@@ -17,15 +17,12 @@ size_t at(int slot, int word) {
     return static_cast<size_t>(slot) * KeySlots::kWordsPerSlot + static_cast<size_t>(word);
 }
 
-Sha256::Digest labelled_digest(const char* label, const DeviceId& device_id,
-                               const KeySlots::Material& material) {
+Sha256 labelled(const char* label) {
     size_t label_bytes = 0;
     while (label[label_bytes] != 0) label_bytes++;
     Sha256 sha;
     sha.update(reinterpret_cast<const uint8_t*>(label), label_bytes);
-    sha.update(device_id.data(), device_id.size());
-    sha.update(material.data(), material.size());
-    return sha.finish();
+    return sha;
 }
 
 uint32_t word_at(const uint8_t* bytes) {
@@ -87,12 +84,17 @@ KeySlots::Slot KeySlots::slot_of(const Material& material, const DeviceId& devic
     Slot slot{};
     for (int i = 0; i < kTagWord; i++)
         slot[i] = word_at(material.data() + 4 * static_cast<size_t>(i));
-    slot[kTagWord] = word_at(labelled_digest(kTagLabel, device_id, material).data());
+    Sha256 tag = labelled(kTagLabel);
+    tag.update(device_id.data(), device_id.size());
+    tag.update(material.data(), material.size());
+    slot[kTagWord] = word_at(tag.finish().data());
     return slot;
 }
 
-crypto::Ed25519::Seed KeySlots::seed_of(const Material& material, const DeviceId& device_id) {
-    return labelled_digest(kSeedLabel, device_id, material);
+crypto::Ed25519::Seed KeySlots::seed_of(const Material& material) {
+    Sha256 seed = labelled(kSeedLabel);
+    seed.update(material.data(), material.size());
+    return seed.finish();
 }
 
 // INFO: fc 08nov26 a draw of one byte repeated is an RNG that failed or wrote nothing, never a key
@@ -109,7 +111,7 @@ std::optional<crypto::Ed25519::Seed> KeySlots::seed(const Memory& memory,
     if (!memory.read(words)) return std::nullopt;
     const std::optional<int> slot = current(words, device_id);
     if (!slot) return std::nullopt;
-    return seed_of(material_in(slot_in(words, *slot)), device_id);
+    return seed_of(material_in(slot_in(words, *slot)));
 }
 
 std::optional<int> KeySlots::provision(Memory& memory, const DeviceId& device_id) {

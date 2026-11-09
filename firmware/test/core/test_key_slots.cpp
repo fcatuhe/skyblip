@@ -70,12 +70,12 @@ struct Uicr : KeySlots::Memory {
 };
 
 std::optional<Ed25519::Seed> seed_of(const KeySlots::Material& material) {
-    return KeySlots::seed_of(material, kDevice);
+    return KeySlots::seed_of(material);
 }
 
 }  // namespace
 
-// Python's hashlib: sha256 of "skyblip:slot:v1" or ":seed:v1", the DEVICEID, bytes 0 to 27.
+// From Python's hashlib over bytes 0 to 27, the tag with the DEVICEID, the seed without.
 TEST_CASE("key slots: a slot is the material then its tag, and the seed is its labelled SHA-256") {
     KeySlots::Material material{};
     for (size_t i = 0; i < material.size(); i++) material[i] = static_cast<uint8_t>(i);
@@ -84,9 +84,9 @@ TEST_CASE("key slots: a slot is the material then its tag, and the seed is its l
     CHECK(slot[6] == 0x1B1A1918u);
     CHECK(slot[7] == 0xEC63419Fu);
     Ed25519::Seed expected{};
-    REQUIRE(skyblip::hex::read("e7975b94095e90646d3a1b950b8e163a024e7dc903c645bd87445d1713347e64",
+    REQUIRE(skyblip::hex::read("e22c2ad4e30fcb3926ba011b80023e798074e1d681efb3e1799488d1c0a86edb",
                                ByteSpan(expected.data(), expected.size())));
-    CHECK(KeySlots::seed_of(material, kDevice) == expected);
+    CHECK(KeySlots::seed_of(material) == expected);
 }
 
 // A board programmed from another unit's image carries that unit's UICR.
@@ -98,8 +98,17 @@ TEST_CASE("key slots: a slot copied from another chip is torn, and this chip dra
     CHECK_FALSE(KeySlots::seed(uicr, kDevice));
     CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(1));
     CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn.back()));
-    CHECK(KeySlots::seed_of(uicr.drawn.back(), kDevice) !=
-          KeySlots::seed_of(uicr.drawn.back(), kOtherDevice));
+}
+
+// A dead RNG handing every chip the same draw must give them one key, which the server flags.
+TEST_CASE("key slots: one draw on two chips is one key, though each chip tags its slot apart") {
+    const KeySlots::Material material = Uicr::material_numbered(0x40);
+    CHECK(KeySlots::slot_of(material, kDevice) != KeySlots::slot_of(material, kOtherDevice));
+    Uicr first;
+    Uicr second;
+    first.put(0, material, kDevice);
+    second.put(0, material, kOtherDevice);
+    CHECK(KeySlots::seed(first, kDevice) == KeySlots::seed(second, kOtherDevice));
 }
 
 TEST_CASE("key slots: a blank UICR gets material in slot 0, read back, and its seed is the key") {
