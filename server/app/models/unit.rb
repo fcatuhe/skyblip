@@ -4,6 +4,7 @@ class Unit < ApplicationRecord
   SERIALS = 1..0xFFFF
   NEW_PER_DAY = 50
   NEW_PER_NETWORK_PER_DAY = 5
+  PENDING_KEYS_KEPT = 5
 
   has_many :keys, dependent: :destroy
   has_one :active_key, -> { active }, class_name: "Unit::Key"
@@ -65,6 +66,7 @@ class Unit < ApplicationRecord
       key.update!(status: bound_to?(key) ? :active : :pending, **seen)
     end
     key.touch unless key.saved_changes?
+    forget_old_pending_keys if key.pending?
     key
   end
 
@@ -74,5 +76,10 @@ class Unit < ApplicationRecord
     def bound_to?(key)
       active = keys.active.first
       active.nil? || active == key
+    end
+
+    # INFO: fc 09nov26 anyone can sign a fresh key for a known DEVICEID, so only the newest pending keys are kept for an admin
+    def forget_old_pending_keys
+      keys.pending.order(updated_at: :desc, id: :desc).offset(PENDING_KEYS_KEPT).destroy_all
     end
 end

@@ -38,6 +38,17 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal unit_keys(:bound_active), units(:bound).active_key
   end
 
+  test "keeps the newest pending keys of a device and forgets the older ones, its active key untouched" do
+    keys = Array.new(Unit::PENDING_KEYS_KEPT + 2) do |index|
+      travel index.minutes do
+        Unit.register(device_id: units(:bound).device_id, public_key: format("%064x", 0xe000 + index))
+      end
+    end
+
+    assert_equal keys.last(Unit::PENDING_KEYS_KEPT).map(&:public_key).sort, units(:bound).keys.pending.pluck(:public_key).sort
+    assert_equal unit_keys(:bound_active), units(:bound).reload.active_key
+  end
+
   test "once its key is revoked, a device binds the next key that registers" do
     unit_keys(:bound_active).revoked!
 
