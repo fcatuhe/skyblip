@@ -137,7 +137,7 @@ jobs:
           cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$version.full.signed.bin"
           cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
           cp simulator/scenarios.json release/
-          cp NOTICE.md LICENSES/Apache-2.0.txt release/
+          cp LICENSE NOTICE.md LICENSES/*.txt release/
           (cd release && sha256sum -- * > SHA256SUMS)
           cat "builds/$SLUG.version" release/SHA256SUMS
 
