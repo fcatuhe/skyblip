@@ -1,0 +1,100 @@
+@layer components {
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-l) var(--space-inline-m);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: step;
+  }
+
+  @media (max-width: 56rem) {
+    .steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 36rem) {
+    .steps-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .steps-grid > li {
+    counter-increment: step;
+    background: var(--card-bg);
+    border-radius: var(--space-inline-xs);
+    padding: var(--space-l) var(--space-inline-l);
+    box-shadow: 0 1px 3px color-mix(in oklch, var(--ink) 12%, transparent);
+  }
+
+  .steps-grid h3 {
+    display: flex;
+    align-items: first baseline;
+    gap: var(--space-inline-xs);
+    font-size: var(--text-l);
+  }
+
+  .steps-grid h3::before {
+    content: counter(step);
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.6em;
+    block-size: 1.6em;
+    border: 2px solid var(--blip);
+    border-radius: 50%;
+    color: var(--blip-text);
+    font-size: var(--text-s);
+  }
+
+  .steps-grid p { color: var(--card-ink); font-size: var(--text-s); margin: 0; }
+
+  .steps-grid--sequence {
+    --step-mark: var(--space-xl);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    max-inline-size: 48rem;
+    margin-inline: auto;
+    padding: var(--space-xl) clamp(var(--space-inline-m), 4vw, var(--space-inline-2xl));
+    background: var(--card-bg);
+    border-radius: var(--space-inline-xs);
+    box-shadow: 0 1px 3px color-mix(in oklch, var(--ink) 12%, transparent);
+  }
+
+  .steps-grid--sequence > li {
+    position: relative;
+    padding: 0 0 var(--space-l);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .steps-grid--sequence > li:last-child { padding-block-end: 0; }
+
+  .steps-grid--sequence > li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    inset-block: calc(var(--step-mark) + var(--space-2xs)) var(--space-2xs);
+    inset-inline-start: calc(var(--step-mark) / 2 - 1px);
+    border-inline-start: 2px solid var(--sky);
+  }
+
+  .steps-grid--sequence h3 {
+    align-items: center;
+    gap: var(--space-m);
+    margin-block-end: var(--space-2xs);
+  }
+
+  .steps-grid--sequence h3::before {
+    inline-size: var(--step-mark);
+    block-size: var(--step-mark);
+    font-size: var(--text-base);
+  }
+
+  .steps-grid--sequence p {
+    font-size: var(--text-base);
+    padding-inline-start: calc(var(--step-mark) + var(--space-m));
+  }
+
+  .steps-grid--sequence + .signature {
+    max-inline-size: 48rem;
+    margin-inline: auto;
+  }
+}

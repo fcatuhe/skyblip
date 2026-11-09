@@ -215,48 +215,6 @@
     color: var(--quiet-text);
   }
 
-  .steps-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
-    gap: var(--space-l) var(--space-inline-m);
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    counter-reset: step;
-  }
-
-  .steps-grid > li {
-    counter-increment: step;
-    background: var(--card-bg);
-    border-radius: var(--space-inline-xs);
-    padding: var(--space-l) var(--space-inline-l);
-    box-shadow: 0 1px 3px color-mix(in oklch, var(--ink) 12%, transparent);
-  }
-
-  .band--tint .steps-grid > li { background: var(--card-bg); }
-
-  .steps-grid h3 {
-    display: flex;
-    align-items: first baseline;
-    gap: var(--space-inline-xs);
-    font-size: var(--text-l);
-  }
-
-  .steps-grid h3::before {
-    content: counter(step);
-    flex: none;
-    display: inline-grid;
-    place-items: center;
-    inline-size: 1.6em;
-    block-size: 1.6em;
-    border: 2px solid var(--blip);
-    border-radius: 50%;
-    color: var(--blip-text);
-    font-size: var(--text-s);
-  }
-
-  .steps-grid p { color: var(--card-ink); font-size: var(--text-s); margin: 0; }
-
   .faq {
     max-inline-size: 48rem;
     margin-inline: auto;

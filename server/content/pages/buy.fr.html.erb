@@ -155,31 +155,30 @@ updated_on: "2026-11-09"
 
 <section id="install" class="band band--tint">
   <h2 class="section-title">Un Go, prêt en cinq étapes</h2>
-  <ol class="steps-grid">
+  <ol class="steps-grid steps-grid--sequence">
     <li>
       <h3>Commande.</h3>
       <p>Un LilyGO T-Echo ou T-Echo Plus, en 868&nbsp;MHz avec baromètre BME280.</p>
     </li>
     <li>
       <h3>Installation.</h3>
-      <p>Le fichier skyBlip déposé sur le lecteur USB qui apparaît. Appareil branché en USB-C, deux pressions sur <span class="mono">RST</span> ouvrent le lecteur <span class="mono">TECHOBOOT</span>, où déposer le <span class="mono">.uf2</span> de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version</a>.</p>
+      <p>Branchez l&rsquo;appareil en USB-C et appuyez deux fois sur <span class="mono">RST</span>. Déposez le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version</a> sur le lecteur <span class="mono">TECHOBOOT</span> qui s&rsquo;ouvre.</p>
     </li>
     <li>
       <h3>Activation.</h3>
-      <p>Un Go neuf n&rsquo;émet ni ne reçoit avant d&rsquo;avoir son numéro de série. <%= link_to_page "activate", label: "Activez-le" %> en Bluetooth depuis Chrome ou Edge, puis autorisez-le par deux pressions sur l&rsquo;appareil.</p>
+      <p><%= link_to_page "activate", label: "Activez-le" %> en Bluetooth depuis Chrome ou Edge, puis autorisez-le par deux pressions sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit.</p>
     </li>
     <li>
       <h3>Réglages.</h3>
-      <p>Votre type d&rsquo;aéronef et votre indicatif, dans le menu de l&rsquo;appareil.</p>
+      <p>Choisissez votre type d&rsquo;aéronef et saisissez votre indicatif dans le menu de l&rsquo;appareil.</p>
     </li>
     <li>
       <h3>Mises à jour.</h3>
-      <p>Depuis le navigateur, en Bluetooth, chacune validée sur l&rsquo;écran.</p>
+      <p>Installez chaque nouvelle version depuis <%= link_to_page "manage", label: "Gérer mon skyBlip" %> en Bluetooth, et validez&#8209;la sur l&rsquo;écran de l&rsquo;appareil.</p>
     </li>
   </ol>
   <p class="signature">
-    Le même fichier sert aux deux boîtiers. Les mises à jour passent par
-    <%= link_to_page "manage", label: "Gérer mon skyBlip" %>. Pour
+    Le même fichier sert au T&#8209;Echo et au T&#8209;Echo Plus. Pour
     l&rsquo;instant, seules des versions de développement sont publiées. Les
     étapes de Bravo seront ici à la sortie de son firmware.
   </p>
