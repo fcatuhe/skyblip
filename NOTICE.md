@@ -22,10 +22,11 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 |---|---|---|
 | `firmware/hardware/parts/drv2605/drv2605.cpp`, `Drv2605::begin` | the register setup of SensorLib's DRV2605 driver, Copyright (c) 2024 Lewis He | MIT, text below |
 | `firmware/core/gnss/nmea.cpp` and `firmware/core/protocol/nmea_out.cpp`, the calendar conversions | Howard Hinnant's `days_from_civil` and `civil_from_days` | public domain |
+| `firmware/hardware/parts/bme280/bme280.cpp`, the compensation | the integer compensation formulas of Bosch Sensortec's BME280 datasheet, section 4.2.3, rev 1.1 | reference code the datasheet publishes for implementers |
 
 ## Built into a firmware image
 
-`firmware/west.yml` pins Zephyr v4.4.2, Zephyr's own manifest pins the module revisions, and `west update` fetches them. The C and C++ libraries come with the Zephyr SDK's toolchain. Monocypher and the Bosch image are the vendored copies above.
+`firmware/west.yml` pins Zephyr v4.4.2. Zephyr's own manifest pins the module revisions, and `west update` fetches them. The C and C++ libraries come with the Zephyr SDK's toolchain. Monocypher and the Bosch image are the vendored copies above.
 
 | Component | What it does in the image | License |
 |---|---|---|
@@ -36,7 +37,7 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 | [hal_nordic](https://github.com/zephyrproject-rtos/hal_nordic) | nrfx and the MDK, the nRF52840's drivers and register definitions | BSD-3-Clause, Copyright (c) 2010 - 2026, Nordic Semiconductor ASA, text below. The MDK's `system_nrf52.c` is Apache-2.0, Copyright (c) 2009-2026 ARM Limited |
 | [Mbed TLS](https://github.com/zephyrproject-rtos/mbedtls) and [TF-PSA-Crypto](https://github.com/zephyrproject-rtos/tf-psa-crypto) | the PSA crypto the Bluetooth host uses | Apache-2.0, chosen from Apache-2.0 OR GPL-2.0-or-later |
 | [zcbor](https://github.com/zephyrproject-rtos/zcbor) | the CBOR codec of MCUmgr | Apache-2.0 |
-| picolibc, from the Zephyr SDK | the C library | BSD-3-Clause and the other permissive licenses in its `COPYING.picolibc`, copied as `LICENSES/picolibc.txt` from the revision Zephyr v4.4.2 pins |
+| picolibc, from the Zephyr SDK | the C library | BSD-3-Clause and the other permissive licenses in its `COPYING.picolibc`, copied as `LICENSES/picolibc.txt` from the revision Zephyr v4.4.2 pins. Its GPL-2.0 and AGPL-3.0 entries cover tests and a build script, not the library |
 | libstdc++ and libgcc, from the Zephyr SDK's GCC | C++ and compiler runtime support | GPL-3.0-or-later WITH GCC-exception-3.1, which lets the image ship under any terms and asks for no notice |
 | Monocypher | the Ed25519 check | CC0-1.0 |
 | Bosch BHI260AP firmware | the inertial unit's image, in a full image only | BSD-3-Clause, text below |
@@ -48,8 +49,8 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 | Component | License |
 |---|---|
 | [Emscripten](https://github.com/emscripten-core/emscripten)'s runtime and JavaScript glue | MIT or NCSA, used under MIT, text below |
-| [musl](https://musl.libc.org), the C library | MIT, text below |
-| libc++, libc++abi and compiler-rt, from LLVM | Apache-2.0 WITH LLVM-exception, which asks for no notice in compiled form |
+| [musl](https://musl.libc.org), the C library | MIT, and Sun's fdlibm notice for the math functions, texts below |
+| libc++, libc++abi and compiler-rt, from LLVM | Apache-2.0 WITH LLVM-exception, and NCSA or MIT for legacy code, used under MIT, text below |
 
 ## Notices
 
@@ -212,4 +213,39 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-The Apache License 2.0, TinyCrypt's two licenses and picolibc's licenses are in `LICENSES/`.
+LLVM's libc++, libc++abi and compiler-rt, for their legacy code:
+
+```
+Copyright (c) 2009-2014 by the contributors listed in CREDITS.TXT
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+musl's math functions, from Sun's fdlibm:
+
+```
+Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+
+Developed at SunSoft, a Sun Microsystems, Inc. business.
+Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice
+is preserved.
+```
+
+The Apache License 2.0, TinyCrypt's two licenses and picolibc's licenses are in `LICENSES/` in the repository, and beside this file in a release.
