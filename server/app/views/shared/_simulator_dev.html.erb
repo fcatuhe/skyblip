@@ -15,7 +15,7 @@
                 data-action="click->dev-simulator#control" data-dev-simulator-command-param="reset"></button>
         <button class="sb-key sb-key--action" aria-label="button 2, P1.10: a press opens the menu of the page on the glass and changes the focused row once inside, a hold of 2 s switches off" title="button 2, P1.10: a press opens the menu of the page on the glass and changes the focused row once inside, a hold of 2 s switches off"
                 data-dev-simulator-command-param="hold" data-action="pointerdown->dev-simulator#press pointerup->dev-simulator#release pointerleave->dev-simulator#release pointercancel->dev-simulator#release keydown->dev-simulator#press keyup->dev-simulator#release"></button>
-        <span class="sb-led sb-led--alarm" id="led_alarm" title="the LED we drive: lit on a traffic alarm"></span>
+        <span class="sb-led sb-led--lamp" id="led_lamp" data-lamp="dark" title="the RGB lamp the firmware drives: green wink with a fix, blue wink without, red wink when the cell is low, red blink when critical, red flicker on a traffic alarm"></span>
         <span class="sb-led sb-led--charge" id="led_charge" title="charge state: the charger drives this one, not the MCU"></span>
       </div>
       <div class="keymap">

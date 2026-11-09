@@ -218,7 +218,8 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('refreshstate').textContent = REFRESH[refresh];
     $('refreshstate').className = refresh === 2 ? 'full' : '';
     $('refreshcount').textContent = '  ·  ' + f.presents() + ' refreshes';
-    $('led_alarm').className = 'sb-led sb-led--alarm' + (f.alarm() ? ' sb-led--lit' : '');
+    // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
+    $('led_lamp').dataset.lamp = f.lamp?.() ?? 'dark';
     $('led_charge').className = 'sb-led sb-led--charge' + (f.batteryCharging() ? ' sb-led--lit' : '');
     $('pagehint').textContent = 'page: ' + PAGES[f.page()] +
         '  ·  backlight ' + (f.backlightOn() ? 'on' : 'off') +
