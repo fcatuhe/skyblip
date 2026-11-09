@@ -199,7 +199,7 @@
       "description": "Unit to host after the two presses that answer register, at most 138 bytes in one notification, which an iPhone's 182-byte payload carries. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
       "keys": [
         {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian"},
-        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "Pd, the raw 32-byte Ed25519 public key of the unit, from its seed in UICR CUSTOMER"},
+        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "Pd, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
         {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
         {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the unit trusts, as in the challenge reply"},
         {"name": "release", "number": 5, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
