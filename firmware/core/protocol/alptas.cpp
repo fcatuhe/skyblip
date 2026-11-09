@@ -33,8 +33,8 @@ constexpr uint32_t kMaskKey = 0x956F6C77u;
 constexpr BitField kAddressField{0, 24};
 constexpr BitField kMessageTypeField{24, 4};
 constexpr BitField kAddressTypeField{28, 3};
-constexpr BitField kNeedsThreeField{56, 4};
-constexpr BitField kHasThreeField{60, 4};
+constexpr BitField kPatternLowField{56, 4};
+constexpr BitField kPatternHighField{60, 4};
 constexpr BitField kTimeBitsField{66, 4};
 constexpr BitField kAircraftTypeField{70, 4};
 constexpr BitField kAltitudeField{75, 13};
@@ -48,7 +48,7 @@ constexpr BitField kAirborneField{166, 2};
 constexpr BitField kGnssAccuracyFirstField{168, 6};
 constexpr BitField kGnssAccuracySecondField{174, 5};
 constexpr BitField kUnknownField{179, 5};
-constexpr BitField kLastByteField{184, 8};
+constexpr BitField kTrailingByteField{184, 8};
 
 constexpr Exponential kAltitudeCode{12, 1, false};
 constexpr Exponential kSpeedCode{8, 2, false};
@@ -127,7 +127,8 @@ uint16_t carried_crc(const uint8_t* frame) {
 }
 
 bool structured(const uint8_t* decrypted) {
-    return read_bits(decrypted, kLastByteField) == 0 && read_bits(decrypted, kNeedsThreeField) == 3;
+    return read_bits(decrypted, kTrailingByteField) == 0 &&
+           read_bits(decrypted, kPatternLowField) == 3;
 }
 
 // INFO: fc 09mar26 the time bits match to within one second, so a 15 against a 0 fails
@@ -305,12 +306,13 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observati
         static_cast<uint32_t>(divide_rounded<int32_t>(observation.track_c9 * 360, 512)) % 360u;
     write_bits(frame, kCourseField, (course_deg << 1) & 0x03FFu);
 
-    // INFO: fc 09mar26 the accuracy fields and unknown bits carry what deployed senders send
+    // INFO: fc 09mar26 the accuracy fields and unknown bits carry the constants SoftRF and GATAS
+    // send
     write_bits(frame, kGnssAccuracyFirstField, 0x12);
     write_bits(frame, kGnssAccuracySecondField, 0x0A);
     write_bits(frame, kUnknownField, 11);
-    write_bits(frame, kNeedsThreeField, 3);
-    write_bits(frame, kHasThreeField, 3);
+    write_bits(frame, kPatternLowField, 3);
+    write_bits(frame, kPatternHighField, 3);
 
     crypt_frame(frame, utc_s, true);
     alptas_set_crc(frame);
