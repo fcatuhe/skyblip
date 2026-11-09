@@ -13,6 +13,8 @@ LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
 BUILD_ASSERT(IS_ENABLED(CONFIG_ENTROPY_NRF5_BIAS_CORRECTION),
              "the unit's key is drawn from the RNG, which is biased without its correction");
+BUILD_ASSERT(DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_entropy), nordic_nrf_rng),
+             "the unit's key is drawn from the nRF RNG, the source the bias correction applies to");
 
 namespace skyblip::platform::zephyr {
 
