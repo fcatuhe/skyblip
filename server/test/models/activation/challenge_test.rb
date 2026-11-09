@@ -23,6 +23,15 @@ class Activation::ChallengeTest < ActiveSupport::TestCase
     assert_equal :expired, assert_raises(Activation::Refusal) { Activation::Challenge.find_live(challenge.server_nonce) }.reason
   end
 
+  test "a server nonce that expires between its lookup and its spending is not spent" do
+    challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key_id: "890026b1")
+    found = Activation::Challenge.find_live(challenge.server_nonce)
+
+    travel 5.minutes + 1.second do
+      assert_equal :expired, assert_raises(Activation::Refusal) { found.spend }.reason
+    end
+  end
+
   test "a server nonce expires after five minutes" do
     challenge = Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key_id: "890026b1")
 

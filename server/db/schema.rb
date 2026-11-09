@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_19_094938) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_08_222028) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -41,6 +41,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_094938) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.boolean "release"
+    t.index ["public_key"], name: "index_unit_keys_on_public_key"
     t.index ["unit_id", "public_key"], name: "index_unit_keys_on_unit_id_and_public_key", unique: true
     t.index ["unit_id"], name: "index_unit_keys_on_unit_id_active", unique: true, where: "status = 'active'"
   end
@@ -50,7 +51,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_19_094938) do
     t.integer "serial", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "enrolled_from"
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
+    t.index ["enrolled_from", "created_at"], name: "index_units_on_enrolled_from_and_created_at"
     t.index ["serial"], name: "index_units_on_serial", unique: true
     t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end

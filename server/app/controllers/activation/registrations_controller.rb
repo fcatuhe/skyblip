@@ -1,5 +1,5 @@
 class Activation::RegistrationsController < Activation::ApplicationController
-  rate_limit to: 10, within: 1.minute, with: :rate_limited
+  rate_limit to: 10, within: 1.minute, by: -> { Unit.network_of(request.remote_ip) || request.remote_ip }, with: :rate_limited
   wrap_parameters :registration, include: %i[device_id public_key version server_key_id release server_nonce signature]
 
   def create

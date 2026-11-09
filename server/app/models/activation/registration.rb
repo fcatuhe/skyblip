@@ -6,7 +6,7 @@ class Activation::Registration
   attribute :public_key, :string
   attribute :version, :string
   attribute :server_key_id, :string
-  attribute :release, :boolean
+  attribute :release
   attribute :server_nonce, :string
   attribute :signature, :string
   attribute :ip_address, :string
@@ -15,9 +15,9 @@ class Activation::Registration
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
   validates :version, format: { with: Activation::VERSION }
   validates :server_key_id, format: { with: Activation::SERVER_KEY_ID }
-  validates :release, inclusion: { in: [ true, false ] }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
+  validate :release_a_boolean, :public_key_strong
 
   def unlock_code
     raise Activation::Refusal.new(:invalid) if invalid?
@@ -37,6 +37,17 @@ class Activation::Registration
   end
 
   private
+    # INFO: fc 09nov26 the inclusion validator checks each element of an array, so [true] would pass as a release
+    def release_a_boolean
+      errors.add(:release, :inclusion) unless release == true || release == false
+    end
+
+    def public_key_strong
+      if public_key.to_s.match?(Activation::PUBLIC_KEY) && Identity::PublicKey.weak?(public_key)
+        errors.add(:public_key, :invalid)
+      end
+    end
+
     def signed_by_unit?(unit_nonce)
       message = Identity::Message.registration(device_id:, public_key:, unit_nonce:, server_nonce:, server_key_id:, release:, version:)
       unit_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ public_key ].pack("H*"))

@@ -5,3 +5,8 @@ Rails.application.config.x.identity.server_private_key =
   else
     Rails.application.credentials.dig(:identity, :server_private_key)
   end
+
+# INFO: fc 09nov26 checked at boot, so a malformed seed stops the deploy instead of breaking the admin pages
+Rails.application.config.after_initialize do
+  Identity::ServerKey.current if Identity::ServerKey.configured?
+end

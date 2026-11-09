@@ -7,6 +7,13 @@ class Identity::MessageTest < ActiveSupport::TestCase
     assert_equal vectors["unlock_message"], hex(Identity::Message.unlock(**unlock_fields))
   end
 
+  test "a development build's registration carries release 0, and its signature is the vectors'" do
+    message = Identity::Message.registration(**registration_fields, release: false)
+
+    assert_equal vectors["development_registration_message"], hex(message)
+    assert_equal vectors["development_registration_signature"], unit_key.sign(nil, message).unpack1("H*")
+  end
+
   # Ed25519 is deterministic, so equal signatures mean OpenSSL and Monocypher sign alike.
   test "OpenSSL signs the server's two messages as the firmware does, and verifies the unit's" do
     server_key = Identity::ServerKey.current

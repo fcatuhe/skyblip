@@ -8,6 +8,13 @@
   </p>
 <% end %>
 
+<% if @sharing.any? %>
+  <p class="admin-flash admin-flash--alert" role="alert">
+    <%= pluralize(@sharing.size, "unit") %> share a key with another unit, a key reused by a script or custom firmware, or an RNG that failed:
+    <%= unit_links(@sharing) %>.
+  </p>
+<% end %>
+
 <% if @server_key %>
   <dl class="admin-details">
     <dt>Server key</dt>

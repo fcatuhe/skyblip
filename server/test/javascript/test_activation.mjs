@@ -48,6 +48,9 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   assert.equal(unit.sign(messages.registration(fields)), VECTORS.registration_signature);
   assert.equal(server.sign(messages.unlock(fields)), VECTORS.unlock_signature);
   assert.ok(verifies(VECTORS.unit_public_key, VECTORS.registration_signature, messages.registration(fields)));
+  const development = messages.registration({ ...fields, release: false });
+  assert.equal(development.toString('hex'), VECTORS.development_registration_message);
+  assert.equal(unit.sign(development), VECTORS.development_registration_signature);
 });
 
 test('a unit not yet activated reports no address', async () => {

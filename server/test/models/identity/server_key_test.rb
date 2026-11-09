@@ -18,4 +18,16 @@ class Identity::ServerKeyTest < ActiveSupport::TestCase
   ensure
     Rails.configuration.x.identity.server_private_key = seed
   end
+
+  # pack("H*") reads a non-hex digit as some nibble, so a mistyped seed would sign as another key.
+  test "fails loudly when the credentials hold a seed that is not 64 hex digits" do
+    seed = Rails.configuration.x.identity.server_private_key
+
+    [ "zz" * 32, seed.first(62), "#{seed}00" ].each do |bad|
+      Rails.configuration.x.identity.server_private_key = bad
+      assert_raises(ArgumentError) { Identity::ServerKey.current }
+    end
+  ensure
+    Rails.configuration.x.identity.server_private_key = seed
+  end
 end

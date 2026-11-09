@@ -19,6 +19,16 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal 1, key.unit.serial
   end
 
+  # The admin page reads a key's updated_at as when it was last seen.
+  test "a known device registering again with nothing new is seen again" do
+    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release, :ip_address).symbolize_keys
+
+    travel 1.hour do
+      key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, **seen)
+      assert_in_delta Time.current, key.reload.updated_at, 1.second
+    end
+  end
+
   test "a known device with another key is recorded as pending and bound to nothing" do
     key = Unit.register(device_id: units(:bound).device_id, public_key: "e5" * 32, ip_address: "203.0.113.4")
 
@@ -26,6 +36,17 @@ class UnitTest < ActiveSupport::TestCase
     assert key.persisted?
     assert_equal "203.0.113.4", key.ip_address
     assert_equal unit_keys(:bound_active), units(:bound).active_key
+  end
+
+  test "keeps the newest pending keys of a device and forgets the older ones, its active key untouched" do
+    keys = Array.new(Unit::PENDING_KEYS_KEPT + 2) do |index|
+      travel index.minutes do
+        Unit.register(device_id: units(:bound).device_id, public_key: format("%064x", 0xe000 + index))
+      end
+    end
+
+    assert_equal keys.last(Unit::PENDING_KEYS_KEPT).map(&:public_key).sort, units(:bound).keys.pending.pluck(:public_key).sort
+    assert_equal unit_keys(:bound_active), units(:bound).reload.active_key
   end
 
   test "once its key is revoked, a device binds the next key that registers" do
@@ -64,6 +85,45 @@ class UnitTest < ActiveSupport::TestCase
     refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]) }
     assert_equal :daily_cap, refusal.reason
     assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key).active?
+  end
+
+  test "refuses a new device past the cap of its network, an IPv6 /56 counting as one, and serves other networks" do
+    Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
+      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "2001:db8:1:2::#{index + 1}")
+    end
+
+    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:ff:ffff::9") }
+    assert_equal :network_cap, refusal.reason
+    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:100::1").active?
+    assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, ip_address: "2001:db8:1:2::1").active?
+  end
+
+  test "names a network by its IPv4 address or its IPv6 /56, a mapped IPv4 address as itself" do
+    assert_equal "203.0.113.8", Unit.network_of("203.0.113.8")
+    assert_equal "203.0.113.8", Unit.network_of("::ffff:203.0.113.8")
+    assert_equal "2001:db8:1::", Unit.network_of("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
+    assert_equal "2001:db8:1:100::", Unit.network_of("2001:db8:1:1ff::1")
+  end
+
+  # Docker on crooz hands Rails its gateway, 172.18.0.1, for every IPv6 client (#205).
+  test "counts a private address toward no network, so the clients behind it do not share one cap" do
+    assert_nil Unit.network_of("172.18.0.1")
+    assert_nil Unit.network_of("::1")
+    assert_nil Unit.network_of("fe80::1")
+
+    (Unit::NEW_PER_NETWORK_PER_DAY + 1).times do |index|
+      assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, ip_address: "172.18.0.1").active?
+    end
+  end
+
+  test "counts a network's new devices for today only" do
+    Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
+      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8")
+    end
+
+    travel 1.day do
+      assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "203.0.113.8").active?
+    end
   end
 
   test "the first unit gets serial 1, never 0" do

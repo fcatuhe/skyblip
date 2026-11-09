@@ -32,7 +32,7 @@ class Identity : public ports::Identity {
         explicit Uicr(const struct device* entropy) : entropy_(entropy) {}
         bool read(identity::KeySlots::Words& out) const override;
         void write(int word, uint32_t value) override;
-        bool draw(crypto::Ed25519::Seed& out) override;
+        bool draw(identity::KeySlots::Material& out) override;
 
        private:
         const struct device* entropy_;
@@ -43,6 +43,7 @@ class Identity : public ports::Identity {
     const struct flash_area* unlock_page_{nullptr};
     identity::DeviceId device_id_{};
     uint16_t bluetooth_tag_{0};
+    bool device_id_read_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

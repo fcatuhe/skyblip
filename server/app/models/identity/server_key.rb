@@ -1,4 +1,6 @@
 class Identity::ServerKey
+  SEED = /\A\h{64}\z/
+
   attr_reader :id, :public_key
 
   def self.current
@@ -13,6 +15,8 @@ class Identity::ServerKey
   end
 
   def initialize(seed)
+    raise ArgumentError, "identity.server_private_key is not 64 hexadecimal digits" unless seed.match?(SEED)
+
     @private_key = OpenSSL::PKey.new_raw_private_key("ED25519", [ seed ].pack("H*"))
     @public_key = @private_key.raw_public_key.unpack1("H*")
     @id = OpenSSL::Digest::SHA256.digest(@private_key.raw_public_key).first(4).unpack1("H*")

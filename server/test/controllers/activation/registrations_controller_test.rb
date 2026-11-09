@@ -29,6 +29,16 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "error" => "invalid" }, response.parsed_body)
   end
 
+  test "refuses a release that is not a JSON boolean, which a cast would have read as true" do
+    [ "this is not a boolean", "true", 1 ].each do |release|
+      post activation_registrations_path, params: signed_registration(@challenge).merge(release:), as: :json
+
+      assert_response :unprocessable_content
+      assert_equal({ "error" => "invalid" }, response.parsed_body)
+    end
+    assert_not Unit.exists?(device_id: vectors["device_id"])
+  end
+
   test "spends the server nonce, so a replay is refused" do
     registration = signed_registration(@challenge)
     post activation_registrations_path, params: registration, as: :json
@@ -46,6 +56,28 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     post activation_registrations_path, params: signed_registration(@challenge).merge(release: false), as: :json
     assert_response :unprocessable_content
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
+    assert_not Unit.exists?(device_id: vectors["device_id"])
+  end
+
+  # The unit signs the key id it trusts, so a registration naming another key than its challenge did is refused before its signature.
+  test "refuses a registration for another server key than its challenge, and leaves the nonce" do
+    other_key = Activation::Challenge.new(unit_nonce: @challenge.unit_nonce, server_nonce: @challenge.server_nonce, server_key_id: "a9649d2d")
+    post activation_registrations_path, params: signed_registration(other_key), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
+
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json
+    assert_response :created
+  end
+
+  # OpenSSL verifies this signature for any message: the identity point as key and as R, and S zero.
+  test "refuses a small-order key, whose signature anybody can make without a private key" do
+    forged = "01" + "00" * 31
+    post activation_registrations_path, params: signed_registration(@challenge).merge(public_key: forged, signature: forged + "00" * 32), as: :json
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
     assert_not Unit.exists?(device_id: vectors["device_id"])
   end
 
@@ -93,5 +125,21 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :service_unavailable
     assert_equal({ "error" => "daily_cap" }, response.parsed_body)
+  end
+
+  test "answers a body that is not JSON as invalid, in JSON" do
+    post activation_registrations_path, params: "{not json", headers: { "Content-Type" => "application/json", "Accept" => "application/json" }
+
+    assert_response :unprocessable_content
+    assert_equal({ "error" => "invalid" }, response.parsed_body)
+  end
+
+  test "refuses a new unit past the cap of the network it comes from" do
+    Unit.insert_all(Array.new(Unit::NEW_PER_NETWORK_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, enrolled_from: "203.0.113.8" } })
+
+    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
+
+    assert_response :too_many_requests
+    assert_equal({ "error" => "network_cap" }, response.parsed_body)
   end
 end

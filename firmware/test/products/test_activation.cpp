@@ -483,6 +483,30 @@ TEST_CASE(
     CHECK(queue.bench.activation().serial == QueuedUnlock::kNewSerial);
 }
 
+TEST_CASE(
+    "activation: an unlock to the serial the unit holds is answered at once, page untouched") {
+    Bench bench{platform::host::Platform::kFullyFitted};
+    bench.rig.platform.identity().stored_unlock_code =
+        Identity::unlock_code_for(Identity::kSerial, identity::Nonce{});
+    bench.boot();
+    REQUIRE(bench.activation().serial == Identity::kSerial);
+    bench.rig.seconds(bench.now_ms, 20, 0, 300);
+
+    const identity::Nonce nonce{4, 2};
+    bench.rig.platform.identity().queue_random(nonce);
+    REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
+    const identity::UnlockCode code = Identity::unlock_code_for(Identity::kSerial, nonce);
+    std::string signature(128, '?');
+    hex::write(ConstByteSpan(code.signature.data(), code.signature.size()), signature.data());
+    const size_t before = bench.rig.platform.link().sent.size();
+    bench.rig.send(unlock_command(Identity::kSerial, signature).c_str());
+    bench.pass(100);
+    CHECK(bench.answer_since(before) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
+    CHECK(bench.rig.platform.identity().writes == 0);
+    CHECK(bench.activation().serial == Identity::kSerial);
+}
+
 // A held unlock is never forced onto a cell the settings writer would not touch.
 TEST_CASE("activation: a supply warning before the write window drops the unlock as low_power") {
     QueuedUnlock queue;

@@ -17,6 +17,7 @@
       <tr>
         <th>Public key</th>
         <th>Status</th>
+        <th>Also on</th>
         <th>Firmware</th>
         <th>Build</th>
         <th>Server key id</th>
@@ -31,6 +32,7 @@
         <tr>
           <th class="mono"><%= key.public_key %></th>
           <td><%= key.status %></td>
+          <td><%= unit_links(key.other_units) %></td>
           <td class="mono"><%= key.version %></td>
           <td><%= unit_key_build(key) %></td>
           <td class="mono"><%= key.server_key_id %></td>
