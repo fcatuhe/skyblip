@@ -44,7 +44,7 @@ class Activation::Registration
 
     def public_key_strong
       if public_key.to_s.match?(Activation::PUBLIC_KEY) && Identity::PublicKey.weak?(public_key)
-        errors.add(:public_key, :weak)
+        errors.add(:public_key, :invalid)
       end
     end
 
