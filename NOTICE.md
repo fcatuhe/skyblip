@@ -1,18 +1,18 @@
 # Third-party notices
 
-skyBlip is MIT, see [`LICENSE`](LICENSE). This file lists what other people wrote that the repository carries or that a firmware image is built from, each with the license it comes under. Every firmware release ships this file and [`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt) beside the image.
+skyBlip is MIT, see [`LICENSE`](https://github.com/fcatuhe/skyblip/blob/main/LICENSE). This file lists what other people wrote that the repository carries, that a firmware image is built from, or that the browser simulator is built from, each with the license it comes under. Every release ships this file beside the image, with `LICENSE` and the texts in [`LICENSES/`](https://github.com/fcatuhe/skyblip/tree/main/LICENSES).
 
 ## Carried in this repository
 
 | Path | What it is | License |
 |---|---|---|
-| `firmware/vendor/monocypher/` | Monocypher 4.0.3, the Ed25519 check | BSD-2-Clause or CC0-1.0, [`LICENCE.md`](firmware/vendor/monocypher/LICENCE.md) |
-| `firmware/vendor/doctest/` | doctest, the host test framework, never in an image | MIT, in [`doctest.h`](firmware/vendor/doctest/doctest.h) |
-| `firmware/hardware/parts/bhi260/firmware/BHI260AP.fw` | Bosch Sensortec's BHI260AP RAM image, BHI2xy_SensorAPI v1.6.0 | BSD-3-Clause, [`LICENSE`](firmware/hardware/parts/bhi260/firmware/LICENSE) |
-| `server/app/assets/fonts/FiraSans-*.woff2` | Fira Sans | SIL Open Font License 1.1, [`OFL-FiraSans.txt`](server/app/assets/fonts/OFL-FiraSans.txt) |
-| `server/app/assets/fonts/Inter-*.woff2` | Inter | SIL Open Font License 1.1, [`OFL-Inter.txt`](server/app/assets/fonts/OFL-Inter.txt) |
-| `server/app/assets/fonts/B612Mono-Regular.woff2` | B612 Mono | SIL Open Font License 1.1, [`OFL-B612.txt`](server/app/assets/fonts/OFL-B612.txt) |
-| `docs/reference/ads-l_4_srd860_issue_*` | ADS-L 4 SRD-860, Issues 1 and 2, and their text conversions | Copyright European Union Aviation Safety Agency. Reproduction is authorised provided the source is acknowledged, see [`docs/reference/README.md`](docs/reference/README.md) |
+| `firmware/vendor/monocypher/` | Monocypher 4.0.3, the Ed25519 check | BSD-2-Clause or CC0-1.0, used under CC0-1.0 ([`LICENCE.md`](https://github.com/fcatuhe/skyblip/blob/main/firmware/vendor/monocypher/LICENCE.md)) |
+| `firmware/vendor/doctest/` | doctest, the host test framework, never in an image | MIT, in `doctest.h` |
+| `firmware/hardware/parts/bhi260/firmware/BHI260AP.fw` | Bosch Sensortec's BHI260AP RAM image, BHI2xy_SensorAPI v1.6.0 | BSD-3-Clause, text below and beside the image |
+| `server/app/assets/fonts/FiraSans-*.woff2` | Fira Sans | SIL Open Font License 1.1, `OFL-FiraSans.txt` beside it |
+| `server/app/assets/fonts/Inter-*.woff2` | Inter | SIL Open Font License 1.1, `OFL-Inter.txt` beside it |
+| `server/app/assets/fonts/B612Mono-Regular.woff2` | B612 Mono | SIL Open Font License 1.1, `OFL-B612.txt` beside it |
+| `docs/reference/ads-l_4_srd860_issue_*` | ADS-L 4 SRD-860, Issues 1 and 2, and their text conversions | Copyright European Union Aviation Safety Agency. Reproduction is authorised provided the source is acknowledged, see `docs/reference/README.md` |
 
 The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered from Fira Sans Bold by `scripts/make_wordmark.py`. It is artwork drawn with the font, not the font itself.
 
@@ -20,48 +20,38 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 
 | Where | What it follows | License |
 |---|---|---|
-| `firmware/hardware/parts/drv2605/drv2605.cpp`, `Drv2605::begin` | the register setup of SensorLib's DRV2605 driver, Copyright (c) 2024 Lewis He | MIT |
+| `firmware/hardware/parts/drv2605/drv2605.cpp`, `Drv2605::begin` | the register setup of SensorLib's DRV2605 driver, Copyright (c) 2024 Lewis He | MIT, text below |
 | `firmware/core/gnss/nmea.cpp` and `firmware/core/protocol/nmea_out.cpp`, the calendar conversions | Howard Hinnant's `days_from_civil` and `civil_from_days` | public domain |
-
-```
-MIT License
-
-Copyright (c) 2024 Lewis He
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
 
 ## Built into a firmware image
 
-`west update` fetches these from the revisions [`firmware/west.yml`](firmware/west.yml) pins. They are not in this repository, and each keeps its own license.
+`firmware/west.yml` pins Zephyr v4.4.2, Zephyr's own manifest pins the module revisions, and `west update` fetches them. The C and C++ libraries come with the Zephyr SDK's toolchain. Monocypher and the Bosch image are the vendored copies above.
 
 | Component | What it does in the image | License |
 |---|---|---|
 | [Zephyr](https://github.com/zephyrproject-rtos/zephyr) | the operating system, drivers and Bluetooth host | Apache-2.0 |
-| [MCUboot](https://github.com/zephyrproject-rtos/mcuboot) | the bootloader that checks and swaps images | Apache-2.0, with the NOTICE below |
+| [MCUboot](https://github.com/zephyrproject-rtos/mcuboot) | the bootloader that checks and swaps images, with its `ext/mbedtls-asn1` | Apache-2.0, with the NOTICE below |
+| TinyCrypt, in MCUboot's `ext/tinycrypt` | the bootloader's ECDSA-P256 check, with micro-ecc inside it | BSD-3-Clause (Intel) and BSD-2-Clause (Kenneth MacKay), `LICENSES/TinyCrypt.txt` |
 | [CMSIS 6](https://github.com/zephyrproject-rtos/cmsis_6) | the Cortex-M core headers | Apache-2.0 |
-| [hal_nordic](https://github.com/zephyrproject-rtos/hal_nordic) | nrfx and the MDK, the nRF52840's drivers and register definitions | BSD-3-Clause, Copyright (c) 2010 - 2026, Nordic Semiconductor ASA |
-| [Mbed TLS](https://github.com/zephyrproject-rtos/mbedtls) and [TF-PSA-Crypto](https://github.com/zephyrproject-rtos/tf-psa-crypto) | the PSA crypto behind Bluetooth and the image signature check | Apache-2.0, chosen from Apache-2.0 OR GPL-2.0-or-later |
+| [hal_nordic](https://github.com/zephyrproject-rtos/hal_nordic) | nrfx and the MDK, the nRF52840's drivers and register definitions | BSD-3-Clause, Copyright (c) 2010 - 2026, Nordic Semiconductor ASA, text below. The MDK's `system_nrf52.c` is Apache-2.0, Copyright (c) 2009-2026 ARM Limited |
+| [Mbed TLS](https://github.com/zephyrproject-rtos/mbedtls) and [TF-PSA-Crypto](https://github.com/zephyrproject-rtos/tf-psa-crypto) | the PSA crypto the Bluetooth host uses | Apache-2.0, chosen from Apache-2.0 OR GPL-2.0-or-later |
 | [zcbor](https://github.com/zephyrproject-rtos/zcbor) | the CBOR codec of MCUmgr | Apache-2.0 |
-| [picolibc](https://github.com/zephyrproject-rtos/picolibc) | the C library | BSD-3-Clause and other permissive licenses, listed in its `COPYING.picolibc` |
-| Monocypher | the Ed25519 check, vendored above | BSD-2-Clause or CC0-1.0 |
-| Bosch BHI260AP firmware | the inertial unit's image, in a full image only | BSD-3-Clause, vendored above |
+| picolibc, from the Zephyr SDK | the C library | BSD-3-Clause and the other permissive licenses in its `COPYING.picolibc`, copied as `LICENSES/picolibc.txt` from the revision Zephyr v4.4.2 pins |
+| libstdc++ and libgcc, from the Zephyr SDK's GCC | C++ and compiler runtime support | GPL-3.0-or-later WITH GCC-exception-3.1, which lets the image ship under any terms and asks for no notice |
+| Monocypher | the Ed25519 check | CC0-1.0 |
+| Bosch BHI260AP firmware | the inertial unit's image, in a full image only | BSD-3-Clause, text below |
+
+## Built into the browser simulator
+
+`skyblip_simulator.wasm` and `skyblip_simulator.js` are our firmware compiled by Emscripten, which adds its own runtime.
+
+| Component | License |
+|---|---|
+| [Emscripten](https://github.com/emscripten-core/emscripten)'s runtime and JavaScript glue | MIT or NCSA, used under MIT, text below |
+| [musl](https://musl.libc.org), the C library | MIT, text below |
+| libc++, libc++abi and compiler-rt, from LLVM | Apache-2.0 WITH LLVM-exception, which asks for no notice in compiled form |
+
+## Notices
 
 MCUboot's NOTICE:
 
@@ -147,4 +137,79 @@ IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 ```
 
-Monocypher's BSD-2-Clause and CC0 texts are in [`firmware/vendor/monocypher/LICENCE.md`](firmware/vendor/monocypher/LICENCE.md), and the Apache License 2.0 is in [`LICENSES/Apache-2.0.txt`](LICENSES/Apache-2.0.txt).
+SensorLib:
+
+```
+MIT License
+
+Copyright (c) 2024 Lewis He
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Emscripten:
+
+```
+Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+musl:
+
+```
+Copyright © 2005-2020 Rich Felker, et al.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+The Apache License 2.0, TinyCrypt's two licenses and picolibc's licenses are in `LICENSES/`.

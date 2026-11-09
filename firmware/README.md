@@ -74,4 +74,4 @@ Out of scope, deliberately: `hardware/`, `boards/` and `ports/`. A datasheet's 2
 
 ## License
 
-MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). What an image is built from that is not ours, Zephyr and its modules, Monocypher and the Bosch hub image, is listed with its license in [`NOTICE.md`](../NOTICE.md).
+MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). [`NOTICE.md`](../NOTICE.md) lists what an image is built from that is not ours, each with its license: Zephyr and its modules, the toolchain's libraries, Monocypher and the Bosch hub image.

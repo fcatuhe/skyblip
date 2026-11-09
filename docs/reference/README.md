@@ -41,4 +41,4 @@ The PDF is the normative text. Where the two disagree, the PDF wins.
 
 ## Copyright
 
-Both issues and their conversions are © European Union Aviation Safety Agency, not skyBlip's, and the repository's MIT license does not cover them. They are reproduced under EASA's general permission: "Reproduction is authorised, provided the source is acknowledged, save where otherwise stated" ([easa.europa.eu/en/copyright-disclaimer](https://www.easa.europa.eu/en/copyright-disclaimer)). The source is ED Decision 2022/024/R, linked above.
+Both issues and their conversions are copyright of the European Union Aviation Safety Agency, not skyBlip's, and the repository's MIT license does not cover them. They are reproduced under EASA's general permission: "Reproduction is authorised, provided the source is acknowledged, save where otherwise stated" ([easa.europa.eu/en/copyright-disclaimer](https://www.easa.europa.eu/en/copyright-disclaimer)). The source is ED Decision 2022/024/R, linked above.

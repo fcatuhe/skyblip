@@ -40,4 +40,5 @@ en:
     project: "skyBlip"
     question: "A question? A remark?"
     write: "Write to us on GitHub"
-    license: "Code under the MIT license."
+    license: "Code under the MIT license"
+    notices: "Third-party notices"
