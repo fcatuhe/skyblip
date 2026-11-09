@@ -15,10 +15,9 @@ class Activation::Registration
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
   validates :version, format: { with: Activation::VERSION }
   validates :server_key_id, format: { with: Activation::SERVER_KEY_ID }
-  validates :release, inclusion: { in: [ true, false ] }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
-  validate :public_key_strong
+  validate :release_a_boolean, :public_key_strong
 
   def unlock_code
     raise Activation::Refusal.new(:invalid) if invalid?
@@ -38,6 +37,11 @@ class Activation::Registration
   end
 
   private
+    # INFO: fc 09nov26 the inclusion validator checks each element of an array, so [true] would pass as a release
+    def release_a_boolean
+      errors.add(:release, :inclusion) unless release == true || release == false
+    end
+
     def public_key_strong
       if public_key.to_s.match?(Activation::PUBLIC_KEY) && Identity::PublicKey.weak?(public_key)
         errors.add(:public_key, :weak)
