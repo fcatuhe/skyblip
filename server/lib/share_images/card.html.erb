@@ -2,7 +2,7 @@
 <html lang="<%= I18n.locale %>">
   <head>
     <meta charset="utf-8">
-    <%= stylesheet_link_tag "reset", "_global", "base", "wordmark", "features", "diagram" %>
+    <%= stylesheet_link_tag "reset", "_global", "base", "wordmark", "features", "products" %>
     <link rel="stylesheet" href="/card.css">
   </head>
   <body class="card">
@@ -16,12 +16,12 @@
       <p class="card-site">skyblip.eu</p>
     </div>
     <div class="card-art">
-      <% if card[:photo] %>
-        <figure class="shot shot--photo"><%= image_tag card[:photo], alt: "" %></figure>
-      <% elsif card[:screen] %>
-        <figure class="shot"><%= image_tag card[:screen], alt: "" %></figure>
+      <% if card[:photos] %>
+        <figure class="card-photos">
+          <%= safe_join card[:photos].map { |photo| image_tag photo, alt: "", class: Content::Image.new(photo).dimensions.then { |width, height| height > width ? "card-photo--portrait" : "card-photo--landscape" } }, tag.span("+", class: "pair-plus") %>
+        </figure>
       <% else %>
-        <%= render card[:diagram] %>
+        <figure class="shot"><%= image_tag card[:screen], alt: "" %></figure>
       <% end %>
     </div>
   </body>

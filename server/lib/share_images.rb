@@ -2,10 +2,10 @@ class ShareImages
   WIDTH = 1200
   HEIGHT = 630
   CARDS = {
-    "go" => { name: "Go", protocols: "ADS-L · FLARM", photo: "pages/index/skyblip-go-techo.avif" },
+    "go" => { name: "Go", protocols: "ADS-L · FLARM", photos: %w[pages/index/skyblip-go-techo.avif] },
     "radar" => { name: "Go", protocols: "ADS-L · FLARM", screen: "pages/skyblip-go/radar.png" },
-    "bravo" => { name: "Bravo", protocols: "ADS-B 1090 MHz", photo: "pages/skyblip-bravo/seeed-x1.avif", in_development: true },
-    "tango" => { name: "Tango", protocols: "ADS-B · ADS-L · FLARM", diagram: "shared/tango", in_development: true }
+    "bravo" => { name: "Bravo", protocols: "ADS-B 1090 MHz", photos: %w[pages/skyblip-bravo/seeed-x1.avif], in_development: true },
+    "tango" => { name: "Tango", protocols: "ADS-B · ADS-L · FLARM", photos: %w[pages/index/skyblip-go-techo.avif pages/skyblip-bravo/seeed-x1.avif], in_development: true }
   }
   DIRECTORY = Rails.root.join("content_images/share")
   TEMPLATE = Rails.root.join("lib/share_images/card.html.erb")
@@ -15,7 +15,7 @@ class ShareImages
     [ name, (locale if localized?(name)), "jpg" ].compact.join(".")
   end
 
-  def self.localized?(name) = CARDS.fetch(name).values_at(:diagram, :in_development).any?
+  def self.localized?(name) = CARDS.fetch(name).key?(:in_development)
 
   def generate
     require "ferrum"

@@ -64,4 +64,4 @@ fr:
       go: "skyBlip Go, ADS-L et FLARM : un LilyGO T-Echo blanc avec son antenne, le radar du trafic sur son écran e-paper"
       radar: "skyBlip Go, ADS-L et FLARM : la page radar, trois aéronefs autour de vous, chacun avec sa trajectoire sur une minute"
       bravo: "skyBlip Bravo, firmware en développement : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte qui recevra l'ADS-B 1090 MHz"
-      tango: "skyBlip Tango, firmware en développement. Schéma prévu : Bravo transmettra l'ADS-B à skyBlip Go en Bluetooth, et le Go enverra tout le trafic à votre téléphone"
+      tango: "skyBlip Tango, firmware en développement : un skyBlip Go et un Seeed SenseCAP MeshTracker X1 côte à côte. Associés, ils réuniront l'ADS-B, l'ADS-L et le FLARM sur un radar"
