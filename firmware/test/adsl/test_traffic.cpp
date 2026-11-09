@@ -9,7 +9,7 @@
 #include "core/protocol/adsl.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
-#include "core/util/variable_range.h"
+#include "core/util/exponential.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/menu.h"
 
@@ -113,8 +113,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1: every field sits at the offset and width the tabl
     CHECK(field(payload, 6, 2) == 2u);
     CHECK(field(payload, 8, 5) == 9u);
     CHECK(field(payload, 13, 3) == 5u);
-    CHECK(signed_field(payload, 16, 24) == packet.latitude_cordic() >> 7);
-    CHECK(signed_field(payload, 40, 24) == packet.longitude_cordic() >> 8);
+    CHECK(signed_field(payload, 16, 24) == packet.latitude_steps());
+    CHECK(signed_field(payload, 40, 24) == packet.longitude_steps());
     CHECK(field(payload, 64, 8) == 0xC4u);
     CHECK(field(payload, 72, 14) == 0x0528u);
     CHECK(field(payload, 86, 9) == 0x048u);
@@ -280,29 +280,32 @@ TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an air
 
 // The clause's own algorithm, against the codec the three variable-range fields share.
 TEST_CASE("ADS-L.4.SRD860.G.1.6: the exponential encoding is the clause's, over its whole range") {
+    const Exponential six{6, 2, false};
+    const Exponential twelve{12, 2, false};
+    const Exponential signed_six{6, 2, true};
     for (uint32_t value = 0; value < 960; value++) {
-        const uint32_t code = encode_unsigned_variable_range<uint32_t, 6>(value);
+        const uint32_t code = six.encode(static_cast<int32_t>(value));
         CHECK(code == spec_exponential(value, 6));
     }
     for (uint32_t value = 0; value < 61440; value += 7) {
-        const uint32_t code = encode_unsigned_variable_range<uint32_t, 12>(value);
+        const uint32_t code = twelve.encode(static_cast<int32_t>(value));
         CHECK(code == spec_exponential(value, 12));
     }
     // A decoded value names a bucket 2^exponent wide, and this decoder answers from inside it.
     for (uint32_t code = 0; code < 256; code++) {
         const uint32_t floor_value = spec_exponential_decode(code, 6);
         const uint32_t width = 1u << (code >> 6);
-        const uint32_t decoded = decode_unsigned_variable_range<uint32_t, 6>(code);
+        const uint32_t decoded = static_cast<uint32_t>(six.decode_middle(code));
         CHECK(decoded >= floor_value);
         CHECK(decoded < floor_value + width);
-        CHECK(encode_unsigned_variable_range<uint32_t, 6>(decoded) == code);
+        CHECK(six.encode(static_cast<int32_t>(decoded)) == code);
+        CHECK(static_cast<uint32_t>(six.decode(code)) == floor_value);
     }
     // A signed field spends the freed leading bit on the sign, and a zero value is positive.
-    CHECK((encode_signed_variable_range<int16_t, 6>(-80) & 0x100) == 0x100);
-    CHECK((encode_signed_variable_range<int16_t, 6>(80) & 0x100) == 0);
-    CHECK(encode_signed_variable_range<int16_t, 6>(0) == 0);
-    const int16_t back =
-        decode_signed_variable_range<int16_t, 6>(encode_signed_variable_range<int16_t, 6>(-80));
+    CHECK((signed_six.encode(-80) & 0x100) == 0x100);
+    CHECK((signed_six.encode(80) & 0x100) == 0);
+    CHECK(signed_six.encode(0) == 0);
+    const int32_t back = signed_six.decode_middle(signed_six.encode(-80));
     CHECK(back <= -80);
     CHECK(back >= -81);
 }

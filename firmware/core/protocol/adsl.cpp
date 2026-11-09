@@ -3,105 +3,92 @@
 #include <algorithm>
 
 #include "core/fec/crc.h"
-#include "core/fec/scramble.h"
+#include "core/fec/repair.h"
+#include "core/fec/xxtea.h"
 #include "core/flight/extrapolate.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
 #include "core/units/units.h"
-#include "core/util/bitcount.h"
 #include "core/util/intmath.h"
-#include "core/util/variable_range.h"
 
 namespace skyblip::protocol {
 
-uint16_t AdslPacket::speed_q() const {
-    return decode_unsigned_variable_range<uint16_t, 6>(position_bytes[6]);
+namespace {
+
+constexpr uint16_t kFrameBits = AdslPacket::kDataBytes * 8;
+constexpr int kMostErasures = 16;
+constexpr int64_t kE7PerDegree = 10000000;
+
+constexpr auto kCrcSyndromes = fec::syndromes<kFrameBits>([](uint16_t bit) {
+    uint8_t frame[AdslPacket::kDataBytes] = {};
+    frame[bit >> 3] = static_cast<uint8_t>(0x80u >> (bit & 7));
+    return fec::adsl_crc_check(frame, AdslPacket::kDataBytes);
+});
+
+uint32_t steps_of(int32_t degrees_1e7, int64_t steps_per_degree) {
+    const int64_t steps = divide_rounded<int64_t>(degrees_1e7 * steps_per_degree, kE7PerDegree);
+    return static_cast<uint32_t>(steps) & 0xFFFFFFu;
 }
+
+int32_t degrees_1e7_of(int32_t steps, int64_t steps_per_degree) {
+    return static_cast<int32_t>(divide_rounded<int64_t>(steps * kE7PerDegree, steps_per_degree));
+}
+
+uint32_t short_of(uint32_t code, uint32_t invalid_code) {
+    return code >= invalid_code ? invalid_code - 1 : code;
+}
+
+}
+
+int32_t AdslPacket::latitude_1e7() const {
+    return degrees_1e7_of(latitude_steps(), kLatitudeStepsPerDegree);
+}
+int32_t AdslPacket::longitude_1e7() const {
+    return degrees_1e7_of(longitude_steps(), kLongitudeStepsPerDegree);
+}
+void AdslPacket::set_latitude_1e7(int32_t latitude) {
+    set_field(kLatitudeField, steps_of(latitude, kLatitudeStepsPerDegree));
+}
+void AdslPacket::set_longitude_1e7(int32_t longitude) {
+    set_field(kLongitudeField, steps_of(longitude, kLongitudeStepsPerDegree));
+}
+
+uint16_t AdslPacket::speed_q() const {
+    return static_cast<uint16_t>(kSpeedCode.decode_middle(field(kSpeedField)));
+}
+// INFO: fc 09nov26 G.1.7 to G.1.9: a value past the limit reads the limit, never invalid
 void AdslPacket::set_speed_q(uint16_t speed) {
-    uint16_t code = encode_unsigned_variable_range<uint16_t, 6>(speed);
-    // encode_unsigned_variable_range saturates at 4*threshold-1, which for this field IS the
-    // invalid code. G.1.8: over-range "shall be encoded" as the maximum (236 m/s = 0xFE), so
-    // saturation must stop one short of "unavailable".
-    if (code >= kSpeedInvalidCode) code = kSpeedInvalidCode - 1;
-    position_bytes[6] = static_cast<uint8_t>(code);
+    set_field(kSpeedField, short_of(kSpeedCode.encode(speed), kSpeedInvalidCode));
 }
 
 int32_t AdslPacket::altitude_m() const {
-    int32_t code = position_bytes[8] & 0x3F;
-    code <<= 8;
-    code |= position_bytes[7];
-    return decode_unsigned_variable_range<int32_t, 12>(code) - kAltitudeOffsetM;
+    return kAltitudeCode.decode_middle(field(kAltitudeField)) - kAltitudeOffsetM;
 }
 void AdslPacket::set_altitude_m(int32_t altitude) {
-    altitude += kAltitudeOffsetM;
-    altitude = std::max(altitude, 0);  // G.1.7: below -320 m encodes the limit, 0x0000
-    uint32_t code = encode_unsigned_variable_range<uint32_t, 12>(static_cast<uint32_t>(altitude));
-    // Same collision as ground speed: saturation lands on 0x3FFF, the code for
-    // "no 3D fix". G.1.7 wants the limit (0x3FFE, 61104 m) instead - the
-    // difference between "very high" and "no idea".
-    if (code >= kAltitudeInvalidCode) code = kAltitudeInvalidCode - 1;
-    position_bytes[7] = static_cast<uint8_t>(code);
-    position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0xC0) | ((code >> 8) & 0x3F));
+    const int32_t above_floor = std::max(altitude + kAltitudeOffsetM, 0);
+    set_field(kAltitudeField, short_of(kAltitudeCode.encode(above_floor), kAltitudeInvalidCode));
 }
 
 int16_t AdslPacket::climb_e8() const {
-    int16_t code = static_cast<int16_t>(position_bytes[9] & 0x7F);
-    code = static_cast<int16_t>(code << 2);
-    code = static_cast<int16_t>(code | (position_bytes[8] >> 6));
-    return decode_signed_variable_range<int16_t, 6>(code);
+    return static_cast<int16_t>(kClimbCode.decode_middle(field(kClimbField)));
 }
 void AdslPacket::set_climb_e8(int16_t climb) {
-    uint16_t code = static_cast<uint16_t>(encode_signed_variable_range<int16_t, 6>(climb)) & 0x1FF;
-    // A sink rate at or beyond the limit encodes sign|0xFF == 0x1FF, the code for
-    // "no vertical rate". G.1.9 wants the limit (-118 m/s), so clamp the
-    // magnitude one short. Positive 0x0FF is a legal +119 m/s and stays.
-    if (code == kClimbInvalidCode) code = kClimbInvalidCode - 1;
-    write_climb_code(code);
+    set_field(kClimbField, short_of(kClimbCode.encode(climb), kClimbInvalidCode));
 }
 
-void AdslPacket::write_climb_code(uint16_t code) {
-    position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0x3F) | ((code & 0x03) << 6));
-    position_bytes[9] = static_cast<uint8_t>((position_bytes[9] & 0x80) | ((code >> 2) & 0x7F));
-}
-bool AdslPacket::has_climb() const {
-    uint16_t code = static_cast<uint16_t>(position_bytes[9] & 0x7F);
-    code <<= 2;
-    code |= static_cast<uint16_t>(position_bytes[8] >> 6);
-    return code != kClimbInvalidCode;
-}
-
-uint16_t AdslPacket::track_c9() const {
-    int16_t track = position_bytes[10];
-    track = static_cast<int16_t>(track << 1);
-    track = static_cast<int16_t>(track | (position_bytes[9] >> 7));
-    return static_cast<uint16_t>(track & 0x1FF);
-}
-void AdslPacket::set_track_c9(uint16_t track) {
-    position_bytes[9] = (position_bytes[9] & 0x7F) | ((track & 0x01) << 7);
-    position_bytes[10] = static_cast<uint8_t>(track >> 1);
-}
-
-// XXTEA works on 32-bit words, but this struct is packed, so it has an alignment
-// requirement of 1 and an instance can legally sit at an odd address. Handing
-// &Word[0] to the scrambler would then be a misaligned uint32_t* - undefined
-// behaviour, and on Cortex-M a real fault the moment the optimiser reaches for
-// LDM/STM, which require word alignment. It would fault in the RX path, in the
-// air, depending on where the packet happened to land on the stack. So copy
-// through an aligned local instead: 40 bytes of stack and two 20-byte copies per
-// packet, against a few frames per second. GCC catches this as
-// -Waddress-of-packed-member. Clang does not, so do not rely on the compiler.
+// INFO: fc 09nov26 a packed struct can sit at an odd address, so XXTEA works on an aligned copy
 void AdslPacket::scramble() {
-    uint32_t words[5];
+    uint32_t words[kPayloadBytes / 4];
     __builtin_memcpy(words, payload, sizeof(words));
-    fec::xxtea_scramble_key0(words, 5, 6);
+    fec::xxtea_encrypt(words, kPayloadBytes / 4, fec::kXxteaZeroKey, 6);
     __builtin_memcpy(payload, words, sizeof(words));
 }
 void AdslPacket::descramble() {
-    uint32_t words[5];
+    uint32_t words[kPayloadBytes / 4];
     __builtin_memcpy(words, payload, sizeof(words));
-    fec::xxtea_descramble_key0(words, 5, 6);
+    fec::xxtea_decrypt(words, kPayloadBytes / 4, fec::kXxteaZeroKey, 6);
     __builtin_memcpy(payload, words, sizeof(words));
 }
 
@@ -113,140 +100,9 @@ void AdslPacket::set_crc() {
 }
 uint32_t AdslPacket::check_crc() const { return fec::adsl_crc_check(data, kDataBytes); }
 
-namespace {
-constexpr uint16_t kBits = AdslPacket::kDataBytes * 8;
-
-void flip_bit(uint8_t* bytes, int bit_index) {
-    int byte_index = bit_index >> 3;
-    bit_index &= 7;
-    bit_index = 7 - bit_index;
-    bytes[byte_index] ^= static_cast<uint8_t>(1 << bit_index);
-}
-
-uint32_t crc_syndrome(uint8_t bit) {
-    static const uint32_t kSyndrome[kBits] = {
-        0x7ABEE1, 0xC2A574, 0x6152BA, 0x30A95D, 0xE7AEAA, 0x73D755, 0xC611AE, 0x6308D7, 0xCE7E6F,
-        0x98C533, 0xB3989D, 0xA6364A, 0x531B25, 0xD67796, 0x6B3BCB, 0xCA67E1, 0x9AC9F4, 0x4D64FA,
-        0x26B27D, 0xECA33A, 0x76519D, 0xC4D2CA, 0x626965, 0xCECEB6, 0x67675B, 0xCC49A9, 0x99DED0,
-        0x4CEF68, 0x2677B4, 0x133BDA, 0x099DED, 0xFB34F2, 0x7D9A79, 0xC13738, 0x609B9C, 0x304DCE,
-        0x1826E7, 0xF3E977, 0x860EBF, 0xBCFD5B, 0xA184A9, 0xAF3850, 0x579C28, 0x2BCE14, 0x15E70A,
-        0x0AF385, 0xFA83C6, 0x7D41E3, 0xC15AF5, 0x9F577E, 0x4FABBF, 0xD82FDB, 0x93EDE9, 0xB60CF0,
-        0x5B0678, 0x2D833C, 0x16C19E, 0x0B60CF, 0xFA4A63, 0x82DF35, 0xBE959E, 0x5F4ACF, 0xD05F63,
-        0x97D5B5, 0xB410DE, 0x5A086F, 0xD2FE33, 0x96851D, 0xB4B88A, 0x5A5C45, 0xD2D426, 0x696A13,
-        0xCB4F0D, 0x9A5D82, 0x4D2EC1, 0xD96D64, 0x6CB6B2, 0x365B59, 0xE4D7A8, 0x726BD4, 0x3935EA,
-        0x1C9AF5, 0xF1B77E, 0x78DBBF, 0xC397DB, 0x9E31E9, 0xB0E2F0, 0x587178, 0x2C38BC, 0x161C5E,
-        0x0B0E2F, 0xFA7D13, 0x82C48D, 0xBE9842, 0x5F4C21, 0xD05C14, 0x682E0A, 0x341705, 0xE5F186,
-        0x72F8C3, 0xC68665, 0x9CB936, 0x4E5C9B, 0xD8D449, 0x939020, 0x49C810, 0x24E408, 0x127204,
-        0x093902, 0x049C81, 0xFDB444, 0x7EDA22, 0x3F6D11, 0xE04C8C, 0x702646, 0x381323, 0xE3F395,
-        0x8E03CE, 0x4701E7, 0xDC7AF7, 0x91C77F, 0xB719BB, 0xA476D9, 0xADC168, 0x56E0B4, 0x2B705A,
-        0x15B82D, 0xF52612, 0x7A9309, 0xC2B380, 0x6159C0, 0x30ACE0, 0x185670, 0x0C2B38, 0x06159C,
-        0x030ACE, 0x018567, 0xFF38B7, 0x80665F, 0xBFC92B, 0xA01E91, 0xAFF54C, 0x57FAA6, 0x2BFD53,
-        0xEA04AD, 0x8AF852, 0x457C29, 0xDD4410, 0x6EA208, 0x375104, 0x1BA882, 0x0DD441, 0xF91024,
-        0x7C8812, 0x3E4409, 0xE0D800, 0x706C00, 0x383600, 0x1C1B00, 0x0E0D80, 0x0706C0, 0x038360,
-        0x01C1B0, 0x00E0D8, 0x00706C, 0x003836, 0x001C1B, 0xFFF409, 0x800000, 0x400000, 0x200000,
-        0x100000, 0x080000, 0x040000, 0x020000, 0x010000, 0x008000, 0x004000, 0x002000, 0x001000,
-        0x000800, 0x000400, 0x000200, 0x000100, 0x000080, 0x000040, 0x000020, 0x000010, 0x000008,
-        0x000004, 0x000002, 0x000001};
-    return kSyndrome[bit];
-}
-
-uint8_t find_crc_syndrome(uint32_t syndrome) {
-    static const uint32_t kSorted[kBits] = {
-        0x000001BF, 0x000002BE, 0x000004BD, 0x000008BC, 0x000010BB, 0x000020BA, 0x000040B9,
-        0x000080B8, 0x000100B7, 0x000200B6, 0x000400B5, 0x000800B4, 0x001000B3, 0x001C1BA6,
-        0x002000B2, 0x003836A5, 0x004000B1, 0x00706CA4, 0x008000B0, 0x00E0D8A3, 0x010000AF,
-        0x01856788, 0x01C1B0A2, 0x020000AE, 0x030ACE87, 0x038360A1, 0x040000AD, 0x049C816D,
-        0x06159C86, 0x0706C0A0, 0x080000AC, 0x0939026C, 0x099DED1E, 0x0AF3852D, 0x0B0E2F5A,
-        0x0B60CF39, 0x0C2B3885, 0x0DD44197, 0x0E0D809F, 0x100000AB, 0x1272046B, 0x133BDA1D,
-        0x15B82D7E, 0x15E70A2C, 0x161C5E59, 0x16C19E38, 0x1826E724, 0x18567084, 0x1BA88296,
-        0x1C1B009E, 0x1C9AF551, 0x200000AA, 0x24E4086A, 0x2677B41C, 0x26B27D12, 0x2B705A7D,
-        0x2BCE142B, 0x2BFD538F, 0x2C38BC58, 0x2D833C37, 0x304DCE23, 0x30A95D03, 0x30ACE083,
-        0x34170561, 0x365B594D, 0x37510495, 0x38132373, 0x3836009D, 0x3935EA50, 0x3E44099A,
-        0x3F6D1170, 0x400000A9, 0x457C2992, 0x4701E776, 0x49C81069, 0x4CEF681B, 0x4D2EC14A,
-        0x4D64FA11, 0x4E5C9B66, 0x4FABBF32, 0x531B250C, 0x56E0B47C, 0x579C282A, 0x57FAA68E,
-        0x58717857, 0x5A086F41, 0x5A5C4545, 0x5B067836, 0x5F4ACF3D, 0x5F4C215E, 0x609B9C22,
-        0x6152BA02, 0x6159C082, 0x62696516, 0x6308D707, 0x67675B18, 0x682E0A60, 0x696A1347,
-        0x6B3BCB0E, 0x6CB6B24C, 0x6EA20894, 0x70264672, 0x706C009C, 0x726BD44F, 0x72F8C363,
-        0x73D75505, 0x76519D14, 0x78DBBF53, 0x7A930980, 0x7ABEE100, 0x7C881299, 0x7D41E32F,
-        0x7D9A7920, 0x7EDA226F, 0x800000A8, 0x80665F8A, 0x82C48D5C, 0x82DF353B, 0x860EBF26,
-        0x8AF85291, 0x8E03CE75, 0x91C77F78, 0x93902068, 0x93EDE934, 0x96851D43, 0x97D5B53F,
-        0x98C53309, 0x99DED01A, 0x9A5D8249, 0x9AC9F410, 0x9CB93665, 0x9E31E955, 0x9F577E31,
-        0xA01E918C, 0xA184A928, 0xA476D97A, 0xA6364A0B, 0xADC1687B, 0xAF385029, 0xAFF54C8D,
-        0xB0E2F056, 0xB3989D0A, 0xB410DE40, 0xB4B88A44, 0xB60CF035, 0xB719BB79, 0xBCFD5B27,
-        0xBE959E3C, 0xBE98425D, 0xBFC92B8B, 0xC1373821, 0xC15AF530, 0xC2A57401, 0xC2B38081,
-        0xC397DB54, 0xC4D2CA15, 0xC611AE06, 0xC6866564, 0xCA67E10F, 0xCB4F0D48, 0xCC49A919,
-        0xCE7E6F08, 0xCECEB617, 0xD05C145F, 0xD05F633E, 0xD2D42646, 0xD2FE3342, 0xD677960D,
-        0xD82FDB33, 0xD8D44967, 0xD96D644B, 0xDC7AF777, 0xDD441093, 0xE04C8C71, 0xE0D8009B,
-        0xE3F39574, 0xE4D7A84E, 0xE5F18662, 0xE7AEAA04, 0xEA04AD90, 0xECA33A13, 0xF1B77E52,
-        0xF3E97725, 0xF526127F, 0xF9102498, 0xFA4A633A, 0xFA7D135B, 0xFA83C62E, 0xFB34F21F,
-        0xFDB4446E, 0xFF38B789, 0xFFF409A7};
-    uint16_t low = 0, high = kBits;
-    for (;;) {
-        uint16_t middle = (low + high) >> 1;
-        uint32_t middle_syndrome = kSorted[middle] >> 8;
-        if (syndrome == middle_syndrome) return static_cast<uint8_t>(kSorted[middle]);
-        if (middle == low) break;
-        if (syndrome < middle_syndrome)
-            high = middle;
-        else
-            low = middle;
-    }
-    return 0xFF;
-}
-}
-
 int AdslPacket::correct(const uint8_t* erasures, int max_erasures) {
-    uint32_t crc = fec::adsl_crc_check(data, kDataBytes);
-    if (crc == 0) return 0;
-    uint8_t single = find_crc_syndrome(crc);
-    if (single != 0xFF) {
-        flip_bit(data, single);
-        return 1;
-    }
-
-    static constexpr int kMaxErasures = 16;
-    max_erasures = std::min(max_erasures, kMaxErasures);
-    uint8_t index[kMaxErasures];
-    uint8_t mask[kMaxErasures];
-    uint32_t syndromes[kMaxErasures];
-    int marked = 0;
-    for (int byte_index = 0; byte_index < kDataBytes; byte_index++) {
-        uint8_t byte = erasures[byte_index];
-        uint8_t bit_mask = 0x80;
-        for (int bit_index = 0; bit_index < 8; bit_index++) {
-            if (byte & bit_mask) {
-                if (marked < max_erasures) {
-                    index[marked] = static_cast<uint8_t>(byte_index);
-                    mask[marked] = bit_mask;
-                    syndromes[marked] =
-                        crc_syndrome(static_cast<uint8_t>(byte_index * 8 + bit_index));
-                }
-                marked++;
-            }
-            bit_mask >>= 1;
-        }
-        if (marked > max_erasures) break;
-    }
-    if (marked > max_erasures) return -1;
-
-    int loops = 1 << marked;
-    uint16_t previous_gray = 0;
-    for (int i = 1; i < loops; i++) {
-        uint16_t gray = static_cast<uint16_t>(i ^ (i >> 1));
-        uint16_t changed = gray ^ previous_gray;
-        int bit = 0;
-        while (changed >>= 1) bit++;
-        data[index[bit]] ^= mask[bit];
-        crc ^= syndromes[bit];
-        if (crc == 0) return count_ones(gray);
-        uint8_t remaining = find_crc_syndrome(crc);
-        if (remaining != 0xFF) {
-            flip_bit(data, remaining);
-            return count_ones(gray) + 1;
-        }
-        previous_gray = gray;
-    }
-    return -1;
+    return fec::repair(data, erasures, check_crc(), kCrcSyndromes.check(),
+                       std::min(max_erasures, kMostErasures), true);
 }
 
 bool to_observation(const AdslPacket& packet, const events::Stamp& received, int8_t rssi_dbm,

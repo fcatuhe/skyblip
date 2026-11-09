@@ -3,7 +3,7 @@
 #include <cstring>
 
 #include "core/fec/reed_solomon.h"
-#include "core/fec/scramble.h"
+#include "core/fec/xxtea.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
@@ -118,7 +118,7 @@ TEST_CASE("ADS-L.4.SRD860.E.1.3: key 0 is the scrambling key, and it is the key 
     uint32_t mirror[5];
     std::memcpy(mirror, words, sizeof(words));
     const uint32_t zero_key[4] = {0, 0, 0, 0};
-    fec::xxtea_scramble_key0(words, 5, 6);
+    fec::xxtea_encrypt(words, 5, fec::kXxteaZeroKey, 6);
     spec_xxtea(mirror, 5, zero_key, 6);
     for (int i = 0; i < 5; i++) CHECK(words[i] == mirror[i]);
 }

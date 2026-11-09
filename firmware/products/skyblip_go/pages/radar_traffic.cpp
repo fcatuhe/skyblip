@@ -1,5 +1,7 @@
 #include "products/skyblip_go/pages/radar_traffic.h"
 
+#include <algorithm>
+
 #include "core/flight/arc.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "ui/widgets/blip.h"
@@ -76,7 +78,8 @@ bool pixel_within(int x, int y, int radius) {
 
 HeadingUp on_the_rim(int32_t right, int32_t ahead) {
     const int64_t wide_right = right, wide_ahead = ahead;
-    const int64_t apart = square_root<int64_t>(wide_right * wide_right + wide_ahead * wide_ahead);
+    const int64_t apart = std::max<int64_t>(
+        1, square_root<int64_t>(wide_right * wide_right + wide_ahead * wide_ahead));
     return {static_cast<int32_t>(wide_ahead * kRimRadius / apart),
             static_cast<int32_t>(wide_right * kRimRadius / apart)};
 }

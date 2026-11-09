@@ -38,3 +38,7 @@ python3 scripts/spec_to_md.py /tmp/spec.txt docs/reference/ads-l_4_srd860_issue_
 `scripts/spec_to_md.py` drops page furniture and the table of contents, promotes `SUBPART` and `ADS-L.4.SRD860.x.y` lines to headings, joins wrapped paragraphs, and fences every column-aligned block verbatim. Tables keep the PDF's spacing inside those fences rather than becoming markdown tables: the field-offset tables lose their alignment otherwise. Figures and block diagrams are not carried over.
 
 The PDF is the normative text. Where the two disagree, the PDF wins.
+
+## Copyright
+
+Both issues and their conversions are copyright of the European Union Aviation Safety Agency, not skyBlip's, and the repository's MIT license does not cover them. They are reproduced under EASA's general permission: "Reproduction is authorised, provided the source is acknowledged, save where otherwise stated" ([easa.europa.eu/en/copyright-disclaimer](https://www.easa.europa.eu/en/copyright-disclaimer)). The source is ED Decision 2022/024/R, linked above.

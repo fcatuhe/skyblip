@@ -78,11 +78,9 @@ skyBlip stands on a decade of open work by the free-flight community. Thanks to 
 
 ## License
 
-The repository is **MIT**: see [`LICENSE`](LICENSE). The one exception is [`firmware/`](firmware), which is **GPL-3.0-only** under [`firmware/LICENSE`](firmware/LICENSE), and that license reaches everything below it: `core/`, `ui/`, `ports/`, `hardware/`, `runtime/`, `products/`, `boards/`, `test/` and the simulated world in `firmware/simulator/`.
+The repository is **MIT**: see [`LICENSE`](LICENSE). That covers the firmware, the server, the schemas and the build and release tooling. Any of it may go into another product, open or closed.
 
-So the schemas, the build and release scripts and the server, simulator pages included, may be copied into a closed product; a tracker built from this firmware owes its sources.
-
-The simulator pages are MIT, but the WASM they run is not: `make -C firmware browser` builds it from the firmware, releases publish it, and it stays GPL-3.0-only wherever it is served.
+A few files in the tree are other people's work under their own terms: Bosch Sensortec's image for the inertial unit, the web fonts and EASA's ADS-L specification. A firmware image is also built from Zephyr, its modules and the toolchain's libraries, and the simulator's WASM from Emscripten's runtime. [`NOTICE.md`](NOTICE.md) lists each one with its license, and every release ships it beside the image.
 
 ## Trademark
 

@@ -127,4 +127,4 @@ Deployments use `.github/workflows/server.yml` and Kamal on the existing Debian 
 
 ## License
 
-MIT, see [`LICENSE`](LICENSE), the same license as the repository root. Only `firmware/` is GPL-3.0-only.
+MIT, see [`LICENSE`](LICENSE), the same license as the repository root. The web fonts in `app/assets/fonts/` are under the SIL Open Font License, each with its text beside it ([`NOTICE.md`](../NOTICE.md)).

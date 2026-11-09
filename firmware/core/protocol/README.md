@@ -2,6 +2,8 @@
 
 The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link.
 
+Both air frames are read and written field by field. A field is a `BitField`: an offset and a width counted from bit 0 of the first byte. ADS-L B.3 numbers bits in that order, and the ALP-TAS frame shares it. So `adsl.h` and `alptas.cpp` hold tables of offsets rather than shift sequences, and the ADS-L offsets are the ones G.1 prints. The variable-resolution fields are an `Exponential`: the encoding of ADS-L G.1.6, which the ALP-TAS frame also uses with other widths. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it.
+
 `from_own` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`).
 
 ## The name ADS-L has no field for
@@ -13,6 +15,10 @@ An iConspicuity payload carries no callsign, so a target on the glass is six hex
 `callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_character` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObservation` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
 
 An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pulls `getInfo(Call, 5)` out of it and hangs the name on the target of that address (`oss/nrf52-ogn-tracker/src/proc.cpp:715-733`), with no opinion about our AMT 58. It transmits the same record itself every 40 to 60 seconds, hopping between four channels, so we hear one of theirs perhaps once in four.
+
+## Where the ALP-TAS frame comes from
+
+ALP-TAS has no published specification. Its field layout, the two cipher stages, their keys and the longitude step table follow the community's description of the 2024 protocol, [pastebin.com/YB1ppAbt](https://pastebin.com/raw/YB1ppAbt). The frames `test/core/test_alptas.cpp` pins guard the encoder against regressions.
 
 ## What ALP-TAS costs us
 
@@ -30,37 +36,10 @@ ALP-TAS carries a two-bit state of its own, with no public specification and one
 
 ## Two things an ALP-TAS frame is given before it is refused
 
-`alptas_correct` runs the erasure correction the ADS-L path has always had. §C.2.1 is Manchester, so a chip pair that decoded to neither symbol is an error whose position the receiver already knows: `fec::manchester_decode` marks it, `protocol::Frame` carries the map, and the frame CRC says which combination of those flips was transmitted. The search is a Gray-code walk over the marked bits with the CRC syndrome of each one precomputed, so a combination costs one XOR rather than a pass over the frame, and a frame no combination repairs is restored to exactly the bytes that arrived. Up to six marked bits, which is 63 combinations; beyond that the burst is refused as damaged. The syndromes are computed rather than tabled, out of the CRC's own linearity: flipping a data bit moves the check by `crc16_ccitt(that bit alone, init 0)`, and flipping a carried CRC bit moves it by the bit itself.
+`alptas_correct` runs the erasure correction the ADS-L path has always had. §C.2.1 is Manchester, so a chip pair that decoded to neither symbol is an error whose position the receiver already knows: `fec::manchester_decode` marks it, `protocol::Frame` carries the map, and the frame CRC says which combination of those flips was transmitted. Both frames hand that search to `fec::repair` (`core/fec/README.md`), which leaves a frame no combination repairs exactly as it arrived. Up to six marked bits, which is 64 combinations. Beyond that the burst is refused as damaged. The syndromes come out of the CRC's own linearity: flipping a data bit moves the check by `crc16_ccitt(that bit alone, init 0)`, and flipping a carried CRC bit moves it by the bit itself.
 
 Until 2026-09-19 the ALP-TAS path checked the CRC and threw the frame away, so every burst with one dead chip pair was a `CRC` row while the same damage on an ADS-L frame was corrected and drawn. On a bench that difference is invisible, because nothing at -15 dBm has dead chips. At range it is receptions.
 
-`alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc_s >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two structural fields the protocol offers (`LastByte == 0`, `Needs3 == 3`), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
+`alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc_s >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two fields every frame carries as constants (the trailing byte is 0, the low nibble of the pattern at bit 56 is 3), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
 
 The frame is refused either way. What the search buys is the tape saying `KEY+18` instead of `DEC`, which is the difference between a support case about a radio and one about a receiver's time.
-
-## Our names for upstream fields
-
-The packet layout follows OGN's `adsl.h` and the ALP-TAS frame follows SoftRF's `Legacy.cpp`, but the names are ours, spelled in full. The right column is the name this tree carried before, shaped after the reference source, so a reader holding that source finds each field here.
-
-| Ours | Before, after the reference |
-|---|---|
-| `AdslPacket::sync`, `data_bytes`, `data`, `version` | `SYNC`, `Length`, `Data`, `Version` |
-| `payload`, `payload_words`, `payload_type`, `address_bytes` | `Byte`, `Word`, `Type`, `Address` |
-| `timestamp`, `flight_state`, `aircraft_category`, `emergency`, `position_bytes` | `TimeStamp`, `FlightState`, `AcftCat`, `Emergency`, `Position` |
-| `source_integrity`, `design_assurance`, `navigation_integrity` | `SourceIntegrity`, `DesignAssurance`, `NavigIntegrity` |
-| `horizontal_accuracy`, `vertical_accuracy`, `velocity_accuracy`, `reserved` | `HorizAccuracy`, `VertAccuracy`, `VelAccuracy`, `Reserved` |
-| `crc_bytes`, `spare`, `reset()` | `CRC`, `SpareByte`, `init()` |
-| `kPayloadTypePosition`, `kPayloadTypeOgnDiagnostics` | `kTypePosition`, `kTypeOgnDiagnostics` |
-| `telemetry_type()`, `information_type()`, `set_information_header()`, `information_text()` | `telem_type()`, `info_type()`, `set_info_header()`, `info_msg()` |
-| `kTelemetryTypeInformation`, `kInformationTypeRegistration` | `kTelemTypeInfo`, `kInfoTypeRegistration` |
-| `kInformationHeaderOffset`, `kInformationTextOffset`, `kInformationTextBytes` | `kInfoHeaderByte`, `kInfoMsgByte`, `kInfoMsgBytes` |
-| `get_uint24`/`put_uint24`, `get_uint32`/`put_uint32` (`core/util/little_endian.h`) | `AdslPacket::get3`/`set3`, `get4`/`set4` |
-| `encode_unsigned_variable_range`, `decode_unsigned_variable_range`, `encode_signed_variable_range`, `decode_signed_variable_range` (`core/util/variable_range.h`) | `uns_vr_encode`, `uns_vr_decode`, `sign_vr_encode`, `sign_vr_decode` (`core/util/varint.h`) |
-| ALP-TAS `kMessageTypeField`, `kNeedsThreeField`, `kHasThreeField`, `kClimbField` | `kFMsgType`, `kFNeeds3`, `kFHas3`, `kFVs` |
-| ALP-TAS `kAltitudeField`, `kLatitudeField`, `kLongitudeField` | `kFAlt`, `kFLat`, `kFLon` |
-| ALP-TAS `kGnssAccuracyFirstField`, `kGnssAccuracySecondField`, `kUnknownField` | `kFGpsA`, `kFGpsB`, `kFUnk8` |
-| ALP-TAS every other `k<Name>Field`, such as `kAddressField` | `kF<Name>`, such as `kFAddress` |
-| ALP-TAS `block_tea`, `block_tea_mix`, `kBlockTeaRounds`, `kBlockTeaKey` | `btea4`, `btea_mix`, `kBteaRounds`, `kBteaKey` |
-| ALP-TAS `encode_scaled`, `decode_scaled`, `longitude_divisor` | `enscale`, `descale`, `londiv` |
-| `block_tea` and `scramble` locals `next`, `previous`, `index`, `key_index`, `round`, `mixed`, `count` | XXTEA's `y`, `z`, `p`, `e`, `r` and `q`, `x`, `n` |
-| `civil_from_epoch` locals `days_since_march_epoch`, `day_of_era`, `year_of_era`, `march_year`, `day_of_year`, `march_month` | Hinnant's `z`, `doe`, `yoe`, `y`, `doy`, `mp` |

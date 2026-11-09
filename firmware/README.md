@@ -74,4 +74,4 @@ Out of scope, deliberately: `hardware/`, `boards/` and `ports/`. A datasheet's 2
 
 ## License
 
-GPL-3.0-only, see [`LICENSE`](LICENSE). This directory is the copyleft one: the rest of the repository is MIT, and code cannot travel from here to there. The WASM the simulator page loads is built from these sources and carries this license with it.
+MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). [`NOTICE.md`](../NOTICE.md) lists what an image is built from that is not ours, each with its license: Zephyr and its modules, the toolchain's libraries, Monocypher and the Bosch hub image.

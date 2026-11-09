@@ -3,6 +3,7 @@
 #define SKYBLIP_CORE_UTIL_INTMATH_H
 
 #include <cstdint>
+#include <type_traits>
 
 namespace skyblip {
 
@@ -27,21 +28,25 @@ inline int16_t cosine(int16_t angle) { return sine(static_cast<int16_t>(angle + 
 
 int16_t arctangent(int32_t y, int32_t x);
 
+// INFO: fc 09nov26 rounds to the nearest root, and a negative square, which has none, gives 0
 template <class T>
 T square_root(T square) {
-    T root = 0;
-    T mask = static_cast<T>(1) << (sizeof(T) * 8 - 2);
-    while (mask > square) mask >>= 2;
-    while (mask) {
-        if (square >= (root + mask)) {
-            square -= root + mask;
-            root += mask << 1;
+    if (square <= 0) return 0;
+    using Unsigned = std::make_unsigned_t<T>;
+    Unsigned remainder = static_cast<Unsigned>(square);
+    Unsigned root = 0;
+    Unsigned place = Unsigned{1} << (sizeof(T) * 8 - 2);
+    while (place > remainder) place >>= 2;
+    for (; place != 0; place >>= 2) {
+        if (remainder >= root + place) {
+            remainder -= root + place;
+            root = (root >> 1) + place;
+        } else {
+            root >>= 1;
         }
-        root >>= 1;
-        mask >>= 2;
     }
-    if (square > root) root++;
-    return root;
+    if (remainder > root) root++;
+    return static_cast<T>(root);
 }
 
 inline uint32_t hypotenuse(int32_t delta_x, int32_t delta_y) {

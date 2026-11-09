@@ -43,13 +43,12 @@ TEST_CASE("ADS-L.4.SRD860.D.1: the data link mediates the channel, adds parity, 
 // The length byte rides in the sync word, which is why a burst of any other length never frames.
 TEST_CASE(
     "ADS-L.4.SRD860.D.1.1: the Packet Length field counts the message behind it, not itself") {
-    protocol::AdslPacket packet = traffic_packet();
     const int network_header = 1;
     const int adsl_data = 20;
     const int parity = 3;
-    CHECK(int(packet.data_bytes) == network_header + adsl_data + parity);
-    CHECK(int(packet.data_bytes) == protocol::AdslPacket::kDataBytes);
-    CHECK(int(packet.data_bytes) == int(protocol::kAdslSyncWord & 0xFFu));
+    CHECK(int(protocol::AdslPacket::kDataBytes) == network_header + adsl_data + parity);
+    CHECK(sizeof(protocol::AdslPacket) == protocol::AdslPacket::kDataBytes);
+    CHECK(int(protocol::kAdslSyncWord & 0xFFu) == protocol::AdslPacket::kDataBytes);
     CHECK(protocol::kUplinkSync[2] == protocol::kUplinkFrameBytes);
 }
 

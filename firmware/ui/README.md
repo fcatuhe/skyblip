@@ -2,6 +2,8 @@
 
 The drawing kit: a 1-bit canvas, the 5x7 font inside it, and the marks that are the same on any glass. No page lives here and no panel size is written here.
 
+The 5x7 font is the character set of Hitachi's HD44780U, ROM code A00, the controller behind most character LCD modules. Each glyph is copied from Table 4 of its datasheet, seven rows of five dots, and `NOTICE.md` credits it.
+
 `Canvas` carries its own width and height and draws on bytes it does not own. `Panel<W,H>` is the storage, and it is declared where the size is known: `boards/<board>/glass.h` states what is soldered on, a product names it (`products/skyblip_go/glass.h` is `ui::Panel<200,200>`), and the driver that drives it says what it can drive (`parts::Ssd1681::kGlassWidth`). The board is where those two are asserted equal.
 
 The size is not a constant in this directory because a canvas that knew it would fix one panel for the whole tree: `make test` links every product into one binary, so the day a second product carries a different glass, a global `kWidth` is a compile error at best and one product drawing through another's stride at worst. A runtime width costs a multiply per row on a panel that refreshes once a second.
