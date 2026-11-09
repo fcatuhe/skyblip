@@ -7,7 +7,7 @@
 | Source | [boschsensortec/BHI2xy_SensorAPI](https://github.com/boschsensortec/BHI2xy_SensorAPI), `firmware/bhi260ap/BHI260AP.fw`, release v1.6.0 |
 | Size | 103,676 bytes, a whole number of 32-bit words |
 | SHA-256 | `318def511fd8eb762bf1e61cf02cfd6ecac70f8627d3bacfa7d24a1641f9e915` |
-| Licence | BSD-3-Clause, Copyright (c) 2022 Bosch Sensortec GmbH |
+| Licence | BSD-3-Clause, Copyright (c) 2022 Bosch Sensortec GmbH, full text in [`LICENSE`](LICENSE) |
 
 It is the RAM variant, not `BHI260AP-flash.fw`: the Plus gives the hub no flash of its own, so the image is uploaded by the host at every boot (`../README.md`). The host keeps it in one of two places, below.
 
