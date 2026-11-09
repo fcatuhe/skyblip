@@ -65,6 +65,17 @@ class DeploymentTest < Minitest::Test
     assert_includes production, "subject-checksums: release/SHA256SUMS"
   end
 
+  def test_every_published_image_ships_its_third_party_notices
+    %w[firmware release].each do |name|
+      workflow = File.read(File.join(ROOT, ".github/workflows/#{name}.yml"))
+      notices = workflow.index(%r{^ +cp (?:source/)?NOTICE\.md (?:source/)?LICENSES/Apache-2\.0\.txt release/$})
+      checksums = workflow.index("sha256sum -- * > SHA256SUMS")
+
+      assert notices, "#{name} copies NOTICE.md and the Apache license into the release"
+      assert_operator notices, :<, checksums
+    end
+  end
+
   def test_both_simulator_artifacts_contain_the_scenario_bundle
     %w[firmware release].each do |name|
       workflow = YAML.load_file(File.join(ROOT, ".github/workflows/#{name}.yml"))
