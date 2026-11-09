@@ -95,6 +95,7 @@ export async function load(options = {}) {
     traffic: call('simulator_traffic_count', 'number', noArgs),
     alarm: call('simulator_alarm_level', 'number', noArgs),
     alarmDismissed: call('simulator_alarm_dismissed', 'number', noArgs),
+    lamp: call('simulator_lamp', 'string', noArgs),
     rxOk: call('simulator_rx_ok', 'number', noArgs),
     rxBad: call('simulator_rx_bad', 'number', noArgs),
     rxWait: call('simulator_rx_wait', 'number', noArgs),

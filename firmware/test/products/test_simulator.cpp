@@ -8,6 +8,7 @@
 
 #include "core/events/link.h"
 #include "core/flight/atmosphere.h"
+#include "core/indication/lamp.h"
 #include "core/model/aircraft.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
@@ -508,4 +509,50 @@ TEST_CASE("simulator: a confirmed recovery asks for the press, as the board does
     go::draw_recovery(expected, ports::RecoveryPath::PowerOffToFinish);
     CHECK(glass_is(simulator.panel(), expected));
     CHECK(simulator.product().ready_to_power_off());
+}
+
+namespace {
+
+uint32_t running_alive(simulator::Simulator& simulator) {
+    uint32_t now_ms = 0;
+    for (; now_ms <= 5000; now_ms += simulator::Simulator::kStepMs) simulator.step(now_ms);
+    return now_ms;
+}
+
+bool step_until_lamp(simulator::Simulator& simulator, uint32_t& now_ms, bool lit) {
+    const indication::Indication& wink = indication::indication_for(indication::Condition::Alive);
+    const uint32_t end_ms = now_ms + wink.on_ms + wink.off_ms;
+    while (now_ms <= end_ms) {
+        simulator.step(now_ms);
+        now_ms += simulator::Simulator::kStepMs;
+        if (simulator.platform().indicator().lit() == lit) return true;
+    }
+    return false;
+}
+
+}  // namespace
+
+// The browser looks once a frame, and a 30 ms wink fits between two looks 33 ms apart.
+TEST_CASE("simulator: a wink that starts and ends between two looks is still seen once") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    uint32_t now_ms = running_alive(simulator);
+    REQUIRE(simulator.product().alarm().indicator_condition() == indication::Condition::Alive);
+    (void)simulator.lamp_since_last_look();
+
+    REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/true));
+    REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/false));
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::None);
+}
+
+TEST_CASE("simulator: a lamp still lit is seen at every look") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    uint32_t now_ms = running_alive(simulator);
+    REQUIRE(simulator.product().alarm().indicator_condition() == indication::Condition::Alive);
+
+    REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/true));
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
 }

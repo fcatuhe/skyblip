@@ -175,6 +175,9 @@ KEEPALIVE int simulator_alarm_dismissed() {
     return state.alarm_level != traffic::Level::None &&
            state.alarm_undismissed == traffic::Level::None;
 }
+KEEPALIVE const char* simulator_lamp() {
+    return indication::to_string(g_simulator.lamp_since_last_look());
+}
 KEEPALIVE int simulator_shutdown_phase() {
     return static_cast<int>(g_simulator.product().shutdown().phase());
 }

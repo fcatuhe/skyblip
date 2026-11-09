@@ -31,6 +31,7 @@ class Simulator {
         // INFO: fc 29sep26 on air in the step that keyed it, not the next: 5 ms of a burst's slack
         world_.air().take_own_transmission(platform_.clock().microseconds(),
                                            platform_.chips().radio);
+        if (platform_.indicator().lit()) lit_since_look_ = platform_.indicator().lamp();
     }
 
     bool park_refusal(uint32_t now_ms) {
@@ -87,6 +88,14 @@ class Simulator {
     // What is being announced, gaps included. This is the one to assert on when
     // the question is whether traffic is being called out at all.
     traffic::Level announcing_level() { return product_.alarm().announcing_level(); }
+    // INFO: fc 09nov26 a 30 ms wink can fall between two browser frames, so a look keeps it
+    indication::Lamp lamp_since_last_look() {
+        const indication::Lamp seen = lit_since_look_ != indication::Lamp::None
+                                          ? lit_since_look_
+                                          : platform_.indicator().lamp();
+        lit_since_look_ = indication::Lamp::None;
+        return seen;
+    }
 
    private:
     // INFO: fc 21sep26 settings are what a device was found with, not an act inside the scenario
@@ -104,6 +113,7 @@ class Simulator {
     Product product_{platform_};
     World world_{platform_};
     Scenario scenario_{};
+    indication::Lamp lit_since_look_{indication::Lamp::None};
 };
 
 }  // namespace skyblip::simulator
