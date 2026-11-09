@@ -147,6 +147,19 @@ TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
     CHECK(std::memcmp(packet.data, arrived.data, AdslPacket::kDataBytes) == 0);
 }
 
+// G.1.5 counts 93206 steps to a degree of latitude and 46603 of longitude: a position takes the
+// nearest.
+TEST_CASE("adsl: a position goes out as the nearest whole G.1.5 step") {
+    AdslPacket packet{};
+    packet.reset();
+    packet.set_latitude_1e7(-847540127);
+    packet.set_longitude_1e7(-847540127);
+    CHECK(packet.latitude_steps() == -7899583);
+    CHECK(packet.longitude_steps() == -3949791);
+    packet.set_longitude_1e7(1800000000);
+    CHECK(packet.longitude_steps() == 8388540);
+}
+
 TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") {
     // Push random-ish bit errors, some flagged (weak) and some not, and count:
     //   good      = decoded to the exact original codeword
@@ -482,7 +495,8 @@ TEST_CASE("adsl: a field reads back the middle of the step its code names") {
         packet.set_altitude_m(pair.first);
         CHECK(packet.altitude_m() == pair.second);
     }
-    for (auto pair : {std::pair<int, int>{-2000, -948},
+    for (auto pair : {std::pair<int, int>{-32768, -948},
+                      {-2000, -948},
                       {-100, -101},
                       {-1, -1},
                       {0, 0},
