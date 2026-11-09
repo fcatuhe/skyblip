@@ -39,7 +39,7 @@ Status Identity::begin() {
         LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");
     }
     if (!device_is_ready(entropy_)) LOG_ERR("identity: no entropy, so no new key and no nonce");
-    const std::optional<int> slot = identity::KeySlots::provision(uicr_);
+    const std::optional<int> slot = identity::KeySlots::provision(uicr_, device_id_);
     if (!slot) {
         LOG_ERR("identity: no UICR slot holds a key or took one, the unit has no key");
         return Status::Down;
@@ -75,7 +75,7 @@ bool Identity::Uicr::draw(identity::KeySlots::Material& out) {
 
 bool Identity::seed(crypto::Ed25519::Seed& out) const {
     if (!device_id_read_) return false;
-    const std::optional<crypto::Ed25519::Seed> seed = identity::KeySlots::seed(uicr_);
+    const std::optional<crypto::Ed25519::Seed> seed = identity::KeySlots::seed(uicr_, device_id_);
     if (!seed) return false;
     out = *seed;
     return true;

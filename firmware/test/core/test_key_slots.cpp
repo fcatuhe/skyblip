@@ -10,9 +10,13 @@
 
 using skyblip::ByteSpan;
 using skyblip::crypto::Ed25519;
+using skyblip::identity::DeviceId;
 using skyblip::identity::KeySlots;
 
 namespace {
+
+constexpr DeviceId kDevice{0x8F, 0x3A, 0x1C, 0x2E, 0x9B, 0x7D, 0x4F, 0x60};
+constexpr DeviceId kOtherDevice{0x8F, 0x3A, 0x1C, 0x2E, 0x9B, 0x7D, 0x4F, 0x61};
 
 // INFO: fc 18oct26 UICR as the NVMC sees it: bits only fall to 0, and a write can be cut short
 struct Uicr : KeySlots::Memory {
@@ -58,40 +62,53 @@ struct Uicr : KeySlots::Memory {
             words[slot * KeySlots::kWordsPerSlot + i] = value;
     }
 
-    void put(int slot, const KeySlots::Material& material) {
-        const KeySlots::Slot written = KeySlots::slot_of(material);
+    void put(int slot, const KeySlots::Material& material, const DeviceId& device_id = kDevice) {
+        const KeySlots::Slot written = KeySlots::slot_of(material, device_id);
         for (int i = 0; i < KeySlots::kWordsPerSlot; i++)
             words[slot * KeySlots::kWordsPerSlot + i] = written[i];
     }
 };
 
 std::optional<Ed25519::Seed> seed_of(const KeySlots::Material& material) {
-    return KeySlots::seed_of(material);
+    return KeySlots::seed_of(material, kDevice);
 }
 
 }  // namespace
 
-// Python's hashlib: sha256 of "skyblip:slot:v1" or "skyblip:seed:v1" then bytes 0 to 27.
+// Python's hashlib: sha256 of "skyblip:slot:v1" or ":seed:v1", the DEVICEID, bytes 0 to 27.
 TEST_CASE("key slots: a slot is the material then its tag, and the seed is its labelled SHA-256") {
     KeySlots::Material material{};
     for (size_t i = 0; i < material.size(); i++) material[i] = static_cast<uint8_t>(i);
-    const KeySlots::Slot slot = KeySlots::slot_of(material);
+    const KeySlots::Slot slot = KeySlots::slot_of(material, kDevice);
     CHECK(slot[0] == 0x03020100u);
     CHECK(slot[6] == 0x1B1A1918u);
-    CHECK(slot[7] == 0x86179A09u);
+    CHECK(slot[7] == 0xEC63419Fu);
     Ed25519::Seed expected{};
-    REQUIRE(skyblip::hex::read("e22c2ad4e30fcb3926ba011b80023e798074e1d681efb3e1799488d1c0a86edb",
+    REQUIRE(skyblip::hex::read("e7975b94095e90646d3a1b950b8e163a024e7dc903c645bd87445d1713347e64",
                                ByteSpan(expected.data(), expected.size())));
-    CHECK(KeySlots::seed_of(material) == expected);
+    CHECK(KeySlots::seed_of(material, kDevice) == expected);
+}
+
+// A board programmed from another unit's image carries that unit's UICR.
+TEST_CASE("key slots: a slot copied from another chip is torn, and this chip draws its own key") {
+    Uicr uicr;
+    uicr.put(0, Uicr::material_numbered(0x40), kOtherDevice);
+    REQUIRE(KeySlots::fill(uicr.words, 0, kOtherDevice) == KeySlots::Fill::Complete);
+    CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Torn);
+    CHECK_FALSE(KeySlots::seed(uicr, kDevice));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(1));
+    CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn.back()));
+    CHECK(KeySlots::seed_of(uicr.drawn.back(), kDevice) !=
+          KeySlots::seed_of(uicr.drawn.back(), kOtherDevice));
 }
 
 TEST_CASE("key slots: a blank UICR gets material in slot 0, read back, and its seed is the key") {
     Uicr uicr;
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(0));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(0));
     REQUIRE(uicr.drawn.size() == 1);
-    CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Complete);
-    CHECK(KeySlots::seed(uicr) == seed_of(uicr.drawn[0]));
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(0));
+    CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Complete);
+    CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn[0]));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(0));
     CHECK(uicr.drawn.size() == 1);
 }
 
@@ -101,10 +118,10 @@ TEST_CASE("key slots: one erased word in any position makes a slot torn, never a
         Uicr uicr;
         uicr.put(0, Uicr::material_numbered(0x40));
         uicr.words[word] = KeySlots::kErasedWord;
-        CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Torn);
-        CHECK_FALSE(KeySlots::seed(uicr));
-        CHECK(KeySlots::provision(uicr) == std::optional<int>(1));
-        CHECK(KeySlots::seed(uicr) == seed_of(uicr.drawn.back()));
+        CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Torn);
+        CHECK_FALSE(KeySlots::seed(uicr, kDevice));
+        CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(1));
+        CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn.back()));
     }
 }
 
@@ -114,10 +131,10 @@ TEST_CASE("key slots: a slot full of foreign data is torn, and the next blank on
         CAPTURE(foreign);
         Uicr uicr;
         uicr.fill_slot(0, foreign);
-        CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Torn);
-        CHECK_FALSE(KeySlots::seed(uicr));
-        CHECK(KeySlots::provision(uicr) == std::optional<int>(1));
-        CHECK(KeySlots::seed(uicr) == seed_of(uicr.drawn.back()));
+        CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Torn);
+        CHECK_FALSE(KeySlots::seed(uicr, kDevice));
+        CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(1));
+        CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn.back()));
     }
 }
 
@@ -127,45 +144,45 @@ TEST_CASE("key slots: a word left half programmed in any position makes a slot t
         CAPTURE(word);
         Uicr uicr;
         uicr.put(0, Uicr::material_numbered(0x40));
-        const KeySlots::Slot whole = KeySlots::slot_of(Uicr::material_numbered(0x40));
+        const KeySlots::Slot whole = KeySlots::slot_of(Uicr::material_numbered(0x40), kDevice);
         const uint32_t zeros = ~whole[word];
         uicr.words[word] = whole[word] | (zeros & (~zeros + 1u));
         REQUIRE(uicr.words[word] != whole[word]);
-        CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Torn);
-        CHECK_FALSE(KeySlots::seed(uicr));
+        CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Torn);
+        CHECK_FALSE(KeySlots::seed(uicr, kDevice));
     }
 }
 
 TEST_CASE("key slots: a write cut short leaves a torn slot, and the next blank one takes the key") {
     Uicr uicr;
     uicr.writes_before_cut = 3;
-    CHECK_FALSE(KeySlots::provision(uicr));
-    CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Torn);
+    CHECK_FALSE(KeySlots::provision(uicr, kDevice));
+    CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Torn);
     uicr.writes_before_cut = -1;
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(1));
-    CHECK(KeySlots::seed(uicr) == seed_of(uicr.drawn.back()));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(1));
+    CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn.back()));
 }
 
 TEST_CASE("key slots: the key is the last complete slot, and four full slots provision nothing") {
     Uicr uicr;
     for (int slot = 0; slot < KeySlots::kSlots; slot++)
         uicr.put(slot, Uicr::material_numbered(static_cast<uint8_t>(0x40 + slot)));
-    CHECK(KeySlots::current(uicr.words) == std::optional<int>(3));
+    CHECK(KeySlots::current(uicr.words, kDevice) == std::optional<int>(3));
     CHECK_FALSE(KeySlots::next_blank(uicr.words));
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(3));
-    CHECK(KeySlots::seed(uicr) == seed_of(Uicr::material_numbered(0x43)));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(3));
+    CHECK(KeySlots::seed(uicr, kDevice) == seed_of(Uicr::material_numbered(0x43)));
     CHECK(uicr.drawn.empty());
 
     uicr.words[KeySlots::kWords - 1] = KeySlots::kErasedWord;
-    CHECK(KeySlots::current(uicr.words) == std::optional<int>(2));
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(2));
+    CHECK(KeySlots::current(uicr.words, kDevice) == std::optional<int>(2));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(2));
 }
 
 TEST_CASE("key slots: four slots of foreign data leave the unit keyless and draw nothing") {
     Uicr uicr;
     for (int slot = 0; slot < KeySlots::kSlots; slot++) uicr.fill_slot(slot, 0);
-    CHECK_FALSE(KeySlots::provision(uicr));
-    CHECK_FALSE(KeySlots::seed(uicr));
+    CHECK_FALSE(KeySlots::provision(uicr, kDevice));
+    CHECK_FALSE(KeySlots::seed(uicr, kDevice));
     CHECK(uicr.drawn.empty());
 }
 
@@ -173,16 +190,16 @@ TEST_CASE("key slots: a read error hands out no seed and provisions nothing") {
     Uicr uicr;
     uicr.put(0, Uicr::material_numbered(0x40));
     uicr.read_fails = true;
-    CHECK_FALSE(KeySlots::seed(uicr));
-    CHECK_FALSE(KeySlots::provision(uicr));
+    CHECK_FALSE(KeySlots::seed(uicr, kDevice));
+    CHECK_FALSE(KeySlots::provision(uicr, kDevice));
     CHECK(uicr.drawn.empty());
 }
 
 TEST_CASE("key slots: no material from the RNG leaves every slot blank") {
     Uicr uicr;
     uicr.rng_fails = true;
-    CHECK_FALSE(KeySlots::provision(uicr));
-    CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Blank);
+    CHECK_FALSE(KeySlots::provision(uicr, kDevice));
+    CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Blank);
 }
 
 TEST_CASE("key slots: a draw holding an erased word is drawn again, and the next one is stored") {
@@ -190,10 +207,10 @@ TEST_CASE("key slots: a draw holding an erased word is drawn again, and the next
     KeySlots::Material erased_word = Uicr::material_numbered(0x40);
     for (size_t i = 8; i < 12; i++) erased_word[i] = 0xFF;
     uicr.scripted.push_back(erased_word);
-    CHECK_FALSE(KeySlots::storable(erased_word));
-    CHECK(KeySlots::provision(uicr) == std::optional<int>(0));
+    CHECK_FALSE(KeySlots::storable(erased_word, kDevice));
+    CHECK(KeySlots::provision(uicr, kDevice) == std::optional<int>(0));
     REQUIRE(uicr.drawn.size() == 2);
-    CHECK(KeySlots::seed(uicr) == seed_of(uicr.drawn[1]));
+    CHECK(KeySlots::seed(uicr, kDevice) == seed_of(uicr.drawn[1]));
 }
 
 // An RNG that fails silently hands back the buffer as it was, or one byte over and over.
@@ -203,10 +220,10 @@ TEST_CASE("key slots: an RNG that repeats one byte is never a key, and the unit 
         Uicr uicr;
         KeySlots::Material repeated{};
         repeated.fill(stuck);
-        CHECK_FALSE(KeySlots::storable(repeated));
+        CHECK_FALSE(KeySlots::storable(repeated, kDevice));
         for (int draw = 0; draw < 4; draw++) uicr.scripted.push_back(repeated);
-        CHECK_FALSE(KeySlots::provision(uicr));
-        CHECK(KeySlots::fill(uicr.words, 0) == KeySlots::Fill::Blank);
+        CHECK_FALSE(KeySlots::provision(uicr, kDevice));
+        CHECK(KeySlots::fill(uicr.words, 0, kDevice) == KeySlots::Fill::Blank);
         CHECK(uicr.drawn.size() == 4);
     }
 }
