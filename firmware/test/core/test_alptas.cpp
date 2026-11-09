@@ -437,8 +437,7 @@ TEST_CASE("alptas: a second further out than a clock can plausibly be is not sea
     CHECK(alptas_keyed_second(other, kUtcS, keyed) == Status::Unsupported);
 }
 
-// Pinned bytes: a codec that agrees with itself can still put a frame on air no other receiver
-// reads.
+// A codec that agrees with itself can still put a frame on air no other receiver reads.
 TEST_CASE("alptas: a frame is byte for byte the frame other receivers already read") {
     model::AircraftObservation observation{};
     observation.address = 0xDD1234;

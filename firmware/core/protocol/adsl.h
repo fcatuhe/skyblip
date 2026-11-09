@@ -14,12 +14,11 @@
 namespace skyblip::protocol {
 
 struct __attribute__((packed)) AdslPacket {
-    static constexpr uint8_t kTxBytes = 27;
-    static constexpr uint8_t kSync1 = 0x72;
-    static constexpr uint8_t kSync2 = 0x4B;
-    static constexpr uint8_t kDataBytes = kTxBytes - 3;
-    static constexpr uint8_t kCrcCoverBytes = kTxBytes - 6;
     static constexpr uint8_t kPayloadBytes = 20;
+    static constexpr uint8_t kCrcCoverBytes = 1 + kPayloadBytes;
+    static constexpr uint8_t kDataBytes = kCrcCoverBytes + 3;
+    // INFO: fc 09nov26 on air the two sync bytes and the length byte go ahead of the data
+    static constexpr uint8_t kTxBytes = 3 + kDataBytes;
     // INFO: fc 20sep26 F.2.1 leaves payload 66 to OGN, layout: nrf52-ogn-tracker/src/adsl.h:120
     static constexpr uint8_t kPayloadTypePosition = 0x02;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
@@ -29,8 +28,6 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr int kInformationTextOffset = 6;
     static constexpr int kInformationTextBytes = 14;
 
-    uint8_t sync[2];
-    uint8_t data_bytes;
     union {
         uint8_t data[kDataBytes];
         struct __attribute__((packed)) {
@@ -57,7 +54,6 @@ struct __attribute__((packed)) AdslPacket {
             uint8_t crc_bytes[3];
         };
     };
-    uint8_t spare;
 
     // INFO: fc 09nov26 offsets count from payload bit 0: 40 bits of F.2 header, then G.1
     static constexpr uint16_t kTrafficOffset = 40;
@@ -83,9 +79,6 @@ struct __attribute__((packed)) AdslPacket {
 
     void reset(uint8_t type = kPayloadTypePosition) {
         __builtin_memset(this, 0, sizeof(*this));
-        sync[0] = kSync1;
-        sync[1] = kSync2;
-        data_bytes = kDataBytes;
         payload_type = type;
     }
 
@@ -190,7 +183,8 @@ struct __attribute__((packed)) AdslPacket {
     int correct(const uint8_t* erasures, int max_erasures = 6);
 };
 
-static_assert(sizeof(AdslPacket) == 28, "AdslPacket wire size must be 28 bytes");
+static_assert(sizeof(AdslPacket) == AdslPacket::kDataBytes,
+              "AdslPacket is the data the CRC covers");
 
 bool to_observation(const AdslPacket& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out);
