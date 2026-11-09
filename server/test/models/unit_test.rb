@@ -93,6 +93,17 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal "2001:db8:1:2::", Unit.network_of("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
   end
 
+  # Docker on crooz hands Rails its gateway, 172.18.0.1, for every IPv6 client (#205).
+  test "counts a private address toward no network, so the clients behind it do not share one cap" do
+    assert_nil Unit.network_of("172.18.0.1")
+    assert_nil Unit.network_of("::1")
+    assert_nil Unit.network_of("fe80::1")
+
+    (Unit::NEW_PER_NETWORK_PER_DAY + 1).times do |index|
+      assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, ip_address: "172.18.0.1").active?
+    end
+  end
+
   test "counts a network's new devices for today only" do
     Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
       Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8")

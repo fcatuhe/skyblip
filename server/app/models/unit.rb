@@ -38,7 +38,12 @@ class Unit < ApplicationRecord
     if ip_address.present?
       address = IPAddr.new(ip_address)
       address = address.native if address.ipv4_mapped?
-      (address.ipv6? ? address.mask(64) : address).to_s
+      if address.private? || address.loopback? || address.link_local?
+        Rails.logger.error "Activation: request from a private address #{address}, so it counts toward no network (#205)"
+        nil
+      else
+        (address.ipv6? ? address.mask(64) : address).to_s
+      end
     end
   end
 
