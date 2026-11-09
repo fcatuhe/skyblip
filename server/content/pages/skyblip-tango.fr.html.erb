@@ -1,0 +1,176 @@
+---
+title: Tango, un Go associé à un Bravo
+nav_title: Tango
+slug: tango
+description: skyBlip Tango est un skyBlip Go associé à un skyBlip Bravo, pour le trafic ADS-B, ADS-L et FLARM sur un seul radar, pendant que votre position part en ADS-L. Le Go est disponible aujourd'hui. Le firmware skyBlip Bravo est en développement.
+---
+
+<header class="page-hero">
+  <p class="kicker">skyBlip Go + skyBlip Bravo</p>
+  <h1>skyBlip Tan<span class="highlight">go</span>. Trois sortes de trafic, un seul radar.</h1>
+  <p class="page-hero-subtitle">
+    Un Go associé à un Bravo. Bravo recevra l&rsquo;ADS-B. Le Go reçoit
+    l&rsquo;ADS-L et le FLARM, émet votre position, et affichera les trois
+    sur son radar.
+  </p>
+  <figure class="pair">
+    <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go : un LilyGO T-Echo blanc avec son antenne, le radar du trafic à l'écran" %>
+    <span class="pair-plus" aria-hidden="true">+</span>
+    <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte" %>
+  </figure>
+  <p class="pair-caption">Pas à l&rsquo;échelle. Photo du X1 Seeed Studio.</p>
+  <p class="page-hero-audience">
+    Le Go est disponible aujourd&rsquo;hui. Le Seeed SenseCAP MeshTracker X1
+    est en vente. Le firmware skyBlip Bravo est en développement.
+  </p>
+
+  <div class="cta-pair">
+    <div class="cta-pair-buttons">
+      <div>
+        <a href="#buy" class="button button--primary">Ce qu&rsquo;il faut acheter</a>
+        <small>un Go et un X1, achetés séparément</small>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">Ce que fera un Tango</h2>
+  <div class="feature">
+    <div>
+      <p>
+        Bravo recevra l&rsquo;ADS-B et le transmettra au Go en Bluetooth. Le Go
+        l&rsquo;affichera sur son radar avec le trafic ADS-L et FLARM, et vous
+        alertera sur les trois.
+      </p>
+      <p>
+        Votre téléphone se connectera au Go et recevra tout le trafic en un seul
+        flux.
+      </p>
+      <p>
+        Le Go continue d&rsquo;émettre votre position en ADS-L. Le pilote qui
+        achète un Tango pour voir les avions de ligne sera aussi vu en ADS-L.
+      </p>
+      <p class="note">
+        Le matériel de Bravo n&rsquo;a pas encore été testé avec skyBlip. La
+        réception, la portée et le traitement des altitudes restent à vérifier.
+      </p>
+    </div>
+    <%= render "shared/tango" %>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Qui vous verrez</h2>
+  <p class="section-intro">
+    Un aéronef qui n&rsquo;émet aucun des trois reste invisible. Gardez la
+    veille visuelle.
+  </p>
+  <div class="columns">
+    <div>
+      <h3>ADS-B.</h3>
+      <p>Les avions de ligne, les jets d&rsquo;affaires, les hélicoptères et les avions de voyage équipés de l&rsquo;ADS-B out.</p>
+      <p class="note">Reçu par Bravo.</p>
+    </div>
+    <div>
+      <h3>FLARM.</h3>
+      <p>Les planeurs, les remorqueurs et les autres aéronefs équipés de FLARM.</p>
+      <p class="note">Reçu par le Go.</p>
+    </div>
+    <div>
+      <h3>ADS-L.</h3>
+      <p>Les ULM, les parapentes et les autres aéronefs équipés de l&rsquo;ADS-L, skyBlip Go compris.</p>
+      <p class="note">Reçu et émis par le Go.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Tango ou Tango+&nbsp;?</h2>
+  <div class="columns">
+    <div>
+      <h3>skyBlip Tango.</h3>
+      <p>Un Go et un Bravo. Le Go n&rsquo;a pas de buzzer&nbsp;: l&rsquo;alarme sonnera et vibrera sur Bravo, et s&rsquo;affichera sur l&rsquo;écran du Go.</p>
+      <p class="note">LilyGO T-Echo et Seeed SenseCAP MeshTracker X1.</p>
+    </div>
+    <div>
+      <h3>skyBlip Tango+.</h3>
+      <p>Un Go+ et un Bravo. Le Go+ a son propre buzzer et son vibreur, et prendra l&rsquo;alarme en charge tant que les deux appareils fonctionnent bien ensemble.</p>
+      <p class="note">LilyGO T-Echo Plus et Seeed SenseCAP MeshTracker X1.</p>
+    </div>
+  </div>
+</section>
+
+<section id="buy" class="band">
+  <h2 class="section-title">Ce qu&rsquo;il faut acheter</h2>
+  <p class="section-intro">
+    Un Tango, ce sont deux appareils achetés séparément. Il n&rsquo;y a pas de
+    lot.
+  </p>
+  <div class="offers">
+    <article class="offer">
+      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go : un LilyGO T-Echo blanc, le radar du trafic à l'écran" %>
+      <h2>skyBlip Go</h2>
+      <p class="offer-price"><small>à partir de</small> 68&nbsp;€</p>
+      <p class="offer-tagline">LilyGO T-Echo</p>
+      <ul class="points">
+        <li>Disponible aujourd&rsquo;hui</li>
+        <li>Ou un Go+ à partir de 84&nbsp;€, pour un Tango+</li>
+      </ul>
+      <p class="offer-buy">
+        <%= link_to_page "buy", label: "Voir où l\u2019acheter", anchor: "where", class: "button button--primary" %>
+        <small>L&rsquo;association avec Bravo arrivera avec une mise à jour du firmware.</small>
+      </p>
+    </article>
+
+    <article class="offer">
+      <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1", class: "x1-photo" %>
+      <h2>skyBlip Bravo</h2>
+      <p class="offer-price"><s><span class="visually-hidden">Sans code&nbsp;: </span>49,90&nbsp;$</s> <span class="visually-hidden">Avec le code&nbsp;: </span>44,91&nbsp;$<small class="offer-code">avec le code <%= seeed_promo_code %></small><small class="offer-code">55,95&nbsp;$ avec 11,04&nbsp;$ de livraison vers la France</small></p>
+      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1</p>
+      <ul class="points">
+        <li>Matériel en vente aujourd&rsquo;hui</li>
+        <li>Firmware en développement</li>
+      </ul>
+      <p class="offer-buy">
+        <a href="https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&amp;referring_service=link" target="_blank" rel="sponsored" class="button button--primary">Acheter chez Seeed Studio</a>
+      </p>
+    </article>
+  </div>
+  <p class="signature">
+    Le code <%= seeed_promo_code %> vous donne 10&nbsp;% de remise
+    au paiement chez Seeed. Le lien Seeed est un lien affilié&nbsp;: skyBlip
+    touche une commission. Prix du X1 relevés le 9 novembre 2026, à
+    titre indicatif.
+  </p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">On répond à vos questions</h2>
+  <div class="faq">
+    <details>
+      <summary>Mon téléphone se connecte-t-il au Go ou à Bravo&nbsp;?</summary>
+      <p>Au Go, pour un seul flux avec tout le trafic. Un Go accepte trois connexions. Quand un Bravo sera associé, l&rsquo;une lui sera réservée&nbsp;: deux téléphones ou applications pourront se connecter.</p>
+    </details>
+    <details>
+      <summary>Et si la liaison entre les deux se coupe&nbsp;?</summary>
+      <p>Le Go perdra le trafic ADS-B et gardera le trafic ADS-L et FLARM. Dans un Tango+, l&rsquo;alarme reviendra à Bravo.</p>
+    </details>
+    <details>
+      <summary>Mon propre transpondeur apparaîtra-t-il comme un trafic&nbsp;?</summary>
+      <p>Non, une fois l&rsquo;adresse OACI de votre avion réglée sur le Go. Sans elle, votre propre transpondeur peut apparaître comme un trafic.</p>
+    </details>
+    <details>
+      <summary>Un même aéronef peut-il apparaître deux fois&nbsp;?</summary>
+      <p>Oui, dans la première version. Un aéronef qui emporte à la fois un Go et un transpondeur ADS-B peut apparaître une fois en ADS-L et une fois en ADS-B.</p>
+    </details>
+    <details>
+      <summary>Un Tango émet-il en ADS-B&nbsp;?</summary>
+      <p>Non. Il émet votre position en ADS-L seulement, par le Go.</p>
+    </details>
+    <details>
+      <summary>Un Tango a-t-il besoin d&rsquo;une station sol&nbsp;?</summary>
+      <p>Non. Bravo recevra l&rsquo;ADS-B à bord. Une station skyPost ajoutera le trafic et la météo autour de son terrain&nbsp;: <%= link_to_page "roadmap", label: "ce qui vient ensuite" %>.</p>
+    </details>
+  </div>
+</section>

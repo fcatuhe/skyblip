@@ -1,0 +1,164 @@
+---
+title: Bravo, ADS-B for your phone and your Go
+nav_title: Bravo
+slug: bravo
+description: skyBlip Bravo will receive ADS-B on 1090 MHz, for your navigation app or paired with a skyBlip Go. It is being developed for the Seeed SenseCAP MeshTracker X1, on sale today. The skyBlip Bravo firmware is in development.
+---
+
+<header class="page-hero">
+  <p class="kicker">ADS-B 1090&nbsp;MHz &middot; receive only</p>
+  <h1>Bravo will send ADS-B traffic to your phone or your Go.</h1>
+  <p class="page-hero-subtitle">
+    skyBlip Bravo will receive ADS-B: airliners, business jets, helicopters
+    and touring aircraft with ADS-B out. The Seeed SenseCAP MeshTracker X1 is on sale
+    today. The skyBlip Bravo firmware is in development.
+  </p>
+
+  <ul class="chooser">
+    <li>
+      <h2><a href="#buy">ADS-B traffic on your phone: Bravo</a></h2>
+      <p class="status">Firmware in development</p>
+      <p>It will send ADS-B traffic to your navigation app. A Go already shows gliders equipped with FLARM. A Tango will combine ADS-B, ADS-L and FLARM traffic.</p>
+    </li>
+    <li>
+      <h2><%= link_to_page "features", label: "ADS-L, FLARM or being seen: Go" %></h2>
+      <p class="status status--available">Available</p>
+      <p>It shows the ADS&#8209;L and FLARM traffic and broadcasts your position in ADS&#8209;L.</p>
+    </li>
+    <li>
+      <h2><%= link_to_page "skyblip-tango", label: "All three, and being seen: Tango" %></h2>
+      <p class="status">Firmware in development</p>
+      <p>A Go paired with a Bravo, with ADS-B, ADS-L and FLARM on one radar.</p>
+    </li>
+  </ul>
+
+  <figure class="hero-figure hero-figure--wide">
+    <%= pages_image_tag "seeed-x1.avif", alt: "The Seeed SenseCAP MeshTracker X1: a black card-sized case with one green button" %>
+    <figcaption>Seeed SenseCAP MeshTracker X1. Photo Seeed Studio.</figcaption>
+  </figure>
+
+  <div class="cta-pair">
+    <div class="cta-pair-buttons">
+      <div>
+        <a href="#buy" class="button button--primary">How to get one</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="band band--tint">
+  <h2 class="section-title">What it will hear</h2>
+  <p class="section-intro">
+    Bravo will listen to 1090&nbsp;MHz all the time and decode the ADS-B
+    position messages, Extended Squitter (DF17).
+  </p>
+  <div class="columns">
+    <div>
+      <h3>It will receive.</h3>
+      <p>Airliners, business jets, helicopters and the touring aircraft whose transponder has ADS-B out.</p>
+    </div>
+    <div>
+      <h3>It will not receive.</h3>
+      <p>A transponder without ADS-B out, UAT, TIS-B or ADS-R. Nor ADS-L or FLARM, which the Go receives.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Bravo with your phone</h2>
+  <div class="columns">
+    <div>
+      <h3>In your app.</h3>
+      <p>It will send the traffic over Bluetooth in the same format as a Go, for SkyDemon, SDVFR and the other apps that read it.</p>
+    </div>
+    <div>
+      <h3>An alarm you feel.</h3>
+      <p>Its buzzer and vibration motor will warn you of ADS-B traffic closing in.</p>
+    </div>
+    <div>
+      <h3>Not a transmitter.</h3>
+      <p>It will not broadcast your position. To be seen in ADS-L, add a Go.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Bravo with a Go</h2>
+  <p class="section-intro">
+    Paired with a Go, Bravo will pass the ADS-B traffic to it, and the Go will
+    show ADS-B, ADS-L and FLARM on one radar. The Go keeps broadcasting your
+    position in ADS-L. Together they make a skyBlip Tango.
+  </p>
+  <p class="more"><%= link_to_page "skyblip-tango", label: "What a Tango will do" %></p>
+</section>
+
+<section id="status" class="band">
+  <h2 class="section-title">Where it stands</h2>
+  <div class="columns">
+    <div>
+      <h3>The hardware.</h3>
+      <p>On sale at Seeed Studio. It ships with Meshtastic, a messaging firmware that receives no ADS-B.</p>
+    </div>
+    <div>
+      <h3>The firmware.</h3>
+      <p>In development, open source. You will install it on your X1 when it is released.</p>
+      <p class="note"><a href="https://github.com/fcatuhe/skyblip/issues/184">Follow it on GitHub</a></p>
+    </div>
+    <div>
+      <h3>The tests.</h3>
+      <p>The X1 has not yet been tested with skyBlip. Reception, range and altitude handling remain unverified.</p>
+    </div>
+  </div>
+</section>
+
+<section id="buy" class="band band--tint">
+  <h2 class="section-title">Get a Bravo</h2>
+  <div class="offers offers--one">
+    <article class="offer">
+      <%= pages_image_tag "seeed-x1.avif", alt: "The Seeed SenseCAP MeshTracker X1", class: "x1-photo" %>
+      <h2>skyBlip Bravo</h2>
+      <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
+      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1</p>
+      <ul class="points">
+        <li>90 x 57 x 8&nbsp;mm, 45&nbsp;g, IP66</li>
+        <li>Buzzer, vibration motor, one button, no screen</li>
+        <li>Dual-band GNSS, barometer, 1100&nbsp;mAh battery</li>
+        <li>One version: nothing to pick when you order</li>
+      </ul>
+      <p class="offer-buy">
+        <a href="https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&amp;referring_service=link" target="_blank" rel="sponsored" class="button button--primary">Buy at Seeed Studio</a>
+      </p>
+    </article>
+  </div>
+  <p class="signature">
+    Code <%= seeed_promo_code %> gives you 10% off at Seeed&rsquo;s
+    checkout. The Seeed link is an affiliate link: skyBlip earns a commission.
+    X1 prices taken on 9 November 2026, as a guide only.
+  </p>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Your questions, answered</h2>
+  <div class="faq">
+    <details>
+      <summary>Does Bravo make me visible?</summary>
+      <p>No. Bravo will not transmit your position. To be seen in ADS-L, you need a Go, alone or paired with your Bravo as a Tango.</p>
+    </details>
+    <details>
+      <summary>Can I use the X1 before the skyBlip firmware is released?</summary>
+      <p>With Meshtastic only, which receives no ADS-B. Bravo needs the skyBlip firmware. Its install steps will be on this page when it is released.</p>
+    </details>
+    <details>
+      <summary>My aircraft has a transponder. Will its own signal show as traffic?</summary>
+      <p>It will not, once you set your aircraft&rsquo;s ICAO address, on Bravo or on the Go it is paired with. Bravo will then leave your own transponder out.</p>
+    </details>
+    <details>
+      <summary>Do I need a Go?</summary>
+      <p>No. Alone, Bravo will feed your navigation app. With a Go, you will also get the ADS-L and FLARM traffic, and the Go broadcasts your position in ADS-L.</p>
+    </details>
+    <details>
+      <summary>Do I need a ground station?</summary>
+      <p>No. Bravo will receive ADS-B in the aircraft, wherever the signal reaches it.</p>
+    </details>
+  </div>
+</section>

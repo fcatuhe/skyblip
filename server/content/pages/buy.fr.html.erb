@@ -2,20 +2,22 @@
 title: S'équiper
 nav_title: S'équiper
 slug: s-equiper
-description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868 MHz avec baromètre BME280. Où les acheter, en quoi ils diffèrent, comment installer le firmware skyBlip.
+description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868 MHz avec baromètre BME280. skyBlip Bravo est un Seeed SenseCAP MeshTracker X1. Où les acheter, en quoi ils diffèrent, comment installer le firmware skyBlip.
 ---
 
 <header class="page-hero">
-  <h1>Deux boîtiers, un firmware, sans abonnement.</h1>
+  <h1>Trois boîtiers, un firmware ouvert, sans abonnement.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus.<br>
-    Vous achetez le boîtier, vous installez le firmware skyBlip, et c&rsquo;est
-    tout.
+    skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, skyBlip Bravo
+    un Seeed SenseCAP MeshTracker X1.<br>
+    Vous achetez le boîtier et vous installez le firmware skyBlip sur un Go dès
+    aujourd&rsquo;hui. Le X1 est livré avec Meshtastic, et le firmware skyBlip
+    Bravo est en développement.
   </p>
 </header>
 
 <section>
-  <div class="offers">
+  <div class="offers offers--three">
     <article class="offer">
       <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go : un LilyGO T-Echo blanc, le radar du trafic à l'écran" %>
       <h2>skyBlip Go</h2>
@@ -46,10 +48,27 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
         <a href="#where" class="button button--primary">Voir où l&rsquo;acheter</a>
       </p>
     </article>
+
+    <article class="offer">
+      <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "x1-photo" %>
+      <h2>skyBlip Bravo</h2>
+      <p class="offer-price"><s><span class="visually-hidden">Sans code&nbsp;: </span>49,90&nbsp;$</s> <span class="visually-hidden">Avec le code&nbsp;: </span>44,91&nbsp;$<small class="offer-code">avec le code <%= seeed_promo_code %></small><small class="offer-code">55,95&nbsp;$ avec 11,04&nbsp;$ de livraison vers la France</small></p>
+      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status">Firmware en développement</span></p>
+      <ul class="points">
+        <li>Recevra l&rsquo;ADS-B, pour votre application ou votre Go</li>
+        <li>Buzzer et vibreur</li>
+        <li>Batterie 1100&nbsp;mAh</li>
+      </ul>
+      <p class="offer-buy">
+        <a href="#where" class="button button--primary">Voir où l&rsquo;acheter</a>
+      </p>
+    </article>
   </div>
 
+  <p class="more"><%= link_to_page "skyblip-tango", label: "Un Go et un Bravo forment un skyBlip Tango", anchor: "buy" %></p>
+
   <p class="offer-warning">
-    <strong>Prenez la version 868&nbsp;MHz avec baromètre BME280.</strong>
+    <strong>Pour un Go, prenez la version 868&nbsp;MHz avec baromètre BME280.</strong>
     868&nbsp;MHz est la bande de l&rsquo;ADS-L en Europe&nbsp;; les versions
     433 et 915&nbsp;MHz n&rsquo;émettent pas sur la bonne fréquence. Le BME280
     est requis pour la conformité skyBlip.
@@ -89,23 +108,32 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
     <div class="table-scroll">
       <table class="compare">
         <thead>
-          <tr><th>Vendeur</th><th>skyBlip Go</th><th>skyBlip Go+</th></tr>
+          <tr><th>Vendeur</th><th>skyBlip Go</th><th>skyBlip Go+</th><th>skyBlip Bravo</th></tr>
         </thead>
         <tbody>
           <tr>
             <th>Amazon<span>La commande la plus simple, avec les retours Amazon</span></th>
             <td><a href="https://link.amazon/B00EaKI0W" target="_blank" rel="sponsored">T-Echo, 68&nbsp;€</a></td>
             <td><a href="https://link.amazon/B05es09aX" target="_blank" rel="sponsored">T-Echo Plus, 84&nbsp;€</a></td>
+            <td>&mdash;</td>
           </tr>
           <tr>
             <th>LilyGO<span>Direct du fabricant, idéal pour les commandes groupées</span></th>
             <td><a href="https://www.lilygo.cc/skyblip-go" target="_blank" rel="sponsored">T-Echo, 59,84&nbsp;$</a> <small>46,04&nbsp;$ + 13,80&nbsp;$ de livraison</small></td>
             <td><a href="https://www.lilygo.cc/skyblip-go-plus" target="_blank" rel="sponsored">T-Echo Plus, 81,91&nbsp;$</a> <small>66,31&nbsp;$ + 15,60&nbsp;$ de livraison</small></td>
+            <td>&mdash;</td>
           </tr>
           <tr>
             <th>AliExpress<span>Parfois moins cher, pour les habitués</span></th>
             <td><a href="https://s.click.aliexpress.com/e/_c4nyUpy1" target="_blank" rel="sponsored">T-Echo</a></td>
             <td>&mdash;</td>
+            <td>&mdash;</td>
+          </tr>
+          <tr>
+            <th>Seeed Studio<span>Le fabricant du X1</span></th>
+            <td>&mdash;</td>
+            <td>&mdash;</td>
+            <td><a href="https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&amp;referring_service=link" target="_blank" rel="sponsored">X1, 55,95&nbsp;$</a> <small>44,91&nbsp;$ + 11,04&nbsp;$ de livraison, code <%= seeed_promo_code %></small></td>
           </tr>
         </tbody>
       </table>
@@ -116,12 +144,16 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
     livraison LilyGO est un coût habituel. Les liens Amazon, AliExpress et
     LilyGO sont des liens affiliés&nbsp;: skyBlip touche une commission, sans rien changer à votre
     prix. En tant que Partenaire Amazon, skyBlip réalise un bénéfice sur les
-    achats remplissant les conditions requises.
+    achats remplissant les conditions requises. Le lien Seeed est aussi un lien
+    affilié&nbsp;: skyBlip touche une commission, et le code
+    <%= seeed_promo_code %> vous donne 10&nbsp;% de remise au
+    paiement chez Seeed. Prix du X1 relevé le 9 novembre 2026, avec le code
+    et la livraison vers la France.
   </p>
 </section>
 
 <section id="install" class="band band--tint">
-  <h2 class="section-title">Prêt en quatre étapes</h2>
+  <h2 class="section-title">Un Go, prêt en quatre étapes</h2>
   <ol class="steps-grid">
     <li>
       <h3>Commande.</h3>
@@ -143,7 +175,8 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
   <p class="signature">
     Le même fichier sert aux deux boîtiers. Les mises à jour passent par
     <%= link_to_page "manage", label: "Gérer mon skyBlip" %>. Pour
-    l&rsquo;instant, seules des versions de développement sont publiées.
+    l&rsquo;instant, seules des versions de développement sont publiées. Les
+    étapes de Bravo seront ici à la sortie de son firmware.
   </p>
 </section>
 
@@ -176,6 +209,10 @@ description: skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, en 868
     <details>
       <summary>Pourquoi le baromètre BME280&nbsp;?</summary>
       <p>Il est requis pour la conformité skyBlip. Certains T-Echo sont vendus sans&nbsp;: choisissez la version qui l&rsquo;indique.</p>
+    </details>
+    <details>
+      <summary>Le X1 fonctionne-t-il avec skyBlip aujourd&rsquo;hui&nbsp;?</summary>
+      <p>Pas encore. Il est livré avec Meshtastic, qui ne reçoit pas l&rsquo;ADS-B. Le firmware skyBlip Bravo est en développement, et vous l&rsquo;installerez à sa sortie. <%= link_to_page "skyblip-bravo", label: "Où en est-il\u00a0?", anchor: "status" %></p>
     </details>
     <details>
       <summary>Faut-il ouvrir ou souder le boîtier&nbsp;?</summary>

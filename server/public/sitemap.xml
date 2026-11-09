@@ -26,6 +26,11 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://skyblip.eu/bravo</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://skyblip.eu/buy</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -67,6 +72,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/alimentation</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/bravo</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -122,6 +132,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/s-equiper</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/tango</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -182,6 +197,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/see-and-avoid</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/tango</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

@@ -2,19 +2,41 @@
 title: À venir
 nav_title: À venir
 slug: a-venir
-description: skyBlip Go est disponible aujourd'hui. Viennent ensuite le skyBlip Panel pour les planches de bord à écrans, et les stations sol skyPost, qui relaieront les avions de ligne et la météo.
+description: skyBlip Go est disponible aujourd'hui. skyBlip Bravo recevra l'ADS-B à bord sur un X1 en vente aujourd'hui, et le firmware skyBlip Bravo est en développement. Un Go associé à un Bravo formera un skyBlip Tango. Le Panel pour les planches de bord à écrans et les stations sol skyPost sont en conception.
 ---
 
 <header class="page-hero">
-  <h1>Aujourd&rsquo;hui skyBlip Go. Ensuite, ces trois-là.</h1>
+  <h1>Aujourd&rsquo;hui skyBlip Go. Ensuite, l&rsquo;ADS-B à bord.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go est le seul appareil disponible. Les trois suivants sont en
-    conception, sur la même base de code.
+    skyBlip Go et Go+ sont disponibles. Le firmware skyBlip Bravo est en
+    développement, pour un X1 que vous pouvez acheter aujourd&rsquo;hui. Le
+    Panel et les stations skyPost sont en conception, sur la même base de
+    code.
   </p>
 </header>
 
 <section class="band band--tint">
   <h2 class="section-title">Dans l&rsquo;avion</h2>
+  <p class="section-intro">
+    skyBlip Go reçoit l&rsquo;ADS-L et le FLARM. Il ne reçoit pas l&rsquo;ADS-B
+    sur 1090&nbsp;MHz, qu&rsquo;émettent les avions de ligne, les jets
+    d&rsquo;affaires, les hélicoptères et beaucoup d&rsquo;avions de voyage.
+    skyBlip Bravo le recevra à bord, sans station sol.
+  </p>
+
+  <div class="columns">
+    <div>
+      <h3 id="bravo">skyBlip Bravo.</h3>
+      <p>Le récepteur ADS-B, pour votre téléphone ou votre Go. Le matériel, un Seeed SenseCAP MeshTracker X1, est en vente. Le firmware skyBlip Bravo est en développement.</p>
+      <p class="more"><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></p>
+    </div>
+    <div>
+      <h3 id="tango">skyBlip Tango.</h3>
+      <p>Un Go associé à un Bravo&nbsp;: l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM sur le radar du Go, et votre position en ADS-L. Un Go+ et un Bravo forment un Tango+.</p>
+      <p class="more"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
+    </div>
+  </div>
+
   <div class="feature">
     <div>
       <p class="eyebrow">Pour les planches de bord à écrans</p>
@@ -40,10 +62,9 @@ description: skyBlip Go est disponible aujourd'hui. Viennent ensuite le skyBlip 
 <section class="band">
   <h2 class="section-title">Au sol</h2>
   <p class="section-intro">
-    Les avions de ligne et beaucoup d&rsquo;avions de voyage émettent en ADS-B
-    sur 1090&nbsp;MHz, que skyBlip Go ne reçoit pas. Une station skyPost les
-    recevra, ajoutera le trafic de l&rsquo;Open Glider Network et la météo (QNH,
-    METAR, TAF), et relaiera le tout en ADS-L aux skyBlips en vol.
+    Autour du terrain, une station skyPost recevra l&rsquo;ADS-B, ajoutera le
+    trafic de l&rsquo;Open Glider Network et la météo (QNH, METAR, TAF), et
+    relaiera le tout en ADS-L à chaque skyBlip Go à portée.
   </p>
   <div class="columns">
     <div>

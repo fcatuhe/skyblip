@@ -1,19 +1,40 @@
 ---
 title: Coming next
 nav_title: Roadmap
-description: skyBlip Go is available today. Next come the skyBlip Panel for glass cockpits, and the skyPost ground stations, which will relay airliners and weather.
+description: skyBlip Go is available today. skyBlip Bravo will receive ADS-B in the aircraft on an X1 you can buy today, and the skyBlip Bravo firmware is in development. A Go paired with a Bravo will make a skyBlip Tango. The Panel for glass cockpits and the skyPost ground stations are in design.
 ---
 
 <header class="page-hero">
-  <h1>Today skyBlip Go. Next, these three.</h1>
+  <h1>Today skyBlip Go. Next, ADS-B on board.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go is the only device available. The next three are in
-    design, on the same code base.
+    skyBlip Go and Go+ are available. The skyBlip Bravo firmware is in
+    development, for an X1 you can buy today. The Panel and the skyPost
+    stations are in design, on the same code base.
   </p>
 </header>
 
 <section class="band band--tint">
   <h2 class="section-title">In the aircraft</h2>
+  <p class="section-intro">
+    skyBlip Go receives ADS-L and FLARM. It does not receive ADS-B on
+    1090&nbsp;MHz, which airliners, business jets, helicopters and many touring
+    aircraft transmit. skyBlip Bravo will receive it in the aircraft, with no
+    ground station.
+  </p>
+
+  <div class="columns">
+    <div>
+      <h3 id="bravo">skyBlip Bravo.</h3>
+      <p>The ADS-B receiver, for your phone or your Go. The hardware, a Seeed SenseCAP MeshTracker X1, is on sale. The skyBlip Bravo firmware is in development.</p>
+      <p class="more"><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></p>
+    </div>
+    <div>
+      <h3 id="tango">skyBlip Tango.</h3>
+      <p>A Go paired with a Bravo: ADS-B, ADS-L and FLARM on the Go&rsquo;s radar, and your position in ADS-L. A Go+ and a Bravo make a Tango+.</p>
+      <p class="more"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
+    </div>
+  </div>
+
   <div class="feature">
     <div>
       <p class="eyebrow">For glass cockpits</p>
@@ -38,10 +59,9 @@ description: skyBlip Go is available today. Next come the skyBlip Panel for glas
 <section class="band">
   <h2 class="section-title">On the ground</h2>
   <p class="section-intro">
-    Airliners and many touring aircraft transmit ADS-B on 1090&nbsp;MHz, which
-    skyBlip Go does not receive. A skyPost station will receive them, add the
-    traffic of the Open Glider Network and the weather (QNH, METAR, TAF), and
-    relay it all in ADS-L to the skyBlips in flight.
+    Around the airfield, a skyPost station will receive ADS-B, add the traffic
+    of the Open Glider Network and the weather (QNH, METAR, TAF), and relay it
+    all in ADS-L to every skyBlip Go in range.
   </p>
   <div class="columns">
     <div>
