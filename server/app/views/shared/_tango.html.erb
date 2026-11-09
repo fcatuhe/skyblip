@@ -1,0 +1,44 @@
+<figure class="diagram">
+  <svg viewBox="0 0 400 292" role="img" aria-labelledby="tango-title tango-description">
+    <title id="tango-title"><%= t "tango.title" %></title>
+    <desc id="tango-description"><%= t "tango.description" %></desc>
+    <defs>
+      <% %w[receive transmit link].each do |kind| %>
+        <marker id="tango-<%= kind %>" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto">
+          <path class="diagram-head diagram-head--<%= kind %>" d="M0,1 L10,5 L0,9 z"/>
+        </marker>
+      <% end %>
+    </defs>
+
+    <text class="diagram-label" x="70" y="22"><%= t "tango.adsb" %></text>
+    <line class="diagram-receive" x1="70" y1="32" x2="70" y2="84" marker-end="url(#tango-receive)"/>
+    <text class="diagram-label" x="252" y="22"><%= t "tango.adsl_flarm" %></text>
+    <line class="diagram-receive" x1="252" y1="32" x2="252" y2="84" marker-end="url(#tango-receive)"/>
+    <text class="diagram-label diagram-label--transmit" x="350" y="22"><%= t "tango.adsl" %></text>
+    <line class="diagram-transmit" x1="350" y1="86" x2="350" y2="34" marker-end="url(#tango-transmit)"/>
+
+    <rect class="diagram-device" x="10" y="88" width="120" height="60" rx="8"/>
+    <text class="diagram-brand" x="70" y="112">skyBlip</text>
+    <text class="diagram-name" x="70" y="135">Bravo</text>
+
+    <line class="diagram-link" x1="134" y1="118" x2="208" y2="118" marker-end="url(#tango-link)"/>
+    <text class="diagram-note" x="172" y="108"><%= t "tango.bluetooth" %></text>
+
+    <rect class="diagram-device" x="214" y="88" width="160" height="60" rx="8"/>
+    <text class="diagram-brand" x="294" y="112">skyBlip</text>
+    <text class="diagram-name" x="294" y="135">Go</text>
+
+    <line class="diagram-link" x1="294" y1="152" x2="294" y2="196" marker-end="url(#tango-link)"/>
+    <text class="diagram-note diagram-note--end" x="285" y="171"><%= t "tango.bluetooth" %></text>
+    <text class="diagram-note diagram-note--end" x="285" y="185"><%= t "tango.stream" %></text>
+
+    <rect class="diagram-device diagram-device--quiet" x="194" y="200" width="200" height="50" rx="8"/>
+    <text class="diagram-phone" x="294" y="222"><%= t "tango.phone" %></text>
+    <text class="diagram-note" x="294" y="239"><%= t "tango.app" %></text>
+
+    <line class="diagram-receive" x1="10" y1="280" x2="36" y2="280" marker-end="url(#tango-receive)"/>
+    <text class="diagram-note diagram-note--start" x="44" y="284"><%= t "tango.received" %></text>
+    <line class="diagram-transmit" x1="120" y1="280" x2="146" y2="280" marker-end="url(#tango-transmit)"/>
+    <text class="diagram-note diagram-note--start" x="154" y="284"><%= t "tango.transmitted" %></text>
+  </svg>
+</figure>

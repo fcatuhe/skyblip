@@ -1,6 +1,6 @@
 ---
 title: The traffic around you, in your pocket
-description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight and interoperable European standard, receives everyone else's and tells you where to look. From light aircraft to skydivers, nothing to install, no subscription.
+description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight and interoperable European standard, receives ADS-L and FLARM traffic and tells you where to look. From light aircraft to skydivers, nothing to install, no subscription.
 ---
 
 <header class="page-hero">
@@ -9,8 +9,8 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
   <div class="page-hero-split">
     <div>
       <p class="page-hero-subtitle">
-        skyBlip Go broadcasts your position in ADS-L, receives everyone
-        else&rsquo;s and tells you where to look.
+        skyBlip Go broadcasts your position in ADS-L, receives ADS-L and
+        FLARM traffic and tells you where to look.
       </p>
       <p class="page-hero-audience">
         From light aircraft to skydivers, by way of microlights, gliders,
@@ -174,8 +174,9 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <summary>Do I see airliners?</summary>
       <p>
         Not yet. They transmit ADS-B on 1090&nbsp;MHz, which skyBlip Go
-        does not receive. skyPost ground stations will relay them in ADS-L:
-        <%= link_to_page "roadmap", label: "what comes next" %>.
+        does not receive. Paired with skyBlip Bravo, in development, a Go will
+        show them on its radar:
+        <%= link_to_page "roadmap", label: "skyBlip Tango", anchor: "tango" %>.
       </p>
     </details>
     <details>
@@ -237,6 +238,7 @@ description: skyBlip Go broadcasts your position in ADS-L, the open, lightweight
       <p>Its channels follow those of FLARM and PilotAware. skyBlip Go also receives FLARM traffic.</p>
     </div>
   </div>
+  <p class="more"><%= link_to_page "roadmap", label: "In development: ADS-B traffic on board, with skyBlip Tango", anchor: "tango" %></p>
 </section>
 
 <section class="band band--tint">

@@ -1,6 +1,6 @@
 ---
 title: Le trafic alentour, dans votre poche
-description: skyBlip Go émet votre position en ADS-L, le standard européen ouvert, léger et interopérable, reçoit celle des autres et vous dit où regarder. De l'avion léger au parachutiste, sans installation ni abonnement.
+description: skyBlip Go émet votre position en ADS-L, le standard européen ouvert, léger et interopérable, reçoit le trafic ADS-L et FLARM et vous dit où regarder. De l'avion léger au parachutiste, sans installation ni abonnement.
 ---
 
 <header class="page-hero">
@@ -9,8 +9,8 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
   <div class="page-hero-split">
     <div>
       <p class="page-hero-subtitle">
-        skyBlip Go émet votre position en ADS-L, reçoit celle des autres et vous
-        dit où regarder.
+        skyBlip Go émet votre position en ADS-L, reçoit le trafic ADS-L et
+        FLARM et vous dit où regarder.
       </p>
       <p class="page-hero-audience">
         De l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
@@ -175,8 +175,9 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <summary>Est-ce que je vois les avions de ligne&nbsp;?</summary>
       <p>
         Pas encore. Ils émettent en ADS-B sur 1090&nbsp;MHz, que skyBlip Go
-        ne reçoit pas. Les stations sol skyPost les relaieront en ADS-L&nbsp;:
-        <%= link_to_page "roadmap", label: "ce qui vient ensuite" %>.
+        ne reçoit pas. Associé à skyBlip Bravo, en développement, un Go les
+        affichera sur son radar&nbsp;:
+        <%= link_to_page "roadmap", label: "skyBlip Tango", anchor: "tango" %>.
       </p>
     </details>
     <details>
@@ -239,6 +240,7 @@ description: skyBlip Go émet votre position en ADS-L, le standard européen ouv
       <p>Ses canaux reprennent ceux de FLARM et de PilotAware. skyBlip Go reçoit aussi le trafic FLARM.</p>
     </div>
   </div>
+  <p class="more"><%= link_to_page "roadmap", label: "En développement\u00a0: le trafic ADS-B à bord, avec skyBlip Tango", anchor: "tango" %></p>
 </section>
 
 <section class="band band--tint">

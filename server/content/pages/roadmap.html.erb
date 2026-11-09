@@ -1,20 +1,79 @@
 ---
 title: Coming next
 nav_title: Roadmap
-description: skyBlip Go is available today. Next come the skyBlip Panel for glass cockpits, and the skyPost ground stations, which will relay airliners and weather.
+description: skyBlip Go is available today. skyBlip Bravo, in development, will receive ADS-B in the aircraft, and a Go paired with a Bravo will make a skyBlip Tango. The Panel for glass cockpits and the skyPost ground stations are in design.
 ---
 
 <header class="page-hero">
-  <h1>Today skyBlip Go. Next, these three.</h1>
+  <h1>Today skyBlip Go. Next, ADS-B on board.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go is the only device available. The next three are in
-    design, on the same code base.
+    skyBlip Go and Go+ are available. skyBlip Bravo, an ADS-B receiver, is in
+    development. The Panel and the skyPost stations are in design, on the same
+    code base.
   </p>
 </header>
 
 <section class="band band--tint">
   <h2 class="section-title">In the aircraft</h2>
+  <p class="section-intro">
+    skyBlip Go receives ADS-L and FLARM. It does not receive ADS-B on
+    1090&nbsp;MHz, which airliners, business jets, helicopters and many touring
+    aircraft transmit. skyBlip Bravo will receive it in the aircraft, with no
+    ground station.
+  </p>
+
   <div class="feature">
+    <div>
+      <p class="eyebrow">In development</p>
+      <h3 id="tango">skyBlip Tan<span class="highlight">go</span>.</h3>
+      <p>
+        A skyBlip Go paired with a skyBlip Bravo. Bravo will receive ADS-B and
+        pass it to the Go. The Go will show it on its radar with the ADS-L and
+        FLARM traffic, and warn you about all three.
+      </p>
+      <p>
+        Your phone will connect to the Go and get all the traffic in one
+        stream. The Go will keep broadcasting your position in ADS-L.
+      </p>
+      <p>
+        A pilot who buys a Tango to see the airliners will also be seen in
+        ADS-L.
+      </p>
+      <p>
+        A plain Go has no buzzer, so in a Tango the alarm will sound on Bravo.
+      </p>
+      <p class="note">
+        Bravo&rsquo;s hardware has not yet been tested with skyBlip. Reception,
+        range and altitude handling remain unverified.
+      </p>
+      <p class="feature-guide"><small>Hardware: LilyGO T-Echo and Seeed SenseCAP MeshTracker X1.</small></p>
+    </div>
+    <%= render "shared/tango" %>
+  </div>
+
+  <div class="columns">
+    <div>
+      <h3 id="bravo">skyBlip Bravo.</h3>
+      <p>
+        Card-sized, with no screen. It will receive ADS-B on 1090&nbsp;MHz,
+        Extended Squitter (DF17) only. On its own, it will send that traffic to
+        your navigation app and sound the alarm. It will not broadcast your
+        position: to be seen, pair it with a Go.
+      </p>
+      <p class="note">Seeed SenseCAP MeshTracker X1.</p>
+    </div>
+    <div>
+      <h3>skyBlip Tango+.</h3>
+      <p>
+        A Go+ paired with a Bravo, with the same traffic as a Tango. The Go+
+        has its own buzzer and vibration motor, and will take over the alarm
+        while the pair is healthy.
+      </p>
+      <p class="note">LilyGO T-Echo Plus and Seeed SenseCAP MeshTracker X1.</p>
+    </div>
+  </div>
+
+  <div class="feature feature--reverse">
     <div>
       <p class="eyebrow">For glass cockpits</p>
       <h3>skyBlip <span class="highlight">Panel</span>.</h3>
@@ -38,10 +97,9 @@ description: skyBlip Go is available today. Next come the skyBlip Panel for glas
 <section class="band">
   <h2 class="section-title">On the ground</h2>
   <p class="section-intro">
-    Airliners and many touring aircraft transmit ADS-B on 1090&nbsp;MHz, which
-    skyBlip Go does not receive. A skyPost station will receive them, add the
-    traffic of the Open Glider Network and the weather (QNH, METAR, TAF), and
-    relay it all in ADS-L to the skyBlips in flight.
+    Around the airfield, a skyPost station will receive ADS-B, add the traffic
+    of the Open Glider Network and the weather (QNH, METAR, TAF), and relay it
+    all in ADS-L to every skyBlip Go in range.
   </p>
   <div class="columns">
     <div>

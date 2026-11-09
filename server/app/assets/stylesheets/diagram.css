@@ -1,0 +1,35 @@
+@layer components {
+  .diagram {
+    margin: 0;
+    display: grid;
+    justify-items: center;
+  }
+
+  .diagram svg {
+    inline-size: min(400px, 100%);
+    block-size: auto;
+    font-family: var(--font-sans);
+  }
+
+  .diagram text { text-anchor: middle; fill: var(--ink-soft); }
+
+  .diagram-label { font-size: var(--text-xs); font-weight: 700; fill: var(--sky-deep); }
+  .diagram .diagram-label--transmit { fill: var(--blip-text); }
+  .diagram-brand { font-size: var(--text-xs); }
+  .diagram .diagram-name { font-family: var(--font-display); font-size: var(--text-l); font-weight: 700; fill: var(--ink); }
+  .diagram .diagram-phone { font-size: var(--text-s); font-weight: 700; fill: var(--ink); }
+  .diagram-note { font-size: var(--text-xs); }
+  .diagram .diagram-note--end { text-anchor: end; }
+  .diagram .diagram-note--start { text-anchor: start; }
+
+  .diagram-device { fill: var(--card-bg); stroke: var(--ink); stroke-width: 1.5; }
+  .diagram-device--quiet { stroke: var(--sky); }
+
+  .diagram-receive { stroke: var(--sky-deep); stroke-width: 2; }
+  .diagram-transmit { stroke: var(--blip-text); stroke-width: 2.5; }
+  .diagram-link { stroke: var(--ink-muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+
+  .diagram-head--receive { fill: var(--sky-deep); }
+  .diagram-head--transmit { fill: var(--blip-text); }
+  .diagram-head--link { fill: var(--ink-muted); }
+}
