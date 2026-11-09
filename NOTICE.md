@@ -14,6 +14,8 @@ skyBlip is MIT, see [`LICENSE`](https://github.com/fcatuhe/skyblip/blob/main/LIC
 | `server/app/assets/fonts/B612Mono-Regular.woff2` | B612 Mono | SIL Open Font License 1.1, `OFL-B612.txt` beside it |
 | `docs/reference/ads-l_4_srd860_issue_*` | ADS-L 4 SRD-860, Issues 1 and 2, and their text conversions | Copyright European Union Aviation Safety Agency. Reproduction is authorised provided the source is acknowledged, see `docs/reference/README.md` |
 
+The 5x7 font in `firmware/ui/canvas.cpp` is the character set of Hitachi's HD44780U LCD controller, ROM code A00, as Table 4 of the HD44780U datasheet draws it. Hitachi attaches no license to it. It is credited here as the font's origin.
+
 The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered from Fira Sans Bold by `scripts/make_wordmark.py`. It is artwork drawn with the font, not the font itself.
 
 ## Followed in our own code
