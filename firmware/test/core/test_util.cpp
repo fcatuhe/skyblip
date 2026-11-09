@@ -1,7 +1,7 @@
 // The integer arithmetic the rest of the firmware trusts without checking: fixed
-// point instead of floats, a CORDIC sine, an integer square root, the variable
-// resolution codecs ADS-L packs its fields into. Every one is a silent failure
-// mode. A variable-range codec that rounds the wrong way or an arctangent that is a quadrant out
+// point instead of floats, a CORDIC sine, an integer square root, the exponential
+// codes ADS-L packs its fields into. Every one is a silent failure
+// mode. An exponential code that rounds the wrong way or an arctangent that is a quadrant out
 // reaches the pilot as a target in the wrong place, with nothing logged.
 #include <cmath>
 #include <cstdlib>  // std::abs
@@ -9,11 +9,11 @@
 #include <string>
 
 #include "core/units/units.h"
+#include "core/util/exponential.h"
 #include "core/util/fifo.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "core/util/result.h"
-#include "core/util/variable_range.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -73,27 +73,34 @@ TEST_CASE("fifo: bounded ring behaviour") {
     CHECK(fifo.pop().status() == Status::Empty);
 }
 
-TEST_CASE("variable range: unsigned encode/decode round-trip (within representable range)") {
-    // Bits=6 range encoding is representable up to ~956. Below that the coarsest
-    // quantization step is 8.
-    for (uint16_t value = 0; value < 900; value += 7) {
-        uint16_t encoded = encode_unsigned_variable_range<uint16_t, 6>(value);
-        uint16_t decoded = decode_unsigned_variable_range<uint16_t, 6>(encoded);
-        CHECK(std::abs(int(decoded) - int(value)) <= 8);  // within the coarsest step
+TEST_CASE("exponential: an unsigned value comes back within the step its code names") {
+    const Exponential speed{6, 2, false};
+    for (int32_t value = 0; value < 900; value += 7) {
+        const int32_t decoded = speed.decode_middle(speed.encode(value));
+        CHECK(std::abs(decoded - value) <= 8);
     }
-    // Saturation: large values clamp to the max code, not garbage.
-    CHECK(decode_unsigned_variable_range<uint16_t, 6>(
-              encode_unsigned_variable_range<uint16_t, 6>(5000)) <= 960);
+    CHECK(speed.encode(5000) == speed.largest_magnitude_code());
+    CHECK(speed.encode(-5) == 0);
 }
 
-TEST_CASE("variable range: signed preserves sign and magnitude bucket") {
-    for (int16_t value = -900; value < 900; value += 13) {
-        int16_t encoded = encode_signed_variable_range<int16_t, 6>(value);
-        int16_t decoded = decode_signed_variable_range<int16_t, 6>(encoded);
-        bool sign_ok = ((value < 0) == (decoded < 0)) || (decoded == 0);
-        CHECK(sign_ok);
+TEST_CASE("exponential: a signed value keeps its sign and the step its magnitude names") {
+    const Exponential climb{6, 2, true};
+    for (int32_t value = -900; value < 900; value += 13) {
+        const int32_t decoded = climb.decode_middle(climb.encode(value));
+        CHECK(((value < 0) == (decoded < 0) || decoded == 0));
         CHECK(std::abs(std::abs(value) - std::abs(decoded)) <= 8);
     }
+}
+
+// One exponent bit, as an ALP-TAS altitude carries: 12 bits at 1 m, then 12 bits at 2 m.
+TEST_CASE("exponential: a single exponent bit doubles the step once") {
+    const Exponential altitude{12, 1, false};
+    CHECK(altitude.encode(4095) == 4095u);
+    CHECK(altitude.encode(4096) == 4096u);
+    CHECK(altitude.encode(4097) == 4096u);
+    CHECK(altitude.decode(4097) == 4098);
+    CHECK(altitude.encode(1000000) == 8191u);
+    CHECK(altitude.decode(8191) == 12286);
 }
 
 TEST_CASE("intmath: sine/cosine magnitude and quadrature") {

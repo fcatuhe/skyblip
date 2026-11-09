@@ -171,7 +171,7 @@ TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") 
 }
 
 // --- ADS-L 4 SRD860 issue 2, G.1.7 / G.1.8 / G.1.9 -------------------------
-// The three variable-range fields each have an "invalid" code, and encode_unsigned_variable_range
+// The three exponential fields each have an "invalid" code, and Exponential::encode
 // saturates at exactly that code. The spec is explicit that an out-of-range
 // measurement encodes the LIMIT and that "invalid" means unavailable, so
 // saturation must stop one short. These pin that apart.

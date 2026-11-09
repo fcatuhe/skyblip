@@ -8,7 +8,8 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
-#include "core/util/little_endian.h"
+#include "core/util/bit_field.h"
+#include "core/util/exponential.h"
 
 namespace skyblip::protocol {
 
@@ -16,8 +17,9 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kTxBytes = 27;
     static constexpr uint8_t kSync1 = 0x72;
     static constexpr uint8_t kSync2 = 0x4B;
-    static constexpr uint8_t kDataBytes = kTxBytes - 3;      // 24: Version+payload+CRC
-    static constexpr uint8_t kCrcCoverBytes = kTxBytes - 6;  // 21: Version+payload
+    static constexpr uint8_t kDataBytes = kTxBytes - 3;
+    static constexpr uint8_t kCrcCoverBytes = kTxBytes - 6;
+    static constexpr uint8_t kPayloadBytes = 20;
     // INFO: fc 20sep26 F.2.1 leaves payload 66 to OGN, layout: nrf52-ogn-tracker/src/adsl.h:120
     static constexpr uint8_t kPayloadTypePosition = 0x02;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
@@ -30,23 +32,19 @@ struct __attribute__((packed)) AdslPacket {
     uint8_t sync[2];
     uint8_t data_bytes;
     union {
-        uint8_t data[kDataBytes];  // Version..CRC, what the CRC and the FEC address
+        uint8_t data[kDataBytes];
         struct __attribute__((packed)) {
-            uint8_t version;  // Version[4]/Signature[1]/Key[2]/Reserved[1]
+            uint8_t version;
             union {
-                uint32_t payload_words[5];
-                uint8_t payload[20];
+                uint8_t payload[kPayloadBytes];
                 struct __attribute__((packed)) {
-                    uint8_t payload_type;      // 0x02 = iConspicuity; bit7 = unicast
-                    uint8_t address_bytes[4];  // Address[30]/Reserved[1]/RelayForward[1]
-                    // Meta[2]: Time[6]/FlightState[2]/Cat[5]/Emergency[3]
-                    uint8_t timestamp : 6;          // [0.25 s]
-                    uint8_t flight_state : 2;       // 0=unknown,1=ground,2=airborne
-                    uint8_t aircraft_category : 5;  // ADS-L category
-                    uint8_t emergency : 3;          // 1 = OK
-                    // Position[11]: Lat[24]/Lon[24]/Speed[8]/Alt[14]/Climb[9]/Track[9]
-                    uint8_t position_bytes[11];
-                    // Integrity[2]: SIL[2]/SDA[2]/NIC[4]/NACp[3]/GVA[2]/NACv[2]/Reserved[1]
+                    uint8_t payload_type;
+                    uint8_t address_bytes[4];
+                    uint8_t timestamp : 6;
+                    uint8_t flight_state : 2;
+                    uint8_t aircraft_category : 5;
+                    uint8_t emergency : 3;
+                    uint8_t motion[11];
                     uint8_t source_integrity : 2;
                     uint8_t design_assurance : 2;
                     uint8_t navigation_integrity : 4;
@@ -61,28 +59,46 @@ struct __attribute__((packed)) AdslPacket {
     };
     uint8_t spare;
 
+    // INFO: fc 09nov26 offsets count from payload bit 0: 40 bits of F.2 header, then G.1
+    static constexpr uint16_t kTrafficOffset = 40;
+    static constexpr BitField kAddressMappingTableField{8, 6};
+    static constexpr BitField kAddressField{14, 24};
+    static constexpr BitField kRelayField{39, 1};
+    static constexpr BitField kInformationTypeField{kTrafficOffset, 6};
+    static constexpr BitField kTelemetryTypeField{kTrafficOffset + 6, 2};
+    static constexpr BitField kLatitudeField{kTrafficOffset + 16, 24};
+    static constexpr BitField kLongitudeField{kTrafficOffset + 40, 24};
+    static constexpr BitField kSpeedField{kTrafficOffset + 64, 8};
+    static constexpr BitField kAltitudeField{kTrafficOffset + 72, 14};
+    static constexpr BitField kClimbField{kTrafficOffset + 86, 9};
+    static constexpr BitField kTrackField{kTrafficOffset + 95, 9};
+
+    static constexpr Exponential kSpeedCode{6, 2, false};
+    static constexpr Exponential kAltitudeCode{12, 2, false};
+    static constexpr Exponential kClimbCode{6, 2, true};
+
+    // INFO: fc 09nov26 G.1.5: a latitude step is 1/93206 degree, a longitude step 1/46603
+    static constexpr int64_t kLatitudeStepsPerDegree = 93206;
+    static constexpr int64_t kLongitudeStepsPerDegree = 46603;
+
     void reset(uint8_t type = kPayloadTypePosition) {
+        __builtin_memset(this, 0, sizeof(*this));
         sync[0] = kSync1;
         sync[1] = kSync2;
-        data_bytes = kTxBytes - 3;
-        version = 0x00;
-        for (int i = 0; i < 5; i++) payload_words[i] = 0;
+        data_bytes = kDataBytes;
         payload_type = type;
-        spare = 0;
-        crc_bytes[0] = crc_bytes[1] = crc_bytes[2] = 0;
     }
+
+    uint32_t field(BitField where) const { return read_bits(payload, where); }
+    void set_field(BitField where, uint32_t value) { write_bits(payload, where, value); }
 
     bool is_position() const { return payload_type == kPayloadTypePosition; }
 
-    uint8_t telemetry_type() const {
-        return static_cast<uint8_t>(payload[kInformationHeaderOffset] >> 6);
-    }
-    uint8_t information_type() const {
-        return static_cast<uint8_t>(payload[kInformationHeaderOffset] & 0x3F);
-    }
+    uint8_t telemetry_type() const { return static_cast<uint8_t>(field(kTelemetryTypeField)); }
+    uint8_t information_type() const { return static_cast<uint8_t>(field(kInformationTypeField)); }
     void set_information_header(uint8_t telemetry_type, uint8_t information_type) {
-        payload[kInformationHeaderOffset] =
-            static_cast<uint8_t>((telemetry_type << 6) | (information_type & 0x3F));
+        set_field(kTelemetryTypeField, telemetry_type);
+        set_field(kInformationTypeField, information_type);
     }
     bool is_registration() const {
         return payload_type == kPayloadTypeOgnDiagnostics &&
@@ -94,63 +110,34 @@ struct __attribute__((packed)) AdslPacket {
     }
     char* information_text() { return reinterpret_cast<char*>(payload + kInformationTextOffset); }
 
-    uint32_t address() const { return (get_uint32(address_bytes) >> 6) & settings::kAddressMask; }
-    void set_address(uint32_t address) {
-        put_uint32(address_bytes, (get_uint32(address_bytes) & 0xC000003F) | (address << 6));
+    uint32_t address() const { return field(kAddressField); }
+    void set_address(uint32_t address) { set_field(kAddressField, address); }
+    uint8_t address_mapping_table() const {
+        return static_cast<uint8_t>(field(kAddressMappingTableField));
     }
-    uint8_t address_mapping_table() const { return address_bytes[0] & 0x3F; }
-    void set_address_mapping_table(uint8_t table) {
-        address_bytes[0] = (address_bytes[0] & 0xC0) | table;
-    }
+    void set_address_mapping_table(uint8_t table) { set_field(kAddressMappingTableField, table); }
     uint32_t table_and_address() const {
         return (static_cast<uint32_t>(address_mapping_table()) << 24) | address();
     }
-    bool is_relay() const { return address_bytes[3] & 0x80; }
-    void set_relay(uint8_t relay = 1) {
-        address_bytes[3] = (address_bytes[3] & 0x7F) | (relay << 7);
-    }
+    bool is_relay() const { return field(kRelayField) != 0; }
+    void set_relay(uint8_t relay = 1) { set_field(kRelayField, relay); }
 
-    static int32_t cordic_to_1e7(int32_t cordic) {
-        return static_cast<int32_t>((static_cast<int64_t>(cordic) * 900007296 + (1 << 29)) >> 30);
-    }
-    static int32_t cordic_from_1e7(int32_t degrees_1e7) {
-        return static_cast<int32_t>((static_cast<int64_t>(degrees_1e7) * 5003959 + (1 << 21)) >>
-                                    22);
-    }
-
-    int32_t latitude_cordic() const {
-        int32_t cordic = static_cast<int32_t>(get_uint24(position_bytes));
-        cordic <<= 8;
-        cordic >>= 1;
-        return cordic;
-    }
-    int32_t longitude_cordic() const {
-        int32_t cordic = static_cast<int32_t>(get_uint24(position_bytes + 3));
-        cordic <<= 8;
-        return cordic;
-    }
-    void set_latitude_cordic(int32_t latitude) {
-        latitude = (latitude + 0x40) >> 7;
-        put_uint24(position_bytes, latitude);
-    }
-    void set_longitude_cordic(int32_t longitude) {
-        longitude = (longitude + 0x80) >> 8;
-        put_uint24(position_bytes + 3, longitude);
-    }
     // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
     bool has_position() const {
-        return get_uint24(position_bytes) != kPositionInvalidCode &&
-               get_uint24(position_bytes + 3) != kPositionInvalidCode;
+        return field(kLatitudeField) != kPositionInvalidCode &&
+               field(kLongitudeField) != kPositionInvalidCode;
     }
     void set_position_invalid() {
-        put_uint24(position_bytes, kPositionInvalidCode);
-        put_uint24(position_bytes + 3, kPositionInvalidCode);
+        set_field(kLatitudeField, kPositionInvalidCode);
+        set_field(kLongitudeField, kPositionInvalidCode);
     }
-    int32_t latitude_1e7() const { return cordic_to_1e7(latitude_cordic()); }
-    int32_t longitude_1e7() const { return cordic_to_1e7(longitude_cordic()); }
-    void set_latitude_1e7(int32_t latitude) { set_latitude_cordic(cordic_from_1e7(latitude)); }
-    void set_longitude_1e7(int32_t longitude) { set_longitude_cordic(cordic_from_1e7(longitude)); }
+    int32_t latitude_steps() const { return read_signed_bits(payload, kLatitudeField); }
+    int32_t longitude_steps() const { return read_signed_bits(payload, kLongitudeField); }
+    int32_t latitude_1e7() const;
+    int32_t longitude_1e7() const;
+    void set_latitude_1e7(int32_t latitude);
+    void set_longitude_1e7(int32_t longitude);
 
     // Three fields carry an explicit "invalid" code, and the spec is emphatic
     // that it means UNAVAILABLE, not out-of-range: an over-range value "shall be
@@ -164,26 +151,21 @@ struct __attribute__((packed)) AdslPacket {
 
     uint16_t speed_q() const;          // [0.25 m/s]
     void set_speed_q(uint16_t speed);  // [0.25 m/s]
-    bool has_speed() const { return position_bytes[6] != kSpeedInvalidCode; }
-    void set_speed_invalid() { position_bytes[6] = kSpeedInvalidCode; }
+    bool has_speed() const { return field(kSpeedField) != kSpeedInvalidCode; }
+    void set_speed_invalid() { set_field(kSpeedField, kSpeedInvalidCode); }
 
     int32_t altitude_m() const;  // [m] HAE (WGS-84 ellipsoid, G.1.7: NOT pressure)
     void set_altitude_m(int32_t altitude);
-    bool has_altitude() const {
-        return (position_bytes[8] & 0x3F) != 0x3F || position_bytes[7] != 0xFF;
-    }
-    void set_altitude_invalid() {
-        position_bytes[7] = 0xFF;
-        position_bytes[8] = static_cast<uint8_t>((position_bytes[8] & 0xC0) | 0x3F);
-    }
+    bool has_altitude() const { return field(kAltitudeField) != kAltitudeInvalidCode; }
+    void set_altitude_invalid() { set_field(kAltitudeField, kAltitudeInvalidCode); }
 
     int16_t climb_e8() const;  // [0.125 m/s]
     void set_climb_e8(int16_t climb);
-    bool has_climb() const;
-    void set_climb_invalid() { write_climb_code(kClimbInvalidCode); }
+    bool has_climb() const { return field(kClimbField) != kClimbInvalidCode; }
+    void set_climb_invalid() { set_field(kClimbField, kClimbInvalidCode); }
 
-    uint16_t track_c9() const;  // 9-bit cordic (512 == 360 deg)
-    void set_track_c9(uint16_t track);
+    uint16_t track_c9() const { return static_cast<uint16_t>(field(kTrackField)); }
+    void set_track_c9(uint16_t track) { set_field(kTrackField, track); }
 
     // The Integrity[2] block, G.1.10 to G.1.15. Every one of these fields has a
     // zero code that means "unknown / no fix", so leaving the block at its
@@ -199,8 +181,6 @@ struct __attribute__((packed)) AdslPacket {
 
     void set_integrity_unknown();
     void set_integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2);
-
-    void write_climb_code(uint16_t code);
 
     void scramble();
     void descramble();

@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "core/fec/scramble.h"
+#include "core/fec/xxtea.h"
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
 #include "core/util/little_endian.h"
@@ -65,7 +65,7 @@ Status AdslUplink::encode(const model::AircraftObservation* targets, int count, 
     }
     uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
-    fec::xxtea_scramble_key0(words, sizeof(words) / 4, 6);
+    fec::xxtea_encrypt(words, sizeof(words) / 4, fec::kXxteaZeroKey, 6);
     std::memcpy(data, words, sizeof(words));
 
     std::memcpy(out_frame, data, fec::ReedSolomon255::kDataBytes);
@@ -85,7 +85,7 @@ Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObser
     std::memcpy(data, codeword, fec::ReedSolomon255::kDataBytes);
     uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
     std::memcpy(words, data, sizeof(words));
-    fec::xxtea_descramble_key0(words, sizeof(words) / 4, 6);
+    fec::xxtea_decrypt(words, sizeof(words) / 4, fec::kXxteaZeroKey, 6);
     std::memcpy(data, words, sizeof(words));
 
     if (data[0] != kVersion) return Status::Unsupported;

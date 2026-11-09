@@ -8,7 +8,7 @@
 
 #include "core/fec/crc.h"
 #include "core/fec/manchester.h"
-#include "core/fec/scramble.h"
+#include "core/fec/xxtea.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip::fec;
@@ -70,9 +70,9 @@ TEST_CASE("scramble: descramble is the exact inverse (property)") {
         }
         uint32_t original[5];
         std::memcpy(original, words, sizeof(words));
-        xxtea_scramble_key0(words, 5, 6);
+        xxtea_encrypt(words, 5, kXxteaZeroKey, 6);
         CHECK(std::memcmp(words, original, sizeof(words)) != 0);  // actually changed
-        xxtea_descramble_key0(words, 5, 6);
+        xxtea_decrypt(words, 5, kXxteaZeroKey, 6);
         CHECK(std::memcmp(words, original, sizeof(words)) == 0);  // and reversible
     }
 }
@@ -81,11 +81,11 @@ TEST_CASE("scramble: avalanche, one input bit flips ~half the output bits") {
     uint32_t words[5] = {0x11111111, 0x22222222, 0x33333333, 0x44444444, 0x55555555};
     uint32_t scrambled[5];
     std::memcpy(scrambled, words, sizeof(words));
-    xxtea_scramble_key0(scrambled, 5, 6);
+    xxtea_encrypt(scrambled, 5, kXxteaZeroKey, 6);
     words[2] ^= 1;  // flip a single bit
     uint32_t flipped[5];
     std::memcpy(flipped, words, sizeof(words));
-    xxtea_scramble_key0(flipped, 5, 6);
+    xxtea_encrypt(flipped, 5, kXxteaZeroKey, 6);
     int diff = 0;
     for (int i = 0; i < 5; i++) diff += __builtin_popcountl(scrambled[i] ^ flipped[i]);
     // 160 output bits. A good diffusion is roughly half.
