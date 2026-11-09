@@ -97,7 +97,7 @@ crypto::Ed25519::Seed KeySlots::seed_of(const Material& material) {
     return seed.finish();
 }
 
-// INFO: fc 08nov26 a draw of one byte repeated is an RNG that failed or wrote nothing, never a key
+// INFO: fc 08nov26 a draw of one byte repeated is a buffer the driver never filled, never a key
 bool KeySlots::storable(const Material& material, const DeviceId& device_id) {
     if (all_one_byte(material)) return false;
     const Slot slot = slot_of(material, device_id);
