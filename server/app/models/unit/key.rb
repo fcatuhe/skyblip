@@ -3,7 +3,7 @@ class Unit::Key < ApplicationRecord
 
   enum :status, %w[active pending revoked].index_by(&:itself)
 
-  # INFO: fc 08nov26 a key on two DEVICEIDs is a cloned key or a failing RNG, so the admin pages show it
+  # INFO: fc 08nov26 a key on two DEVICEIDs is a key reused by a script or custom firmware, or a failing RNG, so the admin pages show it
   scope :shared, -> { where(public_key: Unit::Key.group(:public_key).having(arel_table[:unit_id].count(true).gt(1)).select(:public_key)) }
 
   validates :public_key, format: { with: Activation::PUBLIC_KEY }

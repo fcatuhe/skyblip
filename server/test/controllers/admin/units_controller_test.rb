@@ -47,6 +47,19 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr", text: /#{unit_keys(:bound_active).public_key}.*000003/m
   end
 
+  test "names ten units that share a key and counts the rest" do
+    sign_in_as users(:francois)
+    Array.new(11) { |index| Unit.create!(device_id: format("%016x", 0xd000 + index), serial: 10 + index) }.each do |unit|
+      unit.keys.create!(public_key: unit_keys(:bound_active).public_key, status: :active)
+    end
+
+    get admin_units_path
+
+    assert_select "[role=alert]", text: /12 units share a key.*and 2 more\./m do
+      assert_select "a", count: 10
+    end
+  end
+
   test "flags nothing while every key is on one unit" do
     sign_in_as users(:francois)
 
