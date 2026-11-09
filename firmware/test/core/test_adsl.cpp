@@ -121,6 +121,32 @@ TEST_CASE("adsl: a flagged bit past the eighth is searched, not wrapped back ont
     CHECK(std::memcmp(packet.data, sent.data, AdslPacket::kDataBytes) == 0);
 }
 
+TEST_CASE("adsl: one unmarked error is repaired even when more bits are marked than the cap") {
+    AdslPacket packet = make_reference();
+    packet.scramble();
+    packet.set_crc();
+    const AdslPacket sent = packet;
+    uint8_t error[AdslPacket::kDataBytes] = {0};
+    error[0] = 0xFE;
+    packet.data[6] ^= 0x20;
+    REQUIRE(packet.check_crc() != 0);
+
+    CHECK(packet.correct(error, 6) == 1);
+    CHECK(std::memcmp(packet.data, sent.data, AdslPacket::kDataBytes) == 0);
+}
+
+TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
+    AdslPacket packet = make_reference();
+    packet.scramble();
+    packet.set_crc();
+    uint8_t error[AdslPacket::kDataBytes] = {0};
+    for (int byte : {4, 9, 14}) packet.data[byte] ^= 0x03;
+    const AdslPacket arrived = packet;
+
+    CHECK(packet.correct(error, 6) == -1);
+    CHECK(std::memcmp(packet.data, arrived.data, AdslPacket::kDataBytes) == 0);
+}
+
 TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") {
     // Push random-ish bit errors, some flagged (weak) and some not, and count:
     //   good      = decoded to the exact original codeword
