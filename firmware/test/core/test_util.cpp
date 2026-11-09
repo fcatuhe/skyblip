@@ -123,6 +123,11 @@ TEST_CASE("intmath: square root and hypotenuse") {
     CHECK(square_root<uint32_t>(144) == 12);
     CHECK(square_root<uint32_t>(1000000) == 1000);
     CHECK(hypotenuse(3000, 4000) == 5000);
+    // Rounded to the nearest whole root: 2.83 is 3 and 3.87 is 4, and a negative square has none.
+    CHECK(square_root<int64_t>(8) == 3);
+    CHECK(square_root<int64_t>(15) == 4);
+    CHECK(square_root<int64_t>(4294967295LL) == 65536);
+    CHECK(square_root<int32_t>(-4) == 0);
 }
 
 TEST_CASE("intmath: arctangent cardinal directions (16-bit cyclic)") {
