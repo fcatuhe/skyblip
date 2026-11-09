@@ -37,6 +37,10 @@ constexpr ports::Capabilities kOptional =
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
 
+// INFO: fc 08nov26 at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms
+// against 2 s (zephyr/rf.h:221, slot.h:42-45)
+constexpr uint32_t kRadioParkCeilingMs = 2000;
+
 struct SelfTestPartSpec {
     const char* name;
     ports::Capability capability;
@@ -146,6 +150,7 @@ class Product {
         shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
         drive_shutdown(now_ms);
         if (shutdown_.going_down()) screen_.settle_park(now_ms);
+        if (shutdown_.going_down()) await_radio_park(now_ms, ready_but_for_radio());
         enter_recovery_once_parked();
         remember_glass();
     }
@@ -153,21 +158,27 @@ class Product {
     bool park_refusal(uint32_t now_ms) {
         // INFO: fc 05oct26 the refused press may still be down, and the wake pin senses a level
         const bool released = refusal_release_.settled(now_ms, platform_.button_down());
-        if (refused_frame_ == power::RefusedFrame::Leave) return released;
         if (!refusal_asked_) {
             refusal_asked_ = true;
             refusal_since_ms_ = now_ms;
-            if (refused_frame_ == power::RefusedFrame::FlatCell)
+            park_parts(now_ms);
+            if (refused_frame_ == power::RefusedFrame::Leave)
+                screen_.sleep_panel(now_ms);
+            else if (refused_frame_ == power::RefusedFrame::FlatCell)
                 park_flat_cell();
             else
                 screen_.park_for_off();
         }
-        screen_.settle_park(now_ms);
-        remember_glass();
-        // INFO: fc 21sep26 a panel that never reports ready must not hold a flat cell awake
-        const bool parked =
-            !screen_.parking() || now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs;
-        return parked && released;
+        if (refused_frame_ != power::RefusedFrame::Leave) {
+            screen_.settle_park(now_ms);
+            remember_glass();
+            // INFO: fc 21sep26 a panel that never reports ready must not hold a flat cell awake
+            if (screen_.parking() && now_ms - refusal_since_ms_ >= kRefusalParkCeilingMs)
+                screen_.sleep_panel(now_ms);
+        }
+        const bool ready_but_radio = released && !screen_.parking();
+        await_radio_park(now_ms, ready_but_radio);
+        return ready_but_radio && roles_.rf.parked();
     }
 
     power::RefusedFrame refused_frame() const { return refused_frame_; }
@@ -194,10 +205,7 @@ class Product {
     power::ShutdownSequencer& shutdown() { return shutdown_; }
     const power::ShutdownSequencer& shutdown() const { return shutdown_; }
     // INFO: fc 12sep26 rails cut mid-frame leave the ink half-driven, and the sun develops it
-    bool ready_to_power_off() const {
-        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
-               (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
-    }
+    bool ready_to_power_off() const { return ready_but_for_radio() && roles_.rf.parked(); }
     bool installing() const { return shutdown_.reason() == power::ShutdownReason::Install; }
     bool recovering() const { return shutdown_.reason() == power::ShutdownReason::Recovery; }
     bool stowing() const { return shutdown_.reason() == power::ShutdownReason::Stow; }
@@ -340,11 +348,7 @@ class Product {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
-        // The radio goes first. An armed dwell keeps the receiver and the PA
-        // alive right through the seconds the panel takes to park.
-        roles_.rf.abort();
-        roles_.rf.sleep();
-        publish_radio_asleep();
+        park_parts(now_ms);
         // And now that nothing is armed, the second is nobody's: a settings change
         // still waiting for a free phase (core/timing/durable_write.h) goes to
         // flash here rather than dying with the rails. From this point the service
@@ -352,15 +356,6 @@ class Product {
         config_link_.flush_settings(now_ms);
         power_.record_last_pass(now_ms);
         capture_.park(now_ms);
-        // Every peripheral that can be left driven is switched off by the owner
-        // that drives it, because from here the service loop no longer runs: a
-        // buzzer mid-pattern would sound until the rails drop.
-        alarm_.park(now_ms);
-        // The haptic is a part on a bus, so silence is not enough: a DRV2605 left
-        // out of standby draws through the rail it shares with the flash, and its
-        // enable pin has to be released before that rail goes
-        // (core/power/shutdown.h kPowerDownOrder).
-        board_.park();
         if (installing())
             screen_.park_for_install();
         else if (recovering())
@@ -373,6 +368,41 @@ class Product {
             screen_.park_for_low_cell();
         else
             screen_.set_power(false);
+    }
+
+    // INFO: fc 08nov26 the switch-off and the refused boot both run this, so every road leaves
+    // these parts alike
+    void park_parts(uint32_t now_ms) {
+        // The radio goes first. An armed dwell keeps the receiver and the PA
+        // alive right through the seconds the panel takes to park.
+        roles_.rf.abort();
+        roles_.rf.sleep();
+        publish_radio_asleep();
+        // Every peripheral that can be left driven is switched off by the owner
+        // that drives it, because from here the service loop no longer runs: a
+        // buzzer mid-pattern would sound until the rails drop.
+        alarm_.park(now_ms);
+        // The haptic is a part on a bus, so silence is not enough: a DRV2605 that
+        // answered is put in standby and its enable held low before the rail it
+        // shares with the flash goes, and the enable of one that never answered is
+        // released, since bring-up raised it on every board.
+        board_.park();
+    }
+
+    bool ready_but_for_radio() const {
+        return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
+               (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
+    }
+
+    // INFO: fc 08nov26 a radio that never parks must not keep a switched-off unit awake, so the
+    // wait is bounded
+    void await_radio_park(uint32_t now_ms, bool waiting) {
+        if (!waiting || roles_.rf.parked()) {
+            radio_waited_since_ms_.reset();
+            return;
+        }
+        if (!radio_waited_since_ms_) radio_waited_since_ms_ = now_ms;
+        if (now_ms - *radio_waited_since_ms_ >= kRadioParkCeilingMs) roles_.rf.abandon();
     }
 
     void enter_recovery_once_parked() {
@@ -454,6 +484,7 @@ class Product {
     power::RefusedFrame refused_frame_{power::RefusedFrame::Leave};
     std::optional<ports::RecoveryPath> recovery_taken_{};
     uint32_t refusal_since_ms_{0};
+    std::optional<uint32_t> radio_waited_since_ms_{};
     power::ButtonRelease refusal_release_{};
     bool refusal_asked_{false};
     power::CellOnGlass glass_remembered_{power::CellOnGlass::None};

@@ -192,6 +192,9 @@ constexpr uint8_t kSetSleep = 0x84;
 // a standby rather than the whole bring-up; the RTC is off because the only
 // thing that wakes this device is the button.
 constexpr uint8_t kSleepWarmStartNoRtc = 0x04;
+// INFO: fc 08nov26 DS 13.1.1 cold start, 160 nA against 600 nA warm, for SYSTEM OFF since every
+// boot reinitialises
+constexpr uint8_t kSleepColdStartNoRtc = 0x00;
 constexpr uint16_t kSyncWordRegister = 0x06C0;  // DS 13.4.9, 8 bytes
 
 // DS 9.6 ("Rx Gain") register 0x08AC: 0x94 is the power-saving gain the part

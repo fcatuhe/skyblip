@@ -32,10 +32,10 @@
 		led-green = &led_green;
 		led-red = &led_red;
 		led-blue = &led_blue;
-		gnss-enable = &gnss_enable_gpio;
+		gnss-wake = &gnss_wake_gpio;
 		gnss-reset = &gnss_reset_gpio;
 		peripheral-rail = &peripheral_rail_gpio;
-		auxiliary-rail = &auxiliary_rail_gpio;
+		regulator-enable = &regulator_enable_gpio;
 		flash-write-protect = &flash_write_protect_gpio;
 		flash-hold = &flash_hold_gpio;
 		radio-reset = &radio_reset_gpio;
@@ -98,13 +98,12 @@
 			label = "peripheral-rail";
 		};
 
-		/* P0.13, the REV_2 RF rail (SoftRF iomap/LilyGO_TEcho.h:82-83). Both
-		 * SoftRF and the moshe-braner fork leave this pin alone on REV_2 - they
-		 * never raise it, so they have nothing to drop. We raise it, so we own
-		 * dropping it. */
-		auxiliary_rail_gpio: auxiliary_rail {
+		/* P0.13 (PWR_EN) enables U11, the AP2112K-3.3 that feeds the nRF52840 and
+		 * the SX1262 (Xinyuan-LilyGO/T-Echo schematic/T-Echo_Schematic.pdf), so it
+		 * is raised at boot and never lowered. LilyGO's pin_config.h never defines it. */
+		regulator_enable_gpio: regulator_enable {
 			gpios = <&gpio0 13 GPIO_ACTIVE_HIGH>;
-			label = "auxiliary-rail";
+			label = "regulator-enable";
 		};
 
 		/* Flash WP# (IO2) and HOLD# (IO3) in single-line mode: real inputs, and
@@ -119,13 +118,13 @@
 			label = "flash-hold";
 		};
 
-		/* L76K wake (P1.02) and active-low reset (P1.05). SoftRF drives both
+		/* L76K WAKE_UP (P1.02) and active-low RESET_N (P1.05). SoftRF drives both
 		 * high for the Plus (platform/nRF52.cpp:1589-1593); meshcore's
 		 * lilygo_techo variant.h:139-140 has the same pins with
 		 * PIN_GPS_RESET_ACTIVE=LOW. */
-		gnss_enable_gpio: gnss_enable {
+		gnss_wake_gpio: gnss_wake {
 			gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
-			label = "gnss-enable";
+			label = "gnss-wake";
 		};
 
 		gnss_reset_gpio: gnss_reset {
@@ -134,8 +133,7 @@
 		};
 
 		/* SX1262 NRESET (P0.25). The radio driver drives it through io::Gpio
-		 * with a flat pin number from pins.h; it is named here because the
-		 * shutdown path is the one other caller and it has no board header. */
+		 * with a flat pin number from pins.h, which checks it against this node. */
 		radio_reset_gpio: radio_reset {
 			gpios = <&gpio0 25 GPIO_ACTIVE_LOW>;
 			label = "radio-reset";
@@ -265,7 +263,7 @@
 	 *
 	 * meshcore variants/lilygo_techo/variant.h:77-79 disagrees: 13 / 14 / 15. That
 	 * is SoftRF's REV_1 map (iomap:19-21), so that variant targets the older board
-	 * - and P0.13 is this board's aux 3V3 rail (auxiliary_rail above, iomap:82-83), so
+	 * - and P0.13 is this board's regulator enable (regulator_enable above), so
 	 * the two cannot both be true of a Plus. Every other pin on this board is
 	 * already the REV_2 map, which is the tie-break.
 	 *

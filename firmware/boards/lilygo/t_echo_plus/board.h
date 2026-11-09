@@ -90,11 +90,12 @@ class TEchoPlus {
         return rf_.begin();
     }
 
-    // The way down, for the parts the board owns rather than the platform: the
-    // haptic driver goes to standby and lets go of its enable line before the
-    // rail it hangs off collapses. SoftRF does the same two things in the same
-    // order (platform/nRF52.cpp:2899-2912). Called from the shutdown sequence,
-    // after the services have stopped running.
+    // The way down, for the parts the board owns rather than the platform: a
+    // haptic driver that answered goes to standby and its enable is held low
+    // before the rail it hangs off collapses, and otherwise the enable that
+    // take_bus_inventory() raised is released. SoftRF puts it in standby in the
+    // same place (platform/nRF52.cpp:3007-3020). Called on every road into
+    // SYSTEM OFF, after the services have stopped running.
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }

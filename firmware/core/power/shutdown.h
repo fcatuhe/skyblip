@@ -26,7 +26,7 @@ enum class ShutdownPhase : uint8_t { Running, Parking, AwaitRelease, Off };
 const char* to_string(ShutdownReason reason);
 
 // What dropping the rails is made of. Every one of these is harmless on its
-// own; four of them are wrong in the wrong place, so the ORDER below is the
+// own; most of them are wrong in the wrong place, so the ORDER below is the
 // content of this module and the thing the tests hold.
 //
 // INFO: fc 06aug26 THE SLEEP CURRENT THIS SEQUENCE ACTUALLY LEAVES HAS NEVER BEEN
@@ -37,10 +37,16 @@ const char* to_string(ShutdownReason reason);
 // off. The number on the bench is what decides whether the product needs a
 // hardware switch, and it is the one measurement nothing in this repository can
 // stand in for.
+//
+// INFO: fc 08nov26 P0.13 has no step: it enables U11, the AP2112K-3.3 feeding the SoC and radio
+// (T-Echo schematic)
 enum class PowerDownStep : uint8_t {
     // An armed dwell keeps the receiver and the PA alive, and the executor
     // re-arms it as long as it is running. Nothing downstream is true until the
     // part is in SetSleep.
+    //
+    // INFO: fc 08nov26 NRESET is pulsed before SetSleep, never after, so the part sleeps from
+    // STDBY_RC whatever state it was in
     RadioSleep,
     // Deep Power-Down, 0xB9. It is a command over SPI, so the part has to still
     // have a supply to hear it: after the rail, it is a no-op.
@@ -49,41 +55,37 @@ enum class PowerDownStep : uint8_t {
     ExternalFlashLinesReleased,
     // INFO: fc 13sep26 the panel sleeps at the park frame, but CS, DC and RES# stay driven high
     PanelLinesReleased,
-    // L76K: the wake pin low, then reset asserted. The receiver is the largest
-    // steady draw on the board with a fix.
-    GnssBackupOff,
-    GnssResetAsserted,
-    // SX1262 NRESET. After RadioSleep, because a reset pulse on a running radio
-    // loses the retained configuration for nothing.
-    RadioResetAsserted,
-    // The rails collapse last, and only once every part behind them has been
-    // told and every line into them is at zero.
+    // INFO: fc 08nov26 the I2C peripheral stays enabled without device PM, so it is stopped and
+    // its lines let go
+    SensorBusReleased,
+    // INFO: fc 08nov26 L76K WAKE_UP held low into SYSTEM OFF, as its pull-up wakes a powered
+    // receiver to 29 mA
+    GnssStandby,
+    // INFO: fc 08nov26 the UART is stopped, and its lines and RESET_N are left undriven, unpulled
+    // and never pulsed
+    GnssLinesReleased,
+    // The rail collapses last, and only once every part behind it has been told
+    // and every line into it is at zero.
+    //
+    // INFO: fc 08nov26 its enable stays driven low into SYSTEM OFF, as a floating one restarted a
+    // unit (Meshtastic #10510)
     PeripheralRailOff,
-    AuxiliaryRailOff,
-    // INFO: hk 03aug26 SoftRF-moshe-braner src/platform/nRF52.cpp:2055-2080
-    // drives each enable pin OUTPUT LOW before switching it to input, because
-    // that "clears the output latch AND actively shuts off the external
-    // regulator before we release the pin". The release is therefore its own
-    // step and it comes after the rails are already down.
-    DrivenPinsReleased,
     // Level-sensed, so it is armed only once the button is up: see
     // kReleaseSettleMs. Last, because arming it earlier races the rails.
     WakePinArmed,
 };
 
-constexpr int kPowerDownStepCount = 11;
+constexpr int kPowerDownStepCount = 9;
 
 inline constexpr PowerDownStep kPowerDownOrder[kPowerDownStepCount] = {
     PowerDownStep::RadioSleep,
     PowerDownStep::ExternalFlashDeepPowerDown,
     PowerDownStep::ExternalFlashLinesReleased,
     PowerDownStep::PanelLinesReleased,
-    PowerDownStep::GnssBackupOff,
-    PowerDownStep::GnssResetAsserted,
-    PowerDownStep::RadioResetAsserted,
+    PowerDownStep::SensorBusReleased,
+    PowerDownStep::GnssStandby,
+    PowerDownStep::GnssLinesReleased,
     PowerDownStep::PeripheralRailOff,
-    PowerDownStep::AuxiliaryRailOff,
-    PowerDownStep::DrivenPinsReleased,
     PowerDownStep::WakePinArmed,
 };
 
@@ -115,22 +117,26 @@ static_assert(step_order(PowerDownStep::ExternalFlashDeepPowerDown) <
 static_assert(step_order(PowerDownStep::ExternalFlashDeepPowerDown) <
                   step_order(PowerDownStep::ExternalFlashLinesReleased),
               "the flash cannot be commanded over lines that have been released");
-static_assert(step_order(PowerDownStep::RadioSleep) < step_order(PowerDownStep::RadioResetAsserted),
-              "the radio is put to sleep before its reset line is touched");
-static_assert(step_order(PowerDownStep::GnssResetAsserted) <
+static_assert(step_order(PowerDownStep::GnssStandby) < step_order(PowerDownStep::GnssLinesReleased),
+              "the GNSS is in standby before its reset line is let go");
+static_assert(step_order(PowerDownStep::GnssLinesReleased) <
                   step_order(PowerDownStep::PeripheralRailOff),
-              "the GNSS is told to stop before its supply is taken away");
+              "a GNSS line left driven high back-feeds the receiver through its protection diodes");
 static_assert(step_order(PowerDownStep::PanelLinesReleased) <
                   step_order(PowerDownStep::PeripheralRailOff),
               "a panel line left driven high back-feeds the glass through its protection diodes");
-static_assert(step_order(PowerDownStep::PeripheralRailOff) <
-                      step_order(PowerDownStep::DrivenPinsReleased) &&
-                  step_order(PowerDownStep::AuxiliaryRailOff) <
-                      step_order(PowerDownStep::DrivenPinsReleased),
-              "a pin is released only once there is no rail left to back-feed");
+static_assert(step_order(PowerDownStep::ExternalFlashLinesReleased) <
+                  step_order(PowerDownStep::PeripheralRailOff),
+              "a flash line left driven high back-feeds the flash through its protection diodes");
+static_assert(step_order(PowerDownStep::SensorBusReleased) <
+                  step_order(PowerDownStep::PeripheralRailOff),
+              "the sensor bus lets go of its lines while the parts on them still have a supply");
+static_assert(step_order(PowerDownStep::PeripheralRailOff) == kPowerDownStepCount - 2,
+              "the rail drops once every part behind it has been told and every line let go");
 
 // INFO: hk 03aug26 the 20 ms MB spends between driving the enable pins low and
 // releasing them (nRF52.cpp:2075). It is the rail's discharge, not the pin's.
+// | 08nov26 now the wait between the rail dropping and the wake pin being armed
 constexpr uint32_t kRailSettleMs = 20;
 
 const char* to_string(PowerDownStep step);

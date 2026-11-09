@@ -18,10 +18,13 @@
 // the rail does: MCUboot needs them before it touches the secondary slot.
 //
 // The L76K's own two lines are raised here as well. They are not MCUboot's
-// business, but they are the board's: the receiver's reset is active low with
-// no external pull, so leaving the pin floating leaves the part undefined.
-// SoftRF drives reset then wake high for REV_2 and the Plus
+// business, but they are the board's: the receiver pulls both up internally
+// (Quectel L76K Hardware Design 4.2.1-4.2.2), and driving them high at boot
+// matches SoftRF, which drives reset then wake high for REV_2 and the Plus
 // (platform/nRF52.cpp:1589-1593).
+//
+// INFO: fc 08nov26 P0.13 enables U11, the regulator feeding this SoC and the
+// radio (T-Echo schematic), so nothing lowers it
 //
 // INFO: fc 06aug26 P1.05 and P1.02 agree across SoftRF's iomap and meshcore's
 // variant for this board, and neither has been read on ours. This is the one
@@ -66,7 +69,7 @@ BUILD_ASSERT(BOARD_GPIO_PIN(DT_NODELABEL(buzzer_sense_gpio)) ==
 // about which pin is which.
 static const struct gpio_dt_spec board_power_pins[] = {
 	GPIO_DT_SPEC_GET(DT_ALIAS(peripheral_rail), gpios),
-	GPIO_DT_SPEC_GET(DT_ALIAS(auxiliary_rail), gpios),
+	GPIO_DT_SPEC_GET(DT_ALIAS(regulator_enable), gpios),
 	GPIO_DT_SPEC_GET(DT_ALIAS(flash_write_protect), gpios),
 	GPIO_DT_SPEC_GET(DT_ALIAS(flash_hold), gpios),
 };
@@ -74,7 +77,7 @@ static const struct gpio_dt_spec board_power_pins[] = {
 // Raised after the rail, because the receiver has to have a supply before it is
 // let out of reset. Reset first, then wake, which is SoftRF's order.
 static const struct gpio_dt_spec gnss_reset = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_reset), gpios);
-static const struct gpio_dt_spec gnss_enable = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_enable), gpios);
+static const struct gpio_dt_spec gnss_wake = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_wake), gpios);
 
 // Defined below: the two things this board has to read off its own pins before
 // any driver claims them. A no-op in MCUboot.
@@ -97,7 +100,7 @@ static int board_power_up_gated_rails(void)
 
 	k_busy_wait(RAIL_RAMP_US + FLASH_STARTUP_US);
 
-	if (!gpio_is_ready_dt(&gnss_reset) || !gpio_is_ready_dt(&gnss_enable)) {
+	if (!gpio_is_ready_dt(&gnss_reset) || !gpio_is_ready_dt(&gnss_wake)) {
 		return -ENODEV;
 	}
 
@@ -109,7 +112,7 @@ static int board_power_up_gated_rails(void)
 		return error;
 	}
 
-	error = gpio_pin_configure_dt(&gnss_enable, GPIO_OUTPUT_ACTIVE);
+	error = gpio_pin_configure_dt(&gnss_wake, GPIO_OUTPUT_ACTIVE);
 
 	if (error != 0) {
 		return error;
