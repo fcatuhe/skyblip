@@ -453,6 +453,74 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
     CHECK(radio.reinitialisations() >= 2);
 }
 
+// Nothing owns the bus until bring-up succeeds, so SYSTEM OFF must not wait for a park never
+// coming.
+TEST_CASE("rf: an executor that never started reads parked") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    CHECK(rf.parked());
+
+    chip.miso_dead = true;
+    REQUIRE(rf.begin() != Status::Ok);
+    CHECK(rf.parked());
+
+    chip.miso_dead = false;
+    REQUIRE(rf.begin() == Status::Ok);
+    CHECK_FALSE(rf.parked());
+}
+
+// SYSTEM OFF sends its own SetSleep next, and a reinitialisation after it would restart the
+// receiver.
+TEST_CASE("rf: after the shutdown park, the radio does no recovery or reinitialisation") {
+    models::Sx1262 chip;
+    parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf(radio, clock, events);
+    REQUIRE(rf.begin() == Status::Ok);
+
+    ports::RfPlan plan{};
+    plan.mode = ports::RfMode::RxMBand;
+    plan.frequency_hz = timing::kMBand0Hz;
+    plan.start_us = 0;
+    plan.end_us = 400000;
+    REQUIRE(rf.arm(plan) == Status::Ok);
+    uint32_t now_ms = 0;
+    for (; now_ms <= 400; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
+    }
+    REQUIRE(radio.mode() == parts::RadioMode::Rx);
+
+    // A reinitialisation that failed leaves one owed, which is what would wake a parked radio.
+    chip.miso_dead = true;
+    for (; now_ms <= runtime::kRadioRxSilenceCeilingMs + 1000; now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
+    }
+    REQUIRE(radio.reinitialisations() >= 1);
+    chip.miso_dead = false;
+
+    CHECK_FALSE(rf.parked());
+    rf.sleep();
+    CHECK(rf.parked());
+    REQUIRE(chip.sleeping);
+    const uint32_t reinitialisations = radio.reinitialisations();
+    for (uint32_t until = now_ms + 2 * runtime::kRadioRxSilenceCeilingMs; now_ms <= until;
+         now_ms += 10) {
+        clock.set_milliseconds(now_ms);
+        rf.service(now_ms);
+    }
+    CHECK(radio.reinitialisations() == reinitialisations);
+    CHECK(chip.sleeping);
+    plan.start_us = static_cast<uint64_t>(now_ms) * 1000;
+    plan.end_us = plan.start_us + 400000;
+    CHECK(rf.arm(plan) == Status::Down);
+}
+
 // A radio half configured may still sit on the last dwell's channel, and it keyed there.
 TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so") {
     models::Sx1262 chip;

@@ -478,6 +478,13 @@ void ScreenService::settle_park(uint32_t now_ms) {
                                                              : power::CellOnGlass::None;
         return;
     }
+    sleep_panel(now_ms);
+}
+
+// INFO: fc 08nov26 every road ends here, so a refusal that paints nothing still sends the panel
+// 0x10
+void ScreenService::sleep_panel(uint32_t now_ms) {
+    powered_ = false;
     park_ = ParkStep::None;
     context_.roles.display.power_off();
     accrue_backlight(now_ms);

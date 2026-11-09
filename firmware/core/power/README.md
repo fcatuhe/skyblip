@@ -109,6 +109,34 @@ It takes the span between two observations rather than a pass at its nominal len
 
 What these buy is the second half of a budget nothing else on this board can supply. Milliamps per consumer come from a datasheet or a bench; how long each was on comes from here, and multiplying the two is the only power figure this device can produce.
 
+## The off state, on every road
+
+Every road into SYSTEM OFF parks the parts the same way. A long press, a stow, the cutoff, a link request and a recovery that powers off run `drive_shutdown`, and a refused boot, on a charger wake or a held press, runs `park_refusal`. Both call `park_parts`: the radio executor is aborted and parked for good, so it arms, recovers and reinitialises nothing more, the lamp and the buzzer are parked, and a DRV2605 that answered at bring-up is put in standby with its enable, P0.08, held low. Bring-up raises P0.08 on every board before the I2C scan, so where nothing answered at 0x5A the park releases it to an input: on a Plus that keeps it from back-feeding the driver once P0.12 drops, and on the plain T-Echo the pin is console RX. Both roads wait for the radio executor to report itself parked before SYSTEM OFF touches the radio, and an executor whose bring-up never started its thread reads parked at once. The wait is bounded: once everything else is ready, `kRadioParkCeilingMs` (2 s) is the longest it lasts. The executor's thread reads the request at worst 800 ms after it is made: it may be in `k_usleep` waiting for a queued plan's start (`zephyr/rf.h:221` and `:291`, which a semaphore does not wake), a plan is queued only for the window after the one flying (`products/skyblip_go/services/radio.cpp:272-276`), so at most one 400 ms slot ahead (`core/timing/slot.h:42-45`), and one 400 ms dwell may follow before the abort it carries is read. Past the ceiling the thread is aborted and SYSTEM OFF takes the radio with its NRESET pulse. An abort inside an SPI transfer keeps the driver's bus lock, so after an abandon SYSTEM OFF sends no SPI at all: it stops the SPIM with register writes alone, pulses NRESET, checks BUSY, prints that the shutdown is degraded and goes on. The radio is then left in STDBY_RC, about 0.6 mA by the datasheet and not measured, so the ceiling is a last resort and not a road. `park_parts` parks the alarm before the shutdown writes the last duty record, so that record includes the annunciator's time up to the park. The panel then wears its last frame and goes into deep sleep (0x10) after it. A refusal that leaves the glass alone sends the 0x10 with no refresh, and a refused frame that is still not ready at `kRefusalParkCeilingMs` gets it at the ceiling. An install reboots into the bootloader and takes none of these roads.
+
+Then `power_down` walks `kPowerDownOrder`, the same on every road:
+
+- `RadioSleep`: NRESET is pulsed for 100 us, BUSY is awaited for up to 10 ms, and SetSleep goes out with cold start, 160 nA against 600 nA warm (DS 13.1.1), with NSS left high. The pulse puts the part in STDBY_RC whatever state it was in, the only state SetSleep is valid from, and it comes before the SetSleep, never after it. A BUSY that never falls, or cannot be read, sends nothing, prints why, and the power-down carries on. MeshCore uses the same order.
+- `ExternalFlashDeepPowerDown` and `ExternalFlashLinesReleased`: 0xB9, then CS, WP# and HOLD# disconnected.
+- `PanelLinesReleased`: the seven panel lines disconnected, as cfr34k does.
+- `SensorBusReleased`: TWIM0 disabled and SDA and SCL disconnected, because Zephyr leaves it enabled without device power management.
+- `GnssStandby`: the L76K's WAKE_UP driven low and kept low.
+- `GnssLinesReleased`: the UART stopped and disabled, then TX, RX and RESET_N disconnected. RESET_N is never pulsed.
+- `PeripheralRailOff`: P0.12 driven low and kept low into SYSTEM OFF, as MeshCore does, because a floating one restarted a unit (Meshtastic #10510). The wake pin is armed 20 ms later.
+
+P0.13 is never lowered: per the vendor schematic it enables U11, the AP2112K-3.3 that feeds the SoC and the radio, and LilyGO's `pin_config.h` never defines it. The sequence differs from LilyGO's `Sleep_Display.ino` on three GNSS lines. WAKE_UP stays driven low, where LilyGO drives it low and then leaves a pull-down. RESET_N is released with no pull, as SoftRF and Meshtastic leave it, where LilyGO uses a pull-down. The UART is stopped and its lines disconnected, where LilyGO leaves pull-ups on them.
+
+LilyGO measured 56.77 uA in SYSTEM OFF on this board with its own sequence (T-Echo_V1.0 Power Consumption Test, 2024-09-09). That is a measurement of their sequence, a reference for the order of magnitude, and not a figure this firmware has been measured at. Its GNSS step, worth 27.6 mA there, changes several receiver pins at once. One part of the floor is fixed whatever the firmware does: the battery divider, R18 and R22 at 100k each on the schematic, draws about 19 to 21 uA across a 3.7 to 4.2 V cell. The one bench evidence for this firmware is E68BD9 switched off at 30 to 45 % and near flat by morning (`docs/bench/2026-10-05-power-run-E68BD9.md`), which puts the off current of the sequence before this one at 23 to 41 mA, inferred from the drain and not measured with a meter.
+
+Two cheap checks settle it. A meter in series with the pack after a switch-off reads the number directly. The blue GNSS PPS LED (LED6) blinking while a switched-off unit lies outdoors means the receiver is running and the off state still leaks.
+
+Five things were considered and are not done:
+
+- The `$PCAS12` standby command: WAKE_UP held low already puts the L76K in standby.
+- Sleep commands to the BME280 or the BHI260AP: both sit behind P0.12, which the sequence cuts.
+- moshe-braner's reboot into SYSTEM OFF: `board.c` raises every rail at boot, so the next boot does not start from a low-power state.
+- Lowering P0.13: it enables the regulator that feeds the SoC and the radio.
+- An LPCOMP wake: only the button wakes this device, and a charger already reaches it through VBUS.
+
 ## What is still unmeasured
 
 No current is sensed anywhere on this board, so nothing here can count coulombs, and no figure in minutes may be published (`battery.h`). The sleep current the shutdown sequence leaves has never been measured either (`shutdown.h`). Both are the same bench day, and until it happens every number in this directory is a voltage or a decision about one.

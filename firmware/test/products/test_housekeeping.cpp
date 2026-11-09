@@ -69,6 +69,65 @@ TEST_CASE("product: the rails wait for the park frame, not only for the park win
     CHECK_FALSE(rig.platform.chips().epd.powered);
 }
 
+// The silicon executor parks on its own thread, and one that never does must not keep a unit awake.
+TEST_CASE("product: the rails wait for the radio to park, and go at the ceiling if it never does") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.run(0, 1000);
+    now_ms = 1000;
+    rig.product.board().rf().defer_park = true;
+
+    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    REQUIRE_FALSE(rig.platform.chips().epd.powered);
+    CHECK_FALSE(rig.product.ready_to_power_off());
+    CHECK(rig.product.board().rf().abandons() == 0);
+
+    rig.hold_button(now_ms, go::kRadioParkCeilingMs + 100, /*down=*/false);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(rig.product.board().rf().abandons() == 1);
+}
+
+// The executor on silicon parks a few milliseconds after it is asked, which is the common case.
+TEST_CASE("product: a radio that parks before the ceiling ends the wait without an abandon") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.run(0, 1000);
+    now_ms = 1000;
+    rig.product.board().rf().defer_park = true;
+
+    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    REQUIRE_FALSE(rig.product.ready_to_power_off());
+
+    rig.product.board().rf().finish_park();
+    rig.hold_button(now_ms, 50, /*down=*/false);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(rig.product.board().rf().abandons() == 0);
+}
+
+// A radio that answered the probe and then refused bring-up has no executor to wait for.
+TEST_CASE("product: a radio that failed bring-up powers off with no wait and no abandon") {
+    HousekeepingRig rig;
+    rig.platform.chips().radio.miso_dead = true;
+    REQUIRE(rig.setup() != Status::Ok);
+    REQUIRE(ports::has(rig.product.capabilities(), ports::Capability::Rf));
+    uint32_t now_ms = 0;
+    rig.run(0, 1000);
+    now_ms = 1000;
+    rig.product.board().rf().defer_park = true;
+
+    rig.hold_button(now_ms, power::kLongPressHoldMs + 200);
+    rig.hold_button(now_ms, power::kParkSettleMs, /*down=*/false);
+    rig.hold_button(now_ms, power::kReleaseSettleMs + 200, /*down=*/false);
+    CHECK(rig.product.ready_to_power_off());
+    CHECK(rig.product.board().rf().abandons() == 0);
+}
+
 // The unit as flashed paged under the thumb, two seconds before the rails went.
 TEST_CASE("product: the hold that switches the device off does not page first") {
     HousekeepingRig rig;

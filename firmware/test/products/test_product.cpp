@@ -233,6 +233,56 @@ TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
           power::kPowerDownStepCount - 1);
 }
 
+// A refused boot ran bring-up, so it owes every part the park a switch-off gives it.
+TEST_CASE(
+    "product: a refusal that leaves the glass parks the radio and the lamp and sleeps the panel") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::Leave);
+    REQUIRE(rig.platform.chips().epd.powered);
+
+    rig.sleep_again();
+    CHECK(rig.platform.chips().radio.sleeping);
+    CHECK(rig.platform.indicator().parked());
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK(rig.platform.chips().epd.present_count == 0);
+}
+
+// A panel that never reports ready must not hold a flat cell awake, nor be left awake by it.
+TEST_CASE("product: a framed refusal whose panel never settles still sleeps the panel") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::FlatCell);
+    rig.platform.chips().epd.busy_stuck = true;
+
+    rig.sleep_again();
+    CHECK(rig.platform.chips().epd.present_count == 1);
+    CHECK_FALSE(rig.platform.chips().epd.powered);
+    CHECK(rig.platform.chips().radio.sleeping);
+    CHECK(rig.platform.indicator().parked());
+}
+
+// A refused boot has a cell to spare least of all, so a radio that never parks is not waited out.
+TEST_CASE("product: a refusal waits for the radio to park, and goes dark at the ceiling") {
+    Rig rig;
+    rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
+    rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.refused_frame() == power::RefusedFrame::Leave);
+    rig.product.board().rf().defer_park = true;
+
+    const uint32_t released_ms = power::kReleaseSettleMs;
+    CHECK_FALSE(rig.product.park_refusal(0));
+    CHECK_FALSE(rig.product.park_refusal(released_ms));
+    CHECK_FALSE(rig.product.park_refusal(released_ms + go::kRadioParkCeilingMs - 1));
+    CHECK(rig.product.board().rf().abandons() == 0);
+    CHECK(rig.product.park_refusal(released_ms + go::kRadioParkCeilingMs));
+    CHECK(rig.product.board().rf().abandons() == 1);
+}
+
 TEST_CASE("product: the same charger with the button held is a boot") {
     Rig rig;
     rig.platform.system_power().causes =

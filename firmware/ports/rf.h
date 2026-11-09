@@ -181,7 +181,17 @@ class Rf {
     // every second by design, so a radio left in RX is what flattens the pack.
     // Virtual-with-default, so an executor that has nothing to sleep stays
     // valid; both SX1262 executors override it with SetSleep (0x84).
+    //
+    // INFO: fc 08nov26 terminal: once parked, the executor arms, recovers and reinitialises nothing
     virtual void sleep() {}
+
+    // INFO: fc 08nov26 SYSTEM OFF drives the radio itself, so it waits for this to hand the bus
+    // over
+    virtual bool parked() const { return true; }
+
+    // Takes the bus from an executor that has not parked by the product's
+    // ceiling, so SYSTEM OFF can drive the radio anyway.
+    virtual void abandon() {}
 };
 
 }  // namespace skyblip::ports

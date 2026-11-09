@@ -225,6 +225,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kRefusalParkCeilingMs` | 6000 (6 s) | milliseconds | Ceiling | a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two |
+| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms against 2 s (zephyr/rf.h:221, slot.h:42-45) |
 
 ## [`firmware/products/skyblip_go/input`](../firmware/products/skyblip_go/input/README.md)
 
@@ -290,4 +291,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-185 constants over 18 folders.
+186 constants over 18 folders.

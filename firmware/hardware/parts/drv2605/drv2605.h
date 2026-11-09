@@ -51,7 +51,8 @@ class Drv2605 : public ports::Haptic {
     void start() override;
     void stop() override;
 
-    // Standby and the enable line released, for the way down.
+    // Standby and the enable line held low, for the way down. The enable of a
+    // part that never answered is released instead.
     void park();
 
     bool ready() const { return ready_; }

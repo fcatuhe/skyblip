@@ -67,6 +67,7 @@ class Rf : public ports::Rf {
     }
 
     Status arm(const ports::RfPlan& plan) override {
+        if (sleep_requested_ || parked_) return Status::Down;
         if (plan.end_us <= plan.start_us) return Status::OutOfRange;
         if (plan.tx != nullptr && (plan.tx_at_us < plan.start_us || plan.tx_at_us >= plan.end_us))
             return Status::OutOfRange;
@@ -108,7 +109,7 @@ class Rf : public ports::Rf {
     // The shutdown path runs on the service thread and the radio belongs to this
     // one, so what crosses the boundary is a request: abort the dwell, wake the
     // thread, and let it issue SetSleep itself. Nothing else may touch the SPI
-    // while a dwell is on it.
+    // until parked() says the thread has let go of it for good.
     void sleep() override {
         k_sched_lock();
         queued_ = false;
@@ -118,6 +119,21 @@ class Rf : public ports::Rf {
         k_sem_give(&wake_);
         k_sem_give(&armed_);
     }
+
+    // INFO: fc 08nov26 no thread means nothing ever owned the bus, so there is nothing to wait for
+    bool parked() const override { return thread_id_ == nullptr || parked_; }
+
+    // INFO: fc 08nov26 an abort inside a transfer keeps the SPI driver's lock, so SYSTEM OFF reads
+    // abandoned() and sends no SPI after it
+    void abandon() override {
+        if (parked()) return;
+        k_thread_abort(thread_id_);
+        (void)gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_DISABLE);
+        abandoned_ = true;
+        parked_ = true;
+    }
+
+    static bool abandoned() { return abandoned_; }
 
     ports::RfCarrier carrier() const override { return carrier_; }
 
@@ -186,13 +202,12 @@ class Rf : public ports::Rf {
         health_checked_us_ = clock_.microseconds();
         for (;;) {
             const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
+            if (sleep_requested_) {
+                park();
+                return;
+            }
             health(reinitialisation_affordable());
             if (armed != 0) continue;
-            if (sleep_requested_) {
-                sleep_requested_ = false;
-                radio_.sleep();
-                continue;
-            }
             abort_ = false;
             ports::RfPlan plan{};
             uint64_t armed_at_us = 0;
@@ -216,6 +231,14 @@ class Rf : public ports::Rf {
             flying_ = false;
             health(reinitialisation_affordable());
         }
+    }
+
+    // INFO: fc 08nov26 the thread ends here, so no dwell, recovery or reinitialisation follows the
+    // SetSleep
+    void park() {
+        (void)gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_DISABLE);
+        radio_.sleep();
+        parked_ = true;
     }
 
     // INFO: fc 27sep26 flying from the moment it is taken, so a burst armed during the retune joins
@@ -487,10 +510,13 @@ class Rf : public ports::Rf {
     bool queued_{false};
     volatile bool abort_{false};
     volatile bool sleep_requested_{false};
+    volatile bool parked_{false};
     static Rf* self_;
+    static volatile bool abandoned_;
 };
 
 inline Rf* Rf::self_ = nullptr;
+inline volatile bool Rf::abandoned_ = false;
 
 }  // namespace skyblip::platform::zephyr
 #endif  // __ZEPHYR__

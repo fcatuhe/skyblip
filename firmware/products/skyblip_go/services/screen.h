@@ -70,6 +70,7 @@ class ScreenService : public runtime::Service {
     void set_backlight(bool on);
     void set_power(bool on);
     void settle_park(uint32_t now_ms);
+    void sleep_panel(uint32_t now_ms);
     void park_for_install();
     void park_for_recovery(ports::RecoveryPath path);
     void park_for_stow();
