@@ -41,6 +41,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.resume_replies(now_ms);
     events::RxFrame frame{};
     while (!config_.replying() && context_.bus.link_rx.pop(frame)) {
+        if (!config_.from_live_connection(frame)) continue;
         config_.on_rx(frame);
         record_link(diagnostics::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
@@ -182,7 +183,8 @@ void ConfigLinkService::drain_link_events(uint32_t now_ms) {
     events::LinkEvent event{};
     while (context_.bus.link_events.pop(event)) {
         if (event.type == events::LinkEventType::Up) {
-            config_.on_link_up(events::LinkUp{event.session_id, event.payload_bytes});
+            config_.on_link_up(
+                events::LinkUp{event.session_id, event.payload_bytes, event.connection});
             record_link(diagnostics::LinkAction::Up, event.session_id, 0, now_ms);
         } else {
             config_.on_link_down(events::LinkDown{event.session_id});

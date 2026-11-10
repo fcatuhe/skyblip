@@ -158,7 +158,7 @@ TEST_CASE(
     config.set_battery_state(battery_of(50, true), power::PowerLevel::Normal);
     CHECK(link.sent.empty());
 
-    config.on_link_up(events::LinkUp{1, 200});
+    config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
 
     config.set_battery_state(battery_of(50, true), power::PowerLevel::Normal);  // repeat: no push
     CHECK(link.sent.empty());
@@ -193,7 +193,7 @@ TEST_CASE("comms: a flight state that changes under a link is pushed, a repeat i
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_link_up(events::LinkUp{1, 200});
+    config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
 
     config.set_flight_state(flight::FlightState::Ground);
     REQUIRE(link.sent.size() == 1);

@@ -67,7 +67,7 @@ struct StoreRig {
         comms::LogRequest request{};
         request.command = comms::LogCommand::List;
         request.store = owner;
-        request.link_session = link.session_id();
+        request.peer = events::Peer{link.session_id(), link.connection(link.session_id())};
         request.index_valid = true;
         request.index = index;
         request.understood = true;

@@ -32,7 +32,9 @@ class NullAnnunciator : public Annunciator {
 class NullLink : public Link {
    public:
     Status send(events::Endpoint, ConstByteSpan) override { return Status::Down; }
-    Status send_to(uint16_t, events::Endpoint, ConstByteSpan) override { return Status::Down; }
+    Status send_to(const events::Peer&, events::Endpoint, ConstByteSpan) override {
+        return Status::Down;
+    }
     Status advertise_as(const char*) override { return Status::Down; }
 };
 

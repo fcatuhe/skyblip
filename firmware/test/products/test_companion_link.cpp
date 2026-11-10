@@ -382,3 +382,135 @@ TEST_CASE("companion link: a second app leaving does not cancel the holder's pro
     rig.run(now_ms, now_ms + 200);
     CHECK(rig.product.config_link().config().claim_holder() == 2);
 }
+
+// A frame queued before its connection dropped used to claim the unit for a central that was gone.
+TEST_CASE("companion link: a set queued before its connection dropped claims nothing") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    comms::ConfigService& config = rig.product.config_link().config();
+
+    rig.raise_link(1);
+    rig.raise_link(2);
+    rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 1000);
+    now_ms += 1000;
+    REQUIRE(last_frame_on(rig, events::Endpoint::Config).find("cancelled") != std::string::npos);
+
+    rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
+    rig.drop_link(1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    CHECK(config.pending() == comms::Pending::None);
+    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK_FALSE(config.claim().held());
+
+    rig.send_from(2, "{\"command\":\"set\",\"aircraft_type\":4}");
+    rig.run(now_ms, now_ms + 200);
+    CHECK(config.claim_holder() == 2);
+    CHECK(config.pending() == comms::Pending::Set);
+}
+
+// Silicon names a session by its controller slot, so the next phone may come up under the same id.
+TEST_CASE(
+    "companion link: a frame from the last connection on a reused session id reaches no one") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    comms::ConfigService& config = rig.product.config_link().config();
+
+    rig.raise_link(1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.send_from(1, "{\"command\":\"power_off\"}");
+    rig.send_log_from(1, "{\"command\":\"erase\"}");
+    rig.drop_link(1);
+    rig.raise_link(1);
+    rig.platform.link().clear();
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    CHECK(config.pending() == comms::Pending::None);
+    CHECK_FALSE(config.claim().held());
+    CHECK(rig.platform.link().count_to(1, events::Endpoint::Config) == 0);
+
+    rig.send_from(1, "{\"command\":\"get\"}");
+    rig.run(now_ms, now_ms + 200);
+    CHECK(config.claim_holder() == 1);
+    CHECK(last_frame_on(rig, events::Endpoint::Config).find("\"command\":\"config\"") !=
+          std::string::npos);
+}
+
+TEST_CASE("companion link: a log erase queued before its connection dropped claims nothing") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    comms::ConfigService& config = rig.product.config_link().config();
+
+    rig.raise_link(1);
+    rig.raise_link(2);
+    rig.send_log_from(1, "{\"command\":\"erase\"}");
+    rig.drop_link(1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    CHECK(config.pending() == comms::Pending::None);
+    CHECK_FALSE(config.claim().held());
+
+    rig.send_from(2, "{\"command\":\"get\"}");
+    rig.run(now_ms, now_ms + 200);
+    CHECK(config.claim_holder() == 2);
+}
+
+TEST_CASE("companion link: a second central leaving does not end the holder's refusal") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+
+    rig.raise_link(1);
+    rig.raise_link(2);
+    rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    rig.press(now_ms);
+    rig.run(now_ms, now_ms + 1000);
+    now_ms += 1000;
+    REQUIRE(last_frame_on(rig, events::Endpoint::Config).find("cancelled") != std::string::npos);
+
+    rig.drop_link(2);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
+    rig.run(now_ms, now_ms + 200);
+    CHECK(last_frame_on(rig, events::Endpoint::Config).find("refused_on_device") !=
+          std::string::npos);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+}
+
+TEST_CASE("companion link: a config reply held for a phone that left never reaches the next one") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    rig.raise_link(1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+
+    rig.platform.link().force_status(Status::WouldBlock, false);
+    rig.send_from(1, "{\"command\":\"get\"}");
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
+    REQUIRE(rig.product.config_link().config().replying());
+
+    rig.drop_link(1);
+    rig.raise_link(1);
+    rig.platform.link().force_status(Status::Ok);
+    rig.platform.link().clear();
+    rig.run(now_ms, now_ms + ports::kReplyWaitCeilingMs + 500);
+    CHECK(rig.platform.link().count_to(1, events::Endpoint::Config) == 0);
+}

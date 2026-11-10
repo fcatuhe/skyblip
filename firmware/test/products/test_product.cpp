@@ -153,8 +153,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
-    rig.platform.link().push_rx(
-        link_frame(events::Endpoint::Config, 0, "{\"command\":\"set\",\"alarm_volume\":\"loud\"}"));
+    rig.send("{\"command\":\"set\",\"alarm_volume\":\"loud\"}");
     rig.run(100, 300);
     rig.product.config_link().config().confirm();
     // The write is a request now, not a call: it coalesces for

@@ -95,6 +95,20 @@ struct bt_conn* connection_of(uint16_t session_id) {
     return connection_reference(session_id - 1);
 }
 
+// INFO: fc 10nov26 checked and referenced under one lock, so a reconnect cannot redirect a reply
+struct bt_conn* connection_of(const skyblip::events::Peer& peer) {
+    if (peer.connection == 0 || peer.session_id == 0 || peer.session_id > ARRAY_SIZE(g_connections))
+        return nullptr;
+    const size_t index = peer.session_id - 1;
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    struct bt_conn* connection = nullptr;
+    if (g_sessions.connection(peer.session_id) == peer.connection &&
+        g_connections[index] != nullptr)
+        connection = bt_conn_ref(g_connections[index]);
+    k_spin_unlock(&g_lock, key);
+    return connection;
+}
+
 uint16_t payload_from_mtu(uint16_t mtu) {
     return mtu > kNotifyHeaderBytes ? static_cast<uint16_t>(mtu - kNotifyHeaderBytes)
                                     : static_cast<uint16_t>(0);
@@ -108,6 +122,7 @@ Status push_rx(struct bt_conn* connection, Endpoint endpoint, const void* data, 
     const uint8_t* incoming = static_cast<const uint8_t*>(data);
     for (uint16_t i = 0; i < frame.bytes; i++) frame.data[i] = incoming[i];
     k_spinlock_key_t key = k_spin_lock(&g_lock);
+    frame.connection = g_sessions.connection(frame.session_id);
     const Status queued = g_rx.push(frame);
     k_spin_unlock(&g_lock, key);
     return queued;
@@ -356,6 +371,13 @@ uint16_t Link::payload_bytes_to(uint16_t session_id) const {
     return payload < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : payload;
 }
 
+uint32_t Link::connection(uint16_t session_id) const {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const uint32_t live = g_sessions.connection(session_id);
+    k_spin_unlock(&g_lock, key);
+    return live;
+}
+
 Status Link::notify_one(struct bt_conn* connection, Endpoint endpoint, ConstByteSpan bytes) {
     const struct bt_gatt_attr* attributes[kMaxNotifyAttributes] = {};
     const int attribute_count = notify_attributes(endpoint, attributes);
@@ -397,9 +419,9 @@ Status Link::send(Endpoint endpoint, ConstByteSpan bytes) {
     return delivered ? Status::Ok : result;
 }
 
-Status Link::send_to(uint16_t session_id, Endpoint endpoint, ConstByteSpan bytes) {
-    if (bytes.size() > payload_bytes_to(session_id)) return Status::OutOfRange;
-    struct bt_conn* connection = connection_of(session_id);
+Status Link::send_to(const events::Peer& peer, Endpoint endpoint, ConstByteSpan bytes) {
+    if (bytes.size() > payload_bytes_to(peer.session_id)) return Status::OutOfRange;
+    struct bt_conn* connection = connection_of(peer);
     if (connection == nullptr) return Status::Down;
     const Status sent = notify_one(connection, endpoint, bytes);
     bt_conn_unref(connection);

@@ -34,7 +34,7 @@ TEST_CASE("comms: an update pushed at link-up that does not fit is counted, neve
     ConfigService config(link, store);
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
-    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
     CHECK(link.sent.empty());
     CHECK(config.link_drops() == 1);
 }

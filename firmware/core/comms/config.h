@@ -115,13 +115,17 @@ class ConfigService {
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
     void on_rx(const events::RxFrame& frame);
+    // INFO: fc 10nov26 a frame from a connection that dropped is nobody's command
+    bool from_live_connection(const events::RxFrame& frame) const {
+        return frame.connection != 0 && frame.connection == link_.connection(frame.session_id);
+    }
 
     // Whether anyone is listening. Exported because it is the one fact about
     // this service that no reply reveals until the gauge happens to move, and a
     // product test has to be able to assert that a connection reached it.
     bool link_up() const { return connected_count_ > 0; }
     const LinkClaim& claim() const { return claim_; }
-    bool claim_link(uint16_t session_id) { return claim_.grant(session_id); }
+    bool claim_link(const events::Peer& peer) { return claim_.grant(peer); }
     uint16_t claim_holder() const { return claim_.holder(); }
 
     // The values core/power already decided: state of charge, the millivolt
@@ -216,6 +220,8 @@ class ConfigService {
     // confirmation gesture on the device itself latches it.
     void request_log_erase();
     bool log_erase_requested() const { return log_erase_requested_; }
+    // INFO: fc 10nov26 the erase answers the phone whose prompt was confirmed
+    const events::Peer& log_erase_peer() const { return log_erase_peer_; }
     void clear_log_erase_request() { log_erase_requested_ = false; }
 
     // Latched by a confirmed "gnss_cold_start". A receiver whose almanac is poisoned
@@ -246,10 +252,10 @@ class ConfigService {
 
    private:
     Status reply(const uint8_t* frame, int bytes);
-    Status reply_to(uint16_t session_id, const uint8_t* frame, int bytes);
-    Status deliver(uint16_t session_id, const uint8_t* frame, int bytes);
+    Status reply_to(const events::Peer& peer, const uint8_t* frame, int bytes);
+    Status deliver(const events::Peer& peer, const uint8_t* frame, int bytes);
     Status broadcast(const uint8_t* frame, int bytes);
-    void refuse_unclaimed(uint16_t session_id);
+    void refuse_unclaimed(const events::Peer& peer);
     void refuse_too_wide();
     void note_connected(uint16_t session_id);
     void note_disconnected(uint16_t session_id);
@@ -280,7 +286,7 @@ class ConfigService {
     // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update();
-    void push_update(uint16_t session_id);
+    void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
     // And the whole dump, which is the same table as the console's: one frame per
     // subsystem where the payload allows it, more where it does not, and never a
@@ -299,7 +305,7 @@ class ConfigService {
                       const Arguments&... arguments);
     template <class Report>
     void continue_report(std::optional<Report>& report);
-    void hold(uint16_t session_id, const uint8_t* frame, int bytes);
+    void hold(const events::Peer& peer, const uint8_t* frame, int bytes);
     void drop_replies();
     void request_firmware(const cbor::Reader& frame);
     void stage_settings(const events::RxFrame& frame);
@@ -331,6 +337,7 @@ class ConfigService {
     bool install_requested_{false};
     bool recovery_requested_{false};
     bool log_erase_requested_{false};
+    events::Peer log_erase_peer_{0, 0};
     bool gnss_cold_start_requested_{false};
     Pending pending_{Pending::None};
     bool refused_on_device_{false};
@@ -349,7 +356,7 @@ class ConfigService {
                   "a registration frame must be holdable");
     uint8_t held_frame_[kHeldFrameBytes]{};
     int held_bytes_{0};
-    uint16_t held_for_session_id_{0};
+    events::Peer held_for_{0, 0};
     uint32_t held_since_ms_{0};
     std::optional<DiagnosticsReport> diagnostics_report_{};
     std::optional<TimingReport> timing_report_{};

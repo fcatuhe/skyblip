@@ -207,3 +207,27 @@ TEST_CASE("link sessions: the unit's own exchange is the unit's, and a crossed o
     CHECK(both.mtu_exchange_started_by == events::MtuExchangeStarter::Both);
     CHECK(both.payload_bytes == 182);
 }
+
+// Silicon names a session by its controller slot, so the next phone may come up under the same id.
+TEST_CASE("link sessions: a session id used again names a new connection, its own repeats do not") {
+    LinkSessions sessions;
+    CHECK(sessions.connection(1) == 0);
+
+    sessions.connected(1, 244);
+    const uint32_t first = sessions.connection(1);
+    CHECK(first == 1);
+    sessions.payload_changed(1, 182);
+    CHECK(sessions.connection(1) == first);
+    sessions.connected(1, 244);
+    CHECK(sessions.connection(1) == first);
+
+    sessions.connected(2, 244);
+    CHECK(sessions.connection(2) != first);
+
+    sessions.disconnected(1);
+    CHECK(sessions.connection(1) == 0);
+    sessions.connected(1, 244);
+    CHECK(sessions.connection(1) != 0);
+    CHECK(sessions.connection(1) != first);
+    CHECK(sessions.connection(1) != sessions.connection(2));
+}

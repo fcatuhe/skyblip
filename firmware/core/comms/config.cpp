@@ -94,7 +94,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
     note_connected(event.session_id);
     if (image_state_ != dfu::ImageState::Confirmed ||
         settings_fallback_ != settings::Fallback::None)
-        push_update(event.session_id);
+        push_update(events::Peer{event.session_id, event.connection});
 }
 
 // INFO: fc 18sep26 Only the holder's disconnect cancels: another app leaving must not answer a
@@ -142,7 +142,7 @@ int ConfigService::payload_bytes_to(uint16_t session_id) const {
 // through this door is a request/response answer except the status push, so the
 // recovery from a lost one is the phone's next command; the push has tick().
 Status ConfigService::reply(const uint8_t* frame, int bytes) {
-    return reply_to(claim_.holder(), frame, bytes);
+    return reply_to(claim_.peer(), frame, bytes);
 }
 
 Status ConfigService::broadcast(const uint8_t* frame, int bytes) {
@@ -156,35 +156,35 @@ Status ConfigService::broadcast(const uint8_t* frame, int bytes) {
     return sent;
 }
 
-Status ConfigService::reply_to(uint16_t session_id, const uint8_t* frame, int bytes) {
-    const Status sent = deliver(session_id, frame, bytes);
-    if (sent == Status::OutOfRange && bytes > 0 && claim_.holds(session_id)) refuse_too_wide();
+Status ConfigService::reply_to(const events::Peer& peer, const uint8_t* frame, int bytes) {
+    const Status sent = deliver(peer, frame, bytes);
+    if (sent == Status::OutOfRange && bytes > 0 && claim_.holds(peer)) refuse_too_wide();
     return sent;
 }
 
 // INFO: fc 25sep26 one frame waits for the link, and a second one while it does is dropped as Full
-Status ConfigService::deliver(uint16_t session_id, const uint8_t* frame, int bytes) {
-    if (bytes <= 0 || bytes > payload_bytes_to(session_id) || held_bytes_ > 0) {
+Status ConfigService::deliver(const events::Peer& peer, const uint8_t* frame, int bytes) {
+    if (bytes <= 0 || bytes > payload_bytes_to(peer.session_id) || held_bytes_ > 0) {
         diagnostics_.link_drops++;
         return held_bytes_ > 0 ? Status::Full : Status::OutOfRange;
     }
-    const Status sent = link_.send_to(session_id, events::Endpoint::Config,
+    const Status sent = link_.send_to(peer, events::Endpoint::Config,
                                       ConstByteSpan(frame, static_cast<size_t>(bytes)));
     if (sent == Status::WouldBlock)
-        hold(session_id, frame, bytes);
+        hold(peer, frame, bytes);
     else if (!is_ok(sent))
         diagnostics_.link_drops++;
     return sent;
 }
 
-void ConfigService::hold(uint16_t session_id, const uint8_t* frame, int bytes) {
+void ConfigService::hold(const events::Peer& peer, const uint8_t* frame, int bytes) {
     if (bytes > kHeldFrameBytes) {
         diagnostics_.link_drops++;
         return;
     }
     std::memcpy(held_frame_, frame, static_cast<size_t>(bytes));
     held_bytes_ = bytes;
-    held_for_session_id_ = session_id;
+    held_for_ = peer;
     held_since_ms_ = now_ms_;
 }
 
@@ -194,14 +194,14 @@ void ConfigService::drop_replies() {
     timing_report_.reset();
 }
 
-void ConfigService::refuse_unclaimed(uint16_t session_id) {
+void ConfigService::refuse_unclaimed(const events::Peer& peer) {
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Acknowledgement);
     writer.add_boolean(link::acknowledgement_key::kAcknowledge, false);
     writer.add_code(link::acknowledgement_key::kReason, link::Reason::Claimed);
     writer.add_unsigned(link::acknowledgement_key::kBy, claim_.holder());
-    (void)reply_to(session_id, frame, writer.finish());
+    (void)reply_to(peer, frame, writer.finish());
 }
 
 void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
@@ -301,8 +301,8 @@ bool ConfigService::signed_by_trusted_key() const {
 
 void ConfigService::on_rx(const events::RxFrame& frame) {
     if (frame.endpoint != events::Endpoint::Config) return;
-    if (!claim_.grant(frame.session_id)) {
-        refuse_unclaimed(frame.session_id);
+    if (!claim_.grant(events::peer_of(frame))) {
+        refuse_unclaimed(events::peer_of(frame));
         return;
     }
     const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
@@ -503,6 +503,7 @@ void ConfigService::confirm() {
     } else if (pending_ == Pending::EraseLog) {
         pending_ = Pending::None;
         log_erase_requested_ = true;
+        log_erase_peer_ = claim_.peer();
         acknowledge(true, link::Reason::EraseLog);
     } else if (pending_ == Pending::GnssColdStart) {
         pending_ = Pending::None;

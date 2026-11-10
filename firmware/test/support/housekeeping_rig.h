@@ -99,7 +99,9 @@ struct HousekeepingRig {
     // A companion app talking to the device: the frame arrives on the link the
     // board polls, so it takes the same road a phone's would.
     void send(const char* json) {
-        platform.link().push_rx(link_frame(events::Endpoint::Config, 0, json));
+        if (!platform.link().up()) platform.link().raise_link();
+        platform.link().push_rx(
+            link_frame(events::Endpoint::Config, platform.link().session_id(), json));
     }
 
     comms::ConfigService& config() { return product.config_link().config(); }

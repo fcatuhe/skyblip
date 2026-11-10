@@ -3,21 +3,25 @@
 
 #include <cstdint>
 
+#include "core/events/link.h"
+
 namespace skyblip::comms {
 
 class LinkClaim {
    public:
-    bool grant(uint16_t session_id) {
+    bool grant(const events::Peer& peer) {
         if (!held_) {
             held_ = true;
-            holder_ = session_id;
+            holder_ = peer;
         }
-        return holder_ == session_id;
+        return holder_ == peer;
     }
 
-    bool holds(uint16_t session_id) const { return held_ && holder_ == session_id; }
+    bool holds(uint16_t session_id) const { return held_ && holder_.session_id == session_id; }
+    bool holds(const events::Peer& peer) const { return held_ && holder_ == peer; }
     bool held() const { return held_; }
-    uint16_t holder() const { return holder_; }
+    uint16_t holder() const { return holder_.session_id; }
+    const events::Peer& peer() const { return holder_; }
 
     void release(uint16_t session_id) {
         if (holds(session_id)) release();
@@ -25,11 +29,11 @@ class LinkClaim {
 
     void release() {
         held_ = false;
-        holder_ = 0;
+        holder_ = events::Peer{0, 0};
     }
 
    private:
-    uint16_t holder_{0};
+    events::Peer holder_{0, 0};
     bool held_{false};
 };
 

@@ -15,6 +15,7 @@ class LinkSessions {
 
     void connected(uint16_t session_id, uint16_t payload_bytes) {
         Slot* slot = find(session_id);
+        const uint32_t connection = slot == nullptr ? 0 : slot->connection;
         if (slot == nullptr) slot = free_slot();
         if (slot == nullptr) {
             refused_++;
@@ -23,6 +24,7 @@ class LinkSessions {
         *slot = Slot{};
         slot->used = true;
         slot->session_id = session_id;
+        slot->connection = connection != 0 ? connection : next_connection();
         slot->payload_bytes = floor_payload(payload_bytes);
         slot->mtu_updates = slot->payload_bytes > ports::kMinimumLinkPayloadBytes ? 1 : 0;
         raise(events::LinkEventType::Up, *slot);
@@ -61,6 +63,12 @@ class LinkSessions {
     bool up() const { return count() > 0; }
     bool up(uint16_t session_id) const { return find(session_id) != nullptr; }
 
+    // INFO: fc 10nov26 never 0 and never given twice before 2^32 connections, unlike a session id
+    uint32_t connection(uint16_t session_id) const {
+        const Slot* slot = find(session_id);
+        return slot == nullptr ? 0 : slot->connection;
+    }
+
     int count() const {
         int sessions = 0;
         for (const Slot& slot : slots_)
@@ -86,6 +94,7 @@ class LinkSessions {
 
    private:
     struct Slot {
+        uint32_t connection{0};
         uint16_t session_id{0};
         uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
         uint8_t mtu_updates{0};
@@ -99,6 +108,11 @@ class LinkSessions {
         if (by_central) return events::MtuExchangeStarter::Central;
         if (slot.exchanged_by_unit) return events::MtuExchangeStarter::Unit;
         return events::MtuExchangeStarter::None;
+    }
+
+    uint32_t next_connection() {
+        if (++last_connection_ == 0) ++last_connection_;
+        return last_connection_;
     }
 
     static uint16_t floor_payload(uint16_t bytes) {
@@ -128,12 +142,14 @@ class LinkSessions {
         event.type = type;
         event.session_id = slot.session_id;
         event.payload_bytes = slot.payload_bytes;
+        event.connection = slot.connection;
         if (type == events::LinkEventType::Down) event.mtu_exchange_started_by = starter_of(slot);
         if (!is_ok(events_.push(event))) dropped_++;
     }
 
     Fifo<events::LinkEvent, kMaxEvents> events_{};
     Slot slots_[kMaxSessions]{};
+    uint32_t last_connection_{0};
     uint32_t dropped_{0};
     uint32_t refused_{0};
 };

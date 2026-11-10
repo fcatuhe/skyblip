@@ -20,8 +20,10 @@ class Link : public ports::Link {
     // connect - see core/comms/README.md.
     uint16_t payload_bytes() const override;
     uint16_t payload_bytes_to(uint16_t session_id) const override;
+    uint32_t connection(uint16_t session_id) const override;
     Status send(events::Endpoint endpoint, ConstByteSpan bytes) override;
-    Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) override;
+    Status send_to(const events::Peer& peer, events::Endpoint endpoint,
+                   ConstByteSpan bytes) override;
     Status advertise_as(const char* name) override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell

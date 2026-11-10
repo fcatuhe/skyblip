@@ -38,13 +38,16 @@ struct Desk {
 
     explicit Desk(flight::FlightState state = flight::FlightState::Ground) {
         link.raise_link(session_id);
-        config.on_link_up(events::LinkUp{session_id, ports::kMinimumLinkPayloadBytes});
+        config.on_link_up(events::LinkUp{session_id, ports::kMinimumLinkPayloadBytes,
+                                         link.connection(session_id)});
         config.set_flight_state(state);
         config.tick(1000);
     }
 
     std::string say(const char* json) {
-        config.on_rx(link_frame(events::Endpoint::Config, session_id, json));
+        events::RxFrame frame = link_frame(events::Endpoint::Config, session_id, json);
+        frame.connection = link.connection(session_id);
+        config.on_rx(frame);
         return last();
     }
 
@@ -58,7 +61,8 @@ struct Desk {
         config.on_link_down(events::LinkDown{session_id});
         session_id++;
         link.raise_link(session_id);
-        config.on_link_up(events::LinkUp{session_id, ports::kMinimumLinkPayloadBytes});
+        config.on_link_up(events::LinkUp{session_id, ports::kMinimumLinkPayloadBytes,
+                                         link.connection(session_id)});
     }
 
     std::string last() { return link_text(link.last().bytes); }

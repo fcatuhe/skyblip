@@ -476,3 +476,130 @@ TEST_CASE("flight log: with no storage the device flies and logs nothing") {
     // And it says so, rather than answering an empty log.
     CHECK(link_text(last_log_frame(rig)->bytes).find("no_storage") != std::string::npos);
 }
+
+// Silicon names a session by its controller slot, so the next phone may come up under the same id.
+TEST_CASE("flight log: a reply held for a phone that left never reaches the next one on its id") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    rig.raise_link(1);
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+
+    rig.platform.link().clear();
+    rig.platform.link().force_status(Status::WouldBlock, false);
+    rig.send_log_from(1, "{\"command\":\"list\"}");
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
+    REQUIRE(rig.platform.link().count_to(1, events::Endpoint::Log) == 0);
+
+    rig.drop_link(1);
+    rig.raise_link(1);
+    rig.platform.link().force_status(Status::Ok);
+    rig.platform.link().clear();
+    rig.run(now_ms, now_ms + ports::kReplyWaitCeilingMs + 500);
+    CHECK(rig.platform.link().count_to(1, events::Endpoint::Log) == 0);
+}
+
+TEST_CASE("flight log: a read a slow link left half sent stops when its phone leaves") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 200);
+    taxi(rig, now_ms, 40);
+    const uint32_t session = rig.product.flight_log().session_id();
+    REQUIRE(rig.product.flight_log().records_written() > 8 * 5);
+
+    rig.raise_link(1);
+    rig.platform.link().hold_after(4);
+    char command[96];
+    std::snprintf(command, sizeof(command),
+                  "{\"command\":\"read\",\"session\":%u,\"from\":0,\"count\":8}", session);
+    rig.platform.link().clear();
+    rig.platform.link().serve();
+    rig.send_log_from(1, command);
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
+    const int sent_before_leaving = rig.platform.link().count_to(1, events::Endpoint::Log);
+    REQUIRE(sent_before_leaving > 0);
+    REQUIRE(sent_before_leaving < 8);
+
+    rig.drop_link(1);
+    rig.raise_link(1);
+    rig.platform.link().clear();
+    for (int served = 0; served < 10; served++) {
+        rig.platform.link().serve();
+        rig.run(now_ms, now_ms + 100);
+        now_ms += 100;
+    }
+    CHECK(rig.platform.link().count_to(1, events::Endpoint::Log) == 0);
+}
+
+// The next phone asks during the erase, which once made it the one the verdict answered.
+TEST_CASE("flight log: the erase verdict for a phone that left never reaches the next one") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
+    taxi(rig, now_ms, 40);
+
+    rig.raise_link(1);
+    rig.send_log_from(1, "{\"command\":\"erase\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
+    REQUIRE(rig.product.flight_log().erasing());
+
+    rig.drop_link(1);
+    rig.raise_link(1);
+    rig.platform.link().clear();
+    rig.send_log_from(1, "{\"command\":\"list\"}");
+    rig.run(now_ms, now_ms + 60000);
+    REQUIRE_FALSE(rig.product.flight_log().erasing());
+    int erased = 0;
+    for (const auto& frame : rig.platform.link().sent)
+        if (frame.endpoint == events::Endpoint::Log &&
+            field(link_text(frame.bytes), "reason") == "erased")
+            erased++;
+    CHECK(erased == 0);
+    CHECK(field(rig.last_on(events::Endpoint::Log), "reason") == "busy");
+}
+
+TEST_CASE("flight log: the erase verdict answers the phone that asked, whoever asks meanwhile") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 60);
+    taxi(rig, now_ms, 40);
+
+    rig.raise_link(1);
+    rig.raise_link(2);
+    rig.send_log_from(1, "{\"command\":\"erase\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 100);
+    now_ms += 100;
+    REQUIRE(rig.product.flight_log().erasing());
+
+    rig.platform.link().clear();
+    rig.send_log_from(2, "{\"command\":\"list\"}");
+    rig.run(now_ms, now_ms + 60000);
+    REQUIRE_FALSE(rig.product.flight_log().erasing());
+    std::string to_holder;
+    std::string to_other;
+    for (const auto& frame : rig.platform.link().sent) {
+        if (frame.endpoint != events::Endpoint::Log) continue;
+        (frame.session == 1 ? to_holder : to_other) += link_text(frame.bytes);
+    }
+    CHECK(to_holder.find("\"reason\":\"erased\"") != std::string::npos);
+    CHECK(to_other.find("\"reason\":\"claimed\"") != std::string::npos);
+    CHECK(to_other.find("\"reason\":\"erased\"") == std::string::npos);
+}

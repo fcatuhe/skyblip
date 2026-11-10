@@ -305,12 +305,12 @@ TEST_CASE(
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_link_up(events::LinkUp{1, 244});
+    config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
     CHECK(link.sent.empty());
 
     config.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{});
     link.raise_link(2);
-    config.on_link_up(events::LinkUp{2, 244});
+    config.on_link_up(events::LinkUp{2, 244, link.connection(2)});
     REQUIRE(link.sent.size() == 1);
     CHECK(link_text(link.last().bytes).find("\"command\":\"update\"") != std::string::npos);
     CHECK(link_text(link.last().bytes).find("\"image\":\"probation\"") != std::string::npos);
@@ -323,7 +323,7 @@ TEST_CASE("comms: a link that comes up on settings that fell back is told, on a 
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_settings_fallback(settings::Fallback::Defaults);
-    config.on_link_up(events::LinkUp{1, 244});
+    config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
     REQUIRE(link.sent.size() == 1);
     CHECK(link_text(link.last().bytes).find("\"image\":\"confirmed\"") != std::string::npos);
     CHECK(link_text(link.last().bytes).find("\"settings\":\"defaults\"") != std::string::npos);
