@@ -2,8 +2,8 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SETTINGS_STORE_H
 
 #include "core/comms/config.h"
-#include "core/comms/config_store.h"
 #include "core/identity/activation.h"
+#include "products/common/settings_store.h"
 #include "products/skyblip_go/pages/settings_changes.h"
 #include "products/skyblip_go/settings.h"
 
@@ -11,7 +11,7 @@ namespace skyblip::go {
 
 static_assert(comms::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt holds every row");
 
-class SettingsStore : public comms::ConfigStore {
+class SettingsStore : public common::SettingsStore {
    public:
     SettingsStore(Settings& settings, const identity::Activation& activation)
         : settings_(settings), activation_(activation) {}
@@ -35,6 +35,23 @@ class SettingsStore : public comms::ConfigStore {
 
     bool pilot_settings_only(const cbor::Reader& frame) const override {
         return go::pilot_settings_only(frame);
+    }
+
+    void restore_defaults() override { settings_ = defaults(); }
+
+    uint8_t blob_version() const override { return kBlobVersion; }
+
+    Status adopt(const uint8_t* blob, size_t blob_bytes) override {
+        Settings loaded;
+        const Status read = from_blob(blob, blob_bytes, loaded);
+        if (is_ok(read)) settings_ = loaded;
+        return read;
+    }
+
+    size_t to_blob(uint8_t* out, size_t capacity) const override {
+        if (capacity < blob_size()) return 0;
+        go::to_blob(settings_, out, capacity);
+        return blob_size();
     }
 
    private:

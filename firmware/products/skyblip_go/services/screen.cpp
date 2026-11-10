@@ -278,7 +278,7 @@ void ScreenService::step_editor(uint32_t now_ms) {
             // INFO: cf 02aug26 One owner of the flash blob. The page changes the
             // struct the config service was already given a reference to and
             // says so with the same flag the companion link raises; the write
-            // itself stays in go::ConfigLinkService::persist, so there is never
+            // itself stays in common::ConfigLinkService::persist, so there is never
             // a second writer and never two versions of the blob.
             config_.note_settings_changed();
             dirty_ = true;
