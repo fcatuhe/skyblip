@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { FakeServer, FakeUnit, REGISTRATION_FRAME_BYTES, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
-import { ATT_HEADER_BYTES } from './fake_skyblip.mjs';
+import { ATT_HEADER_BYTES, DEFAULTS } from './fake_skyblip.mjs';
 import { Activator } from '#skyblip/activation';
 import { addressOf } from '#skyblip/ble';
 
@@ -191,4 +191,127 @@ test('another app holding the unit is named', async () => {
   unit.claimedBy = 3;
   activator.activate();
   assert.equal((await until(settled)).notice.key, 'claimed');
+});
+
+async function activated(options = {}) {
+  const session = await connected(options);
+  session.activator.activate();
+  await session.until(confirming);
+  session.unit.press();
+  await session.until(state => state.offer === 'open' && state.address && state.status);
+  return session;
+}
+
+test('once activated, the page offers the aircraft type and the callsign the unit holds', async () => {
+  const { unit, activator } = await activated({ stored: { ...DEFAULTS, aircraft_type: 4, callsign: 'F-CABC' } });
+  assert.deepEqual(activator.state.settings, { aircraft_type: 4, callsign: 'F-CABC' });
+  assert.equal(activator.state.status.flight, 'ground');
+  assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get', 'status']);
+});
+
+test('saving writes the aircraft type and the callsign in one set, asked on the glass, and reads them back', async () => {
+  const { unit, activator, until } = await activated();
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  assert.deepEqual(unit.staged, { aircraft_type: 4, callsign: 'F-JXYZ' });
+  unit.press();
+  const saved = await until(state => state.offer === 'saved' && state.settings.callsign === 'F-JXYZ');
+  assert.equal(saved.notice.key, 'saved');
+  assert.deepEqual(saved.settings, { aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.deepEqual(unit.commands.slice(-2), ['set', 'get']);
+  assert.equal(unit.commands.filter(command => command === 'set').length, 1);
+});
+
+test('saving sends only what changed, and nothing when nothing did', async () => {
+  const { unit, activator, until } = await activated();
+  activator.saveSettings({ aircraft_type: 1, callsign: '' });
+  assert.ok(!unit.commands.includes('set'));
+  activator.saveSettings({ aircraft_type: 1, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  assert.deepEqual(unit.staged, { callsign: 'F-JXYZ' });
+});
+
+test('skipping leaves the unit on its defaults and sends nothing', async () => {
+  const { unit, activator } = await activated();
+  activator.skipSettings();
+  assert.equal(activator.state.offer, 'skipped');
+  assert.equal(activator.state.notice.key, 'skipped');
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.ok(!unit.commands.includes('set'));
+});
+
+test('a unit whose firmware asks for the ground refuses the settings indoors, and its first fix gives Save back', async () => {
+  const { unit, activator, until } = await activated({ onGround: false });
+  assert.equal(activator.state.status.flight, 'unknown');
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  const refused = await until(settled);
+  assert.deepEqual(refused.notice, { key: 'in_flight', during: 'set' });
+  assert.equal(refused.heldForGround, true);
+  assert.equal(refused.offer, 'open');
+
+  unit.land();
+  await until(state => !state.heldForGround);
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  unit.press();
+  assert.equal((await until(state => state.offer === 'saved')).notice.key, 'saved');
+});
+
+test('a unit whose firmware takes settings off the ground saves them indoors, with no fix', async () => {
+  const { unit, activator, until } = await activated({ onGround: false, setsOffGround: true });
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  unit.press();
+  const saved = await until(state => state.offer === 'saved' && state.settings.callsign === 'F-JXYZ');
+  assert.equal(saved.notice.key, 'saved');
+  assert.equal(saved.status.flight, 'unknown');
+});
+
+test('a refusal of the settings keeps the offer open, and is named as the settings', async () => {
+  const { unit, activator, until } = await activated();
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  unit.refuse();
+  const refused = await until(settled);
+  assert.deepEqual(refused.notice, { key: 'cancelled', during: 'set' });
+  assert.equal(refused.offer, 'open');
+
+  unit.swapPowered = false;
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.deepEqual((await until(state => state.notice?.key === 'low_power')).notice, { key: 'low_power', during: 'set' });
+});
+
+test('a link lost while the glass asks for the settings is said as such', async () => {
+  const { unit, activator, until } = await activated();
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  await until(state => state.phase === 'storing');
+  unit.drop();
+  const lost = await until(state => state.phase === 'offline');
+  assert.equal(lost.notice.key, 'link_lost');
+  assert.equal(lost.offer, null);
+});
+
+test('a link lost while the page reads the unit back after the unlock is said as such, and nothing more is written', async () => {
+  const { unit, activator, until } = await connected();
+  activator.activate();
+  await until(confirming);
+  unit.press();
+  await until(state => state.offer === 'open');
+  unit.drop();
+  const lost = await until(state => state.phase === 'offline');
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(activator.state.phase, 'offline');
+  assert.equal(activator.state.offer, null);
+  assert.deepEqual(activator.state.notice, { key: 'link_lost' });
+  assert.equal(lost.notice.key, 'link_lost');
+  assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock']);
+});
+
+test('skipping keeps the settings the unit already holds', async () => {
+  const { unit, activator } = await activated({ stored: { ...DEFAULTS, aircraft_type: 4, callsign: 'F-CABC' } });
+  activator.skipSettings();
+  assert.equal(activator.state.notice.key, 'skipped');
+  assert.ok(!unit.commands.includes('set'));
+  assert.equal(unit.stored.aircraft_type, 4);
+  assert.equal(unit.stored.callsign, 'F-CABC');
 });

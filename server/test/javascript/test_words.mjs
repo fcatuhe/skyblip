@@ -27,7 +27,9 @@ const REPLY_REFUSALS = ['small_mtu'];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'network_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
-const ACTIVATION_NOTICES = ['activated', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
+const ACTIVATION_NOTICES = ['activated', 'saved', 'skipped', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
+// INFO: fc 10nov26 a set's refusals whose activation words would mislead, so the page words them as the settings'
+const SETTINGS_REFUSALS = ['in_flight', 'low_power', 'expired'];
 
 const words = (path, kind = 'manage') => new Set([...read(path).matchAll(new RegExp(`data-${kind}-word="(\\w+)"`, 'g'))].map(match => match[1]));
 
@@ -91,6 +93,18 @@ for (const page of ACTIVATION_PAGES) {
   test(`every refusal and notice of an activation has words on ${page.split('/').pop()}`, () => {
     const keys = [...identityRefusals(), ...PROMPT_REFUSALS, ...REPLY_REFUSALS, ...SERVER_REFUSALS, ...ACTIVATION_NOTICES];
     const missing = keys.filter(key => !words(page, 'activate').has(key));
+    assert.deepEqual(missing, []);
+  });
+}
+
+test('the firmware still refuses a set with the reasons the activation page words for the settings', () => {
+  const missing = SETTINGS_REFUSALS.filter(reason => !firmwareRefusals().includes(reason));
+  assert.deepEqual(missing, []);
+});
+
+for (const page of ACTIVATION_PAGES) {
+  test(`every refusal of the settings offered after an activation has words on ${page.split('/').pop()}`, () => {
+    const missing = SETTINGS_REFUSALS.map(reason => `set_${reason}`).filter(key => !words(page, 'activate').has(key));
     assert.deepEqual(missing, []);
   });
 }

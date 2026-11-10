@@ -30,23 +30,7 @@
     <fieldset data-manage-target="fields">
       <legend><%= settings[:legend] %></legend>
 
-      <div class="manage-field">
-        <label for="manage-aircraft-type"><%= settings[:aircraft_type] %></label>
-        <select id="manage-aircraft-type" name="aircraft_type">
-          <% settings[:aircraft_types].each_with_index do |name, code| %>
-            <option value="<%= code %>"><%= name %></option>
-          <% end %>
-        </select>
-        <p class="manage-default" data-manage-target="default" data-setting="aircraft_type" hidden></p>
-      </div>
-
-      <div class="manage-field">
-        <label for="manage-callsign"><%= settings[:callsign] %></label>
-        <input type="text" id="manage-callsign" name="callsign" maxlength="9" pattern="[A-Za-z0-9 \-]*"
-               autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="manage-callsign-hint">
-        <p class="manage-hint" id="manage-callsign-hint"><%= settings[:callsign_hint] %></p>
-        <p class="manage-default" data-manage-target="default" data-setting="callsign" hidden></p>
-      </div>
+      <%= render "shared/aircraft_settings", scope: "manage", defaults: true %>
 
       <div class="manage-field">
         <label for="manage-units"><%= settings[:units] %></label>

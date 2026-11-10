@@ -1,9 +1,14 @@
 import { addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { hex } from '#skyblip/link';
+import { changedSettings, settingsOf, statusOf } from '#skyblip/settings';
 
 export { hasWebBluetooth };
+export { readSetting, showSetting } from '#skyblip/settings';
 
-const BUSY = new Set(['asking', 'confirming', 'registering', 'unlocking']);
+export const OFFERED_SETTINGS = ['aircraft_type', 'callsign'];
+
+const SAVING = new Set(['saving', 'storing']);
+const BUSY = new Set(['asking', 'confirming', 'registering', 'unlocking', ...SAVING]);
 
 export class ServerRefusal extends Error {
   constructor(key, detail = null) {
@@ -43,7 +48,7 @@ export class Activator {
   #device = null;
   #leaving = false;
   #serverNonce = null;
-  #state = { phase: 'offline', device: null, address: null, read: false, notice: null };
+  #state = { phase: 'offline', device: null, address: null, read: false, settings: null, status: null, heldForGround: false, offer: null, notice: null };
 
   constructor({ onChange, server }) {
     this.#onChange = onChange;
@@ -85,17 +90,35 @@ export class Activator {
     return this.#send({ command: 'challenge' });
   }
 
-  async #send(command) {
+  saveSettings(values) {
+    const { phase, offer, settings } = this.#state;
+    if (phase !== 'ready' || offer !== 'open') return;
+    const changed = changedSettings(settings, values, OFFERED_SETTINGS);
+    if (Object.keys(changed).length === 0) return;
+    this.#set({ phase: 'saving', notice: null });
+    return this.#send({ command: 'set', ...changed });
+  }
+
+  skipSettings() {
+    if (this.#state.phase === 'ready' && this.#state.offer === 'open') this.#set({ offer: 'skipped', notice: { key: 'skipped' } });
+  }
+
+  // INFO: fc 10nov26 a write for a link that closed meanwhile belongs to no unit, and #closed has said why
+  async #send(command, device = this.#device) {
+    if (!device || device !== this.#device) return false;
     try {
-      await this.#device.sendConfig(command);
+      await device.sendConfig(command);
+      return true;
     } catch (error) {
-      this.#set({ phase: this.#device ? 'ready' : 'offline', notice: { key: 'failed', detail: error.message } });
+      if (this.#device === device) this.#set({ phase: 'ready', notice: { key: 'failed', detail: error.message } });
+      return false;
     }
   }
 
   #receive(reply) {
     if (!reply) return;
-    if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true });
+    if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true, settings: settingsOf(reply, OFFERED_SETTINGS) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply), ...(reply.flight === 'ground' ? { heldForGround: false } : {}) });
     else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
     else if (reply.command === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
@@ -105,9 +128,21 @@ export class Activator {
     const { phase } = this.#state;
     if (reply.reason === 'claimed' || reply.reason === 'small_mtu') return this.#set({ phase: 'ready', notice: { key: reply.reason } });
     if (!BUSY.has(phase)) return;
+    if (SAVING.has(phase)) return this.#settingsAcked(reply);
     if (reply.pending && reply.reason === 'confirm_register') return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && reply.reason === 'unlock' && phase === 'unlocking') return this.#unlocked();
     this.#set({ phase: 'ready', notice: { key: reply.reason || 'refused' } });
+  }
+
+  #settingsAcked(reply) {
+    if (reply.pending && reply.reason === 'confirm') return this.#set({ phase: 'storing' });
+    if (reply.acknowledge && !reply.reason) return this.#saved();
+    this.#set({ phase: 'ready', heldForGround: reply.reason === 'in_flight', notice: { key: reply.reason || 'refused', during: 'set' } });
+  }
+
+  #saved() {
+    this.#set({ phase: 'ready', offer: 'saved', notice: { key: 'saved' } });
+    return this.#send({ command: 'get' });
   }
 
   async #challenge({ nonce, server_key_id }) {
@@ -141,16 +176,18 @@ export class Activator {
     }
   }
 
-  #unlocked() {
-    this.#set({ phase: 'ready', notice: { key: 'activated' } });
-    return this.#send({ command: 'get' });
+  async #unlocked() {
+    const device = this.#device;
+    this.#set({ phase: 'ready', offer: 'open', notice: { key: 'activated' } });
+    if (await this.#send({ command: 'get' }, device)) await this.#send({ command: 'status' }, device);
   }
 
   #closed() {
-    const notice = BUSY.has(this.#state.phase) && !this.#leaving ? { key: 'link_lost' } : this.#state.notice;
+    const { phase, offer } = this.#state;
+    const notice = (BUSY.has(phase) || offer === 'open') && !this.#leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#device = null;
     this.#serverNonce = null;
-    this.#set({ phase: 'offline', device: null, address: null, read: false, notice });
+    this.#set({ phase: 'offline', device: null, address: null, read: false, settings: null, status: null, heldForGround: false, offer: null, notice });
   }
 
   #set(patch) {

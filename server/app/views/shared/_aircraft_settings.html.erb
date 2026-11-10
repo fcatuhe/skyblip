@@ -1,0 +1,21 @@
+<div class="manage-field">
+  <label for="<%= scope %>-aircraft-type"><%= t("settings.aircraft_type") %></label>
+  <select id="<%= scope %>-aircraft-type" name="aircraft_type">
+    <% Ownship::AircraftType.all.each do |type| %>
+      <option value="<%= type.code %>"><%= type.name %></option>
+    <% end %>
+  </select>
+  <% if defaults %>
+    <p class="manage-default" data-<%= scope %>-target="default" data-setting="aircraft_type" hidden></p>
+  <% end %>
+</div>
+
+<div class="manage-field">
+  <label for="<%= scope %>-callsign"><%= t("settings.callsign") %></label>
+  <input type="text" id="<%= scope %>-callsign" name="callsign" maxlength="9" pattern="[A-Za-z0-9 \-]*"
+         autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="<%= scope %>-callsign-hint">
+  <p class="manage-hint" id="<%= scope %>-callsign-hint"><%= t("settings.callsign_hint") %></p>
+  <% if defaults %>
+    <p class="manage-default" data-<%= scope %>-target="default" data-setting="callsign" hidden></p>
+  <% end %>
+</div>

@@ -1,12 +1,14 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
 import { hex } from '#skyblip/link';
+import { changedSettings, settingsOf, statusOf } from '#skyblip/settings';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
 } from '#skyblip/smp';
 
 export { hasWebBluetooth };
+export { readSetting, showSetting } from '#skyblip/settings';
 
 const IMAGE_REFUSALS = {
   10: 'flash',
@@ -24,7 +26,6 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
-const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign'];
 
 class LinkLost extends Error {
   constructor() {
@@ -56,10 +57,6 @@ function imageOf(reply) {
   };
 }
 
-function settingsOf(reply) {
-  return Object.fromEntries(SETTING_KEYS.filter(key => key in reply).map(key => [key, reply[key]]));
-}
-
 function identityOf(reply) {
   return { address: addressOf(reply) };
 }
@@ -73,17 +70,6 @@ function adviceOf({ image, file }) {
 
 function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
-}
-
-function statusOf(reply) {
-  return {
-    flight: reply.flight ?? null,
-    upload: reply.upload === true,
-    batteryPercent: reply.battery_percent ?? null,
-    charging: reply.charging === true,
-    powerLevel: reply.power_level ?? null,
-    wentDarkFlat: reply.went_dark_flat === true,
-  };
 }
 
 export class Updater {
@@ -110,6 +96,7 @@ export class Updater {
     settings: null,
     address: null,
     defaults: null,
+    heldForGround: false,
     file: null,
     advice: null,
     settling: false,
@@ -199,12 +186,10 @@ export class Updater {
   }
 
   saveSettings(values) {
-    const { settings } = this.#state;
-    const changed = Object.entries(values).filter(([key, value]) => SETTING_KEYS.includes(key) && settings?.[key] !== value);
-    if (changed.length === 0) return;
-    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
+    const changed = changedSettings(this.#state.settings, values);
+    if (Object.keys(changed).length === 0) return;
     this.#set({ notice: null });
-    return this.#ask('set', Object.fromEntries(changed));
+    return this.#ask('set', changed);
   }
 
   resetSettings() {
@@ -253,7 +238,7 @@ export class Updater {
   #receive(reply) {
     if (!reply) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
-    else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply), ...(reply.flight === 'ground' ? { heldForGround: false } : {}) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
     else if (reply.command === 'acknowledgement') this.#acked(reply);
@@ -268,7 +253,8 @@ export class Updater {
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
-    this.#set({ phase: 'ready', task: null, notice: { key: reply.reason || 'refused' } });
+    const heldForGround = task === 'set' && reply.reason === 'in_flight';
+    this.#set({ phase: 'ready', task: null, ...(heldForGround ? { heldForGround } : {}), notice: { key: reply.reason || 'refused' } });
   }
 
   #narrow() {
@@ -352,11 +338,11 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, heldForGround: false, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null,
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, heldForGround: false,
       progress: null,
       notice,
     });

@@ -47,6 +47,10 @@ en:
     app: "navigation app"
     received: "received"
     transmitted: "transmitted"
+  settings:
+    aircraft_type: "Aircraft type"
+    callsign: "Callsign"
+    callsign_hint: "Up to nine letters, digits, dashes or blanks. Empty transmits no name."
   footer:
     description: "Electronic conspicuity for light aviation. skyBlip Go broadcasts your position in ADS-L, receives ADS-L and FLARM traffic and tells you where to look."
     open_source: "Open source, no subscription, no account."
