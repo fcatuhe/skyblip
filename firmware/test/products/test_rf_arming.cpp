@@ -12,7 +12,7 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
-#include "products/skyblip_go/services/traffic.h"
+#include "products/common/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/simulator.h"
 
