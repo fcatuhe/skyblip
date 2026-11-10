@@ -28,6 +28,14 @@ TEST_CASE("units: feet<->metres round-trip is close") {
     }
 }
 
+// The international foot is 304.8 mm exactly, so a pressure altitude converts without drift.
+TEST_CASE("units: feet to millimetres is exact to the millimetre, either side of zero") {
+    CHECK(to_millimetres(Feet(1)).value == 305);
+    CHECK(to_millimetres(Feet(4000)).value == 1219200);
+    CHECK(to_millimetres(Feet(-1200)).value == -365760);
+    CHECK(to_millimetres(Feet(126700)).value == 38618160);
+}
+
 // Every one truncated, so a speed, a climb and a rate each read a unit below what was flown.
 TEST_CASE("units: a speed and a rate are rounded to the unit shown, not truncated") {
     // 60 kt is 30.87 m/s, which the wire carries as 123 quarter-m/s: 59.77 kt back.
