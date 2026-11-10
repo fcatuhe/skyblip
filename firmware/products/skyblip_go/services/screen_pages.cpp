@@ -184,11 +184,14 @@ void ScreenService::render(uint32_t now_ms) {
                     const model::AircraftObservation observation =
                         flight::carried_to(target->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
-                    if (!flight::relative_north_east_up(own_now, observation, north, east, up))
+                    bool up_valid = false;
+                    if (!flight::relative_north_east_up(own_now, observation, north, east, up,
+                                                        up_valid))
                         continue;
                     targets_[count].north_m = north;
                     targets_[count].east_m = east;
                     targets_[count].up_m = up;
+                    targets_[count].up_valid = up_valid;
                     targets_[count].alarm_level = target->alarm_level;
                     targets_[count].alarm_dismissed = target->alarm_dismissed;
                     targets_[count].climb_e8 = observation.climb_e8;

@@ -37,7 +37,8 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a target and neve
     CHECK(graded.relative_distance_m == doctest::Approx(400).epsilon(0.02));
 }
 
-TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at our level") {
+// No height is not our height: the grade is the distance, and the altitude stays unknown.
+TEST_CASE("alarm: a neighbour that sends no altitude is an advisory on distance alone") {
     const model::Ownship own = flying(30, 0);
     model::AircraftObservation no_altitude = target_at(own, 55, 0, 0, 30, 180);
     no_altitude.altitude_valid = false;
@@ -45,7 +46,14 @@ TEST_CASE("alarm: a neighbour that sends no altitude is ranged on the ground, at
     int32_t slant_m = 0;
     CHECK(range_check(own, no_altitude, slant_m) == Plausibility::Believable);
     CHECK(slant_m == doctest::Approx(55).epsilon(0.05));
-    CHECK(assess(own, no_altitude, 0).level == Level::Advisory);
+    const AlarmAssessment near = assess(own, no_altitude, 0);
+    CHECK(near.level == Level::Advisory);
+    CHECK_FALSE(near.relative_altitude_valid);
+
+    model::AircraftObservation far = target_at(own, 3200, 0, 0, 30, 180);
+    far.altitude_valid = false;
+    CHECK(assess(own, far, 0).level == Level::None);
+    CHECK(assess(own, target_at(own, 55, 0, 0, 30, 180), 0).relative_altitude_valid);
 }
 
 TEST_CASE("alarm: an aircraft leaving is as much an advisory as one arriving") {

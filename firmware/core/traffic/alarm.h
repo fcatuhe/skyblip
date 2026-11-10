@@ -19,6 +19,7 @@ struct AlarmAssessment {
     int32_t relative_distance_m{0};
     int32_t relative_altitude_m{0};
     int32_t closing_mps{0};
+    bool relative_altitude_valid{false};
     bool valid{false};
 };
 

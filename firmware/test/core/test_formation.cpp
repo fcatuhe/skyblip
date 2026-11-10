@@ -281,6 +281,32 @@ TEST_CASE("formation: an aircraft that says it is on the ground is never a wingm
     CHECK(tracker.members() == 0);
 }
 
+// Station keeping is three axes, and a target that sends no height cannot be seen to keep one.
+TEST_CASE("formation: a target that sends no altitude is never a wingman") {
+    Tracker tracker;
+    Report report{};
+    for (uint32_t now_ms = 1000; now_ms <= 1000 + kTogetherHoldMs + 1000; now_ms += 1000) {
+        const model::Ownship own = flying(40, 90, now_ms);
+        model::AircraftObservation unknown = target_at(own, -60, -120, 10, 40, 90, now_ms);
+        unknown.altitude_valid = false;
+        report = tracker.observe(own, unknown, {}, now_ms);
+    }
+    CHECK(report.state == State::None);
+    CHECK(tracker.members() == 0);
+}
+
+TEST_CASE("formation: a member that stops sending its altitude leaves at once") {
+    Tracker tracker;
+    const uint32_t now_ms = fly_on_station(tracker) + 1000;
+    REQUIRE(tracker.members() == 1);
+
+    const model::Ownship own = flying(40, 90, now_ms);
+    model::AircraftObservation unknown = target_at(own, -60, -120, 10, 40, 90, now_ms);
+    unknown.altitude_valid = false;
+    tracker.observe(own, unknown, {}, now_ms);
+    CHECK(tracker.members() == 0);
+}
+
 // A landing is the end of a formation, not six seconds of it counted on the square.
 TEST_CASE("formation: a member that reports itself on the ground leaves at once") {
     Tracker tracker;

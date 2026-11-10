@@ -28,6 +28,7 @@ struct RadarTarget {
     bool turn_valid{false};
     bool in_formation{false};
     bool alarm_dismissed{false};
+    bool up_valid{true};
 };
 
 struct RadarSnapshot {

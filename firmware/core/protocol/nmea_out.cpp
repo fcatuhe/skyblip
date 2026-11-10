@@ -41,7 +41,9 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                  const char* callsign) {
     (void)capacity;
     int32_t north_m, east_m, up_m;
-    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m)) return 0;
+    bool up_valid;
+    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m, up_valid)) return 0;
+    if (!up_valid) return 0;
     int written = 0;
     written += format_string(out + written, "$PFLAA,");
     written += format_unsigned(out + written, alarm_level);
@@ -90,7 +92,7 @@ uint8_t pflau_gps(const model::Ownship& own) {
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
                  int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t relative_bearing_deg, int32_t relative_altitude_m,
-                 int32_t relative_distance_m) {
+                 bool relative_altitude_valid, int32_t relative_distance_m) {
     (void)capacity;
     int written = 0;
     written += format_string(out + written, "$PFLAU,");
@@ -110,7 +112,8 @@ int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool tra
         out[written++] = ',';
         written += format_unsigned(out + written, alarm_level ? 2u : 0u);
         out[written++] = ',';
-        written += format_signed(out + written, relative_altitude_m, 1, 0, false);
+        if (relative_altitude_valid)
+            written += format_signed(out + written, relative_altitude_m, 1, 0, false);
         out[written++] = ',';
         written += format_unsigned(
             out + written,

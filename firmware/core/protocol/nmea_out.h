@@ -16,6 +16,7 @@ uint8_t adsl_category_to_alptas_type(uint8_t adsl_category);
 uint8_t address_mapping_table_to_id_type(uint8_t address_mapping_table);
 
 // INFO: fc 20sep26 callsign rides the ID field behind a '!', as OGN's does: lookout.h:144
+// INFO: fc 10nov26 XCSoar drops a $PFLAA without RelativeVertical, and a 0 there draws it level
 int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                  const model::AircraftObservation& target, uint8_t alarm_level,
                  const char* callsign);
@@ -30,7 +31,7 @@ uint8_t pflau_gps(const model::Ownship& own);
 int format_pflau(char* out, size_t capacity, const model::Ownship& own, bool transmitting,
                  int target_count, const model::AircraftObservation* threat, uint8_t alarm_level,
                  int16_t relative_bearing_deg, int32_t relative_altitude_m,
-                 int32_t relative_distance_m);
+                 bool relative_altitude_valid, int32_t relative_distance_m);
 
 // fix_valid follows the same binary own.fix_valid this device already keeps
 // (no 2D/3D distinction survives to Ownship), which is what format_pflau's own

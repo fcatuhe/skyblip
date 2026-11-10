@@ -77,6 +77,25 @@ TEST_CASE("radar page: traffic is a blip, and the advisory fills it") {
           ink_in(diamond, kPlotX - 8, kPlotY - 8, kPlotX + 9, kPlotY + 9));
 }
 
+// A target that sends no altitude points nowhere, and is drawn neither level nor small.
+TEST_CASE("radar page: a target with no altitude is a ring, filled when it is an advisory") {
+    RadarTarget unknown[1] = {{2 * kMetresPerNm, 0, 0, Level::None}};
+    unknown[0].up_valid = false;
+    const Glass ring = radar(one_target(unknown));
+    CHECK_FALSE(ring.get_pixel(kPlotX, kPlotY));
+    CHECK(ring.get_pixel(kPlotX - 5, kPlotY));
+    CHECK(ring.get_pixel(kPlotX + 5, kPlotY));
+    CHECK(ring.get_pixel(kPlotX, kPlotY - 5));
+    CHECK_FALSE(ring.get_pixel(kPlotX, kPlotY - 7));
+    CHECK_FALSE(ring.get_pixel(kPlotX - 7, kPlotY));
+
+    unknown[0].alarm_level = Level::Advisory;
+    const Glass disc = radar(one_target(unknown));
+    CHECK(disc.get_pixel(kPlotX, kPlotY));
+    CHECK(ink_in(disc, kPlotX - 6, kPlotY - 6, kPlotX + 7, kPlotY + 7) >
+          ink_in(ring, kPlotX - 6, kPlotY - 6, kPlotX + 7, kPlotY + 7));
+}
+
 // Near-size covers exactly the separation that can alarm, so size is a fact and not a flourish.
 TEST_CASE("radar page: past the advisory's own altitude window the blip is the small one") {
     RadarTarget inside[1] = {

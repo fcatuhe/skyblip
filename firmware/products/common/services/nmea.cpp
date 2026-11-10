@@ -133,9 +133,10 @@ void NmeaService::emit_status(uint32_t now_ms) {
                                  sentence_, sizeof(sentence_), own, transmitting, heard,
                                  &threat->observation, traffic::to_number(worst_level),
                                  static_cast<int16_t>(signed_bearing(worst.relative_bearing_deg)),
-                                 worst.relative_altitude_m, worst.relative_distance_m)
+                                 worst.relative_altitude_m, worst.relative_altitude_valid,
+                                 worst.relative_distance_m)
                            : protocol::format_pflau(sentence_, sizeof(sentence_), own, transmitting,
-                                                    heard, nullptr, 0, 0, 0, 0);
+                                                    heard, nullptr, 0, 0, 0, false, 0);
     write(sentence_, length);
 }
 
