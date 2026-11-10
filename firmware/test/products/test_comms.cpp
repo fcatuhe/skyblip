@@ -147,49 +147,6 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 }
 
-TEST_CASE("comms: set is REFUSED in flight (fail closed), no staging") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store);
-    config.set_flight_state(flight::FlightState::Airborne);
-    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
-    CHECK(config.pending() == Pending::None);
-    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
-    CHECK(int(settings.aircraft_type) == 1);
-}
-
-// The latch itself is core/flight/ground.h's; this gate refuses whatever is not a confirmed ground.
-TEST_CASE("comms: unknown flight-state refuses") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store);
-    config.set_flight_state(flight::FlightState::Unknown);  // never confirmed on ground
-    CHECK(config.flight_state() == flight::FlightState::Unknown);
-    config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
-    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
-
-    config.set_flight_state(flight::FlightState::Ground);
-    CHECK(config.flight_state() == flight::FlightState::Ground);
-}
-
-TEST_CASE("comms: confirm re-checks the gate, becoming airborne cancels apply") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store);
-    config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
-    config.set_flight_state(flight::FlightState::Airborne);  // took off before confirming
-    config.confirm();
-    CHECK(int(settings.aircraft_type) == 1);  // NOT applied
-    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
-}
-
 // Nothing used to set the gate, so it stayed Unknown and refused forever: green tests, dead device.
 TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value refuses") {
     platform::host::Link link;

@@ -41,19 +41,18 @@ void ConfigService::tick(uint32_t now_ms) {
 }
 
 void ConfigService::set_flight_state(flight::FlightState state) {
+    const bool changed = state != flight_state_;
+    flight_state_ = state;
     if (state == flight::FlightState::Airborne) {
         upload_window_open_ = false;
         // A prompt that survived the take-off roll would be an authorisation a
         // pilot could confirm with an elbow in the air.
-        // INFO: fc 18oct26 activation is the exception: a unit with no serial transmits nothing
-        if (pending_ != Pending::None && !register_exempt()) {
+        if (pending_ != Pending::None && !prompt_allowed()) {
             pending_ = Pending::None;
             pending_set_bytes_ = 0;
             acknowledge(false, link::Reason::InFlight);
         }
     }
-    const bool changed = state != flight_state_;
-    flight_state_ = state;
     // INFO: fc 03oct26 a page holding its buttons for the ground learns it landed without polling
     if (changed && link_up()) push_status();
 }
@@ -364,7 +363,8 @@ void ConfigService::send_config() {
 }
 
 void ConfigService::stage_settings(const events::RxFrame& frame) {
-    if (!on_ground()) {
+    const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
+    if (!settings_allowed(reader, flight_state_)) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }
@@ -375,8 +375,7 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
     }
     char detail[sizeof(prompt_detail_)]{};
     const Status described =
-        store_.describe_changes(cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)), detail,
-                                static_cast<int>(sizeof(detail)));
+        store_.describe_changes(reader, detail, static_cast<int>(sizeof(detail)));
     if (described != Status::Ok) {
         acknowledge(false, settings_refusal(described));
         return;
@@ -423,7 +422,7 @@ void ConfigService::request_log_erase() {
 }
 
 void ConfigService::confirm() {
-    if (!on_ground() && !register_exempt()) {
+    if (!prompt_allowed()) {
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
         acknowledge(false, link::Reason::InFlight);
@@ -443,8 +442,7 @@ void ConfigService::confirm() {
             acknowledge(false, link::Reason::LowPower);
             return;
         }
-        const Status applied = store_.apply(cbor::Reader(
-            ConstByteSpan(pending_set_frame_, static_cast<size_t>(pending_set_bytes_))));
+        const Status applied = store_.apply(pending_set());
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
         if (applied == Status::Ok) {

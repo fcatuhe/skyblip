@@ -120,8 +120,7 @@ TEST_CASE(
     CHECK(config_frames(rig) == pushed);
 }
 
-// The one setting no menu can carry, so the link is the only way in: pinned end
-// to end because a name nobody can set is a feature nobody has.
+// A name typed on a phone, end to end: the glass names it, and two presses store it.
 TEST_CASE("companion link: a callsign is written by an app and authorised on the glass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

@@ -26,7 +26,9 @@ bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_m
 
 // INFO: cf 02aug26 a standing prompt takes the pad and the button both, so nothing pages or opens
 void ScreenService::handle_input(uint32_t now_ms) {
-    const comms::Pending pending = config_.pending();
+    const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
+                                       ? config_.pending()
+                                       : comms::Pending::None;
     if (pending != prompt_) {
         prompt_ = pending;
         prompt_since_ms_ = now_ms;

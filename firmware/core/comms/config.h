@@ -194,19 +194,13 @@ class ConfigService {
     void cancel();
 
     Pending pending() const { return pending_; }
+    // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
+    bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
     bool settings_dirty() const { return settings_dirty_; }
     void clear_dirty() { settings_dirty_ = false; }
 
-    // INFO: cf 02aug26 The panel's settings page edits the same struct this
-    // service was handed, one validated field at a time, and this is how it
-    // says so. There is exactly one writer of the flash blob - the product's
-    // ConfigLinkService, on this flag - so the two editors cannot disagree
-    // about what is stored. Deliberately not gated on flight state: a "set"
-    // from a phone is refused unless the device is positively on the ground,
-    // because a phone in a pocket has no proven presence and rewrites the whole
-    // struct in one message. A press on the panel is presence itself and moves
-    // one field, and alarm volume is a thing a pilot needs in the air.
+    // INFO: fc 10nov26 one writer stores the blob, on this flag, so the panel and a phone agree
     void note_settings_changed() { settings_dirty_ = true; }
 
     // Why the device came up. Read once at boot by the shell, reported here so
@@ -313,6 +307,9 @@ class ConfigService {
     bool on_ground() const { return flight_state_ == flight::FlightState::Ground; }
     bool activated() const { return identity_ != nullptr && identity_->activated(); }
     bool register_exempt() const { return pending_ == Pending::Register && !activated(); }
+    bool prompt_allowed() const { return prompt_allowed_in(flight_state_); }
+    bool settings_allowed(const cbor::Reader& frame, flight::FlightState state) const;
+    cbor::Reader pending_set() const;
 
     ports::Link& link_;
     ConfigStore& store_;
