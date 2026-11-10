@@ -345,7 +345,7 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
 
     // One bound's worth of passes, and every aircraft in the table has been
     // named at least once inside it.
-    fly(rig, now_ms, go::NmeaService::kTargetRefreshCeilingMs / 1000);
+    fly(rig, now_ms, common::NmeaService::kTargetRefreshCeilingMs / 1000);
     const std::vector<std::string> heard = sentences(rig);
     for (int i = 0; i < count; i++) {
         char address_hex[8];
@@ -359,11 +359,11 @@ TEST_CASE("nmea: more targets than one pass carries are all refreshed inside the
     }
     // No pass spends its whole budget on traffic and drops the alarm sentence.
     CHECK(count_of(rig, "$PFLAU") >=
-          static_cast<int>(go::NmeaService::kTargetRefreshCeilingMs / 1000));
+          static_cast<int>(common::NmeaService::kTargetRefreshCeilingMs / 1000));
     // ...and no pass sends more traffic than the cap the bound is derived from.
     CHECK(count_of(rig, "$PFLAA") <=
-          go::NmeaService::kTargetsPerPass *
-              (static_cast<int>(go::NmeaService::kTargetRefreshCeilingMs / 1000) + 1));
+          common::NmeaService::kTargetsPerPass *
+              (static_cast<int>(common::NmeaService::kTargetRefreshCeilingMs / 1000) + 1));
 }
 
 // The notify share ended each pass at four 20-byte frames: no $PFLAA reached a 20-byte tablet.
@@ -419,9 +419,9 @@ struct FeatureRig {
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{link, store};
-    go::NmeaService nmea;
+    common::NmeaService nmea;
 
-    FeatureRig(go::Feature declared, ports::Capabilities fitted = ports::Capability::Link)
+    FeatureRig(common::Feature declared, ports::Capabilities fitted = ports::Capability::Link)
         : nmea(context, declared, config) {
         roles.capabilities = fitted;
         state.own.fix_valid = true;
@@ -439,21 +439,21 @@ struct FeatureRig {
 }  // namespace
 
 TEST_CASE("nmea: a product that does not declare the companion link says nothing on it") {
-    FeatureRig silent(go::Feature::None);
+    FeatureRig silent(common::Feature::None);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) silent.nmea.tick(now_ms);
     CHECK_FALSE(silent.nmea.enabled());
     CHECK(silent.frames() == 0);
 
     // The same rig, the same link, the same fix: the feature is the difference,
     // which is what makes it a gate and not decoration.
-    FeatureRig speaking(go::Feature::CompanionLink);
+    FeatureRig speaking(common::Feature::CompanionLink);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) speaking.nmea.tick(now_ms);
     CHECK(speaking.nmea.enabled());
     CHECK(speaking.frames() > 0);
 }
 
 TEST_CASE("nmea: the companion link is not claimed on a board with no link fitted") {
-    FeatureRig unfitted(go::Feature::CompanionLink, ports::Capability::None);
+    FeatureRig unfitted(common::Feature::CompanionLink, ports::Capability::None);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) unfitted.nmea.tick(now_ms);
     CHECK_FALSE(unfitted.nmea.enabled());
     CHECK(unfitted.frames() == 0);

@@ -1,14 +1,15 @@
 # fuzz
 
-Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each links every host source the suite links, under ASan and UBSan, and runs the production code unchanged.
+Four libFuzzer harnesses, one per door a stranger's bytes come in through. Each links every host source the suite links, under ASan and UBSan, and runs the production code unchanged.
 
 | Harness | Door | Input |
 |---|---|---|
 | `fuzz_air` | the radio: ADS-L, ALP-TAS and the O-band uplink | a receiver (UTC, position), a transmitter's frame, then chip noise |
+| `fuzz_adsb` | the 1090 MHz radio: DF17 | a transmitter's frame, then chip noise |
 | `fuzz_nmea` | the L76K's UART | the byte stream, as the parser's `feed()` sees it |
 | `fuzz_link` | the companion link's Config and Log writes | one action after another, on a whole product |
 
-`make fuzz` builds all three in `build/fuzz/` and runs them in turn, 30 s for `fuzz_nmea`, 60 s for `fuzz_air` and 90 s for `fuzz_link`, which is the slow one. `FUZZ_SECONDS` sets all three at once, and `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
+`make fuzz` builds all four in `build/fuzz/` and runs them in turn, 30 s for `fuzz_nmea` and `fuzz_adsb`, 60 s for `fuzz_air` and 90 s for `fuzz_link`, which is the slow one. `FUZZ_SECONDS` sets all four at once, and `make fuzz-link FUZZ_SECONDS=600` runs one. libFuzzer ships with clang, so `FUZZ_CXX` defaults to `clang++`, and the objects live in their own tree because `-fsanitize=fuzzer-no-link` instruments every one of them.
 
 `make fuzz ABI=ilp32` builds the same harnesses for i386 in `build/fuzz-ilp32/`, with `-m32 -funsigned-char`: a 32-bit `long` and an unsigned `char`, as on the nRF52. The 64-bit host cannot see an overflow that only a 32-bit `long` reaches, and the i386 build found one in its first minutes: the RMC date's seconds were a `long`, which a garbage date overflowed at once and a real one would have from 2038. CI runs both builds, the i386 one on an x86_64 runner with `g++-multilib`.
 
@@ -17,6 +18,7 @@ Three libFuzzer harnesses, one per door a stranger's bytes come in through. Each
 A mutation that breaks a checksum stops at the checksum, and the fuzzer never sees the parser behind it. Each harness therefore seals what an honest transmitter would seal, and leaves the corruption to the fuzzer:
 
 - `fuzz_air` builds the frame a transmitter would send, Manchester-encodes it past the shared sync window, then XORs the rest of the input over the chips. Noise over a clean burst can reach any chip stream, so framing, the sync tail, the error map and the forward correction are all in play, then the decoders in the order `TrafficService` calls them. The input picks the sealing: raw sends its bytes as they are, sealed fixes their CRC or Reed-Solomon parity, encoded builds an ALP-TAS frame from fields with `alptas_encode`. ALP-TAS is encrypted under the second it was sent, so only the encoder gets a mutation past the decrypt check to the position arithmetic behind it.
+- `fuzz_adsb` sends the input's frame as it is, or forces DF17 and seals its parity, then XORs the rest of the input over the chips the LR2021 reports after its sync. A sealed frame under no noise reaches every parser, and noise reaches the doubtful-bit repair.
 - `fuzz_nmea` rewrites the two hex digits after every `*` to the checksum of the sentence before it. `nmea_checksum_ok` itself is the suite's to test.
 - `fuzz_link` boots a product with no panel onto a log partition that already holds one flight, gives it a second of fixes on the ground, and connects two apps.
 
@@ -34,7 +36,7 @@ Any other byte is skipped, and a length past the end of the input takes what is 
 
 ## Seeds and dictionaries
 
-`corpus/<name>/` holds the seeds and `<name>.dict` the tokens the parsers compare against: for the link, the action bytes, the command key with each command code, and the CBOR heads the frames open with. Both are read-only to a run: new inputs go to `build/fuzz/corpus/<name>/`, which CI caches between runs so the corpus keeps growing. `fuzz_air` needs none: the harness is the transmitter, so every input is already a framed burst.
+`corpus/<name>/` holds the seeds and `<name>.dict` the tokens the parsers compare against: for the link, the action bytes, the command key with each command code, and the CBOR heads the frames open with. Both are read-only to a run: new inputs go to `build/fuzz/corpus/<name>/`, which CI caches between runs so the corpus keeps growing. `fuzz_air` and `fuzz_adsb` need none: each harness is the transmitter, so every input is already a framed burst.
 
 ## When one crashes
 

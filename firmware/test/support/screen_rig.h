@@ -9,7 +9,7 @@
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
 #include "ports/null.h"
-#include "products/skyblip_go/services/alarm.h"
+#include "products/common/services/alarm.h"
 #include "products/skyblip_go/services/capture.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings_store.h"
@@ -39,7 +39,7 @@ struct ScreenRig {
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
-    go::AlarmService alarm_service{context, settings};
+    common::AlarmService alarm_service{context, {settings.alarm_enabled, settings.alarm_volume}};
     go::RecordPool pool{context};
     go::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
     go::RecordStore flights_store{pool, store::SectorOwner::Flights};

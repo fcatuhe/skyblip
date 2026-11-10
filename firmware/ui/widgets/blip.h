@@ -7,7 +7,7 @@
 
 namespace skyblip::ui {
 
-enum class Vertical : uint8_t { FarAbove, Above, Level, Below, FarBelow };
+enum class Vertical : uint8_t { FarAbove, Above, Level, Below, FarBelow, Unknown };
 enum class Trend : uint8_t { Steady, Climbing, Sinking };
 
 void draw_blip(Canvas& canvas, int x, int y, Vertical vertical, Trend trend, bool alarm);

@@ -1,0 +1,4 @@
+# TODO: fc 10nov26 the QIAA package is unverified for the X1, until #170 reads it off a unit's nRF52840
+config BOARD_MESHTRACKER_X1
+	select SOC_NRF52840_QIAA
+	select SOC_NRF52840

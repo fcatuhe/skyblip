@@ -25,6 +25,7 @@ constexpr Band kBands[] = {
     {"below", Vertical::Below, true},
     {"far-above", Vertical::FarAbove, false},
     {"far-below", Vertical::FarBelow, false},
+    {"unknown", Vertical::Unknown, true},
 };
 
 struct Motion {

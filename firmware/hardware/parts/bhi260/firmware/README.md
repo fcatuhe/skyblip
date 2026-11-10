@@ -13,7 +13,7 @@ It is the RAM variant, not `BHI260AP-flash.fw`: the Plus gives the hub no flash 
 
 ## How it reaches the part
 
-A full image carries it and a slim one does not. Both are built from one commit, at one version, and both pin it by digest: `skyblip_imu_image()` in `cmake/skyblip.cmake` hashes this file into `bhi260ap_fw_sha256.inc` for every build, and turns it into a byte list (`bhi260ap_fw.inc`) only when `CONFIG_SKYBLIP_IMU_IMAGE_LINKED` is set. `hardware/platform/zephyr/imu_firmware.cpp` is the only translation unit that includes either, and the platform hands them to the board as `imu_firmware()`, empty in a slim image, and `imu_firmware_digest()`. The host build and the WASM simulator carry an eight-byte stand-in, and nothing in the repo is a 650 KB generated header anybody could be tempted to edit.
+A full image carries it and a slim one does not. Both are built from one commit, at one version, and both pin it by digest: `skyblip_imu_image()` in `cmake/skyblip.cmake` hashes this file into `bhi260ap_fw_sha256.inc` for every build of a product that sets `CONFIG_SKYBLIP_IMU_IMAGE`, and turns it into a byte list (`bhi260ap_fw.inc`) only when `CONFIG_SKYBLIP_IMU_IMAGE_LINKED` is set. `hardware/platform/zephyr/imu_firmware.cpp` is the only translation unit that includes either, and the platform hands them to the board as `imu_firmware()`, empty in a slim image, and `imu_firmware_digest()`. The host build and the WASM simulator carry an eight-byte stand-in, and nothing in the repo is a 650 KB generated header anybody could be tempted to edit.
 
 | | Full image | Slim image |
 |---|---|---|

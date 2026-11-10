@@ -16,6 +16,7 @@ struct RangeRow {
     model::Source source{model::Source::AdslDirect};
     int32_t ground_m{0};
     int32_t up_m{0};
+    bool up_valid{true};
     // INFO: fc 20sep26 into the store the rows were ranked against, nullptr while nothing named it
     const char* callsign{nullptr};
 };

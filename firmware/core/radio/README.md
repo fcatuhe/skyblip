@@ -103,7 +103,7 @@ All eleven reach `core/comms/diagnostics.h`'s radio group, so they leave on the 
 
 ## Who writes what
 
-`go::TrafficService` writes everything the air reported. It already drains `bus.rf`, and it is the one place that knows whether a burst that arrived also decoded, which is the distinction the whole page turns on.
+`common::TrafficService` writes everything the air reported. It already drains `bus.rf`, and it is the one place that knows whether a burst that arrived also decoded, which is the distinction the whole page turns on.
 
 `go::RadioService` writes the two the air never sees. A burst its own policy refused reaches no executor and raises no event, so before `Held` and `Unarmed` existed the counters moved and the page stayed silent - which reads exactly like a dead transmitter to the one person looking at it. `Held` is the hour's allowance holding every burst until it frees up, and `Unarmed` is the executor refusing a plan that cannot complete inside its own dwell.
 

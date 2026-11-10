@@ -1,8 +1,10 @@
 # firmware
 
-The C++ tree: `core/` is the portable logic, `ports/` the roles a product needs from a board, `hardware/` the parts and platforms that fill them, `ui/` the drawing kit, `products/` the pages and services that make one device what it is, `boards/` the Zephyr board, `test/` the host suite, `simulator/` the world it flies in. Each directory carries its own README for what it decides.
+The C++ tree: `core/` is the portable logic, `ports/` the roles a product needs from a board, `hardware/` the parts and platforms that fill them, `ui/` the drawing kit, `products/` the pages and services that make one device what it is, `boards/` the Zephyr boards, `test/` the host suite, `simulator/` the world it flies in. Each directory carries its own README for what it decides.
 
 A file lives in the narrowest layer that decides its content. A spec, a physical law or arithmetic is `core/`; what the core needs done for it is `ports/`; a datasheet is `hardware/`; a schematic is `boards/`; which pages exist, what a press means and which settings a pilot gets is the product's; pixels that any product would draw the same way are `ui/`.
+
+A service that more than one product runs lives in `products/common/`, in namespace `common` ([`products/common/README.md`](products/common/README.md)). It does not go in `runtime/`. `runtime/` is the loop every service is written against: `Service`, `Context`, `Loop`, the watchdog's feed decision and the pass budgets. It decides nothing about traffic, a phone or an alarm. A shared service decides product content: the cadence a phone's map is fed at, which claim turns it on, which settings it reads. That belongs to the products layer, shared by more than one product. No file in `products/common/` includes a product's header. A product hands a shared service what it reads of the product's settings as a small struct the product fills, and the claims it makes as `common::Feature` bits in its own `kFeatures`. The host build, the tuning index and the clang-format job already walk `products/*`, and the device build adds `products/common/` beside the other shared layers in `cmake/skyblip.cmake`. Every later move of a service out of a product follows the same rule.
 
 `ports/` is a port layer, not a hardware abstraction layer, and it is named for what it is: it declares the roles the core needs filled, in the core's own vocabulary, and `hardware/` is where a part or a platform fills one. A port is what the core calls; what the world does to a sensor arrives as an `events::` value on a queue instead, and `hardware/README.md` is where that half of the contract is written down. Register code belongs there, never here. `core/` and `ui/` compile with no framework headers at all, which is what buys the host suite and the WASM simulator; Zephyr is used freely below `ports/` and never above it.
 
@@ -34,9 +36,12 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_mm_s` | millimetres per second | `climb_mm_s` |
 | `_cm`, `_ft` | centimetres, feet | `hfom_cm`, `altitude_ft` |
 | `_kt`, `_fpm` | knots, feet per minute | `speed_kt`, `climb_fpm` |
+| `_mkt` | thousandths of a knot | `speed_mkt` |
 | `_1e7`, `_e8`, `_e2`, `_e1` | scaled by that power of ten | `latitude_1e7`, `climb_e8`, `hdop_e2` |
 | `_q` | quarter units, the ADS-L velocity encoding | `speed_q` |
 | `_c9` | ADS-L's 9-bit course, 360 degrees over 512 counts | `track_c9` |
+| `_c7`, `_c10` | ADS-B's 7-bit and 10-bit angles, 360 degrees over 128 and 1024 counts | `track_c7`, `heading_c10` |
+| `_cpr` | a CPR-encoded coordinate, a 17-bit fraction of its zone | `latitude_cpr` |
 | `_dbm`, `_mv`, `_mpa`, `_pa` | dBm, millivolts, millipascals, pascals | `rssi_dbm`, `battery_offset_mv`, `pressure_mpa` |
 | `_deg`, `_cdeg` | degrees, hundredths of a degree | `track_deg`, `track_cdeg` |
 | `_dps`, `_cdps` | degrees per second, hundredths of a degree per second | `turn_dps`, `turn_cdps` |

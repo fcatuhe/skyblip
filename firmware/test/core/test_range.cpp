@@ -76,6 +76,18 @@ TEST_CASE("range: distance is the ground track, and height above is its own figu
     CHECK(row.ground_m == doctest::Approx(3000).epsilon(0.01));
 }
 
+TEST_CASE("range: an emitter that sends no altitude has a distance and no height") {
+    model::AircraftObservation observation = emitter(3000);
+    observation.altitude_valid = false;
+    RangeRow row;
+    REQUIRE(range_to(own_at_equator(), observation, row));
+    CHECK_FALSE(row.up_valid);
+    CHECK(row.ground_m == doctest::Approx(3000).epsilon(0.01));
+
+    REQUIRE(range_to(own_at_equator(), emitter(3000), row));
+    CHECK(row.up_valid);
+}
+
 TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
     TrafficTable table;
     const int32_t ranges[6] = {8000, 1000, 5000, 300, 12000, 2500};

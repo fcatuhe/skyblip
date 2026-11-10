@@ -3,7 +3,7 @@
 #   make test        build + run all host doctest suites
 #   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
 #   make fuzz        every libFuzzer harness in turn, in build/fuzz/ (clang)
-#   make fuzz-nmea   one of them: nmea, air or link
+#   make fuzz-nmea   one of them: nmea, air, adsb or link
 #   make ... ABI=ilp32  any of the above for i386, where long is 32 bits as on the nRF52
 #   make tidy        clang-tidy the sources the host build compiles
 #   make simulator   terminal simulator
@@ -55,6 +55,7 @@ FUZZ_CXX ?= clang++
 # INFO: fc 26sep26 fuzz_nmea runs about 20000 inputs a second and fuzz_link 300, so link gets the minutes
 FUZZ_SECONDS_nmea ?= 30
 FUZZ_SECONDS_air ?= 60
+FUZZ_SECONDS_adsb ?= 30
 FUZZ_SECONDS_link ?= 90
 FUZZ_BUILD := build/fuzz$(ABI_SUFFIX)
 ifdef FUZZ

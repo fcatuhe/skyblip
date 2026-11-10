@@ -6,6 +6,7 @@
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/alptas.h"
+#include "core/protocol/nmea_out.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/formation.h"
 #include "core/traffic/lease.h"
@@ -66,6 +67,23 @@ model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
     packet.set_latitude_1e7(sent.latitude_1e7);
     packet.set_longitude_1e7(sent.longitude_1e7);
     packet.set_altitude_m(sent.altitude_m);
+    packet.set_speed_q(sent.speed_q);
+    model::AircraftObservation heard{};
+    REQUIRE(protocol::to_observation(packet, events::Stamp{}, 0, model::Source::AdslDirect, heard));
+    return stamped(heard);
+}
+
+// G.1.7 lets a position say its altitude is invalid, and the decoder keeps saying so.
+model::AircraftObservation over_adsl_without_altitude(const model::AircraftObservation& sent) {
+    protocol::AdslPacket packet;
+    packet.reset();
+    packet.set_address(sent.address);
+    packet.set_address_mapping_table(sent.address_mapping_table);
+    packet.flight_state = sent.flight_state;
+    packet.aircraft_category = sent.aircraft_category;
+    packet.set_latitude_1e7(sent.latitude_1e7);
+    packet.set_longitude_1e7(sent.longitude_1e7);
+    packet.set_altitude_invalid();
     packet.set_speed_q(sent.speed_q);
     model::AircraftObservation heard{};
     REQUIRE(protocol::to_observation(packet, events::Stamp{}, 0, model::Source::AdslDirect, heard));
@@ -165,4 +183,23 @@ TEST_CASE("traffic: a parked aircraft is never a wingman, whichever system heard
         CHECK(joins_formation(system.heard(sender(flight::FlightState::Airborne))));
         CHECK_FALSE(joins_formation(system.heard(sender(flight::FlightState::Ground))));
     }
+}
+
+// Unknown is a state, not 0 m: nothing downstream may read the target as level with us.
+TEST_CASE(
+    "traffic: an ADS-L target with no altitude is graded on distance, never a wingman, no PFLAA") {
+    const model::AircraftObservation heard =
+        over_adsl_without_altitude(sender(flight::FlightState::Airborne));
+    REQUIRE_FALSE(heard.altitude_valid);
+
+    const model::Ownship own = own_at(1000);
+    const AlarmAssessment graded = assess(own, heard, 1000);
+    CHECK(graded.valid);
+    CHECK(graded.level == Level::Advisory);
+    CHECK_FALSE(graded.relative_altitude_valid);
+
+    CHECK_FALSE(joins_formation(heard));
+
+    char sentence[128];
+    CHECK(protocol::format_pflaa(sentence, sizeof(sentence), own, heard, 1, nullptr) == 0);
 }
