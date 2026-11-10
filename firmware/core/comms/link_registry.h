@@ -218,6 +218,7 @@ enum : uint32_t {
     kImuDigest = 7,
     kDowngrade = 8,
     kKey = 9,
+    kProduct = 10,
 };
 }
 

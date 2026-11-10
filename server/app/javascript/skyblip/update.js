@@ -11,6 +11,7 @@ export { hasWebBluetooth };
 export { readSetting, showSetting } from '#skyblip/settings';
 
 const IMAGE_REFUSALS = {
+  5: 'wrong_product',
   10: 'flash',
   11: 'flash',
   12: 'flash',
@@ -54,7 +55,13 @@ function imageOf(reply) {
     imu: reply.imu === 'held' ? hex(reply.imu_digest) : reply.imu,
     downgrade: reply.downgrade === true,
     key: reply.key ? hex(reply.key).toUpperCase() : null,
+    product: reply.product ?? null,
   };
+}
+
+// INFO: fc 10nov26 a Go leaves product out, as all firmware before the key did, so an unread frame is a Go too
+export function productOf(image) {
+  return image?.product ?? 'skyblip_go';
 }
 
 function identityOf(reply) {
@@ -84,6 +91,7 @@ export class Updater {
   #sha = null;
   #version = null;
   #key = null;
+  #product = null;
   #windowOpen = false;
   #leaving = false;
   #state = {
@@ -162,6 +170,7 @@ export class Updater {
     this.#version = image.version;
     const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
     this.#key = image.key;
+    this.#product = image.product;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
   }
 
@@ -198,6 +207,8 @@ export class Updater {
 
   #refusal() {
     const unit = this.#state.image;
+    if (this.#product && this.#product !== productOf(unit)) return 'wrong_product';
+    if (!this.#product && unit?.product) return 'unmarked_image';
     if (unit?.key && this.#key !== unit.key) return 'wrong_key';
     if (this.#running && !unit?.downgrade && compareVersions(this.#version, this.#running) < 0) return 'older';
     return null;
@@ -323,7 +334,12 @@ export class Updater {
   }
 
   #fail(error) {
-    this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, notice: noticeOf(error) });
+    this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, notice: this.#noticeOf(error) });
+  }
+
+  #noticeOf(error) {
+    const notice = noticeOf(error);
+    return notice.key === 'wrong_product' && !this.#product ? { key: 'unmarked_image' } : notice;
   }
 
   #closed() {

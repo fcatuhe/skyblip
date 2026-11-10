@@ -1071,6 +1071,12 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 9,
           "type": "bytes",
           "bytes": 4
+        },
+        {
+          "name": "product",
+          "number": 10,
+          "type": "enum",
+          "enum": "product"
         }
       ]
     },
@@ -2110,6 +2116,24 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "held",
           "code": 5,
           "mirrors": "Held"
+        }
+      ]
+    },
+    "product": {
+      "mirrors": {
+        "type": "dfu::Product",
+        "header": "core/dfu/update.h"
+      },
+      "values": [
+        {
+          "name": "skyblip_go",
+          "code": 0,
+          "mirrors": "SkyblipGo"
+        },
+        {
+          "name": "skyblip_bravo",
+          "code": 1,
+          "mirrors": "SkyblipBravo"
         }
       ]
     },

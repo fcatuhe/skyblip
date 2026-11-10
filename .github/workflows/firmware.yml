@@ -90,6 +90,9 @@ jobs:
       # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
       - name: the image says which hub image it pins
         run: python3 scripts/test_check_imu_image.py
+      # A unit takes only an image naming its own product, and nothing while it runs one naming none.
+      - name: the image names its product
+        run: python3 scripts/test_check_image_product.py
       # The Go turns both switches on, so only this configure sees a product that has neither.
       - name: a product without activation or a hub builds no unit key and pins no hub image
         run: python3 scripts/test_shared_layers.py

@@ -6,7 +6,8 @@ class Release
   REPOSITORY = "fcatuhe/skyblip".freeze
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
   TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
-  FILE = /\A(?:skyblip-go-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin|skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
+  FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
+  FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
@@ -22,6 +23,8 @@ class Release
   rescue JSON::ParserError, KeyError, TypeError, ArgumentError => error
     raise Unavailable, "Invalid GitHub release list: #{error.class}"
   end
+
+  def self.product_of(file) = file[FIRMWARE, 1]&.tr("-", "_")
 
   def self.shelf(releases)
     newest_first = releases.sort_by(&:published_at).reverse
@@ -100,5 +103,5 @@ class Release
   def channel = development? ? "development" : "release"
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
-  def firmware_files = assets.select { |name| FILE.match?(name) && name.end_with?(".signed.bin") }
+  def firmware_files = assets.grep(FIRMWARE)
 end

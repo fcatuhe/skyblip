@@ -150,7 +150,7 @@
     },
     {
       "command": "update", "code": 10, "endpoint": "config", "sender": "both",
-      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build.",
+      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, and two more for a product other than skyblip_go, which names itself in product.",
       "keys": [
         {"name": "image", "number": 1, "type": "enum", "enum": "image", "required": true, "description": "What became of the last install: confirmed, probation (running, not yet confirmed), reverted (started and never confirmed itself, so the bootloader swapped the old one back) or refused (never started)"},
         {"name": "from", "number": 2, "type": "text", "description": "The version the last install replaced, as dfu writes it, 0.3.0+1234. Present unless image is confirmed"},
@@ -160,7 +160,8 @@
         {"name": "imu", "number": 6, "type": "enum", "enum": "hub_image", "required": true, "description": "What the sensor hub's partition holds: none (no hub answered), missing, corrupt, unreadable (the external flash did not answer), writing (a full image is writing it now, up to a minute) or held"},
         {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the verified hub blob's SHA-256, present when imu is held"},
         {"name": "downgrade", "number": 8, "type": "boolean", "description": "Present and true on a unit whose bootloader accepts an image older than the running one, a development build"},
-        {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the signing key the bootloader trusts, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"}
+        {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the signing key the bootloader trusts, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"},
+        {"name": "product", "number": 10, "type": "enum", "enum": "product", "description": "The product the unit runs, which is the only one whose images it installs (firmware/core/dfu/README.md), so a page offers it no other. Absent on a skyblip_go, so its frame stays as narrow as before the key, and on firmware built before the key, all of it skyblip_go"}
       ]
     },
     {
@@ -456,6 +457,13 @@
         {"name": "unreadable", "code": 3, "mirrors": "Unreadable"},
         {"name": "writing", "code": 4, "mirrors": "Writing"},
         {"name": "held", "code": 5, "mirrors": "Held"}
+      ]
+    },
+    "product": {
+      "mirrors": {"type": "dfu::Product", "header": "core/dfu/update.h"},
+      "values": [
+        {"name": "skyblip_go", "code": 0, "mirrors": "SkyblipGo"},
+        {"name": "skyblip_bravo", "code": 1, "mirrors": "SkyblipBravo"}
       ]
     },
     "log": {

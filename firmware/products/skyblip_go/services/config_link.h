@@ -48,6 +48,7 @@ class ConfigLinkService : public runtime::Service {
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);
+        config_.set_product(dfu::Product::SkyblipGo);
     }
 
     Status setup() override;

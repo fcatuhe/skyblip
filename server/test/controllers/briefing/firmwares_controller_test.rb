@@ -18,6 +18,8 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#firmware_shelf select[data-manage-target=shelf]"
     assert_select "option[data-channel=development]", minimum: 1
     assert_select "option[value^='/releases/dev-']", minimum: 1
+    assert_select "option[data-product=skyblip_go][value*='/skyblip-go-']", minimum: 1
+    assert_select "option:not([data-product=skyblip_go])[data-channel]", count: 0
   end
 
   # The cassette records GitHub rejecting an invalid token with HTTP 401.

@@ -156,6 +156,14 @@ constexpr bool on_the_wire(dfu::HubImage value) {
     return false;
 }
 
+constexpr bool on_the_wire(dfu::Product value) {
+    switch (value) {
+        case dfu::Product::SkyblipGo:
+        case dfu::Product::SkyblipBravo: return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(store::SectorOwner value) {
     switch (value) {
         case store::SectorOwner::Flights:
@@ -251,6 +259,10 @@ static_assert(code(dfu::HubImage::Unreadable) == 3, "hub_image unreadable");
 static_assert(code(dfu::HubImage::Writing) == 4, "hub_image writing");
 static_assert(code(dfu::HubImage::Held) == 5, "hub_image held");
 static_assert(on_the_wire(dfu::HubImage::None), "hub_image");
+
+static_assert(code(dfu::Product::SkyblipGo) == 0, "product skyblip_go");
+static_assert(code(dfu::Product::SkyblipBravo) == 1, "product skyblip_bravo");
+static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
 
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");
