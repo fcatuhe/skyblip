@@ -215,11 +215,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClosingMps` | 3 | metres per second | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kClosingFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kLiftoffWindowMs` | `kTogetherHoldMs` = 6000 (6 s) | milliseconds | Window | [README](../firmware/core/traffic/README.md) argues it |
+| `kAdsbGateRangeCeilingM` | `kPlausibleRangeCeilingM` = 30000 | metres | Ceiling | no farther than a direct ADS-L or FLARM target can be (README.md) |
+| `kAdsbGateHeightCeilingM` | 500 | metres | Ceiling | PowerFLARM's default VRANGE, FLARM FTD-014 version 1.18 3.1.6 (README.md) |
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * flight::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * flight::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
+| `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
 ## `firmware/products/common/services`
@@ -298,4 +301,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-188 constants over 19 folders.
+191 constants over 19 folders.

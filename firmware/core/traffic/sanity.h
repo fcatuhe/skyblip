@@ -56,7 +56,9 @@ constexpr int32_t kPlausibleRangeCeilingM = 30000;
 // exactly the distant traffic the uplink exists to provide.
 constexpr int32_t kRelayedRangeCeilingM = 2 * kPlausibleRangeCeilingM;
 
-// Which of the two applies to a report, from the path it came over.
+// INFO: fc 10nov26 1090 MHz line of sight between two aircraft at FL600, worked out in README.md
+constexpr int32_t kAdsbRangeCeilingM = 1115000;
+
 int32_t plausible_range_m(model::Source source);
 
 // Why a reception was or was not believed. NoReference is not a verdict on the
