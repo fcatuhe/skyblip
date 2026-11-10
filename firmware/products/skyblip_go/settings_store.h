@@ -33,6 +33,10 @@ class SettingsStore : public comms::ConfigStore {
         return applied;
     }
 
+    bool pilot_settings_only(const cbor::Reader& frame) const override {
+        return go::pilot_settings_only(frame);
+    }
+
    private:
     Settings& settings_;
     const identity::Activation& activation_;

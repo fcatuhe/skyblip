@@ -1,6 +1,7 @@
 // The two wires that decide whether the companion link can do anything at all: the flight state
 // behind the gate, and the gesture that answers a prompt.
 #include <cstring>
+#include <string>
 
 #include "core/events/link.h"
 #include "doctest/doctest.h"
@@ -212,4 +213,141 @@ TEST_CASE("product: gnss_cold_start is refused in flight") {
     rig.double_press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
+}
+
+// A unit with no fix since boot is Unknown, and the radar menu changes the same values without one.
+TEST_CASE("product: a set with no fix since boot is confirmed by two presses and stored") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+
+    rig.send("{\"command\":\"set\",\"callsign\":\"F-JXYZ\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(rig.config().flight_state() == flight::FlightState::Unknown);
+    REQUIRE(rig.config().pending() == comms::Pending::Set);
+    REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
+
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 2000);
+    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(std::strcmp(rig.product.settings().callsign, "F-JXYZ") == 0);
+    uint8_t blob[64];
+    size_t count = 0;
+    REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
+    go::Settings stored{};
+    REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
+    CHECK(std::strcmp(stored.callsign, "F-JXYZ") == 0);
+}
+
+// Checked on every pass: a prompt takes the glass and both controls, alarm dismissal included.
+TEST_CASE("product: a set sent in flight never puts a prompt over the radar") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.airborne(now_ms);
+    REQUIRE(rig.config().flight_state() == flight::FlightState::Airborne);
+
+    bool prompted = false;
+    for (int i = 0; i < 3; i++) {
+        rig.send("{\"command\":\"set\",\"alarm_volume\":1}");
+        for (const uint32_t until = now_ms + 1000; now_ms <= until; now_ms += 50) {
+            rig.platform.clock().set_milliseconds(now_ms);
+            rig.product.run_pass(now_ms);
+            prompted = prompted || rig.product.screen().prompt() != comms::Pending::None;
+        }
+    }
+    CHECK_FALSE(prompted);
+    CHECK(rig.config().pending() == comms::Pending::None);
+    CHECK(rig.product.screen().page() == go::Page::Radar);
+    CHECK(rig.product.settings().alarm_volume == go::AlarmVolume::Loud);
+}
+
+// Pass by pass, because config ran before ownship and saw the take-off one pass late.
+TEST_CASE("product: no prompt stands on the glass on any pass the latch says airborne") {
+    struct Staged {
+        const char* request;
+        bool fixed_first;
+    };
+    for (const Staged staged : {Staged{"{\"command\":\"set\",\"alarm_volume\":1}", false},
+                                Staged{"{\"command\":\"power_off\"}", true}}) {
+        const std::string request = staged.request;
+        CAPTURE(request);
+        HousekeepingRig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t now_ms = 0;
+        if (staged.fixed_first) rig.on_ground(now_ms);
+        rig.send(staged.request);
+        rig.run(now_ms, now_ms + 3000);
+        now_ms += 3050;
+        REQUIRE(rig.product.screen().prompt() != comms::Pending::None);
+
+        int airborne_passes = 0;
+        int prompted_passes = 0;
+        for (int fix = 0; fix < 14; fix++) {
+            rig.push_fix(/*speed_mm_s=*/50000, /*altitude_msl_m=*/1200);
+            for (int pass = 0; pass < 10; pass++, now_ms += 50) {
+                rig.platform.clock().set_milliseconds(now_ms);
+                rig.product.run_pass(now_ms);
+                if (rig.state().flight.confirmed_state != flight::FlightState::Airborne) continue;
+                airborne_passes++;
+                const bool config_heard =
+                    rig.config().flight_state() == flight::FlightState::Airborne;
+                if (rig.product.screen().prompt() != comms::Pending::None ||
+                    (config_heard && rig.config().pending() != comms::Pending::None))
+                    prompted_passes++;
+            }
+        }
+        REQUIRE(airborne_passes > 0);
+        CHECK(prompted_passes == 0);
+    }
+}
+
+// One pass: the first airborne fix brings an advisory, and the press that lands with it confirms
+// nothing.
+TEST_CASE("product: the pass the first fix says airborne takes a staged set off an advisory") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.send("{\"command\":\"set\",\"alarm_volume\":1}");
+    rig.run(0, 3000);
+    REQUIRE(rig.config().flight_state() == flight::FlightState::Unknown);
+    REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
+
+    const auto pass = [&](uint32_t at_ms) {
+        rig.platform.clock().set_milliseconds(at_ms);
+        rig.product.run_pass(at_ms);
+    };
+    const auto button = [&](bool down, uint32_t at_ms) {
+        rig.product.bus().input.push(events::ContactEvent{events::Contact::Button, down, at_ms});
+    };
+    button(true, 3010);
+    pass(3010);
+    button(false, 3110);
+    pass(3110);
+    button(true, 3160);
+    pass(3160);
+    REQUIRE(rig.config().pending() == comms::Pending::Set);
+
+    model::AircraftObservation target{};
+    target.address = 0x424242;
+    target.address_mapping_table = 6;
+    target.position_valid = true;
+    target.latitude_1e7 = 5000;
+    target.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
+    target.at_ms = 3260;
+    target.received.at_s = 3;
+    target.received.into_ms = 260;
+    rig.state().traffic.update(target, 3);
+    rig.push_fix(/*speed_mm_s=*/50000, /*altitude_msl_m=*/0);
+    button(false, 3260);
+    pass(3260);
+
+    REQUIRE(rig.state().flight.confirmed_state == flight::FlightState::Airborne);
+    REQUIRE(rig.state().alarm_undismissed == traffic::Level::Advisory);
+    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK(rig.product.settings().alarm_volume == go::AlarmVolume::Loud);
+
+    // The next pass, config hears the take-off and drops what the glass already dropped.
+    pass(3310);
+    CHECK(rig.config().pending() == comms::Pending::None);
 }
