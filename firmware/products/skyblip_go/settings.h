@@ -17,6 +17,7 @@
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
+#include "products/common/alarm_volume.h"
 
 namespace skyblip::go {
 
@@ -24,7 +25,7 @@ enum class Units : uint8_t { Nautical = 0, Metric = 1 };
 
 enum class RadarPlot : uint8_t { All = 0, ToScale = 1 };
 
-enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
+using common::AlarmVolume;
 
 constexpr int kRangeStepCount = 4;
 constexpr int kDefaultRangeStep = 2;

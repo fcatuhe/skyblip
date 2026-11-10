@@ -1,4 +1,4 @@
-// products/skyblip_go/services/nmea.h: the traffic picture and ownship position
+// products/common/services/nmea.h: the traffic picture and ownship position
 // a paired tablet draws, in the sentences every EFB already speaks, and the
 // single writer of events::Endpoint::Nmea.
 //
@@ -8,17 +8,17 @@
 // tablet with a skyBlip Go saw an empty map. This is the producer. It owns the
 // cadence, the rotation and the framing; it owns no geometry - relative position
 // comes from core/protocol, the level from what core/traffic already decided.
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_NMEA_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_NMEA_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_NMEA_H
 
 #include "core/comms/config.h"
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/table.h"
-#include "products/skyblip_go/features.h"
+#include "products/common/features.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 class NmeaService : public runtime::Service {
    public:
@@ -122,6 +122,6 @@ class NmeaService : public runtime::Service {
     bool enabled_{false};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

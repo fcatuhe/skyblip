@@ -1,4 +1,4 @@
-#include "products/skyblip_go/services/nmea.h"
+#include "products/common/services/nmea.h"
 
 #include <cstring>
 
@@ -10,7 +10,7 @@
 #include "core/timing/transmit.h"
 #include "core/util/intmath.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 namespace {
 
@@ -287,4 +287,4 @@ void NmeaService::abandon_pass() {
     pass_bytes_ = pass_sent_ = 0;
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

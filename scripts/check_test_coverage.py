@@ -18,7 +18,8 @@ REQUIRED_MODULES = [
     "core/traffic", "core/settings", "core/comms", "core/flight", "core/bus",
     "core/power", "core/annunciation", "core/indication", "core/dfu", "core/radio",
     "core/input", "core/crypto", "core/identity",
-    "products/skyblip_go/pages", "products/skyblip_go/input", "ui/widgets", "runtime",
+    "products/common/services", "products/skyblip_go/pages", "products/skyblip_go/input",
+    "ui/widgets", "runtime",
     "simulator",
 ]
 
