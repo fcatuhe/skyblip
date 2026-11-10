@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_PLATFORM_H
-#define SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_PLATFORM_H
+#ifndef SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_T_ECHO_PLUS_H
+#define SKYBLIP_HARDWARE_PLATFORM_ZEPHYR_T_ECHO_PLUS_H
 #if defined(__ZEPHYR__)
 
 #include <zephyr/device.h>
@@ -51,7 +51,12 @@ int board_buzzer_pin_held_low(void);
 
 namespace skyblip::platform::zephyr {
 
-class Platform {
+static_assert(IS_ENABLED(CONFIG_SKYBLIP_ACTIVATION),
+              "the T-Echo Plus provisions the unit key, which only an activated product trusts");
+static_assert(IS_ENABLED(CONFIG_SKYBLIP_IMU_IMAGE),
+              "the T-Echo Plus boots its BHI260AP hub from an image the build pins");
+
+class TEchoPlus {
    public:
     using Rf = zephyr::Rf;
     using Link = zephyr::Link;
@@ -235,7 +240,7 @@ class Platform {
     zephyr::SystemPower system_power_{button_};
 };
 
-static_assert(fills_the_platform_contract<Platform>());
+static_assert(fills_the_platform_contract<TEchoPlus>());
 
 }  // namespace skyblip::platform::zephyr
 #endif  // __ZEPHYR__

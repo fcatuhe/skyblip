@@ -3,7 +3,7 @@
 
 #include "hardware/platform/zephyr/console.h"
 #include "hardware/platform/zephyr/loop_wake.h"
-#include "hardware/platform/zephyr/platform.h"
+#include "hardware/platform/zephyr/t_echo_plus.h"
 #include "products/skyblip_go/product.h"
 #include "products/skyblip_go/services/diagnostics.h"
 #include "runtime/tasks.h"
@@ -14,9 +14,9 @@ using namespace skyblip;
 
 namespace {
 
-using Go = go::Product<platform::zephyr::Platform>;
+using Go = go::Product<platform::zephyr::TEchoPlus>;
 
-platform::zephyr::Platform g_platform;
+platform::zephyr::TEchoPlus g_platform;
 Go g_product{g_platform};
 
 // Reads what the services and the board already count, one line per subsystem on

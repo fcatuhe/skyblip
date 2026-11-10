@@ -18,6 +18,13 @@ function(skyblip_shared_layers)
     ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/*.cpp
   )
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
+  # Removed rather than globbed apart, so the Go links its objects in the order it always has.
+  if(NOT CONFIG_SKYBLIP_ACTIVATION)
+    list(REMOVE_ITEM shared ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/identity.cpp)
+  endif()
+  if(NOT CONFIG_SKYBLIP_IMU_IMAGE)
+    list(REMOVE_ITEM shared ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/imu_firmware.cpp)
+  endif()
   target_sources(app PRIVATE ${shared})
 
   # Monocypher, as C: the host compiles it as C++ with everything else (vendor/monocypher/LOCAL-CHANGES.md).
@@ -37,15 +44,19 @@ function(skyblip_shared_layers)
   if(CONFIG_MCUMGR_GRP_IMG)
     target_link_libraries(app PRIVATE MCUBOOT_BOOTUTIL)
   endif()
-  skyblip_imu_image()
-  skyblip_server_key()
+  if(CONFIG_SKYBLIP_IMU_IMAGE)
+    skyblip_imu_image()
+  endif()
+  if(CONFIG_SKYBLIP_ACTIVATION)
+    skyblip_server_key()
+  endif()
 endfunction()
 
-# The skyblip.eu server key every device build verifies identity messages with: only skyblip.eu signs them.
+# The skyblip.eu server key an activated product verifies identity messages with: only skyblip.eu signs them.
 function(skyblip_server_key)
   set(key ${SKYBLIP_FIRMWARE}/keys/server.pub)
   if(NOT EXISTS ${key})
-    message(FATAL_ERROR "no server public key at ${key}: every device build trusts it, and no unit could be activated without it (firmware/keys/README.md)")
+    message(FATAL_ERROR "no server public key at ${key}: every activated product trusts it, and no unit could be activated without it (firmware/keys/README.md)")
   endif()
   file(READ ${key} hex)
   string(STRIP "${hex}" hex)
@@ -63,7 +74,7 @@ function(skyblip_server_key)
   message(STATUS "skyBlip trusts the server key in ${key}")
 endfunction()
 
-# The hub boots from our copy of its image: every build pins the digest, only a full one carries it.
+# The hub boots from our copy of its image: every build of a product with a hub pins the digest, only a full one carries it.
 function(skyblip_imu_image)
   set(image ${SKYBLIP_FIRMWARE}/hardware/parts/bhi260/firmware/BHI260AP.fw)
   set(generated ${ZEPHYR_BINARY_DIR}/include/generated)
