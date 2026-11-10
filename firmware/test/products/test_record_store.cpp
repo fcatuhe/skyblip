@@ -6,7 +6,8 @@
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
-#include "products/skyblip_go/services/record_store.h"
+#include "products/common/services/record_store.h"
+#include "products/skyblip_go/flash_window.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -45,9 +46,9 @@ struct StoreRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    go::RecordPool pool{context};
-    go::RecordStore flights{pool, store::SectorOwner::Flights};
-    go::RecordStore capture{pool, store::SectorOwner::Diagnostics};
+    common::RecordPool pool{context, go::book_flash_in_dwell};
+    common::RecordStore flights{pool, store::SectorOwner::Flights};
+    common::RecordStore capture{pool, store::SectorOwner::Diagnostics};
 
     explicit StoreRig(ports::FlashRegion& region)
         : flash(region),
@@ -63,7 +64,7 @@ struct StoreRig {
         REQUIRE(capture.open());
     }
 
-    std::string listed(go::RecordStore& store, store::SectorOwner owner, uint32_t index) {
+    std::string listed(common::RecordStore& store, store::SectorOwner owner, uint32_t index) {
         comms::LogRequest request{};
         request.command = comms::LogCommand::List;
         request.store = owner;
@@ -92,31 +93,31 @@ bool says(const std::string& reply, const char* key_value) {
     return reply.find(key_value) != std::string::npos;
 }
 
-void write_flight_record(go::RecordStore& store, uint32_t utc_s, bool session_end) {
+void write_flight_record(common::RecordStore& store, uint32_t utc_s, bool session_end) {
     flight::LogRecord record{};
     record.utc_s = utc_s;
     record.fix_valid = true;
     record.utc_valid = true;
     record.session_end = session_end;
-    uint8_t raw[go::kStoreRecordBytes]{};
+    uint8_t raw[common::kStoreRecordBytes]{};
     flight::encode_log_record(record, store.base_session(), raw);
-    REQUIRE(store.append(raw, 0) == go::Append::Ok);
+    REQUIRE(store.append(raw, 0) == common::Append::Ok);
 }
 
-void write_diagnostics_record(go::RecordStore& store, diagnostics::Type type, uint32_t at_s) {
+void write_diagnostics_record(common::RecordStore& store, diagnostics::Type type, uint32_t at_s) {
     diagnostics::Instant at{};
     at.at_s = at_s;
     at.utc_dated = true;
     const diagnostics::Record record = type == diagnostics::Type::End
                                            ? diagnostics::record_of(diagnostics::End{}, at)
                                            : diagnostics::record_of(diagnostics::Gnss{}, at);
-    uint8_t raw[go::kStoreRecordBytes]{};
+    uint8_t raw[common::kStoreRecordBytes]{};
     diagnostics::encode_record(record, raw);
-    REQUIRE(store.append(raw, 0) == go::Append::Ok);
+    REQUIRE(store.append(raw, 0) == common::Append::Ok);
 }
 
-go::Append append_one(go::RecordStore& store, uint32_t now_ms = 0) {
-    uint8_t raw[go::kStoreRecordBytes]{};
+common::Append append_one(common::RecordStore& store, uint32_t now_ms = 0) {
+    uint8_t raw[common::kStoreRecordBytes]{};
     diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, diagnostics::Instant{}),
                                raw);
     return store.append(raw, now_ms);
@@ -134,7 +135,7 @@ store::SectorHeader flights_label(uint32_t sequence) {
     header.owner = store::SectorOwner::Flights;
     header.sequence = sequence;
     header.session_id = kFlightSession;
-    header.record_bytes = static_cast<uint8_t>(go::kStoreRecordBytes);
+    header.record_bytes = static_cast<uint8_t>(common::kStoreRecordBytes);
     header.session_start = true;
     return header;
 }
@@ -222,7 +223,7 @@ TEST_CASE("record store: a write the part refused is a fault the caller can retr
 
     const uint32_t faults = rig.pool.faults();
     flash.cut_power_after(0);
-    CHECK(append_one(rig.capture) == go::Append::Fault);
+    CHECK(append_one(rig.capture) == common::Append::Fault);
     CHECK(rig.pool.faults() == faults + 1);
     CHECK(rig.capture.session_records() == 1);
 }
@@ -235,7 +236,7 @@ TEST_CASE("record store: a refused sector is not a fault, it is the end of the c
     write_flight_record(rig.flights, kFlightSession, false);
 
     rig.capture.begin_session(kCaptureSession);
-    CHECK(append_one(rig.capture) == go::Append::NoSector);
+    CHECK(append_one(rig.capture) == common::Append::NoSector);
     CHECK(rig.pool.faults() == 0);
 }
 
@@ -316,12 +317,12 @@ TEST_CASE("record store: a write is placed at the instant it starts, not when it
     constexpr uint32_t kPassMs = 10'000 + kPassPhaseMs;
     rig.publish_dwell(kPassMs, kPassPhaseMs);
     rig.clock.set_milliseconds(kPassMs + kRanLongMs + 1);
-    CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
+    CHECK(append_one(rig.capture, kPassMs) == common::Append::Deferred);
     CHECK(flash.erases == erases);
 
     rig.publish_dwell(kPassMs + 1000, kPassPhaseMs);
     rig.clock.set_milliseconds(kPassMs + 1000 + kRanLongMs);
-    CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
+    CHECK(append_one(rig.capture, kPassMs + 1000) == common::Append::Ok);
     CHECK(flash.erases > erases);
 }
 
@@ -335,12 +336,12 @@ TEST_CASE("record store: both rings writing in one pass share the window that pa
 
     constexpr uint32_t kPassMs = 10'000;
     rig.publish_dwell(kPassMs, kLastClaimPhaseMs);
-    CHECK(append_one(rig.flights, kPassMs) == go::Append::Ok);
-    CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
+    CHECK(append_one(rig.flights, kPassMs) == common::Append::Ok);
+    CHECK(append_one(rig.capture, kPassMs) == common::Append::Deferred);
     CHECK(rig.capture.sectors_owned() == 0);
 
     rig.publish_dwell(kPassMs + 1000, timing::kUplinkRxStartMs);
-    CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
+    CHECK(append_one(rig.capture, kPassMs + 1000) == common::Append::Ok);
 }
 
 namespace {
@@ -352,8 +353,8 @@ void numbered_record(uint32_t i, uint8_t* out) {
     diagnostics::encode_record(diagnostics::record_of(diagnostics::Gnss{}, at), out);
 }
 
-void advance_to_slot(go::RecordStore& store, uint32_t slot) {
-    while (store.session_records() < slot) REQUIRE(append_one(store) == go::Append::Ok);
+void advance_to_slot(common::RecordStore& store, uint32_t slot) {
+    while (store.session_records() < slot) REQUIRE(append_one(store) == common::Append::Ok);
 }
 
 }  // namespace
@@ -372,7 +373,7 @@ TEST_CASE(
     advance_to_slot(rig.capture, 10);
     CHECK(rig.capture.run_slots() == 10);
     advance_to_slot(rig.capture, 20);
-    CHECK(rig.capture.run_slots() == go::kMaxRunSlots);
+    CHECK(rig.capture.run_slots() == common::kMaxRunSlots);
     advance_to_slot(rig.capture, rig.pool.slots_per_sector() - 5);
     CHECK(rig.capture.run_slots() == 5);
 }
@@ -387,9 +388,9 @@ TEST_CASE(
     const uint32_t writes = flash.writes;
     const uint32_t records = rig.capture.session_records();
 
-    uint8_t raw[3 * go::kStoreRecordBytes]{};
-    for (uint32_t i = 0; i < 3; i++) numbered_record(i, raw + i * go::kStoreRecordBytes);
-    CHECK(rig.capture.append(raw, 3, 0) == go::Append::Fault);
+    uint8_t raw[3 * common::kStoreRecordBytes]{};
+    for (uint32_t i = 0; i < 3; i++) numbered_record(i, raw + i * common::kStoreRecordBytes);
+    CHECK(rig.capture.append(raw, 3, 0) == common::Append::Fault);
     CHECK(flash.writes == writes);
     CHECK(rig.capture.session_records() == records);
 }
@@ -407,10 +408,10 @@ TEST_CASE("record store: a write that spans a page edge is booked as two page pr
     constexpr uint32_t kPassMs = 10'000;
     rig.publish_dwell(kPassMs, kOneProgramLeft);
     const uint32_t programs = flash.programs;
-    CHECK(append_one(rig.capture, kPassMs) == go::Append::Deferred);
+    CHECK(append_one(rig.capture, kPassMs) == common::Append::Deferred);
 
     rig.publish_dwell(kPassMs + 1000, kOneProgramLeft - static_cast<int>(store::kSlotWriteCostMs));
-    CHECK(append_one(rig.capture, kPassMs + 1000) == go::Append::Ok);
+    CHECK(append_one(rig.capture, kPassMs + 1000) == common::Append::Ok);
     CHECK(flash.programs - programs == 2);
 }
 
@@ -426,16 +427,16 @@ TEST_CASE("record store: records written in page runs leave the image one at a t
     runs.capture.begin_session(kCaptureSession);
 
     const uint32_t total = single.pool.slots_per_sector() + 40;
-    uint8_t raw[go::kMaxRunSlots * go::kStoreRecordBytes]{};
+    uint8_t raw[common::kMaxRunSlots * common::kStoreRecordBytes]{};
     for (uint32_t i = 0; i < total; i++) {
         numbered_record(i, raw);
-        REQUIRE(single.capture.append(raw, 0) == go::Append::Ok);
+        REQUIRE(single.capture.append(raw, 0) == common::Append::Ok);
     }
     for (uint32_t i = 0; i < total;) {
         const uint32_t run = std::min(runs.capture.run_slots(), total - i);
         for (uint32_t offset = 0; offset < run; offset++)
-            numbered_record(i + offset, raw + offset * go::kStoreRecordBytes);
-        REQUIRE(runs.capture.append(raw, run, 0) == go::Append::Ok);
+            numbered_record(i + offset, raw + offset * common::kStoreRecordBytes);
+        REQUIRE(runs.capture.append(raw, run, 0) == common::Append::Ok);
         i += run;
     }
 

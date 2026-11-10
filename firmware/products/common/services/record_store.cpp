@@ -1,8 +1,8 @@
-#include "products/skyblip_go/services/record_store.h"
+#include "products/common/services/record_store.h"
 
 #include <algorithm>
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 bool RecordStore::open() {
     pool_.open();
@@ -360,4 +360,4 @@ bool RecordStore::read_records(uint32_t session_id, uint32_t from, int count) {
     return true;
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

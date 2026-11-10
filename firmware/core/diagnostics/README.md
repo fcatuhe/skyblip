@@ -19,7 +19,7 @@ What it deliberately does not hold:
 | the BLE offload and the chunking | `core/comms/log_link.h`, shared with the flights store |
 | the taps that fill these records | the services in `products/`, one call each, behind `armed()`: the table below says which |
 | where the capture is armed from | the product's diagnostics screen, `products/skyblip_go/pages/capture.cpp` |
-| draining this ring to flash | `products/skyblip_go/services/capture.cpp`, over the store both logs share |
+| draining this ring to flash | `products/common/services/capture.cpp`, over the store both logs share |
 | whether a capture survives a reboot | nothing: it does not, and that is the design |
 
 The armed flag lives in RAM and in nothing else. It is not a setting, it is never written to flash, and a boot always comes up disarmed: a device that quietly kept recording after a power cycle would fill its partition with a capture nobody asked for, and the pilot who armed it would not be the one who found out.
@@ -135,8 +135,8 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 
 | Type | Tap | When |
 |---|---|---|
-| `Boot` | `services/capture.cpp` `record_boot` | as a capture session opens, so a corpus names the build that produced it |
-| `Config` | `services/capture.cpp` `record_config` | the same instant, and for the same reason |
+| `Boot` | `products/common/services/capture.cpp` `record_boot` | as a capture session opens, so a corpus names the build that produced it |
+| `Config` | `products/common/services/capture.cpp` `record_config`, with the settings `products/skyblip_go/capture_settings.h` describes | the same instant, and for the same reason |
 | `Gnss` | `services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
 | `Pps` | `services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
 | `Burst` | `products/common/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
@@ -146,19 +146,19 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Barometer` | `services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
-| `Link` | `services/config_link.cpp` `record_link` and `record_link_down`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
+| `Link` | `services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Write` | `services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
-| `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
-| `End` | `services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
+| `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
+| `End` | `products/common/services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
 | `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diagnostics::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
 
 `Gnss::reject` is the receiver's own verdict and reaches the tap the way every other receiver fact does: `gnss::FixValidity` lives on the L76K driver, which no `runtime::Context` reaches, so the board publishes its reason and its count onto `bus::State` beside the sky view as it pushes the solution, and own-ship reads them there. The board is a writer of that group by the table in `core/bus/README.md`.
 
 Two fields have no producer on this device and are left at their default rather than filled with a number nobody measured. `LinkAction::Sent` is never written: an outbound frame exists in `RecordPool::send` and in `core/comms`, and neither can see the claim the record carries, so a `Sent` emitted from the one a recorder reaches would cover the log endpoint's chunks and miss every reply the config endpoint sends - a corpus that reads as a device which answered nothing. The action keeps its number rather than being retired, because a decoder has nothing but the number. `Gap::span_ms` is zero on the marker the writer leaves when the partition is full, because the records still queued are the ring's and it does not hand out their instants.
 
-`Write::kind` is always `Settings`: it records the verdicts of `timing::DurableWriteWindow` itself, and only the settings blob asks that object to place a write. Both rings do reach the same window, through `RecordPool::book_window()`, but they ask it whether a phase is free rather than handing it a write to schedule, so there is no verdict to record.
+`Write::kind` is always `Settings`: it records the verdicts of `timing::DurableWriteWindow` itself, and only the settings blob asks that object to place a write. On the Go both rings do reach the same window, through `RecordPool::book_window()` and `products/skyblip_go/flash_window.h`, but they ask it whether a phase is free rather than handing it a write to schedule, so there is no verdict to record.
 
 ## The recorder
 
