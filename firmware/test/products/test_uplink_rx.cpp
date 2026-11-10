@@ -168,9 +168,9 @@ struct FeatureRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    go::TrafficService traffic;
+    common::TrafficService traffic;
 
-    explicit FeatureRig(go::Feature declared) : traffic(context, declared) {
+    explicit FeatureRig(common::Feature declared) : traffic(context, declared) {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
@@ -364,7 +364,7 @@ TEST_CASE("uplink: with Feature::UplinkRx off, a ground frame decodes to nothing
     uint8_t frame[protocol::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(&relayed, 1, 0, frame) == Status::Ok);
 
-    FeatureRig silent(go::Feature::None);
+    FeatureRig silent(common::Feature::None);
     CHECK_FALSE(silent.traffic.uplink_enabled());
     silent.deliver(frame);
     CHECK(silent.state.air.uplink_frames == 0);
@@ -376,7 +376,7 @@ TEST_CASE("uplink: with Feature::UplinkRx off, a ground frame decodes to nothing
 
     // The same rig, the same frame: the feature is the difference, which is what
     // makes it a gate and not decoration.
-    FeatureRig listening(go::Feature::UplinkRx);
+    FeatureRig listening(common::Feature::UplinkRx);
     CHECK(listening.traffic.uplink_enabled());
     listening.deliver(frame);
     CHECK(listening.state.air.uplink_frames == 1);

@@ -10,6 +10,7 @@
 #include "core/power/wake.h"
 #include "core/units/units.h"
 #include "ports/dfu.h"
+#include "products/common/services/alarm.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/input/gesture.h"
@@ -27,7 +28,6 @@
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/pages/sixpack.h"
 #include "products/skyblip_go/pages/status.h"
-#include "products/skyblip_go/services/alarm.h"
 #include "products/skyblip_go/services/capture.h"
 #include "runtime/service.h"
 
@@ -53,7 +53,7 @@ class ScreenService : public runtime::Service {
     static constexpr traffic::Level kAlarmTakesGlass = traffic::Level::Advisory;
 
     ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                  AlarmService& alarm, const CaptureService& capture,
+                  common::AlarmService& alarm, const CaptureService& capture,
                   const SelfTestSnapshot& self_test)
         : runtime::Service(context),
           settings_(settings),
@@ -192,7 +192,7 @@ class ScreenService : public runtime::Service {
 
     Settings& settings_;
     comms::ConfigService& config_;
-    AlarmService& alarm_;
+    common::AlarmService& alarm_;
     const CaptureService& capture_;
     const SelfTestSnapshot& self_test_;
     diagnostics::Profile capture_in_focus_{kFirstCapture};

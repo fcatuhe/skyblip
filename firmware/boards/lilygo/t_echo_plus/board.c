@@ -142,7 +142,7 @@ SYS_INIT(board_power_up_gated_rails, PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_D
 // driver nothing could call.
 //
 // Read once, into two words the application asks for later
-// (hardware/platform/zephyr/platform.h declares both as board hooks).
+// (hardware/platform/zephyr/t_echo_plus.h declares both as board hooks).
 //
 // Skipped in MCUboot: the bootloader has no use for either answer and no reason
 // to pay a quarter of a second for them.

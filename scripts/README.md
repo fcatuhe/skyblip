@@ -17,7 +17,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py`, which `build_image.sh` runs on both images; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
-| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_blip_frames.py`, `test_link_registry.py`, `test_power_budget.py`, `test_link_budget.py` | the Python self-checks, run by the `firmware` workflow |
+| `test_mkuf2.py`, `test_check_imu_image.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_blip_frames.py`, `test_link_registry.py`, `test_power_budget.py`, `test_link_budget.py`, `test_shared_layers.py` | the Python self-checks, run by the `firmware` workflow. `test_shared_layers.py` configures `firmware/test/cmake/shared_layers` with cmake, with and without `CONFIG_SKYBLIP_ACTIVATION` and `CONFIG_SKYBLIP_IMU_IMAGE` |
 
 ## blip.py
 

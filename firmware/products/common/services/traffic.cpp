@@ -1,4 +1,4 @@
-#include "products/skyblip_go/services/traffic.h"
+#include "products/common/services/traffic.h"
 
 #include "core/events/rf.h"
 #include "core/flight/state.h"
@@ -7,7 +7,7 @@
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 namespace {
 // INFO: fc 20sep26 the branch bus::State::traffic_now_s() takes is what dates the second it returns
@@ -277,4 +277,4 @@ radio::Verdict TrafficService::verdict_of(Status decoded) {
     }
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

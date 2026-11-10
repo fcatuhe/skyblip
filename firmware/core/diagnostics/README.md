@@ -139,7 +139,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Config` | `services/capture.cpp` `record_config` | the same instant, and for the same reason |
 | `Gnss` | `services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
 | `Pps` | `services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
-| `Burst` | `services/traffic.cpp` `log`, `services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
+| `Burst` | `products/common/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
 | `Flight` | `services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
 | `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
@@ -147,7 +147,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `services/config_link.cpp` `record_link` and `record_link_down`, `services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
-| `Traffic` | `services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
+| `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Write` | `services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |

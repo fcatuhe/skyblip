@@ -1,6 +1,6 @@
 # core/protocol
 
-The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link.
+The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link, `adsb_category.{h,cpp}` what an ADS-B emitter category is in ADS-L's terms.
 
 Both air frames are read and written field by field. A field is a `BitField`: an offset and a width counted from bit 0 of the first byte. ADS-L B.3 numbers bits in that order, and the ALP-TAS frame shares it. So `adsl.h` and `alptas.cpp` hold tables of offsets rather than shift sequences, and the ADS-L offsets are the ones G.1 prints. The variable-resolution fields are an `Exponential`: the encoding of ADS-L G.1.6, which the ALP-TAS frame also uses with other widths. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it.
 
@@ -31,6 +31,24 @@ What that costs: this device's own table, 58 (`settings::kAddressMappingTable`),
 ## A target with no altitude
 
 `format_pflaa` sends nothing for a target whose altitude is unknown. XCSoar drops a `$PFLAA` with an empty RelativeVertical ("Relative Altitude is required !", `ParsePFLAA` in `src/Device/Driver/FLARM/StaticParser.cpp` at XCSoar `6e0c8328`), and a 0 there is drawn level with us, which is the one thing the target has not said. `format_pflau` still names it as the threat when it is the advisory, with RelativeVertical left empty: the same parser reads an empty field as no vertical (`has_vertical`) and keeps the bearing and the distance.
+
+## The category ADS-B sends
+
+`adsb_emitter_to_adsl_category` reads the emitter category of an ADS-B identification message, a type code from 1 to 4 and a 3-bit category, into ADS-L G.1.3, which is the one category the tree holds. `adsl_category_to_alptas_type` takes it on to `$PFLAA` from there. The type code and category pairs are those of The 1090 Megahertz Riddle, table "Wake vortex in ADS-B identification and category message" ([mode-s.org](https://mode-s.org/1090mhz/content/ads-b/2-identification.html)). The rows below use the usual A0 to D7 shorthand, a letter for the type code (A is 4, B is 3, C is 2, D is 1, which is all reserved) and a digit for the category. Neither the Riddle nor the GDL 90 table below prints those letters. The Riddle rounds the type code 4 weights to kilograms. The pounds below are Table 11 of the GDL 90 Data Interface Specification, 560-1058-00 Rev A, which lists the same three groups in order ([faa.gov](https://www.faa.gov/sites/faa.gov/files/air_traffic/technology/adsb/archival/GDL90_Public_ICD_RevA.PDF)).
+
+| ADS-B | Kind | G.1.3 | Why |
+|---|---|---|---|
+| A1 | light, under 15 500 lb | 1 | G.1.3 draws its line between 1 and 2 at the same 7031 kg, 15 500 lb |
+| A2 to A5 | small, large, high vortex large, heavy | 2 | at or above that line |
+| A6 | high performance, over 5 g and 400 kt | 2 | ADS-B gives it no weight. The tree already reads a FLARM jet, type 9, as 2 (`alptas_type_to_adsl_category`) |
+| A7 | rotorcraft | 3 | ADS-B gives it no weight either. Issue 1 named 3 plain rotorcraft before Issue 2 split it into light, 3, and heavy, 15. A FLARM helicopter is read as 3 too, and 15 would reach `$PFLAA` as type 0 |
+| B1 | glider, sailplane | 4 | |
+| B2 | lighter-than-air | 5 | |
+| B3 | parachutist, skydiver | 8 | |
+| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight. `adsl_category_to_alptas_type` sends 6 to `$PFLAA` as C, an airship, until #216 is fixed |
+| B6 | unmanned aerial vehicle | 11 | ADS-B carries no EU operational category. A FLARM UAV, type D, is read as 11 too |
+| B7 | space vehicle | 0 | G.1.3 has no value for it |
+| A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
 ## The flight state every decoder owes
 

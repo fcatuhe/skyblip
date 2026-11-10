@@ -91,6 +91,7 @@ uint8_t wire(model::Source value) {
         case model::Source::AdslUplink: return 1;
         case model::Source::Alptas: return 2;
         case model::Source::Own: return 3;
+        case model::Source::Adsb: return 4;
     }
     return kUnpinned;
 }
@@ -281,7 +282,7 @@ TEST_CASE(
 TEST_CASE(
     "diagnostics ordinals: model::Source's codes are the burst and traffic source byte, and a code "
     "changed here changes SOURCE in scripts/blip_records.py and the schema's source enum") {
-    codes_pinned<model::Source>(4);
+    codes_pinned<model::Source>(5);
 }
 
 TEST_CASE(

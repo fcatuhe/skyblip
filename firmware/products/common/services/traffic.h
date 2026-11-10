@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_TRAFFIC_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_TRAFFIC_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
 
 #include "core/events/rf.h"
 #include "core/model/aircraft.h"
@@ -8,10 +8,10 @@
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
 #include "core/traffic/callsigns.h"
-#include "products/skyblip_go/features.h"
+#include "products/common/features.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 // Owns state.traffic: radio events become targets. The dwell that heard a burst
 // names the system it belongs to (core/protocol/air.h), so nothing here guesses:
@@ -52,6 +52,6 @@ class TrafficService : public runtime::Service {
     bool uplink_enabled_{false};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

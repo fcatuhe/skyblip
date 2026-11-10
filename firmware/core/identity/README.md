@@ -32,4 +32,4 @@ On the host, `hardware/platform/host/identity.h` is the unit and the test server
 
 ## Which server key a build trusts
 
-Only skyblip.eu signs for a unit, so every device build, a pull request, `main`, a local build and a release alike, embeds the server key, `keys/server.pub`, and nothing else verifies; `cmake/skyblip.cmake` turns it into `skyblip_server_key.inc` and refuses to configure without it (`firmware/keys/README.md`). The host suite and the simulator trust the test key in `schemas/activation.v1.vectors.json`.
+Only skyblip.eu signs for a unit, so every build of a product that sets `CONFIG_SKYBLIP_ACTIVATION`, a pull request, `main`, a local build and a release alike, embeds the server key, `keys/server.pub`, and nothing else verifies. `cmake/skyblip.cmake` turns it into `skyblip_server_key.inc` and refuses to configure without it (`firmware/keys/README.md`). A product without activation, such as Bravo, embeds no server key and its board provisions no unit key. The host suite and the simulator trust the test key in `schemas/activation.v1.vectors.json`.
