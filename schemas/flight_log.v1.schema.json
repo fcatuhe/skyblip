@@ -224,9 +224,10 @@
         "adsl_direct",
         "adsl_uplink",
         "alptas",
-        "own"
+        "own",
+        "adsb"
       ],
-      "description": "alarm, encounter. Which path it was heard on, byte 17. Codes: 0 adsl_direct, 1 adsl_uplink, 2 alptas, 3 own"
+      "description": "alarm, encounter. Which path it was heard on, byte 17. Codes: 0 adsl_direct, 1 adsl_uplink, 2 alptas, 3 own, 4 adsb"
     },
     "rssi_dbm": {
       "type": "integer",

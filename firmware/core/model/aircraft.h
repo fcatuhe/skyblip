@@ -6,7 +6,8 @@
 #include "core/events/stamp.h"
 
 namespace skyblip::model {
-enum class Source : uint8_t { AdslDirect = 0, AdslUplink = 1, Alptas = 2, Own = 3 };
+enum class Source : uint8_t { AdslDirect = 0, AdslUplink = 1, Alptas = 2, Own = 3, Adsb = 4 };
+enum class ClimbSource : uint8_t { Unknown = 0, Gnss = 1, Barometric = 2 };
 
 // What the station log calls a system where it has a column six characters wide,
 // and what nearby abbreviates to one where it has a glyph.
@@ -16,6 +17,7 @@ constexpr const char* source_word(Source source) {
         case Source::AdslUplink: return "UPLINK";
         case Source::Alptas: return "FLARM";
         case Source::Own: return "OWN";
+        case Source::Adsb: return "ADS-B";
     }
     return "?";
 }
@@ -26,6 +28,7 @@ constexpr char source_letter(Source source) {
         case Source::AdslUplink: return 'U';
         case Source::Alptas: return 'F';
         case Source::Own: return 'O';
+        case Source::Adsb: return 'B';
     }
     return '?';
 }
@@ -39,6 +42,7 @@ struct AircraftObservation {
     int32_t latitude_1e7;
     int32_t longitude_1e7;
     int32_t altitude_m;
+    int32_t pressure_altitude_ft;
     int16_t climb_e8;
     uint16_t speed_q;
     uint16_t track_c9;
@@ -46,13 +50,26 @@ struct AircraftObservation {
     // INFO: fc 13sep26 the instant this position was true, on ports::Clock, for the geometry to
     // align
     uint32_t at_ms;
+    // INFO: fc 10nov26 ms before at_ms each field was true, negative after, zero when one message
+    // carried them all
+    int32_t speed_age_ms;
+    int32_t climb_age_ms;
+    int32_t altitude_age_ms;
+    int32_t pressure_altitude_age_ms;
+    int32_t flight_state_age_ms;
     int8_t rssi_dbm;
     Source source;
     bool climb_valid;
+    ClimbSource climb_source;
     bool speed_valid;
     bool position_valid;
     // INFO: fc 23sep26 G.1.7 lets a 2D position mark its altitude invalid, so decoders say which
     bool altitude_valid{true};
+    bool pressure_altitude_valid;
+    uint8_t adsb_version;
+    bool adsb_version_valid;
+    uint8_t gva;
+    bool gva_valid;
 };
 
 }  // namespace skyblip::model

@@ -20,6 +20,9 @@ struct Ownship {
     // geoid-referenced figure a panel or an IGC file wants.
     int32_t altitude_hae_mm;
     int32_t altitude_msl_mm;
+    int32_t pressure_altitude_mm;
+    uint32_t pressure_altitude_at_ms;
+    bool pressure_altitude_valid;
     int32_t climb_mm_s;
     // INFO: fc 19sep26 what the instruments resolve: the wire's coarser units are the encoder's
     int32_t speed_mm_s;
