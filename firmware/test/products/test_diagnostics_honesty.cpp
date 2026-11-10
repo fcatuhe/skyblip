@@ -3,8 +3,8 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/timing/slot.h"
+#include "products/common/services/ownship.h"
 #include "products/common/services/traffic.h"
-#include "products/skyblip_go/services/ownship.h"
 #include "test/support/screen_rig.h"
 
 namespace {
@@ -40,8 +40,8 @@ struct ServiceRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    go::Settings settings{};
-    go::OwnshipService ownship{context, settings};
+    uint8_t aircraft_type{go::kAircraftTypeLight};
+    common::OwnshipService ownship{context, aircraft_type};
     common::TrafficService traffic{context, common::Feature::None};
 
     ServiceRig() { recorder.arm(); }

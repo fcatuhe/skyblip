@@ -45,14 +45,14 @@ int format_unsigned(char* out, uint32_t value, uint8_t minimum_digits, uint8_t f
 int format_signed(char* out, int32_t value, uint8_t minimum_digits, uint8_t fraction_digits,
                   bool plus_sign) {
     int written = 0;
+    uint32_t magnitude = static_cast<uint32_t>(value);
     if (value < 0) {
         out[written++] = '-';
-        value = -value;
+        magnitude = 0u - magnitude;
     } else if (plus_sign) {
         out[written++] = '+';
     }
-    written += format_unsigned(out + written, static_cast<uint32_t>(value), minimum_digits,
-                               fraction_digits);
+    written += format_unsigned(out + written, magnitude, minimum_digits, fraction_digits);
     return written;
 }
 

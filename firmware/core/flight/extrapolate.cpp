@@ -1,5 +1,7 @@
 #include "core/flight/extrapolate.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 
 #include "core/flight/arc.h"
@@ -170,7 +172,9 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
         longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
     east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_micrometres, kMicrometresPerMetre));
     up_valid = target.altitude_valid;
-    up_m = up_valid ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value : 0;
+    const int64_t up =
+        static_cast<int64_t>(target.altitude_m) - to_metres(Millimetres(own.altitude_hae_mm)).value;
+    up_m = up_valid ? static_cast<int32_t>(std::clamp<int64_t>(up, INT32_MIN, INT32_MAX)) : 0;
     return true;
 }
 

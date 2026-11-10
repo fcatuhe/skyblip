@@ -1,4 +1,4 @@
-#include "products/skyblip_go/services/ownship.h"
+#include "products/common/services/ownship.h"
 
 #include "core/diagnostics/payload.h"
 #include "core/diagnostics/profile.h"
@@ -12,7 +12,7 @@
 #include "core/units/units.h"
 #include "core/util/intmath.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 flight::FlightState OwnshipService::flight_state_from(const model::Ownship& own, uint32_t now_ms) {
     flight::FlightSample sample{};
@@ -254,16 +254,18 @@ void OwnshipService::apply_barometer(const events::BarometerSample& sample, uint
     context_.state.barometer.pressure_mpa = sample.pressure_mpa;
     context_.state.barometer.temperature_dc = sample.temperature_dc;
     context_.state.barometer.temperature_valid = sample.temperature_valid;
-    const int32_t altitude_mm = flight::pressure_to_altitude_mm(sample.pressure_mpa);
+    // TODO: fc 10nov26 #193 and #176 write the three own.pressure_altitude fields here, _at_ms from
+    // sample.at_ms, and tick() clears _valid once the barometer goes stale
+    const int32_t pressure_altitude_mm = flight::pressure_to_altitude_mm(sample.pressure_mpa);
     if (!barometer_heard_within_max_age(now_ms)) barometer_reference_ms_ = 0;
     barometer_heard_ms_ = now_ms == 0 ? 1 : now_ms;
     barometer_active_ = true;
     int32_t climb_mm_s = 0;
-    const bool adopted = climb_from_altitude_mm(altitude_mm, sample.at_ms, kBarometerClimbWindowMs,
-                                                barometer_reference_altitude_mm_,
-                                                barometer_reference_ms_, climb_mm_s);
+    const bool adopted = climb_from_altitude_mm(
+        pressure_altitude_mm, sample.at_ms, kBarometerClimbWindowMs,
+        barometer_reference_altitude_mm_, barometer_reference_ms_, climb_mm_s);
     if (adopted) adopt_climb(climb_mm_s, now_ms);
-    record_barometer(sample, altitude_mm, climb_mm_s, adopted, now_ms);
+    record_barometer(sample, pressure_altitude_mm, climb_mm_s, adopted, now_ms);
 }
 
 void OwnshipService::record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
@@ -385,4 +387,4 @@ bool OwnshipService::climb_from_altitude_mm(int32_t altitude_mm, uint32_t now_ms
     return measured;
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

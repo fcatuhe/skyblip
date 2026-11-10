@@ -10,6 +10,9 @@
 
 namespace skyblip::protocol {
 
+// INFO: fc 10nov26 NMEA 0183 and FLARM's FTD-014 cap a sentence at 82 characters, $ to CRLF
+constexpr int kNmeaSentenceCeilingBytes = 82;
+
 int nmea_finish(char* sentence, int body_bytes);
 
 uint8_t adsl_category_to_alptas_type(uint8_t adsl_category);
