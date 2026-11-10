@@ -1,0 +1,11 @@
+identifier: meshtracker_x1
+name: Seeed SenseCAP MeshTracker X1 (skyBlip Bravo)
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+ram: 256
+flash: 1024
+supported:
+  - gpio
+vendor: seeed

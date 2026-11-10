@@ -1,5 +1,20 @@
+config SKYBLIP_ACTIVATION
+	bool "Activate the unit against skyblip.eu"
+	help
+	  The unit keeps a key of its own in UICR, provisioned before Bluetooth
+	  starts, and trusts the server key compiled in from keys/server.pub. A
+	  product without it provisions no key and embeds no server key. The
+	  MCUboot signing keys are sysbuild's and every product keeps them.
+
+config SKYBLIP_IMU_IMAGE
+	bool "Pin the BHI260AP image the sensor hub boots"
+	help
+	  The build hashes the hub's firmware into the image, so the update page
+	  and the hub's flash copy both know which one it was built against.
+
 config SKYBLIP_IMU_IMAGE_LINKED
 	bool "Carry the BHI260AP image in the application"
+	depends on SKYBLIP_IMU_IMAGE
 	default y
 	help
 	  A full image links the sensor hub's firmware, boots the hub from it and
