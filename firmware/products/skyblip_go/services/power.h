@@ -36,13 +36,16 @@ class PowerService : public runtime::Service {
     bool supply_warned() const { return cutoff_.supply_warned(); }
     uint32_t supply_warnings() const { return cutoff_.supply_warnings(); }
 
-    // Whether a durable write of this kind may happen now. One reader today, the
-    // settings writer; the flight log's answer is in the same rule and is always
-    // yes, which is the point of asking through it rather than around it.
+    // Whether a durable write of this kind may happen now. The settings writer
+    // asks the same rule of cutoff_monitor(); the flight log's answer is in the
+    // same rule and is always yes, which is the point of asking through it
+    // rather than around it.
     bool may_write(power::DurableWrite kind) const { return cutoff_.may_write(kind); }
+    const power::CutoffMonitor& cutoff_monitor() const { return cutoff_; }
 
-    // Tenths of a degree, and whether a reading younger than kDieStaleMs stands:
-    // the one freshness the panel, the charge window and the reply all read.
+    // Tenths of a degree, and whether a reading younger than kDieStaleMs stands,
+    // as published on state.power, where the panel, the charge window and the
+    // config link's reply read it.
     // False on a board with no sensor for ever, which is what the reply reads to
     // decide whether the key exists at all - never a zero standing in for absent,
     // because 0.0 C is a plausible hangar morning.
