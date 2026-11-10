@@ -1,5 +1,6 @@
 // F3. A position sent under another instant's timestamp is a lie of 50 m at 50 m/s over a second.
 #include <cmath>
+#include <cstdint>
 
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
@@ -198,6 +199,28 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
 }
 
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
+// The height difference overflowed int32 when a target's altitude sat at the type's limit.
+TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit") {
+    auto own = flying(48.1, 8.1, 0.0, 0.0);
+    model::AircraftObservation target{};
+    target.position_valid = true;
+    target.altitude_valid = true;
+    target.latitude_1e7 = own.latitude_1e7;
+    target.longitude_1e7 = own.longitude_1e7;
+    int32_t north, east, up;
+    bool up_valid;
+
+    target.altitude_m = INT32_MIN;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up == INT32_MIN);
+
+    target.altitude_m = INT32_MAX;
+    own.altitude_hae_mm = -1200000;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up == INT32_MAX);
+    CHECK(up_valid);
+}
+
 TEST_CASE("adsl: the transmitted position is the position at the quarter second it names") {
     model::Ownship own{};
     own.fix_valid = true;
