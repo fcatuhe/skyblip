@@ -13,6 +13,7 @@ function(skyblip_shared_layers)
     ${SKYBLIP_FIRMWARE}/core/*.cpp
     ${SKYBLIP_FIRMWARE}/ui/*.cpp
     ${SKYBLIP_FIRMWARE}/runtime/*.cpp
+    ${SKYBLIP_FIRMWARE}/products/common/*.cpp
     ${SKYBLIP_FIRMWARE}/hardware/parts/*.cpp
     ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/*.cpp
   )

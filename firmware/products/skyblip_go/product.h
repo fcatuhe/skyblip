@@ -8,18 +8,18 @@
 #include "core/power/shutdown.h"
 #include "core/power/wake.h"
 #include "core/util/format.h"
+#include "products/common/services/alarm.h"
+#include "products/common/services/nmea.h"
+#include "products/common/services/traffic.h"
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/pages/self_test.h"
-#include "products/skyblip_go/services/alarm.h"
 #include "products/skyblip_go/services/capture.h"
 #include "products/skyblip_go/services/config_link.h"
 #include "products/skyblip_go/services/flight_log.h"
-#include "products/skyblip_go/services/nmea.h"
 #include "products/skyblip_go/services/ownship.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/services/screen.h"
-#include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/loop.h"
 
@@ -231,9 +231,9 @@ class Product {
     OwnshipService& ownship() { return ownship_; }
     PowerService& power() { return power_; }
     RadioService& radio() { return radio_; }
-    TrafficService& traffic() { return traffic_; }
-    AlarmService& alarm() { return alarm_; }
-    NmeaService& nmea() { return nmea_; }
+    common::TrafficService& traffic() { return traffic_; }
+    common::AlarmService& alarm() { return alarm_; }
+    common::NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
     ConfigLinkService& config_link() { return config_link_; }
     FlightLogService& flight_log() { return flight_log_; }
@@ -446,9 +446,9 @@ class Product {
     ConfigLinkService config_link_{context_, settings_, power_};
     OwnshipService ownship_{context_, settings_};
     RadioService radio_{context_, settings_};
-    TrafficService traffic_{context_, kFeatures};
-    AlarmService alarm_{context_, settings_};
-    NmeaService nmea_{context_, kFeatures, config_link_.config()};
+    common::TrafficService traffic_{context_, kFeatures};
+    common::AlarmService alarm_{context_, {settings_.alarm_enabled, settings_.alarm_volume}};
+    common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
     FlightLogService flight_log_{context_, flights_store_, &capture_store_, config_link_.config()};
     CaptureService capture_{context_, capture_store_, flights_store_, settings_,
                             config_link_.config()};

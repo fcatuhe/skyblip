@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_ALARM_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_ALARM_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_ALARM_H
 
 #include "core/annunciation/annunciator.h"
 #include "core/diagnostics/payload.h"
@@ -9,11 +9,22 @@
 #include "core/traffic/formation.h"
 #include "core/traffic/table.h"
 #include "ports/indicator.h"
-#include "products/skyblip_go/settings.h"
+#include "products/common/alarm_volume.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
+
+struct AlarmSettings {
+    AlarmSettings(const bool& enabled_by, const AlarmVolume& volume_of)
+        : enabled(enabled_by), volume(volume_of) {}
+    AlarmSettings(bool&&, const AlarmVolume&) = delete;
+    AlarmSettings(const bool&, AlarmVolume&&) = delete;
+    AlarmSettings(bool&&, AlarmVolume&&) = delete;
+
+    const bool& enabled;
+    const AlarmVolume& volume;
+};
 
 // The lamp lives here rather than in PowerService, whose state most of it reads,
 // because the highest-priority row in the table is the alarm level and because a
@@ -21,7 +32,7 @@ namespace skyblip::go {
 // is already called at exactly the right point in the shutdown sequence.
 class AlarmService : public runtime::Service {
    public:
-    AlarmService(runtime::Context& context, const Settings& settings)
+    AlarmService(runtime::Context& context, AlarmSettings settings)
         : runtime::Service(context), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
@@ -85,9 +96,9 @@ class AlarmService : public runtime::Service {
     indication::Policy indication_{};
     bool dirty_{false};
     bool running_{true};
-    const Settings& settings_;
+    AlarmSettings settings_;
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif
