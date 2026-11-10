@@ -194,6 +194,15 @@ struct GroundedUnitWithLogs {
         taxi(rig, now_ms, 2);
     }
 
+    void reconnect() {
+        rig.drop_link(1);
+        taxi(rig, now_ms, 1);
+        rig.raise_link(1);
+        taxi(rig, now_ms, 1);
+    }
+
+    void outwait_prompt() { taxi(rig, now_ms, comms::kPromptCeilingMs / 1000 + 1); }
+
     bool answered(size_t before, events::Endpoint endpoint, const std::string& prefix) {
         const auto& sent = rig.platform.link().sent;
         for (size_t i = before; i < sent.size(); i++)
@@ -212,6 +221,7 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.confirm();
     unit.say("{\"command\":\"dfu\",\"version\":\"0.4.0+1\"}");
     unit.cancel();
+    unit.reconnect();
     unit.say("{\"command\":\"gnss_cold_start\"}");
     unit.confirm();
     unit.rig.platform.identity().queue_random(kUnitNonce);
@@ -427,7 +437,7 @@ TEST_CASE("link registry: the unit reads every key a host frame may carry, and r
         unit.say(frame.endpoint, json);
         taxi(unit.rig, unit.now_ms, 3);
         CHECK(unit.answered(before, answer->endpoint, answer->reads));
-        if (answer->reads.find("\"pending\":true") != std::string::npos) unit.cancel();
+        if (answer->reads.find("\"pending\":true") != std::string::npos) unit.outwait_prompt();
 
         before = unit.rig.platform.link().sent.size();
         unit.rig.platform.link().push_rx(with_a_foreign_key(frame));

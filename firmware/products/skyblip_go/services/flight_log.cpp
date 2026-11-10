@@ -17,13 +17,14 @@ void FlightLogService::tick(uint32_t now_ms) {
 
     if (config_.log_erase_requested()) {
         config_.clear_log_erase_request();
+        erase_peer_ = config_.log_erase_peer();
         flights_.begin_erase();
     }
     if (flights_.erasing()) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {
             session_.reset();
-            acknowledge(comms::LogStore::Flights, true, link::Reason::Erased);
+            answer(erase_peer_, comms::LogStore::Flights, true, link::Reason::Erased);
         }
         return;
     }
@@ -119,9 +120,10 @@ bool FlightLogService::on_ground() const {
     return context_.state.flight.confirmed_state == flight::FlightState::Ground;
 }
 
-void FlightLogService::acknowledge(comms::LogStore store, bool ok, link::Reason reason) {
+void FlightLogService::answer(const events::Peer& peer, comms::LogStore store, bool ok,
+                              link::Reason reason) {
     RecordPool& pool = flights_.pool();
-    pool.send(reply_link_session_,
+    pool.send(peer,
               comms::format_log_acknowledgement(pool.reply_buffer(), pool.reply_capacity(), ok,
                                                 reason, store),
               store);
@@ -141,6 +143,7 @@ void FlightLogService::serve_link(uint32_t now_ms) {
     if (diagnostics_ != nullptr) diagnostics_->continue_read();
     events::RxFrame frame{};
     while (!replying() && context_.bus.log_rx.pop(frame)) {
+        if (!config_.from_live_connection(frame)) continue;
         handle(comms::parse_log_request(frame));
         record_link(diagnostics::LinkAction::Received, frame.session_id, frame.bytes, now_ms);
     }
@@ -159,7 +162,7 @@ bool FlightLogService::replying() const {
 void FlightLogService::watch_link_drops(uint32_t now_ms) {
     if (link_drops() == recorded_drops_) return;
     recorded_drops_ = link_drops();
-    record_link(diagnostics::LinkAction::Dropped, reply_link_session_, 0, now_ms);
+    record_link(diagnostics::LinkAction::Dropped, last_asker_session_, 0, now_ms);
 }
 
 void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t session,
@@ -178,36 +181,37 @@ void FlightLogService::record_link(diagnostics::LinkAction action, uint16_t sess
 }
 
 void FlightLogService::handle(const comms::LogRequest& request) {
-    reply_link_session_ = request.link_session;
-    if (!config_.claim_link(request.link_session)) {
-        acknowledge(request.store, false, link::Reason::Claimed);
+    last_asker_session_ = request.peer.session_id;
+    if (!config_.claim_link(request.peer)) {
+        answer(request.peer, request.store, false, link::Reason::Claimed);
         return;
     }
     if (!request.understood) {
-        acknowledge(request.store, false, request.reason.value_or(link::Reason::UnknownCommand));
+        answer(request.peer, request.store, false,
+               request.reason.value_or(link::Reason::UnknownCommand));
         return;
     }
     RecordStore* store = store_for(request.store);
     if (store == nullptr) {
-        acknowledge(request.store, false, link::Reason::NoDiagnostics);
+        answer(request.peer, request.store, false, link::Reason::NoDiagnostics);
         return;
     }
     if (!store->available()) {
-        acknowledge(request.store, false, link::Reason::NoStorage);
+        answer(request.peer, request.store, false, link::Reason::NoStorage);
         return;
     }
     if (flights_.erasing()) {
-        acknowledge(request.store, false, link::Reason::Busy);
+        answer(request.peer, request.store, false, link::Reason::Busy);
         return;
     }
     if (!on_ground()) {
-        acknowledge(request.store, false, link::Reason::InFlight);
+        answer(request.peer, request.store, false, link::Reason::InFlight);
         return;
     }
 
     if (request.command == comms::LogCommand::Erase) {
         if (request.store != comms::LogStore::Flights) {
-            acknowledge(request.store, false, link::Reason::FlightsOnly);
+            answer(request.peer, request.store, false, link::Reason::FlightsOnly);
             return;
         }
         config_.request_log_erase();

@@ -22,7 +22,7 @@ ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(pending);
     snapshot.detail = comms::pending_detail(pending);
-    snapshot.timeout_s = comms::kPromptForgetMs / 1000;
+    snapshot.timeout_s = comms::kPromptCeilingMs / 1000;
     return snapshot;
 }
 

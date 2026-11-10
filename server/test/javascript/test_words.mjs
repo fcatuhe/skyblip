@@ -22,14 +22,14 @@ const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version', 'invalid'])
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
 const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
 // INFO: fc 18oct26 what the prompt machinery and the claim answer any command, activation included
-const PROMPT_REFUSALS = ['expired', 'cancelled', 'claimed', 'unknown_command'];
+const PROMPT_REFUSALS = ['expired', 'cancelled', 'prompt_pending', 'refused_on_device', 'claimed', 'unknown_command'];
 const REPLY_REFUSALS = ['small_mtu'];
 const SERVER_REFUSALS = [
   'invalid', 'unknown_server_key', 'expired', 'bad_signature', 'other_key', 'revoked_key', 'daily_cap', 'network_cap', 'no_serial', 'rate_limited', 'unreachable', 'failed',
 ].map(key => `server_${key}`);
 const ACTIVATION_NOTICES = ['activated', 'saved', 'skipped', 'no_bluetooth', 'not_skyblip', 'link_lost', 'failed', 'refused'];
 // INFO: fc 10nov26 a set's refusals whose activation words would mislead, so the page words them as the settings'
-const SETTINGS_REFUSALS = ['in_flight', 'low_power', 'expired'];
+const SETTINGS_REFUSALS = ['in_flight', 'low_power', 'expired', 'cancelled', 'prompt_pending', 'refused_on_device'];
 
 const words = (path, kind = 'manage') => new Set([...read(path).matchAll(new RegExp(`data-${kind}-word="(\\w+)"`, 'g'))].map(match => match[1]));
 

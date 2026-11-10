@@ -88,6 +88,7 @@ TEST_CASE("comms: the firmware prompt names the version the phone is about to se
     REQUIRE(config.pending() == Pending::Dfu);
     CHECK(std::string(config.prompt_detail()) == "INSTALL 0.2.0+15 FROM THE PHONE");
 
+    config.tick(kPromptCeilingMs);
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::PowerOff));
 }
@@ -304,12 +305,12 @@ TEST_CASE(
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
-    config.on_link_up(events::LinkUp{1, 244});
+    config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
     CHECK(link.sent.empty());
 
     config.set_image_state(dfu::ImageState::Probation, dfu::UpdateRecord{});
     link.raise_link(2);
-    config.on_link_up(events::LinkUp{2, 244});
+    config.on_link_up(events::LinkUp{2, 244, link.connection(2)});
     REQUIRE(link.sent.size() == 1);
     CHECK(link_text(link.last().bytes).find("\"command\":\"update\"") != std::string::npos);
     CHECK(link_text(link.last().bytes).find("\"image\":\"probation\"") != std::string::npos);
@@ -322,7 +323,7 @@ TEST_CASE("comms: a link that comes up on settings that fell back is told, on a 
     go::SettingsStore store(settings, kTestActivation);
     ConfigService config(link, store);
     config.set_settings_fallback(settings::Fallback::Defaults);
-    config.on_link_up(events::LinkUp{1, 244});
+    config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
     REQUIRE(link.sent.size() == 1);
     CHECK(link_text(link.last().bytes).find("\"image\":\"confirmed\"") != std::string::npos);
     CHECK(link_text(link.last().bytes).find("\"settings\":\"defaults\"") != std::string::npos);
@@ -491,9 +492,9 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     prompt.tick(before);
     prompt.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kPromptForgetMs - 1u);
+    prompt.tick(before + kPromptCeilingMs - 1u);
     CHECK(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kPromptForgetMs);
+    prompt.tick(before + kPromptCeilingMs);
     CHECK(prompt.pending() == Pending::None);
     CHECK(link_text(second_link.last().bytes).find("expired") != std::string::npos);
 }

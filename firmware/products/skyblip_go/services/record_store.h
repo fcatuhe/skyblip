@@ -73,7 +73,7 @@ class RecordStore {
     void continue_read();
     void abandon_read() { reading_.active = false; }
     bool reading() const { return reading_.active; }
-    void acknowledge(uint16_t link_session, bool ok, link::Reason reason);
+    void acknowledge(const events::Peer& peer, bool ok, link::Reason reason);
 
    private:
     struct Tail {
@@ -83,7 +83,7 @@ class RecordStore {
 
     struct Reading {
         bool active{false};
-        uint16_t link_session{0};
+        events::Peer peer{0, 0};
         uint32_t session{0};
         comms::LogWindow window{};
         int next{0};
@@ -101,7 +101,7 @@ class RecordStore {
     void answer_list(const comms::LogRequest& request);
     void answer_read(const comms::LogRequest& request);
     bool read_records(uint32_t session_id, uint32_t from, int count);
-    void reply(uint16_t link_session, int bytes);
+    void reply(const events::Peer& peer, int bytes);
     comms::LogStore selector() const { return owner_; }
 
     RecordPool& pool_;

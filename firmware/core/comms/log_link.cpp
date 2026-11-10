@@ -69,7 +69,7 @@ int log_records_per_chunk(int payload_bytes, LogStore store) {
 LogRequest parse_log_request(const events::RxFrame& frame) {
     LogRequest request{};
     if (frame.endpoint != events::Endpoint::Log) return request;
-    request.link_session = frame.session_id;
+    request.peer = events::peer_of(frame);
     request.reason = link::Reason::UnknownCommand;
 
     const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));

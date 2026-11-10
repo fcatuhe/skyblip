@@ -466,8 +466,10 @@ TEST_CASE("log: a store this build has no service for is refused by name, never 
     rig.setup();
     go::FlightLogService log{rig.context, rig.flights, nullptr, rig.config};
 
-    rig.bus.log_rx.push(link_frame(events::Endpoint::Log, rig.link.session_id(),
-                                   "{\"command\":\"list\",\"log\":\"diagnostics\"}"));
+    events::RxFrame list = link_frame(events::Endpoint::Log, rig.link.session_id(),
+                                      "{\"command\":\"list\",\"log\":\"diagnostics\"}");
+    list.connection = rig.link.connection(list.session_id);
+    rig.bus.log_rx.push(list);
     log.tick(0);
 
     REQUIRE_FALSE(rig.link.sent.empty());

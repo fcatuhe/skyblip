@@ -35,13 +35,19 @@ class Link {
     virtual uint16_t payload_bytes() const { return kMinimumLinkPayloadBytes; }
     virtual uint16_t payload_bytes_to(uint16_t /*session_id*/) const { return payload_bytes(); }
 
+    // INFO: fc 10nov26 the connection a session id names now, as RxFrame::connection numbers it,
+    // 0 for none
+    virtual uint32_t connection(uint16_t /*session_id*/) const { return 0; }
+
     // INFO: fc 04aug26 Longer than payload_bytes() is refused, never truncated:
     // a controller does not shorten an oversized notification, it fails it, and
     // a caller that learns nothing about that has silently dropped the frame.
     virtual Status send(events::Endpoint endpoint, ConstByteSpan bytes) = 0;
 
     // INFO: fc 18sep26 send() is every subscribed central, send_to() is the one that asked.
-    virtual Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) = 0;
+    // | 10nov26 Down once that connection is gone, even if its session id came back for another
+    virtual Status send_to(const events::Peer& peer, events::Endpoint endpoint,
+                           ConstByteSpan bytes) = 0;
 
     // INFO: fc 18oct26 starts advertising under name, or renames a link already advertising
     virtual Status advertise_as(const char* name) = 0;

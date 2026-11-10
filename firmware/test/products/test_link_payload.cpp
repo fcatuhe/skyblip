@@ -365,7 +365,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
 
     // Out of buffers for one pass - an upload sharing the connection will do
     // that. The push is the one frame nobody asked for, so nobody will ask
@@ -394,7 +394,7 @@ TEST_CASE("comms: the widest status push fits the twenty bytes every link guaran
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kWidestAddress);
     ConfigService config(link, store);
-    config.on_link_up(events::LinkUp{1, link.payload_bytes()});
+    config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
     config.set_die_temperature(INT16_MIN, true);
     make_worst_case(config);
 

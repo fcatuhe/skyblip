@@ -54,7 +54,7 @@ class FlightLogService : public runtime::Service {
                      uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     RecordStore* store_for(comms::LogStore store);
-    void acknowledge(comms::LogStore store, bool ok, link::Reason reason);
+    void answer(const events::Peer& peer, comms::LogStore store, bool ok, link::Reason reason);
     bool on_ground() const;
 
     RecordStore& flights_;
@@ -63,7 +63,8 @@ class FlightLogService : public runtime::Service {
     flight::LogSession session_{};
     flight::LogEvents events_{};
     uint32_t recorded_drops_{0};
-    uint16_t reply_link_session_{0};
+    uint16_t last_asker_session_{0};
+    events::Peer erase_peer_{0, 0};
 
     uint8_t scratch_[kStoreRecordBytes]{};
 };

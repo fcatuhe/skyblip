@@ -131,7 +131,7 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::PowerOff);
     expect.detail = comms::pending_detail(comms::Pending::PowerOff);
-    expect.timeout_s = comms::kPromptForgetMs / 1000;
+    expect.timeout_s = comms::kPromptCeilingMs / 1000;
     go::Glass expected;
     go::draw_confirm(expected, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
@@ -153,8 +153,8 @@ TEST_CASE("product: a prompt nobody answers expires, and the device is not power
     now_ms += 1000;
     REQUIRE(rig.product.screen().prompt() == comms::Pending::PowerOff);
 
-    rig.run(now_ms, now_ms + comms::kPromptForgetMs + 1000);
-    now_ms += comms::kPromptForgetMs + 1000;
+    rig.run(now_ms, now_ms + comms::kPromptCeilingMs + 1000);
+    now_ms += comms::kPromptCeilingMs + 1000;
     CHECK(rig.config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().prompt() == comms::Pending::None);
     CHECK_FALSE(rig.product.shutdown().going_down());

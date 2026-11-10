@@ -133,7 +133,7 @@ TEST_CASE("comms flight gate: install, recovery, power-off, cold start and erase
             CHECK(bench.last() == kInFlight);
         }
         Bench erase(state);
-        REQUIRE(erase.config.claim_link(1));
+        REQUIRE(erase.config.claim_link(events::Peer{1, kFirstConnection}));
         erase.config.request_log_erase();
         CHECK(erase.config.pending() == Pending::None);
         CHECK(erase.last() == kInFlight);

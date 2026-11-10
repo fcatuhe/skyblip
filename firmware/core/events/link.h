@@ -18,7 +18,19 @@ enum class Endpoint : uint8_t { Config = 0, Nmea = 1, Log = 2 };
 struct LinkUp {
     uint16_t session_id;
     uint16_t payload_bytes;
+    uint32_t connection;
 };
+
+// INFO: fc 10nov26 a reply goes to the connection that asked: silicon reuses session ids
+struct Peer {
+    uint16_t session_id;
+    uint32_t connection;
+};
+
+inline bool operator==(const Peer& a, const Peer& b) {
+    return a.session_id == b.session_id && a.connection == b.connection;
+}
+inline bool operator!=(const Peer& a, const Peer& b) { return !(a == b); }
 
 enum class MtuRequest : uint8_t { NotAsked, Pending, Exchanged, AlreadyExchanged, Refused, Unsent };
 
@@ -39,14 +51,19 @@ struct LinkEvent {
     MtuExchangeStarter mtu_exchange_started_by;
     uint16_t session_id;
     uint16_t payload_bytes;
+    uint32_t connection;
 };
 
 struct RxFrame {
     uint16_t session_id;
+    // INFO: fc 10nov26 LinkSessions numbers each connection once: silicon reuses session ids
+    uint32_t connection;
     Endpoint endpoint;
     uint16_t bytes;
     std::array<uint8_t, 256> data;
 };
+
+inline Peer peer_of(const RxFrame& frame) { return Peer{frame.session_id, frame.connection}; }
 
 struct DfuRequest {
     uint16_t session_id;

@@ -121,8 +121,10 @@ updated_on: "2026-11-10"
         <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">This unit is already activated, and it has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then activate again.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="low_power">The battery is critical, too low to write the serial to memory. Charge it, then activate again.</td></tr>
         <tr><th class="mono">flash</th><td data-activate-word="flash">The unit could not write its serial to its memory. Activate again, and if it happens again, tell us.</td></tr>
-        <tr><th class="mono">expired</th><td data-activate-word="expired">Nobody answered the question on the glass within thirty seconds, which counts as a refusal. Activate again, and press twice when the glass asks.</td></tr>
-        <tr><th class="mono">cancelled</th><td data-activate-word="cancelled">The unit said no: one press refuses the question.</td></tr>
+        <tr><th class="mono">expired</th><td data-activate-word="expired">Nobody answered the question on the glass within thirty seconds, so the unit dropped it. Activate again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-activate-word="cancelled">The unit said no: one press refuses the question, and the unit then asks nothing more from this connection. Disconnect and connect again, then activate again.</td></tr>
+        <tr><th class="mono">prompt_pending</th><td data-activate-word="prompt_pending">The glass is already asking a question this connection sent. Answer it on the unit, or wait up to thirty seconds for it to go, then activate again.</td></tr>
+        <tr><th class="mono">refused_on_device</th><td data-activate-word="refused_on_device">One press on the unit refused a question from this connection, so the unit asks nothing more from it. Disconnect and connect again, then activate again.</td></tr>
         <tr><th class="mono">claimed</th><td data-activate-word="claimed">Another app holds this unit&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
         <tr><th class="mono">unknown_command</th><td data-activate-word="unknown_command">The firmware on the unit is older than activation, and needs none. Update it from the update page first.</td></tr>
         <tr><th class="mono">anything else</th><td data-activate-word="refused">The unit refused, with a reason this page does not know:</td></tr>
@@ -142,7 +144,10 @@ updated_on: "2026-11-10"
       <tbody>
         <tr><th class="mono">in_flight</th><td data-activate-word="set_in_flight">The unit has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="set_low_power">The battery is critical, too low to write the settings to memory. Charge it, then try again.</td></tr>
-        <tr><th class="mono">expired</th><td data-activate-word="set_expired">Nobody answered the question on the glass within thirty seconds, which counts as a refusal. Try again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">expired</th><td data-activate-word="set_expired">Nobody answered the question on the glass within thirty seconds, so the unit dropped it. Try again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-activate-word="set_cancelled">The unit said no: one press refuses the question, and the settings stay as they were. The unit now asks nothing more from this connection, so change them in its menu or on the update page.</td></tr>
+        <tr><th class="mono">prompt_pending</th><td data-activate-word="set_prompt_pending">The glass is already asking a question this connection sent. Answer it on the unit, or wait up to thirty seconds for it to go, then try again.</td></tr>
+        <tr><th class="mono">refused_on_device</th><td data-activate-word="set_refused_on_device">One press on the unit refused a question from this connection, so the unit asks nothing more from it. The settings stay as they were: change them in its menu or on the update page.</td></tr>
       </tbody>
     </table>
   </div>

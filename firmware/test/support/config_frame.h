@@ -28,8 +28,13 @@ inline events::RxFrame link_frame(events::Endpoint endpoint, uint16_t session_id
     return frame;
 }
 
+// INFO: fc 10nov26 LinkSessions numbers connections from 1, so a fresh link's first central is 1
+inline constexpr uint32_t kFirstConnection = 1;
+
 inline events::RxFrame config_frame(const char* json) {
-    return link_frame(events::Endpoint::Config, 1, json);
+    events::RxFrame frame = link_frame(events::Endpoint::Config, 1, json);
+    frame.connection = kFirstConnection;
+    return frame;
 }
 
 inline std::string link_text(const std::string& frame) {

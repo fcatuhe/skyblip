@@ -27,7 +27,10 @@ class Link : public ports::Link {
 
     static Status begin() { return Status::Ok; }
 
-    void push_rx(const events::RxFrame& frame) { rx_.push(frame); }
+    void push_rx(events::RxFrame frame) {
+        frame.connection = sessions_.connection(frame.session_id);
+        rx_.push(frame);
+    }
     bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
     void raise_link(uint16_t session_id = 1) {
@@ -74,14 +77,19 @@ class Link : public ports::Link {
     uint16_t payload_bytes_to(uint16_t session_id) const override {
         return sessions_.payload_bytes(session_id);
     }
+    uint32_t connection(uint16_t session_id) const override {
+        return sessions_.connection(session_id);
+    }
 
     Status send(events::Endpoint endpoint, ConstByteSpan bytes) override {
         return record(0, endpoint, bytes);
     }
 
-    Status send_to(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) override {
-        if (!sessions_.up(session_id)) return Status::Down;
-        return record(session_id, endpoint, bytes);
+    Status send_to(const events::Peer& peer, events::Endpoint endpoint,
+                   ConstByteSpan bytes) override {
+        if (peer.connection == 0 || sessions_.connection(peer.session_id) != peer.connection)
+            return Status::Down;
+        return record(peer.session_id, endpoint, bytes);
     }
 
     Status advertise_as(const char* name) override {
