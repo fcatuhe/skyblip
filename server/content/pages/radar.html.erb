@@ -4,7 +4,7 @@ nav_title: Radar
 description: "Read the skyBlip Go traffic display, symbols and Nearby list. Understand alerts within 3 km and 300 m and how PLOT ALL shows distant traffic."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-10"
 ---
 
 <section>
@@ -133,13 +133,18 @@ updated_on: "2026-11-09"
     <li>A caution, never an instruction</li>
   </ul>
 
-  <h3 id="shapes">Five shapes, and <span class="highlight">you read them without learning them</span>.</h3>
+  <h3 id="shapes">Six shapes, and <span class="highlight">you read them without learning them</span>.</h3>
   <p class="lede">
     Point up is traffic above you; point down is traffic below; the diamond is
     someone inside your 60&nbsp;m. A full-size symbol sits within the 300&nbsp;m
     the alarm cares about; a reduced one is further away vertically, and it
     stays on the picture without ever asking for it. The caret joins from
     2.5&nbsp;m/s of climb or descent, on the side the traffic is going.
+  </p>
+  <p class="lede">
+    The ring is an aircraft that sends no altitude. It points nowhere, because
+    nobody knows if it is above or below you. Within 3&nbsp;km it is filled
+    like any alarm, because it may be at your level.
   </p>
   <p class="lede">
     Filled black belongs to the alarm. While no symbol is filled, nothing is
@@ -162,6 +167,8 @@ updated_on: "2026-11-09"
         far_above_when: "above you, beyond 300 m",
         far_below: "Point down, reduced",
         far_below_when: "below you, beyond 300 m",
+        unknown: "Ring",
+        unknown_when: "no altitude sent",
         out_of_window: "outside the alarm's altitude window" %>
 
   <div class="feature">
@@ -171,8 +178,9 @@ updated_on: "2026-11-09"
         The radar says where to look, this page says who that is. One row per
         aircraft the device can place: its callsign if it broadcasts one and its
         address otherwise, the ground distance between you, and how far above or
-        below you it is. On the top line, your own callsign with the address you
-        transmit under beside it, and the count of everything heard.
+        below you it is, or two dashes when it sends no altitude. On the top
+        line, your own callsign with the address you transmit under beside it,
+        and the count of everything heard.
       </p>
       <p>
         The letter at the head of the row says where the report came from.

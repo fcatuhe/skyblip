@@ -27,6 +27,17 @@ Why not a prediction. A predicted conflict is a better alarm for an aircraft und
 
 A target that reports no velocity is still charged at `kUnknownTargetSpeedMps` in the closing figure the formation layer reads, because zero would make a relayed position the safest thing in the sky.
 
+## A target that sends no altitude
+
+ADS-L lets a position mark its altitude invalid (G.1.7). Unknown is a state, not 0 m. `flight::relative_north_east_up` says whether the height it returns is real, through `up_valid`, and every reader decides what unknown means for it. None of them may read the target as level with us:
+
+- `alarm` grades it on distance alone: inside `kAdvisoryDistanceM` it is an advisory, because it may be at our level. `AlarmAssessment::relative_altitude_valid` is false, so neither the radar, `nearby` nor the tablet prints a separation it does not have. The records do not carry the flag yet: the flight log (`products/skyblip_go/services/flight_log.cpp`) and the diagnostics `Traffic` record (`products/skyblip_go/services/alarm.cpp`) write 0 for an unknown altitude, and `scripts/blip_records.py` decodes that 0 as a separation. #203 adds the flag.
+- `formation` never makes it a member, and a member that stops sending its altitude leaves on that report. Holding station is a claim about three axes, and a target with no height cannot be seen to hold one.
+- `range` gives it a ground distance and `RangeRow::up_valid` false, which `nearby` prints as `--`.
+- `sanity` checks its ground distance, since there is no slant to take.
+
+What the radar and the list draw for it is in `products/skyblip_go/pages/README.md`, and what the tablet is sent in `core/protocol/README.md`.
+
 ## How long an aircraft is held
 
 Two questions, and they have nothing to do with each other. Have we lost this aircraft, which is about the link. Is this position fresh enough to grade, which is about metres a second. `lease.h` answers the first, `kAlertMaxAgeMs` the second.

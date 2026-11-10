@@ -129,10 +129,11 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     REQUIRE(written > 0);
     REQUIRE(efb.send(events::Endpoint::Nmea,
                      ConstByteSpan(reinterpret_cast<uint8_t*>(buffer), written)) == Status::Ok);
-    written = protocol::format_pflau(
-        buffer, sizeof(buffer), own, true, table.count(), &observation,
-        traffic::to_number(assessment.level), assessment.relative_bearing_deg,
-        assessment.relative_altitude_m, assessment.relative_distance_m);
+    written =
+        protocol::format_pflau(buffer, sizeof(buffer), own, true, table.count(), &observation,
+                               traffic::to_number(assessment.level),
+                               assessment.relative_bearing_deg, assessment.relative_altitude_m,
+                               assessment.relative_altitude_valid, assessment.relative_distance_m);
     REQUIRE(efb.send(events::Endpoint::Nmea,
                      ConstByteSpan(reinterpret_cast<uint8_t*>(buffer), written)) == Status::Ok);
     CHECK(efb.count_on(events::Endpoint::Nmea) == 2);

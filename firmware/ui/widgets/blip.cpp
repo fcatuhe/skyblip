@@ -44,6 +44,11 @@ constexpr uint32_t kDiamondRows[] = {
     0x00000080,  // .......#.......
 };
 
+constexpr uint32_t kRingRows[] = {
+    0x000000f8, 0x000001fc, 0x00000306, 0x00000603, 0x00000603, 0x00000603,
+    0x00000603, 0x00000603, 0x00000306, 0x000001fc, 0x000000f8,
+};
+
 constexpr uint32_t kNearCaretRows[] = {
     0x00000080,  // .......#.......
     0x000001c0,  // ......###......
@@ -76,6 +81,7 @@ constexpr uint32_t kFarCaretRows[] = {
 
 constexpr Sprite kNearPoint{kNearPointRows, 17, 9, -8, -7};
 constexpr Sprite kDiamond{kDiamondRows, 15, 15, -7, -7};
+constexpr Sprite kRing{kRingRows, 11, 11, -5, -5};
 constexpr Sprite kNearCaret{kNearCaretRows, 15, 8, -7, -11};
 constexpr Sprite kFarPoint{kFarPointRows, 13, 7, -6, -5};
 constexpr Sprite kFarCaret{kFarCaretRows, 11, 6, -5, -9};
@@ -90,6 +96,7 @@ bool points_down(Vertical vertical) {
 
 const Sprite& body_of(Vertical vertical) {
     if (vertical == Vertical::Level) return kDiamond;
+    if (vertical == Vertical::Unknown) return kRing;
     return beyond_the_window(vertical) ? kFarPoint : kNearPoint;
 }
 

@@ -5,7 +5,7 @@ slug: radar
 description: "Lisez le radar de skyBlip Go, ses symboles et la liste Nearby. Comprenez l'alerte à moins de 3 km et 300 m et le mode PLOT ALL."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-10"
 ---
 
 <section>
@@ -143,7 +143,7 @@ updated_on: "2026-11-09"
     <li>Un avertissement, jamais un ordre</li>
   </ul>
 
-  <h3 id="shapes">Cinq formes, et <span class="highlight">vous les lisez sans les apprendre</span>.</h3>
+  <h3 id="shapes">Six formes, et <span class="highlight">vous les lisez sans les apprendre</span>.</h3>
   <p class="lede">
     La pointe en haut, c&rsquo;est un trafic au-dessus&nbsp;; la pointe en bas,
     un trafic en dessous&nbsp;; le losange, quelqu&rsquo;un dans vos 60&nbsp;m.
@@ -151,6 +151,12 @@ updated_on: "2026-11-09"
     l&rsquo;alarme&nbsp;; un symbole réduit est plus loin verticalement, et il
     reste sur l&rsquo;image sans jamais la réclamer. Le chevron s&rsquo;ajoute à
     partir de 2,5&nbsp;m/s de montée ou de descente, du côté où le trafic va.
+  </p>
+  <p class="lede">
+    L&rsquo;anneau est un aéronef qui n&rsquo;émet pas son altitude. Il ne
+    pointe nulle part, car personne ne sait s&rsquo;il est au-dessus ou en
+    dessous de vous. À moins de 3&nbsp;km, il est noirci comme toute alarme,
+    car il peut être à votre niveau.
   </p>
   <p class="lede">
     Le noirci est réservé à l&rsquo;alarme. Tant qu&rsquo;aucun symbole
@@ -174,6 +180,8 @@ updated_on: "2026-11-09"
         far_above_when: "au-dessus de vous, au-delà de 300 m",
         far_below: "Pointe en bas, réduite",
         far_below_when: "en dessous de vous, au-delà de 300 m",
+        unknown: "Anneau",
+        unknown_when: "aucune altitude émise",
         out_of_window: "hors de la tranche d'altitude de l'alarme" %>
 
   <div class="feature">
@@ -183,7 +191,8 @@ updated_on: "2026-11-09"
         Le radar dit où regarder, cette page dit qui c&rsquo;est. Une ligne par
         aéronef que l&rsquo;appareil sait placer&nbsp;: son indicatif s&rsquo;il
         en émet un et son adresse sinon, la distance au sol qui vous en sépare,
-        et de combien il est au-dessus ou en dessous de vous. En haut, votre
+        et de combien il est au-dessus ou en dessous de vous, ou deux tirets
+        s&rsquo;il n&rsquo;émet pas son altitude. En haut, votre
         propre indicatif avec l&rsquo;adresse sous laquelle vous émettez à côté,
         et le nombre d&rsquo;appareils entendus.
       </p>

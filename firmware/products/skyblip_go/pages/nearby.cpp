@@ -124,8 +124,12 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
     text[written] = 0;
     right_aligned(canvas, kNearbyDistanceEnd, y, text, written, kNearbyScale);
 
-    const int32_t relative = relative_hundreds_of_feet(row.up_m);
-    written = format_signed(text, relative, 2, 0, relative != 0);
+    if (row.up_valid) {
+        const int32_t relative = relative_hundreds_of_feet(row.up_m);
+        written = format_signed(text, relative, 2, 0, relative != 0);
+    } else {
+        written = format_string(text, "--");
+    }
     text[written] = 0;
     right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, text, written, kNearbyScale);
 }
