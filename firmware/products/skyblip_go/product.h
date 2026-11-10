@@ -13,14 +13,14 @@
 #include "products/common/services/config_link.h"
 #include "products/common/services/flight_log.h"
 #include "products/common/services/nmea.h"
+#include "products/common/services/ownship.h"
+#include "products/common/services/power.h"
 #include "products/common/services/traffic.h"
 #include "products/skyblip_go/capture_settings.h"
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/product_name.h"
-#include "products/skyblip_go/services/ownship.h"
-#include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings.h"
@@ -232,8 +232,8 @@ class Product {
     const Settings& settings() const { return settings_; }
     const bus::State& state() const { return state_; }
 
-    OwnshipService& ownship() { return ownship_; }
-    PowerService& power() { return power_; }
+    common::OwnshipService& ownship() { return ownship_; }
+    common::PowerService& power() { return power_; }
     RadioService& radio() { return radio_; }
     common::TrafficService& traffic() { return traffic_; }
     common::AlarmService& alarm() { return alarm_; }
@@ -447,12 +447,12 @@ class Product {
 
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
-    PowerService power_{context_, settings_};
+    common::PowerService power_{context_, settings_.battery_offset_mv};
     SettingsStore settings_store_{settings_, state_.activation};
     common::ConfigLinkService config_link_{context_, settings_store_, power_.cutoff_monitor(),
                                            product_name(roles_.capabilities),
                                            dfu::Product::SkyblipGo};
-    OwnshipService ownship_{context_, settings_};
+    common::OwnshipService ownship_{context_, settings_.aircraft_type};
     RadioService radio_{context_, settings_};
     common::TrafficService traffic_{context_, kFeatures};
     common::AlarmService alarm_{context_, {settings_.alarm_enabled, settings_.alarm_volume}};

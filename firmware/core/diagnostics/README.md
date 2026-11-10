@@ -137,14 +137,14 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 |---|---|---|
 | `Boot` | `products/common/services/capture.cpp` `record_boot` | as a capture session opens, so a corpus names the build that produced it |
 | `Config` | `products/common/services/capture.cpp` `record_config`, with the settings `products/skyblip_go/capture_settings.h` describes | the same instant, and for the same reason |
-| `Gnss` | `services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
-| `Pps` | `services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
+| `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | every solution the receiver publishes, fix or not |
+| `Pps` | `products/common/services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
 | `Burst` | `products/common/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |
-| `Flight` | `services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
-| `Power` | `services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
-| `Barometer` | `services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
-| `Motion` | `services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
+| `Flight` | `products/common/services/ownship.cpp` `record_flight` | every evaluation of the flight machine, never only its transitions |
+| `Power` | `products/common/services/power.cpp` `record_power` | `PowerService::kRecordPeriodMs`, the cadence the cell is sampled at, and once more off it as a capture parks |
+| `Barometer` | `products/common/services/ownship.cpp` `record_barometer` | every sample the board polls (`runtime::kBarometerPublishPeriodMs`) |
+| `Motion` | `products/common/services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
@@ -152,7 +152,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
 | `End` | `products/common/services/capture.cpp` `write_end` | the last record of a session that stopped rather than died |
-| `Duty` | `services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diagnostics::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
+| `Duty` | `products/common/services/power.cpp` `record_duty` | on the `Power` pass and under its instant: `PowerService::kDutyRecordPeriodMs` in a full capture, `diagnostics::kPowerRunRecordPeriodMs` in a power run or a flight run, and once more after the last `Power` as a capture parks |
 
 `Gnss::reject` is the receiver's own verdict and reaches the tap the way every other receiver fact does: `gnss::FixValidity` lives on the L76K driver, which no `runtime::Context` reaches, so the board publishes its reason and its count onto `bus::State` beside the sky view as it pushes the solution, and own-ship reads them there. The board is a writer of that group by the table in `core/bus/README.md`.
 

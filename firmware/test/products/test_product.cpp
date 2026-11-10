@@ -399,8 +399,8 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     // status a phone is pushed should carry a temperature, and the self-test page
     // is the moment a bench eye is looking.
     CHECK(die.reads() == 1);
-    CHECK(rig.product.power().die_temperature_valid());
-    CHECK(rig.product.power().die_temperature_dc() == 412);
+    CHECK(rig.product.state().power.die_valid);
+    CHECK(rig.product.state().power.die_dc == 412);
     CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
     // Five seconds of passes: still one measurement.
@@ -428,9 +428,9 @@ TEST_CASE("product: the die sensor is read on a slow cadence and reaches the tab
     CHECK(die.reads() > before);
     CHECK(status_of(rig, now_ms).find("\"die_temperature_c\":41") != std::string::npos);
 
-    rig.run(now_ms, now_ms + go::PowerService::kDieStaleMs);
-    now_ms += go::PowerService::kDieStaleMs + 50;
-    CHECK_FALSE(rig.product.power().die_temperature_valid());
+    rig.run(now_ms, now_ms + common::PowerService::kDieStaleMs);
+    now_ms += common::PowerService::kDieStaleMs + 50;
+    CHECK_FALSE(rig.product.state().power.die_valid);
     CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
@@ -483,7 +483,7 @@ TEST_CASE("product: a board with no die sensor publishes no temperature at all")
     uint32_t now_ms = 0;
     rig.run(now_ms, now_ms + 30000);
     now_ms += 30050;
-    CHECK_FALSE(rig.product.power().die_temperature_valid());
+    CHECK_FALSE(rig.product.state().power.die_valid);
     CHECK(status_of(rig, now_ms).find("die_temperature_c") == std::string::npos);
 }
 
