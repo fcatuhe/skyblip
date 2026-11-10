@@ -83,7 +83,7 @@ class ConfigService {
     // histograms because they are measurements of the same second: a write that
     // could not be placed inside its bound is a stall that landed where the slot
     // map did not budget for one, and it must not be silent. Wired by the product
-    // that owns the write (products/skyblip_go/services/config_link.h).
+    // that owns the write (products/common/services/config_link.h).
     void set_durable_writes(const timing::DurableWriteWindow* writes) { durable_writes_ = writes; }
 
     // INFO: fc 18oct26 challenge, register, unlock live in identity_link.cpp, else unknown_command

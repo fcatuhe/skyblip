@@ -9,18 +9,20 @@
 #include "core/power/wake.h"
 #include "core/util/format.h"
 #include "products/common/services/alarm.h"
+#include "products/common/services/config_link.h"
 #include "products/common/services/nmea.h"
 #include "products/common/services/traffic.h"
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/pages/self_test.h"
+#include "products/skyblip_go/product_name.h"
 #include "products/skyblip_go/services/capture.h"
-#include "products/skyblip_go/services/config_link.h"
 #include "products/skyblip_go/services/flight_log.h"
 #include "products/skyblip_go/services/ownship.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings.h"
+#include "products/skyblip_go/settings_store.h"
 #include "runtime/loop.h"
 
 namespace skyblip::go {
@@ -235,7 +237,7 @@ class Product {
     common::AlarmService& alarm() { return alarm_; }
     common::NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
-    ConfigLinkService& config_link() { return config_link_; }
+    common::ConfigLinkService& config_link() { return config_link_; }
     FlightLogService& flight_log() { return flight_log_; }
     CaptureService& capture() { return capture_; }
     diagnostics::Recorder& diagnostics() { return diagnostics_; }
@@ -443,7 +445,10 @@ class Product {
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
     PowerService power_{context_, settings_};
-    ConfigLinkService config_link_{context_, settings_, power_};
+    SettingsStore settings_store_{settings_, state_.activation};
+    common::ConfigLinkService config_link_{context_, settings_store_, power_.cutoff_monitor(),
+                                           product_name(roles_.capabilities),
+                                           dfu::Product::SkyblipGo};
     OwnshipService ownship_{context_, settings_};
     RadioService radio_{context_, settings_};
     common::TrafficService traffic_{context_, kFeatures};
