@@ -1,28 +1,34 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CAPTURE_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CAPTURE_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_CAPTURE_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_CAPTURE_H
 
 #include "core/comms/config.h"
 #include "core/diagnostics/payload.h"
 #include "core/diagnostics/profile.h"
-#include "products/skyblip_go/services/record_store.h"
-#include "products/skyblip_go/settings.h"
+#include "products/common/services/record_store.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
+
+class CaptureSettings {
+   public:
+    virtual ~CaptureSettings() = default;
+
+    virtual void describe(diagnostics::Config& record) const = 0;
+};
 
 class CaptureService : public runtime::Service {
    public:
     // INFO: fc 20sep26 the price walks the whole pool, so it is answered at the render cadence
     static constexpr uint32_t kPublishPeriodMs = 1000;
 
-    // INFO: fc 20sep26 one pass of slot programs, so the next dwell is armed on time
+    // INFO: fc 10nov26 caps the flash work one pass books in the product's flash window
     static constexpr uint32_t kDrainCeilingRecords = 16;
 
     // INFO: fc 20sep26 the gap that says why it stopped, and the end marker that closes it
     static constexpr uint32_t kTailSlotsReserved = 2;
 
     CaptureService(runtime::Context& context, RecordStore& store, const RecordStore& flights,
-                   const Settings& settings, const comms::ConfigService& config)
+                   const CaptureSettings& settings, const comms::ConfigService& config)
         : runtime::Service(context),
           store_(store),
           flights_(flights),
@@ -65,7 +71,7 @@ class CaptureService : public runtime::Service {
 
     RecordStore& store_;
     const RecordStore& flights_;
-    const Settings& settings_;
+    const CaptureSettings& settings_;
     const comms::ConfigService& config_;
     uint32_t session_id_{0};
     uint32_t opened_ms_{0};
@@ -82,6 +88,6 @@ class CaptureService : public runtime::Service {
     uint8_t scratch_[kMaxRunSlots * kStoreRecordBytes]{};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

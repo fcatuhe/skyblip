@@ -1,4 +1,4 @@
-#include "products/skyblip_go/services/record_pool.h"
+#include "products/common/services/record_pool.h"
 
 #include <cstring>
 
@@ -7,7 +7,7 @@
 #include "core/util/span.h"
 #include "ports/link.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 bool RecordPool::open() {
     if (opened_) return available_;
@@ -60,8 +60,7 @@ uint32_t RecordPool::free_sectors() const {
 }
 
 bool RecordPool::book_window(uint32_t cost_ms, uint32_t pass_ms) {
-    return context_.state.rf.book_flash_window(pass_ms, context_.roles.clock.milliseconds(),
-                                               cost_ms);
+    return flash_window_(context_, pass_ms, cost_ms);
 }
 
 Status RecordPool::read_header(uint32_t sector, store::SectorHeader& out) {
@@ -147,4 +146,4 @@ Status RecordPool::deliver_held(uint32_t now_ms) {
     return sent == Status::WouldBlock ? Status::Timeout : sent;
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

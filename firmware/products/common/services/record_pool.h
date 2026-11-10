@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_POOL_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_POOL_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_RECORD_POOL_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_RECORD_POOL_H
 
 #include "core/comms/log_link.h"
 #include "core/diagnostics/record.h"
@@ -7,16 +7,19 @@
 #include "core/store/sector_allocator.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 // INFO: fc 20sep26 both rings write 24-byte slots, so the partition has one slot geometry
 static_assert(flight::kLogRecordBytes == diagnostics::kRecordBytes,
               "the two rings share a partition and must share its slot size");
 constexpr uint32_t kStoreRecordBytes = flight::kLogRecordBytes;
 
+using FlashWindow = bool (*)(runtime::Context& context, uint32_t pass_ms, uint32_t cost_ms);
+
 class RecordPool {
    public:
-    explicit RecordPool(runtime::Context& context) : context_(context) {}
+    RecordPool(runtime::Context& context, FlashWindow flash_window)
+        : context_(context), flash_window_(flash_window) {}
 
     bool open();
     bool available() const { return available_; }
@@ -58,6 +61,7 @@ class RecordPool {
     uint32_t offset_of(uint32_t sector) const { return sector * sector_bytes_; }
 
     runtime::Context& context_;
+    const FlashWindow flash_window_;
     store::SectorAllocator allocator_{};
     uint32_t sector_bytes_{0};
     uint32_t sector_count_{0};
@@ -78,6 +82,6 @@ class RecordPool {
     uint8_t chunk_[comms::kLogChunkRawBytes]{};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

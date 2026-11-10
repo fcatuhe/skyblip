@@ -7,8 +7,10 @@
 #include "core/events/link.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/services/capture.h"
-#include "products/skyblip_go/services/flight_log.h"
+#include "products/common/services/capture.h"
+#include "products/common/services/flight_log.h"
+#include "products/skyblip_go/capture_settings.h"
+#include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
 #include "test/support/config_frame.h"
@@ -109,10 +111,11 @@ struct SmallPoolRig {
     go::Settings settings{};
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{link, store};
-    go::RecordPool pool{context};
-    go::RecordStore flights{pool, store::SectorOwner::Flights};
-    go::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
-    go::CaptureService capture{context, capture_store, flights, settings, config};
+    common::RecordPool pool{context, go::book_flash_in_dwell};
+    common::RecordStore flights{pool, store::SectorOwner::Flights};
+    common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
+    go::CaptureSettings capture_settings{settings};
+    common::CaptureService capture{context, capture_store, flights, capture_settings, config};
 
     explicit SmallPoolRig(uint32_t sectors = kSectors) : flash(sectors) {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
@@ -301,7 +304,7 @@ TEST_CASE("capture: one pass writes at most the drain ceiling, however deep the 
     const int queued = rig.recorder.queued();
     rig.capture.tick(now_ms += 50);
     CHECK(rig.recorder.queued() ==
-          queued - static_cast<int>(go::CaptureService::kDrainCeilingRecords));
+          queued - static_cast<int>(common::CaptureService::kDrainCeilingRecords));
 }
 
 namespace {
@@ -464,7 +467,7 @@ TEST_CASE("capture: nothing reaches the flash in the slot own-ship may be keying
 TEST_CASE("log: a store this build has no service for is refused by name, never in silence") {
     SmallPoolRig rig;
     rig.setup();
-    go::FlightLogService log{rig.context, rig.flights, nullptr, rig.config};
+    common::FlightLogService log{rig.context, rig.flights, nullptr, rig.config};
 
     events::RxFrame list = link_frame(events::Endpoint::Log, rig.link.session_id(),
                                       "{\"command\":\"list\",\"log\":\"diagnostics\"}");

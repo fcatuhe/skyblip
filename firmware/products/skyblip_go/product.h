@@ -9,13 +9,15 @@
 #include "core/power/wake.h"
 #include "core/util/format.h"
 #include "products/common/services/alarm.h"
+#include "products/common/services/capture.h"
+#include "products/common/services/flight_log.h"
 #include "products/common/services/nmea.h"
 #include "products/common/services/traffic.h"
+#include "products/skyblip_go/capture_settings.h"
 #include "products/skyblip_go/features.h"
+#include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/pages/self_test.h"
-#include "products/skyblip_go/services/capture.h"
 #include "products/skyblip_go/services/config_link.h"
-#include "products/skyblip_go/services/flight_log.h"
 #include "products/skyblip_go/services/ownship.h"
 #include "products/skyblip_go/services/power.h"
 #include "products/skyblip_go/services/radio.h"
@@ -236,8 +238,8 @@ class Product {
     common::NmeaService& nmea() { return nmea_; }
     ScreenService& screen() { return screen_; }
     ConfigLinkService& config_link() { return config_link_; }
-    FlightLogService& flight_log() { return flight_log_; }
-    CaptureService& capture() { return capture_; }
+    common::FlightLogService& flight_log() { return flight_log_; }
+    common::CaptureService& capture() { return capture_; }
     diagnostics::Recorder& diagnostics() { return diagnostics_; }
 
    private:
@@ -436,9 +438,10 @@ class Product {
     runtime::Context context_{roles_, bus_, state_, diagnostics_};
     runtime::LoopMeter meter_{roles_.clock};
     uint32_t loop_window_s_{0};
-    RecordPool pool_{context_};
-    RecordStore flights_store_{pool_, store::SectorOwner::Flights};
-    RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
+    common::RecordPool pool_{context_, book_flash_in_dwell};
+    common::RecordStore flights_store_{pool_, store::SectorOwner::Flights};
+    common::RecordStore capture_store_{pool_, store::SectorOwner::Diagnostics};
+    CaptureSettings capture_settings_{settings_};
 
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
@@ -449,9 +452,10 @@ class Product {
     common::TrafficService traffic_{context_, kFeatures};
     common::AlarmService alarm_{context_, {settings_.alarm_enabled, settings_.alarm_volume}};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
-    FlightLogService flight_log_{context_, flights_store_, &capture_store_, config_link_.config()};
-    CaptureService capture_{context_, capture_store_, flights_store_, settings_,
-                            config_link_.config()};
+    common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,
+                                         config_link_.config()};
+    common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
+                                    config_link_.config()};
     ScreenService screen_{context_, settings_, config_link_.config(),
                           alarm_,   capture_,  self_test_snapshot_};
 

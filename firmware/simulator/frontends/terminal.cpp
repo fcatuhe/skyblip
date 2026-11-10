@@ -88,7 +88,7 @@ void render(simulator::Simulator& simulator) {
                 kAlarms[traffic::to_number(state.alarm_level)]);
     // One line, because a log that only exists on a partition nobody can see is
     // a feature nobody notices is broken.
-    const go::FlightLogService& log = simulator.product().flight_log();
+    const common::FlightLogService& log = simulator.product().flight_log();
     std::printf("  log:%-9s records:%-5u sessions:%u\n",
                 !log.available() ? "no flash" : (log.recording() ? "RECORDING" : "idle"),
                 log.records_written(), log.sessions_on_flash());
