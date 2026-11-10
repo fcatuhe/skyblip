@@ -57,3 +57,11 @@ fr:
     write: "Écrivez-nous sur GitHub"
     license: "Code sous licence MIT"
     notices: "Licences tierces"
+  share:
+    in_development: "Firmware en développement"
+    locale: "fr_FR"
+    images:
+      go: "skyBlip Go, ADS-L et FLARM : un LilyGO T-Echo blanc avec son antenne, le radar du trafic sur son écran e-paper"
+      radar: "skyBlip Go, ADS-L et FLARM : la page radar, trois aéronefs autour de vous, chacun avec sa trajectoire sur une minute"
+      bravo: "skyBlip Bravo, firmware en développement : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte qui recevra l'ADS-B 1090 MHz"
+      tango: "skyBlip Tango, firmware en développement : un skyBlip Go et un Seeed SenseCAP MeshTracker X1 côte à côte. Associés, ils réuniront l'ADS-B, l'ADS-L et le FLARM sur un radar"

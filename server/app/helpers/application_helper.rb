@@ -8,11 +8,19 @@ module ApplicationHelper
   end
 
   def title
-    [ site_name, @page&.title.presence ].uniq.compact.join(" · ")
+    if page_title.blank? || page_title.include?(site_name)
+      page_title.presence || site_name
+    else
+      "#{page_title} · #{site_name}"
+    end
+  end
+
+  def page_title
+    @page ? @page.title : content_for(:title)
   end
 
   def description
-    @page&.description
+    @page ? @page.description : content_for(:description)
   end
 
   def author
@@ -23,22 +31,13 @@ module ApplicationHelper
     Content.canonical_url(@page ? @page.url_path : request.path)
   end
 
+  def theme_color = Rails.configuration.x.theme_color
+
   def robots_content
     if Rails.env.production? && !content_for?(:noindex)
       "index, follow"
     else
       "noindex, nofollow"
-    end
-  end
-
-  def og_meta_tag(key, content)
-    case key
-    when :title, :description, :image
-      tag(:meta, name: key, property: "og:#{key}", content: content)
-    when :author
-      tag(:meta, name: key, content: content)
-    else
-      tag(:meta, property: "og:#{key}", content: content)
     end
   end
 end

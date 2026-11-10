@@ -28,4 +28,22 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
   def nav_label
     nav_title.presence || title
   end
+
+  def updated_on
+    Date.iso8601(frontmatter.fetch(:updated_on))
+  end
+
+  def published_on
+    frontmatter[:published_on]&.then { Date.iso8601(it) }
+  end
+
+  def article? = published_on.present?
+
+  def parent
+    frontmatter[:parent]&.then { self.class.find_by(base_slug: it, locale:) }
+  end
+
+  def share_image = frontmatter[:share_image]
+
+  def product = frontmatter[:product]
 end

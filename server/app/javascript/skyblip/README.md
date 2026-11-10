@@ -2,7 +2,7 @@ The Rails app serves the simulator and Bluetooth console under `/briefing/simula
 
 Reusable browser modules live here and their Node tests live in `server/test/javascript/`. Rails importmap pins `#skyblip/*` to digested assets, and `server/package.json` maps those same module names for Node's native test runner. Serving the app needs no Node runtime, package install, or bundler.
 
-The simulator loads `embed.js`, its generated JavaScript module, and WASM from same-origin `/releases/:tag/:file` URLs after a lazy Turbo frame selects a release. Its case styling is app-owned in `server/app/assets/stylesheets/device.css`. The firmware's own `firmware/simulator/web/embed.js` remains usable by `server/bin/screenshots` without Rails.
+The simulator loads `embed.js`, its generated JavaScript module, and WASM from same-origin `/releases/:tag/:file` URLs after a lazy Turbo frame selects a release. Its case styling is app-owned in `server/app/assets/stylesheets/simulator/device.css`. The firmware's own `firmware/simulator/web/embed.js` remains usable by `server/bin/screenshots` without Rails.
 
 ## The console
 

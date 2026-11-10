@@ -1,7 +1,8 @@
 ---
-title: Buy
+title: "T-Echo 868 MHz, Go prices and firmware install"
 nav_title: Buy
-description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MHz with the BME280 barometer. skyBlip Bravo is a Seeed SenseCAP MeshTracker X1. Where to buy them, how they differ, how to install the skyBlip firmware.
+description: "Compare Go and Go+, from €68 and €84. Choose a T-Echo 868 MHz with BME280, find sellers, then install and activate the free firmware."
+updated_on: "2026-11-09"
 ---
 
 <header class="page-hero">
@@ -17,7 +18,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
 <section>
   <div class="offers offers--three">
     <article class="offer">
-      <%= image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
       <h2>skyBlip Go</h2>
       <p class="offer-price"><small>from</small> €68</p>
       <p class="offer-tagline">LilyGO T-Echo</p>
@@ -48,7 +49,7 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
     </article>
 
     <article class="offer">
-      <%= image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "x1-photo" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "x1-photo" %>
       <h2>skyBlip Bravo</h2>
       <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
       <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status">Firmware in development</span></p>
@@ -150,30 +151,27 @@ description: skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, in 868 MH
 </section>
 
 <section id="install" class="band band--tint">
-  <h2 class="section-title">A Go, ready in four steps</h2>
-  <ol class="steps-grid">
+  <h2 class="section-title">A Go, ready in three steps</h2>
+  <ol class="steps-grid steps-grid--sequence">
     <li>
       <h3>Order.</h3>
       <p>A LilyGO T-Echo or T-Echo Plus, in 868&nbsp;MHz with the BME280 barometer.</p>
     </li>
     <li>
       <h3>Install.</h3>
-      <p>Drop the skyBlip file on the USB drive that shows up. With the device plugged in over USB-C, two presses of <span class="mono">RST</span> open the <span class="mono">TECHOBOOT</span> drive, where the <span class="mono">.uf2</span> of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> goes.</p>
+      <p>Plug the device in over USB-C and press <span class="mono">RST</span> twice. Drop the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> on the <span class="mono">TECHOBOOT</span> drive that opens.</p>
     </li>
     <li>
-      <h3>Set up.</h3>
-      <p>Your aircraft type and your callsign, in the device&rsquo;s menu.</p>
-    </li>
-    <li>
-      <h3>Update.</h3>
-      <p>From the browser, over Bluetooth, each one approved on the screen.</p>
+      <h3>Activate.</h3>
+      <p><%= link_to_page "activate", label: "Activate it" %> over Bluetooth from Chrome or Edge, then allow it with two presses on the device. Until then, a new Go neither transmits nor receives. Then set your <a href="#type">aircraft type</a> and callsign, in the device&rsquo;s menu or from <%= link_to_page "manage", label: "Manage my skyBlip" %>.</p>
     </li>
   </ol>
   <p class="signature">
-    The same file works on both devices. Updates go through
-    <%= link_to_page "manage", label: "Manage my skyBlip" %>. For now, only
-    development builds are published. Bravo&rsquo;s steps will be here when
-    its firmware is released.
+    Updates come later, from <%= link_to_page "manage", label: "Manage my skyBlip" %>
+    over Bluetooth, each one approved on the device&rsquo;s screen. The same
+    file works on the T&#8209;Echo and the T&#8209;Echo Plus. For now,
+    only development builds are published. Bravo&rsquo;s steps will be here
+    when its firmware is released.
   </p>
 </section>
 

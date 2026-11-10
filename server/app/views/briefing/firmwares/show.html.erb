@@ -1,3 +1,4 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 <%= turbo_frame_tag :firmware_shelf do %>
   <% if @unavailable %>
     <p class="note" role="status"><%= t("firmwares.unavailable") %></p>

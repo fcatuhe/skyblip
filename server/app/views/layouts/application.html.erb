@@ -9,14 +9,9 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
-    <%= render 'layouts/og_meta_tags', tags: {
-      title: title,
-      description: description,
-      author: author,
-      type: "website",
-      site_name: site_name,
-      url: canonical_url,
-    } %>
+    <%= tag.meta name: "description", content: description if description %>
+    <%= tag.meta name: "author", content: author %>
+    <%= share_meta_tags %>
 
     <%= tag :link, rel: "canonical", href: canonical_url %>
 
@@ -24,17 +19,22 @@
 
     <%= tag :meta, name: "robots", content: robots_content %>
 
+    <%= structured_data_tag %>
+
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+    <%= tag.link rel: "manifest", href: pwa_manifest_path(format: :json, locale: nil) %>
+    <%= tag.meta name: "theme-color", content: theme_color %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.png" type="image/png" sizes="512x512">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= preload_link_tag "Inter-Regular.woff2" %>
+    <%= preload_link_tag "FiraSans-Bold.woff2" %>
+
+    <%= site_stylesheet_link_tags %>
+    <%= yield :stylesheets %>
     <%= javascript_importmap_tags %>
     <%= javascript_import_module_tag "ahoy-module" unless Ahoy.api_only %>
   </head>

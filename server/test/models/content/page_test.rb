@@ -27,4 +27,20 @@ class Content::PageTest < ActiveSupport::TestCase
     assert_raises(Decant::FileNotFound) { Content::Page.find("about", locale: :fr) }
     assert_raises(Decant::FileNotFound) { Content::Page.find("a-propos", locale: :en) }
   end
+
+  test "every page says when it last changed, and an article was published before that" do
+    Content::Page.all.each do |page|
+      assert_kind_of Date, page.updated_on, page.path
+      assert_operator page.published_on, :<=, page.updated_on, page.path if page.article?
+    end
+  end
+
+  test "a page with a publication date is an article, and a guide names its parent" do
+    assert Content::Page.find("see-and-avoid", locale: :en).article?
+    assert_not Content::Page.find("radar", locale: :en).article?
+
+    guide = Content::Page.find("radar", locale: :fr)
+    assert_equal "/fr/guides", guide.parent.url_path
+    assert_nil Content::Page.find("guides", locale: :fr).parent
+  end
 end

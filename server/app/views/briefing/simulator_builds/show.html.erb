@@ -1,3 +1,4 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("simulator", *("workbench" if @workbench)) %>
 <%= turbo_frame_tag :simulator_build do %>
   <% if @unavailable %>
     <p class="<%= class_names("note", "frame-note": @workbench) %>" role="status"><%= t("simulator_builds.unavailable") %></p>
