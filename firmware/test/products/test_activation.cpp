@@ -233,9 +233,46 @@ TEST_CASE("activation: one press cancels the registration, thirty seconds expire
         bench.challenge_with_vectors_nonce();
         bench.register_with_vectors();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.pass(comms::kPromptForgetMs + 500);
+        bench.pass(comms::kPromptCeilingMs + 500);
         CHECK(bench.answer_since(before) == refusal("expired"));
     }
+}
+
+// A register over another server nonce must not swap the one the standing prompt will sign.
+TEST_CASE(
+    "activation: a register while the prompt stands is refused, and the presses sign the first") {
+    Bench bench;
+    bench.rig.platform.dfu().release = bench.vectors.flag("release");
+    bench.boot();
+    bench.challenge_with_vectors_nonce();
+    bench.register_with_vectors();
+    REQUIRE(bench.pending() == comms::Pending::Register);
+
+    CHECK(bench.say(
+              register_command(std::string(32, '0'), bench.vectors.text("register_signature"))) ==
+          refusal("prompt_pending"));
+    CHECK(bench.pending() == comms::Pending::Register);
+    CHECK(bench.press_twice().find(bench.vectors.text("registration_signature")) !=
+          std::string::npos);
+}
+
+// The activation page's run on one link: each answer opens the next question, none is re-sent.
+TEST_CASE("activation: the page activates, then stores the settings it offers, on one connection") {
+    Bench bench;
+    bench.boot();
+    bench.challenge_with_vectors_nonce();
+    bench.register_with_vectors();
+    bench.press_twice();
+    REQUIRE(bench.unlock_with_vectors() ==
+            "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
+    REQUIRE(bench.rig.product.config_link().config().flight_state() ==
+            flight::FlightState::Unknown);
+
+    CHECK(bench.say("{\"command\":\"set\",\"aircraft_type\":4,\"callsign\":\"F-JABC\"}")
+              .find("\"pending\":true") != std::string::npos);
+    CHECK(bench.press_twice() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
+    CHECK(int(bench.rig.settings().aircraft_type) == 4);
+    CHECK(std::string(bench.rig.settings().callsign) == "F-JABC");
 }
 
 TEST_CASE("activation: register and unlock without a challenge have no session to sign against") {

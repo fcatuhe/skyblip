@@ -37,7 +37,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kPromptForgetMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Forget | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
+| `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
 | `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
 | `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
 | `kDiagnosticsDumpPeriodMs` | 10000 (10 s) | milliseconds | Period | - |

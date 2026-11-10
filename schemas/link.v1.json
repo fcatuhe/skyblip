@@ -7,7 +7,7 @@
       "description": "Unit to host on the config endpoint: the verdict on a command that has no reply of its own, the refusal of any config command, and a prompt standing on the glass and its verdict, a log erase's included. 11 bytes at its widest, so every link carries it.",
       "keys": [
         {"name": "acknowledge", "number": 1, "type": "boolean", "required": true, "description": "The command was carried out. False is a refusal, or a prompt waiting on the glass when pending is true"},
-        {"name": "pending", "number": 2, "type": "boolean", "description": "Present only as true: a prompt stands on the glass under the word in reason. Two presses answer it with the command's verdict, one press answers cancelled, thirty seconds expired and a take-off in_flight, and the asking link dropping takes it without an answer"},
+        {"name": "pending", "number": 2, "type": "boolean", "description": "Present only as true: a prompt stands on the glass under the word in reason. Two presses answer it with the command's verdict, one press answers cancelled, thirty seconds expired and a take-off in_flight, and the asking link dropping takes it without an answer. No command renews it: the thirty seconds run from the staging, and a command that would stage another prompt while it stands is refused prompt_pending. After one press answers cancelled, every command from that link that would stage a prompt is refused refused_on_device until the link drops"},
         {"name": "reason", "number": 3, "type": "enum", "enum": "reason", "description": "The word for the verdict, the refusal or the prompt, from the one enumeration every frame shares (firmware/core/comms/README.md and server/app/javascript/skyblip/README.md say which command answers which). Absent only on the verdict of a set the presses stored"},
         {"name": "by", "number": 4, "type": "unsigned", "description": "On a claimed refusal, the link session id of the central that holds the claim: one central at a time commands the unit (firmware/core/comms/README.md, The claim)"}
       ]
@@ -38,7 +38,7 @@
     },
     {
       "command": "set", "code": 4, "endpoint": "config", "sender": "host", "keys_of": "config",
-      "description": "Host to unit: the keys of config to change, all or none. A value out of range is refused out_of_range, a wrong type or a callsign the menu cannot type invalid, and nothing is stored. version, address and address_mapping_table are read-only and ignored. Refused low_power while the cell is below the settings write rule, and in_flight unless the unit is on the ground. With no fix, flight unknown, a set whose keys the radar menu also changes is staged too, but one carrying battery_offset_mv or frequency_trim_e1_ppm, which the menu has no row for, is not. A take-off cancels a staged set. Otherwise the unit asks on its glass under confirm, and two presses store the change and answer an acknowledgement with no reason."
+      "description": "Host to unit: the keys of config to change, all or none. A value out of range is refused out_of_range, a wrong type or a callsign the menu cannot type invalid, and nothing is stored. version, address and address_mapping_table are read-only and ignored. Refused low_power while the cell is below the settings write rule, and in_flight unless the unit is on the ground. With no fix, flight unknown, a set whose keys the radar menu also changes is staged too, but one carrying battery_offset_mv or frequency_trim_e1_ppm, which the menu has no row for, is not. A take-off cancels a staged set. Otherwise the unit asks on its glass under confirm, and two presses store the change and answer an acknowledgement with no reason. While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
     },
     {
       "command": "status", "code": 5, "endpoint": "config", "sender": "both",
@@ -165,18 +165,18 @@
     },
     {
       "command": "dfu", "code": 11, "endpoint": "config", "sender": "host",
-      "description": "Host to unit: asks to install the image of version, on the ground only (in_flight) and with a cell that allows the swap (low_power). The unit answers confirm_dfu and asks on its glass, naming the version, and two presses answer dfu and open a ten-minute upload window for MCUmgr. The image that lands installs unasked, answered install, or refused nothing_staged, not_approved (not the version the presses authorised), wrong_key, in_flight or low_power (server/app/javascript/skyblip/README.md).",
+      "description": "Host to unit: asks to install the image of version, on the ground only (in_flight) and with a cell that allows the swap (low_power). The unit answers confirm_dfu and asks on its glass, naming the version, and two presses answer dfu and open a ten-minute upload window for MCUmgr. The image that lands installs unasked, answered install, or refused nothing_staged, not_approved (not the version the presses authorised), wrong_key, in_flight or low_power (server/app/javascript/skyblip/README.md). While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time).",
       "keys": [
         {"name": "version", "number": 1, "type": "text", "required": true, "description": "The image's version as read off its header, 0.2.0+15. Absent or unreadable is refused no_version, and older than the running image refused older unless the unit accepts a downgrade"}
       ]
     },
     {
       "command": "recovery", "code": 12, "endpoint": "config", "sender": "host", "keys": [],
-      "description": "Host to unit: asks to enter the UF2 bootloader, on the ground only (in_flight). The unit answers confirm_recovery and asks on its glass, and two presses answer recovery and hand the unit to the bootloader, a USB drive named TECHOBOOT (products/skyblip_go/README.md)."
+      "description": "Host to unit: asks to enter the UF2 bootloader, on the ground only (in_flight). The unit answers confirm_recovery and asks on its glass, and two presses answer recovery and hand the unit to the bootloader, a USB drive named TECHOBOOT (products/skyblip_go/README.md). While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
     },
     {
       "command": "power_off", "code": 13, "endpoint": "config", "sender": "host", "keys": [],
-      "description": "Host to unit: asks to switch the unit off, on the ground only (in_flight). The unit answers confirm_power_off and asks on its glass, and two presses answer power_off and start the shutdown."
+      "description": "Host to unit: asks to switch the unit off, on the ground only (in_flight). The unit answers confirm_power_off and asks on its glass, and two presses answer power_off and start the shutdown. While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
     },
     {
       "command": "challenge", "code": 14, "endpoint": "config", "sender": "both",
@@ -188,7 +188,7 @@
     },
     {
       "command": "register", "code": 15, "endpoint": "config", "sender": "host",
-      "description": "Host to unit, 88 bytes. The unit checks R with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. Two presses answer the registration frame, one press cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals, in the order checked: in_flight (an activated unit off the ground), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
+      "description": "Host to unit, 88 bytes. The unit checks R with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. Two presses answer the registration frame, one press cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state: it is silent, and indoors it has no fix to be on the ground by. An activated unit asks only on the ground, and a take-off cancels the prompt. Refusals, in the order checked: prompt_pending (a prompt stands) and refused_on_device (one press refused a prompt on this link) (firmware/core/comms/README.md, One prompt at a time), in_flight (an activated unit off the ground), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
       "keys": [
         {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, the server's 16 random bytes, used once"},
         {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "R, the server's Ed25519 signature over the register message, 'skyblip:register:v1' || Nu || Ns"}
@@ -234,7 +234,7 @@
     },
     {
       "command": "erase", "code": 20, "endpoint": "log", "sender": "host",
-      "description": "Host to unit on the log endpoint: asks to erase the flights store. The prompt and its verdict travel on the config endpoint: the unit answers confirm_erase_log and asks on its glass, and two presses answer erase_log. Once the store is erased the log endpoint answers a log frame with reason erased. The diagnostics store, which is recycled rather than erased, is refused flights_only, and an erase off the ground in_flight.",
+      "description": "Host to unit on the log endpoint: asks to erase the flights store. The prompt and its verdict travel on the config endpoint: the unit answers confirm_erase_log and asks on its glass, and two presses answer erase_log. Once the store is erased the log endpoint answers a log frame with reason erased. The diagnostics store, which is recycled rather than erased, is refused flights_only, and an erase off the ground in_flight. On the config endpoint, an erase is refused prompt_pending while a prompt stands, and refused_on_device after one press refused a prompt on this link, until the link drops (firmware/core/comms/README.md, One prompt at a time).",
       "keys": [
         {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "Which store the command addresses: flights, or diagnostics. Absent is flights, and a code that is neither is refused unknown_log"}
       ]
@@ -276,7 +276,7 @@
     },
     {
       "command": "gnss_cold_start", "code": 24, "endpoint": "config", "sender": "host", "keys": [],
-      "description": "Host to unit: asks for a cold start of the GNSS receiver, on the ground only (in_flight). The unit answers confirm_gnss_cold_start and asks on its glass, and two presses answer gnss_cold_start and restart the receiver cold."
+      "description": "Host to unit: asks for a cold start of the GNSS receiver, on the ground only (in_flight). The unit answers confirm_gnss_cold_start and asks on its glass, and two presses answer gnss_cold_start and restart the receiver cold. While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
     },
     {
       "command": "ownship", "code": 25, "endpoint": "config", "sender": "host",
@@ -332,7 +332,9 @@
         {"name": "busy", "code": 37},
         {"name": "flights_only", "code": 38},
         {"name": "read_failed", "code": 40},
-        {"name": "erased", "code": 41}
+        {"name": "erased", "code": 41},
+        {"name": "prompt_pending", "code": 42},
+        {"name": "refused_on_device", "code": 43}
       ]
     },
     "alarm_volume": {

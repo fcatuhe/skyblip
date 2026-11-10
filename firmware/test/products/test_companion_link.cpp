@@ -137,7 +137,7 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Set);
     expect.detail = "CALLSIGN F-JABC";
-    expect.timeout_s = comms::kPromptForgetMs / 1000;
+    expect.timeout_s = comms::kPromptCeilingMs / 1000;
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),

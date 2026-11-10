@@ -88,6 +88,7 @@ TEST_CASE("comms: the firmware prompt names the version the phone is about to se
     REQUIRE(config.pending() == Pending::Dfu);
     CHECK(std::string(config.prompt_detail()) == "INSTALL 0.2.0+15 FROM THE PHONE");
 
+    config.tick(kPromptCeilingMs);
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::PowerOff));
 }
@@ -491,9 +492,9 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     prompt.tick(before);
     prompt.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kPromptForgetMs - 1u);
+    prompt.tick(before + kPromptCeilingMs - 1u);
     CHECK(prompt.pending() == Pending::Dfu);
-    prompt.tick(before + kPromptForgetMs);
+    prompt.tick(before + kPromptCeilingMs);
     CHECK(prompt.pending() == Pending::None);
     CHECK(link_text(second_link.last().bytes).find("expired") != std::string::npos);
 }

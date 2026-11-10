@@ -428,6 +428,15 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
+    CHECK(rig.last_on(events::Endpoint::Config).find("refused_on_device") != std::string::npos);
+    CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
+
+    rig.drop_link();
+    rig.run(now_ms, now_ms + 200);
+    now_ms += 200;
+    rig.send_log("{\"command\":\"erase\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
     rig.double_press(now_ms);
     rig.run(now_ms, now_ms + 100);

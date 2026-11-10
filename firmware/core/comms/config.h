@@ -48,7 +48,8 @@ const char* pending_detail(Pending pending);
 // it is not allowed to stand there forever: a device left on a wing with an
 // unanswered "confirm firmware upload" is a device a stranger can walk up to.
 // Long enough to put a phone down and reach the button, and no longer.
-constexpr uint32_t kPromptForgetMs = 30u * 1000u;
+// | 10nov26 counted from the staging, because no command renews a standing prompt.
+constexpr uint32_t kPromptCeilingMs = 30u * 1000u;
 
 // INFO: cf 02aug26 A push exists so a tablet does not have to poll a gauge that
 // barely moves between polls. Pushing on every millivolt reading would just
@@ -255,6 +256,7 @@ class ConfigService {
     bool connected(uint16_t session_id) const;
     int payload_bytes() const;
     int payload_bytes_to(uint16_t session_id) const;
+    bool prompt_refused();
     void stage(Pending pending, link::Reason reason);
     void acknowledge(bool accepted, std::optional<link::Reason> reason = std::nullopt);
     void send_config();
@@ -331,6 +333,7 @@ class ConfigService {
     bool log_erase_requested_{false};
     bool gnss_cold_start_requested_{false};
     Pending pending_{Pending::None};
+    bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
     uint32_t now_ms_{0};

@@ -19,6 +19,18 @@ static_assert(
 link::Reason settings_refusal(Status status) {
     return status == Status::OutOfRange ? link::Reason::OutOfRange : link::Reason::Invalid;
 }
+
+bool stages_prompt(link::Command command) {
+    switch (command) {
+        case link::Command::Set:
+        case link::Command::Dfu:
+        case link::Command::Recovery:
+        case link::Command::PowerOff:
+        case link::Command::GnssColdStart:
+        case link::Command::Register: return true;
+        default: return false;
+    }
+}
 }  // namespace
 
 void ConfigService::tick(uint32_t now_ms) {
@@ -33,7 +45,7 @@ void ConfigService::tick(uint32_t now_ms) {
     }
     if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
     if (identity_ != nullptr) identity_->tick(now_ms);
-    if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptForgetMs) {
+    if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
         acknowledge(false, link::Reason::Expired);
@@ -92,6 +104,7 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     if (identity_ != nullptr) identity_->forget(event.session_id);
     if (!claim_.holds(event.session_id)) return;
     claim_.release();
+    refused_on_device_ = false;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;
@@ -192,6 +205,20 @@ void ConfigService::refuse_unclaimed(uint16_t session_id) {
 }
 
 void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
+
+// INFO: fc 10nov26 the link has no pairing: no command renews a prompt, and one press ends prompts
+// for that link
+bool ConfigService::prompt_refused() {
+    if (pending_ != Pending::None) {
+        acknowledge(false, link::Reason::PromptPending);
+        return true;
+    }
+    if (refused_on_device_) {
+        acknowledge(false, link::Reason::RefusedOnDevice);
+        return true;
+    }
+    return false;
+}
 
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;
@@ -295,6 +322,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         acknowledge(false, link::Reason::Invalid);
         return;
     }
+    if (stages_prompt(command) && prompt_refused()) return;
     switch (command) {
         case link::Command::Get: send_config(); return;
         case link::Command::Defaults: send_defaults(); return;
@@ -414,6 +442,7 @@ void ConfigService::answer_prompt_request(link::Command command, const cbor::Rea
 }
 
 void ConfigService::request_log_erase() {
+    if (prompt_refused()) return;
     if (!on_ground()) {
         acknowledge(false, link::Reason::InFlight);
         return;
@@ -434,7 +463,7 @@ void ConfigService::confirm() {
         return;
     }
     if (pending_ == Pending::Set) {
-        // Asked again: the confirmation window is kPromptForgetMs wide and a cell
+        // Asked again: the confirmation window is kPromptCeilingMs wide and a cell
         // can cross the warning inside it.
         if (!settings_writable()) {
             pending_ = Pending::None;
@@ -483,6 +512,7 @@ void ConfigService::confirm() {
 }
 
 void ConfigService::cancel() {
+    if (pending_ != Pending::None) refused_on_device_ = true;
     pending_ = Pending::None;
     pending_set_bytes_ = 0;
     upload_window_open_ = false;

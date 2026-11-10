@@ -97,6 +97,7 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     REQUIRE(config.pending() == Pending::Set);
     CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
 
+    config.tick(kPromptCeilingMs);
     config.on_rx(config_frame("{\"command\":\"set\",\"units\":0}"));
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
@@ -173,10 +174,10 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
 
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     REQUIRE(config.pending() == Pending::Dfu);
-    config.tick(1000 + kPromptForgetMs - 1);
+    config.tick(1000 + kPromptCeilingMs - 1);
     CHECK(config.pending() == Pending::Dfu);
 
-    config.tick(1000 + kPromptForgetMs);
+    config.tick(1000 + kPromptCeilingMs);
     CHECK(config.pending() == Pending::None);
     CHECK(link_text(link.last().bytes).find("expired") != std::string::npos);
 

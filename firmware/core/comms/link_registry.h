@@ -79,6 +79,8 @@ enum class Reason : uint8_t {
     FlightsOnly = 38,
     ReadFailed = 40,
     Erased = 41,
+    PromptPending = 42,
+    RefusedOnDevice = 43,
 };
 
 namespace acknowledgement_key {

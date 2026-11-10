@@ -81,8 +81,10 @@ inline constexpr Value kReasonValues[] = {
     {"flights_only", 38},
     {"read_failed", 40},
     {"erased", 41},
+    {"prompt_pending", 42},
+    {"refused_on_device", 43},
 };
-inline constexpr Enumeration kReason{kReasonValues, 41};
+inline constexpr Enumeration kReason{kReasonValues, 43};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},

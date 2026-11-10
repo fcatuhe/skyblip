@@ -1701,6 +1701,14 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "erased",
           "code": 41
+        },
+        {
+          "name": "prompt_pending",
+          "code": 42
+        },
+        {
+          "name": "refused_on_device",
+          "code": 43
         }
       ]
     },
