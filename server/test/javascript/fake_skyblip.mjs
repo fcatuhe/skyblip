@@ -2,6 +2,9 @@ import { decode, encode } from '#skyblip/cbor';
 import { UUID } from '#skyblip/ble';
 import { compareVersions, parseVersion, readImage, versionText } from '#skyblip/image';
 import { decodeFrame, encodeFrame } from '#skyblip/link';
+import { PRODUCTION_KEY } from './fake_image.mjs';
+
+export { PRODUCTION_KEY, imageClass, signedImage } from './fake_image.mjs';
 
 const SMP_HEADER_BYTES = 8;
 export const ATT_HEADER_BYTES = 3;
@@ -12,19 +15,12 @@ const MGMT_ERR_EMSGSIZE = 7;
 const MGMT_ERR_ENOTSUP = 8;
 const MGMT_ERR_EACCESSDENIED = 11;
 const IMAGE_GROUP = 1;
+export const IMG_MGMT_ERR_INVALID_TLV = 5;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
-export const PRODUCTION_KEY = 0xb2;
 export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' };
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const DIGEST = /^[0-9a-f]{16}$/;
-const IMAGE_HEADER_BYTES = 32;
-const TLV_INFO = 0x6907;
-const TLV_KEYHASH = 0x01;
-const KEY_HASH_BYTES = 32;
-const PROTECTED_TLV_INFO = 0x6908;
-const TLV_IMU_PIN = 0x00a0;
-const TLV_IMU_FULL = 0x00a1;
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -85,9 +81,10 @@ export class FakeSkyblip {
     downgrade = false,
     address = 0x00012a,
     setsOffGround = false,
+    product = 'skyblip_go',
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, setsOffGround });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, setsOffGround, product });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -288,6 +285,7 @@ export class FakeSkyblip {
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
+    if (this.product !== null && this.product !== 'skyblip_go') frame.product = this.product;
     this.reply(frame, { asked });
   }
 
@@ -385,11 +383,12 @@ export class FakeSkyblip {
       if (this.refuseUpload) return { err: { group: IMAGE_GROUP, rc: this.refuseUpload } };
       const header = readImage(data);
       if (header && this.older(header.version)) return { err: { group: IMAGE_GROUP, rc: IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER } };
-      this.upload = { sha, len, off: 0 };
+      this.upload = { sha, len, off: 0, classEnd: classEndOf(data) };
       this.slot = new Uint8Array(len);
       this.finished = false;
     }
     if (!this.upload || off !== this.upload.off) return { off: this.upload ? this.upload.off : 0 };
+    if (this.refusesProduct(data, off)) return { err: { group: IMAGE_GROUP, rc: IMG_MGMT_ERR_INVALID_TLV } };
     this.slot.set(data, off);
     this.upload.off += data.length;
     const reached = this.upload.off;
@@ -400,6 +399,21 @@ export class FakeSkyblip {
       else setImmediate(() => this.installLanded());
     }
     return { off: reached };
+  }
+
+  // INFO: fc 10nov26 a null product is firmware before the check, which takes any image its key signed
+  refusesProduct(data, off) {
+    if (this.product === null) return false;
+    const { classEnd, len } = this.upload;
+    if (classEnd === null || classEnd > len) return true;
+    if (off >= classEnd || off + data.length < classEnd) return false;
+    return readImage(this.slotWith(data, off)).product !== this.product;
+  }
+
+  slotWith(data, off) {
+    const slot = Uint8Array.from(this.slot);
+    slot.set(data, off);
+    return slot;
   }
 
   sendSmp(request, answer) {
@@ -431,45 +445,10 @@ function indefiniteMap(object) {
   return out;
 }
 
-export function signedImage({ major, minor, revision, build }, size, { imu = null, key = PRODUCTION_KEY } = {}) {
-  const bytes = new Uint8Array(size);
-  for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
-  const protectedArea = imu ? protectedTlvs(imu) : new Uint8Array(0);
-  const trailer = tlvArea(TLV_INFO, [[TLV_KEYHASH, new Uint8Array(KEY_HASH_BYTES).fill(key)]]);
-  const view = new DataView(bytes.buffer);
-  view.setUint32(0, 0x96f3b83d, true);
-  view.setUint16(8, IMAGE_HEADER_BYTES, true);
-  view.setUint16(10, protectedArea.length, true);
-  view.setUint32(12, size - IMAGE_HEADER_BYTES - protectedArea.length - trailer.length, true);
-  view.setUint8(20, major);
-  view.setUint8(21, minor);
-  view.setUint16(22, revision, true);
-  view.setUint32(24, build, true);
-  bytes.set(protectedArea, size - protectedArea.length - trailer.length);
-  bytes.set(trailer, size - trailer.length);
-  return bytes;
-}
-
-function protectedTlvs({ pin, full }) {
-  const entries = [];
-  if (pin !== undefined) entries.push([TLV_IMU_PIN, Uint8Array.from(pin.match(/../g), pair => parseInt(pair, 16))]);
-  if (full !== undefined) entries.push([TLV_IMU_FULL, Uint8Array.of(full ? 1 : 0)]);
-  return tlvArea(PROTECTED_TLV_INFO, entries);
-}
-
-function tlvArea(magic, entries) {
-  const area = new Uint8Array(4 + entries.reduce((sum, [, value]) => sum + 4 + value.length, 0));
-  const view = new DataView(area.buffer);
-  view.setUint16(0, magic, true);
-  view.setUint16(2, area.length, true);
-  let at = 4;
-  for (const [type, value] of entries) {
-    view.setUint16(at, type, true);
-    view.setUint16(at + 2, value.length, true);
-    area.set(value, at + 4);
-    at += 4 + value.length;
-  }
-  return area;
+function classEndOf(header) {
+  const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+  const protectedBytes = view.getUint16(10, true);
+  return protectedBytes === 0 ? null : view.getUint16(8, true) + view.getUint32(12, true) + protectedBytes;
 }
 
 function keyName(byte) {

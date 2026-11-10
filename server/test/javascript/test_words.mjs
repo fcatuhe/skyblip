@@ -10,7 +10,7 @@ const PAGES = ['../../content/pages/manage.html.erb', '../../content/pages/manag
 const CONFIG = '../../../firmware/core/comms/config.cpp';
 
 const PAGE_NOTICES = [
-  'claimed', 'window_closed', 'older', 'wrong_key', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
+  'claimed', 'window_closed', 'older', 'wrong_key', 'wrong_product', 'unmarked_image', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
   'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'saved', 'shelf_failed', 'needs_full',
 ];
 const DEVICE_NOTES = [

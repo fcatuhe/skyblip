@@ -281,6 +281,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu::HubImageReport held{};
     held.holding = dfu::HubImage::Held;
     config.set_hub_image(held);
+    config.set_product(dfu::Product::SkyblipBravo);
     for (const char* command : {"status", "diagnostics", "update"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
 }

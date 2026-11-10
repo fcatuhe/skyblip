@@ -63,6 +63,10 @@ main() {
   assert_downgrade_rule "$slim_build" "$slim_app"
   "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
   "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
+  # A unit refuses an upload naming another product, and takes none while it runs an image naming none.
+  for image in "$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin" "$slim_app/zephyr.signed.bin"; do
+    "$python" "$tree/scripts/check_image_product.py" "$image" "$product"
+  done
   assert_confirmed_image_differs
   check_flash_budget
   stage_artifacts "$version"

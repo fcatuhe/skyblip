@@ -190,6 +190,8 @@ class ConfigService {
 
     void set_hub_image(const dfu::HubImageReport& report) { hub_image_ = report; }
 
+    void set_product(dfu::Product product) { product_ = product; }
+
     // INFO: cf 02aug26 BLE pairing is off on this product (encrypted GATT
     // characteristics break Web Bluetooth on Windows), so physical presence is
     // what stands in for it: nothing sensitive happens without a gesture made
@@ -367,6 +369,7 @@ class ConfigService {
     dfu::UpdateRecord update_record_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
+    std::optional<dfu::Product> product_{};
 
     // Long enough to upload ~730 KB over BLE on a slow phone, short enough that
     // a device left on a bench does not stay writable all afternoon.

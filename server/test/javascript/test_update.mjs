@@ -5,7 +5,7 @@ import {
   BLOB_PIN, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
 } from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from '#skyblip/ble';
-import { Updater } from '#skyblip/update';
+import { Updater, productOf } from '#skyblip/update';
 
 import {
   NEWER, IMAGE_BYTES, session, READS, asking, installing, settled, connected, chosen, unexchanged,
@@ -276,6 +276,72 @@ test('an image signed by another key is refused before the window opens', async 
   assert.equal(device.commands.includes('dfu'), false);
 });
 
+test('a unit that names no product is a skyBlip Go, as every unit before the key was', async () => {
+  const { updater } = await connected({ product: null });
+  assert.equal(updater.state.image.product, null);
+  assert.equal(productOf(updater.state.image), 'skyblip_go');
+  assert.equal(productOf(null), 'skyblip_go');
+});
+
+// A Go on firmware before the check takes any image its key signed, and its update frame does not fit this link.
+test('a Bravo image is refused before the window opens to a unit whose update frame never arrived', async () => {
+  const { device, updater } = await connected({ product: null, mtu: 23 });
+  assert.equal(updater.state.image, null);
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: 'skyblip_bravo' }), 'skyblip-bravo-0.2.0+15.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'wrong_product');
+  assert.equal(device.commands.includes('dfu'), false);
+  assert.equal(device.finished, false);
+});
+
+test('a Bravo refuses an image naming no product before the window opens, in words of its own', async () => {
+  const { device, updater } = await connected({ product: 'skyblip_bravo' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: null }), 'skyblip-bravo-dev-900.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'unmarked_image');
+  assert.equal(device.commands.includes('dfu'), false);
+});
+
+test('an image for another product is refused before the window opens', async () => {
+  const { device, updater } = await connected();
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: 'skyblip_bravo' }), 'skyblip-bravo-0.2.0+15.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'wrong_product');
+  assert.equal(device.commands.includes('dfu'), false);
+});
+
+test('a Bravo installs a Bravo image', async () => {
+  const { device, updater, until } = await connected({ product: 'skyblip_bravo' });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: 'skyblip_bravo' }), 'skyblip-bravo-0.2.0+15.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(installing);
+});
+
+test('a Go refuses an image that names no product once its protected TLVs arrive, in words of their own', async () => {
+  const { device, updater, until } = await connected();
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: null }), 'skyblip-go-0.1.0+800.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'unmarked_image');
+  assert.equal(device.finished, false);
+});
+
+// The image's protected TLVs end where its 40-byte trailer starts, and the device never writes the chunk that completes them.
+test('a unit refuses an image of another product before it writes the chunk that completes its class', async () => {
+  const { device, updater, until } = await chosen();
+  device.product = 'skyblip_bravo';
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).notice.key, 'wrong_product');
+  assert.notEqual(signedImage(NEWER, IMAGE_BYTES)[IMAGE_BYTES - 41], 0);
+  assert.equal(device.slot[IMAGE_BYTES - 41], 0);
+  assert.equal(device.finished, false);
+});
+
 // The slim and full images of one release share its version, and the full one is how a device gets its blob.
 test('an image of the running version is sent', async () => {
   const { updater, until } = await connected({ running: '0.2.0.15', imu: 'missing' });
@@ -323,7 +389,7 @@ test('an update frame pushed on connect is read without being asked', async () =
   const { image } = await until(state => state.image);
   assert.deepEqual(image, {
     state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, imu: BLOB_PIN.slice(0, 16),
-    downgrade: false, key: 'B2B2B2B2',
+    downgrade: false, key: 'B2B2B2B2', product: null,
   });
 });
 

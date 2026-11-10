@@ -11,6 +11,7 @@ const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
+const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
@@ -19,8 +20,9 @@ export default class extends Controller {
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
-    const { Updater, hasWebBluetooth, readSetting, showSetting } = await import(this.srcValue)
+    const { Updater, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
+    this.productOf = productOf
     this.readSetting = readSetting
     this.showSetting = showSetting
     this.bluetooth = hasWebBluetooth()
@@ -144,8 +146,10 @@ export default class extends Controller {
     if (!this.hasShelfTarget) return
     const options = [...this.shelfTarget.options].filter(option => option.value)
     const channel = image?.downgrade ? "development" : "release"
-    // INFO: fc 17oct26 release channels filter choices. The updater verifies the downloaded image's signing key before installation.
-    for (const option of options) option.hidden = !image?.key || option.dataset.channel !== channel
+    // INFO: fc 17oct26 release channels filter choices. The updater verifies the downloaded image's signing key before installation. | 10nov26 products filter them too, and the updater checks the image's class
+    for (const option of options) {
+      option.hidden = !image?.key || option.dataset.channel !== channel || option.dataset.product !== this.productOf(image)
+    }
     if (this.shelfTarget.selectedOptions[0]?.hidden) {
       this.shelfTarget.value = ""
       this.#shelve(null)
@@ -183,7 +187,7 @@ export default class extends Controller {
 
   #notes({ image, status, settings, address }) {
     const notes = []
-    if (settings && address === null) notes.push(["not_activated"])
+    if (settings && address === null && ACTIVATED_PRODUCTS.has(this.productOf(image))) notes.push(["not_activated"])
     if (status && status.flight !== "ground") notes.push(["in_flight"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])

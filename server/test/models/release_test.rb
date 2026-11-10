@@ -17,6 +17,16 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.full.signed.bin], stable.firmware_files
   end
 
+  test "both products' images are offered, each named after its product" do
+    shelf = release("dev-1010", assets: %w[skyblip-go-dev-1010.signed.bin skyblip-bravo-dev-1010.signed.bin
+                                           skyblip-bravo-dev-1010.full.signed.bin skyblip-tango-dev-1010.signed.bin])
+
+    assert_equal %w[skyblip-go-dev-1010.signed.bin skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.full.signed.bin],
+                 shelf.firmware_files
+    assert_equal %w[skyblip_go skyblip_bravo skyblip_bravo], shelf.firmware_files.map { |file| Release.product_of(file) }
+    assert_nil Release.product_of("embed.js")
+  end
+
   # GitHub returns dev-998, dev-1005, dev-1002 in this recording, not newest first.
   test "the shelf lists releases newest first whatever order GitHub returns" do
     releases = VCR.use_cassette("github/releases") { Release.all }

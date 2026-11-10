@@ -5,7 +5,10 @@
 #include <zephyr/mgmt/mcumgr/mgmt/callbacks.h>
 #include <zephyr/mgmt/mcumgr/mgmt/mgmt_defines.h>
 
+#include <optional>
+
 #include "core/dfu/image.h"
+#include "core/dfu/product_check.h"
 #include "core/dfu/smp_policy.h"
 #include "core/dfu/update.h"
 #include "hardware/platform/zephyr/dfu.h"
@@ -52,26 +55,48 @@ mgmt_cb_return on_upload(uint32_t event, mgmt_cb_return, int32_t*, uint16_t*, bo
     return MGMT_CB_OK;
 }
 
+mgmt_cb_return refuse_image(int32_t image_error, int32_t* error_code, uint16_t* group,
+                            bool* abort_more) {
+    *error_code = image_error;
+    *group = MGMT_GROUP_ID_IMAGE;
+    *abort_more = true;
+    return MGMT_CB_ERROR_ERR;
+}
+
 // INFO: fc 03oct26 the version travels in the first chunk, so an older image is refused before the
 // rest
+bool older(const img_mgmt_upload_req& request, Dfu& slots) {
+    dfu::ImageHeader incoming;
+    ports::ImageVersion running;
+    return dfu::read_header(request.img_data.value, request.img_data.len, incoming) &&
+           slots.running_version(running) &&
+           dfu::version_refusal(running, incoming.version, slots.downgrade_allowed()) != nullptr;
+}
+
+std::optional<dfu::ImageClass> running_class(Dfu& slots) {
+    dfu::ImageClass running;
+    if (slots.running_class(running)) return running;
+    return std::nullopt;
+}
+
+dfu::ProductCheck g_product_check;
+
 mgmt_cb_return on_chunk(uint32_t event, mgmt_cb_return, int32_t* error_code, uint16_t* group,
                         bool* abort_more, void* data, size_t data_size) {
     if (event != MGMT_EVT_OP_IMG_MGMT_DFU_CHUNK || data == nullptr ||
         data_size != sizeof(img_mgmt_upload_check))
         return refuse(error_code, abort_more);
     const img_mgmt_upload_req& request = *static_cast<const img_mgmt_upload_check*>(data)->req;
-    dfu::ImageHeader incoming;
-    ports::ImageVersion running;
+    const uint8_t* chunk = request.img_data.value;
+    const size_t bytes = request.img_data.len;
     Dfu slots;
-    if (request.off != 0 ||
-        !dfu::read_header(request.img_data.value, request.img_data.len, incoming) ||
-        !slots.running_version(running) ||
-        dfu::version_refusal(running, incoming.version, slots.downgrade_allowed()) == nullptr)
-        return MGMT_CB_OK;
-    *error_code = IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER;
-    *group = MGMT_GROUP_ID_IMAGE;
-    *abort_more = true;
-    return MGMT_CB_ERROR_ERR;
+    if (request.off == 0 && older(request, slots))
+        return refuse_image(IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, error_code, group, abort_more);
+    const bool admitted =
+        request.off == 0 ? g_product_check.begin(chunk, bytes, request.size, running_class(slots))
+                         : g_product_check.admits(request.off, chunk, bytes);
+    if (!admitted) return refuse_image(IMG_MGMT_ERR_INVALID_TLV, error_code, group, abort_more);
+    return MGMT_CB_OK;
 }
 
 mgmt_callback g_command_callback{};

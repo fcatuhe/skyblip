@@ -162,6 +162,12 @@ inline constexpr Value kHubImageValues[] = {
 };
 inline constexpr Enumeration kHubImage{kHubImageValues, 6};
 
+inline constexpr Value kProductValues[] = {
+    {"skyblip_go", 0},
+    {"skyblip_bravo", 1},
+};
+inline constexpr Enumeration kProduct{kProductValues, 2};
+
 inline constexpr Value kLogValues[] = {
     {"flights", 1},
     {"diagnostics", 2},
@@ -331,6 +337,7 @@ inline constexpr Key kUpdateKeys[] = {
     {"imu_digest", 7, Type::Bytes, nullptr, 8, false},
     {"downgrade", 8, Type::Boolean, nullptr, 0, false},
     {"key", 9, Type::Bytes, nullptr, 4, false},
+    {"product", 10, Type::Enum, &kProduct, 0, false},
 };
 
 inline constexpr Key kDfuKeys[] = {
@@ -445,7 +452,7 @@ inline constexpr Frame kFrames[] = {
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
     {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 51},
     {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 51},
-    {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 10},
+    {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},
     {"power_off", 13, events::Endpoint::Config, Sender::Host, kPowerOffKeys, 1},

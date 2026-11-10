@@ -11,6 +11,8 @@ namespace skyblip::dfu {
 
 enum class ImageState : uint8_t { Confirmed = 0, Probation = 1, Reverted = 2, Refused = 3 };
 
+enum class Product : uint8_t { SkyblipGo = 0, SkyblipBravo = 1 };
+
 struct UpdateRecord {
     ports::ImageVersion from{};
     ports::ImageVersion to{};

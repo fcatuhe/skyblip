@@ -11,6 +11,13 @@ const TLV_INFO_BYTES = 4;
 const TLV_KEYHASH = 0x01;
 const TLV_IMU_PIN = 0x00a0;
 const TLV_IMU_FULL = 0x00a1;
+const TLV_IMAGE_CLASS = 0x0075;
+const CLASS_BYTES = 16;
+// INFO: fc 10nov26 uuid5 of the product directory in uuid5(DNS, skyblip.eu), as imgtool signs it (scripts/check_image_product.py)
+const PRODUCT_CLASSES = {
+  d1d4d6655f2b5695ad59f122902c2120: 'skyblip_go',
+  '46d97790da405396a354779456a09465': 'skyblip_bravo',
+};
 const KEY_HASH_BYTES = 32;
 const KEY_PREFIX_BYTES = 4;
 const PIN_BYTES = 32;
@@ -29,26 +36,32 @@ export function readImage(bytes) {
     },
     key: signingKey(view),
     bytes: bytes.length,
-    imu: imuOf(view),
+    ...protectedOf(view),
   };
 }
 
-function imuOf(view) {
-  const imu = { pin: null, full: null };
+function unread() {
+  return { imu: { pin: null, full: null }, product: null };
+}
+
+function protectedOf(view) {
   const start = view.getUint16(HEADER_SIZE_OFFSET, true) + view.getUint32(IMAGE_SIZE_OFFSET, true);
-  if (start + TLV_INFO_BYTES > view.byteLength || view.getUint16(start, true) !== PROTECTED_TLV_MAGIC) return imu;
+  if (start + TLV_INFO_BYTES > view.byteLength || view.getUint16(start, true) !== PROTECTED_TLV_MAGIC) return unread();
   const end = start + view.getUint16(start + 2, true);
-  if (end > view.byteLength) return imu;
+  if (end > view.byteLength) return unread();
+  const found = unread();
   for (let at = start + TLV_INFO_BYTES; at + TLV_INFO_BYTES <= end;) {
     const type = view.getUint16(at, true);
     const length = view.getUint16(at + 2, true);
     const value = at + TLV_INFO_BYTES;
-    if (value + length > end) return { pin: null, full: null };
-    if (type === TLV_IMU_PIN && length === PIN_BYTES) imu.pin = hex(new Uint8Array(view.buffer, view.byteOffset + value, length));
-    if (type === TLV_IMU_FULL && length === 1) imu.full = view.getUint8(value) === 1;
+    if (value + length > end) return unread();
+    const bytes = () => new Uint8Array(view.buffer, view.byteOffset + value, length);
+    if (type === TLV_IMU_PIN && length === PIN_BYTES) found.imu.pin = hex(bytes());
+    if (type === TLV_IMU_FULL && length === 1) found.imu.full = view.getUint8(value) === 1;
+    if (type === TLV_IMAGE_CLASS && length === CLASS_BYTES) found.product = PRODUCT_CLASSES[hex(bytes())] ?? 'unknown';
     at = value + length;
   }
-  return imu;
+  return found;
 }
 
 export function fullImageNeeded(deviceImu, pin) {

@@ -10,6 +10,8 @@
     stored: { aircraft_type: 4, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-CABC' },
     staged: null,
     mtu: 247,
+    product: 'skyblip_go',
+    address: 3,
     listeners: [],
 
     async reply(fields) {
@@ -24,7 +26,8 @@
       const { decodeFrame } = await link();
       const { command, ...fields } = decodeFrame(raw);
       if (command === 'status') return this.reply({ command, flight: 'ground', upload: false, charging: false, power_level: 'normal', went_dark_flat: false });
-      if (command === 'get') return this.reply({ command: 'config', version: 1, address: 3, address_mapping_table: 58, ...this.stored });
+      if (command === 'update') return this.reply({ command, image: 'confirmed', swap_powered: true, imu: 'none', downgrade: true, key: 'a1a1a1a1', ...(this.product === 'skyblip_go' ? {} : { product: this.product }) });
+      if (command === 'get') return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58, ...this.stored });
       if (command === 'defaults') return this.reply({ command, aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' });
       if (command === 'set') {
         this.staged = fields;
