@@ -47,6 +47,8 @@ class TrafficTable {
         own_address_ = address & settings::kAddressMask;
     }
 
+    void set_own_icao(uint32_t address) { own_icao_ = address & settings::kAddressMask; }
+
     // Where own-ship is, for the range gate below. This is the table's door and
     // three paths come through it - a direct ADS-L frame, an ALP-TAS frame and up
     // to thirteen aircraft relayed inside one uplink frame - so the gate lives
@@ -60,6 +62,8 @@ class TrafficTable {
     // this radio can hear (core/traffic/sanity.h). Not silent: a rate that climbs
     // is a receiver at the edge of its budget or a decoder that is wrong.
     uint32_t implausible() const { return implausible_; }
+    uint32_t adsb_outside_gate() const { return adsb_outside_gate_; }
+    uint32_t adsb_without_position() const { return adsb_without_position_; }
 
     int update(const model::AircraftObservation& observation, uint32_t now_s);
 
@@ -77,7 +81,10 @@ class TrafficTable {
     model::Ownship own_{};
     uint32_t own_address_{0};
     uint8_t own_address_mapping_table_{0};
+    uint32_t own_icao_{0};
     uint32_t implausible_{0};
+    uint32_t adsb_outside_gate_{0};
+    uint32_t adsb_without_position_{0};
 
     struct Weight {
         bool on_ground;
@@ -86,9 +93,11 @@ class TrafficTable {
         uint32_t age_s;
     };
 
+    bool own_aircraft(const model::AircraftObservation& observation) const;
     static bool prefer_new(const model::AircraftObservation& incoming,
                            const model::AircraftObservation& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
+    static void release(Target& target);
     static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
     static bool matters_less(const Weight& weight, const Weight& other);
     Weight weight_of(const model::AircraftObservation& observation, uint32_t now_s) const;

@@ -11,6 +11,8 @@ constexpr uint32_t kAddressMask = 0x00FFFFFFu;
 // INFO: fc 09oct26 registry ticket #228794: manufacturer page 49, which F.2.2 numbers from 9
 constexpr uint8_t kAddressMappingTable = 58;
 constexpr uint8_t kManufacturerPrefix = 0x00;
+// INFO: fc 10nov26 F.2.2 numbers the ICAO table 5, which an aircraft with a transponder uses
+constexpr uint8_t kIcaoAddressMappingTable = 5;
 
 using AirAddress = std::optional<uint32_t>;
 

@@ -198,6 +198,44 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
     CHECK(missed > 5);
 }
 
+// Pressure and GNSS heights differ by the day's weather, so each is compared with its own kind.
+TEST_CASE("extrapolate: a target's height is GNSS against GNSS, else pressure against pressure") {
+    model::Ownship own = flying(48.5, 8.5, 30.0, 0.0);
+    own.pressure_altitude_mm = 1100000;
+    own.pressure_altitude_valid = true;
+    model::AircraftObservation target{};
+    target.position_valid = true;
+    target.latitude_1e7 = own.latitude_1e7;
+    target.longitude_1e7 = own.longitude_1e7;
+    target.altitude_m = 1500;
+    target.altitude_valid = true;
+    target.pressure_altitude_ft = 4000;
+    target.pressure_altitude_valid = true;
+    int32_t north = 0, east = 0, up = 0;
+    bool up_valid = false;
+
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up_valid);
+    CHECK(up == 300);
+
+    // 4000 ft is 1219.2 m, against our 1100 m on the same 1013.25 hPa.
+    target.altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up_valid);
+    CHECK(up == 119);
+
+    own.pressure_altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK_FALSE(up_valid);
+    CHECK(up == 0);
+
+    own.pressure_altitude_valid = true;
+    target.pressure_altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK_FALSE(up_valid);
+    CHECK(up == 0);
+}
+
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
 // The height difference overflowed int32 when a target's altitude sat at the type's limit.
 TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit") {
