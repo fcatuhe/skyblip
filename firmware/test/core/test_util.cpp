@@ -4,6 +4,7 @@
 // mode. An exponential code that rounds the wrong way or an arctangent that is a quadrant out
 // reaches the pilot as a target in the wrong place, with nothing logged.
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>  // std::abs
 #include <cstring>
 #include <string>
@@ -172,6 +173,13 @@ TEST_CASE("format: hex, dec, fixed point") {
     CHECK(std::string(text, written) == "-17");
     written = format_unsigned(text, 1234, 1, 1);  // one decimal
     CHECK(std::string(text, written) == "123.4");
+}
+
+// Negating INT32_MIN overflowed, which UBSan caught through a $PFLAA height.
+TEST_CASE("format: the most negative int32 prints whole") {
+    char text[16];
+    const int written = format_signed(text, INT32_MIN);
+    CHECK(std::string(text, written) == "-2147483648");
 }
 
 TEST_CASE("format: nmea lat/lon") {

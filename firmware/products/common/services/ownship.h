@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_OWNSHIP_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_OWNSHIP_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_OWNSHIP_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_OWNSHIP_H
 
 #include "core/events/sensor.h"
 #include "core/flight/atmosphere.h"
@@ -14,17 +14,24 @@
 #include "core/gnss/acquisition.h"
 #include "core/gnss/first_fix.h"
 #include "core/model/ownship.h"
-#include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
+
+struct OwnshipSettings {
+    OwnshipSettings(const uint8_t& aircraft_type_of) : aircraft_type(aircraft_type_of) {}
+    OwnshipSettings(uint8_t&&) = delete;
+    OwnshipSettings(const uint8_t&&) = delete;
+
+    const uint8_t& aircraft_type;
+};
 
 // Owns state.own: sensor readings become the one state the protocol encoder, the
 // alarm logic and every screen read.
 class OwnshipService : public runtime::Service {
    public:
-    OwnshipService(runtime::Context& context, const Settings& settings)
+    OwnshipService(runtime::Context& context, OwnshipSettings settings)
         : runtime::Service(context), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
@@ -100,9 +107,9 @@ class OwnshipService : public runtime::Service {
     static constexpr uint32_t kPpsRecordPeriodMs = 1000;
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds
     static constexpr uint32_t kMotionRecordPeriodMs = 1000;
-    const Settings& settings_;
+    OwnshipSettings settings_;
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

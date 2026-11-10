@@ -7,7 +7,7 @@
 #include "core/settings/address.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/sx1262.h"
-#include "products/skyblip_go/services/power.h"
+#include "products/common/services/power.h"
 #include "products/skyblip_go/services/screen.h"
 #include "test/support/diagnostics_corpus.h"
 #include "test/support/diagnostics_taps.h"

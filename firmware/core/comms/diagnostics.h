@@ -69,7 +69,7 @@ struct Diagnostics {
     uint16_t gnss_solution_phase_ms{0};
     bool gnss_solution_phase_valid{false};
     // The extrapolation the transmitter applies, measured against the fix that
-    // closed the interval (products/skyblip_go/services/ownship.cpp). It belongs
+    // closed the interval (products/common/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
     // receiver rather than with the radio.
     uint16_t residual_m{0};

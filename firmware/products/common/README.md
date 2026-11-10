@@ -4,6 +4,8 @@ The services more than one product runs, and the vocabulary they read. Why they 
 
 `services/` holds these services, in namespace `common`:
 
+- `OwnshipService` owns `state.own`: it drains `bus.gnss`, `bus.barometer` and `bus.accelerometer`, and publishes the fix, the climb, the turn, the flight state and the ground latch.
+- `PowerService` owns `state.power`: it drains `bus.battery`, reads the die temperature, and runs `core/power`'s cutoff rule.
 - `TrafficService` owns `state.traffic`: it drains `bus.rf`, decodes each burst and feeds the table and the callsigns.
 - `AlarmService` owns everything a product says out loud or shows with a light: it grades each target, then drives the buzzer, the motor and the lamp through `core/annunciation` and `core/indication`.
 - `NmeaService` is the single writer of `events::Endpoint::Nmea`: the FLARM sentences a phone's map draws, once a second.
@@ -19,9 +21,21 @@ No file here includes `products/<product>/*`. What a service needs from a produc
 
 A feature with no reader is a line of marketing inside a header. The list said `CompanionLink` for as long as the tree had a NMEA characteristic nothing ever wrote to, and nothing anywhere could tell. So a bit joins the list on the commit that reads it, and leaves it with its last reader.
 
+## What stays with the product
+
+A shared service reads the parts fitted from `context.roles.capabilities`, so a part the board lacks is skipped, as the inclinometer and the die sensor are. The self-test page and the parts table it lists are the product's, because they name the parts its board carries.
+
+The shutdown order is the product's too. `core/power/shutdown.h` decides when a unit goes down and why. The product decides what parks in which order, because only the product knows which radio, panel and capture it has. `PowerService` gives it two things to call: `cutoff()`, which asks for a `LowBattery` shutdown, and `record_last_pass()`, which the product calls while it parks so a capture ends on one more `Power` and `Duty`. The Go's order is `Product::drive_shutdown()` in `../skyblip_go/product.h`.
+
+The cell is the Go's for now. `PowerService` reads the battery through `core/power`'s gauge curve, voltage ladder and charge window, and those are the values of the Go's 4.2 V LiPo pouch (`../../core/power/README.md`). Bravo's 1100 mAh high-voltage cell needs its own values, and #176 adds the cell seam.
+
+## Own pressure altitude
+
+`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere, with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it. That is where own pressure altitude enters `Ownship`. `model::Ownship` has the three fields, `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid`, and nothing writes them yet. #193 on the Go and #176 on Bravo write them there, with `pressure_altitude_at_ms` from the sample's `at_ms`, and `tick()` clears `pressure_altitude_valid` once the barometer goes stale.
+
 ## Settings
 
-A product owns its settings struct, its blob and its link keys. A shared service reads the few fields it needs through a small struct the product fills at construction. `AlarmSettings` holds references to the product's alarm on/off and alarm volume, so a change from the link or the menu reaches the alarm on its next tick, as it did when the alarm read the Go's `Settings` directly.
+A product owns its settings struct, its blob and its link keys. A shared service reads the few fields it needs through a small struct the product fills at construction. `AlarmSettings` holds references to the product's alarm on/off and alarm volume, so a change from the link or the menu reaches the alarm on its next tick, as it did when the alarm read the Go's `Settings` directly. `OwnshipSettings` holds the aircraft type that own-ship stamps on `state.own`, and `PowerSettings` the battery trim in millivolts. Each struct refuses a temporary, so no reference is left dangling.
 
 `settings_store.h` is the seam between the config link and a product's settings. `common::SettingsStore` extends `comms::ConfigStore`, the calls that answer a phone, with the four the link needs to keep the blob: `restore_defaults()`, `blob_version()`, `adopt()` and `to_blob()`. The product owns the struct, its layout, its migrations and its link keys. The link owns when the blob is read and written: the durable-write window, the power rule, a newer layout kept for a reverted image, and the copy kept for a revert. The Go's `go::SettingsStore` fills it from `go::Settings`. The link holds a blob in a buffer of `ConfigLinkService::kBlobBytes`, 64 bytes. A store returns 0 from `to_blob()` when its blob is wider than the buffer it is handed, and the link counts that, or any length past its buffer, as a failed write rather than writing it.
 

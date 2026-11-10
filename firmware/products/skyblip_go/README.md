@@ -12,7 +12,7 @@ Migration only runs forward, and a layout cannot be read backwards: fields were 
 
 ## What a service is
 
-`TrafficService`, `AlarmService`, `NmeaService`, `FlightLogService`, `CaptureService` and `ConfigLinkService` are shared with other products, in `../common/services/` ([`../common/README.md`](../common/README.md)). `product.h` builds them with this product's `kFeatures`, with references to its alarm on/off and volume settings, with `CaptureSettings` from `capture_settings.h`, with the flash rule in `flash_window.h`, and with its `SettingsStore`, its power service's cutoff monitor, its name and its `dfu::Product`. The rules below hold for them as for the services that are the Go's alone.
+`OwnshipService`, `PowerService`, `TrafficService`, `AlarmService`, `NmeaService`, `FlightLogService`, `CaptureService` and `ConfigLinkService` are shared with other products, in `../common/services/` ([`../common/README.md`](../common/README.md)). `product.h` builds them with this product's `kFeatures`, with references to its aircraft type, battery trim, alarm on/off and volume settings, with `CaptureSettings` from `capture_settings.h`, with the flash rule in `flash_window.h`, and with its `SettingsStore`, its power service's cutoff monitor, its name and its `dfu::Product`. The self-test page, the parts table it lists and the shutdown order stay here, in `product.h`. The rules below hold for them as for the services that are the Go's alone.
 
 A service is one unit of work the loop steps, under the watchdog, in dataflow order. It owns one thing: a queue it drains, a slice of `bus::State` it writes, or an output port it drives. Never two of the same kind, and never a queue somebody else also drains.
 

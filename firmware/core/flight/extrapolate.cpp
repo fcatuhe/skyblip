@@ -1,5 +1,7 @@
 #include "core/flight/extrapolate.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 
 #include "core/flight/arc.h"
@@ -172,7 +174,9 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
     up_m = 0;
     up_valid = true;
     if (target.altitude_valid) {
-        up_m = target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value;
+        const int64_t up = static_cast<int64_t>(target.altitude_m) -
+                           to_metres(Millimetres(own.altitude_hae_mm)).value;
+        up_m = static_cast<int32_t>(std::clamp<int64_t>(up, INT32_MIN, INT32_MAX));
     } else if (target.pressure_altitude_valid && own.pressure_altitude_valid) {
         const int64_t target_mm = to_millimetres(Feet(target.pressure_altitude_ft)).value;
         up_m = static_cast<int32_t>(

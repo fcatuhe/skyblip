@@ -21,6 +21,9 @@ struct AlarmSettings {
     AlarmSettings(bool&&, const AlarmVolume&) = delete;
     AlarmSettings(const bool&, AlarmVolume&&) = delete;
     AlarmSettings(bool&&, AlarmVolume&&) = delete;
+    AlarmSettings(const bool&&, const AlarmVolume&) = delete;
+    AlarmSettings(const bool&, const AlarmVolume&&) = delete;
+    AlarmSettings(const bool&&, const AlarmVolume&&) = delete;
 
     const bool& enabled;
     const AlarmVolume& volume;
