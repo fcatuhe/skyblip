@@ -8,7 +8,7 @@ namespace skyblip::events {
 // Log is its own endpoint and not a verb on Config: an offload is thousands of
 // round trips and would otherwise sit in the same queue as the prompt that
 // authorises a firmware upload.
-enum class Endpoint : uint8_t { Config = 0, Nmea = 1, Log = 2 };
+enum class Endpoint : uint8_t { Config = 0, Nmea = 1, Log = 2, Peer = 3 };
 
 // INFO: fc 04aug26 Payload, not MTU: the two differ by the three bytes of
 // notification header, which is exactly the off-by-three that makes a frame an

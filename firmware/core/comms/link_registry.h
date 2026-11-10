@@ -35,6 +35,9 @@ enum class Command : uint8_t {
     Chunk = 23,
     GnssColdStart = 24,
     Ownship = 25,
+    Observation = 26,
+    Health = 27,
+    PeerClaim = 28,
 };
 
 enum class Reason : uint8_t {
@@ -349,6 +352,73 @@ enum : uint32_t {
 };
 }
 
+namespace observation_key {
+enum : uint32_t {
+    kAddress = 1,
+    kBootEpoch = 2,
+    kSequence = 3,
+    kAtS = 4,
+    kIntoMs = 5,
+    kLatitude1e7 = 6,
+    kLongitude1e7 = 7,
+    kAltitudeM = 8,
+    kAltitudeAgeMs = 9,
+    kPressureAltitudeFt = 10,
+    kPressureAltitudeAgeMs = 11,
+    kSpeedQ = 12,
+    kTrackC9 = 13,
+    kSpeedAgeMs = 14,
+    kClimbE8 = 15,
+    kClimbSource = 16,
+    kClimbAgeMs = 17,
+    kFlightState = 18,
+    kFlightStateAgeMs = 19,
+    kAircraftCategory = 20,
+    kAdsbVersion = 21,
+    kGva = 22,
+    kCallsign = 23,
+    kCallsignHeardS = 24,
+};
+}
+
+namespace health_key {
+enum : uint32_t {
+    kProtocolVersion = 1,
+    kBootEpoch = 2,
+    kListening = 3,
+    kUtcValid = 4,
+    kLastSequence = 5,
+    kOwnIcaoSet = 6,
+    kAlarmGranted = 7,
+    kLeaseMs = 8,
+    kRequestEpoch = 9,
+    kRequestSequence = 10,
+    kExportReference = 11,
+};
+}
+
+namespace peer_claim_key {
+enum : uint32_t {
+    kBootEpoch = 1,
+    kAtS = 2,
+    kIntoMs = 3,
+    kLatitude1e7 = 4,
+    kLongitude1e7 = 5,
+    kPositionAgeMs = 6,
+    kAltitudeHaeMm = 7,
+    kAltitudeHaeAgeMs = 8,
+    kPressureAltitudeMm = 9,
+    kPressureAltitudeAgeMs = 10,
+    kOwnIcao = 11,
+    kAlarmRequested = 12,
+    kRequestSequence = 13,
+    kAlarmPasses = 14,
+    kAlarmVolume = 15,
+    kAssessedEpoch = 16,
+    kAssessedSequence = 17,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -374,7 +444,9 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Log:
         case Command::Session:
         case Command::Chunk:
-        case Command::GnssColdStart: return 0x1;
+        case Command::GnssColdStart:
+        case Command::Observation:
+        case Command::Health: return 0x1;
         case Command::Set: return 0x7FF;
         case Command::Dfu:
         case Command::Erase: return 0x3;
@@ -383,6 +455,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
+        case Command::PeerClaim: return 0x3FFFF;
     }
     return 0;
 }

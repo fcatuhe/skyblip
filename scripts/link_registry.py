@@ -22,7 +22,7 @@ JAVASCRIPT_MODULE = "server/app/javascript/skyblip/link_registry.js"
 
 COMMAND_KEY = {"name": "command", "number": 0, "type": "enum", "enum": "command"}
 TYPES = ("unsigned", "integer", "boolean", "text", "bytes", "unsigned_array", "enum")
-ENDPOINTS = ("config", "log")
+ENDPOINTS = ("config", "log", "peer")
 SENDERS = ("host", "unit", "both")
 CPP_TYPES = {"unsigned": "Unsigned", "integer": "Integer", "boolean": "Boolean", "text": "Text",
              "bytes": "Bytes", "unsigned_array": "UnsignedArray", "enum": "Enum"}

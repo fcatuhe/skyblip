@@ -194,6 +194,7 @@ uint8_t wire(events::Endpoint value) {
         case events::Endpoint::Config: return 0;
         case events::Endpoint::Nmea: return 1;
         case events::Endpoint::Log: return 2;
+        case events::Endpoint::Peer: return 3;
     }
     return kUnpinned;
 }
@@ -347,7 +348,7 @@ TEST_CASE(
 TEST_CASE(
     "diagnostics ordinals: events::Endpoint's codes are the link endpoint byte, and a code changed "
     "here changes ENDPOINT in scripts/blip_records.py and the schema's endpoint enum") {
-    codes_pinned<events::Endpoint>(3);
+    codes_pinned<events::Endpoint>(4);
 }
 
 TEST_CASE(

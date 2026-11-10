@@ -162,6 +162,20 @@ inline constexpr Value kHubImageValues[] = {
 };
 inline constexpr Enumeration kHubImage{kHubImageValues, 6};
 
+inline constexpr Value kExportReferenceValues[] = {
+    {"none", 0},
+    {"go", 1},
+    {"own", 2},
+};
+inline constexpr Enumeration kExportReference{kExportReferenceValues, 3};
+
+inline constexpr Value kClimbSourceValues[] = {
+    {"unknown", 0},
+    {"gnss", 1},
+    {"barometric", 2},
+};
+inline constexpr Enumeration kClimbSource{kClimbSourceValues, 3};
+
 inline constexpr Value kProductValues[] = {
     {"skyblip_go", 0},
     {"skyblip_bravo", 1},
@@ -201,8 +215,11 @@ inline constexpr Value kCommandValues[] = {
     {"chunk", 23},
     {"gnss_cold_start", 24},
     {"ownship", 25},
+    {"observation", 26},
+    {"health", 27},
+    {"peer_claim", 28},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 26};
+inline constexpr Enumeration kCommand{kCommandValues, 29};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -441,6 +458,70 @@ inline constexpr Key kOwnshipKeys[] = {
     {"rows", 4, Type::Bytes, nullptr, 0, true},
 };
 
+inline constexpr Key kObservationKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"address", 1, Type::Unsigned, nullptr, 0, true},
+    {"boot_epoch", 2, Type::Unsigned, nullptr, 0, true},
+    {"sequence", 3, Type::Unsigned, nullptr, 0, true},
+    {"at_s", 4, Type::Unsigned, nullptr, 0, true},
+    {"into_ms", 5, Type::Unsigned, nullptr, 0, false},
+    {"latitude_1e7", 6, Type::Integer, nullptr, 0, false},
+    {"longitude_1e7", 7, Type::Integer, nullptr, 0, false},
+    {"altitude_m", 8, Type::Integer, nullptr, 0, false},
+    {"altitude_age_ms", 9, Type::Integer, nullptr, 0, false},
+    {"pressure_altitude_ft", 10, Type::Integer, nullptr, 0, false},
+    {"pressure_altitude_age_ms", 11, Type::Integer, nullptr, 0, false},
+    {"speed_q", 12, Type::Unsigned, nullptr, 0, false},
+    {"track_c9", 13, Type::Unsigned, nullptr, 0, false},
+    {"speed_age_ms", 14, Type::Integer, nullptr, 0, false},
+    {"climb_e8", 15, Type::Integer, nullptr, 0, false},
+    {"climb_source", 16, Type::Enum, &kClimbSource, 0, false},
+    {"climb_age_ms", 17, Type::Integer, nullptr, 0, false},
+    {"flight_state", 18, Type::Enum, &kFlight, 0, false},
+    {"flight_state_age_ms", 19, Type::Integer, nullptr, 0, false},
+    {"aircraft_category", 20, Type::Unsigned, nullptr, 0, false},
+    {"adsb_version", 21, Type::Unsigned, nullptr, 0, false},
+    {"gva", 22, Type::Unsigned, nullptr, 0, false},
+    {"callsign", 23, Type::Text, nullptr, 0, false},
+    {"callsign_heard_s", 24, Type::Unsigned, nullptr, 0, false},
+};
+
+inline constexpr Key kHealthKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"protocol_version", 1, Type::Unsigned, nullptr, 0, true},
+    {"boot_epoch", 2, Type::Unsigned, nullptr, 0, true},
+    {"listening", 3, Type::Boolean, nullptr, 0, true},
+    {"utc_valid", 4, Type::Boolean, nullptr, 0, true},
+    {"last_sequence", 5, Type::Unsigned, nullptr, 0, false},
+    {"own_icao_set", 6, Type::Boolean, nullptr, 0, true},
+    {"alarm_granted", 7, Type::Boolean, nullptr, 0, true},
+    {"lease_ms", 8, Type::Unsigned, nullptr, 0, false},
+    {"request_epoch", 9, Type::Unsigned, nullptr, 0, false},
+    {"request_sequence", 10, Type::Unsigned, nullptr, 0, false},
+    {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
+};
+
+inline constexpr Key kPeerClaimKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"boot_epoch", 1, Type::Unsigned, nullptr, 0, true},
+    {"at_s", 2, Type::Unsigned, nullptr, 0, false},
+    {"into_ms", 3, Type::Unsigned, nullptr, 0, false},
+    {"latitude_1e7", 4, Type::Integer, nullptr, 0, false},
+    {"longitude_1e7", 5, Type::Integer, nullptr, 0, false},
+    {"position_age_ms", 6, Type::Unsigned, nullptr, 0, false},
+    {"altitude_hae_mm", 7, Type::Integer, nullptr, 0, false},
+    {"altitude_hae_age_ms", 8, Type::Unsigned, nullptr, 0, false},
+    {"pressure_altitude_mm", 9, Type::Integer, nullptr, 0, false},
+    {"pressure_altitude_age_ms", 10, Type::Unsigned, nullptr, 0, false},
+    {"own_icao", 11, Type::Unsigned, nullptr, 0, false},
+    {"alarm_requested", 12, Type::Boolean, nullptr, 0, true},
+    {"request_sequence", 13, Type::Unsigned, nullptr, 0, false},
+    {"alarm_passes", 14, Type::Unsigned, nullptr, 0, true},
+    {"alarm_volume", 15, Type::Enum, &kAlarmVolume, 0, true},
+    {"assessed_epoch", 16, Type::Unsigned, nullptr, 0, false},
+    {"assessed_sequence", 17, Type::Unsigned, nullptr, 0, false},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -468,6 +549,9 @@ inline constexpr Frame kFrames[] = {
     {"chunk", 23, events::Endpoint::Log, Sender::Unit, kChunkKeys, 6},
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
+    {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 12},
+    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 18},
 };
 
 }
