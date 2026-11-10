@@ -22,6 +22,7 @@
 #include "test/support/capture_rig.h"
 #include "test/support/config_frame.h"
 #include "test/support/product_rig.h"
+#include "test/support/registry_frames.h"
 #include "test/support/rig_moves.h"
 
 using namespace skyblip;
@@ -38,36 +39,6 @@ const names::Frame* frame_coded(uint64_t code) {
     return nullptr;
 }
 
-const names::Key* key_numbered(const names::Frame& frame, uint32_t number) {
-    for (int i = 0; i < frame.count; i++)
-        if (frame.keys[i].number == number) return &frame.keys[i];
-    return nullptr;
-}
-
-bool names_code(const names::Enumeration& enumeration, uint64_t code) {
-    for (int i = 0; i < enumeration.count; i++)
-        if (enumeration.values[i].code == code) return true;
-    return false;
-}
-
-bool carries_its_type(const names::Key& key, const cbor::Entry& entry) {
-    switch (key.type) {
-        case names::Type::Unsigned: return entry.type == cbor::Type::Unsigned;
-        case names::Type::Integer:
-            return entry.type == cbor::Type::Unsigned || entry.type == cbor::Type::Negative;
-        case names::Type::Boolean: return entry.type == cbor::Type::Boolean;
-        case names::Type::Text: return entry.type == cbor::Type::Text;
-        case names::Type::Bytes:
-            return entry.type == cbor::Type::Bytes &&
-                   (key.bytes == 0 || entry.content.size() == static_cast<size_t>(key.bytes));
-        case names::Type::UnsignedArray: return entry.type == cbor::Type::Array;
-        case names::Type::Enum:
-            return entry.type == cbor::Type::Unsigned &&
-                   names_code(*key.enumeration, entry.argument);
-    }
-    return false;
-}
-
 class Witness {
    public:
     void hold(const platform::host::Link& link) {
@@ -78,7 +49,7 @@ class Witness {
     std::vector<std::string> unheard() const {
         std::vector<std::string> out;
         for (const names::Frame& frame : names::kFrames) {
-            if (frame.sender == names::Sender::Host) continue;
+            if (frame.sender == names::Sender::Host || !on_a_phone_endpoint(frame)) continue;
             if (commands_.count(frame.code) == 0) out.push_back(frame.command);
             for (int i = 0; i < frame.count; i++) {
                 const names::Key& key = frame.keys[i];
@@ -130,12 +101,6 @@ struct NoConsole {
     bool ready() const { return false; }
     void line(const char*, int) {}
 };
-
-std::string hex_text(ConstByteSpan bytes) {
-    std::string out(2 * bytes.size(), '0');
-    hex::write(bytes, out.data());
-    return out;
-}
 
 const identity::Nonce kUnitNonce{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 const identity::Nonce kServerNonce{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
@@ -428,7 +393,7 @@ TEST_CASE("link registry: the unit reads every key a host frame may carry, and r
     unit.rig.platform.identity().queue_random(kUnitNonce);
     const std::map<std::string, std::string> values = samples(unit);
     for (const names::Frame& frame : names::kFrames) {
-        if (frame.sender == names::Sender::Unit) continue;
+        if (frame.sender == names::Sender::Unit || !on_a_phone_endpoint(frame)) continue;
         const Answer* answer = answer_to(frame);
         REQUIRE_MESSAGE(answer != nullptr, "no answer for ", std::string(frame.command));
         const std::string json = with_every_key(frame, values);

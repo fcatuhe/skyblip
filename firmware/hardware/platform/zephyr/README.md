@@ -8,7 +8,7 @@ What `link.cpp` puts on the air, and why those UUIDs.
 |---|---|---|
 | Nordic UART `6E400001-B5A3-F393-E0A9-E50E24DCCA9E` | `...0002` written by the app, `...0003` notified by us | XCSoar, Enroute Flight Navigation, anything SoftRF-shaped |
 | HM-10 `FFE0` | `FFE1`, notify and write on one characteristic | LK8000, and the profile PowerFLARM Flex ships |
-| skyBlip `69C21301-0187-4204-A91D-02EB8858B440` | `...02` config, `...03` flight log, each write and notify | our own configuration page |
+| skyBlip `69C21301-0187-4204-A91D-02EB8858B440` | `...02` config, `...03` flight log, each write and notify, and `...04` peer, written by a paired Go and notified by Bravo, which only Bravo will serve (#192) | our own configuration page, and a paired Go (`core/comms/README.md`, The peer endpoint) |
 
 The NMEA stream goes out on both public profiles at once, which is what SoftRF does (`src/platform/bluetooth/Bluefruit.cpp`, `bleuart_HM10` beside `bleuart_NUS`). The two conventions split the market: the open-source soaring stack prefers Nordic UART and XCSoar checks it first, while FLARM chose `FFE0`/`FFE1` for Fusion and Flex, which is what SkyDemon's 2024 BLE support was built against. Offering both costs one service definition and covers every client we know of.
 

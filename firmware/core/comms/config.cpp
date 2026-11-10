@@ -371,7 +371,10 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Log:
         case link::Command::Session:
         case link::Command::Chunk:
-        case link::Command::Ownship: return false;
+        case link::Command::Ownship:
+        case link::Command::Observation:
+        case link::Command::Health:
+        case link::Command::PeerClaim: return false;
     }
     return false;
 }

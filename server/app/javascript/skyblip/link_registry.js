@@ -1539,6 +1539,327 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "observation",
+      "code": 26,
+      "endpoint": "peer",
+      "sender": "unit",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "address",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "boot_epoch",
+          "number": 2,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "sequence",
+          "number": 3,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "at_s",
+          "number": 4,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "into_ms",
+          "number": 5,
+          "type": "unsigned"
+        },
+        {
+          "name": "latitude_1e7",
+          "number": 6,
+          "type": "integer"
+        },
+        {
+          "name": "longitude_1e7",
+          "number": 7,
+          "type": "integer"
+        },
+        {
+          "name": "altitude_m",
+          "number": 8,
+          "type": "integer"
+        },
+        {
+          "name": "altitude_age_ms",
+          "number": 9,
+          "type": "integer"
+        },
+        {
+          "name": "pressure_altitude_ft",
+          "number": 10,
+          "type": "integer"
+        },
+        {
+          "name": "pressure_altitude_age_ms",
+          "number": 11,
+          "type": "integer"
+        },
+        {
+          "name": "speed_q",
+          "number": 12,
+          "type": "unsigned"
+        },
+        {
+          "name": "track_c9",
+          "number": 13,
+          "type": "unsigned"
+        },
+        {
+          "name": "speed_age_ms",
+          "number": 14,
+          "type": "integer"
+        },
+        {
+          "name": "climb_e8",
+          "number": 15,
+          "type": "integer"
+        },
+        {
+          "name": "climb_source",
+          "number": 16,
+          "type": "enum",
+          "enum": "climb_source"
+        },
+        {
+          "name": "climb_age_ms",
+          "number": 17,
+          "type": "integer"
+        },
+        {
+          "name": "flight_state",
+          "number": 18,
+          "type": "enum",
+          "enum": "flight"
+        },
+        {
+          "name": "flight_state_age_ms",
+          "number": 19,
+          "type": "integer"
+        },
+        {
+          "name": "aircraft_category",
+          "number": 20,
+          "type": "unsigned"
+        },
+        {
+          "name": "adsb_version",
+          "number": 21,
+          "type": "unsigned"
+        },
+        {
+          "name": "gva",
+          "number": 22,
+          "type": "unsigned"
+        },
+        {
+          "name": "callsign",
+          "number": 23,
+          "type": "text"
+        },
+        {
+          "name": "callsign_heard_s",
+          "number": 24,
+          "type": "unsigned"
+        }
+      ]
+    },
+    {
+      "command": "health",
+      "code": 27,
+      "endpoint": "peer",
+      "sender": "unit",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "protocol_version",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "boot_epoch",
+          "number": 2,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "listening",
+          "number": 3,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "utc_valid",
+          "number": 4,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "last_sequence",
+          "number": 5,
+          "type": "unsigned"
+        },
+        {
+          "name": "own_icao_set",
+          "number": 6,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "alarm_granted",
+          "number": 7,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "lease_ms",
+          "number": 8,
+          "type": "unsigned"
+        },
+        {
+          "name": "request_epoch",
+          "number": 9,
+          "type": "unsigned"
+        },
+        {
+          "name": "request_sequence",
+          "number": 10,
+          "type": "unsigned"
+        },
+        {
+          "name": "export_reference",
+          "number": 11,
+          "type": "enum",
+          "enum": "export_reference",
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "peer_claim",
+      "code": 28,
+      "endpoint": "peer",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "boot_epoch",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "at_s",
+          "number": 2,
+          "type": "unsigned"
+        },
+        {
+          "name": "into_ms",
+          "number": 3,
+          "type": "unsigned"
+        },
+        {
+          "name": "latitude_1e7",
+          "number": 4,
+          "type": "integer"
+        },
+        {
+          "name": "longitude_1e7",
+          "number": 5,
+          "type": "integer"
+        },
+        {
+          "name": "position_age_ms",
+          "number": 6,
+          "type": "unsigned"
+        },
+        {
+          "name": "altitude_hae_mm",
+          "number": 7,
+          "type": "integer"
+        },
+        {
+          "name": "altitude_hae_age_ms",
+          "number": 8,
+          "type": "unsigned"
+        },
+        {
+          "name": "pressure_altitude_mm",
+          "number": 9,
+          "type": "integer"
+        },
+        {
+          "name": "pressure_altitude_age_ms",
+          "number": 10,
+          "type": "unsigned"
+        },
+        {
+          "name": "own_icao",
+          "number": 11,
+          "type": "unsigned"
+        },
+        {
+          "name": "alarm_requested",
+          "number": 12,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "request_sequence",
+          "number": 13,
+          "type": "unsigned"
+        },
+        {
+          "name": "alarm_passes",
+          "number": 14,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "alarm_volume",
+          "number": 15,
+          "type": "enum",
+          "enum": "alarm_volume",
+          "required": true
+        },
+        {
+          "name": "assessed_epoch",
+          "number": 16,
+          "type": "unsigned"
+        },
+        {
+          "name": "assessed_sequence",
+          "number": 17,
+          "type": "unsigned"
+        }
+      ]
     }
   ],
   "enums": {
@@ -2119,6 +2440,45 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
+    "export_reference": {
+      "values": [
+        {
+          "name": "none",
+          "code": 0
+        },
+        {
+          "name": "go",
+          "code": 1
+        },
+        {
+          "name": "own",
+          "code": 2
+        }
+      ]
+    },
+    "climb_source": {
+      "mirrors": {
+        "type": "model::ClimbSource",
+        "header": "core/model/aircraft.h"
+      },
+      "values": [
+        {
+          "name": "unknown",
+          "code": 0,
+          "mirrors": "Unknown"
+        },
+        {
+          "name": "gnss",
+          "code": 1,
+          "mirrors": "Gnss"
+        },
+        {
+          "name": "barometric",
+          "code": 2,
+          "mirrors": "Barometric"
+        }
+      ]
+    },
     "product": {
       "mirrors": {
         "type": "dfu::Product",
@@ -2263,6 +2623,18 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "ownship",
           "code": 25
+        },
+        {
+          "name": "observation",
+          "code": 26
+        },
+        {
+          "name": "health",
+          "code": 27
+        },
+        {
+          "name": "peer_claim",
+          "code": 28
         }
       ]
     }
