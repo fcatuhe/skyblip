@@ -21,6 +21,21 @@
     <button type="button" class="manage-button" data-activate-target="activate" data-action="activate#activate" disabled><%= activate %></button>
   </div>
 
+  <form class="manage-settings" data-activate-target="settings" data-action="input->activate#edit change->activate#edit submit->activate#save" hidden>
+    <fieldset data-activate-target="fields">
+      <legend><%= settings[:legend] %></legend>
+      <p class="note"><%= settings[:lede] %></p>
+
+      <%= render "shared/aircraft_settings", scope: "activate", defaults: false %>
+    </fieldset>
+
+    <p class="note" data-activate-target="ground" hidden><%= settings[:ground] %></p>
+    <div class="manage-row">
+      <button type="submit" class="manage-button" data-activate-target="save" disabled><%= settings[:save] %></button>
+      <button type="button" class="manage-button manage-button--quiet" data-activate-target="skip" data-action="activate#skip"><%= settings[:skip] %></button>
+    </div>
+  </form>
+
   <ol class="manage-steps">
     <% steps.each do |step, words| %>
       <li data-activate-target="step" data-step="<%= step %>" data-activate-word="step_<%= step %>"><%= words %></li>

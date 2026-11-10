@@ -111,7 +111,7 @@ The ownship editor, `/briefing/ownship`, draws the symbol at the centre of the r
 
 The simulated device case is `app/assets/stylesheets/simulator/device.css`, shared by the public simulator and the editable simulator under `/briefing/simulator`.
 
-The update page (`manage.*`) installs firmware and edits device settings using `app/javascript/skyblip/`, loaded through Importmap. The Bluetooth transport and update dialect are described in that folder's README. Every refusal the device can answer is a row in the page's tables, marked `data-manage-word`, and the controller reads the sentence out of the row. `test/javascript/test_words.mjs` fails when `firmware/core/comms/config.cpp` gains a refusal that either language has no row for.
+The update page (`manage.*`) installs firmware and edits device settings using `app/javascript/skyblip/`, loaded through Importmap. The Bluetooth transport and update dialect are described in that folder's README. Every refusal the device can answer is a row in the page's tables, marked `data-manage-word`, and the controller reads the sentence out of the row. `test/javascript/test_words.mjs` fails when `firmware/core/comms/config.cpp` gains a refusal that either language has no row for. The activation page offers the aircraft type and the callsign once a unit holds its serial, through the same fields, `shared/_aircraft_settings.html.erb`, whose labels live in `config/locales/` and whose types are `Ownship::AircraftType`'s names.
 
 ## Firmware and simulator releases
 

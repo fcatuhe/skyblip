@@ -47,6 +47,10 @@ fr:
     app: "application de navigation"
     received: "reçu"
     transmitted: "émis"
+  settings:
+    aircraft_type: "Type d\u2019aéronef"
+    callsign: "Indicatif"
+    callsign_hint: "Jusqu\u2019à neuf lettres, chiffres, tirets ou blancs. Vide, aucun nom n\u2019est émis."
   footer:
     description: "Visibilité électronique pour l'aviation légère. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."
     open_source: "Open source, sans abonnement, sans compte."

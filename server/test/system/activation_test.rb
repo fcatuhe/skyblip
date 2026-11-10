@@ -21,6 +21,48 @@ class ActivationTest < ApplicationSystemTestCase
     assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
   end
 
+  test "the aircraft type and the callsign are saved in the same session, asked once on the glass" do
+    activate
+    assert_select "Aircraft type", selected: "Light aircraft"
+    assert_field "Callsign", with: ""
+
+    select "Glider", from: "Aircraft type"
+    fill_in "Callsign", with: "f-jxyz"
+    click_button "Save"
+    assert_selector "li[aria-current=step][data-step=settings]"
+    assert_equal({ "aircraft_type" => 4, "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
+
+    page.execute_script("fakeUnit.press()")
+    assert_selector "[role=status]", text: "Saved: the unit stored the aircraft type and the callsign"
+    assert_no_field "Callsign"
+    assert_equal 1, page.evaluate_script("fakeUnit.commands").count("set")
+  end
+
+  test "skipping the settings keeps the ones the unit holds" do
+    activate
+    click_button "Skip"
+    assert_selector "[role=status]", text: "Settings kept: the unit keeps its current aircraft type and callsign"
+    assert_no_field "Callsign"
+    assert_not_includes page.evaluate_script("fakeUnit.commands"), "set"
+  end
+
+  test "a unit that wants the ground for its settings refuses them indoors, and its first fix gives Save back" do
+    visit "/activate"
+    page.execute_script("fakeUnit.flight = 'unknown'")
+    activate
+    assert_no_selector "[data-activate-target=ground]"
+    fill_in "Callsign", with: "F-JXYZ"
+    click_button "Save"
+    assert_selector "[role=status]", text: "The unit has not proven it is on the ground"
+    assert_selector "[data-activate-target=ground]", text: "Save comes back when the unit reports the fix"
+    assert_button "Save", disabled: true
+
+    page.execute_script("fakeUnit.land()")
+    assert_no_selector "[data-activate-target=ground]"
+    click_button "Save"
+    assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
+  end
+
   test "a browser that kept the smallest Bluetooth packet is told so at the first step" do
     visit "/activate"
     page.execute_script("fakeUnit.mtu = 23")
@@ -30,4 +72,14 @@ class ActivationTest < ApplicationSystemTestCase
     assert_equal %w[get challenge], page.evaluate_script("fakeUnit.commands")
     assert_nil Unit.find_by(device_id: vectors["device_id"])
   end
+
+  private
+    def activate
+      visit "/activate" unless page.current_path == "/activate"
+      click_button "Connect"
+      click_button "Activate"
+      assert_selector "li[aria-current=step][data-step=confirm]"
+      page.execute_script("fakeUnit.press()")
+      assert_selector "[role=status]", text: "Activated: the unit holds its serial"
+    end
 end

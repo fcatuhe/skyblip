@@ -84,15 +84,17 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     address = 0x00012a,
+    setsOffGround = false,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, setsOffGround });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
+    this.airborne = false;
     this.staged = null;
     this.windowOpen = false;
     this.slot = null;
@@ -229,7 +231,7 @@ export class FakeSkyblip {
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
-    if (!this.onGround) return this.acknowledge(false, 'in_flight');
+    if (!this.onGround && !(command === 'set' && this.setsOffGround)) return this.acknowledge(false, 'in_flight');
     if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
     if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
     if (command === 'dfu' && this.older(parseVersion(fields.version))) return this.acknowledge(false, 'older');
@@ -248,6 +250,7 @@ export class FakeSkyblip {
 
   takeOff() {
     this.onGround = false;
+    this.airborne = true;
     this.windowOpen = false;
     if (this.pending) {
       this.pending = null;
@@ -258,6 +261,7 @@ export class FakeSkyblip {
 
   land() {
     this.onGround = true;
+    this.airborne = false;
     this.sendStatus();
   }
 
@@ -290,7 +294,7 @@ export class FakeSkyblip {
   sendStatus() {
     this.reply({
       command: 'status',
-      flight: this.onGround ? 'ground' : 'airborne',
+      flight: this.flight(),
       upload: this.windowOpen && this.onGround,
       battery_percent: this.swapPowered ? 80 : 12,
       charging: false,
@@ -298,6 +302,12 @@ export class FakeSkyblip {
       went_dark_flat: false,
       die_temperature_c: 21,
     });
+  }
+
+  // INFO: fc 10nov26 config.cpp reads a unit with no fix since boot as unknown, which refuses like airborne
+  flight() {
+    if (this.onGround) return 'ground';
+    return this.airborne ? 'airborne' : 'unknown';
   }
 
   press() {

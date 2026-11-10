@@ -23,11 +23,21 @@
     nonce: null,
     serverNonce: null,
     address: null,
+    stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' },
+    staged: null,
+    pending: null,
+    flight: 'ground',
     mtu: 247,
     listeners: [],
     commands: [],
 
     async press() {
+      const task = this.pending;
+      this.pending = null;
+      if (task === 'set') {
+        Object.assign(this.stored, this.staged);
+        return this.reply({ command: 'acknowledgement', acknowledge: true });
+      }
       const { device_id, unit_public_key, unit_seed, server_key_id, release, version } = this.vectors;
       const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
       const message = join(
@@ -51,6 +61,15 @@
       setTimeout(() => this.listeners.forEach(listener => listener({ target: { value } })));
     },
 
+    land() {
+      this.flight = 'ground';
+      return this.status();
+    },
+
+    status() {
+      return this.reply({ command: 'status', flight: this.flight, upload: false, charging: false, power_level: 'normal', went_dark_flat: false });
+    },
+
     acknowledge(acknowledge, reason, pending = undefined) {
       return this.reply({ command: 'acknowledgement', acknowledge, pending, reason });
     },
@@ -59,7 +78,16 @@
       const { decodeFrame } = await link();
       const { command, ...fields } = decodeFrame(raw);
       this.commands.push(command);
-      if (command === 'get') return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 });
+      if (command === 'get') {
+        return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58, ...this.stored });
+      }
+      if (command === 'status') return this.status();
+      if (command === 'set') {
+        if (this.flight !== 'ground') return this.acknowledge(false, 'in_flight');
+        this.staged = fields;
+        this.pending = 'set';
+        return this.acknowledge(false, 'confirm', true);
+      }
       if (command === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
         return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
@@ -69,6 +97,7 @@
           return this.acknowledge(false, 'bad_signature');
         }
         this.serverNonce = hex(fields.server_nonce);
+        this.pending = 'register';
         return this.acknowledge(false, 'confirm_register', true);
       }
       if (command === 'unlock') {

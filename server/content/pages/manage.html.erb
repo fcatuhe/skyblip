@@ -2,7 +2,7 @@
 title: "Go firmware update and device settings"
 nav_title: Update
 description: "Update skyBlip Go firmware and settings over Bluetooth from Chrome or Edge. Approve each change on the device. USB recovery is also explained."
-updated_on: "2026-11-09"
+updated_on: "2026-11-10"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
@@ -17,7 +17,8 @@ updated_on: "2026-11-09"
   <p class="lede">
     The page also reads the settings the device holds, shows which differ from
     the ones it ships on, and changes them, each change asked on the glass.
-    Nothing is asked while the device is not on the ground.
+    An install is asked only while the device is on the ground. A device whose
+    firmware wants the ground for its settings too says so.
   </p>
 
   <%= render "shared/manage",
@@ -33,11 +34,6 @@ updated_on: "2026-11-09"
         flight: { label: "Flight", ground: "on the ground", airborne: "airborne", unknown: "not yet known" },
         settings: {
           legend: "Settings on the device",
-          aircraft_type: "Aircraft type",
-          aircraft_types: ["Unknown", "Light aircraft", "Heavy aircraft", "Helicopter", "Glider", "Balloon",
-                           "Microlight", "Paraglider", "Skydiver", "VTOL", "Gyrocopter"],
-          callsign: "Callsign",
-          callsign_hint: "Up to nine letters, digits, dashes or blanks. Empty transmits no name.",
           units: "Units",
           unit_names: { nautical: "Nautical: NM and kt", metric: "Metric: km and km/h" },
           alarm_enabled: "Alarm sound",

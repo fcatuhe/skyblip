@@ -3,7 +3,7 @@ title: "Mise à jour du firmware et réglages du Go"
 nav_title: Mise à jour
 slug: mise-a-jour
 description: "Mettez à jour le firmware et les réglages de skyBlip Go en Bluetooth depuis Chrome ou Edge. Chaque changement se confirme sur l'appareil."
-updated_on: "2026-11-09"
+updated_on: "2026-11-10"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
@@ -19,15 +19,16 @@ updated_on: "2026-11-09"
   <p class="lede">
     La page lit aussi les réglages que l&rsquo;appareil contient, montre ceux
     qui diffèrent de ceux avec lesquels il est livré, et les change, chaque
-    changement demandé à l&rsquo;écran. Rien n&rsquo;est demandé tant que
-    l&rsquo;appareil n&rsquo;est pas au sol.
+    changement demandé à l&rsquo;écran. Une installation n&rsquo;est demandée
+    qu&rsquo;au sol. Un appareil dont le firmware veut aussi être au sol pour
+    ses réglages le signale.
   </p>
 
   <%= render "shared/manage",
-        unsupported: "Ce navigateur n'a pas Web Bluetooth, cette page ne peut donc pas joindre l'appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d'iPhone et d'iPad n'en ont pas.",
+        unsupported: "Ce navigateur n\u2019a pas Web Bluetooth, cette page ne peut donc pas joindre l\u2019appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d\u2019iPhone et d\u2019iPad n\u2019en ont pas.",
         connect: "Connecter",
         disconnect: "Déconnecter",
-        connecting: "Votre navigateur liste les appareils à portée : choisissez skyBlip Go suivi de son adresse.",
+        connecting: "Votre navigateur liste les appareils à portée\u00A0: choisissez skyBlip Go suivi de son adresse.",
         device: "Appareil",
         firmware: "En service",
         track: { label: "Canal", development: "développement", release: "publié" },
@@ -35,24 +36,19 @@ updated_on: "2026-11-09"
         charging: "en charge",
         flight: { label: "Vol", ground: "au sol", airborne: "en vol", unknown: "pas encore connu" },
         settings: {
-          legend: "Réglages de l'appareil",
-          aircraft_type: "Type d'aéronef",
-          aircraft_types: ["Inconnu", "Avion léger", "Avion lourd", "Hélicoptère", "Planeur", "Ballon",
-                           "ULM", "Parapente", "Parachutiste", "VTOL", "Autogire"],
-          callsign: "Indicatif",
-          callsign_hint: "Jusqu'à neuf lettres, chiffres, tirets ou blancs. Vide, aucun nom n'est émis.",
+          legend: "Réglages de l\u2019appareil",
           units: "Unités",
-          unit_names: { nautical: "Aéronautiques : NM et kt", metric: "Métriques : km et km/h" },
-          alarm_enabled: "Son de l'alarme",
-          alarm_volume: "Volume de l'alarme",
+          unit_names: { nautical: "Aéronautiques\u00A0: NM et kt", metric: "Métriques\u00A0: km et km/h" },
+          alarm_enabled: "Son de l\u2019alarme",
+          alarm_volume: "Volume de l\u2019alarme",
           volume_names: { off: "Coupé", soft: "Faible", loud: "Fort" },
           save: "Enregistrer",
-          reset: "Revenir aux réglages d'origine",
-          default: "D'origine : %{value}",
+          reset: "Revenir aux réglages d\u2019origine",
+          default: "D\u2019origine\u00A0: %{value}",
           on: "activé",
           off: "désactivé",
           none: "aucun",
-          confirm_set: "Autorisez le changement : l'écran dit SETTINGS, pressez deux fois."
+          confirm_set: "Autorisez le changement\u00A0: l\u2019écran dit SETTINGS, pressez deux fois."
         },
         advice: "Fichier à envoyer",
         chosen: "Image choisie",
@@ -61,14 +57,14 @@ updated_on: "2026-11-09"
         file: "Ou votre propre fichier de firmware, en .signed.bin",
         install: "Installer",
         steps: {
-          dfu: "Autorisez la mise à jour : l'écran dit FIRMWARE et la version, pressez deux fois.",
-          upload: "L'image voyage et l'écran dit RECEIVING. Gardez cette page ouverte et l'appareil près de vous.",
-          install: "L'appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
+          dfu: "Autorisez la mise à jour\u00A0: l\u2019écran dit FIRMWARE et la version, pressez deux fois.",
+          upload: "L\u2019image voyage et l\u2019écran dit RECEIVING. Gardez cette page ouverte et l\u2019appareil près de vous.",
+          install: "L\u2019appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
         },
         remaining: "environ %{minutes} min restantes",
-        recovery: "Si le firmware ne prend pas : le lecteur USB",
-        confirm_recovery: "L'écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER : pressez deux fois.",
-        recovering: "L'écran dit maintenant USB BOOTLOADER. S'il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l'appareil est alors un lecteur USB nommé TECHOBOOT : déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n'est émis pendant ce temps.",
+        recovery: "Si le firmware ne prend pas\u00A0: le lecteur USB",
+        confirm_recovery: "L\u2019écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER\u00A0: pressez deux fois.",
+        recovering: "L\u2019écran dit maintenant USB BOOTLOADER. S\u2019il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l\u2019appareil est alors un lecteur USB nommé TECHOBOOT\u00A0: déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n\u2019est émis pendant ce temps.",
         recover: "Redémarrer en lecteur USB" %>
 </section>
 
@@ -191,7 +187,7 @@ updated_on: "2026-11-09"
         <tr><th class="mono">imu: writing</th><td data-manage-word="imu_writing">L&rsquo;appareil écrit le firmware de sa centrale inertielle dans sa mémoire, jusqu&rsquo;à une minute. Laissez-le allumé&nbsp;: la page redemande jusqu&rsquo;à ce que ce soit fini.</td></tr>
         <tr><th class="mono">no key</th><td data-manage-word="no_key">Ce firmware est trop ancien pour nommer la clé qu&rsquo;il reconnaît, si bien que la liste des images publiées reste vide. Installez-en une à la main une fois, le .full.signed.bin de sa page de version avec le sélecteur de fichier, ou son .uf2 sur le lecteur USB&nbsp;: ensuite la liste propose les suivantes.</td></tr>
         <tr><th class="mono">went_dark_flat</th><td data-manage-word="went_dark_flat">La dernière fois qu&rsquo;il s&rsquo;est éteint, c&rsquo;était pour une batterie vide. Chargez-le avant la mise à jour.</td></tr>
-        <tr><th class="mono">pas d&rsquo;address</th><td data-manage-word="not_activated">Cet appareil n&rsquo;est pas encore activé : il n&rsquo;émet ni ne reçoit. Donnez-lui son numéro sur la page d&rsquo;activation, skyblip.eu/fr/activer.</td></tr>
+        <tr><th class="mono">pas d&rsquo;address</th><td data-manage-word="not_activated">Cet appareil n&rsquo;est pas encore activé&nbsp;: il n&rsquo;émet ni ne reçoit. Donnez-lui son numéro sur la page d&rsquo;activation, skyblip.eu/fr/activer.</td></tr>
       </tbody>
     </table>
   </div>

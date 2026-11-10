@@ -10,7 +10,6 @@ const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "ins
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
-const NUMBERS = new Set(["aircraft_type"])
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 
 export default class extends Controller {
@@ -20,8 +19,10 @@ export default class extends Controller {
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
-    const { Updater, hasWebBluetooth } = await import(this.srcValue)
+    const { Updater, hasWebBluetooth, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
+    this.readSetting = readSetting
+    this.showSetting = showSetting
     this.bluetooth = hasWebBluetooth()
     this.unsupportedTarget.hidden = this.bluetooth
     this.updater = new Updater({ onChange: state => this.#render(state) })
@@ -205,13 +206,13 @@ export default class extends Controller {
     return note
   }
 
-  #settings({ phase, settings, defaults }) {
+  #settings({ phase, settings, defaults, heldForGround }) {
     this.settingsTarget.hidden = !settings
     if (!settings) return
     if (settings !== this.shown) this.#fill(settings)
     const edited = this.#edited()
     const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
-    const idle = phase === "ready" && this.updater.onGround
+    const idle = phase === "ready" && !heldForGround
     this.fieldsTarget.disabled = !idle
     this.saveTarget.disabled = !idle || !changed
     this.resetTarget.hidden = !defaults
@@ -222,31 +223,12 @@ export default class extends Controller {
   #fill(settings) {
     this.shown = settings
     const { elements } = this.settingsTarget
-    this.#choose(elements.aircraft_type, settings.aircraft_type)
-    elements.callsign.value = settings.callsign
-    elements.units.value = settings.units
-    elements.alarm_enabled.checked = settings.alarm_enabled
-    this.#choose(elements.alarm_volume, settings.alarm_volume)
-  }
-
-  #choose(select, value) {
-    if (![...select.options].some(option => option.value === String(value))) {
-      select.add(new Option(String(value), value))
-    }
-    select.value = value
+    for (const [key, value] of Object.entries(settings)) this.showSetting(elements[key], value)
   }
 
   #edited() {
     const { elements } = this.settingsTarget
-    const edited = {}
-    for (const key of Object.keys(this.shown ?? {})) {
-      const field = elements[key]
-      if (field.type === "checkbox") edited[key] = field.checked
-      else if (NUMBERS.has(key)) edited[key] = Number(field.value)
-      else if (field.tagName === "SELECT") edited[key] = field.value
-      else edited[key] = field.value.toUpperCase().trimEnd()
-    }
-    return edited
+    return Object.fromEntries(Object.keys(this.shown ?? {}).map(key => [key, this.readSetting(elements[key])]))
   }
 
   #default(note, settings, defaults) {

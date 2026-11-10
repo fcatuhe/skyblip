@@ -42,6 +42,7 @@ jobs:
               - 'firmware/core/comms/config.cpp'
               - 'firmware/core/comms/identity_link.cpp'
               - 'firmware/core/comms/config.h'
+              - 'firmware/products/skyblip_go/pages/menu.cpp'
               - 'scripts/simulator_scenarios.rb'
               - 'lib/simulator_scenarios.rb'
               - '.github/workflows/firmware.yml'

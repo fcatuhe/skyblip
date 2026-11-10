@@ -1,10 +1,11 @@
 require "test_helper"
 
 class Ownship::AircraftTypeTest < ActiveSupport::TestCase
-  test "the codes follow the settings select on the manage page" do
-    english = Rails.root.join("content/pages/manage.html.erb").read[/aircraft_types: \[(.*?)\]/m, 1].scan(/"([^"]+)"/).flatten
+  # The settings forms send these codes as the unit's aircraft_type, so they must be the device menu's.
+  test "the codes follow the aircraft types of the device menu" do
+    menu = Rails.root.join("../firmware/products/skyblip_go/pages/menu.cpp").read[/kAircraftNames\[[^\]]*\] = \{(.*?)\};/m, 1].scan(/"([^"]+)"/).flatten
 
-    assert_equal english, Ownship::AircraftType.all.map(&:name)
+    assert_equal menu, Ownship::AircraftType::KEYS.map { it.split("_").first.upcase }
     assert_equal 4, Ownship::AircraftType.find("glider").code
   end
 
