@@ -1,0 +1,6 @@
+board:
+  name: meshtracker_x1
+  full_name: Seeed SenseCAP MeshTracker X1 (skyBlip Bravo)
+  vendor: seeed
+  socs:
+    - name: nrf52840

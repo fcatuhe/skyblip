@@ -42,7 +42,9 @@ struct Plotted {
     ui::Trend trend;
 };
 
-ui::Vertical vertical_of(int32_t up_m) {
+ui::Vertical vertical_of(const RadarTarget& target) {
+    if (!target.up_valid) return ui::Vertical::Unknown;
+    const int32_t up_m = target.up_m;
     const int32_t apart = up_m < 0 ? -up_m : up_m;
     if (apart <= kLevelM) return ui::Vertical::Level;
     const bool beyond = apart > traffic::kAdvisoryAltitudeM;
@@ -94,8 +96,8 @@ Plotted plot_point(const RadarSnapshot& snapshot, const RadarTarget& target,
     const bool in_ring = inside_ring(delta_x, delta_y, ring);
     const bool pinned = !in_ring && snapshot.plot == RadarPlot::All;
     const HeadingUp drawn = pinned ? on_the_rim(delta_x, delta_y) : HeadingUp{delta_y, delta_x};
-    Plotted plotted{delta_x, delta_y, glass_x_of(drawn.right),  glass_y_of(drawn.ahead),
-                    in_ring, true,    vertical_of(target.up_m), trend_of(target)};
+    Plotted plotted{delta_x, delta_y, glass_x_of(drawn.right), glass_y_of(drawn.ahead),
+                    in_ring, true,    vertical_of(target),     trend_of(target)};
     plotted.shown = pinned || on_glass(plotted.x, plotted.y);
     return plotted;
 }
@@ -275,6 +277,12 @@ struct RimMark {
     int count;
 };
 
+// INFO: fc 10nov26 a target with no altitude may be at ours, so it ranks as level
+int32_t separation_m(const RadarTarget& target) {
+    const int32_t apart = target.up_m < 0 ? -target.up_m : target.up_m;
+    return target.up_valid ? apart : 0;
+}
+
 bool outranks(const RimMark& mark, const RimMark& other) {
     if (mark.level != other.level) return mark.level > other.level;
     if (mark.separation_m != other.separation_m) return mark.separation_m < other.separation_m;
@@ -432,8 +440,8 @@ void plot_rim(ui::Canvas& canvas, const RadarSnapshot& snapshot, int16_t track_a
         if (target.in_formation) continue;
         const Plotted plotted = plot_point(snapshot, target, track_angle16);
         if (plotted.in_ring) continue;
-        const RimMark mark{clear_of(plotted, label), target.alarm_level,
-                           target.up_m < 0 ? -target.up_m : target.up_m, apart_squared(plotted), 1};
+        const RimMark mark{clear_of(plotted, label), target.alarm_level, separation_m(target),
+                           apart_squared(plotted), 1};
         int at = ranked++;
         for (; at > 0 && outranks(mark, marks[at - 1]); at--) marks[at] = marks[at - 1];
         marks[at] = mark;

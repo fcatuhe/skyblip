@@ -131,6 +131,40 @@ TEST_CASE("blip: past the advisory's window the blip is smaller, and carries no 
     CHECK(blip(Vertical::FarAbove, Trend::Steady).get_pixel(kCentreX, kCentreY + 1));
 }
 
+// A target that sends no altitude has no side to point to, so its blip has no point.
+TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the diamond") {
+    const TestPanel ring = blip(Vertical::Unknown, Trend::Steady);
+    CHECK_FALSE(ring.get_pixel(kCentreX, kCentreY));
+    CHECK(ring.get_pixel(kCentreX - 5, kCentreY));
+    CHECK(ring.get_pixel(kCentreX + 5, kCentreY));
+    CHECK(ring.get_pixel(kCentreX, kCentreY - 5));
+    CHECK(ring.get_pixel(kCentreX, kCentreY + 5));
+    CHECK_FALSE(ring.get_pixel(kCentreX - 5, kCentreY - 5));
+
+    const TestPanel filled = blip(Vertical::Unknown, Trend::Steady, /*alarm=*/true);
+    CHECK(filled.get_pixel(kCentreX, kCentreY));
+    CHECK(ink(filled) > ink(ring));
+
+    CHECK(blip_above(Vertical::Unknown, Trend::Climbing) ==
+          blip_above(Vertical::Level, Trend::Climbing));
+    CHECK(blip_below(Vertical::Unknown, Trend::Sinking) ==
+          blip_below(Vertical::Level, Trend::Sinking));
+    for (const Trend trend : {Trend::Climbing, Trend::Sinking}) {
+        const TestPanel with_caret = blip(Vertical::Unknown, trend);
+        const int caret_ink =
+            ink(blip(Vertical::Level, trend)) - ink(blip(Vertical::Level, Trend::Steady));
+        CHECK(ink(with_caret) - ink(ring) == caret_ink);
+        for (int y = 1; y < TestPanel::kHeight - 1; y++)
+            for (int x = 1; x < TestPanel::kWidth - 1; x++) {
+                if (!ring.get_pixel(x, y)) continue;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                        if (!ring.get_pixel(x + dx, y + dy))
+                            CHECK_FALSE(with_caret.get_pixel(x + dx, y + dy));
+            }
+    }
+}
+
 TEST_CASE("blip: the alarm fills the blip it was already drawing") {
     const TestPanel hollow = blip(Vertical::Level, Trend::Steady);
     const TestPanel filled = blip(Vertical::Level, Trend::Steady, /*alarm=*/true);

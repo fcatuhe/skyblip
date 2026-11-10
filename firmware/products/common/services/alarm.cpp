@@ -1,8 +1,8 @@
-#include "products/skyblip_go/services/alarm.h"
+#include "products/common/services/alarm.h"
 
 #include <algorithm>
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 bool AlarmService::silenced(traffic::Target& target, formation::State state) {
     if (state == formation::State::None) return false;
@@ -61,7 +61,7 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.level = tracker_.announced_level(now_ms);
     situation.announced = announced;
     situation.first_fix = context_.state.own.fix_acquired;
-    situation.enabled = settings_.alarm_enabled && settings_.alarm_volume != AlarmVolume::Off;
+    situation.enabled = settings_.enabled && settings_.volume != AlarmVolume::Off;
     situation.running = running_;
     drive(situation, now_ms);
     drive_lamp(now_ms, running_);
@@ -139,9 +139,8 @@ void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_
 
 void AlarmService::drive_buzzer(const annunciation::Command& command) {
     if (command.tone_on) {
-        const ports::Loudness loudness = settings_.alarm_volume == AlarmVolume::Soft
-                                             ? ports::Loudness::Soft
-                                             : ports::Loudness::Loud;
+        const ports::Loudness loudness =
+            settings_.volume == AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
         context_.roles.annunciator.tone(command.tone_hz, loudness);
     } else {
         context_.roles.annunciator.silence();
@@ -156,4 +155,4 @@ void AlarmService::drive_motor(bool vibrating) {
     }
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

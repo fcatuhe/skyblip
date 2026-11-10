@@ -73,7 +73,8 @@ TEST_CASE("nmea: relative geometry, target due north is +north, ~0 east") {
     observation.longitude_1e7 = own.longitude_1e7;
     observation.altitude_m = 1200;
     int32_t north_m, east_m, up_m;
-    REQUIRE(flight::relative_north_east_up(own, observation, north_m, east_m, up_m));
+    bool up_valid;
+    REQUIRE(flight::relative_north_east_up(own, observation, north_m, east_m, up_m, up_valid));
     CHECK(north_m > 100000);
     CHECK(std::abs(east_m) < 100);
     CHECK(up_m == 200);
@@ -88,7 +89,8 @@ TEST_CASE("nmea: a target across the antimeridian is metres away, not the width 
     observation.longitude_1e7 = -1799999000;
     observation.altitude_m = 1000;
     int32_t north_m, east_m, up_m;
-    REQUIRE(flight::relative_north_east_up(own, observation, north_m, east_m, up_m));
+    bool up_valid;
+    REQUIRE(flight::relative_north_east_up(own, observation, north_m, east_m, up_m, up_valid));
     CHECK(north_m == 0);
     // 0.0002 deg of longitude at the equator
     CHECK(east_m == doctest::Approx(22).epsilon(0.05));
@@ -180,17 +182,48 @@ TEST_CASE("nmea: PFLAA returns 0 without own position") {
     CHECK(format_pflaa(buffer, sizeof(buffer), own, observation, 0, nullptr) == 0);
 }
 
+// XCSoar drops a $PFLAA with no RelativeVertical, and draws a 0 at our level.
+TEST_CASE("nmea: a target that sends no altitude gets no PFLAA") {
+    auto own = own_at(481000000, 81000000, 1000);
+    model::AircraftObservation observation{};
+    observation.position_valid = true;
+    observation.latitude_1e7 = own.latitude_1e7 + 10000;
+    observation.longitude_1e7 = own.longitude_1e7;
+    observation.altitude_m = 1000;
+    char buffer[128];
+    CHECK(format_pflaa(buffer, sizeof(buffer), own, observation, 1, nullptr) > 0);
+
+    observation.altitude_valid = false;
+    CHECK(format_pflaa(buffer, sizeof(buffer), own, observation, 1, nullptr) == 0);
+}
+
+// XCSoar reads an empty RelativeVertical as no vertical, and a 0 as our level.
+TEST_CASE("nmea: PFLAU leaves RelativeVertical empty for a threat with no altitude") {
+    auto own = own_at(481000000, 81000000, 1000);
+    model::AircraftObservation threat{};
+    threat.address = 0x112233;
+    char buffer[128];
+    const int written =
+        format_pflau(buffer, sizeof(buffer), own, true, 1, &threat, 1, 45, 0, false, 800);
+    const std::string sentence(buffer, written);
+    CHECK(sentence.rfind("$PFLAU,1,1,2,1,1,45,2,,800,112233*", 0) == 0);
+    CHECK(data_fields(sentence) == 10);
+    CHECK(checksum_ok(sentence));
+}
+
 TEST_CASE("nmea: PFLAU reports the receive count, the GPS state and the threat") {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation threat{};
     threat.address = 0x112233;
     char buffer[128];
-    int written = format_pflau(buffer, sizeof(buffer), own, true, 5, &threat, 3, 45, -50, 800);
+    int written =
+        format_pflau(buffer, sizeof(buffer), own, true, 5, &threat, 3, 45, -50, true, 800);
     std::string sentence(buffer, written);
     CHECK(sentence.rfind("$PFLAU,5,1,2,1,3,", 0) == 0);
     CHECK(sentence.find("112233") != std::string::npos);
     // A threat off the left wing is a negative bearing, not 315.
-    const int back = format_pflau(buffer, sizeof(buffer), own, true, 5, &threat, 3, -45, -50, 800);
+    const int back =
+        format_pflau(buffer, sizeof(buffer), own, true, 5, &threat, 3, -45, -50, true, 800);
     CHECK(std::string(buffer, back).find(",-45,") != std::string::npos);
     CHECK(checksum_ok(sentence));
 }
@@ -217,12 +250,13 @@ TEST_CASE("nmea: PFLAU GPS 1 on the ground reads as a 2D fix on XCSoar, and is s
     auto own = own_at(481000000, 81000000, 1000);
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
     char buffer[128];
-    const int written = format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, 0);
+    const int written =
+        format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, false, 0);
     CHECK(std::string(buffer, written).rfind("$PFLAU,0,1,1,1,0,", 0) == 0);
 
     // SoftRF sends GNSS_STATUS_3D_MOVING on any fix (lyusupov .../data/NMEA.cpp:547), we do not.
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
-    const int air = format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, 0);
+    const int air = format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, false, 0);
     CHECK(std::string(buffer, air).rfind("$PFLAU,0,1,2,1,0,", 0) == 0);
 }
 
@@ -232,7 +266,8 @@ TEST_CASE("nmea: PFLAU carries all ten FTD-012 fields, empty sky or not") {
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
     char buffer[128];
 
-    const int quiet = format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, 0);
+    const int quiet =
+        format_pflau(buffer, sizeof(buffer), own, true, 0, nullptr, 0, 0, 0, false, 0);
     const std::string nothing_out_there(buffer, quiet);
     CHECK(nothing_out_there.rfind("$PFLAU,0,1,2,1,0,,0,,,*4C", 0) == 0);
     CHECK(data_fields(nothing_out_there) == 10);
@@ -240,7 +275,8 @@ TEST_CASE("nmea: PFLAU carries all ten FTD-012 fields, empty sky or not") {
 
     model::AircraftObservation threat{};
     threat.address = 0x112233;
-    const int seen = format_pflau(buffer, sizeof(buffer), own, true, 1, &threat, 2, -45, -50, 800);
+    const int seen =
+        format_pflau(buffer, sizeof(buffer), own, true, 1, &threat, 2, -45, -50, true, 800);
     const std::string with_a_threat(buffer, seen);
     CHECK(data_fields(with_a_threat) == 10);
     CHECK(checksum_ok(with_a_threat));
@@ -250,10 +286,12 @@ TEST_CASE("nmea: PFLAU carries all ten FTD-012 fields, empty sky or not") {
 TEST_CASE("nmea: PFLAU's TX field follows the transmitter's own gate, not the clock's validity") {
     auto own = own_at(481000000, 81000000, 1000);
     char buffer[128];
-    const int silent = format_pflau(buffer, sizeof(buffer), own, false, 2, nullptr, 0, 0, 0, 0);
+    const int silent =
+        format_pflau(buffer, sizeof(buffer), own, false, 2, nullptr, 0, 0, 0, false, 0);
     CHECK(std::string(buffer, silent).rfind("$PFLAU,2,0,2,1,0,", 0) == 0);
 
-    const int sending = format_pflau(buffer, sizeof(buffer), own, true, 2, nullptr, 0, 0, 0, 0);
+    const int sending =
+        format_pflau(buffer, sizeof(buffer), own, true, 2, nullptr, 0, 0, 0, false, 0);
     CHECK(std::string(buffer, sending).rfind("$PFLAU,2,1,2,1,0,", 0) == 0);
 }
 
@@ -357,8 +395,8 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     const int traffic = format_pflaa(buffer, sizeof(buffer), own, observation, 3, "ABCDEFGHIJKLMN");
     CHECK(traffic > 0);
     CHECK(traffic <= comms::kSmallestSupportedPayloadBytes);
-    const int status =
-        format_pflau(buffer, sizeof(buffer), own, true, 99, &observation, 3, -180, -99999, 999999);
+    const int status = format_pflau(buffer, sizeof(buffer), own, true, 99, &observation, 3, -180,
+                                    -99999, true, 999999);
     CHECK(status > 0);
     CHECK(status <= comms::kSmallestSupportedPayloadBytes);
     // And neither fits what BLE merely guarantees, which is why a sender here

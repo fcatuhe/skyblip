@@ -158,7 +158,7 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
 }
 
 bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,
-                            int32_t& north_m, int32_t& east_m, int32_t& up_m) {
+                            int32_t& north_m, int32_t& east_m, int32_t& up_m, bool& up_valid) {
     if (!own.fix_valid || !target.position_valid) return false;
     const int64_t latitude_delta_1e7 = static_cast<int64_t>(target.latitude_1e7) - own.latitude_1e7;
     const int64_t longitude_delta_1e7 =
@@ -169,9 +169,8 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
     const int64_t east_micrometres = divide_rounded<int64_t>(
         longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
     east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_micrometres, kMicrometresPerMetre));
-    up_m = target.altitude_valid
-               ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value
-               : 0;
+    up_valid = target.altitude_valid;
+    up_m = up_valid ? target.altitude_m - to_metres(Millimetres(own.altitude_hae_mm)).value : 0;
     return true;
 }
 

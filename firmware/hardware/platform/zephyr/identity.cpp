@@ -2,12 +2,13 @@
 
 #include "hardware/platform/zephyr/identity.h"
 
-#include <hal/nrf_ficr.h>
 #include <hal/nrf_nvmc.h>
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/irq.h>
 #include <zephyr/logging/log.h>
+
+#include "hardware/platform/zephyr/bluetooth_tag.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
@@ -35,7 +36,7 @@ Status Identity::begin() {
     }
     for (size_t i = 0; i < sizeof(hardware_id); i++) device_id_[i] = hardware_id[i];
     device_id_read_ = true;
-    bluetooth_tag_ = static_cast<uint16_t>(nrf_ficr_deviceaddr_get(NRF_FICR, 0) & 0xFFFFu);
+    bluetooth_tag_ = zephyr::bluetooth_tag();
     if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0) {
         unlock_page_ = nullptr;
         LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");

@@ -12,6 +12,8 @@ Migration only runs forward, and a layout cannot be read backwards: fields were 
 
 ## What a service is
 
+`TrafficService`, `AlarmService` and `NmeaService` are shared with other products, in `../common/services/` ([`../common/README.md`](../common/README.md)). `product.h` builds them with this product's `kFeatures` and with references to its alarm on/off and volume settings. The rules below hold for them as for the services that are the Go's alone.
+
 A service is one unit of work the loop steps, under the watchdog, in dataflow order. It owns one thing: a queue it drains, a slice of `bus::State` it writes, or an output port it drives. Never two of the same kind, and never a queue somebody else also drains.
 
 That is why `nmea` is a service and not a helper, though it drains nothing and writes nothing: it drives `ports::Link` on a one-second cadence that has to defer around an armed burst, which needs its own place in the order and its own watchdog row. Something that consumes the finished product rather than being stepped by it is a reader, and `DiagnosticsDump` is the one the tree has.
@@ -64,7 +66,7 @@ The order in `services_` is the dataflow, not a preference. `ownship` publishes 
 
 ## Features and capabilities
 
-A capability is what the board has, probed at bring-up and granted from the devicetree (`ports/capabilities.h`). A feature is what this build claims to do (`features.h`), and every feature names the capabilities it needs in `kFeatureSpecs`. A service asks `supported(declared, capabilities)` in its `setup()`, so a claim the hardware cannot serve is off rather than broken.
+A capability is what the board has, probed at bring-up and granted from the devicetree (`ports/capabilities.h`). A feature is what this build claims to do (`kFeatures` in `features.h`), and every feature names the capabilities it needs in `kFeatureSpecs` (`../common/features.h`). A service asks `supported(declared, capabilities)` in its `setup()`, so a claim the hardware cannot serve is off rather than broken.
 
 A feature bit with no reader does not exist. The list is exactly the claims a service branches on, and a bit is added on the commit that reads it.
 

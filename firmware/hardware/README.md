@@ -8,7 +8,9 @@ A window the datasheet asks the host to hold, a reset pulse or a save the part m
 
 ## The platform contract
 
-`boards/` is a template over a platform rather than a consumer of a base class, so a platform proves itself by compiling, not by overriding. The cost is that the contract is nowhere in the type system, which is what this section is for. A platform is what `platform/host/platform.h` and `platform/zephyr/platform.h` both are, and there are exactly two of them.
+`boards/` is a template over a platform rather than a consumer of a base class, so a platform proves itself by compiling, not by overriding. The cost is that the contract is nowhere in the type system, which is what this section is for. A platform is what `platform/host/platform.h` and `platform/zephyr/t_echo_plus.h` both are: the T-Echo Plus, on the host and on silicon.
+
+On silicon each board has its own composition, which names the parts that board brings up and no others. The adapters it is built from (`clock.h`, `link.h`, `kvstore.h` and the rest) are shared. `platform/zephyr/meshtracker_x1.h` is the X1's, a stub with the SoC's parts only until #170 gives the board its devicetree, and it fills no contract yet because no board template is written over it.
 
 The buses a part is constructed over:
 

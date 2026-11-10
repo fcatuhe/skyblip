@@ -222,6 +222,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
+## `firmware/products/common/services`
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
+| `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
+| `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
+
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -259,9 +267,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | one pass of slot programs, so the next dwell is armed on time |
 | `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked, and logs its refusal, once a second |
-| `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
-| `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
-| `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
 | `kBarometerClimbWindowMs` | `flight::kClimbWindowFloorMs` = 500 | milliseconds | Window | - |
 | `kGnssClimbWindowMs` | 2000 (2 s) | milliseconds | Window | - |
 | `kBarometerMaxAgeMs` | `3 * runtime::kBarometerPublishPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | three missed samples: a barometer that went silent hands the climb back |
@@ -293,4 +298,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-188 constants over 18 folders.
+188 constants over 19 folders.

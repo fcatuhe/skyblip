@@ -1,0 +1,7 @@
+tests:
+  boards.meshtracker_x1.platform:
+    tags: platform boards
+    # Built, never run: no X1 has run skyBlip yet, and its devicetree is a placeholder until #170.
+    build_only: true
+    platform_allow:
+      - meshtracker_x1

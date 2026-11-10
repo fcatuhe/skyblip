@@ -54,8 +54,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # A PR recompiles the few files it touched, not all 155 translation units.
-      - name: install ccache
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache
+      - name: install ccache and cmake
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -90,6 +90,9 @@ jobs:
       # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
       - name: the image says which hub image it pins
         run: python3 scripts/test_check_imu_image.py
+      # The Go turns both switches on, so only this configure sees a product that has neither.
+      - name: a product without activation or a hub builds no unit key and pins no hub image
+        run: python3 scripts/test_shared_layers.py
       # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.
       - name: no Nordic DFU package
@@ -446,8 +449,9 @@ jobs:
 
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where
-    # native_sim can. product-image compiles the ones it cannot.
-    name: platform adapters (native_sim)
+    # native_sim can. product-image compiles the ones it cannot, and the X1's
+    # composition is built here until a product ships on it (#188).
+    name: platform adapters (native_sim, meshtracker_x1)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
     runs-on: ubuntu-24.04
@@ -480,4 +484,4 @@ jobs:
         run: |
           # ZEPHYR_BASE is not in this step's env, so ask west for the workspace.
           python3 "$(west topdir)/zephyr/scripts/twister" \
-            -T test/twister -p native_sim --inline-logs
+            -T test/twister -p native_sim -p meshtracker_x1 --inline-logs

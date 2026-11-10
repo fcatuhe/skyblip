@@ -253,6 +253,18 @@ TEST_CASE("nearby page: traffic below carries its sign, and traffic at this leve
     CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(1), "00", kNearbyScale));
 }
 
+// 00 says level with us, which a target that sends no altitude has not said.
+TEST_CASE("nearby page: a target that sends no altitude reads two dashes in the ALT column") {
+    traffic::RangeRow rows[2] = {row_at(1200, 0), row_at(2000, 0)};
+    rows[0].up_valid = false;
+
+    Glass canvas;
+    draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(0), "--", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyDistanceEnd, row_y(0), "0.6", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, row_y(1), "00", kNearbyScale));
+}
+
 // Three double-height columns fill the glass, so a figure with one more digit hits its neighbour.
 TEST_CASE("nearby page: a distance or a separation past what the column holds is said in words") {
     traffic::RangeRow rows[2] = {row_at(200000, 9000), row_at(1000, -9000)};

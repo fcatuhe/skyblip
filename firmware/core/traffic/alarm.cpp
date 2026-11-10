@@ -22,8 +22,9 @@ void velocity_north_east(int32_t speed_mm_s, int16_t angle, int64_t& north, int6
 }
 
 Level level_for(const AlarmAssessment& assessment) {
-    const bool in_window = std::abs(assessment.relative_altitude_m) <= kAdvisoryAltitudeM &&
-                           assessment.relative_distance_m <= kAdvisoryDistanceM;
+    const bool in_band = !assessment.relative_altitude_valid ||
+                         std::abs(assessment.relative_altitude_m) <= kAdvisoryAltitudeM;
+    const bool in_window = in_band && assessment.relative_distance_m <= kAdvisoryDistanceM;
     return in_window ? Level::Advisory : Level::None;
 }
 
@@ -57,9 +58,12 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     const model::AircraftObservation target = flight::carried_to(reported, now_ms);
     AlarmAssessment assessment{};
     int32_t north_m, east_m, up_m;
-    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m)) return assessment;
+    bool up_valid;
+    if (!flight::relative_north_east_up(own, target, north_m, east_m, up_m, up_valid))
+        return assessment;
     assessment.valid = true;
     assessment.relative_altitude_m = up_m;
+    assessment.relative_altitude_valid = up_valid;
     assessment.relative_distance_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
     assessment.closing_mps =
         divide_rounded(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),

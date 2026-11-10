@@ -3,8 +3,8 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/timing/slot.h"
+#include "products/common/services/traffic.h"
 #include "products/skyblip_go/services/ownship.h"
-#include "products/skyblip_go/services/traffic.h"
 #include "test/support/screen_rig.h"
 
 namespace {
@@ -42,7 +42,7 @@ struct ServiceRig {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::OwnshipService ownship{context, settings};
-    go::TrafficService traffic{context, go::Feature::None};
+    common::TrafficService traffic{context, common::Feature::None};
 
     ServiceRig() { recorder.arm(); }
 
