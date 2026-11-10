@@ -1,9 +1,9 @@
-#include "products/skyblip_go/services/power.h"
+#include "products/common/services/power.h"
 
 #include "core/diagnostics/payload.h"
 #include "core/events/sensor.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 // Gated on the capability and not on the port's own answer, the same way the
 // board gates the barometer and the divider it polls: a part the platform never
@@ -122,4 +122,4 @@ uint32_t PowerService::duty_period_ms() const {
                                                               : kDutyRecordPeriodMs;
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

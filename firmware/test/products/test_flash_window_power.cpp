@@ -119,7 +119,7 @@ TEST_CASE("flash window: a fired power-failure comparator stops settings writes"
     const uint32_t before = writes(rig);
     rig.platform.system_power().supply_warning = true;
     step_one(rig, now_ms);
-    CHECK(rig.product.power().supply_warned());
+    CHECK(rig.product.power().cutoff_monitor().supply_warned());
     CHECK(rig.product.power().supply_warnings() == 1);
     // Read and cleared, so one warning is one warning however many passes run.
     step_until(rig, now_ms, now_ms + 200);
@@ -129,6 +129,6 @@ TEST_CASE("flash window: a fired power-failure comparator stops settings writes"
     step_until(rig, now_ms, now_ms + timing::DurableWriteWindow::kDeferCeilingMs + 2000);
     CHECK(writes(rig) == before);
     // Latching: a rail that came back up does not make it un-happen.
-    CHECK_FALSE(rig.product.power().may_write(power::DurableWrite::Settings));
-    CHECK(rig.product.power().may_write(power::DurableWrite::FlightRecord));
+    CHECK_FALSE(rig.product.power().cutoff_monitor().may_write(power::DurableWrite::Settings));
+    CHECK(rig.product.power().cutoff_monitor().may_write(power::DurableWrite::FlightRecord));
 }

@@ -5,8 +5,7 @@
 #include "hardware/platform/host/die_temperature.h"
 #include "hardware/platform/host/identity.h"
 #include "ports/null.h"
-#include "products/skyblip_go/services/power.h"
-#include "products/skyblip_go/settings.h"
+#include "products/common/services/power.h"
 
 using namespace skyblip;
 
@@ -24,8 +23,8 @@ struct ThermalRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    go::Settings settings{};
-    go::PowerService power{context, settings};
+    int16_t battery_offset_mv{0};
+    common::PowerService power{context, battery_offset_mv};
 
     ThermalRig() { roles.capabilities = ports::Capability::DieTemperature; }
 
@@ -35,12 +34,12 @@ struct ThermalRig {
     }
 };
 
-constexpr uint32_t kSamplePeriodMs = go::PowerService::kDieStaleMs / 3;
+constexpr uint32_t kSamplePeriodMs = common::PowerService::kDieStaleMs / 3;
 
 }  // namespace
 
 TEST_CASE("thermal: the freshness window is spelled out in seconds, not left to drift") {
-    CHECK(go::PowerService::kDieStaleMs == 30000);
+    CHECK(common::PowerService::kDieStaleMs == 30000);
 }
 
 TEST_CASE("thermal: a reading the sensor gave is published where the panel gate reads it") {
@@ -70,13 +69,13 @@ TEST_CASE("thermal: a sensor that stops answering stops gating the panel") {
     REQUIRE(rig.state.power.die_valid);
 
     rig.sensor.refuse();
-    for (uint32_t elapsed = kSamplePeriodMs; elapsed <= go::PowerService::kDieStaleMs;
+    for (uint32_t elapsed = kSamplePeriodMs; elapsed <= common::PowerService::kDieStaleMs;
          elapsed += kSamplePeriodMs) {
         rig.power.tick(now_ms + elapsed);
         CHECK(rig.state.power.die_valid);
     }
 
-    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.power.tick(now_ms + common::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK_FALSE(rig.state.power.die_valid);
     CHECK(rig.state.power.die_dc == 700);
 }
@@ -92,7 +91,7 @@ TEST_CASE("thermal: one reading and then silence, and the charge window stops sa
     rig.tick_on_cable(now_ms + kSamplePeriodMs);
     CHECK(rig.state.power.charge == power::ChargeCondition::Ok);
 
-    rig.tick_on_cable(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.tick_on_cable(now_ms + common::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK(rig.state.power.charge != power::ChargeCondition::Ok);
 }
 
@@ -106,7 +105,7 @@ TEST_CASE("thermal: a stale reading on Go's cable cannot say, and never counts a
     REQUIRE(rig.power.charge_warnings() == 1);
 
     rig.sensor.refuse();
-    rig.tick_on_cable(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.tick_on_cable(now_ms + common::PowerService::kDieStaleMs + kSamplePeriodMs);
     CHECK(rig.state.power.charge == power::ChargeCondition::Unknown);
     CHECK(rig.power.charge_warnings() == 1);
 }
@@ -116,10 +115,10 @@ TEST_CASE("thermal: a sensor that answers again is believed again") {
     uint32_t now_ms = 1000;
     rig.power.tick(now_ms);
     rig.sensor.refuse();
-    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + kSamplePeriodMs);
+    rig.power.tick(now_ms + common::PowerService::kDieStaleMs + kSamplePeriodMs);
     REQUIRE_FALSE(rig.state.power.die_valid);
     rig.sensor.hold(180);
-    rig.power.tick(now_ms + go::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
+    rig.power.tick(now_ms + common::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
     CHECK(rig.state.power.die_valid);
     CHECK(rig.state.power.die_dc == 180);
 }
@@ -134,7 +133,7 @@ TEST_CASE("thermal: the freshness window spans the 49.7-day wrap of the counter"
     rig.power.tick(before_wrap + kSamplePeriodMs);
     CHECK(rig.state.power.die_valid);
 
-    rig.power.tick(before_wrap + go::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
+    rig.power.tick(before_wrap + common::PowerService::kDieStaleMs + 2 * kSamplePeriodMs);
     CHECK_FALSE(rig.state.power.die_valid);
 }
 
