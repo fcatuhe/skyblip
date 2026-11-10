@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_FLIGHT_LOG_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_FLIGHT_LOG_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_FLIGHT_LOG_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_FLIGHT_LOG_H
 
 #include "core/comms/config.h"
 #include "core/comms/log_link.h"
@@ -7,10 +7,10 @@
 #include "core/flight/log_events.h"
 #include "core/flight/log_session.h"
 #include "core/traffic/table.h"
-#include "products/skyblip_go/services/record_store.h"
+#include "products/common/services/record_store.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 static_assert(flight::kLogTargetSlots == traffic::TrafficTable::kMaxTargets,
               "the flight log follows one target per traffic table slot");
@@ -69,6 +69,6 @@ class FlightLogService : public runtime::Service {
     uint8_t scratch_[kStoreRecordBytes]{};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif
