@@ -459,6 +459,12 @@ zephyr_udc0: &usbd {
 				label = "image-1";
 				reg = <0x00000000 0x000b5000>;
 			};
+
+			/* INFO: fc 12nov26 512 sectors of 4 KB, store::kMaxPoolSectors, for the flights and the capture */
+			log_partition: partition@b5000 {
+				label = "logs";
+				reg = <0x000b5000 0x00200000>;
+			};
 		};
 	};
 };

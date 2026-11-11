@@ -10,11 +10,11 @@
 #include "core/power/wake.h"
 #include "core/units/units.h"
 #include "ports/dfu.h"
+#include "products/common/confirm_gesture.h"
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
-#include "products/skyblip_go/input/gesture.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/pages/bravo.h"
 #include "products/skyblip_go/pages/capture.h"
@@ -137,7 +137,7 @@ class ScreenService : public runtime::Service {
     void sync_editor(uint32_t now_ms);
     void step_editor(uint32_t now_ms);
     MenuValues menu_values() const;
-    void resolve(Answer answer);
+    void resolve(common::Answer answer);
     enum class Change : uint8_t { None, Asked, Wiped };
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
@@ -213,8 +213,8 @@ class ScreenService : public runtime::Service {
     diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     Controls controls_{};
-    ConfirmGesture confirm_{};
-    ConfirmGesture arming_{};
+    common::ConfirmGesture confirm_{};
+    common::ConfirmGesture arming_{};
     MenuEditor editor_{};
 
     // INFO: cf 02aug26 a prompt is answered once read and once the thumb has stopped, never sooner

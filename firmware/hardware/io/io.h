@@ -6,7 +6,7 @@
 
 namespace skyblip::io {
 
-enum class BusId : uint8_t { Radio, Epd, Gnss, Sensor };
+enum class BusId : uint8_t { Radio, Epd, Gnss, Sensor, Rtc };
 
 enum class PinFunction : uint8_t {
     RadioBusy,

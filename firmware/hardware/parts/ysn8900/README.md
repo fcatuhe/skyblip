@@ -1,6 +1,6 @@
 # hardware/parts/ysn8900
 
-The YXC YSN8900 real-time clock of the Seeed MeshTracker X1, on its own I2C bus. The driver finds it and nothing more: `answers()` is a zero-length write to 0x32, the probe `boards/lilygo/t_echo_plus/i2c_scan.h` uses. Nothing keeps time on it yet. A board reports its RTC as `ports::Inventory::rtc_fitted`: the T-Echo's scan sets it from the PCF8563 at 0x51, and #176 sets it from this probe when it wires the Bravo.
+The YXC YSN8900 real-time clock of the Seeed MeshTracker X1, on its own I2C bus. The driver finds it and nothing more: `answers()` is a zero-length write to 0x32, the probe `boards/lilygo/t_echo_plus/i2c_scan.h` uses. Nothing keeps time on it yet. A board reports its RTC as `ports::Inventory::rtc_fitted`: the T-Echo's scan sets it from the PCF8563 at 0x51, and the X1's board sets it from this probe once its platform has raised the RTC's enable.
 
 ## Sources
 

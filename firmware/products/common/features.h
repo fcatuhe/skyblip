@@ -11,6 +11,7 @@ enum class Feature : uint32_t {
     None = 0,
     UplinkRx = 1u << 0,
     CompanionLink = 1u << 1,
+    LampShowsLink = 1u << 2,
 };
 
 // Named apart from ports::has so a service reading both cannot pick the wrong one.
@@ -26,6 +27,7 @@ struct FeatureSpec {
 constexpr FeatureSpec kFeatureSpecs[] = {
     {Feature::UplinkRx, ports::Capability::Rf},
     {Feature::CompanionLink, ports::Capability::Link},
+    {Feature::LampShowsLink, ports::Capability::Link | ports::Capability::Indicator},
 };
 
 constexpr Feature supported(Feature declared, ports::Capabilities capabilities) {

@@ -83,6 +83,7 @@ class AdsbAssembly {
         uint16_t speed_q{0};
         uint16_t track_c9{0};
         int8_t rssi_dbm{0};
+        bool rssi_valid{false};
         uint8_t aircraft_category{0};
         uint8_t adsb_version{0};
         uint8_t gva{0};
@@ -113,8 +114,8 @@ class AdsbAssembly {
 
     Aircraft* admit(const AdsbMessage& message, uint32_t at_ms, const AdsbReference& reference);
     void fold_position(Aircraft& aircraft, CprFormat format, const AdsbCpr& cpr, bool slow,
-                       uint32_t at_ms, const events::Stamp& received, int8_t rssi_dbm,
-                       const AdsbReference& reference);
+                       uint32_t at_ms, const events::Stamp& received,
+                       const AdsbReception& reception, const AdsbReference& reference);
     static bool confirm(Aircraft& aircraft, const CprHalf& newest, const CprPosition& local);
     static void fold_velocity(Aircraft& aircraft, const AdsbVelocity& velocity, uint32_t at_ms);
     static void fold_surface_motion(Aircraft& aircraft, const AdsbSurfacePosition& surface,

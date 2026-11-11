@@ -5,104 +5,116 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
-#include <zephyr/drivers/pwm.h>
-#include <zephyr/sys/printk.h>
-
-#include <cstdint>
+#include <zephyr/drivers/spi.h>
 
 #include "core/util/result.h"
-#include "hardware/platform/zephyr/annunciator.h"
-#include "hardware/platform/zephyr/battery.h"
+#include "hardware/platform/zephyr/adsb_receiver.h"
+#include "hardware/platform/zephyr/ag3335.h"
 #include "hardware/platform/zephyr/bluetooth_tag.h"
-#include "hardware/platform/zephyr/clock.h"
-#include "hardware/platform/zephyr/die_temperature.h"
-#include "hardware/platform/zephyr/indicator.h"
+#include "hardware/platform/zephyr/dfu.h"
+#include "hardware/platform/zephyr/flash_region.h"
 #include "hardware/platform/zephyr/io.h"
-#include "hardware/platform/zephyr/kvstore.h"
-#include "hardware/platform/zephyr/watchdog.h"
+#include "hardware/platform/zephyr/link.h"
+#include "hardware/platform/zephyr/meshtracker_x1_lines.h"
+#include "hardware/platform/zephyr/meshtracker_x1_power.h"
 #include "ports/capabilities.h"
+#include "ports/null.h"
 
 namespace skyblip::platform::zephyr {
 
-// TODO: fc 11nov26 the board's own parts only, until #176 brings up the radio, GNSS and barometer
+static_assert(!IS_ENABLED(CONFIG_SKYBLIP_ACTIVATION),
+              "Bravo is never activated, so the X1 provisions no unit key");
+
 class MeshtrackerX1 {
    public:
+    using AdsbReceiver = zephyr::AdsbReceiver;
+
+    // INFO: fc 12nov26 what the boot path is decided on: why the SoC woke, the button and the cell
+    void begin_wake() {
+        system_power_.read_causes();
+        (void)lines_.begin_inputs();
+    }
+
     Status begin() {
-        if (!device_is_ready(gpio0_) || !device_is_ready(gpio1_)) return Status::Down;
-        storage_mounted_ = key_value_.begin() == Status::Ok;
-        annunciator_.begin();
-        indicator_.begin();
-        if (!input(button_, "button") || !input(charge_status_, "charge status") ||
-            !input(charge_done_, "charge done"))
-            return Status::Down;
+        system_power_.arm_supply_monitor();
+        if (lines_.begin() != Status::Ok) return Status::Down;
+        if (!device_is_ready(radio_spi_device_)) return Status::Down;
+        gnss_ready_ = gnss_.begin() == Status::Ok;
+        // TODO: fc 12nov26 P0.09 powers the YSN8900 per SoftRF and Seeed, unverified until #169
+        rtc_powered_ = gpio_pin_configure_dt(&rtc_enable_, GPIO_OUTPUT_ACTIVE) == 0;
+        (void)log_flash_.begin();
+        link_up_ = link_.begin() == Status::Ok;
         return Status::Ok;
     }
 
-    io::Gpio& gpio() { return gpio_; }
-    io::Delay& delay() { return delay_; }
-    io::I2c& i2c(io::BusId) { return sensor_i2c_; }
+    io::Spi& spi(io::BusId) { return radio_spi_; }
+    io::Uart& uart(io::BusId) { return gnss_.uart(); }
+    io::I2c& i2c(io::BusId bus) {
+        if (bus == io::BusId::Rtc) return rtc_i2c_;
+        return lines_.i2c(bus);
+    }
+    io::Gpio& gpio() { return lines_.gpio(); }
+    io::Delay& delay() { return lines_.delay(); }
+    const struct gpio_dt_spec& radio_irq() const { return radio_irq_; }
 
-    zephyr::Clock& clock() { return clock_; }
-    zephyr::KeyValueStore& key_value() { return key_value_; }
-    zephyr::Annunciator& annunciator() { return annunciator_; }
-    zephyr::Indicator& indicator() { return indicator_; }
-    zephyr::Battery& battery() { return battery_; }
-    zephyr::DieTemperature& die_temperature() { return die_temperature_; }
-    zephyr::Watchdog& watchdog() { return watchdog_; }
-    static uint16_t bluetooth_tag() { return zephyr::bluetooth_tag(); }
-    bool storage_mounted() const { return storage_mounted_; }
+    zephyr::Clock& clock() { return lines_.clock(); }
+    zephyr::Link& link() { return link_; }
+    zephyr::KeyValueStore& key_value() { return lines_.key_value(); }
+    zephyr::FlashRegion& log_flash() { return log_flash_; }
+    zephyr::Annunciator& annunciator() { return lines_.annunciator(); }
+    zephyr::Indicator& indicator() { return lines_.indicator(); }
+    zephyr::Dfu& dfu() { return dfu_; }
+    zephyr::DieTemperature& die_temperature() { return lines_.die_temperature(); }
+    zephyr::Pps& pps() { return gnss_.pps(); }
+    zephyr::Watchdog& watchdog() { return lines_.watchdog(); }
+    MeshtrackerX1Power& system_power() { return system_power_; }
+    ports::KeylessIdentity& identity() { return identity_; }
 
-    bool button_down() { return gpio_pin_get_dt(&button_) == 1; }
-    bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
-    bool external_power() { return zephyr::Battery::external_power(); }
-    bool charging() { return gpio_pin_get_dt(&charge_status_) == 1; }
-    bool charged() { return gpio_pin_get_dt(&charge_done_) == 1; }
+    bool button_down() { return lines_.button_down(); }
+    bool read_battery_mv(uint16_t& out_mv) { return lines_.read_battery_mv(out_mv); }
+    bool external_power() { return lines_.external_power(); }
 
+    bool gnss_wired() const { return gnss_ready_; }
+    bool pps_armed() const { return gnss_.pps_armed(); }
+    bool storage_mounted() const { return lines_.storage_mounted(); }
+    bool link_up() const { return link_up_; }
+    bool rtc_powered() const { return rtc_powered_; }
+
+    // INFO: fc 12nov26 the board grants the radio, the barometer and the haptic driver from their
+    // probes
     ports::Capabilities capabilities() const {
-        ports::Capabilities found = ports::Capability::None;
-        if (gpio_is_ready_dt(&button_)) found |= ports::Capability::Contacts;
-        if (pwm_is_ready_dt(&buzzer_)) found |= ports::Capability::Buzzer;
-        if (device_is_ready(flash_device_)) found |= ports::Capability::Storage;
-        if (battery_.ready()) found |= ports::Capability::Battery;
-        if (die_temperature_.ready()) found |= ports::Capability::DieTemperature;
-        if (indicator_.ready()) found |= ports::Capability::Indicator;
+        ports::Capabilities found =
+            lines_.capabilities() | ports::Capability::Link | ports::Capability::Dfu;
+        if (device_is_ready(gnss_uart_device_)) found |= ports::Capability::Gnss;
         return found;
     }
 
    private:
-    static bool input(const struct gpio_dt_spec& pin, const char* name) {
-        const int error = gpio_pin_configure_dt(&pin, GPIO_INPUT);
-        if (error != 0) printk("meshtracker_x1: %s pin not configured (%d)\n", name, error);
-        return error == 0;
-    }
+    // TODO: fc 12nov26 the SX1262's 8 MHz mode 0 SPI, unverified for the LR2021 until #169
+    static constexpr struct spi_config kSpiConfig = {
+        .frequency = 8000000U,
+        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
+        .slave = 0,
+        .cs = {},
+    };
 
-    const struct device* gpio0_{DEVICE_DT_GET(DT_NODELABEL(gpio0))};
-    const struct device* gpio1_{DEVICE_DT_GET(DT_NODELABEL(gpio1))};
-    const struct device* sensor_i2c_device_{DEVICE_DT_GET(DT_ALIAS(sensor_i2c))};
-    const struct device* battery_device_{DEVICE_DT_GET(DT_NODELABEL(vbatt))};
-    const struct device* flash_device_{DEVICE_DT_GET(DT_NODELABEL(ext_flash))};
-    struct pwm_dt_spec buzzer_ = PWM_DT_SPEC_GET(DT_ALIAS(buzzer));
-    struct gpio_dt_spec haptic_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(haptic_enable), gpios);
-    struct gpio_dt_spec button_ = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
-    struct gpio_dt_spec charge_status_ = GPIO_DT_SPEC_GET(DT_ALIAS(charge_status), gpios);
-    struct gpio_dt_spec charge_done_ = GPIO_DT_SPEC_GET(DT_ALIAS(charge_done), gpios);
-    struct gpio_dt_spec led_green_ = GPIO_DT_SPEC_GET(DT_ALIAS(led_green), gpios);
-    struct gpio_dt_spec led_red_ = GPIO_DT_SPEC_GET(DT_ALIAS(led_red), gpios);
-    struct gpio_dt_spec led_blue_ = GPIO_DT_SPEC_GET(DT_ALIAS(led_blue), gpios);
-
-    zephyr::Clock clock_{};
-    Gpio gpio_{gpio0_, gpio1_};
-    Delay delay_{};
-    I2c sensor_i2c_{sensor_i2c_device_};
-    // INFO: fc 11nov26 P1.05 enables a DRV2605, so this motor stands in until the board attaches it
-    PinMotor motor_{haptic_enable_};
-    Annunciator annunciator_{buzzer_, motor_};
-    Indicator indicator_{led_green_, led_red_, led_blue_};
-    KeyValueStore key_value_{};
-    zephyr::Battery battery_{battery_device_};
-    zephyr::DieTemperature die_temperature_{};
-    zephyr::Watchdog watchdog_{};
-    bool storage_mounted_{false};
+    MeshtrackerX1Power system_power_{};
+    MeshtrackerX1Lines lines_{};
+    const struct device* radio_spi_device_{DEVICE_DT_GET(DT_ALIAS(radio_spi))};
+    const struct device* gnss_uart_device_{DEVICE_DT_GET(DT_ALIAS(gnss_uart))};
+    struct gpio_dt_spec radio_cs_ = GPIO_DT_SPEC_GET_BY_IDX(DT_ALIAS(radio_spi), cs_gpios, 0);
+    struct gpio_dt_spec radio_irq_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
+    struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(rtc_enable), gpios);
+    Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
+    I2c rtc_i2c_{DEVICE_DT_GET(DT_ALIAS(rtc_i2c))};
+    Ag3335Wiring gnss_{};
+    FlashRegion log_flash_{PARTITION_ID(log_partition)};
+    Dfu dfu_{};
+    zephyr::Link& link_{zephyr::link()};
+    ports::KeylessIdentity identity_{zephyr::bluetooth_tag()};
+    bool gnss_ready_{false};
+    bool rtc_powered_{false};
+    bool link_up_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

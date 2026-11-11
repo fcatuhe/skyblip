@@ -4,6 +4,7 @@
 #include "core/comms/config.h"
 #include "core/dfu/update.h"
 #include "core/diagnostics/payload.h"
+#include "core/identity/activation.h"
 #include "core/identity/unit.h"
 #include "core/power/cutoff.h"
 #include "core/power/duty.h"
@@ -39,13 +40,14 @@ class ConfigLinkService : public runtime::Service {
    public:
     ConfigLinkService(runtime::Context& context, SettingsStore& store,
                       const power::CutoffMonitor& power, const char* product_name,
-                      dfu::Product product)
+                      identity::NameRule name_rule, dfu::Product product)
         : runtime::Service(context),
           store_(store),
           config_(context.roles.link, store_, &context.roles.dfu,
                   &context.state.rf.timing_statistics),
           power_(power),
           product_name_(product_name),
+          name_rule_(name_rule),
           unit_(context.roles.identity),
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
@@ -96,6 +98,7 @@ class ConfigLinkService : public runtime::Service {
     void watch_link_drops(uint32_t now_ms);
     void accrue_connected(uint32_t now_ms);
     void publish_upload_verdict();
+    void publish_link();
 
     // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
@@ -137,6 +140,7 @@ class ConfigLinkService : public runtime::Service {
     comms::ConfigService config_;
     const power::CutoffMonitor& power_;
     const char* product_name_;
+    identity::NameRule name_rule_;
     identity::Unit unit_;
     comms::IdentityLink identity_;
     bool identity_published_{false};

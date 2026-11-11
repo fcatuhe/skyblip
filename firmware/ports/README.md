@@ -24,9 +24,11 @@ A receiver, a barometer, a divider and a button are called by nobody. The world 
 
 Every field of `Roles` is a reference. A board with no lamp, no die sensor and no radio still fills all twelve, because a port whose methods do nothing is a smaller thing than a pointer every caller has to check. Some ports are their own absent part: `Indicator`, `DieTemperature` and `Gnss` are concrete, and the base class is what a board without one is handed. The rest have a null in `null.h`, next to the role it fills rather than in the loop that steps them.
 
-`Identity` is the one role with no null part and no capability bit: every unit has a DEVICEID, a key and somewhere to keep its unlock code, so the platform fills it directly (`core/identity/README.md`). A unit whose key could not be provisioned still fills it, and says so through `seed()` answering false.
+`Identity` is the one role with no capability bit: a unit that is activated has a DEVICEID, a key and somewhere to keep its unlock code, so the platform fills it directly (`core/identity/README.md`). A unit whose key could not be provisioned still fills it, and says so through `seed()` answering false. A product that is never activated, skyBlip Bravo, is handed `KeylessIdentity` from `null.h`: the Bluetooth tag its platform read off FICR, no DEVICEID, no key and nowhere to keep a code, so the activation commands answer `keyless`.
 
 What is missing is stated once, in `capabilities.h`, and read by the code that has something to say about it: the self-test page prints the row, a service skips the work. Never by dereferencing.
+
+`Capability::AdsbReceiver` is Bravo's LR2021 answering its version over SPI, as `Capability::Rf` is the SX1262 answering on the Go. It is a separate bit because the two radios fill separate roles: one is armed per dwell, the other listens full time and feeds a queue.
 
 `capabilities.h` is what the board found, `inventory.h` is which part it was. The first is what code branches on; the second is what a bench reads when two footprints ship with different silicon in them.
 

@@ -163,6 +163,11 @@ struct DutyState {
     uint32_t ble_connected_ms{0};
 };
 
+struct LinkState {
+    bool connected{false};
+    bool prompt_standing{false};
+};
+
 enum class CaptureStop : uint8_t { None, Pilot, NoSectors, NoStorage };
 
 struct CaptureState {
@@ -200,6 +205,7 @@ struct State {
     FormationState formation{};
     CaptureState capture{};
     DutyState duty{};
+    LinkState link{};
     // INFO: fc 18oct26 written by the config service alone, which holds the unit
     identity::Activation activation{};
 

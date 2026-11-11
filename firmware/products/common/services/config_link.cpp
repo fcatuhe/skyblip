@@ -49,6 +49,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     publish_identity(now_ms);
 
     config_.tick(now_ms);
+    publish_link();
     drain_settings(now_ms);
     spend_gnss_cold_start();
     confirm_image_once_healthy();
@@ -80,7 +81,7 @@ void ConfigLinkService::advertise(uint32_t now_ms) {
     advertise_asked_ = true;
     advertise_asked_ms_ = now_ms;
     char name[identity::kBluetoothNameBytes + 1];
-    identity::bluetooth_name(name, sizeof(name), product_name_, context_.state.activation);
+    name_rule_(name, sizeof(name), product_name_, context_.state.activation);
     advertised_ = context_.roles.link.advertise_as(name) == Status::Ok;
 }
 
@@ -104,6 +105,13 @@ void ConfigLinkService::place_unlock(uint32_t now_ms) {
         return;
     config_.settle_unlock();
     unlock_writes_.placed(now_ms, verdict == timing::DurableWriteVerdict::Forced);
+}
+
+void ConfigLinkService::publish_link() {
+    context_.state.link.connected = config_.link_up();
+    context_.state.link.prompt_standing =
+        config_.pending() != comms::Pending::None &&
+        config_.prompt_allowed_in(context_.state.flight.confirmed_state);
 }
 
 void ConfigLinkService::publish_upload_verdict() {

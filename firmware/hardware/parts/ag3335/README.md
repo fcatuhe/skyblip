@@ -64,7 +64,7 @@ The same log shows a receiver with no fix sending `$GNGGA,000008.012,,,,,0,0,,,M
 | Sleep | P0.30 | high | SoftRF `Seeed_X1.h:14`, Meshtastic `variant.h:136` |
 | RTC wake | P0.29 | low, high wakes | SoftRF `Seeed_X1.h:15`, Meshtastic `variant.h:137` |
 
-`Ag3335Wiring::begin()` drives the five lines in SoftRF's order (`nRF52.cpp:1865-1878`): enable, RTC supply, reset, sleep, RTC wake. It then opens the UART and arms the PPS. It reads them from the devicetree aliases `gnss-uart`, `gnss-pps`, `gnss-enable`, `gnss-rtc-enable`, `gnss-reset`, `gnss-sleep` and `gnss-rtc-wake`, the names #170 gave them in the X1's devicetree. Composing the wiring and the driver into the board is #176's. `test/twister/ag3335` builds both. Its overlay declares the same nodes under the same names as #170's devicetree, so it builds on the stub board and adds nothing on #170's.
+`Ag3335Wiring::begin()` drives the five lines in SoftRF's order (`nRF52.cpp:1865-1878`): enable, RTC supply, reset, sleep, RTC wake. It then opens the UART and arms the PPS. It reads them from the devicetree aliases `gnss-uart`, `gnss-pps`, `gnss-enable`, `gnss-rtc-enable`, `gnss-reset`, `gnss-sleep` and `gnss-rtc-wake`, the names #170 gave them in the X1's devicetree. `platform/zephyr/meshtracker_x1.h` holds the wiring and `boards/seeed/meshtracker_x1/board.h` the driver, for skyBlip Bravo. `test/twister/ag3335` builds both. Its overlay declares the same nodes under the same names as #170's devicetree, so it builds on the stub board and adds nothing on #170's.
 
 ## The model
 

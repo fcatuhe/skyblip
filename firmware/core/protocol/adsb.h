@@ -17,6 +17,7 @@ constexpr uint8_t kAdsbCallsignCharacters = 8;
 struct AdsbReception {
     uint64_t at_us{0};
     int8_t rssi_dbm{0};
+    bool rssi_valid{false};
 };
 
 struct AdsbQuantity {

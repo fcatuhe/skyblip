@@ -71,7 +71,7 @@ endif
 SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard core/*/*.cpp ui/*.cpp ui/*/*.cpp \
        hardware/parts/*/*.cpp runtime/*.cpp products/*/*.cpp products/*/pages/*.cpp products/*/services/*.cpp \
        simulator/world/*.cpp))
-SRC := $(filter-out products/skyblip_go/main.cpp %/test_%.cpp,$(SRC))
+SRC := $(filter-out products/%/main.cpp %/test_%.cpp,$(SRC))
 
 # Monocypher is C that also compiles as C++: one compiler builds and instruments it with the rest.
 VENDOR_SRC := $(wildcard vendor/monocypher/*.c)

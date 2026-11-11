@@ -48,7 +48,7 @@ struct HousekeepingRig {
         hold_button(now_ms, 80, /*down=*/false);
     }
 
-    // The authorising gesture: two presses well inside go::ConfirmGesture's
+    // The authorising gesture: two presses well inside common::ConfirmGesture's
     // window. Each press() above advances the clock by ~200 ms, so the pair
     // lands at a gap a thumb actually produces.
     void double_press(uint32_t& now_ms) {

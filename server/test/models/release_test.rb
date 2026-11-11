@@ -17,14 +17,23 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.full.signed.bin], stable.firmware_files
   end
 
-  test "both products' images are offered, each named after its product" do
-    shelf = release("dev-1010", assets: %w[skyblip-go-dev-1010.signed.bin skyblip-bravo-dev-1010.signed.bin
-                                           skyblip-bravo-dev-1010.full.signed.bin skyblip-tango-dev-1010.signed.bin])
+  test "each product's tag prefix names the product its release offers images of, and no other" do
+    assets = %w[skyblip-go-dev-1010.signed.bin skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.full.signed.bin skyblip-tango-dev-1010.signed.bin]
+    go = release("dev-1010", assets:)
+    bravo = release("bravo-dev-1010", assets:)
 
-    assert_equal %w[skyblip-go-dev-1010.signed.bin skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.full.signed.bin],
-                 shelf.firmware_files
-    assert_equal %w[skyblip_go skyblip_bravo skyblip_bravo], shelf.firmware_files.map { |file| Release.product_of(file) }
+    assert_equal [ "skyblip_go", %w[skyblip-go-dev-1010.signed.bin] ], [ go.product, go.firmware_files ]
+    assert_equal [ "skyblip_bravo", %w[skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.full.signed.bin] ], [ bravo.product, bravo.firmware_files ]
+    assert_equal %w[skyblip_bravo skyblip_bravo], bravo.firmware_files.map { |file| Release.product_of(file) }
     assert_nil Release.product_of("embed.js")
+  end
+
+  test "a product's tags read as the Go's do once their prefix is off" do
+    assert release("bravo-v0.2.0").stable?
+    assert release("bravo-dev-1010", prerelease: true).main_development?
+    assert_equal "development", release("bravo-dev-1010-feat-x", prerelease: true).channel
+    assert_equal "skyblip_go", release("dev-1010-bravo-fix", prerelease: true).product
+    assert_not Release::TAG.match?("tango-v0.1.0")
   end
 
   # GitHub returns dev-998, dev-1005, dev-1002 in this recording, not newest first.
@@ -42,6 +51,15 @@ class ReleaseTest < ActiveSupport::TestCase
     branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z")
 
     assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
+  end
+
+  test "the shelf keeps each product's newest stable release, whichever product released last" do
+    go = release("v0.2.0", published_at: "2026-10-10T00:00:00Z")
+    older_bravo = release("bravo-v0.1.0", published_at: "2026-10-11T00:00:00Z")
+    newer_bravo = release("bravo-v0.2.0", published_at: "2026-10-12T00:00:00Z")
+    bravo_main = release("bravo-dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z")
+
+    assert_equal %w[bravo-v0.2.0 v0.2.0 bravo-dev-1005], Release.shelf([ go, bravo_main, older_bravo, newer_bravo ]).map(&:tag)
   end
 
   test "the firmware shelf lists every slim image newest first, then every full one" do
@@ -62,6 +80,16 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal "v0.2.0", Release.simulator([ branch, candidate, newer_stable, main, older_stable ]).tag
     assert_equal "dev-1005", Release.simulator([ branch, candidate, main ]).tag
     assert_nil Release.simulator([ branch ])
+  end
+
+  # Until the simulator page offers Bravo (#180), it runs and names the Go's releases only.
+  test "the simulator follows the Go's releases" do
+    go = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    bravo = release("bravo-v0.1.0", published_at: "2026-10-12T00:00:00Z", assets: Release::SIMULATOR_FILES)
+    bravo_main = release("bravo-dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z", assets: Release::SIMULATOR_FILES)
+
+    assert_equal "v0.2.0", Release.simulator([ bravo, go, bravo_main ]).tag
+    assert_nil Release.simulator([ bravo, bravo_main ])
   end
 
   private

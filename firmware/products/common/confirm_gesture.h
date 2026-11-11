@@ -1,6 +1,6 @@
-// products/skyblip_go/input/gesture.h: the gesture that authorises, as pure logic.
+// products/common/confirm_gesture.h: the gesture that authorises, as pure logic.
 //
-// This product ships with BLE pairing off, so there is no cryptographic proof
+// skyBlip ships with BLE pairing off, so there is no cryptographic proof
 // that the phone asking for a firmware upload belongs to the pilot. Physical
 // presence stands in for it, which makes the gesture the security boundary: it
 // has to be something a thumb cannot produce by accident, and something that
@@ -13,12 +13,12 @@
 //
 // No framework, no clock of its own: the shell feeds debounced press edges and
 // the time, which is what lets the simulator authorise through the same path.
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_INPUT_GESTURE_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_INPUT_GESTURE_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_CONFIRM_GESTURE_H
+#define SKYBLIP_PRODUCTS_COMMON_CONFIRM_GESTURE_H
 
 #include <cstdint>
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 enum class Answer : uint8_t { None, Confirm, Cancel };
 
@@ -74,6 +74,6 @@ class ConfirmGesture {
     bool pressed_{false};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

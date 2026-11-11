@@ -54,6 +54,9 @@ class AdsbReceiver : public ports::AdsbReceiver {
         return Status::Ok;
     }
 
+    // INFO: fc 12nov26 the thread drains the FIFO on its own, so the board's pass has nothing to do
+    void service(uint32_t) {}
+
     ports::AdsbReceiverStatistics statistics() const override {
         k_sched_lock();
         ports::AdsbReceiverStatistics statistics = statistics_;
@@ -63,18 +66,24 @@ class AdsbReceiver : public ports::AdsbReceiver {
         return statistics;
     }
 
+    // INFO: fc 12nov26 a part no thread runs, never probed or never started, is parked from here
     void sleep() override {
+        if (thread_id_ == nullptr) {
+            if (!parked_) radio_.park();
+            parked_ = true;
+            return;
+        }
         sleep_requested_ = true;
         k_sem_give(&wake_);
     }
 
-    bool parked() const override { return thread_id_ == nullptr || parked_; }
+    bool parked() const override { return parked_; }
 
     // INFO: fc 11nov26 GPIO only: a thread aborted inside a transfer keeps the SPI lock, so no SPI
     // follows
     void abandon() override {
         if (parked()) return;
-        if (!stopped_) k_thread_abort(thread_id_);
+        if (thread_id_ != nullptr && !stopped_) k_thread_abort(thread_id_);
         (void)gpio_pin_interrupt_configure_dt(&irq_, GPIO_INT_DISABLE);
         radio_.hold_in_reset();
         parked_ = true;

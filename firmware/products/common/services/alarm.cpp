@@ -21,6 +21,12 @@ formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t
     return report.state;
 }
 
+Status AlarmService::setup() {
+    lamp_shows_link_ =
+        has_feature(supported(declared_, context_.roles.capabilities), Feature::LampShowsLink);
+    return Status::Ok;
+}
+
 void AlarmService::tick(uint32_t now_ms) {
     passes_++;
     accrue_annunciator(now_ms);
@@ -131,6 +137,8 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.alarm_level = context_.state.alarm_undismissed;
     situation.power_level = context_.state.power.level;
     situation.fix_valid = context_.state.own.fix_valid;
+    situation.prompting = lamp_shows_link_ && context_.state.link.prompt_standing;
+    situation.linked = lamp_shows_link_ && context_.state.link.connected;
 
     const indication::Command command = indication_.update(situation, now_ms);
     if (command.changed) context_.roles.indicator.show(command.lamp);
