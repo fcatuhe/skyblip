@@ -63,6 +63,11 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
 bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,
                             int32_t& north_m, int32_t& east_m, int32_t& up_m, bool& up_valid);
 
+bool gnss_relative_altitude_m(const model::Ownship& own, const model::AircraftObservation& target,
+                              int32_t& up_m);
+bool pressure_relative_altitude_m(const model::Ownship& own,
+                                  const model::AircraftObservation& target, int32_t& up_m);
+
 }  // namespace skyblip::flight
 
 #endif

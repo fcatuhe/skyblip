@@ -73,6 +73,31 @@ def flag(bit):
     return lambda raw, flags: bool(flags & (1 << bit))
 
 
+def bits(at, shift, mask):
+    return lambda raw, flags: (raw[at] >> shift) & mask
+
+
+def valid_only(inner, bit):
+    """A value read only when its validity bit is set, and absent otherwise."""
+    return lambda raw, flags: inner(raw, flags) if flags & (1 << bit) else None
+
+
+def vouched_flag(recorded, bit):
+    """A validity bit read only when a second bit says the firmware wrote it, and absent otherwise."""
+    return lambda raw, flags: bool(flags & (1 << bit)) if flags & (1 << recorded) else None
+
+
+def unless_unknown(inner, recorded, valid):
+    """A value a vouched validity bit calls unknown is absent: older records, which wrote none, keep it."""
+
+    def read(raw, flags):
+        if flags & (1 << recorded) and not flags & (1 << valid):
+            return None
+        return inner(raw, flags)
+
+    return read
+
+
 def flag_field(shift, mask, names):
     def read(raw, flags):
         value = (flags >> shift) & mask
@@ -193,10 +218,11 @@ DIAGNOSTICS_TYPES = {
         ("mtu_exchange_started_by", enum8(12, MTU_EXCHANGE_STARTER)), ("claim_held", flag(2)))),
     13: ("traffic", (
         ("address", uint32(0)), ("distance_m", uint16(4)), ("bearing_deg", uint16(6)),
-        ("relative_altitude_m", int16(8)),
+        ("relative_altitude_m", unless_unknown(int16(8), 6, 7)),
         ("closing_mps", int16(10)), ("alarm", uint8(12)), ("source", enum8(13, SOURCE)),
         ("rssi_dbm", int8(14)), ("tracked", uint8(15)), ("assessed", flag(2)), ("dismissed", flag(3)),
-        ("in_formation", flag(4)), ("position_valid", flag(5)))),
+        ("in_formation", flag(4)), ("position_valid", flag(5)),
+        ("relative_altitude_valid", vouched_flag(6, 7)))),
     14: ("write", (
         ("waited_ms", uint32(0)), ("phase_ms", uint16(4)), ("requests", uint16(6)), ("writes", uint16(8)),
         ("forced", uint16(10)), ("placement", enum8(12, PLACEMENT)), ("kind", enum8(13, WRITE_KIND)),
@@ -221,6 +247,15 @@ DIAGNOSTICS_TYPES = {
         ("passes", uint16(0)), ("busy_ms", uint16(2)), ("worst_pass_us", uint32(4)),
         ("worst_pass_phase_ms", uint16(8)), ("worst_gap_ms", uint16(10)), ("worst_gap_phase_ms", uint16(12)),
         ("worst_service", enum8(14, SERVICE)), ("worst_tick_ms", uint8(15)))),
+    21: ("adsb", (
+        ("address", uint24(0)), ("adsb_version", valid_only(bits(3, 0, 0x07), 2)),
+        ("gva", valid_only(bits(3, 3, 0x03), 3)), ("pressure_altitude_ft", valid_only(int32(4), 4)),
+        ("height_difference_ft", valid_only(int16(8), 5)),
+        ("height_difference_age_ms", valid_only(int16(10), 5)),
+        ("gnss_relative_altitude_m", valid_only(int16(12), 6)),
+        ("pressure_relative_altitude_m", valid_only(int16(14), 7)), ("adsb_version_valid", flag(2)),
+        ("gva_valid", flag(3)), ("pressure_altitude_valid", flag(4)), ("height_difference_valid", flag(5)),
+        ("gnss_relative_altitude_valid", flag(6)), ("pressure_relative_altitude_valid", flag(7)))),
 }
 
 FLIGHT_FIELDS = (
@@ -240,9 +275,10 @@ FLIGHT_KIND_OFFSET = 16
 
 TARGET_FIELDS = (
     ("address", uint24(2)), ("address_mapping_table", uint8(5)), ("distance_m", uint16(6)),
-    ("relative_altitude_m", int16(8)), ("relative_bearing_deg", uint16(10)), ("closing_mps", int16(12)), ("alarm", uint8(14)),
+    ("relative_altitude_m", unless_unknown(int16(8), 2, 3)), ("relative_bearing_deg", uint16(10)),
+    ("closing_mps", int16(12)), ("alarm", uint8(14)),
     ("aircraft_category", uint8(15)), ("source", enum8(17, SOURCE)), ("rssi_dbm", int8(18)),
-    ("dismissed", flag(0)), ("in_formation", flag(1)),
+    ("dismissed", flag(0)), ("in_formation", flag(1)), ("relative_altitude_valid", vouched_flag(2, 3)),
 )
 
 # INFO: fc 15oct26 kind: (name, the byte its flags are read from, its fields)
@@ -332,7 +368,9 @@ def decode_flight_event(raw, base_utc_s):
     flags = raw[flags_at]
     decoded = {"type": name, "utc_s": base_utc_s + int.from_bytes(raw[0:2], "little")}
     for field, read in fields:
-        decoded[field] = read(raw, flags)
+        value = read(raw, flags)
+        if value is not None:
+            decoded[field] = value
     return decoded
 
 

@@ -2,13 +2,16 @@
 #include <string>
 #include <vector>
 
+#include "core/diagnostics/payload.h"
 #include "core/events/rf.h"
+#include "core/flight/log_record.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
 #include "products/skyblip_go/pages/nearby.h"
+#include "test/support/diagnostics_corpus.h"
 #include "test/support/glass_text.h"
 #include "test/support/nmea_stream.h"
 #include "test/support/product_rig.h"
@@ -20,7 +23,7 @@ namespace {
 
 constexpr uint32_t kAddress = 0xC5D804;
 
-void hear_without_altitude(Rig& rig, int32_t north_m) {
+void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     model::Ownship transmitter = rig.state().own;
     transmitter.latitude_1e7 +=
         static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
@@ -30,7 +33,7 @@ void hear_without_altitude(Rig& rig, int32_t north_m) {
     protocol::AdslPacket packet;
     protocol::from_own(packet, transmitter, kAddress, /*address_mapping_table=*/6,
                        /*aircraft_category=*/4);
-    packet.set_altitude_invalid();
+    if (!altitude_sent) packet.set_altitude_invalid();
     packet.scramble();
     packet.set_crc();
 
@@ -46,9 +49,10 @@ void hear_without_altitude(Rig& rig, int32_t north_m) {
     rig.product.bus().rf.push(event);
 }
 
-void hear_for(Rig& rig, uint32_t& now_ms, int32_t north_m, int seconds) {
+void hear_for(Rig& rig, uint32_t& now_ms, int32_t north_m, int seconds,
+              bool altitude_sent = false) {
     for (int second = 0; second < seconds; second++) {
-        hear_without_altitude(rig, north_m);
+        hear(rig, north_m, altitude_sent);
         fly(rig, now_ms, 1);
     }
 }
@@ -70,7 +74,81 @@ bool blip_anywhere(const ui::Canvas& glass, ui::Vertical vertical) {
     return false;
 }
 
+std::vector<flight::LogEvent> flight_events(Rig& rig) {
+    std::vector<flight::LogEvent> out;
+    platform::host::FlashRegion& flash = rig.platform.log_flash();
+    std::vector<uint8_t> raw(flash.sector_bytes());
+    for (uint32_t sector = 0; sector < flash.sector_count(); sector++) {
+        REQUIRE(is_ok(flash.read(sector * flash.sector_bytes(), raw.data(), flash.sector_bytes())));
+        store::SectorHeader header{};
+        if (store::decode_sector_header(raw.data(), header) != Status::Ok) continue;
+        if (header.owner != store::SectorOwner::Flights) continue;
+        for (uint32_t slot = 0; slot < flight::kLogSlotsPerSector; slot++) {
+            flight::LogEvent event{};
+            if (flight::decode_log_event(raw.data() + flight::log_record_offset(slot),
+                                         header.session_id, event) == Status::Ok)
+                out.push_back(event);
+        }
+    }
+    return out;
+}
+
+struct Written {
+    std::vector<flight::LogTarget> logged;
+    std::vector<diagnostics::Record> traffic;
+};
+
+// A flight with a capture armed, past a target 1500 m north that does or does not send its
+// altitude.
+Written written_past(bool altitude_sent) {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.product.diagnostics().arm();
+    fly(rig, now_ms, 20);
+    REQUIRE(rig.product.capture().capturing());
+    REQUIRE(rig.product.flight_log().recording());
+
+    hear_for(rig, now_ms, 1500, 4, altitude_sent);
+    REQUIRE(rig.state().alarm_level == traffic::Level::Advisory);
+    rig.seconds(now_ms, 40, 0, 900);
+    REQUIRE_FALSE(rig.product.flight_log().recording());
+    rig.product.diagnostics().disarm();
+    rig.seconds(now_ms, 4, 0, 900);
+    REQUIRE_FALSE(rig.product.capture().capturing());
+
+    Written out;
+    for (const flight::LogEvent& event : flight_events(rig))
+        if (event.kind != flight::LogKind::Status) out.logged.push_back(event.target);
+    for (const diagnostics::Record& record : captured(rig))
+        if (record.type == diagnostics::Type::Traffic) out.traffic.push_back(record);
+    REQUIRE(out.logged.size() >= 2);
+    REQUIRE(out.traffic.size() >= 4);
+    return out;
+}
+
+void check_written(const Written& written, bool altitude_known) {
+    for (const flight::LogTarget& target : written.logged) {
+        CHECK(target.address == kAddress);
+        CHECK(target.relative_altitude_valid == altitude_known);
+    }
+    for (const diagnostics::Record& record : written.traffic) {
+        diagnostics::Traffic value{};
+        REQUIRE(diagnostics::read(record, value));
+        CHECK(record.flagged(diagnostics::kTrafficFlagAltitudeRecorded));
+        CHECK(value.relative_altitude_valid == altitude_known);
+    }
+}
+
 }  // namespace
+
+TEST_CASE("unknown altitude: the flight log and the capture write it as unknown, not as 0 m") {
+    check_written(written_past(false), false);
+}
+
+TEST_CASE("unknown altitude: a target that sends its altitude is written as known in both logs") {
+    check_written(written_past(true), true);
+}
 
 TEST_CASE("unknown altitude: an advisory on distance, a PFLAU with no vertical, and no PFLAA") {
     Rig rig;

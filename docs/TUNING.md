@@ -48,7 +48,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kDutyPeriodCeilingMs` | 60000 (1 min) | milliseconds | Ceiling | a counter crosses the wire as its low half, so 65.536 s of it is the ceiling |
-| `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff |
+| `kPowerRunRecordPeriodMs` | 30000 (30 s) | milliseconds | Period | 28,900 slots at two records a pass is 120 h, against a 50 h run to cutoff |
 | `kStageMarginStepUs` | 10 | microseconds | - | a burst's last byte holds the stage margin in 10 us steps, +-1.27 ms |
 | `kMaxRecords` | 64 | records | - | 64 slots: ~30 records/s across a sector erase and the direct slot behind it |
 
@@ -241,6 +241,9 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kRecordPeriodMs` | `protocol::kHeightDifferenceMaxAgeMs` = 10000 (10 s) | milliseconds | Period | a GNSS-baro difference is trusted 10 s, so one record per aircraft in it |
+| `kBudgetWindowMs` | 1000 (1 s) | milliseconds | Window | the ring's writer can be blocked about a second, so its budget is a second's |
+| `kBudgetCeilingRecords` | `static_cast<uint32_t>(kAircraft) * kBudgetWindowMs / kRecordPeriodMs` | records | Ceiling | a full assembly spread evenly over the period, so no burst outruns the ring |
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | caps the flash work one pass books in the product's flash window |
 | `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked, and logs its refusal, once a second |
@@ -313,4 +316,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-203 constants over 19 folders.
+206 constants over 19 folders.

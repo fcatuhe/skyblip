@@ -46,6 +46,7 @@ struct AircraftObservation {
     int16_t climb_e8;
     uint16_t speed_q;
     uint16_t track_c9;
+    int16_t height_difference_ft;
     events::Stamp received;
     // INFO: fc 13sep26 the instant this position was true, on ports::Clock, for the geometry to
     // align
@@ -56,6 +57,7 @@ struct AircraftObservation {
     int32_t climb_age_ms;
     int32_t altitude_age_ms;
     int32_t pressure_altitude_age_ms;
+    int32_t height_difference_age_ms;
     int32_t flight_state_age_ms;
     int8_t rssi_dbm;
     Source source;
@@ -70,6 +72,7 @@ struct AircraftObservation {
     bool adsb_version_valid;
     uint8_t gva;
     bool gva_valid;
+    bool height_difference_valid;
 };
 
 }  // namespace skyblip::model

@@ -351,6 +351,11 @@ void AdsbAssembly::observe(const Aircraft& aircraft, model::AircraftObservation&
     }
 
     const Timed& difference = aircraft.height_difference_ft;
+    out.height_difference_valid = difference.valid;
+    if (difference.valid) {
+        out.height_difference_ft = static_cast<int16_t>(difference.value);
+        out.height_difference_age_ms = age_ms(difference.at_ms);
+    }
     const int32_t skew_ms = pressure.valid && difference.valid
                                 ? elapsed_ms(pressure.at_ms, difference.at_ms)
                                 : INT32_MAX;

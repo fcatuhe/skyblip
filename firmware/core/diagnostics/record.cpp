@@ -27,6 +27,7 @@ const char* type_name(Type type) {
         case Type::Duty: return "duty";
         case Type::Switch: return "switch";
         case Type::Loop: return "loop";
+        case Type::Adsb: return "adsb";
     }
     return "?";
 }

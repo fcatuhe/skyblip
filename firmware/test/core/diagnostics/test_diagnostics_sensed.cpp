@@ -348,3 +348,130 @@ TEST_CASE("diagnostics record: a stage margin past what the byte holds saturates
     CHECK(diagnostics::read(diagnostics::record_of(early), out));
     CHECK(out.tx_stage_margin_us == 1270);
 }
+
+TEST_CASE("diagnostics record: an ADS-B target keeps its version, its GVA and both altitudes") {
+    diagnostics::Adsb in{};
+    in.address = 0x3C4D5E;
+    in.adsb_version = 2;
+    in.gva = 2;
+    in.pressure_altitude_ft = 37000;
+    in.height_difference_ft = -275;
+    in.height_difference_age_ms = 1500;
+    in.gnss_relative_altitude_m = -812;
+    in.pressure_relative_altitude_m = 1204;
+    in.adsb_version_valid = true;
+    in.gva_valid = true;
+    in.pressure_altitude_valid = true;
+    in.height_difference_valid = true;
+    in.gnss_relative_altitude_valid = true;
+    in.pressure_relative_altitude_valid = true;
+
+    const diagnostics::Adsb out = diagnostics_round_trip(in);
+    CHECK(out.address == in.address);
+    CHECK(out.adsb_version == in.adsb_version);
+    CHECK(out.gva == in.gva);
+    CHECK(out.pressure_altitude_ft == in.pressure_altitude_ft);
+    CHECK(out.height_difference_ft == in.height_difference_ft);
+    CHECK(out.height_difference_age_ms == in.height_difference_age_ms);
+    CHECK(out.gnss_relative_altitude_m == in.gnss_relative_altitude_m);
+    CHECK(out.pressure_relative_altitude_m == in.pressure_relative_altitude_m);
+    CHECK(out.adsb_version_valid);
+    CHECK(out.gva_valid);
+    CHECK(out.pressure_altitude_valid);
+    CHECK(out.height_difference_valid);
+    CHECK(out.gnss_relative_altitude_valid);
+    CHECK(out.pressure_relative_altitude_valid);
+}
+
+// Version 0 sends no operational status, so a version not heard yet is not version 0.
+TEST_CASE("diagnostics record: an ADS-B version never heard reads unknown, apart from version 0") {
+    diagnostics::Adsb unheard{};
+    unheard.address = 0x3C4D5E;
+    diagnostics::Adsb heard = unheard;
+    heard.adsb_version_valid = true;
+
+    const diagnostics::Adsb unknown = diagnostics_round_trip(unheard);
+    const diagnostics::Adsb zero = diagnostics_round_trip(heard);
+    CHECK_FALSE(unknown.adsb_version_valid);
+    CHECK(zero.adsb_version_valid);
+    CHECK(zero.adsb_version == 0);
+    CHECK_FALSE(zero.gva_valid);
+}
+
+TEST_CASE("diagnostics record: an ADS-B altitude past what its two bytes hold saturates") {
+    diagnostics::Adsb in{};
+    in.address = 0xFF3C4D5E;
+    in.height_difference_age_ms = 40000;
+    in.gnss_relative_altitude_m = 40000;
+    in.pressure_relative_altitude_m = -40000;
+
+    const diagnostics::Adsb out = diagnostics_round_trip(in);
+    CHECK(out.address == 0x3C4D5E);
+    CHECK(out.height_difference_age_ms == 32767);
+    CHECK(out.gnss_relative_altitude_m == 32767);
+    CHECK(out.pressure_relative_altitude_m == -32768);
+}
+
+namespace {
+
+model::Ownship own_at_500_m() {
+    model::Ownship own{};
+    own.fix_valid = true;
+    own.altitude_hae_mm = 500000;
+    own.pressure_altitude_mm = 480000;
+    own.pressure_altitude_valid = true;
+    return own;
+}
+
+model::AircraftObservation adsb_target() {
+    model::AircraftObservation target{};
+    target.address = 0x3C4D5E;
+    target.source = model::Source::Adsb;
+    target.at_ms = 10000;
+    target.altitude_m = 1300;
+    target.altitude_valid = true;
+    target.pressure_altitude_ft = 2600;
+    target.pressure_altitude_valid = true;
+    target.height_difference_ft = -275;
+    target.height_difference_age_ms = 300;
+    target.height_difference_valid = true;
+    target.adsb_version = 1;
+    target.adsb_version_valid = true;
+    return target;
+}
+
+}  // namespace
+
+TEST_CASE("diagnostics record: an ADS-B target is compared on GNSS height and on pressure apart") {
+    const diagnostics::Adsb value = diagnostics::adsb_of(own_at_500_m(), adsb_target(), 10500);
+    CHECK(value.address == 0x3C4D5E);
+    CHECK(value.adsb_version_valid);
+    CHECK(value.adsb_version == 1);
+    CHECK_FALSE(value.gva_valid);
+    CHECK(value.pressure_altitude_ft == 2600);
+    CHECK(value.height_difference_ft == -275);
+    // 300 ms older than the position, which is 500 ms older than the record.
+    CHECK(value.height_difference_age_ms == 800);
+    REQUIRE(value.gnss_relative_altitude_valid);
+    CHECK(value.gnss_relative_altitude_m == 800);
+    REQUIRE(value.pressure_relative_altitude_valid);
+    // 2600 ft is 792.48 m, against own 480 m.
+    CHECK(value.pressure_relative_altitude_m == 312);
+}
+
+TEST_CASE("diagnostics record: an ADS-B altitude neither side can compare is recorded as unknown") {
+    model::Ownship own = own_at_500_m();
+    own.pressure_altitude_valid = false;
+    model::AircraftObservation target = adsb_target();
+    target.altitude_valid = false;
+    target.height_difference_valid = false;
+
+    const diagnostics::Adsb value = diagnostics::adsb_of(own, target, 10500);
+    CHECK(value.pressure_altitude_valid);
+    CHECK(value.pressure_altitude_ft == 2600);
+    CHECK_FALSE(value.height_difference_valid);
+    CHECK_FALSE(value.gnss_relative_altitude_valid);
+    CHECK_FALSE(value.pressure_relative_altitude_valid);
+    CHECK(value.gnss_relative_altitude_m == 0);
+    CHECK(value.pressure_relative_altitude_m == 0);
+}
