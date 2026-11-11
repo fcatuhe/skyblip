@@ -98,8 +98,9 @@ bool AdsbAssembly::fold(const AdsbMessage& message, uint32_t at_ms, const events
     if (!aircraft->position_valid) {
         aircraft->received = received;
         aircraft->rssi_dbm = message.reception.rssi_dbm;
+        aircraft->rssi_valid = message.reception.rssi_valid;
     }
-    const int8_t rssi_dbm = message.reception.rssi_dbm;
+    const AdsbReception& reception = message.reception;
     switch (message.kind) {
         case AdsbKind::Identification:
             aircraft->aircraft_category =
@@ -112,7 +113,7 @@ bool AdsbAssembly::fold(const AdsbMessage& message, uint32_t at_ms, const events
             const bool slow =
                 surface.speed_mkt.valid && surface.speed_mkt.value < kSlowSurfaceSpeedCeilingMkt;
             fold_position(*aircraft, CprFormat::Surface, surface.cpr, slow, at_ms, received,
-                          rssi_dbm, reference);
+                          reception, reference);
             break;
         }
         case AdsbKind::AirbornePosition: {
@@ -123,7 +124,7 @@ bool AdsbAssembly::fold(const AdsbMessage& message, uint32_t at_ms, const events
             if (airborne.gnss_height_valid)
                 aircraft->gnss_height_ft = {airborne.gnss_height_ft, at_ms, true};
             fold_position(*aircraft, CprFormat::Airborne, airborne.cpr, false, at_ms, received,
-                          rssi_dbm, reference);
+                          reception, reference);
             break;
         }
         case AdsbKind::Velocity:
@@ -213,7 +214,7 @@ AdsbAssembly::Aircraft* AdsbAssembly::admit(const AdsbMessage& message, uint32_t
 
 void AdsbAssembly::fold_position(Aircraft& aircraft, CprFormat format, const AdsbCpr& cpr,
                                  bool slow, uint32_t at_ms, const events::Stamp& received,
-                                 int8_t rssi_dbm, const AdsbReference& reference) {
+                                 const AdsbReception& reception, const AdsbReference& reference) {
     CprHalf& half = cpr.odd ? aircraft.odd : aircraft.even;
     half = CprHalf{cpr, at_ms, format, slow, true};
     aircraft.range_current = false;
@@ -225,7 +226,8 @@ void AdsbAssembly::fold_position(Aircraft& aircraft, CprFormat format, const Ads
         aircraft.position_format = format;
         aircraft.position_valid = true;
         aircraft.received = received;
-        aircraft.rssi_dbm = rssi_dbm;
+        aircraft.rssi_dbm = reception.rssi_dbm;
+        aircraft.rssi_valid = reception.rssi_valid;
     };
     if (aircraft.position_valid && since_ms(at_ms, aircraft.position_at_ms) <= kTrackJumpWindowMs) {
         CprPosition local;
@@ -319,6 +321,7 @@ void AdsbAssembly::observe(const Aircraft& aircraft, model::AircraftObservation&
     out.aircraft_category = aircraft.aircraft_category;
     out.received = aircraft.received;
     out.rssi_dbm = aircraft.rssi_dbm;
+    out.rssi_valid = aircraft.rssi_valid;
     out.at_ms = aircraft.position_valid ? aircraft.position_at_ms : aircraft.heard_at_ms;
     out.position_valid = aircraft.position_valid;
     if (aircraft.position_valid) {

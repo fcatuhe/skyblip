@@ -22,6 +22,9 @@ const char* to_string(Condition condition) {
         case Condition::Low: return "low";
         case Condition::NoFix: return "no-fix";
         case Condition::Alive: return "alive";
+        case Condition::Prompt: return "prompt";
+        case Condition::NoFixLinked: return "no-fix-linked";
+        case Condition::AliveLinked: return "alive-linked";
         default: return "?";
     }
 }
@@ -41,6 +44,7 @@ Condition condition_for(const Situation& situation) {
     // consulted, which is what makes the order the whole of the rule.
     if (!situation.running) return Condition::Off;
     if (situation.alarm_level >= kAlarmTakesLamp) return Condition::Alarm;
+    if (situation.prompting) return Condition::Prompt;
     switch (situation.power_level) {
         case power::PowerLevel::Critical:
         case power::PowerLevel::Flat: return Condition::Critical;
@@ -48,6 +52,8 @@ Condition condition_for(const Situation& situation) {
         case power::PowerLevel::Unknown:
         case power::PowerLevel::Normal: break;
     }
+    if (situation.linked)
+        return situation.fix_valid ? Condition::AliveLinked : Condition::NoFixLinked;
     return situation.fix_valid ? Condition::Alive : Condition::NoFix;
 }
 

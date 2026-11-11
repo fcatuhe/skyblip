@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Build a product image off the committed tip of local main, into builds/.
+# Build product images off the committed tip of local main, into builds/.
 #
-#   scripts/build_local.sh [product]        product defaults to skyblip_go
+#   scripts/build_local.sh [product...]     skyblip_go when none is named
+#   scripts/build_local.sh skyblip_go skyblip_bravo
 #
 # What the `product-image` CI job does, on this machine and on any ref: both
 # end in scripts/build_image.sh. The first run bootstraps a Zephyr workspace and downloads the SDK into
@@ -20,8 +21,7 @@
 #   SKYBLIP_UPDATE=1     re-run west update even if the manifest has not moved
 set -euo pipefail
 
-product=${1:-skyblip_go}
-slug=${product//_/-}
+if [ $# -gt 0 ]; then products=("$@"); else products=(skyblip_go); fi
 
 repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 ref=${SKYBLIP_REF:-main}
@@ -135,10 +135,17 @@ update_workspace
 install_sdk
 create_signing_key
 
-SKYBLIP_TREE=$workspace PYTHON=$python WEST=$west \
-  "$repo/scripts/build_image.sh" "$product" "$key" "${SKYBLIP_PUBLIC_KEY:-}"
+# build_image.sh empties out/ for each product, so each is copied before the next is built.
 mkdir -p "$repo/builds"
-cp "$workspace/firmware/build/out/$slug".* "$repo/builds/"
+for product in "${products[@]}"; do
+  slug=${product//_/-}
+  SKYBLIP_TREE=$workspace PYTHON=$python WEST=$west \
+    "$repo/scripts/build_image.sh" "$product" "$key" "${SKYBLIP_PUBLIC_KEY:-}"
+  cp "$workspace/firmware/build/out/$slug".* "$repo/builds/"
+done
 
 echo
-echo "builds/$slug.uf2  <-  $(cut -d' ' -f2- "$repo/builds/$slug.version")"
+for product in "${products[@]}"; do
+  slug=${product//_/-}
+  echo "builds/$slug.uf2  <-  $(cut -d' ' -f2- "$repo/builds/$slug.version")"
+done

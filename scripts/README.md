@@ -11,9 +11,9 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
 | `mkuf2.py` | build the drag-and-drop install image for a board, and refuse to write outside that board's factory bootloader window |
-| `build_local.sh` | build the device image off a committed ref, from a bare machine |
+| `build_local.sh` | build the device images of the products it is given, `skyblip_go` when none is named, off a committed ref, from a bare machine |
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
-| `build_image.sh` | build, sign and check the slim and full images in a ready workspace: what `build_local.sh`, CI and a release share |
+| `build_image.sh` | build, sign and check one product's images in a ready workspace, in its own build directory: the slim and full images of a product with a sensor hub, the one image of a product without, and `check_imu_image.py` only for the first. What `build_local.sh`, CI and a release share |
 | `dev_release.rb` | publish each product image of a `firmware.yml` run as its own development pre-release and prune the old ones, its logic in `lib/dev_release.rb`, tested by `.github/test/dev_release_test.rb` |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py` and `check_image_product.py`, which `build_image.sh` runs on the images it signs; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says. `size_check.py` prints each image's flash and RAM headroom against its slot and its board's SRAM, and fails a build with no slot |

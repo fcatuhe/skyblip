@@ -1,4 +1,4 @@
-// The LR2021 executor compiled against Zephyr and the X1's radio lines, over an SPI #176 wires.
+// The LR2021 executor compiled against Zephyr and the X1's radio lines, over an unwired SPI.
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>

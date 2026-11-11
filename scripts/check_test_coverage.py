@@ -19,12 +19,13 @@ REQUIRED_MODULES = [
     "core/power", "core/annunciation", "core/indication", "core/dfu", "core/radio",
     "core/input", "core/crypto", "core/identity",
     "products/common/services", "products/skyblip_go/pages", "products/skyblip_go/input",
+    "products/skyblip_bravo",
     "ui/widgets", "runtime",
     "simulator",
 ]
 
 TEST_DIRS = ("test", "test/adsl", "test/core", "test/ui", "test/products", "test/products/pages",
-             "test/hardware", "test/boards")
+             "test/products/skyblip_bravo", "test/hardware", "test/boards")
 
 PART_TEST_DIR = "test/hardware"
 

@@ -46,8 +46,9 @@ The host test suite and the simulator need nothing but a C++ compiler: `make -C 
 The device image is built off a committed ref, `main` by default, into `builds/`:
 
 ```
-scripts/build_local.sh              # skyblip_go, the only product today
-SKYBLIP_REF=HEAD scripts/build_local.sh
+scripts/build_local.sh                          # skyblip_go
+scripts/build_local.sh skyblip_go skyblip_bravo
+SKYBLIP_REF=HEAD scripts/build_local.sh skyblip_bravo
 ```
 
 The first run needs `cmake ninja dtc gperf`, then bootstraps a Zephyr workspace under `~/.cache/skyblip/west` and installs the SDK under `~/.local/opt`.
@@ -67,7 +68,7 @@ The build number after the `+` is the commit count. A unit on the production key
 Three identifiers name skyBlip to the outside world, and two of them are ours so far.
 
 - **ADS-L address table**: manufacturer page 49, which is AMT entry 58, with manufacturer prefix 0, assigned by the ADS-L registry on 5 October 2026 (ticket #228794). The assignment carries a prefix, so it is the structured scheme of F.2.2 rather than the flat 24-bit space we applied for: the 16 bits below the prefix are ours to fill densely, one per unit. Both are constants in [`firmware/core/settings/address.h`](firmware/core/settings/address.h), and each unit gets its 16 bits at [skyblip.eu/activate](https://skyblip.eu/activate): the server assigns the serial against the unit's FICR id and signs it, and until a unit holds one it neither transmits nor receives ([`firmware/core/identity/`](firmware/core/identity)). The exchange with the registry is logged on [skyblip.eu/ads-l-registry](https://skyblip.eu/ads-l-registry).
-- **USB**: Vendor ID 0x1209, Product ID 0x5AFE, granted by [pid.codes](https://pid.codes/1209/5AFE/) on 2 October 2026 ([pull request #1282](https://github.com/pidcodes/pidcodes.github.com/pull/1282)) and set in [`firmware/products/skyblip_go/prj.conf`](firmware/products/skyblip_go/prj.conf). It names the running application only: the bootloader presents Adafruit's factory descriptors.
+- **USB**: Vendor ID 0x1209, Product ID 0x5AFE, granted by [pid.codes](https://pid.codes/1209/5AFE/) on 2 October 2026 ([pull request #1282](https://github.com/pidcodes/pidcodes.github.com/pull/1282)) and set in [`firmware/products/skyblip_go/prj.conf`](firmware/products/skyblip_go/prj.conf) and [`firmware/products/skyblip_bravo/prj.conf`](firmware/products/skyblip_bravo/prj.conf), with the product strings `skyBlip Go` and `skyBlip Bravo`. It names the running application only: the bootloader presents Adafruit's factory descriptors.
 - **NMEA manufacturer code**: open. The `$PADSL`, `$PADSI` and `$PADSO` sentences sketched on [skyblip.eu/ads-l-registry/nmea](https://skyblip.eu/ads-l-registry/nmea) need a three-letter code that NMEA assigns: either one of our own, or an ADS code held by ADS-L's registry or working group, so the sentences belong to the specification rather than to one implementer.
 
 ## Acknowledgements

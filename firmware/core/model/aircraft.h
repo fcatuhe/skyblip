@@ -60,6 +60,8 @@ struct AircraftObservation {
     int32_t height_difference_age_ms;
     int32_t flight_state_age_ms;
     int8_t rssi_dbm;
+    // INFO: fc 12nov26 the LR2021 levels only a FIFO read's newest frame, so ADS-B may carry none
+    bool rssi_valid{true};
     Source source;
     bool climb_valid;
     ClimbSource climb_source;

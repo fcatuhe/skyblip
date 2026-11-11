@@ -12,6 +12,7 @@
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
 #include "products/skyblip_go/capture_settings.h"
+#include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings_store.h"
@@ -41,7 +42,8 @@ struct ScreenRig {
     go::SettingsStore store{settings, state.activation};
     comms::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
-    common::AlarmService alarm_service{context, {settings.alarm_enabled, settings.alarm_volume}};
+    common::AlarmService alarm_service{
+        context, go::kFeatures, {settings.alarm_enabled, settings.alarm_volume}};
     common::RecordPool pool{context, go::book_flash_in_dwell};
     common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};

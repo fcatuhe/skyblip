@@ -7,7 +7,7 @@
 
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/input/gesture.h"
+#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/product_rig.h"
@@ -16,7 +16,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kDoublePressWindowMs = go::ConfirmGesture::kDoublePressWindowMs;
+constexpr uint32_t kDoublePressWindowMs = common::ConfirmGesture::kDoublePressWindowMs;
 
 // Long enough for a press to have finished meaning one thing before the next
 // one is made: the pairing window, and a little.

@@ -8,9 +8,11 @@
 # has to pass before it leaves. With a public key, the image must verify
 # against it: that is how CI knows it signed with the key the units trust.
 #
-# Two images of one commit land in firmware/build/out/: the slim .signed.bin, which
-# leaves the BHI260AP image on the external flash, and the .full.signed.bin, which
-# carries it. The .uf2 is always the full one, with a .version line beside them.
+# A product with a sensor hub lands two images of one commit in firmware/build/out/:
+# the slim .signed.bin, which leaves the BHI260AP image on the external flash, and the
+# .full.signed.bin, which carries it. The .uf2 is always the full one. A product with
+# no hub, CONFIG_SKYBLIP_IMU_IMAGE unset in its prj.conf, builds the one image. A
+# .version line lands beside them.
 #
 #   SKYBLIP_CHANNEL     development (default): MCUboot takes any image signed by its key
 #                       production: products/<product>/release/ adds the refusal of an older one
@@ -29,12 +31,13 @@ tree=${SKYBLIP_TREE:-$(git -C "$(dirname "$0")" rev-parse --show-toplevel)}
 python=${PYTHON:-python3}
 west=${WEST:-west}
 firmware=$tree/firmware
-build=$firmware/build
-slim_build=$firmware/build-slim
+# One build directory per product: west refuses a directory configured for another application.
+build=$firmware/build/image/$product
+slim_build=$firmware/build/image-slim/$product
 app=$build/$product/zephyr
 slim_app=$slim_build/$product/zephyr
 hub_image=$firmware/hardware/parts/bhi260/firmware/BHI260AP.fw
-out=$build/out
+out=$firmware/build/out
 topdir=$(cd "$firmware" && "$west" topdir)
 imgtool=$topdir/bootloader/mcuboot/scripts/imgtool.py
 # What tells mkuf2.py where Zephyr's uf2conv.py is, outside a `west build` env.
@@ -50,22 +53,30 @@ main() {
     test -f "$public_key" || { echo "FAIL: no public key at $public_key"; exit 1; }
   fi
 
-  local version
+  local version images signed
   version=$(image_version)
   board=$(declared_board)
   echo "== building $product $version, $channel ($(git -C "$tree" rev-parse --short HEAD))"
   build_image "$version" "$build" y
-  build_image "$version" "$slim_build" n
-  for image in "$app" "$slim_app"; do
+  images=("$app")
+  if has_hub; then
+    build_image "$version" "$slim_build" n
+    images+=("$slim_app")
+  fi
+  for image in "${images[@]}"; do
     assert_version_stamped "$version" "$image"
     if [ -n "$public_key" ]; then assert_signed_by "$public_key" "$image"; fi
   done
   assert_downgrade_rule "$build" "$app"
-  assert_downgrade_rule "$slim_build" "$slim_app"
-  "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
-  "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
+  if has_hub; then
+    assert_downgrade_rule "$slim_build" "$slim_app"
+    "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
+    "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
+  fi
   # A unit refuses an upload naming another product, and takes none while it runs an image naming none.
-  for image in "$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin" "$slim_app/zephyr.signed.bin"; do
+  signed=("$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin")
+  if has_hub; then signed+=("$slim_app/zephyr.signed.bin"); fi
+  for image in "${signed[@]}"; do
     "$python" "$tree/scripts/check_image_product.py" "$image" "$product"
   done
   assert_confirmed_image_differs
@@ -107,6 +118,11 @@ declared_board() {
   echo "$declared"
 }
 
+# The hub's image is pinned by the product's prj.conf, and only a product that pins one has a slim build.
+has_hub() {
+  grep -q '^CONFIG_SKYBLIP_IMU_IMAGE=y' "$firmware/products/$product/prj.conf"
+}
+
 # A full image and a slim one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
 build_image() {
   local version=$1 dir=$2 linked=$3 conf=$firmware/build-conf
@@ -122,6 +138,9 @@ build_image() {
     mcuboot_conf="$mcuboot_conf;$product_dir/release/mcuboot.conf"
   fi
 
+  local hub_flag=()
+  if has_hub; then hub_flag=(-DSB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED="$linked"); fi
+
   if [ "${SKYBLIP_PRISTINE:-0}" = 1 ]; then rm -rf "$dir"; fi
   drop_build_of_moved_sdk "$dir"
   # -D<image>_ is sysbuild's namespace for one image, named after the app dir.
@@ -129,7 +148,7 @@ build_image() {
     -- -DSB_EXTRA_CONF_FILE="$conf/signing.conf" \
        -D"${product}"_EXTRA_CONF_FILE="$app_conf" \
        -Dmcuboot_EXTRA_CONF_FILE="$mcuboot_conf" \
-       -DSB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED="$linked")
+       "${hub_flag[@]}")
 }
 
 # CMake caches the compiler by absolute path, so a build configured against an SDK
@@ -183,7 +202,11 @@ assert_confirmed_image_differs() {
 # The full image only: the slim one is the same RAM and less flash.
 check_budgets() {
   "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
-  echo "slim image: $(stat -c %s "$slim_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
+  if has_hub; then
+    echo "slim image: $(stat -c %s "$slim_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
+  else
+    echo "image: $(stat -c %s "$app/zephyr.signed.bin") B over the air"
+  fi
 }
 
 # The application image must be the CONFIRMED one: a slot0 written directly
@@ -196,8 +219,12 @@ stage_artifacts() {
     "$build/mcuboot/zephyr/zephyr.hex" "$app/zephyr.signed.confirmed.hex"
   rm -rf "$out" && mkdir -p "$out"
   cp "$build/$slug.uf2" "$out/$slug.uf2"
-  cp "$slim_app/zephyr.signed.bin" "$out/$slug.signed.bin"
-  cp "$app/zephyr.signed.bin" "$out/$slug.full.signed.bin"
+  if has_hub; then
+    cp "$slim_app/zephyr.signed.bin" "$out/$slug.signed.bin"
+    cp "$app/zephyr.signed.bin" "$out/$slug.full.signed.bin"
+  else
+    cp "$app/zephyr.signed.bin" "$out/$slug.signed.bin"
+  fi
   cp "$app/zephyr.signed.confirmed.bin" "$out/$slug.signed.confirmed.bin"
   echo "$slug $version $(git -C "$tree" rev-parse --short HEAD) $channel" > "$out/$slug.version"
 }

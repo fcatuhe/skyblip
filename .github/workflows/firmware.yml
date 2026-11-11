@@ -260,10 +260,15 @@ jobs:
       fail-fast: false
       # `slug` is the product as a human writes it: the board name carries an
       # underscore Zephyr requires, and expressions have no replace().
+      # Bravo's image is kept a week, as the X1 smoke image is, until #204 publishes it as a pre-release.
       matrix:
         include:
           - product: skyblip_go
             slug: skyblip-go
+            retention: 1
+          - product: skyblip_bravo
+            slug: skyblip-bravo
+            retention: 7
     name: product image (${{ matrix.product }})
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -327,7 +332,7 @@ jobs:
           name: ${{ matrix.slug }}-${{ env.IMAGE_VERSION }}
           path: firmware/build/out/*
           if-no-files-found: error
-          retention-days: 1
+          retention-days: ${{ matrix.retention }}
 
   simulator:
     name: browser simulator
@@ -405,7 +410,7 @@ jobs:
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where
     # native_sim can. product-image compiles the ones it cannot, and the X1's
-    # smoke image, MCUboot with a signed app, is built and size-checked here until a product ships on it (#176).
+    # smoke image, MCUboot with a signed app, is built and size-checked here for the bench's first session (#169).
     name: platform adapters (native_sim, meshtracker_x1)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'

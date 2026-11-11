@@ -131,6 +131,29 @@ TEST_CASE("indication: the priority order is the table, top row first") {
     CHECK(condition_for(situation) == Condition::Alive);
 }
 
+// The rows a product with no glass lights: a phone's prompt, and a phone connected.
+TEST_CASE(
+    "indication: a prompt yields only to traffic, and a link keeps the fix colour twice as fast") {
+    Situation situation = everything_at_once();
+    situation.prompting = true;
+    situation.linked = true;
+    CHECK(condition_for(situation) == Condition::Alarm);
+    situation.alarm_level = Level::None;
+    CHECK(condition_for(situation) == Condition::Prompt);
+    situation.prompting = false;
+    CHECK(condition_for(situation) == Condition::Critical);
+    situation.power_level = power::PowerLevel::Normal;
+    CHECK(condition_for(situation) == Condition::NoFixLinked);
+    situation.fix_valid = true;
+    CHECK(condition_for(situation) == Condition::AliveLinked);
+
+    const Indication& alive = indication_for(Condition::Alive);
+    const Indication& linked = indication_for(Condition::AliveLinked);
+    CHECK(linked.lamp == alive.lamp);
+    CHECK(2 * (linked.on_ms + linked.off_ms) == alive.on_ms + alive.off_ms);
+    CHECK(indication_for(Condition::NoFixLinked).lamp == indication_for(Condition::NoFix).lamp);
+}
+
 TEST_CASE("indication: the cutoff monitor decides what low means, not a second threshold") {
     Situation situation{};
     situation.power_level = power::PowerLevel::Critical;

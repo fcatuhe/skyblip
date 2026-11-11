@@ -17,6 +17,7 @@
 
 #include <cstdint>
 
+#include "hardware/io/i2c_scan.h"
 #include "hardware/io/io.h"
 #include "hardware/parts/bhi260/bhi260.h"
 #include "hardware/parts/bme280/bme280.h"
@@ -24,12 +25,6 @@
 #include "ports/inventory.h"
 
 namespace skyblip::boards::t_echo_plus {
-
-// 7-bit addresses. 0x00-0x07 and 0x78-0x7F are reserved by the I2C
-// specification, so a part cannot live there and a probe of one is a transfer
-// that means nothing.
-constexpr uint8_t kI2cFirstAddress = 0x08;
-constexpr uint8_t kI2cLastAddress = 0x77;
 
 // Everything this board is documented to carry, so the page can name what it
 // found rather than printing hex at a pilot. Sources: project/2-DEVICES.md's
@@ -52,10 +47,7 @@ constexpr const char* i2c_role(uint8_t address) {
 // bus time, once, at boot.
 inline ports::Inventory scan_i2c(io::I2c& bus) {
     ports::Inventory inventory{};
-    for (uint8_t address = kI2cFirstAddress; address <= kI2cLastAddress; address++) {
-        if (!bus.write(address, nullptr, 0)) continue;
-        inventory.add_i2c_address(address);
-    }
+    io::scan_i2c(bus, inventory);
     inventory.rtc_fitted = inventory.has_i2c_address(kRtcAddress);
     return inventory;
 }

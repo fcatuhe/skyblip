@@ -10,6 +10,7 @@
 #include "core/traffic/table.h"
 #include "ports/indicator.h"
 #include "products/common/alarm_volume.h"
+#include "products/common/features.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 
@@ -35,9 +36,10 @@ struct AlarmSettings {
 // is already called at exactly the right point in the shutdown sequence.
 class AlarmService : public runtime::Service {
    public:
-    AlarmService(runtime::Context& context, AlarmSettings settings)
-        : runtime::Service(context), settings_(settings) {}
+    AlarmService(runtime::Context& context, Feature declared, AlarmSettings settings)
+        : runtime::Service(context), declared_(declared), settings_(settings) {}
 
+    Status setup() override;
     void tick(uint32_t now_ms) override;
 
     // The device is going down: the loop stops running, so the buzzer is
@@ -102,6 +104,8 @@ class AlarmService : public runtime::Service {
     bool dirty_{false};
     uint32_t passes_{0};
     bool running_{true};
+    bool lamp_shows_link_{false};
+    const Feature declared_;
     AlarmSettings settings_;
 };
 

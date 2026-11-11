@@ -33,6 +33,10 @@ static_assert(sizeof("activate 3F2A skyBlip") - 1 <= kBluetoothNameBytes,
 
 int bluetooth_name(char* out, int capacity, const char* product, const Activation& activation);
 
+// INFO: fc 12nov26 the product picks how it is named on the air: bluetooth_name is the Go's rule
+using NameRule = int (*)(char* out, int capacity, const char* product,
+                         const Activation& activation);
+
 }  // namespace skyblip::identity
 
 #endif

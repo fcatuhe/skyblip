@@ -30,6 +30,14 @@ SoftRF is the reference vocabulary and we keep its distinction and not its duty:
 
 Blue was the obvious colour for a first battery step and it is the wrong one. It already means no fix, the lamp shows one thing at a time, and a colour with two meanings is a colour with none. The step is also a voltage and not a percentage: the percentage comes off a textbook curve (`core/power/README.md`), so keying the lamp to it would make the lamp exactly as trustworthy as a table nobody has measured yet.
 
+## Three rows for a device with no glass
+
+`Prompt`, `NoFixLinked` and `AliveLinked` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt or a connection on. The Go makes no claim, so `Situation::prompting` and `Situation::linked` stay false there and its lamp is the one above.
+
+`Prompt` is a fast green blink, 60 ms in every 250, a `Transient` row because a prompt expires in thirty seconds. It sits below `Alarm`, so an advisory keeps the lamp, and above the cell, because a pilot answering a phone is standing beside the unit. Bravo arms the two-press gesture only while this row is showing (`products/skyblip_bravo/README.md`).
+
+A connected phone keeps the fix colour and doubles the wink rate: one wink every 1.5 s instead of 3 s, which is 2% and the edge of the `Steady` budget. The colour still says the fix and the rhythm says the link, so the lamp shows one thing at a time and a pilot reads both.
+
 ## Why charge is not a row
 
 The board already answers it in hardware. The charger IC drives its own LED, documented in LilyGO's T-Echo pin table: lit while charging, blinking with the cell missing or faulty, off when full. It reports while the SoC is asleep, which nothing here can do, and it reads the charger rather than guessing from a terminal voltage.

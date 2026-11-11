@@ -92,7 +92,7 @@ The first two steps are `flight::gnss_relative_altitude_m` and `flight::pressure
 
 A height is only compared with its own kind. A pressure altitude is measured on 1013.25 hPa, and it differs from a GNSS height by the geoid and by the day's weather. ADS-L, FLARM and the uplink send no pressure altitude, so they take the first branch or none, as before.
 
-The rule reads the validity flags only. Whether a field is still fresh enough to be valid is decided from its age where the observation is assembled (#190), and own-ship's pressure altitude is expired by whoever publishes it: #193 on the Go and #176 on Bravo. Until they do, no product publishes one, so a target that sends only a pressure altitude is unknown.
+The rule reads the validity flags only. Whether a field is still fresh enough to be valid is decided from its age where the observation is assembled (#190), and own-ship's pressure altitude is published and expired by `common::OwnshipService` on both products (`products/common/README.md`), so a target that sends only a pressure altitude is unknown while the barometer is silent.
 
 `flight::carried_to` carries `altitude_m` by the target's climb, and leaves both pressure altitudes as they were reported. At the 1.5 s `flight::kExtrapolationCeilingMs` and 10 m/s of climb, that is 15 m inside a 300 m band.
 

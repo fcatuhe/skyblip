@@ -1,4 +1,4 @@
-// Harness, not a test: Bravo on the peer endpoint, a recording replayed until #176 builds it.
+// Harness, not a test: Bravo on the peer endpoint, a recording replayed until #192 serves it.
 #ifndef SKYBLIP_TEST_SUPPORT_BRAVO_STUB_H
 #define SKYBLIP_TEST_SUPPORT_BRAVO_STUB_H
 

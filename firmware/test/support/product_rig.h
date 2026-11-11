@@ -187,7 +187,7 @@ struct Rig {
         }
     }
 
-    // The authorising gesture: two presses inside go::ConfirmGesture's window.
+    // The authorising gesture: two presses inside common::ConfirmGesture's window.
     void double_press(uint32_t& now_ms) {
         press(now_ms);
         press(now_ms);
