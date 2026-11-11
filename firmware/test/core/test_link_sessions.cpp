@@ -231,3 +231,50 @@ TEST_CASE("link sessions: a session id used again names a new connection, its ow
     CHECK(sessions.connection(1) != first);
     CHECK(sessions.connection(1) != sessions.connection(2));
 }
+
+// A paired Go keeps one connection for its Bravo, which phones must never take (#178).
+TEST_CASE("link sessions: a reserved peer connection leaves phones one fewer, Bravo away or not") {
+    LinkSessions sessions;
+    REQUIRE(sessions.reserve_peer(true) == Status::Ok);
+    CHECK(sessions.phone_ceiling() == static_cast<int>(LinkSessions::kMaxSessions) - 1);
+
+    CHECK(sessions.connected(1, 244));
+    CHECK(sessions.admits());
+    CHECK(sessions.connected(2, 244));
+    CHECK_FALSE(sessions.admits());
+    CHECK_FALSE(sessions.connected(3, 244));
+    CHECK(sessions.count() == 2);
+    CHECK(sessions.refused() == 1);
+
+    LinkEvent event{};
+    int ups = 0;
+    while (sessions.pop(event)) ups++;
+    CHECK(ups == 2);
+
+    REQUIRE(sessions.reserve_peer(false) == Status::Ok);
+    CHECK(sessions.admits());
+    CHECK(sessions.connected(3, 244));
+}
+
+TEST_CASE("link sessions: no reservation while phones hold every connection") {
+    LinkSessions sessions;
+    for (uint16_t id = 1; id <= LinkSessions::kMaxSessions; id++)
+        REQUIRE(sessions.connected(id, 244));
+    CHECK(sessions.reserve_peer(true) == Status::Full);
+    CHECK_FALSE(sessions.peer_reserved());
+
+    sessions.disconnected(3);
+    CHECK(sessions.reserve_peer(true) == Status::Ok);
+    CHECK(sessions.peer_reserved());
+    CHECK_FALSE(sessions.admits());
+}
+
+TEST_CASE("link sessions: a session already up comes up again past a reservation") {
+    LinkSessions sessions;
+    REQUIRE(sessions.connected(1, 23));
+    REQUIRE(sessions.connected(2, 23));
+    REQUIRE(sessions.reserve_peer(true) == Status::Ok);
+    CHECK(sessions.connected(2, 185));
+    CHECK(sessions.payload_bytes(2) == 185);
+    CHECK(sessions.refused() == 0);
+}

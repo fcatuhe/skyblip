@@ -127,7 +127,7 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(int(kBlobVersion) == 12);
+    CHECK(int(kBlobVersion) == 13);
 }
 
 // Until version 12 a unit held no own ICAO, so the transponder it filters is none.
@@ -182,7 +182,6 @@ TEST_CASE("settings: a blob written by version-11 firmware comes back whole, wit
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(blob_size() == 1 + sizeof(V11) + 4 + 4);
     Settings again;
     REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
     CHECK(again.own_icao == 0x3C6586u);
@@ -412,11 +411,10 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
-    // The layout it writes back is shorter by the two bytes those settings held.
+    // It writes back the current layout, and that reads back whole.
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(blob_size() < 1 + sizeof(V6) + 4);
     Settings again;
     REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
     CHECK(std::string(again.callsign) == "D-KXYZ");

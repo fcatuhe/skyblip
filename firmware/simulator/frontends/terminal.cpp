@@ -35,8 +35,8 @@ uint32_t now_ms() {
         duration_cast<milliseconds>(steady_clock::now() - started).count());
 }
 
-const char* kPages[] = {"radar",      "nearby",    "6-pack", "g meter", "status",
-                        "satellites", "radio log", "raw",    "capture", "self test"};
+const char* kPages[] = {"radar",     "nearby", "6-pack",  "g meter",   "status", "satellites",
+                        "radio log", "raw",    "capture", "self test", "bravo"};
 static_assert(sizeof(kPages) / sizeof(kPages[0]) == go::kPageCount,
               "a page with no name here prints past the end of the array");
 const char* kAlarms[] = {"none", "ADVISORY"};

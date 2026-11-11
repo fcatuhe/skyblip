@@ -14,6 +14,8 @@
 #include "core/events/link.h"
 #include "core/identity/activation.h"
 #include "core/util/fifo.h"
+#include "hardware/platform/zephyr/att_budget.h"
+#include "hardware/platform/zephyr/skyblip_uuid.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
@@ -36,15 +38,12 @@ static struct bt_uuid_128 nus_tx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0003));
 static struct bt_uuid_16 hm10_service_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 hm10_characteristic_uuid = BT_UUID_INIT_16(0xFFE1);
 
-// INFO: fc 18sep26 Our own base: config and log are our protocol, not a UART apps would misread.
-#define SKYBLIP_UUID(id) \
-    BT_UUID_128_ENCODE(0x69c21300 | (id), 0x0187, 0x4204, 0xa91d, 0x02eb8858b440)
-static struct bt_uuid_128 skyblip_service_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x01));
-static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x02));
+static struct bt_uuid_128 skyblip_service_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kSkyblipServiceId));
+static struct bt_uuid_128 config_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kConfigCharacteristicId));
 // The log offload is thousands of small round trips. On its own characteristic
 // it cannot starve the one the pilot's prompts travel on, and an app that does
 // not want logs simply never subscribes.
-static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(0x03));
+static struct bt_uuid_128 log_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kLogCharacteristicId));
 
 // INFO: fc 04aug26 The ATT notification header - opcode plus value handle. What
 // is left of the ATT_MTU is what one notification may carry, which is why 185
@@ -58,22 +57,20 @@ Fifo<RxFrame, 8> g_rx;
 struct k_spinlock g_lock;
 comms::LinkSessions g_sessions;
 struct bt_conn* g_connections[CONFIG_BT_MAX_CONN] = {};
-static_assert(CONFIG_BT_MAX_CONN <= static_cast<int>(comms::LinkSessions::kMaxSessions),
-              "the controller admits more centrals than core will serve");
+// INFO: fc 11nov26 equal: every phone is a row, and a reserved Bravo finds a free connection
+static_assert(CONFIG_BT_MAX_CONN == static_cast<int>(comms::LinkSessions::kMaxSessions),
+              "the controller admits more phones than core will serve, or fewer than it reserves");
 
-// INFO: fc 23sep26 a notify off the sysworkq waits forever for a buffer, so each link gets a share
-constexpr atomic_val_t kMaxNotifiesInFlight = 4;
-constexpr int kAttResponsesPerLink = 1;
-// INFO: fc 25sep26 smp_bt.c waits on each notification's sent callback before the next
-constexpr int kSmpNotifiesPerLink = 1;
-static_assert(CONFIG_BT_ATT_TX_COUNT >=
-                  (kMaxNotifiesInFlight + kAttResponsesPerLink + kSmpNotifiesPerLink) *
-                      CONFIG_BT_MAX_CONN,
-              "the ATT pool must hold every link's notifications, a response and an SMP reply");
 atomic_t g_in_flight[CONFIG_BT_MAX_CONN];
 
 void notified(struct bt_conn* connection, void* /*user_data*/) {
     atomic_dec(&g_in_flight[bt_conn_index(connection)]);
+}
+
+// INFO: fc 11nov26 the Go's own link to its Bravo is central.cpp's: no session, no NMEA, no MTU ask
+bool phone(struct bt_conn* connection) {
+    struct bt_conn_info info = {};
+    return bt_conn_get_info(connection, &info) == 0 && info.role == BT_CONN_ROLE_PERIPHERAL;
 }
 
 // INFO: fc 18sep26 bt_conn_index() is the controller's own slot, so session ids never collide.
@@ -139,6 +136,7 @@ bool too_long(uint16_t bytes) { return bytes > kMaxInboundBytes; }
 // INFO: fc 23sep26 a write with response learns the queue was full, one without is dropped unseen
 ssize_t accept_write(struct bt_conn* connection, Endpoint endpoint, const void* data,
                      uint16_t bytes) {
+    if (!phone(connection)) return BT_GATT_ERR(BT_ATT_ERR_WRITE_NOT_PERMITTED);
     if (too_long(bytes)) return BT_GATT_ERR(BT_ATT_ERR_INVALID_ATTRIBUTE_LEN);
     if (!is_ok(push_rx(connection, endpoint, data, bytes)))
         return BT_GATT_ERR(BT_ATT_ERR_INSUFFICIENT_RESOURCES);
@@ -260,6 +258,10 @@ void request_mtu(struct bt_conn* connection) {
 // INFO: fc 18sep26 -ENOMEM is every connection object in use, and recycled() is what undoes it.
 void resume_advertising() {
     if (atomic_get(&g_advertising) == 0) return;
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const bool admits = g_sessions.admits();
+    k_spin_unlock(&g_lock, key);
+    if (!admits) return;
     const int error = start_advertising();
     if (error != 0 && error != -ENOMEM && error != -EALREADY)
         LOG_ERR("bluetooth: advertising did not resume (%d), the device is invisible", error);
@@ -272,15 +274,22 @@ void resume_advertising() {
 // stack's own thread, so calling into a service from here would be a second path
 // into core/ with no critical section around it.
 // INFO: fc 25sep26 Zephyr drops a gone link's sent callbacks, so a new link starts at zero
+// INFO: fc 11nov26 a phone past the ceiling a paired Bravo leaves is disconnected, never served
 void connected(struct bt_conn* connection, uint8_t error) {
-    if (error) return;
+    if (error || !phone(connection)) return;
     const uint8_t index = bt_conn_index(connection);
-    struct bt_conn* held = bt_conn_ref(connection);
     atomic_set(&g_in_flight[index], 0);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    g_connections[index] = held;
-    g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)));
+    const bool admitted =
+        g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)));
+    if (admitted) g_connections[index] = bt_conn_ref(connection);
     k_spin_unlock(&g_lock, key);
+    if (!admitted) {
+        const int refused = bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_LOW_RESOURCES);
+        if (refused != 0)
+            LOG_ERR("bluetooth: a phone past the ceiling stayed connected (%d)", refused);
+        return;
+    }
     request_mtu(connection);
     resume_advertising();
 }
@@ -350,6 +359,22 @@ Status Link::advertise_as(const char* name) {
     }
     if (error != 0) LOG_ERR("bluetooth: advertising as %s failed (%d)", next->name, error);
     return named == 0 && error == 0 ? Status::Ok : Status::Down;
+}
+
+Status Link::reserve_peer_connection(bool reserved) {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const Status status = g_sessions.reserve_peer(reserved);
+    const bool admits = g_sessions.admits();
+    k_spin_unlock(&g_lock, key);
+    if (status != Status::Ok) return status;
+    if (admits) {
+        resume_advertising();
+        return status;
+    }
+    const int stopped = bt_le_adv_stop();
+    if (stopped != 0)
+        LOG_ERR("bluetooth: advertising past the phone ceiling did not stop (%d)", stopped);
+    return status;
 }
 
 uint16_t Link::payload_bytes() const {

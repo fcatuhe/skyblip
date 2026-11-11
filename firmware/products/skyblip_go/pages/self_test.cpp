@@ -89,6 +89,11 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         y += kLineHeight;
     }
 
+    if (snapshot.own_icao_warning && y < self_test_row_y(kSelfTestRows)) {
+        canvas.draw_text(kLeft, y, kSelfTestOwnIcaoText, true, 1);
+        y += kLineHeight;
+    }
+
     y += kSelfTestDividerGap;
     canvas.horizontal_line(kLeft, y, kGlassWidth - 2 * kLeft, true);
     y += kSelfTestFooterGap;

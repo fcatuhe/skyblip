@@ -69,6 +69,8 @@ void ScreenService::handle_input(uint32_t now_ms) {
     }
     if (arming_.tick(now_ms) != common::Answer::None) dirty_ = true;
     step_editor(now_ms);
+    step_bravo(now_ms);
+    sync_notice(now_ms);
 }
 
 void ScreenService::sync_receiving(uint32_t now_ms) {
@@ -157,6 +159,11 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 
 void ScreenService::tap(uint32_t now_ms) {
     if (answering() || receiving_ || !context_.state.activation.activated()) return;
+    if (close_notice()) return;
+    if (on_bravo_page()) {
+        act_on_bravo(bravo_page_.pad(bravo_view(), now_ms), now_ms);
+        return;
+    }
     if (step_capture_focus()) return;
     page_forward(now_ms);
 }
@@ -167,6 +174,7 @@ void ScreenService::long_touch() {
         alarm_.dismiss();
         return;
     }
+    if (close_notice()) return;
     show_radar();
 }
 
@@ -184,6 +192,11 @@ void ScreenService::press(uint32_t now_ms) {
     }
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
+    if (close_notice()) return;
+    if (on_bravo_page()) {
+        act_on_bravo(bravo_page_.button(bravo_view(), now_ms), now_ms);
+        return;
+    }
     if (editor_.active()) {
         editor_.button(now_ms);
         return;
@@ -247,7 +260,12 @@ void ScreenService::show_radar() { show_page(Page::Radar); }
 
 void ScreenService::show_page(Page page) {
     if (mode_ == Mode::Menu) leave_menu();
+    if (page_ == Page::Bravo) bravo_.end_pairing();
     page_ = page;
+    if (page == Page::Bravo) {
+        bravo_page_.open(last_tick_ms_);
+        bravo_.begin_pairing(last_tick_ms_);
+    }
     change_screen();
 }
 

@@ -17,6 +17,7 @@
 #include "hardware/platform/contract.h"
 #include "hardware/platform/zephyr/annunciator.h"
 #include "hardware/platform/zephyr/battery.h"
+#include "hardware/platform/zephyr/central.h"
 #include "hardware/platform/zephyr/clock.h"
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/die_temperature.h"
@@ -103,6 +104,7 @@ class TEchoPlus {
 
     zephyr::Clock& clock() { return clock_; }
     zephyr::Link& link() { return link_; }
+    zephyr::Central& central() { return central_; }
     zephyr::KeyValueStore& key_value() { return key_value_; }
     zephyr::FlashRegion& log_flash() { return log_flash_; }
     zephyr::FlashRegion& imu_flash() { return imu_flash_; }
@@ -228,6 +230,7 @@ class TEchoPlus {
     FlashRegion imu_flash_{PARTITION_ID(imu_image_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
+    zephyr::Central& central_{zephyr::central()};
     zephyr::Identity identity_{};
     zephyr::Battery battery_{battery_device_};
     zephyr::DieTemperature die_temperature_{};

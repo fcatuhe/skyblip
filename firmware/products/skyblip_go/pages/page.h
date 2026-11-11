@@ -22,7 +22,8 @@ enum class Page : uint8_t {
     Raw = 7,
     Capture = 8,
     SelfTest = 9,
-    kCount = 10
+    Bravo = 10,
+    kCount = 11
 };
 
 constexpr int kPageCount = static_cast<int>(Page::kCount);
@@ -87,9 +88,12 @@ constexpr int kWalkedPages = 4;
 
 constexpr bool walked(Page page) { return static_cast<int>(page) < kWalkedPages; }
 
-constexpr bool diagnostic(Page page) { return !walked(page); }
-
 constexpr bool diagnostics_menu(Page owner) { return owner == Page::Nearby; }
+
+// INFO: fc 11nov26 the settings menu opens it, so it is no bench page and an alarm takes it
+constexpr bool settings_page(Page page) { return page == Page::Bravo; }
+
+constexpr bool diagnostic(Page page) { return !walked(page) && !settings_page(page); }
 
 constexpr const char* page_title(Page page) {
     switch (page) {
@@ -103,6 +107,7 @@ constexpr const char* page_title(Page page) {
         case Page::Capture: return "CAPTURE";
         case Page::SelfTest: return "SELF TEST";
         case Page::GMeter: return "G METER";
+        case Page::Bravo: return "BRAVO";
         default: return "";
     }
 }
@@ -112,7 +117,10 @@ constexpr const char* menu_title(Page page) {
     return diagnostics_menu(page) ? "DIAGNOSTICS" : page_title(page);
 }
 
-constexpr Page menu_owner(Page page) { return walked(page) ? page : Page::Nearby; }
+constexpr Page menu_owner(Page page) {
+    if (walked(page)) return page;
+    return settings_page(page) ? Page::Radar : Page::Nearby;
+}
 
 // INFO: fc 18sep26 a page off the walk was opened from a menu, so the pad hands it back there
 constexpr Page page_after(Page page) {

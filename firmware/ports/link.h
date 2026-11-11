@@ -51,6 +51,9 @@ class Link {
 
     // INFO: fc 18oct26 starts advertising under name, or renames a link already advertising
     virtual Status advertise_as(const char* name) = 0;
+
+    // INFO: fc 11nov26 keeps one connection for the paired peer, Full while phones hold them all
+    virtual Status reserve_peer_connection(bool reserved) = 0;
 };
 
 }

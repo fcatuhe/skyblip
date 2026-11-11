@@ -3,6 +3,7 @@
 
 #include "core/events/link.h"
 #include "ports/annunciator.h"
+#include "ports/central.h"
 #include "ports/dfu.h"
 #include "ports/die_temperature.h"
 #include "ports/display.h"
@@ -37,6 +38,18 @@ class NullLink : public Link {
         return Status::Down;
     }
     Status advertise_as(const char*) override { return Status::Down; }
+    Status reserve_peer_connection(bool) override { return Status::Down; }
+};
+
+class NullCentral : public Central {
+   public:
+    Status scan(const ScanDuty&, const char*) override { return Status::Down; }
+    void stop_scan() override {}
+    Status connect(const events::BluetoothAddress&, const ScanDuty&) override {
+        return Status::Down;
+    }
+    void disconnect() override {}
+    Status write(ConstByteSpan) override { return Status::Down; }
 };
 
 class NullKeyValueStore : public KeyValueStore {
@@ -92,6 +105,7 @@ struct NullRoles {
     NullDisplay display;
     NullAnnunciator annunciator;
     NullLink link;
+    NullCentral central;
     NullKeyValueStore key_value;
     NullFlashRegion log_flash;
     NullDfu dfu;

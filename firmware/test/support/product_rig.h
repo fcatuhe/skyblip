@@ -6,6 +6,7 @@
 #define SKYBLIP_TEST_SUPPORT_PRODUCT_RIG_H
 
 #include <cstring>
+#include <functional>
 #include <string>
 
 #include "core/events/link.h"
@@ -42,8 +43,12 @@ struct Rig {
         for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += step_ms) {
             platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
+            if (world) world(now_ms);
         }
     }
+
+    // INFO: fc 11nov26 what else lives through each pass, a paired Bravo and the air between
+    std::function<void(uint32_t)> world{};
 
     // The shell's other loop: a refused boot settles the frame it owes the glass.
     void sleep_again(uint32_t step_ms = 50) {
@@ -177,6 +182,7 @@ struct Rig {
         for (int i = 0; i < 2; i++) {
             platform.clock().set_milliseconds(now_ms);
             product.run_pass(now_ms);
+            if (world) world(now_ms);
             now_ms += 40;
         }
     }

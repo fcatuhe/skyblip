@@ -36,8 +36,7 @@ class Link : public ports::Link {
     bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
     void raise_link(uint16_t session_id = 1) {
-        sessions_.connected(session_id, declared_payload_bytes_);
-        if (!sessions_.up(session_id)) return;
+        if (!sessions_.connected(session_id, declared_payload_bytes_)) return;
         live_.push_back(session_id);
         last_session_id_ = session_id;
     }
@@ -53,6 +52,9 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out) { return sessions_.pop(out); }
     bool up() const { return sessions_.up(); }
     int links() const { return sessions_.count(); }
+    // INFO: fc 11nov26 what silicon decides advertising on: a phone more may connect
+    bool admits_phone() const { return sessions_.admits(); }
+    uint32_t refused() const { return sessions_.refused(); }
     uint16_t session_id() const { return last_session_id_; }
 
     // What this link came up with. Floored the way a real one is: nothing may
@@ -102,6 +104,10 @@ class Link : public ports::Link {
         }
         advertised = name;
         return Status::Ok;
+    }
+
+    Status reserve_peer_connection(bool reserved) override {
+        return sessions_.reserve_peer(reserved);
     }
 
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()

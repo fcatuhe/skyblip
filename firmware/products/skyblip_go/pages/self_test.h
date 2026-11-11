@@ -43,11 +43,13 @@ struct SelfTestSnapshot {
     const uint8_t* i2c_addresses{nullptr};
     const char* const* i2c_roles{nullptr};
     int i2c_address_count{0};
+    // INFO: fc 11nov26 go::OwnIcaoWarning::stands(): neither the Go nor Bravo has an own ICAO
+    bool own_icao_warning{false};
 };
 
 // The most rows the page can carry before the last one falls off the panel. The
-// bus scan's row is one of them.
-constexpr int kSelfTestRows = 15;
+// bus scan's row is one of them, and the own-ICAO warning's another.
+constexpr int kSelfTestRows = 16;
 
 // The grid the page is set on, exported so a test can read a row back off the
 // glass instead of counting ink: "there is ink on the GNSS row" is not the same
@@ -70,6 +72,9 @@ constexpr int kSelfTestFooterHeight =
 
 static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterHeight <= kGlassHeight,
               "the last row would fall off the glass");
+
+constexpr const char kSelfTestOwnIcaoText[] = "NO OWN ICAO: OWN XPDR IS TRAFFIC";
+static_assert(sizeof(kSelfTestOwnIcaoText) - 1 <= kSelfTestRowCells, "the warning fits its row");
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);
 

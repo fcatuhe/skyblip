@@ -7,8 +7,10 @@
 #include <deque>
 #include <string>
 
+#include "core/events/central.h"
 #include "core/events/link.h"
 #include "core/util/result.h"
+#include "hardware/platform/host/central.h"
 #include "hardware/platform/host/link.h"
 
 namespace skyblip {
@@ -19,9 +21,20 @@ class PairedLink {
     enum class Direction : uint8_t { ToCentral, ToPeripheral };
     enum class Flow : uint8_t { Flowing, Stalled, Lost };
 
+    // INFO: fc 11nov26 tag 3F2A, a static random address as an nRF52 advertises with its FICR's
+    static constexpr events::BluetoothAddress kPeripheralAddress{
+        1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+
     explicit PairedLink(platform::host::Link& peripheral, uint16_t session_id = 1)
         : peripheral_(&peripheral), session_id_(session_id) {
         peripheral_->tap(sent_);
+    }
+
+    // INFO: fc 11nov26 a Go's central drives this one: it scans, connects, writes and reads
+    PairedLink(platform::host::Link& peripheral, platform::host::Central& central,
+               uint16_t session_id = 1)
+        : PairedLink(peripheral, session_id) {
+        central_ = &central;
     }
     ~PairedLink() { peripheral_->untap(sent_); }
     PairedLink(const PairedLink&) = delete;
@@ -44,6 +57,7 @@ class PairedLink {
     void drop() {
         collect_notifications();
         if (peripheral_up_) peripheral_->drop_link(session_id_);
+        if (central_ != nullptr && central_up_) central_->drop();
         central_up_ = false;
         peripheral_up_ = false;
         lose_held();
@@ -55,6 +69,14 @@ class PairedLink {
         inbox_.clear();
         lose_held();
     }
+
+    void reboot_central(platform::host::Central& rebooted) {
+        reboot_central();
+        central_ = &rebooted;
+    }
+
+    // INFO: fc 11nov26 out of range or off: no scan hears the peripheral, no connect takes it
+    void set_in_range(bool in_range) { in_range_ = in_range; }
 
     // INFO: fc 10nov26 a rebooted peripheral brings a new link, numbering connections from 1
     void reboot_peripheral(platform::host::Link& rebooted) {
@@ -73,8 +95,10 @@ class PairedLink {
     }
 
     void pump() {
+        if (central_ != nullptr) serve_central();
         collect_notifications();
         carry(to_central_, [this](const std::string& bytes) {
+            if (central_ != nullptr) return central_->notify(bytes);
             inbox_.push_back(bytes);
             return true;
         });
@@ -115,6 +139,31 @@ class PairedLink {
     }
     const Pipe& pipe(Direction direction) const {
         return direction == Direction::ToCentral ? to_central_ : to_peripheral_;
+    }
+
+    // INFO: fc 11nov26 a central that disconnects tells the peripheral at once, unlike a reboot
+    void serve_central() {
+        if (central_up_ && !central_->up()) {
+            collect_notifications();
+            if (peripheral_up_) peripheral_->drop_link(session_id_);
+            central_up_ = false;
+            peripheral_up_ = false;
+            lose_held();
+        }
+        if (!central_->scanning()) heard_ = false;
+        if (central_->scanning() && in_range_ && !heard_ && !peripheral_->advertised.empty()) {
+            central_->hear(kPeripheralAddress, peripheral_->advertised.c_str());
+            heard_ = true;
+        }
+        if (central_->connecting() && central_->wanted() == kPeripheralAddress && in_range_ &&
+            connect())
+            central_->come_up(payload_bytes_);
+        for (; !central_->writes.empty(); central_->writes.pop_front()) {
+            if (central_up_)
+                to_peripheral_.held.push_back(central_->writes.front());
+            else
+                to_peripheral_.lost++;
+        }
     }
 
     void collect_notifications() {
@@ -162,7 +211,10 @@ class PairedLink {
     }
 
     platform::host::Link* peripheral_;
+    platform::host::Central* central_{nullptr};
     uint16_t session_id_;
+    bool in_range_{true};
+    bool heard_{false};
     uint16_t payload_bytes_{ports::kMinimumLinkPayloadBytes};
     bool central_up_{false};
     bool peripheral_up_{false};

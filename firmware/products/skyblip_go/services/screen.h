@@ -16,6 +16,7 @@
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/activation.h"
+#include "products/skyblip_go/pages/bravo.h"
 #include "products/skyblip_go/pages/capture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/gmeter.h"
@@ -29,6 +30,7 @@
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/pages/sixpack.h"
 #include "products/skyblip_go/pages/status.h"
+#include "products/skyblip_go/services/bravo.h"
 #include "runtime/service.h"
 
 namespace skyblip::go {
@@ -54,13 +56,14 @@ class ScreenService : public runtime::Service {
 
     ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
                   common::AlarmService& alarm, const common::CaptureService& capture,
-                  const SelfTestSnapshot& self_test)
+                  const SelfTestSnapshot& self_test, BravoService& bravo)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           alarm_(alarm),
           capture_(capture),
-          self_test_(self_test) {}
+          self_test_(self_test),
+          bravo_(bravo) {}
 
     void tick(uint32_t now_ms) override;
 
@@ -95,6 +98,8 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
+    bool noticing() const { return notice_; }
+    const BravoPage& bravo_page() const { return bravo_page_; }
     void mark_dirty() { dirty_ = true; }
 
    private:
@@ -102,6 +107,12 @@ class ScreenService : public runtime::Service {
     RawSnapshot raw_snapshot(uint32_t now_ms) const;
     CaptureSnapshot capture_snapshot(uint32_t now_ms) const;
     bool on_capture_page() const { return mode_ == Mode::Page && page_ == Page::Capture; }
+    bool on_bravo_page() const { return mode_ == Mode::Page && page_ == Page::Bravo; }
+    BravoView bravo_view() const;
+    void act_on_bravo(BravoAction action, uint32_t now_ms);
+    void step_bravo(uint32_t now_ms);
+    void sync_notice(uint32_t now_ms);
+    bool close_notice();
     bool picking_a_capture() const;
     bool step_capture_focus();
     void sync_arming(uint32_t now_ms);
@@ -195,6 +206,10 @@ class ScreenService : public runtime::Service {
     common::AlarmService& alarm_;
     const common::CaptureService& capture_;
     const SelfTestSnapshot& self_test_;
+    BravoService& bravo_;
+    BravoPage bravo_page_{};
+    uint32_t notice_since_ms_{0};
+    bool notice_{false};
     diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     Controls controls_{};

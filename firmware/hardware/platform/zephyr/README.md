@@ -30,7 +30,25 @@ The name therefore rides the scan response, where 29 characters fit, and the pro
 
 ## Several centrals
 
-`CONFIG_BT_MAX_CONN` is 3 and `comms::LinkSessions::kMaxSessions` matches it, with a `static_assert` here so the two cannot drift. A session id is `bt_conn_index() + 1`, the controller's own slot, so ids never collide and never outlive the connection.
+`CONFIG_BT_MAX_CONN` is 3 and `comms::LinkSessions::kMaxSessions` equals it, with a `static_assert` here so the two cannot drift: every connection a phone can take is a row in the table, and a reserved Bravo still finds a free connection object. A session id is `bt_conn_index() + 1`, the controller's own slot, so ids never collide and never outlive the connection.
+
+`link.cpp` serves phones only, the connections where the unit is the peripheral. A connection where the Go is the central, its link to a paired Bravo, is `central.cpp`'s: `connected()` here skips it by its role, from `bt_conn_get_info()`, and `disconnected()` and the MTU callback skip it because it never entered `g_connections`, so it never enters `LinkSessions`, never gets the unit's MTU request, never takes a share of the NMEA broadcast, and a write it makes to a characteristic here is refused `WRITE_NOT_PERMITTED`. While a Bravo is paired, `reserve_peer_connection(true)` lowers the phone ceiling to two: advertising stops at two phones, even while Bravo is away, and a third phone that connects in the instant before it stops is disconnected with `REMOTE_LOW_RESOURCES` and never reaches the bus.
+
+## The Go's central
+
+`central.cpp` is built only where `CONFIG_BT_CENTRAL` is set, which is the Go's `prj.conf` (`cmake/skyblip.cmake`). It fills `ports::Central`:
+
+- a scan is active, because the name rides the scan response, with duplicates filtered, and reports only an advertiser whose complete name starts with the prefix the product passes, `skyBlip Bravo `, so a hangar full of phones cannot fill the event queue ahead of a Bravo that the duplicate filter then never reports again;
+- a connection is `bt_conn_le_create()` to the pinned address, its type included, with the initiator listening at the duty the product passes and Zephyr's 3-second create timeout (`CONFIG_BT_CREATE_CONN_TIMEOUT`), after which the product asks again;
+- once connected the Go asks for the MTU as GATT client, discovers the peer characteristic, `...04`, and subscribes to it with `CONFIG_BT_GATT_AUTO_DISCOVER_CCC`. The link is `Up` only then, with the payload it settled on, so the product can refuse one below 126 bytes before writing anything;
+- `peer_claim` goes out as a write without response, refused when wider than the payload. The service loop never makes the write itself: off the system work queue, `bt_att_create_pdu()` waits forever for a buffer (`subsys/bluetooth/host/att.c:794-815` at v4.4.2), so `write()` takes the connection and the characteristic's handle under the lock that clears them, copies the frame, and submits it to the system work queue, where an empty pool answers `-ENOMEM` at once. One write is in flight at a time, `kCentralWritesInFlight`, and the next answers `WouldBlock` until its sent callback lands; a write the work queue could not send is counted in `writes_refused()`;
+- a notification goes onto its own queue of eight frames, and one the queue cannot take or longer than an `RxFrame` is counted in `dropped()`, with an event the event queue could not take. `dropped()` and `writes_refused()` are logged, `bluetooth: Bravo's link dropped ... and refused ... since boot`, at most every 10 seconds and only when one of them moved.
+
+The ATT pool is sized for it in `att_budget.h`: `CONFIG_BT_ATT_TX_COUNT`, 18, holds three phones' shares of six, four notifications, a response and an SMP reply, and holds a paired Go's two phones and Bravo's three, one write, one request and one response. So a Bravo that stops taking frames, with two phones connected, costs the phones nothing: its one write stays in flight, the `peer_claim` after it is refused `WouldBlock` and counted in `writes_refused()`, the loop never waits, and the supervision timeout of `BT_LE_CONN_PARAM_DEFAULT`, 4 s, ends the link, after which the Go reconnects. Zephyr drops the sent callbacks of a link that is gone, so each new link starts its write count at zero, and a callback from an older link is told apart by a generation number and ignored. A write the work queue fails, `-ENOTCONN` from a link that went while it waited included, gives its count back whatever link it belonged to, because that count is the work item's own.
+
+`connect()` creates the connection into a local and publishes it under the lock that the callbacks release it under, and each callback releases only the connection it is given, if the lock still holds it. A create that fails before it is published is found disconnected once published, and released there, so its reference is dropped once either way.
+
+No SMP and no bonding, on this link as on the phones', so the Windows Web Bluetooth update path keeps working. The address is pinned on both sides instead (`core/comms/README.md`, The Go's link to its Bravo).
 
 Subscription state is not held here. `bt_gatt_is_subscribed()` is per connection and already correct; the three booleans this file used to keep were one device's worth of state for what is now three centrals.
 

@@ -13,12 +13,13 @@ PROJECT = FIRMWARE / "test" / "cmake" / "shared_layers"
 PLATFORM = FIRMWARE / "hardware" / "platform" / "zephyr"
 
 
-def configure(activation, imu_image):
+def configure(activation, imu_image, central=False):
     with tempfile.TemporaryDirectory() as build:
         subprocess.run(
             ["cmake", "-S", str(PROJECT), "-B", build,
              f"-DCONFIG_SKYBLIP_ACTIVATION={'ON' if activation else 'OFF'}",
              f"-DCONFIG_SKYBLIP_IMU_IMAGE={'ON' if imu_image else 'OFF'}",
+             f"-DCONFIG_BT_CENTRAL={'ON' if central else 'OFF'}",
              "-DCONFIG_SKYBLIP_IMU_IMAGE_LINKED=OFF"],
             check=True, capture_output=True, text=True)
         built = pathlib.Path(build)
@@ -29,14 +30,15 @@ def configure(activation, imu_image):
 
 
 class SharedLayers(unittest.TestCase):
-    def test_a_product_without_activation_or_a_hub_builds_neither(self):
+    def test_a_product_without_activation_a_hub_or_a_central_builds_none(self):
         platform, generated = configure(activation=False, imu_image=False)
         self.assertEqual(platform, {"link.cpp", "mcumgr_hooks.cpp"})
         self.assertEqual(generated, set())
 
-    def test_the_go_builds_its_unit_key_and_pins_its_hub_image(self):
-        platform, generated = configure(activation=True, imu_image=True)
-        self.assertEqual(platform, {"identity.cpp", "imu_firmware.cpp", "link.cpp", "mcumgr_hooks.cpp"})
+    def test_the_go_builds_its_unit_key_its_central_and_pins_its_hub_image(self):
+        platform, generated = configure(activation=True, imu_image=True, central=True)
+        self.assertEqual(platform, {"central.cpp", "identity.cpp", "imu_firmware.cpp", "link.cpp",
+                                    "mcumgr_hooks.cpp"})
         self.assertEqual(generated, {"skyblip_server_key.inc", "bhi260ap_fw_sha256.inc"})
 
 

@@ -25,6 +25,7 @@ class Link : public ports::Link {
     Status send_to(const events::Peer& peer, events::Endpoint endpoint,
                    ConstByteSpan bytes) override;
     Status advertise_as(const char* name) override;
+    Status reserve_peer_connection(bool reserved) override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell
     // drains this into App::on_link_rx(). Returns false when empty.

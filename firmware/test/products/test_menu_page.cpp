@@ -59,7 +59,7 @@ TEST_CASE("product: a press opens the menu of the page a pilot is standing on") 
     CHECK(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
 
     // The pad past the last row hands the glass back to the page the menu belongs to.
-    focus_on(rig, now_ms, go::MenuRow::OwnIcao);
+    focus_on(rig, now_ms, go::MenuRow::Bravo);
     move(rig, now_ms);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Radar);

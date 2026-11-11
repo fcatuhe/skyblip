@@ -12,14 +12,15 @@ class LinkSessions {
     // INFO: fc 18sep26 Never above CONFIG_BT_MAX_CONN, the controller is what admits a central.
     static constexpr size_t kMaxSessions = 3;
     static constexpr size_t kMaxEvents = 8;
+    static constexpr int kPeerConnections = 1;
 
-    void connected(uint16_t session_id, uint16_t payload_bytes) {
+    bool connected(uint16_t session_id, uint16_t payload_bytes) {
         Slot* slot = find(session_id);
         const uint32_t connection = slot == nullptr ? 0 : slot->connection;
-        if (slot == nullptr) slot = free_slot();
+        if (slot == nullptr && admits()) slot = free_slot();
         if (slot == nullptr) {
             refused_++;
-            return;
+            return false;
         }
         *slot = Slot{};
         slot->used = true;
@@ -28,7 +29,24 @@ class LinkSessions {
         slot->payload_bytes = floor_payload(payload_bytes);
         slot->mtu_updates = slot->payload_bytes > ports::kMinimumLinkPayloadBytes ? 1 : 0;
         raise(events::LinkEventType::Up, *slot);
+        return true;
     }
+
+    // INFO: fc 11nov26 a paired Bravo keeps its connection while away, so phones get one fewer
+    Status reserve_peer(bool reserved) {
+        if (reserved && !peer_reserved_ && count() >= static_cast<int>(kMaxSessions))
+            return Status::Full;
+        peer_reserved_ = reserved;
+        return Status::Ok;
+    }
+
+    bool peer_reserved() const { return peer_reserved_; }
+
+    int phone_ceiling() const {
+        return static_cast<int>(kMaxSessions) - (peer_reserved_ ? kPeerConnections : 0);
+    }
+
+    bool admits() const { return count() < phone_ceiling(); }
 
     // INFO: le 04aug26 The MTU exchange lands late, so this is a second Up on one session.
     void payload_changed(uint16_t session_id, uint16_t payload_bytes) {
@@ -152,6 +170,7 @@ class LinkSessions {
     uint32_t last_connection_{0};
     uint32_t dropped_{0};
     uint32_t refused_{0};
+    bool peer_reserved_{false};
 };
 
 }

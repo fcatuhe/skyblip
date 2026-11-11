@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/comms/link_registry.h"
+#include "core/comms/peer.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
 #include "simulator/world/link_names.h"
@@ -106,7 +107,8 @@ void carries_every_key_at_its_type(const names::Frame& frame, const std::vector<
 
 }  // namespace
 
-// No product speaks the peer frames yet (#192, #178, #193), so these bytes are their contract.
+// Bravo serves the peer frames in #192 and the Go folds observations in #193: these bytes are their
+// contract.
 TEST_CASE("link registry: the peer frames at their widest are these bytes, every key at its type") {
     std::set<std::string> pinned;
     for (const names::Frame& frame : names::kFrames) {
@@ -129,10 +131,13 @@ TEST_CASE("link registry: a pairing needs 126 bytes, the observation at its wide
     for (const names::Frame& frame : names::kFrames) {
         if (on_a_phone_endpoint(frame)) continue;
         const size_t bytes = at_its_widest(frame).size();
+        if (std::string(frame.command) == "peer_claim")
+            CHECK(bytes == static_cast<size_t>(comms::kPeerClaimWidestBytes));
         if (bytes <= widest) continue;
         widest = bytes;
         widest_command = frame.command;
     }
     CHECK(widest == 126);
+    CHECK(widest == comms::kPeerPayloadFloorBytes);
     CHECK(widest_command == "observation");
 }

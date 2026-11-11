@@ -153,7 +153,7 @@ PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
 CHANGE = ("retune", "hop", "to_o_band", "to_m_band", "wake")
 SERVICE = ("config", "ownship", "power", "radio", "traffic", "alarm", "nmea", "flight_log",
-           "capture", "screen", "board_poll")
+           "capture", "screen", "board_poll", "bravo")
 
 DIAGNOSTICS_TYPES = {
     1: ("boot", (

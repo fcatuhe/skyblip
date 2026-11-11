@@ -275,3 +275,25 @@ TEST_CASE(
     CHECK(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V"));
     CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
 }
+
+// #191's contract: the warning is listed here for as long as go::OwnIcaoWarning stands.
+TEST_CASE(
+    "self-test page: a paired Go with no own ICAO either side lists the warning under the bus") {
+    const SelfTestPart parts[] = {{"RADIO", PartState::Pass}, {"BARO", PartState::Pass, "76"}};
+    const uint8_t found[] = {0x76};
+    const char* const roles[] = {"BARO"};
+    SelfTestSnapshot snapshot = page(parts, 2, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 1;
+
+    Glass without;
+    draw_self_test(without, snapshot);
+    CHECK_FALSE(reads_at(without, kSelfTestLeftX, self_test_row_y(3), kSelfTestOwnIcaoText));
+
+    snapshot.own_icao_warning = true;
+    Glass with;
+    draw_self_test(with, snapshot);
+    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestOwnIcaoText));
+    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(2), "I2C BARO"));
+}
