@@ -229,6 +229,7 @@ bool ConfigService::prompt_refused() {
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
+    prompts_staged_++;
     prompt_detail_[0] = 0;
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));

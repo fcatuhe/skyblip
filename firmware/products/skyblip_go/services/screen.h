@@ -11,6 +11,7 @@
 #include "core/units/units.h"
 #include "ports/dfu.h"
 #include "products/common/confirm_gesture.h"
+#include "products/common/prompt_answer.h"
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
 #include "products/skyblip_go/glass.h"
@@ -212,15 +213,13 @@ class ScreenService : public runtime::Service {
     bool notice_{false};
     diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
+    uint32_t prompts_staged_{0};
     Controls controls_{};
-    common::ConfirmGesture confirm_{};
+    common::PromptAnswer answer_{};
     common::ConfirmGesture arming_{};
     MenuEditor editor_{};
 
     // INFO: cf 02aug26 a prompt is answered once read and once the thumb has stopped, never sooner
-    uint32_t last_press_ms_{0};
-    uint32_t prompt_since_ms_{0};
-    bool pressed_once_{false};
     bool prompt_on_glass_{false};
     bool capture_on_glass_{false};
     bool receiving_{false};

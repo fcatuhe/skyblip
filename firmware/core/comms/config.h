@@ -196,6 +196,8 @@ class ConfigService {
     void cancel();
 
     Pending pending() const { return pending_; }
+    // INFO: fc 11nov26 a new count is a new prompt, even of the same kind as the one it replaced
+    uint32_t prompts_staged() const { return prompts_staged_; }
     // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
     bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
@@ -346,6 +348,7 @@ class ConfigService {
     uint32_t now_ms_{0};
     uint32_t upload_window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
+    uint32_t prompts_staged_{0};
     ports::ImageVersion approved_version_{};
     char prompt_detail_[kPromptDetailBytes]{};
     uint8_t pending_set_frame_[sizeof(events::RxFrame::data)]{};

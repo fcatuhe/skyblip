@@ -15,6 +15,24 @@ bool refused_with(const std::string& frame, const char* reason) {
            frame.find(reason) != std::string::npos;
 }
 
+void hold_through_power_off(BravoRig& rig) {
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.platform.set_button_down(true);
+    rig.run_for(100);
+    rig.send("{\"command\":\"power_off\"}");
+    rig.run_for(1000);
+    rig.platform.set_button_down(false);
+}
+
+uint32_t arming_pass_ms() {
+    BravoRig dry;
+    hold_through_power_off(dry);
+    for (int pass = 0; pass < 200 && !dry.product.button().armed(); pass++) dry.run_for(10);
+    REQUIRE(dry.product.button().armed());
+    return dry.now_ms - 10;
+}
+
 }  // namespace
 
 TEST_CASE("bravo: a set from a phone blinks the prompt and two presses store it") {
@@ -152,6 +170,68 @@ TEST_CASE("bravo: the gesture stays disarmed while the button is down, and arms 
     rig.run_for(500);
     REQUIRE(rig.product.button().armed());
 
+    rig.double_press();
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
+}
+
+// GPT's review of #245: the same kind of prompt staged again before the next pass is a new prompt.
+TEST_CASE("bravo: a replaced prompt cannot spend a hold begun on the one it replaced") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.send("{\"command\":\"set\",\"own_icao\":3958150}");
+    rig.run_for(1500);
+    REQUIRE(rig.product.button().armed());
+    rig.platform.set_button_down(true);
+    rig.run_for(100);
+    rig.platform.link().drop_link();
+    rig.raise_link(2);
+    rig.send("{\"command\":\"set\",\"alarm_enabled\":false}");
+    rig.run_for(800);
+    REQUIRE(rig.product.config_link().config().claim_holder() == 2);
+    REQUIRE(rig.product.button().prompt() == comms::Pending::Set);
+    rig.platform.set_button_down(false);
+    rig.run_for(100);
+    rig.press();
+    rig.run_for(200);
+    CHECK(rig.product.button().prompt() == comms::Pending::Set);
+    CHECK(rig.product.settings().alarm_enabled);
+}
+
+// GPT's review of #245: the debounce publishes a down a pass or more after it began.
+TEST_CASE("bravo: a press that began before the gesture armed is never spent on it") {
+    const uint32_t armed_ms = arming_pass_ms();
+
+    BravoRig rig;
+    hold_through_power_off(rig);
+    rig.run_for(armed_ms - 20 - rig.now_ms);
+    rig.platform.set_button_down(true);
+    rig.run_for(100);
+    CHECK_FALSE(rig.product.button().armed());
+    rig.platform.set_button_down(false);
+    rig.run_for(100);
+    rig.press();
+    rig.run_for(200);
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
+}
+
+// GPT's re-review of #245: the button was never up a whole window before the double press.
+TEST_CASE("bravo: after a press that began before arming, a double press waits a quiet window") {
+    const uint32_t armed_ms = arming_pass_ms();
+
+    BravoRig rig;
+    hold_through_power_off(rig);
+    rig.run_for(armed_ms - 20 - rig.now_ms);
+    rig.platform.set_button_down(true);
+    rig.run_for(100);
+    rig.platform.set_button_down(false);
+    rig.run_for(50);
+    rig.double_press();
+    CHECK_FALSE(rig.product.shutdown().going_down());
+    CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
+
+    rig.run_for(700);
     rig.double_press();
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
 }
