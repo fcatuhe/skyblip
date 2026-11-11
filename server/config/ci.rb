@@ -14,6 +14,7 @@ CI.run do
 
   step "Tests: Rails", "bin/rails test"
   step "Tests: Deployment and release workflows", "bundle exec ruby ../.github/test/deployment_test.rb"
+  step "Tests: Development pre-releases", "bundle exec ruby ../.github/test/dev_release_test.rb"
   step "Tests: System", "bin/rails test:system"
   step "Tests: browser protocols and firmware words", "node --test test/javascript/test_*.mjs"
 end
