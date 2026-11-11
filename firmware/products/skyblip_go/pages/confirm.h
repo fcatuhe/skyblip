@@ -15,10 +15,8 @@ namespace skyblip::go {
 struct ConfirmSnapshot {
     const char* title{""};
     const char* detail{""};
-    // How long the prompt stands before it refuses on its own. Drawn as a
-    // sentence, never as a running clock: a second-by-second countdown would
-    // repaint the e-paper thirty times for one question.
-    uint32_t timeout_s{0};
+    // INFO: fc 11nov26 one partial refresh a second, the alarm wedge's rate, shows the time left
+    uint32_t seconds_left{0};
 };
 
 // The grid, exported so a test reads a line back off the glass instead of

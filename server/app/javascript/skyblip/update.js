@@ -25,6 +25,7 @@ const IMAGE_REFUSALS = {
 // INFO: fc 26sep26 the ATT payloads of MTU 247 and 185, where Android and iOS commonly settle
 const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
+export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 
@@ -373,4 +374,14 @@ export class Updater {
     this.#state = { ...state, advice: adviceOf(state), settling: settlingOf(state) };
     this.#onChange(this.#state);
   }
+}
+
+const sharedListeners = new Set();
+let sharedUpdater = null;
+
+// INFO: fc 11nov26 one link for the update and settings pages, which Turbo swaps without reloading this module
+export function joinSession(onChange) {
+  sharedUpdater ??= new Updater({ onChange: state => sharedListeners.forEach(listener => listener(state)) });
+  sharedListeners.add(onChange);
+  return { updater: sharedUpdater, leave: () => sharedListeners.delete(onChange) };
 }

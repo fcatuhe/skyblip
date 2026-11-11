@@ -1,0 +1,42 @@
+<form class="manage-settings" data-manage-target="settings" data-action="input->manage#edit change->manage#edit submit->manage#save" hidden>
+  <fieldset data-manage-target="fields">
+    <legend><%= settings[:legend] %></legend>
+
+    <%= render "shared/aircraft_settings", scope: "manage", defaults: true %>
+
+    <div class="manage-field">
+      <label for="manage-units"><%= settings[:units] %></label>
+      <select id="manage-units" name="units">
+        <% settings[:unit_names].each do |value, name| %>
+          <option value="<%= value %>"><%= name %></option>
+        <% end %>
+      </select>
+      <p class="manage-default" data-manage-target="default" data-setting="units" hidden></p>
+    </div>
+
+    <div class="manage-field manage-field--check">
+      <input type="checkbox" id="manage-alarm-enabled" name="alarm_enabled">
+      <label for="manage-alarm-enabled"><%= settings[:alarm_enabled] %></label>
+      <p class="manage-default" data-manage-target="default" data-setting="alarm_enabled" hidden></p>
+    </div>
+
+    <div class="manage-field">
+      <label for="manage-alarm-volume"><%= settings[:alarm_volume] %></label>
+      <select id="manage-alarm-volume" name="alarm_volume">
+        <% settings[:volume_names].each do |value, name| %>
+          <option value="<%= value %>"><%= name %></option>
+        <% end %>
+      </select>
+      <p class="manage-default" data-manage-target="default" data-setting="alarm_volume" hidden></p>
+    </div>
+  </fieldset>
+
+  <div class="manage-row">
+    <button type="submit" class="manage-button" data-manage-target="save" disabled><%= settings[:save] %></button>
+    <button type="button" class="manage-button manage-button--quiet" data-manage-target="reset" data-action="manage#reset" disabled><%= settings[:reset] %></button>
+  </div>
+  <p class="note" data-manage-word="confirm_set"><%= settings[:confirm_set] %></p>
+  <p class="manage-message" role="status" data-manage-target="settingsMessage"></p>
+</form>
+
+<p class="manage-message" role="status" data-manage-target="message"></p>

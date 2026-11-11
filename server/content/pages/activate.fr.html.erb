@@ -34,6 +34,8 @@ updated_on: "2026-11-11"
         address: "Adresse",
         none: "pas encore",
         activate: "Activer",
+        countdown: "L\u2019écran refuse de lui-même dans %{seconds}\u00A0s.",
+        activated: safe_join([ "Déjà activé\u00A0: cet appareil a son numéro de série et n\u2019a rien à activer. Mettez à jour son firmware sur ", link_to_page("update", label: "la page de mise à jour"), ", et changez ses réglages sur ", link_to_page("configure", label: "la page des réglages"), "." ]),
         settings: {
           legend: "Type d\u2019aéronef, indicatif et adresse OACI",
           lede: "Tous trois sont facultatifs. Passez-les et l\u2019appareil garde ses réglages actuels\u00A0: vous pourrez toujours les changer dans son menu ou sur la page de mise à jour.",
@@ -93,7 +95,7 @@ updated_on: "2026-11-11"
     ce qu&rsquo;il se pose. Passez-la et
     l&rsquo;appareil garde ses réglages actuels, qui sont, sur un appareil neuf,
     un avion léger sans indicatif ni adresse OACI. Tous restent modifiables ensuite, dans le menu de
-    l&rsquo;appareil et sur <%= link_to_page "manage", label: "la page de mise à jour" %>.
+    l&rsquo;appareil et sur <%= link_to_page "configure", label: "la page des réglages" %>.
   </p>
   <p class="lede">
     L&rsquo;appareil vérifie son numéro à chaque démarrage, et n&rsquo;a besoin
@@ -213,6 +215,6 @@ updated_on: "2026-11-11"
 
 <section>
   <p>
-    <%= link_to_page "manage", class: "cta cta--previous" %>
+    <%= link_to_page "update", class: "cta cta--previous" %>
   </p>
 </section>

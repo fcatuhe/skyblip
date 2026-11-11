@@ -6,6 +6,8 @@ export { hasWebBluetooth };
 export { readSetting, showSetting } from '#skyblip/settings';
 
 export const OFFERED_SETTINGS = ['aircraft_type', 'callsign', 'own_icao'];
+// INFO: fc 11nov26 the firmware's comms::kPromptCeilingMs, which test_activation.mjs reads from its source
+export const PROMPT_CEILING_MS = 30_000;
 
 const SAVING = new Set(['saving', 'storing']);
 const BUSY = new Set(['asking', 'confirming', 'registering', 'unlocking', ...SAVING]);

@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { FakeServer, FakeUnit, REGISTRATION_FRAME_BYTES, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
 import { ATT_HEADER_BYTES, DEFAULTS } from './fake_skyblip.mjs';
-import { Activator } from '#skyblip/activation';
+import { Activator, PROMPT_CEILING_MS } from '#skyblip/activation';
 import { addressOf } from '#skyblip/ble';
 
 const CHROME_MTU = 498;
@@ -51,6 +52,12 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const development = messages.registration({ ...fields, release: false });
   assert.equal(development.toString('hex'), VECTORS.development_registration_message);
   assert.equal(unit.sign(development), VECTORS.development_registration_signature);
+});
+
+test('the page counts down the prompt the firmware stands for as long', () => {
+  const config = readFileSync(new URL('../../../firmware/core/comms/config.h', import.meta.url), 'utf8');
+  const [, seconds] = config.match(/kPromptCeilingMs = (\d+)u \* 1000u;/);
+  assert.equal(PROMPT_CEILING_MS, Number(seconds) * 1000);
 });
 
 test('a unit not yet activated reports no address', async () => {

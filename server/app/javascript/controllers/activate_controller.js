@@ -1,16 +1,18 @@
 import { Controller } from "@hotwired/stimulus"
 
 const LINKED = new Set(["ready", "asking", "confirming", "registering", "unlocking", "saving", "storing"])
+const GLASS_ASKING = new Set(["confirming", "storing"])
 const PHASE_STEP = { asking: "ask", confirming: "confirm", registering: "register", unlocking: "register", saving: "settings", storing: "settings" }
 
 export default class extends Controller {
-  static targets = ["unsupported", "connect", "disconnect", "hint", "activate", "device", "address", "step", "message",
-                    "settings", "fields", "airborne", "save", "skip"]
-  static values = { src: String, challenges: String, registrations: String, none: String }
+  static targets = ["unsupported", "connect", "disconnect", "hint", "activate", "activated", "device", "address", "step", "message",
+                    "countdown", "settings", "fields", "airborne", "save", "skip"]
+  static values = { src: String, challenges: String, registrations: String, none: String, countdown: String }
 
   async connect() {
-    const { Activator, hasWebBluetooth, httpServer, readSetting, showSetting } = await import(this.srcValue)
+    const { Activator, PROMPT_CEILING_MS, hasWebBluetooth, httpServer, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
+    this.promptCeilingMs = PROMPT_CEILING_MS
     this.readSetting = readSetting
     this.showSetting = showSetting
     this.bluetooth = hasWebBluetooth()
@@ -22,6 +24,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.#stopCountdown()
     this.activator?.disconnect()
   }
 
@@ -56,11 +59,14 @@ export default class extends Controller {
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
-    this.activateTarget.disabled = state.phase !== "ready" || !state.read || state.offer === "open"
+    const alreadyActivated = state.read && Boolean(state.address) && !state.offer
+    this.activatedTarget.hidden = !alreadyActivated
+    this.activateTarget.disabled = state.phase !== "ready" || !state.read || Boolean(state.address)
     this.deviceTarget.textContent = state.device || "-"
     this.addressTarget.textContent = state.read ? state.address ?? this.noneValue : "-"
     this.addressTarget.classList.toggle("mono", Boolean(state.address))
     this.#offer(state)
+    this.#countdown(state.phase)
     const current = PHASE_STEP[state.phase]
     for (const step of this.stepTargets) {
       if (step.dataset.step === current) step.setAttribute("aria-current", "step")
@@ -85,6 +91,27 @@ export default class extends Controller {
     this.airborneTarget.hidden = !inFlight
     this.saveTarget.disabled = !idle || !changed || inFlight
     this.skipTarget.disabled = !idle
+  }
+
+  #countdown(phase) {
+    if (!GLASS_ASKING.has(phase)) return this.#stopCountdown()
+    if (this.askedAt === undefined) {
+      this.askedAt = performance.now()
+      this.ticker = setInterval(() => this.#tick(), 250)
+    }
+    this.#tick()
+  }
+
+  #tick() {
+    const seconds = Math.ceil((this.promptCeilingMs - (performance.now() - this.askedAt)) / 1000)
+    this.countdownTarget.hidden = seconds <= 0
+    this.countdownTarget.textContent = this.countdownValue.replace("%{seconds}", seconds)
+  }
+
+  #stopCountdown() {
+    clearInterval(this.ticker)
+    this.askedAt = undefined
+    if (this.hasCountdownTarget) this.countdownTarget.hidden = true
   }
 
   #fill(settings) {

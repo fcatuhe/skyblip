@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/product.h"
 #include "runtime/tasks.h"
+#include "test/support/confirm_glass.h"
 #include "test/support/housekeeping_rig.h"
 
 using namespace skyblip;
@@ -126,7 +127,8 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::PowerOff);
     expect.detail = comms::pending_detail(comms::Pending::PowerOff);
-    expect.timeout_s = comms::kPromptCeilingMs / 1000;
+    expect.seconds_left = seconds_left_on(rig.product.screen().framebuffer());
+    CHECK(expect.seconds_left > 0);
     go::Glass expected;
     go::draw_confirm(expected, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
@@ -135,6 +137,26 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
     // It reached the glass, not just the buffer: the pilot being asked can see
     // the question before the button can answer it.
     CHECK(rig.platform.chips().epd.framebuffer().count_black() == expected.count_black());
+}
+
+TEST_CASE("product: the panel counts down the seconds the prompt has left, once a second") {
+    HousekeepingRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rig.on_ground(now_ms);
+
+    rig.send("{\"command\":\"power_off\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    const uint32_t first = seconds_left_on(rig.platform.chips().epd.framebuffer());
+    REQUIRE(first > 25);
+
+    for (uint32_t elapsed_s = 1; elapsed_s <= 5; elapsed_s++) {
+        rig.run(now_ms, now_ms + 1000);
+        now_ms += 1000;
+        CAPTURE(elapsed_s);
+        CHECK(seconds_left_on(rig.platform.chips().epd.framebuffer()) == first - elapsed_s);
+    }
 }
 
 TEST_CASE("product: a prompt nobody answers expires, and the device is not powered off") {

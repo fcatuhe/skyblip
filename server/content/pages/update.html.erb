@@ -1,26 +1,26 @@
 ---
-title: "Go firmware update and device settings"
+title: "Go firmware update over Bluetooth"
 nav_title: Update
-description: "Update skyBlip Go firmware and settings over Bluetooth from Chrome or Edge. Approve each change on the device. USB recovery is also explained."
+description: "Update skyBlip Go firmware over Bluetooth from Chrome or Edge. Approve the install on the device. USB recovery is also explained."
 updated_on: "2026-11-11"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
 <section id="update">
   <p class="kicker">skyBlip Go</p>
-  <h1>New firmware and settings, from this page, over Bluetooth.</h1>
+  <h1>New firmware, from this page, over Bluetooth.</h1>
   <p class="lede">
     Nothing to install and nothing to pair. The page sends the image, and the
     device asks you once, on its own glass and naming the version, before it
     takes it. A phone cannot update it on its own.
   </p>
   <p class="lede">
-    The page also reads the settings the device holds, shows which differ from
-    the ones it ships on, and changes them, each change asked on the glass.
-    Nothing is asked while the device is flying.
+    Its settings have <%= link_to_page "configure", label: "a page of their own" %>,
+    and the device stays connected from one page to the other. Nothing is
+    asked while the device is flying.
   </p>
 
-  <%= render "shared/manage",
+  <%= render layout: "shared/manage", locals: {
         unsupported: "This browser has no Web Bluetooth, so this page cannot reach the device. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.",
         connect: "Connect",
         disconnect: "Disconnect",
@@ -31,37 +31,25 @@ updated_on: "2026-11-11"
         battery: "Battery",
         charging: "charging",
         flight: { label: "Flight", ground: "on the ground", airborne: "airborne", unknown: "not yet known" },
-        settings: {
-          legend: "Settings on the device",
-          units: "Units",
-          unit_names: { nautical: "Nautical: NM and kt", metric: "Metric: km and km/h" },
-          alarm_enabled: "Alarm sound",
-          alarm_volume: "Alarm volume",
-          volume_names: { off: "Off", soft: "Soft", loud: "Loud" },
-          save: "Save",
-          reset: "Back to defaults",
-          default: "Default: %{value}",
-          on: "on",
-          off: "off",
-          none: "none",
-          confirm_set: "Allow the change: the glass says SETTINGS, press twice."
-        },
         advice: "File to send",
         chosen: "Chosen image",
         full: "full",
         slim: "slim",
-        file: "Or a firmware file of your own, ending in .signed.bin",
-        install: "Install",
-        steps: {
-          dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
-          upload: "The image travels and the glass says RECEIVING. Keep this page open and the device close.",
-          install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
-        },
-        remaining: "about %{minutes} min left",
-        recovery: "If the firmware will not take: the USB drive",
-        confirm_recovery: "The glass says RECOVERY, REBOOT INTO THE USB BOOTLOADER: press twice.",
-        recovering: "The glass now says USB BOOTLOADER. If it reads PRESS THE BUTTON TO START IT, press the button once. On a computer the device is then a USB drive named TECHOBOOT: drop the .uf2 file on it for new firmware, or press RST to go back to skyBlip. Nothing transmits meanwhile.",
-        recover: "Restart into the USB drive" %>
+        remaining: "about %{minutes} min left"
+      } do %>
+    <%= render "shared/manage_firmware",
+          file: "Or a firmware file of your own, ending in .signed.bin",
+          install: "Install",
+          steps: {
+            dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
+            upload: "The image travels and the glass says RECEIVING. Keep this page open and the device close.",
+            install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
+          },
+          recovery: "If the firmware will not take: the USB drive",
+          confirm_recovery: "The glass says RECOVERY, REBOOT INTO THE USB BOOTLOADER: press twice.",
+          recovering: "The glass now says USB BOOTLOADER. If it reads PRESS THE BUTTON TO START IT, press the button once. On a computer the device is then a USB drive named TECHOBOOT: drop the .uf2 file on it for new firmware, or press RST to go back to skyBlip. Nothing transmits meanwhile.",
+          recover: "Restart into the USB drive" %>
+  <% end %>
 </section>
 
 <section>
@@ -119,44 +107,6 @@ updated_on: "2026-11-11"
   </p>
 </section>
 
-<section>
-  <h2 class="kicker">Settings</h2>
-
-  <h3>What it holds, <span class="highlight">beside what it ships on</span>.</h3>
-  <p class="lede">
-    Once connected, the page reads the aircraft type, the callsign, the units,
-    the alarm and the own ICAO address from the device, and asks the firmware for the values a new
-    unit ships on. A setting that differs from those says so under its field.
-  </p>
-  <p class="lede">
-    Save sends only what you changed. Back to defaults sends the firmware&rsquo;s
-    own values for what differs. Either way the glass says
-    <span class="mono">SETTINGS</span> and lists each change in the words of
-    its own menu, such as <span class="mono">CALLSIGN F-JXYZ</span>, up to four
-    rows: press twice, and the page reads the settings back from the device.
-  </p>
-  <p class="lede">
-    The radar&rsquo;s range and plot are set on the device&rsquo;s own menu,
-    and the page leaves them as they are.
-  </p>
-  <p class="lede">
-    The aeroplane at the centre of the radar is drawn on
-    <%= link_to "its own page", briefing_ownship_path %>, one per aircraft type,
-    a glider for a glider. The device shows the light aircraft for every type
-    until it learns to take a drawing over Bluetooth.
-  </p>
-
-  <div class="table-scroll">
-    <table class="modules">
-      <thead>
-        <tr><th>The page says</th><th>What it means</th></tr>
-      </thead>
-      <tbody>
-        <tr><th>Saved</th><td data-manage-word="saved">The device stored the settings, and the form shows them as the device read them back.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
 
 <section>
   <h2 class="kicker">What it tells you about itself</h2>

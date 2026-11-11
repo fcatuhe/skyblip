@@ -26,7 +26,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/buy</loc>
-    <lastmod>2026-11-10</lastmod>
+    <lastmod>2026-11-11</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/configure</loc>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/controls</loc>
@@ -38,7 +42,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/features</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr</loc>
@@ -78,7 +82,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/fonctionnalites</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/guides</loc>
@@ -93,7 +97,7 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/fr/mise-a-jour</loc>
+    <loc>https://skyblip.eu/fr/mettre-a-jour</loc>
     <lastmod>2026-11-11</lastmod>
   </url>
   <url>
@@ -105,8 +109,12 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
+    <loc>https://skyblip.eu/fr/regler</loc>
+    <lastmod>2026-11-11</lastmod>
+  </url>
+  <url>
     <loc>https://skyblip.eu/fr/s-equiper</loc>
-    <lastmod>2026-11-10</lastmod>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/tango</loc>
@@ -114,7 +122,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/telephone</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/voir-et-eviter</loc>
@@ -133,12 +141,8 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/manage</loc>
-    <lastmod>2026-11-11</lastmod>
-  </url>
-  <url>
     <loc>https://skyblip.eu/phone</loc>
-    <lastmod>2026-11-09</lastmod>
+    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/power</loc>
@@ -167,5 +171,9 @@
   <url>
     <loc>https://skyblip.eu/try</loc>
     <lastmod>2026-11-09</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/update</loc>
+    <lastmod>2026-11-11</lastmod>
   </url>
 </urlset>

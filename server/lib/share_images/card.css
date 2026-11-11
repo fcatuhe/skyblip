@@ -60,6 +60,5 @@
   .card-photo--landscape { inline-size: 330px; }
   .card-photos .pair-plus { font-size: 2.5rem; }
   .card-photos:has(.pair-plus) { gap: var(--space-2xs); }
-  .card-photos:has(.pair-plus) .card-photo--portrait { block-size: 380px; }
-  .card-photos:has(.pair-plus) .card-photo--landscape { inline-size: 190px; }
+  .card-photos:has(.pair-plus) img { block-size: calc(260px * var(--photo-scale, 1)); inline-size: auto; }
 }

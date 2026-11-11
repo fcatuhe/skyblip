@@ -3,7 +3,7 @@ require "application_system_test_case"
 class BriefingTest < ApplicationSystemTestCase
   test "the update page offers the published firmware once its frame loads" do
     VCR.use_cassette("github/releases") do
-      visit "/manage"
+      visit "/update"
 
       assert_selector "turbo-frame#firmware_shelf[complete]"
       assert_selector "option", text: "skyBlip dev 0.1.0+1005, Full image", visible: :all
@@ -13,7 +13,7 @@ class BriefingTest < ApplicationSystemTestCase
 
   test "the update page keeps the file picker when GitHub is unavailable" do
     VCR.use_cassette("github/unavailable") do
-      visit "/manage"
+      visit "/update"
 
       assert_text "GitHub's release list is unavailable"
       assert_field type: "file"

@@ -25,6 +25,13 @@ class Briefing::OwnshipsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "width" => 24, "words" => glider.words, "hotSpot" => 4 }, linked)
   end
 
+  test "switching language keeps the drawing in the address" do
+    get briefing_ownship_path(type: "glider", w: 24, rows: "ff")
+
+    assert_select ".locale-switcher a[href='/fr/briefing/ownship?rows=ff&type=glider&w=24']", text: "FR"
+    assert_select "link[rel=alternate][hreflang=fr][href=?]", "https://skyblip.eu/fr/briefing/ownship"
+  end
+
   test "an unreadable drawing in the address says so and hands nothing over" do
     get briefing_ownship_path(type: "light_aircraft", rows: "zz", w: "24")
 

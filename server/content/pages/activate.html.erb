@@ -32,6 +32,8 @@ updated_on: "2026-11-11"
         address: "Address",
         none: "none yet",
         activate: "Activate",
+        countdown: "The glass refuses on its own in %{seconds} s.",
+        activated: safe_join([ "Already activated: this unit holds its serial and has nothing to activate. Update its firmware on ", link_to_page("update", label: "the update page"), ", and change its settings on ", link_to_page("configure", label: "the settings page"), "." ]),
         settings: {
           legend: "Aircraft type, callsign and own ICAO address",
           lede: "All three are optional. Skip them and the unit keeps its current ones: you can still change them in its menu or on the update page.",
@@ -85,7 +87,7 @@ updated_on: "2026-11-11"
     <span class="mono">SETTINGS</span> and lists each change, press twice.
     While the unit is flying, the page holds Save until it lands. Skip it and the unit keeps the ones it holds: a light aircraft,
     no callsign and no own ICAO address on a new unit. All stay changeable later, in the
-    unit&rsquo;s menu and on <%= link_to_page "manage", label: "the update page" %>.
+    unit&rsquo;s menu and on <%= link_to_page "configure", label: "the settings page" %>.
   </p>
   <p class="lede">
     The unit checks its serial at every start, and needs this page only once.
@@ -203,6 +205,6 @@ updated_on: "2026-11-11"
 
 <section>
   <p>
-    <%= link_to_page "manage", class: "cta cta--previous" %>
+    <%= link_to_page "update", class: "cta cta--previous" %>
   </p>
 </section>

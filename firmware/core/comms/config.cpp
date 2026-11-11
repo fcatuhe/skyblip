@@ -246,6 +246,12 @@ const char* ConfigService::prompt_detail() const {
     return prompt_detail_[0] != 0 ? prompt_detail_ : pending_detail(pending_);
 }
 
+uint32_t ConfigService::prompt_seconds_left(uint32_t now_ms) const {
+    const uint32_t standing_ms = now_ms - pending_since_ms_;
+    if (pending_ == Pending::None || standing_ms >= kPromptCeilingMs) return 0;
+    return (kPromptCeilingMs - standing_ms + 999u) / 1000u;
+}
+
 // INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
 void ConfigService::request_firmware(const cbor::Reader& frame) {
     char text[dfu::kVersionTextBytes];
