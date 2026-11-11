@@ -72,7 +72,7 @@ void ButtonService::press(uint32_t now_ms) {
         return;
     }
     if (pairing_.armed()) {
-        if (pairing_.counts(answer_, now_ms) && peer_.answer(now_ms)) pairing_.spend();
+        if (peer_.answer(now_ms)) pairing_.spend();
         return;
     }
     if (answering()) return;

@@ -33,10 +33,6 @@ class PairingGesture {
         armed_ms_ = now_ms;
     }
 
-    bool counts(const common::PromptAnswer& answer, uint32_t now_ms) const {
-        return armed_ && answer.went_down_after(armed_ms_, now_ms);
-    }
-
     void spend() { armed_ = false; }
     bool armed() const { return armed_; }
 
