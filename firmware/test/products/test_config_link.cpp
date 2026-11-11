@@ -47,7 +47,6 @@ struct WideSettings : common::SettingsStore {
     void write_default_fields(cbor::Writer&) const override {}
     Status apply(const cbor::Reader&) override { return Status::Ok; }
     Status describe_changes(const cbor::Reader&, char*, int) const override { return Status::Ok; }
-    bool pilot_settings_only(const cbor::Reader&) const override { return true; }
 
     void restore_defaults() override {}
     uint8_t blob_version() const override { return 1; }

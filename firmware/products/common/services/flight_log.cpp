@@ -117,8 +117,8 @@ bool FlightLogService::drain_events(uint32_t now_ms) {
     return true;
 }
 
-bool FlightLogService::on_ground() const {
-    return context_.state.flight.confirmed_state == flight::FlightState::Ground;
+bool FlightLogService::in_flight() const {
+    return context_.state.flight.confirmed_state == flight::FlightState::Airborne;
 }
 
 void FlightLogService::answer(const events::Peer& peer, comms::LogStore store, bool ok,
@@ -205,7 +205,7 @@ void FlightLogService::handle(const comms::LogRequest& request) {
         answer(request.peer, request.store, false, link::Reason::Busy);
         return;
     }
-    if (!on_ground()) {
+    if (in_flight()) {
         answer(request.peer, request.store, false, link::Reason::InFlight);
         return;
     }

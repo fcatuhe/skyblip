@@ -90,6 +90,18 @@ TEST_CASE("comms prompt cap: a no-op set every 20 s keeps no prompt past 30 s fr
     }
 }
 
+// The glass counts these down, so a second already begun still counts as a whole one.
+TEST_CASE("comms prompt cap: the seconds left round up, from the staging to the expiry") {
+    Desk desk;
+    CHECK(desk.config.prompt_seconds_left(1000) == 0);
+    desk.say("{\"command\":\"recovery\"}");
+    CHECK(desk.config.prompt_seconds_left(1000) == 30);
+    CHECK(desk.config.prompt_seconds_left(1001) == 30);
+    CHECK(desk.config.prompt_seconds_left(2000) == 29);
+    CHECK(desk.config.prompt_seconds_left(1000 + kPromptCeilingMs - 1) == 1);
+    CHECK(desk.config.prompt_seconds_left(1000 + kPromptCeilingMs) == 0);
+}
+
 TEST_CASE("comms prompt cap: a prompt command while a prompt stands leaves that prompt untouched") {
     Desk desk;
     desk.say(kSetType);

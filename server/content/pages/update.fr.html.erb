@@ -1,15 +1,15 @@
 ---
-title: "Mise à jour du firmware et réglages du Go"
-nav_title: Mise à jour
-slug: mise-a-jour
-description: "Mettez à jour le firmware et les réglages de skyBlip Go en Bluetooth depuis Chrome ou Edge. Chaque changement se confirme sur l'appareil."
+title: "Mise à jour du firmware du Go en Bluetooth"
+nav_title: Mettre à jour
+slug: mettre-a-jour
+description: "Mettez à jour le firmware de skyBlip Go en Bluetooth depuis Chrome ou Edge. L'installation se confirme sur l'appareil. Le recours par USB est expliqué."
 updated_on: "2026-11-11"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
 <section id="update">
   <p class="kicker">skyBlip Go</p>
-  <h1>Un nouveau firmware et des réglages, depuis cette page, en Bluetooth.</h1>
+  <h1>Un nouveau firmware, depuis cette page, en Bluetooth.</h1>
   <p class="lede">
     Rien à installer, rien à appairer. La page envoie l&rsquo;image, et
     l&rsquo;appareil vous le demande une fois sur son propre écran, en nommant la
@@ -17,14 +17,12 @@ updated_on: "2026-11-11"
     seul.
   </p>
   <p class="lede">
-    La page lit aussi les réglages que l&rsquo;appareil contient, montre ceux
-    qui diffèrent de ceux avec lesquels il est livré, et les change, chaque
-    changement demandé à l&rsquo;écran. Une installation n&rsquo;est demandée
-    qu&rsquo;au sol. Un appareil dont le firmware veut aussi être au sol pour
-    ses réglages le signale.
+    Ses réglages ont <%= link_to_page "configure", label: "leur propre page" %>,
+    et l&rsquo;appareil reste connecté d&rsquo;une page à l&rsquo;autre.
+    Rien n&rsquo;est demandé tant que l&rsquo;appareil vole.
   </p>
 
-  <%= render "shared/manage",
+  <%= render layout: "shared/manage", locals: {
         unsupported: "Ce navigateur n\u2019a pas Web Bluetooth, cette page ne peut donc pas joindre l\u2019appareil. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d\u2019iPhone et d\u2019iPad n\u2019en ont pas.",
         connect: "Connecter",
         disconnect: "Déconnecter",
@@ -35,37 +33,25 @@ updated_on: "2026-11-11"
         battery: "Batterie",
         charging: "en charge",
         flight: { label: "Vol", ground: "au sol", airborne: "en vol", unknown: "pas encore connu" },
-        settings: {
-          legend: "Réglages de l\u2019appareil",
-          units: "Unités",
-          unit_names: { nautical: "Aéronautiques\u00A0: NM et kt", metric: "Métriques\u00A0: km et km/h" },
-          alarm_enabled: "Son de l\u2019alarme",
-          alarm_volume: "Volume de l\u2019alarme",
-          volume_names: { off: "Coupé", soft: "Faible", loud: "Fort" },
-          save: "Enregistrer",
-          reset: "Revenir aux réglages d\u2019origine",
-          default: "D\u2019origine\u00A0: %{value}",
-          on: "activé",
-          off: "désactivé",
-          none: "aucun",
-          confirm_set: "Autorisez le changement\u00A0: l\u2019écran dit SETTINGS, pressez deux fois."
-        },
         advice: "Fichier à envoyer",
         chosen: "Image choisie",
         full: "complète",
         slim: "allégée",
-        file: "Ou votre propre fichier de firmware, en .signed.bin",
-        install: "Installer",
-        steps: {
-          dfu: "Autorisez la mise à jour\u00A0: l\u2019écran dit FIRMWARE et la version, pressez deux fois.",
-          upload: "L\u2019image voyage et l\u2019écran dit RECEIVING. Gardez cette page ouverte et l\u2019appareil près de vous.",
-          install: "L\u2019appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
-        },
-        remaining: "environ %{minutes} min restantes",
-        recovery: "Si le firmware ne prend pas\u00A0: le lecteur USB",
-        confirm_recovery: "L\u2019écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER\u00A0: pressez deux fois.",
-        recovering: "L\u2019écran dit maintenant USB BOOTLOADER. S\u2019il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l\u2019appareil est alors un lecteur USB nommé TECHOBOOT\u00A0: déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n\u2019est émis pendant ce temps.",
-        recover: "Redémarrer en lecteur USB" %>
+        remaining: "environ %{minutes} min restantes"
+      } do %>
+    <%= render "shared/manage_firmware",
+          file: "Ou votre propre fichier de firmware, en .signed.bin",
+          install: "Installer",
+          steps: {
+            dfu: "Autorisez la mise à jour\u00A0: l\u2019écran dit FIRMWARE et la version, pressez deux fois.",
+            upload: "L\u2019image voyage et l\u2019écran dit RECEIVING. Gardez cette page ouverte et l\u2019appareil près de vous.",
+            install: "L\u2019appareil installe et redémarre, une trentaine de secondes, et la liaison tombe. Reconnectez pour voir le résultat."
+          },
+          recovery: "Si le firmware ne prend pas\u00A0: le lecteur USB",
+          confirm_recovery: "L\u2019écran dit RECOVERY, REBOOT INTO THE USB BOOTLOADER\u00A0: pressez deux fois.",
+          recovering: "L\u2019écran dit maintenant USB BOOTLOADER. S\u2019il affiche PRESS THE BUTTON TO START IT, pressez le bouton une fois. Sur un ordinateur, l\u2019appareil est alors un lecteur USB nommé TECHOBOOT\u00A0: déposez-y le fichier .uf2 pour un nouveau firmware, ou pressez RST pour revenir à skyBlip. Rien n\u2019est émis pendant ce temps.",
+          recover: "Redémarrer en lecteur USB" %>
+  <% end %>
 </section>
 
 <section>
@@ -73,7 +59,7 @@ updated_on: "2026-11-11"
 
   <ul class="points">
     <li>Chrome ou Edge, sur un ordinateur ou sur Android</li>
-    <li>L&rsquo;appareil au sol, avec un fix GPS</li>
+    <li>L&rsquo;appareil au sol. Un firmware plus ancien attend aussi un fix GPS</li>
     <li>Une batterie au-dessus de l&rsquo;alerte, ou en charge</li>
     <li>Une image de la liste, ou un fichier en .signed.bin, celui que cette page nomme</li>
     <li>Aucune autre application ne tient les réglages de l&rsquo;appareil</li>
@@ -100,8 +86,7 @@ updated_on: "2026-11-11"
     L&rsquo;écran dit <span class="mono">FIRMWARE</span>, puis
     <span class="mono">INSTALL</span> et la version, par exemple
     <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>&nbsp;: pressez deux
-    fois. Cela ouvre une fenêtre de dix minutes, et seulement tant que
-    l&rsquo;appareil sait qu&rsquo;il est au sol.
+    fois. Cela ouvre une fenêtre de dix minutes.
   </p>
   <p class="lede">
     L&rsquo;image voyage ensuite. L&rsquo;écran dit
@@ -113,7 +98,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     Une fois le dernier octet arrivé, l&rsquo;appareil vérifie qu&rsquo;il tient
-    bien la version qu&rsquo;il vous a nommée, qu&rsquo;il est toujours au sol et
+    bien la version qu&rsquo;il vous a nommée, qu&rsquo;il n&rsquo;a pas décollé et
     que la batterie tiendra, puis il installe sans redemander. Il affiche
     <span class="mono">INSTALLING</span> et redémarre sur le nouveau firmware, ce
     qui prend une trentaine de secondes, et la liaison tombe.
@@ -127,47 +112,6 @@ updated_on: "2026-11-11"
   </p>
 </section>
 
-<section>
-  <h2 class="kicker">Réglages</h2>
-
-  <h3>Ce qu&rsquo;il contient, <span class="highlight">à côté de ce qu&rsquo;il avait à la livraison</span>.</h3>
-  <p class="lede">
-    Une fois connectée, la page lit le type d&rsquo;aéronef, l&rsquo;indicatif,
-    les unités, l&rsquo;alarme et l&rsquo;adresse OACI de l&rsquo;appareil, et demande au firmware les
-    valeurs d&rsquo;un appareil neuf. Un réglage qui en diffère le dit sous son
-    champ.
-  </p>
-  <p class="lede">
-    Enregistrer n&rsquo;envoie que ce que vous avez changé. Revenir aux réglages
-    d&rsquo;origine envoie les valeurs du firmware pour ce qui diffère. Dans les
-    deux cas l&rsquo;écran dit <span class="mono">SETTINGS</span> et liste
-    chaque changement dans les mots de son propre menu, comme
-    <span class="mono">CALLSIGN F-JXYZ</span>, sur quatre lignes au plus&nbsp;:
-    pressez deux fois, et la page relit les réglages sur l&rsquo;appareil.
-  </p>
-  <p class="lede">
-    La portée et l&rsquo;affichage du radar se règlent dans le menu de
-    l&rsquo;appareil, et la page n&rsquo;y touche pas.
-  </p>
-  <p class="lede">
-    L&rsquo;avion au centre du radar se dessine sur
-    <%= link_to "sa propre page", briefing_ownship_path %>, un par type
-    d&rsquo;aéronef, un planeur pour un planeur. L&rsquo;appareil affiche
-    l&rsquo;avion léger pour tous les types tant qu&rsquo;il ne sait pas
-    recevoir un dessin par Bluetooth.
-  </p>
-
-  <div class="table-scroll">
-    <table class="modules">
-      <thead>
-        <tr><th>La page dit</th><th>Ce que cela veut dire</th></tr>
-      </thead>
-      <tbody>
-        <tr><th>Enregistré</th><td data-manage-word="saved">L&rsquo;appareil a enregistré les réglages, et le formulaire les montre tels que l&rsquo;appareil les a relus.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
 
 <section>
   <h2 class="kicker">Ce qu&rsquo;il dit de lui-même</h2>
@@ -207,7 +151,7 @@ updated_on: "2026-11-11"
         <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et quoi faire</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">Il n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou il n&rsquo;a pas eu de fix GPS depuis qu&rsquo;il est allumé. Mettez-le là où il voit le ciel, attendez le fix, puis réessayez.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">L&rsquo;appareil indique qu&rsquo;il vole. Réessayez une fois qu&rsquo;il s&rsquo;est posé. Un firmware plus ancien le dit aussi jusqu&rsquo;à son premier fix GPS depuis l&rsquo;allumage&nbsp;: mettez-le là où il voit le ciel et attendez le fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">La batterie est critique. Installer, c&rsquo;est 15 à 25 secondes d&rsquo;effacements de mémoire flash, et l&rsquo;appareil n&rsquo;en commence pas un sur une batterie qui pourrait ne pas le finir. Chargez-la, puis réessayez.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, alors l&rsquo;appareil l&rsquo;a retirée. Réessayez, et pressez deux fois quand l&rsquo;écran demande.</td></tr>
         <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">L&rsquo;appareil a dit non&nbsp;: une pression refuse la question, et une pression sur RECEIVING arrête l&rsquo;envoi. Après une question refusée, l&rsquo;appareil ne demande plus rien à cette connexion&nbsp;: déconnectez et reconnectez avant de réessayer. Après un envoi arrêté, relancez l&rsquo;installation.</td></tr>

@@ -6,6 +6,8 @@ export { hasWebBluetooth };
 export { readSetting, showSetting } from '#skyblip/settings';
 
 export const OFFERED_SETTINGS = ['aircraft_type', 'callsign', 'own_icao'];
+// INFO: fc 11nov26 the firmware's comms::kPromptCeilingMs, which test_activation.mjs reads from its source
+export const PROMPT_CEILING_MS = 30_000;
 
 const SAVING = new Set(['saving', 'storing']);
 const BUSY = new Set(['asking', 'confirming', 'registering', 'unlocking', ...SAVING]);
@@ -48,7 +50,7 @@ export class Activator {
   #device = null;
   #leaving = false;
   #serverNonce = null;
-  #state = { phase: 'offline', device: null, address: null, read: false, settings: null, status: null, heldForGround: false, offer: null, notice: null };
+  #state = { phase: 'offline', device: null, address: null, read: false, settings: null, status: null, offer: null, notice: null };
 
   constructor({ onChange, server }) {
     this.#onChange = onChange;
@@ -118,7 +120,7 @@ export class Activator {
   #receive(reply) {
     if (!reply) return;
     if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true, settings: settingsOf(reply, OFFERED_SETTINGS) });
-    else if (reply.command === 'status') this.#set({ status: statusOf(reply), ...(reply.flight === 'ground' ? { heldForGround: false } : {}) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
     else if (reply.command === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
@@ -137,7 +139,7 @@ export class Activator {
   #settingsAcked(reply) {
     if (reply.pending && reply.reason === 'confirm') return this.#set({ phase: 'storing' });
     if (reply.acknowledge && !reply.reason) return this.#saved();
-    this.#set({ phase: 'ready', heldForGround: reply.reason === 'in_flight', notice: { key: reply.reason || 'refused', during: 'set' } });
+    this.#set({ phase: 'ready', notice: { key: reply.reason || 'refused', during: 'set' } });
   }
 
   #saved() {
@@ -187,7 +189,7 @@ export class Activator {
     const notice = (BUSY.has(phase) || offer === 'open') && !this.#leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#device = null;
     this.#serverNonce = null;
-    this.#set({ phase: 'offline', device: null, address: null, read: false, settings: null, status: null, heldForGround: false, offer: null, notice });
+    this.#set({ phase: 'offline', device: null, address: null, read: false, settings: null, status: null, offer: null, notice });
   }
 
   #set(patch) {

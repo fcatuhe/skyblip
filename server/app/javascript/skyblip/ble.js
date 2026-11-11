@@ -121,6 +121,18 @@ async function openSmp(server, onSmp) {
   return chr;
 }
 
+let openDevice = null;
+
+// INFO: fc 11nov26 one link per page: the update and settings pages keep theirs across visits, so a new one closes it
+async function closeOpenDevice() {
+  const device = openDevice;
+  openDevice = null;
+  if (!device?.gatt.connected) return;
+  const closed = new Promise(resolve => device.addEventListener('gattserverdisconnected', resolve, { once: true }));
+  device.gatt.disconnect();
+  await closed;
+}
+
 export async function connect({ onLine, onReply, onSmp, onClose }) {
   if (!hasWebBluetooth()) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
   const device = await navigator.bluetooth.requestDevice({
@@ -132,8 +144,10 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
     ],
     optionalServices: [UUID.nus, UUID.hm10, UUID.skyblip, UUID.smp],
   });
+  await closeOpenDevice();
   const server = await device.gatt.connect();
-  device.addEventListener('gattserverdisconnected', () => onClose(device.name));
+  openDevice = device;
+  device.addEventListener('gattserverdisconnected', () => onClose(device.name), { once: true });
 
   const stream = onLine ? await openStream(server, onLine) : null;
   const config = await openConfig(server, onReply);

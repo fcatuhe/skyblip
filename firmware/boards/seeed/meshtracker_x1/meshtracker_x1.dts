@@ -1,7 +1,11 @@
 /dts-v1/;
 #include <nordic/nrf52840_qiaa.dtsi>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/adc/nrf-saadc.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
 
-/* TODO: fc 10nov26 placeholder with no pin, no partition and an unverified QIAA package, until #170 replaces it from a unit on the bench */
+/* TODO: fc 11nov26 every pin and address here is from the sources in README.md, unverified until #169 benches a unit */
 / {
 	model = "Seeed SenseCAP MeshTracker X1";
 	compatible = "seeed,meshtracker-x1";
@@ -9,9 +13,452 @@
 	chosen {
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,console = &cdc_acm_uart0;
+		zephyr,shell-uart = &cdc_acm_uart0;
+	};
+
+	aliases {
+		radio-spi = &spi3;
+		gnss-uart = &uart0;
+		sensor-i2c = &i2c0;
+		rtc-i2c = &i2c1;
+		buzzer = &buzzer_pwm;
+		button = &button_gpio;
+		charge-status = &charge_status_gpio;
+		charge-done = &charge_done_gpio;
+		usb-detect = &usb_detect_gpio;
+		led-green = &led_green;
+		led-red = &led_red;
+		led-blue = &led_blue;
+		sensor-rail = &sensor_rail_gpio;
+		flash-enable = &flash_enable_gpio;
+		haptic-enable = &haptic_enable_gpio;
+		rtc-enable = &rtc_enable_gpio;
+		gnss-enable = &gnss_enable_gpio;
+		gnss-reset = &gnss_reset_gpio;
+		gnss-rtc-enable = &gnss_rtc_enable_gpio;
+		gnss-sleep = &gnss_sleep_gpio;
+		gnss-rtc-wake = &gnss_rtc_wake_gpio;
+		gnss-pps = &gnss_pps_gpio;
+		radio-reset = &radio_reset_gpio;
+		radio-busy = &radio_busy_gpio;
+		radio-irq = &radio_irq_gpio;
+		rtc-interrupt = &rtc_interrupt_gpio;
+		imu-interrupt = &imu_interrupt_gpio;
+		magnetometer-interrupt = &magnetometer_interrupt_gpio;
+		watchdog0 = &wdt0;
+	};
+
+	board_inputs {
+		compatible = "gpio-keys";
+
+		/* INFO: fc 11nov26 the one button reads high when pressed, against the SoC's pull-down */
+		button_gpio: button {
+			gpios = <&gpio0 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;
+			label = "button";
+		};
+
+		/* TODO: fc 11nov26 both charger outputs read low when asserted per Meshtastic and SoftRF's T1000-E map, unverified until #169 */
+		charge_status_gpio: charge_status {
+			gpios = <&gpio1 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			label = "charge-status";
+		};
+
+		charge_done_gpio: charge_done {
+			gpios = <&gpio1 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+			label = "charge-done";
+		};
+
+		/* TODO: fc 11nov26 the polarity of the USB-C detect line is in no source, unverified until #169 */
+		usb_detect_gpio: usb_detect {
+			gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+			label = "usb-detect";
+		};
+	};
+
+	/* INFO: fc 11nov26 a pin map, never a device: disabled so CONFIG_INPUT_GPIO_KEYS cannot claim a rail enable */
+	board_power_gpios {
+		compatible = "gpio-keys";
+		status = "disabled";
+
+		sensor_rail_gpio: sensor_rail {
+			gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
+			label = "sensor-rail";
+		};
+
+		flash_enable_gpio: flash_enable {
+			gpios = <&gpio0 15 GPIO_ACTIVE_HIGH>;
+			label = "flash-enable";
+		};
+
+		haptic_enable_gpio: haptic_enable {
+			gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
+			label = "haptic-enable";
+		};
+
+		rtc_enable_gpio: rtc_enable {
+			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
+			label = "rtc-enable";
+		};
+
+		gnss_enable_gpio: gnss_enable {
+			gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+			label = "gnss-enable";
+		};
+
+		gnss_rtc_enable_gpio: gnss_rtc_enable {
+			gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+			label = "gnss-rtc-enable";
+		};
+	};
+
+	/* INFO: fc 11nov26 the lines the parts' own drivers drive, named so the board says its whole wiring */
+	board_part_gpios {
+		compatible = "gpio-keys";
+		status = "disabled";
+
+		/* TODO: fc 11nov26 SoftRF and Meshtastic hold this AG3335 reset high to reset, unverified until #171 */
+		gnss_reset_gpio: gnss_reset {
+			gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
+			label = "gnss-reset";
+		};
+
+		gnss_sleep_gpio: gnss_sleep {
+			gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
+			label = "gnss-sleep";
+		};
+
+		gnss_rtc_wake_gpio: gnss_rtc_wake {
+			gpios = <&gpio0 29 GPIO_ACTIVE_HIGH>;
+			label = "gnss-rtc-wake";
+		};
+
+		/* TODO: fc 11nov26 SoftRF and Seeed say GNSS PPS, Meshtastic says VCC_ADC, unverified until #171 */
+		gnss_pps_gpio: gnss_pps {
+			gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
+			label = "gnss-pps";
+		};
+
+		radio_reset_gpio: radio_reset {
+			gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
+			label = "radio-reset";
+		};
+
+		radio_busy_gpio: radio_busy {
+			gpios = <&gpio0 7 GPIO_ACTIVE_HIGH>;
+			label = "radio-busy";
+		};
+
+		radio_irq_gpio: radio_irq {
+			gpios = <&gpio1 1 GPIO_ACTIVE_HIGH>;
+			label = "radio-irq";
+		};
+
+		rtc_interrupt_gpio: rtc_interrupt {
+			gpios = <&gpio0 31 GPIO_ACTIVE_HIGH>;
+			label = "rtc-interrupt";
+		};
+
+		imu_interrupt_gpio: imu_interrupt {
+			gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
+			label = "imu-interrupt";
+		};
+
+		magnetometer_interrupt_gpio: magnetometer_interrupt {
+			gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+			label = "magnetometer-interrupt";
+		};
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+
+		buzzer_pwm: buzzer_pwm {
+			pwms = <&pwm0 0 PWM_HZ(2000) PWM_POLARITY_NORMAL>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_red: led_red {
+			gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+			label = "status-red";
+		};
+
+		led_green: led_green {
+			gpios = <&gpio0 24 GPIO_ACTIVE_HIGH>;
+			label = "status-green";
+		};
+
+		led_blue: led_blue {
+			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
+			label = "status-blue";
+		};
+	};
+
+	/* INFO: fc 11nov26 power-gpios is the divider's own enable, so the driver raises it before the first sample */
+	vbatt: vbatt {
+		compatible = "voltage-divider";
+		io-channels = <&adc 0>;
+		output-ohms = <100000>;
+		full-ohms = <200000>;
+		power-gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&adc {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@0 {
+		reg = <0>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+		zephyr,input-positive = <NRF_SAADC_AIN0>;
+		zephyr,resolution = <12>;
+	};
+};
+
+&pinctrl {
+	spi3_default: spi3_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 11)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 9)>,
+				<NRF_PSEL(SPIM_MISO, 1, 8)>;
+		};
+	};
+
+	spi3_sleep: spi3_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 11)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 9)>,
+				<NRF_PSEL(SPIM_MISO, 1, 8)>;
+			low-power-enable;
+		};
+	};
+
+	uart0_default: uart0_default {
+		group1 {
+			psels = <NRF_PSEL(UART_TX, 0, 13)>;
+		};
+
+		group2 {
+			psels = <NRF_PSEL(UART_RX, 0, 14)>;
+		};
+	};
+
+	uart0_sleep: uart0_sleep {
+		group1 {
+			psels = <NRF_PSEL(UART_TX, 0, 13)>, <NRF_PSEL(UART_RX, 0, 14)>;
+			low-power-enable;
+		};
+	};
+
+	i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 15)>, <NRF_PSEL(TWIM_SCL, 1, 14)>;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 15)>, <NRF_PSEL(TWIM_SCL, 1, 14)>;
+			low-power-enable;
+		};
+	};
+
+	i2c1_default: i2c1_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 26)>, <NRF_PSEL(TWIM_SCL, 0, 27)>;
+		};
+	};
+
+	i2c1_sleep: i2c1_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 26)>, <NRF_PSEL(TWIM_SCL, 0, 27)>;
+			low-power-enable;
+		};
+	};
+
+	pwm0_default: pwm0_default {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 25)>;
+		};
+	};
+
+	pwm0_sleep: pwm0_sleep {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 25)>;
+			low-power-enable;
+		};
+	};
+
+	qspi_default: qspi_default {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 19)>,
+				<NRF_PSEL(QSPI_IO0, 0, 21)>,
+				<NRF_PSEL(QSPI_IO1, 0, 22)>,
+				<NRF_PSEL(QSPI_IO2, 0, 23)>,
+				<NRF_PSEL(QSPI_IO3, 1, 0)>,
+				<NRF_PSEL(QSPI_CSN, 0, 20)>;
+		};
+	};
+
+	qspi_sleep: qspi_sleep {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 19)>,
+				<NRF_PSEL(QSPI_IO0, 0, 21)>,
+				<NRF_PSEL(QSPI_IO1, 0, 22)>,
+				<NRF_PSEL(QSPI_IO2, 0, 23)>,
+				<NRF_PSEL(QSPI_IO3, 1, 0)>;
+			low-power-enable;
+		};
+
+		group2 {
+			psels = <NRF_PSEL(QSPI_CSN, 0, 20)>;
+			low-power-enable;
+			bias-pull-up;
+		};
 	};
 };
 
 &gpio0 { status = "okay"; };
 &gpio1 { status = "okay"; };
 &gpiote { status = "okay"; };
+
+/* TODO: fc 11nov26 P0.09 is the RTC's power enable per SoftRF, Meshtastic and Seeed, unverified until #169 */
+&uicr {
+	nfct-pins-as-gpios;
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&pwm0_default>;
+	pinctrl-1 = <&pwm0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&spi3 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	pinctrl-0 = <&spi3_default>;
+	pinctrl-1 = <&spi3_sleep>;
+	pinctrl-names = "default", "sleep";
+	cs-gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+};
+
+&i2c0 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+};
+
+&i2c1 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-1 = <&i2c1_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+};
+
+/* TODO: fc 11nov26 115200 is the AG3335's default per SoftRF and Meshtastic, unverified until #171 */
+&uart0 {
+	compatible = "nordic,nrf-uarte";
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-1 = <&uart0_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+zephyr_udc0: &usbd {
+	status = "okay";
+
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+/* INFO: fc 11nov26 the factory bootloader reads GPREGRET on every boot, so its magic bytes are written through this one area */
+&gpregret1 {
+	uf2_boot_retention: retention@0 {
+		compatible = "zephyr,retention";
+		status = "okay";
+		reg = <0x0 0x1>;
+	};
+};
+
+/* TODO: fc 11nov26 the S140 7.3.0 and 0xEA000 boundaries are Meshtastic's, unverified until #169 reads INFO_UF2.TXT off a unit */
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		softdevice_partition: partition@0 {
+			label = "softdevice";
+			read-only;
+			reg = <0x00000000 0x00027000>;
+		};
+
+		boot_partition: partition@27000 {
+			label = "mcuboot";
+			reg = <0x00027000 0x0000e000>;
+		};
+
+		slot0_partition: partition@35000 {
+			label = "image-0";
+			reg = <0x00035000 0x000b5000>;
+		};
+
+		storage_partition: partition@ea000 {
+			label = "storage";
+			reg = <0x000ea000 0x0000a000>;
+		};
+
+		uf2_boot_partition: partition@f4000 {
+			label = "uf2-bootloader";
+			read-only;
+			reg = <0x000f4000 0x0000c000>;
+		};
+	};
+};
+
+/* INFO: fc 11nov26 GD25Q64E DS-00484 Rev 1.4 gives the JEDEC ID, tDP 3 us and tRES1 20 us, and single-line never writes its QE bit */
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	ext_flash: flash@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		sck-frequency = <32000000>;
+		jedec-id = [c8 40 17];
+		size-in-bytes = <8388608>;
+		quad-enable-requirements = "NONE";
+		has-dpd;
+		t-enter-dpd = <3000>;
+		t-exit-dpd = <20000>;
+
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			slot1_partition: partition@0 {
+				label = "image-1";
+				reg = <0x00000000 0x000b5000>;
+			};
+		};
+	};
+};

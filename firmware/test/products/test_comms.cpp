@@ -150,19 +150,18 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
 }
 
-// Nothing used to set the gate, so it stayed Unknown and refused forever: green tests, dead device.
-TEST_CASE("comms: only the ADS-L on-ground code is permission, every other value refuses") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store);
-    config.set_flight_state(flight::state_from(0));
-    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    CHECK(config.pending() == Pending::None);
-    config.set_flight_state(flight::state_from(1));
-    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    CHECK(config.pending() == Pending::Dfu);
+TEST_CASE("comms: only the ADS-L airborne code closes the gate, every other value opens it") {
+    for (const uint8_t code : {0, 1, 2, 3, 255}) {
+        CAPTURE(int(code));
+        platform::host::Link link;
+        link.raise_link(1);
+        go::Settings settings = go::defaults();
+        go::SettingsStore store(settings, kTestActivation);
+        ConfigService config(link, store);
+        config.set_flight_state(flight::state_from(code));
+        config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+        CHECK((config.pending() == Pending::Dfu) == (code != 2));
+    }
 }
 
 TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants nothing") {

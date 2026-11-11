@@ -6,18 +6,26 @@ import { LINK_REGISTRY } from '#skyblip/link_registry';
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
-const PAGES = ['../../content/pages/manage.html.erb', '../../content/pages/manage.fr.html.erb'];
+const PAGES = ['../../content/pages/update.html.erb', '../../content/pages/update.fr.html.erb'];
 const CONFIG = '../../../firmware/core/comms/config.cpp';
 
 const PAGE_NOTICES = [
   'claimed', 'window_closed', 'older', 'wrong_key', 'wrong_product', 'unmarked_image', 'too_large', 'not_image', 'flash', 'smp', 'failed', 'refused',
-  'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'saved', 'shelf_failed', 'needs_full',
+  'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth', 'no_file', 'no_params', 'shelf_failed', 'needs_full',
 ];
 const DEVICE_NOTES = [
   'probation', 'reverted', 'image_refused', 'settings_prior', 'settings_defaults', 'swap_unpowered', 'went_dark_flat',
   'imu_writing', 'no_key', 'not_activated',
 ];
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version', 'invalid']);
+
+const CONFIGURE_PAGES = ['../../content/pages/configure.html.erb', '../../content/pages/configure.fr.html.erb'];
+// INFO: fc 11nov26 what config.cpp answers a set with, the claim and the link included
+const SET_REFUSALS = ['in_flight', 'low_power', 'expired', 'cancelled', 'prompt_pending', 'refused_on_device', 'small_mtu', 'unknown_command'];
+const SETTINGS_PAGE_NOTICES = [
+  'claimed', 'saved', 'smp', 'failed', 'refused', 'timeout', 'link_lost', 'not_skyblip', 'no_bluetooth',
+  'settings_prior', 'settings_defaults', 'not_activated',
+];
 
 const ACTIVATION_PAGES = ['../../content/pages/activate.html.erb', '../../content/pages/activate.fr.html.erb'];
 const IDENTITY = '../../../firmware/core/comms/identity_link.cpp';
@@ -78,7 +86,24 @@ test('both pages word the same keys', () => {
 const registryNames = enumeration => LINK_REGISTRY.enums[enumeration].values.map(({ name }) => name);
 const offered = (page, list) => [...read(page).match(new RegExp(`${list}: \\{([^}]*)\\}`))[1].matchAll(/(\w+): "/g)].map(match => match[1]);
 
-for (const page of PAGES) {
+test('the firmware still refuses a set with the reasons the settings page words', () => {
+  const missing = SET_REFUSALS.filter(reason => !firmwareRefusals().includes(reason));
+  assert.deepEqual(missing, []);
+});
+
+for (const page of CONFIGURE_PAGES) {
+  test(`every refusal and notice of a set has words on ${page.split('/').pop()}`, () => {
+    const missing = [...SET_REFUSALS, ...SETTINGS_PAGE_NOTICES].filter(key => !words(page).has(key));
+    assert.deepEqual(missing, []);
+  });
+}
+
+test('both settings pages word the same keys', () => {
+  const [english, french] = CONFIGURE_PAGES.map(page => words(page));
+  assert.deepEqual([...english].sort(), [...french].sort());
+});
+
+for (const page of CONFIGURE_PAGES) {
   test(`${page.split('/').pop()} offers the units and the alarm volumes under the registry's names`, () => {
     assert.deepEqual(offered(page, 'unit_names'), registryNames('units'));
     assert.deepEqual(offered(page, 'volume_names'), registryNames('alarm_volume'));

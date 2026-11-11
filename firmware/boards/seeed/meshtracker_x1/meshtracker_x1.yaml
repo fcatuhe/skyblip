@@ -8,4 +8,11 @@ ram: 256
 flash: 1024
 supported:
   - gpio
+  - spi
+  - i2c
+  - uart
+  - pwm
+  - adc
+  - flash
+  - usb_device
 vendor: seeed

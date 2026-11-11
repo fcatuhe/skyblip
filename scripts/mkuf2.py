@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the drag-and-drop install artifact, and refuse to build a dangerous one.
 
-    mkuf2.py <out.uf2> <in1.hex> [in2.hex ...]
+    mkuf2.py <board> <out.uf2> <in1.hex> [in2.hex ...]
 
 The inputs are the two images sysbuild builds separately - MCUboot at
 boot_partition and the signed, confirmed application at slot0 - which this script
@@ -14,41 +14,55 @@ for its range checks, so it does it here rather than taking a dependency on
 `mergehex`.
 
 The application image must be the *confirmed* one. A slot0 written directly by a
-bootloader never goes through a swap, so it never gets a chance to mark itself
-good, and an unconfirmed image would be reverted on the second boot.
+bootloader never goes through a swap, so it never gets to mark itself good, and an
+unconfirmed image would be reverted on the second boot.
 
-The result is the single file a pilot drops on the TECHOBOOT volume.
+The result is the single file a pilot drops on the bootloader's volume.
 It stays the only install artifact: a Nordic DFU package stores a real
 bank_0_crc, which fails bootloader_app_is_valid() after the first MCUboot swap
 (check_no_dfu_package.py).
 
-The two range assertions are the point of this script. The factory Adafruit
-bootloader will write any address inside
+The range assertions are the point of this script. Each board has its own window,
+in WINDOWS, because each factory bootloader sits over its own SoftDevice. The
+Adafruit bootloader writes any address inside
     USER_FLASH_START .. USER_FLASH_END  =  0x001000 .. 0x0EA000
 (Adafruit_nRF52_Bootloader src/usb/uf2/uf2cfg.h:25-26, ghostfat.c in_app_space),
-and it does so without complaint. So:
+and it does so without complaint. So, per board:
 
-  * A block below 0x026000 would land on the factory MBR + SoftDevice. Erasing
-    those makes the device unable to run SoftRF/Meshtastic ever again and breaks
-    the bootloader's own fallback DFU. Reversibility is a feature; guard it.
-  * A block at or above 0x0EA000 is SILENTLY REFUSED by the bootloader - the
-    copy appears to succeed and the device is left with a truncated image.
-  * A block at or above 0x0F4000 would land on the factory bootloader itself.
-    Unreachable today (it is past USER_FLASH_END), and checked anyway so that
-    raising the ceiling can never take the recovery path with it: without that
-    bootloader the device installs nothing without a programmer.
+  * A block below the SoftDevice's end would land on the factory MBR and
+    SoftDevice. Erasing those makes the device unable to run SoftRF/Meshtastic
+    ever again and breaks the bootloader's own fallback DFU.
+  * A block at or above USER_FLASH_END is SILENTLY REFUSED by the bootloader -
+    the copy appears to succeed and the device is left with a truncated image.
+    The T-Echo's identity page, its unit's unlock code, sits right there.
+  * A block at or above the factory bootloader's start would land on the
+    bootloader itself. Unreachable today (it is past USER_FLASH_END), and checked
+    anyway so that raising the ceiling can never take the recovery path with it:
+    without that bootloader the device installs nothing without a programmer.
 
-All three are cheap to check here and expensive to discover in the field.
+All of them are cheap to check here and expensive to discover in the field.
 """
 import os
 import pathlib
 import subprocess
 import sys
+from typing import NamedTuple
 
-SOFTDEVICE_END = 0x00026000
-USER_FLASH_END = 0x000EA000
-UF2_BOOTLOADER_START = 0x000F4000
 UF2_FAMILY_NRF52840 = "0xADA52840"
+
+
+class Window(NamedTuple):
+    softdevice_end: int
+    user_flash_end: int
+    bootloader_start: int
+    softdevice: str
+
+
+WINDOWS = {
+    "t_echo_plus": Window(0x00026000, 0x000EA000, 0x000F4000, "S140 6.1.1"),
+    # TODO: fc 11nov26 Meshtastic's S140 7.3.0 and nRF52_Bootloader 2.6.0 window, unverified until #169 reads INFO_UF2.TXT
+    "meshtracker_x1": Window(0x00027000, 0x000EA000, 0x000F4000, "S140 7.3.0"),
+}
 
 
 def read_hex(path, into):
@@ -129,31 +143,32 @@ def zephyr_uf2conv():
     )
 
 
-def check_window(ranges):
-    """Refuse a merged image the factory bootloader cannot safely write.
+def check_window(ranges, window):
+    """Refuse a merged image the board's factory bootloader cannot safely write.
 
     Returns an error message, or None when every byte lands in the writable
-    window. No I/O and no Zephyr: scripts/test_mkuf2.py exercises the three
-    guards directly, because they are the only reason this script exists and a
+    window. No I/O and no Zephyr: scripts/test_mkuf2.py exercises the guards
+    directly, because they are the only reason this script exists and a
     partition edit is what silently defeats them.
     """
     low = min(start for start, _ in ranges)
     high = max(end for _, end in ranges)
-    if low < SOFTDEVICE_END:
+    if low < window.softdevice_end:
         return (
-            f"image starts at 0x{low:06X}, below 0x{SOFTDEVICE_END:06X}. "
-            "This would overwrite the factory MBR/SoftDevice. Check that "
-            "CONFIG_USE_DT_CODE_PARTITION=y and that boot_partition is at 0x26000."
+            f"image starts at 0x{low:06X}, below 0x{window.softdevice_end:06X}. "
+            f"This would overwrite the factory MBR/SoftDevice ({window.softdevice}). Check "
+            "that CONFIG_USE_DT_CODE_PARTITION=y and that boot_partition starts at "
+            f"0x{window.softdevice_end:X}."
         )
-    if high > UF2_BOOTLOADER_START:
+    if high > window.bootloader_start:
         return (
             f"image ends at 0x{high:06X}, inside the factory UF2 bootloader at "
-            f"0x{UF2_BOOTLOADER_START:06X}. That bootloader is the only way to "
+            f"0x{window.bootloader_start:06X}. That bootloader is the only way to "
             "install anything without a programmer; it is never a target."
         )
-    if high > USER_FLASH_END:
+    if high > window.user_flash_end:
         return (
-            f"image ends at 0x{high:06X}, past USER_FLASH_END 0x{USER_FLASH_END:06X}. "
+            f"image ends at 0x{high:06X}, past USER_FLASH_END 0x{window.user_flash_end:06X}. "
             "The UF2 bootloader silently drops writes above that, so the device "
             "would be flashed with a truncated image."
         )
@@ -161,11 +176,14 @@ def check_window(ranges):
 
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 4:
         print(__doc__)
         return 2
-    out = pathlib.Path(sys.argv[1])
-    inputs = [pathlib.Path(p) for p in sys.argv[2:]]
+    board = sys.argv[1]
+    if board not in WINDOWS:
+        return fail(f"no write window for board {board!r}, only for {', '.join(sorted(WINDOWS))}")
+    out = pathlib.Path(sys.argv[2])
+    inputs = [pathlib.Path(p) for p in sys.argv[3:]]
 
     byte_map = {}
     for path in inputs:
@@ -182,7 +200,7 @@ def main():
     for start, end in ranges:
         print(f"  0x{start:08X} - 0x{end - 1:08X}  ({end - start} bytes)")
 
-    problem = check_window(ranges)
+    problem = check_window(ranges, WINDOWS[board])
     if problem:
         return fail(problem)
 

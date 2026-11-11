@@ -143,7 +143,7 @@ test('progress only moves forward and ends at the image size', async () => {
 
 for (const [name, arrange, reason] of [
   ['a cell below the warning refuses the upload window', { swapPowered: false }, 'low_power'],
-  ['a device not proven on the ground refuses the upload window', { onGround: false }, 'in_flight'],
+  ['a device in flight is asked for no upload window', { flight: 'airborne' }, 'in_flight'],
 ]) {
   test(`${name}, and the page says ${reason}`, async () => {
     const { updater, until } = await chosen(arrange);

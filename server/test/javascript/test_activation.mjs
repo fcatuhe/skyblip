@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { FakeServer, FakeUnit, REGISTRATION_FRAME_BYTES, VECTORS, keyPair, messages, verifies } from './fake_activation.mjs';
 import { ATT_HEADER_BYTES, DEFAULTS } from './fake_skyblip.mjs';
-import { Activator } from '#skyblip/activation';
+import { Activator, PROMPT_CEILING_MS } from '#skyblip/activation';
 import { addressOf } from '#skyblip/ble';
 
 const CHROME_MTU = 498;
@@ -51,6 +52,12 @@ test('the vectors hold for node:crypto too, so the fakes sign as the server and 
   const development = messages.registration({ ...fields, release: false });
   assert.equal(development.toString('hex'), VECTORS.development_registration_message);
   assert.equal(unit.sign(development), VECTORS.development_registration_signature);
+});
+
+test('the page counts down the prompt the firmware stands for as long', () => {
+  const config = readFileSync(new URL('../../../firmware/core/comms/config.h', import.meta.url), 'utf8');
+  const [, seconds] = config.match(/kPromptCeilingMs = (\d+)u \* 1000u;/);
+  assert.equal(PROMPT_CEILING_MS, Number(seconds) * 1000);
 });
 
 test('a unit not yet activated reports no address', async () => {
@@ -113,7 +120,7 @@ test('the server refusing a known unit with another key is said in its words', a
 });
 
 test('activating needs no ground: a unit without a serial is silent, and indoors it has no fix', async () => {
-  const { unit, activator, until } = await connected({ onGround: false });
+  const { unit, activator, until } = await connected({ flight: 'unknown' });
   activator.activate();
   await until(confirming);
   unit.press();
@@ -258,25 +265,24 @@ test('skipping leaves the unit on its defaults and sends nothing', async () => {
   assert.ok(!unit.commands.includes('set'));
 });
 
-test('a unit whose firmware asks for the ground refuses the settings indoors, and its first fix gives Save back', async () => {
-  const { unit, activator, until } = await activated({ onGround: false });
-  assert.equal(activator.state.status.flight, 'unknown');
+test('a unit in flight refuses the settings, and keeps the offer open until it lands', async () => {
+  const { unit, activator, until } = await activated({ flight: 'airborne' });
+  assert.equal(activator.state.status.flight, 'airborne');
   activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
   const refused = await until(settled);
   assert.deepEqual(refused.notice, { key: 'in_flight', during: 'set' });
-  assert.equal(refused.heldForGround, true);
   assert.equal(refused.offer, 'open');
 
   unit.land();
-  await until(state => !state.heldForGround);
+  await until(state => state.status.flight === 'ground');
   activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
   await until(state => state.phase === 'storing');
   unit.press();
   assert.equal((await until(state => state.offer === 'saved')).notice.key, 'saved');
 });
 
-test('a unit whose firmware takes settings off the ground saves them indoors, with no fix', async () => {
-  const { unit, activator, until } = await activated({ onGround: false, setsOffGround: true });
+test('a unit with no fix since boot saves the settings indoors', async () => {
+  const { unit, activator, until } = await activated({ flight: 'unknown' });
   activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
   await until(state => state.phase === 'storing');
   unit.press();
@@ -294,6 +300,12 @@ test('a refusal of the settings keeps the offer open, and is named as the settin
   assert.deepEqual(refused.notice, { key: 'cancelled', during: 'set' });
   assert.equal(refused.offer, 'open');
 
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.deepEqual((await until(state => state.notice?.key === 'refused_on_device')).notice, { key: 'refused_on_device', during: 'set' });
+});
+
+test('a cell too low for the settings refuses them, named as the settings', async () => {
+  const { unit, activator, until } = await activated();
   unit.swapPowered = false;
   activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
   assert.deepEqual((await until(state => state.notice?.key === 'low_power')).notice, { key: 'low_power', during: 'set' });
