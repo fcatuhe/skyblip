@@ -2,10 +2,13 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_BRAVO_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/comms/config.h"
+#include "core/comms/peer.h"
 #include "core/events/central.h"
 #include "ports/central.h"
+#include "products/common/services/adsb_capture.h"
 #include "products/common/services/alarm.h"
 #include "products/skyblip_go/own_icao_warning.h"
 #include "products/skyblip_go/pairing.h"
@@ -28,6 +31,14 @@ class BravoService : public runtime::Service {
     // INFO: fc 11nov26 GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost
     static constexpr uint32_t kReconnectScanWindowUs = 11250;
     static constexpr uint32_t kReconnectScanPeriodUs = 1280000;
+    // INFO: fc 12nov26 schemas/link.v1.json: Bravo sends health once a second whatever the traffic
+    static constexpr uint32_t kHealthPeriodMs = 1000;
+    // INFO: fc 12nov26 unverified: three missed health frames, so one lost notification is no loss
+    static constexpr uint32_t kHealthMaxAgeMs = 3 * kHealthPeriodMs;
+    // INFO: fc 12nov26 a paired Go names no loss before a connection has had its ceiling after boot
+    static constexpr uint32_t kBootSettleMs = kConnectCeilingMs;
+    // INFO: fc 12nov26 unverified: two GNSS clocks part by a second at most, and more is no clock
+    static constexpr uint32_t kAheadCeilingMs = 1000;
     // INFO: fc 11nov26 two health periods for Bravo to answer an unpairing Go, then the link drops
     static constexpr uint32_t kFarewellCeilingMs = 2000;
 
@@ -55,13 +66,21 @@ class BravoService : public runtime::Service {
     const events::BluetoothAddress& pairing_with() const { return pairing_with_; }
     OwnIcaoWarning& own_icao_warning() { return own_icao_warning_; }
     const OwnIcaoWarning& own_icao_warning() const { return own_icao_warning_; }
+    // INFO: fc 12nov26 observations with no UTC of ours to place them by, or dated too far ahead
+    uint32_t unplaced() const { return unplaced_; }
+    // INFO: fc 12nov26 observation frames comms::read_observation() refused
+    uint32_t refused() const { return refused_; }
     bool leaving() const { return leaving_; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
 
    private:
     void take_event(const events::CentralEvent& event, uint32_t now_ms);
-    void take_frame(const events::RxFrame& frame);
+    void take_frame(const events::RxFrame& frame, uint32_t now_ms);
+    void take_health(ConstByteSpan bytes, uint32_t now_ms);
+    void fold(const comms::PeerObservation& peer, uint32_t now_ms);
+    std::optional<uint32_t> second_edge_ms(uint32_t at_s) const;
+    comms::BravoState state_now() const;
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
     void went_down();
     void hear(const events::CentralEvent& event);
@@ -83,6 +102,8 @@ class BravoService : public runtime::Service {
     ports::Central& central_;
     const common::AlarmService& alarm_;
     OwnIcaoWarning own_icao_warning_{};
+    common::AdsbCapture adsb_capture_{context_};
+    comms::PeerHealth health_{};
     events::BluetoothAddress found_[kBravoFoundRows]{};
     events::BluetoothAddress pairing_with_{};
     int found_count_{0};
@@ -92,6 +113,13 @@ class BravoService : public runtime::Service {
     uint32_t step_since_ms_{0};
     uint32_t claimed_ms_{0};
     uint32_t boot_epoch_{0};
+    uint32_t health_heard_ms_{0};
+    uint32_t started_ms_{0};
+    uint32_t unplaced_{0};
+    uint32_t refused_{0};
+    bool health_heard_{false};
+    bool started_{false};
+    bool settled_{false};
     uint32_t farewell_ms_{0};
     bool connecting_{false};
     bool up_{false};

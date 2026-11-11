@@ -110,10 +110,29 @@ TEST_CASE("product: a radio that parks before the ceiling ends the wait without 
     CHECK(rig.product.board().rf().abandons() == 0);
 }
 
+// The board probed in its constructor, and the product is a global built before the watchdog arms.
+TEST_CASE("product: building the product touches no part, and setup probes the parts") {
+    HousekeepingRig rig;
+    const models::Bme280& barometer = rig.platform.barometer().chip;
+    CHECK(rig.platform.chips().radio.commands_seen.empty());
+    CHECK(rig.platform.chips().radio.reset_pulses == 0);
+    CHECK(rig.platform.chips().haptic.enable_raises == 0);
+    CHECK(rig.platform.chips().haptic.writes + rig.platform.chips().haptic.reads == 0);
+    CHECK(barometer.writes + barometer.reads == 0);
+    CHECK(rig.product.board().inventory().i2c_count == 0);
+
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.platform.chips().radio.reset_pulses > 0);
+    CHECK(rig.platform.chips().haptic.enable_raises > 0);
+    CHECK(rig.product.board().inventory().i2c_count > 0);
+    CHECK(ports::has(rig.product.capabilities(),
+                     ports::Capability::Rf | ports::Capability::Barometer));
+}
+
 // A radio that answered the probe and then refused bring-up has no executor to wait for.
 TEST_CASE("product: a radio that failed bring-up powers off with no wait and no abandon") {
     HousekeepingRig rig;
-    rig.platform.chips().radio.miso_dead = true;
+    rig.platform.chips().radio.fail_calibration = parts::sx1262::kErrorPllCalibration;
     REQUIRE(rig.setup() != Status::Ok);
     REQUIRE(ports::has(rig.product.capabilities(), ports::Capability::Rf));
     uint32_t now_ms = 0;

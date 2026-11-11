@@ -168,6 +168,18 @@ constexpr bool on_the_wire(comms::ExportReference value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::BravoState value) {
+    switch (value) {
+        case comms::BravoState::Waiting:
+        case comms::BravoState::Live:
+        case comms::BravoState::LinkDown:
+        case comms::BravoState::ReceiverDown:
+        case comms::BravoState::NoUtc: return true;
+        case comms::BravoState::Unpaired: return false;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(model::ClimbSource value) {
     switch (value) {
         case model::ClimbSource::Unknown:
@@ -286,6 +298,13 @@ static_assert(code(comms::ExportReference::None) == 0, "export_reference none");
 static_assert(code(comms::ExportReference::Go) == 1, "export_reference go");
 static_assert(code(comms::ExportReference::Own) == 2, "export_reference own");
 static_assert(on_the_wire(comms::ExportReference::None), "export_reference");
+
+static_assert(code(comms::BravoState::Waiting) == 1, "bravo waiting");
+static_assert(code(comms::BravoState::Live) == 2, "bravo live");
+static_assert(code(comms::BravoState::LinkDown) == 3, "bravo link_down");
+static_assert(code(comms::BravoState::ReceiverDown) == 4, "bravo receiver_down");
+static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
+static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
 
 static_assert(code(model::ClimbSource::Unknown) == 0, "climb_source unknown");
 static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");

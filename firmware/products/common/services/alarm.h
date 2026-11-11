@@ -99,6 +99,7 @@ class AlarmService : public runtime::Service {
     traffic::AlarmTracker tracker_{};
     formation::Tracker formation_{};
     uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
+    bool bravo_lost_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     bool dirty_{false};

@@ -27,10 +27,14 @@ Status BravoService::setup() {
 }
 
 void BravoService::tick(uint32_t now_ms) {
+    if (!started_) {
+        started_ = true;
+        started_ms_ = now_ms;
+    }
     events::CentralEvent event{};
     while (context_.bus.central_events.pop(event)) take_event(event, now_ms);
     events::RxFrame frame{};
-    while (context_.bus.peer_rx.pop(frame)) take_frame(frame);
+    while (context_.bus.peer_rx.pop(frame)) take_frame(frame, now_ms);
 
     if (step_ == BravoStep::Refused && refusal_ == BravoRefusal::PhonesConnected) start_scan();
     if (step_ == BravoStep::Connecting && now_ms - step_since_ms_ >= kConnectCeilingMs)
@@ -51,6 +55,10 @@ void BravoService::tick(uint32_t now_ms) {
         claim(now_ms);
     }
     if (leaving_ && now_ms - farewell_ms_ >= kFarewellCeilingMs) leave();
+    // INFO: fc 12nov26 both ages are cleared once spent, so neither comes back 49.7 days on
+    if (health_heard_ && now_ms - health_heard_ms_ > kHealthMaxAgeMs) health_heard_ = false;
+    if (health_heard_ || now_ms - started_ms_ >= kBootSettleMs) settled_ = true;
+    context_.state.bravo = state_now();
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
@@ -84,6 +92,7 @@ void BravoService::unpair() {
     settings_.bravo = events::BluetoothAddress{};
     config_.note_settings_changed();
     link_ = BravoLink::Down;
+    health_heard_ = false;
     own_icao_warning_.unpaired();
     if (farewell) {
         leaving_ = true;
@@ -150,10 +159,22 @@ void BravoService::went_down() {
     if (link_ == BravoLink::Up) link_ = BravoLink::Down;
 }
 
-void BravoService::take_frame(const events::RxFrame& frame) {
+void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
     const ConstByteSpan bytes(frame.data.data(), frame.bytes);
     const Result<link::Command> command = comms::peer_command(bytes);
-    if (!command.ok() || command.value() != link::Command::Health) return;
+    if (!command.ok()) return;
+    if (command.value() == link::Command::Health) {
+        take_health(bytes, now_ms);
+    } else if (command.value() == link::Command::Observation) {
+        const Result<comms::PeerObservation> observation = comms::read_observation(bytes);
+        if (observation.ok())
+            fold(observation.value(), now_ms);
+        else
+            refused_++;
+    }
+}
+
+void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
     if (health.status() == Status::Unsupported) {
         refuse_protocol();
@@ -179,6 +200,20 @@ void BravoService::take_frame(const events::RxFrame& frame) {
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
     own_icao_warning_.paired(health.value().own_icao_set);
+    health_ = health.value();
+    health_heard_ = true;
+    health_heard_ms_ = now_ms;
+}
+
+// INFO: fc 12nov26 health alone says lost, never quiet traffic: an empty sky is a healthy one
+comms::BravoState BravoService::state_now() const {
+    if (!paired(settings_)) return comms::BravoState::Unpaired;
+    if (health_heard_) {
+        if (!health_.listening) return comms::BravoState::ReceiverDown;
+        if (!health_.utc_valid) return comms::BravoState::NoUtc;
+        return comms::BravoState::Live;
+    }
+    return settled_ ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
 }
 
 // INFO: fc 11nov26 another protocol is never pinned, and a pinned Bravo on one waits for a boot
@@ -198,6 +233,7 @@ void BravoService::forget() {
     settings_.bravo = events::BluetoothAddress{};
     config_.note_settings_changed();
     link_ = BravoLink::Down;
+    health_heard_ = false;
     own_icao_warning_.unpaired();
     forgotten_ = true;
     central_.disconnect();

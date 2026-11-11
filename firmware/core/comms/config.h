@@ -9,6 +9,7 @@
 #include "core/comms/link_claim.h"
 #include "core/comms/link_registry.h"
 #include "core/comms/link_sessions.h"
+#include "core/comms/peer.h"
 #include "core/comms/timing_report.h"
 #include "core/dfu/update.h"
 #include "core/events/link.h"
@@ -195,6 +196,8 @@ class ConfigService {
     void cancel();
 
     Pending pending() const { return pending_; }
+    // INFO: fc 11nov26 a new count is a new prompt, even of the same kind as the one it replaced
+    uint32_t prompts_staged() const { return prompts_staged_; }
     // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
     bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
@@ -210,6 +213,8 @@ class ConfigService {
     void set_reset_reason(power::ResetReason reason) { diagnostics_.reset = reason; }
     power::ResetReason reset_reason() const { return diagnostics_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
+    // INFO: fc 12nov26 a paired Go's glass says BRAVO LOST, and a page learns it without polling
+    void set_bravo_state(BravoState state);
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -325,6 +330,7 @@ class ConfigService {
     Diagnostics diagnostics_{};
     bool supply_warned_{false};
     bool went_dark_flat_{false};
+    BravoState bravo_{BravoState::Unpaired};
     uint16_t connected_sessions_[LinkSessions::kMaxSessions]{};
     int connected_count_{0};
     LinkClaim claim_{};
@@ -342,6 +348,7 @@ class ConfigService {
     uint32_t now_ms_{0};
     uint32_t upload_window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
+    uint32_t prompts_staged_{0};
     ports::ImageVersion approved_version_{};
     char prompt_detail_[kPromptDetailBytes]{};
     uint8_t pending_set_frame_[sizeof(events::RxFrame::data)]{};

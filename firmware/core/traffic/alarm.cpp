@@ -28,6 +28,11 @@ Level level_for(const AlarmAssessment& assessment) {
     return in_window ? Level::Advisory : Level::None;
 }
 
+// INFO: fc 12nov26 a reception is as old as the instant it was true, never younger than now
+uint32_t heard_ms(const model::AircraftObservation& target, uint32_t now_ms) {
+    return static_cast<int32_t>(target.at_ms - now_ms) > 0 ? now_ms : target.at_ms;
+}
+
 }  // namespace
 
 int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation& target,
@@ -96,14 +101,14 @@ AlarmTracker::Decision AlarmTracker::update(const model::Ownship& own,
     const uint32_t key = target.received.at_s * 1000u + target.received.into_ms;
     if (key != slot->reception_key) {
         slot->reception_key = key;
-        slot->seen_ms = now_ms;
+        slot->seen_ms = heard_ms(target, now_ms);
     }
     slot->forget_ms = forget_ms(target);
 
     const bool grounded =
         flight::on_ground(target.flight_state) || flight::on_ground(own.flight_state);
     const uint32_t floor_ms = grounded ? kGroundRenotifyFloorMs : kRenotifyFloorMs;
-    if (now_ms - target.at_ms <= kAlertMaxAgeMs)
+    if (static_cast<int32_t>(now_ms - target.at_ms) <= static_cast<int32_t>(kAlertMaxAgeMs))
         decision.notify = notify_for(*slot, decision.assessment.level, floor_ms, now_ms);
     if (decision.notify) slot->dismissed = false;
     if (slot->dismissed) decision.notify = false;
@@ -151,7 +156,7 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& tar
     slot->used = true;
     slot->address = target.address;
     slot->address_mapping_table = target.address_mapping_table;
-    slot->seen_ms = now_ms;
+    slot->seen_ms = heard_ms(target, now_ms);
     return slot;
 }
 

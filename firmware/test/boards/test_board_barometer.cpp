@@ -19,7 +19,10 @@ using Board = boards::TEchoPlus<platform::host::Platform>;
 constexpr uint32_t kMidpointMs = parts::Bme280::kConversionMidpointMs;
 
 struct Unit {
-    Unit() { REQUIRE(board.begin() == Status::Ok); }
+    Unit() {
+        board.probe();
+        REQUIRE(board.begin() == Status::Ok);
+    }
 
     std::vector<uint32_t> sample_instants(uint32_t from_ms, uint32_t to_ms) {
         std::vector<uint32_t> at;

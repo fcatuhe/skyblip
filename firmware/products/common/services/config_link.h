@@ -60,6 +60,8 @@ class ConfigLinkService : public runtime::Service {
     void load_identity();
     void tick(uint32_t now_ms) override;
 
+    void set_product_name(const char* product_name) { product_name_ = product_name; }
+
     comms::ConfigService& config() { return config_; }
     const timing::DurableWriteWindow& durable_writes() const { return writes_; }
 

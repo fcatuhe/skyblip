@@ -29,13 +29,19 @@ struct Rig {
     platform::host::Platform platform;
     Go product{platform};
 
-    explicit Rig(BarometerByHand) : Rig() { platform.barometer().fitted = false; }
+    explicit Rig(BarometerByHand) : Rig() { barometer_by_hand_ = true; }
 
     explicit Rig(ports::Capabilities fitted = platform::host::Platform::kFullyFitted,
                  std::optional<uint16_t> serial = platform::host::Identity::kSerial)
         : platform(fitted, serial) {}
 
-    Status setup() { return product.setup(); }
+    Status setup() {
+        const Status status = product.setup();
+        if (barometer_by_hand_) platform.barometer().fitted = false;
+        return status;
+    }
+
+    bool barometer_by_hand_{false};
 
     go::Settings& settings() { return product.settings(); }
 

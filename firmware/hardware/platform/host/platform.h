@@ -271,7 +271,10 @@ class Platform {
     // other barometer address, or with a part nobody expected.
     I2cBus& i2c_bus() { return i2c_; }
 
-    ports::Capabilities capabilities() const { return fitted_; }
+    ports::Capabilities capabilities() const {
+        return ports::without(fitted_, ports::Capability::Barometer);
+    }
+    bool barometer_answers() const { return bme280_.answers(); }
 
    private:
     void wire_i2c() {

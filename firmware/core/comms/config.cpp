@@ -130,6 +130,12 @@ void ConfigService::set_battery_state(const power::BatteryState& battery, power:
     if (link_up() && (charging_changed || level_changed || step_changed)) push_status();
 }
 
+void ConfigService::set_bravo_state(BravoState state) {
+    const bool changed = state != bravo_;
+    bravo_ = state;
+    if (changed && link_up()) push_status();
+}
+
 int ConfigService::payload_bytes() const { return static_cast<int>(link_.payload_bytes()); }
 
 int ConfigService::payload_bytes_to(uint16_t session_id) const {
@@ -223,6 +229,7 @@ bool ConfigService::prompt_refused() {
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
+    prompts_staged_++;
     prompt_detail_[0] = 0;
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));

@@ -189,15 +189,27 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     return out;
 }
 
-const char* ring_word(const RadarSnapshot& snapshot, char* out) {
-    if (const char* cell = cell_word(snapshot, out)) return cell;
-    return state_word(snapshot);
-}
+struct RingWords {
+    const char* banner{nullptr};
+    const char* note{nullptr};
+};
 
-// INFO: fc 18sep26 how far the receiver has got, under the word that says it has not got there
-const char* ring_note(const RadarSnapshot& snapshot, char* out) {
-    if (cell_word(snapshot, out) != nullptr) return state_word(snapshot);
-    return snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
+// INFO: fc 12nov26 the banner and the note are the first two words standing, in this order
+RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
+    const char* words[5] = {};
+    int count = 0;
+    if (const char* cell = cell_word(snapshot, cell_buffer)) words[count++] = cell;
+    if (!snapshot.fix_valid) words[count++] = "NO FIX";
+    if (const char* loss = bravo_loss_word(snapshot.bravo)) {
+        words[count++] = "BRAVO LOST";
+        if (count == 1) words[count++] = loss;
+    }
+    if (snapshot.fix_valid) {
+        if (const char* state = state_word(snapshot)) words[count++] = state;
+    } else {
+        words[count++] = gnss::stage_name(snapshot.stage);
+    }
+    return {words[0], words[1]};
 }
 
 Box note_box(const char* note, int y) {
@@ -209,6 +221,14 @@ void state_note(ui::Canvas& canvas, const char* note, int y) {
     const Box box = note_box(note, y);
     canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
     canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, kNoteScale);
+}
+
+// INFO: fc 12nov26 over the count, as FLIGHT stands over the clock: the count holds Bravo's too
+void bravo_word(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    if (snapshot.bravo != comms::BravoState::Live) return;
+    const char* word = "BRAVO";
+    const int y = kFooterBottom - kCharacterHeight * kTrafficScale - kStackGap - kCharacterHeight;
+    canvas.draw_text(kGlassWidth - kMargin - text_width(word, 1), y, word, true, 1);
 }
 
 void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
@@ -226,6 +246,20 @@ void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
 Box banner_box(const char* word, int y) {
     const int width = text_width(word, kBannerScale);
     return padded(kCentreX - width / 2, y, width, kCharacterHeight * kBannerScale);
+}
+
+// INFO: fc 12nov26 a banner wider than the ring's chord where it stands rises until it clears it
+int banner_y_inside(const char* word, const Layout& layout) {
+    const Box box = banner_box(word, layout.banner_y);
+    const int half_width = box.width / 2 + 1;
+    const int inside = layout.outer_radius - kRingWidth;
+    int y = layout.banner_y;
+    while (y > kOwnshipTail + kLabelPad) {
+        const int below = y - layout.banner_y + box.y + box.height - kNear;
+        if (half_width * half_width + below * below < inside * inside) break;
+        y--;
+    }
+    return y;
 }
 
 void state_banner(ui::Canvas& canvas, const char* word, int y) {
@@ -358,6 +392,18 @@ void invert_wedges(ui::Canvas& canvas, int outer_radius, const Wedge* wedges, in
 
 }  // namespace
 
+const char* bravo_loss_word(comms::BravoState state) {
+    switch (state) {
+        case comms::BravoState::LinkDown: return "LINK DOWN";
+        case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
+        case comms::BravoState::NoUtc: return "NO UTC";
+        case comms::BravoState::Unpaired:
+        case comms::BravoState::Waiting:
+        case comms::BravoState::Live: break;
+    }
+    return nullptr;
+}
+
 void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     canvas.clear(true);
 
@@ -368,17 +414,21 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     flight_word(canvas, snapshot);
     range_label(canvas, snapshot);
     traffic_count(canvas, snapshot.heard_count, snapshot.fix_valid && snapshot.receiver_listening);
+    bravo_word(canvas, snapshot);
 
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int reading_count = 2;
-    char word_buffer[12], note_buffer[12];
-    if (const char* word = ring_word(snapshot, word_buffer)) {
-        state_banner(canvas, word, layout.banner_y);
-        readings[reading_count++] = banner_box(word, layout.banner_y);
+    char cell_buffer[12];
+    const RingWords ring = ring_words(snapshot, cell_buffer);
+    const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
+    const int note_y = layout.note_y - layout.banner_y + banner_y;
+    if (ring.banner) {
+        state_banner(canvas, ring.banner, banner_y);
+        readings[reading_count++] = banner_box(ring.banner, banner_y);
     }
-    if (const char* note = ring_note(snapshot, note_buffer)) {
-        state_note(canvas, note, layout.note_y);
-        readings[reading_count++] = note_box(note, layout.note_y);
+    if (ring.note) {
+        state_note(canvas, ring.note, note_y);
+        readings[reading_count++] = note_box(ring.note, note_y);
     }
 
     const int16_t track_angle16 =

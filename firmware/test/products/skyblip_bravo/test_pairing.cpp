@@ -36,6 +36,50 @@ bool stored_pin(platform::host::MeshtrackerX1& platform, events::BluetoothAddres
     return stored.peer.pinned;
 }
 
+// A Go asking to pair, played by hand: its claim reaches Bravo, and Bravo's frames come back.
+struct Asked {
+    BravoRig rig{};
+    PairedLink go{rig.platform.link()};
+
+    Asked() {
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.seconds_with_fix(2);
+        REQUIRE(go.connect());
+        REQUIRE(go.write(complete_registry_frame(
+                    "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
+                    "\"alarm_passes\":1,\"alarm_volume\":\"loud\",\"paired\":false}")) ==
+                Status::Ok);
+        run_for(30);
+        REQUIRE(rig.product.peer().requested());
+    }
+
+    void run_for(uint32_t span_ms) {
+        for (uint32_t stepped = 0; stepped < span_ms; stepped += 10) {
+            rig.step();
+            go.pump();
+            rig.now_ms += 10;
+        }
+    }
+
+    bool offered() {
+        bool offered = false;
+        for (std::string frame; go.take(frame);) {
+            const std::string text = link_text(frame);
+            offered =
+                offered || (field(text, "command") == "health" && field(text, "paired") == "true");
+        }
+        return offered;
+    }
+};
+
+uint32_t pairing_arms_at_ms() {
+    Asked dry;
+    for (int pass = 0; pass < 200 && !dry.rig.product.button().pairing_armed(); pass++)
+        dry.run_for(10);
+    REQUIRE(dry.rig.product.button().pairing_armed());
+    return dry.rig.now_ms - 10;
+}
+
 struct Tango {
     Rig go{};
     BravoRig bravo{};
@@ -279,6 +323,26 @@ TEST_CASE("bravo pairing: a Go that retries after a lost health needs a new pres
     tango.run_for(2000);
     CHECK(tango.go_pinned());
     CHECK(tango.peer().paired());
+}
+
+// #245's rule on the pairing press: the debounce publishes a down a pass or more after it began.
+TEST_CASE("bravo pairing: a press that began before the gesture armed never pairs") {
+    const uint32_t armed_ms = pairing_arms_at_ms();
+
+    Asked asked;
+    asked.run_for(armed_ms - 20 - asked.rig.now_ms);
+    asked.rig.platform.set_button_down(true);
+    asked.run_for(100);
+    asked.rig.platform.set_button_down(false);
+    asked.run_for(100);
+    CHECK(asked.rig.product.peer().requested());
+    CHECK_FALSE(asked.offered());
+
+    asked.run_for(1000);
+    asked.rig.press();
+    asked.run_for(100);
+    CHECK_FALSE(asked.rig.product.peer().requested());
+    CHECK(asked.offered());
 }
 
 // #179 hands the alarm over only once both sides hold the pin.

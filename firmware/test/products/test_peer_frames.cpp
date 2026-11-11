@@ -52,12 +52,22 @@ const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
      "ffff111affffffff12f5"},
 };
 
-int64_t widest_number(const std::string& name, int64_t type_extreme) {
+// INFO: fc 12nov26 the widest heights comms::read_observation() takes, its ranges' widest ends
+const std::map<std::string, int64_t> kWidestAGoReads = {
+    {"observation.altitude_m", -1318},
+    {"observation.pressure_altitude_ft", 126700},
+};
+
+int64_t widest_number(const std::string& name, int64_t type_extreme,
+                      const std::map<std::string, int64_t>& tighter) {
+    const auto tightest = tighter.find(name);
+    if (tightest != tighter.end()) return tightest->second;
     const auto narrower = kNarrowerThanTheirType.find(name);
     return narrower == kNarrowerThanTheirType.end() ? type_extreme : narrower->second;
 }
 
-std::vector<uint8_t> at_its_widest(const names::Frame& frame) {
+std::vector<uint8_t> at_its_widest(const names::Frame& frame,
+                                   const std::map<std::string, int64_t>& tighter = {}) {
     std::vector<uint8_t> bytes(256);
     cbor::Writer writer(bytes.data(), static_cast<int>(bytes.size()));
     writer.add_unsigned(link::kCommandKey, frame.code);
@@ -66,12 +76,12 @@ std::vector<uint8_t> at_its_widest(const names::Frame& frame) {
         const std::string name = std::string(frame.command) + "." + key.name;
         switch (key.type) {
             case names::Type::Unsigned:
-                writer.add_unsigned(key.number,
-                                    widest_number(name, std::numeric_limits<uint32_t>::max()));
+                writer.add_unsigned(
+                    key.number, widest_number(name, std::numeric_limits<uint32_t>::max(), tighter));
                 break;
             case names::Type::Integer:
-                writer.add_integer(key.number,
-                                   widest_number(name, std::numeric_limits<int32_t>::min()));
+                writer.add_integer(
+                    key.number, widest_number(name, std::numeric_limits<int32_t>::min(), tighter));
                 break;
             case names::Type::Boolean: writer.add_boolean(key.number, true); break;
             case names::Type::Text:
@@ -122,6 +132,45 @@ TEST_CASE("link registry: the peer frames at their widest are these bytes, every
         pinned.insert(frame.command);
     }
     CHECK(pinned.size() == kPeerFramesAtTheirWidest.size());
+}
+
+// The registry's widest values are the wire's, and its heights are past any ADS-B encoding (#193).
+TEST_CASE(
+    "link registry: a Go refuses the widest observation, whose heights no ADS-B field holds") {
+    for (const names::Frame& frame : names::kFrames) {
+        if (std::string(frame.command) != "observation") continue;
+        const std::vector<uint8_t> bytes = at_its_widest(frame);
+        CHECK(comms::read_observation(ConstByteSpan(bytes.data(), bytes.size())).status() ==
+              Status::Invalid);
+    }
+}
+
+// Two bytes narrower than the wire's widest: -1318 m takes a two-byte argument, not four.
+TEST_CASE("link registry: a Go reads whole the widest observation inside its ranges, 124 bytes") {
+    for (const names::Frame& frame : names::kFrames) {
+        if (std::string(frame.command) != "observation") continue;
+        const std::vector<uint8_t> bytes = at_its_widest(frame, kWidestAGoReads);
+        CHECK(bytes.size() == 124);
+        const Result<comms::PeerObservation> read =
+            comms::read_observation(ConstByteSpan(bytes.data(), bytes.size()));
+        REQUIRE(read.ok());
+        const model::AircraftObservation& target = read.value().observation;
+        CHECK(target.address == 0xFFFFFF);
+        CHECK(target.position_valid);
+        CHECK(target.latitude_1e7 == -900000000);
+        CHECK(target.altitude_valid);
+        CHECK(target.altitude_m == -1318);
+        CHECK(target.pressure_altitude_valid);
+        CHECK(target.pressure_altitude_ft == 126700);
+        CHECK(target.speed_valid);
+        CHECK(target.climb_valid);
+        CHECK(target.climb_source == model::ClimbSource::Barometric);
+        CHECK(target.flight_state == 2);
+        CHECK(target.adsb_version_valid);
+        CHECK(target.gva_valid);
+        CHECK(std::string(read.value().callsign) == "ABCD1234");
+        CHECK(read.value().callsign_dated);
+    }
 }
 
 // core/comms/README.md writes this payload down, and a Go refuses a pairing below it (#177).

@@ -414,3 +414,41 @@ TEST_CASE("annunciation: a stream of announcements never holds an output past th
     CHECK(buzzer.longest_vibration_ms <= longest_call_ms(kAdvisoryTune));
     CHECK(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs);
 }
+
+// A lost Bravo is said once, low and unfelt, so it is told apart from traffic and never masks it.
+TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic cuts it") {
+    Buzzer buzzer;
+    uint32_t now_ms = 1000;
+    Situation lost{};
+    lost.bravo_lost = true;
+    buzzer.apply(buzzer.policy.update(lost, now_ms), now_ms);
+    now_ms += kStepMs;
+    buzzer.run(Situation{}, now_ms, 3000);
+    CHECK(tune_for(Voice::BravoLost, Level::None).notes == kBravoLostTune.notes);
+    REQUIRE(buzzer.beeps == 1);
+    CHECK(buzzer.hz_of[0] == kNoteC7Hz);
+    CHECK(buzzer.beep_ms_of[0] == kBravoLostNoteMs);
+    CHECK(buzzer.vibrations == 0);
+    CHECK(buzzer.policy.voice() == Voice::None);
+
+    Buzzer under_traffic;
+    uint32_t traffic_now_ms = 1000;
+    under_traffic.announce(standing(Level::Advisory), traffic_now_ms, 100);
+    Situation both = standing(Level::Advisory);
+    both.bravo_lost = true;
+    under_traffic.apply(under_traffic.policy.update(both, traffic_now_ms), traffic_now_ms);
+    CHECK(under_traffic.policy.voice() == Voice::Traffic);
+
+    Buzzer cut;
+    uint32_t cut_now_ms = 1000;
+    cut.apply(cut.policy.update(lost, cut_now_ms), cut_now_ms);
+    cut_now_ms += kStepMs;
+    Situation fix{};
+    fix.first_fix = true;
+    cut.apply(cut.policy.update(fix, cut_now_ms), cut_now_ms);
+    CHECK(cut.policy.voice() == Voice::BravoLost);
+    cut_now_ms += kStepMs;
+    cut.announce(standing(Level::Advisory), cut_now_ms, 3000);
+    CHECK(cut.policy.voice() == Voice::Traffic);
+    CHECK(cut.beeps == 1 + kAdvisoryCalls);
+}

@@ -52,6 +52,8 @@ Six is where a fade stops being a fade. At 1 Hz, six consecutive misses is a lin
 
 `kAlertMaxAgeMs` is 5 s: what the alarm is allowed to grade. It acts on a position, and at 100 m/s of closure a five-second-old fix is already 500 m of uncertainty, so a target older than that is no longer something to say a word about. It does not scale with the target's interval and must not: stretching it to a minute for a parked aircraft would be grading a position half a kilometre wrong. What the ground rate asks for instead is below.
 
+Both ages count from the instant a reception was true, never from when it reached the table. A radio reception is true on the pass it is decoded, so the two are one instant there. A paired Bravo's observation reaches the Go later than it was heard, and `AlarmTracker` dates its freshness from the observation's `at_ms`, so a target forwarded late stops sounding at its own age. The table's ages are in seconds, and a reception dated up to two of them ahead, `kReceptionAheadCeilingS`, is held as new: the table's second lags its clock by up to one, and a paired Bravo's clock may run one ahead (`../comms/README.md`, What the Go makes of its Bravo). A reception dated further ahead is as old as a clock that went backwards, and is dropped.
+
 `direct_preferred_max_age_s` is the one figure that takes the larger of the two: the alarm's patience airborne, for the reason `table.h` gives, and the target's own interval on the ground. At 0.1 Hz a relay allowed past after five seconds replaces every ground report with the poorer copy of itself, for ever, when the next direct report is not even due.
 
 ## An aircraft on the ground is not traffic
@@ -78,7 +80,7 @@ A new inbound source owes this directory one thing: write the field, `Unknown` w
 
 ## ADS-B
 
-ADS-B reaches the table as `Source::Adsb`: from the LR2021 on a Bravo alone, and from a paired Bravo on a Go (#193). The rules below are the table's and `relative_north_east_up`'s, so both products apply them the same way.
+ADS-B reaches the table as `Source::Adsb`: from the LR2021 on a Bravo alone, and from a paired Bravo on a Go, whose `BravoService` folds each `observation` frame through `update` at the instants Bravo heard its fields (`../comms/README.md`, What the Go makes of its Bravo). The rules below are the table's and `relative_north_east_up`'s, so both products apply them the same way.
 
 ### Which height is compared
 

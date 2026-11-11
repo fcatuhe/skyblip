@@ -144,6 +144,8 @@ SLOT_STATE = ("uplink_rx_o_band", "switch_o_band_to_m_band", "slot0", "hop", "sl
 REFUSAL = ("none", "over_budget", "unarmed", "unsettled", "off_schedule")
 FLIGHT_STATE = ("unknown", "on_ground", "airborne")
 POWER_LEVEL = ("unknown", "normal", "critical", "flat", "low")
+# INFO: fc 12nov26 comms::BravoState, the link registry's bravo enum with unpaired as its 0
+BRAVO = ("unpaired", "waiting", "live", "link_down", "receiver_down", "no_utc")
 CHARGE = ("unknown", "ok", "too_cold", "too_hot")
 CONTACT = ("button", "pad")
 LINK_ACTION = ("up", "down", "claim_taken", "claim_released", "received", "sent", "dropped")
@@ -289,6 +291,7 @@ FLIGHT_EVENTS = {
         ("battery_valid", flag(0)), ("charging", flag(1)), ("external_power", flag(2)))),
     2: ("alarm", 19, TARGET_FIELDS),
     3: ("encounter", 19, TARGET_FIELDS + (("heard_s", uint16(20)),)),
+    4: ("bravo", 3, (("bravo", enum8(2, BRAVO)),)),
 }
 
 

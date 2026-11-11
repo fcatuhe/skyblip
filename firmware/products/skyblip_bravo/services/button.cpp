@@ -19,52 +19,40 @@ void ButtonService::tick(uint32_t now_ms) {
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
         if (event.contact != events::Contact::Button) continue;
-        if (event.down) {
-            pressing_ = true;
-            pressed_ms_ = event.at_ms;
-            // INFO: fc 12nov26 a contact begun before the gesture armed is never spent on it
-            pressed_while_armed_ = confirm_.armed() || pairing_.armed();
-            continue;
-        }
         // INFO: fc 12nov26 a hold past kLongPressHoldMs is the shutdown sequencer's, never a press
-        const bool pressed = pressing_ && event.at_ms - pressed_ms_ < power::kLongPressHoldMs;
-        pressing_ = false;
-        released_ms_ = now_ms;
-        released_once_ = true;
+        const bool pressed = !event.down && answer_.pressing() &&
+                             event.at_ms - answer_.pressed_ms() < power::kLongPressHoldMs;
+        answer_.contact(event, now_ms);
+        pairing_.contact(answer_, now_ms);
         if (pressed) press(now_ms);
     }
-    arm_once_quiet(now_ms);
-    if (!pressing_)
-        pairing_.arm_once_quiet(pairing_readable(), released_once_, released_ms_, now_ms);
-    if (answering()) resolve(confirm_.tick(now_ms));
+    pairing_.arm_once_quiet(answer_, pairing_readable(), now_ms);
+    if (answering()) {
+        answer_.arm_once_quiet(prompt_readable(), now_ms);
+        resolve(answer_.tick(now_ms));
+    }
 }
 
 void ButtonService::sync_prompt(uint32_t now_ms) {
     const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
                                        ? config_.pending()
                                        : comms::Pending::None;
-    if (pending == prompt_) return;
+    const uint32_t staged = config_.prompts_staged();
+    if (pending == prompt_ && staged == prompts_staged_) return;
     prompt_ = pending;
-    prompt_since_ms_ = now_ms;
-    confirm_.disarm();
+    prompts_staged_ = staged;
+    answer_.ask(now_ms);
 }
 
 // INFO: fc 12nov26 as on the Go's glass: the lamp shows the prompt and the thumb is up and still
-void ButtonService::arm_once_quiet(uint32_t now_ms) {
-    if (!answering() || confirm_.armed() || pressing_) return;
-    const bool quiet = settled_for_a_double_press(now_ms, prompt_since_ms_) &&
-                       (!released_once_ || settled_for_a_double_press(now_ms, released_ms_));
-    if (prompt_readable() && quiet) confirm_.arm(now_ms);
+bool ButtonService::prompt_readable() const {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
+    return alarm_.indicator_condition() == indication::Condition::Prompt;
 }
 
 bool ButtonService::pairing_readable() const {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
     return alarm_.indicator_condition() == indication::Condition::Pairing;
-}
-
-bool ButtonService::prompt_readable() const {
-    if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
-    return alarm_.indicator_condition() == indication::Condition::Prompt;
 }
 
 void ButtonService::sync_receiving(uint32_t now_ms) {
@@ -75,8 +63,8 @@ void ButtonService::sync_receiving(uint32_t now_ms) {
 }
 
 void ButtonService::press(uint32_t now_ms) {
-    if (confirm_.armed()) {
-        if (pressed_while_armed_) resolve(confirm_.press(now_ms));
+    if (answer_.armed()) {
+        resolve(answer_.press(now_ms));
         return;
     }
     if (alarm_stands()) {
@@ -84,7 +72,7 @@ void ButtonService::press(uint32_t now_ms) {
         return;
     }
     if (pairing_.armed()) {
-        if (pressed_while_armed_ && peer_.answer(now_ms)) pairing_.spend();
+        if (pairing_.counts(answer_, now_ms) && peer_.answer(now_ms)) pairing_.spend();
         return;
     }
     if (answering()) return;
@@ -99,7 +87,7 @@ void ButtonService::resolve(common::Answer answer) {
     else
         config_.cancel();
     prompt_ = comms::Pending::None;
-    confirm_.disarm();
+    answer_.disarm();
 }
 
 }  // namespace skyblip::bravo

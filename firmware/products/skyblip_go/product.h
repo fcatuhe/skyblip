@@ -56,6 +56,9 @@ class Product {
     explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {}
 
     Status setup() {
+        board_.probe();
+        roles_.capabilities = board_.capabilities();
+        config_link_.set_product_name(product_name(roles_.capabilities));
         const Status board = board_.begin();
         const power::ResetCause causes = platform_.system_power().reset_causes();
         reset_reason_ = power::classify(causes);
@@ -421,12 +424,9 @@ class Product {
     // asks core/power whether the cell will survive a write before it makes one.
     common::PowerService power_{context_, settings_.battery_offset_mv};
     SettingsStore settings_store_{settings_, state_.activation};
-    common::ConfigLinkService config_link_{context_,
-                                           settings_store_,
-                                           power_.cutoff_monitor(),
-                                           product_name(roles_.capabilities),
-                                           identity::bluetooth_name,
-                                           dfu::Product::SkyblipGo};
+    common::ConfigLinkService config_link_{
+        context_,     settings_store_,          power_.cutoff_monitor(),
+        "skyBlip Go", identity::bluetooth_name, dfu::Product::SkyblipGo};
     common::OwnshipService ownship_{context_, settings_.aircraft_type};
     RadioService radio_{context_, settings_};
     common::TrafficService traffic_{context_, kFeatures, settings_.own_icao};

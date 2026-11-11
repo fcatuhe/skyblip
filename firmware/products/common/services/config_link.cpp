@@ -36,6 +36,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible());
     config_.set_hub_image(context_.state.imu.image);
+    config_.set_bravo_state(context_.state.bravo);
 
     config_.resume_replies(now_ms);
     events::RxFrame frame{};
