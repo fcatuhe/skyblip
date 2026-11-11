@@ -33,12 +33,6 @@ namespace {
 
 const std::set<std::string> kWrittenOnlyByTheHost = {"battery_offset_mv", "frequency_trim_e1_ppm"};
 
-const names::Frame* frame_coded(uint64_t code) {
-    for (const names::Frame& frame : names::kFrames)
-        if (frame.code == code) return &frame;
-    return nullptr;
-}
-
 class Witness {
    public:
     void hold(const platform::host::Link& link) {
@@ -75,11 +69,9 @@ class Witness {
         CHECK(frame->sender != names::Sender::Host);
         CHECK(frame->endpoint == endpoint);
         commands_.insert(frame->code);
-        std::set<uint32_t> present;
         for (int i = 0; i < reader.count(); i++) {
             cbor::Entry entry;
             REQUIRE(reader.entry(i, entry));
-            present.insert(entry.key);
             const names::Key* key = key_numbered(*frame, entry.key);
             CHECK_MESSAGE(key != nullptr, entry.key, " is not a key of ",
                           std::string(frame->command));
@@ -87,10 +79,7 @@ class Witness {
             CHECK_MESSAGE(carries_its_type(*key, entry), std::string(key->name));
             keys_.insert(key);
         }
-        for (int i = 0; i < frame->count; i++) {
-            const names::Key& key = frame->keys[i];
-            if (key.required) CHECK_MESSAGE(present.count(key.number) == 1, std::string(key.name));
-        }
+        CHECK(missing_required_keys(*frame, reader) == "");
     }
 
     std::set<uint32_t> commands_;
