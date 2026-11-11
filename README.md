@@ -56,7 +56,7 @@ CI builds it too, and which key signs it decides which units it can update over 
 
 - a pull request: a key made for the run, so the build is proven and the image updates nothing;
 - `main`, or a branch run by hand: the development key, published by [`firmware.yml`](.github/workflows/firmware.yml) as one pre-release per product on the Releases page, `dev-<build number>` for `main` (the last three kept) and `dev-<build number>-<branch>` for a branch (its newest kept until its pull request closes). Every product but the Go puts its name in front, as in `bravo-dev-<build number>`, and keeps its own three;
-- a product's tag on `main`, `v*` for the Go and `bravo-v*` for Bravo: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal that product's `VERSION`. Bravo's tags release only once the `firmware_production` environment admits them ([`server/DEPLOYMENT.md`](server/DEPLOYMENT.md), #204).
+- a product's tag on `main`, `v*` for the Go and `bravo-v*` for Bravo: the production key, after an approval, into a draft release ([`release.yml`](.github/workflows/release.yml)). The tag must equal that product's `VERSION`.
 
 Each release holds one product's images, named `skyblip-<product>-<version or dev tag>`, with the simulator, the license texts and a `SHA256SUMS` over all of them. A product with no sensor hub has no `.full.signed.bin`.
 
