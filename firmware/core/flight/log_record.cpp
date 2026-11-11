@@ -22,6 +22,9 @@ constexpr uint8_t kStatusFlagCharging = 1u << 1;
 constexpr uint8_t kStatusFlagExternalPower = 1u << 2;
 constexpr uint8_t kTargetFlagDismissed = 1u << 0;
 constexpr uint8_t kTargetFlagInFormation = 1u << 1;
+// INFO: fc 11nov26 targets before bit 2 wrote 0 for an unknown altitude, so bit 2 vouches for bit 3
+constexpr uint8_t kTargetFlagAltitudeRecorded = 1u << 2;
+constexpr uint8_t kTargetFlagRelativeAltitudeValid = 1u << 3;
 
 void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
     const uint32_t elapsed = utc_s > base_utc_s ? utc_s - base_utc_s : 0;
@@ -95,6 +98,8 @@ void encode_target(const LogTarget& target, uint8_t* out) {
     uint8_t flags = 0;
     if (target.dismissed) flags |= kTargetFlagDismissed;
     if (target.in_formation) flags |= kTargetFlagInFormation;
+    flags |= kTargetFlagAltitudeRecorded;
+    if (target.relative_altitude_valid) flags |= kTargetFlagRelativeAltitudeValid;
     out[19] = flags;
     put_uint16(out + 20, target.heard_s);
 }
@@ -113,6 +118,7 @@ void decode_target(const uint8_t* raw, LogTarget& out) {
     out.rssi_dbm = static_cast<int8_t>(raw[18]);
     out.dismissed = (raw[19] & kTargetFlagDismissed) != 0;
     out.in_formation = (raw[19] & kTargetFlagInFormation) != 0;
+    out.relative_altitude_valid = (raw[19] & kTargetFlagRelativeAltitudeValid) != 0;
     out.heard_s = get_uint16(raw + 20);
 }
 

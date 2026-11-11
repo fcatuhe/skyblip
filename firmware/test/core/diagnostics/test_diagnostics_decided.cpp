@@ -188,6 +188,7 @@ TEST_CASE("diagnostics record: a target keeps the geometry the alarm level was d
     in.dismissed = true;
     in.in_formation = true;
     in.position_valid = true;
+    in.relative_altitude_valid = true;
 
     const diagnostics::Traffic out = diagnostics_round_trip(in);
     CHECK(out.address == in.address);
@@ -203,6 +204,38 @@ TEST_CASE("diagnostics record: a target keeps the geometry the alarm level was d
     CHECK(out.dismissed);
     CHECK(out.in_formation);
     CHECK(out.position_valid);
+    CHECK(out.relative_altitude_valid);
+}
+
+namespace {
+
+// The same 24 bytes scripts/test_blip_altitude.py decodes as a target whose altitude is unknown.
+constexpr uint8_t kTrafficOfUnknownAltitude[diagnostics::kRecordBytes] = {
+    0x0d, 0x66, 0x00, 0x00, 0x40, 0xf9, 0xa1, 0x6a, 0x5e, 0x4d, 0x3c, 0x00,
+    0xc8, 0x05, 0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x04, 0xb9, 0x03};
+
+}  // namespace
+
+TEST_CASE("diagnostics record: a target with no altitude is written unknown, not level with us") {
+    diagnostics::Traffic in{};
+    in.address = 0x3C4D5E;
+    in.distance_m = 1480;
+    in.bearing_deg = 12;
+    in.alarm = traffic::Level::Advisory;
+    in.source = model::Source::Adsb;
+    in.rssi_dbm = -71;
+    in.tracked = 3;
+    in.assessed = true;
+    in.position_valid = true;
+    diagnostics::Instant at{};
+    at.at_s = kDiagnosticsTestUtcS;
+    at.utc_dated = true;
+
+    uint8_t raw[diagnostics::kRecordBytes]{};
+    diagnostics::encode_record(diagnostics::record_of(in, at), raw);
+    CHECK(std::memcmp(raw, kTrafficOfUnknownAltitude, diagnostics::kRecordBytes) == 0);
+    CHECK((raw[1] & diagnostics::kTrafficFlagAltitudeRecorded) != 0);
+    CHECK_FALSE(diagnostics_round_trip(in).relative_altitude_valid);
 }
 
 TEST_CASE("diagnostics record: a durable write keeps where in the second it was placed") {

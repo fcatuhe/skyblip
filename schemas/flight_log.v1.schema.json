@@ -194,7 +194,11 @@
     },
     "relative_altitude_m": {
       "type": "integer",
-      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9."
+      "description": "alarm, encounter. Its altitude above own-ship, metres, bytes 8-9. Absent when relative_altitude_valid is false: the target's altitude was unknown, and the 0 in the record is not level with us."
+    },
+    "relative_altitude_valid": {
+      "type": "boolean",
+      "description": "alarm, encounter. Bit 3 of byte 19, read only when bit 2 says the firmware wrote it: false is a target whose altitude is unknown, graded on its distance alone. Absent on a flight older than the flag, whose bit 2 is clear: such a record wrote 0 for an unknown altitude and nothing tells it from a target level with us."
     },
     "relative_bearing_deg": {
       "type": "integer",

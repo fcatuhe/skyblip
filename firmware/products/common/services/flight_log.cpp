@@ -68,6 +68,7 @@ void FlightLogService::watch(uint32_t now_ms) {
                              ? 0
                              : static_cast<uint32_t>(assessment.relative_distance_m));
         log_target.relative_altitude_m = clamp_int16(assessment.relative_altitude_m);
+        log_target.relative_altitude_valid = assessment.relative_altitude_valid;
         log_target.relative_bearing_deg = assessment.relative_bearing_deg;
         log_target.closing_mps = clamp_int16(assessment.closing_mps);
         log_target.alarm = traffic::to_number(target->alarm_level);

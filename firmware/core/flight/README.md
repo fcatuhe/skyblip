@@ -199,6 +199,8 @@ Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its
 | 21 | flags and the G.1.2 flight state | | |
 | 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
 
+A target's flags are bit 0 dismissed, bit 1 in formation, bit 2 altitude recorded and bit 3 relative altitude valid. Since #161 a target can have no altitude, and its record still writes 0 m for it, so bit 3 says whether those bytes are a separation. Bit 2 is set on every target this firmware writes and clear on every one written before the flag, so a reader of an older flight knows its 0 m may be unknown rather than level with us.
+
 The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
 
 ## log_events

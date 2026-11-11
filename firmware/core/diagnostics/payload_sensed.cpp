@@ -1,6 +1,16 @@
 #include "core/diagnostics/payload.h"
+#include "core/flight/extrapolate.h"
 
 namespace skyblip::diagnostics {
+
+namespace {
+
+constexpr uint32_t kAdsbAddressMask = 0xFFFFFF;
+constexpr uint8_t kAdsbVersionMask = 0x07;
+constexpr uint8_t kAdsbGvaShift = 3;
+constexpr uint8_t kAdsbGvaMask = 0x03;
+
+}  // namespace
 
 Record record_of(const Gnss& value, const Instant& at) {
     Record record = framed(Type::Gnss, at);
@@ -290,6 +300,74 @@ bool read(const Record& record, Switch& out) {
     out.change = static_cast<SwitchKind>(record.payload[12]);
     out.armed_ahead = record.flagged(kSwitchFlagArmedAhead);
     out.late = record.flagged(kSwitchFlagLate);
+    return true;
+}
+
+Adsb adsb_of(const model::Ownship& own, const model::AircraftObservation& target, uint32_t now_ms) {
+    Adsb value{};
+    value.address = target.address;
+    value.adsb_version = target.adsb_version;
+    value.adsb_version_valid = target.adsb_version_valid;
+    value.gva = target.gva;
+    value.gva_valid = target.gva_valid;
+    value.pressure_altitude_valid = target.pressure_altitude_valid;
+    if (target.pressure_altitude_valid) value.pressure_altitude_ft = target.pressure_altitude_ft;
+    value.height_difference_valid = target.height_difference_valid;
+    if (target.height_difference_valid) {
+        value.height_difference_ft = target.height_difference_ft;
+        const int32_t since_position_ms = static_cast<int32_t>(now_ms - target.at_ms);
+        value.height_difference_age_ms =
+            clamp_int32(static_cast<int64_t>(target.height_difference_age_ms) + since_position_ms);
+    }
+    value.gnss_relative_altitude_valid =
+        flight::gnss_relative_altitude_m(own, target, value.gnss_relative_altitude_m);
+    value.pressure_relative_altitude_valid =
+        flight::pressure_relative_altitude_m(own, target, value.pressure_relative_altitude_m);
+    return value;
+}
+
+Record record_of(const Adsb& value, const Instant& at) {
+    Record record = framed(Type::Adsb, at);
+    const uint32_t address = value.address & kAdsbAddressMask;
+    record.payload[0] = static_cast<uint8_t>(address);
+    record.payload[1] = static_cast<uint8_t>(address >> 8);
+    record.payload[2] = static_cast<uint8_t>(address >> 16);
+    record.payload[3] = static_cast<uint8_t>((value.adsb_version & kAdsbVersionMask) |
+                                             ((value.gva & kAdsbGvaMask) << kAdsbGvaShift));
+    put_int32(record.payload + 4, value.pressure_altitude_ft);
+    put_int16(record.payload + 8, clamp_int16(value.height_difference_ft));
+    put_int16(record.payload + 10, clamp_int16(value.height_difference_age_ms));
+    put_int16(record.payload + 12, clamp_int16(value.gnss_relative_altitude_m));
+    put_int16(record.payload + 14, clamp_int16(value.pressure_relative_altitude_m));
+    set_flag(record.flags, kAdsbFlagVersionValid, value.adsb_version_valid);
+    set_flag(record.flags, kAdsbFlagGvaValid, value.gva_valid);
+    set_flag(record.flags, kAdsbFlagPressureAltitudeValid, value.pressure_altitude_valid);
+    set_flag(record.flags, kAdsbFlagHeightDifferenceValid, value.height_difference_valid);
+    set_flag(record.flags, kAdsbFlagGnssRelativeAltitudeValid, value.gnss_relative_altitude_valid);
+    set_flag(record.flags, kAdsbFlagPressureRelativeAltitudeValid,
+             value.pressure_relative_altitude_valid);
+    return record;
+}
+
+bool read(const Record& record, Adsb& out) {
+    if (record.type != Type::Adsb) return false;
+    out = Adsb{};
+    out.address = static_cast<uint32_t>(record.payload[0]) |
+                  (static_cast<uint32_t>(record.payload[1]) << 8) |
+                  (static_cast<uint32_t>(record.payload[2]) << 16);
+    out.adsb_version = record.payload[3] & kAdsbVersionMask;
+    out.gva = (record.payload[3] >> kAdsbGvaShift) & kAdsbGvaMask;
+    out.pressure_altitude_ft = get_int32(record.payload + 4);
+    out.height_difference_ft = get_int16(record.payload + 8);
+    out.height_difference_age_ms = get_int16(record.payload + 10);
+    out.gnss_relative_altitude_m = get_int16(record.payload + 12);
+    out.pressure_relative_altitude_m = get_int16(record.payload + 14);
+    out.adsb_version_valid = record.flagged(kAdsbFlagVersionValid);
+    out.gva_valid = record.flagged(kAdsbFlagGvaValid);
+    out.pressure_altitude_valid = record.flagged(kAdsbFlagPressureAltitudeValid);
+    out.height_difference_valid = record.flagged(kAdsbFlagHeightDifferenceValid);
+    out.gnss_relative_altitude_valid = record.flagged(kAdsbFlagGnssRelativeAltitudeValid);
+    out.pressure_relative_altitude_valid = record.flagged(kAdsbFlagPressureRelativeAltitudeValid);
     return true;
 }
 

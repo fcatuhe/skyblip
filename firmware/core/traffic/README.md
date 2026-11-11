@@ -32,7 +32,7 @@ A target that reports no velocity is still charged at `kUnknownTargetSpeedMps` i
 
 ADS-L lets a position mark its altitude invalid (G.1.7), and an ADS-B target may send no altitude at all. Unknown is a state, not 0 m. `flight::relative_north_east_up` says whether the height it returns is real, through `up_valid`, and every reader decides what unknown means for it. None of them may read the target as level with us:
 
-- `alarm` grades it on distance alone: inside `kAdvisoryDistanceM` it is an advisory, because it may be at our level. `AlarmAssessment::relative_altitude_valid` is false, so neither the radar, `nearby` nor the tablet prints a separation it does not have. The records do not carry the flag yet: the flight log (`products/common/services/flight_log.cpp`) and the diagnostics `Traffic` record (`products/common/services/alarm.cpp`) write 0 for an unknown altitude, and `scripts/blip_records.py` decodes that 0 as a separation. #203 adds the flag.
+- `alarm` grades it on distance alone: inside `kAdvisoryDistanceM` it is an advisory, because it may be at our level. `AlarmAssessment::relative_altitude_valid` is false, so neither the radar, `nearby` nor the tablet prints a separation it does not have. The records carry the flag: the flight log's alarm and encounter (`products/common/services/flight_log.cpp`, `../flight/README.md`) and the diagnostics `Traffic` record (`products/common/services/alarm.cpp`, `../diagnostics/README.md`), and `scripts/blip_records.py` leaves the altitude out of a target whose flag says unknown. A record written before the flag carries 0 for an unknown altitude, and nothing in it tells that 0 from a target level with us.
 - `formation` never makes it a member, and a member that stops sending its altitude leaves on that report. Holding station is a claim about three axes, and a target with no height cannot be seen to hold one.
 - `range` gives it a ground distance and `RangeRow::up_valid` false, which `nearby` prints as `--`.
 - `sanity` checks its ground distance, since there is no slant to take.
@@ -87,6 +87,8 @@ ADS-B reaches the table as `Source::Adsb`: from the LR2021 on a Bravo alone, and
 1. its height above the ellipsoid, `altitude_m`, against own-ship's `altitude_hae_mm`;
 2. else its pressure altitude, `pressure_altitude_ft`, against own-ship's `pressure_altitude_mm`;
 3. else none: `up_valid` is false, as above.
+
+The first two steps are `flight::gnss_relative_altitude_m` and `flight::pressure_relative_altitude_m`, which the capture's ADS-B record also calls, apart, so a corpus holds both answers for a target that sends both (#183).
 
 A height is only compared with its own kind. A pressure altitude is measured on 1013.25 hPa, and it differs from a GNSS height by the geoid and by the day's weather. ADS-L, FLARM and the uplink send no pressure altitude, so they take the first branch or none, as before.
 

@@ -32,6 +32,7 @@ flight::LogTarget glider(uint32_t address, uint16_t distance_m, uint8_t alarm) {
     target.aircraft_category = 2;
     target.distance_m = distance_m;
     target.relative_altitude_m = -42;
+    target.relative_altitude_valid = true;
     target.relative_bearing_deg = 315;
     target.closing_mps = 12;
     target.alarm = alarm;
@@ -106,6 +107,7 @@ TEST_CASE("log event: a status and an encounter come back from twenty-four bytes
     CHECK(back.target.aircraft_category == 2);
     CHECK(back.target.distance_m == 180);
     CHECK(back.target.relative_altitude_m == -42);
+    CHECK(back.target.relative_altitude_valid);
     CHECK(back.target.relative_bearing_deg == 315);
     CHECK(back.target.closing_mps == 12);
     CHECK(back.target.alarm == 1);
@@ -166,7 +168,29 @@ TEST_CASE("log event: the bytes the host decoder is pinned to") {
     pass.target = glider(0xDD1234, 180, 1);
     pass.target.heard_s = 95;
     flight::encode_log_event(pass, kBaseUtcS, raw);
-    CHECK(hex(raw) == "2c013412dd06b400d6ff3b010c0001028300a8005f002eb1");
+    CHECK(hex(raw) == "2c013412dd06b400d6ff3b010c0001028300a80c5f004fc4");
+
+    pass.target.relative_altitude_m = 0;
+    pass.target.relative_altitude_valid = false;
+    flight::encode_log_event(pass, kBaseUtcS, raw);
+    CHECK(hex(raw) == "2c013412dd06b40000003b010c0001028300a8045f0041c9");
+}
+
+// Since #161 a target can have no altitude, and 0 m in its record would read as level with us.
+TEST_CASE("log event: a target with no altitude comes back unknown, not level with us") {
+    flight::LogEvent alarm{};
+    alarm.kind = flight::LogKind::Alarm;
+    alarm.utc_s = kBaseUtcS + 5;
+    alarm.target = glider(0x3F0001, 900, 1);
+    alarm.target.relative_altitude_m = 0;
+    alarm.target.relative_altitude_valid = false;
+    uint8_t raw[flight::kLogRecordBytes];
+    flight::encode_log_event(alarm, kBaseUtcS, raw);
+
+    flight::LogEvent back{};
+    REQUIRE(flight::decode_log_event(raw, kBaseUtcS, back) == Status::Ok);
+    CHECK_FALSE(back.target.relative_altitude_valid);
+    CHECK(raw[19] == 0x04);
 }
 
 TEST_CASE("log events: a status opens the flight, then one a minute, and one when the cell drops") {

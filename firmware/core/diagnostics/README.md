@@ -70,7 +70,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Motion` 10 | ball position, the three g-meter axes now, the normal axis at both extremes, hub error bytes | what the airframe pulled, and whether the filter lengths suit it. Absent on a unit with no hub, which the fitted flag says |
 | `Contact` 11 | contact, edge instant, how long the level had held, the gesture the product decided | `Controls::kLongTouchHoldMs` and `kLongPressHoldMs` against the presses a hand actually makes |
 | `Link` 12 | link session, the payload of that session, action (up, down, claim taken or released, received, sent, dropped), endpoint, frame bytes, drops; on `down`, which side started the MTU exchange | what a phone negotiates in the field, whether frames need splitting (`../comms/README.md`, Measuring what links settle on), and where an offload stalls |
-| `Traffic` 13 | address, distance, bearing, relative altitude, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistanceM` and `kAdvisoryAltitudeM` against the encounters that happened, and what the ageing rules threw away |
+| `Traffic` 13 | address, distance, bearing, relative altitude and whether it is known, closing speed, alarm level, source, RSSI, targets tracked | `kAdvisoryDistanceM` and `kAdvisoryAltitudeM` against the encounters that happened, and what the ageing rules threw away |
 | `Write` 14 | placement, kind, how long the change waited, the phase it was placed at, requests, writes, forced | whether `kSettleMs` and `kDeferCeilingMs` place a durable write inside its window, and how often one is forced |
 | `Screen` 15 | page, mode, prompt, alarm level, how long it had been up, backlight, powered, thermal hold, how long the last render and the last present took | `ScreenService::kPresentFloorMs` and the refresh cadence against what a pilot was shown, and what a page costs the loop |
 | `Gap` 16 | records dropped, the span they cover, the total since arming, the ring capacity | nothing. It is the hole itself, written where the hole is |
@@ -78,12 +78,46 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Duty` 18 | panel partial and full refreshes, backlight ms, receiver armed ms, transmit keyed ms, BLE connected ms, annunciator ms | what each consumer cost over a flight, on a board that cannot measure current: time in state is the only half of a power budget this device holds |
 | `Switch` 19 | the change (hop, M to O, O to M, retune, wake), the frequency tuned to, how long the retune took, the gap from the previous dwell's end, the margin to the dwell's start, armed ahead, late | whether `kHopGuardMs` and `kJitterGuardMs` can shrink, from every change rather than the worst since boot, and when a slow one happened |
 | `Loop` 20 | over the second before it: service passes, milliseconds spent in them, the longest pass and its phase, the longest start-to-start gap and its phase, the slowest service and its longest tick | whether the loop is late because one pass is long or because nothing ran it, and which service holds it |
+| `Adsb` 21 | ICAO address, ADS-B version, GVA, pressure altitude, the GNSS-baro difference and its age, the relative altitude on GNSS height and on pressure altitude, each with its own validity | the ADS-B altitude questions of #183: which datum each installation's difference is on, how far the two relative altitudes disagree, and which versions and GVA values are heard |
 
 ### The burst that carried a name, and why the name is not in it
 
 Own-ship puts a callsign on the air once every ten seconds, in slot 1's tail, and a position every second in the air or every ten on the ground (`../timing/README.md`). On the air those are two different payloads. In a capture they were the same record, so a corpus could not tell the ident from the positions it sits between, nor say what the ident cost in air time. `kBurstFlagCallsign` is bit 6 of the burst record's flag byte, straight off `radio::Entry::callsign`, and it says this burst carried a name.
 
 The name itself is not recorded. Nine characters do not fit a payload whose sixteen bytes are spoken for, and they would say nothing a reader does not have: own-ship's address is on the same record, and what that address is called is `Config`'s business on this device and `core/traffic/callsigns.h`'s for everybody else. A name heard rather than sent needs no flag either, because the verdict already is one: `Named` is what `TrafficService::decode_adsl` returns for a registration frame, and it sits beside the address the name was filed under.
+
+### A target whose altitude is unknown
+
+Since #161 a target can have no relative altitude: it sent none, or it sent a pressure altitude and own-ship has none. The alarm grades it on distance alone, and `Traffic` writes 0 in `relative_altitude_m` for it, as it always did. Flag bit 7, `kTrafficFlagRelativeAltitudeValid`, says whether those two bytes are a separation. Records written before the flag left bit 7 clear on every target, known or not, so bit 6, `kTrafficFlagAltitudeRecorded`, is set on every `Traffic` this firmware writes and vouches for bit 7, the way `Boot`'s bit 2 vouches for its profile. A reader takes bit 7 only when bit 6 is set. An older record keeps its altitude and says nothing about it: its 0 may be unknown. The flight log's targets carry the same pair (`../flight/README.md`).
+
+### The ADS-B record
+
+`Adsb` is one ADS-B aircraft as an analysis of #183 needs it, and nothing the `Traffic` record already holds. Its sixteen bytes are spoken for:
+
+| Payload bytes | Field |
+|---|---|
+| 0-2 | ICAO address |
+| 3 | version in bits 0-2, GVA in bits 3-4, the widths DF17's type code 31 gives them |
+| 4-7 | pressure altitude, feet, as the target sent it |
+| 8-9 | GNSS-baro difference, feet |
+| 10-11 | the difference's age, milliseconds before the record's instant, saturated |
+| 12-13 | relative altitude on GNSS height against own HAE, metres, saturated |
+| 14-15 | relative altitude on pressure altitude against own pressure altitude, metres, saturated |
+
+Flag bits 2 to 7 say which of the version, the GVA, the pressure altitude, the difference and the two relative altitudes are valid, so an unknown version is never read as version 0, which sends no type code 31 at all (`../model/README.md`). The host decoder leaves out every value its flag calls invalid.
+
+The two relative altitudes are `flight::gnss_relative_altitude_m` and `flight::pressure_relative_altitude_m`, the two halves of the rule the alarm applies in turn (`../traffic/README.md`). The alarm keeps the first that answers, and this record keeps both, because #183 asks how far they disagree. Neither side is carried to a common instant, so the record holds the heights as they were reported. The difference is on the observation for this record alone (`../model/README.md`).
+
+The record has no position: sixteen bytes do not hold one beside the altitudes. A target the traffic table admits also writes a `Traffic` record at its receptions, under the same address, with its distance and bearing. Nor does it hold the age of the pressure altitude or of the GNSS height. The record is taken as an observation is folded, so both are as old as the target's last messages that carried them.
+
+It is written before the traffic table, not after it. The table holds ADS-B targets within 30 km and 500 m of us (`../traffic/README.md`, The gate), and #183 asks about every aircraft heard, those far above us included. A paired Go's observations carry no difference, because the `peer` frame does not (#177), so its `Adsb` records leave the difference invalid.
+
+A Bravo folds every message each aircraft sends, so `AdsbCapture` admits a record under two rules, and only a record the recorder took counts against either:
+
+- **Each aircraft at most once each `kRecordPeriodMs`,** 10 s, the span a GNSS-baro difference is trusted (`kHeightDifferenceMaxAgeMs`). An aircraft heard again sooner is paced: nothing is written and nothing is counted, because there is nothing new to say about its difference.
+- **At most `kBudgetCeilingRecords` in any `kBudgetWindowMs`:** ten records in any sliding second, which is `AdsbAssembly::kMaxAircraft`, 100, spread evenly over the period. An aircraft due when the second's ten are spent is refused, counted in `refused()`, and admitted on a later fold. So a capture armed under a full sky writes ten aircraft in its first second rather than a hundred at once into a 64-slot ring, and the period after it stays spread the same way. The limit of the assembly does not bound the sky: aircraft that come and go faster than it forgets them are held to the same ten a second.
+
+The two rules bound the table that remembers each aircraft's last record. Ten in any second is at most a hundred in any period, the table's size, so whenever the budget admits a record an entry is free or has expired. A held entry is never recycled, which would let its aircraft be recorded again inside its period, and a `static_assert` holds the three constants to that arithmetic. Were no entry free anyway, the record would be refused and counted like one over budget.
 
 ### The transmitter, and a link two captures measure
 
@@ -148,6 +182,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
+| `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, at most once per aircraft each `AdsbCapture::kRecordPeriodMs` and ten in any second. No product calls it yet: Bravo will after each `protocol::AdsbAssembly::fold` (#176), and a paired Go after each `observation` frame it folds (#193) |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |
@@ -181,9 +216,9 @@ uint32_t dropped() const;
 
 ### The three profiles
 
-A profile is what a capture is for, chosen when it is armed and held in RAM beside the armed flag, so a boot comes up with neither. `Full` lists every type: it is the corpus the tuning work replays, and at eleven records a second it fills the ring in about an hour. `PowerRun` lists `Boot`, `Config`, `Power`, `Duty`, `Gap` and `End`, and nothing else. `FlightRun` lists the same six at the same cadence (`paced()`), and is the one profile that changes what the device does as well as what it records (`simulates_flight()`).
+A profile is what a capture is for, chosen when it is armed and held in RAM beside the armed flag, so a boot comes up with neither. `Full` lists every type: it is the corpus the tuning work replays. A capture may take 170 sectors of the Go's 298, because the flights floor keeps 128 (`../store/README.md`), and 170 sectors of 170 slots is 28,900 records. At `Recorder::kPeriodicRecordsPerSecond`, fifteen a second, a full capture fills them in about 32 minutes. A unit that records ADS-B adds up to ten a second under a full sky (`AdsbCapture::kBudgetCeilingRecords`, The ADS-B record above), and at twenty-five a second the same slots hold about 19 minutes. `PowerRun` lists `Boot`, `Config`, `Power`, `Duty`, `Gap` and `End`, and nothing else. `FlightRun` lists the same six at the same cadence (`paced()`), and is the one profile that changes what the device does as well as what it records (`simulates_flight()`).
 
-PowerRun exists because a discharge run to cutoff on the 2400 mAh pack is 35 to 50 hours and a full capture keeps 68 minutes. Two records every 30 s is 240 an hour, so the 45,220 slots of the diagnostics ring hold 188 hours: a run to cutoff fits whole, with its start intact, which is the part of the curve a power budget is built from. The cadence is one constant with that arithmetic behind it rather than a divider a bench can turn, because a number is defensible where a knob is not, and `Power` and `Duty` go out on the same pass so a reader divides one pair of records by another without interpolating between two clocks.
+PowerRun exists because a discharge run to cutoff on the 2400 mAh pack is 35 to 50 hours and a full capture keeps 32 minutes. Two records every 30 s is 240 an hour, so the 28,900 slots hold about 120 hours: a run to cutoff fits whole, with its start intact, which is the part of the curve a power budget is built from. The cadence is one constant with that arithmetic behind it rather than a divider a bench can turn, because a number is defensible where a knob is not, and `Power` and `Duty` go out on the same pass so a reader divides one pair of records by another without interpolating between two clocks.
 
 FlightRun exists because a power run measures a parked unit, and the question a pilot asks is how long one lasts in the air. While a flight run is armed the product runs the glass as in flight and nothing else: the radar's flight clock and `FLIGHT` word, and the g-meter's extremes cleared at the simulated takeoff (`../../products/skyblip_go/README.md`). The rest of what flight changes reads own-ship's flight state, which is what goes on air, so it stays the unit's real one. A parked unit keeps transmitting at the ground cadence and says it is on ground, because ADS-L G.1.16 holds an on-ground report to 0.1 Hz and an airborne flag on a parked unit would put a false aircraft in front of every receiver in range. The flight log follows the real state too, so a parked unit writes no flight: a simulated one among a pilot's flights could not be told apart from a real one, and a run to cutoff would evict the real ones from the ring. What that leaves out of the draw is a 24-byte program every second and a sector erase every three minutes. Offload and updates stay open, because the gates that refuse them in flight read the same real state. `scripts/power_budget.py` prints the transmit the run could not send beside its model, read off the profile `Boot` names.
 
@@ -199,7 +234,7 @@ A full ring refuses the new record and keeps the history. A corpus is read forwa
 
 The ring has to cover the worst window a writer can be blocked for, at the rate a busy second produces records.
 
-The blocking window is about a second: the store erases a 4 KB sector when the frontier moves to it, and a writer stands off the direct slot (450 to 1000 ms, §C.5) rather than putting flash work where own-ship keys the PA. The rate, in the worst second: the eleven the next paragraph counts off, plus the air, which is what makes the second busy - a site where the radio tape (16 rows) turns over in a few seconds is a handful of `Burst` records and their `Traffic` updates. Thirty a second is a generous reading of that, and 64 slots is two of those windows, 1536 bytes of RAM.
+The blocking window is about a second: the store erases a 4 KB sector when the frontier moves to it, and a writer stands off the direct slot (450 to 1000 ms, §C.5) rather than putting flash work where own-ship keys the PA. The rate, in the worst second: the fifteen the next paragraph counts off, plus the air, which is what makes the second busy - a site where the radio tape (16 rows) turns over in a few seconds is a handful of `Burst` records and their `Traffic` updates. Thirty a second is a generous reading of that, and 64 slots is two of those windows, 1536 bytes of RAM. A unit that records ADS-B adds at most ten records in any second, whatever the sky does and including the second it was armed in, because `AdsbCapture` spreads a full sky's records over the period rather than writing each aircraft on its first fold. Fifteen and ten leave five of the thirty for the air.
 
 It is a bound, not a promise: a sky that produces more is a sky whose gaps are recorded as gaps.
 

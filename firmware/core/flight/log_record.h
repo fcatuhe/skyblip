@@ -109,6 +109,7 @@ struct LogTarget {
     uint16_t heard_s{0};
     bool dismissed{false};
     bool in_formation{false};
+    bool relative_altitude_valid{false};
 };
 
 struct LogEvent {

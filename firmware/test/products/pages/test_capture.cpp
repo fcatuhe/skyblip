@@ -9,7 +9,7 @@ using skyblip::diagnostics::Profile;
 
 namespace {
 
-// 266 sectors of 170 slots is 45,220: 4110 s at Full's 39,600 an hour, 678,300 s at a run's 240.
+// A made-up pool, not the Go's: 266 sectors of 170 slots, 4110 s at 39,600 an hour, 678,300 at 240.
 constexpr uint32_t kFullKeepsS = 4110;
 constexpr uint32_t kPowerRunKeepsS = 678300;
 

@@ -12,6 +12,7 @@
 #include "core/gnss/validity.h"
 #include "core/model/aircraft.h"
 #include "core/model/band.h"
+#include "core/model/ownship.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
@@ -245,6 +246,9 @@ constexpr uint8_t kTrafficFlagAssessed = 1u << 2;
 constexpr uint8_t kTrafficFlagDismissed = 1u << 3;
 constexpr uint8_t kTrafficFlagInFormation = 1u << 4;
 constexpr uint8_t kTrafficFlagPositionValid = 1u << 5;
+// INFO: fc 11nov26 records before bit 6 wrote 0 for an unknown altitude, so bit 6 vouches for bit 7
+constexpr uint8_t kTrafficFlagAltitudeRecorded = 1u << 6;
+constexpr uint8_t kTrafficFlagRelativeAltitudeValid = 1u << 7;
 
 struct Traffic {
     uint32_t address{0};
@@ -260,6 +264,7 @@ struct Traffic {
     bool dismissed{false};
     bool in_formation{false};
     bool position_valid{false};
+    bool relative_altitude_valid{false};
 };
 
 constexpr uint8_t kWriteFlagPending = 1u << 2;
@@ -347,6 +352,32 @@ struct Loop {
     uint8_t worst_tick_ms{0};
 };
 
+constexpr uint8_t kAdsbFlagVersionValid = 1u << 2;
+constexpr uint8_t kAdsbFlagGvaValid = 1u << 3;
+constexpr uint8_t kAdsbFlagPressureAltitudeValid = 1u << 4;
+constexpr uint8_t kAdsbFlagHeightDifferenceValid = 1u << 5;
+constexpr uint8_t kAdsbFlagGnssRelativeAltitudeValid = 1u << 6;
+constexpr uint8_t kAdsbFlagPressureRelativeAltitudeValid = 1u << 7;
+
+struct Adsb {
+    uint32_t address{0};
+    int32_t pressure_altitude_ft{0};
+    int32_t height_difference_ft{0};
+    int32_t height_difference_age_ms{0};
+    int32_t gnss_relative_altitude_m{0};
+    int32_t pressure_relative_altitude_m{0};
+    uint8_t adsb_version{0};
+    uint8_t gva{0};
+    bool adsb_version_valid{false};
+    bool gva_valid{false};
+    bool pressure_altitude_valid{false};
+    bool height_difference_valid{false};
+    bool gnss_relative_altitude_valid{false};
+    bool pressure_relative_altitude_valid{false};
+};
+
+Adsb adsb_of(const model::Ownship& own, const model::AircraftObservation& target, uint32_t now_ms);
+
 Record record_of(const Boot& value, const Instant& at);
 Record record_of(const Config& value, const Instant& at);
 Record record_of(const Gnss& value, const Instant& at);
@@ -367,6 +398,7 @@ Record record_of(const End& value, const Instant& at);
 Record record_of(const Duty& value, const Instant& at);
 Record record_of(const Switch& value, const Instant& at);
 Record record_of(const Loop& value, const Instant& at);
+Record record_of(const Adsb& value, const Instant& at);
 
 bool read(const Record& record, Boot& out);
 bool read(const Record& record, Config& out);
@@ -388,6 +420,7 @@ bool read(const Record& record, End& out);
 bool read(const Record& record, Duty& out);
 bool read(const Record& record, Switch& out);
 bool read(const Record& record, Loop& out);
+bool read(const Record& record, Adsb& out);
 
 }  // namespace skyblip::diagnostics
 

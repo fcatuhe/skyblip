@@ -153,6 +153,8 @@ Record record_of(const Traffic& value, const Instant& at) {
     set_flag(record.flags, kTrafficFlagDismissed, value.dismissed);
     set_flag(record.flags, kTrafficFlagInFormation, value.in_formation);
     set_flag(record.flags, kTrafficFlagPositionValid, value.position_valid);
+    set_flag(record.flags, kTrafficFlagAltitudeRecorded, true);
+    set_flag(record.flags, kTrafficFlagRelativeAltitudeValid, value.relative_altitude_valid);
     return record;
 }
 
@@ -172,6 +174,7 @@ bool read(const Record& record, Traffic& out) {
     out.dismissed = record.flagged(kTrafficFlagDismissed);
     out.in_formation = record.flagged(kTrafficFlagInFormation);
     out.position_valid = record.flagged(kTrafficFlagPositionValid);
+    out.relative_altitude_valid = record.flagged(kTrafficFlagRelativeAltitudeValid);
     return true;
 }
 

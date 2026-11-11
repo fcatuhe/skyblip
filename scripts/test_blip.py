@@ -10,7 +10,8 @@ side of a Bluetooth link, and nothing but a test holds them together.
 
 test_blip_offload.py holds the log endpoint conversation, test_blip_link.py the NMEA
 reassembly, reply framing and resume, test_blip_frames.py the CBOR codec and the
-registry, and all three run with this file.
+registry, test_blip_altitude.py the ADS-B record and the unknown altitude, and all four
+run with this file.
 """
 import json
 import pathlib
@@ -296,7 +297,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
         named = [name for name, _ in
                  (records.DIAGNOSTICS_TYPES[key] for key in sorted(records.DIAGNOSTICS_TYPES))]
         self.assertEqual(named, self.schema["properties"]["type"]["enum"])
-        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 21)))
+        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 22)))
 
     def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
         for field, names in records.enum_fields():
@@ -383,12 +384,13 @@ class GoldenVectors(unittest.TestCase):
 
     def test_an_encounter_encoded_by_the_firmware(self):
         decoded = records.decode_flight_record(
-            bytes.fromhex("2c013412dd06b400d6ff3b010c0001028300a8005f002eb1"), 1_785_628_800)
+            bytes.fromhex("2c013412dd06b400d6ff3b010c0001028300a80c5f004fc4"), 1_785_628_800)
         self.assertEqual(decoded["type"], "encounter")
         self.assertEqual(decoded["utc_s"], 1_785_629_100)
         self.assertEqual(decoded["address"], 0xDD1234)
         self.assertEqual(decoded["distance_m"], 180)
         self.assertEqual(decoded["relative_altitude_m"], -42)
+        self.assertTrue(decoded["relative_altitude_valid"])
         self.assertEqual(decoded["relative_bearing_deg"], 315)
         self.assertEqual(decoded["alarm"], 1)
         self.assertEqual(decoded["rssi_dbm"], -88)
@@ -560,6 +562,7 @@ def load_tests(loader, tests, pattern):
     tests.addTests(loader.loadTestsFromName("test_blip_offload"))
     tests.addTests(loader.loadTestsFromName("test_blip_link"))
     tests.addTests(loader.loadTestsFromName("test_blip_frames"))
+    tests.addTests(loader.loadTestsFromName("test_blip_altitude"))
     return tests
 
 

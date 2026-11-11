@@ -169,18 +169,26 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
         longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
     east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_micrometres, kMicrometresPerMetre));
     up_m = 0;
-    up_valid = true;
-    if (target.altitude_valid) {
-        const int64_t up = static_cast<int64_t>(target.altitude_m) -
-                           to_metres(Millimetres(own.altitude_hae_mm)).value;
-        up_m = static_cast<int32_t>(std::clamp<int64_t>(up, INT32_MIN, INT32_MAX));
-    } else if (target.pressure_altitude_valid && own.pressure_altitude_valid) {
-        const int64_t target_mm = to_millimetres(Feet(target.pressure_altitude_ft)).value;
-        up_m = static_cast<int32_t>(
-            divide_rounded<int64_t>(target_mm - own.pressure_altitude_mm, kMillimetresPerMetre));
-    } else {
-        up_valid = false;
-    }
+    up_valid = gnss_relative_altitude_m(own, target, up_m) ||
+               pressure_relative_altitude_m(own, target, up_m);
+    return true;
+}
+
+bool gnss_relative_altitude_m(const model::Ownship& own, const model::AircraftObservation& target,
+                              int32_t& up_m) {
+    if (!own.fix_valid || !target.altitude_valid) return false;
+    const int64_t up =
+        static_cast<int64_t>(target.altitude_m) - to_metres(Millimetres(own.altitude_hae_mm)).value;
+    up_m = static_cast<int32_t>(std::clamp<int64_t>(up, INT32_MIN, INT32_MAX));
+    return true;
+}
+
+bool pressure_relative_altitude_m(const model::Ownship& own,
+                                  const model::AircraftObservation& target, int32_t& up_m) {
+    if (!own.pressure_altitude_valid || !target.pressure_altitude_valid) return false;
+    const int64_t target_mm = to_millimetres(Feet(target.pressure_altitude_ft)).value;
+    up_m = static_cast<int32_t>(
+        divide_rounded<int64_t>(target_mm - own.pressure_altitude_mm, kMillimetresPerMetre));
     return true;
 }
 

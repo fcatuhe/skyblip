@@ -98,6 +98,7 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
     value.dismissed = decision.dismissed;
     value.in_formation = target.in_formation;
     value.position_valid = target.observation.position_valid;
+    value.relative_altitude_valid = assessment.relative_altitude_valid;
     context_.diagnostics.record(value, context_.instant(now_ms));
 }
 

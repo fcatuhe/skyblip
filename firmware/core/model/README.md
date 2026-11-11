@@ -27,6 +27,7 @@ ADS-L, ALP-TAS and the uplink record send everything about an aircraft in one me
 | vertical rate (`climb_e8`) | `climb_age_ms` | a velocity message of any subtype that carries one |
 | height above the ellipsoid (`altitude_m`) | `altitude_age_ms` | an airborne position with type code 20 to 22, or a derivation, below |
 | pressure altitude (`pressure_altitude_ft`) | `pressure_altitude_age_ms` | an airborne position with type code 9 to 18 |
+| GNSS-baro difference (`height_difference_ft`) | `height_difference_age_ms` | a velocity message that carries one, not saturated |
 | `flight_state` | `flight_state_age_ms` | a surface or airborne position, an airborne velocity, or a DF17 capability of 4 (on the ground) or 5 (airborne) |
 
 Speed and climb are two ages because ADS-B sends them apart. A velocity message of subtype 3 or 4 carries an airspeed and a heading with its vertical rate, and those are not a ground speed and a track, so it refreshes the climb and not the speed. A surface position carries a ground speed and a track and no vertical rate. The message layouts are The 1090 Megahertz Riddle's chapters "Airborne velocity" and "Surface position", and the capability codes its table "Mode S transponder capability (CA)". Capability 6 and 7 say either on the ground or airborne, so they refresh nothing. A velocity message says airborne because RTCA DO-260B (draft 4.2) Table 2-77 broadcasts it only in the air.
@@ -36,6 +37,8 @@ An age is how many milliseconds before `at_ms` the field was true, so the field'
 `climb_source` says what measured `climb_e8`: `Gnss`, `Barometric`, or `Unknown`, which is what a value-initialised observation holds. ADS-B's velocity message carries the source in one bit (The 1090 Megahertz Riddle, "Airborne velocity", `VrSrc`). ADS-L, ALP-TAS and the uplink do not say, so they leave it `Unknown`. It describes `climb_e8` only while `climb_valid` is true, and means nothing otherwise.
 
 `altitude_m` stays the height above the WGS-84 ellipsoid, the datum every other source and own-ship's `altitude_hae_mm` use. An ADS-B target sends a GNSS height directly in an airborne position message with type code 20 to 22, or it is derived from the pressure altitude plus the GNSS-baro difference that the velocity message carries. Whether that GNSS height is on the same datum is settled with flight data (#183), not here. A derived height is only as fresh as the older of its two halves, so its `altitude_age_ms` is that half's age, and `altitude_valid` is false unless both are valid. `pressure_altitude_ft` is the target's altitude on 1013.25 hPa, in the feet ADS-B encodes it in, valid only when `pressure_altitude_valid` says so.
+
+`height_difference_ft` is the GNSS-baro difference itself, GNSS height less pressure altitude in the feet and 25 ft steps the velocity message carries, valid only when `height_difference_valid` says so. A derived `altitude_m` already holds it added to the pressure altitude, and a direct one hides it, so no rule reads it. It is on the observation for the capture's ADS-B record (`../diagnostics/README.md`), which #183 reads to settle which datum each installation's difference is on. It is valid while the assembly holds it, 10 s (`protocol::kHeightDifferenceMaxAgeMs`). The `peer` endpoint's `observation` frame (#177, `schemas/link.v1.json`) does not carry it, so a paired Go's observations never hold one.
 
 The identity and the operational status carry a validity and no age, because no rule reads them by age:
 
@@ -49,4 +52,6 @@ A callsign is not an observation field. It goes to `traffic::CallsignTable` keye
 
 ## What the ADS-B fields cost
 
-The fields above grew `AircraftObservation` from 48 to 76 bytes and `Ownship` from 60 to 72, as `arm-zephyr-eabi-g++ -mcpu=cortex-m4` lays them out for the nRF52840. `traffic::TrafficTable` holds 48 observations, so it grew from 3528 to 4884 bytes, and `bus::State`, which holds the table and own-ship, from 6296 to 7656. A 64-bit host build gives the same figures, except 6304 and 7664 for `bus::State`.
+The fields above grew `AircraftObservation` from 48 to 76 bytes and `Ownship` from 60 to 72, as `arm-zephyr-eabi-g++ -mcpu=cortex-m4` lays them out for the nRF52840. `traffic::TrafficTable` holds 48 observations, and measured 4896 bytes once they were in, and `bus::State`, which holds the table and own-ship, 7672. A 64-bit host build gives the same figures, except 7680 for `bus::State`.
+
+The GNSS-baro difference grew `AircraftObservation` again, from 76 to 84 bytes: `height_difference_ft` fills the two bytes of padding after `track_c9`, and the age, the flag and the padding behind the flag cost the eight. `traffic::TrafficTable` grew from 4896 to 5280 bytes and `bus::State` from 7672 to 8056, measured with the same compiler and flags. A 64-bit host build gives the same figures, except 7680 and 8064 for `bus::State`.

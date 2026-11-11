@@ -12,7 +12,7 @@ constexpr bool paced(Profile profile) { return profile != Profile::Full; }
 
 constexpr bool simulates_flight(Profile profile) { return profile == Profile::FlightRun; }
 
-// INFO: fc 21sep26 45,220 slots at two records a pass is 188 h, against a 50 h run to cutoff
+// INFO: fc 11nov26 28,900 slots at two records a pass is 120 h, against a 50 h run to cutoff
 constexpr uint32_t kPowerRunRecordPeriodMs = 30000;
 static_assert(kPowerRunRecordPeriodMs <= kDutyPeriodCeilingMs,
               "two Duty records this far apart cannot be subtracted");
@@ -42,7 +42,8 @@ constexpr bool lists(Profile profile, Type type) {
         case Type::Write:
         case Type::Screen:
         case Type::Switch:
-        case Type::Loop: return false;
+        case Type::Loop:
+        case Type::Adsb: return false;
     }
     return false;
 }

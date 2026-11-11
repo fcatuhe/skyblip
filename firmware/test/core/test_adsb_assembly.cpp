@@ -88,6 +88,21 @@ TEST_CASE("adsb assembly: a GNSS height derives from a fresh difference and stop
     CHECK_FALSE(bravo.heard.altitude_valid);
 }
 
+TEST_CASE("adsb assembly: the GNSS-baro difference rides on the observation with its own age") {
+    Bravo bravo;
+    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), 0));
+    CHECK(bravo.heard.height_difference_valid);
+    CHECK(bravo.heard.height_difference_ft == -275);
+    CHECK(bravo.heard.height_difference_age_ms == 0);
+
+    bravo.fly(kLatitude, kLongitude, 1500, false, 3000);
+    CHECK(bravo.heard.height_difference_ft == -275);
+    CHECK(bravo.heard.height_difference_age_ms == 1500);
+
+    bravo.fly(kLatitude, kLongitude, kHeightDifferenceMaxAgeMs + 1, true, 3000);
+    CHECK_FALSE(bravo.heard.height_difference_valid);
+}
+
 TEST_CASE("adsb assembly: a GNSS height sent in the position wins over an older derived one") {
     Bravo bravo;
     REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, 150), 0));

@@ -11,6 +11,7 @@ The services more than one product runs, and the vocabulary they read. Why they 
 - `NmeaService` is the single writer of `events::Endpoint::Nmea`: the FLARM sentences a phone's map draws, once a second.
 - `FlightLogService` writes the flights ring: a takeoff opens a session and a landing closes it. It also drains `bus.log_rx` and answers the Log endpoint for both rings.
 - `CaptureService` drains `diagnostics::Recorder` into the diagnostics ring while a capture is armed.
+- `AdsbCapture` is not a service: it writes the capture's `diagnostics::Adsb` record for an ADS-B observation while a capture is armed, at most once per aircraft each `kRecordPeriodMs` and `kBudgetCeilingRecords` in any second. The service that folds ADS-B owns one and calls `record()` on each observation it folds: Bravo's after `protocol::AdsbAssembly::fold` (#176), and the Go's after each `peer` observation (#193). Why there, and before the traffic table, is in `../../core/diagnostics/README.md`, "The ADS-B record".
 - `ConfigLinkService` is the companion link's device side: it answers `config`, `set` and the other config commands through `comms::ConfigService`, loads and persists the product's settings, names the unit on the air and takes a running image off probation.
 
 No file here includes `products/<product>/*`. What a service needs from a product reaches it at construction, like everything else a service needs.
