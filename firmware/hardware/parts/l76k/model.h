@@ -7,11 +7,11 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_H
 
-#include <cmath>
 #include <string>
 
 #include "core/gnss/nmea.h"
 #include "hardware/io/io.h"
+#include "hardware/parts/gnss_truth.h"
 #include "hardware/parts/l76k/l76k.h"
 
 namespace skyblip::models {
@@ -20,17 +20,11 @@ namespace skyblip::models {
 // platform's UART fills on silicon, and here it is the rate the MCU end is set
 // to. Bytes crossing a rate mismatch are framing errors in both directions,
 // which is what "the receiver came up at 38400" actually looks like.
-class L76k : public io::Uart, public io::UartRate {
+class L76k : public io::Uart, public io::UartRate, public GnssTruth {
    public:
     // Modelled receiver state, driven by the caller.
     bool fix_valid{true};
     uint8_t satellites{9};
-    int32_t latitude_1e7{485000000};  // 48.5 N
-    int32_t longitude_1e7{85000000};  //  8.5 E
-    // Height above the WGS-84 ellipsoid. The GGA this emits carries field 9 as
-    // altitude_m - geoid_separation_m, which is what a receiver actually reports.
-    int32_t altitude_m{1000};
-    int32_t geoid_separation_m{47};
     bool emit_geoid_separation{true};
     uint8_t gps_in_view{9};
     uint8_t beidou_in_view{7};
@@ -39,19 +33,6 @@ class L76k : public io::Uart, public io::UartRate {
     uint16_t hdop_e2{90};
     uint16_t vdop_e2{150};
     uint16_t pdop_e2{180};
-    // INFO: fc 19sep26 RMC field 7 is knots to a hundredth, so the part holds mm/s and rounds there
-    int32_t speed_mm_s{23150};
-    int32_t track_deg{90};
-    // INFO: fc 03aug26 Degrees per second, positive to the right. The track this
-    // model emits is the only thing own-ship can differentiate a turn rate out
-    // of, so a thermalling own-ship is expressed here and nowhere else.
-    double turn_dps{0};
-    // INFO: fc 18sep26 millimetres per second, so any rate a pilot can ask for is one the air holds
-    int32_t climb_mm_s{0};
-    uint32_t utc_seconds_of_day{12 * 3600 + 34 * 60 + 56};
-    // RMC field 9, ddmmyy. "010180" is the MTK fake date a receiver with no
-    // almanac reports beside a position that looks perfectly ordinary.
-    const char* date{"010125"};
 
     // INFO: gn 09Jun25 The AT6558 core in the L76K takes $PCAS configuration
     // sentences and never acknowledges them: the only evidence they landed is
@@ -187,12 +168,6 @@ class L76k : public io::Uart, public io::UartRate {
     }
     size_t available() override { return pending_.size(); }
 
-    int32_t altitude_mm() const {
-        return altitude_m * 1000 + static_cast<int32_t>(climbed_m_ * 1000);
-    }
-    // INFO: fc 18sep26 the heading flown, fraction included: NMEA's whole degree is the report
-    double heading_deg() const { return track_deg + turned_deg_; }
-
     void tick(uint32_t now_ms) {
         last_tick_ms_ = now_ms;
         // First tick only anchors the cadence. Anchoring on `last_ms_ == 0`
@@ -222,11 +197,6 @@ class L76k : public io::Uart, public io::UartRate {
    private:
     static constexpr int kCommandBytes = 64;
 
-    uint32_t seconds_of_day_ms_{0};
-    double climbed_m_{0};
-    double turned_deg_{0};
-    double latitude_fraction_1e7_{0};
-    double longitude_fraction_1e7_{0};
     char command_[kCommandBytes]{};
     int command_length_{0};
     // Three windows, each a START instant plus a flag rather than an end instant.
@@ -320,60 +290,6 @@ class L76k : public io::Uart, public io::UartRate {
         sentence_set_applied = true;
     }
 
-    // INFO: fc 18sep26 a receiver solves continuously and reports on its cadence, ADS-L 4 §C.2.5
-    void fly(int32_t elapsed_ms) {
-        const double speed_mps = speed_mm_s / 1000.0;
-        const double elapsed_s = elapsed_ms / 1000.0;
-        const double track_rad = mid_step_track_deg(elapsed_s) * 3.14159265358979 / 180.0;
-        advance_latitude(speed_mps * std::cos(track_rad) * elapsed_s);
-        const double latitude_cosine = std::cos(latitude_1e7 / 1e7 * 3.14159265358979 / 180.0);
-        if (latitude_cosine > 0.01)
-            advance_longitude(speed_mps * std::sin(track_rad) * elapsed_s, latitude_cosine);
-        advance_track(elapsed_s);
-        advance_altitude(elapsed_s);
-        advance_clock(elapsed_ms);
-    }
-
-    double mid_step_track_deg(double elapsed_s) const {
-        return track_deg + turn_dps * elapsed_s * 0.5;
-    }
-
-    // INFO: fc 18sep26 a step moves less than the 1.1 cm 1e-7 deg carries, so the rest is banked
-    void advance_latitude(double north_m) {
-        latitude_fraction_1e7_ += north_m * 1e7 / 111320.0;
-        const int32_t whole = static_cast<int32_t>(latitude_fraction_1e7_);
-        latitude_fraction_1e7_ -= whole;
-        latitude_1e7 += whole;
-    }
-
-    void advance_longitude(double east_m, double latitude_cosine) {
-        longitude_fraction_1e7_ += east_m * 1e7 / (111320.0 * latitude_cosine);
-        const int32_t whole = static_cast<int32_t>(longitude_fraction_1e7_);
-        longitude_fraction_1e7_ -= whole;
-        longitude_1e7 += whole;
-    }
-
-    void advance_track(double elapsed_s) {
-        turned_deg_ += turn_dps * elapsed_s;
-        const int32_t whole_deg = static_cast<int32_t>(turned_deg_);
-        turned_deg_ -= whole_deg;
-        track_deg = ((track_deg + whole_deg) % 360 + 360) % 360;
-    }
-
-    void advance_altitude(double elapsed_s) {
-        climbed_m_ += climb_mm_s * elapsed_s / 1000.0;
-        const int32_t whole_m = static_cast<int32_t>(climbed_m_);
-        altitude_m += whole_m;
-        climbed_m_ -= whole_m;
-    }
-
-    // INFO: fc 18sep26 NMEA carries whole seconds, so every solution of one second stamps the same
-    void advance_clock(int32_t elapsed_ms) {
-        seconds_of_day_ms_ += static_cast<uint32_t>(elapsed_ms);
-        utc_seconds_of_day = (utc_seconds_of_day + seconds_of_day_ms_ / 1000u) % 86400u;
-        seconds_of_day_ms_ %= 1000u;
-    }
-
     // $PCAS10,n: 0 hot, 1 warm, 2 cold, 3 factory. The module reboots either
     // way; a cold start also throws the orbit data away, and a factory reset
     // takes every setting we applied with it.
@@ -432,11 +348,6 @@ class L76k : public io::Uart, public io::UartRate {
 
     void emit_burst();
     void emit_version();
-    uint32_t knots_e2() const;
-    uint32_t kmh_e2() const;
-    uint32_t heading_e2() const;
-    int32_t msl_dm() const;
-    int put_time(char* out) const;
     void emit_rmc();
     void emit_gsa();
     static uint8_t share_of_solution(uint8_t budget, uint8_t in_view, uint8_t total_in_view);
