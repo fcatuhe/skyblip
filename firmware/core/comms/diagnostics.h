@@ -1,8 +1,8 @@
 // core/comms/diagnostics.h: the one status dump, and the only place its fields
 // are named.
 //
-// Not a shell and not OGN's thirty-five keys: five subsystems, thirty numbers,
-// every one of them already computed. Nothing here is reset by being read.
+// INFO: fc 11nov26 six subsystems, the sixth only on a 1090 MHz receiver, and nothing is reset by
+// being read
 #ifndef SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 #define SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 
@@ -15,6 +15,7 @@
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
 #include "core/timing/channel.h"
+#include "ports/adsb_receiver.h"
 #include "ports/gnss.h"
 
 namespace skyblip::comms {
@@ -80,6 +81,10 @@ struct Diagnostics {
     power::ChargeCondition charge{power::ChargeCondition::Unknown};
     uint32_t charge_warnings{0};
 
+    bool adsb_fitted{false};
+    ports::AdsbReceiverStatistics adsb{};
+    uint32_t adsb_invalid{0};
+
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
@@ -101,8 +106,8 @@ int whole_celsius(int16_t temperature_dc);
 // console lines or as link frames, and then thrown away.
 class DiagnosticsReport {
    public:
-    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power };
-    static constexpr int kGroupCount = 5;
+    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb };
+    static constexpr int kGroupCount = 6;
 
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
@@ -130,7 +135,7 @@ class DiagnosticsReport {
     int next_frame(int payload_bytes, uint8_t* out, int capacity);
 
    private:
-    enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, Code };
+    enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, Code, UnsignedArray };
 
     struct Field {
         const char* name;
@@ -141,18 +146,22 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 47;
+    static constexpr int kMaxFields = 56;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
              const char* text = nullptr);
-    static int field_bytes(const Field& field);
+    int field_bytes(const Field& field) const;
     static const char* group_name(Group group);
     // Where the index-th line's fields start, or count_ when there is no such
     // line.
     int line_start(int index) const;
 
     link::Command command_;
+    // INFO: fc 11nov26 the one array field reads this copy, so a refresh never changes a dump in
+    // flight
+    static constexpr int kAdsbRssiCount = ports::AdsbReceiverStatistics::kRssiBuckets;
+    uint32_t adsb_rssi_[kAdsbRssiCount]{};
     Field fields_[kMaxFields]{};
     int count_{0};
     int line_count_{0};

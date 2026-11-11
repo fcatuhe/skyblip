@@ -5,6 +5,8 @@
 // truncated, and that reading one does not disturb anything.
 //
 // No device and no link here: a snapshot struct in, characters out.
+#include <algorithm>
+#include <iterator>
 #include <string>
 
 #include "core/comms/config.h"  // kSmallestSupportedPayloadBytes: the ceiling both surfaces answer under
@@ -74,6 +76,17 @@ Diagnostics busy_device() {
     diagnostics.battery_implausible = 2;
     diagnostics.die_dc = 415;
     diagnostics.die_valid = true;
+
+    diagnostics.adsb_fitted = true;
+    diagnostics.adsb.frames = 51234;
+    diagnostics.adsb.frame_rate_hz = 212;
+    diagnostics.adsb_invalid = 3021;
+    diagnostics.adsb.dropped = 4;
+    diagnostics.adsb.rearms = 1;
+    diagnostics.adsb.device_errors = 0x0080;
+    const uint32_t levels[ports::AdsbReceiverStatistics::kRssiBuckets] = {0,    120, 900, 3000,
+                                                                          2500, 800, 90,  3};
+    std::copy(std::begin(levels), std::end(levels), std::begin(diagnostics.adsb.rssi));
     return diagnostics;
 }
 
@@ -129,6 +142,16 @@ Diagnostics widest_device() {
     diagnostics.die_valid = true;
     diagnostics.charge = power::ChargeCondition::TooCold;
     diagnostics.charge_warnings = 0xFFFFFFFFu;
+    diagnostics.adsb_fitted = true;
+    diagnostics.adsb.frames = 0xFFFFFFFFu;
+    diagnostics.adsb.frame_rate_hz = 0xFFFFFFFFu;
+    diagnostics.adsb_invalid = 0xFFFFFFFFu;
+    diagnostics.adsb.dropped = 0xFFFFFFFFu;
+    diagnostics.adsb.rearms = 0xFFFFFFFFu;
+    diagnostics.adsb.resets = 0xFFFFFFFFu;
+    diagnostics.adsb.command_errors = 0xFFFFFFFFu;
+    diagnostics.adsb.device_errors = 0xFFFF;
+    std::fill(std::begin(diagnostics.adsb.rssi), std::end(diagnostics.adsb.rssi), 0xFFFFFFFFu);
     return diagnostics;
 }
 
@@ -186,8 +209,7 @@ bool has(const std::string& haystack, const char* needle) {
 TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that already exist") {
     const std::string text = console(busy_device());
 
-    // Five subsystems, in the order a bench eye wants them: how long it has been
-    // up, then the radio, then what it heard, then what it knows about itself.
+    // Uptime, the radio, what it heard, what it knows of itself, then the 1090 MHz receiver.
     CHECK(has(text, "system uptime_s=3725 reset=\"WATCHDOG\" link_drops=2\n"));
     CHECK(has(text,
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
@@ -203,6 +225,9 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "power cell_mv=3812 percent=64 battery_valid=true charging=false power_level=\"OK\" "
               "supply_warnings=1 "
               "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
+    CHECK(has(text,
+              "adsb frames=51234 frame_rate_hz=212 invalid=3021 dropped=4 rearms=1 resets=0 "
+              "command_errors=0 errors=128 rssi_dbm=0,120,900,3000,2500,800,90,3\n"));
 
     DiagnosticsReport report(busy_device(), link::Command::Diagnostics);
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
@@ -484,5 +509,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 47);
+    CHECK(fields == 56);
 }

@@ -745,6 +745,51 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "charge_warnings",
           "number": 50,
           "type": "unsigned"
+        },
+        {
+          "name": "frames",
+          "number": 51,
+          "type": "unsigned"
+        },
+        {
+          "name": "frame_rate_hz",
+          "number": 52,
+          "type": "unsigned"
+        },
+        {
+          "name": "invalid",
+          "number": 53,
+          "type": "unsigned"
+        },
+        {
+          "name": "dropped",
+          "number": 54,
+          "type": "unsigned"
+        },
+        {
+          "name": "rearms",
+          "number": 55,
+          "type": "unsigned"
+        },
+        {
+          "name": "resets",
+          "number": 56,
+          "type": "unsigned"
+        },
+        {
+          "name": "command_errors",
+          "number": 57,
+          "type": "unsigned"
+        },
+        {
+          "name": "errors",
+          "number": 58,
+          "type": "unsigned"
+        },
+        {
+          "name": "rssi_dbm",
+          "number": 59,
+          "type": "unsigned_array"
         }
       ],
       "keys_of": "diagnostics"
@@ -1019,6 +1064,51 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "charge_warnings",
           "number": 50,
           "type": "unsigned"
+        },
+        {
+          "name": "frames",
+          "number": 51,
+          "type": "unsigned"
+        },
+        {
+          "name": "frame_rate_hz",
+          "number": 52,
+          "type": "unsigned"
+        },
+        {
+          "name": "invalid",
+          "number": 53,
+          "type": "unsigned"
+        },
+        {
+          "name": "dropped",
+          "number": 54,
+          "type": "unsigned"
+        },
+        {
+          "name": "rearms",
+          "number": 55,
+          "type": "unsigned"
+        },
+        {
+          "name": "resets",
+          "number": 56,
+          "type": "unsigned"
+        },
+        {
+          "name": "command_errors",
+          "number": 57,
+          "type": "unsigned"
+        },
+        {
+          "name": "errors",
+          "number": 58,
+          "type": "unsigned"
+        },
+        {
+          "name": "rssi_dbm",
+          "number": 59,
+          "type": "unsigned_array"
         }
       ]
     },
@@ -2181,6 +2271,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "power",
           "code": 4,
           "mirrors": "Power"
+        },
+        {
+          "name": "adsb",
+          "code": 5,
+          "mirrors": "Adsb"
         }
       ]
     },

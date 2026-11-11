@@ -146,7 +146,16 @@
         {"name": "implausible", "number": 47, "type": "unsigned", "description": "power. Readings the gauge refused: at or under 1800 mV, an unpopulated or unconnected divider rather than a flat cell, or over 4700 mV, which no 4.2 V cell reaches and a rail does. On the cable or off it. cell_mv holds the last one while battery_valid is false"},
         {"name": "die_temperature_c", "number": 48, "type": "integer", "description": "power. Die temperature in whole degrees Celsius, rounded away from zero. Absent rather than zero when no reading younger than 30 seconds exists. The same value as the status reply's"},
         {"name": "charge", "number": 49, "type": "enum", "enum": "charge", "description": "power. Whether the die temperature allows the cell to charge (core/power/charging.h): too_cold under 5.0 C, too_hot over 60.0 C, ok between, against LilyGO's 0 to 60 C window with the die's own warmth as the margin at the cold end. Judged only on the cable with a die reading and absent otherwise, so unknown never travels. The console prints OK, COLD and HOT"},
-        {"name": "charge_warnings", "number": 50, "type": "unsigned", "description": "power. Times the charge condition changed into too_cold or too_hot (products/common/services/power.cpp): a cable left in a cold cockpit is one warning, not one a pass"}
+        {"name": "charge_warnings", "number": 50, "type": "unsigned", "description": "power. Times the charge condition changed into too_cold or too_hot (products/common/services/power.cpp): a cable left in a cold cockpit is one warning, not one a pass"},
+        {"name": "frames", "number": 51, "type": "unsigned", "description": "adsb. 1090 MHz frames the LR2021 handed up since boot: each is a preamble and a 0x95 sync with 27 chips behind it, valid or not (hardware/parts/lr2021). The adsb group is sent only by a unit with a 1090 MHz receiver"},
+        {"name": "frame_rate_hz", "number": 52, "type": "unsigned", "description": "adsb. Frames handed up over the last whole second, 0 after a silent one"},
+        {"name": "invalid", "number": 53, "type": "unsigned", "description": "adsb. Sync hits without a valid frame: frames core/protocol's adsb_receive refused as Crc or Invalid. A DF17 of a type the decoder does not read is not counted here"},
+        {"name": "dropped", "number": 54, "type": "unsigned", "description": "adsb. Frames lost before the decoder: the queue to it was full (core/events/adsb.h sizes it), or the LR2021's FIFO overflowed, which counts every frame the FIFO held, since the driver clears it and starts receive again"},
+        {"name": "rearms", "number": 55, "type": "unsigned", "description": "adsb. Times the receiver went back into receive through standby after 30 s without a frame (runtime::kRadioRxSilenceCeilingMs). Climbs once every 30 s under an empty sky"},
+        {"name": "resets", "number": 56, "type": "unsigned", "description": "adsb. Times the LR2021 was reset and brought up again, after BUSY stayed high past its ceiling or a re-arm failed"},
+        {"name": "command_errors", "number": 57, "type": "unsigned", "description": "adsb. Commands the LR2021 answered CMD_FAIL or CMD_PERR in the status that opens the next frame (LR20xx datasheet Rev. 2.1, 6.7.1)"},
+        {"name": "errors", "number": 58, "type": "unsigned", "description": "adsb. The LR2021's GetErrors word at the end of its last bring-up (LR20xx datasheet Rev. 2.1, 6.7.4). Bit 0, HF_XOSC_START_ERR, and bit 2, PLL_LOCK_ERR, refuse the bring-up. The others are kept for the bench, since 1090 MHz is past the 960 MHz the LF path is specified to"},
+        {"name": "rssi_dbm", "number": 59, "type": "unsigned_array", "description": "adsb. Counts of frames by the level of their pulses (RssiHigh), in eight buckets whose floors are -128, -90, -80, -70, -60, -50, -40 and -30 dBm (ports/adsb_receiver.h). A frame read in the same wake as a newer one has no level of its own, and neither has the newest when the two packet-status reads around the FIFO level disagree: those are in frames only"}
       ]
     },
     {
@@ -449,7 +458,8 @@
         {"name": "radio", "code": 1, "mirrors": "Radio"},
         {"name": "traffic", "code": 2, "mirrors": "Traffic"},
         {"name": "gnss", "code": 3, "mirrors": "Gnss"},
-        {"name": "power", "code": 4, "mirrors": "Power"}
+        {"name": "power", "code": 4, "mirrors": "Power"},
+        {"name": "adsb", "code": 5, "mirrors": "Adsb"}
       ]
     },
     "reset": {
