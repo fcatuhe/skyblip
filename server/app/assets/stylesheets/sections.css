@@ -310,7 +310,8 @@
   }
 
   .offers .offer img {
-    block-size: 16rem;
+    block-size: calc(16rem * var(--photo-scale, 1));
+    align-self: center;
     inline-size: auto;
     max-inline-size: 100%;
     object-fit: contain;

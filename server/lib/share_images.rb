@@ -7,6 +7,7 @@ class ShareImages
     "bravo" => { name: "Bravo", protocols: "ADS-B 1090 MHz", photos: %w[pages/skyblip-bravo/seeed-x1.avif], in_development: true },
     "tango" => { name: "Tango", protocols: "ADS-B · ADS-L · FLARM", photos: %w[pages/index/skyblip-go-techo.avif pages/skyblip-bravo/seeed-x1.avif], in_development: true }
   }
+  PHOTO_CLASSES = { "pages/skyblip-bravo/seeed-x1.avif" => "photo-x1" }
   DIRECTORY = Rails.root.join("content_images/share")
   TEMPLATE = Rails.root.join("lib/share_images/card.html.erb")
   STYLESHEET = Rails.root.join("lib/share_images/card.css")

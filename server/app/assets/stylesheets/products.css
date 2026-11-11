@@ -32,7 +32,7 @@
   .lineup p:not(.status) { color: var(--card-ink); font-size: var(--text-s); }
   .lineup h2 a { color: var(--ink); }
 
-  .lineup .pair img { block-size: 8rem; }
+  .lineup .pair img { block-size: calc(8rem * var(--photo-scale, 1)); }
 
   @media (max-width: 40rem) {
     .lineup > li {
@@ -50,9 +50,9 @@
     .lineup > li > .pair { grid-row: span 3; grid-column: 1; justify-self: center; align-self: center; }
     .lineup > li > :not(.pair) { grid-column: 2; }
     .lineup h2 { margin: 0; }
-    .lineup .pair img { block-size: 4.5rem; }
+    .lineup .pair img { block-size: calc(4.5rem * var(--photo-scale, 1)); }
     .lineup .pair:has(.pair-plus) { gap: var(--space-inline-2xs); }
-    .lineup .pair:has(.pair-plus) img { block-size: 3.5rem; }
+    .lineup .pair:has(.pair-plus) img { block-size: calc(3.5rem * var(--photo-scale, 1)); }
   }
 
   .status {
@@ -74,7 +74,7 @@
   }
 
   .pair img {
-    block-size: 10rem;
+    block-size: calc(10rem * var(--photo-scale, 1));
     inline-size: auto;
     max-inline-size: 100%;
     mix-blend-mode: multiply;
@@ -94,7 +94,8 @@
     inline-size: min(220px, 100%);
   }
 
-  .offers .offer img.x1-photo { max-inline-size: min(220px, 100%); }
+  /* INFO: fc 11nov26 the X1 photo's height in Go photos, measured off the X1's 90 mm edge and the T-Echo's 54 mm face */
+  .photo-x1 { --photo-scale: 0.57; }
 
   .chooser {
     display: grid;
