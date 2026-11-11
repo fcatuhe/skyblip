@@ -1,42 +1,65 @@
 name: release
 
-# A `v*` tag on main becomes a draft release: the image signed with the production
-# key, its checksums and its provenance. The draft is published by hand, and once
-# published its files cannot change: immutable releases are on for this repo.
+# A product's tag on main becomes a draft release: the image signed with the production
+# key, its checksums and its provenance. `v*` is the Go's, as it was before a second
+# product, and every other product puts its name in front: `bravo-v*` is Bravo's.
+# The draft is published by hand, and once published its files cannot change:
+# immutable releases are on for this repo.
 #
 # Every action is pinned by commit, and nothing is restored from a cache: the
 # image job holds the production key, and a cache or a moved tag is code that
 # would run beside it.
 on:
   push:
-    tags: ["v*"]
+    tags: ["v*", "bravo-v*"]
 
 permissions:
   contents: read
-
-env:
-  PRODUCT: skyblip_go
-  SLUG: skyblip-go
 
 jobs:
   # Before the approval is asked for, so a tag that can never release fails in seconds.
   tag:
     name: tag names a release of main
     runs-on: ubuntu-24.04
+    outputs:
+      product: ${{ steps.product.outputs.product }}
+      prefix: ${{ steps.product.outputs.prefix }}
+      slug: ${{ steps.product.outputs.slug }}
+      version: ${{ steps.product.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: the tag names a product
+        id: product
+        run: |
+          case "$GITHUB_REF_NAME" in
+            v*) name=go prefix='' version=${GITHUB_REF_NAME#v} ;;
+            *-v*) name=${GITHUB_REF_NAME%%-v*} prefix=${GITHUB_REF_NAME%%-v*}- version=${GITHUB_REF_NAME#*-v} ;;
+            *) echo "FAIL: $GITHUB_REF_NAME is neither v<version> nor <product>-v<version>"; exit 1 ;;
+          esac
+          test -d "firmware/products/skyblip_$name" \
+            || { echo "FAIL: $GITHUB_REF_NAME names skyblip_$name, which is not in firmware/products/"; exit 1; }
+          {
+            echo "product=skyblip_$name"
+            echo "prefix=$prefix"
+            echo "slug=skyblip-$name"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
       - name: the tag is the product's VERSION
+        env:
+          PRODUCT: ${{ steps.product.outputs.product }}
+          RELEASE_VERSION: ${{ steps.product.outputs.version }}
         run: |
           file=firmware/products/$PRODUCT/VERSION
           triple=$(sed -n \
             -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
             -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
             -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
-          test "v$triple" = "$GITHUB_REF_NAME" \
+          test "$triple" = "$RELEASE_VERSION" \
             || { echo "FAIL: tag $GITHUB_REF_NAME, but $file says $triple"; exit 1; }
 
       - name: the tag is on main
@@ -89,6 +112,10 @@ jobs:
     needs: [tag, simulator]
     environment: firmware_production
     runs-on: ubuntu-24.04
+    env:
+      PRODUCT: ${{ needs.tag.outputs.product }}
+      SLUG: ${{ needs.tag.outputs.slug }}
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
     permissions:
       contents: read
       id-token: write
@@ -130,11 +157,12 @@ jobs:
       # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
       - name: name the files after the release
         run: |
-          version=${GITHUB_REF_NAME#v}
           mkdir release
-          cp "builds/$SLUG.uf2" "release/$SLUG-$version.uf2"
-          cp "builds/$SLUG.signed.bin" "release/$SLUG-$version.signed.bin"
-          cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$version.full.signed.bin"
+          cp "builds/$SLUG.uf2" "release/$SLUG-$RELEASE_VERSION.uf2"
+          cp "builds/$SLUG.signed.bin" "release/$SLUG-$RELEASE_VERSION.signed.bin"
+          if [ -f "builds/$SLUG.full.signed.bin" ]; then
+            cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$RELEASE_VERSION.full.signed.bin"
+          fi
           cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
           cp simulator/scenarios.json release/
           cp LICENSE NOTICE.md LICENSES/*.txt release/
@@ -154,7 +182,7 @@ jobs:
   # Its own job, so the token that can write a release never shares a runner with the key.
   draft:
     name: draft release
-    needs: image
+    needs: [tag, image]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -164,9 +192,14 @@ jobs:
           name: release
           path: release
 
+      # The notes start at the same product's last published release, never at another product's.
       - name: create the draft
         env:
           GH_TOKEN: ${{ github.token }}
+          PREFIX: ${{ needs.tag.outputs.prefix }}
         run: |
+          tags=$(gh release list --repo "$GITHUB_REPOSITORY" -L 100 --exclude-drafts --exclude-pre-releases \
+                   --json tagName --jq '.[].tagName')
+          previous=$(grep -m1 -E "^${PREFIX}v[0-9]" <<< "$tags") || previous=""
           gh release create "$GITHUB_REF_NAME" release/* \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes
+            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes ${previous:+--notes-start-tag "$previous"}

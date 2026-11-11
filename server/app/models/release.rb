@@ -5,7 +5,8 @@ class Release
   NotFound = Class.new(StandardError)
   REPOSITORY = "fcatuhe/skyblip".freeze
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
-  TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
+  PRODUCT_PREFIX = /\A(?:(bravo)-)?/
+  TAG = /#{PRODUCT_PREFIX}(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
   FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
@@ -36,11 +37,11 @@ class Release
 
   def self.shelf(releases)
     newest_first = releases.sort_by(&:published_at).reverse
-    [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
+    [ *newest_first.select(&:stable?).uniq(&:product), *newest_first.select(&:development?) ]
   end
 
   def self.simulator(releases = all)
-    available = releases.select(&:simulator?).sort_by(&:published_at).reverse
+    available = releases.select { |release| release.simulator? && release.product == "skyblip_go" }.sort_by(&:published_at).reverse
     available.find(&:stable?) || available.find(&:main_development?)
   end
 
@@ -105,11 +106,15 @@ class Release
     @published_at = Time.iso8601(entry.fetch("published_at"))
   end
 
-  def development? = tag.start_with?("dev-")
-  def main_development? = /\Adev-\d+\z/.match?(tag)
-  def stable? = tag.start_with?("v") && !@prerelease
+  def product = "skyblip_#{tag[PRODUCT_PREFIX, 1] || "go"}"
+  def development? = unprefixed_tag.start_with?("dev-")
+  def main_development? = /\Adev-\d+\z/.match?(unprefixed_tag)
+  def stable? = unprefixed_tag.start_with?("v") && !@prerelease
   def channel = development? ? "development" : "release"
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
-  def firmware_files = assets.grep(FIRMWARE)
+  def firmware_files = assets.grep(FIRMWARE).select { |file| self.class.product_of(file) == product }
+
+  private
+    def unprefixed_tag = tag.sub(PRODUCT_PREFIX, "")
 end
