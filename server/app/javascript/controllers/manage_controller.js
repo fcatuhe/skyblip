@@ -227,6 +227,12 @@ export default class extends Controller {
   #fill(settings) {
     this.shown = settings
     const { elements } = this.settingsTarget
+    for (const field of this.settingsTarget.querySelectorAll(".manage-field")) {
+      const input = field.querySelector("[name]")
+      const held = Boolean(input) && input.name in settings
+      field.hidden = !held
+      if (input) input.disabled = !held
+    }
     for (const [key, value] of Object.entries(settings)) this.showSetting(elements[key], value)
   }
 

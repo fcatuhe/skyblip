@@ -46,7 +46,8 @@ struct StampRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    common::TrafficService traffic{context, go::kFeatures};
+    uint32_t own_icao{};
+    common::TrafficService traffic{context, go::kFeatures, own_icao};
 
     StampRig() {
         roles.capabilities = ports::Capability::Rf;

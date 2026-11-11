@@ -245,6 +245,7 @@ inline constexpr Key kConfigKeys[] = {
     {"callsign", 8, Type::Text, nullptr, 0, false},
     {"battery_offset_mv", 9, Type::Integer, nullptr, 0, false},
     {"frequency_trim_e1_ppm", 10, Type::Integer, nullptr, 0, false},
+    {"own_icao", 11, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -525,9 +526,9 @@ inline constexpr Key kPeerClaimKeys[] = {
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 11},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 11},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 11},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 12},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 12},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 12},
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 8},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},

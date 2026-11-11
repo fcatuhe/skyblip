@@ -23,7 +23,7 @@
     nonce: null,
     serverNonce: null,
     address: null,
-    stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' },
+    stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 },
     staged: null,
     pending: null,
     flight: 'ground',

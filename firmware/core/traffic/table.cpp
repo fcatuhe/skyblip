@@ -33,6 +33,14 @@ bool TrafficTable::own_aircraft(const model::AircraftObservation& observation) c
            address == own_icao_;
 }
 
+void TrafficTable::set_own_icao(uint32_t address) {
+    const uint32_t masked = address & settings::kAddressMask;
+    if (masked == own_icao_) return;
+    own_icao_ = masked;
+    const int index = own_icao_ == 0 ? -1 : find(settings::kIcaoAddressMappingTable, own_icao_);
+    if (index >= 0) release(slots_[index]);
+}
+
 int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
     for (int i = 0; i < kMaxTargets; i++) {
         if (slots_[i].used && slots_[i].observation.address == address &&

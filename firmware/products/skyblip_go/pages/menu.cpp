@@ -11,7 +11,7 @@ constexpr int kHeaderRuleY = 21;
 
 constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::AircraftType, MenuRow::Callsign,
                                       MenuRow::Units, MenuRow::Range,        MenuRow::Plot,
-                                      MenuRow::Alarm, MenuRow::Volume};
+                                      MenuRow::Alarm, MenuRow::Volume,       MenuRow::OwnIcao};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
                                        MenuRow::Raw,    MenuRow::Capture,    MenuRow::SelfTest};
 
@@ -45,6 +45,12 @@ void row_text(ui::Canvas& canvas, int line, const char* label, const char* value
     canvas.draw_text(kMenuRightX - text_cells(value) * kMenuCellWidth, y, value, ink, kMenuScale);
 }
 
+void field_header(ui::Canvas& canvas, const char* title) {
+    canvas.clear(true);
+    canvas.draw_text(kMenuLeftX - 2, kHeaderY, title, true, kMenuScale);
+    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
+}
+
 }  // namespace
 
 Menu menu_for(Page page) {
@@ -72,6 +78,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Light: return "LIGHT";
         case MenuRow::AircraftType: return "TYPE";
         case MenuRow::Callsign: return "CALLSIGN";
+        case MenuRow::OwnIcao: return "OWN ICAO";
         case MenuRow::Units: return "UNITS";
         case MenuRow::Range: return "RANGE";
         case MenuRow::Plot: return "PLOT";
@@ -121,6 +128,30 @@ bool callsign_press_clears(const char* text, int cursor) {
     return cursor == 0 && text[0] == kCallsignBlank;
 }
 
+char next_hex_character(char character) {
+    if (character == kCallsignBlank) return '0';
+    if (character >= '0' && character < '9') return static_cast<char>(character + 1);
+    if (character == '9') return 'A';
+    if (character >= 'A' && character < 'F') return static_cast<char>(character + 1);
+    return kCallsignBlank;
+}
+
+uint32_t own_icao_typed(const char* edited) {
+    uint32_t address = 0;
+    for (int i = 0; i < kOwnIcaoCharacters; i++) {
+        const char digit = edited[i];
+        uint32_t nibble = 0;
+        if (digit >= '0' && digit <= '9')
+            nibble = static_cast<uint32_t>(digit - '0');
+        else if (digit >= 'A' && digit <= 'F')
+            nibble = static_cast<uint32_t>(digit - 'A' + 10);
+        else
+            return kOwnIcaoUnset;
+        address = (address << 4) | nibble;
+    }
+    return address;
+}
+
 int callsign_stored(char* out, const char* edited) {
     int written = 0;
     while (written < kCallsignCharacters && edited[written] != 0) {
@@ -158,6 +189,11 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
             }
             break;
         }
+        case MenuRow::OwnIcao:
+            written = values.settings.own_icao == kOwnIcaoUnset
+                          ? format_string(out, "NONE")
+                          : format_hex(out, values.settings.own_icao, kOwnIcaoCharacters);
+            break;
         case MenuRow::Units:
             written = format_string(
                 out, values.settings.units == go::Units::Metric ? "METRIC" : "NAUTICAL");
@@ -203,12 +239,11 @@ void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
 }
 
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
-    canvas.clear(true);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, "CALLSIGN", true, kMenuScale);
-    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
+    field_header(canvas, snapshot.title);
 
-    canvas.draw_text(kCallsignTextX, kCallsignTextY, snapshot.text, true, kCallsignScale);
-    const int at = kCallsignTextX + snapshot.cursor * kCallsignCellWidth;
+    const int text_x = field_text_x(text_cells(snapshot.text));
+    canvas.draw_text(text_x, kCallsignTextY, snapshot.text, true, kCallsignScale);
+    const int at = text_x + snapshot.cursor * kCallsignCellWidth;
     canvas.rectangle(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorHeight, true,
                      /*fill=*/true);
 
@@ -222,21 +257,37 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
                          kCallsignClearHelpText, true, 1);
 }
 
+void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
+    field_header(canvas, snapshot.title);
+    canvas.draw_text(field_text_x(text_cells(snapshot.text)), kCallsignTextY, snapshot.text, true,
+                     kCallsignScale);
+    canvas.draw_text(centred_x(kClearKeepsHintText, kCallsignHintScale), kCallsignPadHintY,
+                     kClearKeepsHintText, true, kCallsignHintScale);
+    canvas.draw_text(centred_x(kCallsignClearHintText, kCallsignHintScale), kCallsignButtonHintY,
+                     kCallsignClearHintText, true, kCallsignHintScale);
+    canvas.draw_text(centred_x(kOwnIcaoClearHelpText, 1), kCallsignHelpY, kOwnIcaoClearHelpText,
+                     true, 1);
+}
+
 void MenuEditor::enter(Page page, uint32_t now_ms) {
     page_ = page;
     focus_ = 0;
     idle_since_ms_ = now_ms;
     active_ = menu_for(page).row_count > 0;
     pending_ = Pending::None;
-    editing_ = false;
-    cursor_ = 0;
+    close_field();
 }
 
 void MenuEditor::leave() {
     focus_ = 0;
     active_ = false;
     pending_ = Pending::None;
+    close_field();
+}
+
+void MenuEditor::close_field() {
     editing_ = false;
+    clearing_ = false;
     cursor_ = 0;
 }
 
@@ -262,8 +313,14 @@ MenuAction MenuEditor::tick(uint32_t now_ms, const MenuValues& current, MenuValu
     if (!active_) return MenuAction::None;
     const Pending pending = pending_;
     pending_ = Pending::None;
-    if (pending == Pending::Act) return editing_ ? step(current, next) : act(current, next);
-    if (pending == Pending::Advance) return editing_ ? roll() : advance();
+    if (pending == Pending::Act) {
+        if (clearing_) return confirm_clear(current, next);
+        return editing_ ? step(current, next) : act(current, next);
+    }
+    if (pending == Pending::Advance) {
+        if (clearing_) return keep();
+        return editing_ ? roll() : advance();
+    }
     if (now_ms - idle_since_ms_ >= kIdleReturnHoldMs) {
         leave();
         return MenuAction::Leave;
@@ -280,51 +337,91 @@ MenuAction MenuEditor::advance() {
     return MenuAction::Moved;
 }
 
-// Nine characters wide whatever is stored, so every position can be rolled and
-// the ones a pilot leaves blank are what the stored form drops.
-void MenuEditor::edit(const MenuValues& current) {
+// Full width whatever is stored, so every position can be rolled and the ones a
+// pilot leaves blank are what the stored form drops.
+void MenuEditor::edit(MenuRow field, const MenuValues& current) {
+    field_ = field;
     editing_ = true;
+    clearing_ = false;
     cursor_ = 0;
     int written = 0;
-    while (written < kCallsignCharacters && current.settings.callsign[written] != 0) {
-        text_[written] = current.settings.callsign[written];
-        written++;
+    if (field == MenuRow::OwnIcao) {
+        if (current.settings.own_icao != kOwnIcaoUnset)
+            written = format_hex(text_, current.settings.own_icao, kOwnIcaoCharacters);
+    } else {
+        while (written < kCallsignCharacters && current.settings.callsign[written] != 0) {
+            text_[written] = current.settings.callsign[written];
+            written++;
+        }
     }
-    while (written < kCallsignCharacters) text_[written++] = kCallsignBlank;
-    text_[kCallsignCharacters] = 0;
+    while (written < characters()) text_[written++] = kCallsignBlank;
+    text_[characters()] = 0;
+}
+
+int MenuEditor::characters() const {
+    return field_ == MenuRow::OwnIcao ? kOwnIcaoCharacters : kCallsignCharacters;
 }
 
 MenuAction MenuEditor::roll() {
-    text_[cursor_] = next_callsign_character(text_[cursor_]);
+    text_[cursor_] = field_ == MenuRow::OwnIcao ? next_hex_character(text_[cursor_])
+                                                : next_callsign_character(text_[cursor_]);
     return MenuAction::Moved;
 }
 
-// The last character's button press is what stores the name: a field a pilot
+// The last character's button press is what stores the field: a field a pilot
 // walks off the end of is a field they have finished with.
 MenuAction MenuEditor::step(const MenuValues& current, MenuValues& next) {
     if (callsign_press_clears(text_, cursor_)) return clear(current, next);
-    if (cursor_ + 1 < kCallsignCharacters) {
+    if (cursor_ + 1 < characters()) {
         cursor_++;
         return MenuAction::Moved;
     }
+    return store(current, next);
+}
+
+MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
     next = current;
-    callsign_stored(next.settings.callsign, text_);
-    editing_ = false;
-    cursor_ = 0;
-    if (go::validate(next.settings) != Status::Ok) {
-        next = current;
-        return MenuAction::Moved;
+    bool typed = true;
+    if (field_ == MenuRow::OwnIcao) {
+        next.settings.own_icao = own_icao_typed(text_);
+        typed = next.settings.own_icao != kOwnIcaoUnset;
+    } else {
+        callsign_stored(next.settings.callsign, text_);
     }
-    return MenuAction::Changed;
+    close_field();
+    if (typed && go::validate(next.settings) == Status::Ok) return MenuAction::Changed;
+    next = current;
+    return MenuAction::Moved;
 }
 
 MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
-    editing_ = false;
-    cursor_ = 0;
+    if (field_ == MenuRow::OwnIcao) {
+        if (current.settings.own_icao == kOwnIcaoUnset) {
+            close_field();
+            return MenuAction::Moved;
+        }
+        format_hex(text_, current.settings.own_icao, kOwnIcaoCharacters);
+        text_[kOwnIcaoCharacters] = 0;
+        clearing_ = true;
+        return MenuAction::Moved;
+    }
+    close_field();
     if (current.settings.callsign[0] == 0) return MenuAction::Moved;
     next = current;
     next.settings.callsign[0] = 0;
     return MenuAction::Changed;
+}
+
+MenuAction MenuEditor::confirm_clear(const MenuValues& current, MenuValues& next) {
+    close_field();
+    next = current;
+    next.settings.own_icao = kOwnIcaoUnset;
+    return MenuAction::Changed;
+}
+
+MenuAction MenuEditor::keep() {
+    close_field();
+    return MenuAction::Moved;
 }
 
 // INFO: cf 02aug26 one gate for every accepted value, go::validate, the same one a phone goes past
@@ -341,7 +438,8 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             next.light = !current.light;
             leave();
             return MenuAction::Light;
-        case MenuRow::Callsign: edit(current); return MenuAction::Moved;
+        case MenuRow::Callsign:
+        case MenuRow::OwnIcao: edit(row, current); return MenuAction::Moved;
         case MenuRow::AircraftType:
             next.settings.aircraft_type = next_aircraft_type(current.settings.aircraft_type);
             break;

@@ -319,6 +319,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.callsign", "\"D-KXYZ\""},
         {"set.battery_offset_mv", "10"},
         {"set.frequency_trim_e1_ppm", "-5"},
+        {"set.own_icao", "3958150"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},

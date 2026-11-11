@@ -168,9 +168,10 @@ struct FeatureRig {
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
+    uint32_t own_icao{};
     common::TrafficService traffic;
 
-    explicit FeatureRig(common::Feature declared) : traffic(context, declared) {
+    explicit FeatureRig(common::Feature declared) : traffic(context, declared, own_icao) {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
@@ -345,6 +346,33 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
     CHECK(rig.state().air.uplink_targets == 1);
     CHECK(target_for(rig, own_address) == nullptr);
     CHECK(target_for(rig, 0x4D0001) != nullptr);
+}
+
+// A ground station also relays the transponder of the aircraft we fly in, under the ICAO table.
+TEST_CASE("uplink: our aircraft's transponder relayed back is traffic until the own ICAO is set") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+
+    model::AircraftObservation heard[2] = {
+        relayed_aircraft(rig, 0x3C6586, 0, 0, 0),
+        relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
+    };
+    heard[0].address_mapping_table = settings::kIcaoAddressMappingTable;
+    REQUIRE(relay(rig, now_ms, heard, 2));
+    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) >= 0);
+    CHECK(rig.state().traffic.count() == 2);
+
+    rig.settings().own_icao = 0x3C6586;
+    fly(rig, now_ms, 1);
+    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) < 0);
+    CHECK(target_for(rig, 0x4D0001) != nullptr);
+    CHECK(rig.state().traffic.count() == 1);
+
+    REQUIRE(relay(rig, now_ms, heard, 2));
+    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) < 0);
+    CHECK(rig.state().traffic.count() == 1);
 }
 
 // The feature is what turns the path on, following the pattern the companion

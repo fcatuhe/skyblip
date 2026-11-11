@@ -9,7 +9,9 @@ import { noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC' };
+const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC', own_icao: 0x3C6586 };
+const FLOWN_SHOWN = { ...FLOWN, own_icao: '3C6586' };
+const DEFAULTS_SHOWN = { ...DEFAULTS, own_icao: '' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
@@ -19,13 +21,13 @@ async function withSettings(options = {}) {
 
 test('connecting reads the stored settings and the ones the firmware ships on', async () => {
   const { updater } = await withSettings();
-  assert.deepEqual(updater.state.settings, FLOWN);
-  assert.deepEqual(updater.state.defaults, DEFAULTS);
+  assert.deepEqual(updater.state.settings, FLOWN_SHOWN);
+  assert.deepEqual(updater.state.defaults, DEFAULTS_SHOWN);
 });
 
 test('a save sends only what changed, is asked on the glass, and reads the device back', async () => {
   const { device, updater, until } = await withSettings();
-  updater.saveSettings({ ...FLOWN, callsign: 'F-JXYZ' });
+  updater.saveSettings({ ...FLOWN_SHOWN, callsign: 'F-JXYZ' });
   await until(asking('set'));
   assert.deepEqual(device.staged, { callsign: 'F-JXYZ' });
   device.press();
@@ -35,7 +37,7 @@ test('a save sends only what changed, is asked on the glass, and reads the devic
 
 test('a save with nothing changed sends nothing', async () => {
   const { device, updater } = await withSettings();
-  updater.saveSettings({ ...FLOWN });
+  updater.saveSettings({ ...FLOWN_SHOWN });
   assert.equal(device.commands.includes('set'), false);
 });
 
@@ -43,10 +45,10 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '' });
+  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 });
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
-  assert.deepEqual(settings, DEFAULTS);
+  assert.deepEqual(settings, DEFAULTS_SHOWN);
 });
 
 test('a firmware that does not know its defaults offers no reset', async () => {

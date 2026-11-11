@@ -19,3 +19,13 @@
     <p class="manage-default" data-<%= scope %>-target="default" data-setting="callsign" hidden></p>
   <% end %>
 </div>
+
+<div class="manage-field" hidden>
+  <label for="<%= scope %>-own-icao"><%= t("settings.own_icao") %></label>
+  <input type="text" id="<%= scope %>-own-icao" name="own_icao" maxlength="6" pattern="[0-9A-Fa-f]{6}"
+         autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="<%= scope %>-own-icao-hint">
+  <p class="manage-hint" id="<%= scope %>-own-icao-hint"><%= t("settings.own_icao_hint") %></p>
+  <% if defaults %>
+    <p class="manage-default" data-<%= scope %>-target="default" data-setting="own_icao" hidden></p>
+  <% end %>
+</div>

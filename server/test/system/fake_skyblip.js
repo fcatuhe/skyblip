@@ -7,7 +7,7 @@
   const SMALL_MTU = { command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' };
 
   const unit = {
-    stored: { aircraft_type: 4, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-CABC' },
+    stored: { aircraft_type: 4, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-CABC', own_icao: 0 },
     staged: null,
     mtu: 247,
     product: 'skyblip_go',
@@ -28,7 +28,7 @@
       if (command === 'status') return this.reply({ command, flight: 'ground', upload: false, charging: false, power_level: 'normal', went_dark_flat: false });
       if (command === 'update') return this.reply({ command, image: 'confirmed', swap_powered: true, imu: 'none', downgrade: true, key: 'a1a1a1a1', ...(this.product === 'skyblip_go' ? {} : { product: this.product }) });
       if (command === 'get') return this.reply({ command: 'config', version: 1, ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58, ...this.stored });
-      if (command === 'defaults') return this.reply({ command, aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' });
+      if (command === 'defaults') return this.reply({ command, aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 });
       if (command === 'set') {
         this.staged = fields;
         return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
@@ -66,11 +66,23 @@
   Object.defineProperty(navigator, 'bluetooth', {
     configurable: true,
     value: {
-      requestDevice: async () => ({
-        name: 'skyBlip Go 00003',
-        addEventListener: () => {},
-        gatt: { connected: true, connect: async () => server, disconnect: () => {} },
-      }),
+      requestDevice: async () => {
+        const closed = [];
+        const gatt = {
+          connected: true,
+          connect: async () => server,
+          disconnect: () => {
+            gatt.connected = false;
+            unit.listeners = [];
+            setTimeout(() => closed.forEach(listener => listener()));
+          },
+        };
+        return {
+          name: 'skyBlip Go 00003',
+          addEventListener: (type, listener) => type === 'gattserverdisconnected' && closed.push(listener),
+          gatt,
+        };
+      },
     },
   });
 })();

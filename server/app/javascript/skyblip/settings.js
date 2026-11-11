@@ -1,9 +1,20 @@
-export const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign'];
+export const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign', 'own_icao'];
 
 const NUMBERS = new Set(['aircraft_type']);
+const OWN_ICAO = /^[0-9A-F]{6}$/;
 
 export function settingsOf(reply, keys = SETTING_KEYS) {
-  return Object.fromEntries(keys.filter(key => key in reply).map(key => [key, reply[key]]));
+  return Object.fromEntries(keys.filter(key => key in reply).map(key => [key, key === 'own_icao' ? ownIcaoText(reply[key]) : reply[key]]));
+}
+
+export function settingsFrame(settings) {
+  if (!('own_icao' in settings)) return settings;
+  const text = settings.own_icao;
+  return { ...settings, own_icao: text === '' ? 0 : OWN_ICAO.test(text) ? Number.parseInt(text, 16) : text };
+}
+
+function ownIcaoText(address) {
+  return address === 0 ? '' : address.toString(16).toUpperCase().padStart(6, '0');
 }
 
 export function changedSettings(stored, values, keys = SETTING_KEYS) {

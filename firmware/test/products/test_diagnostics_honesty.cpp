@@ -42,7 +42,8 @@ struct ServiceRig {
     runtime::Context context{roles, bus, state, recorder};
     uint8_t aircraft_type{go::kAircraftTypeLight};
     common::OwnshipService ownship{context, aircraft_type};
-    common::TrafficService traffic{context, common::Feature::None};
+    uint32_t own_icao{};
+    common::TrafficService traffic{context, common::Feature::None, own_icao};
 
     ServiceRig() { recorder.arm(); }
 

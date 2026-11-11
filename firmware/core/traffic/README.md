@@ -109,7 +109,7 @@ The table refuses two addresses, before any other check:
 - our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`);
 - our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it.
 
-Zero sets an entry to filter nothing. Until the Go has an own-ICAO setting (#191), `common::TrafficService` passes 0.
+Zero sets an entry to filter nothing. `common::TrafficService` passes the product's own-ICAO setting on every pass, through `common::TrafficSettings`, so an address typed on the glass or set over the link filters from the next pass. A new address also releases the slot it names, if the table holds one, so our transponder leaves the radar on that pass rather than when its lease runs out. It is released even under an alarm, unlike a slot the gate or a full table would release: the address names our own aircraft, so that alarm grades our own transponder against us, and it is the false alarm the pilot set the address to stop. The Go's setting is `own_icao`, 0 while unset (`products/skyblip_go/README.md`, Own ICAO).
 
 ### A report with no position
 
@@ -142,9 +142,9 @@ The gate decides admission, and it never freezes a slot. A report from an aircra
 
 ### Accepted for v1
 
-**Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1, and #191 has the Go warn about it.
+**Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO).
 
-**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. Accepted for v1, and the site says so (#197).
+**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58, even when its `own_icao` holds the aircraft's ICAO address. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. Accepted for v1, and the site says so (#197).
 
 ## Dismissal
 

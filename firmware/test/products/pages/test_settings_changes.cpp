@@ -43,6 +43,34 @@ TEST_CASE(
     CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nBATTERY -20 MV\nFREQ TRIM +1.5 PPM");
 }
 
+// A phone that clears the own ICAO makes the aircraft's transponder traffic, so the glass says so.
+TEST_CASE(
+    "settings changes page: an own ICAO set or cleared reads in hex, or NONE, under the name") {
+    Settings from = defaults();
+    Settings to = from;
+    to.own_icao = 0x3C6586;
+    CHECK(described(from, to) == "OWN ICAO 3C6586");
+
+    from = to;
+    to.own_icao = kOwnIcaoUnset;
+    to.units = Units::Metric;
+    CHECK(described(from, to) == "OWN ICAO NONE\nUNITS METRIC");
+}
+
+TEST_CASE("settings changes page: every key a set may change at once still counts on four rows") {
+    Settings from = defaults();
+    Settings to = from;
+    to.aircraft_type = 7;
+    std::strcpy(to.callsign, "F-JXYZ");
+    to.own_icao = 0x3C6586;
+    to.units = Units::Metric;
+    to.alarm_enabled = false;
+    to.alarm_volume = AlarmVolume::Off;
+    to.battery_offset_mv = -20;
+    to.frequency_trim_e1_ppm = 15;
+    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nOWN ICAO 3C6586\nAND 5 MORE");
+}
+
 TEST_CASE("settings changes page: past four rows the last one counts the rest") {
     const Settings from = defaults();
     Settings to = from;

@@ -2,7 +2,7 @@
 title: "Activate Go for ADS-L over Bluetooth"
 nav_title: Activate
 description: "Activate your skyBlip Go over Bluetooth from Chrome or Edge. Get its signed serial without an account. Confirm with two presses on the device."
-updated_on: "2026-11-10"
+updated_on: "2026-11-11"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
@@ -33,8 +33,8 @@ updated_on: "2026-11-10"
         none: "none yet",
         activate: "Activate",
         settings: {
-          legend: "Aircraft type and callsign",
-          lede: "Both are optional. Skip them and the unit keeps its current ones: you can still change them in its menu or on the update page.",
+          legend: "Aircraft type, callsign and own ICAO address",
+          lede: "All three are optional. Skip them and the unit keeps its current ones: you can still change them in its menu or on the update page.",
           ground: "This unit takes settings only on the ground, once it has a GPS fix. Take it where it sees the sky: Save comes back when the unit reports the fix.",
           save: "Save",
           skip: "Skip"
@@ -43,7 +43,7 @@ updated_on: "2026-11-10"
           ask: "The page asks skyblip.eu for a request signed for this unit, and hands it over.",
           confirm: "Allow it: the glass says ACTIVATE, SEND THE KEY OF THIS UNIT TO SKYBLIP.EU, press twice.",
           register: "skyblip.eu gives the unit its serial, and the unit stores it.",
-          settings: "If you choose them, allow the aircraft type and the callsign: the glass says SETTINGS, press twice."
+          settings: "If you choose them, allow the settings: the glass says SETTINGS, press twice."
         } %>
 </section>
 
@@ -77,13 +77,16 @@ updated_on: "2026-11-10"
     serial in hexadecimal.
   </p>
   <p class="lede">
-    The page then offers the aircraft type and the callsign, both optional.
+    The page then offers the aircraft type, the callsign and the own ICAO
+    address, all optional. The own ICAO address is your Mode S transponder&rsquo;s,
+    six hexadecimal digits: with it, the unit never shows your own transponder
+    as traffic. It does not change the address the unit transmits.
     Save sends them in one change, and the glass asks once more: it says
     <span class="mono">SETTINGS</span> and lists each change, press twice. A
     unit whose firmware takes settings only on the ground says so while it has
     no GPS fix: the page shows it, and Save comes back once the unit reports
-    the fix. Skip it and the unit keeps the ones it holds: a light aircraft
-    and no callsign on a new unit. Both stay changeable later, in the
+    the fix. Skip it and the unit keeps the ones it holds: a light aircraft,
+    no callsign and no own ICAO address on a new unit. All stay changeable later, in the
     unit&rsquo;s menu and on <%= link_to_page "manage", label: "the update page" %>.
   </p>
   <p class="lede">
@@ -189,8 +192,8 @@ updated_on: "2026-11-10"
       </thead>
       <tbody>
         <tr><th>Activated</th><td data-activate-word="activated">Activated: the unit holds its serial and has started its radio. Its name changes to skyBlip Go followed by its address.</td></tr>
-        <tr><th>Saved</th><td data-activate-word="saved">Saved: the unit stored the aircraft type and the callsign. Change them later in its menu or on the update page.</td></tr>
-        <tr><th>Settings kept</th><td data-activate-word="skipped">Settings kept: the unit keeps its current aircraft type and callsign. Change them later in its menu or on the update page.</td></tr>
+        <tr><th>Saved</th><td data-activate-word="saved">Saved: the unit stored the settings you changed. Change them later in its menu or on the update page.</td></tr>
+        <tr><th>Settings kept</th><td data-activate-word="skipped">Settings kept: the unit keeps its current aircraft type, callsign and own ICAO address. Change them later in its menu or on the update page.</td></tr>
         <tr><th>No Web Bluetooth</th><td data-activate-word="no_bluetooth">This browser has no Web Bluetooth. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.</td></tr>
         <tr><th>Not a skyBlip</th><td data-activate-word="not_skyblip">The device you picked has no skyBlip settings service: it is not a skyBlip.</td></tr>
         <tr><th>Link lost</th><td data-activate-word="link_lost">The link dropped. Bring the unit closer, connect again and activate again.</td></tr>

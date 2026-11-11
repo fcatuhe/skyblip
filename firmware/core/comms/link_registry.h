@@ -107,6 +107,7 @@ enum : uint32_t {
     kCallsign = 8,
     kBatteryOffsetMv = 9,
     kFrequencyTrimE1Ppm = 10,
+    kOwnIcao = 11,
 };
 }
 
@@ -447,7 +448,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::GnssColdStart:
         case Command::Observation:
         case Command::Health: return 0x1;
-        case Command::Set: return 0x7FF;
+        case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase: return 0x3;
         case Command::Register:

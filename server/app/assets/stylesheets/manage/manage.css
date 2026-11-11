@@ -93,6 +93,8 @@
     color: var(--ink-muted);
   }
 
+  .manage-field[hidden] { display: none; }
+
   .manage-field--check {
     grid-template-columns: auto 1fr;
     align-items: center;
