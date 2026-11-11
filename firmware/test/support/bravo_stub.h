@@ -1,4 +1,4 @@
-// Harness, not a test: Bravo on the peer endpoint, a recording replayed until #192 serves it.
+// Harness, not a test: Bravo on the peer endpoint, a recording replayed for a Go case.
 #ifndef SKYBLIP_TEST_SUPPORT_BRAVO_STUB_H
 #define SKYBLIP_TEST_SUPPORT_BRAVO_STUB_H
 
@@ -35,6 +35,7 @@ class BravoStub {
         bool utc_valid{true};
         bool own_icao_set{false};
         std::string export_reference{"own"};
+        bool paired{true};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -120,7 +121,7 @@ class BravoStub {
                            ",\"utc_valid\":" + text_of(health.utc_valid) +
                            ",\"own_icao_set\":" + text_of(health.own_icao_set) +
                            ",\"alarm_granted\":false,\"export_reference\":\"" +
-                           health.export_reference + "\"";
+                           health.export_reference + "\",\"paired\":" + text_of(health.paired);
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         return complete_registry_frame(json + "}");
     }

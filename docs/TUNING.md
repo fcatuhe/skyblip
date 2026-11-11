@@ -277,7 +277,17 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kFlashPassCeilingMs` | `events::kAdsbQueueDrainWindowMs / 2` = 50 | milliseconds | Ceiling | the ADS-B queue holds the design load for its drain window, so flash takes half |
+| `kClaimMaxAgeMs` | 4000 (4 s) | milliseconds | MaxAge | a fix period, a second of unknown phase and two claim periods, one lost |
+| `kTargetUpdateFloorMs` | 500 | milliseconds | Floor | schemas/link.v1.json observation: two frames a second for a target at most |
+| `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s, inside the Go's 35 s kAnswerCeilingMs |
+| `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
+
+## `firmware/products/skyblip_bravo/services`
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json health: once a second whatever the traffic |
 
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
@@ -323,6 +333,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHealthMaxAgeMs` | `3 * kHealthPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | unverified: three missed health frames, so one lost notification is no loss |
 | `kBootSettleMs` | `kConnectCeilingMs` = 10000 (10 s) | milliseconds | Settle | a paired Go names no loss before a connection has had its ceiling after boot |
 | `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
+| `kFarewellCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | two health periods for Bravo to answer an unpairing Go, then the link drops |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -345,4 +356,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-225 constants over 21 folders.
+231 constants over 22 folders.

@@ -44,7 +44,7 @@ std::string peer_claim(uint32_t passes) {
     return complete_registry_frame(
         "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
         "\"alarm_passes\":" +
-        std::to_string(passes) + ",\"alarm_volume\":\"loud\"}");
+        std::to_string(passes) + ",\"alarm_volume\":\"loud\",\"paired\":false}");
 }
 
 std::string peer_claim_with_position() {
@@ -52,7 +52,7 @@ std::string peer_claim_with_position() {
         "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"at_s\":1785628800,\"into_ms\":250,"
         "\"latitude_1e7\":485000000,\"longitude_1e7\":85000000,\"position_age_ms\":200,"
         "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,\"alarm_requested\":false,"
-        "\"alarm_passes\":3,\"alarm_volume\":\"loud\"}");
+        "\"alarm_passes\":3,\"alarm_volume\":\"loud\",\"paired\":false}");
 }
 
 struct Pair {
@@ -94,7 +94,7 @@ TEST_CASE("paired link: Bravo's recorded observations and its health reach the c
     const std::string epoch = std::to_string(pair.bravo.boot_epoch());
     CHECK(frames[0] == "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":" + epoch +
                            ",\"listening\":true,\"utc_valid\":true,\"own_icao_set\":false,"
-                           "\"alarm_granted\":false,\"export_reference\":\"own\"}");
+                           "\"alarm_granted\":false,\"export_reference\":\"own\",\"paired\":true}");
     CHECK(frames[1] == "{\"command\":\"observation\",\"address\":4479337,\"boot_epoch\":" + epoch +
                            ",\"sequence\":0,\"at_s\":1785628800,\"into_ms\":250,"
                            "\"latitude_1e7\":485100000,\"longitude_1e7\":85200000,"
@@ -113,7 +113,7 @@ TEST_CASE("paired link: the central's peer_claim reaches Bravo on the peer endpo
     REQUIRE(pair.bravo.claims.size() == 1);
     CHECK(pair.bravo.claims[0] ==
           "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-          "\"alarm_passes\":12,\"alarm_volume\":\"loud\"}");
+          "\"alarm_passes\":12,\"alarm_volume\":\"loud\",\"paired\":false}");
     CHECK(pair.link.delivered(Direction::ToPeripheral) == 1);
 }
 

@@ -26,6 +26,8 @@ class Link : public ports::Link {
                    ConstByteSpan bytes) override;
     Status advertise_as(const char* name) override;
     Status reserve_peer_connection(bool reserved) override;
+    Status reserve_peer_connection_for(const events::BluetoothAddress& central) override;
+    bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell
     // drains this into App::on_link_rx(). Returns false when empty.
@@ -38,6 +40,7 @@ class Link : public ports::Link {
     bool pop_event(events::LinkEvent& out);
 
    private:
+    static Status advertise_within_ceiling(Status status, bool admits);
     static Status notify_one(struct bt_conn* connection, events::Endpoint endpoint,
                              ConstByteSpan bytes);
 };

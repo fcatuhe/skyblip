@@ -21,6 +21,21 @@ Status apply_key(const Result<Value>& read, Assign assign) {
 
 Settings defaults() { return Settings{}; }
 
+events::BluetoothAddress address_of(const PeerPin& pin) {
+    events::BluetoothAddress address{};
+    address.type = pin.address_type;
+    for (size_t i = 0; i < kPeerAddressBytes; i++) address.bytes[i] = pin.address[i];
+    return address;
+}
+
+PeerPin pin_of(const events::BluetoothAddress& address) {
+    PeerPin pin{};
+    pin.address_type = address.type;
+    for (size_t i = 0; i < kPeerAddressBytes; i++) pin.address[i] = address.bytes[i];
+    pin.pinned = true;
+    return pin;
+}
+
 Status validate(const Settings& settings) {
     if (settings.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
     if (settings.own_icao > settings::kAddressMask) return Status::OutOfRange;

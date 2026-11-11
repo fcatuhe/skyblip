@@ -18,6 +18,7 @@ enum class Condition : uint8_t {
     Off,
     Alarm,
     Prompt,
+    Pairing,
     Critical,
     Low,
     NoFix,
@@ -74,6 +75,10 @@ inline constexpr Row kTable[kRowCount] = {
      {indication::Lamp::Green, 60, 190},
      Budget::Transient,
      "green, fast blink: a phone asks, two presses allow and one refuses"},
+    {Condition::Pairing,
+     {indication::Lamp::Blue, 60, 190},
+     Budget::Transient,
+     "blue, fast blink: a skyBlip Go asks to pair, one press pairs"},
     {Condition::Critical,
      {indication::Lamp::Red, 60, 540},
      Budget::Transient,
@@ -187,6 +192,7 @@ struct Situation {
     bool fix_valid{false};
     // INFO: fc 12nov26 only a product without a screen claims these, common::Feature::LampShowsLink
     bool prompting{false};
+    bool pairing{false};
     bool linked{false};
 };
 

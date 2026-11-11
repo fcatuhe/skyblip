@@ -71,6 +71,10 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     bool parked() const override { return parked_; }
 
+    bool listening() const override {
+        return started_ && !stopped_ && radio_.mode() == parts::Lr2021Mode::Receive;
+    }
+
     void abandon() override {
         if (parked()) return;
         radio_.hold_in_reset();

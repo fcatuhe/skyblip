@@ -39,6 +39,8 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kBootSettleMs = kConnectCeilingMs;
     // INFO: fc 12nov26 unverified: two GNSS clocks part by a second at most, and more is no clock
     static constexpr uint32_t kAheadCeilingMs = 1000;
+    // INFO: fc 11nov26 two health periods for Bravo to answer an unpairing Go, then the link drops
+    static constexpr uint32_t kFarewellCeilingMs = 2000;
 
     BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
                  ports::Central& central, const common::AlarmService& alarm)
@@ -68,6 +70,9 @@ class BravoService : public runtime::Service {
     uint32_t unplaced() const { return unplaced_; }
     // INFO: fc 12nov26 observation frames comms::read_observation() refused
     uint32_t refused() const { return refused_; }
+    bool leaving() const { return leaving_; }
+    // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
+    bool take_forgotten_notice();
 
    private:
     void take_event(const events::CentralEvent& event, uint32_t now_ms);
@@ -85,7 +90,12 @@ class BravoService : public runtime::Service {
     void release_unless_paired();
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
     void claim(uint32_t now_ms);
-    bool linked() const { return up_ && (step_ == BravoStep::Waiting || link_ == BravoLink::Up); }
+    void forget();
+    void leave();
+    bool linked() const {
+        return up_ &&
+               (step_ == BravoStep::Waiting || (step_ == BravoStep::Idle && paired(settings_)));
+    }
 
     Settings& settings_;
     comms::ConfigService& config_;
@@ -110,8 +120,12 @@ class BravoService : public runtime::Service {
     bool health_heard_{false};
     bool started_{false};
     bool settled_{false};
+    uint32_t farewell_ms_{0};
     bool connecting_{false};
     bool up_{false};
+    bool leaving_{false};
+    bool farewell_owed_{false};
+    bool forgotten_{false};
 };
 
 }  // namespace skyblip::go

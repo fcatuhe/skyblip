@@ -159,6 +159,15 @@ constexpr bool on_the_wire(dfu::HubImage value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::ExportReference value) {
+    switch (value) {
+        case comms::ExportReference::None:
+        case comms::ExportReference::Go:
+        case comms::ExportReference::Own: return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(comms::BravoState value) {
     switch (value) {
         case comms::BravoState::Waiting:
@@ -284,6 +293,11 @@ static_assert(code(dfu::HubImage::Unreadable) == 3, "hub_image unreadable");
 static_assert(code(dfu::HubImage::Writing) == 4, "hub_image writing");
 static_assert(code(dfu::HubImage::Held) == 5, "hub_image held");
 static_assert(on_the_wire(dfu::HubImage::None), "hub_image");
+
+static_assert(code(comms::ExportReference::None) == 0, "export_reference none");
+static_assert(code(comms::ExportReference::Go) == 1, "export_reference go");
+static_assert(code(comms::ExportReference::Own) == 2, "export_reference own");
+static_assert(on_the_wire(comms::ExportReference::None), "export_reference");
 
 static_assert(code(comms::BravoState::Waiting) == 1, "bravo waiting");
 static_assert(code(comms::BravoState::Live) == 2, "bravo live");

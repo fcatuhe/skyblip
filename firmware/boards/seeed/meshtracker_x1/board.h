@@ -119,6 +119,8 @@ class MeshtrackerX1 {
         while (platform_.link().pop_rx(frame)) {
             if (frame.endpoint == events::Endpoint::Log)
                 bus_.log_rx.push(frame);
+            else if (frame.endpoint == events::Endpoint::Peer)
+                bus_.peer_rx.push(frame);
             else
                 bus_.link_rx.push(frame);
         }

@@ -8,6 +8,7 @@
 #include "core/protocol/adsb_assembly.h"
 #include "products/common/services/adsb_capture.h"
 #include "products/common/services/traffic.h"
+#include "products/skyblip_bravo/gate_reference.h"
 #include "runtime/service.h"
 
 namespace skyblip::bravo {
@@ -15,8 +16,13 @@ namespace skyblip::bravo {
 // INFO: fc 12nov26 owns state.traffic on Bravo: 1090 MHz is its only source, so no TrafficService
 class AdsbService : public runtime::Service {
    public:
-    AdsbService(runtime::Context& context, bus::AdsbQueue& frames, common::TrafficSettings settings)
-        : runtime::Service(context), frames_(frames), settings_(settings), capture_(context) {}
+    AdsbService(runtime::Context& context, bus::AdsbQueue& frames, common::TrafficSettings settings,
+                const GateReference& gate)
+        : runtime::Service(context),
+          frames_(frames),
+          settings_(settings),
+          gate_(gate),
+          capture_(context) {}
 
     void tick(uint32_t now_ms) override;
 
@@ -26,11 +32,12 @@ class AdsbService : public runtime::Service {
     const common::AdsbCapture& capture() const { return capture_; }
 
    private:
-    protocol::AdsbReference reference() const;
+    static protocol::AdsbReference reference(const model::Ownship& own);
     void hear(const events::AdsbFrame& frame, const protocol::AdsbReference& here, uint32_t now_ms);
 
     bus::AdsbQueue& frames_;
     common::TrafficSettings settings_;
+    const GateReference& gate_;
     common::AdsbCapture capture_;
     protocol::AdsbAssembly assembly_{};
     model::AircraftObservation observation_{};

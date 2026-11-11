@@ -55,6 +55,8 @@ class AdsbReceiver {
 
     virtual Status begin() = 0;
     virtual AdsbReceiverStatistics statistics() const = 0;
+    // INFO: fc 11nov26 armed on 1090 MHz: false before begin(), through a reset, once parked
+    virtual bool listening() const = 0;
     // INFO: fc 11nov26 terminal like ports::Rf::sleep(): parked() turns true only once the part
     // confirmed its sleep
     virtual void sleep() = 0;

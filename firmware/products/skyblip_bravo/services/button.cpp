@@ -14,6 +14,7 @@ bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
 
 void ButtonService::tick(uint32_t now_ms) {
     sync_prompt(now_ms);
+    pairing_.sync(peer_.requested(), pairing_readable(), now_ms);
     sync_receiving(now_ms);
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
@@ -22,8 +23,10 @@ void ButtonService::tick(uint32_t now_ms) {
         const bool pressed = !event.down && answer_.pressing() &&
                              event.at_ms - answer_.pressed_ms() < power::kLongPressHoldMs;
         answer_.contact(event, now_ms);
+        pairing_.contact(answer_, now_ms);
         if (pressed) press(now_ms);
     }
+    pairing_.arm_once_quiet(answer_, pairing_readable(), now_ms);
     if (answering()) {
         answer_.arm_once_quiet(prompt_readable(), now_ms);
         resolve(answer_.tick(now_ms));
@@ -47,6 +50,11 @@ bool ButtonService::prompt_readable() const {
     return alarm_.indicator_condition() == indication::Condition::Prompt;
 }
 
+bool ButtonService::pairing_readable() const {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
+    return alarm_.indicator_condition() == indication::Condition::Pairing;
+}
+
 void ButtonService::sync_receiving(uint32_t now_ms) {
     const bool receiving = config_.receiving_firmware();
     if (receiving == receiving_) return;
@@ -61,6 +69,10 @@ void ButtonService::press(uint32_t now_ms) {
     }
     if (alarm_stands()) {
         alarm_.dismiss();
+        return;
+    }
+    if (pairing_.armed()) {
+        if (peer_.answer(now_ms)) pairing_.spend();
         return;
     }
     if (answering()) return;

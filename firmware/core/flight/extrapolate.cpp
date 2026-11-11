@@ -176,7 +176,7 @@ bool relative_north_east_up(const model::Ownship& own, const model::AircraftObse
 
 bool gnss_relative_altitude_m(const model::Ownship& own, const model::AircraftObservation& target,
                               int32_t& up_m) {
-    if (!own.fix_valid || !target.altitude_valid) return false;
+    if (!own.fix_valid || !own.altitude_hae_valid || !target.altitude_valid) return false;
     const int64_t up =
         static_cast<int64_t>(target.altitude_m) - to_metres(Millimetres(own.altitude_hae_mm)).value;
     up_m = static_cast<int32_t>(std::clamp<int64_t>(up, INT32_MIN, INT32_MAX));

@@ -83,7 +83,7 @@ TEST_CASE("bravo pairing: the pin survives a reboot, and the Go reconnects to it
         tango.bravo.run_pass(at_ms);
         tango.air.pump();
     };
-    uint32_t now_ms = 100;
+    uint32_t now_ms = tango.now_ms;
     rebooted.run(now_ms, now_ms + 2000);
     now_ms += 2050;
     CHECK(rebooted.product.bravo().link() == go::BravoLink::Down);
