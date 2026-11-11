@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "core/comms/diagnostics.h"
+#include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
@@ -158,6 +159,18 @@ constexpr bool on_the_wire(dfu::HubImage value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::BravoState value) {
+    switch (value) {
+        case comms::BravoState::Waiting:
+        case comms::BravoState::Live:
+        case comms::BravoState::LinkDown:
+        case comms::BravoState::ReceiverDown:
+        case comms::BravoState::NoUtc: return true;
+        case comms::BravoState::Unpaired: return false;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(model::ClimbSource value) {
     switch (value) {
         case model::ClimbSource::Unknown:
@@ -271,6 +284,13 @@ static_assert(code(dfu::HubImage::Unreadable) == 3, "hub_image unreadable");
 static_assert(code(dfu::HubImage::Writing) == 4, "hub_image writing");
 static_assert(code(dfu::HubImage::Held) == 5, "hub_image held");
 static_assert(on_the_wire(dfu::HubImage::None), "hub_image");
+
+static_assert(code(comms::BravoState::Waiting) == 1, "bravo waiting");
+static_assert(code(comms::BravoState::Live) == 2, "bravo live");
+static_assert(code(comms::BravoState::LinkDown) == 3, "bravo link_down");
+static_assert(code(comms::BravoState::ReceiverDown) == 4, "bravo receiver_down");
+static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
+static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
 
 static_assert(code(model::ClimbSource::Unknown) == 0, "climb_source unknown");
 static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");

@@ -396,6 +396,11 @@ class GoldenVectors(unittest.TestCase):
         self.assertEqual(decoded["rssi_dbm"], -88)
         self.assertEqual(decoded["heard_s"], 95)
 
+    def test_a_bravo_record_encoded_by_the_firmware(self):
+        decoded = records.decode_flight_record(
+            bytes.fromhex("140003000000000000000000000000008400000000005396"), 1_785_628_800)
+        self.assertEqual(decoded, {"type": "bravo", "utc_s": 1_785_628_820, "bravo": "link_down"})
+
 
 class FlightLogAgainstTheSchema(unittest.TestCase):
     def setUp(self):

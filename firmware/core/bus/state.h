@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_BUS_STATE_H
 #define SKYBLIP_CORE_BUS_STATE_H
 
+#include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/events/rf.h"
 #include "core/flight/atmosphere.h"
@@ -204,6 +205,8 @@ struct State {
 
     traffic::Level alarm_level{traffic::Level::None};
     traffic::Level alarm_undismissed{traffic::Level::None};
+    // INFO: fc 12nov26 written by a paired Go's Bravo service alone, Unpaired everywhere else
+    comms::BravoState bravo{comms::BravoState::Unpaired};
 
     struct AirCounts {
         uint32_t rx_ok{0};

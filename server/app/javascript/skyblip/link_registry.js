@@ -319,6 +319,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "die_temperature_c",
           "number": 7,
           "type": "integer"
+        },
+        {
+          "name": "bravo",
+          "number": 8,
+          "type": "enum",
+          "enum": "bravo"
         }
       ]
     },
@@ -2563,6 +2569,42 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "own",
           "code": 2
+        }
+      ]
+    },
+    "bravo": {
+      "mirrors": {
+        "type": "comms::BravoState",
+        "header": "core/comms/peer.h",
+        "off_the_wire": [
+          "Unpaired"
+        ]
+      },
+      "values": [
+        {
+          "name": "waiting",
+          "code": 1,
+          "mirrors": "Waiting"
+        },
+        {
+          "name": "live",
+          "code": 2,
+          "mirrors": "Live"
+        },
+        {
+          "name": "link_down",
+          "code": 3,
+          "mirrors": "LinkDown"
+        },
+        {
+          "name": "receiver_down",
+          "code": 4,
+          "mirrors": "ReceiverDown"
+        },
+        {
+          "name": "no_utc",
+          "code": 5,
+          "mirrors": "NoUtc"
         }
       ]
     },

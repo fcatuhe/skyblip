@@ -49,6 +49,7 @@ void OwnshipService::tick(uint32_t now_ms) {
     context_.state.gnss.stage_s = acquisition_.stage_ms(now_ms) / 1000;
 
     context_.state.barometer.active = barometer_active_;
+    if (!barometer_active_) context_.state.own.pressure_altitude_valid = false;
     context_.state.own.tx_settled = first_fix_.settled(now_ms);
     context_.state.own.fix_acquired = first_fix_.take_acquired();
 }
@@ -254,9 +255,10 @@ void OwnshipService::apply_barometer(const events::BarometerSample& sample, uint
     context_.state.barometer.pressure_mpa = sample.pressure_mpa;
     context_.state.barometer.temperature_dc = sample.temperature_dc;
     context_.state.barometer.temperature_valid = sample.temperature_valid;
-    // TODO: fc 10nov26 #193 and #176 write the three own.pressure_altitude fields here, _at_ms from
-    // sample.at_ms, and tick() clears _valid once the barometer goes stale
     const int32_t pressure_altitude_mm = flight::pressure_to_altitude_mm(sample.pressure_mpa);
+    context_.state.own.pressure_altitude_mm = pressure_altitude_mm;
+    context_.state.own.pressure_altitude_at_ms = sample.at_ms;
+    context_.state.own.pressure_altitude_valid = true;
     if (!barometer_heard_within_max_age(now_ms)) barometer_reference_ms_ = 0;
     barometer_heard_ms_ = now_ms == 0 ? 1 : now_ms;
     barometer_active_ = true;

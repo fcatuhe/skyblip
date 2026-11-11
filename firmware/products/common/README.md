@@ -32,7 +32,7 @@ The cell is the Go's for now. `PowerService` reads the battery through `core/pow
 
 ## Own pressure altitude
 
-`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere, with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it. That is where own pressure altitude enters `Ownship`. `model::Ownship` has the three fields, `pressure_altitude_mm`, `pressure_altitude_at_ms` and `pressure_altitude_valid`, and nothing writes them yet. #193 on the Go and #176 on Bravo write them there, with `pressure_altitude_at_ms` from the sample's `at_ms`, and `tick()` clears `pressure_altitude_valid` once the barometer goes stale.
+`OwnshipService::apply_barometer()` turns each barometer sample into a pressure altitude on the standard atmosphere, with `flight::pressure_to_altitude_mm`, and derives the barometric climb from it. That is where own pressure altitude enters `Ownship`: `pressure_altitude_mm`, with `pressure_altitude_at_ms` from the sample's `at_ms` and `pressure_altitude_valid` set. `tick()` clears `pressure_altitude_valid` once no sample has arrived for `kBarometerMaxAgeMs`, the age past which the barometer stops being active. The service is shared, so the Go publishes it from its BME280 and Bravo from its SPA06. Its only reader is an ADS-B target that sends a pressure altitude and no GNSS height (`../../core/flight/extrapolate.cpp`), which a Go meets once #193 folds a Bravo's observations.
 
 ## Settings
 

@@ -43,7 +43,7 @@
     },
     {
       "command": "status", "code": 5, "endpoint": "config", "sender": "both",
-      "description": "Asked with the bare command, and the one frame the unit also sends without being asked: while a link is up, a change of flight state, a charging flip, a change of power level or a five-percent step of the state of charge pushes it to every subscribed central. With every key at its widest it is 20 bytes, the payload every link guarantees, pinned byte for byte in firmware/test/products/test_comms_report.cpp. It carries what a pilot's screen shows and nothing a bench reads: why the device came up is reset and whether a gauge is fitted is battery_valid in diagnostics, the address and the callsign are config's. A key with no reading behind it is absent, never a zero. The firmware writes the keys in ascending number, and scripts/check_link_registry.py holds firmware/core/comms/config_reports.cpp to this table: the keys, their order, their types and which may be absent.",
+      "description": "Asked with the bare command, and the one frame the unit also sends without being asked: while a link is up, a change of flight state, a charging flip, a change of power level, a five-percent step of the state of charge or a change of bravo pushes it to every subscribed central. With every key at its widest it is 22 bytes, pinned byte for byte in firmware/test/products/test_comms_report.cpp, and 20 on a unit that is not paired with a Bravo, the payload every link guarantees. A status over 20 bytes, usual for a paired Go in flight, is dropped on a link that stayed at 20 bytes: a push silently, an ask with small_mtu. It carries what a pilot's screen shows and nothing a bench reads: why the device came up is reset and whether a gauge is fitted is battery_valid in diagnostics, the address and the callsign are config's. A key with no reading behind it is absent, never a zero. The firmware writes the keys in ascending number, and scripts/check_link_registry.py holds firmware/core/comms/config_reports.cpp to this table: the keys, their order, their types and which may be absent.",
       "keys": [
         {"name": "flight", "number": 1, "type": "enum", "enum": "flight", "required": true, "description": "The confirmed flight state. A firmware install, a recovery, a power-off, a cold start, a log request, a set and an activated unit's activation are refused while this reads airborne, and go ahead on ground and on unknown, a unit with no fix since boot"},
         {"name": "upload", "number": 2, "type": "boolean", "required": true, "description": "A firmware upload window is open and the unit is not airborne: two presses after dfu open it for ten minutes, and a take-off, one press, the claim holder's link dropping or the upload landing closes it"},
@@ -51,7 +51,8 @@
         {"name": "charging", "number": 4, "type": "boolean", "required": true, "description": "The cable is in. No pin says when the charge ends, so a full cell on the cable still reads true"},
         {"name": "power_level", "number": 5, "type": "enum", "enum": "power_level", "required": true, "description": "What core/power's cutoff rule made of the cell: low below 3600 mV, critical below 3500 mV and flat below 3200 mV, each entered after three consecutive readings below it and left after three back above it by 35 mV (core/power/cutoff.h). low asks for a charger, critical refuses every settings write, flat is the unit taking itself down, and unknown is no believable reading yet. The glass and the USB console print OK, LOW, CRITICAL, FLAT and --"},
         {"name": "went_dark_flat", "number": 6, "type": "boolean", "required": true, "description": "The last time this unit went dark it was for a flat cell: the cutoff took it down, or a switch-on was refused below the boot lockout. The glass says FLAT BATTERY until a charger wakes the unit, and this outlives that frame: true for the whole of the one boot that followed, false from the boot after. The self-test page prints the same fact as WAS FLAT"},
-        {"name": "die_temperature_c", "number": 7, "type": "integer", "description": "Die temperature in whole degrees Celsius, rounded away from zero. Absent rather than zero when no reading younger than 30 seconds exists, because 0 C is a plausible hangar morning. The same value as diagnostics' die_temperature_c"}
+        {"name": "die_temperature_c", "number": 7, "type": "integer", "description": "Die temperature in whole degrees Celsius, rounded away from zero. Absent rather than zero when no reading younger than 30 seconds exists, because 0 C is a plausible hangar morning. The same value as diagnostics' die_temperature_c"},
+        {"name": "bravo", "number": 8, "type": "enum", "enum": "bravo", "description": "What a Go paired with a Bravo makes of its Bravo's health frames (firmware/core/comms/README.md, What the Go makes of its Bravo): live, waiting until the first health of the boot, or why it is lost, link_down, receiver_down or no_utc, which the glass shows as BRAVO LOST. Absent on a unit that is not paired"}
       ]
     },
     {
@@ -308,11 +309,11 @@
         {"name": "sequence", "number": 3, "type": "unsigned", "required": true, "description": "This frame's number among the observations Bravo sent since boot, every target counted together: 0 for the first, one more for each frame after, and 0 again after 4294967295. A reader orders two numbers of one boot_epoch by serial number arithmetic (RFC 1982, SERIAL_BITS 32): a is newer than b when (a - b) mod 2^32 lies from 1 to 2^31 - 1. At 100 frames a second it wraps after 16 months"},
         {"name": "at_s", "number": 4, "type": "unsigned", "required": true, "description": "The UTC second, counted from 1970, of the instant the observation's at_ms names: the position's, or with no valid position the newest message's (firmware/core/model/README.md). Bravo sends nothing without UTC (#192)"},
         {"name": "into_ms", "number": 5, "type": "unsigned", "description": "Milliseconds into at_s, 0 to 999, as events::Stamp counts them. Absent while Bravo's PPS phase is not valid, so the instant is known to the second only"},
-        {"name": "latitude_1e7", "number": 6, "type": "integer", "description": "The position's latitude in 1e-7 degrees, north positive, as latitude_1e7. Present with longitude_1e7 while position_valid, and both absent otherwise, half a CPR pair included. Its time is at_s and into_ms"},
-        {"name": "longitude_1e7", "number": 7, "type": "integer", "description": "The position's longitude in 1e-7 degrees, east positive, as longitude_1e7. Present with latitude_1e7"},
-        {"name": "altitude_m", "number": 8, "type": "integer", "description": "The target's GNSS height in whole metres above the WGS-84 ellipsoid, as altitude_m, measured or derived from the pressure altitude (firmware/core/model/README.md). Present while altitude_valid. Whether ADS-B's GNSS height is on that datum is settled with flight data (#183)"},
+        {"name": "latitude_1e7", "number": 6, "type": "integer", "description": "The position's latitude in 1e-7 degrees, north positive, -900000000 to 900000000, as latitude_1e7. Present with longitude_1e7 while position_valid, and both absent otherwise, half a CPR pair included. Its time is at_s and into_ms. A Go refuses the frame for a value out of range"},
+        {"name": "longitude_1e7", "number": 7, "type": "integer", "description": "The position's longitude in 1e-7 degrees, east positive, -1800000000 to 1800000000, as longitude_1e7. Present with latitude_1e7. A Go refuses the frame for a value out of range"},
+        {"name": "altitude_m", "number": 8, "type": "integer", "description": "The target's GNSS height in whole metres above the WGS-84 ellipsoid, as altitude_m, measured or derived from the pressure altitude (firmware/core/model/README.md). Present while altitude_valid, -1318 to 39572: the pressure altitudes ADS-B encodes widened by the widest GNSS-baro difference it carries unsaturated, 3125 ft. A Go refuses the frame for a height outside it. Whether ADS-B's GNSS height is on that datum is settled with flight data (#183)"},
         {"name": "altitude_age_ms", "number": 9, "type": "integer", "description": "How many milliseconds before at_s and into_ms altitude_m was true, negative when after, as altitude_age_ms. Present with altitude_m"},
-        {"name": "pressure_altitude_ft", "number": 10, "type": "integer", "description": "The target's pressure altitude on 1013.25 hPa in feet, as ADS-B encodes it and pressure_altitude_ft holds it. Present while pressure_altitude_valid"},
+        {"name": "pressure_altitude_ft", "number": 10, "type": "integer", "description": "The target's pressure altitude on 1013.25 hPa in feet, as ADS-B encodes it and pressure_altitude_ft holds it, -1200 to 126700, the extremes of its Gillham code. Present while pressure_altitude_valid. A Go refuses the frame for a value outside it"},
         {"name": "pressure_altitude_age_ms", "number": 11, "type": "integer", "description": "The age of pressure_altitude_ft, as pressure_altitude_age_ms. Present with it"},
         {"name": "speed_q", "number": 12, "type": "unsigned", "description": "Ground speed in quarters of a metre a second, 0 to 65535, as speed_q. Present with track_c9 while speed_valid"},
         {"name": "track_c9", "number": 13, "type": "unsigned", "description": "Track over the ground, 0 to 511, 360 degrees over 512 counts, as track_c9. Present with speed_q"},
@@ -545,6 +546,16 @@
         {"name": "none", "code": 0},
         {"name": "go", "code": 1},
         {"name": "own", "code": 2}
+      ]
+    },
+    "bravo": {
+      "mirrors": {"type": "comms::BravoState", "header": "core/comms/peer.h", "off_the_wire": ["Unpaired"]},
+      "values": [
+        {"name": "waiting", "code": 1, "mirrors": "Waiting"},
+        {"name": "live", "code": 2, "mirrors": "Live"},
+        {"name": "link_down", "code": 3, "mirrors": "LinkDown"},
+        {"name": "receiver_down", "code": 4, "mirrors": "ReceiverDown"},
+        {"name": "no_utc", "code": 5, "mirrors": "NoUtc"}
       ]
     },
     "climb_source": {

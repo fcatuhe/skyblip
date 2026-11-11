@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://skyblip.eu/schemas/flight_log.v1.schema.json",
   "title": "skyBlip flight log record (v1)",
-  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's chunks, each one CBOR byte string of whole records. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a target's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends. Records are in the order they were written, not the order they describe. Every record carries type and utc_s; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
+  "description": "ONE decoded record out of a flight, as a host decoder reads it off the log endpoint's chunks, each one CBOR byte string of whole records. The firmware owns the layout (firmware/core/flight/log_record.h): 24 bytes, little-endian, bytes 0-1 the seconds since the session opened, bytes 22-23 a CRC-16-CCITT over the first 22, every field written one at a time. A session holds fixes, one a second while the aircraft flies and the minute before its takeoff, and events beside them: a status a minute and whenever the cell changes level, an alarm whenever a target's level changes, and an encounter, the closest pass of each aircraft heard, written when it leaves the table or the flight ends, and on a Go paired with a Bravo a bravo record when the Bravo is lost and when it comes back. Records are in the order they were written, not the order they describe. Every record carries type and utc_s; the rest of the keys belong to the type named at the front of each description and no record mixes two of them. A session listed closed:false ended with the power: its last record may be a torn write, which the CRC refuses.",
   "type": "object",
   "required": [
     "type",
@@ -16,9 +16,10 @@
         "fix",
         "status",
         "alarm",
-        "encounter"
+        "encounter",
+        "bravo"
       ],
-      "description": "What this record is. A fix carries byte 16 as the high byte of its nine-bit track, so the byte is 0 or 1; an event sets its top bit and names its kind in the other seven: status=0x81, alarm=0x82, encounter=0x83. A kind is retired, never renumbered, because a flight on the partition outlives the firmware that wrote it."
+      "description": "What this record is. A fix carries byte 16 as the high byte of its nine-bit track, so the byte is 0 or 1; an event sets its top bit and names its kind in the other seven: status=0x81, alarm=0x82, encounter=0x83, bravo=0x84. A kind is retired, never renumbered, because a flight on the partition outlives the firmware that wrote it."
     },
     "utc_s": {
       "type": "integer",
@@ -246,6 +247,18 @@
     "in_formation": {
       "type": "boolean",
       "description": "alarm, encounter. Bit 1 of byte 19: flying in formation with own-ship, so its alarm was withheld"
+    },
+    "bravo": {
+      "type": "string",
+      "enum": [
+        "unpaired",
+        "waiting",
+        "live",
+        "link_down",
+        "receiver_down",
+        "no_utc"
+      ],
+      "description": "bravo. What the Go made of its Bravo's health, byte 2, written on the fix the Bravo was lost and on the fix it came back: link_down, receiver_down or no_utc when lost, the glass's BRAVO LOST, and live, or unpaired after an unpair, when it came back. Codes: 0 unpaired, 1 waiting, 2 live, 3 link_down, 4 receiver_down, 5 no_utc, the link registry's bravo enum (schemas/link.v1.json)."
     },
     "heard_s": {
       "type": "integer",

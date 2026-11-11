@@ -12,6 +12,14 @@ namespace {
 uint32_t observation_at_s(const model::AircraftObservation& observation) {
     return observation.received.at_s;
 }
+// INFO: fc 12nov26 our second lags our clock by one, a paired Bravo's runs one ahead: no further
+constexpr int32_t kReceptionAheadCeilingS = 2;
+
+uint32_t age_s(const model::AircraftObservation& observation, uint32_t now_s) {
+    const int32_t age = static_cast<int32_t>(now_s - observation_at_s(observation));
+    if (age >= 0) return static_cast<uint32_t>(age);
+    return age >= -kReceptionAheadCeilingS ? 0u : UINT32_MAX;
+}
 int source_rank(model::Source source) {
     switch (source) {
         case model::Source::AdslDirect:
@@ -98,7 +106,7 @@ TrafficTable::Weight TrafficTable::weight_of(const model::AircraftObservation& o
     int32_t slant_m = 0;
     if (range_check(own_, observation, slant_m) == Plausibility::NoReference) slant_m = 0;
     return Weight{flight::on_ground(observation.flight_state), slant_m,
-                  source_rank(observation.source), now_s - observation_at_s(observation)};
+                  source_rank(observation.source), age_s(observation, now_s)};
 }
 
 int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint32_t now_s) {
@@ -176,7 +184,7 @@ void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservatio
 void TrafficTable::age_out(uint32_t now_s) {
     for (int i = 0; i < kMaxTargets; i++) {
         if (!slots_[i].used) continue;
-        if (now_s - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation))
+        if (age_s(slots_[i].observation, now_s) > forget_s(slots_[i].observation))
             release(slots_[i]);
     }
 }
