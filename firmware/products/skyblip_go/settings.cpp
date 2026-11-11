@@ -24,8 +24,6 @@ bool callsign_is_typeable(const char* callsign) {
     return false;
 }
 
-constexpr uint64_t key_bit(uint32_t key) { return uint64_t{1} << key; }
-
 template <class Value, class Assign>
 Status apply_key(const Result<Value>& read, Assign assign) {
     if (read.status() == Status::NotFound) return Status::Ok;
@@ -151,16 +149,6 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame) {
     if (status != Status::Ok) return status;
     settings = next;
     return Status::Ok;
-}
-
-bool pilot_settings_only(const cbor::Reader& frame) {
-    constexpr uint64_t kPilotKeys =
-        key_bit(link::kCommandKey) | key_bit(link::set_key::kVersion) |
-        key_bit(link::set_key::kAddress) | key_bit(link::set_key::kAddressMappingTable) |
-        key_bit(link::set_key::kAircraftType) | key_bit(link::set_key::kAlarmEnabled) |
-        key_bit(link::set_key::kAlarmVolume) | key_bit(link::set_key::kUnits) |
-        key_bit(link::set_key::kCallsign) | key_bit(link::set_key::kOwnIcao);
-    return frame.keys_within(kPilotKeys);
 }
 
 }  // namespace skyblip::go

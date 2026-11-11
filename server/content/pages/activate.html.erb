@@ -32,10 +32,12 @@ updated_on: "2026-11-11"
         address: "Address",
         none: "none yet",
         activate: "Activate",
+        countdown: "The glass refuses on its own in %{seconds} s.",
+        activated: safe_join([ "Already activated: this unit holds its serial and has nothing to activate. Update its firmware on ", link_to_page("update", label: "the update page"), ", and change its settings on ", link_to_page("configure", label: "the settings page"), "." ]),
         settings: {
           legend: "Aircraft type, callsign and own ICAO address",
           lede: "All three are optional. Skip them and the unit keeps its current ones: you can still change them in its menu or on the update page.",
-          ground: "This unit takes settings only on the ground, once it has a GPS fix. Take it where it sees the sky: Save comes back when the unit reports the fix.",
+          airborne: "The unit is flying: Save comes back once it has landed.",
           save: "Save",
           skip: "Skip"
         },
@@ -82,12 +84,10 @@ updated_on: "2026-11-11"
     six hexadecimal digits: with it, the unit never shows your own transponder
     as traffic. It does not change the address the unit transmits.
     Save sends them in one change, and the glass asks once more: it says
-    <span class="mono">SETTINGS</span> and lists each change, press twice. A
-    unit whose firmware takes settings only on the ground says so while it has
-    no GPS fix: the page shows it, and Save comes back once the unit reports
-    the fix. Skip it and the unit keeps the ones it holds: a light aircraft,
+    <span class="mono">SETTINGS</span> and lists each change, press twice.
+    While the unit is flying, the page holds Save until it lands. Skip it and the unit keeps the ones it holds: a light aircraft,
     no callsign and no own ICAO address on a new unit. All stay changeable later, in the
-    unit&rsquo;s menu and on <%= link_to_page "manage", label: "the update page" %>.
+    unit&rsquo;s menu and on <%= link_to_page "configure", label: "the settings page" %>.
   </p>
   <p class="lede">
     The unit checks its serial at every start, and needs this page only once.
@@ -121,7 +121,7 @@ updated_on: "2026-11-11"
         <tr><th class="mono">no_session</th><td data-activate-word="no_session">The unit no longer holds the number this activation started from: more than ten minutes passed, or the link dropped. Activate again.</td></tr>
         <tr><th class="mono">bad_signature</th><td data-activate-word="bad_signature">The unit did not recognise what skyblip.eu signed as made for it, now. Activate again, and if it happens twice, tell us which firmware it runs.</td></tr>
         <tr><th class="mono">small_mtu</th><td data-activate-word="small_mtu">The unit&rsquo;s answer did not fit the link: this phone or browser kept Bluetooth&rsquo;s smallest packet size, or one too small for the answer. Disconnect and connect again. If it happens again, update the browser and the phone, or activate from another phone or a computer with Chrome or Edge.</td></tr>
-        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">This unit is already activated, and it has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then activate again.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">This unit is already activated, and it is flying. Activate again once it has landed. Older firmware also says so until its first GPS fix since it was switched on: take it where it sees the sky and wait for the fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="low_power">The battery is critical, too low to write the serial to memory. Charge it, then activate again.</td></tr>
         <tr><th class="mono">flash</th><td data-activate-word="flash">The unit could not write its serial to its memory. Activate again, and if it happens again, tell us.</td></tr>
         <tr><th class="mono">expired</th><td data-activate-word="expired">Nobody answered the question on the glass within thirty seconds, so the unit dropped it. Activate again, and press twice when the glass asks.</td></tr>
@@ -145,7 +145,7 @@ updated_on: "2026-11-11"
         <tr><th>The unit answers</th><th>What it means, and what to do</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-activate-word="set_in_flight">The unit has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="set_in_flight">The unit is flying, so the settings stay as they were. Try again once it has landed. Older firmware also says so until its first GPS fix since it was switched on: take it where it sees the sky and wait for the fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="set_low_power">The battery is critical, too low to write the settings to memory. Charge it, then try again.</td></tr>
         <tr><th class="mono">expired</th><td data-activate-word="set_expired">Nobody answered the question on the glass within thirty seconds, so the unit dropped it. Try again, and press twice when the glass asks.</td></tr>
         <tr><th class="mono">cancelled</th><td data-activate-word="set_cancelled">The unit said no: one press refuses the question, and the settings stay as they were. The unit now asks nothing more from this connection, so change them in its menu or on the update page.</td></tr>
@@ -205,6 +205,6 @@ updated_on: "2026-11-11"
 
 <section>
   <p>
-    <%= link_to_page "manage", class: "cta cta--previous" %>
+    <%= link_to_page "update", class: "cta cta--previous" %>
   </p>
 </section>

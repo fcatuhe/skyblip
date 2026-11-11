@@ -25,6 +25,7 @@ const IMAGE_REFUSALS = {
 // INFO: fc 26sep26 the ATT payloads of MTU 247 and 185, where Android and iOS commonly settle
 const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
+export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 
@@ -104,7 +105,7 @@ export class Updater {
     settings: null,
     address: null,
     defaults: null,
-    heldForGround: false,
+    refusedOnDevice: false,
     file: null,
     advice: null,
     settling: false,
@@ -120,9 +121,8 @@ export class Updater {
     return this.#state;
   }
 
-  get onGround() {
-    const { status } = this.#state;
-    return !status || status.flight === 'ground';
+  get inFlight() {
+    return this.#state.status?.flight === 'airborne';
   }
 
   async connect() {
@@ -176,7 +176,7 @@ export class Updater {
 
   async install() {
     if (!this.#image) return this.#set({ notice: { key: 'no_file' } });
-    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
+    if (this.inFlight) return this.#set({ notice: { key: 'in_flight' } });
     const refusal = this.#refusal();
     if (refusal) return this.#set({ notice: { key: refusal } });
     this.#set({ notice: null });
@@ -185,7 +185,7 @@ export class Updater {
   }
 
   recover() {
-    if (!this.onGround) return this.#set({ notice: { key: 'in_flight' } });
+    if (this.inFlight) return this.#set({ notice: { key: 'in_flight' } });
     this.#set({ notice: null });
     return this.#ask('recovery');
   }
@@ -197,6 +197,7 @@ export class Updater {
   saveSettings(values) {
     const changed = changedSettings(this.#state.settings, values);
     if (Object.keys(changed).length === 0) return;
+    if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'set' } });
     this.#set({ notice: null });
     return this.#ask('set', settingsFrame(changed));
   }
@@ -249,7 +250,7 @@ export class Updater {
   #receive(reply) {
     if (!reply) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
-    else if (reply.command === 'status') this.#set({ status: statusOf(reply), ...(reply.flight === 'ground' ? { heldForGround: false } : {}) });
+    else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
     else if (reply.command === 'acknowledgement') this.#acked(reply);
@@ -257,15 +258,15 @@ export class Updater {
 
   #acked(reply) {
     const { phase, task } = this.#state;
-    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: { key: 'claimed' } });
+    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
     if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
-    const heldForGround = task === 'set' && reply.reason === 'in_flight';
-    this.#set({ phase: 'ready', task: null, ...(heldForGround ? { heldForGround } : {}), notice: { key: reply.reason || 'refused' } });
+    const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
+    this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
   }
 
   #narrow() {
@@ -283,7 +284,7 @@ export class Updater {
   }
 
   #saved() {
-    this.#set({ phase: 'ready', task: null, notice: { key: 'saved' } });
+    this.#set({ phase: 'ready', task: null, notice: { key: 'saved', during: 'set' } });
     return this.#send({ command: 'get' });
   }
 
@@ -334,7 +335,11 @@ export class Updater {
   }
 
   #fail(error) {
-    this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, notice: this.#noticeOf(error) });
+    this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, notice: this.#noticeDuring(this.#state.task, this.#noticeOf(error)) });
+  }
+
+  #noticeDuring(task, notice) {
+    return task === 'set' ? { ...notice, during: 'set' } : notice;
   }
 
   #noticeOf(error) {
@@ -354,11 +359,11 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, heldForGround: false, progress: null });
+      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, heldForGround: false,
+      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
       progress: null,
       notice,
     });
@@ -369,4 +374,14 @@ export class Updater {
     this.#state = { ...state, advice: adviceOf(state), settling: settlingOf(state) };
     this.#onChange(this.#state);
   }
+}
+
+const sharedListeners = new Set();
+let sharedUpdater = null;
+
+// INFO: fc 11nov26 one link for the update and settings pages, which Turbo swaps without reloading this module
+export function joinSession(onChange) {
+  sharedUpdater ??= new Updater({ onChange: state => sharedListeners.forEach(listener => listener(state)) });
+  sharedListeners.add(onChange);
+  return { updater: sharedUpdater, leave: () => sharedListeners.delete(onChange) };
 }

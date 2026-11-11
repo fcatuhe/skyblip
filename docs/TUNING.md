@@ -56,6 +56,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kAdsbQueueDrainWindowMs` | 100 | milliseconds | Window | a drain window chosen and not yet measured, until the #169 bench reads the drops |
 | `kStampReachUs` | 2000000 (2000 ms) | microseconds | - | - |
 
 ## [`firmware/core/flight`](../firmware/core/flight/README.md)
@@ -323,4 +324,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-213 constants over 19 folders.
+214 constants over 19 folders.

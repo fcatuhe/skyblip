@@ -40,6 +40,11 @@
       Object.assign(this.stored, this.staged);
       return this.reply({ command: 'acknowledgement', acknowledge: true });
     },
+
+    refuse() {
+      this.staged = null;
+      return this.reply({ command: 'acknowledgement', acknowledge: false, reason: 'cancelled' });
+    },
   };
 
   const config = {

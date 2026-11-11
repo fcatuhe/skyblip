@@ -44,6 +44,14 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
   end
 
+  test "the firmware shelf lists every slim image newest first, then every full one" do
+    older = release("dev-1002", published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1002.full.signed.bin skyblip-go-dev-1002.signed.bin])
+    newer = release("dev-1005", published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1005.signed.bin])
+
+    assert_equal %w[skyblip-go-dev-1005.signed.bin skyblip-go-dev-1002.signed.bin skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1002.full.signed.bin],
+                 Release.firmware_shelf([ older, newer ]).map(&:last)
+  end
+
   test "the simulator prefers the newest stable release, then the newest main build" do
     older_stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z", assets: Release::SIMULATOR_FILES)
     newer_stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", assets: Release::SIMULATOR_FILES)

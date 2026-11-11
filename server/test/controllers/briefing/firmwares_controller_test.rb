@@ -2,7 +2,7 @@ require "test_helper"
 
 class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
   test "the update page renders the file picker and a separate shelf request without GitHub" do
-    get "/manage"
+    get "/update"
 
     assert_response :success
     assert_select "input[type=file]"
@@ -20,6 +20,9 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     assert_select "option[value^='/releases/dev-']", minimum: 1
     assert_select "option[data-product=skyblip_go][value*='/skyblip-go-']", minimum: 1
     assert_select "option:not([data-product=skyblip_go])[data-channel]", count: 0
+    images = css_select("option[data-kind]")
+    assert_equal %w[slim slim slim full full full], images.map { |option| option["data-kind"] }
+    assert_equal "/releases/dev-1005/skyblip-go-dev-1005.signed.bin", images.first["value"]
   end
 
   # The cassette records GitHub rejecting an invalid token with HTTP 401.

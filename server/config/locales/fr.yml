@@ -1,7 +1,9 @@
 fr:
   nav:
     label: "Site"
-    manage: "Gérer"
+    session:
+      connected: "Connecté à"
+      disconnect: "Déconnecter"
     try: "Essayer"
   cta:
     prompt: "Envie d'essayer maintenant ou de vous équiper ?"

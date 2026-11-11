@@ -8,7 +8,6 @@ const ESTIMATE_AFTER_SHARE = 0.05
 const ASKED_STEPS = new Set(["dfu", "install"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
-const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
@@ -16,25 +15,27 @@ const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
                     "device", "firmware", "track", "battery", "flight", "advice", "chosen", "notes", "step",
-                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset"]
+                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset", "settingsMessage"]
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
-    const { Updater, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
+    const { LINKED_PHASES, joinSession, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
+    this.linked = LINKED_PHASES
     this.productOf = productOf
     this.readSetting = readSetting
     this.showSetting = showSetting
     this.bluetooth = hasWebBluetooth()
     this.unsupportedTarget.hidden = this.bluetooth
-    this.updater = new Updater({ onChange: state => this.#render(state) })
+    this.session = joinSession(state => this.#render(state))
+    this.updater = this.session.updater
     this.#render(this.updater.state)
   }
 
   disconnect() {
     clearTimeout(this.recheck)
     this.selection?.abort()
-    this.updater?.disconnect()
+    this.session?.leave()
   }
 
   shelfTargetConnected() {
@@ -122,24 +123,31 @@ export default class extends Controller {
   }
 
   #render(state) {
-    const linked = LINKED.has(state.phase)
-    const idle = state.phase === "ready" && this.updater.onGround
+    const linked = this.linked.has(state.phase)
+    const idle = state.phase === "ready" && !this.updater.inFlight
+    const asks = idle && !state.refusedOnDevice
     this.connectTarget.hidden = linked
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
-    this.installTarget.disabled = this.selecting || !idle || !state.file
-    this.fileTarget.disabled = this.selecting || !["offline", "ready"].includes(state.phase)
-    this.#offer(state, idle)
-    this.recoverTarget.disabled = !idle
     this.#facts(state)
     this.#notes(state)
-    this.#settings(state)
+    if (this.hasSettingsTarget) this.#settings(state)
+    if (this.hasInstallTarget) this.#firmware(state, idle, asks)
+    else this.messageTarget.textContent = this.#linkMessage(state)
+  }
+
+  #firmware(state, idle, asks) {
+    this.installTarget.disabled = this.selecting || !asks || !state.file
+    this.fileTarget.disabled = this.selecting || !["offline", "ready"].includes(state.phase)
+    this.#offer(state, idle)
+    this.recoverTarget.disabled = !asks
     this.#steps(state)
     this.#progress(state)
     this.messageTarget.textContent = this.#message(state)
-    this.messageTarget.classList.toggle("visually-hidden", !state.notice && Boolean(this.#step(state)))
+    this.messageTarget.classList.toggle("visually-hidden", !this.#notice(state) && Boolean(this.#step(state)))
     this.#recheck(state)
+    this.#preselect(state)
   }
 
   #offer({ image }, idle) {
@@ -157,6 +165,17 @@ export default class extends Controller {
     this.shelfTarget.disabled = this.selecting || !idle || options.every(option => option.hidden)
   }
 
+  #preselect({ device, settings, notice, file }) {
+    if (!device) this.preselected = null
+    if (!this.hasShelfTarget || !settings || notice || this.preselected === device || this.selecting) return
+    if (file || this.shelfTarget.value || this.fileTarget.value) return
+    const newest = [...this.shelfTarget.options].find(option => option.value && !option.hidden && option.dataset.kind === "slim")
+    if (!newest) return
+    this.preselected = device
+    this.shelfTarget.value = newest.value
+    this.take()
+  }
+
   #shelve(option) {
     if (!this.hasShelfTarget) return
     if (!option) this.shelfTarget.value = ""
@@ -167,9 +186,11 @@ export default class extends Controller {
   #facts({ device, running, image, status, advice, file }) {
     this.deviceTarget.textContent = device || "-"
     this.firmwareTarget.textContent = running || "-"
-    this.trackTarget.textContent = image?.key ? this.labelsValue.track[image.downgrade ? "development" : "release"] : "-"
-    this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
-    this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
+    if (this.hasInstallTarget) {
+      this.trackTarget.textContent = image?.key ? this.labelsValue.track[image.downgrade ? "development" : "release"] : "-"
+      this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
+      this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
+    }
     const percent = status?.batteryPercent
     const charging = status?.charging ? ` ${this.chargingValue}` : ""
     this.batteryTarget.textContent = percent === null || percent === undefined ? "-" : `${percent} %${charging}`
@@ -185,17 +206,24 @@ export default class extends Controller {
     return full ? this.fullValue : this.slimValue
   }
 
-  #notes({ image, status, settings, address }) {
+  #notes({ image, status, settings, address, refusedOnDevice }) {
     const notes = []
     if (settings && address === null && ACTIVATED_PRODUCTS.has(this.productOf(image))) notes.push(["not_activated"])
-    if (status && status.flight !== "ground") notes.push(["in_flight"])
+    if (status?.flight === "airborne") notes.push(["in_flight"])
+    if (refusedOnDevice) notes.push(["refused_on_device"])
+    if (image?.settings) notes.push([`settings_${image.settings}`])
+    if (this.hasInstallTarget) notes.push(...this.#imageNotes(image, status))
+    this.notesTarget.replaceChildren(...notes.map(([key, version]) => this.#note(key, version)))
+  }
+
+  #imageNotes(image, status) {
+    const notes = []
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
     if (image && !image.key && this.hasShelfTarget) notes.push(["no_key"])
-    if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])
-    this.notesTarget.replaceChildren(...notes.map(([key, version]) => this.#note(key, version)))
+    return notes
   }
 
   #note(key, version) {
@@ -210,13 +238,15 @@ export default class extends Controller {
     return note
   }
 
-  #settings({ phase, settings, defaults, heldForGround }) {
+  #settings(state) {
+    const { phase, settings, defaults, refusedOnDevice } = state
     this.settingsTarget.hidden = !settings
     if (!settings) return
     if (settings !== this.shown) this.#fill(settings)
+    this.settingsMessageTarget.textContent = this.#settingsMessage(state)
     const edited = this.#edited()
     const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
-    const idle = phase === "ready" && !heldForGround
+    const idle = phase === "ready" && !this.updater.inFlight && !refusedOnDevice
     this.fieldsTarget.disabled = !idle
     this.saveTarget.disabled = !idle || !changed
     this.resetTarget.hidden = !defaults
@@ -291,12 +321,30 @@ export default class extends Controller {
   }
 
   #message(state) {
-    if (state.notice) return [this.#word(state.notice.key), state.notice.detail].filter(Boolean).join(" ")
+    const notice = this.#notice(state)
+    if (notice) return this.#said(notice)
     if (state.task === "recovery") return this.#word("confirm_recovery")
-    if (state.task === "set") return this.#word("confirm_set")
     const step = this.#step(state)
     if (step) return this.#word(`step_${step}`)
     return PHASE_WORD[state.phase] ? this.#word(PHASE_WORD[state.phase]) : ""
+  }
+
+  #linkMessage(state) {
+    const notice = this.#notice(state)
+    if (notice) return this.#said(notice)
+    return state.phase === "connecting" ? this.#word("connecting") : ""
+  }
+
+  #settingsMessage({ notice }) {
+    return notice?.during === "set" ? this.#said(notice) : ""
+  }
+
+  #notice({ notice }) {
+    return notice?.during === "set" ? null : notice
+  }
+
+  #said({ key, detail }) {
+    return [this.#word(key), detail].filter(Boolean).join(" ")
   }
 
   #word(key) {

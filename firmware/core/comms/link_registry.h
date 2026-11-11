@@ -208,6 +208,15 @@ enum : uint32_t {
     kDieTemperatureC = 48,
     kCharge = 49,
     kChargeWarnings = 50,
+    kFrames = 51,
+    kFrameRateHz = 52,
+    kInvalid = 53,
+    kDropped = 54,
+    kRearms = 55,
+    kResets = 56,
+    kCommandErrors = 57,
+    kErrors = 58,
+    kRssiDbm = 59,
 };
 }
 

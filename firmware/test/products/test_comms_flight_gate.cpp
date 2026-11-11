@@ -1,5 +1,5 @@
-// What the flight state gates on the config endpoint, and the settings a set may change without a
-// fix.
+// What the flight state gates on the config endpoint: Airborne refuses, and the ground or no fix
+// since boot stages.
 #include <cstring>
 #include <string>
 
@@ -21,8 +21,12 @@ namespace {
 constexpr const char* kInFlight =
     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"in_flight\"}";
 
-constexpr flight::FlightState kOffTheGround[] = {flight::FlightState::Unknown,
-                                                 flight::FlightState::Airborne};
+constexpr flight::FlightState kNotAirborne[] = {flight::FlightState::Ground,
+                                                flight::FlightState::Unknown};
+
+constexpr const char* kPromptRequests[] = {
+    "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}", "{\"command\":\"recovery\"}",
+    "{\"command\":\"power_off\"}", "{\"command\":\"gnss_cold_start\"}"};
 
 struct Bench {
     platform::host::Link link;
@@ -92,67 +96,91 @@ TEST_CASE("comms flight gate: a take-off cancels a staged set, from the ground o
     }
 }
 
-// No menu row changes a trim: each is set on a bench, against a supply or an analyser.
-TEST_CASE("comms flight gate: a set carrying a bench trim is refused in_flight off the ground") {
-    for (const flight::FlightState state : kOffTheGround) {
-        for (const char* set :
-             {"{\"command\":\"set\",\"battery_offset_mv\":40}",
-              "{\"command\":\"set\",\"frequency_trim_e1_ppm\":-25}",
-              "{\"command\":\"set\",\"aircraft_type\":4,\"frequency_trim_e1_ppm\":-25}"}) {
-            Bench bench(state);
-            bench.config.on_rx(config_frame(set));
-            CHECK(bench.config.pending() == Pending::None);
-            CHECK(bench.last() == kInFlight);
-            CHECK(int(bench.settings.aircraft_type) == 1);
-            CHECK(bench.settings.battery_offset_mv == 0);
-            CHECK(bench.settings.frequency_trim_e1_ppm == 0);
-        }
+TEST_CASE(
+    "comms flight gate: a set carrying a bench trim is staged with no fix, and refused aloft") {
+    for (const char* set : {"{\"command\":\"set\",\"battery_offset_mv\":40}",
+                            "{\"command\":\"set\",\"frequency_trim_e1_ppm\":-25}"}) {
+        Bench grounded(flight::FlightState::Unknown);
+        grounded.config.on_rx(config_frame(set));
+        CHECK(grounded.config.pending() == Pending::Set);
+
+        Bench aloft(flight::FlightState::Airborne);
+        aloft.config.on_rx(config_frame(set));
+        CHECK(aloft.config.pending() == Pending::None);
+        CHECK(aloft.last() == kInFlight);
     }
 }
 
-// Unknown is no take-off, so the prompt stands until the press, and the press refuses it.
+// A fix lost on the ground is no take-off, so the prompt stands and the press confirms it.
 TEST_CASE(
-    "comms flight gate: a trim staged on the ground is refused at the press once the fix is lost") {
+    "comms flight gate: a set staged on the ground is stored at the press once the fix is lost") {
     Bench bench(flight::FlightState::Ground);
     bench.config.on_rx(config_frame("{\"command\":\"set\",\"battery_offset_mv\":40}"));
     REQUIRE(bench.config.pending() == Pending::Set);
     bench.config.set_flight_state(flight::FlightState::Unknown);
     bench.config.confirm();
-    CHECK(bench.settings.battery_offset_mv == 0);
-    CHECK(bench.last() == kInFlight);
+    CHECK(bench.settings.battery_offset_mv == 40);
+    CHECK(bench.last() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
 }
 
-TEST_CASE("comms flight gate: install, recovery, power-off, cold start and erase stay grounded") {
-    for (const flight::FlightState state : kOffTheGround) {
-        for (const char* request :
-             {"{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}", "{\"command\":\"recovery\"}",
-              "{\"command\":\"power_off\"}", "{\"command\":\"gnss_cold_start\"}"}) {
+TEST_CASE(
+    "comms flight gate: install, recovery, power-off, cold start and erase are refused aloft") {
+    for (const char* request : kPromptRequests) {
+        Bench bench(flight::FlightState::Airborne);
+        bench.config.on_rx(config_frame(request));
+        CHECK(bench.config.pending() == Pending::None);
+        CHECK(bench.last() == kInFlight);
+    }
+    Bench erase(flight::FlightState::Airborne);
+    REQUIRE(erase.config.claim_link(events::Peer{1, kFirstConnection}));
+    erase.config.request_log_erase();
+    CHECK(erase.config.pending() == Pending::None);
+    CHECK(erase.last() == kInFlight);
+}
+
+// Unknown is a unit with no fix since boot: it sends no position and grades no traffic.
+TEST_CASE(
+    "comms flight gate: install, recovery, power-off, cold start and erase ask on the ground or "
+    "with no fix") {
+    for (const flight::FlightState state : kNotAirborne) {
+        for (const char* request : kPromptRequests) {
             Bench bench(state);
             bench.config.on_rx(config_frame(request));
-            CHECK(bench.config.pending() == Pending::None);
-            CHECK(bench.last() == kInFlight);
+            CHECK(bench.config.pending() != Pending::None);
         }
         Bench erase(state);
         REQUIRE(erase.config.claim_link(events::Peer{1, kFirstConnection}));
         erase.config.request_log_erase();
-        CHECK(erase.config.pending() == Pending::None);
-        CHECK(erase.last() == kInFlight);
+        CHECK(erase.config.pending() == Pending::EraseLog);
     }
+}
 
+TEST_CASE(
+    "comms flight gate: an upload finished after the fix is lost installs, and a take-off shuts "
+    "it") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation);
     FinishedUpload dfu;
     ConfigService config(link, store, &dfu);
-    config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
     config.confirm();
     REQUIRE(config.receiving_firmware());
-    config.set_flight_state(flight::FlightState::Unknown);
+    config.set_flight_state(flight::FlightState::Airborne);
+    CHECK_FALSE(config.upload_allowed());
     config.tick(100);
     CHECK_FALSE(config.install_requested());
-    CHECK(link_text(link.last().bytes) == kInFlight);
+
+    config.set_flight_state(flight::FlightState::Ground);
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    config.set_flight_state(flight::FlightState::Unknown);
+    CHECK(config.upload_allowed());
+    config.tick(200);
+    CHECK(config.install_requested());
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");
 }
 
 // A twin unit nobody sent a set to is what the glass must still show, byte for byte.

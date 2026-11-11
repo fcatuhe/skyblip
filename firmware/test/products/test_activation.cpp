@@ -668,21 +668,23 @@ TEST_CASE(
     }
 }
 
-// An activated unit transmits, so it owes every identity command the ground gate the others obey.
-TEST_CASE("activation: an activated unit refuses challenge, register and unlock off the ground") {
-    for (flight::FlightState flight_state :
-         {flight::FlightState::Unknown, flight::FlightState::Airborne}) {
-        CAPTURE(static_cast<int>(flight_state));
-        Desk desk(Identity::kSerial);
-        REQUIRE(desk.identity.activated());
-        desk.config.set_flight_state(flight_state);
-        CHECK(desk.say("{\"command\":\"challenge\"}") == refusal("in_flight"));
-        CHECK(desk.say(register_command(desk.vectors.text("server_nonce"),
-                                        desk.vectors.text("register_signature"))) ==
-              refusal("in_flight"));
-        CHECK(desk.say(unlock_command(298, desk.vectors.text("unlock_signature"))) ==
-              refusal("in_flight"));
-    }
+// An activated unit transmits, so it owes every identity command the flight gate the others obey.
+TEST_CASE("activation: an activated unit refuses challenge, register and unlock in flight") {
+    Desk desk(Identity::kSerial);
+    REQUIRE(desk.identity.activated());
+    desk.config.set_flight_state(flight::FlightState::Airborne);
+    CHECK(desk.say("{\"command\":\"challenge\"}") == refusal("in_flight"));
+    CHECK(desk.say(register_command(desk.vectors.text("server_nonce"),
+                                    desk.vectors.text("register_signature"))) ==
+          refusal("in_flight"));
+    CHECK(desk.say(unlock_command(298, desk.vectors.text("unlock_signature"))) ==
+          refusal("in_flight"));
+}
+
+TEST_CASE("activation: an activated unit with no fix since boot answers a challenge") {
+    Desk desk(Identity::kSerial);
+    REQUIRE(desk.config.flight_state() == flight::FlightState::Unknown);
+    CHECK(desk.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
 }
 
 TEST_CASE("activation: an activated unit's register prompt is cancelled at take-off") {

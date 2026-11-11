@@ -33,10 +33,6 @@ class SettingsStore : public common::SettingsStore {
         return applied;
     }
 
-    bool pilot_settings_only(const cbor::Reader& frame) const override {
-        return go::pilot_settings_only(frame);
-    }
-
     void restore_defaults() override { settings_ = defaults(); }
 
     uint8_t blob_version() const override { return kBlobVersion; }

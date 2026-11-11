@@ -18,7 +18,7 @@
     <div class="card-art">
       <% if card[:photos] %>
         <figure class="card-photos">
-          <%= safe_join card[:photos].map { |photo| image_tag photo, alt: "", class: Content::Image.new(photo).dimensions.then { |width, height| height > width ? "card-photo--portrait" : "card-photo--landscape" } }, tag.span("+", class: "pair-plus") %>
+          <%= safe_join card[:photos].map { |photo| image_tag photo, alt: "", class: [ Content::Image.new(photo).dimensions.then { |width, height| height > width ? "card-photo--portrait" : "card-photo--landscape" }, ShareImages::PHOTO_CLASSES[photo] ] }, tag.span("+", class: "pair-plus") %>
         </figure>
       <% else %>
         <figure class="shot"><%= image_tag card[:screen], alt: "" %></figure>

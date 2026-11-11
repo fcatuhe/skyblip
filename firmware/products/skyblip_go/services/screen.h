@@ -118,7 +118,7 @@ class ScreenService : public runtime::Service {
     void sync_arming(uint32_t now_ms);
     void toggle_capture();
     void change_screen();
-    void draw_prompt();
+    void draw_prompt(uint32_t now_ms);
     void draw_menu_page();
     void enter_menu(uint32_t now_ms);
     void leave_menu();

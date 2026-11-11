@@ -93,7 +93,7 @@ jobs:
       # A unit takes only an image naming its own product, and nothing while it runs one naming none.
       - name: the image names its product
         run: python3 scripts/test_check_image_product.py
-      # The budgets come off each build's slot and SRAM, and a board with no slot needs one named.
+      # The budgets come off each build's slot and SRAM, and a build with no slot fails.
       - name: the size check holds each target to its flash and RAM budgets
         run: python3 scripts/test_size_check.py
       # The Go turns all three switches on, so only this configure sees a product that has none.
@@ -456,7 +456,7 @@ jobs:
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where
     # native_sim can. product-image compiles the ones it cannot, and the X1's
-    # composition is built and size-checked here until a product ships on it (#176).
+    # smoke image, MCUboot with a signed app, is built and size-checked here until a product ships on it (#176).
     name: platform adapters (native_sim, meshtracker_x1)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -492,11 +492,23 @@ jobs:
           python3 "$(west topdir)/zephyr/scripts/twister" \
             -T test/twister -p native_sim -p meshtracker_x1 --inline-logs
 
-      # Twister names its build directory after the test's path, so the one ELF is found rather than spelled.
-      - name: the X1 stub fits its flash and RAM budgets
+      # Twister names its build directory after the test's path, so the one smoke build is found rather than spelled.
+      - name: the X1 smoke image fits its slot and its RAM, and installs by drag-and-drop inside the X1's window
         working-directory: firmware
         run: |
-          elf=$(find twister-out -path '*/boards.meshtracker_x1.platform/zephyr/zephyr.elf')
-          test "$(printf '%s\n' "$elf" | grep -c .)" = 1 \
-            || { echo "FAIL: expected one X1 stub ELF under twister-out, found: ${elf:-none}"; exit 1; }
-          python3 ../scripts/size_check.py "$elf"
+          smoke=$(find twister-out -type d -name boards.meshtracker_x1.platform)
+          test "$(printf '%s\n' "$smoke" | grep -c .)" = 1 \
+            || { echo "FAIL: expected one X1 smoke build under twister-out, found: ${smoke:-none}"; exit 1; }
+          python3 ../scripts/size_check.py "$smoke/meshtracker_x1/zephyr/zephyr.elf"
+          mkdir -p build
+          ZEPHYR_BASE="$(west topdir)/zephyr" python3 ../scripts/mkuf2.py meshtracker_x1 build/meshtracker-x1-smoke.uf2 \
+            "$smoke/mcuboot/zephyr/zephyr.hex" "$smoke/meshtracker_x1/zephyr/zephyr.signed.confirmed.hex"
+
+      # The first bench session (#169) starts from this file, signed with MCUboot's published development key.
+      - name: upload the X1 smoke image
+        uses: actions/upload-artifact@v7
+        with:
+          name: meshtracker-x1-smoke
+          path: firmware/build/meshtracker-x1-smoke.uf2
+          if-no-files-found: error
+          retention-days: 7

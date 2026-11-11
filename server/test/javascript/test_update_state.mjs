@@ -58,24 +58,50 @@ test('a firmware that does not know its defaults offers no reset', async () => {
   assert.equal(device.commands.includes('set'), false);
 });
 
-test('a save refused on the glass says so, and the settings stay as stored', async () => {
+test('a save refused on the glass says so under Save, and the settings stay as stored', async () => {
   const { device, updater, until } = await withSettings();
   updater.saveSettings({ units: 'nautical' });
   await until(asking('set'));
   device.refuse();
-  assert.equal((await until(settled)).notice.key, 'cancelled');
+  assert.deepEqual((await until(settled)).notice, { key: 'cancelled', during: 'set' });
   assert.deepEqual(device.stored, FLOWN);
 });
 
-test('off the ground the page asks no install and no recovery, and landing gives them back', async () => {
+test('one press on a question marks the connection refused on the device until the link drops', async () => {
+  const { device, updater, until } = await chosen();
+  updater.install();
+  await until(asking('dfu'));
+  device.refuse();
+  assert.equal((await until(settled)).refusedOnDevice, true);
+  updater.recover();
+  assert.equal((await until(state => state.notice?.key === 'refused_on_device')).refusedOnDevice, true);
+  device.drop();
+  assert.equal((await until(state => state.phase === 'offline')).refusedOnDevice, false);
+});
+
+test('one press that stops an upload refuses no question, so the connection may ask again', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseAfterPackets = 3;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).refusedOnDevice, false);
+  updater.recover();
+  await until(asking('recovery'));
+});
+
+test('in flight the page asks no install, no recovery and no save, and landing gives them back', async () => {
   const { device, updater, until } = await chosen({ stored: FLOWN });
+  await until(state => state.settings);
   device.takeOff();
   await until(state => state.status.flight === 'airborne');
-  assert.equal(updater.onGround, false);
+  assert.equal(updater.inFlight, true);
   const sent = device.commands.length;
   updater.recover();
   await updater.install();
   assert.equal(updater.state.notice.key, 'in_flight');
+  updater.saveSettings({ ...FLOWN_SHOWN, units: 'nautical' });
+  assert.deepEqual(updater.state.notice, { key: 'in_flight', during: 'set' });
   assert.equal(device.commands.length, sent);
   device.land();
   await until(state => state.status.flight === 'ground');
@@ -83,30 +109,18 @@ test('off the ground the page asks no install and no recovery, and landing gives
   await until(asking('recovery'));
 });
 
-test('off the ground a save is still sent, and a refusal holds it until the device reports the ground', async () => {
-  const { device, updater, until } = await withSettings();
-  device.takeOff();
-  await until(state => state.status.flight === 'airborne');
-  updater.saveSettings({ units: 'nautical' });
-  const refused = await until(settled);
-  assert.equal(refused.notice.key, 'in_flight');
-  assert.equal(refused.heldForGround, true);
-  assert.equal(device.commands.filter(command => command === 'set').length, 1);
-  device.land();
-  await until(state => !state.heldForGround);
-  updater.saveSettings({ units: 'nautical' });
-  await until(asking('set'));
-});
-
-test('a device whose firmware takes settings off the ground saves them in flight', async () => {
-  const { device, updater, until } = await withSettings({ setsOffGround: true });
-  device.takeOff();
-  await until(state => state.status.flight === 'airborne');
-  updater.saveSettings({ units: 'nautical' });
+// Unknown is a unit with no fix since boot, every unit on a bench indoors.
+test('a device with no fix since boot is asked to save and to install', async () => {
+  const { device, updater, until } = await chosen({ stored: FLOWN, flight: 'unknown' });
+  await until(state => state.settings);
+  assert.equal(updater.inFlight, false);
+  updater.saveSettings({ ...FLOWN_SHOWN, units: 'nautical' });
   await until(state => state.phase === 'confirming');
   device.press();
   assert.equal((await until(settled)).notice.key, 'saved');
   assert.equal(device.stored.units, 'nautical');
+  updater.install();
+  await until(asking('dfu'));
 });
 
 test('taking off while the glass asks takes the question away, and the page says why', async () => {

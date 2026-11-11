@@ -38,9 +38,9 @@ bool IdentityLink::open(uint16_t session_id, uint32_t now_ms) {
     return true;
 }
 
-// INFO: fc 18oct26 an unactivated unit is silent and a bench has no fix: only activated is gated
+// INFO: fc 18oct26 an unactivated unit is silent, so only an activated one is refused in flight
 bool ConfigService::identity_refused_in_flight() {
-    if (!identity_->activated() || on_ground()) return false;
+    if (!identity_->activated() || !in_flight()) return false;
     refuse(link::Reason::InFlight);
     return true;
 }

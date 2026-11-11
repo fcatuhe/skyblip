@@ -8,6 +8,7 @@
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/confirm_glass.h"
 #include "test/support/menu_rig.h"
 #include "test/support/product_rig.h"
 
@@ -82,7 +83,8 @@ TEST_CASE("product: a prompt takes the page, and the taps already in flight cann
     go::ConfirmSnapshot expect;
     expect.title = comms::pending_title(comms::Pending::Dfu);
     expect.detail = "INSTALL 0.2.0+15 FROM THE PHONE";
-    expect.timeout_s = comms::kPromptCeilingMs / 1000;
+    expect.seconds_left = seconds_left_on(rig.product.screen().framebuffer());
+    CHECK(expect.seconds_left > 0);
     go::Glass prompt_page;
     go::draw_confirm(prompt_page, expect);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),

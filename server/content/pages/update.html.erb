@@ -1,27 +1,26 @@
 ---
-title: "Go firmware update and device settings"
+title: "Go firmware update over Bluetooth"
 nav_title: Update
-description: "Update skyBlip Go firmware and settings over Bluetooth from Chrome or Edge. Approve each change on the device. USB recovery is also explained."
+description: "Update skyBlip Go firmware over Bluetooth from Chrome or Edge. Approve the install on the device. USB recovery is also explained."
 updated_on: "2026-11-11"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
 <section id="update">
   <p class="kicker">skyBlip Go</p>
-  <h1>New firmware and settings, from this page, over Bluetooth.</h1>
+  <h1>New firmware, from this page, over Bluetooth.</h1>
   <p class="lede">
     Nothing to install and nothing to pair. The page sends the image, and the
     device asks you once, on its own glass and naming the version, before it
     takes it. A phone cannot update it on its own.
   </p>
   <p class="lede">
-    The page also reads the settings the device holds, shows which differ from
-    the ones it ships on, and changes them, each change asked on the glass.
-    An install is asked only while the device is on the ground. A device whose
-    firmware wants the ground for its settings too says so.
+    Its settings have <%= link_to_page "configure", label: "a page of their own" %>,
+    and the device stays connected from one page to the other. Nothing is
+    asked while the device is flying.
   </p>
 
-  <%= render "shared/manage",
+  <%= render layout: "shared/manage", locals: {
         unsupported: "This browser has no Web Bluetooth, so this page cannot reach the device. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.",
         connect: "Connect",
         disconnect: "Disconnect",
@@ -32,37 +31,25 @@ updated_on: "2026-11-11"
         battery: "Battery",
         charging: "charging",
         flight: { label: "Flight", ground: "on the ground", airborne: "airborne", unknown: "not yet known" },
-        settings: {
-          legend: "Settings on the device",
-          units: "Units",
-          unit_names: { nautical: "Nautical: NM and kt", metric: "Metric: km and km/h" },
-          alarm_enabled: "Alarm sound",
-          alarm_volume: "Alarm volume",
-          volume_names: { off: "Off", soft: "Soft", loud: "Loud" },
-          save: "Save",
-          reset: "Back to defaults",
-          default: "Default: %{value}",
-          on: "on",
-          off: "off",
-          none: "none",
-          confirm_set: "Allow the change: the glass says SETTINGS, press twice."
-        },
         advice: "File to send",
         chosen: "Chosen image",
         full: "full",
         slim: "slim",
-        file: "Or a firmware file of your own, ending in .signed.bin",
-        install: "Install",
-        steps: {
-          dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
-          upload: "The image travels and the glass says RECEIVING. Keep this page open and the device close.",
-          install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
-        },
-        remaining: "about %{minutes} min left",
-        recovery: "If the firmware will not take: the USB drive",
-        confirm_recovery: "The glass says RECOVERY, REBOOT INTO THE USB BOOTLOADER: press twice.",
-        recovering: "The glass now says USB BOOTLOADER. If it reads PRESS THE BUTTON TO START IT, press the button once. On a computer the device is then a USB drive named TECHOBOOT: drop the .uf2 file on it for new firmware, or press RST to go back to skyBlip. Nothing transmits meanwhile.",
-        recover: "Restart into the USB drive" %>
+        remaining: "about %{minutes} min left"
+      } do %>
+    <%= render "shared/manage_firmware",
+          file: "Or a firmware file of your own, ending in .signed.bin",
+          install: "Install",
+          steps: {
+            dfu: "Allow the update: the glass says FIRMWARE and the version, press twice.",
+            upload: "The image travels and the glass says RECEIVING. Keep this page open and the device close.",
+            install: "The device installs and restarts, about thirty seconds, and the link drops. Connect again to see the result."
+          },
+          recovery: "If the firmware will not take: the USB drive",
+          confirm_recovery: "The glass says RECOVERY, REBOOT INTO THE USB BOOTLOADER: press twice.",
+          recovering: "The glass now says USB BOOTLOADER. If it reads PRESS THE BUTTON TO START IT, press the button once. On a computer the device is then a USB drive named TECHOBOOT: drop the .uf2 file on it for new firmware, or press RST to go back to skyBlip. Nothing transmits meanwhile.",
+          recover: "Restart into the USB drive" %>
+  <% end %>
 </section>
 
 <section>
@@ -70,7 +57,7 @@ updated_on: "2026-11-11"
 
   <ul class="points">
     <li>Chrome or Edge, on a computer or on Android</li>
-    <li>The device on the ground, with a GPS fix</li>
+    <li>The device on the ground. Older firmware also waits for a GPS fix</li>
     <li>A battery above the warning, or charging</li>
     <li>An image from the list, or a file ending in .signed.bin, the one this page names</li>
     <li>No other app holding the device&rsquo;s settings</li>
@@ -96,8 +83,7 @@ updated_on: "2026-11-11"
     <span class="mono">FIRMWARE</span>, then
     <span class="mono">INSTALL</span> and the version, for example
     <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>: press twice. That
-    opens a window of ten minutes, and only while the device knows it is on the
-    ground.
+    opens a window of ten minutes.
   </p>
   <p class="lede">
     The image travels next. The glass says <span class="mono">RECEIVING</span>
@@ -108,7 +94,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     Once the last byte is in, the device checks that it holds the version it
-    asked you about, that it is still on the ground and that the battery can
+    asked you about, that it has not taken off and that the battery can
     finish the job, then installs without asking again. It paints
     <span class="mono">INSTALLING</span> and restarts into the new firmware,
     which takes about thirty seconds, and the link drops.
@@ -121,44 +107,6 @@ updated_on: "2026-11-11"
   </p>
 </section>
 
-<section>
-  <h2 class="kicker">Settings</h2>
-
-  <h3>What it holds, <span class="highlight">beside what it ships on</span>.</h3>
-  <p class="lede">
-    Once connected, the page reads the aircraft type, the callsign, the units,
-    the alarm and the own ICAO address from the device, and asks the firmware for the values a new
-    unit ships on. A setting that differs from those says so under its field.
-  </p>
-  <p class="lede">
-    Save sends only what you changed. Back to defaults sends the firmware&rsquo;s
-    own values for what differs. Either way the glass says
-    <span class="mono">SETTINGS</span> and lists each change in the words of
-    its own menu, such as <span class="mono">CALLSIGN F-JXYZ</span>, up to four
-    rows: press twice, and the page reads the settings back from the device.
-  </p>
-  <p class="lede">
-    The radar&rsquo;s range and plot are set on the device&rsquo;s own menu,
-    and the page leaves them as they are.
-  </p>
-  <p class="lede">
-    The aeroplane at the centre of the radar is drawn on
-    <%= link_to "its own page", briefing_ownship_path %>, one per aircraft type,
-    a glider for a glider. The device shows the light aircraft for every type
-    until it learns to take a drawing over Bluetooth.
-  </p>
-
-  <div class="table-scroll">
-    <table class="modules">
-      <thead>
-        <tr><th>The page says</th><th>What it means</th></tr>
-      </thead>
-      <tbody>
-        <tr><th>Saved</th><td data-manage-word="saved">The device stored the settings, and the form shows them as the device read them back.</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
 
 <section>
   <h2 class="kicker">What it tells you about itself</h2>
@@ -197,7 +145,7 @@ updated_on: "2026-11-11"
         <tr><th>The device answers</th><th>What it means, and what to do</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">It has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">The device says it is flying. Try again once it has landed. Older firmware also says so until its first GPS fix since it was switched on: take it where it sees the sky and wait for the fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">The battery is critical. Installing is 15 to 25 seconds of flash erases, and the device does not start one on a cell that might not finish it. Charge it, then try again.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Nobody answered the question on the glass within thirty seconds, so the device dropped it. Try again, and press twice when the glass asks.</td></tr>
         <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The device said no: one press refuses the question, and one press on RECEIVING stops the upload. After a refused question, the device asks nothing more from this connection: disconnect and connect again before you try again. After a stopped upload, install again.</td></tr>

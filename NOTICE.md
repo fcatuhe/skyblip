@@ -24,6 +24,7 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 | Where | What it follows | License |
 |---|---|---|
 | `firmware/hardware/parts/drv2605/drv2605.cpp`, `Drv2605::begin` | the register setup of SensorLib's DRV2605 driver, Copyright (c) 2024 Lewis He | MIT, text below |
+| `firmware/hardware/parts/lr2021/lr2021.cpp` | the bring-up order, the two-frame read, the SetSleep layout and the BUSY ceilings of RadioLib's LR2021 class at commit `b087af9` (8.0.0-6-gb087af9, six commits past 8.0.0), Copyright (c) 2018 Jan Gromeš | MIT, text below |
 | `firmware/core/gnss/nmea.cpp` and `firmware/core/protocol/nmea_out.cpp`, the calendar conversions | Howard Hinnant's `days_from_civil` and `civil_from_days` | public domain |
 | `firmware/hardware/parts/bme280/bme280.cpp`, the compensation | the integer compensation formulas of Bosch Sensortec's BME280 datasheet, section 4.2.3, rev 1.1 | reference code the datasheet publishes for implementers |
 
@@ -147,6 +148,32 @@ SensorLib:
 MIT License
 
 Copyright (c) 2024 Lewis He
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+RadioLib:
+
+```
+MIT License
+
+Copyright (c) 2018 Jan Gromeš
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

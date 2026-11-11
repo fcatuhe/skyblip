@@ -4,7 +4,7 @@ nav_title: Phone
 description: "See skyBlip Go traffic in SkyDemon, ForeFlight or SDVFR Next over Bluetooth. Three connections at once, with no pairing."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-11"
 ---
 
 <section>
@@ -69,7 +69,7 @@ updated_on: "2026-11-09"
     from then on it is on the status screen, on the air once every ten seconds,
     and on the screens of the aircraft around you. You can also type it on the
     device itself, in <%= link_to_page "controls", label: "the callsign field", anchor: "callsign" %>,
-    or set it from a browser on <%= link_to_page "manage", label: "the update page" %>, beside
+    or set it from a browser on <%= link_to_page "configure", label: "the settings page" %>, beside
     the aircraft type, the units and the alarm.
   </p>
   <p class="lede">
@@ -80,7 +80,7 @@ updated_on: "2026-11-09"
 
   <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
   <p class="lede">
-    <%= link_to_page "manage", label: "The update page" %> sends a signed
+    <%= link_to_page "update", label: "The update page" %> sends a signed
     image over the same Bluetooth, from Chrome or Edge, and the glass asks
     once, naming the version, before it takes the image and installs it. The new
     firmware then has to bring its radio up, hear its receiver and draw its
@@ -117,7 +117,7 @@ updated_on: "2026-11-09"
   <p class="lede">
     Turning Bluetooth pairing on encrypts the GATT characteristics, which is a
     known Web Bluetooth failure on Windows and would break
-    <%= link_to_page "manage", label: "the browser page that installs firmware" %>.
+    <%= link_to_page "update", label: "the browser page that installs firmware" %>.
     So the boundary is the image and not the link.
   </p>
 

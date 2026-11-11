@@ -1,0 +1,158 @@
+---
+title: "Go settings over Bluetooth"
+nav_title: Configure
+description: "Change skyBlip Go settings over Bluetooth from Chrome or Edge: aircraft type, callsign, own ICAO, units and alarm. Approve each change on the device."
+updated_on: "2026-11-11"
+---
+<% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
+<% settings = {
+     legend: "Settings on the device",
+     units: "Units",
+     unit_names: { nautical: "Nautical: NM and kt", metric: "Metric: km and km/h" },
+     alarm_enabled: "Alarm sound",
+     alarm_volume: "Alarm volume",
+     volume_names: { off: "Off", soft: "Soft", loud: "Loud" },
+     save: "Save",
+     reset: "Back to defaults",
+     default: "Default: %{value}",
+     on: "on",
+     off: "off",
+     none: "none",
+     confirm_set: "Allow the change: the glass says SETTINGS, press twice."
+   } %>
+
+<section id="settings">
+  <p class="kicker">skyBlip Go</p>
+  <h1>Its settings, from this page, over Bluetooth.</h1>
+  <p class="lede">
+    The page reads the settings the device holds, shows which differ from the
+    ones it ships on, and changes them, each change asked on the glass.
+    Nothing is asked while the device is flying.
+  </p>
+  <p class="lede">
+    New firmware is on <%= link_to_page "update", label: "the update page" %>,
+    and the device stays connected from one page to the other.
+  </p>
+
+  <%= render layout: "shared/manage", locals: {
+        unsupported: "This browser has no Web Bluetooth, so this page cannot reach the device. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.",
+        connect: "Connect",
+        disconnect: "Disconnect",
+        connecting: "Your browser lists the devices in range: pick skyBlip Go followed by its address.",
+        device: "Device",
+        firmware: "Running",
+        battery: "Battery",
+        charging: "charging",
+        flight: { label: "Flight", ground: "on the ground", airborne: "airborne", unknown: "not yet known" },
+        settings:
+      } do %>
+    <%= render "shared/manage_settings", settings: %>
+  <% end %>
+</section>
+
+<section>
+  <h2 class="kicker">Before you start</h2>
+
+  <ul class="points">
+    <li>Chrome or Edge, on a computer or on Android</li>
+    <li>The device on the ground. Older firmware also waits for a GPS fix</li>
+    <li>No other app holding the device&rsquo;s settings</li>
+  </ul>
+</section>
+
+<section>
+  <h2 class="kicker">What happens</h2>
+
+  <h3>What it holds, <span class="highlight">beside what it ships on</span>.</h3>
+  <p class="lede">
+    Once connected, the page reads the aircraft type, the callsign, the units,
+    the alarm and the own ICAO address from the device, and asks the firmware
+    for the values a new unit ships on. A setting that differs from those says
+    so under its field.
+  </p>
+  <p class="lede">
+    Save sends only what you changed. Back to defaults sends the firmware&rsquo;s
+    own values for what differs. Either way the glass says
+    <span class="mono">SETTINGS</span> and lists each change in the words of
+    its own menu, such as <span class="mono">CALLSIGN F-JXYZ</span>, up to four
+    rows: press twice, and the page reads the settings back from the device.
+  </p>
+  <p class="lede">
+    The radar&rsquo;s range and plot are set on the device&rsquo;s own menu,
+    and the page leaves them as they are.
+  </p>
+  <p class="lede">
+    The aeroplane at the centre of the radar is drawn on
+    <%= link_to "its own page", briefing_ownship_path %>, one per aircraft type,
+    a glider for a glider. The device shows the light aircraft for every type
+    until it learns to take a drawing over Bluetooth.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Saved</th><td data-manage-word="saved">The device stored the settings, and the form shows them as the device read them back.</td></tr>
+        <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Your settings are the ones from before the last update: what you changed while the newer firmware ran stayed with it.</td></tr>
+        <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">The stored settings could not be read, so the device runs on its defaults. Check the callsign and the aircraft type before you fly.</td></tr>
+        <tr><th class="mono">no address</th><td data-manage-word="not_activated">This unit is not activated yet, so it neither transmits nor receives. Give it its serial on the activation page, skyblip.eu/activate.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When it says no</h2>
+
+  <p class="lede">
+    Every refusal comes with a reason, and the page puts it in the words below.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The device answers</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">The device says it is flying. Try again once it has landed. Older firmware also says so until its first GPS fix since it was switched on: take it where it sees the sky and wait for the fix.</td></tr>
+        <tr><th class="mono">low_power</th><td data-manage-word="low_power">The battery is critical, and the device does not write its settings on a cell that might not finish. Charge it, then try again.</td></tr>
+        <tr><th class="mono">expired</th><td data-manage-word="expired">Nobody answered the question on the glass within thirty seconds, so the device dropped it. Try again, and press twice when the glass asks.</td></tr>
+        <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The device said no: one press refuses the question. After a refused question, the device asks nothing more from this connection: disconnect and connect again before you try again.</td></tr>
+        <tr><th class="mono">prompt_pending</th><td data-manage-word="prompt_pending">The glass is already asking a question this connection sent. Answer it on the device, or wait up to thirty seconds for it to go, then try again.</td></tr>
+        <tr><th class="mono">refused_on_device</th><td data-manage-word="refused_on_device">One press on the device refused a question from this connection, so the device asks nothing more from it. Disconnect and connect again, then try again.</td></tr>
+        <tr><th class="mono">small_mtu</th><td data-manage-word="small_mtu">The answer did not fit the link: this phone or browser kept Bluetooth&rsquo;s smallest packet size, 20 bytes. Disconnect and connect again. If it happens again, update the browser and the phone, or connect from another phone or a computer with Chrome or Edge.</td></tr>
+        <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
+        <tr><th class="mono">unknown_command</th><td data-manage-word="unknown_command">The firmware on the device is older than this page and does not know the question. Update it on <%= link_to_page "update", label: "the update page" %>.</td></tr>
+        <tr><th class="mono">anything else</th><td data-manage-word="refused">The device refused, with a reason this page does not know:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">When the page stops</h2>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>The page says</th><th>What it means, and what to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>No Web Bluetooth</th><td data-manage-word="no_bluetooth">This browser has no Web Bluetooth. Use Chrome or Edge, on a computer or on Android. Safari, Firefox, and every browser on an iPhone or an iPad lack it.</td></tr>
+        <tr><th>Not a skyBlip</th><td data-manage-word="not_skyblip">The device you picked has no settings service: it is not a skyBlip, or its firmware predates settings over Bluetooth.</td></tr>
+        <tr><th>Link lost</th><td data-manage-word="link_lost">The link dropped. Bring the device closer and connect again.</td></tr>
+        <tr><th>No answer</th><td data-manage-word="timeout">The device stopped answering. Disconnect and connect again.</td></tr>
+        <tr><th>Refused</th><td data-manage-word="smp">The device refused with an error this page does not know:</td></tr>
+        <tr><th>Anything else</th><td data-manage-word="failed">Something failed on the way:</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <p>
+    <%= link_to_page "update", class: "cta cta--previous" %>
+  </p>
+</section>

@@ -42,6 +42,10 @@ Rails.application.routes.draw do
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
   end
 
+  # INFO: fc 11nov26 the update page's addresses until it was renamed, kept for old links and bookmarks
+  get "manage", to: redirect("/update")
+  get "fr/mise-a-jour", to: redirect("/fr/mettre-a-jour")
+
   scope "(:locale)", locale: /#{I18n.available_locales.without(I18n.default_locale).join("|")}/ do
     namespace :briefing do
       root "dashboards#show"
