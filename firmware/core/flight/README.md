@@ -27,6 +27,8 @@ The curve is the ICAO troposphere formula tabulated at 500 Pa steps and interpol
 |---|---|---|
 | BME280 forced 4 times a second, x16 / x2 oversampling and IIR 4 | 0.66 Pa RMS noise | 5.5 cm |
 | what `parts::Bme280` compensates to (DS 4.2.3, Q24.8) | 1/256 Pa | 0.3 mm |
+| SPA06 once a second at x64, on the X1, the datasheet's figure until #169 measures it | 0.3 Pa RMS noise | 2.5 cm |
+| what `parts::Spa06` compensates to (DS 4.6.1, Q16) | 1/65536 Pa | 0.001 mm |
 | `pressure_to_altitude_mm` | 1 mPa | 0.008 mm |
 | table interpolation against the closed form | | under 25 cm, a bias, not jitter |
 | `climb_e8_from_mm_s`, the ADS-L G.1.9 unit | 0.125 m/s | 24.6 ft/min of rate |
