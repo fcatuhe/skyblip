@@ -20,7 +20,7 @@ A paired Go whose `own_icao` is unset, beside a Bravo whose own ICAO is unset to
 
 ## Bravo
 
-`services/bravo.h` is the Go's link to a paired skyBlip Bravo: the pairing a pilot drives from the `BRAVO` row, the pin it keeps in the settings, the connection it keeps for Bravo, and the reconnection. What it does and why is in `../../core/comms/README.md`, "The Go's link to its Bravo", and the page is in `pages/README.md`. It is the eleventh service and the last, after `screen`, so the codes the loop meter records for the ten before it hold: its code is 11, past the board poll's 10 (`core/diagnostics/payload.h`, `loop_service_code`).
+`services/bravo.h` is the Go's link to a paired skyBlip Bravo: the pairing a pilot drives from the `BRAVO` row, the pin it keeps in the settings, the connection it keeps for Bravo, and the reconnection. What it does and why is in `../../core/comms/README.md`, "The Go's link to its Bravo", and the page is in `pages/README.md`. `services/bravo_fold.cpp` folds Bravo's observations into the traffic table, and the service publishes what it makes of Bravo's health as `bus::State::bravo`, which the radar, the self-test page, the alarm's one tone, the flight log and the `status` frame read (`../../core/comms/README.md`, "What the Go makes of its Bravo"). It is the eleventh service and the last, after `screen`, so the codes the loop meter records for the ten before it hold: its code is 11, past the board poll's 10 (`core/diagnostics/payload.h`, `loop_service_code`).
 
 ## What a service is
 

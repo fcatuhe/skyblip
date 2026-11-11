@@ -130,6 +130,12 @@ void ConfigService::set_battery_state(const power::BatteryState& battery, power:
     if (link_up() && (charging_changed || level_changed || step_changed)) push_status();
 }
 
+void ConfigService::set_bravo_state(BravoState state) {
+    const bool changed = state != bravo_;
+    bravo_ = state;
+    if (changed && link_up()) push_status();
+}
+
 int ConfigService::payload_bytes() const { return static_cast<int>(link_.payload_bytes()); }
 
 int ConfigService::payload_bytes_to(uint16_t session_id) const {

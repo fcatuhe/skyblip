@@ -169,6 +169,11 @@ inline constexpr Value kExportReferenceValues[] = {
 };
 inline constexpr Enumeration kExportReference{kExportReferenceValues, 3};
 
+inline constexpr Value kBravoValues[] = {
+    {"waiting", 1}, {"live", 2}, {"link_down", 3}, {"receiver_down", 4}, {"no_utc", 5},
+};
+inline constexpr Enumeration kBravo{kBravoValues, 5};
+
 inline constexpr Value kClimbSourceValues[] = {
     {"unknown", 0},
     {"gnss", 1},
@@ -257,6 +262,7 @@ inline constexpr Key kStatusKeys[] = {
     {"power_level", 5, Type::Enum, &kPowerLevel, 0, true},
     {"went_dark_flat", 6, Type::Boolean, nullptr, 0, true},
     {"die_temperature_c", 7, Type::Integer, nullptr, 0, false},
+    {"bravo", 8, Type::Enum, &kBravo, 0, false},
 };
 
 inline constexpr Key kTimingKeys[] = {
@@ -538,7 +544,7 @@ inline constexpr Frame kFrames[] = {
     {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 12},
     {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 12},
     {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 12},
-    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 8},
+    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
     {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 60},

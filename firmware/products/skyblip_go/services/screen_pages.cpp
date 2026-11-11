@@ -186,6 +186,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.formation_members = context_.state.formation.members;
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
+            snapshot.bravo = context_.state.bravo;
             int count = 0;
             if (own.fix_valid) {
                 const model::Ownship own_now = flight::carried_to(own, now_ms);
@@ -280,6 +281,8 @@ void ScreenService::render(uint32_t now_ms) {
             SelfTestSnapshot now = self_test_;
             now.address = context_.state.activation.address();
             now.own_icao_warning = bravo_.own_icao_warning().stands(settings.own_icao);
+            now.bravo = context_.state.bravo;
+            now.bravo_tag = events::bluetooth_tag(settings.bravo);
             draw_self_test(framebuffer_, now);
             break;
         }

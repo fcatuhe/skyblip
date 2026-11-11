@@ -69,6 +69,11 @@ inline constexpr Note kFirstFixJingle[] = {
 };
 inline constexpr Tune kFirstFixTune = tune_of(kFirstFixJingle);
 
+constexpr uint16_t kBravoLostNoteMs = 3 * kTuneSixteenthMs;
+
+inline constexpr Note kBravoLostTone[] = {{kNoteC7Hz, kBravoLostNoteMs, 0}};
+inline constexpr Tune kBravoLostTune = tune_of(kBravoLostTone);
+
 constexpr uint16_t shortest_phase_ms(Tune tune) {
     uint16_t shortest = 0xFFFF;
     for (uint8_t i = 0; i < tune.count; i++) {
@@ -85,8 +90,9 @@ constexpr uint16_t shortest_phase_ms(Tune tune) {
 // INFO: fc 17oct26 a tune never starts over a sounding one, so no on-span outlasts the longest call
 constexpr uint16_t kReannounceRestMs = kTuneSixteenthMs;
 
-constexpr uint16_t kShortestPhaseMs = std::min(
-    {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), kReannounceRestMs});
+constexpr uint16_t kShortestPhaseMs =
+    std::min({shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune),
+              shortest_phase_ms(kBravoLostTune), kReannounceRestMs});
 static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
 
 constexpr uint16_t longest_call_ms(Tune tune) {
@@ -103,12 +109,13 @@ constexpr uint16_t longest_call_ms(Tune tune) {
 // INFO: fc 17oct26 a guard under the loop, never a tune's: an output still on past it is a bug
 constexpr uint16_t kAnnunciatorOnCeilingMs = 2000;
 static_assert(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs &&
-                  longest_call_ms(kFirstFixTune) < kAnnunciatorOnCeilingMs,
+                  longest_call_ms(kFirstFixTune) < kAnnunciatorOnCeilingMs &&
+                  longest_call_ms(kBravoLostTune) < kAnnunciatorOnCeilingMs,
               "the guard would cut a call the policy means to play");
 
-// Who is holding the buzzer. Traffic outranks the fix chirp, always: the rule
-// is written here and nowhere else.
-enum class Voice : uint8_t { None, FirstFix, Traffic };
+// Who is holding the buzzer. Traffic outranks a lost Bravo, which outranks the
+// fix chirp, always: the rule is written here and nowhere else.
+enum class Voice : uint8_t { None, FirstFix, BravoLost, Traffic };
 
 constexpr bool felt(Voice voice) { return voice == Voice::Traffic; }
 
@@ -122,6 +129,8 @@ struct Situation {
     bool announced{false};
     // The first fix landed on this pass.
     bool first_fix{false};
+    // A paired Bravo was lost on this pass.
+    bool bravo_lost{false};
     // settings.alarm_enabled, and a volume that is not off.
     bool enabled{true};
     // False from the moment the device starts going down.

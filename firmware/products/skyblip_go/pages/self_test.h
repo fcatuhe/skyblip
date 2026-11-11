@@ -6,6 +6,7 @@
 
 #include <cstdint>
 
+#include "core/comms/peer.h"
 #include "core/settings/address.h"
 #include "products/skyblip_go/glass.h"
 
@@ -45,10 +46,13 @@ struct SelfTestSnapshot {
     int i2c_address_count{0};
     // INFO: fc 11nov26 go::OwnIcaoWarning::stands(): neither the Go nor Bravo has an own ICAO
     bool own_icao_warning{false};
+    comms::BravoState bravo{comms::BravoState::Unpaired};
+    uint16_t bravo_tag{0};
 };
 
 // The most rows the page can carry before the last one falls off the panel. The
-// bus scan's row is one of them, and the own-ICAO warning's another.
+// bus scan's row is one of them, and the paired Bravo's another, which the
+// own-ICAO warning takes while the Bravo is not lost.
 constexpr int kSelfTestRows = 16;
 
 // The grid the page is set on, exported so a test can read a row back off the

@@ -201,6 +201,8 @@ Two families share the 24 bytes, and byte 16 tells them apart. A fix carries its
 | 21 | flags and the G.1.2 flight state | | |
 | 22-23 | CRC-16-CCITT over 0-21 | the same | the same |
 
+A `bravo` record, `0x84` in byte 16, carries one byte after the seconds: in byte 2 the `comms::BravoState` code a paired Go made of its Bravo, the link registry's `bravo` enum with 0 for unpaired. Every other byte up to the CRC is 0.
+
 A target's flags are bit 0 dismissed, bit 1 in formation, bit 2 altitude recorded and bit 3 relative altitude valid. Since #161 a target can have no altitude, and its record still writes 0 m for it, so bit 3 says whether those bytes are a separation. Bit 2 is set on every target this firmware writes and clear on every one written before the flag, so a reader of an older flight knows its 0 m may be unknown rather than level with us.
 
 The enum codes are the diagnostics capture's, pinned by the same tests (`../diagnostics/README.md`), and [`schemas/flight_log.v1.schema.json`](../../../schemas/flight_log.v1.schema.json) is what one decoded record looks like, which `scripts/test_blip.py` holds the host decoder to.
@@ -214,6 +216,7 @@ The track says where the flight went. `LogEvents` says what was around it and wh
 | status | the first second of the session, every `kLogStatusPeriodMs` after it, and whenever the cell changes level | cell voltage, percent, power level, charge condition, aircraft heard now and the most heard at once since the last one |
 | alarm | a contact's alarm level changes, either way | the contact and its geometry at that second |
 | encounter | a contact leaves the table, another aircraft takes its slot, or the flight ends | the contact at its closest pass, dated at that pass, with the highest level it reached and how long it was heard |
+| bravo | a paired Go's Bravo is lost, including on the first second of the session, and when it is no longer lost | the state, a reason when lost (`../comms/README.md`, What the Go makes of its Bravo) and `live` or `unpaired` when back |
 
 A status a minute is one record in sixty of the track's. An alarm and an encounter cost one record each, so a busy sky costs what it has in it rather than a record per target per second, which at ten targets would have filled the partition in under two hours.
 

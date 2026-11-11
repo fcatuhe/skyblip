@@ -28,6 +28,7 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
     writer.add_boolean(link::status_key::kWentDarkFlat, went_dark_flat_);
     if (diagnostics_.die_valid)
         writer.add_integer(link::status_key::kDieTemperatureC, whole_celsius(diagnostics_.die_dc));
+    if (bravo_ != BravoState::Unpaired) writer.add_code(link::status_key::kBravo, bravo_);
     return writer.finish();
 }
 

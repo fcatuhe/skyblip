@@ -68,6 +68,9 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.level = tracker_.announced_level(now_ms);
     situation.announced = announced;
     situation.first_fix = context_.state.own.fix_acquired;
+    const bool bravo_lost = comms::lost(context_.state.bravo);
+    situation.bravo_lost = bravo_lost && !bravo_lost_;
+    bravo_lost_ = bravo_lost;
     situation.enabled = settings_.enabled && settings_.volume != AlarmVolume::Off;
     situation.running = running_;
     drive(situation, now_ms);

@@ -81,7 +81,7 @@ constexpr uint32_t kLogKindOffset = 16;
 constexpr uint8_t kLogEventMark = 0x80;
 
 // INFO: fc 15oct26 a wire format: a kind is retired, never renumbered
-enum class LogKind : uint8_t { Fix = 0, Status = 1, Alarm = 2, Encounter = 3 };
+enum class LogKind : uint8_t { Fix = 0, Status = 1, Alarm = 2, Encounter = 3, Bravo = 4 };
 
 struct LogStatus {
     uint16_t cell_mv{0};
@@ -117,6 +117,8 @@ struct LogEvent {
     uint32_t utc_s{0};
     LogStatus status{};
     LogTarget target{};
+    // INFO: fc 12nov26 a paired Go's comms::BravoState code, the status frame's bravo
+    uint8_t bravo{0};
 };
 
 // Everything worth keeping out of the state the whole device already agrees on.
