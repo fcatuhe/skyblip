@@ -5,14 +5,16 @@ gate that keeps a Nordic DFU package out (check_no_dfu_package.py).
     python3 scripts/test_mkuf2.py
 
 Runs on stdlib alone and never invokes Zephyr's uf2conv.py, so it is a host job
-in CI rather than a step of the 5-minute device build. What it protects is the
-window 0x026000..0x0EA000: below it are the factory MBR and SoftDevice, above it
-the bootloader accepts writes and drops them, and at 0x0F4000 sits the factory
-UF2 bootloader, which is the only way to install anything on this board without
-a programmer. A partition edit is what quietly defeats those checks, and a
-partition edit is exactly the change nobody re-reads mkuf2.py for.
+in CI rather than a step of the 5-minute device build. What it protects is each
+board's window: below it are the factory MBR and SoftDevice, above it the
+bootloader accepts writes and drops them, and past that sits the factory UF2
+bootloader, which is the only way to install anything on the board without a
+programmer. A partition edit is what quietly defeats those checks, so the windows
+are read against each board's devicetree.
 """
 import pathlib
+import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -21,6 +23,14 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import check_no_dfu_package  # noqa: E402
 import mkuf2  # noqa: E402
+
+BOARDS = pathlib.Path(__file__).resolve().parent.parent / "firmware" / "boards"
+BOARD_DTS = {
+    "t_echo_plus": BOARDS / "lilygo" / "t_echo_plus" / "t_echo_plus.dts",
+    "meshtracker_x1": BOARDS / "seeed" / "meshtracker_x1" / "meshtracker_x1.dts",
+}
+GO = mkuf2.WINDOWS["t_echo_plus"]
+BRAVO = mkuf2.WINDOWS["meshtracker_x1"]
 
 
 def span(start, length, fill=0xA5):
@@ -33,51 +43,95 @@ def hex_file(byte_map, directory, name="in.hex"):
     return path
 
 
-class RangeGuards(unittest.TestCase):
-    def test_the_window_constants_are_the_partition_map(self):
-        # t_echo_plus.dts: boot_partition 0x26000, slot0 ends 0xEA000,
-        # uf2_boot_partition 0xF4000. Changing one here without changing the
-        # devicetree is the failure this file exists to catch.
-        self.assertEqual(mkuf2.SOFTDEVICE_END, 0x00026000)
-        self.assertEqual(mkuf2.USER_FLASH_END, 0x000EA000)
-        self.assertEqual(mkuf2.UF2_BOOTLOADER_START, 0x000F4000)
+def internal_partitions(board):
+    text = BOARD_DTS[board].read_text()
+    flash0 = text[text.index("&flash0 {"):]
+    flash0 = flash0[:flash0.index("\n};")]
+    found = re.findall(r"(\w+): partition@\w+ \{[^}]*?reg = <(0x\w+) (0x\w+)>", flash0)
+    return {label: (int(start, 16), int(start, 16) + int(size, 16)) for label, start, size in found}
 
+
+class WindowsAgainstTheDevicetree(unittest.TestCase):
+    def test_every_board_has_a_window_and_a_devicetree(self):
+        self.assertEqual(set(mkuf2.WINDOWS), set(BOARD_DTS))
+
+    def test_each_window_is_its_board_partition_map(self):
+        for board, window in mkuf2.WINDOWS.items():
+            with self.subTest(board=board):
+                partitions = internal_partitions(board)
+                self.assertEqual(partitions["softdevice_partition"][1], window.softdevice_end)
+                self.assertEqual(partitions["boot_partition"][0], window.softdevice_end)
+                self.assertEqual(partitions["slot0_partition"][1], window.user_flash_end)
+                self.assertEqual(partitions["uf2_boot_partition"][0], window.bootloader_start)
+
+    def test_only_mcuboot_and_slot0_lie_inside_a_window(self):
+        for board, window in mkuf2.WINDOWS.items():
+            for label, (start, end) in internal_partitions(board).items():
+                if label in ("boot_partition", "slot0_partition"):
+                    continue
+                with self.subTest(board=board, partition=label):
+                    self.assertTrue(end <= window.softdevice_end or start >= window.user_flash_end)
+
+    def test_the_go_identity_page_is_refused(self):
+        start, end = internal_partitions("t_echo_plus")["identity_partition"]
+        problem = mkuf2.check_window([(GO.softdevice_end, end)], GO)
+        self.assertIn("USER_FLASH_END", problem)
+        self.assertEqual(start, GO.user_flash_end)
+
+
+class RangeGuards(unittest.TestCase):
     def test_a_block_below_the_softdevice_end_is_refused(self):
-        problem = mkuf2.check_window([(0x00025000, 0x00026000)])
+        problem = mkuf2.check_window([(0x00025000, 0x00026000)], GO)
         self.assertIsNotNone(problem)
         self.assertIn("MBR/SoftDevice", problem)
 
     def test_a_block_one_byte_below_the_softdevice_end_is_refused(self):
-        problem = mkuf2.check_window([(0x00025FFF, 0x00030000)])
+        problem = mkuf2.check_window([(0x00025FFF, 0x00030000)], GO)
         self.assertIsNotNone(problem)
         self.assertIn("MBR/SoftDevice", problem)
 
-    def test_a_block_above_user_flash_end_is_refused(self):
-        problem = mkuf2.check_window([(0x00026000, 0x000EA001)])
-        self.assertIsNotNone(problem)
-        self.assertIn("USER_FLASH_END", problem)
+    def test_a_go_image_is_refused_on_the_x1_softdevice(self):
+        # The Go's MCUboot starts at 0x26000, the last page of S140 7.3.0 on an X1.
+        problem = mkuf2.check_window([(0x00026000, 0x00034000), (0x00034000, 0x000EA000)], BRAVO)
+        self.assertIn("MBR/SoftDevice (S140 7.3.0)", problem)
 
-    def test_a_block_in_the_nvs_area_is_refused_for_the_write_ceiling(self):
-        problem = mkuf2.check_window([(0x00026000, 0x000F4000)])
-        self.assertIsNotNone(problem)
-        self.assertIn("USER_FLASH_END", problem)
+    def test_a_block_above_user_flash_end_is_refused(self):
+        for window in (GO, BRAVO):
+            problem = mkuf2.check_window([(window.softdevice_end, 0x000EA001)], window)
+            self.assertIn("USER_FLASH_END", problem)
+
+    def test_a_block_in_the_storage_area_is_refused_for_the_write_ceiling(self):
+        for window in (GO, BRAVO):
+            problem = mkuf2.check_window([(window.softdevice_end, 0x000F4000)], window)
+            self.assertIn("USER_FLASH_END", problem)
 
     def test_a_block_reaching_the_factory_bootloader_names_it(self):
-        problem = mkuf2.check_window([(0x00026000, 0x000F4001)])
-        self.assertIsNotNone(problem)
-        self.assertIn("0x0F4000", problem)
-        self.assertIn("bootloader", problem)
+        for window in (GO, BRAVO):
+            problem = mkuf2.check_window([(window.softdevice_end, 0x000F4001)], window)
+            self.assertIn("0x0F4000", problem)
+            self.assertIn("bootloader", problem)
 
     def test_an_image_ending_exactly_at_user_flash_end_is_accepted(self):
         # The real case: imgtool pads the confirmed image to slot1's length, so
         # the trailer lands on the last byte before the ceiling.
-        self.assertIsNone(mkuf2.check_window([(0x00026000, 0x000EA000)]))
+        for window in (GO, BRAVO):
+            self.assertIsNone(mkuf2.check_window([(window.softdevice_end, 0x000EA000)], window))
 
     def test_the_two_sysbuild_images_together_are_accepted(self):
         self.assertIsNone(mkuf2.check_window([
             (0x00026000, 0x00034000),
             (0x00034000, 0x000EA000),
-        ]))
+        ], GO))
+        self.assertIsNone(mkuf2.check_window([
+            (0x00027000, 0x00035000),
+            (0x00035000, 0x000EA000),
+        ], BRAVO))
+
+    def test_a_board_without_a_window_is_refused_before_any_input_is_read(self):
+        done = subprocess.run([sys.executable, mkuf2.__file__, "nrf52840dk", "out.uf2", "missing.hex"],
+                              capture_output=True, text=True)
+        self.assertEqual(done.returncode, 1)
+        self.assertIn("no write window for board 'nrf52840dk'", done.stdout)
 
 
 class Merging(unittest.TestCase):

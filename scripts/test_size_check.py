@@ -4,7 +4,6 @@
     python3 scripts/test_size_check.py
 """
 import pathlib
-import re
 import struct
 import subprocess
 import sys
@@ -25,7 +24,16 @@ CONFIG_ROM_END_OFFSET=0x1096
 CONFIG_SRAM_BASE_ADDRESS=0x20000000
 CONFIG_SRAM_SIZE=256
 """
-STUB_CONFIG = """CONFIG_BOARD="meshtracker_x1"
+BRAVO_CONFIG = """CONFIG_BOARD="meshtracker_x1"
+CONFIG_FLASH_BASE_ADDRESS=0x0
+CONFIG_FLASH_LOAD_OFFSET=0x35000
+CONFIG_FLASH_SIZE=1024
+CONFIG_FLASH_LOAD_SIZE=0xb5000
+CONFIG_ROM_END_OFFSET=0x1096
+CONFIG_SRAM_BASE_ADDRESS=0x20000000
+CONFIG_SRAM_SIZE=256
+"""
+SLOTLESS_CONFIG = """CONFIG_BOARD="nrf52840dk"
 CONFIG_FLASH_BASE_ADDRESS=0x0
 CONFIG_FLASH_LOAD_OFFSET=0
 CONFIG_FLASH_SIZE=1024
@@ -70,24 +78,17 @@ class SizeCheck(unittest.TestCase):
         self.assertEqual(size_check.report(elf(0x34000, 4096, 262145), GO_CONFIG)[1],
                          ["over the RAM budget by 1 B"])
 
-    def test_the_slotless_x1_stub_is_held_to_its_unverified_budget(self):
-        budget = size_check.SLOTLESS_FLASH_BUDGETS["meshtracker_x1"]
-        lines, found = size_check.report(elf(0, budget, 4864), STUB_CONFIG)
+    def test_the_x1_is_held_to_its_own_slot_less_the_footer(self):
+        # 0xB5000 - 0x1096 = 737130, the FLASH region the X1 smoke image's linker prints.
+        lines, found = size_check.report(elf(0x35000, 737130, 4096), BRAVO_CONFIG)
         self.assertEqual(found, [])
-        self.assertIn("unverified: meshtracker_x1 has no slot yet", lines[0])
-        self.assertEqual(size_check.report(elf(0, budget + 1, 4864), STUB_CONFIG)[1],
+        self.assertIn("737130 B budget", lines[0])
+        self.assertEqual(size_check.report(elf(0x35000, 737131, 4096), BRAVO_CONFIG)[1],
                          ["over the flash budget by 1 B"])
 
-    def test_a_slotless_board_with_no_budget_fails(self):
-        config = STUB_CONFIG.replace("meshtracker_x1", "nrf52840dk")
-        self.assertEqual(size_check.report(elf(0, 4096, 4096), config)[1],
-                         ["nrf52840dk has no slot and no budget in SLOTLESS_FLASH_BUDGETS"])
-
-    def test_the_go_slot_is_the_one_its_board_declares(self):
-        dts = (pathlib.Path(__file__).resolve().parent.parent
-               / "firmware/boards/lilygo/t_echo_plus/t_echo_plus.dts").read_text()
-        slot0 = re.search(r"slot0_partition: partition@\w+ \{[^}]*reg = <0x\w+ (0x\w+)>", dts)
-        self.assertEqual(int(slot0.group(1), 16), size_check.T_ECHO_SLOT0_BYTES)
+    def test_a_board_with_no_slot_fails(self):
+        self.assertEqual(size_check.report(elf(0, 4096, 4096), SLOTLESS_CONFIG)[1],
+                         ["nrf52840dk has no slot to hold the image to"])
 
     def test_a_file_that_is_not_an_elf_fails(self):
         self.assertEqual(size_check.report(bytes(64), GO_CONFIG)[1], ["not a 32-bit little-endian ELF"])

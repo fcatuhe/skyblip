@@ -52,6 +52,7 @@ main() {
 
   local version
   version=$(image_version)
+  board=$(declared_board)
   echo "== building $product $version, $channel ($(git -C "$tree" rev-parse --short HEAD))"
   build_image "$version" "$build" y
   build_image "$version" "$slim_build" n
@@ -97,14 +98,18 @@ image_version() {
   echo "$triple+$build"
 }
 
+# The board is a fact about the SKU, declared by the product, never passed in.
+declared_board() {
+  local declared
+  declared=$(sed -n 's/^skyblip_product_board(\(.*\))$/\1/p' \
+             "$firmware/products/$product/CMakeLists.txt")
+  test -n "$declared" || { echo "FAIL: $product declares no board" >&2; exit 1; }
+  echo "$declared"
+}
+
 # A full image and a slim one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
 build_image() {
-  local version=$1 dir=$2 linked=$3 board conf=$firmware/build-conf
-  # The board is a fact about the SKU, declared by the product, never passed in.
-  board=$(sed -n 's/^skyblip_product_board(\(.*\))$/\1/p' \
-          "$firmware/products/$product/CMakeLists.txt")
-  test -n "$board" || { echo "FAIL: $product declares no board"; exit 1; }
-
+  local version=$1 dir=$2 linked=$3 conf=$firmware/build-conf
   mkdir -p "$conf"
   echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(realpath "$key")\"" > "$conf/signing.conf"
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$conf/version.conf"
@@ -187,7 +192,7 @@ check_budgets() {
 # the build directory and out/ takes the copy.
 stage_artifacts() {
   local version=$1
-  "$python" "$tree/scripts/mkuf2.py" "$build/$slug.uf2" \
+  "$python" "$tree/scripts/mkuf2.py" "$board" "$build/$slug.uf2" \
     "$build/mcuboot/zephyr/zephyr.hex" "$app/zephyr.signed.confirmed.hex"
   rm -rf "$out" && mkdir -p "$out"
   cp "$build/$slug.uf2" "$out/$slug.uf2"
