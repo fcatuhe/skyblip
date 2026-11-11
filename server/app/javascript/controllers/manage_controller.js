@@ -140,6 +140,7 @@ export default class extends Controller {
     this.messageTarget.textContent = this.#message(state)
     this.messageTarget.classList.toggle("visually-hidden", !state.notice && Boolean(this.#step(state)))
     this.#recheck(state)
+    this.#preselect(state)
   }
 
   #offer({ image }, idle) {
@@ -155,6 +156,17 @@ export default class extends Controller {
       this.#shelve(null)
     }
     this.shelfTarget.disabled = this.selecting || !idle || options.every(option => option.hidden)
+  }
+
+  #preselect({ device, settings, notice, file }) {
+    if (!device) this.preselected = null
+    if (!this.hasShelfTarget || !settings || notice || this.preselected === device || this.selecting) return
+    if (file || this.shelfTarget.value || this.fileTarget.value) return
+    const newest = [...this.shelfTarget.options].find(option => option.value && !option.hidden && option.dataset.kind === "slim")
+    if (!newest) return
+    this.preselected = device
+    this.shelfTarget.value = newest.value
+    this.take()
   }
 
   #shelve(option) {
