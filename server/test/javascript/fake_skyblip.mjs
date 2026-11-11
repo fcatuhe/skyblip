@@ -65,7 +65,7 @@ export class FakeSkyblip {
     to = null,
     settings = null,
     imu = BLOB_PIN.slice(0, 16),
-    onGround = true,
+    flight = 'ground',
     swapPowered = true,
     bufSize = 2475,
     mtu = 185,
@@ -80,18 +80,17 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     address = 0x00012a,
-    setsOffGround = false,
     product = 'skyblip_go',
   } = {}) {
-    Object.assign(this, { running, image, from, to, settings, imu, onGround, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, setsOffGround, product });
+    Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, product });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
-    this.airborne = false;
+    this.refusedOnDevice = false;
     this.staged = null;
     this.windowOpen = false;
     this.slot = null;
@@ -190,6 +189,7 @@ export class FakeSkyblip {
     if (!this.connected) return;
     this.connected = false;
     this.pending = null;
+    this.refusedOnDevice = false;
     this.windowOpen = false;
     for (const listener of this.listeners) listener();
   }
@@ -228,7 +228,8 @@ export class FakeSkyblip {
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
-    if (!this.onGround && !(command === 'set' && this.setsOffGround)) return this.acknowledge(false, 'in_flight');
+    if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
+    if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
     if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
     if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
     if (command === 'dfu' && this.older(parseVersion(fields.version))) return this.acknowledge(false, 'older');
@@ -246,8 +247,7 @@ export class FakeSkyblip {
   }
 
   takeOff() {
-    this.onGround = false;
-    this.airborne = true;
+    this.flight = 'airborne';
     this.windowOpen = false;
     if (this.pending) {
       this.pending = null;
@@ -257,8 +257,7 @@ export class FakeSkyblip {
   }
 
   land() {
-    this.onGround = true;
-    this.airborne = false;
+    this.flight = 'ground';
     this.sendStatus();
   }
 
@@ -292,20 +291,14 @@ export class FakeSkyblip {
   sendStatus() {
     this.reply({
       command: 'status',
-      flight: this.flight(),
-      upload: this.windowOpen && this.onGround,
+      flight: this.flight,
+      upload: this.windowOpen && this.flight !== 'airborne',
       battery_percent: this.swapPowered ? 80 : 12,
       charging: false,
       power_level: this.swapPowered ? 'normal' : 'low',
       went_dark_flat: false,
       die_temperature_c: 21,
     });
-  }
-
-  // INFO: fc 10nov26 config.cpp reads a unit with no fix since boot as unknown, which refuses like airborne
-  flight() {
-    if (this.onGround) return 'ground';
-    return this.airborne ? 'airborne' : 'unknown';
   }
 
   press() {
@@ -325,6 +318,7 @@ export class FakeSkyblip {
   }
 
   refuse() {
+    if (this.pending) this.refusedOnDevice = true;
     this.pending = null;
     this.windowOpen = false;
     this.acknowledge(false, 'cancelled');
@@ -375,7 +369,7 @@ export class FakeSkyblip {
   }
 
   imageUpload({ off, len, sha, data }) {
-    if (!this.windowOpen || !this.onGround) return { rc: MGMT_ERR_EACCESSDENIED };
+    if (!this.windowOpen || this.flight === 'airborne') return { rc: MGMT_ERR_EACCESSDENIED };
     if (--this.closeWindowAfterPackets === 0) this.windowOpen = false;
     this.uploadOffsets.push(off);
     if (off === 0) {

@@ -34,6 +34,8 @@ struct Inventory {
     // null: the page prints it.
     const char* panel_name{"?"};
     HapticKind haptic{HapticKind::None};
+    // INFO: fc 11nov26 an undriven RTC: T-Echo's PCF8563 at 0x51, or X1's YSN8900 on its own bus
+    bool rtc_fitted{false};
 
     bool has_i2c_address(uint8_t address) const {
         for (uint8_t i = 0; i < i2c_count; i++)

@@ -17,25 +17,20 @@ using namespace skyblip;
 // gate was never told the flight state, so it refused everything forever, and
 // nothing could ever call confirm(), so it refused everything twice over.
 
-TEST_CASE("product: the gate opens on the ground the fix stream proved, not on a phone's word") {
+// Unknown is a unit with no fix since boot: it sends no position and grades no traffic.
+TEST_CASE("product: the gate closes on the take-off the fix stream proved, not on a phone's word") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
 
-    // No solution yet: the device does not know where it is, so it is not on
-    // the ground, so it authorises nothing. This is the state a bench device
-    // was stuck in - Unknown, forever.
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, 500);
-    CHECK(rig.config().flight_state() == flight::FlightState::Unknown);
-    CHECK(rig.config().pending() == comms::Pending::None);
     now_ms = 500;
+    CHECK(rig.config().flight_state() == flight::FlightState::Unknown);
+    CHECK(rig.config().pending() == comms::Pending::Dfu);
 
     rig.on_ground(now_ms);
     CHECK(rig.config().flight_state() == flight::FlightState::Ground);
-    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 500);
-    now_ms += 500;
     CHECK(rig.config().pending() == comms::Pending::Dfu);
 
     // And the same stream takes it away again: the transmitter and the update

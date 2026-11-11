@@ -18,9 +18,6 @@ class ConfigStore {
 
     // INFO: fc 03oct26 what apply() would change, rows split by '\n' | 20oct26 or its refusal
     virtual Status describe_changes(const cbor::Reader& frame, char* out, int capacity) const = 0;
-
-    // INFO: fc 10nov26 true when the product's own menu changes every key the set holds
-    virtual bool pilot_settings_only(const cbor::Reader& frame) const = 0;
 };
 
 }  // namespace skyblip::comms

@@ -1,7 +1,8 @@
 tests:
   boards.meshtracker_x1.platform:
     tags: platform boards
-    # Built, never run: no X1 has run skyBlip yet, and its devicetree is a placeholder until #170.
+    # Built, never run: the smoke image installs by drag-and-drop on a bench unit (#169).
     build_only: true
+    sysbuild: true
     platform_allow:
       - meshtracker_x1

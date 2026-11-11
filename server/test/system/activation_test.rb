@@ -68,19 +68,25 @@ class ActivationTest < ApplicationSystemTestCase
     assert_selector "#activate-own-icao:invalid"
   end
 
-  test "a unit that wants the ground for its settings refuses them indoors, and its first fix gives Save back" do
+  test "a unit with no fix since boot takes its settings indoors" do
     visit "/activate"
     page.execute_script("fakeUnit.flight = 'unknown'")
     activate
-    assert_no_selector "[data-activate-target=ground]"
     fill_in "Callsign", with: "F-JXYZ"
     click_button "Save"
-    assert_selector "[role=status]", text: "The unit has not proven it is on the ground"
-    assert_selector "[data-activate-target=ground]", text: "Save comes back when the unit reports the fix"
+    assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
+  end
+
+  test "a unit in flight holds Save until it lands" do
+    visit "/activate"
+    page.execute_script("fakeUnit.flight = 'airborne'")
+    activate
+    fill_in "Callsign", with: "F-JXYZ"
+    assert_selector "[data-activate-target=airborne]", text: "Save comes back once it has landed"
     assert_button "Save", disabled: true
 
     page.execute_script("fakeUnit.land()")
-    assert_no_selector "[data-activate-target=ground]"
+    assert_no_selector "[data-activate-target=airborne]"
     click_button "Save"
     assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
   end

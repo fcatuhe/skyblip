@@ -41,6 +41,7 @@ TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
     // parts would be a scan nobody could use: this is the entire evidence for the
     // RTC that project/2-DEVICES.md records as fitted.
     CHECK(inventory.has_i2c_address(kRtcAddress));
+    CHECK(inventory.rtc_fitted);
     CHECK(inventory.has_i2c_address(parts::Bhi260::kAddress));
 
     // Ascending, so the page reads the same way twice.

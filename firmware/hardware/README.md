@@ -10,7 +10,7 @@ A window the datasheet asks the host to hold, a reset pulse or a save the part m
 
 `boards/` is a template over a platform rather than a consumer of a base class, so a platform proves itself by compiling, not by overriding. The cost is that the contract is nowhere in the type system, which is what this section is for. A platform is what `platform/host/platform.h` and `platform/zephyr/t_echo_plus.h` both are: the T-Echo Plus, on the host and on silicon.
 
-On silicon each board has its own composition, which names the parts that board brings up and no others. The adapters it is built from (`clock.h`, `link.h`, `kvstore.h` and the rest) are shared. `platform/zephyr/meshtracker_x1.h` is the X1's, a stub with the SoC's parts only until #170 gives the board its devicetree, and it fills no contract yet because no board template is written over it. `platform/zephyr/ag3335.h` is the AG3335's wiring on silicon, its UART, its PPS and its five control lines, read from devicetree aliases, which #176 composes into the X1's.
+On silicon each board has its own composition, which names the parts that board brings up and no others. The adapters it is built from (`clock.h`, `link.h`, `kvstore.h` and the rest) are shared. `platform/zephyr/meshtracker_x1.h` is the X1's. It brings up the board's own parts: the button, the lamps, the buzzer, the battery and the charger lines, the settings store and the NOR. It fills no contract yet, because no board template is written over it until #176 adds the radio, the GNSS and the barometer. `platform/zephyr/ag3335.h` is the AG3335's wiring on silicon, its UART, its PPS and its five control lines, read from devicetree aliases, which #176 composes into the X1's.
 
 The buses a part is constructed over:
 

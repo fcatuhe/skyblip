@@ -103,9 +103,6 @@ void write_settings_fields(cbor::Writer& writer, const Settings& settings);
 
 Status apply_settings(Settings& settings, const cbor::Reader& frame);
 
-// INFO: fc 10nov26 the radar menu changes these values, and the trims are a bench's
-bool pilot_settings_only(const cbor::Reader& frame);
-
 }  // namespace skyblip::go
 
 #endif

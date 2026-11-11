@@ -32,14 +32,7 @@ const char* pending_detail(Pending pending) {
 
 bool ConfigService::prompt_allowed_in(flight::FlightState state) const {
     // INFO: fc 18oct26 activation is the exception: a unit with no serial transmits nothing
-    if (state == flight::FlightState::Ground || register_exempt()) return true;
-    return pending_ == Pending::Set && settings_allowed(pending_set(), state);
-}
-
-// INFO: fc 10nov26 a unit with no fix grades no traffic, so a prompt there hides no advisory
-bool ConfigService::settings_allowed(const cbor::Reader& frame, flight::FlightState state) const {
-    if (state == flight::FlightState::Ground) return true;
-    return state == flight::FlightState::Unknown && store_.pilot_settings_only(frame);
+    return state != flight::FlightState::Airborne || register_exempt();
 }
 
 cbor::Reader ConfigService::pending_set() const {

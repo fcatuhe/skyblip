@@ -65,7 +65,7 @@ void ConfigService::set_flight_state(flight::FlightState state) {
             acknowledge(false, link::Reason::InFlight);
         }
     }
-    // INFO: fc 03oct26 a page holding its buttons for the ground learns it landed without polling
+    // INFO: fc 03oct26 a page holding its buttons in flight learns it landed without polling
     if (changed && link_up()) push_status();
 }
 
@@ -280,7 +280,7 @@ void ConfigService::install_received_image() {
         acknowledge(false, link::Reason::NotApproved);
     } else if (!signed_by_trusted_key()) {
         acknowledge(false, link::Reason::WrongKey);
-    } else if (!on_ground()) {
+    } else if (in_flight()) {
         acknowledge(false, link::Reason::InFlight);
     } else if (!swap_powered()) {
         acknowledge(false, link::Reason::LowPower);
@@ -394,8 +394,7 @@ void ConfigService::send_config() {
 }
 
 void ConfigService::stage_settings(const events::RxFrame& frame) {
-    const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
-    if (!settings_allowed(reader, flight_state_)) {
+    if (in_flight()) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }
@@ -404,6 +403,7 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
         acknowledge(false, link::Reason::LowPower);
         return;
     }
+    const cbor::Reader reader(ConstByteSpan(frame.data.data(), frame.bytes));
     char detail[sizeof(prompt_detail_)]{};
     const Status described =
         store_.describe_changes(reader, detail, static_cast<int>(sizeof(detail)));
@@ -419,7 +419,7 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
 
 // INFO: fc 03oct26 the dfu image travels over SMP, not this channel (simulator/README.md)
 void ConfigService::answer_prompt_request(link::Command command, const cbor::Reader& frame) {
-    if (!on_ground()) {
+    if (in_flight()) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }
@@ -446,7 +446,7 @@ void ConfigService::answer_prompt_request(link::Command command, const cbor::Rea
 
 void ConfigService::request_log_erase() {
     if (prompt_refused()) return;
-    if (!on_ground()) {
+    if (in_flight()) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }

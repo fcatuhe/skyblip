@@ -21,14 +21,12 @@ noinit, and a stack member such as the radio thread's
 (hardware/platform/zephyr/rf.h) in the object that holds it.
 
 Every build fails RAM at link before it can fail here, because the linker
-holds every board to CONFIG_SRAM_SIZE. A build with a slot also fails flash at
-link, because the linker holds it to the same slot: for both, this prints the
-headroom. Only a build with no slot can fail flash here: it links against the
-whole flash, so it is held to the budget SLOTLESS_FLASH_BUDGETS names for its
-board. An ELF with no loadable segment, or with one outside both the flash and
-the SRAM, fails here too. The Go's budget is
-its slot0 in boards/lilygo/t_echo_plus/t_echo_plus.dts less the footer its
-build's CONFIG_ROM_END_OFFSET reserves.
+holds every board to CONFIG_SRAM_SIZE. It also fails flash at link, because the
+linker holds it to the same slot: for both, this prints the headroom. A build
+with no slot links against the whole flash, over the factory SoftDevice and
+bootloader, so it fails here. An ELF with no loadable segment, or with one
+outside both the flash and the SRAM, fails here too. Each budget is the board's
+slot0 less the footer its build's CONFIG_ROM_END_OFFSET reserves.
 """
 import os
 import struct
@@ -37,11 +35,6 @@ import sys
 ELF_HEADER_BYTES = 52
 PROGRAM_HEADER_BYTES = 32
 PT_LOAD = 1
-
-T_ECHO_SLOT0_BYTES = 0xB6000
-GO_MCUBOOT_FOOTER_BYTES = 0x1096
-# TODO: fc 10nov26 the X1 stub has no slot, so it is held to the Go's until #170 lays out the X1's partitions
-SLOTLESS_FLASH_BUDGETS = {"meshtracker_x1": T_ECHO_SLOT0_BYTES - GO_MCUBOOT_FOOTER_BYTES}
 
 
 def main(argv):
@@ -116,13 +109,10 @@ def kconfig(text):
 
 def flash_budget_bytes(config):
     slot_bytes = int(config.get("CONFIG_FLASH_LOAD_SIZE", "0"), 0)
-    if slot_bytes:
-        footer_bytes = int(config.get("CONFIG_ROM_END_OFFSET", "0"), 0)
-        return slot_bytes - footer_bytes, "the slot less MCUboot's footer"
-    board = config.get("CONFIG_BOARD", "")
-    if board in SLOTLESS_FLASH_BUDGETS:
-        return SLOTLESS_FLASH_BUDGETS[board], f"unverified: {board} has no slot yet"
-    raise ValueError(f"{board or 'the build'} has no slot and no budget in SLOTLESS_FLASH_BUDGETS")
+    if not slot_bytes:
+        raise ValueError(f"{config.get('CONFIG_BOARD') or 'the build'} has no slot to hold the image to")
+    footer_bytes = int(config.get("CONFIG_ROM_END_OFFSET", "0"), 0)
+    return slot_bytes - footer_bytes, "the slot less MCUboot's footer"
 
 
 def load_segments(elf):
