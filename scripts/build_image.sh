@@ -63,8 +63,12 @@ main() {
   assert_downgrade_rule "$slim_build" "$slim_app"
   "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
   "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
+  # A unit refuses an upload naming another product, and takes none while it runs an image naming none.
+  for image in "$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin" "$slim_app/zephyr.signed.bin"; do
+    "$python" "$tree/scripts/check_image_product.py" "$image" "$product"
+  done
   assert_confirmed_image_differs
-  check_flash_budget
+  check_budgets
   stage_artifacts "$version"
 }
 
@@ -171,13 +175,9 @@ assert_confirmed_image_differs() {
     || { echo "FAIL: the confirmed hex is byte-identical to the unconfirmed one"; exit 1; }
 }
 
-# The host `size` cannot read an arm-zephyr-eabi ELF, and the SDK's own tool is
-# not on PATH outside a build: it sits beside the objcopy the build used.
-check_flash_budget() {
-  local objcopy
-  objcopy=$(sed -n 's/^CMAKE_OBJCOPY:FILEPATH=//p' "$build/$product/CMakeCache.txt")
-  test -n "$objcopy" || { echo "FAIL: the build cached no CMAKE_OBJCOPY to find the SDK's size by"; exit 1; }
-  SIZE=${objcopy%objcopy}size "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
+# The full image only: the slim one is the same RAM and less flash.
+check_budgets() {
+  "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
   echo "slim image: $(stat -c %s "$slim_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
 }
 

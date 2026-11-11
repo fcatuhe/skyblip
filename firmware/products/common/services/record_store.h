@@ -1,23 +1,17 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_STORE_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RECORD_STORE_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_RECORD_STORE_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_RECORD_STORE_H
 
 #include "core/comms/log_link.h"
 #include "core/flight/log_session.h"
-#include "core/timing/durable_write.h"
-#include "products/skyblip_go/services/record_pool.h"
+#include "products/common/services/record_pool.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 // INFO: fc 03oct26 the record that straddles into a page, then the ten the page holds
 constexpr uint32_t kMaxRunSlots = (store::kPageBytes + kStoreRecordBytes - 1) / kStoreRecordBytes;
 
-// INFO: fc 20sep26 a bulk erase still owes the dwell map its re-arm, so it goes a window at a time
+// INFO: fc 10nov26 caps the sectors one pass of a bulk erase books in the product's flash window
 constexpr uint32_t kEraseCeilingSectors = 8;
-
-static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
-                      static_cast<uint32_t>(timing::kJitterGuardMs) <
-                  static_cast<uint32_t>(timing::kUplinkRxEndMs - timing::kUplinkRxStartMs),
-              "claiming a sector no longer fits inside the narrowest dwell the map offers");
 
 enum class Append : uint8_t { Ok, Deferred, NoSector, Fault };
 
@@ -127,6 +121,6 @@ class RecordStore {
     uint8_t scratch_[kStoreRecordBytes]{};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

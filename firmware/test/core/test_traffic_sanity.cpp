@@ -206,3 +206,33 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     CHECK(table.count() == 1);
     CHECK(table.implausible() == 2);
 }
+
+// 1090 MHz is bounded by the horizon, not our budget, and a far aircraft is the gate's to refuse.
+TEST_CASE("traffic: an ADS-B target is judged against the radio horizon between two aircraft") {
+    const double effective_radius_m = 4.0 / 3.0 * 6371000.0;
+    const double fl600_m = 60000 * 0.3048;
+    const double horizon_m = 2 * std::sqrt(2 * effective_radius_m * fl600_m);
+    CHECK(kAdsbRangeCeilingM >= horizon_m);
+    CHECK(kAdsbRangeCeilingM - horizon_m < 1000);
+    CHECK(plausible_range_m(model::Source::Adsb) == kAdsbRangeCeilingM);
+
+    const model::Ownship own = flying(30, 0);
+    TrafficTable table;
+    table.set_own_reference(own);
+    model::AircraftObservation heard = target_at(own, 400000, 0, 0, 230, 180);
+    heard.address = 0x4E0001;
+    heard.source = model::Source::Adsb;
+    int32_t slant_m = 0;
+    CHECK(range_check(own, heard, slant_m) == Plausibility::Believable);
+    CHECK(table.update(heard, 100) < 0);
+    CHECK(table.implausible() == 0);
+    CHECK(table.adsb_outside_gate() == 1);
+
+    model::AircraftObservation ghost = target_at(own, kAdsbRangeCeilingM + 1000, 0, 0, 230, 180);
+    ghost.address = 0x4E0002;
+    ghost.source = model::Source::Adsb;
+    CHECK(range_check(own, ghost, slant_m) == Plausibility::TooFar);
+    CHECK(table.update(ghost, 100) < 0);
+    CHECK(table.implausible() == 1);
+    CHECK(table.adsb_outside_gate() == 1);
+}

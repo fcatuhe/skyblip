@@ -5,6 +5,7 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 | File | What it decides |
 |---|---|
 | `sanity` | whether a decoded position is close enough to have been heard at all |
+| `gate` | whether an ADS-B target is near enough, in distance and in height, to take a slot |
 | `lease` | how long one reception is believed, for every layer that holds a slot |
 | `table` | which aircraft the finite table holds, and each one's turn rate |
 | `alarm` | whether a target is an advisory, and what the annunciator is allowed to say |
@@ -29,12 +30,13 @@ A target that reports no velocity is still charged at `kUnknownTargetSpeedMps` i
 
 ## A target that sends no altitude
 
-ADS-L lets a position mark its altitude invalid (G.1.7). Unknown is a state, not 0 m. `flight::relative_north_east_up` says whether the height it returns is real, through `up_valid`, and every reader decides what unknown means for it. None of them may read the target as level with us:
+ADS-L lets a position mark its altitude invalid (G.1.7), and an ADS-B target may send no altitude at all. Unknown is a state, not 0 m. `flight::relative_north_east_up` says whether the height it returns is real, through `up_valid`, and every reader decides what unknown means for it. None of them may read the target as level with us:
 
-- `alarm` grades it on distance alone: inside `kAdvisoryDistanceM` it is an advisory, because it may be at our level. `AlarmAssessment::relative_altitude_valid` is false, so neither the radar, `nearby` nor the tablet prints a separation it does not have. The records do not carry the flag yet: the flight log (`products/skyblip_go/services/flight_log.cpp`) and the diagnostics `Traffic` record (`products/common/services/alarm.cpp`) write 0 for an unknown altitude, and `scripts/blip_records.py` decodes that 0 as a separation. #203 adds the flag.
+- `alarm` grades it on distance alone: inside `kAdvisoryDistanceM` it is an advisory, because it may be at our level. `AlarmAssessment::relative_altitude_valid` is false, so neither the radar, `nearby` nor the tablet prints a separation it does not have. The records do not carry the flag yet: the flight log (`products/common/services/flight_log.cpp`) and the diagnostics `Traffic` record (`products/common/services/alarm.cpp`) write 0 for an unknown altitude, and `scripts/blip_records.py` decodes that 0 as a separation. #203 adds the flag.
 - `formation` never makes it a member, and a member that stops sending its altitude leaves on that report. Holding station is a claim about three axes, and a target with no height cannot be seen to hold one.
 - `range` gives it a ground distance and `RangeRow::up_valid` false, which `nearby` prints as `--`.
 - `sanity` checks its ground distance, since there is no slant to take.
+- `gate` holds an ADS-B target on its distance alone, below.
 
 What the radar and the list draw for it is in `products/skyblip_go/pages/README.md`, and what the tablet is sent in `core/protocol/README.md`.
 
@@ -70,7 +72,77 @@ The liftoff is when the device starts talking. Every target inside the ring beco
 
 The ground rules above read one field, `AircraftObservation::flight_state`, and never ask which system a report came from. The field holds the ADS-L G.1.2 code whatever the wire was, and `flight::state_from` is its only reader, so a code nobody named is `Unknown`. Each decoder fills it: ADS-L copies G.1.2, the uplink record carries the same two bits, and ALP-TAS maps its own two-bit field in `alptas_flight_state` (1 on the ground, 2 airborne, 3 airborne and circling, and 0, which no known sender transmits, `Unknown`). The lease, the grade, the direct hold and the formation all key off that field and nothing else.
 
+ADS-B fills it in the assembler (#190): `Ground` from a surface position (type code 5 to 8) or a DF17 capability of 4, `Airborne` from an airborne position (type code 9 to 22) or a capability of 5. Any other message leaves a fresh state as it is, and `flight_state_age_ms` keeps the instant it was true. An aircraft that has sent no such evidence yet is `Unknown`, and gets the airborne treatment like any other.
+
 A new inbound source owes this directory one thing: write the field, `Unknown` when its wire has no state, and it inherits everything above without a line changing here. `test/core/test_traffic_sources.cpp` flies one parked aircraft through every decoder and holds them all to the same answers, so a source added to its table is checked the day it lands.
+
+## ADS-B
+
+ADS-B reaches the table as `Source::Adsb`: from the LR2021 on a Bravo alone, and from a paired Bravo on a Go (#193). The rules below are the table's and `relative_north_east_up`'s, so both products apply them the same way.
+
+### Which height is compared
+
+`flight::relative_north_east_up` takes a target's height in this order:
+
+1. its height above the ellipsoid, `altitude_m`, against own-ship's `altitude_hae_mm`;
+2. else its pressure altitude, `pressure_altitude_ft`, against own-ship's `pressure_altitude_mm`;
+3. else none: `up_valid` is false, as above.
+
+A height is only compared with its own kind. A pressure altitude is measured on 1013.25 hPa, and it differs from a GNSS height by the geoid and by the day's weather. ADS-L, FLARM and the uplink send no pressure altitude, so they take the first branch or none, as before.
+
+The rule reads the validity flags only. Whether a field is still fresh enough to be valid is decided from its age where the observation is assembled (#190), and own-ship's pressure altitude is expired by whoever publishes it: #193 on the Go and #176 on Bravo. Until they do, no product publishes one, so a target that sends only a pressure altitude is unknown.
+
+`flight::carried_to` carries `altitude_m` by the target's climb, and leaves both pressure altitudes as they were reported. At the 1.5 s `flight::kExtrapolationCeilingMs` and 10 m/s of climb, that is 15 m inside a 300 m band.
+
+### One aircraft heard on several paths
+
+`source_rank` puts a direct ADS-L or FLARM reception at 3, ADS-B at 2 and the uplink at 1, the order epic #184 decided. A lower-ranked copy never displaces a higher-ranked one younger than `direct_preferred_max_age_s`, however much newer it is. Past that age it takes over, and the higher-ranked copy takes the target back on its next reception. ADS-B ranks below a direct reception because it sends each field in a message of its own, with its own age, while ADS-L and FLARM carry them all in one burst. On a paired Go it also crosses a second link, from the Bravo. It ranks above the uplink, which relays what a ground station heard.
+
+The table merges two reports only when both the address mapping table and the address match. An ADS-B address is an ICAO address, table 5 in ADS-L F.2.2 (`settings::kIcaoAddressMappingTable`), and the ADS-B assembler (#190) must write that table on every observation. So an ADS-L or FLARM unit merges with its ADS-B copy only when it sends the aircraft's ICAO address, which F.2.3 asks of an aircraft that also carries a transponder. Under any other table it is a second identity, and the table does not guess that the two are one aircraft.
+
+### Our own aircraft
+
+The table refuses two addresses, before any other check:
+
+- our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`);
+- our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it.
+
+Zero sets an entry to filter nothing. Until the Go has an own-ICAO setting (#191), `common::TrafficService` passes 0.
+
+### A report with no position
+
+An ADS-B observation can exist before its position does, such as half a CPR pair (`core/model/README.md`). The table refuses `Source::Adsb` without `position_valid`, before the sanity check, and counts it in `adsb_without_position()`, so an assembler that hands one over shows up. Admitted, it would have had a slant of 0, and a full table would have kept it over every real target. So the ADS-B assembler (#190) may hand the table an observation only once it holds a position, and the rule above stops one that slips through. Other sources are unchanged.
+
+### Sanity: the radio horizon
+
+`kAdsbRangeCeilingM` is 1115 km. The ADS-L ceiling is our link budget, but nobody has measured what the LR2021 hears on 1090 MHz yet (#172), so the bound that holds without a bench figure is line of sight. Over a smooth earth, with the standard atmosphere's effective radius of 4/3 of the earth's:
+
+    d = sqrt(2 k R h1) + sqrt(2 k R h2), with k = 4/3 and R = 6371 km
+
+Both aircraft are put at FL600, 18288 m, the top of the class A airspace airliners and business jets fly in (14 CFR 71.33). Each term is then 557.4 km, and d is 1114.8 km. Own-ship is put at FL600 too, because the ceiling has to hold wherever the receiver flies. `test/core/test_traffic_sanity.cpp` computes the figure. A position further than that was not sent from where the aircraft is: it is a decode gone wrong, and it counts in `implausible()` like any other.
+
+### The gate
+
+The table already keeps its nearest targets: a full table evicts the farthest slot, and never one under an advisory. So the gate does not protect ADS-L from a flood of ADS-B. Nearest-first does that. The gate keeps out the ADS-B a pilot has no use for, so that it holds no slot and no NMEA time: `common::NmeaService` sends at most `kTargetsPerPass`, 10 targets a second, so a full table sends each target only every fifth second.
+
+It applies to `Source::Adsb` only, and refuses a target that is either:
+
+- further than `kAdsbGateRangeCeilingM` over the ground, which is `kPlausibleRangeCeilingM`, 30 km. No ADS-B target is held further away than a direct ADS-L or FLARM target can be. The radar's widest range is 16 km (`kRangeStepsKm`), and the alarm acts inside 3 km. For comparison, PowerFLARM's `ADSBRANGE` defaults to unlimited, and its `PCASRANGE` for transponder-only targets to 7408 m (FLARM FTD-014, version 1.18 of 2024-12-19, 3.2.10 and 3.2.8);
+- or more than `kAdsbGateHeightCeilingM`, 500 m, above or below us. That is the default of PowerFLARM's `VRANGE`, the vertical range of the aircraft it shows (FTD-014, 3.1.6, values 500 to 2000). It is 200 m wider than the alarm's `kAdvisoryAltitudeM`, so a target is held before it can become an advisory: closing at 10 m/s vertically, it enters the table 20 s before it enters the band. FLARM's own `ADSBVRANGE` defaults to unlimited (3.2.11), and its `PCASVRANGE` to 610 m (3.2.9).
+
+The gate measures from the table's reference, `set_own_reference`. Paired, a Bravo gates its exports on the Go's position (#192). A target the gate refuses or releases counts in `adsb_outside_gate()` and not in `implausible()`, because a real aircraft far away is not a decoder fault. No link reports it yet.
+
+The gate decides admission, and it never freezes a slot. A report from an aircraft the table does not hold yet takes no slot when it is outside the gate. A report outside the gate from an aircraft the table holds releases its slot on that report, when the slot would have taken the report: `prefer_new` still keeps a fresher, higher-ranked copy. The one exception is a slot under an alarm: the report refreshes it instead, so the alarm grades the new position, and the next report outside the gate releases it once the alarm has dropped. An ADS-B advisory with an unknown altitude that next reports a height 800 m above us therefore stops being an advisory on that report, rather than standing on the radar for its 6 s lease.
+
+**Unknown altitude** is neither inside nor outside a height band. The gate holds such a target on its distance alone, as `alarm` grades it on distance alone: it may be at our level. That includes a target that sends only a pressure altitude while own-ship has none.
+
+**Without a fix of our own** there is no reference, so the gate holds every ADS-B target and `weight_of` gives every slot a slant of 0. Eviction then reads the ground first, then the rank, then the age. Among targets with the same ground state, a direct ADS-L or FLARM target outranks ADS-B, which outranks the uplink, and among ADS-B targets the one heard longest ago goes. No slot under an alarm is evicted. So a receiver without a fix holds the ADS-B aircraft it heard most recently, wherever they are. It grades none of them and sends none as `$PFLAA`, because `assess` and `NmeaService::emit_targets` both need our fix. When the fix comes, each far aircraft is released on its next report, and nearer aircraft take the slots as they report.
+
+### Accepted for v1
+
+**Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1, and #191 has the Go warn about it.
+
+**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. Accepted for v1, and the site says so (#197).
 
 ## Dismissal
 

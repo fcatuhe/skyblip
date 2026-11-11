@@ -37,6 +37,10 @@ constexpr Metres to_metres(Millimetres millimetres) {
     return Metres(divide_rounded(millimetres.value, kMillimetresPerMetre));
 }
 constexpr Metres to_metres(Feet feet) { return Metres((feet.value * 2497 + 4096) >> 13); }
+constexpr Millimetres to_millimetres(Feet feet) {
+    return Millimetres(
+        static_cast<int32_t>(divide_rounded<int64_t>(static_cast<int64_t>(feet.value) * 3048, 10)));
+}
 constexpr Feet to_feet(Metres metres) { return Feet((metres.value * 3360 + 512) >> 10); }
 constexpr Feet to_feet(Millimetres millimetres) {
     return Feet(static_cast<int32_t>(

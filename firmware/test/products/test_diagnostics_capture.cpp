@@ -6,8 +6,8 @@
 #include "core/events/link.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/services/capture.h"
-#include "products/skyblip_go/services/flight_log.h"
+#include "products/common/services/capture.h"
+#include "products/common/services/flight_log.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/capture_rig.h"
 #include "test/support/glass_text.h"
@@ -133,7 +133,7 @@ TEST_CASE("capture: the page prices every capture, and the pad picks between the
     taxi(rig, now_ms, 5);
     open_capture_page(rig, now_ms);
 
-    const go::CaptureService& capture = rig.product.capture();
+    const common::CaptureService& capture = rig.product.capture();
     CHECK(capture.keeps_s(diagnostics::Profile::Full) > 0);
     CHECK(capture.keeps_s(diagnostics::Profile::PowerRun) >
           100 * capture.keeps_s(diagnostics::Profile::Full));

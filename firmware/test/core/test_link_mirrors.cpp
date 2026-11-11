@@ -4,6 +4,7 @@
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
+#include "core/model/aircraft.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
@@ -156,6 +157,23 @@ constexpr bool on_the_wire(dfu::HubImage value) {
     return false;
 }
 
+constexpr bool on_the_wire(model::ClimbSource value) {
+    switch (value) {
+        case model::ClimbSource::Unknown:
+        case model::ClimbSource::Gnss:
+        case model::ClimbSource::Barometric: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(dfu::Product value) {
+    switch (value) {
+        case dfu::Product::SkyblipGo:
+        case dfu::Product::SkyblipBravo: return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(store::SectorOwner value) {
     switch (value) {
         case store::SectorOwner::Flights:
@@ -251,6 +269,15 @@ static_assert(code(dfu::HubImage::Unreadable) == 3, "hub_image unreadable");
 static_assert(code(dfu::HubImage::Writing) == 4, "hub_image writing");
 static_assert(code(dfu::HubImage::Held) == 5, "hub_image held");
 static_assert(on_the_wire(dfu::HubImage::None), "hub_image");
+
+static_assert(code(model::ClimbSource::Unknown) == 0, "climb_source unknown");
+static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");
+static_assert(code(model::ClimbSource::Barometric) == 2, "climb_source barometric");
+static_assert(on_the_wire(model::ClimbSource::Unknown), "climb_source");
+
+static_assert(code(dfu::Product::SkyblipGo) == 0, "product skyblip_go");
+static_assert(code(dfu::Product::SkyblipBravo) == 1, "product skyblip_bravo");
+static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
 
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");

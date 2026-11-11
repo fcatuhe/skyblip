@@ -9,7 +9,11 @@
 namespace skyblip::traffic {
 
 int32_t plausible_range_m(model::Source source) {
-    return source == model::Source::AdslUplink ? kRelayedRangeCeilingM : kPlausibleRangeCeilingM;
+    switch (source) {
+        case model::Source::AdslUplink: return kRelayedRangeCeilingM;
+        case model::Source::Adsb: return kAdsbRangeCeilingM;
+        default: return kPlausibleRangeCeilingM;
+    }
 }
 
 Plausibility range_check(const model::Ownship& own, const model::AircraftObservation& observation,

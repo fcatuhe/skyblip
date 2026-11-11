@@ -90,6 +90,12 @@ jobs:
       # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
       - name: the image says which hub image it pins
         run: python3 scripts/test_check_imu_image.py
+      # A unit takes only an image naming its own product, and nothing while it runs one naming none.
+      - name: the image names its product
+        run: python3 scripts/test_check_image_product.py
+      # The budgets come off each build's slot and SRAM, and a board with no slot needs one named.
+      - name: the size check holds each target to its flash and RAM budgets
+        run: python3 scripts/test_size_check.py
       # The Go turns both switches on, so only this configure sees a product that has neither.
       - name: a product without activation or a hub builds no unit key and pins no hub image
         run: python3 scripts/test_shared_layers.py
@@ -450,7 +456,7 @@ jobs:
   platform-adapters:
     # What the pure-host suite cannot build: the Zephyr adapters, run where
     # native_sim can. product-image compiles the ones it cannot, and the X1's
-    # composition is built here until a product ships on it (#188).
+    # composition is built and size-checked here until a product ships on it (#176).
     name: platform adapters (native_sim, meshtracker_x1)
     needs: changes
     if: needs.changes.outputs.firmware == 'true'
@@ -485,3 +491,12 @@ jobs:
           # ZEPHYR_BASE is not in this step's env, so ask west for the workspace.
           python3 "$(west topdir)/zephyr/scripts/twister" \
             -T test/twister -p native_sim -p meshtracker_x1 --inline-logs
+
+      # Twister names its build directory after the test's path, so the one ELF is found rather than spelled.
+      - name: the X1 stub fits its flash and RAM budgets
+        working-directory: firmware
+        run: |
+          elf=$(find twister-out -path '*/boards.meshtracker_x1.platform/zephyr/zephyr.elf')
+          test "$(printf '%s\n' "$elf" | grep -c .)" = 1 \
+            || { echo "FAIL: expected one X1 stub ELF under twister-out, found: ${elf:-none}"; exit 1; }
+          python3 ../scripts/size_check.py "$elf"

@@ -1,18 +1,18 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_LINK_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_CONFIG_LINK_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
 
 #include "core/comms/config.h"
+#include "core/dfu/update.h"
 #include "core/diagnostics/payload.h"
 #include "core/identity/unit.h"
 #include "core/power/cutoff.h"
 #include "core/power/duty.h"
 #include "core/settings/blob.h"
 #include "core/timing/durable_write.h"
-#include "products/skyblip_go/services/power.h"
-#include "products/skyblip_go/settings_store.h"
+#include "products/common/settings_store.h"
 #include "runtime/service.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 // The companion link's device side: load and persist settings, feed the config
 // state machine, and take the running image off probation once the hardware has
@@ -37,17 +37,20 @@ namespace skyblip::go {
 // again; what is protected is every setting they ever made.
 class ConfigLinkService : public runtime::Service {
    public:
-    ConfigLinkService(runtime::Context& context, Settings& settings, const PowerService& power)
+    ConfigLinkService(runtime::Context& context, SettingsStore& store,
+                      const power::CutoffMonitor& power, const char* product_name,
+                      dfu::Product product)
         : runtime::Service(context),
-          settings_(settings),
-          store_(settings, context.state.activation),
+          store_(store),
           config_(context.roles.link, store_, &context.roles.dfu,
                   &context.state.rf.timing_statistics),
           power_(power),
+          product_name_(product_name),
           unit_(context.roles.identity),
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);
+        config_.set_product(product);
     }
 
     Status setup() override;
@@ -106,7 +109,8 @@ class ConfigLinkService : public runtime::Service {
     void drain_settings(uint32_t now_ms);
     void write_settings(uint32_t now_ms, bool forced);
     bool persist();
-    static bool newer_layout(const uint8_t* blob, size_t blob_bytes);
+    bool newer_layout(const uint8_t* blob, size_t blob_bytes) const;
+    static bool blob_fits(size_t blob_bytes) { return blob_bytes > 0 && blob_bytes <= kBlobBytes; }
     void load_prior();
     bool adopt(const uint8_t* blob, size_t blob_bytes);
     void remember(const uint8_t* blob, size_t blob_bytes);
@@ -118,21 +122,21 @@ class ConfigLinkService : public runtime::Service {
     bool hardware_proven() const;
     void publish_image_state();
 
-    // Whether the blob may go to flash at all, asked of the one service that
-    // knows what the cell is doing. A reference, not a pointer: the product wires
-    // it at construction and there is no version of this device where the
-    // question has no owner.
     bool storable() const {
         return ports::has(context_.roles.capabilities, ports::Capability::Storage) &&
                context_.roles.key_value.ready();
     }
+    // Whether the blob may go to flash at all, asked of the cutoff monitor the
+    // power service owns. A reference, not a pointer: the product wires it at
+    // construction and there is no version of this device where the question
+    // has no owner.
     bool may_persist() const { return power_.may_write(power::DurableWrite::Settings); }
     bool hold_for_power();
 
-    Settings& settings_;
-    SettingsStore store_;
+    SettingsStore& store_;
     comms::ConfigService config_;
-    const PowerService& power_;
+    const power::CutoffMonitor& power_;
+    const char* product_name_;
     identity::Unit unit_;
     comms::IdentityLink identity_;
     bool identity_published_{false};
@@ -168,6 +172,6 @@ class ConfigLinkService : public runtime::Service {
     bool update_recorded_{false};
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

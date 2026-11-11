@@ -1,11 +1,10 @@
-#include "products/skyblip_go/services/config_link.h"
+#include "products/common/services/config_link.h"
 
 #include <cstring>
 
 #include "core/events/link.h"
-#include "products/skyblip_go/product_name.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 Status ConfigLinkService::setup() {
     load();
@@ -32,7 +31,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     // Read where it is already sampled, on the cadence the sensor deserves: the
     // service that owns the cell owns the die too, and this only carries the
     // number to the link.
-    config_.set_die_temperature(power_.die_temperature_dc(), power_.die_temperature_valid());
+    config_.set_die_temperature(context_.state.power.die_dc, context_.state.power.die_valid);
     // The range gate's own counter, read off the table that keeps it rather than
     // recounted here (core/traffic/table.h).
     config_.set_range_refused(context_.state.traffic.implausible());
@@ -80,8 +79,7 @@ void ConfigLinkService::advertise(uint32_t now_ms) {
     advertise_asked_ = true;
     advertise_asked_ms_ = now_ms;
     char name[identity::kBluetoothNameBytes + 1];
-    identity::bluetooth_name(name, sizeof(name), product_name(context_.roles.capabilities),
-                             context_.state.activation);
+    identity::bluetooth_name(name, sizeof(name), product_name_, context_.state.activation);
     advertised_ = context_.roles.link.advertise_as(name) == Status::Ok;
 }
 
@@ -273,7 +271,7 @@ void ConfigLinkService::flush_settings(uint32_t now_ms) {
 void ConfigLinkService::load() {
     if (loaded_) return;
     load_image_state();
-    settings_ = go::defaults();
+    store_.restore_defaults();
     if (!storable()) {
         loaded_ = true;
         return;
@@ -295,8 +293,9 @@ void ConfigLinkService::load() {
     config_.set_settings_fallback(fallback_);
 }
 
-bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t blob_bytes) {
-    return settings::sealed(blob, blob_bytes) && settings::blob_version(blob) > go::kBlobVersion;
+bool ConfigLinkService::newer_layout(const uint8_t* blob, size_t blob_bytes) const {
+    return settings::sealed(blob, blob_bytes) &&
+           settings::blob_version(blob) > store_.blob_version();
 }
 
 void ConfigLinkService::load_prior() {
@@ -312,10 +311,7 @@ void ConfigLinkService::load_prior() {
 }
 
 bool ConfigLinkService::adopt(const uint8_t* blob, size_t blob_bytes) {
-    go::Settings loaded;
-    if (!is_ok(go::from_blob(blob, blob_bytes, loaded))) return false;
-    settings_ = loaded;
-    return true;
+    return is_ok(store_.adopt(blob, blob_bytes));
 }
 
 void ConfigLinkService::remember(const uint8_t* blob, size_t blob_bytes) {
@@ -327,8 +323,8 @@ void ConfigLinkService::remember(const uint8_t* blob, size_t blob_bytes) {
 bool ConfigLinkService::persist() {
     if (!storable()) return true;
     uint8_t blob[kBlobBytes];
-    go::to_blob(settings_, blob, sizeof(blob));
-    const size_t blob_bytes = go::blob_size();
+    const size_t blob_bytes = store_.to_blob(blob, sizeof(blob));
+    if (!blob_fits(blob_bytes)) return false;
     if (stored_bytes_ == blob_bytes && std::memcmp(stored_, blob, blob_bytes) == 0) return true;
     if (!is_ok(context_.roles.key_value.write(settings_key(), blob, blob_bytes))) return false;
     std::memcpy(stored_, blob, blob_bytes);
@@ -400,8 +396,11 @@ void ConfigLinkService::record_update() {
 // defaults
 void ConfigLinkService::keep_settings_for_a_revert() {
     uint8_t blob[kBlobBytes];
-    go::to_blob(settings_, blob, sizeof(blob));
-    const size_t length = go::blob_size();
+    const size_t length = store_.to_blob(blob, sizeof(blob));
+    if (!blob_fits(length)) {
+        failed_++;
+        return;
+    }
     if (!is_ok(context_.roles.key_value.write(kPriorSettingsKey, blob, length))) return;
     if (newer_kept_) remember(blob, length);
 }
@@ -438,4 +437,4 @@ void ConfigLinkService::confirm_image_once_healthy() {
     publish_image_state();
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

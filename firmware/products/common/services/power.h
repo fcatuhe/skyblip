@@ -1,5 +1,5 @@
-#ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
-#define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_POWER_H
+#ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_POWER_H
+#define SKYBLIP_PRODUCTS_COMMON_SERVICES_POWER_H
 
 #include "core/diagnostics/profile.h"
 #include "core/power/battery.h"
@@ -7,11 +7,18 @@
 #include "core/power/cutoff.h"
 #include "ports/capabilities.h"
 #include "ports/die_temperature.h"
-#include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
+
+struct PowerSettings {
+    PowerSettings(const int16_t& battery_offset_mv_of) : battery_offset_mv(battery_offset_mv_of) {}
+    PowerSettings(int16_t&&) = delete;
+    PowerSettings(const int16_t&&) = delete;
+
+    const int16_t& battery_offset_mv;
+};
 
 // Owns state.power.battery and state.power.level: what the divider read becomes the
 // voltage and the state of charge every screen and the companion link report,
@@ -20,7 +27,7 @@ namespace skyblip::go {
 // cell is nearly gone is the one place that says so.
 class PowerService : public runtime::Service {
    public:
-    PowerService(runtime::Context& context, const Settings& settings)
+    PowerService(runtime::Context& context, PowerSettings settings)
         : runtime::Service(context), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
@@ -33,30 +40,19 @@ class PowerService : public runtime::Service {
     // product and handed here, because this service owns the cutoff monitor and
     // the monitor is where the rule lives (core/power/cutoff.h).
     void on_supply_warning() { cutoff_.on_supply_warning(); }
-    bool supply_warned() const { return cutoff_.supply_warned(); }
     uint32_t supply_warnings() const { return cutoff_.supply_warnings(); }
 
-    // Whether a durable write of this kind may happen now. One reader today, the
-    // settings writer; the flight log's answer is in the same rule and is always
-    // yes, which is the point of asking through it rather than around it.
-    bool may_write(power::DurableWrite kind) const { return cutoff_.may_write(kind); }
-
-    // Tenths of a degree, and whether a reading younger than kDieStaleMs stands:
-    // the one freshness the panel, the charge window and the reply all read.
-    // False on a board with no sensor for ever, which is what the reply reads to
-    // decide whether the key exists at all - never a zero standing in for absent,
-    // because 0.0 C is a plausible hangar morning.
-    bool die_temperature_valid() const { return context_.state.power.die_valid; }
-    int16_t die_temperature_dc() const { return context_.state.power.die_dc; }
+    // Whether a durable write of this kind may happen now, and whether the
+    // supply warned, asked of the rule itself. The settings writer asks it; the
+    // flight log's answer is in the same rule and is always yes, which is the
+    // point of asking through it rather than around it.
+    const power::CutoffMonitor& cutoff_monitor() const { return cutoff_; }
 
     power::ChargeCondition charge_condition() const { return charge_; }
     uint32_t charge_warnings() const { return charge_warnings_; }
 
     // INFO: fc 06sep26 a sensor that stopped answering must neither hold nor drive the glass
     static constexpr uint32_t kDieStaleMs = 30000;
-    bool die_reading_fresh(uint32_t now_ms) const {
-        return die_valid_ && now_ms - die_valid_ms_ <= kDieStaleMs;
-    }
 
     // INFO: fc 20sep26 the cadence the cell is sampled at, so no record repeats a reading
     static constexpr uint32_t kRecordPeriodMs = runtime::kBatteryPeriodMs;
@@ -78,6 +74,15 @@ class PowerService : public runtime::Service {
     static constexpr uint32_t kDiePeriodMs = 10000;
     static_assert(kDieStaleMs >= 2 * kDiePeriodMs, "one missed sample is not a dead sensor");
 
+    // Whether a reading younger than kDieStaleMs stands. tick() publishes it as
+    // state.power.die_valid, beside the tenths of a degree in die_dc, where the
+    // panel, the charge window and the config link's reply read both.
+    // False on a board with no sensor for ever, which is what the reply reads to
+    // decide whether the key exists at all - never a zero standing in for absent,
+    // because 0.0 C is a plausible hangar morning.
+    bool die_reading_fresh(uint32_t now_ms) const {
+        return die_valid_ && now_ms - die_valid_ms_ <= kDieStaleMs;
+    }
     void sample_die_temperature(uint32_t now_ms);
     void watch_charge();
     void record_pass(uint32_t now_ms);
@@ -97,9 +102,9 @@ class PowerService : public runtime::Service {
     int16_t die_dc_{0};
     bool die_valid_{false};
     bool die_sampled_{false};
-    const Settings& settings_;
+    PowerSettings settings_;
 };
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common
 
 #endif

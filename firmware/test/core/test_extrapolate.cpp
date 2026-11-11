@@ -1,5 +1,6 @@
 // F3. A position sent under another instant's timestamp is a lie of 50 m at 50 m/s over a second.
 #include <cmath>
+#include <cstdint>
 
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
@@ -197,7 +198,67 @@ TEST_CASE("extrapolate: the residual is what the model missed, in metres") {
     CHECK(missed > 5);
 }
 
+// Pressure and GNSS heights differ by the day's weather, so each is compared with its own kind.
+TEST_CASE("extrapolate: a target's height is GNSS against GNSS, else pressure against pressure") {
+    model::Ownship own = flying(48.5, 8.5, 30.0, 0.0);
+    own.pressure_altitude_mm = 1100000;
+    own.pressure_altitude_valid = true;
+    model::AircraftObservation target{};
+    target.position_valid = true;
+    target.latitude_1e7 = own.latitude_1e7;
+    target.longitude_1e7 = own.longitude_1e7;
+    target.altitude_m = 1500;
+    target.altitude_valid = true;
+    target.pressure_altitude_ft = 4000;
+    target.pressure_altitude_valid = true;
+    int32_t north = 0, east = 0, up = 0;
+    bool up_valid = false;
+
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up_valid);
+    CHECK(up == 300);
+
+    // 4000 ft is 1219.2 m, against our 1100 m on the same 1013.25 hPa.
+    target.altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up_valid);
+    CHECK(up == 119);
+
+    own.pressure_altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK_FALSE(up_valid);
+    CHECK(up == 0);
+
+    own.pressure_altitude_valid = true;
+    target.pressure_altitude_valid = false;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK_FALSE(up_valid);
+    CHECK(up == 0);
+}
+
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
+// The height difference overflowed int32 when a target's altitude sat at the type's limit.
+TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit") {
+    auto own = flying(48.1, 8.1, 0.0, 0.0);
+    model::AircraftObservation target{};
+    target.position_valid = true;
+    target.altitude_valid = true;
+    target.latitude_1e7 = own.latitude_1e7;
+    target.longitude_1e7 = own.longitude_1e7;
+    int32_t north, east, up;
+    bool up_valid;
+
+    target.altitude_m = INT32_MIN;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up == INT32_MIN);
+
+    target.altitude_m = INT32_MAX;
+    own.altitude_hae_mm = -1200000;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up == INT32_MAX);
+    CHECK(up_valid);
+}
+
 TEST_CASE("adsl: the transmitted position is the position at the quarter second it names") {
     model::Ownship own{};
     own.fix_valid = true;

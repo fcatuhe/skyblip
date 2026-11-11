@@ -4,6 +4,7 @@
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
+#include "core/traffic/gate.h"
 
 namespace skyblip::traffic {
 
@@ -15,10 +16,21 @@ int source_rank(model::Source source) {
     switch (source) {
         case model::Source::AdslDirect:
         case model::Source::Alptas: return 3;
+        case model::Source::Adsb: return 2;
         case model::Source::AdslUplink: return 1;
         default: return 0;
     }
 }
+}
+
+bool TrafficTable::own_aircraft(const model::AircraftObservation& observation) const {
+    const uint32_t address = observation.address & settings::kAddressMask;
+    if (own_address_ != 0 && observation.address_mapping_table == own_address_mapping_table_ &&
+        address == own_address_)
+        return true;
+    return own_icao_ != 0 &&
+           observation.address_mapping_table == settings::kIcaoAddressMappingTable &&
+           address == own_icao_;
 }
 
 int TrafficTable::find(uint8_t address_mapping_table, uint32_t address) const {
@@ -99,9 +111,11 @@ int TrafficTable::allocate_slot(const model::AircraftObservation& incoming, uint
 }
 
 int TrafficTable::update(const model::AircraftObservation& observation, uint32_t now_s) {
-    if (own_address_ != 0 && observation.address_mapping_table == own_address_mapping_table_ &&
-        (observation.address & settings::kAddressMask) == own_address_)
+    if (own_aircraft(observation)) return -1;
+    if (observation.source == model::Source::Adsb && !observation.position_valid) {
+        adsb_without_position_++;
         return -1;
+    }
     // One observation at a time, deliberately: an uplink frame carries up to
     // thirteen aircraft and one implausible entry among them says nothing about
     // the other twelve, so a ghost is refused without taking a good report with
@@ -112,14 +126,25 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         implausible_++;
         return -1;
     }
+    const bool gated =
+        observation.source == model::Source::Adsb && outside_adsb_gate(own_, observation);
     int index = find(observation.address_mapping_table, observation.address);
     if (index >= 0) {
-        if (prefer_new(observation, slots_[index].observation)) {
-            watch_liftoff(slots_[index], observation);
-            slots_[index].observation = observation;
-            sample_turn(slots_[index].turn, observation);
+        Target& held = slots_[index];
+        if (!prefer_new(observation, held.observation)) return index;
+        if (gated && held.alarm_level == Level::None) {
+            adsb_outside_gate_++;
+            release(held);
+            return -1;
         }
+        watch_liftoff(held, observation);
+        held.observation = observation;
+        sample_turn(held.turn, observation);
         return index;
+    }
+    if (gated) {
+        adsb_outside_gate_++;
+        return -1;
     }
     index = allocate_slot(observation, now_s);
     if (index < 0) return -1;
@@ -143,13 +168,8 @@ void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservatio
 void TrafficTable::age_out(uint32_t now_s) {
     for (int i = 0; i < kMaxTargets; i++) {
         if (!slots_[i].used) continue;
-        if (now_s - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation)) {
-            slots_[i].used = false;
-            slots_[i].turn = TargetTurn{};
-            slots_[i].alarm_level = Level::None;
-            slots_[i].alarm_dismissed = false;
-            slots_[i].in_formation = false;
-        }
+        if (now_s - observation_at_s(slots_[i].observation) > forget_s(slots_[i].observation))
+            release(slots_[i]);
     }
 }
 
@@ -161,13 +181,15 @@ int TrafficTable::count() const {
 }
 
 void TrafficTable::clear() {
-    for (auto& slot : slots_) {
-        slot.used = false;
-        slot.turn = TargetTurn{};
-        slot.alarm_level = Level::None;
-        slot.alarm_dismissed = false;
-        slot.in_formation = false;
-    }
+    for (auto& slot : slots_) release(slot);
+}
+
+void TrafficTable::release(Target& target) {
+    target.used = false;
+    target.turn = TargetTurn{};
+    target.alarm_level = Level::None;
+    target.alarm_dismissed = false;
+    target.in_formation = false;
 }
 
 }

@@ -1,10 +1,10 @@
-#include "products/skyblip_go/services/flight_log.h"
+#include "products/common/services/flight_log.h"
 
 #include "core/diagnostics/record.h"
 #include "core/events/link.h"
 #include "core/traffic/alarm.h"
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 Status FlightLogService::setup() {
     flights_.open();
@@ -220,4 +220,4 @@ void FlightLogService::handle(const comms::LogRequest& request) {
     store->serve(request);
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

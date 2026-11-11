@@ -164,6 +164,9 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     if (dfu_ != nullptr && dfu_->running_key(trusted))
         writer.add_bytes(link::update_key::kKey,
                          ConstByteSpan(trusted.data(), link::update_bytes::kKey));
+    // INFO: fc 10nov26 absent reads as skyblip_go, which keeps a Go's frame inside a 20-byte link
+    if (product_ && *product_ != dfu::Product::SkyblipGo)
+        writer.add_code(link::update_key::kProduct, *product_);
     return writer.finish();
 }
 

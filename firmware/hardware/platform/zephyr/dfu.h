@@ -77,6 +77,11 @@ class Dfu : public ports::Dfu {
     bool staged_key(ports::SigningKeyHash& out) override {
         return read_key(PARTITION_ID(slot1_partition), out);
     }
+    bool running_class(dfu::ImageClass& out) {
+        uint8_t tlvs[kTlvReadBytes];
+        const size_t bytes = read_tlvs(PARTITION_ID(slot0_partition), tlvs);
+        return bytes > 0 && dfu::find_image_class(tlvs, bytes, out);
+    }
     bool downgrade_allowed() const override {
         return !IS_ENABLED(CONFIG_MCUBOOT_BOOTLOADER_NO_DOWNGRADE);
     }
@@ -132,28 +137,32 @@ class Dfu : public ports::Dfu {
         return true;
     }
 
+    // INFO: fc 03oct26 an ECDSA-P256 image's TLV area is 152 bytes, a protected area comes before
+    // it | 10nov26 85 bytes once it names its product
+    static constexpr size_t kTlvReadBytes = 256;
+
     static bool read_key(uint8_t area_id, ports::SigningKeyHash& out) {
+        uint8_t tlvs[kTlvReadBytes];
+        const size_t bytes = read_tlvs(area_id, tlvs);
+        return bytes > 0 && dfu::find_key_hash(tlvs, bytes, out);
+    }
+
+    static size_t read_tlvs(uint8_t area_id, uint8_t (&tlvs)[kTlvReadBytes]) {
         const struct flash_area* area = nullptr;
-        if (flash_area_open(area_id, &area) != 0) return false;
+        if (flash_area_open(area_id, &area) != 0) return 0;
         const size_t start = boot_get_image_start_offset(area_id);
         uint8_t header_bytes[dfu::kImageHeaderBytes];
         dfu::ImageHeader header;
-        bool found = false;
+        size_t read = 0;
         if (flash_area_read(area, start, header_bytes, sizeof(header_bytes)) == 0 &&
             dfu::read_header(header_bytes, sizeof(header_bytes), header)) {
             const size_t at = start + header.tlv_offset();
-            uint8_t tlvs[kTlvReadBytes];
-            const size_t tlv_bytes = at < area->fa_size ? MIN(sizeof(tlvs), area->fa_size - at) : 0;
-            found = tlv_bytes > 0 && flash_area_read(area, at, tlvs, tlv_bytes) == 0 &&
-                    dfu::find_key_hash(tlvs, tlv_bytes, out);
+            const size_t bytes = at < area->fa_size ? MIN(sizeof(tlvs), area->fa_size - at) : 0;
+            if (bytes > 0 && flash_area_read(area, at, tlvs, bytes) == 0) read = bytes;
         }
         flash_area_close(area);
-        return found;
+        return read;
     }
-
-    // INFO: fc 03oct26 an ECDSA-P256 image's TLV area is 152 bytes, a protected area comes before
-    // it
-    static constexpr size_t kTlvReadBytes = 256;
 
     static bool watchdog_running() {
 #if defined(CONFIG_SOC_FAMILY_NORDIC_NRF) && defined(NRF_WDT)

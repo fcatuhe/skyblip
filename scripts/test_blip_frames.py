@@ -54,6 +54,40 @@ class Codec(unittest.TestCase):
             with self.subTest(refused=refused), self.assertRaises(frames.FrameError):
                 frames.decode(bytes.fromhex(refused))
 
+WIDEST_UNSIGNED = 2 ** 32 - 1
+WIDEST_INTEGER = -2 ** 31
+PEER_FRAMES_AT_THEIR_WIDEST = (
+    ({"command": "observation", "address": 0xFFFFFF, "boot_epoch": WIDEST_UNSIGNED,
+      "sequence": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED, "into_ms": 999,
+      "latitude_1e7": -900000000, "longitude_1e7": -1800000000, "altitude_m": WIDEST_INTEGER,
+      "altitude_age_ms": WIDEST_INTEGER, "pressure_altitude_ft": WIDEST_INTEGER,
+      "pressure_altitude_age_ms": WIDEST_INTEGER, "speed_q": 65535, "track_c9": 511,
+      "speed_age_ms": WIDEST_INTEGER, "climb_e8": -32768, "climb_source": "barometric",
+      "climb_age_ms": WIDEST_INTEGER, "flight_state": "airborne",
+      "flight_state_age_ms": WIDEST_INTEGER, "aircraft_category": 17, "adsb_version": 7, "gva": 3,
+      "callsign": "ABCD1234", "callsign_heard_s": WIDEST_UNSIGNED},
+     "b81900181a011a00ffffff021affffffff031affffffff041affffffff051903e7063a35a4e8ff073a6b49d1"
+     "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff"
+     "1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"),
+    ({"command": "health", "protocol_version": 1, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
+      "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "own_icao_set": True,
+      "alarm_granted": True, "lease_ms": WIDEST_UNSIGNED, "request_epoch": WIDEST_UNSIGNED,
+      "request_sequence": WIDEST_UNSIGNED, "export_reference": "own"},
+     "ac00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff"
+     "0b02"),
+    ({"command": "peer_claim", "boot_epoch": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED,
+      "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
+      "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,
+      "altitude_hae_age_ms": WIDEST_UNSIGNED, "pressure_altitude_mm": WIDEST_INTEGER,
+      "pressure_altitude_age_ms": WIDEST_UNSIGNED, "own_icao": 0xFFFFFF, "alarm_requested": True,
+      "request_sequence": WIDEST_UNSIGNED, "alarm_passes": WIDEST_UNSIGNED,
+      "alarm_volume": "loud", "assessed_epoch": WIDEST_UNSIGNED,
+      "assessed_sequence": WIDEST_UNSIGNED},
+     "b200181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
+     "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf50d1affffffff0e1affffffff0f02101a"
+     "ffffffff111affffffff"),
+)
+
 
 class Registry(unittest.TestCase):
     def test_the_widest_status_is_these_twenty_bytes(self):
@@ -63,6 +97,16 @@ class Registry(unittest.TestCase):
         encoded = frames.encode_frame(frame)
         self.assertEqual(encoded.hex(), "a800050102" "02f4031864" "04f40502" "06f407390ccc")
         self.assertEqual(frames.decode_frame(encoded), frame)
+
+    # The same bytes firmware/test/products/test_peer_frames.cpp pins, which a Go and a Bravo will speak.
+    def test_the_peer_frames_at_their_widest_are_these_bytes(self):
+        for frame, pinned in PEER_FRAMES_AT_THEIR_WIDEST:
+            with self.subTest(command=frame["command"]):
+                encoded = frames.encode_frame(frame)
+                self.assertEqual(encoded.hex(), pinned)
+                self.assertEqual(frames.decode_frame(encoded), frame)
+                self.assertEqual(set(frame) - {"command"},
+                                 set(frames.REGISTRY["frames"][frame["command"]]["by_name"]))
 
     def test_a_set_and_a_defaults_reply_share_one_key_table(self):
         defaults = {"command": "defaults", "aircraft_type": 1, "alarm_enabled": True,

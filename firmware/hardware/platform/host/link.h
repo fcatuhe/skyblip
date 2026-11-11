@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_LINK_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_LINK_H
 
+#include <algorithm>
+#include <deque>
 #include <string>
 #include <vector>
 
@@ -27,9 +29,9 @@ class Link : public ports::Link {
 
     static Status begin() { return Status::Ok; }
 
-    void push_rx(events::RxFrame frame) {
+    bool push_rx(events::RxFrame frame) {
         frame.connection = sessions_.connection(frame.session_id);
-        rx_.push(frame);
+        return rx_.push(frame);
     }
     bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
@@ -129,6 +131,13 @@ class Link : public ports::Link {
     }
     void clear() { sent.clear(); }
 
+    // INFO: fc 10nov26 a tapped mailbox gets each frame as it is sent, whatever a case clears later
+    void tap(std::deque<Frame>& mailbox) { mailboxes_.push_back(&mailbox); }
+    void untap(std::deque<Frame>& mailbox) {
+        mailboxes_.erase(std::remove(mailboxes_.begin(), mailboxes_.end(), &mailbox),
+                         mailboxes_.end());
+    }
+
     std::vector<Frame> sent;
     std::string advertised;
     int advertise_calls{0};
@@ -153,12 +162,14 @@ class Link : public ports::Link {
         sent.push_back({endpoint,
                         std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
                         session_id});
+        for (std::deque<Frame>* mailbox : mailboxes_) mailbox->push_back(sent.back());
         return Status::Ok;
     }
 
     bus::Queue<events::RxFrame, 4> rx_;
     comms::LinkSessions sessions_{};
     std::vector<uint16_t> live_;
+    std::vector<std::deque<Frame>*> mailboxes_;
     uint16_t declared_payload_bytes_{kDefaultPayloadBytes};
     uint16_t last_session_id_{0};
     Status next_status_{Status::Ok};

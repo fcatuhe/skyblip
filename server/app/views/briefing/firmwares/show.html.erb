@@ -13,7 +13,7 @@
           <% @releases.each do |release| %>
             <% release.firmware_files.each do |file| %>
               <option value="<%= release_asset_path(release.tag, file, locale: nil) %>"
-                      data-channel="<%= release.channel %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t(file.end_with?(".full.signed.bin") ? "firmwares.full" : "firmwares.slim") %></option>
+                      data-channel="<%= release.channel %>" data-product="<%= Release.product_of(file) %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t(file.end_with?(".full.signed.bin") ? "firmwares.full" : "firmwares.slim") %></option>
             <% end %>
           <% end %>
         </select>

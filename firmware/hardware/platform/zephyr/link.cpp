@@ -204,6 +204,7 @@ int notify_attributes(Endpoint endpoint, const struct bt_gatt_attr** out) {
             return 2;
         case Endpoint::Config: out[0] = &skyblip_service.attrs[kConfigNotifyAttribute]; return 1;
         case Endpoint::Log: out[0] = &skyblip_service.attrs[kLogNotifyAttribute]; return 1;
+        case Endpoint::Peer: return 0;
     }
     return 0;
 }
@@ -381,6 +382,7 @@ uint32_t Link::connection(uint16_t session_id) const {
 Status Link::notify_one(struct bt_conn* connection, Endpoint endpoint, ConstByteSpan bytes) {
     const struct bt_gatt_attr* attributes[kMaxNotifyAttributes] = {};
     const int attribute_count = notify_attributes(endpoint, attributes);
+    if (attribute_count == 0) return Status::Invalid;
     atomic_t* in_flight = &g_in_flight[bt_conn_index(connection)];
     Status result = Status::WouldBlock;
     bool subscribed = false;

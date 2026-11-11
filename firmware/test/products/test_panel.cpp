@@ -223,7 +223,7 @@ TEST_CASE("product: a park with no frame to push still puts the front light out"
     rig.platform.battery().divider_mv = 3100;
     rig.run(now_ms, now_ms + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
-    REQUIRE(rig.product.power().supply_warned());
+    REQUIRE(rig.product.power().cutoff_monitor().supply_warned());
     CHECK(rig.product.ready_to_power_off());
     CHECK_FALSE(
         reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 0, 0, 200, 199, 2));

@@ -19,6 +19,54 @@ test('the widest status is the twenty bytes the firmware pins', () => {
   assert.deepEqual(decodeFrame(frame), status);
 });
 
+const WIDEST_UNSIGNED = 2 ** 32 - 1;
+const WIDEST_INTEGER = -(2 ** 31);
+const PEER_FRAMES_AT_THEIR_WIDEST = [
+  [
+    {
+      command: 'observation', address: 0xffffff, boot_epoch: WIDEST_UNSIGNED, sequence: WIDEST_UNSIGNED, at_s: WIDEST_UNSIGNED, into_ms: 999,
+      latitude_1e7: -900000000, longitude_1e7: -1800000000, altitude_m: WIDEST_INTEGER, altitude_age_ms: WIDEST_INTEGER,
+      pressure_altitude_ft: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_INTEGER, speed_q: 65535, track_c9: 511,
+      speed_age_ms: WIDEST_INTEGER, climb_e8: -32768, climb_source: 'barometric', climb_age_ms: WIDEST_INTEGER, flight_state: 'airborne',
+      flight_state_age_ms: WIDEST_INTEGER, aircraft_category: 17, adsb_version: 7, gva: 3, callsign: 'ABCD1234',
+      callsign_heard_s: WIDEST_UNSIGNED,
+    },
+    'b81900181a011a00ffffff021affffffff031affffffff041affffffff051903e7063a35a4e8ff073a6b49d1' +
+      'ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff' +
+      '1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff',
+  ],
+  [
+    {
+      command: 'health', protocol_version: 1, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
+      own_icao_set: true, alarm_granted: true, lease_ms: WIDEST_UNSIGNED, request_epoch: WIDEST_UNSIGNED, request_sequence: WIDEST_UNSIGNED,
+      export_reference: 'own',
+    },
+    'ac00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff0b02',
+  ],
+  [
+    {
+      command: 'peer_claim', boot_epoch: WIDEST_UNSIGNED, at_s: WIDEST_UNSIGNED, into_ms: 999, latitude_1e7: -900000000,
+      longitude_1e7: -1800000000, position_age_ms: WIDEST_UNSIGNED, altitude_hae_mm: WIDEST_INTEGER, altitude_hae_age_ms: WIDEST_UNSIGNED,
+      pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, own_icao: 0xffffff, alarm_requested: true,
+      request_sequence: WIDEST_UNSIGNED, alarm_passes: WIDEST_UNSIGNED, alarm_volume: 'loud', assessed_epoch: WIDEST_UNSIGNED,
+      assessed_sequence: WIDEST_UNSIGNED,
+    },
+    'b200181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +
+      '081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf50d1affffffff0e1affffffff0f02101a' +
+      'ffffffff111affffffff',
+  ],
+];
+
+test('the peer frames at their widest are the bytes the firmware pins, every key in each', () => {
+  for (const [frame, pinned] of PEER_FRAMES_AT_THEIR_WIDEST) {
+    const encoded = encodeFrame(frame);
+    assert.equal(hex(encoded), pinned, frame.command);
+    assert.deepEqual(decodeFrame(encoded), frame);
+    const keys = LINK_REGISTRY.frames.find(each => each.command === frame.command).keys.map(key => key.name);
+    assert.deepEqual(Object.keys(frame).sort(), keys.sort(), frame.command);
+  }
+});
+
 test('a prompt and a dfu write are these bytes', () => {
   const prompt = { command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_dfu' };
   assert.equal(hex(encodeFrame(prompt)), 'a4000001f402f50301');

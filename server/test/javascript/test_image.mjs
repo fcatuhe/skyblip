@@ -15,9 +15,16 @@ test('the protected TLVs give the blob an image pins and whether it carries it',
 });
 
 test('an image from before the split has no protected area, so no pin is known', () => {
-  const image = readImage(signedImage(VERSION, IMAGE_BYTES));
+  const image = readImage(signedImage(VERSION, IMAGE_BYTES, { product: null }));
   assert.deepEqual(image.version, VERSION);
   assert.deepEqual(image.imu, { pin: null, full: null });
+  assert.equal(image.product, null);
+});
+
+test('the image class names the product an image is for', () => {
+  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES)).product, 'skyblip_go');
+  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES, { product: 'skyblip_bravo', imu: { full: true } })).product, 'skyblip_bravo');
+  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES, { product: 'skyblip_tango' })).product, 'unknown');
 });
 
 test('a protected area cut short or with an entry overrunning it reads as no pin, never throws', () => {

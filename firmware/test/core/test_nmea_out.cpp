@@ -3,8 +3,7 @@
 // on the wrong side of the aircraft on a moving map. Without an own position there
 // is no relative anything, and the encoder must emit nothing rather than a target
 // relative to (0, 0).
-#include <algorithm>  // std::count
-#include <cstdlib>    // std::abs
+#include <cstdlib>  // std::abs
 #include <cstring>
 #include <string>
 
@@ -19,25 +18,10 @@
 #include "doctest/doctest.h"
 #include "ports/link.h"
 #include "test/support/nmea_checksum.h"
+#include "test/support/nmea_traffic.h"
 
 using namespace skyblip;
 using namespace skyblip::protocol;
-
-// The fields after the sentence name: one comma stands in front of each of them.
-static int data_fields(const std::string& sentence) {
-    const std::string body = sentence.substr(0, sentence.find('*'));
-    return static_cast<int>(std::count(body.begin(), body.end(), ','));
-}
-
-static model::Ownship own_at(int32_t latitude_1e7, int32_t longitude_1e7, int32_t altitude_m) {
-    model::Ownship own{};
-    own.fix_valid = true;
-    own.utc_valid = true;
-    own.latitude_1e7 = latitude_1e7;
-    own.longitude_1e7 = longitude_1e7;
-    own.altitude_hae_mm = altitude_m * 1000;
-    return own;
-}
 
 TEST_CASE("nmea: checksum appended correctly") {
     char buffer[128];
@@ -171,6 +155,37 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
         CHECK(sentence.find('$', 1) == std::string::npos);
         CHECK(sentence.find('*') == sentence.rfind('*'));
         CHECK(checksum_ok(sentence));
+    }
+}
+
+// NoTrack is FTD-012's data port version 8, Source and RSSI version 9 (sections 6.4, 6.5 and 8.2).
+TEST_CASE("nmea: PFLAA marks an ADS-B target with NoTrack 0, Source 1 and an empty RSSI") {
+    const auto own = own_at(481000000, 81000000, 1000);
+    const auto target = heard(model::Source::Adsb, 481100000, 81100000, 1500);
+    char buffer[128];
+    const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "DLH4AB");
+    const std::string sentence(buffer, written);
+    CHECK(sentence == "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,*68\r\n");
+    CHECK(data_fields(sentence) == 14);
+    CHECK(checksum_ok(sentence));
+}
+
+// A source other than ADS-B keeps the eleven fields the Go always sent, which EFBs already read.
+TEST_CASE("nmea: PFLAA for an ADS-L target is the eleven fields it always was") {
+    const auto own = own_at(481000000, 81000000, 1000);
+    const auto target = heard(model::Source::AdslDirect, 481100000, 81100000, 1500);
+    char buffer[128];
+    const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "D-KXYZ");
+    const std::string sentence(buffer, written);
+    CHECK(sentence == "$PFLAA,0,1113,743,500,2,DD8F12!D-KXYZ,90,,62,5.0,1*41\r\n");
+    CHECK(data_fields(sentence) == 11);
+    CHECK(checksum_ok(sentence));
+
+    for (const auto source : {model::Source::AdslUplink, model::Source::Alptas}) {
+        auto other = target;
+        other.source = source;
+        const int other_written = format_pflaa(buffer, sizeof(buffer), own, other, 0, "D-KXYZ");
+        CHECK(std::string(buffer, other_written) == sentence);
     }
 }
 

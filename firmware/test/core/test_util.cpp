@@ -4,6 +4,7 @@
 // mode. An exponential code that rounds the wrong way or an arctangent that is a quadrant out
 // reaches the pilot as a target in the wrong place, with nothing logged.
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>  // std::abs
 #include <cstring>
 #include <string>
@@ -25,6 +26,14 @@ TEST_CASE("units: feet<->metres round-trip is close") {
         // integer double-conversion truncation. A few feet is physically moot
         CHECK(std::abs(back.value - feet) <= 5 + std::abs(feet) / 6000);
     }
+}
+
+// The international foot is 304.8 mm exactly, so a pressure altitude converts without drift.
+TEST_CASE("units: feet to millimetres is exact to the millimetre, either side of zero") {
+    CHECK(to_millimetres(Feet(1)).value == 305);
+    CHECK(to_millimetres(Feet(4000)).value == 1219200);
+    CHECK(to_millimetres(Feet(-1200)).value == -365760);
+    CHECK(to_millimetres(Feet(126700)).value == 38618160);
 }
 
 // Every one truncated, so a speed, a climb and a rate each read a unit below what was flown.
@@ -164,6 +173,13 @@ TEST_CASE("format: hex, dec, fixed point") {
     CHECK(std::string(text, written) == "-17");
     written = format_unsigned(text, 1234, 1, 1);  // one decimal
     CHECK(std::string(text, written) == "123.4");
+}
+
+// Negating INT32_MIN overflowed, which UBSan caught through a $PFLAA height.
+TEST_CASE("format: the most negative int32 prints whole") {
+    char text[16];
+    const int written = format_signed(text, INT32_MIN);
+    CHECK(std::string(text, written) == "-2147483648");
 }
 
 TEST_CASE("format: nmea lat/lon") {

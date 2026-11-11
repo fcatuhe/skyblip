@@ -1,8 +1,8 @@
-#include "products/skyblip_go/services/capture.h"
+#include "products/common/services/capture.h"
 
 #include <algorithm>
 
-namespace skyblip::go {
+namespace skyblip::common {
 
 Status CaptureService::setup() {
     store_.open();
@@ -66,15 +66,7 @@ void CaptureService::record_boot(uint32_t now_ms) {
 void CaptureService::record_config(uint32_t now_ms) {
     diagnostics::Config value{};
     value.address = context_.state.activation.address().value_or(0);
-    value.battery_offset_mv = settings_.battery_offset_mv;
-    value.frequency_trim_e1_ppm = settings_.frequency_trim_e1_ppm;
-    value.aircraft_type = settings_.aircraft_type;
-    value.address_mapping_table = settings::kAddressMappingTable;
-    value.alarm_volume = static_cast<uint8_t>(settings_.alarm_volume);
-    value.settings_version = settings_.version;
-    value.alarm_enabled = settings_.alarm_enabled;
-    value.metric = settings_.units == Units::Metric;
-    value.battery_trim_manual = settings_.battery_offset_manual;
+    settings_.describe(value);
     const ports::RfTransmitter transmitter = context_.roles.rf.transmitter();
     value.tx_power_dbm = transmitter.power_dbm;
     value.pa_rated_dbm = transmitter.pa_rated_dbm;
@@ -255,4 +247,4 @@ void CaptureService::publish(uint32_t now_ms) {
     out.keeps_s = span_s(growth * pool.slots_per_sector(), records_per_hour());
 }
 
-}  // namespace skyblip::go
+}  // namespace skyblip::common

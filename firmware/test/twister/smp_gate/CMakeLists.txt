@@ -10,6 +10,7 @@ target_sources(app PRIVATE
   ${FIRMWARE}/hardware/platform/zephyr/mcumgr_hooks.cpp
   ${FIRMWARE}/core/dfu/smp_policy.cpp
   ${FIRMWARE}/core/dfu/image.cpp
+  ${FIRMWARE}/core/dfu/product_check.cpp
   ${FIRMWARE}/core/dfu/update.cpp
   ${FIRMWARE}/core/util/format.cpp
 )
