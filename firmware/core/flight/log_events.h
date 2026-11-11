@@ -23,6 +23,8 @@ class LogEvents {
     void status(const LogStatus& now, uint32_t utc_s, uint32_t now_ms);
     void heard(int slot, const LogTarget& now, uint32_t utc_s);
     void vacant(int slot);
+    // INFO: fc 12nov26 a paired Go's Bravo, written on the pass it is lost and the pass it is not
+    void bravo(uint8_t state, bool lost, uint32_t utc_s);
     void close();
 
     bool peek(LogEvent& out) const;
@@ -57,6 +59,7 @@ class LogEvents {
     uint8_t status_level_{0};
     uint8_t tracked_peak_{0};
     bool status_due_{false};
+    bool bravo_lost_{false};
     bool open_{false};
 };
 

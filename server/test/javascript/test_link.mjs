@@ -9,13 +9,13 @@ import { LINK_REGISTRY } from '#skyblip/link_registry';
 const bytes = text => Uint8Array.from(text.match(/../g) ?? [], pair => parseInt(pair, 16));
 const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/link.v1.vectors.json', import.meta.url), 'utf8'));
 
-test('the widest status is the twenty bytes the firmware pins', () => {
+test('the widest status is the twenty-two bytes the firmware pins', () => {
   const status = {
     command: 'status', flight: 'airborne', upload: false, battery_percent: 100, charging: false, power_level: 'critical',
-    went_dark_flat: false, die_temperature_c: -3277,
+    went_dark_flat: false, die_temperature_c: -3277, bravo: 'no_utc',
   };
   const frame = encodeFrame(status);
-  assert.equal(hex(frame), 'a800050102' + '02f4031864' + '04f40502' + '06f407390ccc');
+  assert.equal(hex(frame), 'a900050102' + '02f4031864' + '04f40502' + '06f407390ccc' + '0805');
   assert.deepEqual(decodeFrame(frame), status);
 });
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "core/comms/peer.h"
 #include "core/gnss/acquisition.h"
 #include "core/traffic/alarm.h"
 #include "core/units/units.h"
@@ -52,7 +53,10 @@ struct RadarSnapshot {
     int formation_members{0};
     uint8_t battery_percent{0};
     bool battery_low{false};
+    comms::BravoState bravo{comms::BravoState::Unpaired};
 };
+
+const char* bravo_loss_word(comms::BravoState state);
 
 void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot);
 

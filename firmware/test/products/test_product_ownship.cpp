@@ -5,10 +5,12 @@
 
 #include "core/annunciation/annunciator.h"
 #include "core/events/link.h"
+#include "core/flight/atmosphere.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "doctest/doctest.h"
+#include "runtime/tasks.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -425,4 +427,37 @@ TEST_CASE("product: before any fix, the first dated sentence anchors the clock")
     rig.run(1000, 1950);
 
     CHECK(rig.state().clock.utc_s == Rig::kBaseUtcS);
+}
+
+// A target that sends only a pressure altitude is compared with ours (#193), so ours must not
+// outlive the BME280 it came from.
+TEST_CASE("product: the BME280 publishes own pressure altitude, dated, and a silent one expires") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 3000);
+    const model::Ownship& own = rig.state().own;
+    REQUIRE(rig.product.ownship().barometer_active());
+    CHECK(own.pressure_altitude_valid);
+    CHECK(own.pressure_altitude_mm ==
+          flight::pressure_to_altitude_mm(rig.state().barometer.pressure_mpa));
+    CHECK(own.pressure_altitude_at_ms <= 3000);
+    CHECK(own.pressure_altitude_at_ms + runtime::kBarometerPublishPeriodMs + 50 > 3000);
+
+    rig.platform.barometer().fitted = false;
+    rig.run(3050, 3000 + 2 * runtime::kBarometerPublishPeriodMs);
+    CHECK(own.pressure_altitude_valid);
+    rig.run(5050, 3000 + 4 * runtime::kBarometerPublishPeriodMs + 100);
+    CHECK_FALSE(rig.product.ownship().barometer_active());
+    CHECK_FALSE(own.pressure_altitude_valid);
+}
+
+TEST_CASE("product: own pressure altitude is the sample's, at the instant it was measured") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK_FALSE(rig.state().own.pressure_altitude_valid);
+    rig.push_barometer(152400, 900);
+    rig.run(1000, 1000);
+    CHECK(rig.state().own.pressure_altitude_valid);
+    CHECK(rig.state().own.pressure_altitude_at_ms == 900);
+    CHECK(rig.state().own.pressure_altitude_mm == doctest::Approx(1524000).epsilon(0.001));
 }

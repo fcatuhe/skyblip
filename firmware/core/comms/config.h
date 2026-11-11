@@ -9,6 +9,7 @@
 #include "core/comms/link_claim.h"
 #include "core/comms/link_registry.h"
 #include "core/comms/link_sessions.h"
+#include "core/comms/peer.h"
 #include "core/comms/timing_report.h"
 #include "core/dfu/update.h"
 #include "core/events/link.h"
@@ -212,6 +213,8 @@ class ConfigService {
     void set_reset_reason(power::ResetReason reason) { diagnostics_.reset = reason; }
     power::ResetReason reset_reason() const { return diagnostics_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
+    // INFO: fc 12nov26 a paired Go's glass says BRAVO LOST, and a page learns it without polling
+    void set_bravo_state(BravoState state);
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -327,6 +330,7 @@ class ConfigService {
     Diagnostics diagnostics_{};
     bool supply_warned_{false};
     bool went_dark_flat_{false};
+    BravoState bravo_{BravoState::Unpaired};
     uint16_t connected_sessions_[LinkSessions::kMaxSessions]{};
     int connected_count_{0};
     LinkClaim claim_{};

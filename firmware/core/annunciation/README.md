@@ -18,6 +18,10 @@ A call is the notes that run together between two silences. The traffic voice ru
 
 The ERM on the T-Echo Plus takes time to spin up and to stop. Whether a 270 ms pulse is felt through a harness, and whether the 270 ms rest reads as a gap, is a bench question that has not been measured.
 
+## A lost Bravo is one low note
+
+A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `BRAVO LOST` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
+
 ## Loudness is the port's, the tune is not
 
 The tune decides pitch and timing and never level. The pilot's volume reaches the port as `ports::Loudness`, `Soft` or `Loud`, and what that means in duty cycle is the platform's: a square wave's fundamental goes as sin(pi x duty), so half duty is the most one pin can give and a tenth of the period is about 10 dB under it. A volume of off never reaches the port: the service treats it like alarms switched off, buzzer and motor both.

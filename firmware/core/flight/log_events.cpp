@@ -10,6 +10,7 @@ void LogEvents::open() {
     count_ = 0;
     tracked_peak_ = 0;
     status_due_ = true;
+    bravo_lost_ = false;
     open_ = true;
 }
 
@@ -57,6 +58,16 @@ void LogEvents::heard(int slot, const LogTarget& now, uint32_t utc_s) {
         track.closest_utc_s = utc_s;
     }
     track.last_utc_s = utc_s;
+}
+
+void LogEvents::bravo(uint8_t state, bool lost, uint32_t utc_s) {
+    if (!open_ || lost == bravo_lost_) return;
+    LogEvent event{};
+    event.kind = LogKind::Bravo;
+    event.utc_s = utc_s;
+    event.bravo = state;
+    push(event);
+    bravo_lost_ = lost;
 }
 
 void LogEvents::vacant(int slot) {

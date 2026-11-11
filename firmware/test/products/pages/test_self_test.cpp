@@ -297,3 +297,60 @@ TEST_CASE(
     CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestOwnIcaoText));
     CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(2), "I2C BARO"));
 }
+
+TEST_CASE("self-test page: a paired Go lists its Bravo by tag under the bus, and how it is heard") {
+    const SelfTestPart parts[] = {{"RADIO", PartState::Pass}, {"LINK", PartState::Pass, "BLE"}};
+    const uint8_t found[] = {0x76};
+    const char* const roles[] = {"BARO"};
+    SelfTestSnapshot snapshot = page(parts, 2, /*flyable=*/true);
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 1;
+    snapshot.bravo_tag = 0x3F2A;
+
+    Glass unpaired;
+    draw_self_test(unpaired, snapshot);
+    CHECK_FALSE(reads_at(unpaired, kSelfTestLeftX, self_test_row_y(3), "BRAVO 3F2A"));
+
+    struct Row {
+        skyblip::comms::BravoState state;
+        const char* verdict;
+    };
+    for (const Row row : {Row{skyblip::comms::BravoState::Waiting, "WAITING"},
+                          Row{skyblip::comms::BravoState::Live, "LIVE"},
+                          Row{skyblip::comms::BravoState::LinkDown, "LINK DOWN"},
+                          Row{skyblip::comms::BravoState::ReceiverDown, "RECEIVER DOWN"},
+                          Row{skyblip::comms::BravoState::NoUtc, "NO UTC"}}) {
+        CAPTURE(row.verdict);
+        snapshot.bravo = row.state;
+        Glass canvas;
+        draw_self_test(canvas, snapshot);
+        CHECK(reads_at(canvas, kSelfTestLeftX, self_test_row_y(3), "BRAVO 3F2A"));
+        CHECK(row_reads(canvas, 3, row.verdict));
+    }
+}
+
+// One row for both: a loss is what a bench needs first, the own-ICAO warning next, LIVE last.
+TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless the Bravo is lost") {
+    const SelfTestPart parts[kSelfTestRows - 2] = {};
+    SelfTestSnapshot snapshot = page(parts, kSelfTestRows - 2, /*flyable=*/true);
+    const uint8_t found[] = {0x76};
+    const char* const roles[] = {"BARO"};
+    snapshot.i2c_addresses = found;
+    snapshot.i2c_roles = roles;
+    snapshot.i2c_address_count = 1;
+    snapshot.bravo_tag = 0x3F2A;
+    snapshot.own_icao_warning = true;
+    const int last = kSelfTestRows - 1;
+
+    snapshot.bravo = skyblip::comms::BravoState::Live;
+    Glass live;
+    draw_self_test(live, snapshot);
+    CHECK(reads_at(live, kSelfTestLeftX, self_test_row_y(last), kSelfTestOwnIcaoText));
+
+    snapshot.bravo = skyblip::comms::BravoState::NoUtc;
+    Glass lost;
+    draw_self_test(lost, snapshot);
+    CHECK(reads_at(lost, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
+    CHECK(row_reads(lost, last, "NO UTC"));
+}

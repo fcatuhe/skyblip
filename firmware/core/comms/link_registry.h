@@ -120,6 +120,7 @@ enum : uint32_t {
     kPowerLevel = 5,
     kWentDarkFlat = 6,
     kDieTemperatureC = 7,
+    kBravo = 8,
 };
 }
 
