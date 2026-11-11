@@ -107,6 +107,28 @@ TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both n
     CHECK(table.count() == 4);
 }
 
+// The address names our own aircraft, so even an alarm it raised is an alarm on ourselves.
+TEST_CASE("traffic: setting our ICAO address releases the target it names, alarming or not") {
+    TrafficTable table;
+    REQUIRE(table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100) >= 0);
+    REQUIRE(table.update(observation(0x3C6587, kIcao, 100, model::Source::Adsb), 100) >= 0);
+    REQUIRE(table.update(observation(0x3C6586, 6, 100, model::Source::Alptas), 100) >= 0);
+    table.at(table.find(kIcao, 0x3C6586))->alarm_level = Level::Advisory;
+    REQUIRE(table.count() == 3);
+
+    table.set_own_icao(0x3C6586);
+    CHECK(table.find(kIcao, 0x3C6586) < 0);
+    CHECK(table.find(kIcao, 0x3C6587) >= 0);
+    CHECK(table.find(6, 0x3C6586) >= 0);
+    CHECK(table.count() == 2);
+
+    REQUIRE(table.update(observation(0x3C6588, kIcao, 100, model::Source::Adsb), 100) >= 0);
+    table.set_own_icao(0x3C6586);
+    CHECK(table.count() == 3);
+    table.set_own_icao(0);
+    CHECK(table.count() == 3);
+}
+
 TEST_CASE("traffic: ADS-B is held inside the gate's range and height band, and counted outside") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;

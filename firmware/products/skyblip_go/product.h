@@ -454,7 +454,7 @@ class Product {
                                            dfu::Product::SkyblipGo};
     common::OwnshipService ownship_{context_, settings_.aircraft_type};
     RadioService radio_{context_, settings_};
-    common::TrafficService traffic_{context_, kFeatures};
+    common::TrafficService traffic_{context_, kFeatures, settings_.own_icao};
     common::AlarmService alarm_{context_, {settings_.alarm_enabled, settings_.alarm_volume}};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,

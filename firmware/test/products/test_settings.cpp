@@ -406,7 +406,8 @@ TEST_CASE("settings: the pilot's settings are the values the radar menu also cha
                        {"{\"callsign\":\"F-JXYZ\"}", MenuRow::Callsign},
                        {"{\"units\":1}", MenuRow::Units},
                        {"{\"alarm_enabled\":false}", MenuRow::Alarm},
-                       {"{\"alarm_volume\":1}", MenuRow::Volume}};
+                       {"{\"alarm_volume\":1}", MenuRow::Volume},
+                       {"{\"own_icao\":3958150}", MenuRow::OwnIcao}};
     for (const auto& key : on_the_menu) {
         CAPTURE(key.patch);
         CHECK(menu_row_index(menu_for(Page::Radar), key.row) >= 0);
@@ -418,4 +419,35 @@ TEST_CASE("settings: the pilot's settings are the values the radar menu also cha
     CHECK_FALSE(patch_pilot_settings_only("{\"battery_offset_mv\":40}"));
     CHECK_FALSE(patch_pilot_settings_only("{\"frequency_trim_e1_ppm\":-25}"));
     CHECK_FALSE(patch_pilot_settings_only("{\"alarm_volume\":1,\"battery_offset_mv\":40}"));
+}
+
+// The aircraft's transponder address: 24 bits, 0 while unset, and nothing wider is ever stored.
+TEST_CASE(
+    "settings: the own ICAO is set over the link, cleared by 0, and refused whole past 24 bits") {
+    Settings settings = defaults();
+    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(config_fields(settings, std::nullopt).find("\"own_icao\":0}") != std::string::npos);
+
+    CHECK(apply_patch(settings, "{\"own_icao\":3958150}") == Status::Ok);
+    CHECK(settings.own_icao == 0x3C6586u);
+    CHECK(config_fields(settings, std::nullopt).find("\"own_icao\":3958150}") != std::string::npos);
+
+    CHECK(apply_patch(settings, "{\"aircraft_type\":4,\"own_icao\":16777216}") ==
+          Status::OutOfRange);
+    CHECK(settings.own_icao == 0x3C6586u);
+    CHECK(int(settings.aircraft_type) == int(kAircraftTypeLight));
+    CHECK(apply_patch(settings, "{\"own_icao\":16777215}") == Status::Ok);
+    CHECK(settings.own_icao == 0xFFFFFFu);
+
+    uint8_t blob[64];
+    to_blob(settings, blob, sizeof(blob));
+    Settings loaded;
+    REQUIRE(from_blob(blob, blob_size(), loaded) == Status::Ok);
+    CHECK(loaded.own_icao == 0xFFFFFFu);
+
+    CHECK(apply_patch(settings, "{\"own_icao\":0}") == Status::Ok);
+    CHECK(settings.own_icao == kOwnIcaoUnset);
+
+    settings.own_icao = 0x1000000;
+    CHECK(validate(settings) == Status::OutOfRange);
 }

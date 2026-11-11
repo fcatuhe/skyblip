@@ -12,6 +12,7 @@ namespace skyblip::go {
 enum class MenuRow : uint8_t {
     AircraftType,
     Callsign,
+    OwnIcao,
     Units,
     Range,
     Plot,
@@ -52,6 +53,13 @@ constexpr char kCallsignBlank = ' ';
 char next_callsign_character(char character);
 // The stored form: a name is edited nine wide and stored as what a pilot typed.
 int callsign_stored(char* out, const char* edited);
+
+constexpr int kOwnIcaoCharacters = 6;
+static_assert(kOwnIcaoCharacters <= kCallsignCharacters,
+              "the field edits in the callsign's buffer");
+char next_hex_character(char character);
+// INFO: fc 11nov26 kOwnIcaoUnset for six digits that are not all typed, or that spell 000000
+uint32_t own_icao_typed(const char* edited);
 
 // INFO: fc 12sep26 ADS-L G.1.3 codes 11 up are UAV and reserved, nothing a pilot sits in
 constexpr uint8_t kNamedAircraftTypes = 11;
@@ -100,9 +108,10 @@ int menu_first_row(const Menu& menu, MenuRow focus);
 
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot);
 
-// The one field on this device, so it is a screen and not a row: the characters
-// at a size a thumb can check, and a bar under the one the pad is rolling.
+// The field screen the callsign and the own ICAO share: the characters at a size a thumb
+// can check, and a bar under the one the pad is rolling.
 struct CallsignSnapshot {
+    const char* title{"CALLSIGN"};
     const char* text{""};
     int cursor{0};
     bool clears{false};
@@ -112,7 +121,10 @@ bool callsign_press_clears(const char* text, int cursor);
 
 constexpr int kCallsignScale = 3;
 constexpr int kCallsignCellWidth = ui::kCellWidth * kCallsignScale;
-constexpr int kCallsignTextX = (kGlassWidth - kCallsignCharacters * kCallsignCellWidth) / 2;
+constexpr int field_text_x(int characters) {
+    return (kGlassWidth - characters * kCallsignCellWidth) / 2;
+}
+constexpr int kCallsignTextX = field_text_x(kCallsignCharacters);
 constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorHeight = 3;
@@ -131,6 +143,16 @@ constexpr int kCallsignButtonHintY = kCallsignPadHintY + 7 * kCallsignHintScale 
 constexpr int kCallsignHelpY = kMenuHintY;
 
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
+
+constexpr const char* kClearKeepsHintText = "PAD KEEPS";
+constexpr const char* kOwnIcaoClearHelpText = "OWN TRANSPONDER SHOWS AS TRAFFIC";
+
+struct ClearSnapshot {
+    const char* title{""};
+    const char* text{""};
+};
+
+void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot);
 
 class MenuEditor {
    public:
@@ -152,6 +174,8 @@ class MenuEditor {
     void pad(uint32_t now_ms);
 
     bool editing() const { return editing_; }
+    bool clearing() const { return clearing_; }
+    MenuRow field() const { return field_; }
     const char* text() const { return text_; }
     int cursor() const { return cursor_; }
 
@@ -160,10 +184,15 @@ class MenuEditor {
    private:
     MenuAction act(const MenuValues& current, MenuValues& next);
     MenuAction advance();
-    void edit(const MenuValues& current);
+    void edit(MenuRow field, const MenuValues& current);
+    int characters() const;
     MenuAction roll();
     MenuAction step(const MenuValues& current, MenuValues& next);
+    MenuAction store(const MenuValues& current, MenuValues& next);
     MenuAction clear(const MenuValues& current, MenuValues& next);
+    MenuAction confirm_clear(const MenuValues& current, MenuValues& next);
+    MenuAction keep();
+    void close_field();
 
     enum class Pending : uint8_t { None, Act, Advance };
 
@@ -174,6 +203,8 @@ class MenuEditor {
     Pending pending_{Pending::None};
     bool active_{false};
     bool editing_{false};
+    bool clearing_{false};
+    MenuRow field_{MenuRow::Callsign};
     int cursor_{0};
     char text_[kCallsignBytes]{0};
 };

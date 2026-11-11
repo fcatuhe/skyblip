@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_TRAFFIC_H
 
+#include <cstdint>
+
 #include "core/events/rf.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/adsl.h"
@@ -13,6 +15,14 @@
 
 namespace skyblip::common {
 
+struct TrafficSettings {
+    TrafficSettings(const uint32_t& own_icao_of) : own_icao(own_icao_of) {}
+    TrafficSettings(uint32_t&&) = delete;
+    TrafficSettings(const uint32_t&&) = delete;
+
+    const uint32_t& own_icao;
+};
+
 // Owns state.traffic: radio events become targets. The dwell that heard a burst
 // names the system it belongs to (core/protocol/air.h), so nothing here guesses:
 // one M-band dwell reports two systems and the frame names itself out of its
@@ -21,8 +31,8 @@ namespace skyblip::common {
 // never shown.
 class TrafficService : public runtime::Service {
    public:
-    TrafficService(runtime::Context& context, Feature declared)
-        : runtime::Service(context), declared_(declared) {}
+    TrafficService(runtime::Context& context, Feature declared, TrafficSettings settings)
+        : runtime::Service(context), declared_(declared), settings_(settings) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -49,6 +59,7 @@ class TrafficService : public runtime::Service {
 
     protocol::AdslUplink uplink_codec_{};
     const Feature declared_;
+    TrafficSettings settings_;
     bool uplink_enabled_{false};
 };
 

@@ -34,6 +34,13 @@ go::Glass expected_page(Rig& rig) {
     return canvas;
 }
 
+bool glass_shows(Rig& rig, uint32_t& now_ms, const go::Glass& expected) {
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
+    return std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
+                       go::Glass::kBytes) == 0;
+}
+
 }  // namespace
 
 TEST_CASE("product: a press opens the menu of the page a pilot is standing on") {
@@ -52,7 +59,7 @@ TEST_CASE("product: a press opens the menu of the page a pilot is standing on") 
     CHECK(rig.product.screen().editor().focus() == go::MenuRow::AircraftType);
 
     // The pad past the last row hands the glass back to the page the menu belongs to.
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::OwnIcao);
     move(rig, now_ms);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
     CHECK(rig.product.screen().page() == go::Page::Radar);
@@ -277,6 +284,60 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
     CHECK(std::string(stored.callsign) == "F-J");
+}
+
+TEST_CASE(
+    "product: an own ICAO typed on the panel is stored, drawn, and cleared only when confirmed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    REQUIRE(rig.settings().own_icao == go::kOwnIcaoUnset);
+
+    open_menu(rig, now_ms);
+    focus_on(rig, now_ms, go::MenuRow::OwnIcao);
+    change(rig, now_ms);
+    REQUIRE(rig.product.screen().editor().editing());
+    CHECK(rig.product.screen().editor().field() == go::MenuRow::OwnIcao);
+
+    const char* wanted = "3C6586";
+    for (int at = 0; at < go::kOwnIcaoCharacters; at++) {
+        while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
+        if (at == 2) {
+            go::CallsignSnapshot field;
+            field.title = "OWN ICAO";
+            field.text = "3C6   ";
+            field.cursor = 2;
+            go::Glass expected;
+            go::draw_callsign(expected, field);
+            CHECK(glass_shows(rig, now_ms, expected));
+        }
+        change(rig, now_ms);
+    }
+    CHECK_FALSE(rig.product.screen().editor().editing());
+    run_past_the_write_settle(rig, now_ms);
+    CHECK(rig.settings().own_icao == 0x3C6586u);
+    go::Settings stored{};
+    REQUIRE(stored_settings(rig, stored));
+    CHECK(stored.own_icao == 0x3C6586u);
+
+    change(rig, now_ms);
+    REQUIRE(rig.product.screen().editor().editing());
+    while (rig.product.screen().editor().text()[0] != ' ') move(rig, now_ms);
+    change(rig, now_ms);
+    REQUIRE(rig.product.screen().editor().clearing());
+    go::ClearSnapshot clear;
+    clear.title = "OWN ICAO";
+    clear.text = "3C6586";
+    go::Glass asked;
+    go::draw_clear(asked, clear);
+    CHECK(glass_shows(rig, now_ms, asked));
+
+    change(rig, now_ms);
+    CHECK_FALSE(rig.product.screen().editor().editing());
+    run_past_the_write_settle(rig, now_ms);
+    CHECK(rig.settings().own_icao == go::kOwnIcaoUnset);
+    REQUIRE(stored_settings(rig, stored));
+    CHECK(stored.own_icao == go::kOwnIcaoUnset);
 }
 
 TEST_CASE("product: walking the rows without changing one writes nothing at all") {
