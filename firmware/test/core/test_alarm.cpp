@@ -356,3 +356,15 @@ TEST_CASE("alarm: our own touch-and-go does not announce again what it had alrea
 
     CHECK_FALSE(tracker.update(own, target_at(own, 1500, 0, 0, 30, 180, now_ms), now_ms).notify);
 }
+
+// A paired Bravo's clock may run up to a second ahead of ours, and its target is fresh, not stale.
+TEST_CASE("alarm: a reception dated half a second ahead of now is announced as fresh") {
+    AlarmTracker tracker;
+    const model::Ownship own = flying(30, 0);
+    const uint32_t now_ms = 1000;
+    const AlarmTracker::Decision decision =
+        tracker.update(own, target_at(own, 1200, 0, 0, 20, 180, now_ms + 500), now_ms);
+    CHECK(decision.assessment.level == Level::Advisory);
+    CHECK(decision.notify);
+    CHECK(tracker.announced_level(now_ms) == Level::Advisory);
+}

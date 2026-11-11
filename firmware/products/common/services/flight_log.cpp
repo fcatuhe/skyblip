@@ -50,6 +50,8 @@ void FlightLogService::tick(uint32_t now_ms) {
 void FlightLogService::watch(uint32_t now_ms) {
     const model::Ownship& own = context_.state.own;
     events_.status(status_now(), own.utc_s, now_ms);
+    events_.bravo(static_cast<uint8_t>(context_.state.bravo), comms::lost(context_.state.bravo),
+                  own.utc_s);
     for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
         if (target == nullptr || !target->used) {

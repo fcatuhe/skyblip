@@ -365,3 +365,19 @@ TEST_CASE(
     CHECK(table.count() == TrafficTable::kMaxTargets);
     CHECK(table.find(kIcao, 0x700001) == advisory_index);
 }
+
+// A paired Bravo dates by its own clock, a second or two ahead of our second, and that is no age.
+TEST_CASE("traffic: a reception two seconds ahead is held as new, one further ahead is dropped") {
+    const model::Ownship own = flying(30, 0);
+    TrafficTable table;
+    table.set_own_reference(own);
+    REQUIRE(table.update(heard(own, 0x3C6586, 1500, 0, model::Source::Adsb, 102), 100) >= 0);
+    REQUIRE(table.update(heard(own, 0x3C6587, 1800, 0, model::Source::Adsb, 103), 100) >= 0);
+    table.age_out(100);
+    CHECK(table.find(kIcao, 0x3C6586) >= 0);
+    CHECK(table.find(kIcao, 0x3C6587) < 0);
+    table.age_out(102 + kAirborneTargetForgetS);
+    CHECK(table.find(kIcao, 0x3C6586) >= 0);
+    table.age_out(103 + kAirborneTargetForgetS);
+    CHECK(table.find(kIcao, 0x3C6586) < 0);
+}

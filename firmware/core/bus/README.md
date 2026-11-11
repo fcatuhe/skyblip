@@ -16,7 +16,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 |---|---|
 | `own` | `ownship` |
 | `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `since_edge_ms` |
-| `traffic` | `traffic` on the Go, `adsb` on Bravo, which runs no `traffic` service |
+| `traffic` | `traffic` on the Go, and `bravo` on a paired Go, `adsb` on Bravo, which runs no `traffic` service |
 | `radio_log` | `traffic` for what was received, `radio` for what was sent |
 | `rf` | `radio`, except `rf.timing_statistics`, whose PPS half is the board's |
 | `air` | `traffic` |
@@ -30,12 +30,15 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `duty` | `screen` for the two panel counts and the backlight, `radio` for the armed receiver and the keyed transmitter, `alarm` for the annunciator, `config` for the BLE link |
 | `link` | `config`: a central is connected, and a prompt stands that the flight state allows |
 | `alarm_level` | `alarm` |
+| `bravo` | `bravo` |
 | `panel_presented` | `screen` |
 | `started` | the product |
 
 Four entries have more than one writer and all four are deliberate. `clock`, `gnss` and `rf.timing_statistics` are split between the board, which is the only code holding the part and therefore the only code that can say when the PPS edge arrived or why the receiver refused a solution, and the services that decide what to do with either. `radio_log` is one ring with two ends of the same conversation in it.
 
 `duty` is the fifth, and it is four writers rather than two: the group is a subject like the others, and the subject is what the device spent. A reader of the power budget wants the panel, the backlight, the receiver, the annunciator and the phone in one place, and each of those facts is known only to the service that drives that consumer, so the split is the same one `barometer` and `gnss` make.
+
+On a paired Go `traffic` and `callsigns` take a second writer, `bravo`, which folds Bravo's observations through the table's own door, `update`, and the names through `learn`, the calls `traffic` makes for the radio. Both run in one loop, one after the other. The `bravo` field is what the Go makes of its Bravo's health (`../comms/README.md`, What the Go makes of its Bravo).
 
 `rf.tx_done_at_us` looks misfiled and is not: `traffic` is the single reader of `bus.rf`, so it is the only code that sees the executor's `TxDone`, and `radio` reads the instant from here rather than opening a second drain of the same queue.
 

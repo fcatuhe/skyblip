@@ -304,3 +304,44 @@ TEST_CASE("log events: a backlog nobody drains loses the oldest, and says how ma
     flight::LogEvent out[64];
     CHECK(drain(events, out, 64) == flight::kLogEventBacklogRecords);
 }
+
+// scripts/test_blip.py decodes the same bytes: a paired Go says when its Bravo went and came back.
+TEST_CASE("log event: a Bravo lost and back is two records, each with the state it was in") {
+    flight::LogEvents events;
+    events.bravo(3, true, kBaseUtcS + 1);
+    flight::LogEvent out[8];
+    CHECK(drain(events, out, 8) == 0);
+
+    events.open();
+    drain(events, out, 8);
+    events.bravo(2, false, kBaseUtcS + 10);
+    events.bravo(3, true, kBaseUtcS + 20);
+    events.bravo(5, true, kBaseUtcS + 21);
+    events.bravo(2, false, kBaseUtcS + 30);
+    REQUIRE(drain(events, out, 8) == 2);
+    CHECK(out[0].kind == flight::LogKind::Bravo);
+    CHECK(out[0].bravo == 3);
+    CHECK(out[0].utc_s == kBaseUtcS + 20);
+    CHECK(out[1].bravo == 2);
+    CHECK(out[1].utc_s == kBaseUtcS + 30);
+
+    uint8_t raw[flight::kLogRecordBytes];
+    flight::encode_log_event(out[0], kBaseUtcS, raw);
+    CHECK(hex(raw) == "140003000000000000000000000000008400000000005396");
+    flight::LogEvent back{};
+    REQUIRE(flight::decode_log_event(raw, kBaseUtcS, back) == Status::Ok);
+    CHECK(back.kind == flight::LogKind::Bravo);
+    CHECK(back.bravo == 3);
+    CHECK(back.utc_s == kBaseUtcS + 20);
+}
+
+TEST_CASE("log event: a flight that opens without its Bravo says so on its first record") {
+    flight::LogEvents events;
+    events.open();
+    events.bravo(3, true, kBaseUtcS);
+    flight::LogEvent out[4];
+    int count = drain(events, out, 4);
+    REQUIRE(count >= 1);
+    CHECK(out[count - 1].kind == flight::LogKind::Bravo);
+    CHECK(out[count - 1].bravo == 3);
+}

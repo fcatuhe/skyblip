@@ -29,8 +29,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFirstFixNextBeatMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
 | `kFirstFixSkipBeatMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
 | `kFirstFixHeldNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kBravoLostNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
 | `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
-| `kShortestPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), kReannounceRestMs})` | milliseconds | - | - |
+| `kShortestPhaseMs` | `std::min({shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs})` | milliseconds | - | - |
 | `kAnnunciatorOnCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | a guard under the loop, never a tune's: an output still on past it is a bug |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
@@ -42,6 +43,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
 | `kDiagnosticsDumpPeriodMs` | 10000 (10 s) | milliseconds | Period | - |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
+| `kIntoCeilingMs` | 999 | milliseconds | Ceiling | schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s |
+| `kAltitudeFloorM` | `to_metres(Feet(kPressureAltitudeFloorFt - kHeightDifferenceCeilingFt)).value` | metres | Floor | - |
+| `kAltitudeCeilingM` | `to_metres(Feet(kPressureAltitudeCeilingFt + kHeightDifferenceCeilingFt)).value` | metres | Ceiling | - |
 
 ## [`firmware/core/diagnostics`](../firmware/core/diagnostics/README.md)
 
@@ -236,6 +240,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
+| `kReceptionAheadCeilingS` | 2 | seconds | Ceiling | our second lags our clock by one, a paired Bravo's runs one ahead: no further |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
 ## [`firmware/products/common`](../firmware/products/common/README.md)
@@ -314,6 +319,10 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kPairingScanPeriodUs` | 60000 (60 ms) | microseconds | Period | - |
 | `kReconnectScanWindowUs` | 11250 (11.25 ms) | microseconds | Window | GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost |
 | `kReconnectScanPeriodUs` | 1280000 (1280 ms) | microseconds | Period | - |
+| `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: Bravo sends health once a second whatever the traffic |
+| `kHealthMaxAgeMs` | `3 * kHealthPeriodMs` = 3000 (3 s) | milliseconds | MaxAge | unverified: three missed health frames, so one lost notification is no loss |
+| `kBootSettleMs` | `kConnectCeilingMs` = 10000 (10 s) | milliseconds | Settle | a paired Go names no loss before a connection has had its ceiling after boot |
+| `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -336,4 +345,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-216 constants over 21 folders.
+225 constants over 21 folders.

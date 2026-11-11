@@ -224,20 +224,47 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     config.set_battery_state(battery, power::PowerLevel::Critical);
     // The driver gates -50 to +125 C, the formatter does not: int16 is widest.
     config.set_die_temperature(INT16_MIN, true);
+    config.set_bravo_state(BravoState::NoUtc);
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
-    // An eight-entry map; airborne and critical are 2, and -3277 is the negative integer 0x0CCC.
-    const uint8_t golden[] = {0xA8, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,
-                              0x04, 0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC};
+    // A nine-entry map; airborne and critical are 2, -3277 is the negative integer 0x0CCC, and
+    // every bravo code is one byte.
+    const uint8_t golden[] = {0xA9, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64, 0x04,
+                              0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC, 0x08, 0x05};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
     CHECK(link_text(frame) ==
           "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,"
           "\"battery_percent\":100,\"charging\":false,\"power_level\":\"critical\","
-          "\"went_dark_flat\":false,\"die_temperature_c\":-3277}");
+          "\"went_dark_flat\":false,\"die_temperature_c\":-3277,\"bravo\":\"no_utc\"}");
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
+}
+
+// A page shows BRAVO LOST as the glass does, without polling for it.
+TEST_CASE("comms: a paired Go pushes status when its Bravo is lost and when it is back") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation);
+    ConfigService config(link, store);
+    config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
+    link.clear();
+
+    config.set_bravo_state(BravoState::Unpaired);
+    CHECK(link.sent.empty());
+    config.set_bravo_state(BravoState::Live);
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes).find("\"bravo\":\"live\"") != std::string::npos);
+    config.set_bravo_state(BravoState::Live);
+    CHECK(link.sent.size() == 1);
+    config.set_bravo_state(BravoState::ReceiverDown);
+    REQUIRE(link.sent.size() == 2);
+    CHECK(link_text(link.last().bytes).find("\"bravo\":\"receiver_down\"") != std::string::npos);
+    config.set_bravo_state(BravoState::Unpaired);
+    REQUIRE(link.sent.size() == 3);
+    CHECK(link_text(link.last().bytes).find("bravo") == std::string::npos);
 }
 
 TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {

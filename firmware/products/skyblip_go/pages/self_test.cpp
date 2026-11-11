@@ -37,6 +37,30 @@ void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
     for (int x = from_x; x < to_x; x += 2 * kCellWidth) canvas.draw_text(x, y, ".", true, 1);
 }
 
+const char* bravo_verdict(comms::BravoState state) {
+    switch (state) {
+        case comms::BravoState::Live: return "LIVE";
+        case comms::BravoState::Waiting: return "WAITING";
+        case comms::BravoState::LinkDown: return "LINK DOWN";
+        case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
+        case comms::BravoState::NoUtc: return "NO UTC";
+        case comms::BravoState::Unpaired: break;
+    }
+    return "";
+}
+
+void bravo_row(ui::Canvas& canvas, int y, const SelfTestSnapshot& snapshot) {
+    char name[12];
+    int written = format_string(name, "BRAVO ");
+    written += format_hex(name + written, snapshot.bravo_tag, 4);
+    name[written] = 0;
+    const char* mark = bravo_verdict(snapshot.bravo);
+    canvas.draw_text(kLeft, y, name, true, 1);
+    leaders(canvas, kLeft + (written + 1) * kCellWidth, kRight - (length(mark) + 1) * kCellWidth,
+            y);
+    right_aligned(canvas, kRight, y, mark);
+}
+
 }  // namespace
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
@@ -89,8 +113,14 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         y += kLineHeight;
     }
 
-    if (snapshot.own_icao_warning && y < self_test_row_y(kSelfTestRows)) {
-        canvas.draw_text(kLeft, y, kSelfTestOwnIcaoText, true, 1);
+    // INFO: fc 12nov26 one row for both: a loss outranks the own-ICAO warning, which outranks LIVE
+    const bool paired = snapshot.bravo != comms::BravoState::Unpaired;
+    const bool warned = snapshot.own_icao_warning && !comms::lost(snapshot.bravo);
+    if ((paired || warned) && y < self_test_row_y(kSelfTestRows)) {
+        if (warned)
+            canvas.draw_text(kLeft, y, kSelfTestOwnIcaoText, true, 1);
+        else
+            bravo_row(canvas, y, snapshot);
         y += kLineHeight;
     }
 
