@@ -39,9 +39,9 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
     {
       command: 'health', protocol_version: 1, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
       own_icao_set: true, alarm_granted: true, lease_ms: WIDEST_UNSIGNED, request_epoch: WIDEST_UNSIGNED, request_sequence: WIDEST_UNSIGNED,
-      export_reference: 'own',
+      export_reference: 'own', paired: true,
     },
-    'ac00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff0b02',
+    'ad00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff0b020cf5',
   ],
   [
     {
@@ -49,11 +49,11 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
       longitude_1e7: -1800000000, position_age_ms: WIDEST_UNSIGNED, altitude_hae_mm: WIDEST_INTEGER, altitude_hae_age_ms: WIDEST_UNSIGNED,
       pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, own_icao: 0xffffff, alarm_requested: true,
       request_sequence: WIDEST_UNSIGNED, alarm_passes: WIDEST_UNSIGNED, alarm_volume: 'loud', assessed_epoch: WIDEST_UNSIGNED,
-      assessed_sequence: WIDEST_UNSIGNED,
+      assessed_sequence: WIDEST_UNSIGNED, paired: true,
     },
-    'b200181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +
+    'b300181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +
       '081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf50d1affffffff0e1affffffff0f02101a' +
-      'ffffffff111affffffff',
+      'ffffffff111affffffff12f5',
   ],
 ];
 

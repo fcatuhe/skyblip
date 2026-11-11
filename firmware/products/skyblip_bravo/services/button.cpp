@@ -14,6 +14,7 @@ bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
 
 void ButtonService::tick(uint32_t now_ms) {
     sync_prompt(now_ms);
+    pairing_.sync(peer_.requested(), pairing_readable(), now_ms);
     sync_receiving(now_ms);
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
@@ -22,7 +23,7 @@ void ButtonService::tick(uint32_t now_ms) {
             pressing_ = true;
             pressed_ms_ = event.at_ms;
             // INFO: fc 12nov26 a contact begun before the gesture armed is never spent on it
-            pressed_while_armed_ = confirm_.armed();
+            pressed_while_armed_ = confirm_.armed() || pairing_.armed();
             continue;
         }
         // INFO: fc 12nov26 a hold past kLongPressHoldMs is the shutdown sequencer's, never a press
@@ -33,6 +34,8 @@ void ButtonService::tick(uint32_t now_ms) {
         if (pressed) press(now_ms);
     }
     arm_once_quiet(now_ms);
+    if (!pressing_)
+        pairing_.arm_once_quiet(pairing_readable(), released_once_, released_ms_, now_ms);
     if (answering()) resolve(confirm_.tick(now_ms));
 }
 
@@ -54,6 +57,11 @@ void ButtonService::arm_once_quiet(uint32_t now_ms) {
     if (prompt_readable() && quiet) confirm_.arm(now_ms);
 }
 
+bool ButtonService::pairing_readable() const {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
+    return alarm_.indicator_condition() == indication::Condition::Pairing;
+}
+
 bool ButtonService::prompt_readable() const {
     if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator)) return true;
     return alarm_.indicator_condition() == indication::Condition::Prompt;
@@ -73,6 +81,10 @@ void ButtonService::press(uint32_t now_ms) {
     }
     if (alarm_stands()) {
         alarm_.dismiss();
+        return;
+    }
+    if (pairing_.armed()) {
+        if (pressed_while_armed_ && peer_.answer(now_ms)) pairing_.spend();
         return;
     }
     if (answering()) return;

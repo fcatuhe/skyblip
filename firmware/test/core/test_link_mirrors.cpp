@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "core/comms/diagnostics.h"
+#include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
@@ -158,6 +159,15 @@ constexpr bool on_the_wire(dfu::HubImage value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::ExportReference value) {
+    switch (value) {
+        case comms::ExportReference::None:
+        case comms::ExportReference::Go:
+        case comms::ExportReference::Own: return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(model::ClimbSource value) {
     switch (value) {
         case model::ClimbSource::Unknown:
@@ -271,6 +281,11 @@ static_assert(code(dfu::HubImage::Unreadable) == 3, "hub_image unreadable");
 static_assert(code(dfu::HubImage::Writing) == 4, "hub_image writing");
 static_assert(code(dfu::HubImage::Held) == 5, "hub_image held");
 static_assert(on_the_wire(dfu::HubImage::None), "hub_image");
+
+static_assert(code(comms::ExportReference::None) == 0, "export_reference none");
+static_assert(code(comms::ExportReference::Go) == 1, "export_reference go");
+static_assert(code(comms::ExportReference::Own) == 2, "export_reference own");
+static_assert(on_the_wire(comms::ExportReference::None), "export_reference");
 
 static_assert(code(model::ClimbSource::Unknown) == 0, "climb_source unknown");
 static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");

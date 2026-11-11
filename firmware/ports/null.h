@@ -39,6 +39,10 @@ class NullLink : public Link {
     }
     Status advertise_as(const char*) override { return Status::Down; }
     Status reserve_peer_connection(bool) override { return Status::Down; }
+    Status reserve_peer_connection_for(const events::BluetoothAddress&) override {
+        return Status::Down;
+    }
+    bool central_of(const events::Peer&, events::BluetoothAddress&) const override { return false; }
 };
 
 class NullCentral : public Central {

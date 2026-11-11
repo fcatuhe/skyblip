@@ -28,6 +28,8 @@ class BravoService : public runtime::Service {
     // INFO: fc 11nov26 GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost
     static constexpr uint32_t kReconnectScanWindowUs = 11250;
     static constexpr uint32_t kReconnectScanPeriodUs = 1280000;
+    // INFO: fc 11nov26 two health periods for Bravo to answer an unpairing Go, then the link drops
+    static constexpr uint32_t kFarewellCeilingMs = 2000;
 
     BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
                  ports::Central& central, const common::AlarmService& alarm)
@@ -53,6 +55,9 @@ class BravoService : public runtime::Service {
     const events::BluetoothAddress& pairing_with() const { return pairing_with_; }
     OwnIcaoWarning& own_icao_warning() { return own_icao_warning_; }
     const OwnIcaoWarning& own_icao_warning() const { return own_icao_warning_; }
+    bool leaving() const { return leaving_; }
+    // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
+    bool take_forgotten_notice();
 
    private:
     void take_event(const events::CentralEvent& event, uint32_t now_ms);
@@ -66,7 +71,12 @@ class BravoService : public runtime::Service {
     void release_unless_paired();
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
     void claim(uint32_t now_ms);
-    bool linked() const { return up_ && (step_ == BravoStep::Waiting || link_ == BravoLink::Up); }
+    void forget();
+    void leave();
+    bool linked() const {
+        return up_ &&
+               (step_ == BravoStep::Waiting || (step_ == BravoStep::Idle && paired(settings_)));
+    }
 
     Settings& settings_;
     comms::ConfigService& config_;
@@ -82,8 +92,12 @@ class BravoService : public runtime::Service {
     uint32_t step_since_ms_{0};
     uint32_t claimed_ms_{0};
     uint32_t boot_epoch_{0};
+    uint32_t farewell_ms_{0};
     bool connecting_{false};
     bool up_{false};
+    bool leaving_{false};
+    bool farewell_owed_{false};
+    bool forgotten_{false};
 };
 
 }  // namespace skyblip::go

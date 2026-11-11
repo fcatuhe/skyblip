@@ -44,12 +44,12 @@ const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
      "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff10"
      "02113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"},
     {"health",
-     "ac00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff"
-     "0b02"},
+     "ad00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff"
+     "0b020cf5"},
     {"peer_claim",
-     "b200181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
+     "b300181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
      "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf50d1affffffff0e1affffffff0f02101affff"
-     "ffff111affffffff"},
+     "ffff111affffffff12f5"},
 };
 
 int64_t widest_number(const std::string& name, int64_t type_extreme) {

@@ -404,6 +404,7 @@ enum : uint32_t {
     kRequestEpoch = 9,
     kRequestSequence = 10,
     kExportReference = 11,
+    kPaired = 12,
 };
 }
 
@@ -426,6 +427,7 @@ enum : uint32_t {
     kAlarmVolume = 15,
     kAssessedEpoch = 16,
     kAssessedSequence = 17,
+    kPaired = 18,
 };
 }
 
@@ -465,7 +467,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
-        case Command::PeerClaim: return 0x3FFFF;
+        case Command::PeerClaim: return 0x7FFFF;
     }
     return 0;
 }

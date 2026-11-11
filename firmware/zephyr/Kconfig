@@ -20,3 +20,10 @@ config SKYBLIP_IMU_IMAGE_LINKED
 	  A full image links the sensor hub's firmware, boots the hub from it and
 	  keeps a copy on imu_image_partition. Without it, a slim image boots the
 	  hub from that copy and is 101 KB lighter over the air.
+
+config SKYBLIP_PEER_SERVER
+	bool "Serve the peer endpoint to a paired Go"
+	help
+	  Bravo serves the peer characteristic its paired Go writes peer_claim
+	  to and reads observation and health from. The Go reaches Bravo's as
+	  a central and serves none.

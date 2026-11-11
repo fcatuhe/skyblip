@@ -331,7 +331,7 @@
     },
     {
       "command": "health", "code": 27, "endpoint": "peer", "sender": "unit",
-      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo gates its exports on, and carries the alarm-ownership grant, whose rules are #179's. 46 bytes at its widest.",
+      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo gates its exports on, and carries the alarm-ownership grant, whose rules are #179's. 48 bytes at its widest.",
       "keys": [
         {"name": "protocol_version", "number": 1, "type": "unsigned", "required": true, "description": "The version of the peer frames Bravo speaks: 1, observation, health and peer_claim as this registry gives them. It moves when a peer key changes meaning, not when one is added"},
         {"name": "boot_epoch", "number": 2, "type": "unsigned", "required": true, "description": "Bravo's boot epoch, the one its observations carry"},
@@ -343,12 +343,13 @@
         {"name": "lease_ms", "number": 8, "type": "unsigned", "description": "How long the grant holds in milliseconds, kHandoverLeaseMs, and when each side counts it from is #179's. Present while alarm_granted"},
         {"name": "request_epoch", "number": 9, "type": "unsigned", "description": "The Go's boot_epoch in the peer_claim this grant or refusal answers, so a grant made before the Go restarted is never read as fresh. Present once Bravo has read a peer_claim that requests the alarm"},
         {"name": "request_sequence", "number": 10, "type": "unsigned", "description": "The request_sequence of the peer_claim this grant or refusal answers. Present with request_epoch"},
-        {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo gates its exports on, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"}
+        {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo gates its exports on, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"},
+        {"name": "paired", "number": 12, "type": "boolean", "required": true, "description": "Bravo holds this Go's pin, or offers it since its button answered this Go's request (#192). A Go asking to pair pins Bravo only on true. A paired Go that reads false holds a pin Bravo does not, from a pairing cut short or a Bravo that pinned another Go, so it drops its pin and says so"}
       ]
     },
     {
       "command": "peer_claim", "code": 28, "endpoint": "peer", "sender": "host",
-      "description": "The paired Go to Bravo on the peer endpoint, once a second while paired: the Go's own-ship, its own ICAO, and its request for the alarm (#179). Bravo reads it only from the Go it pinned (#192). Its ages count back from the instant the Go wrote the frame, so they hold whether or not the Go has UTC, and UTC never stands for a position: each field is valid on its own. 96 bytes at its widest.",
+      "description": "The Go to Bravo on the peer endpoint, once a second while it pairs and while paired: the Go's own-ship, its own ICAO, its request for the alarm (#179), and whether it holds Bravo's pin. Bravo takes the own-ship, the own ICAO and the request only from the Go it pinned, and reads paired from any Go (#192). Its ages count back from the instant the Go wrote the frame, so they hold whether or not the Go has UTC, and UTC never stands for a position: each field is valid on its own. 98 bytes at its widest.",
       "keys": [
         {"name": "boot_epoch", "number": 1, "type": "unsigned", "required": true, "description": "The Go's boot epoch, drawn as Bravo's is (observation's boot_epoch)"},
         {"name": "at_s", "number": 2, "type": "unsigned", "description": "The UTC second, counted from 1970, at which the Go wrote this frame. Absent while the Go holds no UTC"},
@@ -366,7 +367,8 @@
         {"name": "alarm_passes", "number": 14, "type": "unsigned", "required": true, "description": "Passes the Go's alarm service completed since boot, modulo 2^32. A request whose count has not moved since the previous one is not fresh, so a transport that repeats a frozen result never renews a grant (#179)"},
         {"name": "alarm_volume", "number": 15, "type": "enum", "enum": "alarm_volume", "required": true, "description": "What the pair sounds at while the Go owns the alarm: the Go's alarm_volume, and off while its alarm_enabled is false, so off on the Go keeps the pair silent (#179)"},
         {"name": "assessed_epoch", "number": 16, "type": "unsigned", "description": "Bravo's boot_epoch in the observation assessed_sequence names, so a sequence from before Bravo restarted is never read as current. Present with assessed_sequence"},
-        {"name": "assessed_sequence", "number": 17, "type": "unsigned", "description": "The sequence of the last observation the Go finished ingesting and assessing. It is not alarm_passes, which also moves over an empty sky. Absent until the Go has assessed one"}
+        {"name": "assessed_sequence", "number": 17, "type": "unsigned", "description": "The sequence of the last observation the Go finished ingesting and assessing. It is not alarm_passes, which also moves over an empty sky. Absent until the Go has assessed one"},
+        {"name": "paired", "number": 18, "type": "boolean", "required": true, "description": "The Go holds this Bravo's pin: true from the health that pinned it, false while the Go asks to pair. A claim with paired false is the Go's pairing request, and Bravo stores its own pin only once it reads true from the Go its press answered, and health's paired tells a Go when Bravo holds none, so neither side keeps a pin alone (#192). A Go that unpairs while connected writes one claim with false, so Bravo drops its pin too"}
       ]
     }
   ],
@@ -541,10 +543,11 @@
       ]
     },
     "export_reference": {
+      "mirrors": {"type": "comms::ExportReference", "header": "core/comms/peer.h"},
       "values": [
-        {"name": "none", "code": 0},
-        {"name": "go", "code": 1},
-        {"name": "own", "code": 2}
+        {"name": "none", "code": 0, "mirrors": "None"},
+        {"name": "go", "code": 1, "mirrors": "Go"},
+        {"name": "own", "code": 2, "mirrors": "Own"}
       ]
     },
     "climb_source": {

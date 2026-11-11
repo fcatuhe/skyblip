@@ -123,6 +123,15 @@ TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it")
     CHECK(centred_reads(canvas, "SET OWN ICAO IN SETTINGS", 1));
 }
 
+TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropped it too") {
+    Glass canvas;
+    draw_bravo_forgot_notice(canvas);
+    CHECK(centred_reads(canvas, "NOT PAIRED", kMenuScale));
+    CHECK(centred_reads(canvas, "ON BRAVO", kMenuScale));
+    CHECK(centred_reads(canvas, "THE GO FORGOT IT TOO", 1));
+    CHECK(centred_reads(canvas, "PAIR AGAIN FROM SETTINGS", 1));
+}
+
 TEST_CASE("bravo page: the pad walks the list and leaves past its end, the button confirms first") {
     BravoPage page;
     page.open(0);

@@ -98,7 +98,10 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
+    enum class Notice : uint8_t { OwnIcao, BravoForgot };
+
     bool noticing() const { return notice_; }
+    Notice notice() const { return notice_kind_; }
     const BravoPage& bravo_page() const { return bravo_page_; }
     void mark_dirty() { dirty_ = true; }
 
@@ -209,6 +212,7 @@ class ScreenService : public runtime::Service {
     BravoService& bravo_;
     BravoPage bravo_page_{};
     uint32_t notice_since_ms_{0};
+    Notice notice_kind_{Notice::OwnIcao};
     bool notice_{false};
     diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};

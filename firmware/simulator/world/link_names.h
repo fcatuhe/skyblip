@@ -509,6 +509,7 @@ inline constexpr Key kHealthKeys[] = {
     {"request_epoch", 9, Type::Unsigned, nullptr, 0, false},
     {"request_sequence", 10, Type::Unsigned, nullptr, 0, false},
     {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
+    {"paired", 12, Type::Boolean, nullptr, 0, true},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -530,6 +531,7 @@ inline constexpr Key kPeerClaimKeys[] = {
     {"alarm_volume", 15, Type::Enum, &kAlarmVolume, 0, true},
     {"assessed_epoch", 16, Type::Unsigned, nullptr, 0, false},
     {"assessed_sequence", 17, Type::Unsigned, nullptr, 0, false},
+    {"paired", 18, Type::Boolean, nullptr, 0, true},
 };
 
 inline constexpr Frame kFrames[] = {
@@ -560,8 +562,8 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 12},
-    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 18},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
+    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 19},
 };
 
 }

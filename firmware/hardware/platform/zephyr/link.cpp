@@ -15,6 +15,7 @@
 #include "core/identity/activation.h"
 #include "core/util/fifo.h"
 #include "hardware/platform/zephyr/att_budget.h"
+#include "hardware/platform/zephyr/bluetooth_address.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
@@ -178,6 +179,27 @@ BT_GATT_SERVICE_DEFINE(hm10_service, BT_GATT_PRIMARY_SERVICE(&hm10_service_uuid)
                        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
 constexpr int kHm10NotifyAttribute = 2;
 
+// INFO: fc 11nov26 Bravo serves peer to its Go, and the Go reaches Bravo's as a central
+#if defined(CONFIG_SKYBLIP_PEER_SERVER)
+static struct bt_uuid_128 peer_uuid = BT_UUID_INIT_128(SKYBLIP_UUID(kPeerCharacteristicId));
+
+ssize_t on_peer_write(struct bt_conn* connection, const struct bt_gatt_attr*, const void* data,
+                      uint16_t bytes, uint16_t /*offset*/, uint8_t /*flags*/) {
+    return accept_write(connection, Endpoint::Peer, data, bytes);
+}
+
+#define SKYBLIP_PEER_ATTRIBUTES                                                         \
+    ,                                                                                   \
+        BT_GATT_CHARACTERISTIC(                                                         \
+            &peer_uuid.uuid,                                                            \
+            BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP | BT_GATT_CHRC_NOTIFY, \
+            BT_GATT_PERM_WRITE, nullptr, on_peer_write, nullptr),                       \
+        BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE)
+constexpr int kPeerNotifyAttribute = 8;
+#else
+#define SKYBLIP_PEER_ATTRIBUTES
+#endif
+
 BT_GATT_SERVICE_DEFINE(skyblip_service, BT_GATT_PRIMARY_SERVICE(&skyblip_service_uuid),
                        BT_GATT_CHARACTERISTIC(&config_uuid.uuid,
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
@@ -189,7 +211,8 @@ BT_GATT_SERVICE_DEFINE(skyblip_service, BT_GATT_PRIMARY_SERVICE(&skyblip_service
                                               BT_GATT_CHRC_WRITE | BT_GATT_CHRC_WRITE_WITHOUT_RESP |
                                                   BT_GATT_CHRC_NOTIFY,
                                               BT_GATT_PERM_WRITE, nullptr, on_log_write, nullptr),
-                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE));
+                       BT_GATT_CCC(nullptr, BT_GATT_PERM_READ | BT_GATT_PERM_WRITE)
+                           SKYBLIP_PEER_ATTRIBUTES);
 constexpr int kConfigNotifyAttribute = 2;
 constexpr int kLogNotifyAttribute = 5;
 constexpr int kMaxNotifyAttributes = 2;
@@ -202,7 +225,13 @@ int notify_attributes(Endpoint endpoint, const struct bt_gatt_attr** out) {
             return 2;
         case Endpoint::Config: out[0] = &skyblip_service.attrs[kConfigNotifyAttribute]; return 1;
         case Endpoint::Log: out[0] = &skyblip_service.attrs[kLogNotifyAttribute]; return 1;
-        case Endpoint::Peer: return 0;
+        case Endpoint::Peer:
+#if defined(CONFIG_SKYBLIP_PEER_SERVER)
+            out[0] = &skyblip_service.attrs[kPeerNotifyAttribute];
+            return 1;
+#else
+            return 0;
+#endif
     }
     return 0;
 }
@@ -281,7 +310,8 @@ void connected(struct bt_conn* connection, uint8_t error) {
     atomic_set(&g_in_flight[index], 0);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     const bool admitted =
-        g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)));
+        g_sessions.connected(session_of(connection), payload_from_mtu(bt_gatt_get_mtu(connection)),
+                             address_of(bt_conn_get_dst(connection)));
     if (admitted) g_connections[index] = bt_conn_ref(connection);
     k_spin_unlock(&g_lock, key);
     if (!admitted) {
@@ -366,6 +396,25 @@ Status Link::reserve_peer_connection(bool reserved) {
     const Status status = g_sessions.reserve_peer(reserved);
     const bool admits = g_sessions.admits();
     k_spin_unlock(&g_lock, key);
+    return advertise_within_ceiling(status, admits);
+}
+
+Status Link::reserve_peer_connection_for(const events::BluetoothAddress& central) {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const Status status = g_sessions.reserve_peer_for(central);
+    const bool admits = g_sessions.admits();
+    k_spin_unlock(&g_lock, key);
+    return advertise_within_ceiling(status, admits);
+}
+
+bool Link::central_of(const events::Peer& peer, events::BluetoothAddress& out) const {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const bool live = g_sessions.central(peer, out);
+    k_spin_unlock(&g_lock, key);
+    return live;
+}
+
+Status Link::advertise_within_ceiling(Status status, bool admits) {
     if (status != Status::Ok) return status;
     if (admits) {
         resume_advertising();

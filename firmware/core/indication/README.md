@@ -30,11 +30,13 @@ SoftRF is the reference vocabulary and we keep its distinction and not its duty:
 
 Blue was the obvious colour for a first battery step and it is the wrong one. It already means no fix, the lamp shows one thing at a time, and a colour with two meanings is a colour with none. The step is also a voltage and not a percentage: the percentage comes off a textbook curve (`core/power/README.md`), so keying the lamp to it would make the lamp exactly as trustworthy as a table nobody has measured yet.
 
-## Three rows for a device with no glass
+## Four rows for a device with no glass
 
-`Prompt`, `NoFixLinked` and `AliveLinked` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt or a connection on. The Go makes no claim, so `Situation::prompting` and `Situation::linked` stay false there and its lamp is the one above.
+`Prompt`, `Pairing`, `NoFixLinked` and `AliveLinked` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt, a Go's pairing request or a connection on. The Go makes no claim, so `Situation::prompting`, `Situation::pairing` and `Situation::linked` stay false there and its lamp is the one above.
 
 `Prompt` is a fast green blink, 60 ms in every 250, a `Transient` row because a prompt expires in thirty seconds. It sits below `Alarm`, so an advisory keeps the lamp, and above the cell, because a pilot answering a phone is standing beside the unit. Bravo arms the two-press gesture only while this row is showing (`products/skyblip_bravo/README.md`).
+
+`Pairing` is a fast blue blink, the prompt's cadence in the colour of no fix, a `Transient` row because a request expires in thirty seconds. Blue at the steady wink means no fix, and blue at the fast blink means a Go asks to pair: the rhythm tells them apart, as it tells a prompt from a green wink. It sits below `Prompt`, so a phone's prompt keeps the press, and above the cell, because a pilot pairing is standing beside the unit. Bravo arms its one-press pairing gesture only while this row is showing.
 
 A connected phone keeps the fix colour and doubles the wink rate: one wink every 1.5 s instead of 3 s, which is 2% and the edge of the `Steady` budget. The colour still says the fix and the rhythm says the link, so the lamp shows one thing at a time and a pilot reads both.
 

@@ -23,6 +23,7 @@ const char* to_string(Condition condition) {
         case Condition::NoFix: return "no-fix";
         case Condition::Alive: return "alive";
         case Condition::Prompt: return "prompt";
+        case Condition::Pairing: return "pairing";
         case Condition::NoFixLinked: return "no-fix-linked";
         case Condition::AliveLinked: return "alive-linked";
         default: return "?";
@@ -45,6 +46,7 @@ Condition condition_for(const Situation& situation) {
     if (!situation.running) return Condition::Off;
     if (situation.alarm_level >= kAlarmTakesLamp) return Condition::Alarm;
     if (situation.prompting) return Condition::Prompt;
+    if (situation.pairing) return Condition::Pairing;
     switch (situation.power_level) {
         case power::PowerLevel::Critical:
         case power::PowerLevel::Flat: return Condition::Critical;

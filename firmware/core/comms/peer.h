@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/comms/link_registry.h"
+#include "core/model/aircraft.h"
 #include "core/util/result.h"
 #include "core/util/span.h"
 
@@ -12,7 +13,7 @@ namespace skyblip::comms {
 // INFO: fc 11nov26 the observation at its widest, the widest peer frame (#177)
 constexpr uint16_t kPeerPayloadFloorBytes = 126;
 
-constexpr int kPeerClaimWidestBytes = 96;
+constexpr int kPeerClaimWidestBytes = 98;
 
 // INFO: fc 11nov26 schemas/link.v1.json: protocol_version 1 is the three peer frames as written
 constexpr uint32_t kPeerProtocolVersion = 1;
@@ -26,23 +27,50 @@ struct PeerClaim {
     bool fix_valid{false};
     int32_t latitude_1e7{0};
     int32_t longitude_1e7{0};
-    int32_t altitude_hae_mm{0};
     uint32_t fix_age_ms{0};
+    bool altitude_hae_valid{false};
+    int32_t altitude_hae_mm{0};
+    uint32_t altitude_hae_age_ms{0};
     bool pressure_altitude_valid{false};
     int32_t pressure_altitude_mm{0};
     uint32_t pressure_altitude_age_ms{0};
     uint32_t own_icao{0};
     uint32_t alarm_passes{0};
     uint8_t alarm_volume{0};
+    bool paired{false};
 };
 
 // INFO: fc 11nov26 0 when the frame would not fit capacity, never a frame with a key missing
 int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity);
 
+// INFO: fc 11nov26 fix_valid and fix_age_ms are the position's, the height has its own pair
+Result<PeerClaim> read_peer_claim(ConstByteSpan frame);
+
+enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
+
 struct PeerHealth {
     uint32_t boot_epoch{0};
     bool own_icao_set{false};
+    bool listening{false};
+    bool utc_valid{false};
+    bool last_sequence_valid{false};
+    uint32_t last_sequence{0};
+    ExportReference export_reference{ExportReference::None};
+    bool paired{false};
 };
+
+int write_health(const PeerHealth& health, uint8_t* out, int capacity);
+
+struct ObservationFrame {
+    uint32_t boot_epoch{0};
+    uint32_t sequence{0};
+    const char* callsign{nullptr};
+    bool callsign_heard_valid{false};
+    uint32_t callsign_heard_s{0};
+};
+
+int write_observation(const model::AircraftObservation& observation, const ObservationFrame& frame,
+                      uint8_t* out, int capacity);
 
 Result<link::Command> peer_command(ConstByteSpan frame);
 // INFO: fc 11nov26 Invalid without protocol_version, Unsupported for one this build does not speak

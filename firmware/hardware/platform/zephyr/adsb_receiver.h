@@ -46,6 +46,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         self_ = this;
         gpio_init_callback(&irq_callback_, on_irq, BIT(irq_.pin));
         irq_wakes_ = gpio_add_callback(irq_.port, &irq_callback_) == 0 && arm_irq();
+        listening_ = true;
         health_checked_us_ = clock_.microseconds();
         thread_id_ = k_thread_create(
             &thread_, stack_, K_THREAD_STACK_SIZEOF(stack_), entry, this, nullptr, nullptr,
@@ -79,11 +80,14 @@ class AdsbReceiver : public ports::AdsbReceiver {
 
     bool parked() const override { return parked_; }
 
+    bool listening() const override { return listening_; }
+
     // INFO: fc 11nov26 GPIO only: a thread aborted inside a transfer keeps the SPI lock, so no SPI
     // follows
     void abandon() override {
         if (parked()) return;
         if (thread_id_ != nullptr && !stopped_) k_thread_abort(thread_id_);
+        listening_ = false;
         (void)gpio_pin_interrupt_configure_dt(&irq_, GPIO_INT_DISABLE);
         radio_.hold_in_reset();
         parked_ = true;
@@ -109,6 +113,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
             drain();
             health();
             publish();
+            listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
         }
     }
 
@@ -154,6 +159,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     // abandon()
     void park() {
         (void)gpio_pin_interrupt_configure_dt(&irq_, GPIO_INT_DISABLE);
+        listening_ = false;
         parked_ = radio_.sleep() == Status::Ok;
         stopped_ = true;
     }
@@ -171,6 +177,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
     volatile bool sleep_requested_{false};
     volatile bool parked_{false};
     volatile bool stopped_{false};
+    volatile bool listening_{false};
     struct k_thread thread_{};
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);

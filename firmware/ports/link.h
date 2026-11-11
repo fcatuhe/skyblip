@@ -2,6 +2,7 @@
 #ifndef SKYBLIP_PORTS_LINK_H
 #define SKYBLIP_PORTS_LINK_H
 
+#include "core/events/central.h"
 #include "core/events/link.h"
 #include "core/util/result.h"
 #include "core/util/span.h"
@@ -54,6 +55,12 @@ class Link {
 
     // INFO: fc 11nov26 keeps one connection for the paired peer, Full while phones hold them all
     virtual Status reserve_peer_connection(bool reserved) = 0;
+
+    // INFO: fc 11nov26 Bravo's side: the kept connection admits the central at that address alone
+    virtual Status reserve_peer_connection_for(const events::BluetoothAddress& central) = 0;
+
+    // INFO: fc 11nov26 the address of the central on that connection, false once it is gone
+    virtual bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const = 0;
 };
 
 }

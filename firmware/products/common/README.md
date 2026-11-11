@@ -46,7 +46,7 @@ The link names the unit by a rule the product hands it, an `identity::NameRule`,
 
 A link prompt is confirmed on the device through `comms::ConfigService`, which the product reaches as `config_link().config()`. A product service reads `pending()` and `prompt_allowed_in()`, shows the prompt, and calls `confirm()` or `cancel()`. On the Go that service is `ScreenService`, with the e-paper and the button. On Bravo it is `ButtonService`, with the lamp and the button (`../skyblip_bravo/README.md`). Both answer with `ConfirmGesture` (`confirm_gesture.h`): two presses allow, one refuses. The link itself never shows or answers a prompt.
 
-`ConfigLinkService` also publishes `state.link`: whether a central is connected, and whether a prompt stands that the flight state allows. `AlarmService` lights the lamp's prompt and connected rows from it only for a product that claims `Feature::LampShowsLink`, which Bravo does, because it has no glass to show either on. The Go's lamp is unchanged.
+`ConfigLinkService` also publishes `state.link`: whether a central is connected, and whether a prompt stands that the flight state allows. `AlarmService` lights the lamp's prompt and connected rows from it, and the pairing row from `state.link.pairing_standing`, which Bravo's peer service writes, only for a product that claims `Feature::LampShowsLink`, which Bravo does, because it has no glass to show any of them on. The Go's lamp is unchanged.
 
 `alarm_volume.h` is the volume's three steps. They are here because the shared alarm reads them, and the Go's `Settings` stores them. Their wire codes are the link registry's `alarm_volume` enum, which `test/core/test_link_mirrors.cpp` checks against the Go's `go::AlarmVolume`, the same type.
 

@@ -165,6 +165,8 @@ struct DutyState {
 struct LinkState {
     bool connected{false};
     bool prompt_standing{false};
+    // INFO: fc 11nov26 Bravo's: a Go asks to pair and a press would answer it (#192)
+    bool pairing_standing{false};
 };
 
 enum class CaptureStop : uint8_t { None, Pilot, NoSectors, NoStorage };
