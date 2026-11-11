@@ -4,4 +4,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(meshtracker_x1_platform LANGUAGES C CXX)
 
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
-target_sources(app PRIVATE src/main.cpp)
+target_sources(app PRIVATE
+  src/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../hardware/parts/drv2605/drv2605.cpp
+)
