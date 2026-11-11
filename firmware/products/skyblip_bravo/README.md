@@ -44,7 +44,7 @@ Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps A
 
 A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and two presses inside `common::ConfirmGesture::kDoublePressWindowMs` allow it. One press refuses it, and thirty seconds expire it.
 
-The gesture arms only once the lamp shows the prompt, the button is up, and it has been up for one double-press window since its last release and since the prompt arrived. A contact that began before the gesture armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release and one more press. A traffic advisory outranks the prompt on the lamp, so while one stands the gesture stays disarmed and a press dismisses the advisory.
+`common::PromptAnswer` (`../common/prompt_answer.h`) arms the gesture only once the lamp shows the prompt, the button is up, and it has been up for one double-press window since its last release and since the prompt arrived. A contact that began before the gesture armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release and one more press. A prompt replaced by another of the same kind disarms the gesture as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the gesture stays disarmed and a press dismisses the advisory.
 
 A prompt is refused only while the flight state is `Airborne`, as on the Go (`core/comms/config.h`, `prompt_allowed_in`), and a take-off cancels a standing one. A Bravo with no fix since boot is `Unknown`, not `Airborne`, so a Bravo indoors can be updated over Bluetooth.
 
