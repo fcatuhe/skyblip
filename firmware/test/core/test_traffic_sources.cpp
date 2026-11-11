@@ -1,8 +1,12 @@
 // Every system that hears an aircraft writes its flight state into one field, and the rules read
 // only that.
+#include <initializer_list>
+
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/protocol/adsb.h"
+#include "core/protocol/adsb_assembly.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/alptas.h"
@@ -13,6 +17,7 @@
 #include "core/traffic/table.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "test/support/adsb_frames.h"
 
 using namespace skyblip;
 using namespace skyblip::traffic;
@@ -111,6 +116,38 @@ model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
     return stamped(heard);
 }
 
+// INFO: fc 10nov26 the sender is a glider, which ADS-B names B1: type code 3, category 1
+model::AircraftObservation over_adsb(const model::AircraftObservation& sent) {
+    const double latitude = sent.latitude_1e7 / 1e7;
+    const double longitude = sent.longitude_1e7 / 1e7;
+    const int32_t altitude_ft = to_feet(Metres(sent.altitude_m)).value;
+    const bool parked = flight::on_ground(sent.flight_state);
+    const uint8_t capability = parked ? 4 : 5;
+    AdsbFrame frames[4] = {adsb_identification(sent.address, capability, 3, 1, "D1234")};
+    int count = 1;
+    for (bool odd : {false, true})
+        frames[count++] =
+            parked ? adsb_surface_position(sent.address, capability, latitude, longitude, odd)
+                   : adsb_airborne_position(sent.address, capability, latitude, longitude, odd,
+                                            altitude_ft, true);
+    if (!parked) frames[count++] = adsb_ground_velocity(sent.address, capability, 0, 0, 0, 0);
+
+    protocol::AdsbAssembly assembly;
+    protocol::AdsbReference reference;
+    reference.position = {kOwnLatitude1e7, kOwnLongitude1e7};
+    reference.valid = true;
+    model::AircraftObservation heard{};
+    for (int i = 0; i < count; i++) {
+        protocol::AdsbMessage message;
+        REQUIRE(adsb_hear(frames[i], message) == Status::Ok);
+        REQUIRE(assembly.fold(message, static_cast<uint32_t>(500 * i), events::Stamp{}, reference,
+                              heard));
+    }
+    REQUIRE(heard.position_valid);
+    REQUIRE(heard.aircraft_category == sent.aircraft_category);
+    return stamped(heard);
+}
+
 struct System {
     const char* name;
     model::AircraftObservation (*heard)(const model::AircraftObservation&);
@@ -120,6 +157,7 @@ constexpr System kSystems[] = {
     {"ADS-L direct", over_adsl},
     {"ADS-L uplink", over_uplink},
     {"ALP-TAS", over_alptas},
+    {"ADS-B", over_adsb},
 };
 
 bool joins_formation(const model::AircraftObservation& heard) {

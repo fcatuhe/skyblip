@@ -123,6 +123,13 @@ constexpr Knots to_knots(MillimetresPerSecond speed) {
         divide_rounded<int64_t>(static_cast<int64_t>(speed.value) * 194384, 100000000)));
 }
 constexpr Knots to_knots(QuarterMetresPerSecond speed) { return to_knots(to_mm_s(speed)); }
+// INFO: fc 10nov26 a knot is 1852 m an hour, 4630/9 mm/s, and a foot a minute 5.08 mm/s
+constexpr MillimetresPerSecond to_mm_s(Knots speed) {
+    return MillimetresPerSecond(divide_rounded(speed.value * 4630, 9));
+}
+constexpr MillimetresPerSecond to_mm_s(FeetPerMinute climb) {
+    return MillimetresPerSecond(divide_rounded(climb.value * 127, 25));
+}
 constexpr KilometresPerHour to_kmh(MillimetresPerSecond speed) {
     return KilometresPerHour(static_cast<int32_t>(
         divide_rounded<int64_t>(static_cast<int64_t>(speed.value) * 36, 10000)));

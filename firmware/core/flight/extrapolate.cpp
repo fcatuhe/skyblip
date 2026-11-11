@@ -12,9 +12,6 @@ namespace skyblip::flight {
 
 namespace {
 
-// The tree's one figure for the size of the earth, as core/protocol/nmea_out
-// carries it: 1e-7 degree of latitude is 11132 micrometres.
-constexpr int64_t kMicrometresPerE7 = 11132;
 constexpr int64_t kMicrometresPerMetre = 1000000;
 constexpr int64_t kMicrometresPerMillimetre = 1000;
 // Below this cosine a metre of easting is more than a degree of longitude and

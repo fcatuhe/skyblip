@@ -14,6 +14,8 @@ constexpr T divide_rounded(T number, T divisor) {
 }
 
 constexpr int64_t kE7PerTurn = 3600000000LL;
+// INFO: fc 10nov26 the tree's one size of the earth: 1e-7 degree of latitude is 11132 micrometres
+constexpr int64_t kMicrometresPerE7 = 11132;
 
 constexpr int32_t wrapped_longitude_1e7(int64_t longitude_1e7) {
     const int64_t half_turn = kE7PerTurn / 2;
