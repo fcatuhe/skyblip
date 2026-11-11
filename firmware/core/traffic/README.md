@@ -144,7 +144,9 @@ The gate decides admission, and it never freezes a slot. A report from an aircra
 
 **Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO).
 
-**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58, even when its `own_icao` holds the aircraft's ICAO address. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. Accepted for v1, and the site says so (#197).
+### Not accepted: an aircraft that shows twice
+
+**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58, even when its `own_icao` holds the aircraft's ICAO address. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. This is not accepted: #234 holds whether and how the Go transmits the ICAO address, and the owner reviews it before any work starts.
 
 ## Dismissal
 
