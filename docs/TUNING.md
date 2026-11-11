@@ -123,6 +123,18 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kClimbStepFpm` | 64 | feet per minute | - | DO-260A Appendix A draft, Figure A-6: a vertical rate step is 64 ft/min |
+| `kUnknownRangeM` | `INT32_MAX` | metres | - | - |
+| `kAirbornePairMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
+| `kSlowSurfacePairMaxAgeMs` | 50000 (50 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
+| `kSurfacePairMaxAgeMs` | 25000 (25 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
+| `kTrackPositionMaxAgeMs` | 120000 (2 min) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
+| `kTrackJumpWindowMs` | 30000 (30 s) | milliseconds | Window | [README](../firmware/core/protocol/README.md) argues it |
+| `kAirborneJumpCeilingM` | `6 * 1852` = 11112 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
+| `kTransitionJumpCeilingM` | `5 * 1852 / 2` = 4630 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
+| `kSurfaceJumpCeilingM` | `3 * 1852 / 4` = 1389 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
+| `kAdsbRangeCeilingM` | `180 * 1852` = 333360 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
+| `kHeightDifferenceMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
+| `kAdsbAircraftForgetMs` | 250000 (4.16667 min) | milliseconds | Forget | [README](../firmware/core/protocol/README.md) argues it |
 | `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
 | `kAltitudeOffsetM` | 320 | metres | - | - |
 | `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
@@ -301,4 +313,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-191 constants over 19 folders.
+203 constants over 19 folders.
