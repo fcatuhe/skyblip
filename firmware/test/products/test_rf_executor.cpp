@@ -55,7 +55,7 @@ struct Pass {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
-    common::TrafficService traffic_service{context, go::kFeatures};
+    common::TrafficService traffic_service{context, go::kFeatures, settings.own_icao};
 
     Status begin() {
         const Status status = rf.begin();

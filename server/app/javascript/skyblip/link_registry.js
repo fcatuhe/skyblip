@@ -114,6 +114,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "frequency_trim_e1_ppm",
           "number": 10,
           "type": "integer"
+        },
+        {
+          "name": "own_icao",
+          "number": 11,
+          "type": "unsigned"
         }
       ]
     },
@@ -180,6 +185,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "frequency_trim_e1_ppm",
           "number": 10,
           "type": "integer"
+        },
+        {
+          "name": "own_icao",
+          "number": 11,
+          "type": "unsigned"
         }
       ],
       "keys_of": "config"
@@ -247,6 +257,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "frequency_trim_e1_ppm",
           "number": 10,
           "type": "integer"
+        },
+        {
+          "name": "own_icao",
+          "number": 11,
+          "type": "unsigned"
         }
       ],
       "keys_of": "config"

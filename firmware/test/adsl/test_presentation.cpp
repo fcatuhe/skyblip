@@ -153,7 +153,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }
 
-// TODO: fc 19sep26 no ICAO entry: the identity is the chip's, and no patch moves it
+// TODO: fc 19sep26 own_icao is stored (#191), not transmitted, until the owner decides F.2.3
 TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured" *
           doctest::skip()) {
     CHECK(traffic_packet(0x3C0A11u, 5).address() == 0x3C0A11u);

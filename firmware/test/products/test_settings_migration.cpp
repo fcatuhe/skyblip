@@ -127,7 +127,66 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
-    CHECK(int(kBlobVersion) == 11);
+    CHECK(int(kBlobVersion) == 12);
+}
+
+// Until version 12 a unit held no own ICAO, so the transponder it filters is none.
+TEST_CASE("settings: a blob written by version-11 firmware comes back whole, with no own ICAO") {
+    struct V11 {
+        uint8_t version{1};
+        int16_t battery_offset_mv{0};
+        int16_t frequency_trim_e1_ppm{0};
+        bool battery_offset_manual{false};
+        uint8_t aircraft_type{1};
+        bool alarm_enabled{true};
+        AlarmVolume alarm_volume{AlarmVolume::Loud};
+        Units units{Units::Nautical};
+        uint8_t range_step{2};
+        RadarPlot plot{RadarPlot::All};
+        char callsign[10]{0};
+    };
+
+    V11 old{};
+    old.battery_offset_mv = -40;
+    old.frequency_trim_e1_ppm = 12;
+    old.battery_offset_manual = true;
+    old.aircraft_type = 4;
+    old.alarm_enabled = false;
+    old.alarm_volume = AlarmVolume::Soft;
+    old.units = Units::Metric;
+    old.range_step = 3;
+    old.plot = RadarPlot::ToScale;
+    std::memcpy(old.callsign, "F-JABC", 7);
+
+    uint8_t blob[128] = {0};
+    blob[0] = 11;
+    std::memcpy(blob + 1, &old, sizeof(V11));
+    const uint32_t crc = fec::crc32(blob, 1 + sizeof(V11));
+    for (int i = 0; i < 4; i++) blob[1 + sizeof(V11) + i] = static_cast<uint8_t>(crc >> (8 * i));
+
+    Settings out;
+    REQUIRE(from_blob(blob, 1 + sizeof(V11) + 4, out) == Status::Ok);
+    CHECK(int(out.battery_offset_mv) == -40);
+    CHECK(int(out.frequency_trim_e1_ppm) == 12);
+    CHECK(out.battery_offset_manual);
+    CHECK(int(out.aircraft_type) == 4);
+    CHECK_FALSE(out.alarm_enabled);
+    CHECK(out.alarm_volume == AlarmVolume::Soft);
+    CHECK(out.units == Units::Metric);
+    CHECK(int(out.range_step) == 3);
+    CHECK(out.plot == RadarPlot::ToScale);
+    CHECK(std::string(out.callsign) == "F-JABC");
+    CHECK(out.own_icao == kOwnIcaoUnset);
+
+    out.own_icao = 0x3C6586;
+    uint8_t rewritten[128] = {0};
+    to_blob(out, rewritten, sizeof(rewritten));
+    CHECK(int(rewritten[0]) == int(kBlobVersion));
+    CHECK(blob_size() == 1 + sizeof(V11) + 4 + 4);
+    Settings again;
+    REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
+    CHECK(again.own_icao == 0x3C6586u);
+    CHECK(std::string(again.callsign) == "F-JABC");
 }
 
 // Until version 11 the volume ran 0 to 5, and every step from 3 up drove the piezo the same.

@@ -21,19 +21,21 @@ class ActivationTest < ApplicationSystemTestCase
     assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
   end
 
-  test "the aircraft type and the callsign are saved in the same session, asked once on the glass" do
+  test "the aircraft type, the callsign and the own ICAO are saved in the same session, asked once on the glass" do
     activate
     assert_select "Aircraft type", selected: "Light aircraft"
     assert_field "Callsign", with: ""
+    assert_field "Own ICAO address", with: ""
 
     select "Glider", from: "Aircraft type"
     fill_in "Callsign", with: "f-jxyz"
+    fill_in "Own ICAO address", with: "3c6586"
     click_button "Save"
     assert_selector "li[aria-current=step][data-step=settings]"
-    assert_equal({ "aircraft_type" => 4, "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
+    assert_equal({ "aircraft_type" => 4, "callsign" => "F-JXYZ", "own_icao" => 0x3C6586 }, page.evaluate_script("fakeUnit.staged"))
 
     page.execute_script("fakeUnit.press()")
-    assert_selector "[role=status]", text: "Saved: the unit stored the aircraft type and the callsign"
+    assert_selector "[role=status]", text: "Saved: the unit stored the settings you changed"
     assert_no_field "Callsign"
     assert_equal 1, page.evaluate_script("fakeUnit.commands").count("set")
   end
@@ -41,9 +43,29 @@ class ActivationTest < ApplicationSystemTestCase
   test "skipping the settings keeps the ones the unit holds" do
     activate
     click_button "Skip"
-    assert_selector "[role=status]", text: "Settings kept: the unit keeps its current aircraft type and callsign"
+    assert_selector "[role=status]", text: "Settings kept: the unit keeps its current aircraft type, callsign and own ICAO address"
     assert_no_field "Callsign"
     assert_not_includes page.evaluate_script("fakeUnit.commands"), "set"
+  end
+
+  test "a firmware that holds no own ICAO is offered none" do
+    visit "/activate"
+    page.execute_script("delete fakeUnit.stored.own_icao")
+    activate
+    assert_field "Callsign", with: ""
+    assert_no_field "Own ICAO address"
+    fill_in "Callsign", with: "F-JXYZ"
+    click_button "Save"
+    assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeUnit.staged"))
+  end
+
+  test "an own ICAO that is not six hex digits is never sent" do
+    activate
+    fill_in "Own ICAO address", with: "3C65"
+    click_button "Save"
+    assert_nil page.evaluate_script("fakeUnit.staged")
+    assert_not_includes page.evaluate_script("fakeUnit.commands"), "set"
+    assert_selector "#activate-own-icao:invalid"
   end
 
   test "a unit that wants the ground for its settings refuses them indoors, and its first fix gives Save back" do

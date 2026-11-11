@@ -6,7 +6,7 @@ The services more than one product runs, and the vocabulary they read. Why they 
 
 - `OwnshipService` owns `state.own`: it drains `bus.gnss`, `bus.barometer` and `bus.accelerometer`, and publishes the fix, the climb, the turn, the flight state and the ground latch.
 - `PowerService` owns `state.power`: it drains `bus.battery`, reads the die temperature, and runs `core/power`'s cutoff rule.
-- `TrafficService` owns `state.traffic`: it drains `bus.rf`, decodes each burst and feeds the table and the callsigns.
+- `TrafficService` owns `state.traffic`: it drains `bus.rf`, decodes each burst and feeds the table and the callsigns. It hands the table our ADS-L address and the product's own ICAO on every pass.
 - `AlarmService` owns everything a product says out loud or shows with a light: it grades each target, then drives the buzzer, the motor and the lamp through `core/annunciation` and `core/indication`.
 - `NmeaService` is the single writer of `events::Endpoint::Nmea`: the FLARM sentences a phone's map draws, once a second.
 - `FlightLogService` writes the flights ring: a takeoff opens a session and a landing closes it. It also drains `bus.log_rx` and answers the Log endpoint for both rings.
@@ -35,7 +35,7 @@ The cell is the Go's for now. `PowerService` reads the battery through `core/pow
 
 ## Settings
 
-A product owns its settings struct, its blob and its link keys. A shared service reads the few fields it needs through a small struct the product fills at construction. `AlarmSettings` holds references to the product's alarm on/off and alarm volume, so a change from the link or the menu reaches the alarm on its next tick, as it did when the alarm read the Go's `Settings` directly. `OwnshipSettings` holds the aircraft type that own-ship stamps on `state.own`, and `PowerSettings` the battery trim in millivolts. Each struct refuses a temporary, so no reference is left dangling.
+A product owns its settings struct, its blob and its link keys. A shared service reads the few fields it needs through a small struct the product fills at construction. `AlarmSettings` holds references to the product's alarm on/off and alarm volume, so a change from the link or the menu reaches the alarm on its next tick, as it did when the alarm read the Go's `Settings` directly. `OwnshipSettings` holds the aircraft type that own-ship stamps on `state.own`, `PowerSettings` the battery trim in millivolts, and `TrafficSettings` the own ICAO the traffic table refuses, 0 while unset. Each struct refuses a temporary, so no reference is left dangling.
 
 `settings_store.h` is the seam between the config link and a product's settings. `common::SettingsStore` extends `comms::ConfigStore`, the calls that answer a phone, with the four the link needs to keep the blob: `restore_defaults()`, `blob_version()`, `adopt()` and `to_blob()`. The product owns the struct, its layout, its migrations and its link keys. The link owns when the blob is read and written: the durable-write window, the power rule, a newer layout kept for a reverted image, and the copy kept for a revert. The Go's `go::SettingsStore` fills it from `go::Settings`. The link holds a blob in a buffer of `ConfigLinkService::kBlobBytes`, 64 bytes. A store returns 0 from `to_blob()` when its blob is wider than the buffer it is handed, and the link counts that, or any length past its buffer, as a failed write rather than writing it.
 

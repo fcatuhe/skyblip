@@ -48,6 +48,8 @@ constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 // INFO: fc 12sep26 ADS-L G.1.3's light aircraft, what a device says until a pilot says otherwise
 constexpr uint8_t kAircraftTypeLight = 1;
 
+constexpr uint32_t kOwnIcaoUnset = 0;
+
 struct Settings {
     uint8_t version{kCurrentVersion};
     // The per-unit battery trim, core/power/battery.h's kCalibrationCeilingMv
@@ -74,13 +76,15 @@ struct Settings {
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
     char callsign[kCallsignBytes]{0};
+    // INFO: fc 11nov26 stored whole, so an F.2.3 table-5 transmitter can read it unchanged
+    uint32_t own_icao{kOwnIcaoUnset};
 
     // The companion-link contract, which the config frame of schemas/link.v1.json
     // describes. It moves when a key changes meaning, not when the flash layout does.
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 11;
+constexpr uint8_t kBlobVersion = 12;
 
 Settings defaults();
 

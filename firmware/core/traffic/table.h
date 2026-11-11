@@ -47,7 +47,8 @@ class TrafficTable {
         own_address_ = address & settings::kAddressMask;
     }
 
-    void set_own_icao(uint32_t address) { own_icao_ = address & settings::kAddressMask; }
+    // INFO: fc 11nov26 a new address releases its slot even under an alarm: that alarm was on us
+    void set_own_icao(uint32_t address);
 
     // Where own-ship is, for the range gate below. This is the table's door and
     // three paths come through it - a direct ADS-L frame, an ALP-TAS frame and up

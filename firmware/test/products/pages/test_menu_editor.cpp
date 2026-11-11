@@ -170,13 +170,106 @@ TEST_CASE("menu editor: a field nobody finished stores nothing") {
     CHECK(std::string(bench.values.settings.callsign) == "F-JABC");
 }
 
+namespace {
+
+void type(Bench& bench, const char* wanted) {
+    for (int at = 0; wanted[at] != 0; at++) {
+        for (int i = 0; i < 40 && bench.editor.text()[at] != wanted[at]; i++) bench.move();
+        REQUIRE(bench.editor.text()[at] == wanted[at]);
+        if (wanted[at + 1] != 0) REQUIRE(bench.change() == MenuAction::Moved);
+    }
+}
+
+}  // namespace
+
+TEST_CASE("menu editor: the own ICAO is typed in hex, six digits, and stored on the last") {
+    Bench bench;
+    bench.focus_on(MenuRow::OwnIcao);
+    REQUIRE(bench.change() == MenuAction::Moved);
+    REQUIRE(bench.editor.editing());
+    CHECK(bench.editor.field() == MenuRow::OwnIcao);
+    CHECK(std::string(bench.editor.text()) == "      ");
+
+    type(bench, "3C6586");
+    CHECK(bench.editor.cursor() == kOwnIcaoCharacters - 1);
+    CHECK(bench.change() == MenuAction::Changed);
+    CHECK_FALSE(bench.editor.editing());
+    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+    CHECK(bench.editor.focus() == MenuRow::OwnIcao);
+
+    // Opened again, it shows what is stored.
+    REQUIRE(bench.change() == MenuAction::Moved);
+    CHECK(std::string(bench.editor.text()) == "3C6586");
+}
+
+// Five digits and a blank are no address, so the field stores nothing rather than guess.
+TEST_CASE("menu editor: an own ICAO with a digit left blank stores nothing") {
+    Bench bench;
+    bench.values.settings.own_icao = 0x3C6586;
+    bench.focus_on(MenuRow::OwnIcao);
+    REQUIRE(bench.change() == MenuAction::Moved);
+    for (int at = 0; at < kOwnIcaoCharacters - 1; at++)
+        REQUIRE(bench.change() == MenuAction::Moved);
+    for (int i = 0; i < 40 && bench.editor.text()[kOwnIcaoCharacters - 1] != ' '; i++) bench.move();
+    REQUIRE(std::string(bench.editor.text()) == "3C658 ");
+
+    CHECK(bench.change() == MenuAction::Moved);
+    CHECK_FALSE(bench.editor.editing());
+    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+}
+
+TEST_CASE("menu editor: clearing the own ICAO is asked again: the button clears, the pad keeps") {
+    Bench bench;
+    bench.values.settings.own_icao = 0x3C6586;
+    bench.focus_on(MenuRow::OwnIcao);
+
+    for (const bool confirm : {false, true}) {
+        CAPTURE(confirm);
+        REQUIRE(bench.change() == MenuAction::Moved);
+        type(bench, " ");
+        CHECK(bench.change() == MenuAction::Moved);
+        REQUIRE(bench.editor.clearing());
+        CHECK(std::string(bench.editor.text()) == "3C6586");
+        CHECK(bench.values.settings.own_icao == 0x3C6586u);
+
+        if (confirm) {
+            CHECK(bench.change() == MenuAction::Changed);
+            CHECK(bench.values.settings.own_icao == kOwnIcaoUnset);
+        } else {
+            CHECK(bench.move() == MenuAction::Moved);
+            CHECK(bench.values.settings.own_icao == 0x3C6586u);
+        }
+        CHECK_FALSE(bench.editor.clearing());
+        CHECK_FALSE(bench.editor.editing());
+        CHECK(bench.editor.focus() == MenuRow::OwnIcao);
+    }
+}
+
+TEST_CASE("menu editor: a clear nobody confirms, or of no address, changes nothing") {
+    Bench bench;
+    bench.focus_on(MenuRow::OwnIcao);
+    REQUIRE(bench.change() == MenuAction::Moved);
+    CHECK(bench.change() == MenuAction::Moved);
+    CHECK_FALSE(bench.editor.clearing());
+    CHECK_FALSE(bench.editor.editing());
+
+    bench.values.settings.own_icao = 0x3C6586;
+    REQUIRE(bench.change() == MenuAction::Moved);
+    type(bench, " ");
+    REQUIRE(bench.change() == MenuAction::Moved);
+    REQUIRE(bench.editor.clearing());
+    CHECK(bench.run(MenuEditor::kIdleReturnHoldMs + 100) == MenuAction::Leave);
+    CHECK_FALSE(bench.editor.clearing());
+    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+}
+
 TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu") {
     Bench bench;
     for (int i = 1; i < bench.rows(); i++) {
         CHECK(bench.move() == MenuAction::Moved);
         CHECK(bench.editor.focus() == menu_for(Page::Radar).rows[i]);
     }
-    REQUIRE(bench.editor.focus() == MenuRow::Volume);
+    REQUIRE(bench.editor.focus() == MenuRow::OwnIcao);
 
     // One more tap leaves: a thumb that only knows the pad cannot be trapped here.
     CHECK(bench.move() == MenuAction::Leave);

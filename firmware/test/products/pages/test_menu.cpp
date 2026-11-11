@@ -18,6 +18,8 @@ namespace {
 using ui::kCellWidth;
 using ui::kCharacterHeight;
 
+constexpr int kOwnIcaoTextX = (Glass::kWidth - kOwnIcaoCharacters * kCallsignCellWidth) / 2;
+
 bool hint_reads(const Glass& canvas, int y, const char* text, int scale) {
     return reads_at(canvas, centred_x(text, scale), y, text, scale);
 }
@@ -99,16 +101,17 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
-// Eight rows and seven lines: the rows slide up under the focus, one line at a time.
+// Nine rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
     MenuValues values = default_menu_values();
     values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 1);
+    REQUIRE(menu.row_count == kMenuLines + 2);
 
     const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
     CHECK(line_of(top, MenuRow::Light) == 0);
     CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
+    CHECK(line_of(top, MenuRow::OwnIcao) == kMenuLines + 1);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
     CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 
@@ -119,6 +122,31 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
     CHECK(line_of(slid, MenuRow::AircraftType) == 0);
     CHECK(reads_at(slid.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
+
+    const Drawn last = page_of(Page::Radar, values, MenuRow::OwnIcao);
+    CHECK(line_of(last, MenuRow::OwnIcao) == kMenuLines - 1);
+    CHECK(row_label_reads(last, MenuRow::OwnIcao, true));
+    CHECK(row_value_reads(last, MenuRow::OwnIcao, "NONE", true));
+    CHECK(row_value_reads(last, MenuRow::Volume, "SOFT", false));
+    CHECK(line_of(last, MenuRow::Callsign) == 0);
+}
+
+// The address a controller reads off the aircraft's papers, six hex digits as they are written.
+TEST_CASE("radar menu: the own ICAO row shows the six hex digits stored, or NONE") {
+    MenuValues values = default_menu_values();
+    char value[kMenuValueBytes];
+    menu_row_value(value, MenuRow::OwnIcao, values);
+    CHECK(std::string(value) == "NONE");
+    values.settings.own_icao = 0x3C6586;
+    menu_row_value(value, MenuRow::OwnIcao, values);
+    CHECK(std::string(value) == "3C6586");
+    values.settings.own_icao = 0x00A0F1;
+    menu_row_value(value, MenuRow::OwnIcao, values);
+    CHECK(std::string(value) == "00A0F1");
+
+    const Drawn drawn = page_of(Page::Radar, values, MenuRow::OwnIcao);
+    CHECK(row_label_reads(drawn, MenuRow::OwnIcao, true));
+    CHECK(row_value_reads(drawn, MenuRow::OwnIcao, "00A0F1", true));
 }
 
 TEST_CASE("menu page: no label and value a row can hold meet at double height") {
@@ -237,6 +265,61 @@ TEST_CASE("callsign page: the foot says the button clears when the bar is on a b
     draw_callsign(canvas, field);
     CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
     CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+}
+
+// The callsign's field, typing six hex digits: a transponder address is written that way.
+TEST_CASE("own ICAO page: six hex digits stand centred at the callsign's size, under its title") {
+    CallsignSnapshot field;
+    field.title = menu_row_label(MenuRow::OwnIcao);
+    field.text = "3C6586";
+    field.cursor = 5;
+
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "OWN ICAO", kMenuScale));
+    CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
+    CHECK(kOwnIcaoTextX - (Glass::kWidth - kOwnIcaoTextX - 6 * kCallsignCellWidth) <= 1);
+
+    const int at = kOwnIcaoTextX + field.cursor * kCallsignCellWidth;
+    CHECK(canvas.get_pixel(at, kCallsignCursorY));
+    CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
+    CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+}
+
+// Without the own ICAO the aircraft's own transponder can alarm, so a clear is asked twice.
+TEST_CASE("own ICAO page: a clear shows the address it throws away and what that costs") {
+    ClearSnapshot clear;
+    clear.title = menu_row_label(MenuRow::OwnIcao);
+    clear.text = "3C6586";
+
+    Glass canvas;
+    draw_clear(canvas, clear);
+    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "OWN ICAO", kMenuScale));
+    CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
+    CHECK(hint_reads(canvas, kCallsignPadHintY, kClearKeepsHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
+    CHECK(hint_reads(canvas, kCallsignHelpY, kOwnIcaoClearHelpText, 1));
+    CHECK(centred_x(kOwnIcaoClearHelpText, 1) >= 0);
+}
+
+TEST_CASE("menu page: the own ICAO ring is blank, 0 to 9, A to F, and back") {
+    CHECK(next_hex_character(' ') == '0');
+    CHECK(next_hex_character('0') == '1');
+    CHECK(next_hex_character('9') == 'A');
+    CHECK(next_hex_character('A') == 'B');
+    CHECK(next_hex_character('F') == ' ');
+}
+
+// 000000 is no address, and 0 is what the setting holds while it is unset.
+TEST_CASE("menu page: six typed hex digits are an address, and a blank or 000000 is none") {
+    CHECK(own_icao_typed("3C6586") == 0x3C6586u);
+    CHECK(own_icao_typed("FFFFFF") == 0xFFFFFFu);
+    CHECK(own_icao_typed("00A0F1") == 0x00A0F1u);
+    CHECK(own_icao_typed("3C65 6") == kOwnIcaoUnset);
+    CHECK(own_icao_typed("      ") == kOwnIcaoUnset);
+    CHECK(own_icao_typed("000000") == kOwnIcaoUnset);
 }
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.

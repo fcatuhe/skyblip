@@ -37,8 +37,16 @@ void ScreenService::draw_prompt() {
 }
 
 void ScreenService::draw_menu_page() {
+    if (editor_.clearing()) {
+        ClearSnapshot clear;
+        clear.title = menu_row_label(editor_.field());
+        clear.text = editor_.text();
+        draw_clear(framebuffer_, clear);
+        return;
+    }
     if (editor_.editing()) {
         CallsignSnapshot field;
+        field.title = menu_row_label(editor_.field());
         field.text = editor_.text();
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);

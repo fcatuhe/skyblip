@@ -30,8 +30,7 @@ void TrafficService::tick(uint32_t now_ms) {
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
     context_.state.traffic.set_own_address(settings::kAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
-    // TODO: fc 10nov26 unset until #191 gives the Go an own-ICAO setting, which this then passes
-    context_.state.traffic.set_own_icao(0);
+    context_.state.traffic.set_own_icao(settings_.own_icao);
     events::RfEvent event{};
     while (context_.bus.rf.pop(event)) {
         switch (event.type) {
