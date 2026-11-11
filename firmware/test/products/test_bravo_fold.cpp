@@ -105,6 +105,27 @@ TEST_CASE("bravo fold: a frame from a Bravo whose link is down is never folded")
     CHECK(flight.tango.service().refused() == 0);
 }
 
+// #192: a paired Go reads CONNECTED, and folds, only once Bravo's health says it holds the pin.
+TEST_CASE("bravo fold: a reconnected Go folds nothing before Bravo's health says it is paired") {
+    Flight flight;
+    flight.fly(2);
+    flight.tango.air.set_flow(PairedLink::Direction::ToCentral, PairedLink::Flow::Stalled);
+    flight.tango.air.drop();
+    flight.fly(2);
+    REQUIRE(flight.go().platform.central().up());
+    REQUIRE(flight.tango.service().link() != go::BravoLink::Up);
+    flight.go().product.bus().peer_rx.push(
+        peer_frame("{\"command\":\"observation\",\"boot_epoch\":1,\"sequence\":0," +
+                   level_target(4, 0, 800) + "}"));
+    flight.fly(1);
+    CHECK(flight.state().traffic.count() == 0);
+    CHECK(flight.tango.service().refused() == 0);
+
+    flight.tango.air.set_flow(PairedLink::Flow::Flowing);
+    flight.fly(1);
+    CHECK(flight.tango.service().link() == go::BravoLink::Up);
+}
+
 TEST_CASE("bravo fold: an observation the reader refuses is counted, and folds nothing") {
     Flight flight({{edge_ms_of(2) + 300, "\"address\":" + std::to_string(kTarget) +
                                              ",\"at_s\":" + std::to_string(utc_of(2)) +

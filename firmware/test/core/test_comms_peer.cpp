@@ -336,18 +336,36 @@ TEST_CASE("peer frames: an observation carries each valid field with its age, an
           std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
 }
 
+namespace {
+
+Status health_without(uint32_t missing_key) {
+    uint8_t frame[64];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Health);
+    writer.add_unsigned(link::health_key::kProtocolVersion, 1);
+    writer.add_unsigned(link::health_key::kBootEpoch, 9);
+    if (missing_key != link::health_key::kListening)
+        writer.add_boolean(link::health_key::kListening, true);
+    if (missing_key != link::health_key::kUtcValid)
+        writer.add_boolean(link::health_key::kUtcValid, true);
+    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAlarmGranted, false);
+    writer.add_unsigned(link::health_key::kExportReference, 2);
+    writer.add_boolean(link::health_key::kPaired, true);
+    const int bytes = writer.finish();
+    REQUIRE(bytes > 0);
+    return comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes))).status();
+}
+
+}  // namespace
+
 TEST_CASE("peer frames: a health frame that does not say whether Bravo listens is refused") {
-    uint8_t deaf[64];
-    cbor::Writer without_listening(deaf, sizeof(deaf));
-    without_listening.add_code(link::kCommandKey, link::Command::Health);
-    without_listening.add_unsigned(link::health_key::kProtocolVersion, 1);
-    without_listening.add_unsigned(link::health_key::kBootEpoch, 9);
-    without_listening.add_boolean(link::health_key::kUtcValid, true);
-    without_listening.add_boolean(link::health_key::kOwnIcaoSet, false);
-    const int deaf_bytes = without_listening.finish();
-    REQUIRE(deaf_bytes > 0);
-    CHECK(comms::read_health(ConstByteSpan(deaf, static_cast<size_t>(deaf_bytes))).status() ==
-          Status::Invalid);
+    CHECK(health_without(0) == Status::Ok);
+    CHECK(health_without(link::health_key::kListening) == Status::Invalid);
+}
+
+TEST_CASE("peer frames: a health frame that does not say whether Bravo holds UTC is refused") {
+    CHECK(health_without(link::health_key::kUtcValid) == Status::Invalid);
 }
 
 // The Go reads Bravo's observation field by field, each with the age it was sent with (#193).

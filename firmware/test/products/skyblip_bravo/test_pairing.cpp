@@ -4,6 +4,7 @@
 #include <string>
 
 #include "doctest/doctest.h"
+#include "test/support/adsb_frames.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/log_transfer.h"
 #include "test/support/paired_link.h"
@@ -343,6 +344,43 @@ TEST_CASE("bravo pairing: a press that began before the gesture armed never pair
     asked.run_for(100);
     CHECK_FALSE(asked.rig.product.peer().requested());
     CHECK(asked.offered());
+}
+
+// Bravo's writer into the Go's reader: no case ran the two apart from #193's stub.
+TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's time and callsign") {
+    constexpr uint32_t kAircraft = 0x3C6586;
+    // INFO: fc 11nov26 the Go's barometer model reads sea level, and the gate holds Bravo to it
+    constexpr int32_t kNearGoBarometerFt = 100;
+    Tango tango;
+    tango.pair_and_store();
+    const auto second = [&tango] {
+        tango.go.push_timed_fix(0, BravoRig::kOwnAltitudeMm / 1000);
+        tango.bravo.push_fix();
+        tango.run_for(950);
+        tango.go.utc_offset_s++;
+        tango.bravo.utc_offset_s++;
+    };
+    for (int i = 0; i < 3; i++) second();
+    tango.bravo.hear_aircraft(kAircraft, 2000, kNearGoBarometerFt);
+    tango.bravo.hear(adsb_identification(kAircraft, 5, 4, 1, "AFR123"));
+    second();
+    second();
+
+    const bus::State& bravo = tango.bravo.state();
+    const int heard = bravo.traffic.find(settings::kIcaoAddressMappingTable, kAircraft);
+    REQUIRE(heard >= 0);
+    const bus::State& go = tango.go.state();
+    const int folded = go.traffic.find(settings::kIcaoAddressMappingTable, kAircraft);
+    REQUIRE(folded >= 0);
+    const model::AircraftObservation& sent = bravo.traffic.at(heard)->observation;
+    const model::AircraftObservation& read = go.traffic.at(folded)->observation;
+    CHECK(read.source == model::Source::Adsb);
+    CHECK(read.received.at_s == sent.received.at_s);
+    CHECK(read.latitude_1e7 == sent.latitude_1e7);
+    CHECK(read.pressure_altitude_ft == sent.pressure_altitude_ft);
+    const char* callsign = go.callsigns.find(settings::kIcaoAddressMappingTable, kAircraft);
+    REQUIRE(callsign != nullptr);
+    CHECK(std::string(callsign) == "AFR123");
 }
 
 // #179 hands the alarm over only once both sides hold the pin.
