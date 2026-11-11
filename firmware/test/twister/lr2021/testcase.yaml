@@ -1,0 +1,7 @@
+tests:
+  parts.lr2021.adsb_receiver:
+    tags: platform parts
+    # Built, never run: no X1 has run skyBlip yet, and the board wires the receiver in #176.
+    build_only: true
+    platform_allow:
+      - meshtracker_x1

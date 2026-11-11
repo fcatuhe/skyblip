@@ -112,9 +112,9 @@ inline constexpr Value kPowerLevelValues[] = {
 inline constexpr Enumeration kPowerLevel{kPowerLevelValues, 5};
 
 inline constexpr Value kGroupValues[] = {
-    {"system", 0}, {"radio", 1}, {"traffic", 2}, {"gnss", 3}, {"power", 4},
+    {"system", 0}, {"radio", 1}, {"traffic", 2}, {"gnss", 3}, {"power", 4}, {"adsb", 5},
 };
-inline constexpr Enumeration kGroup{kGroupValues, 5};
+inline constexpr Enumeration kGroup{kGroupValues, 6};
 
 inline constexpr Value kResetValues[] = {
     {"unknown", 0},  {"power_on", 1}, {"pin", 2},          {"brownout", 3},       {"software", 4},
@@ -342,6 +342,15 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"die_temperature_c", 48, Type::Integer, nullptr, 0, false},
     {"charge", 49, Type::Enum, &kCharge, 0, false},
     {"charge_warnings", 50, Type::Unsigned, nullptr, 0, false},
+    {"frames", 51, Type::Unsigned, nullptr, 0, false},
+    {"frame_rate_hz", 52, Type::Unsigned, nullptr, 0, false},
+    {"invalid", 53, Type::Unsigned, nullptr, 0, false},
+    {"dropped", 54, Type::Unsigned, nullptr, 0, false},
+    {"rearms", 55, Type::Unsigned, nullptr, 0, false},
+    {"resets", 56, Type::Unsigned, nullptr, 0, false},
+    {"command_errors", 57, Type::Unsigned, nullptr, 0, false},
+    {"errors", 58, Type::Unsigned, nullptr, 0, false},
+    {"rssi_dbm", 59, Type::UnsignedArray, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -532,8 +541,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 8},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 51},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 51},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 60},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 60},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

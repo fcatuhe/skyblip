@@ -67,7 +67,8 @@ constexpr bool on_the_wire(comms::DiagnosticsReport::Group value) {
         case comms::DiagnosticsReport::Group::Radio:
         case comms::DiagnosticsReport::Group::Traffic:
         case comms::DiagnosticsReport::Group::Gnss:
-        case comms::DiagnosticsReport::Group::Power: return true;
+        case comms::DiagnosticsReport::Group::Power:
+        case comms::DiagnosticsReport::Group::Adsb: return true;
     }
     return false;
 }
@@ -211,6 +212,7 @@ static_assert(code(comms::DiagnosticsReport::Group::Radio) == 1, "group radio");
 static_assert(code(comms::DiagnosticsReport::Group::Traffic) == 2, "group traffic");
 static_assert(code(comms::DiagnosticsReport::Group::Gnss) == 3, "group gnss");
 static_assert(code(comms::DiagnosticsReport::Group::Power) == 4, "group power");
+static_assert(code(comms::DiagnosticsReport::Group::Adsb) == 5, "group adsb");
 static_assert(on_the_wire(comms::DiagnosticsReport::Group::System), "group");
 
 static_assert(code(power::ResetReason::Unknown) == 0, "reset unknown");

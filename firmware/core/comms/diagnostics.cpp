@@ -1,6 +1,7 @@
 #include "core/comms/diagnostics.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "core/util/cbor.h"
 
@@ -71,6 +72,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     const bool traffic = only == nullptr || *only == Group::Traffic;
     const bool gnss = only == nullptr || *only == Group::Gnss;
     const bool power = only == nullptr || *only == Group::Power;
+    const bool adsb = only == nullptr || *only == Group::Adsb;
 
     if (system) {
         add(Group::System, "uptime_s", link::diagnostics_key::kUptimeS, Kind::Unsigned,
@@ -196,6 +198,25 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Power, "charge_warnings", link::diagnostics_key::kChargeWarnings, Kind::Unsigned,
             diagnostics.charge_warnings);
     }
+
+    if (adsb && diagnostics.adsb_fitted) {
+        const ports::AdsbReceiverStatistics& receiver = diagnostics.adsb;
+        add(Group::Adsb, "frames", link::diagnostics_key::kFrames, Kind::Unsigned, receiver.frames);
+        add(Group::Adsb, "frame_rate_hz", link::diagnostics_key::kFrameRateHz, Kind::Unsigned,
+            receiver.frame_rate_hz);
+        add(Group::Adsb, "invalid", link::diagnostics_key::kInvalid, Kind::Unsigned,
+            diagnostics.adsb_invalid);
+        add(Group::Adsb, "dropped", link::diagnostics_key::kDropped, Kind::Unsigned,
+            receiver.dropped);
+        add(Group::Adsb, "rearms", link::diagnostics_key::kRearms, Kind::Unsigned, receiver.rearms);
+        add(Group::Adsb, "resets", link::diagnostics_key::kResets, Kind::Unsigned, receiver.resets);
+        add(Group::Adsb, "command_errors", link::diagnostics_key::kCommandErrors, Kind::Unsigned,
+            receiver.command_errors);
+        add(Group::Adsb, "errors", link::diagnostics_key::kErrors, Kind::Unsigned,
+            receiver.device_errors);
+        std::copy(std::begin(receiver.rssi), std::end(receiver.rssi), std::begin(adsb_rssi_));
+        add(Group::Adsb, "rssi_dbm", link::diagnostics_key::kRssiDbm, Kind::UnsignedArray, 0);
+    }
 }
 
 void DiagnosticsReport::add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
@@ -212,11 +233,12 @@ const char* DiagnosticsReport::group_name(Group group) {
         case Group::Traffic: return "traffic";
         case Group::Gnss: return "gnss";
         case Group::Power: return "power";
+        case Group::Adsb: return "adsb";
     }
     return "?";
 }
 
-int DiagnosticsReport::field_bytes(const Field& field) {
+int DiagnosticsReport::field_bytes(const Field& field) const {
     switch (field.kind) {
         case Kind::Unsigned:
         case Kind::Code:
@@ -224,6 +246,8 @@ int DiagnosticsReport::field_bytes(const Field& field) {
         case Kind::Integer: return cbor::integer_entry_bytes(field.key, field.value);
         case Kind::Boolean: return cbor::boolean_entry_bytes(field.key);
         case Kind::Text: return cbor::text_entry_bytes(field.key, field.text);
+        case Kind::UnsignedArray:
+            return cbor::unsigned_array_entry_bytes(field.key, adsb_rssi_, kAdsbRssiCount);
     }
     return 0;
 }
@@ -256,6 +280,9 @@ int DiagnosticsReport::line(int index, char* out, int capacity) const {
             case Kind::Boolean: need += cbor::text_bytes(boolean_text(field.value != 0)); break;
             case Kind::Text:
             case Kind::Code: need += cbor::text_bytes(field.text) + 2; break;
+            case Kind::UnsignedArray:
+                for (const uint32_t count : adsb_rssi_) need += number_bytes(count) + 1;
+                break;
         }
         end++;
     }
@@ -278,6 +305,12 @@ int DiagnosticsReport::line(int index, char* out, int capacity) const {
                 out[written++] = '"';
                 written += write_text(out + written, field.text);
                 out[written++] = '"';
+                break;
+            case Kind::UnsignedArray:
+                for (int value = 0; value < kAdsbRssiCount; value++) {
+                    if (value > 0) out[written++] = ',';
+                    written += write_number(out + written, adsb_rssi_[value]);
+                }
                 break;
         }
     }
@@ -334,6 +367,9 @@ int DiagnosticsReport::next_frame(int payload_bytes, uint8_t* out, int capacity)
             case Kind::Integer: writer.add_integer(field.key, field.value); break;
             case Kind::Boolean: writer.add_boolean(field.key, field.value != 0); break;
             case Kind::Text: writer.add_text(field.key, field.text); break;
+            case Kind::UnsignedArray:
+                writer.add_unsigned_array(field.key, adsb_rssi_, kAdsbRssiCount);
+                break;
         }
     }
     const int bytes = writer.finish();

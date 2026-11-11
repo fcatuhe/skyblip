@@ -4,6 +4,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include "core/events/adsb.h"
 #include "core/events/input.h"
 #include "core/events/link.h"
 #include "core/events/rf.h"
@@ -47,6 +48,9 @@ class Queue {
     std::atomic<int> tail_{0};
     std::atomic<uint32_t> dropped_{0};
 };
+
+// INFO: fc 11nov26 only Bravo hears 1090 MHz, so the queue is a type here and #176 places it
+using AdsbQueue = Queue<events::AdsbFrame, events::kAdsbQueueFrames>;
 
 struct Bus {
     Queue<gnss::GnssSolution, 2> gnss;
