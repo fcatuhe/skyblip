@@ -16,7 +16,10 @@ namespace {
 using Board = boards::TEchoPlus<platform::host::Platform>;
 
 struct Unit {
-    Unit() { REQUIRE(board.begin() == Status::Ok); }
+    Unit() {
+        board.probe();
+        REQUIRE(board.begin() == Status::Ok);
+    }
 
     std::vector<events::BatterySample> passes(int count) {
         std::vector<events::BatterySample> published;

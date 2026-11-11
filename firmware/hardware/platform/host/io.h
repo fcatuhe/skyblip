@@ -100,12 +100,6 @@ class I2cBus : public io::I2c {
 
 // The virtual wiring. A board hands over its pin map once. From then on a pin
 // number reaches the part model that owns it, exactly as a trace would.
-//
-// The haptic driver's enable line is deliberately not in the map: the modelled
-// DRV2605 answers its address whether or not the pin is driven, which is what
-// the real part does - SoftRF finds 0x5A at platform/nRF52.cpp:1158, long before
-// it drives that pin at 2130. The pin is exercised against the model directly in
-// the part's own test, where the model stands in for the trace as well as the bus.
 class Gpio : public io::Gpio {
    public:
     explicit Gpio(Chips& chips) : chips_(chips) {}
@@ -121,6 +115,7 @@ class Gpio : public io::Gpio {
                 case io::PinFunction::EpdReset: chips_.epd.reset_pin = role.pin; break;
                 case io::PinFunction::EpdBusy: chips_.epd.busy_pin = role.pin; break;
                 case io::PinFunction::EpdBacklight: chips_.epd.backlight_pin = role.pin; break;
+                case io::PinFunction::HapticEnable: chips_.haptic.enable_pin = role.pin; break;
             }
             owner_[i] = role;
             count_ = i + 1;
@@ -161,6 +156,7 @@ class Gpio : public io::Gpio {
                 case io::PinFunction::EpdReset:
                 case io::PinFunction::EpdBusy:
                 case io::PinFunction::EpdBacklight: return &chips_.epd;
+                case io::PinFunction::HapticEnable: return &chips_.haptic;
             }
         }
         return nullptr;

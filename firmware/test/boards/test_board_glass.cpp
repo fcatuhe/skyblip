@@ -11,6 +11,7 @@ TEST_CASE("board: the host glass is unturned, so the simulator shows the framebu
     platform::host::Platform platform;
     bus::Bus bus;
     boards::TEchoPlus<platform::host::Platform> board{platform, bus};
+    board.probe();
     REQUIRE(board.begin() == Status::Ok);
 
     parts::Ssd1681Glass canvas;

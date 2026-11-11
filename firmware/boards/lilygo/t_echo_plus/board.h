@@ -5,6 +5,7 @@
 #include "boards/lilygo/t_echo_plus/i2c_scan.h"
 #include "boards/lilygo/t_echo_plus/imu_mount.h"
 #include "boards/lilygo/t_echo_plus/pins.h"
+#include "boards/lilygo/t_echo_plus/probed_roles.h"
 #include "core/bus/bus.h"
 #include "core/bus/state.h"
 #include "core/events/input.h"
@@ -62,13 +63,11 @@ class TEchoPlus {
           rf_(radio_, platform.clock(), bus.rf),
           capabilities_(platform.capabilities()) {
         platform_.wire(t_echo_plus::kPinMap);
-        // The radio is the one part on this board with no bus enumeration of its
-        // own, so presence is a register round-trip. Asserting it instead makes a
-        // dead MISO look like a healthy radio that never hears anything. It
-        // belongs here rather than in begin() because capabilities() has to be
-        // final before roles() is taken, and the round-trip needs nothing the
-        // rails have not already provided: DS 13.1.1 puts the part in STDBY_RC on
-        // reset, and a register write and read back run on that internal clock.
+    }
+
+    // INFO: fc 11nov26 not in the constructor: the product is a global, built before the watchdog
+    void probe() {
+        // INFO: fc 11nov26 a register read back proves the radio: asserting it hides a dead MISO
         if (radio_.probe() == Status::Ok) capabilities_ = capabilities_ | ports::Capability::Rf;
 
         take_bus_inventory();
@@ -76,6 +75,8 @@ class TEchoPlus {
         establish_haptic();
         establish_buzzer();
         establish_inclinometer();
+        establish_barometer();
+        prove_roles();
     }
 
     // Probing is done: capabilities() is already known. This is bring-up, and a part that
@@ -110,8 +111,7 @@ class TEchoPlus {
     ports::Roles roles() {
         return ports::Roles{
             platform_.clock(),
-            ports::has(capabilities_, ports::Capability::Rf) ? static_cast<ports::Rf&>(rf_)
-                                                             : null_.rf,
+            probed_rf_,
             ports::has(capabilities_, ports::Capability::Link)
                 ? static_cast<ports::Link&>(platform_.link())
                 : null_.link,
@@ -124,12 +124,7 @@ class TEchoPlus {
             ports::has(capabilities_, ports::Capability::Storage)
                 ? static_cast<ports::FlashRegion&>(platform_.log_flash())
                 : null_.log_flash,
-            // Buzzer OR haptic: they are one role and two parts, and a board with
-            // a dead buzzer pin still owes a pilot the pulse it can make.
-            ports::has(capabilities_, ports::Capability::Buzzer) ||
-                    ports::has(capabilities_, ports::Capability::Haptic)
-                ? static_cast<ports::Annunciator&>(platform_.annunciator())
-                : null_.annunciator,
+            probed_annunciator_,
             ports::has(capabilities_, ports::Capability::Dfu)
                 ? static_cast<ports::Dfu&>(platform_.dfu())
                 : null_.dfu,
@@ -295,6 +290,15 @@ class TEchoPlus {
     static constexpr uint32_t kBarometerConversionsPerSecond =
         runtime::kBarometerPublishPeriodMs / runtime::kBarometerConversionPeriodMs;
 
+    void prove_roles() {
+        if (ports::has(capabilities_, ports::Capability::Rf)) probed_rf_.prove(rf_);
+        // Buzzer OR haptic: they are one role and two parts, and a board with
+        // a dead buzzer pin still owes a pilot the pulse it can make.
+        if (ports::has(capabilities_, ports::Capability::Buzzer) ||
+            ports::has(capabilities_, ports::Capability::Haptic))
+            probed_annunciator_.prove(platform_.annunciator());
+    }
+
     // What this board needs when a probe contradicts what the platform declared.
     ports::Capabilities without(ports::Capability bit) const {
         return ports::without(capabilities_, bit);
@@ -352,6 +356,11 @@ class TEchoPlus {
     void establish_buzzer() {
         capabilities_ = platform_.buzzer_pin_held_low() ? capabilities_ | ports::Capability::Buzzer
                                                         : without(ports::Capability::Buzzer);
+    }
+
+    void establish_barometer() {
+        capabilities_ = platform_.barometer_answers() ? capabilities_ | ports::Capability::Barometer
+                                                      : without(ports::Capability::Barometer);
     }
 
     void establish_inclinometer() {
@@ -467,6 +476,8 @@ class TEchoPlus {
     input::Contact button_{t_echo_plus::kButtonHoldMs};
     input::Contact pad_{t_echo_plus::kPadSettleMs};
     ports::NullRoles null_{};
+    t_echo_plus::ProbedRf probed_rf_{null_.rf};
+    t_echo_plus::ProbedAnnunciator probed_annunciator_{null_.annunciator};
     ports::Capabilities capabilities_;
     uint32_t last_barometer_ms_{0};
     uint32_t barometer_triggered_ms_{0};

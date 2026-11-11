@@ -25,6 +25,7 @@ TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     const ports::Inventory& inventory = board.inventory();
 
@@ -53,6 +54,7 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Haptic));
     CHECK(board.inventory().haptic == ports::HapticKind::WaveformDriver);
@@ -75,6 +77,7 @@ TEST_CASE("board: an output left on past its ceiling is cut, the motor and the b
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
     ports::Roles roles = board.roles();
     models::Drv2605& chip = platform.chips().haptic;
     bus::State state{};
@@ -99,6 +102,7 @@ TEST_CASE("board: the guard counts from turn-on: an off re-arms it, a pitch chan
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
     ports::Roles roles = board.roles();
     models::Drv2605& chip = platform.chips().haptic;
     bus::State state{};
@@ -137,6 +141,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
     platform.chips().haptic.answers = false;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Haptic));
     CHECK(board.inventory().haptic == ports::HapticKind::None);
@@ -154,6 +159,7 @@ TEST_CASE("board: the panel it identified is on the inventory by name") {
     platform.chips().epd.signature = parts::panels::kGdeh0154D67Syx2118;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     CHECK(board.display().panel() == parts::Panel::Gdeh0154D67Syx2118);
     CHECK(std::string(board.inventory().panel_name) == "D67/2118");
@@ -163,6 +169,7 @@ TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     // The default: no fingerprint taken, which is what this board will report on
     // silicon until a Plus is read on a bench.
@@ -179,6 +186,7 @@ TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer")
     platform.set_buzzer_pin_held_low(true);
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Buzzer));
 }
@@ -188,6 +196,7 @@ TEST_CASE("board: a buzzer pin that follows the pull-up is an empty pad, and the
     platform.set_buzzer_pin_held_low(false);
     bus::Bus bus;
     Board board{platform, bus};
+    board.probe();
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Buzzer));
     // The haptic is a different part on a different bus and is unaffected...
@@ -207,6 +216,7 @@ TEST_CASE("board: a barometer at LilyGO's address is the one reported") {
     platform.i2c_bus().answer(0x76, false);
     platform.i2c_bus().answer(0x77, true);
     Board board{platform, bus};
+    board.probe();
 
     CHECK(int(board.inventory().barometer_address) == 0x77);
 }
@@ -220,6 +230,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
     platform::host::Platform fitted;
     bus::Bus bus;
     Board with_a_lamp{fitted, bus};
+    with_a_lamp.probe();
     CHECK(ports::has(with_a_lamp.capabilities(), ports::Capability::Indicator));
 
     constexpr ports::Capabilities kNoLamp = static_cast<ports::Capabilities>(
@@ -228,6 +239,7 @@ TEST_CASE("board: the status lamp is a devicetree fact, and a board without one 
     platform::host::Platform bare{kNoLamp};
     bus::Bus bare_bus;
     Board without{bare, bare_bus};
+    without.probe();
     CHECK_FALSE(ports::has(without.capabilities(), ports::Capability::Indicator));
     // And it is still a flyable board: the lamp is not required for anything.
     CHECK(ports::has(without.capabilities(), ports::Capability::Rf | ports::Capability::Gnss));
