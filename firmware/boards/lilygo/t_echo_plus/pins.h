@@ -41,7 +41,7 @@ constexpr io::PinRole kPinRoles[] = {
     {io::PinFunction::RadioBusy, kRadioBusy},       {io::PinFunction::RadioReset, kRadioReset},
     {io::PinFunction::RadioDio1, kRadioDio1},       {io::PinFunction::EpdDc, kEpdDc},
     {io::PinFunction::EpdReset, kEpdReset},         {io::PinFunction::EpdBusy, kEpdBusy},
-    {io::PinFunction::EpdBacklight, kEpdBacklight},
+    {io::PinFunction::EpdBacklight, kEpdBacklight}, {io::PinFunction::HapticEnable, kHapticEnable},
 };
 
 constexpr io::PinMap kPinMap{kPinRoles, static_cast<int>(sizeof(kPinRoles) / sizeof(kPinRoles[0]))};

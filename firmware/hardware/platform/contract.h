@@ -97,6 +97,8 @@ constexpr bool fills_the_platform_contract() {
         "platform: identity() -> ports::Identity&, the unit's key provisioned before the link "
         "comes up");
 
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().barometer_answers()), bool>,
+                  "platform: barometer_answers() -> bool, the board's probe of the BME280");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().trigger_barometer()), bool>,
                   "platform: trigger_barometer() -> bool, one conversion started, never waited on");
     static_assert(

@@ -159,7 +159,7 @@ class TEchoPlus {
     bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() { return zephyr::Battery::external_power(); }
 
-    // Probe only: what silicon answered, before anything is brought up.
+    // INFO: fc 11nov26 asks no part: a global's constructor calls it before the watchdog
     ports::Capabilities capabilities() const {
         ports::Capabilities found =
             ports::Capability::Storage | ports::Capability::Dfu | ports::Capability::Link;
@@ -167,7 +167,6 @@ class TEchoPlus {
             found |= ports::Capability::Contacts;
         if (device_is_ready(epd_spi_device_)) found |= ports::Capability::Display;
         if (device_is_ready(gnss_uart_device_)) found |= ports::Capability::Gnss;
-        if (bme280_.answers()) found |= ports::Capability::Barometer;
         if (device_is_ready(battery_device_)) found |= ports::Capability::Battery;
         // Only when the driver answered. A build with no CONFIG_TEMP_NRF5, or a
         // devicetree without the node, is a device with no die reading - and
@@ -179,6 +178,8 @@ class TEchoPlus {
         if (indicator_.ready()) found |= ports::Capability::Indicator;
         return found;
     }
+
+    bool barometer_answers() const { return bme280_.answers(); }
 
    private:
     static constexpr struct spi_config kSpiConfig = {
