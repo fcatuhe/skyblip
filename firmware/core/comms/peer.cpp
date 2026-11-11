@@ -143,39 +143,25 @@ bool read_callsign(const cbor::Reader& reader, PeerObservation& out) {
 
 constexpr uint32_t kAlarmVolumeCeiling = 2;
 
-template <class Value>
-Status optional_key(const Result<Value>& read, bool& present, Value& out) {
-    present = read.ok();
-    if (read.ok()) out = read.value();
-    return read.status() == Status::NotFound ? Status::Ok : read.status();
-}
-
 // INFO: fc 11nov26 a value with no age, or an age with no value, is half a field and refused
-Status both_or_neither(bool value, bool age) { return value == age ? Status::Ok : Status::Invalid; }
-
 Status read_claim_position(const cbor::Reader& reader, PeerClaim& claim) {
     bool longitude = false, position_age = false, height_age = false;
-    Status status = optional_key(reader.read_integer(link::peer_claim_key::kLatitude1e7),
-                                 claim.fix_valid, claim.latitude_1e7);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_integer(link::peer_claim_key::kLongitude1e7), longitude,
-                              claim.longitude_1e7);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_unsigned(link::peer_claim_key::kPositionAgeMs),
-                              position_age, claim.fix_age_ms);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_integer(link::peer_claim_key::kAltitudeHaeMm),
-                              claim.altitude_hae_valid, claim.altitude_hae_mm);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_unsigned(link::peer_claim_key::kAltitudeHaeAgeMs),
-                              height_age, claim.altitude_hae_age_ms);
-    if (status != Status::Ok) return status;
+    if (!take(reader.read_integer(link::peer_claim_key::kLatitude1e7), claim.latitude_1e7,
+              claim.fix_valid) ||
+        !take(reader.read_integer(link::peer_claim_key::kLongitude1e7), claim.longitude_1e7,
+              longitude) ||
+        !take(reader.read_unsigned(link::peer_claim_key::kPositionAgeMs), claim.fix_age_ms,
+              position_age) ||
+        !take(reader.read_integer(link::peer_claim_key::kAltitudeHaeMm), claim.altitude_hae_mm,
+              claim.altitude_hae_valid) ||
+        !take(reader.read_unsigned(link::peer_claim_key::kAltitudeHaeAgeMs),
+              claim.altitude_hae_age_ms, height_age))
+        return Status::Invalid;
     if (claim.fix_valid != longitude || claim.fix_valid != position_age ||
         claim.altitude_hae_valid != height_age)
         return Status::Invalid;
-    if (claim.latitude_1e7 < -kLatitudeCeiling1e7 || claim.latitude_1e7 > kLatitudeCeiling1e7)
-        return Status::OutOfRange;
-    if (claim.longitude_1e7 < -kLongitudeCeiling1e7 || claim.longitude_1e7 > kLongitudeCeiling1e7)
+    if (!within(claim.latitude_1e7, -kLatitudeCeiling1e7, kLatitudeCeiling1e7) ||
+        !within(claim.longitude_1e7, -kLongitudeCeiling1e7, kLongitudeCeiling1e7))
         return Status::OutOfRange;
     return Status::Ok;
 }
@@ -183,11 +169,9 @@ Status read_claim_position(const cbor::Reader& reader, PeerClaim& claim) {
 Status read_claim_instant(const cbor::Reader& reader, PeerClaim& claim) {
     bool into = false;
     uint32_t into_ms = 0;
-    Status status =
-        optional_key(reader.read_unsigned(link::peer_claim_key::kAtS), claim.utc_valid, claim.at_s);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_unsigned(link::peer_claim_key::kIntoMs), into, into_ms);
-    if (status != Status::Ok) return status;
+    if (!take(reader.read_unsigned(link::peer_claim_key::kAtS), claim.at_s, claim.utc_valid) ||
+        !take(reader.read_unsigned(link::peer_claim_key::kIntoMs), into_ms, into))
+        return Status::Invalid;
     if (into && !claim.utc_valid) return Status::Invalid;
     if (into_ms > kIntoCeilingMs) return Status::OutOfRange;
     claim.phase_valid = into;
@@ -197,16 +181,13 @@ Status read_claim_instant(const cbor::Reader& reader, PeerClaim& claim) {
 
 Status read_claim_pressure_and_icao(const cbor::Reader& reader, PeerClaim& claim) {
     bool age = false, icao = false;
-    Status status = optional_key(reader.read_integer(link::peer_claim_key::kPressureAltitudeMm),
-                                 claim.pressure_altitude_valid, claim.pressure_altitude_mm);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs),
-                              age, claim.pressure_altitude_age_ms);
-    if (status == Status::Ok) status = both_or_neither(claim.pressure_altitude_valid, age);
-    if (status == Status::Ok)
-        status = optional_key(reader.read_unsigned(link::peer_claim_key::kOwnIcao), icao,
-                              claim.own_icao);
-    if (status != Status::Ok) return status;
+    if (!take(reader.read_integer(link::peer_claim_key::kPressureAltitudeMm),
+              claim.pressure_altitude_mm, claim.pressure_altitude_valid) ||
+        !take(reader.read_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs),
+              claim.pressure_altitude_age_ms, age) ||
+        !take(reader.read_unsigned(link::peer_claim_key::kOwnIcao), claim.own_icao, icao))
+        return Status::Invalid;
+    if (claim.pressure_altitude_valid != age) return Status::Invalid;
     return claim.own_icao > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
 }
 
