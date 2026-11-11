@@ -269,7 +269,7 @@ TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu"
         CHECK(bench.move() == MenuAction::Moved);
         CHECK(bench.editor.focus() == menu_for(Page::Radar).rows[i]);
     }
-    REQUIRE(bench.editor.focus() == MenuRow::OwnIcao);
+    REQUIRE(bench.editor.focus() == MenuRow::Bravo);
 
     // One more tap leaves: a thumb that only knows the pad cannot be trapped here.
     CHECK(bench.move() == MenuAction::Leave);

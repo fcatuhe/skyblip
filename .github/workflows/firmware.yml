@@ -96,8 +96,8 @@ jobs:
       # The budgets come off each build's slot and SRAM, and a build with no slot fails.
       - name: the size check holds each target to its flash and RAM budgets
         run: python3 scripts/test_size_check.py
-      # The Go turns both switches on, so only this configure sees a product that has neither.
-      - name: a product without activation or a hub builds no unit key and pins no hub image
+      # The Go turns all three switches on, so only this configure sees a product that has none.
+      - name: a product without activation, a hub or a central builds no unit key, no hub image and no central
         run: python3 scripts/test_shared_layers.py
       # A Nordic DFU install stores a real CRC the first MCUboot swap breaks, and the
       # device then sits in DFU mode until someone drops a .uf2 on it by hand.

@@ -50,6 +50,7 @@ Status validate(const Settings& settings) {
         return Status::OutOfRange;
     if (!callsign_is_typeable(settings.callsign)) return Status::Invalid;
     if (settings.own_icao > settings::kAddressMask) return Status::OutOfRange;
+    if (settings.bravo.type > kBluetoothAddressTypeCeiling) return Status::OutOfRange;
     return Status::Ok;
 }
 

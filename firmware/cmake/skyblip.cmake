@@ -25,6 +25,10 @@ function(skyblip_shared_layers)
   if(NOT CONFIG_SKYBLIP_IMU_IMAGE)
     list(REMOVE_ITEM shared ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/imu_firmware.cpp)
   endif()
+  # Only a product that connects to a peer as a central, the Go to its Bravo, builds the central.
+  if(NOT CONFIG_BT_CENTRAL)
+    list(REMOVE_ITEM shared ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/central.cpp)
+  endif()
   target_sources(app PRIVATE ${shared})
 
   # Monocypher, as C: the host compiles it as C++ with everything else (vendor/monocypher/LOCAL-CHANGES.md).

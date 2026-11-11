@@ -47,7 +47,8 @@ struct ScreenRig {
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};
     go::CaptureSettings capture_settings{settings};
     common::CaptureService capture{context, capture_store, flights_store, capture_settings, config};
-    go::ScreenService screen{context, settings, config, alarm_service, capture, self_test};
+    go::BravoService bravo{context, settings, config, null.central, alarm_service};
+    go::ScreenService screen{context, settings, config, alarm_service, capture, self_test, bravo};
 
     ScreenRig() {
         chip.attach_clock(clock);

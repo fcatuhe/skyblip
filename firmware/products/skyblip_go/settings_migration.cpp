@@ -170,9 +170,26 @@ struct SettingsV11 {
     char callsign[kCallsignBytes]{0};
 };
 
+struct SettingsV12 {
+    uint8_t version{1};
+    int16_t battery_offset_mv{0};
+    int16_t frequency_trim_e1_ppm{0};
+    bool battery_offset_manual{false};
+    uint8_t aircraft_type{kAircraftTypeLight};
+    bool alarm_enabled{true};
+    AlarmVolume alarm_volume{AlarmVolume::Loud};
+    Units units{Units::Nautical};
+    uint8_t range_step{kDefaultRangeStep};
+    RadarPlot plot{RadarPlot::All};
+    char callsign[kCallsignBytes]{0};
+    uint32_t own_icao{kOwnIcaoUnset};
+};
+
 static_assert(sizeof(SettingsV11) == sizeof(SettingsV10), "the volume changed scale, not width");
-static_assert(sizeof(Settings) == sizeof(SettingsV11) + sizeof(uint32_t),
+static_assert(sizeof(SettingsV12) == sizeof(SettingsV11) + sizeof(uint32_t),
               "own_icao went in where it costs no padding");
+static_assert(sizeof(Settings) == sizeof(SettingsV12) + sizeof(events::BluetoothAddress) + 1,
+              "the Bravo pin went on the end, with one byte of padding to the next word");
 
 // INFO: fc 15oct26 the old 3 to 5 all drove half duty, the loudest; 1 and 2 were the quieter ones
 AlarmVolume three_step_volume(uint8_t six_step) {
@@ -341,6 +358,23 @@ void migrate_v11(const SettingsV11& old, Settings& out) {
     out.own_icao = kOwnIcaoUnset;
 }
 
+void migrate_v12(const SettingsV12& old, Settings& out) {
+    out = Settings{};
+    out.version = Settings::kCurrentVersion;
+    out.battery_offset_mv = old.battery_offset_mv;
+    out.battery_offset_manual = old.battery_offset_manual;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
+    out.aircraft_type = old.aircraft_type;
+    out.alarm_enabled = old.alarm_enabled;
+    out.alarm_volume = old.alarm_volume;
+    out.units = old.units;
+    out.range_step = old.range_step;
+    out.plot = old.plot;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
+    out.own_icao = old.own_icao;
+}
+
 template <class Old>
 Status open_as(const uint8_t* in, size_t length, Settings& out,
                void (*migrate)(const Old&, Settings&)) {
@@ -354,6 +388,7 @@ Status open_as(const uint8_t* in, size_t length, Settings& out,
 
 Status migrate_blob(uint8_t version, const uint8_t* in, size_t length, Settings& out) {
     switch (version) {
+        case 12: return open_as<SettingsV12>(in, length, out, migrate_v12);
         case 11: return open_as<SettingsV11>(in, length, out, migrate_v11);
         case 10: return open_as<SettingsV10>(in, length, out, migrate_v10);
         case 9: return open_as<SettingsV9>(in, length, out, migrate_v9);

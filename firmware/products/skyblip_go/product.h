@@ -19,8 +19,9 @@
 #include "products/skyblip_go/capture_settings.h"
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
-#include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/product_name.h"
+#include "products/skyblip_go/self_test_parts.h"
+#include "products/skyblip_go/services/bravo.h"
 #include "products/skyblip_go/services/radio.h"
 #include "products/skyblip_go/services/screen.h"
 #include "products/skyblip_go/settings.h"
@@ -44,36 +45,6 @@ constexpr uint32_t kRefusalParkCeilingMs = 6000;
 // INFO: fc 08nov26 at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms
 // against 2 s (zephyr/rf.h:221, slot.h:42-45)
 constexpr uint32_t kRadioParkCeilingMs = 2000;
-
-struct SelfTestPartSpec {
-    const char* name;
-    ports::Capability capability;
-    const char* wired_part;
-};
-
-constexpr SelfTestPartSpec kSelfTestParts[] = {
-    {"RADIO", ports::Capability::Rf, "SX1262"},
-    {"GNSS", ports::Capability::Gnss, "L76K"},
-    {"BARO", ports::Capability::Barometer, "BME280"},
-    {"PANEL", ports::Capability::Display, "SSD1681"},
-    {"IMU", ports::Capability::Inclinometer, "BHI260AP"},
-    {"TEMP", ports::Capability::DieTemperature, "NRF52840"},
-    {"BATTERY", ports::Capability::Battery, "DIVIDER"},
-    {"CONTACTS", ports::Capability::Contacts, "P1.10 P0.11"},
-    {"BUZZER", ports::Capability::Buzzer, "PIEZO"},
-    {"HAPTIC", ports::Capability::Haptic, "DRV2605"},
-    {"LAMP", ports::Capability::Indicator, "RGB"},
-    {"LINK", ports::Capability::Link, "BLE"},
-    {"STORAGE", ports::Capability::Storage, "NVS+NOR"},
-    {"DFU", ports::Capability::Dfu, "MCUBOOT"},
-};
-
-constexpr const char* kStorageOnDefaults = "NVS+NOR DEFAULTS";
-constexpr const char* kImuDetailWithoutImage = "BHI260AP NOBLOB";
-
-constexpr int kSelfTestPartCount =
-    static_cast<int>(sizeof(kSelfTestParts) / sizeof(kSelfTestParts[0]));
-static_assert(kSelfTestPartCount < kSelfTestRows, "the self-test page would drop the bus scan");
 
 // skyBlip Go: one board, one service list. The shell around it only decides how
 // often run_pass() is called and where the pixels go.
@@ -242,6 +213,7 @@ class Product {
     common::ConfigLinkService& config_link() { return config_link_; }
     common::FlightLogService& flight_log() { return flight_log_; }
     common::CaptureService& capture() { return capture_; }
+    BravoService& bravo() { return bravo_; }
     diagnostics::Recorder& diagnostics() { return diagnostics_; }
 
    private:
@@ -461,8 +433,9 @@ class Product {
                                          config_link_.config()};
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
-    ScreenService screen_{context_, settings_, config_link_.config(),
-                          alarm_,   capture_,  self_test_snapshot_};
+    BravoService bravo_{context_, settings_, config_link_.config(), board_.central(), alarm_};
+    ScreenService screen_{
+        context_, settings_, config_link_.config(), alarm_, capture_, self_test_snapshot_, bravo_};
 
     // The log ticks after own-ship has published the fix and after the radio has
     // published the slot plan it defers to, and before the screen, which is the
@@ -470,13 +443,14 @@ class Product {
     // The tablet is told after the table and the levels for this pass are
     // settled and after the config service has drained the connection, and
     // before the two services that may spend a pass on flash or on pixels.
-    static constexpr int kServiceCount = 10;
+    // INFO: fc 11nov26 the Bravo link goes last, so the diagnostics codes of the ten before it hold
+    static constexpr int kServiceCount = 11;
     runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &radio_,
                                                &traffic_,     &alarm_,   &nmea_,  &flight_log_,
-                                               &capture_,     &screen_};
+                                               &capture_,     &screen_,  &bravo_};
     static constexpr const char* kServiceNames[kServiceCount] = {
-        "config", "ownship", "power",      "radio",   "traffic",
-        "alarm",  "nmea",    "flight_log", "capture", "screen"};
+        "config", "ownship",    "power",   "radio",  "traffic", "alarm",
+        "nmea",   "flight_log", "capture", "screen", "bravo"};
     runtime::Loop loop_{services_, kServiceCount, kServiceNames};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};

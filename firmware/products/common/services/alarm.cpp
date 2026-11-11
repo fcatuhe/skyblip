@@ -22,6 +22,7 @@ formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t
 }
 
 void AlarmService::tick(uint32_t now_ms) {
+    passes_++;
     accrue_annunciator(now_ms);
     traffic::Level worst = traffic::Level::None;
     traffic::Level live = traffic::Level::None;

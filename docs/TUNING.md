@@ -295,6 +295,13 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kClaimPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: the Go writes peer_claim once a second while paired |
+| `kConnectCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | unverified: a Bravo in range answers a connection in a few scan windows |
+| `kAnswerCeilingMs` | 35000 (35 s) | milliseconds | Ceiling | unverified: #192's proposed 30 s press window, a health period, a margin |
+| `kPairingScanWindowUs` | 30000 (30 ms) | microseconds | Window | GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting |
+| `kPairingScanPeriodUs` | 60000 (60 ms) | microseconds | Period | - |
+| `kReconnectScanWindowUs` | 11250 (11.25 ms) | microseconds | Window | GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost |
+| `kReconnectScanPeriodUs` | 1280000 (1280 ms) | microseconds | Period | - |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
@@ -317,4 +324,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-207 constants over 19 folders.
+214 constants over 19 folders.

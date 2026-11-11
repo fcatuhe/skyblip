@@ -164,6 +164,15 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     CHECK(meter.take().passes == 0);
 }
 
+// A capture names its slowest service by code, and the eleventh service came after the board
+// poll's.
+TEST_CASE("runtime: a service placed past the board poll's code takes the next, none renumbered") {
+    for (int index = 0; index < diagnostics::kLoopBoardPoll; index++)
+        CHECK(diagnostics::loop_service_code(index) == index);
+    CHECK(diagnostics::loop_service_code(diagnostics::kLoopBoardPoll) ==
+          diagnostics::kLoopBoardPoll + 1);
+}
+
 TEST_CASE("runtime: setup reports the first failure but still sets up the rest") {
     struct : ports::Clock {
         uint32_t milliseconds() const override { return 0; }

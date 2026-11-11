@@ -7,6 +7,7 @@ What happened, as a value small enough to cross a queue. One header per producer
 | `rf.h` | the RF executor | `traffic` |
 | `adsb.h` | the 1090 MHz receiver's executor | Bravo's ADS-B service (#176) |
 | `link.h` | the BLE adapter | `config`, and `log_rx` by `flight_log` |
+| `central.h` | the Go's BLE central, off its link to a paired Bravo, with Bravo's frames on `peer_rx` | `bravo` |
 | `sensor.h` | the board, off the barometer and the divider | `ownship`, `power` |
 | `input.h` | the board, off the button and the pad | `screen` |
 | `stamp.h` | nobody: it is how the others say *when* | everybody |
