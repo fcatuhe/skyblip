@@ -14,7 +14,6 @@
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
 #include "simulator/world/link_names.h"
 #include "test/support/settings_link.h"
@@ -395,30 +394,6 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
     const std::string json = config_fields(settings, 0x5B7E57);
     CHECK(json.find("\"address\":5996119,") != std::string::npos);
     CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);
-}
-
-// A set needs no fix only for the values the radar menu also changes, never for a bench trim.
-TEST_CASE("settings: the pilot's settings are the values the radar menu also changes") {
-    const struct {
-        const char* patch;
-        MenuRow row;
-    } on_the_menu[] = {{"{\"aircraft_type\":4}", MenuRow::AircraftType},
-                       {"{\"callsign\":\"F-JXYZ\"}", MenuRow::Callsign},
-                       {"{\"units\":1}", MenuRow::Units},
-                       {"{\"alarm_enabled\":false}", MenuRow::Alarm},
-                       {"{\"alarm_volume\":1}", MenuRow::Volume},
-                       {"{\"own_icao\":3958150}", MenuRow::OwnIcao}};
-    for (const auto& key : on_the_menu) {
-        CAPTURE(key.patch);
-        CHECK(menu_row_index(menu_for(Page::Radar), key.row) >= 0);
-        CHECK(patch_pilot_settings_only(key.patch));
-    }
-    CHECK(patch_pilot_settings_only(
-        "{\"version\":1,\"address\":5996119,\"address_mapping_table\":58}"));
-
-    CHECK_FALSE(patch_pilot_settings_only("{\"battery_offset_mv\":40}"));
-    CHECK_FALSE(patch_pilot_settings_only("{\"frequency_trim_e1_ppm\":-25}"));
-    CHECK_FALSE(patch_pilot_settings_only("{\"alarm_volume\":1,\"battery_offset_mv\":40}"));
 }
 
 // The aircraft's transponder address: 24 bits, 0 while unset, and nothing wider is ever stored.

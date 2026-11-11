@@ -19,9 +19,8 @@ updated_on: "2026-11-11"
   <p class="lede">
     La page lit aussi les réglages que l&rsquo;appareil contient, montre ceux
     qui diffèrent de ceux avec lesquels il est livré, et les change, chaque
-    changement demandé à l&rsquo;écran. Une installation n&rsquo;est demandée
-    qu&rsquo;au sol. Un appareil dont le firmware veut aussi être au sol pour
-    ses réglages le signale.
+    changement demandé à l&rsquo;écran. Rien n&rsquo;est demandé tant que
+    l&rsquo;appareil vole.
   </p>
 
   <%= render "shared/manage",
@@ -73,7 +72,7 @@ updated_on: "2026-11-11"
 
   <ul class="points">
     <li>Chrome ou Edge, sur un ordinateur ou sur Android</li>
-    <li>L&rsquo;appareil au sol, avec un fix GPS</li>
+    <li>L&rsquo;appareil au sol. Un firmware plus ancien attend aussi un fix GPS</li>
     <li>Une batterie au-dessus de l&rsquo;alerte, ou en charge</li>
     <li>Une image de la liste, ou un fichier en .signed.bin, celui que cette page nomme</li>
     <li>Aucune autre application ne tient les réglages de l&rsquo;appareil</li>
@@ -100,8 +99,7 @@ updated_on: "2026-11-11"
     L&rsquo;écran dit <span class="mono">FIRMWARE</span>, puis
     <span class="mono">INSTALL</span> et la version, par exemple
     <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>&nbsp;: pressez deux
-    fois. Cela ouvre une fenêtre de dix minutes, et seulement tant que
-    l&rsquo;appareil sait qu&rsquo;il est au sol.
+    fois. Cela ouvre une fenêtre de dix minutes.
   </p>
   <p class="lede">
     L&rsquo;image voyage ensuite. L&rsquo;écran dit
@@ -113,7 +111,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     Une fois le dernier octet arrivé, l&rsquo;appareil vérifie qu&rsquo;il tient
-    bien la version qu&rsquo;il vous a nommée, qu&rsquo;il est toujours au sol et
+    bien la version qu&rsquo;il vous a nommée, qu&rsquo;il n&rsquo;a pas décollé et
     que la batterie tiendra, puis il installe sans redemander. Il affiche
     <span class="mono">INSTALLING</span> et redémarre sur le nouveau firmware, ce
     qui prend une trentaine de secondes, et la liaison tombe.
@@ -207,7 +205,7 @@ updated_on: "2026-11-11"
         <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et quoi faire</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">Il n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou il n&rsquo;a pas eu de fix GPS depuis qu&rsquo;il est allumé. Mettez-le là où il voit le ciel, attendez le fix, puis réessayez.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">L&rsquo;appareil indique qu&rsquo;il vole. Réessayez une fois qu&rsquo;il s&rsquo;est posé. Un firmware plus ancien le dit aussi jusqu&rsquo;à son premier fix GPS depuis l&rsquo;allumage&nbsp;: mettez-le là où il voit le ciel et attendez le fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">La batterie est critique. Installer, c&rsquo;est 15 à 25 secondes d&rsquo;effacements de mémoire flash, et l&rsquo;appareil n&rsquo;en commence pas un sur une batterie qui pourrait ne pas le finir. Chargez-la, puis réessayez.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, alors l&rsquo;appareil l&rsquo;a retirée. Réessayez, et pressez deux fois quand l&rsquo;écran demande.</td></tr>
         <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">L&rsquo;appareil a dit non&nbsp;: une pression refuse la question, et une pression sur RECEIVING arrête l&rsquo;envoi. Après une question refusée, l&rsquo;appareil ne demande plus rien à cette connexion&nbsp;: déconnectez et reconnectez avant de réessayer. Après un envoi arrêté, relancez l&rsquo;installation.</td></tr>

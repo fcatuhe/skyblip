@@ -17,8 +17,7 @@ updated_on: "2026-11-11"
   <p class="lede">
     The page also reads the settings the device holds, shows which differ from
     the ones it ships on, and changes them, each change asked on the glass.
-    An install is asked only while the device is on the ground. A device whose
-    firmware wants the ground for its settings too says so.
+    Nothing is asked while the device is flying.
   </p>
 
   <%= render "shared/manage",
@@ -70,7 +69,7 @@ updated_on: "2026-11-11"
 
   <ul class="points">
     <li>Chrome or Edge, on a computer or on Android</li>
-    <li>The device on the ground, with a GPS fix</li>
+    <li>The device on the ground. Older firmware also waits for a GPS fix</li>
     <li>A battery above the warning, or charging</li>
     <li>An image from the list, or a file ending in .signed.bin, the one this page names</li>
     <li>No other app holding the device&rsquo;s settings</li>
@@ -96,8 +95,7 @@ updated_on: "2026-11-11"
     <span class="mono">FIRMWARE</span>, then
     <span class="mono">INSTALL</span> and the version, for example
     <span class="mono">INSTALL 0.2.0+15 FROM THE PHONE</span>: press twice. That
-    opens a window of ten minutes, and only while the device knows it is on the
-    ground.
+    opens a window of ten minutes.
   </p>
   <p class="lede">
     The image travels next. The glass says <span class="mono">RECEIVING</span>
@@ -108,7 +106,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     Once the last byte is in, the device checks that it holds the version it
-    asked you about, that it is still on the ground and that the battery can
+    asked you about, that it has not taken off and that the battery can
     finish the job, then installs without asking again. It paints
     <span class="mono">INSTALLING</span> and restarts into the new firmware,
     which takes about thirty seconds, and the link drops.
@@ -197,7 +195,7 @@ updated_on: "2026-11-11"
         <tr><th>The device answers</th><th>What it means, and what to do</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">It has not proven it is on the ground: it is flying, or has had no GPS fix since it was switched on. Take it where it sees the sky, wait for the fix, then try again.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-manage-word="in_flight">The device says it is flying. Try again once it has landed. Older firmware also says so until its first GPS fix since it was switched on: take it where it sees the sky and wait for the fix.</td></tr>
         <tr><th class="mono">low_power</th><td data-manage-word="low_power">The battery is critical. Installing is 15 to 25 seconds of flash erases, and the device does not start one on a cell that might not finish it. Charge it, then try again.</td></tr>
         <tr><th class="mono">expired</th><td data-manage-word="expired">Nobody answered the question on the glass within thirty seconds, so the device dropped it. Try again, and press twice when the glass asks.</td></tr>
         <tr><th class="mono">cancelled</th><td data-manage-word="cancelled">The device said no: one press refuses the question, and one press on RECEIVING stops the upload. After a refused question, the device asks nothing more from this connection: disconnect and connect again before you try again. After a stopped upload, install again.</td></tr>

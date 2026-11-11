@@ -246,20 +246,18 @@ TEST_CASE("flight: only the two ADS-L G.1.2 codes name a state, every other valu
 TEST_CASE("flight: a lost fix is not a landing, so the ground latch holds airborne") {
     GroundLatch latch;
     CHECK(latch.state() == FlightState::Unknown);
-    CHECK_FALSE(latch.on_ground());
 
     latch.update(FlightState::Ground);
-    CHECK(latch.on_ground());
+    CHECK(latch.state() == FlightState::Ground);
 
-    // Unknown before anything was confirmed is not a ground: every gate behind this fails closed.
+    // A fix lost before any take-off proves nothing either way.
     latch.update(FlightState::Unknown);
     CHECK(latch.state() == FlightState::Unknown);
-    CHECK_FALSE(latch.on_ground());
 
     latch.update(FlightState::Airborne);
     latch.update(FlightState::Unknown);
     CHECK(latch.state() == FlightState::Airborne);
 
     latch.update(FlightState::Ground);
-    CHECK(latch.on_ground());
+    CHECK(latch.state() == FlightState::Ground);
 }

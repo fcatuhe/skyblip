@@ -75,7 +75,7 @@ class ConfigService {
                   const timing::SlotTimingStatistics* timing_statistics = nullptr)
         : link_(link), store_(store), dfu_(dfu), timing_statistics_(timing_statistics) {}
 
-    // INFO: cf 02aug26 Ground opens this door, latched in core/flight/ground.h
+    // INFO: fc 11nov26 only Airborne closes this door, held through a lost fix in flight/ground.h
     void set_flight_state(flight::FlightState state);
     flight::FlightState flight_state() const { return flight_state_; }
 
@@ -101,14 +101,8 @@ class ConfigService {
     // While true the next command waits on the bus: its answer would have nowhere to go.
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
-    // Consulted by the MCUmgr image-upload hook. An unauthenticated SMP
-    // transport is what makes the browser update page possible (encrypted GATT
-    // characteristics are unreliable under Web Bluetooth), so authorisation
-    // lives here instead: an upload is only accepted inside a window that a
-    // physical button press opened, while the device is positively on the
-    // ground. Rogue firmware is stopped separately, by MCUboot's signature
-    // check. This stops a stranger in range wasting the secondary slot.
-    bool upload_allowed() const { return upload_window_open_ && on_ground(); }
+    // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window two presses open
+    bool upload_allowed() const { return upload_window_open_ && !in_flight(); }
     void close_upload_window() { upload_window_open_ = false; }
     bool receiving_firmware() const { return upload_window_open_; }
 
@@ -314,11 +308,10 @@ class ConfigService {
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void install_received_image();
     bool signed_by_trusted_key() const;
-    bool on_ground() const { return flight_state_ == flight::FlightState::Ground; }
+    bool in_flight() const { return flight_state_ == flight::FlightState::Airborne; }
     bool activated() const { return identity_ != nullptr && identity_->activated(); }
     bool register_exempt() const { return pending_ == Pending::Register && !activated(); }
     bool prompt_allowed() const { return prompt_allowed_in(flight_state_); }
-    bool settings_allowed(const cbor::Reader& frame, flight::FlightState state) const;
     cbor::Reader pending_set() const;
 
     ports::Link& link_;

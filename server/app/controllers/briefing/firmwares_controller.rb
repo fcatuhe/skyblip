@@ -2,7 +2,7 @@ class Briefing::FirmwaresController < ApplicationController
   allow_unauthenticated_access
 
   def show
-    @releases = Release.all
+    @images = Release.firmware_shelf(Release.all)
   rescue Release::Unavailable => error
     Rails.logger.warn(error.message)
     @unavailable = true

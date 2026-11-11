@@ -7,6 +7,7 @@ class Release
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
   TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
   FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
+  FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
@@ -25,6 +26,13 @@ class Release
   end
 
   def self.product_of(file) = file[FIRMWARE, 1]&.tr("-", "_")
+  def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "slim"
+
+  def self.firmware_shelf(releases)
+    images = releases.sort_by(&:published_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
+    slim, full = images.partition { |_release, file| kind_of(file) == "slim" }
+    slim + full
+  end
 
   def self.shelf(releases)
     newest_first = releases.sort_by(&:published_at).reverse

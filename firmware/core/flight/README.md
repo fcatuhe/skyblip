@@ -157,13 +157,13 @@ There is no longer an altitude that means flight on its own either. The 2000 m r
 
 ## ground
 
-`state` answers one question about one solution, and the bus carries that answer as the ADS-L G.1.2 code in `own.flight_state`. `state_from` reads it back, and it is the only place that does: G.1.2 is two bits and we own neither the sender nor the future, so a code this build does not name is `Unknown`, which every gate refuses.
+`state` answers one question about one solution, and the bus carries that answer as the ADS-L G.1.2 code in `own.flight_state`. `state_from` reads it back, and it is the only place that does: G.1.2 is two bits and we own neither the sender nor the future, so a code this build does not name is `Unknown`, never a state the sender did not say.
 
 `report_period_s` hangs off the same two bits, because G.1.16 sets the rate by the state: `kAirborneReportPeriodS` is 1 s and `kGroundReportPeriodS` is 10. It is here rather than in the transmitter because both directions need it. Own-ship's schedule is one reader (`core/timing/transmit.h`); the other is `core/traffic/lease.h`, which counts a neighbour's silence in that neighbour's own intervals, and a target of `Unknown` state gets the airborne one because an emitter that does not say is heard at 1 Hz or not at all.
 
-`GroundLatch` is the second question, the one a door asks: may this device be written to, erased, updated. `Unknown` is not a ground - a device that has never had a fix has not proven anything - and once `Airborne` has been seen, only a positive `Ground` clears it. A fix lost in flight is therefore never a landing: without the latch, a receiver dropping out over a ridge would unlock the firmware update mid-flight, which is the one failure `state` itself has no hold left to prevent.
+`GroundLatch` is the second question, the one a door asks: may this device be written to, erased, updated. Only `Airborne` shuts the door. `Unknown`, a device with no fix since boot, sends no position and grades no traffic, so it shuts nothing (`core/comms/README.md`, The flight gate). Once `Airborne` has been seen, only a positive `Ground` clears it. A fix lost in flight is therefore never a landing, and never `Unknown`: without the latch, a receiver dropping out over a ridge would unlock the firmware update mid-flight, which is the one failure `state` itself has no hold left to prevent.
 
-There is one latch, owned by the service that owns the monitor (`products/common/services/ownship.cpp`) and published as `state.flight.confirmed_state`. The companion link's ground gate in `core/comms/config.h` and the flight log's offload gate both read that one value rather than deriving a second opinion or asking each other, so "on the ground" means the same thing to all three.
+There is one latch, owned by the service that owns the monitor (`products/common/services/ownship.cpp`) and published as `state.flight.confirmed_state`. The companion link's flight gate in `core/comms/config.h` and the flight log's offload gate both read that one value rather than deriving a second opinion or asking each other, so "in flight" means the same thing to all three.
 
 ## timer
 
