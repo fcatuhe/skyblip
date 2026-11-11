@@ -64,6 +64,7 @@
       <button type="button" class="manage-button manage-button--quiet" data-manage-target="reset" data-action="manage#reset" disabled><%= settings[:reset] %></button>
     </div>
     <p class="note" data-manage-word="confirm_set"><%= settings[:confirm_set] %></p>
+    <p class="manage-message" role="status" data-manage-target="settingsMessage"></p>
   </form>
 
   <%= turbo_frame_tag :firmware_shelf, src: briefing_firmwares_path, loading: :eager do %>

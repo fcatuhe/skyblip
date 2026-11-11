@@ -124,6 +124,22 @@ class ManageTest < ApplicationSystemTestCase
     end
   end
 
+  test "a save refused on the glass is said under Save, and the connection asks nothing more" do
+    on_the_shelf do
+      visit "/manage"
+      connect_go
+      select "Loud", from: "Alarm volume"
+      click_button "Save"
+      assert_text "Allow the change"
+      page.execute_script("fakeSkyblip.refuse()")
+      within ".manage-settings" do
+        assert_selector "[role=status]", text: "The device said no"
+      end
+      assert_selector "[data-manage-target=notes] p", text: "One press on the device refused a question"
+      assert_button "Save", disabled: true
+    end
+  end
+
   private
     def on_the_shelf(&)
       VCR.use_cassette("github/releases") { VCR.use_cassette("github/firmware", &) }

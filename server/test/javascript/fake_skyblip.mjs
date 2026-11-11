@@ -90,6 +90,7 @@ export class FakeSkyblip {
     this.uploadWrites = [];
     this.connected = false;
     this.pending = null;
+    this.refusedOnDevice = false;
     this.staged = null;
     this.windowOpen = false;
     this.slot = null;
@@ -188,6 +189,7 @@ export class FakeSkyblip {
     if (!this.connected) return;
     this.connected = false;
     this.pending = null;
+    this.refusedOnDevice = false;
     this.windowOpen = false;
     for (const listener of this.listeners) listener();
   }
@@ -226,6 +228,7 @@ export class FakeSkyblip {
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
+    if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
     if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
     if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
     if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
@@ -315,6 +318,7 @@ export class FakeSkyblip {
   }
 
   refuse() {
+    if (this.pending) this.refusedOnDevice = true;
     this.pending = null;
     this.windowOpen = false;
     this.acknowledge(false, 'cancelled');

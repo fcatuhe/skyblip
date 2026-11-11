@@ -293,6 +293,12 @@ test('a refusal of the settings keeps the offer open, and is named as the settin
   assert.deepEqual(refused.notice, { key: 'cancelled', during: 'set' });
   assert.equal(refused.offer, 'open');
 
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.deepEqual((await until(state => state.notice?.key === 'refused_on_device')).notice, { key: 'refused_on_device', during: 'set' });
+});
+
+test('a cell too low for the settings refuses them, named as the settings', async () => {
+  const { unit, activator, until } = await activated();
   unit.swapPowered = false;
   activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
   assert.deepEqual((await until(state => state.notice?.key === 'low_power')).notice, { key: 'low_power', during: 'set' });

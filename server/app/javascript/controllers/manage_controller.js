@@ -16,7 +16,7 @@ const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
                     "device", "firmware", "track", "battery", "flight", "advice", "chosen", "notes", "step",
-                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset"]
+                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset", "settingsMessage"]
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
@@ -124,21 +124,22 @@ export default class extends Controller {
   #render(state) {
     const linked = LINKED.has(state.phase)
     const idle = state.phase === "ready" && !this.updater.inFlight
+    const asks = idle && !state.refusedOnDevice
     this.connectTarget.hidden = linked
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
-    this.installTarget.disabled = this.selecting || !idle || !state.file
+    this.installTarget.disabled = this.selecting || !asks || !state.file
     this.fileTarget.disabled = this.selecting || !["offline", "ready"].includes(state.phase)
     this.#offer(state, idle)
-    this.recoverTarget.disabled = !idle
+    this.recoverTarget.disabled = !asks
     this.#facts(state)
     this.#notes(state)
     this.#settings(state)
     this.#steps(state)
     this.#progress(state)
     this.messageTarget.textContent = this.#message(state)
-    this.messageTarget.classList.toggle("visually-hidden", !state.notice && Boolean(this.#step(state)))
+    this.messageTarget.classList.toggle("visually-hidden", !this.#notice(state) && Boolean(this.#step(state)))
     this.#recheck(state)
     this.#preselect(state)
   }
@@ -197,10 +198,11 @@ export default class extends Controller {
     return full ? this.fullValue : this.slimValue
   }
 
-  #notes({ image, status, settings, address }) {
+  #notes({ image, status, settings, address, refusedOnDevice }) {
     const notes = []
     if (settings && address === null && ACTIVATED_PRODUCTS.has(this.productOf(image))) notes.push(["not_activated"])
     if (status?.flight === "airborne") notes.push(["in_flight"])
+    if (refusedOnDevice) notes.push(["refused_on_device"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
     if (image && !image.key && this.hasShelfTarget) notes.push(["no_key"])
@@ -222,13 +224,15 @@ export default class extends Controller {
     return note
   }
 
-  #settings({ phase, settings, defaults }) {
+  #settings(state) {
+    const { phase, settings, defaults, refusedOnDevice } = state
     this.settingsTarget.hidden = !settings
     if (!settings) return
     if (settings !== this.shown) this.#fill(settings)
+    this.settingsMessageTarget.textContent = this.#settingsMessage(state)
     const edited = this.#edited()
     const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
-    const idle = phase === "ready" && !this.updater.inFlight
+    const idle = phase === "ready" && !this.updater.inFlight && !refusedOnDevice
     this.fieldsTarget.disabled = !idle
     this.saveTarget.disabled = !idle || !changed
     this.resetTarget.hidden = !defaults
@@ -303,12 +307,24 @@ export default class extends Controller {
   }
 
   #message(state) {
-    if (state.notice) return [this.#word(state.notice.key), state.notice.detail].filter(Boolean).join(" ")
+    const notice = this.#notice(state)
+    if (notice) return this.#said(notice)
     if (state.task === "recovery") return this.#word("confirm_recovery")
-    if (state.task === "set") return this.#word("confirm_set")
     const step = this.#step(state)
     if (step) return this.#word(`step_${step}`)
     return PHASE_WORD[state.phase] ? this.#word(PHASE_WORD[state.phase]) : ""
+  }
+
+  #settingsMessage({ notice }) {
+    return notice?.during === "set" ? this.#said(notice) : ""
+  }
+
+  #notice({ notice }) {
+    return notice?.during === "set" ? null : notice
+  }
+
+  #said({ key, detail }) {
+    return [this.#word(key), detail].filter(Boolean).join(" ")
   }
 
   #word(key) {

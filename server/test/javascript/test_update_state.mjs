@@ -58,13 +58,36 @@ test('a firmware that does not know its defaults offers no reset', async () => {
   assert.equal(device.commands.includes('set'), false);
 });
 
-test('a save refused on the glass says so, and the settings stay as stored', async () => {
+test('a save refused on the glass says so under Save, and the settings stay as stored', async () => {
   const { device, updater, until } = await withSettings();
   updater.saveSettings({ units: 'nautical' });
   await until(asking('set'));
   device.refuse();
-  assert.equal((await until(settled)).notice.key, 'cancelled');
+  assert.deepEqual((await until(settled)).notice, { key: 'cancelled', during: 'set' });
   assert.deepEqual(device.stored, FLOWN);
+});
+
+test('one press on a question marks the connection refused on the device until the link drops', async () => {
+  const { device, updater, until } = await chosen();
+  updater.install();
+  await until(asking('dfu'));
+  device.refuse();
+  assert.equal((await until(settled)).refusedOnDevice, true);
+  updater.recover();
+  assert.equal((await until(state => state.notice?.key === 'refused_on_device')).refusedOnDevice, true);
+  device.drop();
+  assert.equal((await until(state => state.phase === 'offline')).refusedOnDevice, false);
+});
+
+test('one press that stops an upload refuses no question, so the connection may ask again', async () => {
+  const { device, updater, until } = await chosen();
+  device.refuseAfterPackets = 3;
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  assert.equal((await until(settled)).refusedOnDevice, false);
+  updater.recover();
+  await until(asking('recovery'));
 });
 
 test('in flight the page asks no install, no recovery and no save, and landing gives them back', async () => {
@@ -78,7 +101,7 @@ test('in flight the page asks no install, no recovery and no save, and landing g
   await updater.install();
   assert.equal(updater.state.notice.key, 'in_flight');
   updater.saveSettings({ ...FLOWN_SHOWN, units: 'nautical' });
-  assert.equal(updater.state.notice.key, 'in_flight');
+  assert.deepEqual(updater.state.notice, { key: 'in_flight', during: 'set' });
   assert.equal(device.commands.length, sent);
   device.land();
   await until(state => state.status.flight === 'ground');
