@@ -15,7 +15,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     publish_upload_verdict();
     accrue_connected(now_ms);
     drain_link_events(now_ms);
-    // INFO: cf 02aug26 nobody calling this leaves the gate at Unknown, which refuses everything
+    // INFO: fc 11nov26 nobody calling this leaves the gate at Unknown, so it never closes in flight
     config_.set_flight_state(context_.state.flight.confirmed_state);
     publish_upload_verdict();
 

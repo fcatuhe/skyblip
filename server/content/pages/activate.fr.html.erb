@@ -37,7 +37,7 @@ updated_on: "2026-11-11"
         settings: {
           legend: "Type d\u2019aéronef, indicatif et adresse OACI",
           lede: "Tous trois sont facultatifs. Passez-les et l\u2019appareil garde ses réglages actuels\u00A0: vous pourrez toujours les changer dans son menu ou sur la page de mise à jour.",
-          ground: "Cet appareil accepte les réglages uniquement au sol, après avoir acquis sa position GPS. Placez-le à ciel ouvert et attendez\u00A0: le bouton Enregistrer redeviendra disponible dès qu\u2019il l\u2019aura.",
+          airborne: "L\u2019appareil vole\u00A0: le bouton Enregistrer redeviendra disponible dès qu\u2019il se sera posé.",
           save: "Enregistrer",
           skip: "Passer"
         },
@@ -88,11 +88,9 @@ updated_on: "2026-11-11"
     propre transpondeur comme un trafic. Elle ne change pas l&rsquo;adresse
     qu&rsquo;il émet. Cliquez sur Enregistrer pour envoyer les modifications
     ensemble. L&rsquo;écran affiche <span class="mono">SETTINGS</span> et
-    présente les changements. Appuyez deux fois pour confirmer. Un appareil
-    dont le firmware n&rsquo;accepte les réglages qu&rsquo;au sol le signale
-    tant qu&rsquo;il n&rsquo;a pas de position GPS&nbsp;: la page
-    l&rsquo;indique, et le bouton Enregistrer redevient disponible dès que
-    l&rsquo;appareil a sa position. Passez-la et
+    présente les changements. Appuyez deux fois pour confirmer. Tant que
+    l&rsquo;appareil vole, la page retient le bouton Enregistrer jusqu&rsquo;à
+    ce qu&rsquo;il se pose. Passez-la et
     l&rsquo;appareil garde ses réglages actuels, qui sont, sur un appareil neuf,
     un avion léger sans indicatif ni adresse OACI. Tous restent modifiables ensuite, dans le menu de
     l&rsquo;appareil et sur <%= link_to_page "manage", label: "la page de mise à jour" %>.
@@ -131,7 +129,7 @@ updated_on: "2026-11-11"
         <tr><th class="mono">no_session</th><td data-activate-word="no_session">L&rsquo;appareil n&rsquo;a plus le nombre d&rsquo;où partait cette activation&nbsp;: plus de dix minutes ont passé, ou la liaison est tombée. Activez de nouveau.</td></tr>
         <tr><th class="mono">bad_signature</th><td data-activate-word="bad_signature">L&rsquo;appareil n&rsquo;a pas reconnu ce que skyblip.eu a signé comme fait pour lui, maintenant. Activez de nouveau, et si cela se reproduit, dites-nous quel firmware il fait tourner.</td></tr>
         <tr><th class="mono">small_mtu</th><td data-activate-word="small_mtu">La réponse de l&rsquo;appareil ne tenait pas dans la liaison&nbsp;: ce téléphone ou ce navigateur est resté à la plus petite taille de paquet Bluetooth, ou à une taille trop petite pour la réponse. Déconnectez, puis reconnectez. Si cela recommence, mettez à jour le navigateur et le téléphone, ou activez depuis un autre téléphone ou un ordinateur avec Chrome ou Edge.</td></tr>
-        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">Cet appareil est déjà activé, et il n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou n&rsquo;a pas eu de position GPS depuis qu&rsquo;il est allumé. Mettez-le à ciel ouvert, attendez la position, puis activez de nouveau.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="in_flight">Cet appareil est déjà activé, et il vole. Activez de nouveau une fois qu&rsquo;il s&rsquo;est posé. Un firmware plus ancien le dit aussi jusqu&rsquo;à sa première position GPS depuis l&rsquo;allumage&nbsp;: mettez-le à ciel ouvert et attendez la position.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="low_power">La batterie est critique, trop faible pour écrire le numéro en mémoire. Chargez-la, puis activez de nouveau.</td></tr>
         <tr><th class="mono">flash</th><td data-activate-word="flash">L&rsquo;appareil n&rsquo;a pas pu écrire son numéro dans sa mémoire. Activez de nouveau, et si cela se reproduit, dites-le-nous.</td></tr>
         <tr><th class="mono">expired</th><td data-activate-word="expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, alors l&rsquo;appareil l&rsquo;a retirée. Activez de nouveau, et appuyez deux fois quand l&rsquo;écran le demande.</td></tr>
@@ -155,7 +153,7 @@ updated_on: "2026-11-11"
         <tr><th>L&rsquo;appareil répond</th><th>Ce que cela veut dire, et que faire</th></tr>
       </thead>
       <tbody>
-        <tr><th class="mono">in_flight</th><td data-activate-word="set_in_flight">L&rsquo;appareil n&rsquo;a pas prouvé qu&rsquo;il est au sol&nbsp;: il vole, ou il n&rsquo;a pas eu de position GPS depuis qu&rsquo;il est allumé. Mettez-le là où il voit le ciel, attendez la position, puis réessayez.</td></tr>
+        <tr><th class="mono">in_flight</th><td data-activate-word="set_in_flight">L&rsquo;appareil vole, alors les réglages restent ce qu&rsquo;ils étaient. Réessayez une fois qu&rsquo;il s&rsquo;est posé. Un firmware plus ancien le dit aussi jusqu&rsquo;à sa première position GPS depuis l&rsquo;allumage&nbsp;: mettez-le là où il voit le ciel et attendez la position.</td></tr>
         <tr><th class="mono">low_power</th><td data-activate-word="set_low_power">La batterie est critique, trop faible pour écrire les réglages en mémoire. Chargez-la, puis réessayez.</td></tr>
         <tr><th class="mono">expired</th><td data-activate-word="set_expired">Personne n&rsquo;a répondu à la question de l&rsquo;écran en trente secondes, alors l&rsquo;appareil l&rsquo;a retirée. Réessayez, et appuyez deux fois quand l&rsquo;écran le demande.</td></tr>
         <tr><th class="mono">cancelled</th><td data-activate-word="set_cancelled">L&rsquo;appareil a dit non&nbsp;: une pression refuse la question, et les réglages restent ce qu&rsquo;ils étaient. L&rsquo;appareil ne demande plus rien à cette connexion, alors changez-les dans son menu ou sur la page de mise à jour.</td></tr>

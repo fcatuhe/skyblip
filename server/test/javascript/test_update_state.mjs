@@ -67,14 +67,17 @@ test('a save refused on the glass says so, and the settings stay as stored', asy
   assert.deepEqual(device.stored, FLOWN);
 });
 
-test('off the ground the page asks no install and no recovery, and landing gives them back', async () => {
+test('in flight the page asks no install, no recovery and no save, and landing gives them back', async () => {
   const { device, updater, until } = await chosen({ stored: FLOWN });
+  await until(state => state.settings);
   device.takeOff();
   await until(state => state.status.flight === 'airborne');
-  assert.equal(updater.onGround, false);
+  assert.equal(updater.inFlight, true);
   const sent = device.commands.length;
   updater.recover();
   await updater.install();
+  assert.equal(updater.state.notice.key, 'in_flight');
+  updater.saveSettings({ ...FLOWN_SHOWN, units: 'nautical' });
   assert.equal(updater.state.notice.key, 'in_flight');
   assert.equal(device.commands.length, sent);
   device.land();
@@ -83,30 +86,18 @@ test('off the ground the page asks no install and no recovery, and landing gives
   await until(asking('recovery'));
 });
 
-test('off the ground a save is still sent, and a refusal holds it until the device reports the ground', async () => {
-  const { device, updater, until } = await withSettings();
-  device.takeOff();
-  await until(state => state.status.flight === 'airborne');
-  updater.saveSettings({ units: 'nautical' });
-  const refused = await until(settled);
-  assert.equal(refused.notice.key, 'in_flight');
-  assert.equal(refused.heldForGround, true);
-  assert.equal(device.commands.filter(command => command === 'set').length, 1);
-  device.land();
-  await until(state => !state.heldForGround);
-  updater.saveSettings({ units: 'nautical' });
-  await until(asking('set'));
-});
-
-test('a device whose firmware takes settings off the ground saves them in flight', async () => {
-  const { device, updater, until } = await withSettings({ setsOffGround: true });
-  device.takeOff();
-  await until(state => state.status.flight === 'airborne');
-  updater.saveSettings({ units: 'nautical' });
+// Unknown is a unit with no fix since boot, every unit on a bench indoors.
+test('a device with no fix since boot is asked to save and to install', async () => {
+  const { device, updater, until } = await chosen({ stored: FLOWN, flight: 'unknown' });
+  await until(state => state.settings);
+  assert.equal(updater.inFlight, false);
+  updater.saveSettings({ ...FLOWN_SHOWN, units: 'nautical' });
   await until(state => state.phase === 'confirming');
   device.press();
   assert.equal((await until(settled)).notice.key, 'saved');
   assert.equal(device.stored.units, 'nautical');
+  updater.install();
+  await until(asking('dfu'));
 });
 
 test('taking off while the glass asks takes the question away, and the page says why', async () => {

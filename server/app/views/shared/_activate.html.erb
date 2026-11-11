@@ -29,7 +29,7 @@
       <%= render "shared/aircraft_settings", scope: "activate", defaults: false %>
     </fieldset>
 
-    <p class="note" data-activate-target="ground" hidden><%= settings[:ground] %></p>
+    <p class="note" data-activate-target="airborne" hidden><%= settings[:airborne] %></p>
     <div class="manage-row">
       <button type="submit" class="manage-button" data-activate-target="save" disabled><%= settings[:save] %></button>
       <button type="button" class="manage-button manage-button--quiet" data-activate-target="skip" data-action="activate#skip"><%= settings[:skip] %></button>

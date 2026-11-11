@@ -5,7 +5,7 @@ const PHASE_STEP = { asking: "ask", confirming: "confirm", registering: "registe
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "activate", "device", "address", "step", "message",
-                    "settings", "fields", "ground", "save", "skip"]
+                    "settings", "fields", "airborne", "save", "skip"]
   static values = { src: String, challenges: String, registrations: String, none: String }
 
   async connect() {
@@ -69,7 +69,7 @@ export default class extends Controller {
     this.messageTarget.textContent = this.#message(state, current)
   }
 
-  #offer({ offer, phase, settings, heldForGround }) {
+  #offer({ offer, phase, settings, status }) {
     const open = offer === "open" && Boolean(settings)
     this.settingsTarget.hidden = !open
     if (!open) {
@@ -78,11 +78,12 @@ export default class extends Controller {
     }
     if (settings !== this.shown) this.#fill(settings)
     const idle = phase === "ready"
+    const inFlight = status?.flight === "airborne"
     const edited = this.#edited()
     const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
     this.fieldsTarget.disabled = !idle
-    this.groundTarget.hidden = !heldForGround
-    this.saveTarget.disabled = !idle || !changed || heldForGround
+    this.airborneTarget.hidden = !inFlight
+    this.saveTarget.disabled = !idle || !changed || inFlight
     this.skipTarget.disabled = !idle
   }
 

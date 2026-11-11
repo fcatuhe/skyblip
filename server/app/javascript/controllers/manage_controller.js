@@ -123,7 +123,7 @@ export default class extends Controller {
 
   #render(state) {
     const linked = LINKED.has(state.phase)
-    const idle = state.phase === "ready" && this.updater.onGround
+    const idle = state.phase === "ready" && !this.updater.inFlight
     this.connectTarget.hidden = linked
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
@@ -200,7 +200,7 @@ export default class extends Controller {
   #notes({ image, status, settings, address }) {
     const notes = []
     if (settings && address === null && ACTIVATED_PRODUCTS.has(this.productOf(image))) notes.push(["not_activated"])
-    if (status && status.flight !== "ground") notes.push(["in_flight"])
+    if (status?.flight === "airborne") notes.push(["in_flight"])
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
     if (image && !image.key && this.hasShelfTarget) notes.push(["no_key"])
@@ -222,13 +222,13 @@ export default class extends Controller {
     return note
   }
 
-  #settings({ phase, settings, defaults, heldForGround }) {
+  #settings({ phase, settings, defaults }) {
     this.settingsTarget.hidden = !settings
     if (!settings) return
     if (settings !== this.shown) this.#fill(settings)
     const edited = this.#edited()
     const changed = Object.keys(edited).some(key => edited[key] !== settings[key])
-    const idle = phase === "ready" && !heldForGround
+    const idle = phase === "ready" && !this.updater.inFlight
     this.fieldsTarget.disabled = !idle
     this.saveTarget.disabled = !idle || !changed
     this.resetTarget.hidden = !defaults

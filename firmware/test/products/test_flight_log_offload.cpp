@@ -396,6 +396,18 @@ TEST_CASE("flight log: an offload is refused in the air, on the same gate a sett
     CHECK(rig.product.flight_log().recording());
 }
 
+TEST_CASE("flight log: a unit with no fix since boot lists its flights") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Unknown);
+
+    rig.send_log("{\"command\":\"list\"}");
+    rig.run(0, 200);
+    const auto* listed = last_log_frame(rig);
+    REQUIRE(listed != nullptr);
+    CHECK(link_text(listed->bytes).find("in_flight") == std::string::npos);
+}
+
 TEST_CASE("flight log: erasing every flight takes the button, not just the phone") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

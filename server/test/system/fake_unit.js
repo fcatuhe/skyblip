@@ -83,7 +83,7 @@
       }
       if (command === 'status') return this.status();
       if (command === 'set') {
-        if (this.flight !== 'ground') return this.acknowledge(false, 'in_flight');
+        if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
         this.staged = fields;
         this.pending = 'set';
         return this.acknowledge(false, 'confirm', true);

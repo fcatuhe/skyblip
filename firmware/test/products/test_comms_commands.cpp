@@ -260,20 +260,6 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     CHECK(config.power_off_requested());
 }
 
-TEST_CASE("comms: a landed upload on a device no longer proven on the ground is not installed") {
-    platform::host::Link link;
-    link.raise_link(1);
-    go::Settings settings = go::defaults();
-    SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
-    ConfigService config(link, store, &dfu);
-    upload_opened(config, dfu);
-    config.set_flight_state(flight::FlightState::Unknown);
-    config.tick(100);
-    CHECK_FALSE(config.install_requested());
-    CHECK(link_text(link.last().bytes).find("in_flight") != std::string::npos);
-}
-
 TEST_CASE("comms: the update question names the image state and the versions of the attempt") {
     platform::host::Link link;
     link.raise_link(1);
