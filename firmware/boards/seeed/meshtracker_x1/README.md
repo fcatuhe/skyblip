@@ -1,6 +1,6 @@
 # Seeed SenseCAP MeshTracker X1
 
-The board skyBlip Bravo runs on. No unit has been read yet: every pin, address, boundary and timing below comes from the sources listed here, and each one stays unverified until #169 benches a unit. A tagged `TODO` in `meshtracker_x1.dts`, `board.c`, `Kconfig.meshtracker_x1`, `meshtracker_x1_defconfig` and `scripts/mkuf2.py` points back here.
+The board skyBlip Bravo runs on. No unit has been read yet: every pin, address, boundary and timing below comes from the sources listed here, and each one stays unverified until #169 benches a unit. A tagged `TODO` in `meshtracker_x1.dts`, `board.c`, `pins.h`, `Kconfig.meshtracker_x1`, `meshtracker_x1_defconfig`, `scripts/mkuf2.py` and the X1's platform points back here.
 
 ## Sources
 
@@ -68,13 +68,38 @@ The factory UF2 bootloader stays. It chain-loads MCUboot from the application or
 | `slot0_partition` | 0x35000 | 0xB5000 | Ends at `USER_FLASH_END`. |
 | `storage_partition` | 0xEA000 | 0xA000 | The bootloader's `DFU_APP_DATA_RESERVED`, so no `.uf2` reaches it. |
 | `uf2_boot_partition` | 0xF4000 | 0xC000 | The factory bootloader, its MBR parameters and its settings. |
-| `slot1_partition`, on the NOR | 0x0 | 0xB5000 | The secondary slot, the same size as slot0, as on the Go. The rest of the NOR is #176's. |
+| `slot1_partition`, on the NOR | 0x0 | 0xB5000 | The secondary slot, the same size as slot0, as on the Go. |
+| `log_partition`, on the NOR | 0xB5000 | 0x200000 | The flights and the capture, 512 sectors of 4 KB, which is `store::kMaxPoolSectors`. The NOR's last 5.3 MiB are unused. |
 
 `USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in Meshtastic's bootloader 2.6.0 (`uf2cfg.h:31-32`, `Makefile:116-121`, `linker/nrf52840.ld`). SoftRF tells an X1 by finding the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. Which bootloader a new unit ships with is not known. Meshtastic-Android's `maintenance_uf2.json` lists two Board-IDs, `nRF52840-MeshTracker-X1-v1` and `nRF52840-MeshTracker-X1`, and a third-party tool, `mikecarper/meshfirmware` `web/src/bootloader-info.js`, calls the `-v1` one the factory's. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
 
 MCUboot uses swap-using-offset, as on the Go. A Go image starts at 0x26000, inside S140 7.3.0, and `mkuf2.py` refuses to build one for this board.
 
 Meshtastic's bootloader 2.6.0 enters UF2 mode after the button is held for 3 s through boot (`BUTTON_DFU_HOLD_MS 3000`), and leaves it when the drive is ejected (`UF2_EXIT_ON_EJECT`). With GPREGRET at `0x6d` it skips that check unless the button is down (`main.c:300-320`). It has no line that puts a VBUS wake back to sleep, unlike the T-Echo's bootloader (`../../lilygo/t_echo_plus/factory/README.md`).
+
+## The board composition
+
+`board.h` is the X1 assembled once, a template over the platform as the T-Echo's is: `hardware/platform/zephyr/meshtracker_x1.h` on silicon, `hardware/platform/host/meshtracker_x1.h` on the host. `pins.h` holds the four lines the parts' own drivers drive as `io::Gpio` numbers, and on silicon a `static_assert` holds each to the devicetree. The constructor touches no part: the product is a global, and a global's constructor runs before `main()` arms the watchdog and before the product has decided whether a wake runs. `probe()` does the work once both hold, and the product then copies the capabilities into its roles. The roles' references are chosen at construction and depend on no probe: the annunciator is always the platform's, and a DRV2605 the probe finds attaches to it. In `probe()`, the LR2021 answering its version grants `Capability::AdsbReceiver`, the SPA06 answering its chip id `Capability::Barometer`, and the DRV2605 answering and identifying itself `Capability::Haptic` and `Capability::HapticDriver`, which it then attaches to the annunciator. The LR2021's receiver pushes each frame into the `bus::AdsbQueue` the product hands the board. The board polls the AG3335, the battery, the button and the PPS edge as the T-Echo's does, and triggers the SPA06 once a second on the PPS edge, because the part has no filter (`../../../hardware/parts/spa06/README.md`).
+
+The inventory #170 moved to #176 is `ports::Inventory`: every address that answers on the sensor bus, the barometer's address, the haptic driver, and whether the YSN8900 answers on its own bus once `begin()` has raised its enable. Bravo prints it on the console at boot, because it has no self-test page.
+
+## The way down
+
+Bravo's product parks the LR2021, the buzzer, the motor, the lamps and the DRV2605 first (`../../../products/skyblip_bravo/README.md`). `meshtracker_x1_power.h` then walks `core/power`'s power-down order on the X1's lines:
+
+| Step | On the X1 |
+|---|---|
+| radio sleep | nothing: the product's receiver already put the LR2021 to sleep or held it in reset, and a refused boot held it in reset through NRESET |
+| flash deep power-down | nothing: the NOR loses its enable below |
+| flash lines released | the QSPI peripheral disabled and its six pads let go |
+| panel lines released | nothing: the X1 has no panel |
+| sensor bus released | both TWIM peripherals disabled and their four pads let go |
+| GNSS standby | the GNSS enable, P1.11, driven low |
+| GNSS lines released | the UARTE stopped and its pads let go, and the reset, sleep and RTC-wake lines let go |
+| peripheral rail off | the sensor rail P1.07, the RTC enable P0.09 and the NOR enable P0.15 driven low |
+| wake pin armed | the button, P0.06, armed as a level wake, high when pressed |
+
+GPREGRET is written first with the factory bootloader's skip magic, or its UF2 magic for a recovery, as on the Go. The GNSS RTC supply, P1.13, is left as bring-up raised it. Every step is unverified until #169 measures the off current.
 
 ## The smoke image
 

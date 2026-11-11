@@ -10,7 +10,7 @@
 #include "core/indication/lamp.h"
 #include "core/power/shutdown.h"
 #include "hardware/parts/drv2605/drv2605.h"
-#include "hardware/platform/zephyr/meshtracker_x1.h"
+#include "hardware/platform/zephyr/meshtracker_x1_lines.h"
 #include "runtime/tasks.h"
 
 using namespace skyblip;
@@ -34,7 +34,7 @@ constexpr BusPart kSensorBusParts[] = {
     {0x14, "BMM350"}, {0x5A, "DRV2605"}, {0x6A, "LSM6DSO"}, {0x77, "SPA06"}};
 constexpr BusPart kRtcBusParts[] = {{0x32, "YSN8900"}};
 
-platform::zephyr::MeshtrackerX1 g_platform;
+platform::zephyr::MeshtrackerX1Lines g_platform;
 parts::Drv2605 g_haptic{g_platform.i2c(io::BusId::Sensor), g_platform.gpio(), kHapticEnablePin};
 platform::zephyr::I2c g_rtc_bus{DEVICE_DT_GET(DT_ALIAS(rtc_i2c))};
 const struct gpio_dt_spec g_button = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
@@ -101,7 +101,7 @@ void announce() {
     show_outputs();
 }
 
-// INFO: fc 11nov26 radio and NOR stay powered, GNSS enable undriven: the off current is #176's
+// INFO: fc 11nov26 radio and NOR stay powered, GNSS enable undriven: Bravo parks them instead
 void switch_off() {
     printk("smoke: switching off, release the button\n");
     while (g_platform.button_down()) hold(runtime::kServicePassCeilingMs);
