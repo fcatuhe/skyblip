@@ -1,14 +1,14 @@
-// The LR2021 executor compiled against Zephyr, over a bus nobody wired yet: #170 and #176 give it
-// SPI.
+// The LR2021 executor compiled against Zephyr and the X1's radio lines, over an SPI #176 wires.
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
 #include "core/bus/bus.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/platform/zephyr/adsb_receiver.h"
-#include "hardware/platform/zephyr/meshtracker_x1.h"
-#include "runtime/tasks.h"
+#include "hardware/platform/zephyr/clock.h"
+#include "hardware/platform/zephyr/io.h"
 
 using namespace skyblip;
 
@@ -22,32 +22,37 @@ class UnwiredSpi : public io::Spi {
     void select(bool) override {}
 };
 
-// TODO: fc 11nov26 pins from SoftRF Seeed_X1.h, unverified until #169 benches a unit
-constexpr int kBusyPin = 7;
-constexpr int kResetPin = 32 + 10;
-constexpr int kIrqPin = 32 + 1;
+constexpr int flat_pin(bool on_gpio1, int pin) { return (on_gpio1 ? 32 : 0) + pin; }
+
+#define RADIO_PIN(label)                                                                  \
+    flat_pin(DT_SAME_NODE(DT_GPIO_CTLR(DT_NODELABEL(label), gpios), DT_NODELABEL(gpio1)), \
+             DT_GPIO_PIN(DT_NODELABEL(label), gpios))
+
+constexpr int kBusyPin = RADIO_PIN(radio_busy_gpio);
+constexpr int kResetPin = RADIO_PIN(radio_reset_gpio);
+constexpr int kIrqPin = RADIO_PIN(radio_irq_gpio);
+// TODO: fc 11nov26 DIO8 from SoftRF radiolib.cpp:2132, unverified until #169 benches a unit
 constexpr uint8_t kIrqDio = 8;
 
-platform::zephyr::MeshtrackerX1 g_platform;
+platform::zephyr::Gpio g_gpio{DEVICE_DT_GET(DT_NODELABEL(gpio0)),
+                              DEVICE_DT_GET(DT_NODELABEL(gpio1))};
+platform::zephyr::Delay g_delay;
+platform::zephyr::Clock g_clock;
 UnwiredSpi g_spi;
 bus::AdsbQueue g_frames;
-parts::Lr2021 g_radio(g_spi, g_platform.gpio(), g_platform.delay(), kBusyPin, kResetPin, kIrqPin,
-                      kIrqDio);
-const struct gpio_dt_spec g_irq = {DEVICE_DT_GET(DT_NODELABEL(gpio1)), 1, GPIO_ACTIVE_HIGH};
-platform::zephyr::AdsbReceiver g_receiver(g_radio, g_platform.clock(), g_irq, g_frames);
+parts::Lr2021 g_radio(g_spi, g_gpio, g_delay, kBusyPin, kResetPin, kIrqPin, kIrqDio);
+const struct gpio_dt_spec g_irq = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
+platform::zephyr::AdsbReceiver g_receiver(g_radio, g_clock, g_irq, g_frames);
 
 }  // namespace
 
 int main(void) {
-    if (g_platform.begin() != Status::Ok) return -1;
-    const Status status = g_receiver.begin();
-    printk("lr2021: begin=%s\n", to_string(status));
+    if (g_receiver.begin() != Status::Ok) return -1;
     for (;;) {
         events::AdsbFrame frame{};
-        while (g_frames.pop(frame)) printk("lr2021: frame rssi=%d\n", frame.rssi_dbm);
-        const ports::AdsbReceiverStatistics statistics = g_receiver.statistics();
-        printk("lr2021: frames=%u dropped=%u\n", static_cast<unsigned>(statistics.frames),
-               static_cast<unsigned>(statistics.dropped));
+        while (g_frames.pop(frame)) {
+        }
+        (void)g_receiver.statistics();
         k_msleep(1000);
     }
     return 0;
