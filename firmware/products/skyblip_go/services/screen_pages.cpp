@@ -28,11 +28,11 @@ int traffic_outside_formation(const traffic::TrafficTable& table) {
 }
 }  // namespace
 
-void ScreenService::draw_prompt() {
+void ScreenService::draw_prompt(uint32_t now_ms) {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(prompt_);
     snapshot.detail = config_.prompt_detail();
-    snapshot.timeout_s = comms::kPromptCeilingMs / 1000;
+    snapshot.seconds_left = config_.prompt_seconds_left(now_ms);
     draw_confirm(framebuffer_, snapshot);
 }
 
@@ -140,7 +140,7 @@ bool ScreenService::unit_activated() {
 
 void ScreenService::render(uint32_t now_ms) {
     if (answering()) {
-        draw_prompt();
+        draw_prompt(now_ms);
         return;
     }
     if (receiving_) {

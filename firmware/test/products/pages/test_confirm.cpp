@@ -22,7 +22,7 @@ ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(pending);
     snapshot.detail = comms::pending_detail(pending);
-    snapshot.timeout_s = comms::kPromptCeilingMs / 1000;
+    snapshot.seconds_left = comms::kPromptCeilingMs / 1000;
     return snapshot;
 }
 
@@ -98,7 +98,23 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
 
     // And the page says it will refuse on its own, so a prompt left standing is
     // not read as one waiting indefinitely.
-    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "REFUSED AFTER 30 S", 1));
+    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 30 S", 1));
+}
+
+TEST_CASE("confirm page: the seconds left count down, and none left draws no line") {
+    ConfirmSnapshot snapshot = prompt(comms::Pending::Register);
+    snapshot.seconds_left = 7;
+    Glass seven;
+    draw_confirm(seven, snapshot);
+    CHECK(reads_at(seven, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 7 S", 1));
+
+    snapshot.seconds_left = 0;
+    Glass none;
+    draw_confirm(none, snapshot);
+    int ink = 0;
+    for (int y = kConfirmExpiryY; y < kConfirmExpiryY + 7; y++)
+        for (int x = 0; x < Glass::kWidth; x++) ink += none.get_pixel(x, y) ? 1 : 0;
+    CHECK(ink == 0);
 }
 
 TEST_CASE("confirm page: it cannot be mistaken for a page a pilot was already on") {

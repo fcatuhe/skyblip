@@ -198,6 +198,7 @@ class ConfigService {
     // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
     bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
+    uint32_t prompt_seconds_left(uint32_t now_ms) const;
     bool settings_dirty() const { return settings_dirty_; }
     void clear_dirty() { settings_dirty_ = false; }
 
