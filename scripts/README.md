@@ -1,6 +1,6 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, which is Ruby.
+Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb` and `dev_release.rb`, which are Ruby.
 
 | Script | What it does |
 |---|---|
@@ -14,6 +14,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `build_local.sh` | build the device image off a committed ref, from a bare machine |
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
 | `build_image.sh` | build, sign and check the slim and full images in a ready workspace: what `build_local.sh`, CI and a release share |
+| `dev_release.rb` | publish each product image of a `firmware.yml` run as its own development pre-release and prune the old ones, its logic in `lib/dev_release.rb`, tested by `.github/test/dev_release_test.rb` |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py` and `check_image_product.py`, which `build_image.sh` runs on the images it signs; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says. `size_check.py` prints each image's flash and RAM headroom against its slot and its board's SRAM, and fails a build with no slot |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
