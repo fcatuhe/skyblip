@@ -1,7 +1,7 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
 import { hex } from '#skyblip/link';
-import { changedSettings, settingsOf, statusOf } from '#skyblip/settings';
+import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
@@ -198,7 +198,7 @@ export class Updater {
     const changed = changedSettings(this.#state.settings, values);
     if (Object.keys(changed).length === 0) return;
     this.#set({ notice: null });
-    return this.#ask('set', changed);
+    return this.#ask('set', settingsFrame(changed));
   }
 
   resetSettings() {

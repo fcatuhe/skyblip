@@ -3,7 +3,7 @@ title: "Activation ADS-L du Go en Bluetooth"
 nav_title: Activer
 slug: activer
 description: "Activez votre skyBlip Go en Bluetooth depuis Chrome ou Edge. Recevez son numéro de série signé, sans compte. Deux pressions sur le Go confirment."
-updated_on: "2026-11-10"
+updated_on: "2026-11-11"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 
@@ -35,8 +35,8 @@ updated_on: "2026-11-10"
         none: "pas encore",
         activate: "Activer",
         settings: {
-          legend: "Type d\u2019aéronef et indicatif",
-          lede: "Tous deux sont facultatifs. Passez-les et l\u2019appareil garde ses réglages actuels\u00A0: vous pourrez toujours les changer dans son menu ou sur la page de mise à jour.",
+          legend: "Type d\u2019aéronef, indicatif et adresse OACI",
+          lede: "Tous trois sont facultatifs. Passez-les et l\u2019appareil garde ses réglages actuels\u00A0: vous pourrez toujours les changer dans son menu ou sur la page de mise à jour.",
           ground: "Cet appareil accepte les réglages uniquement au sol, après avoir acquis sa position GPS. Placez-le à ciel ouvert et attendez\u00A0: le bouton Enregistrer redeviendra disponible dès qu\u2019il l\u2019aura.",
           save: "Enregistrer",
           skip: "Passer"
@@ -45,7 +45,7 @@ updated_on: "2026-11-10"
           ask: "La page demande à skyblip.eu une requête signée pour cet appareil, et la lui transmet.",
           confirm: "Autorisez-la\u00A0: l\u2019écran affiche ACTIVATE, SEND THE KEY OF THIS UNIT TO SKYBLIP.EU, appuyez deux fois.",
           register: "skyblip.eu donne son numéro à l\u2019appareil, qui l\u2019enregistre.",
-          settings: "Si vous les choisissez, autorisez le type d\u2019aéronef et l\u2019indicatif\u00A0: l\u2019écran affiche SETTINGS, appuyez deux fois."
+          settings: "Si vous les choisissez, autorisez les réglages\u00A0: l\u2019écran affiche SETTINGS, appuyez deux fois."
         } %>
 </section>
 
@@ -81,8 +81,12 @@ updated_on: "2026-11-10"
     numéro en hexadécimal.
   </p>
   <p class="lede">
-    La page propose ensuite le type d&rsquo;aéronef et l&rsquo;indicatif, tous
-    deux facultatifs. Cliquez sur Enregistrer pour envoyer les modifications
+    La page propose ensuite le type d&rsquo;aéronef, l&rsquo;indicatif et
+    l&rsquo;adresse OACI de l&rsquo;aéronef, tous trois facultatifs.
+    L&rsquo;adresse OACI est celle de votre transpondeur mode S, six chiffres
+    hexadécimaux&nbsp;: avec elle, l&rsquo;appareil n&rsquo;affiche jamais votre
+    propre transpondeur comme un trafic. Elle ne change pas l&rsquo;adresse
+    qu&rsquo;il émet. Cliquez sur Enregistrer pour envoyer les modifications
     ensemble. L&rsquo;écran affiche <span class="mono">SETTINGS</span> et
     présente les changements. Appuyez deux fois pour confirmer. Un appareil
     dont le firmware n&rsquo;accepte les réglages qu&rsquo;au sol le signale
@@ -90,7 +94,7 @@ updated_on: "2026-11-10"
     l&rsquo;indique, et le bouton Enregistrer redevient disponible dès que
     l&rsquo;appareil a sa position. Passez-la et
     l&rsquo;appareil garde ses réglages actuels, qui sont, sur un appareil neuf,
-    un avion léger sans indicatif. Les deux restent modifiables ensuite, dans le menu de
+    un avion léger sans indicatif ni adresse OACI. Tous restent modifiables ensuite, dans le menu de
     l&rsquo;appareil et sur <%= link_to_page "manage", label: "la page de mise à jour" %>.
   </p>
   <p class="lede">
@@ -198,8 +202,8 @@ updated_on: "2026-11-10"
       </thead>
       <tbody>
         <tr><th>Activé</th><td data-activate-word="activated">Activé&nbsp;: l&rsquo;appareil a son numéro et a allumé sa radio. Son nom devient skyBlip Go suivi de son adresse.</td></tr>
-        <tr><th>Enregistré</th><td data-activate-word="saved">Enregistré&nbsp;: l&rsquo;appareil a enregistré le type d&rsquo;aéronef et l&rsquo;indicatif. Changez-les plus tard dans son menu ou sur la page de mise à jour.</td></tr>
-        <tr><th>Réglages conservés</th><td data-activate-word="skipped">Réglages conservés&nbsp;: l&rsquo;appareil garde son type d&rsquo;aéronef et son indicatif actuels. Changez-les plus tard dans son menu ou sur la page de mise à jour.</td></tr>
+        <tr><th>Enregistré</th><td data-activate-word="saved">Enregistré&nbsp;: l&rsquo;appareil a enregistré les réglages modifiés. Changez-les plus tard dans son menu ou sur la page de mise à jour.</td></tr>
+        <tr><th>Réglages conservés</th><td data-activate-word="skipped">Réglages conservés&nbsp;: l&rsquo;appareil garde son type d&rsquo;aéronef, son indicatif et son adresse OACI actuels. Changez-les plus tard dans son menu ou sur la page de mise à jour.</td></tr>
         <tr><th>Pas de Web Bluetooth</th><td data-activate-word="no_bluetooth">Ce navigateur n&rsquo;a pas Web Bluetooth. Utilisez Chrome ou Edge, sur un ordinateur ou sur Android. Safari, Firefox, et tous les navigateurs d&rsquo;iPhone et d&rsquo;iPad n&rsquo;en ont pas.</td></tr>
         <tr><th>Pas un skyBlip</th><td data-activate-word="not_skyblip">L&rsquo;appareil choisi n&rsquo;a pas le service de réglages de skyBlip&nbsp;: ce n&rsquo;est pas un skyBlip.</td></tr>
         <tr><th>Liaison perdue</th><td data-activate-word="link_lost">La liaison est tombée. Rapprochez l&rsquo;appareil, connectez de nouveau et activez de nouveau.</td></tr>

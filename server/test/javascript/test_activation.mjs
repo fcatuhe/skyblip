@@ -202,31 +202,49 @@ async function activated(options = {}) {
   return session;
 }
 
-test('once activated, the page offers the aircraft type and the callsign the unit holds', async () => {
+test('once activated, the page offers the aircraft type, the callsign and the own ICAO the unit holds', async () => {
   const { unit, activator } = await activated({ stored: { ...DEFAULTS, aircraft_type: 4, callsign: 'F-CABC' } });
-  assert.deepEqual(activator.state.settings, { aircraft_type: 4, callsign: 'F-CABC' });
+  assert.deepEqual(activator.state.settings, { aircraft_type: 4, callsign: 'F-CABC', own_icao: '' });
   assert.equal(activator.state.status.flight, 'ground');
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get', 'status']);
 });
 
 test('saving writes the aircraft type and the callsign in one set, asked on the glass, and reads them back', async () => {
   const { unit, activator, until } = await activated();
-  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ' });
+  activator.saveSettings({ aircraft_type: 4, callsign: 'F-JXYZ', own_icao: '' });
   await until(state => state.phase === 'storing');
   assert.deepEqual(unit.staged, { aircraft_type: 4, callsign: 'F-JXYZ' });
   unit.press();
   const saved = await until(state => state.offer === 'saved' && state.settings.callsign === 'F-JXYZ');
   assert.equal(saved.notice.key, 'saved');
-  assert.deepEqual(saved.settings, { aircraft_type: 4, callsign: 'F-JXYZ' });
+  assert.deepEqual(saved.settings, { aircraft_type: 4, callsign: 'F-JXYZ', own_icao: '' });
   assert.deepEqual(unit.commands.slice(-2), ['set', 'get']);
   assert.equal(unit.commands.filter(command => command === 'set').length, 1);
 });
 
+// The unit holds the transponder's address as a number, and the field shows it as its six hex digits.
+test('an own ICAO typed in hex is sent as the 24-bit address, read back in hex, and cleared by 0', async () => {
+  const { unit, activator, until } = await activated();
+  activator.saveSettings({ aircraft_type: 1, callsign: '', own_icao: '3C6586' });
+  await until(state => state.phase === 'storing');
+  assert.deepEqual(unit.staged, { own_icao: 0x3C6586 });
+  unit.press();
+  const saved = await until(state => state.offer === 'saved' && state.settings.own_icao === '3C6586');
+  assert.equal(unit.stored.own_icao, 0x3C6586);
+  assert.equal(saved.phase, 'ready');
+
+  const cleared = await activated({ stored: { ...DEFAULTS, own_icao: 0x00A0F1 } });
+  assert.equal(cleared.activator.state.settings.own_icao, '00A0F1');
+  cleared.activator.saveSettings({ aircraft_type: 1, callsign: '', own_icao: '' });
+  await cleared.until(state => state.phase === 'storing');
+  assert.deepEqual(cleared.unit.staged, { own_icao: 0 });
+});
+
 test('saving sends only what changed, and nothing when nothing did', async () => {
   const { unit, activator, until } = await activated();
-  activator.saveSettings({ aircraft_type: 1, callsign: '' });
+  activator.saveSettings({ aircraft_type: 1, callsign: '', own_icao: '' });
   assert.ok(!unit.commands.includes('set'));
-  activator.saveSettings({ aircraft_type: 1, callsign: 'F-JXYZ' });
+  activator.saveSettings({ aircraft_type: 1, callsign: 'F-JXYZ', own_icao: '' });
   await until(state => state.phase === 'storing');
   assert.deepEqual(unit.staged, { callsign: 'F-JXYZ' });
 });

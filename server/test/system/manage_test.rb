@@ -25,6 +25,52 @@ class ManageTest < ApplicationSystemTestCase
     end
   end
 
+  test "the own ICAO is edited in hex beside the other settings" do
+    VCR.use_cassette("github/releases") do
+      visit "/manage"
+      click_button "Connect"
+      assert_field "Own ICAO address", with: ""
+      fill_in "Own ICAO address", with: "3c6586"
+      click_button "Save"
+      assert_text "Allow the change"
+      assert_equal({ "own_icao" => 0x3C6586 }, page.evaluate_script("fakeSkyblip.staged"))
+      page.execute_script("fakeSkyblip.press()")
+      assert_field "Own ICAO address", with: "3C6586"
+    end
+  end
+
+  test "an own ICAO left half typed for one unit does not block the next unit, which holds none" do
+    VCR.use_cassette("github/releases") do
+      visit "/manage"
+      click_button "Connect"
+      fill_in "Own ICAO address", with: "3C65"
+      click_button "Disconnect"
+      assert_button "Connect"
+
+      page.execute_script("delete fakeSkyblip.stored.own_icao")
+      click_button "Connect"
+      assert_field "Callsign", with: "F-CABC"
+      assert_no_field "Own ICAO address"
+      fill_in "Callsign", with: "F-JXYZ"
+      click_button "Save"
+      assert_text "Allow the change"
+      assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeSkyblip.staged"))
+    end
+  end
+
+  test "a firmware that holds no own ICAO is offered none, and its other settings still save" do
+    VCR.use_cassette("github/releases") do
+      visit "/manage"
+      page.execute_script("delete fakeSkyblip.stored.own_icao")
+      click_button "Connect"
+      assert_field "Callsign", with: "F-CABC"
+      assert_no_field "Own ICAO address"
+      fill_in "Callsign", with: "F-JXYZ"
+      click_button "Save"
+      assert_equal({ "callsign" => "F-JXYZ" }, page.evaluate_script("fakeSkyblip.staged"))
+    end
+  end
+
   test "a Go is offered the Go images of its track, and a Bravo none of them" do
     VCR.use_cassette("github/releases") do
       visit "/manage"

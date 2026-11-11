@@ -1,11 +1,11 @@
 import { addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { hex } from '#skyblip/link';
-import { changedSettings, settingsOf, statusOf } from '#skyblip/settings';
+import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 
 export { hasWebBluetooth };
 export { readSetting, showSetting } from '#skyblip/settings';
 
-export const OFFERED_SETTINGS = ['aircraft_type', 'callsign'];
+export const OFFERED_SETTINGS = ['aircraft_type', 'callsign', 'own_icao'];
 
 const SAVING = new Set(['saving', 'storing']);
 const BUSY = new Set(['asking', 'confirming', 'registering', 'unlocking', ...SAVING]);
@@ -96,7 +96,7 @@ export class Activator {
     const changed = changedSettings(settings, values, OFFERED_SETTINGS);
     if (Object.keys(changed).length === 0) return;
     this.#set({ phase: 'saving', notice: null });
-    return this.#send({ command: 'set', ...changed });
+    return this.#send({ command: 'set', ...settingsFrame(changed) });
   }
 
   skipSettings() {
