@@ -33,7 +33,8 @@ class Loop {
         if (!feed_decision_.started()) feed_decision_.begin(now_ms);
         for (int i = 0; i < count_; i++) {
             if (meter != nullptr)
-                meter->timed(static_cast<uint8_t>(i), [&] { services_[i]->tick(now_ms); });
+                meter->timed(diagnostics::loop_service_code(i),
+                             [&] { services_[i]->tick(now_ms); });
             else
                 services_[i]->tick(now_ms);
             if (services_[i]->progressing(now_ms)) feed_decision_.check_in(i, now_ms);

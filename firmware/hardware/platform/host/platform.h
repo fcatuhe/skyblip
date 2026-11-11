@@ -10,6 +10,7 @@
 #include "hardware/parts/ssd1681/ssd1681.h"
 #include "hardware/platform/contract.h"
 #include "hardware/platform/host/annunciator.h"
+#include "hardware/platform/host/central.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/die_temperature.h"
 #include "hardware/platform/host/flash_region.h"
@@ -216,6 +217,7 @@ class Platform {
 
     host::Clock& clock() { return clock_; }
     host::Link& link() { return link_; }
+    host::Central& central() { return central_; }
     host::KeyValueStore& key_value() { return key_value_; }
     host::FlashRegion& log_flash() { return log_flash_; }
     host::Annunciator& annunciator() { return annunciator_; }
@@ -297,6 +299,7 @@ class Platform {
     parts::Bme280 bme280_{i2c_};
     host::Clock clock_{};
     host::Link link_{};
+    host::Central central_{};
     host::KeyValueStore key_value_{};
     host::FlashRegion log_flash_{};
     host::FlashRegion imu_flash_{kImuFlashSectors};

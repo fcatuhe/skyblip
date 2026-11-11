@@ -146,6 +146,13 @@ class TEchoPlus {
         };
     }
 
+    // INFO: fc 11nov26 the Go's alone, so it rides beside the roles rather than in them
+    ports::Central& central() {
+        return ports::has(capabilities_, ports::Capability::Link)
+                   ? static_cast<ports::Central&>(platform_.central())
+                   : null_.central;
+    }
+
     void poll_barometer_on_pps(const timing::ClockState& clock, uint32_t now_ms) {
         if (!ports::has(capabilities_, ports::Capability::Barometer)) return;
         if (barometer_converting_) collect_barometer(now_ms);
@@ -235,6 +242,11 @@ class TEchoPlus {
             else
                 bus_.link_rx.push(frame);
         }
+
+        events::CentralEvent central_event;
+        while (platform_.central().pop_event(central_event))
+            bus_.central_events.push(central_event);
+        while (platform_.central().pop_rx(frame)) bus_.peer_rx.push(frame);
 
         if (ports::has(capabilities_, ports::Capability::Gnss)) {
             gnss_.request_satellites_in_view(state.gnss.levels_wanted);

@@ -9,9 +9,9 @@ namespace {
 constexpr int kHeaderY = 3;
 constexpr int kHeaderRuleY = 21;
 
-constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::AircraftType, MenuRow::Callsign,
-                                      MenuRow::Units, MenuRow::Range,        MenuRow::Plot,
-                                      MenuRow::Alarm, MenuRow::Volume,       MenuRow::OwnIcao};
+constexpr MenuRow kRadarMenuRows[] = {
+    MenuRow::Light, MenuRow::AircraftType, MenuRow::Callsign, MenuRow::Units,   MenuRow::Range,
+    MenuRow::Plot,  MenuRow::Alarm,        MenuRow::Volume,   MenuRow::OwnIcao, MenuRow::Bravo};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
                                        MenuRow::Raw,    MenuRow::Capture,    MenuRow::SelfTest};
 
@@ -90,6 +90,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Raw: return "RAW";
         case MenuRow::Capture: return "CAPTURE";
         case MenuRow::SelfTest: return "SELF TEST";
+        case MenuRow::Bravo: return "BRAVO";
         default: return "";
     }
 }
@@ -102,6 +103,7 @@ Page page_behind(MenuRow row) {
         case MenuRow::Satellites: return Page::Satellites;
         case MenuRow::Status: return Page::Status;
         case MenuRow::SelfTest: return Page::SelfTest;
+        case MenuRow::Bravo: return Page::Bravo;
         default: return Page::Radar;
     }
 }
@@ -209,6 +211,11 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
                 format_string(out, values.settings.plot == RadarPlot::All ? "ALL" : "TO SCALE");
             break;
         case MenuRow::Light: written = format_string(out, values.light ? "ON" : "OFF"); break;
+        case MenuRow::Bravo:
+            written = paired(values.settings)
+                          ? format_hex(out, events::bluetooth_tag(values.settings.bravo), 4)
+                          : format_string(out, "NONE");
+            break;
         case MenuRow::Alarm:
             written = format_string(out, values.settings.alarm_enabled ? "ON" : "OFF");
             break;

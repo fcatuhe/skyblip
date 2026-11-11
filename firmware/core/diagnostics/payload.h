@@ -341,6 +341,11 @@ struct Switch {
 // INFO: fc 03oct26 the service loop's index of each service, then the board poll that precedes them
 constexpr uint8_t kLoopBoardPoll = 10;
 
+// INFO: fc 11nov26 a service past the board poll's code takes the next, so none is renumbered
+constexpr uint8_t loop_service_code(int index) {
+    return static_cast<uint8_t>(index < kLoopBoardPoll ? index : index + 1);
+}
+
 struct Loop {
     uint16_t passes{0};
     uint16_t busy_ms{0};

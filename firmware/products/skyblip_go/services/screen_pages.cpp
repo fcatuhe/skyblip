@@ -151,6 +151,10 @@ void ScreenService::render(uint32_t now_ms) {
         draw_activation(framebuffer_, context_.state.activation.bluetooth_tag);
         return;
     }
+    if (notice_) {
+        draw_own_icao_notice(framebuffer_);
+        return;
+    }
     if (mode_ == Mode::Menu) {
         draw_menu_page();
         return;
@@ -275,6 +279,7 @@ void ScreenService::render(uint32_t now_ms) {
             // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
             SelfTestSnapshot now = self_test_;
             now.address = context_.state.activation.address();
+            now.own_icao_warning = bravo_.own_icao_warning().stands(settings.own_icao);
             draw_self_test(framebuffer_, now);
             break;
         }
@@ -311,6 +316,15 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Capture: {
             draw_capture(framebuffer_, capture_snapshot(now_ms));
+            break;
+        }
+        case Page::Bravo: {
+            BravoSnapshot snapshot;
+            snapshot.view = bravo_view();
+            snapshot.focus = bravo_page_.focus();
+            snapshot.confirming = bravo_page_.confirming();
+            snapshot.unpairing = bravo_page_.unpairing();
+            draw_bravo(framebuffer_, snapshot);
             break;
         }
         case Page::Status:

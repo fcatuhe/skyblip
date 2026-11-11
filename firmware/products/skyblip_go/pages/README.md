@@ -326,7 +326,7 @@ The last row is the I2C scan, and it reads `I2C IMU RTC HAPTIC BARO`: what answe
 
 The RTC is why that row exists. It is soldered onto a Plus like everything else, but nothing in this firmware drives it, so it has no capability, and a row is a capability: it carries a verdict, and `PASS` on a part the device never uses would be a claim that nothing behind it is true. The bus row is the honest half - the part answered, we know what it is, we do not use it. The IMU was in that half until a driver arrived; it has a row of its own now, and it still appears in the scan, because what the scan says is that the address answered and what the row says is that the part named itself.
 
-Fourteen part rows and the bus row is fifteen, which is what took the row pitch from 10 px to 9: seven of glyph and two of air. The alternative was dropping the scan, and a page that names every part it drives and hides the one part it does not would be the wrong half to lose.
+Fourteen part rows and the bus row is fifteen, which is what took the row pitch from 10 px to 9: seven of glyph and two of air. The alternative was dropping the scan, and a page that names every part it drives and hides the one part it does not would be the wrong half to lose. A sixteenth row stands under the bus row while a paired Bravo and the Go both lack an own ICAO: `NO OWN ICAO: OWN XPDR IS TRAFFIC`, thirty-two cells, the width of a row. Sixteen rows and the footer end at 198 px of the 200.
 
 Three verdicts, and the third is not a failure. `PASS` is the part answered. `FAIL` is a part the device cannot fly without and did not get. `NOT FITTED` is a footprint with nothing behind it, which is a real answer on this hardware: a plain T-Echo has no buzzer and no haptic, and a board built without a status lamp is still a board that flies. The part named in the middle column stays there when the verdict is `NOT FITTED`, because "the DRV2605 we look for is not there" is what a bench needs to read, and it is replaced by what actually answered when something did.
 
@@ -344,14 +344,14 @@ The panel half of "a pilot with no phone can change the things that matter". The
 
 | Menu | Rows |
 |---|---|
-| `radar` | `SETTINGS`: `LIGHT`, `TYPE`, `CALLSIGN`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `VOLUME`, `OWN ICAO` |
+| `radar` | `SETTINGS`: `LIGHT`, `TYPE`, `CALLSIGN`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `VOLUME`, `OWN ICAO`, `BRAVO` |
 | `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `SELF TEST` |
 
 Neither is titled after the page behind it. A heading reading `RADAR` over five settings, or `NEARBY` over four diagnostic pages, names where a thumb came from rather than what it is looking at, and a pilot who pressed the button knows which page they pressed it on. So the headings are `SETTINGS` and `DIAGNOSTICS`, which is what the rows under them are. Eleven characters at double height leave a third of the glass over, so nothing had to shrink to say it.
 
 Seven rows are why `kMenuRowHeight` is 23: `CALLSIGN` took it from 28 to 26 and `PLOT` from 26 to 23, which is what seven rows under the rule and the hint line at the foot leave. The rows start two pixels under the rule so the hint keeps five pixels of glass above and below it, and the words stand in the middle of the focused row's bar, four pixels above and four below.
 
-Seven is `kMenuLines`, and `LIGHT` made the radar's menu eight rows and `OWN ICAO` nine. Neither took the height down a fourth time: the rows slide up under the focus instead, one line for each tap past the seventh, so `VOLUME` comes onto the glass as `LIGHT` goes off the top, `OWN ICAO` as `TYPE` does, and the hint stays where it is. The pad only ever moves the focus down, so the rows only ever slide one way, and the next time the menu opens it is at the top again. Nothing marks the row below the last line: the pad walks onto it.
+Seven is `kMenuLines`, and `LIGHT` made the radar's menu eight rows, `OWN ICAO` nine and `BRAVO` ten. Neither took the height down a fourth time: the rows slide up under the focus instead, one line for each tap past the seventh, so `VOLUME` comes onto the glass as `LIGHT` goes off the top, `OWN ICAO` as `TYPE` does, and the hint stays where it is. The pad only ever moves the focus down, so the rows only ever slide one way, and the next time the menu opens it is at the top again. Nothing marks the row below the last line: the pad walks onto it.
 
 `CALLSIGN` is third, under `TYPE`, because those two are what another aircraft sees of this one and nothing else on the menu changes that. The row shows six characters of the stored name, which is the length a registration is identified by and the same cut the `nearby` column makes, or `NONE` on a device nobody has named yet.
 
@@ -376,6 +376,20 @@ It is also the one page the walk can be short of. A plain T-Echo has no inertial
 The two contacts mean here what they mean everywhere else: a tap of the pad moves the focus down a row, a press of the button acts on the row the focus is on, and every further press steps the same field again, which is what makes a volume settable with a thumb. No timing to get right, so nothing here can be produced by accident out of the long press that switches the device off, and a standing prompt takes the button away from a menu entirely before the gesture that answers it can be armed.
 
 A pilot cannot get stuck here: the rows only ever advance, the tap past the last one lands back on the page the menu belongs to, a long touch of the pad goes back to the radar, and a menu nobody has touched for `kIdleReturnHoldMs` gives the picture back on its own. There is no `Leave` row, because the pad already leaves and a row that only said "done" was a row to walk past on the way to the one a pilot wanted.
+
+`BRAVO` is under `OWN ICAO` for the same reason: a Bravo is paired once, on the ground, when the pair goes into an aircraft. It shows the paired Bravo's tag, or `NONE`, and opens the `bravo` page.
+
+## bravo
+
+The page a Go pairs with a Bravo on, opened from the `BRAVO` row, and the only page off the walk that the settings menu opens, so the pad hands it back to the radar and an alarm takes the glass from it as it takes it from a menu. Leaving it, by the pad, a long touch, an alarm or `kIdleReturnHoldMs` of nobody pressing, stops the scan and drops a pairing under way. The pairing itself is `../../../core/comms/README.md`, "The Go's link to its Bravo".
+
+Unpaired, opening it starts the scan, and the page lists each Bravo heard as a row, `BRAVO` and its tag, `3F2A`, which is the tag Bravo shows. Nothing heard yet reads `LISTENING`. The pad walks the rows and leaves past the last, and the button opens the confirm screen: `PAIR BRAVO`, the tag at triple height, `PAD CANCELS` over `BUTTON PAIRS`. A second press pairs. The tag is all the glass names, because two Bravos in one hangar differ by nothing else a pilot can read on the Go.
+
+While it pairs, the page reads `PAIRING` over the tag, then `CONNECTING`, then `PRESS THE` over `BUTTON ON BRAVO`, and the pad cancels. This screen never idles out: the pairing has its own ceilings. A refusal reads `NOT PAIRED` and why: `3 PHONES CONNECTED`, which clears on its own once a phone goes, `LINK TOO NARROW`, `NO ANSWER FROM BRAVO`, `LINK LOST`, or `UNKNOWN PROTOCOL` for a Bravo whose peer frames this Go does not speak, each with a line saying what to do. The button tries again.
+
+Paired, the page reads the tag and `CONNECTED`, `NOT CONNECTED`, `LINK TOO NARROW` or `UPDATE NEEDED`. The button asks first, `UNPAIR BRAVO` with `PAD KEEPS` over `BUTTON UNPAIRS`, and a second press unpairs and hands the page back.
+
+The own-ICAO notice is drawn here too, `draw_own_icao_notice()`, though it is no page: `ScreenService` shows it over whatever page stands, once a boot (`../README.md`, Own ICAO).
 
 ## The callsign field
 
@@ -458,5 +472,6 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `menu` | the other side of a page: what it is made of, and what a pilot can change |
 | `confirm`, `installing`, `recovery` | the moments that are not pages: being asked, receiving an image and being written, being handed to the USB bootloader |
 | `activation` | what a unit with no serial says instead of every page: where to activate it, and the tag that names it in the phone's chooser |
+| `bravo` | which Bravo this Go is paired with, and the pairing itself |
 
 `go::Page` lists the four the pad walks first - `Radar`, `Nearby`, `SixPack`, `GMeter` - and `go::kWalkedPages` is where the walk ends and the pages opened by name begin. All four always stand: there was a `page_mask` that could hide pages from the rotation, and with six of them on one walk it was worth having. Four is already the short list it was meant to produce, and two of them are doors - the radar is home, the nearby menu is how every page off the walk is opened - so a mask could only have made the device harder to get around. It left the settings, the link and the schema together (`../README.md`). A long touch of the pad goes back to `Radar` from anywhere, once no alarm is standing to be silenced first. Every page arrives the same way, through one call that takes the page by name, and that call draws what it is given: a page asked for while it is already on the glass still goes through the wipe, because the pilot holding the pad at home is asking for exactly that black (`../input/README.md`). The one place that must not spend it is the alarm taking the glass, which asks for the radar only when the radar is not already there.

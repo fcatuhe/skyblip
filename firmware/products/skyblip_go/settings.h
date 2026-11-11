@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "core/events/central.h"
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
@@ -50,6 +51,9 @@ constexpr uint8_t kAircraftTypeLight = 1;
 
 constexpr uint32_t kOwnIcaoUnset = 0;
 
+// INFO: fc 11nov26 BT_ADDR_LE_RANDOM_ID, the last LE address type (zephyr/bluetooth/addr.h)
+constexpr uint8_t kBluetoothAddressTypeCeiling = 3;
+
 struct Settings {
     uint8_t version{kCurrentVersion};
     // The per-unit battery trim, core/power/battery.h's kCalibrationCeilingMv
@@ -78,15 +82,21 @@ struct Settings {
     char callsign[kCallsignBytes]{0};
     // INFO: fc 11nov26 stored whole, so an F.2.3 table-5 transmitter can read it unchanged
     uint32_t own_icao{kOwnIcaoUnset};
+    // INFO: fc 11nov26 the pinned Bravo, its type with its address, all zero while unpaired
+    events::BluetoothAddress bravo{};
 
     // The companion-link contract, which the config frame of schemas/link.v1.json
     // describes. It moves when a key changes meaning, not when the flash layout does.
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 12;
+constexpr uint8_t kBlobVersion = 13;
 
 Settings defaults();
+
+inline bool paired(const Settings& settings) {
+    return settings.bravo != events::BluetoothAddress{};
+}
 
 Status validate(const Settings& settings);
 

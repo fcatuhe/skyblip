@@ -14,6 +14,10 @@ A receiver, a barometer, a divider and a button are called by nobody. The world 
 
 `Link` is the port with two shapes of send, and the split is the same one: `send()` puts one frame on every subscribed central because the traffic picture is everyone's, `send_to()` answers the connection that asked, named by its session id and its connection number, and answers `Down` once that connection is gone, even when its session id came back for another phone. `payload_bytes()` with no session is therefore the smallest central connected, since a broadcast frame is formatted once and has to fit the narrowest. `core/comms/README.md` has the rest, including which app may configure the device.
 
+`Link` also keeps one connection for a paired peer: `reserve_peer_connection(true)` lowers the phone ceiling by one, whether or not the peer is connected, and answers `Full` while phones hold every connection, so a Go never reserves what it cannot keep (#178).
+
+`Central` is the other side of that connection, the Go connecting to its Bravo: `scan()` and `connect()` take a `ScanDuty`, the window and the period the radio listens in, because how much of the radio a scan may take is the product's decision, `scan()` also takes the name prefix it reports, so the platform drops every other advertiser before it reaches a queue, `write()` puts a `peer_claim` on Bravo's peer characteristic, and what the world answers, an advertiser heard, the link up with its settled payload, the link gone and each notification, arrives as an `events::CentralEvent` or an `events::RxFrame` on the bus. It is not a field of `Roles`: only the Go uses it, so the board hands `central()` to the product, which hands it to its `BravoService`, and a board without Bluetooth hands `NullCentral`.
+
 `Rf` shows the line: the core calls `arm()`, so it is a port, and the executor pushes `RfEvent`, so the reception is an event. One device, two directions, two mechanisms. `Gnss` is a port for one reason only - a cold start is a thing the core asks for - and everything else the receiver knows arrives as a solution on the bus, which is why the port has one method on it.
 
 ## Absent is a role, not a null

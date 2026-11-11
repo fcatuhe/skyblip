@@ -13,6 +13,7 @@
 #include "hardware/parts/ssd1681/ssd1681.h"
 #include "ports/annunciator.h"
 #include "ports/capabilities.h"
+#include "ports/central.h"
 #include "ports/clock.h"
 #include "ports/dfu.h"
 #include "ports/die_temperature.h"
@@ -60,6 +61,8 @@ constexpr bool fills_the_platform_contract() {
                   "platform: clock() -> ports::Clock&");
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().link()), ports::Link&>,
                   "platform: link() -> ports::Link&");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().central()), ports::Central&>,
+                  "platform: central() -> ports::Central&, the Go's link to its Bravo");
     static_assert(
         std::is_convertible_v<decltype(std::declval<Self>().key_value()), ports::KeyValueStore&>,
         "platform: key_value() -> ports::KeyValueStore&");

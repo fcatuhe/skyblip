@@ -101,17 +101,18 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
-// Nine rows and seven lines: the rows slide up under the focus, one line at a time.
+// Ten rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
     MenuValues values = default_menu_values();
     values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 2);
+    REQUIRE(menu.row_count == kMenuLines + 3);
 
     const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
     CHECK(line_of(top, MenuRow::Light) == 0);
     CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
     CHECK(line_of(top, MenuRow::OwnIcao) == kMenuLines + 1);
+    CHECK(line_of(top, MenuRow::Bravo) == kMenuLines + 2);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
     CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 

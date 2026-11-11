@@ -21,6 +21,8 @@ class BravoStub {
     // INFO: fc 10nov26 schemas/link.v1.json, health: once a second whatever the traffic
     static constexpr uint32_t kHealthPeriodMs = 1000;
     static constexpr uint32_t kProtocolVersion = 1;
+    // INFO: fc 11nov26 the name Bravo must advertise (products/common/README.md), tag 3F2A
+    static constexpr const char* kAdvertisedName = "skyBlip Bravo 3F2A";
 
     struct Recorded {
         uint32_t at_ms;
@@ -28,6 +30,7 @@ class BravoStub {
     };
 
     struct Health {
+        uint32_t protocol_version{kProtocolVersion};
         bool listening{true};
         bool utc_valid{true};
         bool own_icao_set{false};
@@ -73,6 +76,7 @@ class BravoStub {
     void boot() {
         previous_link_ = std::move(link_);
         link_ = std::make_unique<platform::host::Link>();
+        (void)link_->advertise_as(kAdvertisedName);
         boot_epoch_ = random_.next();
         sequence_ = 0;
         sent_observation_ = false;
@@ -109,13 +113,14 @@ class BravoStub {
     }
 
     std::string health_frame() const {
-        std::string json =
-            "{\"command\":\"health\",\"protocol_version\":" + std::to_string(kProtocolVersion) +
-            ",\"boot_epoch\":" + std::to_string(boot_epoch_) +
-            ",\"listening\":" + text_of(health.listening) +
-            ",\"utc_valid\":" + text_of(health.utc_valid) +
-            ",\"own_icao_set\":" + text_of(health.own_icao_set) +
-            ",\"alarm_granted\":false,\"export_reference\":\"" + health.export_reference + "\"";
+        std::string json = "{\"command\":\"health\",\"protocol_version\":" +
+                           std::to_string(health.protocol_version) +
+                           ",\"boot_epoch\":" + std::to_string(boot_epoch_) +
+                           ",\"listening\":" + text_of(health.listening) +
+                           ",\"utc_valid\":" + text_of(health.utc_valid) +
+                           ",\"own_icao_set\":" + text_of(health.own_icao_set) +
+                           ",\"alarm_granted\":false,\"export_reference\":\"" +
+                           health.export_reference + "\"";
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         return complete_registry_frame(json + "}");
     }
