@@ -2,7 +2,7 @@ require "test_helper"
 
 class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
   test "the update page renders the file picker and a separate shelf request without GitHub" do
-    get "/manage"
+    get "/update"
 
     assert_response :success
     assert_select "input[type=file]"

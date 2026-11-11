@@ -20,21 +20,22 @@ export default class extends Controller {
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
-    const { Updater, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
+    const { joinSession, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
     this.productOf = productOf
     this.readSetting = readSetting
     this.showSetting = showSetting
     this.bluetooth = hasWebBluetooth()
     this.unsupportedTarget.hidden = this.bluetooth
-    this.updater = new Updater({ onChange: state => this.#render(state) })
+    this.session = joinSession(state => this.#render(state))
+    this.updater = this.session.updater
     this.#render(this.updater.state)
   }
 
   disconnect() {
     clearTimeout(this.recheck)
     this.selection?.abort()
-    this.updater?.disconnect()
+    this.session?.leave()
   }
 
   shelfTargetConnected() {
@@ -129,13 +130,18 @@ export default class extends Controller {
     this.connectTarget.disabled = !this.bluetooth || state.phase === "connecting"
     this.disconnectTarget.hidden = !linked
     this.hintTarget.hidden = linked
+    this.#facts(state)
+    this.#notes(state)
+    if (this.hasSettingsTarget) this.#settings(state)
+    if (this.hasInstallTarget) this.#firmware(state, idle, asks)
+    else this.messageTarget.textContent = this.#linkMessage(state)
+  }
+
+  #firmware(state, idle, asks) {
     this.installTarget.disabled = this.selecting || !asks || !state.file
     this.fileTarget.disabled = this.selecting || !["offline", "ready"].includes(state.phase)
     this.#offer(state, idle)
     this.recoverTarget.disabled = !asks
-    this.#facts(state)
-    this.#notes(state)
-    this.#settings(state)
     this.#steps(state)
     this.#progress(state)
     this.messageTarget.textContent = this.#message(state)
@@ -180,9 +186,11 @@ export default class extends Controller {
   #facts({ device, running, image, status, advice, file }) {
     this.deviceTarget.textContent = device || "-"
     this.firmwareTarget.textContent = running || "-"
-    this.trackTarget.textContent = image?.key ? this.labelsValue.track[image.downgrade ? "development" : "release"] : "-"
-    this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
-    this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
+    if (this.hasInstallTarget) {
+      this.trackTarget.textContent = image?.key ? this.labelsValue.track[image.downgrade ? "development" : "release"] : "-"
+      this.adviceTarget.textContent = advice ? `${this.#kind(advice === "full")}, ${FILE_ENDING[advice]}` : "-"
+      this.chosenTarget.textContent = file ? this.#chosen(file) : "-"
+    }
     const percent = status?.batteryPercent
     const charging = status?.charging ? ` ${this.chargingValue}` : ""
     this.batteryTarget.textContent = percent === null || percent === undefined ? "-" : `${percent} %${charging}`
@@ -203,13 +211,19 @@ export default class extends Controller {
     if (settings && address === null && ACTIVATED_PRODUCTS.has(this.productOf(image))) notes.push(["not_activated"])
     if (status?.flight === "airborne") notes.push(["in_flight"])
     if (refusedOnDevice) notes.push(["refused_on_device"])
+    if (image?.settings) notes.push([`settings_${image.settings}`])
+    if (this.hasInstallTarget) notes.push(...this.#imageNotes(image, status))
+    this.notesTarget.replaceChildren(...notes.map(([key, version]) => this.#note(key, version)))
+  }
+
+  #imageNotes(image, status) {
+    const notes = []
     if (IMAGE_NOTES[image?.state]) notes.push([IMAGE_NOTES[image.state], image.to])
     if (image?.imu === "writing") notes.push(["imu_writing"])
     if (image && !image.key && this.hasShelfTarget) notes.push(["no_key"])
-    if (image?.settings) notes.push([`settings_${image.settings}`])
     if (image && !image.swapPowered) notes.push(["swap_unpowered"])
     if (status?.wentDarkFlat) notes.push(["went_dark_flat"])
-    this.notesTarget.replaceChildren(...notes.map(([key, version]) => this.#note(key, version)))
+    return notes
   }
 
   #note(key, version) {
@@ -313,6 +327,12 @@ export default class extends Controller {
     const step = this.#step(state)
     if (step) return this.#word(`step_${step}`)
     return PHASE_WORD[state.phase] ? this.#word(PHASE_WORD[state.phase]) : ""
+  }
+
+  #linkMessage(state) {
+    const notice = this.#notice(state)
+    if (notice) return this.#said(notice)
+    return state.phase === "connecting" ? this.#word("connecting") : ""
   }
 
   #settingsMessage({ notice }) {

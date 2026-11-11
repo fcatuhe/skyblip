@@ -11,14 +11,35 @@ class ActivationTest < ApplicationSystemTestCase
     visit "/activate"
     click_button "Connect"
     assert_selector "[data-activate-target=address]", text: "none yet"
+    assert_no_selector "[data-activate-target=activated]"
 
     click_button "Activate"
     assert_selector "li[aria-current=step][data-step=confirm]"
+    assert_selector "[data-activate-target=countdown]", text: /\AThe glass refuses on its own in (30|29) s\.\z/
     page.execute_script("fakeUnit.press()")
 
     assert_selector "[role=status]", text: "Activated: the unit holds its serial"
+    assert_no_selector "[data-activate-target=countdown]"
     assert_selector "[data-activate-target=address]", text: "000003"
     assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
+  end
+
+  test "a unit already activated is not activated again, and the page points to the update page" do
+    visit "/activate"
+    page.execute_script("fakeUnit.address = 3")
+    click_button "Connect"
+
+    assert_selector "[data-activate-target=address]", text: "000003"
+    assert_button "Activate", disabled: true
+    within("[data-activate-target=activated]") { assert_link "the update page", href: "/update" }
+  end
+
+  test "the French page points to the French update page" do
+    visit "/fr/activer"
+    page.execute_script("fakeUnit.address = 3")
+    click_button "Connecter"
+
+    within("[data-activate-target=activated]") { assert_link "la page de mise à jour", href: "/fr/mettre-a-jour" }
   end
 
   test "the aircraft type, the callsign and the own ICAO are saved in the same session, asked once on the glass" do

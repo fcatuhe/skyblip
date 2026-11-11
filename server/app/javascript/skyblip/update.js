@@ -374,3 +374,13 @@ export class Updater {
     this.#onChange(this.#state);
   }
 }
+
+const sharedListeners = new Set();
+let sharedUpdater = null;
+
+// INFO: fc 11nov26 one link for the update and settings pages, which Turbo swaps without reloading this module
+export function joinSession(onChange) {
+  sharedUpdater ??= new Updater({ onChange: state => sharedListeners.forEach(listener => listener(state)) });
+  sharedListeners.add(onChange);
+  return { updater: sharedUpdater, leave: () => sharedListeners.delete(onChange) };
+}

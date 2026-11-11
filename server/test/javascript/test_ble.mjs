@@ -81,3 +81,17 @@ test('a config notification arrives decoded by name, and one that is no frame ar
   assert.match(replies[1][2].message, /shortest form/);
   link.disconnect();
 });
+
+// The settings page keeps its link across visits, so the activation page must not open a second one beside it.
+test('a new link closes the one the page already holds, before it opens', async () => {
+  const first = new FakeSkyblip().install();
+  const closed = [];
+  await connect({ onReply: () => {}, onClose: () => closed.push('first') });
+  const second = new FakeSkyblip().install();
+  await connect({ onReply: () => {}, onClose: () => closed.push('second') });
+  assert.deepEqual(closed, ['first']);
+  assert.equal(first.connected, false);
+  assert.equal(second.connected, true);
+  second.drop();
+  assert.deepEqual(closed, ['first', 'second']);
+});

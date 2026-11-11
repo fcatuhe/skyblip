@@ -1,7 +1,6 @@
 en:
   nav:
     label: "Site"
-    manage: "Manage"
     try: "Try it"
   cta:
     prompt: "Want to try it now, or get one?"
