@@ -206,17 +206,17 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
 TEST_CASE("rf: a radio that will not answer over SPI is an absent capability, not a quiet one") {
     platform::host::Platform fitted_platform;
     go::Product<platform::host::Platform> fitted{fitted_platform};
-    CHECK(ports::has(fitted.capabilities(), ports::Capability::Rf));
     CHECK(fitted.setup() == Status::Ok);
+    CHECK(ports::has(fitted.capabilities(), ports::Capability::Rf));
     CHECK(fitted.flyable());
 
     platform::host::Platform dead_platform;
     dead_platform.chips().radio.miso_dead = true;
     go::Product<platform::host::Platform> dead{dead_platform};
-    CHECK_FALSE(ports::has(dead.capabilities(), ports::Capability::Rf));
     // The radio is required, so the loop refuses to fly - and the self-test page
     // that names the part is painted before anything refuses.
     CHECK(dead.setup() == Status::Down);
+    CHECK_FALSE(ports::has(dead.capabilities(), ports::Capability::Rf));
     CHECK_FALSE(dead.flyable());
     CHECK(ports::has(ports::without(go::kRequired, dead.capabilities()), ports::Capability::Rf));
 }
