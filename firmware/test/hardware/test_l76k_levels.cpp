@@ -132,7 +132,7 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
     for (uint32_t now_ms = kBringUpLeadMs + 7010; now_ms < kBringUpLeadMs + 17010; now_ms += 1000) {
         run(gnss, chip, now_ms, now_ms + 990);
         const Burst burst = read_burst(wire.take());
-        const uint32_t fix_ms = parts::wire_ms(burst.ahead_of_fix_bytes, gnss.baud_rate());
+        const uint32_t fix_ms = io::wire_ms(burst.ahead_of_fix_bytes, gnss.baud_rate());
         if (burst.carried_levels) {
             with_levels++;
             paced_ms = fix_ms;
@@ -151,7 +151,7 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
 
 // At the rate the receiver boots at, the widest GSV set did not fit in the second the fix rides.
 TEST_CASE("l76k: the satellites-in-view burst fits the second only at the raised rate") {
-    CHECK(parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
+    CHECK(io::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           parts::L76k::kSolutionPeriodMs);
     CHECK(parts::L76k::kSearchingBurstMs < parts::L76k::kSolutionPeriodMs);
 }

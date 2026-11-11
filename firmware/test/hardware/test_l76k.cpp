@@ -182,7 +182,7 @@ TEST_CASE("l76k: the rate the receiver is met at is the baud the devicetree pins
 // The fix is refused as too old unless it is parsed before the radio's first transmit instant.
 TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites in view and all") {
     // GGA, three GSA and RMC: 333 ms of 9600 baud line, 28 ms of 115200.
-    CHECK(parts::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate) ==
+    CHECK(io::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate) ==
           doctest::Approx(333).epsilon(0.02));
     CHECK(parts::L76k::kBurstMs == doctest::Approx(28).epsilon(0.04));
 
@@ -191,7 +191,7 @@ TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites
           uint32_t(timing::kDirectStartMs));
     // The same burst at the rate the receiver boots at: past the slot, and past the second.
     CHECK(parts::L76k::kBurstStartMs +
-              parts::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
+              io::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           uint32_t(timing::kDirectStartMs));
 }
 

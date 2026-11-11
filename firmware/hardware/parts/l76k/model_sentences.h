@@ -2,11 +2,8 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 
-#include <cmath>
-
 #include "core/protocol/nmea_out.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "hardware/parts/l76k/model.h"
 
 namespace skyblip::models {
@@ -32,36 +29,6 @@ inline void L76k::emit_version() {
     written += format_string(line + written, firmware_version);
     written = protocol::nmea_finish(line, written);
     pending_.append(line, static_cast<size_t>(written));
-}
-
-// INFO: fc 19sep26 a real receiver reports hundredths of a knot and of a degree, and decimetres
-inline uint32_t L76k::knots_e2() const {
-    return static_cast<uint32_t>(divide_rounded<int64_t>(
-        static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 194384, 1000000));
-}
-
-inline uint32_t L76k::kmh_e2() const {
-    return static_cast<uint32_t>(
-        divide_rounded<int64_t>(static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 36, 100));
-}
-
-inline uint32_t L76k::heading_e2() const {
-    const double wrapped = heading_deg() - 360.0 * static_cast<int>(heading_deg() / 360.0);
-    const double positive = wrapped < 0 ? wrapped + 360.0 : wrapped;
-    return static_cast<uint32_t>(std::lround(positive * 100.0)) % 36000u;
-}
-
-inline int32_t L76k::msl_dm() const {
-    const int32_t msl_mm = altitude_mm() - geoid_separation_m * 1000;
-    return (msl_mm >= 0 ? msl_mm + 50 : msl_mm - 50) / 100;
-}
-
-inline int L76k::put_time(char* out) const {
-    int written = 0;
-    written += format_unsigned(out + written, utc_seconds_of_day / 3600u, 2);
-    written += format_unsigned(out + written, (utc_seconds_of_day / 60u) % 60u, 2);
-    written += format_unsigned(out + written, utc_seconds_of_day % 60u, 2);
-    return written;
 }
 
 // $GPRMC,hhmmss,A,ddmm.mmmm,N,dddmm.mmmm,E,speed_kn,track,ddmmyy,,,A*cs

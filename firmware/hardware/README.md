@@ -2,7 +2,7 @@
 
 What fills the roles `ports/` declares. `parts/` is a chip and its datasheet, `platform/` is everything that comes from the silicon the board is soldered to, `io/` is the bus vocabulary the two meet over.
 
-A part is written against `io::Spi`, `io::I2c` and `io::Uart`, never against Zephyr or against a platform. That is what lets each part's `model.h` stand in for the chip on the host and what makes `make test` exercise the SX1262 driver's real register writes. A model is headers only, so it never enters an image. The L76K's is two: `model.h` is what the receiver hears and how it moves, `model_sentences.h` is what it says.
+A part is written against `io::Spi`, `io::I2c` and `io::Uart`, never against Zephyr or against a platform. That is what lets each part's `model.h` stand in for the chip on the host and what makes `make test` exercise the SX1262 driver's real register writes. A model is headers only, so it never enters an image. The L76K's is two: `model.h` is what the receiver hears and how it moves, `model_sentences.h` is what it says. The GNSS models share `parts/gnss_truth.h`: where the antenna is, how it moves and what time it is, so a scenario flies the L76K and the AG3335 the same way.
 
 A window the datasheet asks the host to hold, a reset pulse or a save the part must not be interrupted in, is waited out on `io::Delay` and stated in microseconds. On silicon the calling thread sleeps for at least the window (`k_usleep`, resumed if the thread is woken early), so the service loop and the radio thread give the CPU back for the 10 ms panel reset rather than burning it. It spins with `k_busy_wait` only for a hold shorter than one kernel tick or where no thread may sleep (an interrupt, interrupts locked, before the kernel runs). Neither depends on what a GPIO read happens to cost. On the host it advances every part model's own clock, and the model refuses a hold that came up short: the SX1262 model raises `Fault::ShortReset` or `Fault::SpiBeforeSleepSettled`, the SSD1681 model stays in deep sleep.
 
@@ -10,7 +10,7 @@ A window the datasheet asks the host to hold, a reset pulse or a save the part m
 
 `boards/` is a template over a platform rather than a consumer of a base class, so a platform proves itself by compiling, not by overriding. The cost is that the contract is nowhere in the type system, which is what this section is for. A platform is what `platform/host/platform.h` and `platform/zephyr/t_echo_plus.h` both are: the T-Echo Plus, on the host and on silicon.
 
-On silicon each board has its own composition, which names the parts that board brings up and no others. The adapters it is built from (`clock.h`, `link.h`, `kvstore.h` and the rest) are shared. `platform/zephyr/meshtracker_x1.h` is the X1's, a stub with the SoC's parts only until #170 gives the board its devicetree, and it fills no contract yet because no board template is written over it.
+On silicon each board has its own composition, which names the parts that board brings up and no others. The adapters it is built from (`clock.h`, `link.h`, `kvstore.h` and the rest) are shared. `platform/zephyr/meshtracker_x1.h` is the X1's, a stub with the SoC's parts only until #170 gives the board its devicetree, and it fills no contract yet because no board template is written over it. `platform/zephyr/ag3335.h` is the AG3335's wiring on silicon, its UART, its PPS and its five control lines, read from devicetree aliases, which #176 composes into the X1's.
 
 The buses a part is constructed over:
 
