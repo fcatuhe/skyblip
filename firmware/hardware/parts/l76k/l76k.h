@@ -16,8 +16,6 @@ namespace skyblip::parts {
 // The rate port is io::UartRate (hardware/io/io.h): a board whose platform can
 // retune the port hands the driver one, and autobaud recovery becomes available.
 
-constexpr uint32_t wire_ms(uint32_t bytes, uint32_t baud) { return bytes * 10 * 1000 / baud; }
-
 class L76k : public ports::Gnss {
    public:
     explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate)
@@ -51,7 +49,7 @@ class L76k : public ports::Gnss {
 
     // INFO: fc 13sep26 GGA + three GSA (one per constellation) + RMC, the widest burst we ask for
     static constexpr uint32_t kBurstBytes = 320;
-    static constexpr uint32_t kBurstMs = wire_ms(kBurstBytes, kTargetBaudRate);
+    static constexpr uint32_t kBurstMs = io::wire_ms(kBurstBytes, kTargetBaudRate);
 
     // INFO: fc 03aug26 The L76K wakes on UART activity, so a receiver that is
     // asleep when we start talking eats the first thing we say. SoftRF sends one
@@ -90,7 +88,8 @@ class L76k : public ports::Gnss {
     // INFO: fc 18sep26 four talkers, up to 32 satellites, four to a sentence and 72 bytes each
     static constexpr uint32_t kSatellitesInViewBytes = 648;
     static constexpr uint32_t kSearchingBurstBytes = kBurstBytes + kSatellitesInViewBytes;
-    static constexpr uint32_t kSearchingBurstMs = wire_ms(kSearchingBurstBytes, kTargetBaudRate);
+    static constexpr uint32_t kSearchingBurstMs =
+        io::wire_ms(kSearchingBurstBytes, kTargetBaudRate);
     static_assert(kSearchingBurstMs < kSolutionPeriodMs,
                   "the burst must fit inside one solution period, satellites in view and all");
 
@@ -142,7 +141,7 @@ class L76k : public ports::Gnss {
 
     // INFO: gn 09jun25 SoftRF subtracts a per-chip latency the same way (driver/RF.cpp:236-260)
     uint16_t pps_latency_ms() const {
-        return static_cast<uint16_t>(wire_ms(kBurstBytes, baud_rate()));
+        return static_cast<uint16_t>(io::wire_ms(kBurstBytes, baud_rate()));
     }
 
     uint32_t port_overruns() const { return uart_.overruns(); }

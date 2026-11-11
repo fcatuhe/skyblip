@@ -61,6 +61,9 @@ class I2c {
     virtual bool read(uint8_t address, uint8_t* out, size_t bytes) = 0;
 };
 
+// INFO: fc 11nov26 8N1 puts ten bits on the wire for every byte
+constexpr uint32_t wire_ms(uint32_t bytes, uint32_t baud) { return bytes * 10 * 1000 / baud; }
+
 class Uart {
    public:
     virtual ~Uart() = default;
