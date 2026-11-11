@@ -8,7 +8,6 @@ const ESTIMATE_AFTER_SHARE = 0.05
 const ASKED_STEPS = new Set(["dfu", "install"])
 const PHASE_STEP = { uploading: "upload", installing: "install", rebooting: "install" }
 const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
-const LINKED = new Set(["ready", "asking", "confirming", "uploading", "installing"])
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
@@ -20,8 +19,9 @@ export default class extends Controller {
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
-    const { joinSession, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
+    const { LINKED_PHASES, joinSession, hasWebBluetooth, productOf, readSetting, showSetting } = await import(this.srcValue)
     if (!this.element.isConnected) return
+    this.linked = LINKED_PHASES
     this.productOf = productOf
     this.readSetting = readSetting
     this.showSetting = showSetting
@@ -123,7 +123,7 @@ export default class extends Controller {
   }
 
   #render(state) {
-    const linked = LINKED.has(state.phase)
+    const linked = this.linked.has(state.phase)
     const idle = state.phase === "ready" && !this.updater.inFlight
     const asks = idle && !state.refusedOnDevice
     this.connectTarget.hidden = linked

@@ -39,7 +39,7 @@ class ConfigureTest < ApplicationSystemTestCase
     visit "/configure"
     connect_go
     fill_in "Own ICAO address", with: "3C65"
-    click_button "Disconnect"
+    within(".manage") { click_button "Disconnect" }
     assert_button "Connect"
 
     page.execute_script("delete fakeSkyblip.stored.own_icao")

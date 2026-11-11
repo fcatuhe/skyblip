@@ -25,6 +25,7 @@ const IMAGE_REFUSALS = {
 // INFO: fc 26sep26 the ATT payloads of MTU 247 and 185, where Android and iOS commonly settle
 const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
+export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 

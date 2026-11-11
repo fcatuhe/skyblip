@@ -42,6 +42,21 @@ class UpdateTest < ApplicationSystemTestCase
       assert_current_path "/configure"
       assert_select "Alarm volume", selected: "Soft"
       assert_no_button "Connect"
+      assert_selector ".site-session", text: /Connected to\s+skyBlip Go 00003/
+    end
+  end
+
+  test "the header names the device connected, and its Disconnect closes the link on any briefing page" do
+    on_the_shelf do
+      visit "/update"
+      connect_go
+      click_link "Briefing"
+
+      assert_current_path "/briefing"
+      within(".site-session") { click_button "Disconnect" }
+      assert_no_selector ".site-session"
+      click_link "Change the settings of your device"
+      assert_button "Connect"
     end
   end
 

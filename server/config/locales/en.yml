@@ -1,6 +1,9 @@
 en:
   nav:
     label: "Site"
+    session:
+      connected: "Connected to"
+      disconnect: "Disconnect"
     try: "Try it"
   cta:
     prompt: "Want to try it now, or get one?"
