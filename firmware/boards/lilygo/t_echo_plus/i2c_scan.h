@@ -56,6 +56,7 @@ inline ports::Inventory scan_i2c(io::I2c& bus) {
         if (!bus.write(address, nullptr, 0)) continue;
         inventory.add_i2c_address(address);
     }
+    inventory.rtc_fitted = inventory.has_i2c_address(kRtcAddress);
     return inventory;
 }
 
