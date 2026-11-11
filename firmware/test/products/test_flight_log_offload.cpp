@@ -419,7 +419,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
 
     // Long enough for the question to have reached the glass: a press only
     // counts towards an answer once the prompt is on the panel and the thumb
-    // has stopped (products/skyblip_go/input/gesture.h), which is what makes a pilot stepping a
+    // has stopped (products/common/confirm_gesture.h), which is what makes a pilot stepping a
     // value on the settings page unable to authorise anything by accident.
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);

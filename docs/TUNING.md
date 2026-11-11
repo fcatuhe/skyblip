@@ -238,6 +238,12 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
 | `kTurnMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | [README](../firmware/core/traffic/README.md) argues it |
 
+## [`firmware/products/common`](../firmware/products/common/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kDoublePressWindowMs` | 600 | milliseconds | Window | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
+
 ## `firmware/products/common/services`
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -261,6 +267,13 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
 | `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
 
+## [`firmware/products/skyblip_bravo`](../firmware/products/skyblip_bravo/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kFlashPassCeilingMs` | `events::kAdsbQueueDrainWindowMs / 2` = 50 | milliseconds | Ceiling | the ADS-B queue holds the design load for its drain window, so flash takes half |
+| `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
+
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -273,7 +286,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kLongTouchHoldMs` | 1000 (1 s) | milliseconds | Hold | [README](../firmware/products/skyblip_go/input/README.md) argues it |
-| `kDoublePressWindowMs` | 600 | milliseconds | Window | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
 
 ## [`firmware/products/skyblip_go/pages`](../firmware/products/skyblip_go/pages/README.md)
 
@@ -317,4 +329,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-207 constants over 19 folders.
+209 constants over 21 folders.

@@ -4,7 +4,7 @@ The Goertek SPA06-003 barometer of the Seeed MeshTracker X1. A trigger commands 
 
 The source is the SPA06-003 datasheet, Ver2.0 of 2023-12-05, cited below as DS. Adafruit publishes it at <https://cdn-shop.adafruit.com/product-files/6420/spa06-003.PDF>, and Seeed's copy for its Grove module, <https://files.seeedstudio.com/wiki/Grove-Barometer_Sensor-SPA06-003/res/Datasheet.PDF>, is the same file, byte for byte. Goertek marks it confidential, so it is cited and not kept in the tree.
 
-Nothing here has run on a unit. Every address, register, code, scale factor and timing is the datasheet's or SoftRF's, and carries a `TODO` naming #169, whose bench checks them. The X1 board and platform do not build this part yet: #176 wires it into the Bravo product.
+Nothing here has run on a unit. Every address, register, code, scale factor and timing is the datasheet's or SoftRF's, and carries a `TODO` naming #169, whose bench checks them. `boards/seeed/meshtracker_x1/board.h` triggers it once a second on the PPS edge for skyBlip Bravo.
 
 ## Why command mode
 
@@ -44,7 +44,7 @@ Zephyr 4.4.2 has no SPA06 driver under `drivers/sensor`. The BME280 README says 
 
 64 times is the datasheet's high-precision mode, and its own sports use case (DS table 5, PRS_CFG 0x26). 128 times takes twice as long for the same 0.3 Pa (DS table 8). 32 times takes half as long for 0.4 Pa. The part has no IIR filter, so a conversion that is not read buys nothing: the Bravo board should trigger once a second, on the PPS edge, not four times as the T-Echo's does for the BME280's filter.
 
-A conversion takes the pressure time, one pass, the temperature time and one more pass: about 104 + 10 + 3.6 + 10 ms with `runtime::kServicePassCeilingMs`, and about 140 ms if the pressure takes the datasheet's 115 ms. That fits `runtime::kBarometerConversionCeilingMs`, 150 ms, with little margin. #176 decides the ceiling with the bench's figure.
+A conversion takes the pressure time, one pass, the temperature time and one more pass: about 104 + 10 + 3.6 + 10 ms with `runtime::kServicePassCeilingMs`, and about 140 ms if the pressure takes the datasheet's 115 ms. That fits `runtime::kBarometerConversionCeilingMs`, 150 ms, with little margin. Bravo keeps that ceiling until the bench measures the conversion: one that misses it is counted in the board's `barometer_faults()`, and the next second triggers again.
 
 ## Compensation
 

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "core/events/link.h"
-#include "products/skyblip_go/input/gesture.h"
+#include "products/common/confirm_gesture.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -60,8 +60,8 @@ void write(Rig& rig, uint16_t session_id, events::Endpoint endpoint, const uint8
 
 // The gesture arms once the prompt has stood as long as a double press takes.
 void confirm_on_device(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + go::ConfirmGesture::kDoublePressWindowMs);
-    now_ms += go::ConfirmGesture::kDoublePressWindowMs;
+    rig.run(now_ms, now_ms + common::ConfirmGesture::kDoublePressWindowMs);
+    now_ms += common::ConfirmGesture::kDoublePressWindowMs;
     rig.double_press(now_ms);
 }
 

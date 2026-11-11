@@ -5,7 +5,7 @@ What happened, as a value small enough to cross a queue. One header per producer
 | File | Raised by | Drained by |
 |---|---|---|
 | `rf.h` | the RF executor | `traffic` |
-| `adsb.h` | the 1090 MHz receiver's executor | Bravo's ADS-B service (#176) |
+| `adsb.h` | the 1090 MHz receiver's executor | Bravo's `AdsbService` (`products/skyblip_bravo/services/adsb.h`) |
 | `link.h` | the BLE adapter | `config`, and `log_rx` by `flight_log` |
 | `sensor.h` | the board, off the barometer and the divider | `ownship`, `power` |
 | `input.h` | the board, off the button and the pad | `screen` |

@@ -12,7 +12,7 @@ namespace skyblip::go {
 
 namespace {
 bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= ConfirmGesture::kDoublePressWindowMs;
+    return now_ms - since_ms >= common::ConfirmGesture::kDoublePressWindowMs;
 }
 
 bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_ms,
@@ -67,7 +67,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
         resolve(confirm_.tick(now_ms));
         return;
     }
-    if (arming_.tick(now_ms) != Answer::None) dirty_ = true;
+    if (arming_.tick(now_ms) != common::Answer::None) dirty_ = true;
     step_editor(now_ms);
 }
 
@@ -189,7 +189,7 @@ void ScreenService::press(uint32_t now_ms) {
         return;
     }
     if (on_capture_page()) {
-        if (arming_.press(now_ms) == Answer::Confirm) toggle_capture();
+        if (arming_.press(now_ms) == common::Answer::Confirm) toggle_capture();
         dirty_ = true;
         return;
     }
@@ -295,9 +295,9 @@ void ScreenService::step_editor(uint32_t now_ms) {
     }
 }
 
-void ScreenService::resolve(Answer answer) {
-    if (answer == Answer::None) return;
-    if (answer == Answer::Confirm)
+void ScreenService::resolve(common::Answer answer) {
+    if (answer == common::Answer::None) return;
+    if (answer == common::Answer::Confirm)
         config_.confirm();
     else
         config_.cancel();

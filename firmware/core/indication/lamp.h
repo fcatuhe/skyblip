@@ -14,7 +14,18 @@
 
 namespace skyblip::indication {
 
-enum class Condition : uint8_t { Off, Alarm, Critical, Low, NoFix, Alive, Count };
+enum class Condition : uint8_t {
+    Off,
+    Alarm,
+    Prompt,
+    Critical,
+    Low,
+    NoFix,
+    Alive,
+    NoFixLinked,
+    AliveLinked,
+    Count
+};
 
 // An LED reaches full brightness in microseconds, so core/annunciation's 90 ms
 // floor - an ear figure, the shortest blip a pilot can place and count - does not
@@ -59,6 +70,10 @@ inline constexpr Row kTable[kRowCount] = {
      {indication::Lamp::Red, 45, 135},
      Budget::Transient,
      "red, fast flicker: a traffic advisory stands"},
+    {Condition::Prompt,
+     {indication::Lamp::Green, 60, 190},
+     Budget::Transient,
+     "green, fast blink: a phone asks, two presses allow and one refuses"},
     {Condition::Critical,
      {indication::Lamp::Red, 60, 540},
      Budget::Transient,
@@ -75,6 +90,14 @@ inline constexpr Row kTable[kRowCount] = {
      {indication::Lamp::Green, 30, 2970},
      Budget::Steady,
      "green, one wink every 3 s: running, fix valid"},
+    {Condition::NoFixLinked,
+     {indication::Lamp::Blue, 30, 1470},
+     Budget::Steady,
+     "blue, one wink every 1.5 s: a phone is connected, no GNSS fix yet"},
+    {Condition::AliveLinked,
+     {indication::Lamp::Green, 30, 1470},
+     Budget::Steady,
+     "green, one wink every 1.5 s: a phone is connected, fix valid"},
 };
 
 constexpr uint16_t duty_permille(const Indication& indication) {
@@ -162,6 +185,9 @@ struct Situation {
     // with the same debounce and the same sanity floor.
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     bool fix_valid{false};
+    // INFO: fc 12nov26 only a product without a screen claims these, common::Feature::LampShowsLink
+    bool prompting{false};
+    bool linked{false};
 };
 
 constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;

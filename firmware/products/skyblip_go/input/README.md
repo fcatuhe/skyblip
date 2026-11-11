@@ -35,7 +35,7 @@ What a dismissal costs if it was an accident is one flight's worth of nothing: t
 
 ## The button's third meaning
 
-`ConfirmGesture` is the security boundary, not an input helper. This product ships with BLE pairing off, so nothing proves cryptographically that the phone asking for a firmware upload belongs to the pilot, and physical presence stands in for it. The gesture has to be one a thumb cannot produce by accident and one that cannot be confused with the press that opens a menu or the long press that switches the device off: a double press inside `kDoublePressWindowMs` is the only one of the button's meanings a pilot has to mean to make.
+`common::ConfirmGesture` (`../../common/confirm_gesture.h`, shared with Bravo, which answers its prompts with the same two presses) is the security boundary, not an input helper. This product ships with BLE pairing off, so nothing proves cryptographically that the phone asking for a firmware upload belongs to the pilot, and physical presence stands in for it. The gesture has to be one a thumb cannot produce by accident and one that cannot be confused with the press that opens a menu or the long press that switches the device off: a double press inside `kDoublePressWindowMs` is the only one of the button's meanings a pilot has to mean to make.
 
 It authorises nothing unless a prompt the pilot can read is on the glass, and a lone press at a prompt refuses the operation rather than leaving it standing. Fail closed, which is what makes "press twice to allow, once to refuse" true on the panel.
 

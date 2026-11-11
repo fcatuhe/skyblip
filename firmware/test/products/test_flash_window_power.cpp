@@ -5,7 +5,7 @@
 #include "core/events/link.h"
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/skyblip_go/input/gesture.h"
+#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "test/support/product_rig.h"
 #include "test/support/settings_writes.h"

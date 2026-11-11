@@ -2,8 +2,8 @@
 // authorises.
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
+#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/input/controls.h"
-#include "products/skyblip_go/input/gesture.h"
 
 using namespace skyblip;
 
@@ -97,51 +97,54 @@ TEST_CASE("controls: a touch the button joins says nothing, in either direction"
 }
 
 TEST_CASE("gesture: two presses inside the window authorise, one press refuses") {
-    go::ConfirmGesture gesture;
+    common::ConfirmGesture gesture;
     gesture.arm(1000);
-    CHECK(gesture.press(1100) == go::Answer::None);  // one press decides nothing yet
-    CHECK(gesture.press(1250) == go::Answer::Confirm);
+    CHECK(gesture.press(1100) == common::Answer::None);  // one press decides nothing yet
+    CHECK(gesture.press(1250) == common::Answer::Confirm);
     CHECK_FALSE(gesture.armed());  // spent: the same pair cannot confirm twice
-    CHECK(gesture.press(1300) == go::Answer::None);
+    CHECK(gesture.press(1300) == common::Answer::None);
 
     // The page press, made at a prompt. It is not ignored - it refuses.
-    go::ConfirmGesture lone;
+    common::ConfirmGesture lone;
     lone.arm(1000);
-    CHECK(lone.press(1100) == go::Answer::None);
-    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressWindowMs - 1) == go::Answer::None);
-    CHECK(lone.tick(1100 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
+    CHECK(lone.press(1100) == common::Answer::None);
+    CHECK(lone.tick(1100 + common::ConfirmGesture::kDoublePressWindowMs - 1) ==
+          common::Answer::None);
+    CHECK(lone.tick(1100 + common::ConfirmGesture::kDoublePressWindowMs) == common::Answer::Cancel);
     CHECK_FALSE(lone.armed());
 }
 
 // A pilot cycling pages produces exactly this, and it must not add up to a firmware upload.
 TEST_CASE("gesture: presses made before the prompt, and slow presses, authorise nothing") {
-    go::ConfirmGesture gesture;
-    CHECK(gesture.press(500) == go::Answer::None);  // disarmed: paging, not answering
-    CHECK(gesture.press(600) == go::Answer::None);
-    CHECK(gesture.tick(2000) == go::Answer::None);
+    common::ConfirmGesture gesture;
+    CHECK(gesture.press(500) == common::Answer::None);  // disarmed: paging, not answering
+    CHECK(gesture.press(600) == common::Answer::None);
+    CHECK(gesture.tick(2000) == common::Answer::None);
 
     // The prompt arrives between the two halves of a page double-tap. The half
     // that came first belongs to the pages, and cannot be counted here.
     gesture.arm(650);
-    CHECK(gesture.press(700) == go::Answer::None);
-    CHECK(gesture.tick(700 + go::ConfirmGesture::kDoublePressWindowMs) == go::Answer::Cancel);
+    CHECK(gesture.press(700) == common::Answer::None);
+    CHECK(gesture.tick(700 + common::ConfirmGesture::kDoublePressWindowMs) ==
+          common::Answer::Cancel);
 
-    go::ConfirmGesture slow;
+    common::ConfirmGesture slow;
     slow.arm(0);
-    CHECK(slow.press(100) == go::Answer::None);
-    CHECK(slow.press(100 + go::ConfirmGesture::kDoublePressWindowMs + 1) == go::Answer::None);
+    CHECK(slow.press(100) == common::Answer::None);
+    CHECK(slow.press(100 + common::ConfirmGesture::kDoublePressWindowMs + 1) ==
+          common::Answer::None);
 }
 
 // Three meanings on one button stay disjoint, or a pilot has two of them at once.
 TEST_CASE("gesture: the authorising window sits between a press and the power-off hold") {
-    CHECK(go::ConfirmGesture::kDoublePressWindowMs < power::kLongPressHoldMs);
+    CHECK(common::ConfirmGesture::kDoublePressWindowMs < power::kLongPressHoldMs);
 
     go::Controls controls;
-    go::ConfirmGesture gesture;
+    common::ConfirmGesture gesture;
     gesture.arm(0);
     controls.read(down(events::Contact::Button, 0));
     CHECK(controls.read(up(events::Contact::Button, power::kLongPressHoldMs + 200)) ==
           go::Gesture::None);
-    CHECK(gesture.tick(power::kLongPressHoldMs) == go::Answer::None);
+    CHECK(gesture.tick(power::kLongPressHoldMs) == common::Answer::None);
     CHECK(gesture.armed());
 }

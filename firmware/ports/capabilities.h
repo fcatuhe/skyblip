@@ -30,6 +30,7 @@ enum class Capability : uint32_t {
     // Plus: absent, the same table in core/indication runs and lights nothing.
     Indicator = 1u << 13,
     Inclinometer = 1u << 14,
+    AdsbReceiver = 1u << 15,
 };
 
 using Capabilities = Capability;

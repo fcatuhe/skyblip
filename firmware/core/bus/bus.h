@@ -49,7 +49,7 @@ class Queue {
     std::atomic<uint32_t> dropped_{0};
 };
 
-// INFO: fc 11nov26 only Bravo hears 1090 MHz, so the queue is a type here and #176 places it
+// INFO: fc 11nov26 only Bravo hears 1090 MHz, so the queue is a type and its product holds it
 using AdsbQueue = Queue<events::AdsbFrame, events::kAdsbQueueFrames>;
 
 struct Bus {

@@ -16,7 +16,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 |---|---|
 | `own` | `ownship` |
 | `clock` | `ownship` for UTC and the PPS edge, the board for `pps_locked` and `since_edge_ms` |
-| `traffic` | `traffic` |
+| `traffic` | `traffic` on the Go, `adsb` on Bravo, which runs no `traffic` service |
 | `radio_log` | `traffic` for what was received, `radio` for what was sent |
 | `rf` | `radio`, except `rf.timing_statistics`, whose PPS half is the board's |
 | `air` | `traffic` |
@@ -28,6 +28,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `imu` | the board, which owns the sensor hub the ball comes from and is the only code that can see where its bring-up stopped |
 | `capture` | `capture`, the diagnostics writer, read by the page that arms it |
 | `duty` | `screen` for the two panel counts and the backlight, `radio` for the armed receiver and the keyed transmitter, `alarm` for the annunciator, `config` for the BLE link |
+| `link` | `config`: a central is connected, and a prompt stands that the flight state allows |
 | `alarm_level` | `alarm` |
 | `panel_presented` | `screen` |
 | `started` | the product |

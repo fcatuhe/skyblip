@@ -8,6 +8,7 @@
 #include "ports/display.h"
 #include "ports/flash_region.h"
 #include "ports/gnss.h"
+#include "ports/identity.h"
 #include "ports/indicator.h"
 #include "ports/kvstore.h"
 #include "ports/link.h"
@@ -66,6 +67,25 @@ class NullRf : public Rf {
     Status begin() override { return Status::Down; }
     Status arm(const RfPlan&) override { return Status::Down; }
     void abort() override {}
+};
+
+// INFO: fc 12nov26 a unit that is never activated: the FICR tag names it, and it holds no key
+class KeylessIdentity : public Identity {
+   public:
+    explicit KeylessIdentity(uint16_t bluetooth_tag) : bluetooth_tag_(bluetooth_tag) {}
+
+    identity::DeviceId device_id() const override { return identity::DeviceId{}; }
+    uint16_t bluetooth_tag() const override { return bluetooth_tag_; }
+    bool seed(crypto::Ed25519::Seed&) const override { return false; }
+    const crypto::Ed25519::PublicKey& trusted_server_key() const override { return kNoServerKey; }
+    Status read_unlock_code(identity::UnlockCode&) override { return Status::NotFound; }
+    Status write_unlock_code(const identity::UnlockCode&) override { return Status::Unsupported; }
+    bool draw_random(ByteSpan) override { return false; }
+
+   private:
+    static constexpr crypto::Ed25519::PublicKey kNoServerKey{};
+
+    uint16_t bluetooth_tag_;
 };
 
 struct NullRoles {
