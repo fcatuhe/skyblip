@@ -2117,7 +2117,7 @@ The reset cause and the cell at boot decide whether a wake gets a running device
 - a cell nobody read never refuses a boot
   > The lockout's own catastrophic failure: a unit bricked by a divider nobody read.
 - a charger plugged into a sleeping device does not switch it on
-  > The one the item exists for.
+  > The silicon sets VBUS without OFF on a cable wake, and Zephyr's hwinfo reports that bit as POR.
 - a charger wake is named without hiding a fault that came with it
 - a charger wake that reaches the refusal takes the word back off the glass
   > A bootloader that let a charger wake through would get the frame of every armed device.
@@ -2131,7 +2131,7 @@ The reset cause and the cell at boot decide whether a wake gets a running device
 - a unit that reset itself runs on any cell the cutoff would have kept flying
   > A fault reset in flight met the switch-on lockout and left the pilot dark until a cable.
 - no cause that could be a first power-on refuses a boot by itself
-  > The failure that would be catastrophic and silent: a unit that refuses to boot the first time a cell is connected. On the nRF52840 RESETREAS is all-zero after a power-on or brown-out reset, so the wake bit is what separates the two, and the rule needs BOTH bits rather than either.
+  > The failure that would be catastrophic and silent: a unit that refuses to boot the first time a cell is connected. On the nRF52840 RESETREAS is all-zero after a power-on or brown-out reset, and its VBUS bit is set by nothing but a VBUS wake.
 - on a cell that can run, the button and the reset pin ask for a device
 - the boot a flat cell refuses names it for the unit that never shut down
   > A cell emptied on a shelf ran no shutdown, so the refusal is the only thing left to name it.
@@ -5448,11 +5448,13 @@ The ways a Bravo goes dark, every part parked on each: the X1 items #170 moved t
 **bravo**
 
 - a cable plugged into a unit switched off goes straight back to sleep
+  > The X1's bootloader lets a cable wake through, and the nRF52840 reports it as VBUS without OFF.
 - a long press switches it off with the receiver asleep and every output parked
 - a platform that fails its bring-up still parks the radio it probed
 - a press the bootloader held to its release wakes it, on the cell or the cable
   > The X1's factory bootloader holds the start until the wake press is released.
 - a press wakes it, even with the cable in
+  > A press that lands after the bootloader read the button up is still down when Bravo reads it.
 - a radio whose probe failed and whose BUSY sticks is held in reset on the way down
 - a radio whose probe failed is put to sleep on the way down, not skipped
   > GPT's review: a receiver that never started reported parked while the LR2021 stayed in standby.

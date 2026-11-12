@@ -210,8 +210,7 @@ TEST_CASE("product: the link is told at boot why the device came up") {
 // it would look wrong until a pilot needed it.
 TEST_CASE("product: a charger plugged into a sleeping device is not a boot") {
     Rig rig;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     CHECK(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::SleepAgain);
 
@@ -284,8 +283,7 @@ TEST_CASE("product: a refusal waits for the radio to park, and goes dark at the 
 
 TEST_CASE("product: the same charger with the button held is a boot") {
     Rig rig;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     rig.platform.board_gpio().button_down = true;
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.boot_path() == power::BootPath::Run);

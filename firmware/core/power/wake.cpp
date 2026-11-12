@@ -48,13 +48,10 @@ BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell) {
         return BootPath::SleepAgain;
     if (button_down) return BootPath::Run;
     if (has_cause(causes, ResetCause::Pin)) return BootPath::Run;
-    // Both, not either. VBUS alone is not enough to refuse a boot: the bit is
-    // only ever set on a wake from SYSTEM OFF, and if a future silicon or a
-    // future adapter reported it any other way, refusing on it alone would be a
-    // device that will not switch on.
-    if (!has_cause(causes, ResetCause::LowPowerWake)) return BootPath::Run;
-    if (!has_cause(causes, ResetCause::UsbVbus)) return BootPath::Run;
-    return BootPath::SleepAgain;
+    if (restarted(causes)) return BootPath::Run;
+    // INFO: fc 12nov26 only a VBUS wake from SYSTEM OFF sets RESETREAS.VBUS: README.md
+    if (has_cause(causes, ResetCause::UsbVbus)) return BootPath::SleepAgain;
+    return BootPath::Run;
 }
 
 }  // namespace skyblip::power

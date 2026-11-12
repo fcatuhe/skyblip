@@ -50,42 +50,41 @@ static BootCell healthy(uint16_t cell_mv = 3900) {
     return BootCell{cell_mv, /*valid=*/true, /*external_power=*/false};
 }
 
-// The one the item exists for.
+// The silicon sets VBUS without OFF on a cable wake, and Zephyr's hwinfo reports that bit as POR.
 TEST_CASE("wake: a charger plugged into a sleeping device does not switch it on") {
-    const ResetCause charger = ResetCause::LowPowerWake | ResetCause::UsbVbus;
+    const ResetCause charger = ResetCause::UsbVbus | ResetCause::PowerOn;
     CHECK(boot_path(charger, /*button_down=*/false, healthy()) == BootPath::SleepAgain);
+    CHECK(boot_path(ResetCause::UsbVbus, false, healthy()) == BootPath::SleepAgain);
     // And the page a bench eye reads names it, rather than calling it a wake.
     CHECK(classify(charger) == ResetReason::ChargerWake);
     CHECK(std::string(to_string(ResetReason::ChargerWake)) == "CHARGER WAKE");
 }
 
 TEST_CASE("wake: a pilot holding the button while plugging in gets the device") {
-    const ResetCause charger = ResetCause::LowPowerWake | ResetCause::UsbVbus;
+    const ResetCause charger = ResetCause::UsbVbus | ResetCause::PowerOn;
     CHECK(boot_path(charger, /*button_down=*/true, healthy()) == BootPath::Run);
 }
 
 // The failure that would be catastrophic and silent: a unit that refuses to boot
 // the first time a cell is connected. On the nRF52840 RESETREAS is all-zero after
-// a power-on or brown-out reset, so the wake bit is what separates the two, and
-// the rule needs BOTH bits rather than either.
+// a power-on or brown-out reset, and its VBUS bit is set by nothing but a VBUS wake.
 TEST_CASE("wake: no cause that could be a first power-on refuses a boot by itself") {
     CHECK(boot_path(ResetCause::PowerOn, false, healthy()) == BootPath::Run);
     CHECK(boot_path(ResetCause::None, false, healthy()) == BootPath::Run);
     CHECK(boot_path(ResetCause::Brownout, false, healthy()) == BootPath::Run);
-    // VBUS with no wake bit: not a wake at all, whatever raised it.
-    CHECK(boot_path(ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
-    CHECK(boot_path(ResetCause::PowerOn | ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
 }
 
 TEST_CASE("wake: on a cell that can run, the button and the reset pin ask for a device") {
     // The ordinary way out of SYSTEM OFF: a press on the wake pin.
     CHECK(boot_path(ResetCause::LowPowerWake, false, healthy()) == BootPath::Run);
     // A deliberate reset while the cable happens to be in.
-    CHECK(boot_path(ResetCause::LowPowerWake | ResetCause::UsbVbus | ResetCause::Pin, false,
-                    healthy()) == BootPath::Run);
+    CHECK(boot_path(ResetCause::Pin, false, BootCell{3900, true, /*external_power=*/true}) ==
+          BootPath::Run);
     CHECK(boot_path(ResetCause::Pin, false, healthy()) == BootPath::Run);
     // And a fault is never answered by going back to sleep, whatever else is set.
     CHECK(boot_path(ResetCause::Watchdog | ResetCause::UsbVbus, false, healthy()) == BootPath::Run);
+    CHECK(boot_path(ResetCause::Software | ResetCause::UsbVbus | ResetCause::PowerOn, false,
+                    healthy()) == BootPath::Run);
 }
 
 // Left to boot, each press costs the panel and kParkSettleMs to reach the same cutoff.
@@ -123,7 +122,7 @@ TEST_CASE("wake: a flat cell on the cable gets a device when a person asks for o
     BootCell on_charge = healthy(3000);
     on_charge.external_power = true;
     CHECK(boot_path(ResetCause::Pin, /*button_down=*/true, on_charge) == BootPath::Run);
-    CHECK(boot_path(ResetCause::LowPowerWake | ResetCause::UsbVbus, false, on_charge) ==
+    CHECK(boot_path(ResetCause::UsbVbus | ResetCause::PowerOn, false, on_charge) ==
           BootPath::SleepAgain);
 }
 
