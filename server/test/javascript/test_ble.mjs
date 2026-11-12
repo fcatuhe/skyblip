@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { GATT_WRITE_BYTES, chunks, connect, nmeaChecksum, nmeaSentence, reassembleLines } from '#skyblip/ble';
+import { GATT_WRITE_BYTES, chunks, connect, nmeaSentence, reassembleLines } from '#skyblip/ble';
+import { nmeaChecksum } from '#skyblip/nmea';
 import { FakeSkyblip } from './fake_skyblip.mjs';
 import { GROUP, ID, OP, packet } from '#skyblip/smp';
 

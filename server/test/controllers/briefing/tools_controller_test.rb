@@ -6,6 +6,7 @@ class Briefing::ToolsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href='/briefing/console']", text: /Bluetooth console/
+    assert_select "a[href='/briefing/comparison']", text: /Traffic comparison/
     assert_select "a[href='/briefing/simulator']", text: /Simulator/
     assert_select "a[href='/briefing/ownship']", text: /Ownship editor/
   end

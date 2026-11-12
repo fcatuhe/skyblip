@@ -1,0 +1,62 @@
+@layer workbench {
+.dev-comparison {
+  --chart-retro: var(--signal);
+  --chart-bravo: var(--blip);
+  --chart-ring: var(--sky-deep);
+  --chart-link: var(--ink-soft);
+  --chart-label: var(--ink);
+  --chart-halo: var(--paper);
+  --chart-empty: var(--sky-soft);
+}
+.dev-console.dev-comparison {
+  inline-size: min(1400px, 100vw - 2 * var(--gutter));
+  margin-inline-start: 50%;
+  translate: -50% 0;
+}
+.dev-console.dev-comparison .layout { max-width: none; }
+.dev-comparison .panel.panel-wide { flex-basis: 100%; }
+.dev-comparison .chart {
+  display: block;
+  inline-size: 100%;
+  block-size: min(70vh, 720px);
+  margin-top: var(--space-xs);
+  border-radius: 6px;
+  font: 700 var(--text-s) var(--font-sans);
+}
+.dev-comparison input[type=number], .dev-comparison select {
+  inline-size: 7rem;
+  background: var(--dev-tape-background);
+  color: var(--txt);
+  border: 1px solid var(--dev-button-border);
+  border-radius: 6px;
+  padding: var(--space-2xs) var(--space-xs);
+  font: var(--text-xs) var(--mono);
+}
+.dev-comparison .chart-key { font-weight: 600; }
+.dev-comparison .chart-key-retro { color: var(--chart-retro); }
+.dev-comparison .chart-key-bravo { color: var(--chart-bravo); }
+.dev-comparison .readout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2xs) var(--space-s);
+  margin: var(--space-s) 0 0;
+  font: var(--text-xs) var(--mono);
+}
+.dev-comparison .readout dt { color: var(--dim); }
+.dev-comparison .readout dd { margin: 0; }
+.dev-comparison .traffic-scroll { overflow-x: auto; }
+.dev-comparison .traffic {
+  border-collapse: collapse;
+  font: var(--text-xs) var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dev-comparison .traffic th, .dev-comparison .traffic td {
+  padding: var(--space-2xs) var(--space-xs);
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.dev-comparison .traffic th { color: var(--dim); font-weight: 600; }
+.dev-comparison .traffic td:nth-child(-n+4) { text-align: left; }
+.dev-comparison .traffic .stale { color: var(--dev-timestamp); }
+}

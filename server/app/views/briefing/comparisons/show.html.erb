@@ -1,0 +1,79 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("workbench") %>
+<% content_for :title, t("briefing.tools.comparison") %>
+<% chart = Rails.configuration.x.oaci_chart %>
+<section class="dev-tools dev-console dev-comparison" data-controller="comparison"
+         data-comparison-tiles-value="<%= chart.tiles %>"
+         data-comparison-attribution-value="<%= chart.attribution %>">
+  <h1>Traffic comparison <span>&middot; a SoftRF Retro Mk&nbsp;II over USB beside a skyBlip&nbsp;Bravo over Bluetooth</span></h1>
+
+  <div class="layout">
+    <%= render "source", source: "retro", name: "SoftRF Retro Mk II", transport: "serial" %>
+    <%= render "source", source: "bravo", name: "skyBlip Bravo", transport: "bluetooth" %>
+
+    <div class="panel panel-wide">
+      <h2>Chart</h2>
+      <div class="bar">
+        <button type="button" data-action="comparison#zoomOut" aria-label="Zoom out">&minus;</button>
+        <button type="button" data-action="comparison#zoomIn" aria-label="Zoom in">+</button>
+        <span class="state" data-comparison-target="chartState">-</span>
+      </div>
+      <canvas class="chart" data-comparison-target="chart" aria-label="Traffic from both receivers on the OACI chart" role="img"></canvas>
+      <form class="row" data-action="comparison#saveChart">
+        <label class="check">Latitude <input type="number" name="latitude" step="any" value="<%= chart.centre[:latitude] %>" required></label>
+        <label class="check">Longitude <input type="number" name="longitude" step="any" value="<%= chart.centre[:longitude] %>" required></label>
+        <label class="check">Radius, km <input type="number" name="radius" min="10" max="300" value="<%= chart.radius_km %>" required></label>
+        <button type="submit">Save the chart offline</button>
+        <span class="state" data-comparison-target="saveState"></span>
+      </form>
+      <div class="hint">The chart centres on the receiver that has a fix, and on the saved area before that.
+        Save the area before the flight, and open the page before takeoff: tiles come from IGN's Géoplateforme and stay in this browser, the page does not.
+        <span class="chart-key chart-key-retro">Retro</span> <span class="chart-key chart-key-bravo">Bravo</span>
+        draw the same aircraft joined by a dashed line, with the height above us in hundreds of feet.</div>
+    </div>
+
+    <div class="panel panel-wide">
+      <h2>Aircraft</h2>
+      <p class="state" data-comparison-target="tally">-</p>
+      <div class="traffic-scroll">
+        <table class="traffic">
+          <thead>
+            <tr>
+              <th rowspan="2" scope="col">Address</th>
+              <th rowspan="2" scope="col">Callsign</th>
+              <th rowspan="2" scope="col">Heard by</th>
+              <th rowspan="2" scope="col">First</th>
+              <th colspan="7" scope="colgroup" class="chart-key-retro">Retro</th>
+              <th colspan="7" scope="colgroup" class="chart-key-bravo">Bravo</th>
+            </tr>
+            <tr>
+              <% 2.times do %>
+                <th scope="col">Age, s</th><th scope="col">Dist, km</th><th scope="col">Brg</th><th scope="col">Rel, ft</th>
+                <th scope="col">GS, kt</th><th scope="col">Reports</th><th scope="col">Farthest, km</th>
+              <% end %>
+            </tr>
+          </thead>
+          <tbody data-comparison-target="aircraft"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <% { "retro" => "Retro", "bravo" => "Bravo" }.each do |source, label| %>
+      <div class="panel panel-wide">
+        <h2><%= label %>: every attribute decoded</h2>
+        <div class="traffic-scroll">
+          <table class="traffic" data-comparison-target="attributes" data-source="<%= source %>"></table>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="panel panel-wide">
+      <h2>Log</h2>
+      <div class="bar">
+        <button type="button" data-action="comparison#download">Download NDJSON</button>
+        <button type="button" data-action="comparison#clear">Clear</button>
+        <span class="state" data-comparison-target="logState">-</span>
+      </div>
+      <div class="hint">Every sentence and frame both receivers sent, one JSON line each: the time it arrived, the receiver, the raw line or frame, and what it decoded to.</div>
+    </div>
+  </div>
+</section>

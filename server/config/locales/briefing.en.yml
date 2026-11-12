@@ -85,6 +85,8 @@ en:
       title: Developer tools
       console: Bluetooth console
       console_hint: Every frame the device sends, and any command.
+      comparison: Traffic comparison
+      comparison_hint: A SoftRF over USB beside a skyBlip over Bluetooth, on the OACI chart.
       simulator: Simulator
       simulator_hint: The firmware in your browser, with an editable sky.
       ownship: Ownship editor
