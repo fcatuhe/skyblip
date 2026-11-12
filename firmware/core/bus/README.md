@@ -31,6 +31,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `link` | `config`: a central is connected, and a prompt stands that the flight state allows |
 | `alarm_level` | `alarm` |
 | `bravo` | `bravo` |
+| `alarm_granted` | `peer` on Bravo, never written on the Go |
 | `panel_presented` | `screen` |
 | `started` | the product |
 

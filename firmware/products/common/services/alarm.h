@@ -56,8 +56,6 @@ class AlarmService : public runtime::Service {
 
     int formation_members() const { return formation_.members(); }
     bool sounding() const { return annunciation_.sounding(); }
-    // INFO: fc 11nov26 a peer_claim counts them, so a frozen alarm never renews a grant (#179)
-    uint32_t passes() const { return passes_; }
 
     // What the table decided, and what the lamp is showing this instant. Both,
     // because they differ in the gaps of a wink and a test has to be able to say
@@ -103,7 +101,6 @@ class AlarmService : public runtime::Service {
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     bool dirty_{false};
-    uint32_t passes_{0};
     bool running_{true};
     bool lamp_shows_link_{false};
     const Feature declared_;

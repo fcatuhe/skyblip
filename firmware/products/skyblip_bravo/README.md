@@ -110,7 +110,7 @@ So a pin on the Go alone lasts until the Go next reaches Bravo, and is cleared o
 
 A Go that unpairs while connected says so: it writes one `peer_claim` with `paired` false and keeps the link until Bravo's `health` answers `paired` false, at most `BravoService::kFarewellCeilingMs`, 2 s. Bravo drops its pin and frees the kept connection on that claim. A Go unpaired while away from Bravo cannot say so, and Bravo keeps its pin until that Go asks it again or another Go replaces it. A farewell lost on the link ends the same way, since the Go drops the link after 2 s whether Bravo answered or not. A Go that asks to pair while Bravo holds its pin has unpaired, so Bravo drops its pin and shows the request. Another Go's request answered with a press replaces the pin, and the old Go's next claim is answered `paired` false, so it drops its own.
 
-`PeerService::paired()` is true only while the pin is stored, which is after both sides confirmed. #179 grants the alarm only to that Go. Until then `health` says `alarm_granted` false.
+`PeerService::paired()` is true only while the pin is stored, which is after both sides confirmed. Bravo gives the alarm only to that Go (The alarm).
 
 ### The connection
 
@@ -137,6 +137,22 @@ The position and the height are judged apart: a height older than the ceiling le
 `health.export_reference` says which, whatever UTC says. Bravo exports observations only while it also holds UTC. A claim's age is its position age, plus the time from its `at_s` to Bravo's UTC when both hold UTC, plus the time since Bravo read it. Without a phase on either side it counts the claim from the start of its second and Bravo from the end of its own, so an unknown phase ages a claim. A claim written without UTC never gates. Each field of the Go's own-ship is valid on its own: a pressure altitude older than the ceiling leaves the reference with no pressure altitude, and Bravo's own barometer never stands in for the Go's. With no vertical reference the gate is horizontal only, so no target is dropped on a height it cannot compare.
 
 The CPR reference is the same position, so a Bravo with no fix still decodes locally around its Go. The NMEA stream to a phone is unchanged: it is relative to Bravo's own fix, so a Bravo with no fix sends a phone no `$PFLAA`.
+
+### The alarm
+
+Only Bravo silences itself, and only for a Go+ that sounds for both units (#179). The Go+ takes the alarm with `alarm_requested` true in its claim (`../../core/comms/README.md`, The Go's link to its Bravo). Bravo keeps its buzzer and motor silent while all of these hold:
+
+- it holds the pin of that Go, and that Go's connection is up;
+- the last claim it read from that Go said `alarm_requested` true;
+- that claim is younger than `PeerService::kAlarmRequestMaxAgeMs`, 3 s, three claim periods, so one lost claim keeps it silent. #194 sets the figure on the bench.
+
+`health.alarm_granted` says so to that Go, and is false to every other Go. A claim from a Go Bravo has not pinned never silences it.
+
+Bravo sounds again by its own `alarm_enabled` and `alarm_volume`, on the pass after any of these: the Go's connection drops, a claim says `alarm_requested` false, the Go unpairs, or no requesting claim arrived for 3 s with the link up. An advisory that stands is announced again at once. After a boot Bravo sounds until a requesting claim arrives.
+
+`PeerService` publishes the decision as `bus::State::alarm_granted`, and `common::AlarmService` reads it with the alarm settings, so the traffic call, the first-fix tune and the motor all fall silent the way `ALARM OFF` silences them. Nothing else changes: the lamp still flickers on an advisory, a press still dismisses it, and the `$PFLAU` and `$PFLAA` to a phone keep their alarm levels, because an EFB's alarm follows its own stream (#184).
+
+Two costs are accepted rather than built around. At a handover, a Go+ that loses its fix stops asking only on its next claim, so up to about a claim period passes with no unit sounding. While the link fails one way, both units may sound. Two longer gaps are bounded by the ages above. A Go+ that switches off or stops in flight leaves Bravo silent until its connection drops or its last claim ages out, at most 3 s. Bravo's frames lost on the way to a Go+ whose claims still arrive leave Bravo silent until the Go+ reads `BRAVO LOST`, at most the Go's `kHealthMaxAgeMs` and one claim period, 4 s, while the Go+ keeps alarming on the targets it already holds.
 
 The own ICAO is the pinned Go's `own_icao` when its last claim carried one, else Bravo's own setting. The assembly and the table drop that address.
 
@@ -196,4 +212,5 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - a Go pairs: its request blinks the lamp blue, one press pairs both sides, and both keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;
 - the Go's BRAVO page reads `CONNECTED`, and an aircraft Bravo hears reaches the Go as `observation` frames, at most two a second;
+- paired with a Go+ that has a fix, an advisory sounds on the Go+ alone, and Bravo sounds again within 3 s of the Go+ switching off;
 - endurance from full to cutoff, with the conditions, published as measured.

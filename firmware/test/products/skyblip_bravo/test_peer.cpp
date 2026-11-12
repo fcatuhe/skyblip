@@ -80,7 +80,7 @@ struct Served {
                     std::to_string(position->pressure_altitude_age_ms);
         }
         if (own_icao != 0) json += ",\"own_icao\":" + std::to_string(own_icao);
-        json += ",\"alarm_requested\":false,\"alarm_passes\":1,\"alarm_volume\":\"loud\",";
+        json += ",\"alarm_requested\":false,";
         json += std::string("\"paired\":") + (paired ? "true" : "false") + "}";
         return complete_registry_frame(json);
     }
@@ -320,8 +320,6 @@ TEST_CASE("bravo peer: a central whose peer frame is refused is never sent obser
     writer.add_code(link::kCommandKey, link::Command::PeerClaim);
     writer.add_unsigned(link::peer_claim_key::kBootEpoch, 7);
     writer.add_boolean(link::peer_claim_key::kAlarmRequested, false);
-    writer.add_unsigned(link::peer_claim_key::kAlarmPasses, 1);
-    writer.add_unsigned(link::peer_claim_key::kAlarmVolume, 2);
     const int bytes = writer.finish();
     REQUIRE(bytes > 0);
     REQUIRE(stranger.write(std::string(reinterpret_cast<const char*>(claim),
@@ -454,7 +452,7 @@ TEST_CASE("bravo peer: a malformed claim is refused and counted, and changes not
     Served served;
     REQUIRE(served.go.write(complete_registry_frame(
                 "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"latitude_1e7\":485000000,"
-                "\"alarm_requested\":false,\"alarm_passes\":1,\"alarm_volume\":\"loud\","
+                "\"alarm_requested\":false,"
                 "\"paired\":true}")) == Status::Ok);
     served.run_for(200);
     CHECK(served.rig.product.peer().refused() == 1);

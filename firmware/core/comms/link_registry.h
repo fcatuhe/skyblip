@@ -406,9 +406,6 @@ enum : uint32_t {
     kLastSequence = 5,
     kOwnIcaoSet = 6,
     kAlarmGranted = 7,
-    kLeaseMs = 8,
-    kRequestEpoch = 9,
-    kRequestSequence = 10,
     kExportReference = 11,
     kPaired = 12,
 };
@@ -428,11 +425,6 @@ enum : uint32_t {
     kPressureAltitudeAgeMs = 10,
     kOwnIcao = 11,
     kAlarmRequested = 12,
-    kRequestSequence = 13,
-    kAlarmPasses = 14,
-    kAlarmVolume = 15,
-    kAssessedEpoch = 16,
-    kAssessedSequence = 17,
     kPaired = 18,
 };
 }
@@ -480,7 +472,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
-        case Command::PeerClaim: return 0x7FFFF;
+        case Command::PeerClaim: return 0x41FFF;
     }
     return 0;
 }

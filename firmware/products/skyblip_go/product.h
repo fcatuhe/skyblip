@@ -437,7 +437,7 @@ class Product {
                                          config_link_.config()};
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
-    BravoService bravo_{context_, settings_, config_link_.config(), board_.central(), alarm_};
+    BravoService bravo_{context_, settings_, config_link_.config(), board_.central()};
     ScreenService screen_{
         context_, settings_, config_link_.config(), alarm_, capture_, self_test_snapshot_, bravo_};
 

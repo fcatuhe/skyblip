@@ -32,7 +32,9 @@ void PeerService::tick(uint32_t now_ms) {
     while (context_.bus.peer_rx.pop(frame)) take(frame, now_ms);
     pairing_.tick(now_ms);
     keep_pin();
+    expire_alarm_request(now_ms);
     context_.state.link.pairing_standing = pairing_.requested();
+    context_.state.alarm_granted = alarm_request_.has_value();
 
     const GateChoice choice = gate_.choose(context_.state.own, now_ms);
     const bool utc_valid = context_.instant(now_ms).utc_dated;
@@ -52,6 +54,7 @@ void PeerService::forget_gone() {
         events::BluetoothAddress live{};
         if (!go.used || context_.roles.link.central_of(go.peer, live)) continue;
         if (pairing_.pinned_to(go.address)) gate_.lose_link();
+        if (grants_alarm_to(go.address)) alarm_request_.reset();
         if (go.asked) pairing_.withdraw(go.address);
         go = Go{};
         pacer_.forget(static_cast<int>(&go - gos_.data()));
@@ -77,7 +80,10 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
     }
     switch (heard) {
         case Heard::Pinned:
-        case Heard::Committed: gate_.hear(claim.value(), context_.instant(now_ms), now_ms); break;
+        case Heard::Committed:
+            gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
+            hear_alarm_request(go->address, claim.value().alarm_requested, now_ms);
+            break;
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
         case Heard::Unpinned:
             health_owed_ = true;
@@ -89,6 +95,25 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Stranger: health_owed_ = true; break;
         case Heard::Awaited: break;
     }
+}
+
+// INFO: fc 12nov26 only the pinned Go's claims reach here, so a stranger never silences Bravo
+void PeerService::hear_alarm_request(const events::BluetoothAddress& go, bool requested,
+                                     uint32_t now_ms) {
+    if (requested)
+        alarm_request_ = AlarmRequest{go, now_ms};
+    else
+        alarm_request_.reset();
+}
+
+void PeerService::expire_alarm_request(uint32_t now_ms) {
+    if (alarm_request_ && (!pairing_.pinned_to(alarm_request_->go) ||
+                           now_ms - alarm_request_->heard_ms >= kAlarmRequestMaxAgeMs))
+        alarm_request_.reset();
+}
+
+bool PeerService::grants_alarm_to(const events::BluetoothAddress& go) const {
+    return alarm_request_ && alarm_request_->go == go;
 }
 
 // INFO: fc 11nov26 a Go is known from its first claim on a connection, by the address it came from
@@ -135,6 +160,7 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     for (const Go& go : gos_) {
         if (!go.used) continue;
         health.paired = pairing_.holds(go.address);
+        health.alarm_granted = grants_alarm_to(go.address);
         uint8_t frame[comms::kPeerPayloadFloorBytes];
         const int bytes = comms::write_health(health, frame, sizeof(frame));
         const Status sent = context_.roles.link.send_to(

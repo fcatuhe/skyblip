@@ -14,7 +14,7 @@ namespace skyblip::comms {
 // INFO: fc 11nov26 the observation at its widest, the widest peer frame (#177)
 constexpr uint16_t kPeerPayloadFloorBytes = 126;
 
-constexpr int kPeerClaimWidestBytes = 98;
+constexpr int kPeerClaimWidestBytes = 72;
 
 // INFO: fc 11nov26 schemas/link.v1.json: protocol_version 1 is the three peer frames as written
 constexpr uint32_t kPeerProtocolVersion = 1;
@@ -36,8 +36,7 @@ struct PeerClaim {
     int32_t pressure_altitude_mm{0};
     uint32_t pressure_altitude_age_ms{0};
     uint32_t own_icao{0};
-    uint32_t alarm_passes{0};
-    uint8_t alarm_volume{0};
+    bool alarm_requested{false};
     bool paired{false};
 };
 
@@ -56,6 +55,7 @@ struct PeerHealth {
     bool own_icao_set{false};
     bool last_sequence_valid{false};
     uint32_t last_sequence{0};
+    bool alarm_granted{false};
     ExportReference export_reference{ExportReference::None};
     bool paired{false};
 };

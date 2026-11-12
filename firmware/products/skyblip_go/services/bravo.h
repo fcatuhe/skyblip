@@ -9,7 +9,6 @@
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
-#include "products/common/services/alarm.h"
 #include "products/skyblip_go/own_icao_warning.h"
 #include "products/skyblip_go/pairing.h"
 #include "products/skyblip_go/settings.h"
@@ -43,12 +42,8 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kFarewellCeilingMs = 2000;
 
     BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                 ports::Central& central, const common::AlarmService& alarm)
-        : runtime::Service(context),
-          settings_(settings),
-          config_(config),
-          central_(central),
-          alarm_(alarm) {}
+                 ports::Central& central)
+        : runtime::Service(context), settings_(settings), config_(config), central_(central) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -90,6 +85,7 @@ class BravoService : public runtime::Service {
     void release_unless_paired();
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
     void claim(uint32_t now_ms);
+    bool takes_alarm() const;
     void forget();
     void leave();
     bool linked() const {
@@ -100,7 +96,6 @@ class BravoService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     ports::Central& central_;
-    const common::AlarmService& alarm_;
     OwnIcaoWarning own_icao_warning_{};
     common::AdsbCapture adsb_capture_{context_};
     comms::PeerHealth health_{};
