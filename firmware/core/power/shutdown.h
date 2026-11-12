@@ -153,12 +153,17 @@ class PowerDownSink {
 // returns.
 void power_down(PowerDownSink& sink);
 
-// INFO: fc 05oct26 GPREGRET for the factory bootloader: t_echo_plus/factory/README.md
+// INFO: fc 12nov26 GPREGRET for the factory bootloaders: each board's factory/README.md
+constexpr uint8_t kNoBootloaderMagic = 0x00;
 constexpr uint8_t kSkipBootloaderMagic = 0x6d;
 constexpr uint8_t kUf2MassStorageMagic = 0x57;
 
-constexpr uint8_t boot_magic_for_system_off(bool recovery_armed) {
-    return recovery_armed ? kUf2MassStorageMagic : kSkipBootloaderMagic;
+enum class DfuButton : uint8_t { PressEntersDfu, HoldEntersDfu };
+
+constexpr uint8_t boot_magic_for_system_off(DfuButton button, bool recovery_armed) {
+    if (recovery_armed) return kUf2MassStorageMagic;
+    if (button == DfuButton::PressEntersDfu) return kSkipBootloaderMagic;
+    return kNoBootloaderMagic;
 }
 
 // Long enough that it cannot be the page press, short enough to do with gloves

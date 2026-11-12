@@ -13,6 +13,7 @@
 #include <zephyr/sys/poweroff.h>
 #include <zephyr/sys/reboot.h>
 
+#include "boards/seeed/meshtracker_x1/pins.h"
 #include "core/power/shutdown.h"
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/reset_causes.h"
@@ -58,7 +59,8 @@ class MeshtrackerX1Power : public ports::SystemPower, private power::PowerDownSi
     bool take_supply_warning() override { return supply_monitor_.take_warning(); }
 
     void system_off() override {
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off());
+        (void)write_boot_magic(
+            Dfu::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton));
         power::power_down(*this);
         clear_stale_latches();
         sys_poweroff();

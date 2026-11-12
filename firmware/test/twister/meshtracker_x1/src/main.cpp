@@ -7,6 +7,7 @@
 
 #include <cstdint>
 
+#include "boards/seeed/meshtracker_x1/pins.h"
 #include "core/indication/lamp.h"
 #include "core/power/shutdown.h"
 #include "hardware/parts/drv2605/drv2605.h"
@@ -106,7 +107,8 @@ void switch_off() {
     printk("smoke: switching off, release the button\n");
     while (g_platform.button_down()) hold(runtime::kServicePassCeilingMs);
     hold(power::kReleaseSettleMs);
-    uint8_t magic = power::kSkipBootloaderMagic;
+    uint8_t magic =
+        power::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton, false);
     const int retained =
         retention_write(DEVICE_DT_GET(DT_NODELABEL(uf2_boot_retention)), 0, &magic, sizeof(magic));
     if (retained != 0) {

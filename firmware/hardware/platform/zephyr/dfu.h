@@ -37,9 +37,10 @@ namespace skyblip::platform::zephyr {
 //
 // 0x57 is deliberate recovery: come up as USB mass storage instead of
 // chain-loading MCUboot. It is the SOFTWARE route into the factory bootloader,
-// for a device whose reset button is awkward or enclosed; the other route is a
-// double-click on RESET within 0.5 s, which is the bootloader's own and works
-// whatever state this firmware is in.
+// for a device whose reset button is awkward or enclosed. The other route is the
+// bootloader's own and works whatever state this firmware is in: a double-click
+// on RESET within 0.5 s on the T-Echo, and on the X1, which has no reset button,
+// the button held while the cable goes in (boards/seeed/meshtracker_x1/factory/).
 
 // One writer for both. False when the board declares no retention area or the
 // device is not ready: the caller decides what that means, and neither caller
@@ -110,8 +111,8 @@ class Dfu : public ports::Dfu {
         return ports::RecoveryPath::Rebooted;
     }
 
-    static uint8_t boot_magic_for_system_off() {
-        return power::boot_magic_for_system_off(recovery_armed_);
+    static uint8_t boot_magic_for_system_off(power::DfuButton button) {
+        return power::boot_magic_for_system_off(button, recovery_armed_);
     }
 
    private:

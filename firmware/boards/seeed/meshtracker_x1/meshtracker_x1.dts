@@ -396,7 +396,7 @@ zephyr_udc0: &usbd {
 	};
 };
 
-/* TODO: fc 11nov26 the S140 7.3.0 and 0xEA000 boundaries are Meshtastic's, unverified until #169 reads INFO_UF2.TXT off a unit */
+/* INFO: fc 12nov26 the factory INFO_UF2.TXT, CURRENT.UF2 and bootloader source confirm S140 7.3.0, 0x27000 and 0xEA000, and 0xF4000 is from source only: factory/README.md */
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";

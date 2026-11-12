@@ -8,6 +8,7 @@
 #include <zephyr/devicetree.h>
 #endif
 
+#include "core/power/shutdown.h"
 #include "hardware/io/io.h"
 
 namespace skyblip::boards::t_echo_plus {
@@ -34,6 +35,9 @@ constexpr int kHapticEnable = pin_number(0, 8);
 // INFO: fc 19sep26 the button bounces mechanically, the pad flutters under a fingertip
 constexpr uint32_t kButtonHoldMs = 30;
 constexpr uint32_t kPadSettleMs = 30;
+
+// INFO: fc 12nov26 the factory bootloader enters USB DFU on a press held at boot: factory/README.md
+constexpr power::DfuButton kFactoryDfuButton = power::DfuButton::PressEntersDfu;
 
 // What this board's virtual wiring needs to know: which pin belongs to which
 // part. The silicon platform ignores it and reads the devicetree instead.

@@ -1,6 +1,6 @@
 # Seeed SenseCAP MeshTracker X1
 
-The board skyBlip Bravo runs on. No unit has been read yet: every pin, address, boundary and timing below comes from the sources listed here, and each one stays unverified until #169 benches a unit. A tagged `TODO` in `meshtracker_x1.dts`, `board.c`, `pins.h`, `Kconfig.meshtracker_x1`, `meshtracker_x1_defconfig`, `scripts/mkuf2.py` and the X1's platform points back here.
+The board skyBlip Bravo runs on. The owner read the factory bootloader's files off his first unit on 12 November 2026 (`factory/README.md`). They confirm the SoftDevice and the flash boundaries at 0x27000 and 0xEA000, and they name the bootloader source that shows what it does with the button. No unit has shown that yet. Every other pin, address, boundary and timing below comes from the sources listed here, and each one stays unverified until #169 benches a unit. A tagged `TODO` in `meshtracker_x1.dts`, `board.c`, `pins.h`, `Kconfig.meshtracker_x1`, `meshtracker_x1_defconfig` and the X1's platform points back here.
 
 ## Sources
 
@@ -8,7 +8,7 @@ The board skyBlip Bravo runs on. No unit has been read yet: every pin, address, 
 |---|---|---|
 | SoftRF | `lyusupov/SoftRF`, `software/firmware/source/SoftRF/src/platform/iomap/Seeed_X1.h`, `platform/nRF52.cpp`, `platform/nRF52.h` | `d091924`, 3 November 2026 |
 | Meshtastic | `meshtastic/firmware`, `variants/nrf52840/seeed_mesh_tracker_X1/variant.h` and `variant.cpp`, `boards/mesh-tracker-x1.json` | `17cc649a`, 29 September 2026 |
-| Meshtastic bootloader | `meshtastic/nRF52_Bootloader`, `src/boards/mesh_tracker_x1/board.h` and `board.mk`, `src/usb/uf2/uf2cfg.h`, `Makefile`, `linker/nrf52840.ld`, `src/main.c` | tag `2.6.0`, `e75ad3fa` |
+| Meshtastic bootloader | `meshtastic/nRF52_Bootloader`, `src/boards/mesh_tracker_x1_v2/board.h` and `board.mk`, `src/boards/boards.c`, `src/usb/uf2/uf2cfg.h`, `Makefile`, `linker/nrf52840.ld`, `src/main.c`, the factory bootloader of the owner's unit | `b93789fe`, 12 August 2026 |
 | GigaDevice | the GD25Q64E datasheet, DS-00484 | Rev 1.4 |
 | Seeed | the MeshTracker X1 wiki page, `Seeed-Studio/wiki-documents` `sites/en/docs/Network/Mesh_Network/MeshTracker_X1/x1_intro.md`: its pin list, its block diagram `HardwareDiagram729.png` and its render `HardwareDiagramBu.png` | `bef7ae40`, 24 September 2026 |
 
@@ -33,7 +33,7 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 | GNSS UART | nRF TX P0.13, nRF RX P0.14, 115200 baud | SoftRF, Meshtastic, Seeed | The AG3335, for #171 and #176. |
 | GNSS control | enable P1.11, reset P0.08 high to reset, RTC supply P1.13, sleep P0.30, RTC wake P0.29, PPS P0.04 | SoftRF, Meshtastic, Seeed | Meshtastic's comment calls P0.04 `VCC_ADC`. SoftRF and Seeed call it the PPS. |
 | Sensor I2C | SDA P1.15, SCL P1.14 | SoftRF, Meshtastic, Seeed | |
-| RTC I2C | SDA P0.26, SCL P0.27, enable P0.09, interrupt P0.31 | SoftRF, Seeed | P0.09 is an NFC pin, so the devicetree sets `nfct-pins-as-gpios`, as Meshtastic's build does (`-DCONFIG_NFCT_PINS_AS_GPIOS=1`). On a unit whose `UICR.NFCPINS` still selects NFC, the first boot writes it and resets once. |
+| RTC I2C | SDA P0.26, SCL P0.27, enable P0.09, interrupt P0.31 | SoftRF, Seeed | P0.09 is an NFC pin, so the devicetree sets `nfct-pins-as-gpios`, as Meshtastic's build does (`-DCONFIG_NFCT_PINS_AS_GPIOS=1`). The factory bootloader is built with `CONFIG_NFCT_PINS_AS_GPIOS` (`Makefile:356-358` at `b93789fe`), so its first boot already set `UICR.NFCPINS` to GPIO, and ours writes nothing there. |
 | IMU and magnetometer interrupts | P1.02, P1.12 | SoftRF, Seeed | |
 | Reset | P0.18 | SoftRF, Meshtastic bootloader | The bootloader keeps it as nRESET. Nothing drives it. |
 
@@ -63,7 +63,7 @@ The factory UF2 bootloader stays. It chain-loads MCUboot from the application or
 
 | Partition | Start | Size | Why |
 |---|---|---|---|
-| `softdevice_partition` | 0x00000 | 0x27000 | MBR, 0x1000, and S140 7.3.0, 0x26000 (`SD_FLASH_SIZE` in S140 7.3.0's `nrf_sdm.h`, as `adafruit/Adafruit_nRF52_Bootloader` vendors it). Meshtastic's board file and linker script put the application at 0x27000. |
+| `softdevice_partition` | 0x00000 | 0x27000 | MBR, 0x1000, and S140 7.3.0, 0x26000 (`SD_FLASH_SIZE` in S140 7.3.0's `nrf_sdm.h`). The unit's `INFO_UF2.TXT` names S140 7.3.0, and its `CURRENT.UF2` puts the SoftDevice's end at 0x27000 (`factory/README.md`). |
 | `boot_partition` | 0x27000 | 0xE000 | MCUboot, the Go's size. |
 | `slot0_partition` | 0x35000 | 0xB5000 | Ends at `USER_FLASH_END`. |
 | `storage_partition` | 0xEA000 | 0xA000 | The bootloader's `DFU_APP_DATA_RESERVED`, so no `.uf2` reaches it. |
@@ -71,11 +71,11 @@ The factory UF2 bootloader stays. It chain-loads MCUboot from the application or
 | `slot1_partition`, on the NOR | 0x0 | 0xB5000 | The secondary slot, the same size as slot0, as on the Go. |
 | `log_partition`, on the NOR | 0xB5000 | 0x200000 | The flights and the capture, 512 sectors of 4 KB, which is `store::kMaxPoolSectors`. The NOR's last 5.3 MiB are unused. |
 
-`USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in Meshtastic's bootloader 2.6.0 (`uf2cfg.h:31-32`, `Makefile:116-121`, `linker/nrf52840.ld`). SoftRF tells an X1 by finding the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. Which bootloader a new unit ships with is not known. Meshtastic-Android's `maintenance_uf2.json` lists two Board-IDs, `nRF52840-MeshTracker-X1-v1` and `nRF52840-MeshTracker-X1`, and a third-party tool, `mikecarper/meshfirmware` `web/src/bootloader-info.js`, calls the `-v1` one the factory's. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
+`USER_FLASH_END` is `BOOTLOADER_REGION_START - DFU_APP_DATA_RESERVED` = 0xF4000 - 10 * 4096 = 0xEA000 in the factory bootloader (`uf2cfg.h:25-26`, `Makefile:139`, `linker/nrf52840.ld:14`), and the unit's `CURRENT.UF2` covers 0x1000..0xEA000 and nothing above (`factory/README.md`). SoftRF tells an X1 by finding the string `MeshTracker-X1` in the bootloader region at 0xF4000 (`nRF52.cpp:771-879`), which agrees on where the bootloader sits. The unit has not shown that address itself: #169's SWD session reads it from `UICR`. The owner's first unit reports `nRF52840-MeshTracker-X1-v1`, and another unit may ship another bootloader. Meshtastic-Android's `maintenance_uf2.json` lists two Board-IDs, `nRF52840-MeshTracker-X1-v1` and `nRF52840-MeshTracker-X1`, and a third-party tool, `mikecarper/meshfirmware` `web/src/bootloader-info.js`, calls the `-v1` one the factory's. `scripts/mkuf2.py` holds every `.uf2` to this window, and `scripts/test_mkuf2.py` reads the window back from this devicetree.
 
 MCUboot uses swap-using-offset, as on the Go. A Go image starts at 0x26000, inside S140 7.3.0, and `mkuf2.py` refuses to build one for this board.
 
-Meshtastic's bootloader 2.6.0 enters UF2 mode after the button is held for 3 s through boot (`BUTTON_DFU_HOLD_MS 3000`), and leaves it when the drive is ejected (`UF2_EXIT_ON_EJECT`). With GPREGRET at `0x6d` it skips that check unless the button is down (`main.c:300-320`). It has no line that puts a VBUS wake back to sleep, unlike the T-Echo's bootloader (`../../lilygo/t_echo_plus/factory/README.md`).
+The factory bootloader enters UF2 mode once the button has been held for about 3 s through boot, and lights the LED white. It holds the start while the button stays down, up to those 3 s, so the application reads a shorter wake press as already up. With GPREGRET at `0x6d` it skips the button, so the X1 writes `0x00` at switch-off. It has no line that puts a VBUS wake back to sleep, unlike the T-Echo's bootloader (`../../lilygo/t_echo_plus/factory/README.md`). `factory/README.md` cites the source for each.
 
 ## The board composition
 
@@ -99,10 +99,10 @@ Bravo's product parks the LR2021, the buzzer, the motor, the lamps and the DRV26
 | peripheral rail off | the sensor rail P1.07, the RTC enable P0.09 and the NOR enable P0.15 driven low |
 | wake pin armed | the button, P0.06, armed as a level wake, high when pressed |
 
-GPREGRET is written first with the factory bootloader's skip magic, or its UF2 magic for a recovery, as on the Go. The GNSS RTC supply, P1.13, is left as bring-up raised it. Every step is unverified until #169 measures the off current.
+GPREGRET is written first: `0x00`, which leaves the factory bootloader's button hold in reach, or its UF2 magic for a recovery (`factory/README.md`). The GNSS RTC supply, P1.13, is left as bring-up raised it. Every step is unverified until #169 measures the off current.
 
 ## The smoke image
 
 `firmware/test/twister/meshtracker_x1` is MCUboot and a minimal signed application, built by sysbuild. CI builds it, holds it to slot0 with `size_check.py`, wraps it with `mkuf2.py meshtracker_x1` and uploads `meshtracker-x1-smoke.uf2`. It is signed with MCUboot's published development key, so it is a bench image only.
 
-At boot it lights red, green and blue, sounds the buzzer and pulses the haptic once. Each time a host opens its USB CDC port, which raises DTR, it prints its capabilities, whether the DRV2605 answered and every address that answers on both I2C buses, and runs the outputs again. While the port is open it prints the battery, VBUS, both charger lines and the button every second. A 2 s hold switches it off: it parks the outputs, drops the sensor rail, writes `0x6d` to GPREGRET and arms the button as the wake, and it stays on if any of those fails. The radio and the NOR stay powered and the GNSS enable is left undriven, so the off current it leaves is not the product's.
+At boot it lights red, green and blue, sounds the buzzer and pulses the haptic once. Each time a host opens its USB CDC port, which raises DTR, it prints its capabilities, whether the DRV2605 answered and every address that answers on both I2C buses, and runs the outputs again. While the port is open it prints the battery, VBUS, both charger lines and the button every second. A 2 s hold switches it off: it parks the outputs, drops the sensor rail, writes `0x00` to GPREGRET and arms the button as the wake, and it stays on if any of those fails. The radio and the NOR stay powered and the GNSS enable is left undriven, so the off current it leaves is not the product's.

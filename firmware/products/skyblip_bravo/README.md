@@ -2,7 +2,7 @@
 
 skyBlip Bravo: a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B full time and feeds one phone EFB over FLARM NMEA, alarming on its own buzzer and motor. It transmits nothing. `product.h` wires it over `boards/seeed/meshtracker_x1/board.h`, and `main.cpp` is the shell on silicon. The host suite runs the same product on the X1's part models (`hardware/platform/host/meshtracker_x1.h`), and the simulator flies it among ADS-B traffic, with a phone reading its NMEA (`../../simulator/README.md`).
 
-Nothing here has run on an X1. The units have not arrived, so every pin, timing and part behaviour below the product is unverified until #169 benches one, and the bench list is at the end.
+Nothing here has run on an X1. Only the first unit's factory bootloader has been read (`../../boards/seeed/meshtracker_x1/factory/README.md`), so every pin, timing and part behaviour below the product is unverified until #169 benches one, and the bench list is at the end.
 
 ## The services
 
@@ -168,7 +168,7 @@ A long press, a phone's `power_off`, a cutoff, an install and a recovery all go 
 
 A receiver that never confirms its sleep is held in reset after `kReceiverParkCeilingMs`. That ceiling is the LR2021's worst sleep, a stuck standby and the reset after it, 4 s.
 
-A cable plugged into a switched-off X1 wakes the SoC. Meshtastic's bootloader does not send that wake back to sleep, so this firmware does: `core/power/wake.h` refuses a VBUS wake from SYSTEM OFF with no button held. The boot path is decided before bring-up, from the reset causes, the button and the cell, which `begin_wake()` reads, so a refused wake starts no receiver, no link and no NVS. The board probes nothing until the wake is accepted, so a refused boot sends the LR2021 no SPI command and writes no haptic enable. It does hold the LR2021 in reset through its NRESET line, a GPIO write: after any reset of the SoC the radio's state is unknown, and a cold start, on a low cell or on a battery just connected, leaves it in standby. `power::boot_path()` refuses a cable wake from SYSTEM OFF, any boot on a cell under the lockout, and a restart on a flat cell, and all of them take the same road. `park_refusal()` then waits for the button and switches off, with NRESET still held low through SYSTEM OFF. What that costs against a cold sleep is #169's to measure. A press with the cable in boots.
+A cable plugged into a switched-off X1 wakes the SoC. The factory bootloader, Meshtastic's, does not send that wake back to sleep (`../../boards/seeed/meshtracker_x1/factory/README.md`), so this firmware does: `core/power/wake.h` refuses a VBUS wake from SYSTEM OFF with no button held. The host tests feed that wake as `LowPowerWake` with `UsbVbus`, and the nRF52840 may report `UsbVbus` alone, which the rule lets run, so on silicon the refusal is unproven until a fix or #169's bench check. The boot path is decided before bring-up, from the reset causes, the button and the cell, which `begin_wake()` reads, so a refused wake starts no receiver, no link and no NVS. The board probes nothing until the wake is accepted, so a refused boot sends the LR2021 no SPI command and writes no haptic enable. It does hold the LR2021 in reset through its NRESET line, a GPIO write: after any reset of the SoC the radio's state is unknown, and a cold start, on a low cell or on a battery just connected, leaves it in standby. `power::boot_path()` refuses a cable wake from SYSTEM OFF, any boot on a cell under the lockout, and a restart on a flat cell, and all of them take the same road. `park_refusal()` then waits for the button and switches off, with NRESET still held low through SYSTEM OFF. What that costs against a cold sleep is #169's to measure. A press with the cable in boots. The factory bootloader holds the start while a press under 3 s is down, so `boot_path` knows a button wake by its reset cause, `LowPowerWake` without `UsbVbus`.
 
 The receiver reports itself parked only once the LR2021 is asleep or held in reset. A part whose probe failed, or whose bring-up never ran, has no receiver thread, so `sleep()` parks it directly: a SetSleep if the part takes one, and NRESET held low if not.
 
@@ -209,6 +209,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - a `set` and a `dfu` from the manage page stand on the lamp and two presses allow them, and a Bluetooth update installs and confirms;
 - a capture armed from its Briefing device page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
 - a switch-off reaches SYSTEM OFF with the off current measured, and a cable plugged in leaves it off;
+- after a switch-off, the button held while the cable goes in opens the `X1` drive with the LED white;
 - a Go pairs: its request blinks the lamp blue, one press pairs both sides, and both keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;
 - the Go's BRAVO page reads `CONNECTED`, and an aircraft Bravo hears reaches the Go as `observation` frames, at most two a second;

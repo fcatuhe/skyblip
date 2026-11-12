@@ -61,6 +61,19 @@ TEST_CASE("bravo: a press wakes it, even with the cable in") {
     CHECK(rig.product.flyable());
 }
 
+// The X1's factory bootloader holds the start until the wake press is released.
+TEST_CASE("bravo: a press the bootloader held to its release wakes it, on the cell or the cable") {
+    for (const bool cable : {false, true}) {
+        BravoRig rig;
+        rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+        rig.platform.battery().external_power = cable;
+        REQUIRE_FALSE(rig.platform.button_down());
+        REQUIRE(rig.setup() == Status::Ok);
+        CHECK(rig.product.boot_path() == power::BootPath::Run);
+        CHECK(rig.product.flyable());
+    }
+}
+
 TEST_CASE("bravo: a receiver that never confirms its sleep is held in reset past the ceiling") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
