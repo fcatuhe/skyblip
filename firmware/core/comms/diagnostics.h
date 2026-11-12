@@ -83,7 +83,10 @@ struct Diagnostics {
 
     bool adsb_fitted{false};
     ports::AdsbReceiverStatistics adsb{};
-    uint32_t adsb_invalid{0};
+    uint32_t adsb_crc{0};
+    uint32_t adsb_unsupported{0};
+    uint32_t adsb_folded{0};
+    uint32_t adsb_aircraft{0};
 
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
@@ -146,7 +149,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 56;
+    static constexpr int kMaxFields = 59;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,

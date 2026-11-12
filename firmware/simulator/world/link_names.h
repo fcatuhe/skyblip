@@ -363,13 +363,16 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"charge_warnings", 50, Type::Unsigned, nullptr, 0, false},
     {"frames", 51, Type::Unsigned, nullptr, 0, false},
     {"frame_rate_hz", 52, Type::Unsigned, nullptr, 0, false},
-    {"invalid", 53, Type::Unsigned, nullptr, 0, false},
     {"dropped", 54, Type::Unsigned, nullptr, 0, false},
     {"rearms", 55, Type::Unsigned, nullptr, 0, false},
     {"resets", 56, Type::Unsigned, nullptr, 0, false},
     {"command_errors", 57, Type::Unsigned, nullptr, 0, false},
     {"errors", 58, Type::Unsigned, nullptr, 0, false},
     {"rssi_dbm", 59, Type::UnsignedArray, nullptr, 0, false},
+    {"crc", 60, Type::Unsigned, nullptr, 0, false},
+    {"unsupported", 61, Type::Unsigned, nullptr, 0, false},
+    {"folded", 62, Type::Unsigned, nullptr, 0, false},
+    {"aircraft", 63, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -559,8 +562,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 60},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 60},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

@@ -763,11 +763,6 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "invalid",
-          "number": 53,
-          "type": "unsigned"
-        },
-        {
           "name": "dropped",
           "number": 54,
           "type": "unsigned"
@@ -796,6 +791,26 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "rssi_dbm",
           "number": 59,
           "type": "unsigned_array"
+        },
+        {
+          "name": "crc",
+          "number": 60,
+          "type": "unsigned"
+        },
+        {
+          "name": "unsupported",
+          "number": 61,
+          "type": "unsigned"
+        },
+        {
+          "name": "folded",
+          "number": 62,
+          "type": "unsigned"
+        },
+        {
+          "name": "aircraft",
+          "number": 63,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1082,11 +1097,6 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "invalid",
-          "number": 53,
-          "type": "unsigned"
-        },
-        {
           "name": "dropped",
           "number": 54,
           "type": "unsigned"
@@ -1115,6 +1125,26 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "rssi_dbm",
           "number": 59,
           "type": "unsigned_array"
+        },
+        {
+          "name": "crc",
+          "number": 60,
+          "type": "unsigned"
+        },
+        {
+          "name": "unsupported",
+          "number": 61,
+          "type": "unsigned"
+        },
+        {
+          "name": "folded",
+          "number": 62,
+          "type": "unsigned"
+        },
+        {
+          "name": "aircraft",
+          "number": 63,
+          "type": "unsigned"
         }
       ]
     },

@@ -1,0 +1,6 @@
+# The level main.cpp logs at: a development image sets debug in prj.conf, a release image info.
+module = SKYBLIP_BRAVO
+module-str = skyBlip Bravo
+source "subsys/logging/Kconfig.template.log_config"
+
+source "Kconfig.zephyr"

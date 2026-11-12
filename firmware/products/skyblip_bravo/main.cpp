@@ -1,6 +1,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+#include "core/util/hex.h"
 #include "hardware/platform/zephyr/console.h"
 #include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/meshtracker_x1.h"
@@ -8,7 +9,7 @@
 #include "products/skyblip_bravo/services/diagnostics.h"
 #include "runtime/tasks.h"
 
-LOG_MODULE_REGISTER(skyblip, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(skyblip, CONFIG_SKYBLIP_BRAVO_LOG_LEVEL);
 
 using namespace skyblip;
 
@@ -28,6 +29,22 @@ void log_inventory() {
             found.i2c_count);
     for (uint8_t i = 0; i < found.i2c_count; i++)
         LOG_INF("inventory: sensor bus 0x%02x answered", found.i2c_addresses[i]);
+}
+
+// INFO: fc 12nov26 scripts/adsb_rejects.py parses this line, so keep its keys and their order
+void log_adsb_rejects() {
+    bravo::AdsbReject reject{};
+    while (g_product.adsb().take_reject(reject)) {
+        char chips[2 * protocol::kAdsbChipBytes + 1];
+        chips[hex::write(ConstByteSpan(reject.chips.data(), reject.chips.size()), chips)] = 0;
+        const char* status = reject.status == Status::Unsupported ? "unsupported" : "crc";
+        if (reject.rssi_valid) {
+            LOG_DBG("adsb reject status=%s rssi=%d chips=%s", status,
+                    static_cast<int>(reject.rssi_dbm), chips);
+        } else {
+            LOG_DBG("adsb reject status=%s rssi=none chips=%s", status, chips);
+        }
+    }
 }
 
 }  // namespace
@@ -76,6 +93,7 @@ int main(void) {
         const uint32_t now_ms = static_cast<uint32_t>(k_ticks_to_ms_floor64(began_ticks));
         g_product.run_pass(now_ms);
         g_diagnostics.step(g_product, now_ms);
+        log_adsb_rejects();
 
         if (g_product.may_feed_watchdog(now_ms)) {
             g_platform.watchdog().feed();
