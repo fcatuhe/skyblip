@@ -110,7 +110,7 @@ The two relative altitudes are `flight::gnss_relative_altitude_m` and `flight::p
 
 The record has no position: sixteen bytes do not hold one beside the altitudes. A target the traffic table admits also writes a `Traffic` record at its receptions, under the same address, with its distance and bearing. Nor does it hold the age of the pressure altitude or of the GNSS height. The record is taken as an observation is folded, so both are as old as the target's last messages that carried them.
 
-It is written before the traffic table, not after it. The table holds ADS-B targets within 30 km and 500 m of us (`../traffic/README.md`, The gate), and #183 asks about every aircraft heard, those far above us included. A paired Go's observations carry no difference, because the `peer` frame does not (#177), so its `Adsb` records leave the difference invalid.
+It is written before the traffic table, not after it. A full table keeps only its nearest targets (`../traffic/README.md`, No gate), and #183 asks about every aircraft heard, those it evicts included. A paired Go's observations carry no difference, because the `peer` frame does not (#177), so its `Adsb` records leave the difference invalid.
 
 A Bravo folds every message each aircraft sends, so `AdsbCapture` admits a record under two rules, and only a record the recorder took counts against either:
 

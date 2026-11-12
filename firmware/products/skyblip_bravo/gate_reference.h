@@ -14,7 +14,7 @@ struct GateChoice {
     model::Ownship own{};
 };
 
-// INFO: fc 11nov26 the position Bravo gates on: its Go's from a fresh claim, else its own fix
+// INFO: fc 11nov26 where Bravo places traffic: its Go's from a fresh claim, else its own fix
 class GateReference {
    public:
     // INFO: fc 11nov26 a fix period, a second of unknown phase and two claim periods, one lost

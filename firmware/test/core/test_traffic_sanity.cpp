@@ -207,7 +207,7 @@ TEST_CASE("traffic: a relayed target is judged against the two hops it travelled
     CHECK(table.implausible() == 2);
 }
 
-// 1090 MHz is bounded by the horizon, not our budget, and a far aircraft is the gate's to refuse.
+// 1090 MHz is bounded by the horizon, not our budget, so only a ghost past it is refused.
 TEST_CASE("traffic: an ADS-B target is judged against the radio horizon between two aircraft") {
     const double effective_radius_m = 4.0 / 3.0 * 6371000.0;
     const double fl600_m = 60000 * 0.3048;
@@ -224,9 +224,8 @@ TEST_CASE("traffic: an ADS-B target is judged against the radio horizon between 
     heard.source = model::Source::Adsb;
     int32_t slant_m = 0;
     CHECK(range_check(own, heard, slant_m) == Plausibility::Believable);
-    CHECK(table.update(heard, 100) < 0);
+    CHECK(table.update(heard, 100) >= 0);
     CHECK(table.implausible() == 0);
-    CHECK(table.adsb_outside_gate() == 1);
 
     model::AircraftObservation ghost = target_at(own, kAdsbRangeCeilingM + 1000, 0, 0, 230, 180);
     ghost.address = 0x4E0002;
@@ -234,5 +233,5 @@ TEST_CASE("traffic: an ADS-B target is judged against the radio horizon between 
     CHECK(range_check(own, ghost, slant_m) == Plausibility::TooFar);
     CHECK(table.update(ghost, 100) < 0);
     CHECK(table.implausible() == 1);
-    CHECK(table.adsb_outside_gate() == 1);
+    CHECK(table.count() == 1);
 }
