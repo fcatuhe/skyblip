@@ -1,0 +1,45 @@
+<div class="panel panel-wide" id="capturepanel" data-capture-target="panel" hidden>
+  <h2>Capture (skyBlip)</h2>
+  <form class="row" data-action="capture#arm">
+    <label for="captureprofile">Profile</label>
+    <select id="captureprofile" data-capture-target="profile">
+      <% %w[full power_run flight_run].each do |profile| %>
+        <option value="<%= profile %>"><%= profile %></option>
+      <% end %>
+    </select>
+    <button type="submit" data-capture-target="button">Arm</button>
+    <button type="button" data-capture-target="button" data-action="capture#stop">Stop</button>
+    <button type="button" data-capture-target="button" data-action="capture#fetch">Fetch log</button>
+  </form>
+  <p class="state" id="capturemessage" role="status" data-capture-target="message">-</p>
+  <progress class="capture-progress" aria-label="Records fetched" data-capture-target="progress" hidden></progress>
+  <div class="hint">Arm and Stop send <code>capture</code> on the config endpoint, and a skyBlip Bravo
+    asks on its lamp: two presses on its button allow it, one refuses it. A Go arms its captures on its
+    glass. Only <code>full</code> records the ADS-B aircraft. The unit writes the capture to its flash and
+    closes it on Stop or at power off. Fetch reads the last session of the diagnostics store, as
+    <code>blip.py fetch --log diagnostics</code> does. Stop before you fetch: a session still open is
+    fetched without its last record, which may be a torn write.</div>
+
+  <div class="capture-results" data-capture-target="results" hidden>
+    <p class="state" data-capture-target="session"></p>
+    <ul class="capture-counts" id="capturetypes" aria-label="Records by type" data-capture-target="types"></ul>
+    <a class="capture-download" data-capture-target="download">Download NDJSON</a>
+    <div class="capture-table" tabindex="0" role="region" aria-labelledby="capturecaption">
+      <table>
+        <caption id="capturecaption">ADS-B aircraft heard, one row each, from its latest record</caption>
+        <thead>
+          <tr>
+            <% { address: "ICAO", adsb_version: "ADS-B version", pressure_altitude_ft: "Pressure altitude (ft)",
+                 height_difference_ft: "GNSS-baro difference (ft)", gnss_relative_altitude_m: "Above us, GNSS (m)",
+                 pressure_relative_altitude_m: "Above us, pressure (m)", records: "Records", heard: "Last heard" }.each do |column, label| %>
+              <th scope="col" aria-sort="none" data-capture-target="header" data-column="<%= column %>">
+                <button type="button" data-action="capture#sort" data-capture-column-param="<%= column %>"><%= label %></button>
+              </th>
+            <% end %>
+          </tr>
+        </thead>
+        <tbody id="aircraft" data-capture-target="aircraft"></tbody>
+      </table>
+    </div>
+  </div>
+</div>

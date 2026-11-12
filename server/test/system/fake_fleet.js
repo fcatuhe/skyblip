@@ -2,11 +2,17 @@
   const UUID = {
     skyblip: '69c21301-0187-4204-a91d-02eb8858b440',
     config: '69c21302-0187-4204-a91d-02eb8858b440',
+    log: '69c21303-0187-4204-a91d-02eb8858b440',
     smp: '8d53dc1d-1db7-4cd3-868b-8a527460aa84',
     smpChr: 'da2e7828-fbce-4e01-ae9e-261174997c48',
   };
   const PKCS8_ED25519 = '302e020100300506032b657004220420';
   const SMP_HEADER = 8;
+  const RECORD_BYTES = 24;
+  // INFO: fc 12nov26 log_link.cpp's chunk envelope with its store field, and the clamps it applies, as fake_log.mjs reads them
+  const CHUNK_ENVELOPE_BYTES = 20;
+  const MAX_RECORDS_PER_CHUNK = 19;
+  const MAX_READ_CHUNKS = 8;
   const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
@@ -23,6 +29,13 @@
     return out;
   };
   const label = purpose => encoder.encode(`skyblip:${purpose}:v1`);
+  const recordsPerChunk = payload => {
+    for (let records = MAX_RECORDS_PER_CHUNK; records > 0; records--) {
+      const raw = records * RECORD_BYTES;
+      if (CHUNK_ENVELOPE_BYTES + (raw < 24 ? 1 : raw < 256 ? 2 : 3) + raw <= payload) return records;
+    }
+    return 0;
+  };
 
   class Unit {
     constructor(options) {
@@ -47,13 +60,14 @@
         rebootMs: 1500,
         probationMs: 1500,
         vectors: null,
+        diagnostics: [],
       }, options);
       this.connected = false;
       this.rebooting = false;
       this.pending = null;
       this.refused = false;
       this.windowOpen = false;
-      this.listeners = { config: [], smp: [] };
+      this.listeners = { config: [], log: [], smp: [] };
       this.closed = [];
       this.held = new Uint8Array(0);
       this.device = this.#device();
@@ -68,7 +82,7 @@
         writeValueWithoutResponse: write,
       });
       const services = {
-        [UUID.skyblip]: { [UUID.config]: characteristic('config', raw => unit.onConfig(raw)) },
+        [UUID.skyblip]: { [UUID.config]: characteristic('config', raw => unit.onConfig(raw)), [UUID.log]: characteristic('log', raw => unit.onLog(raw)) },
         [UUID.smp]: { [UUID.smpChr]: characteristic('smp', raw => unit.onSmp(raw)) },
       };
       const server = {
@@ -105,7 +119,7 @@
       this.pending = null;
       this.refused = false;
       this.windowOpen = false;
-      this.listeners = { config: [], smp: [] };
+      this.listeners = { config: [], log: [], smp: [] };
       const closed = this.closed.splice(0);
       later(() => closed.forEach(listener => listener()));
     }
@@ -183,6 +197,37 @@
       }
       if (command === 'unlock') return this.unlock(fields);
       return this.acknowledge(false, 'unknown_command');
+    }
+
+    async onLog(raw) {
+      const [{ decodeFrame, encodeFrame }] = await modules();
+      for (const reply of this.logReplies(decodeFrame(raw))) {
+        const value = new DataView(encodeFrame({ log: 'diagnostics', ...reply }).buffer);
+        later(() => this.connected && this.listeners.log.forEach(listener => listener({ target: { value } })));
+      }
+    }
+
+    logReplies({ command, index, session, from = 0, count = 1 }) {
+      const sessions = this.diagnostics.map(each => ({ ...each, held: bytes(each.records) }));
+      const refuse = reason => [{ command: 'log', acknowledge: false, reason }];
+      if (command === 'list' && index === undefined) return [{ command: 'log', acknowledge: true, sessions: sessions.length }];
+      if (command === 'list') {
+        if (!sessions[index]) return refuse('no_session');
+        const { closed = true, held } = sessions[index];
+        return [{ command: 'session', index, of: sessions.length, session: sessions[index].session, records: held.length / RECORD_BYTES, closed, truncated: false }];
+      }
+      const entry = sessions.find(each => each.session === session);
+      if (!entry) return refuse('no_session');
+      const perChunk = recordsPerChunk(this.mtu - 3);
+      if (perChunk === 0) return refuse('small_mtu');
+      const total = entry.held.length / RECORD_BYTES;
+      if (from >= total) return [{ command: 'chunk', session, from, ends_session: true, records: new Uint8Array(0) }];
+      const replies = [];
+      for (let at = from; at < total && replies.length < Math.min(Math.max(count, 1), MAX_READ_CHUNKS); at += perChunk) {
+        const end = Math.min(at + perChunk, total);
+        replies.push({ command: 'chunk', session, from: at, ends_session: end >= total, records: entry.held.slice(at * RECORD_BYTES, end * RECORD_BYTES) });
+      }
+      return replies;
     }
 
     // INFO: fc 12nov26 capture_request.cpp's checks after the prompt guards and the flight

@@ -44,7 +44,9 @@ export default class extends Controller {
           if (frame) this.write("replies", printable(frame), "ok")
           else this.write("replies", `${error.message}: ${hex(bytes)}`, "warn")
           if (frame?.reason === "small_mtu") this.write("replies", SMALL_MTU, "warn")
+          this.dispatch("reply", { detail: { frame } })
         },
+        onLog: (frame, bytes, error) => { if (!signal.aborted) this.dispatch("log", { detail: { frame, bytes, error } }) },
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })
       if (signal.aborted) {
@@ -54,6 +56,7 @@ export default class extends Controller {
         this.state(`${device.name} over ${device.transport}`, "up")
         this.field("disconnect").disabled = false
         this.field("configpanel").hidden = !device.hasConfig
+        this.dispatch("linked", { detail: { device } })
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -78,6 +81,7 @@ export default class extends Controller {
     this.field("connect").disabled = false
     this.field("disconnect").disabled = true
     this.field("configpanel").hidden = true
+    this.dispatch("closed")
   }
 
   async sendLine(event) {

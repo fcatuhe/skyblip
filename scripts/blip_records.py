@@ -7,6 +7,10 @@ and schemas/flight_log.v1.schema.json.
 
 Importable on its own: an analysis script wants these tables without the BLE
 transport in blip.py.
+
+The console's capture panel decodes the diagnostics half again in the browser,
+server/app/javascript/skyblip/diagnostics.js, and its test runs this module to
+hold the two to the same NDJSON: change both together.
 """
 import datetime
 import json
