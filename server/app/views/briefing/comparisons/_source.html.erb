@@ -1,0 +1,20 @@
+<div class="panel">
+  <h2><span class="chart-key chart-key-<%= source %>"><%= name %></span> over <%= transport == "serial" ? "USB serial" : "Bluetooth" %></h2>
+  <div class="bar">
+    <% if transport == "serial" %>
+      <label class="check">Baud
+        <select data-comparison-target="baud">
+          <% [ 38400, 115200, 57600, 19200, 9600 ].each do |baud| %>
+            <option value="<%= baud %>"><%= baud %></option>
+          <% end %>
+        </select>
+      </label>
+    <% end %>
+    <button type="button" data-comparison-target="link" data-source="<%= source %>"
+            data-action="comparison#link" data-comparison-source-param="<%= source %>" data-comparison-transport-param="<%= transport %>">Connect</button>
+    <button type="button" data-comparison-target="unlink" data-source="<%= source %>" disabled
+            data-action="comparison#unlink" data-comparison-source-param="<%= source %>">Disconnect</button>
+    <span class="state" data-comparison-target="state" data-source="<%= source %>">idle</span>
+  </div>
+  <dl class="readout" data-comparison-target="own" data-source="<%= source %>"></dl>
+</div>

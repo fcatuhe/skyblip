@@ -60,6 +60,7 @@ Rails.application.routes.draw do
       resource :simulator_build, only: :show
       resource :simulator, only: :show
       resource :console, only: :show
+      resource :comparison, only: :show
       resource :ownship, only: :show
     end
 
