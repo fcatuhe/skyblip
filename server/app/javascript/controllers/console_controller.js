@@ -29,7 +29,7 @@ export default class extends Controller {
 
   disconnect() {
     this.session.abort()
-    this.device?.disconnect()
+    this.device?.release()
     this.device = null
   }
 
@@ -48,7 +48,7 @@ export default class extends Controller {
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })
       if (signal.aborted) {
-        device.disconnect()
+        device.release()
       } else {
         this.device = device
         this.state(`${device.name} over ${device.transport}`, "up")

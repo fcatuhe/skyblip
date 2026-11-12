@@ -121,41 +121,89 @@ async function openSmp(server, onSmp) {
   return chr;
 }
 
-let openDevice = null;
+const DEVICE_FILTERS = [
+  { services: [UUID.nus] },
+  { services: [UUID.hm10] },
+  { namePrefix: 'skyBlip' },
+  { namePrefix: 'SoftRF' },
+];
+const OPTIONAL_SERVICES = [UUID.nus, UUID.hm10, UUID.skyblip, UUID.smp];
 
-// INFO: fc 11nov26 one link per page: the update and settings pages keep theirs across visits, so a new one closes it
-async function closeOpenDevice() {
-  const device = openDevice;
-  openDevice = null;
-  if (!device?.gatt.connected) return;
-  const closed = new Promise(resolve => device.addEventListener('gattserverdisconnected', resolve, { once: true }));
-  device.gatt.disconnect();
-  await closed;
+// INFO: fc 11nov26 names narrow the browser's chooser to the devices this browser already met
+export function requestDevice({ names = [], namePrefix = null } = {}) {
+  if (!hasWebBluetooth()) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
+  const filters = namePrefix ? [{ namePrefix }] : names.length > 0 ? names.map(name => ({ name })) : DEVICE_FILTERS;
+  return navigator.bluetooth.requestDevice({ filters, optionalServices: OPTIONAL_SERVICES });
 }
 
-export async function connect({ onLine, onReply, onSmp, onClose }) {
-  if (!hasWebBluetooth()) throw new Error('This browser has no Web Bluetooth: use Chrome or Edge.');
-  const device = await navigator.bluetooth.requestDevice({
-    filters: [
-      { services: [UUID.nus] },
-      { services: [UUID.hm10] },
-      { namePrefix: 'skyBlip' },
-      { namePrefix: 'SoftRF' },
-    ],
-    optionalServices: [UUID.nus, UUID.hm10, UUID.skyblip, UUID.smp],
-  });
-  await closeOpenDevice();
-  const server = await device.gatt.connect();
-  openDevice = device;
-  device.addEventListener('gattserverdisconnected', () => onClose(device.name), { once: true });
+export async function permittedDevices() {
+  if (!hasWebBluetooth() || typeof navigator.bluetooth.getDevices !== 'function') return [];
+  return navigator.bluetooth.getDevices();
+}
 
-  const stream = onLine ? await openStream(server, onLine) : null;
-  const config = await openConfig(server, onReply);
-  const smp = onSmp ? await openSmp(server, onSmp) : null;
-  if (!stream && !config) throw new Error('No serial or config service on this device.');
-  const exclusive = gattQueue();
+const links = new Map();
+
+// INFO: fc 11nov26 one GATT link per device, shared by every client of it, so a Go and a Bravo stay connected side by side
+function linkOf(device) {
+  let link = links.get(device);
+  if (!link) {
+    link = openLink(device, () => {
+      if (links.get(device) !== link) return false;
+      links.delete(device);
+      return true;
+    });
+    links.set(device, link);
+    link.catch(() => links.delete(device));
+  }
+  return link;
+}
+
+async function openLink(device, forget) {
+  const server = await device.gatt.connect();
+  const link = { server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, smp: null };
+  device.addEventListener('gattserverdisconnected', () => {
+    if (!forget()) return;
+    for (const client of link.clients) client.onClose?.(device.name);
+    link.clients.clear();
+  }, { once: true });
+  return link;
+}
+
+const CALLBACKS = { stream: 'onLine', config: 'onReply', smp: 'onSmp' };
+
+function open(link, endpoint, opener) {
+  link[endpoint] ??= opener(link.server, (...args) => {
+    for (const client of link.clients) client[CALLBACKS[endpoint]]?.(...args);
+  }).catch(error => {
+    link[endpoint] = null;
+    throw error;
+  });
+  return link[endpoint];
+}
+
+export async function connect({ device = null, onLine, onReply, onSmp, onClose }) {
+  device ??= await requestDevice();
+  const link = await linkOf(device);
+  const client = { onLine, onReply, onSmp, onClose };
+  link.clients.add(client);
+
+  let stream, config, smp;
+  try {
+    stream = onLine ? await open(link, 'stream', openStream) : null;
+    config = await open(link, 'config', openConfig);
+    smp = onSmp ? await open(link, 'smp', openSmp) : null;
+  } catch (error) {
+    link.clients.delete(client);
+    throw error;
+  }
+  if (!stream && !config) {
+    link.clients.delete(client);
+    throw new Error('No serial or config service on this device.');
+  }
+  const { exclusive } = link;
 
   return {
+    device,
     name: device.name || '(unnamed)',
     transport: stream ? stream.transport : 'none',
     hasStream: Boolean(stream),
@@ -180,6 +228,15 @@ export async function connect({ onLine, onReply, onSmp, onClose }) {
       for (const chunk of chunks(packet, writeBytes)) {
         await exclusive(() => smp.writeValueWithoutResponse(chunk));
       }
+    },
+
+    leave() {
+      link.clients.delete(client);
+    },
+
+    release() {
+      link.clients.delete(client);
+      if (link.clients.size === 0 && device.gatt.connected) device.gatt.disconnect();
     },
 
     disconnect() {
