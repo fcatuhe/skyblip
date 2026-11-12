@@ -255,6 +255,35 @@ TEST_CASE("alarm: a target that has gone quiet stops driving the annunciator") {
     CHECK(tracker.announced_level(now_ms + kAlertMaxAgeMs + 1) == Level::None);
 }
 
+// With no ADS-B gate a sky of far airliners filled the tracker and recycled the advisory's slot.
+TEST_CASE("alarm: far aircraft never take the slot of an announced or dismissed advisory") {
+    AlarmTracker tracker;
+    const model::Ownship own = flying(30, 0);
+
+    uint32_t now_ms = 1000;
+    REQUIRE(tracker.update(own, target_at(own, 400, 0, 0, 30, 180, now_ms), now_ms).notify);
+    tracker.dismiss();
+    model::AircraftObservation announced = target_at(own, 0, 400, 0, 30, 270, now_ms);
+    announced.address = 0x271828;
+    REQUIRE(tracker.update(own, announced, now_ms).notify);
+
+    now_ms += 100;
+    for (int i = 0; i < kMaxTrackedTargets; i++) {
+        model::AircraftObservation far = target_at(own, 200000, 1000 * i, 9000, 230, 90, now_ms);
+        far.address = 0x500000u + static_cast<uint32_t>(i);
+        CHECK(tracker.update(own, far, now_ms).assessment.level == Level::None);
+    }
+
+    now_ms += 100;
+    const AlarmTracker::Decision dismissed =
+        tracker.update(own, target_at(own, 400, 0, 0, 30, 180, now_ms), now_ms);
+    CHECK_FALSE(dismissed.notify);
+    CHECK(dismissed.dismissed);
+    announced.at_ms = now_ms;
+    CHECK_FALSE(tracker.update(own, announced, now_ms).notify);
+    CHECK(tracker.announced_level(now_ms) == Level::Advisory);
+}
+
 // A recycled slot came back empty and read as a first sighting, so the buzzer spoke.
 TEST_CASE("alarm: a report older than the alert window is not announced on a recycled slot") {
     AlarmTracker tracker;

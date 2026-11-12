@@ -3,6 +3,7 @@ import { UUID } from '#skyblip/ble';
 import { compareVersions, parseVersion, readImage, versionText } from '#skyblip/image';
 import { decodeFrame, encodeFrame } from '#skyblip/link';
 import { PRODUCTION_KEY } from './fake_image.mjs';
+import { FakeLogStore } from './fake_log.mjs';
 
 export { PRODUCTION_KEY, imageClass, signedImage } from './fake_image.mjs';
 
@@ -82,10 +83,11 @@ export class FakeSkyblip {
     address = 0x00012a,
     product = 'skyblip_go',
     name = 'skyBlip Go 5B5AFE',
+    logStore = new FakeLogStore(),
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -132,8 +134,9 @@ export class FakeSkyblip {
     const fake = this;
     this.config = new Characteristic(this, bytes => this.onConfig(bytes));
     this.smp = new Characteristic(this, bytes => this.onSmp(bytes));
+    this.log = new Characteristic(this, bytes => this.onLog(bytes));
     const services = {
-      [UUID.skyblip]: { [UUID.config]: this.config },
+      [UUID.skyblip]: { [UUID.config]: this.config, [UUID.log]: this.log },
       ...(this.hasSmp ? { [UUID.smp]: { [UUID.smpChr]: this.smp } } : {}),
     };
     const server = {
@@ -220,6 +223,12 @@ export class FakeSkyblip {
 
   onConfig(bytes) {
     this.answer(decodeFrame(bytes));
+  }
+
+  onLog(bytes) {
+    for (const reply of this.logStore.answer(decodeFrame(bytes), this.mtu - ATT_HEADER_BYTES)) {
+      setImmediate(() => this.connected && this.log.notify(encodeFrame(reply)));
+    }
   }
 
   answer({ command, ...fields }) {

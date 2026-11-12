@@ -335,7 +335,7 @@
     },
     {
       "command": "health", "code": 27, "endpoint": "peer", "sender": "unit",
-      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo gates its exports on, and whether Bravo keeps its alarm silent for this Go (#179). 30 bytes at its widest. Keys 8 to 10 are retired (#179) and never reused.",
+      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo places its exports against, and whether Bravo keeps its alarm silent for this Go (#179). 30 bytes at its widest. Keys 8 to 10 are retired (#179) and never reused.",
       "keys": [
         {"name": "protocol_version", "number": 1, "type": "unsigned", "required": true, "description": "The version of the peer frames Bravo speaks: 1, observation, health and peer_claim as this registry gives them. It moves when a peer key changes meaning, not when one is added"},
         {"name": "boot_epoch", "number": 2, "type": "unsigned", "required": true, "description": "Bravo's boot epoch, the one its observations carry"},
@@ -344,7 +344,7 @@
         {"name": "last_sequence", "number": 5, "type": "unsigned", "description": "The sequence of the last observation Bravo sent in this boot_epoch. Absent before the first"},
         {"name": "own_icao_set", "number": 6, "type": "boolean", "required": true, "description": "Bravo's own-ICAO setting holds an address, so the aircraft's own transponder is not traffic even when the Go sends no own_icao (#184)"},
         {"name": "alarm_granted", "number": 7, "type": "boolean", "required": true, "description": "Bravo keeps its buzzer and haptic silent for this Go (#179): true exactly while this is the Go Bravo pinned, its connection is up, and its last peer_claim said alarm_requested true and is younger than three claim periods. False is Bravo sounding by its own alarm_enabled and alarm_volume. Bravo's NMEA stream to an EFB is unchanged either way"},
-        {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo gates its exports on, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"},
+        {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo places its exports against, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"},
         {"name": "paired", "number": 12, "type": "boolean", "required": true, "description": "Bravo holds this Go's pin, or offers it since its button answered this Go's request (#192). A Go asking to pair pins Bravo only on true. A paired Go that reads false holds a pin Bravo does not, from a pairing cut short or a Bravo that pinned another Go, so it drops its pin and says so"}
       ]
     },

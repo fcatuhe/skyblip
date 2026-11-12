@@ -5,7 +5,6 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 | File | What it decides |
 |---|---|
 | `sanity` | whether a decoded position is close enough to have been heard at all |
-| `gate` | whether an ADS-B target is near enough, in distance and in height, to take a slot |
 | `lease` | how long one reception is believed, for every layer that holds a slot |
 | `table` | which aircraft the finite table holds, and each one's turn rate |
 | `alarm` | whether a target is an advisory, and what the annunciator is allowed to say |
@@ -36,7 +35,6 @@ ADS-L lets a position mark its altitude invalid (G.1.7), and an ADS-B target may
 - `formation` never makes it a member, and a member that stops sending its altitude leaves on that report. Holding station is a claim about three axes, and a target with no height cannot be seen to hold one.
 - `range` gives it a ground distance and `RangeRow::up_valid` false, which `nearby` prints as `--`.
 - `sanity` checks its ground distance, since there is no slant to take.
-- `gate` holds an ADS-B target on its distance alone, below.
 
 What the radar and the list draw for it is in `products/skyblip_go/pages/README.md`, and what the tablet is sent in `core/protocol/README.md`.
 
@@ -111,7 +109,7 @@ The table refuses two addresses, before any other check:
 - our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`);
 - our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it.
 
-Zero sets an entry to filter nothing. `common::TrafficService` passes the product's own-ICAO setting on every pass, through `common::TrafficSettings`, so an address typed on the glass or set over the link filters from the next pass. A new address also releases the slot it names, if the table holds one, so our transponder leaves the radar on that pass rather than when its lease runs out. It is released even under an alarm, unlike a slot the gate or a full table would release: the address names our own aircraft, so that alarm grades our own transponder against us, and it is the false alarm the pilot set the address to stop. The Go's setting is `own_icao`, 0 while unset (`products/skyblip_go/README.md`, Own ICAO).
+Zero sets an entry to filter nothing. `common::TrafficService` passes the product's own-ICAO setting on every pass, through `common::TrafficSettings`, so an address typed on the glass or set over the link filters from the next pass. A new address also releases the slot it names, if the table holds one, so our transponder leaves the radar on that pass rather than when its lease runs out. It is released even under an alarm, unlike a slot a full table would evict: the address names our own aircraft, so that alarm grades our own transponder against us, and it is the false alarm the pilot set the address to stop. The Go's setting is `own_icao`, 0 while unset (`products/skyblip_go/README.md`, Own ICAO).
 
 ### A report with no position
 
@@ -125,22 +123,17 @@ An ADS-B observation can exist before its position does, such as half a CPR pair
 
 Both aircraft are put at FL600, 18288 m, the top of the class A airspace airliners and business jets fly in (14 CFR 71.33). Each term is then 557.4 km, and d is 1114.8 km. Own-ship is put at FL600 too, because the ceiling has to hold wherever the receiver flies. `test/core/test_traffic_sanity.cpp` computes the figure. A position further than that was not sent from where the aircraft is: it is a decode gone wrong, and it counts in `implausible()` like any other.
 
-### The gate
+### No gate
 
-The table already keeps its nearest targets: a full table evicts the farthest slot, and never one under an advisory. So the gate does not protect ADS-L from a flood of ADS-B. Nearest-first does that. The gate keeps out the ADS-B a pilot has no use for, so that it holds no slot and no NMEA time: `common::NmeaService` sends at most `kTargetsPerPass`, 10 targets a second, so a full table sends each target only every fifth second.
+The table holds every ADS-B target it can place, at any distance and any height. The owner decided it on 12 November 2026: all traffic, and nothing to configure for now. PowerFLARM does the same by default: its `ADSBRANGE` and `ADSBVRANGE` are unlimited (FLARM FTD-014, version 1.18 of 2024-12-19, 3.2.10 and 3.2.11).
 
-It applies to `Source::Adsb` only, and refuses a target that is either:
+Three rules still bound what the table holds. A position past `traffic::kAdsbRangeCeilingM`, the 1115 km radio horizon above, is a bad decode, and the table refuses it and counts it in `implausible()`. Before the table, `protocol::AdsbAssembly` refuses a global decode past 180 NM of the receiver's reference while it has one (`core/protocol/README.md`). A full table evicts the ground first, then the farthest slant, so a far airborne aircraft never takes a slot from a nearer airborne one, and it never evicts a slot under an alarm. The alarm keeps its own bands, and grades a far aircraft `None`.
 
-- further than `kAdsbGateRangeCeilingM` over the ground, which is `kPlausibleRangeCeilingM`, 30 km. No ADS-B target is held further away than a direct ADS-L or FLARM target can be. The radar's widest range is 16 km (`kRangeStepsKm`), and the alarm acts inside 3 km. For comparison, PowerFLARM's `ADSBRANGE` defaults to unlimited, and its `PCASRANGE` for transponder-only targets to 7408 m (FLARM FTD-014, version 1.18 of 2024-12-19, 3.2.10 and 3.2.8);
-- or more than `kAdsbGateHeightCeilingM`, 500 m, above or below us. That is the default of PowerFLARM's `VRANGE`, the vertical range of the aircraft it shows (FTD-014, 3.1.6, values 500 to 2000). It is 200 m wider than the alarm's `kAdvisoryAltitudeM`, so a target is held before it can become an advisory: closing at 10 m/s vertically, it enters the table 20 s before it enters the band. FLARM's own `ADSBVRANGE` defaults to unlimited (3.2.11), and its `PCASVRANGE` to 610 m (3.2.9).
+The cost is NMEA time. `common::NmeaService` sends at most `kTargetsPerPass`, 10 `$PFLAA` a second, in rotation over every held slot, so a full table of 48 sends each target about every fifth second. On a busy sky far aircraft fill the slots near ones leave empty, and each target is refreshed less often. Nearest-first eviction decides which aircraft hold a slot, and so which are sent at all.
 
-The gate measures from the table's reference, `set_own_reference`. Paired, a Bravo gates its exports on the Go's position (#192). A target the gate refuses or releases counts in `adsb_outside_gate()` and not in `implausible()`, because a real aircraft far away is not a decoder fault. No link reports it yet.
+The sanity check and the slant both measure from the table's reference, `set_own_reference`. Paired, a Bravo places its traffic against the Go's position (#192).
 
-The gate decides admission, and it never freezes a slot. A report from an aircraft the table does not hold yet takes no slot when it is outside the gate. A report outside the gate from an aircraft the table holds releases its slot on that report, when the slot would have taken the report: `prefer_new` still keeps a fresher, higher-ranked copy. The one exception is a slot under an alarm: the report refreshes it instead, so the alarm grades the new position, and the next report outside the gate releases it once the alarm has dropped. An ADS-B advisory with an unknown altitude that next reports a height 800 m above us therefore stops being an advisory on that report, rather than standing on the radar for its 6 s lease.
-
-**Unknown altitude** is neither inside nor outside a height band. The gate holds such a target on its distance alone, as `alarm` grades it on distance alone: it may be at our level. That includes a target that sends only a pressure altitude while own-ship has none.
-
-**Without a fix of our own** there is no reference, so the gate holds every ADS-B target and `weight_of` gives every slot a slant of 0. Eviction then reads the ground first, then the rank, then the age. Among targets with the same ground state, a direct ADS-L or FLARM target outranks ADS-B, which outranks the uplink, and among ADS-B targets the one heard longest ago goes. No slot under an alarm is evicted. So a receiver without a fix holds the ADS-B aircraft it heard most recently, wherever they are. It grades none of them and sends none as `$PFLAA`, because `assess` and `NmeaService::emit_targets` both need our fix. When the fix comes, each far aircraft is released on its next report, and nearer aircraft take the slots as they report.
+**Without a fix of our own** there is no reference, so the table refuses nothing on its position and `weight_of` gives every slot a slant of 0. Eviction then reads the ground first, then the rank, then the age. Among targets with the same ground state, a direct ADS-L or FLARM target outranks ADS-B, which outranks the uplink, and among ADS-B targets the one heard longest ago goes. No slot under an alarm is evicted. So a receiver without a fix holds the ADS-B aircraft it heard most recently, wherever they are. It grades none of them and sends none as `$PFLAA`, because `assess` and `NmeaService::emit_targets` both need our fix. When the fix comes, a nearer aircraft takes the slot of the farthest as it reports, and a far one keeps its slot until then or until its lease runs out.
 
 ### Accepted for v1
 

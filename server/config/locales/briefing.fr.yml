@@ -85,6 +85,8 @@ fr:
       title: "Outils de développement"
       console: "Console Bluetooth"
       console_hint: "Chaque trame que l\u2019appareil envoie, et n\u2019importe quelle commande."
+      comparison: "Comparaison du trafic"
+      comparison_hint: "Un SoftRF en USB à côté d\u2019un skyBlip en Bluetooth, sur la carte OACI."
       simulator: "Simulateur"
       simulator_hint: "Le firmware dans votre navigateur, avec un ciel modifiable."
       ownship: "Éditeur de l\u2019appareil"

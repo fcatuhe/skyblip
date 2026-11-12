@@ -53,6 +53,17 @@ TEST_CASE("radar rim: distance does not take an aircraft off the glass") {
     CHECK(ink_in(radar(to_scale), 90, 11, 110, 30) == 0);
 }
 
+// 1100 km is 54643 px at 1 NM to scale, so its square overflows int32: UBSan runs guard this.
+TEST_CASE("radar rim: an aircraft near the radio horizon on the 1 NM scale draws nothing") {
+    RadarTarget horizon[1] = {{1100000, 0, 0, Level::None}};
+    RadarSnapshot to_scale = plotting_all(horizon, 1);
+    to_scale.plot = RadarPlot::ToScale;
+    to_scale.range_step = 0;
+    RadarSnapshot empty = to_scale;
+    empty.target_count = 0;
+    CHECK(ink_in(radar(to_scale), 0, 0, 200, 200) == ink_in(radar(empty), 0, 0, 200, 200));
+}
+
 TEST_CASE("radar rim: the ring shrinks to leave the rim its band, and the range stays on it") {
     const Glass empty = radar(plotting_all(nullptr, 0));
     CHECK(empty.get_pixel(100, kRingTopY));

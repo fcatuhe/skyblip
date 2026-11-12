@@ -44,6 +44,19 @@ TEST_CASE("bravo: with a fix an aircraft heard on 1090 MHz reaches the phone as 
     CHECK(rig.count_of("$GPGGA") >= 2);
 }
 
+// The owner's call: all traffic, so an airliner at cruise far away is shown like any other.
+TEST_CASE("bravo: an airliner 200 km away at FL350 reaches the phone as $PFLAA") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.raise_link();
+    rig.seconds_with_fix(3);
+    rig.hear_aircraft(kAircraft, 200000, 35000);
+    rig.seconds_with_fix(2);
+
+    CHECK(rig.state().traffic.count() == 1);
+    CHECK(pflaa_names(rig, kAircraft));
+}
+
 TEST_CASE("bravo: without a fix it says GPS 0, sends no $PFLAA and keeps decoding") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);

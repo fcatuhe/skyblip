@@ -120,11 +120,11 @@ TEST_CASE("bravo scenario: Bravo alone sends a phone its ADS-B traffic as Source
         REQUIRE(fields.size() == 15);
         CHECK(fields[13] == "1");
     }
+    CHECK(exported(simulator, "300001"));
     CHECK(exported(simulator, "300002"));
     CHECK(exported(simulator, "300003"));
     CHECK(exported(simulator, "300004"));
-    // The airliner at FL370 is outside the table's 500 m band, and the taxiing one has no altitude.
-    CHECK_FALSE(exported(simulator, "300001"));
+    // The taxiing one sends no altitude, and $PFLAA needs one.
     CHECK_FALSE(exported(simulator, "300005"));
     CHECK(simulator.product().adsb().assembly().count() == 5);
     CHECK(simulator.product().adsb().crc() == 0);
@@ -214,7 +214,7 @@ TEST_CASE("bravo scenario: Bravo without a fix keeps folding and sends the phone
     CHECK_FALSE(newest(simulator, "$PFLAA").empty());
 }
 
-TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard whole and gated to the near") {
+TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard and held whole") {
     simulator::BravoSimulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     REQUIRE(simulator.load_file("scenarios/bravo_dense_sky.json"));
@@ -225,7 +225,7 @@ TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard whole and gat
     CHECK(simulator.product().adsb().assembly().count() == 30);
     CHECK(simulator.product().adsb().crc() == 0);
     CHECK(simulator.product().board().receiver().statistics().dropped == 0);
-    CHECK(simulator.product().state().traffic.count() < 30);
+    CHECK(simulator.product().state().traffic.count() == 30);
 }
 
 // The 1090MHz Riddle Table 1.4: airborne 2 Hz and 0.2 Hz, still on the ground 0.2 Hz and 0.1 Hz.

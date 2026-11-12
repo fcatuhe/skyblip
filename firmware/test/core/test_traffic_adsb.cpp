@@ -1,9 +1,8 @@
-// ADS-B at the table's door: its rank among the other paths, our own transponder, and the gate.
+// ADS-B at the table's door: its rank among the other paths, our own transponder, and no gate.
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
 #include "core/traffic/alarm.h"
-#include "core/traffic/gate.h"
 #include "core/traffic/lease.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
@@ -129,82 +128,51 @@ TEST_CASE("traffic: setting our ICAO address releases the target it names, alarm
     CHECK(table.count() == 3);
 }
 
-TEST_CASE("traffic: ADS-B is held inside the gate's range and height band, and counted outside") {
+// FL350 is 10668 m, so this airliner is far past any band the alarm or the radar uses.
+TEST_CASE("traffic: an ADS-B target 200 km away at FL350 is held while the table has room") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
-    const int band_m = kAdsbGateHeightCeilingM;
 
-    CHECK(table.update(heard(own, 0x400001, 20000, band_m - 100, model::Source::Adsb), 100) >= 0);
-    CHECK(table.update(heard(own, 0x400002, 5000, band_m + 100, model::Source::Adsb), 100) < 0);
-    CHECK(table.update(heard(own, 0x400003, 5000, -band_m - 100, model::Source::Adsb), 100) < 0);
-    CHECK(table.update(heard(own, 0x400004, kAdsbGateRangeCeilingM + 1000, 0, model::Source::Adsb),
-                       100) < 0);
-    CHECK(table.adsb_outside_gate() == 3);
-    CHECK(table.implausible() == 0);
-
-    CHECK(table.update(heard(own, 0x400002, 5000, band_m + 100, model::Source::AdslDirect), 100) >=
-          0);
-    CHECK(table.count() == 2);
-}
-
-// The geometry is integer, so each edge is pinned on its own metre, as the sanity suite does.
-TEST_CASE("traffic: the ADS-B gate holds its edges and refuses the metre past them") {
-    const model::Ownship own = flying(30, 0);
-    TrafficTable table;
-    table.set_own_reference(own);
-    const int band_m = kAdsbGateHeightCeilingM, range_m = kAdsbGateRangeCeilingM;
-
-    CHECK(table.update(heard(own, 0x440001, 5000, band_m, model::Source::Adsb), 100) >= 0);
-    CHECK(table.update(heard(own, 0x440002, 5000, -band_m, model::Source::Adsb), 100) >= 0);
-    CHECK(table.update(heard(own, 0x440003, range_m, 0, model::Source::Adsb), 100) >= 0);
-    CHECK(table.adsb_outside_gate() == 0);
-
-    CHECK(table.update(heard(own, 0x440004, 5000, band_m + 1, model::Source::Adsb), 100) < 0);
-    CHECK(table.update(heard(own, 0x440005, 5000, -band_m - 1, model::Source::Adsb), 100) < 0);
-    CHECK(table.update(heard(own, 0x440006, range_m + 1, 0, model::Source::Adsb), 100) < 0);
-    CHECK(table.adsb_outside_gate() == 3);
+    CHECK(table.update(heard(own, 0x400001, 200000, 10668 - 1000, model::Source::Adsb), 100) >= 0);
+    CHECK(table.update(heard(own, 0x400002, 5000, 3000, model::Source::Adsb), 100) >= 0);
+    CHECK(table.update(pressure_only(own, 0x400003, 100000, 35000), 100) >= 0);
     CHECK(table.count() == 3);
+    CHECK(table.implausible() == 0);
 }
 
-// Unknown is neither inside nor outside a band, so it is held on distance, as the alarm grades it.
-TEST_CASE("traffic: an ADS-B target with no height to compare is gated on its distance alone") {
-    model::Ownship own = flying(30, 0);
-    own.pressure_altitude_mm = 900000;
-    own.pressure_altitude_valid = true;
-    TrafficTable table;
-    table.set_own_reference(own);
-
-    // 3937 ft is 1200 m, 300 m above our 900 m. 5600 ft is 1707 m, 807 m above.
-    CHECK(table.update(pressure_only(own, 0x410001, 10000, 3937), 100) >= 0);
-    CHECK(table.update(pressure_only(own, 0x410002, 10000, 5600), 100) < 0);
-    CHECK(table.adsb_outside_gate() == 1);
-
-    own.pressure_altitude_valid = false;
-    table.set_own_reference(own);
-    CHECK(table.update(pressure_only(own, 0x410002, 10000, 5600), 100) >= 0);
-    CHECK(table.update(pressure_only(own, 0x410003, kAdsbGateRangeCeilingM + 1000, 5600), 100) < 0);
-    CHECK(table.adsb_outside_gate() == 2);
-    CHECK(table.count() == 2);
-}
-
-TEST_CASE(
-    "traffic: a held ADS-B target that reports itself outside the gate is let go on that report") {
+TEST_CASE("traffic: a full table of far ADS-B gives its farthest slot to a nearer target") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
-    REQUIRE(table.update(heard(own, 0x420001, 5000, 0, model::Source::Adsb, 100), 100) >= 0);
+    for (int i = 0; i < TrafficTable::kMaxTargets; i++)
+        REQUIRE(table.update(heard(own, 0x450000u + i, 50000 + 1000 * i, 9000, model::Source::Adsb),
+                             100) >= 0);
+    const uint32_t farthest = 0x450000u + TrafficTable::kMaxTargets - 1;
 
-    CHECK(table.update(
-              heard(own, 0x420001, 5000, kAdsbGateHeightCeilingM + 200, model::Source::Adsb, 101),
-              101) < 0);
-    CHECK(table.find(kIcao, 0x420001) == -1);
-    CHECK(table.count() == 0);
-    CHECK(table.adsb_outside_gate() == 1);
+    CHECK(table.update(heard(own, 0x460001, 3000, 0, model::Source::Adsb), 100) >= 0);
+    CHECK(table.find(kIcao, farthest) == -1);
+    CHECK(table.find(kIcao, farthest - 1) >= 0);
+    CHECK(table.update(heard(own, 0x460002, 400000, 9000, model::Source::Adsb), 100) < 0);
+    CHECK(table.count() == TrafficTable::kMaxTargets);
 }
 
-// A gate that froze the slot kept a climbing-away advisory on the glass for its whole lease.
-TEST_CASE("traffic: an advisory that reports itself outside the gate is refreshed, not frozen") {
+// No report of its own position releases a held aircraft, however far it goes.
+TEST_CASE("traffic: a held ADS-B target that reports itself far away and above keeps its slot") {
+    const model::Ownship own = flying(30, 0);
+    TrafficTable table;
+    table.set_own_reference(own);
+    const int index = table.update(heard(own, 0x420001, 5000, 0, model::Source::Adsb, 100), 100);
+    REQUIRE(index >= 0);
+
+    CHECK(table.update(heard(own, 0x420001, 5000, 3000, model::Source::Adsb, 101), 101) == index);
+    CHECK(table.at(index)->observation.received.at_s == 101);
+    CHECK(table.update(heard(own, 0x420001, 40000, 3000, model::Source::Adsb, 102), 102) == index);
+    CHECK(table.count() == 1);
+}
+
+// The alarm grades the new height on the report that brings it, so the advisory drops at once.
+TEST_CASE("traffic: an advisory with no height that next reports 800 m above stops being one") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);
@@ -214,37 +182,10 @@ TEST_CASE("traffic: an advisory that reports itself outside the gate is refreshe
     REQUIRE(index >= 0);
     table.at(index)->alarm_level = Level::Advisory;
 
-    const model::AircraftObservation above =
-        heard(own, 0x420002, 2000, 800, model::Source::Adsb, 101);
-    CHECK(table.update(above, 101) == index);
+    CHECK(table.update(heard(own, 0x420002, 2000, 800, model::Source::Adsb, 101), 101) == index);
     CHECK(table.at(index)->observation.received.at_s == 101);
     CHECK(table.at(index)->observation.altitude_valid);
     CHECK(assess(own, table.at(index)->observation, 0).level == Level::None);
-
-    table.at(index)->alarm_level = Level::None;
-    CHECK(table.update(heard(own, 0x420002, 2000, 800, model::Source::Adsb, 102), 102) < 0);
-    CHECK(table.find(kIcao, 0x420002) == -1);
-}
-
-// The direct copy outranks ADS-B, so an ADS-B report from outside the gate must not release it.
-TEST_CASE(
-    "traffic: a fresher direct copy keeps its slot when ADS-B reports from outside the gate") {
-    const model::Ownship own = flying(30, 0);
-    TrafficTable table;
-    table.set_own_reference(own);
-    model::AircraftObservation direct =
-        heard(own, 0x420004, 2000, 0, model::Source::AdslDirect, 100);
-    direct.address_mapping_table = kIcao;
-    const int index = table.update(direct, 100);
-    REQUIRE(index >= 0);
-
-    CHECK(table.update(heard(own, 0x420004, 2000, 800, model::Source::Adsb, 101), 101) == index);
-    CHECK(table.find(kIcao, 0x420004) == index);
-    CHECK(table.at(index)->used);
-    CHECK(source_of(table, index) == model::Source::AdslDirect);
-    CHECK(table.at(index)->observation.received.at_s == 100);
-    CHECK(table.at(index)->observation.altitude_m == direct.altitude_m);
-    CHECK(table.adsb_outside_gate() == 0);
 }
 
 // Half a CPR pair has no position, and with a slant of 0 it would have outranked every real target.
@@ -258,7 +199,6 @@ TEST_CASE("traffic: an ADS-B report with no position yet takes no slot") {
     CHECK(table.count() == 0);
     CHECK(table.adsb_without_position() == 1);
     CHECK(table.implausible() == 0);
-    CHECK(table.adsb_outside_gate() == 0);
 
     model::AircraftObservation relayed = half_pair;
     relayed.source = model::Source::AdslUplink;
@@ -277,7 +217,6 @@ TEST_CASE("traffic: without a fix of our own, ADS-B churns among itself and give
                     heard(flying(30, 0), 0x430000u + i, 400000, 9000, model::Source::Adsb, at_s),
                     at_s) >= 0);
     }
-    CHECK(table.adsb_outside_gate() == 0);
 
     const uint32_t now_s = 100 + TrafficTable::kMaxTargets;
     CHECK(table.update(observation(0x500001, 6, now_s, model::Source::AdslDirect), now_s) >= 0);
@@ -337,10 +276,6 @@ TEST_CASE(
     CHECK(table.find(kIcao, 0x730001) == -1);
 
     CHECK(table.update(heard(own, 0x730003, 2800, 0, model::Source::Adsb), 100) < 0);
-    CHECK(table.update(
-              heard(own, 0x730004, 600, kAdsbGateHeightCeilingM + 300, model::Source::Adsb), 100) <
-          0);
-    CHECK(table.adsb_outside_gate() == 1);
 
     const int farthest_m = 1000 + 40 * (dense - 1);
     model::AircraftObservation level_with_it =

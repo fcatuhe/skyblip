@@ -3,7 +3,7 @@
   <%= link_to t("briefing.tools.back"), briefing_root_path, class: "unit-back" %>
   <h1><%= t("briefing.tools.title") %></h1>
   <ul class="tools-list">
-    <% { console: briefing_console_path, simulator: briefing_simulator_path, ownship: briefing_ownship_path }.each do |tool, path| %>
+    <% { console: briefing_console_path, comparison: briefing_comparison_path, simulator: briefing_simulator_path, ownship: briefing_ownship_path }.each do |tool, path| %>
       <li>
         <%= link_to path, class: "tools-link" do %>
           <strong><%= t("briefing.tools.#{tool}") %></strong>

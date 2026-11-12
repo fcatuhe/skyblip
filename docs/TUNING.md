@@ -232,8 +232,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClosingMps` | 3 | metres per second | - | [README](../firmware/core/traffic/README.md) argues it |
 | `kClosingFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kLiftoffWindowMs` | `kTogetherHoldMs` = 6000 (6 s) | milliseconds | Window | [README](../firmware/core/traffic/README.md) argues it |
-| `kAdsbGateRangeCeilingM` | `kPlausibleRangeCeilingM` = 30000 | metres | Ceiling | no farther than a direct ADS-L or FLARM target can be (README.md) |
-| `kAdsbGateHeightCeilingM` | 500 | metres | Ceiling | PowerFLARM's default VRANGE, FLARM FTD-014 version 1.18 3.1.6 (README.md) |
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kAirborneTargetForgetS` | `kTargetForgetReports * flight::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kGroundTargetForgetS` | `kTargetForgetReports * flight::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
@@ -357,4 +355,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-232 constants over 22 folders.
+230 constants over 22 folders.
