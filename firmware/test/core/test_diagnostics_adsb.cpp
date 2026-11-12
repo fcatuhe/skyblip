@@ -19,7 +19,10 @@ Diagnostics receiving() {
     diagnostics.adsb_fitted = true;
     diagnostics.adsb.frames = 900;
     diagnostics.adsb.frame_rate_hz = 31;
-    diagnostics.adsb_invalid = 120;
+    diagnostics.adsb_crc = 120;
+    diagnostics.adsb_unsupported = 14;
+    diagnostics.adsb_folded = 766;
+    diagnostics.adsb_aircraft = 9;
     diagnostics.adsb.dropped = 2;
     diagnostics.adsb.rearms = 3;
     diagnostics.adsb.resets = 1;
@@ -64,14 +67,17 @@ TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reac
     char line[DiagnosticsReport::kLineBytes];
     REQUIRE(console.line(0, line, static_cast<int>(sizeof(line))) > 0);
     CHECK(std::string(line) ==
-          "adsb frames=900 frame_rate_hz=31 invalid=120 dropped=2 rearms=3 resets=1 "
-          "command_errors=5 errors=128 rssi_dbm=0,1,2,3,4,5,6,7");
+          "adsb frames=900 frame_rate_hz=31 dropped=2 rearms=3 resets=1 command_errors=5 "
+          "errors=128 rssi_dbm=0,1,2,3,4,5,6,7 crc=120 unsupported=14 folded=766 aircraft=9");
 
     DiagnosticsReport link(diagnostics, link::Command::Diagnostics, DiagnosticsReport::Group::Adsb);
     const std::string frame = only_adsb_frame(link);
     CHECK(has(frame, "\"group\":\"adsb\""));
     CHECK(has(frame, "\"frames\":900"));
-    CHECK(has(frame, "\"invalid\":120"));
+    CHECK(has(frame, "\"crc\":120"));
+    CHECK(has(frame, "\"unsupported\":14"));
+    CHECK(has(frame, "\"folded\":766"));
+    CHECK(has(frame, "\"aircraft\":9"));
     CHECK(has(frame, "\"rssi_dbm\":[0,1,2,3,4,5,6,7]"));
 }
 
@@ -84,12 +90,13 @@ TEST_CASE("diagnostics adsb: the histogram is copied when the dump is built") {
     CHECK(has(only_adsb_frame(report), "\"rssi_dbm\":[0,1,2,3,4,5,6,7]"));
 }
 
-// 1 + four 2-byte heads + seven counters of 7 + errors 5 + the array's 2 + 1 + 8 x 5, under the
-// radio's 112.
-TEST_CASE("diagnostics adsb: the widest adsb frame is 106 bytes, narrower than the radio's") {
+// 1 + four 2-byte heads + ten counters of 7 + errors 5 + the array's 2 + 1 + 8 x 5, over the
+// radio's 112 and under the 182 every link carries.
+TEST_CASE("diagnostics adsb: the widest adsb frame is 127 bytes, the widest group of the dump") {
     Diagnostics diagnostics = receiving();
-    diagnostics.adsb.frames = diagnostics.adsb.frame_rate_hz = diagnostics.adsb_invalid =
-        0xFFFFFFFFu;
+    diagnostics.adsb.frames = diagnostics.adsb.frame_rate_hz = 0xFFFFFFFFu;
+    diagnostics.adsb_crc = diagnostics.adsb_unsupported = 0xFFFFFFFFu;
+    diagnostics.adsb_folded = diagnostics.adsb_aircraft = 0xFFFFFFFFu;
     diagnostics.adsb.dropped = diagnostics.adsb.rearms = diagnostics.adsb.resets = 0xFFFFFFFFu;
     diagnostics.adsb.command_errors = 0xFFFFFFFFu;
     diagnostics.adsb.device_errors = 0xFFFF;
@@ -98,7 +105,7 @@ TEST_CASE("diagnostics adsb: the widest adsb frame is 106 bytes, narrower than t
                              DiagnosticsReport::Group::Adsb);
     uint8_t buffer[DiagnosticsReport::kFrameBytes];
     const int written = report.next_frame(512, buffer, static_cast<int>(sizeof(buffer)));
-    CHECK(written == 106);
+    CHECK(written == 127);
 }
 
 // The config service holds a report in a std::optional, so a copy must carry its own counts.

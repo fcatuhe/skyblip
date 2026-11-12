@@ -23,7 +23,7 @@ Nothing here has run on an X1. Only the first unit's factory bootloader has been
 
 `ownship` runs before `adsb`, so a frame is folded against this pass's fix. `alarm` runs before `button`, so a press is read against the lamp the pilot is looking at. `peer` runs last, so the loop codes of the nine before it hold. It sends what `adsb` folded in the same pass, and `adsb` places traffic against the claims `peer` read in the pass before.
 
-Bravo runs no `TrafficService`. 1090 MHz is its only source, so `AdsbService` owns `state.traffic` instead: it hands the table the reference and the own ICAO on every pass, as the Go's traffic service hands its own position and setting (Paired with a Go). Alone, the reference is Bravo's own fix and the own ICAO its own setting. It pops each `events::AdsbFrame` from the queue the radio thread fills, decodes it with `protocol::adsb_receive`, and counts a frame that fails parity in `invalid()`. It folds the rest into `protocol::AdsbAssembly` against Bravo's own position, with the frame's instant on `ports::Clock` and a stamp on the PPS edge. Each folded observation goes to `common::AdsbCapture::record` before the table, because #183 asks about every aircraft heard and a full table keeps only the nearest (`../common/README.md`). An observation with a position then goes to the table. An identification message's callsign goes to `state.callsigns`, keyed on the address, so a `$PFLAA` and the Go both read it there. `age_out` runs on the assembly every pass, as `core/protocol/README.md` requires, and on the table and the callsigns after it.
+Bravo runs no `TrafficService`. 1090 MHz is its only source, so `AdsbService` owns `state.traffic` instead: it hands the table the reference and the own ICAO on every pass, as the Go's traffic service hands its own position and setting (Paired with a Go). Alone, the reference is Bravo's own fix and the own ICAO its own setting. It pops each `events::AdsbFrame` from the queue the radio thread fills, decodes it with `protocol::adsb_receive`, and counts a frame it refuses: in `crc()` when its parity fails, and in `unsupported()` when its parity holds but its message is one the decoder does not read. It keeps the chips of the first refused frames for the console (Reading the rejects). It folds the rest into `protocol::AdsbAssembly` against Bravo's own position, with the frame's instant on `ports::Clock` and a stamp on the PPS edge. Each folded observation goes to `common::AdsbCapture::record` before the table, because #183 asks about every aircraft heard and a full table keeps only the nearest (`../common/README.md`). An observation with a position then goes to the table. An identification message's callsign goes to `state.callsigns`, keyed on the address, so a `$PFLAA` and the Go both read it there. `age_out` runs on the assembly every pass, as `core/protocol/README.md` requires, and on the table and the callsigns after it.
 
 The queue, `bus::AdsbQueue`, lives in the product beside `bus::Bus`, because only Bravo hears 1090 MHz. The board's receiver pushes into it, from its own thread on silicon and from the board's poll on the host.
 
@@ -192,6 +192,56 @@ Bravo has no glass, so a page or `scripts/blip.py capture` arms one over the lin
 
 A capture keeps running through a flight, and stopping it is refused in the air like every prompt. The power-off parks it as on the Go. The Go answers the same command `unknown_command`, because its captures are armed on its glass only (`../skyblip_go/README.md`, Which capture is armed). Only Bravo calls `ConfigService::serve_captures()`.
 
+## Reading the rejects
+
+The `adsb` line of the status dump follows a frame from the antenna to the table. `core/comms/README.md` (The 1090 MHz group) says what each key counts.
+
+| Key | A frame counted there |
+|---|---|
+| `frames` | the LR2021 heard a preamble and the 0x95 sync, and handed up the 27 chip bytes behind them |
+| `dropped` | was lost before the decoder |
+| `crc` | failed its parity, and the one repair allowed, a single doubtful chip pair, did not clear it |
+| `unsupported` | passed its parity and carries a DF17 message the decoder does not read |
+| `folded` | was decoded and folded into an aircraft by `protocol::AdsbAssembly` |
+| `aircraft` | not a frame: the aircraft the assembly holds now, with or without a position |
+
+`tracked`, on the `traffic` line, counts the aircraft that reached the table, each with a position. So `crc` close to `frames` is a reception problem, and `aircraft` above 0 with `tracked` at 0 is aircraft heard without a decoded position.
+
+A development image also prints each refused frame on the USB console, one line each, once a host has opened the port:
+
+```
+[00:01:02.345,000] <dbg> skyblip: log_adsb_rejects: adsb reject status=crc rssi=-87 chips=<54 hex digits>
+```
+
+`status` is `crc` or `unsupported`, as the counters. `rssi` is the frame's RssiHigh level in dBm, or `none` when the LR2021 gave the frame no level of its own (`../../hardware/parts/lr2021/README.md`, Reading a frame). `chips` is the 27 bytes the LR2021 put in its FIFO after the sync, as the decoder read them. `hardware/parts/lr2021/README.md` (Reading a dumped frame) says how to decode them by hand.
+
+`AdsbService` keeps the refused frames in a ring of `kRejectsKept`, 32. A frame refused while 32 wait is counted and not kept. `main.cpp` prints at most `kRejectsLoggedPerPass`, 8, a pass, and leaves the rest in the ring for the next pass, after a rest of 10 ms at most. Zephyr holds each line in its log buffer until its log thread writes it out, and `prj.conf` sizes that buffer at 4096 bytes, room for about 32 lines less the status dump's when it prints. A release image keeps Zephyr's 1024. A console that falls further behind prints `--- N messages dropped ---`, and the frames in those messages are lost. A terminal that stops reading loses bytes further down, in the USB serial port, with no such line, so a line cut short is skipped by the reader and counted nowhere. The ring is filled on every image. While no host holds the port, or at a level above debug, `main.cpp` empties it without formatting a line. `prj.conf` sets `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_DBG`, so the development images CI publishes and `scripts/build_local.sh` builds print the lines. `release/app.conf` sets the level back to info, so a release image prints none. To silence a development build, add `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_INF=y` to its configuration.
+
+Save the console to a file with any serial terminal, for example `picocom -g console.log /dev/ttyACM0` on Linux, and read it with the offline helper:
+
+```
+python3 scripts/adsb_rejects.py console.log
+```
+
+It prints one line per refused frame as it reads it, then a summary, which also counts the dropped messages. The DF17 identification every Mode S primer decodes, `8D4840D6202CC371C32CE0576098`, with bit 61 read wrong from a doubtful pair and the pair of bit 104 doubtful too, reads:
+
+```
+adsb reject status=crc rssi=-87 chips=a665956555a669595559a5a55a6a16a55a59a5a955666a69579695
+crc rssi=-87 df=17 icao=4840d6 tc=4 residue=a01e91 doubtful=2 at 61,104 flip=61 doubtful
+```
+
+The decoder refused it, because it repairs one doubtful pair and no more.
+
+- **`df`**: bits 1 to 5, 17 or 16.
+- **`icao` and `tc`**: bits 9 to 32 and 33 to 37 of a DF17, printed only for a DF17. A real aircraft repeats its ICAO across frames, and noise does not, so the summary lists the DF17 addresses heard twice or more.
+- **`residue`**: the CRC remainder over the 112 bits, 0 for a sound frame. A DF16's residue is its address, because its parity carries it. An `unsupported` line can show a residue too: the decoder repaired one doubtful pair before it read the type, and the line holds the chips from before the repair.
+- **`doubtful`**: the bits whose chip pair read `00` or `11`, numbered 1 to 112. The summary counts them by quarter of the frame. A chip clock that slips inside the frame, which is why cb-tfc dropped a capture laid out as ours (`../../hardware/parts/lr2021/README.md`), leaves about half the pairs after the slip doubtful, so the counts grow from quarter to quarter.
+- **`flip=N`**: flipping bit N alone clears the residue. `doubtful` after it says the chips doubted that bit, which is the only flip the decoder makes. A flip on a bit the chips did not doubt is one the decoder refuses, and dump1090 would accept. A frame one flip clears is not searched for slips, because a wrong bit in the last chips passes as a slip too.
+- **`shift=+N` or `shift=-N`**: the whole frame passes once N chips, 1 or 2, are dropped, for `+`, or added, for `-`, right after the sync, so the frame was misaligned from its start.
+- **`slip=+N@C` or `slip=-N@C`**: the frame passes once N chips are dropped or added at chip C, as for `shift`. Chips count from 0 at the first sync chip, so the first chip after the sync is 8. A slip that lands in a run of equal chips passes anywhere in the run, so it reads as a range, `slip=+1@146-151`. A slip inside the frame is the chip clock losing its place.
+
+The slip search tries about 2600 streams a frame, so it passes a random frame about once in 6500. One frame with a slip is a hint, and many frames with one are a finding.
+
 ## The cell
 
 `PowerService` reads Bravo's 1100 mAh high-voltage cell through the Go's LiPo curve and voltage ladder (`../../core/power/README.md`). No discharge curve of the X1's cell is published, so Bravo keeps the Go's values until #169 measures one from full to cutoff.
@@ -204,6 +254,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - the lamp winks blue, then green once the AG3335 has a fix, and the button switches the unit off and on;
 - the AG3335 acknowledges its configuration and its PPS edge reaches the platform;
 - the LR2021 comes up, its version reads 1.24, and frames reach the `adsb` diagnostics group;
+- the refused frames a development image prints, read with `scripts/adsb_rejects.py`, say whether the chip clock slips inside a frame (Reading the rejects);
 - XCSoar shows ADS-B traffic from Bravo with Bravo's own position;
 - an advisory sounds the buzzer and the motor, and one press dismisses it;
 - a `set` and a `dfu` from the manage page stand on the lamp and two presses allow them, and a Bluetooth update installs and confirms;

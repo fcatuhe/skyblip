@@ -4,6 +4,7 @@
 #include "core/bus/state.h"
 #include "core/comms/diagnostics.h"
 #include "hardware/parts/ag3335/ag3335.h"
+#include "ports/capabilities.h"
 
 namespace skyblip::bravo {
 
@@ -56,7 +57,10 @@ class DiagnosticsDump {
 
         snapshot.adsb_fitted = ports::has(product.capabilities(), ports::Capability::AdsbReceiver);
         snapshot.adsb = product.board().receiver().statistics();
-        snapshot.adsb_invalid = product.adsb().invalid();
+        snapshot.adsb_crc = product.adsb().crc();
+        snapshot.adsb_unsupported = product.adsb().unsupported();
+        snapshot.adsb_folded = product.adsb().folded();
+        snapshot.adsb_aircraft = static_cast<uint32_t>(product.adsb().assembly().count());
 
         snapshot.refreshes++;
     }

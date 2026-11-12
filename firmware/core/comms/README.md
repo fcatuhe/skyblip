@@ -67,9 +67,21 @@ What a support case reads lives where it is asked for. The address and the calls
 
 `schemas/link.v1.json` numbers and describes the keys, and `scripts/check_link_registry.py` holds `format_status` to it: its keys, their order, their types and which keys may be absent. The widest frame is pinned byte for byte in `test/products/test_comms_report.cpp`.
 
+## The 1090 MHz group
+
+Only a unit with a 1090 MHz receiver, a skyBlip Bravo, sends the `adsb` group of the diagnostics dump. Its keys follow a frame from the LR2021 to the decoder's aircraft:
+
+- `frames`, `frame_rate_hz`, `dropped`, `rearms`, `resets`, `command_errors`, `errors` and `rssi_dbm` are the receiver's own, `ports::AdsbReceiverStatistics`, filled by `hardware/parts/lr2021`.
+- `crc` counts the frames `protocol::adsb_receive` refused on parity: the CRC failed, and its one repair, a single doubtful chip pair, did not clear it. Weak or damaged frames land here, and DF16 too, whose parity carries an address.
+- `unsupported` counts the frames whose parity held but whose DF17 message the decoder does not read, such as type codes 0 and 23 to 30. They are sound receptions.
+- `folded` counts the decoded messages `protocol::AdsbAssembly` folded into an aircraft. A message from the own ICAO is not folded.
+- `aircraft` is how many aircraft the assembly holds now, with or without a position. `tracked`, in the traffic group, is how many reached the table.
+
+So the frames that reached the decoder are `crc`, plus `unsupported`, plus the frames it read, and `folded` is at most that last term. Key 53, `invalid`, once counted `crc` and `unsupported` together. It is retired and never reused, and `crc`, `unsupported`, `folded` and `aircraft` are 60 to 63. They follow `rssi_dbm`, on the console as on the link, because a frame's keys ascend and the console prints the table in the same order. `products/skyblip_bravo/README.md` (Reading the rejects) says how to read the frames a development image prints.
+
 ## How wide the frames are
 
-Every frame is measured at its widest. The status push is 20 bytes, 22 on a paired Go, the config reply 37, the update report 57 for a release build at the widest versions `scripts/build_image.sh` lets through, 9.99.99+99999, and 59 for a development build, which adds `downgrade`, each two more on a product other than the Go, which names itself in `product`. The registration frame is 138, the challenge reply 27, an acknowledgement at most 11. The timing report is 147 at its widest and the widest diagnostics group, the radio's, 112, with the 1090 MHz receiver's 106 next, so on a 182-byte link each answers one frame per question and per subsystem; on a narrower one they split, never mixing two groups. `test/products/test_link_payload.cpp`, `test/products/test_comms_report.cpp` and `test/core/test_diagnostics.cpp` pin these; `scripts/test_blip_frames.py` pins the status byte for byte on the host side.
+Every frame is measured at its widest. The status push is 20 bytes, 22 on a paired Go, the config reply 37, the update report 57 for a release build at the widest versions `scripts/build_image.sh` lets through, 9.99.99+99999, and 59 for a development build, which adds `downgrade`, each two more on a product other than the Go, which names itself in `product`. The registration frame is 138, the challenge reply 27, an acknowledgement at most 11. The timing report is 147 at its widest and the widest diagnostics group, the 1090 MHz receiver's, 127, with the radio's 112 next, so on a 182-byte link each answers one frame per question and per subsystem; on a narrower one they split, never mixing two groups. `test/products/test_link_payload.cpp`, `test/products/test_comms_report.cpp` and `test/core/test_diagnostics.cpp` pin these; `scripts/test_blip_frames.py` pins the status byte for byte on the host side.
 
 A log chunk's envelope is 18 bytes at its widest session id and record index, the records' byte string adds a head of two bytes up to ten records and three past it, and a diagnostics chunk names its store in two more. That leaves room for six records at 182 bytes, nine at 244 and nineteen at 495, for either store, and `kMaxLogRecordsPerChunk` is 19.
 

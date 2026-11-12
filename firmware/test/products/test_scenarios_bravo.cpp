@@ -127,7 +127,7 @@ TEST_CASE("bravo scenario: Bravo alone sends a phone its ADS-B traffic as Source
     // The taxiing one sends no altitude, and $PFLAA needs one.
     CHECK_FALSE(exported(simulator, "300005"));
     CHECK(simulator.product().adsb().assembly().count() == 5);
-    CHECK(simulator.product().adsb().invalid() == 0);
+    CHECK(simulator.product().adsb().crc() == 0);
 }
 
 TEST_CASE("bravo scenario: a target with pressure altitude only is placed against own pressure") {
@@ -223,7 +223,7 @@ TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard and held whol
     CHECK(simulator.world().failures() == 0);
     CHECK(simulator.world().adsb_heard() == simulator.world().adsb_sent());
     CHECK(simulator.product().adsb().assembly().count() == 30);
-    CHECK(simulator.product().adsb().invalid() == 0);
+    CHECK(simulator.product().adsb().crc() == 0);
     CHECK(simulator.product().board().receiver().statistics().dropped == 0);
     CHECK(simulator.product().state().traffic.count() == 30);
 }

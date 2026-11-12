@@ -204,8 +204,6 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Adsb, "frames", link::diagnostics_key::kFrames, Kind::Unsigned, receiver.frames);
         add(Group::Adsb, "frame_rate_hz", link::diagnostics_key::kFrameRateHz, Kind::Unsigned,
             receiver.frame_rate_hz);
-        add(Group::Adsb, "invalid", link::diagnostics_key::kInvalid, Kind::Unsigned,
-            diagnostics.adsb_invalid);
         add(Group::Adsb, "dropped", link::diagnostics_key::kDropped, Kind::Unsigned,
             receiver.dropped);
         add(Group::Adsb, "rearms", link::diagnostics_key::kRearms, Kind::Unsigned, receiver.rearms);
@@ -216,6 +214,14 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             receiver.device_errors);
         std::copy(std::begin(receiver.rssi), std::end(receiver.rssi), std::begin(adsb_rssi_));
         add(Group::Adsb, "rssi_dbm", link::diagnostics_key::kRssiDbm, Kind::UnsignedArray, 0);
+        // INFO: fc 12nov26 after rssi_dbm, because a frame's keys ascend and these came later
+        add(Group::Adsb, "crc", link::diagnostics_key::kCrc, Kind::Unsigned, diagnostics.adsb_crc);
+        add(Group::Adsb, "unsupported", link::diagnostics_key::kUnsupported, Kind::Unsigned,
+            diagnostics.adsb_unsupported);
+        add(Group::Adsb, "folded", link::diagnostics_key::kFolded, Kind::Unsigned,
+            diagnostics.adsb_folded);
+        add(Group::Adsb, "aircraft", link::diagnostics_key::kAircraft, Kind::Unsigned,
+            diagnostics.adsb_aircraft);
     }
 }
 

@@ -80,7 +80,10 @@ Diagnostics busy_device() {
     diagnostics.adsb_fitted = true;
     diagnostics.adsb.frames = 51234;
     diagnostics.adsb.frame_rate_hz = 212;
-    diagnostics.adsb_invalid = 3021;
+    diagnostics.adsb_crc = 3021;
+    diagnostics.adsb_unsupported = 412;
+    diagnostics.adsb_folded = 1830;
+    diagnostics.adsb_aircraft = 7;
     diagnostics.adsb.dropped = 4;
     diagnostics.adsb.rearms = 1;
     diagnostics.adsb.device_errors = 0x0080;
@@ -145,7 +148,10 @@ Diagnostics widest_device() {
     diagnostics.adsb_fitted = true;
     diagnostics.adsb.frames = 0xFFFFFFFFu;
     diagnostics.adsb.frame_rate_hz = 0xFFFFFFFFu;
-    diagnostics.adsb_invalid = 0xFFFFFFFFu;
+    diagnostics.adsb_crc = 0xFFFFFFFFu;
+    diagnostics.adsb_unsupported = 0xFFFFFFFFu;
+    diagnostics.adsb_folded = 0xFFFFFFFFu;
+    diagnostics.adsb_aircraft = 0xFFFFFFFFu;
     diagnostics.adsb.dropped = 0xFFFFFFFFu;
     diagnostics.adsb.rearms = 0xFFFFFFFFu;
     diagnostics.adsb.resets = 0xFFFFFFFFu;
@@ -226,8 +232,9 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "supply_warnings=1 "
               "implausible=2 die_temperature_c=42 charge_warnings=0\n"));
     CHECK(has(text,
-              "adsb frames=51234 frame_rate_hz=212 invalid=3021 dropped=4 rearms=1 resets=0 "
-              "command_errors=0 errors=128 rssi_dbm=0,120,900,3000,2500,800,90,3\n"));
+              "adsb frames=51234 frame_rate_hz=212 dropped=4 rearms=1 resets=0 command_errors=0 "
+              "errors=128 rssi_dbm=0,120,900,3000,2500,800,90,3 crc=3021 unsupported=412 "
+              "folded=1830 aircraft=7\n"));
 
     DiagnosticsReport report(busy_device(), link::Command::Diagnostics);
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
@@ -432,7 +439,7 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
     CHECK_FALSE(narrow.exhausted());
 }
 
-// The radio group is the widest a dump writes, each frame of the whole dump as of the radio reply.
+// The radio group, alone in the radio reply and in its frame of the whole dump.
 TEST_CASE("diagnostics: the widest radio frame is 112 bytes, one frame on an iPhone's link") {
     for (link::Command command : {link::Command::Diagnostics, link::Command::Radio}) {
         DiagnosticsReport report(widest_device(), command, DiagnosticsReport::Group::Radio);
@@ -509,5 +516,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 56);
+    CHECK(fields == 59);
 }

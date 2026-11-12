@@ -216,13 +216,16 @@ enum : uint32_t {
     kChargeWarnings = 50,
     kFrames = 51,
     kFrameRateHz = 52,
-    kInvalid = 53,
     kDropped = 54,
     kRearms = 55,
     kResets = 56,
     kCommandErrors = 57,
     kErrors = 58,
     kRssiDbm = 59,
+    kCrc = 60,
+    kUnsupported = 61,
+    kFolded = 62,
+    kAircraft = 63,
 };
 }
 

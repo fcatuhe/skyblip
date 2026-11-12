@@ -24,6 +24,13 @@ void AdsbService::tick(uint32_t now_ms) {
     state.callsigns.age_out(now_s);
 }
 
+bool AdsbService::take_reject(AdsbReject& out) {
+    const Result<AdsbReject> taken = rejects_.pop();
+    if (!taken.ok()) return false;
+    out = taken.value();
+    return true;
+}
+
 protocol::AdsbReference AdsbService::reference(const model::Ownship& own) {
     protocol::AdsbReference here{};
     if (!own.fix_valid) return here;
@@ -36,9 +43,10 @@ void AdsbService::hear(const events::AdsbFrame& frame, const protocol::AdsbRefer
                        uint32_t now_ms) {
     protocol::AdsbMessage message{};
     const protocol::AdsbReception reception{frame.at_us, frame.rssi_dbm, frame.rssi_valid};
-    if (protocol::adsb_receive(frame.chips.data(), frame.chips.size(), reception, message) !=
-        Status::Ok) {
-        invalid_++;
+    const Status status =
+        protocol::adsb_receive(frame.chips.data(), frame.chips.size(), reception, message);
+    if (status != Status::Ok) {
+        refuse(frame, status);
         return;
     }
     const bus::State& state = context_.state;
@@ -54,6 +62,17 @@ void AdsbService::hear(const events::AdsbFrame& frame, const protocol::AdsbRefer
     (void)capture_.record(observation_, now_ms);
     if (!observation_.position_valid) return;
     context_.state.traffic.update(observation_, now_s);
+}
+
+// INFO: fc 12nov26 a whole 27-byte frame is never Invalid, so any refusal but Unsupported is parity
+void AdsbService::refuse(const events::AdsbFrame& frame, Status status) {
+    if (status == Status::Unsupported) {
+        unsupported_++;
+    } else {
+        crc_++;
+    }
+    // INFO: fc 12nov26 a reject past kRejectsKept waiting for the console is counted and not kept
+    (void)rejects_.push(AdsbReject{status, frame.rssi_dbm, frame.rssi_valid, frame.chips});
 }
 
 }  // namespace skyblip::bravo

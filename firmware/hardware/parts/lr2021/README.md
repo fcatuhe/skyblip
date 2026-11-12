@@ -54,6 +54,17 @@ On the IRQ the driver takes a snapshot: GetAndClearIrqStatus, GetOokPacketStatus
 - **An empty FIFO proves nothing.** A frame that lands after GetAndClearIrqStatus is read in the same snapshot, and its own RxDone then arrives with nothing behind it. That RxDone is neither a frame nor a drop, and the FIFO is not cleared, because a frame may be landing in it.
 - **A level is given only when it is certain.** GetOokPacketStatus describes the last packet (DS 16.3.7), which may have landed after the level was read. The newest frame of the snapshot carries the RssiHigh level, in half-dB steps, only when both reads of the packet status agree. Every other frame carries none.
 
+## Reading a dumped frame
+
+A development image of Bravo prints each frame the decoder refused as `adsb reject ... chips=<54 hex digits>` (`products/skyblip_bravo/README.md`, Reading the rejects). The 54 digits are the 27 bytes of one FIFO frame, as the driver read them:
+
+- **Chips.** The part consumes the 16-chip preamble and the 8-chip sync 0x95, so the 27 bytes are the 216 chips after them, at two chips a microsecond, the first chip in the high bit of the first byte.
+- **Pairs.** Put 0x95 back in front and the 224 chips are 112 pairs, one per Mode S bit, bit 1 in chips 1 and 2. A 1 is `10` and a 0 is `01`. A pair of `00` or `11` is doubtful, and the decoder reads it as the inverse of its second chip, as SoftRF does.
+- **Fields.** Bits 1 to 5 are the DF, 0x95 being the chips of `1000`, so a DF16 or a DF17. In a DF17, bits 6 to 8 are the capability, 9 to 32 the ICAO address, 33 to 88 the message, and 89 to 112 the parity. The 112 bits divided by the generator 0x1FFF409 leave 0 for a sound DF17, and the ICAO for a DF16.
+- **Alignment.** The sync fixes where the frame starts, and nothing re-aligns it after. cb-tfc ([perryc/cb-tfc](https://github.com/perryc/cb-tfc), commit `6340f81`) tried this layout on the X1, raw chips behind a sync word, received nothing, and wrote that "the chip clock slips inside a frame". It moved to the part's own Manchester decoding of 14-byte frames. A slip would show as doubtful pairs gathering towards the end of the refused frames, and as frames that pass the CRC once one or two chips are dropped or added at the slip.
+
+`scripts/adsb_rejects.py` does all of this for each line of a saved console, and tries one flipped bit and every slip of one or two chips. Nobody has yet read a dump from a unit, so whether the X1's chip clock slips under this driver is open.
+
 ## Re-arm and reset
 
 `service()` re-arms a receiver that has handed up nothing for the silence ceiling it is given, 30 s from the Zephyr adapter. It goes through STDBY_RC, clears the FIFO and starts receive again, because SetRx fails on a part already in Rx (DS 6.3.5). SoftRF does the same after 15 s of silence, checked every 30 s (`radiolib.cpp:2660-2682`). A BUSY that stays high past its ceiling is a fault: the next `service()` resets the part and brings it up again.
@@ -85,6 +96,7 @@ Every value below comes from SoftRF, RadioLib or the datasheet, and none has run
 - The write of 0x18 into the low byte of 0xF30150, which no public document explains.
 - RadioLib's BUSY ceilings of 3 s after a reset and 1 s around a command.
 - The X1's pins from SoftRF `Seeed_X1.h`: NSS P0.12, SCK P0.11, MOSI P1.09, MISO P1.08, NRESET P1.10, BUSY P0.07, the IRQ on DIO8 at P1.01. The board, not this part, holds them (`boards/seeed/meshtracker_x1/pins.h`).
+- That the chip clock holds over the 216 chips behind the sync, which cb-tfc found it does not (Reading a dumped frame).
 - Whether GetRxFifoLevel counts a frame still arriving, which decides whether two frames 120 us apart both reach the FIFO.
 - That BUSY stays high in sleep, as RadioLib notes, which is what `sleep()` reads.
 - That the FIFO overflow flag latches as DS 6.10.4 says, and that a part held in reset through SYSTEM OFF draws little enough to be the shutdown's fallback.
