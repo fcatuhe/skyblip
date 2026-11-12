@@ -8,17 +8,11 @@
     </ul>
     <div class="site-nav-actions">
       <%= render "layouts/locale_switcher" %>
-      <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage", "aria-current": ("page" if briefing_area?) %>
+      <%= link_to t("briefing.title"), briefing_root_path, class: "site-nav-manage" %>
       <% if Current.user&.admin? %>
         <%= link_to "Admin", analytics_default_path, class: "site-nav-manage", "aria-current": ("page" if controller_path.start_with?("admin/")) %>
       <% end %>
       <%= link_to_page "skyblip-go", label: t("nav.try"), class: "button button--primary button--small" %>
     </div>
   </nav>
-  <% if briefing_area? %>
-    <p class="site-session" data-controller="session" data-session-src-value="<%= update_module_path %>" hidden>
-      <%= t "nav.session.connected" %> <span data-session-target="device"></span>
-      <button type="button" class="site-session-disconnect" data-action="session#unlink"><%= t "nav.session.disconnect" %></button>
-    </p>
-  <% end %>
 </header>

@@ -14,9 +14,7 @@
           <% %w[features skyblip-bravo skyblip-tango buy skyblip-go].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
-          <li><%= link_to_page "update", label_type: :nav %></li>
-          <li><%= link_to_page "configure", label_type: :nav %></li>
-          <li><%= link_to_page "activate", label_type: :nav %></li>
+          <li><%= link_to t("briefing.title"), briefing_root_path %></li>
         </ul>
       </div>
       <div>

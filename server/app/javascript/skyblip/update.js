@@ -8,7 +8,6 @@ import {
 } from '#skyblip/smp';
 
 export { hasWebBluetooth };
-export { readSetting, showSetting } from '#skyblip/settings';
 
 const IMAGE_REFUSALS = {
   5: 'wrong_product',
@@ -26,6 +25,9 @@ const IMAGE_REFUSALS = {
 const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 
 export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
+// INFO: fc 11nov26 an install restarts the device in about thirty seconds, and a full image writes the hub for up to a minute more
+const RETURN_WITHIN_MS = 120_000;
+export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 
@@ -76,6 +78,11 @@ function adviceOf({ image, file }) {
   return fullImageNeeded(image.imu, pin) ? 'full' : 'slim';
 }
 
+function upgradeOf({ file, running }) {
+  if (!file || !running) return null;
+  return compareVersions(parseVersion(file.version), parseVersion(running)) > 0;
+}
+
 function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
@@ -95,6 +102,12 @@ export class Updater {
   #product = null;
   #windowOpen = false;
   #leaving = false;
+  #choice = 0;
+  #opening = null;
+  #bluetoothDevice;
+  #returnEveryMs;
+  #returnWithinMs;
+  #returnTimer = null;
   #state = {
     phase: 'offline',
     task: null,
@@ -108,17 +121,25 @@ export class Updater {
     refusedOnDevice: false,
     file: null,
     advice: null,
+    upgrade: null,
     settling: false,
     progress: null,
     notice: null,
   };
 
-  constructor({ onChange }) {
+  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS }) {
     this.#onChange = onChange;
+    this.#bluetoothDevice = device;
+    this.#returnEveryMs = returnEveryMs;
+    this.#returnWithinMs = returnWithinMs;
   }
 
   get state() {
     return this.#state;
+  }
+
+  get bluetoothDevice() {
+    return this.#bluetoothDevice;
   }
 
   get inFlight() {
@@ -127,17 +148,35 @@ export class Updater {
 
   async connect() {
     if (!hasWebBluetooth()) return this.#set({ notice: { key: 'no_bluetooth' } });
+    // INFO: fc 11nov26 a second client on the same link would hear every reply twice, and an install would fail on it
+    if (this.#device || this.#state.phase === 'connecting') return;
+    if (this.#opening) return this.#opening;
+    this.#stopReturn();
     this.#leaving = false;
     this.#set({ phase: 'connecting', notice: null });
-    let device;
     try {
-      device = await connect({
-        onReply: reply => this.#receive(reply),
-        onSmp: bytes => this.#smp.receive(bytes),
-        onClose: () => this.#closed(),
-      });
+      await this.#open();
     } catch (error) {
       return this.#set({ phase: 'offline', notice: error.name === 'NotFoundError' ? null : noticeOf(error) });
+    }
+  }
+
+  async #open() {
+    this.#opening ??= this.#link().finally(() => (this.#opening = null));
+    return this.#opening;
+  }
+
+  async #link() {
+    const device = await connect({
+      device: this.#bluetoothDevice,
+      onReply: reply => this.#receive(reply),
+      onSmp: bytes => this.#smp.receive(bytes),
+      onClose: () => this.#closed(),
+    });
+    this.#bluetoothDevice = device.device;
+    if (this.#leaving && this.#state.phase !== 'connecting') {
+      device.release();
+      return this.#set({ phase: 'offline' });
     }
     if (!device.hasConfig || !device.hasSmp) {
       this.#leaving = true;
@@ -149,24 +188,51 @@ export class Updater {
     await this.#learn();
   }
 
+  #awaitReturn() {
+    const deadline = performance.now() + this.#returnWithinMs;
+    const attempt = async () => {
+      this.#returnTimer = null;
+      if (this.#state.phase !== 'rebooting') return;
+      try {
+        return await this.#open();
+      } catch {
+        if (this.#state.phase !== 'rebooting') return;
+        if (performance.now() < deadline) this.#returnTimer = setTimeout(attempt, this.#returnEveryMs);
+        else this.#set({ phase: 'offline', notice: { key: 'not_back' } });
+      }
+    };
+    this.#returnTimer = setTimeout(attempt, this.#returnEveryMs);
+  }
+
+  #stopReturn() {
+    clearTimeout(this.#returnTimer);
+    this.#returnTimer = null;
+  }
+
   disconnect() {
     this.#leaving = true;
-    if (this.#device) this.#device.disconnect();
+    if (this.#device) return this.#device.disconnect();
+    this.#stopReturn();
+    if (this.#state.phase === 'rebooting') this.#set({ phase: 'offline' });
   }
 
   clearImage() {
+    this.#choice++;
     this.#image = null;
     this.#set({ file: null, notice: null });
   }
 
   async choose(bytes, name) {
     const image = readImage(bytes);
+    const choice = ++this.#choice;
     if (!image) {
       this.#image = null;
       return this.#set({ file: null, notice: { key: 'not_image' } });
     }
+    const sha = await sha256(bytes);
+    if (choice !== this.#choice) return;
     this.#image = bytes;
-    this.#sha = await sha256(bytes);
+    this.#sha = sha;
     this.#version = image.version;
     const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
     this.#key = image.key;
@@ -235,6 +301,7 @@ export class Updater {
   }
 
   async #send(command) {
+    if (!this.#device) return this.#set({ phase: 'offline', task: null, notice: this.#noticeDuring(this.#state.task, { key: 'link_lost' }) });
     try {
       await this.#device.sendConfig(command);
     } catch (error) {
@@ -359,7 +426,9 @@ export class Updater {
     this.#smp.close(new LinkLost());
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      return this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });
+      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });
+      if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
+      return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
@@ -371,17 +440,7 @@ export class Updater {
 
   #set(patch) {
     const state = { ...this.#state, ...patch };
-    this.#state = { ...state, advice: adviceOf(state), settling: settlingOf(state) };
+    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state) };
     this.#onChange(this.#state);
   }
-}
-
-const sharedListeners = new Set();
-let sharedUpdater = null;
-
-// INFO: fc 11nov26 one link for the update and settings pages, which Turbo swaps without reloading this module
-export function joinSession(onChange) {
-  sharedUpdater ??= new Updater({ onChange: state => sharedListeners.forEach(listener => listener(state)) });
-  sharedListeners.add(onChange);
-  return { updater: sharedUpdater, leave: () => sharedListeners.delete(onChange) };
 }

@@ -166,11 +166,11 @@ updated_on: "2026-11-11"
     </li>
     <li>
       <h3>Activation.</h3>
-      <p><%= link_to_page "activate", label: "Activez-le" %> en Bluetooth depuis Chrome ou Edge, puis autorisez-le par deux pressions sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. La même page propose ensuite votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Un appareil qui veut une position GPS avant de les enregistrer le signale. Tous deux restent modifiables plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to_page "configure", label: "la page des réglages" %>.</p>
+      <p><%= link_to "Activez-le", briefing_activation_path %> en Bluetooth depuis Chrome ou Edge, puis autorisez-le par deux pressions sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. Le Briefing propose ensuite votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Un appareil qui veut une position GPS avant de les enregistrer le signale. Tous deux restent modifiables plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to "le Briefing", briefing_root_path %>.</p>
     </li>
   </ol>
   <p class="signature">
-    Les mises à jour viennent ensuite, depuis <%= link_to_page "update", label: "la page de mise à jour" %>
+    Les mises à jour viennent ensuite, depuis <%= link_to "le Briefing", briefing_root_path %>
     en Bluetooth, chacune validée sur l&rsquo;écran de l&rsquo;appareil. Le même fichier sert au T&#8209;Echo et au T&#8209;Echo Plus. Pour
     l&rsquo;instant, seules des versions de développement sont publiées. Les
     étapes de Bravo seront ici à la sortie de son firmware.

@@ -1,0 +1,23 @@
+<header class="unit-head">
+  <h1 class="unit-name" data-unit-target="name"><%= name %></h1>
+  <p class="unit-facts" data-unit-target="facts"></p>
+  <details class="unit-menu" data-unit-target="menu">
+    <summary aria-label="<%= t("briefing.unit.menu") %>" title="<%= t("briefing.unit.menu") %>">...</summary>
+    <ul>
+      <li><button type="button" data-unit-target="disconnect" data-action="unit#unlink"><%= t("briefing.unit.disconnect") %></button></li>
+      <li><button type="button" data-action="unit#askToForget"><%= t("briefing.unit.forget") %></button></li>
+    </ul>
+  </details>
+  <dialog class="unit-dialog" data-unit-target="forgetDialog" aria-labelledby="forget-question">
+    <form method="dialog">
+      <p class="unit-dialog-question" id="forget-question" data-unit-target="forgetQuestion"></p>
+      <p class="note"><%= t("briefing.unit.forget_detail") %></p>
+      <div class="unit-dialog-actions">
+        <button type="submit" class="button-app button-app--quiet" value="keep" autofocus><%= t("briefing.unit.keep") %></button>
+        <button type="submit" class="button-app" value="forget" data-action="unit#forget"><%= t("briefing.unit.forget") %></button>
+      </div>
+    </form>
+  </dialog>
+</header>
+
+<div class="unit-notes" role="status" data-unit-target="notes"></div>

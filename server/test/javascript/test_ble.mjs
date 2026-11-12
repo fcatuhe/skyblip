@@ -82,16 +82,70 @@ test('a config notification arrives decoded by name, and one that is no frame ar
   link.disconnect();
 });
 
-// The settings page keeps its link across visits, so the activation page must not open a second one beside it.
-test('a new link closes the one the page already holds, before it opens', async () => {
-  const first = new FakeSkyblip().install();
+// A pilot with a Go and a Bravo keeps both connected, and reaches each without the chooser.
+test('two devices stay connected side by side', async () => {
+  const go = new FakeSkyblip().install();
+  const first = await connect({ onReply: () => {}, onClose: () => {} });
+  const bravo = new FakeSkyblip({ product: 'skyblip_bravo' }).install();
+  const second = await connect({ onReply: () => {}, onClose: () => {} });
+  assert.equal(go.connected, true);
+  assert.equal(bravo.connected, true);
+  first.disconnect();
+  assert.equal(go.connected, false);
+  assert.equal(bravo.connected, true);
+  second.disconnect();
+});
+
+test('a device already in hand connects without the chooser', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  globalThis.navigator = { bluetooth: { requestDevice: () => assert.fail('the chooser opened') } };
+  const link = await connect({ device, onReply: () => {}, onClose: () => {} });
+  assert.equal(fake.connected, true);
+  assert.equal(link.device, device);
+  link.disconnect();
+});
+
+test('two clients of one device share its link, and both hear it close', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  let connects = 0;
+  const gattConnect = device.gatt.connect;
+  device.gatt.connect = () => {
+    connects++;
+    return gattConnect();
+  };
+  const heard = [];
   const closed = [];
-  await connect({ onReply: () => {}, onClose: () => closed.push('first') });
-  const second = new FakeSkyblip().install();
-  await connect({ onReply: () => {}, onClose: () => closed.push('second') });
-  assert.deepEqual(closed, ['first']);
-  assert.equal(first.connected, false);
-  assert.equal(second.connected, true);
-  second.drop();
-  assert.deepEqual(closed, ['first', 'second']);
+  const updater = await connect({ device, onReply: reply => heard.push(['updater', reply.command]), onSmp: () => {}, onClose: () => closed.push('updater') });
+  await connect({ device, onReply: reply => heard.push(['activator', reply.command]), onClose: () => closed.push('activator') });
+  await updater.sendConfig({ command: 'status' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(connects, 1);
+  assert.deepEqual(heard, [['updater', 'status'], ['activator', 'status']]);
+  fake.drop();
+  assert.deepEqual(closed, ['updater', 'activator']);
+});
+
+test('a device that dropped connects again on the next request', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  const first = await connect({ device, onReply: () => {}, onClose: () => {} });
+  first.disconnect();
+  assert.equal(fake.connected, false);
+  await connect({ device, onReply: () => {}, onClose: () => {} });
+  assert.equal(fake.connected, true);
+  fake.drop();
+});
+
+// The console and the app share a device: leaving one must not drop the other's link.
+test('a client that releases a shared link leaves it up for the others, and the last one closes it', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  const app = await connect({ device, onReply: () => {}, onClose: () => {} });
+  const workbench = await connect({ device, onReply: () => {}, onClose: () => {} });
+  workbench.release();
+  assert.equal(fake.connected, true);
+  app.release();
+  assert.equal(fake.connected, false);
 });

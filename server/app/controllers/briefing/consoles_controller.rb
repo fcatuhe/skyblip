@@ -1,6 +1,4 @@
-class Briefing::ConsolesController < ApplicationController
-  allow_unauthenticated_access
-
+class Briefing::ConsolesController < Briefing::ApplicationController
   def show
   end
 end

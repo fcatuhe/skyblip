@@ -1,12 +1,12 @@
 require "test_helper"
 
 class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
-  test "the update page renders the file picker and a separate shelf request without GitHub" do
-    get "/update"
+  test "the firmware page renders the file picker and a separate shelf request without GitHub" do
+    get "/briefing/devices/go-00012a/firmware"
 
     assert_response :success
     assert_select "input[type=file]"
-    assert_select "turbo-frame#firmware_shelf[src]"
+    assert_select "turbo-frame#firmware_shelf[src='/briefing/firmwares']"
   end
 
   test "the shelf is populated from published releases on its own request" do
@@ -15,7 +15,7 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :success
-    assert_select "turbo-frame#firmware_shelf select[data-manage-target=shelf]"
+    assert_select "turbo-frame#firmware_shelf select[data-shelf]"
     assert_select "option[data-channel=development]", minimum: 1
     assert_select "option[value^='/releases/dev-']", minimum: 1
     assert_select "option[data-product=skyblip_go][value*='/skyblip-go-']", minimum: 1

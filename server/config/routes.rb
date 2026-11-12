@@ -8,7 +8,6 @@ Rails.application.routes.draw do
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
-  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 
   mount Ahoy::Engine, at: :hoy
@@ -42,13 +41,21 @@ Rails.application.routes.draw do
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
   end
 
-  # INFO: fc 11nov26 the update page's addresses until it was renamed, kept for old links and bookmarks
-  get "manage", to: redirect("/update")
-  get "fr/mise-a-jour", to: redirect("/fr/mettre-a-jour")
+  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app
+  get "activate", to: redirect("/briefing/activate")
+  get "fr/activer", to: redirect("/fr/briefing/activate")
+  %w[update configure manage].each { |path| get path, to: redirect("/briefing") }
+  %w[mettre-a-jour regler mise-a-jour].each { |path| get "fr/#{path}", to: redirect("/fr/briefing") }
 
   scope "(:locale)", locale: /#{I18n.available_locales.without(I18n.default_locale).join("|")}/ do
     namespace :briefing do
-      root "dashboards#show"
+      root "devices#index"
+      resource :manifest, only: :show, defaults: { format: :json }
+      resources :devices, only: :show, param: :slug, constraints: { slug: /(go|bravo)-[0-9a-f]+/ } do
+        resource :firmware, only: :show, module: :devices
+      end
+      resource :activation, only: :show, path: "activate"
+      resource :tools, only: :show
       resource :firmwares, only: :show
       resource :simulator_build, only: :show
       resource :simulator, only: :show

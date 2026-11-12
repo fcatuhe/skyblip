@@ -21,7 +21,7 @@ updated_on: "2026-11-11"
       <h3 id="by-name">It appears by name, and <span class="highlight">three screens</span> read it at once.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: the product, then the
-        24-bit address it got when it was <%= link_to_page "activate", label: "activated" %>.
+        24-bit address it got when it was <%= link_to "activated", briefing_activation_path %>.
         Nothing to pair, no code to type. It carries the FLARM
         NMEA stream on both of the Bluetooth serial profiles navigation software
         looks for, so the app you already fly with finds it.
@@ -69,7 +69,7 @@ updated_on: "2026-11-11"
     from then on it is on the status screen, on the air once every ten seconds,
     and on the screens of the aircraft around you. You can also type it on the
     device itself, in <%= link_to_page "controls", label: "the callsign field", anchor: "callsign" %>,
-    or set it from a browser on <%= link_to_page "configure", label: "the settings page" %>, beside
+    or set it from a browser in <%= link_to "Briefing", briefing_root_path %>, beside
     the aircraft type, the units and the alarm.
   </p>
   <p class="lede">
@@ -80,7 +80,7 @@ updated_on: "2026-11-11"
 
   <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
   <p class="lede">
-    <%= link_to_page "update", label: "The update page" %> sends a signed
+    <%= link_to "Briefing", briefing_root_path %> sends a signed
     image over the same Bluetooth, from Chrome or Edge, and the glass asks
     once, naming the version, before it takes the image and installs it. The new
     firmware then has to bring its radio up, hear its receiver and draw its
@@ -117,7 +117,7 @@ updated_on: "2026-11-11"
   <p class="lede">
     Turning Bluetooth pairing on encrypts the GATT characteristics, which is a
     known Web Bluetooth failure on Windows and would break
-    <%= link_to_page "update", label: "the browser page that installs firmware" %>.
+    <%= link_to "the browser page that installs firmware", briefing_root_path %>.
     So the boundary is the image and not the link.
   </p>
 

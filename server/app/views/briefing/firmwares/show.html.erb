@@ -1,22 +1,18 @@
-<% content_for :stylesheets, area_stylesheet_link_tags("manage") %>
 <%= turbo_frame_tag :firmware_shelf do %>
   <% if @unavailable %>
     <p class="note" role="status"><%= t("firmwares.unavailable") %></p>
   <% elsif @images.none? %>
     <p class="note" role="status"><%= t("firmwares.empty") %></p>
   <% else %>
-    <div class="manage-row">
-      <label class="manage-file">
-        <span><%= t("firmwares.label") %></span>
-        <select data-manage-target="shelf" data-action="manage#take" disabled>
-          <option value=""><%= t("firmwares.prompt") %></option>
-          <% @images.each do |release, file| %>
-            <option value="<%= release_asset_path(release.tag, file, locale: nil) %>"
-                    data-channel="<%= release.channel %>" data-product="<%= Release.product_of(file) %>" data-kind="<%= Release.kind_of(file) %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t("firmwares.#{Release.kind_of(file)}") %></option>
-          <% end %>
-        </select>
-      </label>
-      <a class="manage-release" data-manage-target="release" hidden><%= t("firmwares.release") %></a>
+    <div class="field">
+      <label for="firmware-shelf"><%= t("firmwares.label") %></label>
+      <select id="firmware-shelf" data-shelf data-action="firmware#take" disabled>
+        <option value=""><%= t("firmwares.prompt") %></option>
+        <% @images.each do |release, file| %>
+          <option value="<%= release_asset_path(release.tag, file, locale: nil) %>"
+                  data-channel="<%= release.channel %>" data-product="<%= Release.product_of(file) %>" data-kind="<%= Release.kind_of(file) %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t("firmwares.#{Release.kind_of(file)}") %></option>
+        <% end %>
+      </select>
     </div>
   <% end %>
 <% end %>
