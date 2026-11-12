@@ -1,4 +1,5 @@
 #include "simulator/bravo_simulator.h"
+#include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 
 #ifdef __EMSCRIPTEN__
@@ -13,17 +14,36 @@ using namespace skyblip;
 namespace {
 simulator::Simulator g_simulator;
 simulator::BravoSimulator g_bravo;
-bool g_bravo_flying = false;
+simulator::PairedSimulator g_paired;
+simulator::Product g_flying = simulator::Product::Go;
+
+// INFO: fc 14nov26 equipment a page asks for: 0 ADS-L, 1 ALP-TAS, 2 ADS-B Out alone
+constexpr int kAlptas = 1;
+constexpr int kAdsb = 2;
 
 template <class Visit>
 decltype(auto) on_unit(Visit visit) {
-    return g_bravo_flying ? visit(g_bravo) : visit(g_simulator);
+    if (g_flying == simulator::Product::Bravo) return visit(g_bravo);
+    if (g_flying == simulator::Product::Paired) return visit(g_paired);
+    return visit(g_simulator);
+}
+
+simulator::Simulator& go_unit() {
+    return g_flying == simulator::Product::Paired ? g_paired.go() : g_simulator;
+}
+
+simulator::BravoSimulator::Product& bravo_unit() {
+    return g_flying == simulator::Product::Paired ? g_paired.bravo() : g_bravo.product();
+}
+
+const simulator::PhoneStream& bravo_phone() {
+    return g_flying == simulator::Product::Paired ? g_paired.phone() : g_bravo.phone();
 }
 
 const bus::State& flying_state() {
     return on_unit([](auto& unit) -> const bus::State& { return unit.product().state(); });
 }
-}
+}  // namespace
 
 extern "C" {
 
@@ -31,6 +51,7 @@ extern "C" {
 KEEPALIVE void simulator_setup() {
     (void)g_simulator.setup();
     (void)g_bravo.setup();
+    (void)g_paired.setup();
 }
 KEEPALIVE void simulator_step(unsigned now_ms) {
     on_unit([&](auto& unit) { unit.step(now_ms); });
@@ -41,16 +62,14 @@ KEEPALIVE int simulator_park_refusal(unsigned now_ms) {
 KEEPALIVE int simulator_load_scenario(const char* json, int bytes) {
     simulator::Scenario scenario;
     if (!simulator::parse_scenario(json, bytes, scenario)) return 0;
-    g_bravo_flying = scenario.product == simulator::Product::Bravo;
+    g_flying = scenario.product;
     on_unit([&](auto& unit) { unit.load(scenario); });
     return 1;
 }
 KEEPALIVE int simulator_mode() {
     return static_cast<int>(on_unit([](auto& unit) { return unit.mode(); }));
 }
-KEEPALIVE int simulator_product() {
-    return static_cast<int>(g_bravo_flying ? simulator::Product::Bravo : simulator::Product::Go);
-}
+KEEPALIVE int simulator_product() { return static_cast<int>(g_flying); }
 
 KEEPALIVE void simulator_press_button() {
     on_unit([](auto& unit) { unit.world().press_button(); });
@@ -58,16 +77,14 @@ KEEPALIVE void simulator_press_button() {
 KEEPALIVE void simulator_hold_button(int down) {
     on_unit([&](auto& unit) { unit.world().hold_button(down != 0); });
 }
-KEEPALIVE void simulator_hold_pad(int down) { g_simulator.world().hold_pad(down != 0); }
+KEEPALIVE void simulator_hold_pad(int down) { go_unit().world().hold_pad(down != 0); }
 KEEPALIVE void simulator_set_backlight(int on) {
-    g_simulator.product().screen().set_backlight(on != 0);
+    go_unit().product().screen().set_backlight(on != 0);
 }
 KEEPALIVE void simulator_set_panel_power(int on) {
-    g_simulator.product().screen().set_power(on != 0);
+    go_unit().product().screen().set_power(on != 0);
 }
-KEEPALIVE void simulator_set_range(int step) {
-    g_simulator.product().screen().set_range_step(step);
-}
+KEEPALIVE void simulator_set_range(int step) { go_unit().product().screen().set_range_step(step); }
 
 KEEPALIVE void simulator_set_fix(int on) {
     on_unit([&](auto& unit) { unit.world().set_fix(on != 0); });
@@ -93,7 +110,7 @@ KEEPALIVE void simulator_set_climb_mm_s(int climb_mm_s) {
 KEEPALIVE void simulator_set_turn_dps_e1(int turn_dps_e1) {
     on_unit([&](auto& unit) { unit.world().set_turn_dps(turn_dps_e1 / 10.0); });
 }
-KEEPALIVE void simulator_set_slip_mg(int slip_mg) { g_simulator.world().set_slip_mg(slip_mg); }
+KEEPALIVE void simulator_set_slip_mg(int slip_mg) { go_unit().world().set_slip_mg(slip_mg); }
 // The air outside, in pascals.
 KEEPALIVE void simulator_set_airmass_qnh_pa(int qnh_pa) {
     on_unit([&](auto& unit) { unit.world().set_airmass_qnh_pa(static_cast<uint32_t>(qnh_pa)); });
@@ -112,55 +129,57 @@ KEEPALIVE void simulator_set_position(int latitude_1e7, int longitude_1e7) {
     });
 }
 
-// alptas picks what the aircraft is equipped with: 0 is ADS-L, anything else is
-// ALP-TAS. Both land on the same two M-band channels, so it is the shared sync
-// window that decides whether we hear it, not the button.
-static protocol::System system_of(int alptas) {
-    if (g_bravo_flying) return protocol::System::Unknown;
-    return alptas != 0 ? protocol::System::Alptas : protocol::System::AdslDirect;
+// equipment picks what the aircraft carries. ADS-L and ALP-TAS land on the same
+// two M-band channels, so it is the shared sync window that decides whether we
+// hear them, not the button. A Go hears ADS-B only through a paired Bravo.
+static protocol::System system_of(int equipment) {
+    if (g_flying == simulator::Product::Bravo || equipment == kAdsb)
+        return protocol::System::Unknown;
+    return equipment == kAlptas ? protocol::System::Alptas : protocol::System::AdslDirect;
 }
 
 // INFO: fc 13nov26 a Bravo hears 1090 MHz only: an aircraft added while it flies is ADS-B, A1
-static simulator::AdsbOut adsb_of_added() {
+static simulator::AdsbOut adsb_of(int equipment) {
     simulator::AdsbOut adsb;
-    adsb.fitted = g_bravo_flying;
+    adsb.fitted = system_of(equipment) == protocol::System::Unknown;
     adsb.category = 1;
     return adsb;
 }
 
 KEEPALIVE int simulator_add_aircraft(int north_m, int east_m, int up_m, int speed_mps,
-                                     int track_deg, int turn_dps_e1, int climb_mm_s, int alptas,
+                                     int track_deg, int turn_dps_e1, int climb_mm_s, int equipment,
                                      int address) {
     return on_unit([&](auto& unit) {
         return unit.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, -1, -1,
-                                         system_of(alptas), turn_dps_e1 / 10.0, climb_mm_s / 1000.0,
-                                         static_cast<uint32_t>(address), adsb_of_added());
+                                         system_of(equipment), turn_dps_e1 / 10.0,
+                                         climb_mm_s / 1000.0, static_cast<uint32_t>(address),
+                                         adsb_of(equipment));
     });
 }
 // phase_ms/slot below zero let the aircraft pick its own instant, as a
 // conforming transmitter does. Pinned, they put a burst where the dwell map
 // says we should or should not hear it.
 KEEPALIVE void simulator_add_aircraft_at(int north_m, int east_m, int up_m, int speed_mps,
-                                         int track_deg, int phase_ms, int slot, int alptas) {
+                                         int track_deg, int phase_ms, int slot, int equipment) {
     on_unit([&](auto& unit) {
         unit.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, phase_ms, slot,
-                                  system_of(alptas), 0, 0, 0, adsb_of_added());
+                                  system_of(equipment), 0, 0, 0, adsb_of(equipment));
     });
 }
-KEEPALIVE void simulator_add_threat(int alptas) {
-    on_unit([&](auto& unit) { unit.world().add_threat(system_of(alptas), adsb_of_added()); });
+KEEPALIVE void simulator_add_threat(int equipment) {
+    on_unit([&](auto& unit) { unit.world().add_threat(system_of(equipment), adsb_of(equipment)); });
 }
 KEEPALIVE int simulator_tx_named() {
-    return static_cast<int>(g_simulator.product().state().air.tx_named);
+    return static_cast<int>(go_unit().product().state().air.tx_named);
 }
 KEEPALIVE int simulator_rx_named() {
-    return static_cast<int>(g_simulator.product().state().air.rx_named);
+    return static_cast<int>(go_unit().product().state().air.rx_named);
 }
 KEEPALIVE int simulator_prompt() {
-    return g_simulator.product().screen().prompt() != comms::Pending::None ? 1 : 0;
+    return go_unit().product().screen().prompt() != comms::Pending::None ? 1 : 0;
 }
 KEEPALIVE int simulator_send_config(const char* json) {
-    return g_simulator.world().send_config(json) ? 1 : 0;
+    return go_unit().world().send_config(json) ? 1 : 0;
 }
 KEEPALIVE void simulator_name_aircraft(int index, const char* callsign) {
     on_unit([&](auto& unit) { unit.world().name_aircraft(index, callsign); });
@@ -179,22 +198,22 @@ KEEPALIVE int simulator_aircraft_count() {
 }
 
 // Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
-KEEPALIVE const unsigned char* simulator_panel() { return g_simulator.panel().data(); }
-KEEPALIVE int simulator_panel_width() { return g_simulator.panel().width(); }
-KEEPALIVE int simulator_panel_height() { return g_simulator.panel().height(); }
+KEEPALIVE const unsigned char* simulator_panel() { return go_unit().panel().data(); }
+KEEPALIVE int simulator_panel_width() { return go_unit().panel().width(); }
+KEEPALIVE int simulator_panel_height() { return go_unit().panel().height(); }
 KEEPALIVE int simulator_panel_stride() { return go::Glass::kStride; }
 
-KEEPALIVE int simulator_panel_refreshing() { return g_simulator.panel_refreshing() ? 1 : 0; }
+KEEPALIVE int simulator_panel_refreshing() { return go_unit().panel_refreshing() ? 1 : 0; }
 KEEPALIVE int simulator_panel_refresh_is_full() {
-    return g_simulator.panel_refresh_is_full() ? 1 : 0;
+    return go_unit().panel_refresh_is_full() ? 1 : 0;
 }
-KEEPALIVE int simulator_present_count() { return g_simulator.present_count(); }
+KEEPALIVE int simulator_present_count() { return go_unit().present_count(); }
 
-KEEPALIVE int simulator_backlight_on() { return g_simulator.backlight() ? 1 : 0; }
-KEEPALIVE int simulator_panel_powered() { return g_simulator.panel_powered() ? 1 : 0; }
-KEEPALIVE int simulator_page() { return static_cast<int>(g_simulator.product().screen().page()); }
+KEEPALIVE int simulator_backlight_on() { return go_unit().backlight() ? 1 : 0; }
+KEEPALIVE int simulator_panel_powered() { return go_unit().panel_powered() ? 1 : 0; }
+KEEPALIVE int simulator_page() { return static_cast<int>(go_unit().product().screen().page()); }
 KEEPALIVE int simulator_menu_open() {
-    return g_simulator.product().screen().mode() == go::Mode::Menu ? 1 : 0;
+    return go_unit().product().screen().mode() == go::Mode::Menu ? 1 : 0;
 }
 KEEPALIVE int simulator_capabilities() {
     return static_cast<int>(on_unit([](auto& unit) { return unit.product().capabilities(); }));
@@ -227,69 +246,80 @@ KEEPALIVE const char* simulator_lamp() {
 KEEPALIVE int simulator_shutdown_phase() {
     return static_cast<int>(on_unit([](auto& unit) { return unit.product().shutdown().phase(); }));
 }
-KEEPALIVE int simulator_rx_ok() {
-    return static_cast<int>(g_simulator.product().state().air.rx_ok);
-}
+KEEPALIVE int simulator_rx_ok() { return static_cast<int>(go_unit().product().state().air.rx_ok); }
 KEEPALIVE int simulator_rx_bad() {
-    return static_cast<int>(g_simulator.product().state().air.rx_bad);
+    return static_cast<int>(go_unit().product().state().air.rx_bad);
 }
 KEEPALIVE int simulator_rx_wait() {
-    return static_cast<int>(g_simulator.product().state().air.rx_wait);
+    return static_cast<int>(go_unit().product().state().air.rx_wait);
 }
 KEEPALIVE int simulator_rx_type() {
-    return static_cast<int>(g_simulator.product().state().air.rx_type);
+    return static_cast<int>(go_unit().product().state().air.rx_type);
 }
 KEEPALIVE int simulator_rx_unframed() {
-    return static_cast<int>(g_simulator.product().state().air.rx_unframed);
+    return static_cast<int>(go_unit().product().state().air.rx_unframed);
 }
 KEEPALIVE int simulator_rx_miskeyed() {
-    return static_cast<int>(g_simulator.product().state().air.rx_miskeyed);
+    return static_cast<int>(go_unit().product().state().air.rx_miskeyed);
 }
-KEEPALIVE int simulator_tx_ok() {
-    return static_cast<int>(g_simulator.product().state().air.tx_ok);
-}
+KEEPALIVE int simulator_tx_ok() { return static_cast<int>(go_unit().product().state().air.tx_ok); }
 KEEPALIVE int simulator_tx_lost() {
-    return static_cast<int>(g_simulator.product().state().air.tx_lost);
+    return static_cast<int>(go_unit().product().state().air.tx_lost);
 }
 KEEPALIVE int simulator_slot_state() {
-    return static_cast<int>(g_simulator.product().state().rf.plan.state);
+    return static_cast<int>(go_unit().product().state().rf.plan.state);
 }
 KEEPALIVE int simulator_dwell_frequency_khz() {
-    return static_cast<int>(g_simulator.product().state().rf.plan.frequency_hz / 1000);
+    return static_cast<int>(go_unit().product().state().rf.plan.frequency_hz / 1000);
 }
 
 // The tape: every burst that was on the air, heard or not.
-KEEPALIVE int simulator_air_record_count() { return g_simulator.world().air().record_count(); }
+KEEPALIVE int simulator_air_record_count() { return go_unit().world().air().record_count(); }
 KEEPALIVE int simulator_air_phase_ms(int index) {
-    return g_simulator.world().air().record_at(index).phase_ms;
+    return go_unit().world().air().record_at(index).phase_ms;
 }
 KEEPALIVE int simulator_air_event(int index) {
-    return static_cast<int>(g_simulator.world().air().record_at(index).event);
+    return static_cast<int>(go_unit().world().air().record_at(index).event);
 }
 KEEPALIVE int simulator_air_frequency_khz(int index) {
-    return static_cast<int>(g_simulator.world().air().record_at(index).frequency_hz / 1000);
+    return static_cast<int>(go_unit().world().air().record_at(index).frequency_hz / 1000);
 }
 KEEPALIVE int simulator_air_rssi_dbm(int index) {
-    return g_simulator.world().air().record_at(index).rssi_dbm;
+    return go_unit().world().air().record_at(index).rssi_dbm;
 }
 KEEPALIVE const char* simulator_air_line(int index) {
     static char line[160];
-    g_simulator.world().air().format(index, line, sizeof(line));
+    go_unit().world().air().format(index, line, sizeof(line));
     return line;
 }
-KEEPALIVE int simulator_air_deaf() { return static_cast<int>(g_simulator.world().air().deaf()); }
+KEEPALIVE int simulator_air_deaf() { return static_cast<int>(go_unit().world().air().deaf()); }
 KEEPALIVE int simulator_air_collisions() {
-    return static_cast<int>(g_simulator.world().air().collisions());
+    return static_cast<int>(go_unit().world().air().collisions());
 }
 // INFO: fc 13nov26 what Bravo sent a phone, oldest first, so a page can show the EFB's stream
-KEEPALIVE int simulator_nmea_count() { return static_cast<int>(g_bravo.sentences().size()); }
+KEEPALIVE int simulator_nmea_count() { return static_cast<int>(bravo_phone().sentences().size()); }
 KEEPALIVE const char* simulator_nmea_line(int index) {
-    const auto& sentences = g_bravo.sentences();
+    const auto& sentences = bravo_phone().sentences();
     if (index < 0 || index >= static_cast<int>(sentences.size())) return "";
     return sentences[static_cast<size_t>(index)].c_str();
 }
-KEEPALIVE int simulator_adsb_heard() { return static_cast<int>(g_bravo.world().adsb_heard()); }
-KEEPALIVE int simulator_adsb_aircraft() { return g_bravo.product().adsb().assembly().count(); }
+KEEPALIVE int simulator_adsb_heard() {
+    return static_cast<int>(g_flying == simulator::Product::Paired ? g_paired.world().adsb_heard()
+                                                                   : g_bravo.world().adsb_heard());
+}
+KEEPALIVE int simulator_adsb_aircraft() { return bravo_unit().adsb().assembly().count(); }
+KEEPALIVE const char* simulator_bravo_lamp() {
+    if (g_flying == simulator::Product::Go) return indication::to_string(indication::Lamp::None);
+    return indication::to_string(g_flying == simulator::Product::Paired
+                                     ? g_paired.bravo_lamp_since_last_look()
+                                     : g_bravo.lamp_since_last_look());
+}
+// INFO: fc 14nov26 what the Go makes of its Bravo, comms::BravoState, as its status frame says
+KEEPALIVE int simulator_bravo_state() {
+    return static_cast<int>(go_unit().product().state().bravo);
+}
+KEEPALIVE void simulator_set_bravo_link(int up) { g_paired.aboard().set_link(up != 0); }
+KEEPALIVE int simulator_bravo_link_up() { return g_paired.aboard().link_up() ? 1 : 0; }
 KEEPALIVE int simulator_failures() {
     return on_unit([](auto& unit) { return unit.world().failures(); });
 }

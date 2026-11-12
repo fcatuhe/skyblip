@@ -9,6 +9,7 @@
 #include "core/model/ownship.h"
 #include "core/units/units.h"
 #include "simulator/bravo_simulator.h"
+#include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 
 using namespace skyblip;
@@ -44,6 +45,8 @@ const char* kAlarms[] = {"none", "ADVISORY"};
 constexpr int kRecordLines = 6;
 constexpr size_t kSentenceLines = 12;
 const char* kModes[] = {"dev", "demo", "training"};
+const char* kBravoStates[] = {"unpaired",  "waiting",       "LIVE",
+                              "LINK DOWN", "RECEIVER DOWN", "NO UTC"};
 
 void render(simulator::Simulator& simulator) {
     if (!simulator.panel_powered()) {
@@ -193,6 +196,111 @@ int fly_bravo(const simulator::Scenario& scenario) {
     return 0;
 }
 
+struct Stick {
+    bool fix{true};
+    bool pps{true};
+    bool pad{false};
+    int32_t altitude_m{1000};
+    int32_t speed_kt{45};
+    int32_t track_deg{90};
+    int32_t turn_dps{0};
+};
+
+void take_go_key(simulator::Simulator& simulator, Stick& stick, char key) {
+    simulator::World<platform::host::Platform>& world = simulator.world();
+    switch (key) {
+        case 'p': world.tap_pad(); break;
+        case 'm': world.press_button(); break;
+        case 't':
+            stick.pad = !stick.pad;
+            world.hold_pad(stick.pad);
+            break;
+        case 'b': simulator.product().screen().set_backlight(!simulator.backlight()); break;
+        case 'o': simulator.product().screen().set_power(!simulator.panel_powered()); break;
+        case 'f':
+            stick.fix = !stick.fix;
+            world.set_fix(stick.fix);
+            break;
+        case 'n':
+            stick.pps = !stick.pps;
+            world.set_pps_locked(stick.pps);
+            break;
+        case 'a': world.set_altitude_m(stick.altitude_m += 100); break;
+        case 'z': world.set_altitude_m(stick.altitude_m -= 100); break;
+        case 's': world.set_speed_kt(stick.speed_kt += 5); break;
+        case 'x':
+            world.set_speed_kt(stick.speed_kt = stick.speed_kt > 5 ? stick.speed_kt - 5 : 0);
+            break;
+        case 'd': world.set_track_deg(stick.track_deg = (stick.track_deg + 15) % 360); break;
+        case 'c': world.set_track_deg(stick.track_deg = (stick.track_deg + 345) % 360); break;
+        case 'r':
+            world.set_turn_dps(stick.turn_dps = stick.turn_dps < 24 ? stick.turn_dps + 3 : 24);
+            break;
+        case 'e':
+            world.set_turn_dps(stick.turn_dps = stick.turn_dps > -24 ? stick.turn_dps - 3 : -24);
+            break;
+        case 'w': world.set_turn_dps(stick.turn_dps = 0); break;
+        case 'g': world.add_aircraft(1500, 800, 50, 30, 250); break;
+        case 'h': world.add_threat(); break;
+        case 'j':
+            world.add_aircraft(1500, 800, 50, 30, 250, -1, -1, protocol::System::Alptas);
+            break;
+        case 'k': world.clear_aircraft(); break;
+        default: break;
+    }
+}
+
+void render_aboard(simulator::PairedSimulator& paired) {
+    simulator::BravoAboard& aboard = paired.aboard();
+    std::printf(" Bravo aboard: lamp:%-5s fix:%-4s link:%-4s the Go reads it:%s\n",
+                indication::to_string(paired.bravo_lamp_since_last_look()),
+                aboard.fix() ? "on" : "OFF", aboard.link_up() ? "up" : "LOST",
+                kBravoStates[static_cast<int>(paired.product().state().bravo)]);
+    std::printf("  squitters on air/heard:%u/%u  aircraft:%d  traffic:%d\n",
+                paired.world().adsb_sent(), paired.world().adsb_heard(),
+                paired.bravo().adsb().assembly().count(), paired.bravo().state().traffic.count());
+    std::printf(" bravo: [l]ink lost or back  [v] Bravo's fix\n");
+    std::fflush(stdout);
+}
+
+int fly_paired(const simulator::Scenario& scenario) {
+    simulator::PairedSimulator paired;
+    if (paired.setup() != Status::Ok) {
+        std::printf("simulator setup failed\n");
+        return 1;
+    }
+    paired.load(scenario);
+    uint32_t last_step_ms = now_ms();
+    Stick stick;
+    stick.altitude_m = scenario.altitude_m;
+    stick.speed_kt = scenario.speed_kt;
+    stick.track_deg = scenario.track_deg;
+
+    RawTerminal raw;
+    bool running = true;
+    while (running) {
+        char key;
+        while (read(STDIN_FILENO, &key, 1) == 1) {
+            if (key == 'q') running = false;
+            if (key == 'l') paired.aboard().set_link(!paired.aboard().link_up());
+            if (key == 'v') paired.aboard().set_fix(!paired.aboard().fix());
+            take_go_key(paired.go(), stick, key);
+        }
+        const uint32_t target_ms = now_ms();
+        while (last_step_ms + simulator::PairedSimulator::kStepMs <= target_ms) {
+            last_step_ms += simulator::PairedSimulator::kStepMs;
+            paired.step(last_step_ms);
+        }
+        render(paired.go());
+        render_aboard(paired);
+        usleep(50 * 1000);
+    }
+    std::printf("\nbye: traffic=%d squitters=%u failures=%d\n",
+                paired.product().state().traffic.count(), paired.world().adsb_heard(),
+                paired.world().failures());
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -205,6 +313,7 @@ int main(int argc, char** argv) {
         return 1;
     }
     if (scenario.product == simulator::Product::Bravo) return fly_bravo(scenario);
+    if (scenario.product == simulator::Product::Paired) return fly_paired(scenario);
 
     simulator::Simulator simulator;
     if (simulator.setup() != Status::Ok) {
@@ -214,60 +323,15 @@ int main(int argc, char** argv) {
     if (scenario_path != nullptr) simulator.load(scenario);
 
     uint32_t last_step_ms = now_ms();
-    bool fix = true, pps = true, pad = false;
-    int32_t altitude_m = 1000, speed_kt = 45, track_deg = 90, turn_dps = 0;
+    Stick stick;
 
     RawTerminal raw;
     bool running = true;
     while (running) {
         char key;
         while (read(STDIN_FILENO, &key, 1) == 1) {
-            switch (key) {
-                case 'q': running = false; break;
-                case 'p': simulator.world().tap_pad(); break;
-                case 'm': simulator.world().press_button(); break;
-                case 't':
-                    pad = !pad;
-                    simulator.world().hold_pad(pad);
-                    break;
-                case 'b': simulator.product().screen().set_backlight(!simulator.backlight()); break;
-                case 'o': simulator.product().screen().set_power(!simulator.panel_powered()); break;
-                case 'f':
-                    fix = !fix;
-                    simulator.world().set_fix(fix);
-                    break;
-                case 'n':
-                    pps = !pps;
-                    simulator.world().set_pps_locked(pps);
-                    break;
-                case 'a': simulator.world().set_altitude_m(altitude_m += 100); break;
-                case 'z': simulator.world().set_altitude_m(altitude_m -= 100); break;
-                case 's': simulator.world().set_speed_kt(speed_kt += 5); break;
-                case 'x':
-                    simulator.world().set_speed_kt(speed_kt = speed_kt > 5 ? speed_kt - 5 : 0);
-                    break;
-                case 'd':
-                    simulator.world().set_track_deg(track_deg = (track_deg + 15) % 360);
-                    break;
-                case 'c':
-                    simulator.world().set_track_deg(track_deg = (track_deg + 345) % 360);
-                    break;
-                case 'r':
-                    simulator.world().set_turn_dps(turn_dps = turn_dps < 24 ? turn_dps + 3 : 24);
-                    break;
-                case 'e':
-                    simulator.world().set_turn_dps(turn_dps = turn_dps > -24 ? turn_dps - 3 : -24);
-                    break;
-                case 'w': simulator.world().set_turn_dps(turn_dps = 0); break;
-                case 'g': simulator.world().add_aircraft(1500, 800, 50, 30, 250); break;
-                case 'h': simulator.world().add_threat(); break;
-                case 'j':
-                    simulator.world().add_aircraft(1500, 800, 50, 30, 250, -1, -1,
-                                                   protocol::System::Alptas);
-                    break;
-                case 'k': simulator.world().clear_aircraft(); break;
-                default: break;
-            }
+            if (key == 'q') running = false;
+            take_go_key(simulator, stick, key);
         }
         // Slot edges are 5 ms wide, so the loop catches up in 5 ms steps
         // rather than jumping a whole frame and stepping over one.

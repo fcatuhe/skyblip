@@ -1,5 +1,5 @@
 export async function mountSimulator(element, src, manifest, signal) {
-  const { load, PAGES, ALARM, DWELL, SHUTDOWN, REFRESH } = await import(src);
+  const { load, PAGES, ALARM, DWELL, SHUTDOWN, REFRESH, PRODUCT, BRAVO_STATE } = await import(src);
 
   const SIM = {};
 
@@ -41,7 +41,8 @@ export async function mountSimulator(element, src, manifest, signal) {
   SIM.battery = v => { f.setBatteryMv(+v); $('bat_o').textContent = (v/1000).toFixed(2) + ' V'; };
   SIM.toggleExternalPower = () => { ext = !ext; f.setExternalPower(ext ? 1 : 0);
                                     $('extbtn').textContent = 'USB power: ' + (ext ? 'ON' : 'OFF'); };
-  const alptas = () => ($('tfc_system').value === 'alptas' ? 1 : 0);
+  const EQUIPMENT = { adsl: 0, alptas: 1, adsb: 2 };
+  const equipment = () => EQUIPMENT[$('tfc_system').value];
   const KT_TO_MPS = 0.514444;
   const TRAFFIC_CRUISE_KT = [90, 180];
   const TRAFFIC_SLOW_KT = [35, 90];
@@ -68,29 +69,35 @@ export async function mountSimulator(element, src, manifest, signal) {
     f.addAircraft(Math.round(Math.cos(brg)*d), Math.round(Math.sin(brg)*d),
                   spread(TRAFFIC_VERT_SPREAD_M),
                   trafficSpeedMps(), Math.round(Math.random()*359),
-                  trafficTurnDpsE1(), trafficClimbMmS(), alptas(), trafficAddress());
+                  trafficTurnDpsE1(), trafficClimbMmS(), equipment(), trafficAddress());
   };
-  SIM.addThreat = () => f.addThreat(alptas());
+  SIM.addThreat = () => f.addThreat(equipment());
   SIM.addAt = phase => {
     const brg = Math.random() * 2 * Math.PI, d = 800 + Math.random() * 3000;
     f.addAircraftAt(Math.round(Math.cos(brg)*d), Math.round(Math.sin(brg)*d), 0, 30,
-                    Math.round(Math.random()*359), phase, -1, alptas());
+                    Math.round(Math.random()*359), phase, -1, equipment());
   };
   const MODES = ['dev', 'demo', 'training'];
+  SIM.toggleBravoLink = () => f.setBravoLink(f.bravoLinkUp() === 1 ? 0 : 1);
+  const PRODUCT_NAME = { go: 'skyBlip\u00a0Go', bravo: 'skyBlip\u00a0Bravo', paired: 'skyBlip\u00a0Go paired with Bravo' };
   SIM.applyMode = () => {
     const mode = MODES[f.mode()] || 'dev';
     // TODO: fc 13nov26 a release before simulator_product flies only a Go: drop the ?. once Release.simulator serves one that exports it
-    const bravo = f.product?.() === 1;
+    const product = PRODUCT?.[f.product?.() ?? 0] ?? 'go';
     element.dataset.mode = mode;
-    element.dataset.product = bravo ? 'bravo' : 'go';
+    element.dataset.product = product;
     for (const panel of element.querySelectorAll('.panel')) {
       if (panel.id === 'scenariopanel') continue;
       panel.hidden = mode !== 'dev';
     }
-    $('product_name').textContent = bravo ? 'skyBlip\u00a0Bravo' : 'skyBlip\u00a0Go';
-    $('phonepanel').hidden = !bravo;
-    $('device').hidden = bravo;
-    if (bravo) $('bandpanel').hidden = true;
+    $('product_name').textContent = PRODUCT_NAME[product];
+    $('phonepanel').hidden = product === 'go';
+    $('device').hidden = product === 'bravo';
+    if (product === 'bravo') $('bandpanel').hidden = true;
+    $('bravo_paired').hidden = product !== 'paired';
+    $('bravolinkrow').hidden = mode !== 'dev';
+    $('tfc_adsb').hidden = product !== 'paired';
+    if (product !== 'paired' && $('tfc_system').value === 'adsb') $('tfc_system').value = 'adsl';
     $('modehint').textContent = mode === 'dev'
       ? 'mode: dev, every control visible'
       : 'mode: ' + mode + ', controls hidden, the scenario is driving';
@@ -222,11 +229,18 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('phone').textContent = out.length ? out.join('') : '-';
     $('phone').scrollTop = $('phone').scrollHeight;
     $('adsbhint').textContent = f.adsbHeard() + ' squitters heard, ' + f.adsbAircraft() + ' aircraft assembled.';
+    // TODO: fc 14nov26 a release before simulator_bravo_lamp shows no Bravo lamp: drop the ?. once Release.simulator serves one that exports it
+    const lamp = f.bravoLamp?.() ?? 'dark';
+    $('bravo_lamp').dataset.lamp = lamp;
+    $('bravo_lamp_name').textContent = lamp;
+    if (element.dataset.product !== 'paired') return;
+    $('bravo_state').textContent = BRAVO_STATE[f.bravoState()];
+    $('bravolinkbtn').textContent = 'Link to the Go: ' + (f.bravoLinkUp() === 1 ? 'UP' : 'LOST');
   }
 
   function draw() {
     f.advance(Math.min(f.elapsedMs() + 100, performance.now() - startedAt));
-    if (element.dataset.product === 'bravo') drawPhone();
+    if (element.dataset.product !== 'go') drawPhone();
     f.paint(canvas);
     const refresh = f.refreshing() ? (f.refreshIsFull() ? 2 : 1) : 0;
     canvas.className = 'sb-glass ' + (f.powered() ? '' : 'off ') + (f.backlightOn() ? 'bl ' : '') +
@@ -235,7 +249,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('refreshstate').className = refresh === 2 ? 'full' : '';
     $('refreshcount').textContent = '  ·  ' + f.presents() + ' refreshes';
     // TODO: fc 09nov26 builds before simulator_lamp cannot report it, drop the ?. once the newest main dev build exports it
-    $('led_lamp').dataset.lamp = f.lamp?.() ?? 'dark';
+    if (element.dataset.product !== 'bravo') $('led_lamp').dataset.lamp = f.lamp?.() ?? 'dark';
     $('led_charge').className = 'sb-led sb-led--charge' + (f.batteryCharging() ? ' sb-led--lit' : '');
     $('pagehint').textContent = 'page: ' + PAGES[f.page()] +
         '  ·  backlight ' + (f.backlightOn() ? 'on' : 'off') +

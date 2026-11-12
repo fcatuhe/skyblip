@@ -1,6 +1,6 @@
 # simulator
 
-The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, and `bravo_simulator.h` flies a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`). `frontends/terminal.cpp` and `frontends/browser.cpp` draw them, and the host suite asserts on them. None of them adds behaviour.
+The simulator runs a real product on the host platform, inside a world that drives the part models. `simulator.h` flies a skyBlip Go on the T-Echo's models, and `bravo_simulator.h` flies a skyBlip Bravo on the MeshTracker X1's (`hardware/platform/host/meshtracker_x1.h`). `paired_simulator.h` flies both in one aircraft, a Go paired with a Bravo. `frontends/terminal.cpp` and `frontends/browser.cpp` draw them, and the host suite asserts on them. None of them adds behaviour.
 
 ## The world
 
@@ -10,6 +10,19 @@ The simulator runs a real product on the host platform, inside a world that driv
 - `World<Platform>` is a `Sky` carrying one unit: its GNSS, barometer, button, pad, cell and phone link. A Go hears 868 MHz and a Bravo hears 1090 MHz, so an aircraft with both systems is heard by each on its own band.
 
 Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own.
+
+## A Go paired with a Bravo
+
+`PairedSimulator` holds a `Simulator`, whose world is the one sky, and a Bravo with `world/bravo_aboard.h` beside it. Both boot already paired, as a Tango leaves the hangar: before `setup()`, each settings blob on flash pins the other, at `PairedLink`'s two addresses. The Go's blob also sets `PairedSimulator::kOwnIcao`, because a pilot flying a Tango sets one, and without it the Go shows the own-ICAO notice once a boot (#191).
+
+`BravoAboard` puts Bravo in the Go's aircraft. Each step, after the Go's world:
+
+- Bravo's AG3335 takes the Go's L76K truth: the same place, height, motion and UTC. Its fix flag stays its own, so a scenario can take Bravo's fix alone.
+- Its SPA06 reads the same air as the Go's BME280, through `World::feel_air`.
+- The sky squitters to its LR2021, through `World::squitter_to`. A sky has one 1090 MHz receiver, and a Go never listens on that band.
+- `world/paired_link.h` carries the `peer` frames between Bravo's link and the Go's central. The host suite's `test/support/paired_link.h` re-exports it.
+
+Bravo's phone, when a scenario connects one, takes the session after the Go's. `BravoAboard::set_link(false)` drops the connection at once, as a supervision timeout ends it, and no reconnect comes up until `set_link(true)`.
 
 ## ADS-B Out
 
@@ -38,15 +51,14 @@ The world does not model:
 
 A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, that the terminal, the browser and the suite all load. `scripts/simulator_scenarios.rb` bundles every file for the browser.
 
-- `"product": "bravo"` flies a Bravo. A file without it flies a Go.
+- `"product": "bravo"` flies a Bravo, and `"product": "paired"` a Go paired with a Bravo. A file without it flies a Go.
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
 - `"category"` is the emitter category, `A0` to `C7`, in `core/protocol/README.md`'s shorthand: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
+- In a paired file, an event with `"unit": "bravo"` acts on Bravo instead of the Go. Bravo aboard takes `fix` and `companion`. The event `"bravo_link": 0` loses the link between them, and `1` brings it back. A file that uses either outside a pair, or gives Bravo another event, is refused.
 
 ## The browser
 
-`frontends/browser.cpp` builds one WASM module with both products. Loading a scenario picks the product it names, and every export that both products share reads that one. The Go's glass, its 868 MHz tape and its radio counters stay the Go's. `simulator_product`, `simulator_nmea_count`, `simulator_nmea_line`, `simulator_adsb_heard` and `simulator_adsb_aircraft` give the workbench what Bravo has instead of a glass: the stream a phone EFB reads. `scripts/check_simulator_exports.py` checks that `web/embed.js` binds only exported names.
-
-A paired Go and Bravo, with ADS-B on the Go's glass, is #196.
+`frontends/browser.cpp` builds one WASM module with a Go, a Bravo and a pair. Loading a scenario picks the unit it names, and every export that the units share reads that one. The Go's glass, its 868 MHz tape and its radio counters read the Go alone or the paired Go. `simulator_product`, `simulator_nmea_count`, `simulator_nmea_line`, `simulator_adsb_heard`, `simulator_adsb_aircraft` and `simulator_bravo_lamp` give the workbench what Bravo has instead of a glass: its lamp, and the stream a phone EFB reads. Paired, the page shows the Go's glass with Bravo's lamp and stream beside it, `simulator_bravo_state` says what the Go makes of Bravo, and `simulator_set_bravo_link` loses the link or brings it back. An aircraft added while a pair flies may carry ADS-B Out alone, heard by Bravo only. `scripts/check_simulator_exports.py` checks that `web/embed.js` binds only exported names.

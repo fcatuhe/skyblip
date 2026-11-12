@@ -2,7 +2,8 @@ import createModule from './skyblip_simulator.js';
 
 export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', 'raw', 'capture', 'self test', 'bravo'];
 export const ALARM = ['none', 'advisory'];
-export const PRODUCT = ['go', 'bravo'];
+export const PRODUCT = ['go', 'bravo', 'paired'];
+export const BRAVO_STATE = ['unpaired', 'waiting', 'live', 'link down', 'receiver down', 'no UTC'];
 export const SHUTDOWN = ['running', 'parking', 'await release', 'off'];
 export const REFRESH = ['idle', 'partial refresh', 'full refresh'];
 export const DWELL = ['uplink RX · 869.525', 'retune O->M', 'slot 0 · 868.200',
@@ -117,6 +118,10 @@ export async function load(options = {}) {
     nmeaLine: call('simulator_nmea_line', 'string', oneNumber),
     adsbHeard: call('simulator_adsb_heard', 'number', noArgs),
     adsbAircraft: call('simulator_adsb_aircraft', 'number', noArgs),
+    bravoLamp: call('simulator_bravo_lamp', 'string', noArgs),
+    bravoState: call('simulator_bravo_state', 'number', noArgs),
+    setBravoLink: call('simulator_set_bravo_link', null, oneNumber),
+    bravoLinkUp: call('simulator_bravo_link_up', 'number', noArgs),
   };
 
   let simMs = 0;

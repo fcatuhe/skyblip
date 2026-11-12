@@ -11,7 +11,7 @@ namespace skyblip::simulator {
 
 enum class Mode : uint8_t { Device, Demo, Training };
 
-enum class Product : uint8_t { Go, Bravo };
+enum class Product : uint8_t { Go, Bravo, Paired };
 
 enum class EventKind : uint8_t {
     Fix,
@@ -27,6 +27,7 @@ enum class EventKind : uint8_t {
     Companion,
     ExpectAlarmMinimum,
     ExpectTrafficMinimum,
+    BravoLink,
 };
 
 struct AdsbOut {
@@ -61,6 +62,8 @@ struct ScenarioEvent {
     uint32_t at_ms{0};
     EventKind kind{EventKind::Fix};
     long value{0};
+    // INFO: fc 14nov26 "unit": "bravo" in a paired scenario: the Bravo's fix or phone, not the Go's
+    bool on_bravo{false};
 };
 
 // One scenario file drives the browser, the terminal and the regression tests, so

@@ -61,6 +61,7 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
         {"companion", EventKind::Companion},
         {"expect_alarm_minimum", EventKind::ExpectAlarmMinimum},
         {"expect_traffic_minimum", EventKind::ExpectTrafficMinimum},
+        {"bravo_link", EventKind::BravoLink},
     };
     out.at_ms = static_cast<uint32_t>(integer_or(reader, "at_ms", 0));
     for (const Named& named : kKeys) {
@@ -100,8 +101,25 @@ bool adsb_from(const json::Reader& reader, protocol::System system, AdsbOut& ads
            category_from(category, adsb);
 }
 
+bool unit_from(const json::Reader& reader, ScenarioEvent& event) {
+    char unit[8] = {0};
+    if (!reader.read_string("unit", unit, sizeof(unit))) return true;
+    event.on_bravo = std::strcmp(unit, "bravo") == 0;
+    return event.on_bravo;
+}
+
+// INFO: fc 14nov26 only a paired scenario has a Bravo aboard, and it takes its fix and its phone
+bool fits(const ScenarioEvent& event, Product product) {
+    const bool paired = product == Product::Paired;
+    if (event.kind == EventKind::BravoLink) return paired;
+    if (!event.on_bravo) return true;
+    return paired && (event.kind == EventKind::Fix || event.kind == EventKind::Companion);
+}
+
 Product product_from(const std::string& name) {
-    return name == "bravo" ? Product::Bravo : Product::Go;
+    if (name == "bravo") return Product::Bravo;
+    if (name == "paired") return Product::Paired;
+    return Product::Go;
 }
 
 Mode mode_from(const std::string& name) {
@@ -153,7 +171,9 @@ bool parse_scenario(const char* json, int bytes, Scenario& parsed) {
     for (const std::string& object : objects_in_array(text, "events")) {
         const json::Reader reader(object.c_str(), static_cast<int>(object.size()));
         ScenarioEvent event;
-        if (event_from(reader, event)) out.events.push_back(event);
+        if (!event_from(reader, event)) continue;
+        if (!unit_from(reader, event) || !fits(event, out.product)) return false;
+        out.events.push_back(event);
     }
     parsed = std::move(out);
     return true;
