@@ -10,7 +10,7 @@ export default class extends Controller {
     this.session = new AbortController()
     this.device = null
     this.listen("connect", "click", () => this.link())
-    this.listen("disconnect", "click", () => this.device?.release())
+    this.listen("disconnect", "click", () => this.leave())
     this.listen("send", "submit", event => this.sendLine(event))
     this.listen("sendjson", "submit", event => this.sendJson(event))
     this.listen("clearstream", "click", () => { this.field("stream").textContent = "-" })
@@ -60,6 +60,15 @@ export default class extends Controller {
         this.field("connect").disabled = false
         this.state(error.message, "down")
       }
+    }
+  }
+
+  // INFO: fc 12nov26 a released link closes without calling back the client that released it
+  leave() {
+    const { device } = this
+    if (device) {
+      device.release()
+      this.closed(device.name)
     }
   }
 
