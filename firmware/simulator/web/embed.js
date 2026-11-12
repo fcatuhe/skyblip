@@ -120,6 +120,7 @@ export async function load(options = {}) {
     adsbAircraft: call('simulator_adsb_aircraft', 'number', noArgs),
     bravoLamp: call('simulator_bravo_lamp', 'string', noArgs),
     bravoState: call('simulator_bravo_state', 'number', noArgs),
+    bravoSilent: call('simulator_bravo_silent', 'number', noArgs),
     setBravoLink: call('simulator_set_bravo_link', null, oneNumber),
     bravoLinkUp: call('simulator_bravo_link_up', 'number', noArgs),
   };

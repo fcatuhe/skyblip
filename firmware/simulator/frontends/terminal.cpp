@@ -256,9 +256,10 @@ void render_aboard(simulator::PairedSimulator& paired) {
                 indication::to_string(paired.bravo_lamp_since_last_look()),
                 aboard.fix() ? "on" : "OFF", aboard.link_up() ? "up" : "LOST",
                 kBravoStates[static_cast<int>(paired.product().state().bravo)]);
-    std::printf("  squitters on air/heard:%u/%u  aircraft:%d  traffic:%d\n",
+    std::printf("  squitters on air/heard:%u/%u  aircraft:%d  traffic:%d  alarm:%s\n",
                 paired.world().adsb_sent(), paired.world().adsb_heard(),
-                paired.bravo().adsb().assembly().count(), paired.bravo().state().traffic.count());
+                paired.bravo().adsb().assembly().count(), paired.bravo().state().traffic.count(),
+                paired.bravo().state().alarm_granted ? "silent for the Go+" : "its own");
     std::printf(" bravo: [l]ink lost or back  [v] Bravo's fix\n");
     std::fflush(stdout);
 }

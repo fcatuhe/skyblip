@@ -9,15 +9,16 @@
   "track_deg": 90,
   "duration_ms": 40000,
   "aircraft": [
-    {"system": "adsb", "category": "A1", "north_m": 4000, "east_m": 1000, "up_m": 300, "speed_mps": 46, "track_deg": 90},
-    {"system": "adsl_direct", "north_m": -3000, "east_m": -1000, "up_m": 200, "speed_mps": 46, "track_deg": 90}
+    {"system": "adsb", "category": "A1", "north_m": 2500, "east_m": 1000, "up_m": 60, "speed_mps": 50, "track_deg": 100},
+    {"system": "adsl_direct", "north_m": -3000, "east_m": -1000, "up_m": 200, "speed_mps": 46, "track_deg": 90},
+    {"system": "adsb", "category": "A1", "north_m": 0, "east_m": 6000, "up_m": 30, "speed_mps": 50, "track_deg": 270, "climb_mps_e1": -15}
   ],
   "events": [
     {"at_ms": 0, "unit": "bravo", "companion": 1},
-    {"at_ms": 10000, "expect_traffic_minimum": 2},
+    {"at_ms": 10000, "expect_traffic_minimum": 3},
     {"at_ms": 12000, "bravo_link": 0},
     {"at_ms": 24000, "expect_traffic_minimum": 1},
     {"at_ms": 26000, "bravo_link": 1},
-    {"at_ms": 38000, "expect_traffic_minimum": 2}
+    {"at_ms": 38000, "expect_traffic_minimum": 3}
   ]
 }

@@ -318,6 +318,8 @@ KEEPALIVE const char* simulator_bravo_lamp() {
 KEEPALIVE int simulator_bravo_state() {
     return static_cast<int>(go_unit().product().state().bravo);
 }
+// INFO: fc 14nov26 Bravo's bus::State::alarm_granted: it keeps silent while its Go+ sounds for both
+KEEPALIVE int simulator_bravo_silent() { return g_paired.bravo().state().alarm_granted ? 1 : 0; }
 KEEPALIVE void simulator_set_bravo_link(int up) { g_paired.aboard().set_link(up != 0); }
 KEEPALIVE int simulator_bravo_link_up() { return g_paired.aboard().link_up() ? 1 : 0; }
 KEEPALIVE int simulator_failures() {

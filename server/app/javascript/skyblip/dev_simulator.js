@@ -235,6 +235,8 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('bravo_lamp_name').textContent = lamp;
     if (element.dataset.product !== 'paired') return;
     $('bravo_state').textContent = BRAVO_STATE[f.bravoState()];
+    $('bravo_silent').textContent = f.bravoSilent() === 1
+      ? 'Bravo keeps silent: the Go+ sounds for both.' : 'Bravo sounds by its own settings.';
     $('bravolinkbtn').textContent = 'Link to the Go: ' + (f.bravoLinkUp() === 1 ? 'UP' : 'LOST');
   }
 

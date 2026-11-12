@@ -1,4 +1,5 @@
 // A Go and a Bravo paired in one aircraft: the scenarios fly both over one sky and one link.
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -20,6 +21,34 @@ namespace {
 constexpr uint32_t kGa = 0x300002;
 constexpr uint32_t kAirliner = 0x300001;
 constexpr uint32_t kDual = 0x300003;
+constexpr uint32_t kLateThreat = 0x300005;
+constexpr uint32_t kThreatAfterReturn = 0x300003;
+// INFO: fc 14nov26 an advisory's first beeps end inside this, so onsets this far apart sound apart
+constexpr uint32_t kOnsetApartMs = 1000;
+
+const traffic::Target* target_of(const bus::State& state, uint32_t address) {
+    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+        const traffic::Target* target = state.traffic.at(i);
+        if (target != nullptr && target->used && target->observation.address == address)
+            return target;
+    }
+    return nullptr;
+}
+
+traffic::Level level_of(const bus::State& state, uint32_t address) {
+    const traffic::Target* target = target_of(state, address);
+    return target == nullptr ? traffic::Level::None : target->alarm_level;
+}
+
+struct Onset {
+    uint32_t at_ms{0};
+    bool granted{false};
+    int other_onsets{0};
+    uint32_t go_sounds{0};
+    uint32_t bravo_sounds{0};
+    traffic::Level bravo_level{traffic::Level::None};
+    model::Source source{model::Source::AdslDirect};
+};
 
 struct Paired {
     simulator::PairedSimulator simulator;
@@ -44,6 +73,59 @@ struct Paired {
     }
     bool reads_lost() { return reads("BRAVO LOST", 2); }
 
+    static uint32_t sounds_of(const platform::host::Annunciator& annunciator) {
+        return annunciator.tone_commands() + annunciator.motor_starts();
+    }
+    uint32_t go_sounds() { return sounds_of(simulator.go().platform().annunciator()); }
+    uint32_t bravo_sounds() { return sounds_of(simulator.bravo_platform().annunciator()); }
+    bool bravo_silent_for_go() { return simulator.bravo().state().alarm_granted; }
+
+    // INFO: fc 14nov26 what each unit sounded in the kOnsetApartMs from the Go's advisory onset
+    Onset fly_to_onset(uint32_t address) {
+        Onset onset;
+        uint32_t other_onset_ms = 0;
+        std::vector<uint32_t> advised;
+        uint32_t go_sounds_before = 0;
+        uint32_t bravo_sounds_before = 0;
+        const uint32_t end_ms = simulator.scenario().duration_ms;
+        while (now_ms <= end_ms && (onset.at_ms == 0 || now_ms - onset.at_ms < kOnsetApartMs)) {
+            const uint32_t step_ms = now_ms;
+            const uint32_t go_sounds_now = go_sounds();
+            const uint32_t bravo_sounds_now = bravo_sounds();
+            run_until(step_ms);
+            for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
+                const traffic::Target* target = go().traffic.at(i);
+                if (target == nullptr || !target->used) continue;
+                const uint32_t other = target->observation.address;
+                const bool advisory = target->alarm_level == traffic::Level::Advisory;
+                const bool known =
+                    std::find(advised.begin(), advised.end(), other) != advised.end();
+                if (advisory && !known && other != address) {
+                    advised.push_back(other);
+                    other_onset_ms = step_ms;
+                    if (onset.at_ms != 0) onset.other_onsets++;
+                }
+                if (!advisory && known)
+                    advised.erase(std::find(advised.begin(), advised.end(), other));
+            }
+            if (onset.at_ms == 0 && level_of(go(), address) == traffic::Level::Advisory) {
+                onset.at_ms = step_ms;
+                onset.granted = bravo_silent_for_go();
+                const traffic::Target* target = target_of(go(), address);
+                onset.source = target->observation.source;
+                if (other_onset_ms != 0 && step_ms - other_onset_ms < kOnsetApartMs)
+                    onset.other_onsets++;
+                go_sounds_before = go_sounds_now;
+                bravo_sounds_before = bravo_sounds_now;
+            }
+        }
+        if (onset.at_ms == 0) return onset;
+        onset.go_sounds = go_sounds() - go_sounds_before;
+        onset.bravo_sounds = bravo_sounds() - bravo_sounds_before;
+        onset.bravo_level = level_of(simulator.bravo().state(), address);
+        return onset;
+    }
+
     // INFO: fc 14nov26 the sentences Bravo's phone read since it had read `read` of them
     std::vector<std::string> bravo_sentences_since(uint32_t read, const char* kind) {
         const auto& sentences = simulator.phone().sentences();
@@ -63,15 +145,6 @@ int slots_of(const bus::State& state, uint32_t address) {
         if (target != nullptr && target->used && target->observation.address == address) slots++;
     }
     return slots;
-}
-
-const traffic::Target* target_of(const bus::State& state, uint32_t address) {
-    for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-        const traffic::Target* target = state.traffic.at(i);
-        if (target != nullptr && target->used && target->observation.address == address)
-            return target;
-    }
-    return nullptr;
 }
 
 bool parses(const char* json) {
@@ -138,7 +211,7 @@ TEST_CASE("paired scenario: Bravo flies the Go's own-ship, and hears the sky the
     CHECK(std::abs(bravo.longitude_1e7 - go.longitude_1e7) < 10);
     CHECK(std::abs(bravo.altitude_hae_mm - go.altitude_hae_mm) < 100);
     CHECK(paired.simulator.world().adsb_heard() > 0);
-    CHECK(paired.simulator.bravo().adsb().assembly().count() == 3);
+    CHECK(paired.simulator.bravo().adsb().assembly().count() == 4);
 }
 
 TEST_CASE(
@@ -183,7 +256,7 @@ TEST_CASE("paired scenario: a lost link says BRAVO LOST, keeps the ADS-L target,
     Paired paired("scenarios/paired_link_lost.json");
     paired.run_until(11900);
     CHECK(paired.bravo() == comms::BravoState::Live);
-    CHECK(paired.go().traffic.count() == 2);
+    CHECK(paired.go().traffic.count() == 3);
     CHECK_FALSE(paired.reads_lost());
 
     paired.run_until(16000);
@@ -203,7 +276,7 @@ TEST_CASE("paired scenario: a lost link says BRAVO LOST, keeps the ADS-L target,
     paired.run_until(32000);
     CHECK(paired.bravo() == comms::BravoState::Live);
     CHECK_FALSE(paired.reads_lost());
-    CHECK(paired.go().traffic.count() == 2);
+    CHECK(paired.go().traffic.count() == 3);
 }
 
 TEST_CASE("paired scenario: BRAVO LOST shows only where the link is lost") {
@@ -213,7 +286,7 @@ TEST_CASE("paired scenario: BRAVO LOST shows only where the link is lost") {
         CAPTURE(file);
         Paired paired(file);
         bool shown = false;
-        // TODO: fc 14nov26 drop the 2000 ms once BravoService holds a boot NoUtc as Waiting (#179)
+        // TODO: fc 14nov26 drop the 2000 ms once BravoService holds a boot NoUtc as Waiting
         bool lost_after_boot = false;
         while (paired.now_ms <= paired.simulator.scenario().duration_ms) {
             paired.run_until(paired.now_ms + 100);
@@ -270,4 +343,64 @@ TEST_CASE("paired scenario: a dense sky reaches the Go through Bravo, all of it 
         if (target != nullptr && target->used)
             CHECK(target->observation.source == model::Source::Adsb);
     }
+}
+
+TEST_CASE("paired scenario: the Go+ takes the alarm within a claim period of reading Bravo live") {
+    Paired paired("scenarios/paired.json");
+    REQUIRE(ports::has(paired.simulator.product().capabilities(), ports::Capability::Buzzer));
+    uint32_t live_ms = 0;
+    uint32_t granted_ms = 0;
+    uint32_t bravo_sounded_ms = 0;
+    bool given_back = false;
+    while (paired.now_ms <= paired.simulator.scenario().duration_ms) {
+        const uint32_t now_ms = paired.now_ms;
+        const uint32_t bravo_sounds = paired.bravo_sounds();
+        paired.run_until(now_ms);
+        if (live_ms == 0 && paired.go().own.fix_valid && paired.bravo() == comms::BravoState::Live)
+            live_ms = now_ms;
+        if (granted_ms == 0 && paired.bravo_silent_for_go()) granted_ms = now_ms;
+        given_back = given_back || (granted_ms != 0 && !paired.bravo_silent_for_go());
+        if (paired.bravo_sounds() != bravo_sounds) bravo_sounded_ms = now_ms;
+    }
+    REQUIRE(live_ms != 0);
+    REQUIRE(granted_ms >= live_ms);
+    CHECK(granted_ms - live_ms <= go::BravoService::kClaimPeriodMs);
+    CHECK_FALSE(given_back);
+    CHECK(bravo_sounded_ms < granted_ms);
+}
+
+TEST_CASE("paired scenario: an ADS-B threat after the grant sounds on the Go+ and not on Bravo") {
+    Paired paired("scenarios/paired.json");
+    const Onset onset = paired.fly_to_onset(kLateThreat);
+    REQUIRE(onset.at_ms != 0);
+    CHECK(onset.granted);
+    CHECK(onset.other_onsets == 0);
+    CHECK(onset.go_sounds > 0);
+    CHECK(onset.bravo_sounds == 0);
+    CHECK(onset.bravo_level == traffic::Level::Advisory);
+    CHECK(onset.source == model::Source::Adsb);
+}
+
+TEST_CASE(
+    "paired scenario: Bravo sounds while the link is lost, and keeps silent once it is back") {
+    Paired paired("scenarios/paired_link_lost.json");
+    paired.run_until(11900);
+    REQUIRE(paired.simulator.bravo().state().alarm_level == traffic::Level::Advisory);
+    CHECK(paired.bravo_silent_for_go());
+    const uint32_t before_loss = paired.bravo_sounds();
+
+    paired.run_until(12000 + go::BravoService::kClaimPeriodMs);
+    CHECK_FALSE(paired.bravo_silent_for_go());
+    CHECK(paired.bravo_sounds() > before_loss);
+
+    paired.run_until(26000 + 2 * go::BravoService::kClaimPeriodMs);
+    REQUIRE(paired.bravo() == comms::BravoState::Live);
+    const Onset onset = paired.fly_to_onset(kThreatAfterReturn);
+    REQUIRE(onset.at_ms != 0);
+    CHECK(onset.granted);
+    CHECK(onset.other_onsets == 0);
+    CHECK(onset.go_sounds > 0);
+    CHECK(onset.bravo_sounds == 0);
+    CHECK(onset.bravo_level == traffic::Level::Advisory);
+    CHECK(onset.source == model::Source::Adsb);
 }
