@@ -1,0 +1,31 @@
+<% content_for :title, t("briefing.activation.title") %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: "activate") %>
+<%= tag.div class: "unit unit--activation", data: {
+      controller: "activation",
+      activation_challenges_value: activation_challenges_path,
+      activation_registrations_value: activation_registrations_path,
+      activation_devices_value: "#{briefing_root_path}/devices",
+      activation_glass_outlet: ".glass-prompt"
+    } do %>
+  <header class="unit-head">
+    <h1 class="unit-name" data-activation-target="name" data-title="<%= t("briefing.activation.title") %>"><%= t("briefing.activation.title") %></h1>
+    <p class="unit-facts" data-activation-target="facts"></p>
+  </header>
+
+  <p class="unit-lede" data-activation-target="hint"><%= t("briefing.activation.hint") %></p>
+
+  <%= render "briefing/glass" %>
+
+  <p class="unit-message" role="status" data-activation-target="message" hidden></p>
+
+  <div class="app-actions">
+    <button type="button" class="button-app" data-activation-target="find" data-action="activation#find"><%= t("briefing.activation.find") %></button>
+    <button type="button" class="button-app" data-activation-target="activate" data-action="activation#activate" hidden><%= t("briefing.activation.activate") %></button>
+    <button type="button" class="button-app" data-activation-target="reconnect" data-action="activation#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
+  </div>
+
+  <details class="unit-details" data-activation-target="kept" hidden>
+    <summary><%= t("briefing.activation.kept_summary") %></summary>
+    <p class="note"><%= t("briefing.activation.kept") %></p>
+  </details>
+<% end %>

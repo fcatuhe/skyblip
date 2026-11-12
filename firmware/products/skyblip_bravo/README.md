@@ -191,7 +191,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - XCSoar shows ADS-B traffic from Bravo with Bravo's own position;
 - an advisory sounds the buzzer and the motor, and one press dismisses it;
 - a `set` and a `dfu` from the manage page stand on the lamp and two presses allow them, and a Bluetooth update installs and confirms;
-- a capture armed from the settings page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
+- a capture armed from its Briefing device page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
 - a switch-off reaches SYSTEM OFF with the off current measured, and a cable plugged in leaves it off;
 - a Go pairs: its request blinks the lamp blue, one press pairs both sides, and both keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;

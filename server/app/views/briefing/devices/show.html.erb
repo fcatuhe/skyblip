@@ -1,0 +1,40 @@
+<% name = device_name(@slug) %>
+<% content_for :title, name %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: @slug) %>
+<%= tag.div class: "unit", data: {
+      controller: "unit",
+      unit_slug_value: @slug,
+      unit_home_value: briefing_root_path,
+      unit_activation_value: briefing_activation_path,
+      unit_glass_outlet: ".glass-prompt"
+    } do %>
+  <%= render "briefing/devices/header", name: %>
+
+  <p class="unit-banner" data-unit-target="banner" hidden>
+    <span data-unit-target="bannerText"></span>
+    <%= link_to t("briefing.unit.update"), briefing_device_firmware_path(device_slug: @slug), class: "button-app button-app--small", data: { unit_target: "bannerAction" } %>
+  </p>
+
+  <%= render "briefing/glass" %>
+
+  <div class="unit-offline" data-unit-target="offline">
+    <section class="unit-last-read" aria-labelledby="last-read">
+      <h2 class="unit-label" id="last-read"><%= t("briefing.unit.last_read") %></h2>
+      <dl class="unit-last" data-unit-target="lastRead" hidden></dl>
+    </section>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-unit-target="connect" data-action="unit#link" data-label="<%= t("briefing.unit.connect") %>"><%= t("briefing.unit.connect") %></button>
+    </div>
+  </div>
+
+  <%= render "briefing/devices/settings" %>
+
+  <%= link_to briefing_device_firmware_path(device_slug: @slug), class: "unit-row", data: { unit_target: "firmwareRow" }, hidden: true do %>
+    <span><%= t("briefing.unit.firmware") %></span>
+    <span class="unit-row-value" data-unit-target="firmware"></span>
+  <% end %>
+
+  <div hidden>
+    <%= render "briefing/shelf" %>
+  </div>
+<% end %>

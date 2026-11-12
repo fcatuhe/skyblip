@@ -1,13 +1,12 @@
 fr:
   firmwares:
-    label: Une image publiée pour cet appareil
+    label: Image publiée
     prompt: Choisissez une image
-    release: Sa version sur GitHub, avec le .uf2
-    slim: Image allégée
-    full: Image complète
-    loading: Chargement des firmwares publiés sur GitHub. Vous pouvez aussi choisir un fichier ci-dessous.
-    unavailable: La liste des versions GitHub est indisponible. Rechargez la page pour réessayer, ou choisissez un fichier de firmware ci-dessous.
-    empty: "Aucun firmware publié n\u2019est disponible. Vous pouvez choisir un fichier ci-dessous."
+    slim: allégée
+    full: complète
+    loading: Chargement des firmwares publiés.
+    unavailable: La liste des firmwares publiés est indisponible. Choisissez plutôt un fichier.
+    empty: "Aucun firmware n\u2019est encore publié. Choisissez plutôt un fichier."
   simulator_builds:
     loading: Chargement du simulateur depuis GitHub.
     unavailable: Le simulateur n'a pas pu être chargé depuis GitHub. Rechargez la page pour réessayer.
@@ -20,12 +19,3 @@ fr:
       key: "Le bouton de l'appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume"
       pad: "Le pavé tactile : une tape change de page, un contact d'une seconde ramène le radar"
       reset: "RST : redémarrer l'appareil"
-  briefing:
-    title: Briefing
-    description: Préparez votre appareil avant le vol.
-    activate: Activer un appareil neuf
-    update: Mettre à jour le firmware de l'appareil
-    configure: Changer les réglages de l'appareil
-    ownship: "Dessiner le symbole de l'appareil, un par type d'aéronef"
-    simulator: Essayer le simulateur et modifier l'appareil simulé
-    console: Ouvrir la console Bluetooth
