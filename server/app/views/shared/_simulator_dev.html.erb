@@ -128,6 +128,7 @@
           <select id="tfc_system">
             <option value="adsl" selected>ADS-L</option>
             <option value="alptas">ALP-TAS</option>
+            <option value="adsb" id="tfc_adsb" hidden>ADS-B, heard by Bravo</option>
           </select>
         </div>
         <div class="ctl dev-space-top"><label for="rng">Range</label>
@@ -139,12 +140,23 @@
           same channels, framed by the one sync window the dwell arms.</div>
       </div>
       <div class="panel" id="phonepanel" hidden>
-        <h2>Phone (FLARM NMEA from skyBlip Bravo)</h2>
+        <h2>skyBlip Bravo: its lamp and a phone's FLARM NMEA</h2>
+        <p class="bravo-lamp">
+          <span class="dev-lamp" id="bravo_lamp" data-lamp="dark" aria-hidden="true"></span>
+          lamp: <b id="bravo_lamp_name">dark</b>
+        </p>
+        <div id="bravo_paired" hidden>
+          <p class="hint">The Go reads Bravo as <b id="bravo_state">-</b>. <span id="bravo_silent"></span></p>
+          <div class="row" id="bravolinkrow">
+            <button id="bravolinkbtn" data-action="click->dev-simulator#control" data-dev-simulator-command-param="toggleBravoLink">Link to the Go: UP</button>
+          </div>
+        </div>
         <div class="tape" id="phone">-</div>
         <div class="hint">Bravo has no screen: a phone EFB reads this stream. Each
           aircraft is a real DF17 squitter on 1090 MHz, heard by the modelled LR2021
           and decoded, assembled and gated by the firmware. ADS-B targets carry
-          Source 1 in <code>$PFLAA</code>. <span id="adsbhint"></span></div>
+          Source 1 in <code>$PFLAA</code>. Paired, Bravo also sends the Go each target
+          over the Bluetooth link, and the Go shows it under <code>B</code>. <span id="adsbhint"></span></div>
       </div>
       <div class="panel" id="bandpanel">
         <h2>868 MHz band (one second)</h2>

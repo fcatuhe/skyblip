@@ -196,6 +196,23 @@ class World : public Sky {
     bool send_config(const char* json);
     void disconnect_companion() { platform_.link().drop_link(); }
 
+    // One altitude, two sensors: the GNSS model integrates climb into its own
+    // altitude and the barometer reads THAT, exactly as both would see the same
+    // air. Setting them apart would show a climb rate no real pair can produce.
+    // The airmass shifts the pressure the sensor sees, as weather does, without
+    // moving the aircraft.
+    template <class Barometer>
+    void feel_air(Barometer& barometer) const {
+        const int32_t altitude_msl_mm = gnss().altitude_mm() - gnss().geoid_separation_m * 1000;
+        barometer.set_pressure_mpa(flight::altitude_mm_to_pressure_mpa(
+            altitude_msl_mm + flight::pressure_to_altitude_mm(airmass_qnh_pa_ * 1000)));
+        barometer.set_temperature_dc(flight::isa_temperature_dc(altitude_msl_mm));
+    }
+    // INFO: fc 14nov26 a Bravo aboard hears this sky's 1090 MHz, and a sky has one such receiver
+    void squitter_to(models::Lr2021& radio) {
+        fly_1090(platform_.clock().microseconds(), datum(), radio);
+    }
+
     int failures() const { return failures_; }
     const char* first_failure() const { return failure_[0] == 0 ? nullptr : failure_; }
     bool finished(uint32_t now_ms) const {

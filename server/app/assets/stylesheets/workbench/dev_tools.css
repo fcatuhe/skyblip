@@ -40,6 +40,7 @@
   --dev-tape-text: #b9c4cf;
   --dev-success: #8fe08f;
   --dev-timestamp: #5d6a77;
+  --dev-lamp-dark: #3a3f45;
 }
 .dev-simulator { --bg:var(--dev-background); --panel:var(--dev-panel); --line:var(--dev-border); --txt:var(--dev-text); --dim:var(--dev-muted); --accent:var(--dev-accent); }
 .dev-simulator { background:var(--bg); color:var(--txt); font:14px/1.45 system-ui,sans-serif;
@@ -107,6 +108,12 @@
 .dev-simulator .legend .tx { color:var(--dev-accent); }
 .dev-simulator .legend .deaf { color:var(--dev-danger); }
 .dev-simulator .legend .coll { color:var(--dev-warning); }
+.dev-simulator .bravo-lamp { display:flex; align-items:center; gap:8px; margin:0 0 8px; font-size:12px; color:var(--dim); }
+.dev-simulator .bravo-lamp b { color:var(--txt); font-weight:600; }
+.dev-simulator .dev-lamp { inline-size:12px; block-size:12px; border-radius:50%; background:var(--dev-lamp-dark); }
+.dev-simulator .dev-lamp[data-lamp="green"] { background:var(--sb-lamp-green); box-shadow:0 0 8px 2px var(--sb-lamp-green-glow); }
+.dev-simulator .dev-lamp[data-lamp="red"] { background:var(--sb-lamp-red); box-shadow:0 0 8px 2px var(--sb-lamp-red-glow); }
+.dev-simulator .dev-lamp[data-lamp="blue"] { background:var(--sb-lamp-blue); box-shadow:0 0 8px 2px var(--sb-lamp-blue-glow); }
 
 
 .dev-console { --bg:var(--dev-background); --panel:var(--dev-panel); --line:var(--dev-border); --txt:var(--dev-text); --dim:var(--dev-muted); --accent:var(--dev-accent);

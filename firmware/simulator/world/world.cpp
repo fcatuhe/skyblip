@@ -28,16 +28,7 @@ void World<Platform>::step(uint32_t now_ms, const bus::State& state) {
         set_origin();
     }
     gnss().tick(now_ms);
-
-    // One altitude, two sensors: the GNSS model integrates climb into its own
-    // altitude and the barometer reads THAT, exactly as both would see the same
-    // air. Setting them apart would show a climb rate no real pair can produce.
-    // The airmass shifts the pressure the sensor sees, as weather does, without
-    // moving the aircraft.
-    const int32_t altitude_msl_mm = gnss().altitude_mm() - gnss().geoid_separation_m * 1000;
-    barometer().set_pressure_mpa(flight::altitude_mm_to_pressure_mpa(
-        altitude_msl_mm + flight::pressure_to_altitude_mm(airmass_qnh_pa_ * 1000)));
-    barometer().set_temperature_dc(flight::isa_temperature_dc(altitude_msl_mm));
+    feel_air(barometer());
 
     update_inertial();
     service_button(now_ms);
@@ -465,6 +456,7 @@ void World<Platform>::apply_events(uint32_t now_ms, const bus::State& state) {
     while (next_event_ < scenario_.events.size() &&
            scenario_.events[next_event_].at_ms <= elapsed_ms) {
         const ScenarioEvent& event = scenario_.events[next_event_++];
+        if (event.on_bravo) continue;
         switch (event.kind) {
             case EventKind::Fix: set_fix(event.value != 0); break;
             case EventKind::Pps: set_pps_locked(event.value != 0); break;
@@ -489,6 +481,7 @@ void World<Platform>::apply_events(uint32_t now_ms, const bus::State& state) {
             case EventKind::ExpectTrafficMinimum:
                 if (state.traffic.count() < event.value) fail("traffic count below expectation");
                 break;
+            case EventKind::BravoLink: break;
         }
     }
 }

@@ -4,10 +4,11 @@
 #include <deque>
 #include <string>
 
-#include "core/events/link.h"
 #include "hardware/platform/host/meshtracker_x1.h"
 #include "products/skyblip_bravo/product.h"
 #include "runtime/tasks.h"
+#include "simulator/lamp_look.h"
+#include "simulator/phone_stream.h"
 #include "simulator/world/world.h"
 
 namespace skyblip::simulator {
@@ -17,7 +18,6 @@ class BravoSimulator {
     using Product = bravo::Product<platform::host::MeshtrackerX1>;
 
     static constexpr uint32_t kStepMs = 5;
-    static constexpr size_t kKeptSentences = 32;
 
     Status setup() {
         const Status started = product_.setup();
@@ -29,8 +29,8 @@ class BravoSimulator {
         platform_.clock().set_milliseconds(now_ms);
         world_.step(now_ms, product_.state());
         product_.run_pass(now_ms);
-        read_phone();
-        if (platform_.indicator().lit()) lit_since_look_ = platform_.indicator().lamp();
+        phone_.read(platform_.link());
+        lamp_.watch();
     }
 
     bool park_refusal(uint32_t now_ms) {
@@ -61,42 +61,19 @@ class BravoSimulator {
     World<platform::host::MeshtrackerX1>& world() { return world_; }
     platform::host::MeshtrackerX1& platform() { return platform_; }
 
-    // INFO: fc 13nov26 the phone's side of the link: the newest sentences Bravo sent, oldest first
-    const std::deque<std::string>& sentences() const { return sentences_; }
-    uint32_t sentences_read() const { return sentences_read_; }
+    const std::deque<std::string>& sentences() const { return phone_.sentences(); }
+    uint32_t sentences_read() const { return phone_.sentences_read(); }
+    const PhoneStream& phone() const { return phone_; }
 
-    // INFO: fc 09nov26 a 30 ms wink can fall between two browser frames, so a look keeps it
-    indication::Lamp lamp_since_last_look() {
-        const indication::Lamp seen = lit_since_look_ != indication::Lamp::None
-                                          ? lit_since_look_
-                                          : platform_.indicator().lamp();
-        lit_since_look_ = indication::Lamp::None;
-        return seen;
-    }
+    indication::Lamp lamp_since_last_look() { return lamp_.since_last_look(); }
 
    private:
-    // INFO: fc 13nov26 drained every step, so a browser left running for hours holds 32 lines
-    void read_phone() {
-        for (const auto& frame : platform_.link().sent)
-            if (frame.endpoint == events::Endpoint::Nmea) stream_ += frame.bytes;
-        platform_.link().clear();
-        for (size_t end = stream_.find("\r\n"); end != std::string::npos;
-             end = stream_.find("\r\n")) {
-            sentences_.push_back(stream_.substr(0, end));
-            stream_.erase(0, end + 2);
-            sentences_read_++;
-            if (sentences_.size() > kKeptSentences) sentences_.pop_front();
-        }
-    }
-
     platform::host::MeshtrackerX1 platform_{};
     Product product_{platform_};
     World<platform::host::MeshtrackerX1> world_{platform_};
     Scenario scenario_{};
-    std::deque<std::string> sentences_{};
-    std::string stream_{};
-    uint32_t sentences_read_{0};
-    indication::Lamp lit_since_look_{indication::Lamp::None};
+    PhoneStream phone_{};
+    LampLook lamp_{platform_.indicator()};
 };
 
 }  // namespace skyblip::simulator
