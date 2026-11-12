@@ -79,11 +79,17 @@ export async function mountSimulator(element, src, manifest, signal) {
   const MODES = ['dev', 'demo', 'training'];
   SIM.applyMode = () => {
     const mode = MODES[f.mode()] || 'dev';
+    // TODO: fc 13nov26 builds before simulator_product fly a Go only, drop the ?. once main exports it
+    const bravo = f.product?.() === 1;
     element.dataset.mode = mode;
+    element.dataset.product = bravo ? 'bravo' : 'go';
     for (const panel of element.querySelectorAll('.panel')) {
       if (panel.id === 'scenariopanel') continue;
       panel.hidden = mode !== 'dev';
     }
+    $('phonepanel').hidden = !bravo;
+    $('device').hidden = bravo;
+    if (bravo) $('bandpanel').hidden = true;
     $('modehint').textContent = mode === 'dev'
       ? 'mode: dev, every control visible'
       : 'mode: ' + mode + ', controls hidden, the scenario is driving';
@@ -209,8 +215,16 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('tape').replaceChildren(...(out.length ? out : ['-']));
   }
 
+  function drawPhone() {
+    const n = f.nmeaCount(), out = [];
+    for (let i = 0; i < n; i++) out.push(f.nmeaLine(i) + '\n');
+    $('phone').textContent = out.length ? out.join('') : '-';
+    $('adsbhint').textContent = f.adsbHeard() + ' squitters heard, ' + f.adsbAircraft() + ' aircraft assembled.';
+  }
+
   function draw() {
     f.advance(Math.min(f.elapsedMs() + 100, performance.now() - startedAt));
+    if (element.dataset.product === 'bravo') drawPhone();
     f.paint(canvas);
     const refresh = f.refreshing() ? (f.refreshIsFull() ? 2 : 1) : 0;
     canvas.className = 'sb-glass ' + (f.powered() ? '' : 'off ') + (f.backlightOn() ? 'bl ' : '') +

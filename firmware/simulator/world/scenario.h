@@ -11,6 +11,8 @@ namespace skyblip::simulator {
 
 enum class Mode : uint8_t { Device, Demo, Training };
 
+enum class Product : uint8_t { Go, Bravo };
+
 enum class EventKind : uint8_t {
     Fix,
     Pps,
@@ -22,12 +24,23 @@ enum class EventKind : uint8_t {
     Speed,
     Track,
     Aircraft,
+    Companion,
     ExpectAlarmMinimum,
     ExpectTrafficMinimum,
 };
 
+struct AdsbOut {
+    bool fitted{false};
+    bool on_ground{false};
+    // INFO: fc 13nov26 its velocity messages carry no GNSS-baro difference
+    bool pressure_only{false};
+    uint8_t category_type_code{4};
+    uint8_t category{0};
+};
+
 struct ScenarioAircraft {
     protocol::System system{protocol::System::AdslDirect};
+    AdsbOut adsb{};
     double north_m{0};
     double east_m{0};
     double up_m{0};
@@ -58,6 +71,7 @@ struct Scenario {
     std::string name;
     std::string callsign{kDefaultCallsign};
     Mode mode{Mode::Device};
+    Product product{Product::Go};
     int32_t latitude_1e7{485000000};
     int32_t longitude_1e7{85000000};
     int32_t altitude_m{1000};

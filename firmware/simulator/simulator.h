@@ -65,7 +65,7 @@ class Simulator {
     const Scenario& scenario() const { return scenario_; }
 
     Product& product() { return product_; }
-    World& world() { return world_; }
+    World<platform::host::Platform>& world() { return world_; }
     platform::host::Platform& platform() { return platform_; }
 
     // What the device made of the phone the world connected: true only once the
@@ -111,7 +111,7 @@ class Simulator {
 
     platform::host::Platform platform_{};
     Product product_{platform_};
-    World world_{platform_};
+    World<platform::host::Platform> world_{platform_};
     Scenario scenario_{};
     indication::Lamp lit_since_look_{indication::Lamp::None};
 };

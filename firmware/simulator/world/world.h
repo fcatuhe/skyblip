@@ -1,14 +1,20 @@
 #ifndef SKYBLIP_SIMULATOR_WORLD_WORLD_H
 #define SKYBLIP_SIMULATOR_WORLD_WORLD_H
 
+#include <cstdio>
+
 #include "core/bus/state.h"
 #include "core/events/link.h"
 #include "core/flight/atmosphere.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
+#include "core/protocol/adsl_uplink.h"
 #include "core/timing/slot.h"
+#include "hardware/parts/gnss_truth.h"
+#include "hardware/platform/host/meshtracker_x1.h"
 #include "hardware/platform/host/platform.h"
+#include "simulator/world/adsb_out.h"
 #include "simulator/world/air.h"
 #include "simulator/world/scenario.h"
 
@@ -22,6 +28,8 @@ struct VirtualAircraft {
     // this device never hears for itself, reaching it only because a skyPost on
     // the ground heard it and relays it on the O band.
     protocol::System system{protocol::System::AdslDirect};
+    // INFO: fc 13nov26 an aircraft with ADS-B Out only has system Unknown, silent on 868
+    AdsbOut adsb{};
     uint32_t address{0};
     // North and east of the world's origin, not of own-ship: two aircraft that
     // both manoeuvre only describe one encounter if they fly over the same
@@ -44,26 +52,23 @@ struct VirtualAircraft {
     char callsign[protocol::AdslPacket::kInformationTextBytes + 1]{0};
 };
 
-// The sky, the air and the ground the firmware flies through. It drives the part
-// models only: virtual aircraft are broadcast as genuine scrambled ADS-L frames
-// and own-ship motion as genuine NMEA, so the production receive and parse paths
-// are what run.
-class World {
+struct AdsbDatum {
+    int32_t own_hae_mm{0};
+    int32_t geoid_separation_mm{0};
+    // INFO: fc 13nov26 what the airmass adds to a height above sea level
+    int32_t pressure_offset_mm{0};
+};
+
+class Sky {
    public:
-    static constexpr int kMaxAircraft = 8;
-    static constexpr int16_t kLevelFlightUpMg = 1000;
+    static constexpr int kMaxAircraft = 32;
 
-    explicit World(platform::host::Platform& platform) : platform_(platform) {}
-
-    void step(uint32_t now_ms, const bus::State& state);
-    void update_inertial();
-
-    void load(const Scenario& scenario);
+    explicit Sky(const models::GnssTruth& own) : own_(own) {}
 
     int add_aircraft(double north_m, double east_m, double up_m, double speed_mps = 30,
                      double track_deg = 270, int phase_ms = -1, int slot = -1,
                      protocol::System system = protocol::System::AdslDirect, double turn_dps = 0,
-                     double climb_mps = 0, uint32_t address = 0);
+                     double climb_mps = 0, uint32_t address = 0, const AdsbOut& adsb = AdsbOut{});
     // INFO: fc 14sep26 a kilometre ahead on our track, reciprocal, sinking through our level
     int add_threat(protocol::System system = protocol::System::AdslDirect) {
         return add_aircraft(0, 1000, 30, 40, 270, -1, -1, system, 0, kThreatSinkMps);
@@ -72,17 +77,84 @@ class World {
     void remove_aircraft(int index);
     void name_aircraft(int index, const char* callsign);
     int aircraft_count() const;
-    // Where the world says the two aircraft actually are, which is not what the
-    // firmware knows: the device only ever has the target's last report.
+    // INFO: fc 03aug26 where the world says an aircraft is, not the last report the firmware holds
     const VirtualAircraft* aircraft_at(int index) const;
     double separation_m(int index) const;
 
     Air& air() { return air_; }
-    models::L76k& gnss() { return platform_.chips().gnss; }
-    const models::L76k& gnss() const { return platform_.chips().gnss; }
-    models::Bme280& barometer() { return platform_.barometer().chip; }
-    models::Bhi260& imu() { return platform_.chips().imu; }
-    platform::host::Platform& platform() { return platform_; }
+    uint32_t adsb_sent() const { return adsb_sent_; }
+    uint32_t adsb_heard() const { return adsb_heard_; }
+
+   protected:
+    void restart() {
+        origin_valid_ = false;
+        squittering_ = false;
+    }
+    void set_origin();
+    void move_aircraft(uint32_t now_ms);
+    void fly_868(uint64_t now_us, const model::Ownship& own, models::Sx1262& radio);
+    void fly_1090(uint64_t now_us, const AdsbDatum& datum, models::Lr2021& radio);
+
+   private:
+    double own_north_m() const;
+    double own_east_m() const;
+    int32_t latitude_1e7_of(const VirtualAircraft& aircraft) const;
+    int32_t longitude_1e7_of(const VirtualAircraft& aircraft) const;
+    void schedule_second(uint64_t epoch_us, const model::Ownship& own);
+    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own);
+    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
+                     double range_m);
+    void relay(uint64_t epoch_us, const model::Ownship& own);
+    model::AircraftObservation as_relayed(const VirtualAircraft& aircraft,
+                                          const model::Ownship& own) const;
+    void squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t to_us,
+                  const AdsbDatum& datum, models::Lr2021& radio);
+    void send(const AdsbFrame& frame, models::Lr2021& radio);
+    static int8_t rssi_at(double range_m);
+
+    static constexpr double kThreatSinkMps = -3;
+    // INFO: fc 05aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
+    static constexpr double kGroundStationRangeM = 12000;
+
+    const models::GnssTruth& own_;
+    Air air_{};
+    protocol::AdslUplink uplink_{};
+    VirtualAircraft aircraft_[kMaxAircraft]{};
+    uint32_t aircraft_moved_ms_{0};
+    int32_t origin_latitude_1e7_{0};
+    int32_t origin_longitude_1e7_{0};
+    bool origin_valid_{false};
+    uint32_t scheduled_second_{0};
+    bool scheduled_{false};
+    uint64_t squittered_until_us_{0};
+    bool squittering_{false};
+    uint32_t adsb_sent_{0};
+    uint32_t adsb_heard_{0};
+};
+
+static_assert(Air::kMaxBursts >= 2 * Sky::kMaxAircraft + 1,
+              "a second's direct bursts, their callsigns and the relay must all fit the air");
+
+// The sky, the air and the ground the firmware flies through. It drives the part
+// models only: virtual aircraft are broadcast as genuine scrambled ADS-L frames
+// and own-ship motion as genuine NMEA, so the production receive and parse paths
+// are what run.
+template <class Platform>
+class World : public Sky {
+   public:
+    static constexpr int16_t kLevelFlightUpMg = 1000;
+
+    explicit World(Platform& platform) : Sky(gnss_of(platform)), platform_(platform) {}
+
+    void step(uint32_t now_ms, const bus::State& state);
+    void update_inertial();
+
+    void load(const Scenario& scenario);
+
+    auto& gnss() { return gnss_of(platform_); }
+    const auto& gnss() const { return gnss_of(platform_); }
+    auto& barometer() { return barometer_of(platform_); }
+    Platform& platform() { return platform_; }
 
     void set_fix(bool on) { gnss().fix_valid = on; }
     void set_satellites(int satellites) {
@@ -128,51 +200,67 @@ class World {
     }
 
    private:
+    static models::L76k& gnss_of(platform::host::Platform& go) { return go.chips().gnss; }
+    static models::Ag3335& gnss_of(platform::host::MeshtrackerX1& bravo) { return bravo.gnss(); }
+    static models::Bme280& barometer_of(platform::host::Platform& go) {
+        return go.barometer().chip;
+    }
+    static models::Spa06& barometer_of(platform::host::MeshtrackerX1& bravo) {
+        return bravo.barometer();
+    }
+    static void fit_barometer(platform::host::Platform& go, bool on) { go.barometer().fitted = on; }
+    static void fit_barometer(platform::host::MeshtrackerX1& bravo, bool on) {
+        bravo.barometer().answers = on;
+    }
+    static void set_button_down(platform::host::Platform& go, bool down) {
+        go.board_gpio().button_down = down;
+    }
+    static void set_button_down(platform::host::MeshtrackerX1& bravo, bool down) {
+        bravo.set_button_down(down);
+    }
+    static void set_pad_down(platform::host::Platform& go, bool down) {
+        go.board_gpio().pad_down = down;
+    }
+    // INFO: fc 13nov26 an X1 has no touch pad and no inertial unit
+    static void set_pad_down(platform::host::MeshtrackerX1&, bool) {}
+    static void lean(platform::host::Platform& go, int16_t up_mg, int16_t lateral_mg) {
+        go.chips().imu.set_acceleration(up_mg, lateral_mg, 0);
+    }
+    static void lean(platform::host::MeshtrackerX1&, int16_t, int16_t) {}
+    void listen(uint64_t now_us, const bus::State& state, platform::host::Platform& go) {
+        fly_868(now_us, state.own, go.chips().radio);
+    }
+    void listen(uint64_t now_us, const bus::State&, platform::host::MeshtrackerX1& bravo) {
+        fly_1090(now_us, datum(), bravo.radio());
+    }
+
+    AdsbDatum datum() const {
+        AdsbDatum datum;
+        datum.own_hae_mm = gnss().altitude_mm();
+        datum.geoid_separation_mm = gnss().geoid_separation_m * 1000;
+        datum.pressure_offset_mm = flight::pressure_to_altitude_mm(airmass_qnh_pa_ * 1000);
+        return datum;
+    }
     void service_button(uint32_t now_ms);
     void service_pad(uint32_t now_ms);
-    void set_origin();
-    double own_north_m() const;
-    double own_east_m() const;
-    void service_aircraft(uint32_t now_ms, const model::Ownship& own);
-    void schedule_second(uint64_t epoch_us, const model::Ownship& own);
-    void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own);
-    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
-                     double range_m);
-    void relay(uint64_t epoch_us, const model::Ownship& own);
-    model::AircraftObservation as_relayed(const VirtualAircraft& aircraft,
-                                          const model::Ownship& own) const;
-    static int8_t rssi_at(double range_m);
     void apply_events(uint32_t now_ms, const bus::State& state);
-    void fail(const char* what);
+    void fail(const char* what) {
+        failures_++;
+        if (failure_[0] == 0) std::snprintf(failure_, sizeof(failure_), "%s", what);
+    }
 
     // A modelled press has to last longer than the board's debounce window or
     // the firmware is right to ignore it.
     static constexpr uint32_t kPressMs = 60;
-    static constexpr double kThreatSinkMps = -3;
 
-    // Where the ground station is, so a relayed burst arrives at a level a
-    // receiver can plausibly hear. A skyPost is a fixed site with a mast and
-    // 500 mW e.r.p. (§C.4), not another glider, so it is placed far enough away
-    // to be background and loud enough to be heard.
-    static constexpr double kGroundStationRangeM = 12000;
-
-    platform::host::Platform& platform_;
-    Air air_{};
-    protocol::AdslUplink uplink_{};
-    VirtualAircraft aircraft_[kMaxAircraft]{};
+    Platform& platform_;
     Scenario scenario_{};
     size_t next_event_{0};
     uint32_t start_ms_{0};
-    uint32_t aircraft_moved_ms_{0};
     uint32_t airmass_qnh_pa_{flight::kIsaSeaLevelPa};
     int32_t slip_mg_{0};
     uint32_t press_since_ms_{0};
     uint32_t tap_since_ms_{0};
-    int32_t origin_latitude_1e7_{0};
-    int32_t origin_longitude_1e7_{0};
-    bool origin_valid_{false};
-    uint32_t scheduled_second_{0};
-    bool scheduled_{false};
     int failures_{0};
     bool started_{false};
     bool press_pending_{false};

@@ -6,7 +6,7 @@
     <%= link_to "Bluetooth console", briefing_console_path, data: { turbo_frame: "_top" } %></span></h1>
 
   <div class="layout">
-    <div class="device">
+    <div class="device" id="device">
       <div class="sb-case">
         <canvas role="img" aria-label="Firmware display" id="epd" class="sb-glass" width="200" height="200"></canvas>
         <button class="sb-pad" aria-label="capacitive pad on the top edge, P0.11: tap it to page through radar, nearby and the six-pack or to walk the rows of a menu, touch it 1 s to come back to the radar, or to take a ghosted radar through black when you are already on it, or hold it through a 2 s press to switch off with a blank panel" title="capacitive pad on the top edge, P0.11: tap it to page through radar, nearby and the six-pack or to walk the rows of a menu, touch it 1 s to come back to the radar, or to take a ghosted radar through black when you are already on it, or hold it through a 2 s press to switch off with a blank panel"
@@ -138,7 +138,15 @@
           encrypted the way the 2024 protocol does. Both are Manchester bursts on the
           same channels, framed by the one sync window the dwell arms.</div>
       </div>
-      <div class="panel">
+      <div class="panel" id="phonepanel" hidden>
+        <h2>Phone (FLARM NMEA from skyBlip Bravo)</h2>
+        <div class="tape" id="phone">-</div>
+        <div class="hint">Bravo has no screen: a phone EFB reads this stream. Each
+          aircraft is a real DF17 squitter on 1090 MHz, heard by the modelled LR2021
+          and decoded, assembled and gated by the firmware. ADS-B targets carry
+          Source 1 in <code>$PFLAA</code>. <span id="adsbhint"></span></div>
+      </div>
+      <div class="panel" id="bandpanel">
         <h2>868 MHz band (one second)</h2>
         <canvas role="img" aria-label="Radio traffic across the 868 MHz band" id="band" width="1000" height="96"></canvas>
         <div class="legend">

@@ -25,19 +25,6 @@ constexpr auto kParitySyndromes = fec::syndromes<kFrameBits>([](uint16_t bit) {
 constexpr char kCallsignCharacters[] =
     "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
 
-struct MovementBand {
-    uint8_t first_code;
-    int32_t floor_mkt;
-    int32_t step_mkt;
-};
-
-// INFO: fc 10nov26 Doc 9871 A.2.3.3.1: codes 125 to 127 are reserved, 124 is 175 kt or more
-constexpr MovementBand kMovementBands[] = {
-    {1, 0, 0},         {2, 125, 125},     {9, 1000, 250},      {13, 2000, 500},
-    {39, 15000, 1000}, {94, 70000, 2000}, {109, 100000, 5000}, {124, 175000, 0},
-};
-constexpr uint8_t kMovementSaturatedCode = 124;
-
 // INFO: fc 10nov26 DO-260A Appendix A draft, Figure A-6: a vertical rate step is 64 ft/min
 constexpr int32_t kClimbStepFpm = 64;
 constexpr int32_t kHeightDifferenceStepFt = 25;
@@ -144,12 +131,12 @@ AdsbIdentification identification_of(const uint8_t* frame, uint8_t type_code) {
 
 AdsbQuantity movement_speed_of(uint32_t code) {
     AdsbQuantity speed;
-    if (code == 0 || code > kMovementSaturatedCode) return speed;
-    const MovementBand* band = kMovementBands;
-    for (const MovementBand& candidate : kMovementBands)
+    if (code == 0 || code > kAdsbMovementSaturatedCode) return speed;
+    const AdsbMovementBand* band = kAdsbMovementBands;
+    for (const AdsbMovementBand& candidate : kAdsbMovementBands)
         if (candidate.first_code <= code) band = &candidate;
     speed.valid = true;
-    speed.saturated = code == kMovementSaturatedCode;
+    speed.saturated = code == kAdsbMovementSaturatedCode;
     speed.value = band->floor_mkt + static_cast<int32_t>(code - band->first_code) * band->step_mkt;
     return speed;
 }

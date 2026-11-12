@@ -14,6 +14,19 @@ constexpr uint8_t kAdsbSyncChips = 0x95;
 constexpr uint8_t kAdsbChipBytes = 2 * kAdsbFrameBytes - 1;
 constexpr uint8_t kAdsbCallsignCharacters = 8;
 
+struct AdsbMovementBand {
+    uint8_t first_code;
+    int32_t floor_mkt;
+    int32_t step_mkt;
+};
+
+// INFO: fc 10nov26 Doc 9871 A.2.3.3.1: codes 125 to 127 are reserved, 124 is 175 kt or more
+inline constexpr AdsbMovementBand kAdsbMovementBands[] = {
+    {1, 0, 0},         {2, 125, 125},     {9, 1000, 250},      {13, 2000, 500},
+    {39, 15000, 1000}, {94, 70000, 2000}, {109, 100000, 5000}, {124, 175000, 0},
+};
+constexpr uint8_t kAdsbMovementSaturatedCode = 124;
+
 struct AdsbReception {
     uint64_t at_us{0};
     int8_t rssi_dbm{0};

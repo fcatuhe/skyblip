@@ -56,7 +56,7 @@ class Air {
     // in the receiver's passband and the exact PLL word does not matter.
     static constexpr uint32_t kChannelToleranceHz = 100000;
     static constexpr int8_t kSensitivityDbm = -115;
-    static constexpr int kMaxBursts = 16;
+    static constexpr int kMaxBursts = 65;
     static constexpr int kMaxRecords = 96;
 
     static bool tuned_to(uint32_t radio_hz, uint32_t burst_hz) {
