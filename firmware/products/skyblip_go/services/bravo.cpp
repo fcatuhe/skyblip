@@ -90,6 +90,7 @@ void BravoService::unpair() {
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;
+    utc_heard_ = false;
     own_icao_warning_.unpaired();
     if (farewell) {
         leaving_ = true;
@@ -198,6 +199,7 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     link_ = BravoLink::Up;
     own_icao_warning_.paired(health.value().own_icao_set);
     health_ = health.value();
+    if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;
     health_heard_ms_ = now_ms;
 }
@@ -207,8 +209,8 @@ comms::BravoState BravoService::state_now() const {
     if (!paired(settings_)) return comms::BravoState::Unpaired;
     if (health_heard_) {
         if (!health_.listening) return comms::BravoState::ReceiverDown;
-        if (!health_.utc_valid) return comms::BravoState::NoUtc;
-        return comms::BravoState::Live;
+        if (health_.utc_valid) return comms::BravoState::Live;
+        return utc_heard_ ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
     }
     return settled_ ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
 }
@@ -231,6 +233,7 @@ void BravoService::forget() {
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;
+    utc_heard_ = false;
     own_icao_warning_.unpaired();
     forgotten_ = true;
     central_.disconnect();

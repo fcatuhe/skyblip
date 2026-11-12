@@ -258,7 +258,7 @@
         "receiver_down",
         "no_utc"
       ],
-      "description": "bravo. What the Go made of its Bravo's health, byte 2, written on the fix the Bravo was lost and on the fix it came back: link_down, receiver_down or no_utc when lost, the glass's BRAVO LOST, and live, or unpaired after an unpair, when it came back. Codes: 0 unpaired, 1 waiting, 2 live, 3 link_down, 4 receiver_down, 5 no_utc, the link registry's bravo enum (schemas/link.v1.json)."
+      "description": "bravo. What the Go made of its Bravo's health, byte 2, written on the fix the Bravo was lost and on the fix it came back: link_down, receiver_down or no_utc when lost, the glass's BRAVO LOST, and live, unpaired after an unpair, or waiting when it came back. It comes back waiting only when the Bravo has not sent UTC since the Go booted or paired. Codes: 0 unpaired, 1 waiting, 2 live, 3 link_down, 4 receiver_down, 5 no_utc, the link registry's bravo enum (schemas/link.v1.json)."
     },
     "heard_s": {
       "type": "integer",

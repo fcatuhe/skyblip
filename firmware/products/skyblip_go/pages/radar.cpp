@@ -203,6 +203,14 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     if (const char* loss = bravo_loss_word(snapshot.bravo)) {
         words[count++] = "BRAVO LOST";
         if (count == 1) words[count++] = loss;
+    } else if (snapshot.bravo == comms::BravoState::Waiting) {
+        // INFO: fc 12nov26 BRAVO WAITING overruns the ALL ring at banner height, so a banner splits
+        if (count == 0) {
+            words[count++] = "BRAVO";
+            words[count++] = "WAITING";
+        } else {
+            words[count++] = "BRAVO WAITING";
+        }
     }
     if (snapshot.fix_valid) {
         if (const char* state = state_word(snapshot)) words[count++] = state;

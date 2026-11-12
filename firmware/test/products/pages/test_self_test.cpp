@@ -330,8 +330,8 @@ TEST_CASE("self-test page: a paired Go lists its Bravo by tag under the bus, and
     }
 }
 
-// One row for both: a loss is what a bench needs first, the own-ICAO warning next, LIVE last.
-TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless the Bravo is lost") {
+// One row for both: a loss or a wait comes first, the own-ICAO warning next, LIVE last.
+TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless it is lost or waiting") {
     const SelfTestPart parts[kSelfTestRows - 2] = {};
     SelfTestSnapshot snapshot = page(parts, kSelfTestRows - 2, /*flyable=*/true);
     const uint8_t found[] = {0x76};
@@ -353,4 +353,10 @@ TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless the B
     draw_self_test(lost, snapshot);
     CHECK(reads_at(lost, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
     CHECK(row_reads(lost, last, "NO UTC"));
+
+    snapshot.bravo = skyblip::comms::BravoState::Waiting;
+    Glass waiting;
+    draw_self_test(waiting, snapshot);
+    CHECK(reads_at(waiting, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
+    CHECK(row_reads(waiting, last, "WAITING"));
 }
