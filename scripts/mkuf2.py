@@ -60,7 +60,7 @@ class Window(NamedTuple):
 
 WINDOWS = {
     "t_echo_plus": Window(0x00026000, 0x000EA000, 0x000F4000, "S140 6.1.1"),
-    # TODO: fc 11nov26 Meshtastic's S140 7.3.0 and nRF52_Bootloader 2.6.0 window, unverified until #169 reads INFO_UF2.TXT
+    # INFO: fc 12nov26 the X1's factory files confirm 0x27000 and 0xEA000, 0xF4000 is from source only: meshtracker_x1/factory/README.md
     "meshtracker_x1": Window(0x00027000, 0x000EA000, 0x000F4000, "S140 7.3.0"),
 }
 

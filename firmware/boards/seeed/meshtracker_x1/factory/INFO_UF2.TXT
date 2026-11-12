@@ -1,0 +1,5 @@
+UF2 Bootloader 0.10.0-18-gb93789f
+Model: Seeed MeshTracker-X1
+Board-ID: nRF52840-MeshTracker-X1-v1
+Date: Aug 12 2026
+SoftDevice: S140 7.3.0

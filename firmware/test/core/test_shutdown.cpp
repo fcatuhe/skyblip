@@ -365,9 +365,13 @@ TEST_CASE("power down: every part is told before the rail drops, and the wake pi
     CHECK(sink.at(PowerDownStep::WakePinArmed) == kPowerDownStepCount - 1);
 }
 
-// The bootloader's DFU button is ours: a press waking on any other byte lands in USB DFU.
-TEST_CASE("power down: every switch-off asks the factory bootloader to skip DFU") {
-    CHECK(boot_magic_for_system_off(/*recovery_armed=*/false) == 0x6d);
-    // Recovery is the one switch-off that asks for the UF2 drive instead.
-    CHECK(boot_magic_for_system_off(/*recovery_armed=*/true) == 0x57);
+// A bootloader that enters DFU on a press needs the skip, and one that waits for a hold does not.
+TEST_CASE("power down: a switch-off asks the bootloader to skip DFU only where a press enters it") {
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/false) == 0x6d);
+    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/false) == 0x00);
+}
+
+TEST_CASE("power down: a recovery asks every factory bootloader for the UF2 drive") {
+    CHECK(boot_magic_for_system_off(DfuButton::PressEntersDfu, /*recovery_armed=*/true) == 0x57);
+    CHECK(boot_magic_for_system_off(DfuButton::HoldEntersDfu, /*recovery_armed=*/true) == 0x57);
 }

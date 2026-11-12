@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+#include "core/power/shutdown.h"
+
 #ifdef CONFIG_BOARD_MESHTRACKER_X1
 #include <zephyr/devicetree.h>
 #endif
@@ -21,6 +23,9 @@ constexpr int kHapticEnable = pin_number(1, 5);
 
 // TODO: fc 12nov26 the T-Echo's debounce, kept until #169 scopes the X1's button bounce
 constexpr uint32_t kButtonHoldMs = 30;
+
+// INFO: fc 12nov26 the factory bootloader enters UF2 only after a 3 s hold: factory/README.md
+constexpr power::DfuButton kFactoryDfuButton = power::DfuButton::HoldEntersDfu;
 
 #ifdef CONFIG_BOARD_MESHTRACKER_X1
 #define SKYBLIP_DEVICETREE_PIN(node_id) \

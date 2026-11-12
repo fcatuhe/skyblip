@@ -14,6 +14,7 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
+#include "boards/lilygo/t_echo_plus/pins.h"
 #include "core/power/shutdown.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "hardware/platform/zephyr/dfu.h"
@@ -108,7 +109,8 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
     // of it, and which step happens when is decided and tested on the host.
     void system_off() override {
         // INFO: fc 05oct26 first, as it outlives the rails; no retention area, no recovery either
-        (void)write_boot_magic(Dfu::boot_magic_for_system_off());
+        (void)write_boot_magic(
+            Dfu::boot_magic_for_system_off(boards::t_echo_plus::kFactoryDfuButton));
         power::power_down(*this);
         // AFTER the walk above, not before: every step of it reconfigures pins,
         // and the last one arms a level-sensed wake. A DETECT that was latched
