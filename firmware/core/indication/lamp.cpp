@@ -2,6 +2,20 @@
 
 namespace skyblip::indication {
 
+namespace {
+
+bool lit_at(const Indication& indication, uint32_t into_cycle_ms) {
+    const uint32_t stride = static_cast<uint32_t>(indication.on_ms) + indication.between_ms;
+    for (uint32_t flash = 0; flash < indication.flashes; flash++) {
+        const uint32_t starts_ms = flash * stride;
+        if (into_cycle_ms >= starts_ms && into_cycle_ms < starts_ms + indication.on_ms)
+            return true;
+    }
+    return false;
+}
+
+}  // namespace
+
 const Indication& indication_for(Condition condition) {
     for (int i = 0; i < kRowCount; i++)
         if (kTable[i].condition == condition) return kTable[i].indication;
@@ -68,50 +82,40 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
     if (wanted != condition_ || !started_) {
         condition_ = wanted;
         started_ = true;
-        phase_ms_ = now_ms;
-        flash_ = 0;
         // A condition that has just changed shows itself immediately: the flash a
         // pilot is owed is the one that follows the event, not the one that
         // follows the rest of the previous cycle.
-        lit_ = indication_for(condition_).lamp != indication::Lamp::None;
-    } else {
-        advance(now_ms);
+        cycle_start_ms_ = now_ms;
+        on_grid_ = false;
     }
 
+    const Indication& indication = indication_for(condition_);
+    const bool lit = indication.lamp != indication::Lamp::None && indication.on_ms != 0 &&
+                     lit_at(indication, into_cycle_ms(situation, indication, now_ms));
+
     Command command{};
-    command.lamp = lit_ ? indication_for(condition_).lamp : indication::Lamp::None;
+    command.lamp = lit ? indication.lamp : indication::Lamp::None;
     command.changed = command.lamp != shown_;
     shown_ = command.lamp;
     return command;
 }
 
-void Policy::advance(uint32_t now_ms) {
-    const Indication& indication = indication_for(condition_);
-    if (indication.lamp == indication::Lamp::None || indication.on_ms == 0) {
-        lit_ = false;
-        return;
-    }
-    // Unsigned subtraction throughout, so the 49.7-day wrap of the millisecond
-    // counter costs at most one restarted flash rather than a lamp stuck in the
-    // phase it was in when the counter turned over.
+// INFO: fc 12nov26 the grid is joined only where both phases are dark, so no flash is cut short
+uint32_t Policy::into_cycle_ms(const Situation& situation, const Indication& indication,
+                               uint32_t now_ms) {
     const uint32_t cycle = cycle_ms(indication);
-    const uint32_t elapsed = now_ms - phase_ms_;
-    // A pass that arrives a whole cycle or more late restarts the flash instead of
-    // unwinding the phases it missed: nobody saw them, and replaying them would
-    // spend the loop catching up with a blink.
-    if (elapsed >= cycle) {
-        phase_ms_ = now_ms;
-        flash_ = 0;
-        lit_ = true;
-        return;
+    if (cycle == 0) return 0;
+    uint32_t into = (now_ms - cycle_start_ms_) % cycle;
+    if (!situation.utc_locked) {
+        on_grid_ = false;
+    } else {
+        const uint32_t on_grid = static_cast<uint32_t>(situation.utc_ms % cycle);
+        if (!on_grid_ && !lit_at(indication, into) && !lit_at(indication, on_grid))
+            on_grid_ = true;
+        if (on_grid_) into = on_grid;
     }
-    const bool another_flash = flash_ + 1 < indication.flashes;
-    const uint16_t dark_ms = another_flash ? indication.between_ms : indication.off_ms;
-    const uint16_t phase_ms = lit_ ? indication.on_ms : dark_ms;
-    if (elapsed < phase_ms) return;
-    phase_ms_ += phase_ms;
-    if (!lit_) flash_ = another_flash ? flash_ + 1 : 0;
-    lit_ = !lit_;
+    cycle_start_ms_ = now_ms - into;
+    return into;
 }
 
 }  // namespace skyblip::indication

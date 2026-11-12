@@ -141,6 +141,9 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.pairing = lamp_shows_link_ && context_.state.link.pairing_standing;
     situation.linked = lamp_shows_link_ && context_.state.link.phone_connected;
     situation.capturing = lamp_shows_link_ && context_.state.capture.armed;
+    const timing::ClockState& clock = context_.state.clock;
+    situation.utc_locked = clock.pps_locked && clock.utc_s != 0 && clock.since_edge_ms < 1000;
+    situation.utc_ms = static_cast<uint64_t>(clock.utc_s) * 1000u + clock.since_edge_ms;
 
     const indication::Command command = indication_.update(situation, now_ms);
     if (command.changed) context_.roles.indicator.show(command.lamp);

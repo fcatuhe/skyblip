@@ -292,6 +292,81 @@ TEST_CASE("indication: a change shows itself at once, not at the end of the cycl
     CHECK(lamp.shown == indication::Lamp::Red);
 }
 
+// A Go and its Bravo side by side in one cockpit used to wink at whatever offset their last change left.
+TEST_CASE("indication: two units locked to UTC wink together, whenever each condition began") {
+    constexpr uint64_t kUtcAtZeroMs = 1700000000000ull + 1234;
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
+    situation.utc_locked = true;
+
+    LampRig early;
+    LampRig late;
+    int together = 0;
+    for (uint32_t now_ms = 0; now_ms <= 30000; now_ms += kStepMs) {
+        situation.utc_ms = kUtcAtZeroMs + now_ms;
+        early.step(situation, now_ms);
+        if (now_ms >= 1700) late.step(situation, now_ms);
+        if (now_ms < 10000) continue;
+        CHECK(early.shown == late.shown);
+        if (early.shown != indication::Lamp::None) together++;
+    }
+    CHECK(early.policy.on_utc_grid());
+    CHECK(late.policy.on_utc_grid());
+    // Seven winks in the last twenty seconds, each 30 ms, three passes apiece.
+    CHECK(together == 7 * 3);
+}
+
+TEST_CASE("indication: the grid takes over after the change's own flash, and cuts no flash short") {
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
+    situation.utc_locked = true;
+    // The grid's wink is 1500 ms away when the condition begins.
+    constexpr uint64_t kGridHalfwayMs = 1699999999500ull;
+
+    LampRig lamp;
+    uint32_t lit_run_ms = 0;
+    bool cut_short = false;
+    for (uint32_t now_ms = 0; now_ms <= 10000; now_ms += kStepMs) {
+        situation.utc_ms = kGridHalfwayMs + now_ms;
+        lamp.step(situation, now_ms);
+        if (now_ms == 0) CHECK(lamp.shown == indication::Lamp::Green);
+        if (lamp.shown != indication::Lamp::None) {
+            lit_run_ms += kStepMs;
+        } else {
+            cut_short = cut_short || (lit_run_ms != 0 && lit_run_ms != 30);
+            lit_run_ms = 0;
+        }
+    }
+    CHECK_FALSE(cut_short);
+    CHECK(lamp.policy.on_utc_grid());
+    // The change's flash at 0, then the grid's at 1500, 4500, 7500.
+    CHECK(lamp.flashes == 4);
+}
+
+TEST_CASE("indication: a lost PPS lock keeps the rhythm it was winking on") {
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.fix_valid = true;
+    situation.utc_locked = true;
+    constexpr uint64_t kGridHalfwayMs = 1699999999500ull;
+
+    LampRig lamp;
+    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += kStepMs) {
+        situation.utc_ms = kGridHalfwayMs + now_ms;
+        lamp.step(situation, now_ms);
+    }
+    REQUIRE(lamp.policy.on_utc_grid());
+
+    situation.utc_locked = false;
+    lamp.run(situation, 5010, 7490);
+    CHECK(lamp.shown == indication::Lamp::None);
+    CHECK_FALSE(lamp.policy.on_utc_grid());
+    lamp.step(situation, 7500);
+    CHECK(lamp.shown == indication::Lamp::Green);
+}
+
 TEST_CASE("indication: the lamp is told only when the answer changes") {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;

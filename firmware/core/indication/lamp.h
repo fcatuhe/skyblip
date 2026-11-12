@@ -222,6 +222,9 @@ struct Situation {
     bool pairing{false};
     bool linked{false};
     bool capturing{false};
+    // INFO: fc 12nov26 PPS-locked UTC, so every unit in a cockpit winks on the same grid
+    bool utc_locked{false};
+    uint64_t utc_ms{0};
 };
 
 constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;
@@ -244,15 +247,16 @@ class Policy {
     Condition condition() const { return condition_; }
     // What is lit right now, gaps included: None during the off phase of a wink.
     indication::Lamp lamp() const { return shown_; }
+    bool on_utc_grid() const { return on_grid_; }
 
    private:
-    void advance(uint32_t now_ms);
+    uint32_t into_cycle_ms(const Situation& situation, const Indication& indication,
+                           uint32_t now_ms);
 
     Condition condition_{Condition::Off};
     indication::Lamp shown_{indication::Lamp::None};
-    uint32_t phase_ms_{0};
-    uint8_t flash_{0};
-    bool lit_{false};
+    uint32_t cycle_start_ms_{0};
+    bool on_grid_{false};
     bool started_{false};
 };
 
