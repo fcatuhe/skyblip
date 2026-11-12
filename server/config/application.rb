@@ -45,6 +45,14 @@ module Skyblip
     config.x.theme_color = "#F4F1EA"
     config.x.seeed.promo_code = "5GO3A5DD"
 
+    # The France OACI 1:500 000 chart under /briefing/comparison, free for professional and non-profit use under IGN's terms.
+    config.x.oaci_chart.tiles = "https://data.geopf.fr/private/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0" \
+      "&LAYER=GEOGRAPHICALGRIDSYSTEMS.MAPS.SCAN-OACI&STYLE=normal&TILEMATRIXSET=PM" \
+      "&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg&apikey=ign_scan_ws"
+    config.x.oaci_chart.attribution = "© IGN / SIA, carte OACI-VFR"
+    config.x.oaci_chart.centre = { latitude: 44.8283, longitude: -0.7156 }
+    config.x.oaci_chart.radius_km = 100
+
     config.i18n.available_locales = %i[ en fr ]
     config.i18n.default_locale = :en
 

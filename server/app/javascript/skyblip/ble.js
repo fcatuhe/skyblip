@@ -1,4 +1,5 @@
 import { decodeFrame, encodeFrame } from '#skyblip/link';
+import { nmeaChecksum, nmeaLines } from '#skyblip/nmea';
 
 export const UUID = {
   nus: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
@@ -17,13 +18,6 @@ export const UUID = {
 export const GATT_WRITE_BYTES = 20;
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-
-export function nmeaChecksum(body) {
-  let sum = 0;
-  for (const ch of encoder.encode(body)) sum ^= ch;
-  return sum.toString(16).toUpperCase().padStart(2, '0');
-}
 
 export function nmeaSentence(text) {
   const line = text.trim();
@@ -69,13 +63,8 @@ function bytesOf(event) {
 }
 
 export function reassembleLines(onLine) {
-  let held = '';
-  return event => {
-    held += decoder.decode(event.target.value);
-    const lines = held.split(/\r?\n/);
-    held = lines.pop();
-    for (const line of lines) if (line) onLine(line);
-  };
+  const feed = nmeaLines(onLine);
+  return event => feed(bytesOf(event));
 }
 
 async function openStream(server, onLine) {
