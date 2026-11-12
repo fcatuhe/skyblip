@@ -1,7 +1,6 @@
-<form class="unit-settings" data-unit-target="capture" data-action="submit->unit#armCapture" aria-labelledby="unit-capture-title" hidden>
+<form class="unit-capture" data-unit-target="capture" data-action="submit->unit#armCapture" aria-labelledby="unit-capture-title" hidden>
   <h2 class="unit-label" id="unit-capture-title"><%= t("briefing.capture.title") %></h2>
   <fieldset class="unit-fields" data-unit-target="captureFields">
-    <legend class="visually-hidden"><%= t("briefing.capture.title") %></legend>
     <div class="field">
       <label for="unit-capture-profile"><%= t("briefing.capture.profile") %></label>
       <select id="unit-capture-profile" name="profile" data-unit-target="captureProfile" aria-describedby="unit-capture-hint">

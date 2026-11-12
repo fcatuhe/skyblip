@@ -146,6 +146,24 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo in flight locks its capture too, and offers no stop" do
+    in_range a_bravo
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_select "Profile"
+      page.execute_script("#{unit("3F2A")}.takeOff()")
+      assert_selector ".unit-facts", text: "Airborne"
+      within("[data-unit-target=capture]") do
+        assert_button "Locked in flight", disabled: true
+        assert_no_button "Stop the capture"
+      end
+
+      page.execute_script("#{unit("3F2A")}.land()")
+      within("[data-unit-target=capture]") { assert_button "Arm", disabled: false }
+    end
+  end
+
   test "a Bravo asks with its lamp, since it has no glass, and is never said to need activation" do
     in_range a_bravo
     on_the_shelf do
@@ -166,16 +184,16 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go, a_bravo
     on_the_shelf do
       connect_go
-      assert_no_select "Capture"
+      assert_no_select "Profile"
 
       page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
       within(".fleet--rail") { click_button "Connect a device" }
       assert_current_path "/briefing/devices/bravo-3f2a"
-      select "Power run: power and duty", from: "Capture"
+      select "Power run", from: "Profile"
       click_button "Arm"
       assert_selector ".glass-lamp", text: "The lamp blinks green fast."
       assert_selector ".glass-press", text: "Press the Bravo's button twice."
-      assert_no_select "Capture"
+      assert_no_select "Profile"
       assert_equal "power_run", page.evaluate_script("#{unit("3F2A")}.capture")
 
       page.execute_script("#{unit("3F2A")}.press()")

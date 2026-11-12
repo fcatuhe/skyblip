@@ -50,12 +50,12 @@ en:
       reset: Back to defaults
     capture:
       title: Diagnostics capture
-      profile: Capture
+      profile: Profile
       profile_names:
-        full: "Full: every subject"
-        power_run: "Power run: power and duty"
-        flight_run: "Flight run: power and duty, flight clock running"
-      hint: It records what Bravo hears and decides, for us to read with you after a flight.
+        full: Full
+        power_run: Power run
+        flight_run: Flight run
+      hint: "Full records every subject. Power run records power and duty, and Flight run does too with its flight clock running. We read it with you after a flight."
       arm: Arm
       stop: Stop the capture
     firmware:

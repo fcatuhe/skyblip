@@ -280,7 +280,7 @@ export default class extends Controller {
   #capture(unit, state) {
     const linked = unit?.linked ?? false
     this.captureTarget.hidden = !linked || unit.product !== "skyblip_bravo" || this.#prompting(state)
-    const notice = state?.notice?.during === "capture" && !this.#refusedHere(state) ? sayNotice(state.notice, ...CAPTURE_NOTICES) : ""
+    const notice = state?.notice?.during === "capture" && !this.#refusedHere(state) && !LINK_NOTICES.has(state.notice.key) ? sayNotice(state.notice, ...CAPTURE_NOTICES) : ""
     this.captureMessageTarget.hidden = !notice
     this.captureMessageTarget.textContent = notice
     this.captureMessageTarget.classList.toggle("is-good", CAPTURE_DONE.has(state?.notice?.key))
