@@ -216,7 +216,7 @@ The track says where the flight went. `LogEvents` says what was around it and wh
 | status | the first second of the session, every `kLogStatusPeriodMs` after it, and whenever the cell changes level | cell voltage, percent, power level, charge condition, aircraft heard now and the most heard at once since the last one |
 | alarm | a contact's alarm level changes, either way | the contact and its geometry at that second |
 | encounter | a contact leaves the table, another aircraft takes its slot, or the flight ends | the contact at its closest pass, dated at that pass, with the highest level it reached and how long it was heard |
-| bravo | a paired Go's Bravo is lost, including on the first second of the session, and when it is no longer lost | the state, a reason when lost (`../comms/README.md`, What the Go makes of its Bravo) and `live` or `unpaired` when back |
+| bravo | a paired Go's Bravo is lost, including on the first second of the session, and when it is no longer lost | the state, a reason when lost (`../comms/README.md`, What the Go makes of its Bravo) and `live` or `unpaired` when back, or `waiting` when back from a Bravo that has not sent UTC since the Go booted or paired |
 
 A status a minute is one record in sixty of the track's. An alarm and an encounter cost one record each, so a busy sky costs what it has in it rather than a record per target per second, which at ten targets would have filled the partition in under two hours.
 

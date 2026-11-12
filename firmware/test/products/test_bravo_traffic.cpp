@@ -166,6 +166,68 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are BRAVO LOST
                    go::kGlassHeight));
 }
 
+TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is BRAVO LOST, with one tone") {
+    Flight flight;
+    flight.fly(3);
+    REQUIRE(flight.state().bravo == comms::BravoState::Live);
+    flight.tones.clear();
+    flight.tango.bravo.health.utc_valid = false;
+    flight.fly(2);
+    CHECK(flight.state().bravo == comms::BravoState::NoUtc);
+    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.reads("NO UTC"));
+    CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
+}
+
+TEST_CASE("bravo traffic: a Bravo that reboots after having UTC is lost until it has it again") {
+    Flight flight;
+    flight.fly(3);
+    REQUIRE(flight.state().bravo == comms::BravoState::Live);
+    flight.tones.clear();
+    flight.tango.bravo.health.utc_valid = false;
+    flight.tango.air.reboot_peripheral(flight.tango.bravo.reboot());
+    flight.tango.air.drop();
+    flight.fly(5);
+    REQUIRE(flight.tango.service().link() == go::BravoLink::Up);
+    CHECK(flight.state().bravo == comms::BravoState::NoUtc);
+    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
+
+    flight.tango.bravo.health.utc_valid = true;
+    flight.fly(2);
+    CHECK(flight.state().bravo == comms::BravoState::Live);
+}
+
+TEST_CASE("bravo traffic: a dropped pin forgets Bravo's UTC, so the next Bravo without it waits") {
+    Flight flight;
+    flight.fly(3);
+    REQUIRE(flight.state().bravo == comms::BravoState::Live);
+    SUBCASE("unpaired on the Go") {
+        flight.go().show(flight.tango.now_ms, go::Page::Bravo);
+        flight.go().press(flight.tango.now_ms);
+        REQUIRE(flight.go().product.screen().bravo_page().unpairing());
+        flight.go().press(flight.tango.now_ms);
+        flight.tango.run_for(5000);
+    }
+    SUBCASE("forgotten by Bravo") {
+        flight.tango.bravo.health.paired = false;
+        flight.tango.run_for(2000);
+        flight.tango.bravo.health.paired = true;
+        REQUIRE(flight.go().product.screen().notice() == go::ScreenService::Notice::BravoForgot);
+        flight.go().tap(flight.tango.now_ms);
+        REQUIRE_FALSE(flight.go().product.screen().noticing());
+    }
+    REQUIRE_FALSE(go::paired(flight.go().settings()));
+
+    flight.tones.clear();
+    flight.tango.bravo.health.utc_valid = false;
+    flight.tango.pair();
+    flight.tango.run_for(3000);
+    REQUIRE(flight.tango.service().link() == go::BravoLink::Up);
+    CHECK(flight.state().bravo == comms::BravoState::Waiting);
+    CHECK(flight.tones.empty());
+}
+
 TEST_CASE("bravo traffic: an unpaired Go never says BRAVO LOST, nor sends a bravo key") {
     Flight flight({}, /*paired=*/false);
     flight.fly(3);

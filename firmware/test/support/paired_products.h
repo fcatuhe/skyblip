@@ -23,16 +23,43 @@ struct PairedProducts {
     // Every frame the Go wrote, in order, whatever the air did with it.
     std::vector<std::string> go_wrote{};
 
+    struct Stored {
+        std::string go;
+        std::string bravo;
+    };
+
     explicit PairedProducts(ports::Capabilities go_fitted = platform::host::Platform::kFullyFitted)
         : go(go_fitted) {
-        REQUIRE(go.setup() == Status::Ok);
-        REQUIRE(bravo.setup() == Status::Ok);
-        go.world = [this](uint32_t at_ms) {
-            for (const std::string& frame : go.platform.central().writes) go_wrote.push_back(frame);
-            bravo.now_ms = at_ms;
-            bravo.step();
-            air.pump();
-        };
+        start();
+    }
+
+    // INFO: fc 12nov26 the X1 probes its parts as it is built, so Bravo's blob goes in before that
+    explicit PairedProducts(const Stored& stored)
+        : bravo([&stored](platform::host::MeshtrackerX1& platform) {
+              keep(platform.key_value(), stored.bravo);
+          }) {
+        keep(go.platform.key_value(), stored.go);
+        start();
+    }
+
+    Stored stored() {
+        Stored both{stored_in(go.platform.key_value()), stored_in(bravo.platform.key_value())};
+        REQUIRE_FALSE(both.go.empty());
+        REQUIRE_FALSE(both.bravo.empty());
+        return both;
+    }
+
+    // INFO: fc 12nov26 empty when nothing is stored, which is how a case says no pin was kept
+    static std::string stored_in(platform::host::KeyValueStore& store) {
+        uint8_t blob[64] = {};
+        size_t bytes = 0;
+        if (store.read("settings", blob, sizeof(blob), bytes) != Status::Ok) return {};
+        return std::string(reinterpret_cast<const char*>(blob), bytes);
+    }
+
+    static void keep(platform::host::KeyValueStore& store, const std::string& blob) {
+        REQUIRE(store.write("settings", reinterpret_cast<const uint8_t*>(blob.data()),
+                            blob.size()) == Status::Ok);
     }
 
     go::BravoService& service() { return go.product.bravo(); }
@@ -68,6 +95,18 @@ struct PairedProducts {
     }
 
     bool go_pinned() { return go::paired(go.settings()); }
+
+   private:
+    void start() {
+        REQUIRE(go.setup() == Status::Ok);
+        REQUIRE(bravo.setup() == Status::Ok);
+        go.world = [this](uint32_t at_ms) {
+            for (const std::string& frame : go.platform.central().writes) go_wrote.push_back(frame);
+            bravo.now_ms = at_ms;
+            bravo.step();
+            air.pump();
+        };
+    }
 };
 
 }  // namespace skyblip
