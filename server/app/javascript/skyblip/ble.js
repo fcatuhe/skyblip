@@ -83,10 +83,10 @@ async function openStream(server, onLine) {
   return { write: chr, transport: 'HM-10' };
 }
 
-async function openConfig(server, onReply) {
+async function openFrames(server, uuid, onFrame) {
   const svc = await serviceOrNull(server, UUID.skyblip);
   if (!svc) return null;
-  const chr = await svc.getCharacteristic(UUID.config);
+  const chr = await svc.getCharacteristic(uuid);
   await chr.startNotifications();
   chr.addEventListener('characteristicvaluechanged', event => {
     const bytes = bytesOf(event);
@@ -94,12 +94,15 @@ async function openConfig(server, onReply) {
     try {
       frame = decodeFrame(bytes);
     } catch (error) {
-      return onReply(null, bytes, error);
+      return onFrame(null, bytes, error);
     }
-    onReply(frame, bytes);
+    onFrame(frame, bytes);
   });
   return chr;
 }
+
+const openConfig = (server, onReply) => openFrames(server, UUID.config, onReply);
+const openLog = (server, onLog) => openFrames(server, UUID.log, onLog);
 
 async function openSmp(server, onSmp) {
   const svc = await serviceOrNull(server, UUID.smp);
@@ -149,7 +152,7 @@ function linkOf(device) {
 
 async function openLink(device, forget) {
   const server = await device.gatt.connect();
-  const link = { server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, smp: null };
+  const link = { server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, log: null, smp: null };
   device.addEventListener('gattserverdisconnected', () => {
     if (!forget()) return;
     for (const client of link.clients) client.onClose?.(device.name);
@@ -158,7 +161,7 @@ async function openLink(device, forget) {
   return link;
 }
 
-const CALLBACKS = { stream: 'onLine', config: 'onReply', smp: 'onSmp' };
+const CALLBACKS = { stream: 'onLine', config: 'onReply', log: 'onLog', smp: 'onSmp' };
 
 function open(link, endpoint, opener) {
   link[endpoint] ??= opener(link.server, (...args) => {
@@ -170,16 +173,17 @@ function open(link, endpoint, opener) {
   return link[endpoint];
 }
 
-export async function connect({ device = null, onLine, onReply, onSmp, onClose }) {
+export async function connect({ device = null, onLine, onReply, onLog, onSmp, onClose }) {
   device ??= await requestDevice();
   const link = await linkOf(device);
-  const client = { onLine, onReply, onSmp, onClose };
+  const client = { onLine, onReply, onLog, onSmp, onClose };
   link.clients.add(client);
 
-  let stream, config, smp;
+  let stream, config, log, smp;
   try {
     stream = onLine ? await open(link, 'stream', openStream) : null;
     config = await open(link, 'config', openConfig);
+    log = onLog ? await open(link, 'log', openLog) : null;
     smp = onSmp ? await open(link, 'smp', openSmp) : null;
   } catch (error) {
     link.clients.delete(client);
@@ -197,6 +201,7 @@ export async function connect({ device = null, onLine, onReply, onSmp, onClose }
     transport: stream ? stream.transport : 'none',
     hasStream: Boolean(stream),
     hasConfig: Boolean(config),
+    hasLog: Boolean(log),
     hasSmp: Boolean(smp),
 
     async sendLine(text) {
@@ -210,6 +215,12 @@ export async function connect({ device = null, onLine, onReply, onSmp, onClose }
       if (!config) throw new Error('This device has no config endpoint.');
       const bytes = encodeFrame(fields);
       await exclusive(() => config.writeValueWithResponse(bytes));
+    },
+
+    async sendLog(fields) {
+      if (!log) throw new Error('This device has no log endpoint.');
+      const bytes = encodeFrame(fields);
+      await exclusive(() => log.writeValueWithResponse(bytes));
     },
 
     async sendSmp(packet, writeBytes = GATT_WRITE_BYTES) {

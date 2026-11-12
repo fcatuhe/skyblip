@@ -43,6 +43,7 @@ jobs:
               - 'firmware/core/comms/identity_link.cpp'
               - 'firmware/core/comms/config.h'
               - 'firmware/products/skyblip_go/pages/menu.cpp'
+              - 'scripts/blip_records.py'
               - 'scripts/simulator_scenarios.rb'
               - 'lib/simulator_scenarios.rb'
               - 'lib/dev_release.rb'

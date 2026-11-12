@@ -156,6 +156,32 @@
 .dev-console .hint code { color:var(--accent); font-family:var(--mono); }
 .dev-console .gone { display:none; }
 
+.dev-console .panel-wide { flex-basis: 100%; }
+.dev-console .row label { font-size: var(--text-xs); color: var(--dim); }
+.dev-console select { background: var(--dev-tape-background); color: var(--txt); border: 1px solid var(--dev-button-border);
+                      border-radius: 8px; padding: var(--space-xs); font: var(--text-xs) var(--mono); }
+.dev-console .state.ok { color: var(--ok); }
+.dev-console .state.warn { color: var(--warn); }
+.dev-console .state.bad { color: var(--bad); }
+.dev-console .capture-progress { inline-size: 100%; accent-color: var(--accent); }
+.dev-console .capture-results { margin-top: var(--space-s); }
+.dev-console .capture-counts { list-style: none; display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-s);
+                               margin: var(--space-xs) 0; padding: 0; font: var(--text-xs)/1.5 var(--mono); color: var(--dim); }
+.dev-console .capture-download { font-size: var(--text-xs); }
+.dev-console .capture-table { overflow-x: auto; margin-top: var(--space-xs); }
+.dev-console .capture-table table { inline-size: 100%; border-collapse: collapse; font: var(--text-xs)/1.5 var(--mono);
+                                    font-variant-numeric: tabular-nums; }
+.dev-console .capture-table caption { caption-side: top; text-align: start; padding-block: var(--space-xs); color: var(--dim); font-family: system-ui, sans-serif; }
+.dev-console .capture-table th,
+.dev-console .capture-table td { padding: var(--space-2xs) var(--space-xs); border-block-end: 1px solid var(--line); text-align: end; }
+.dev-console .capture-table th { vertical-align: bottom; font-family: system-ui, sans-serif; }
+.dev-console .capture-table td { white-space: nowrap; }
+.dev-console .capture-table :is(th, td):first-child { text-align: start; }
+.dev-console .capture-table th button { background: none; border: 0; border-radius: 0; padding: 0; color: var(--dim); font: inherit; }
+.dev-console .capture-table th button:hover { background: none; color: var(--txt); }
+.dev-console .capture-table th[aria-sort="ascending"] button::after { content: " \2191"; }
+.dev-console .capture-table th[aria-sort="descending"] button::after { content: " \2193"; }
+
 .dev-tools .dev-panels { display: flex; flex-direction: column; gap: var(--space-m); max-width: 420px; }
 .dev-tools .dev-space-top { margin-top: var(--space-s); }
 .dev-tools .dev-space-bottom { margin-bottom: var(--space-xs); }

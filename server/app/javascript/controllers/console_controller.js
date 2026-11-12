@@ -10,7 +10,7 @@ export default class extends Controller {
     this.session = new AbortController()
     this.device = null
     this.listen("connect", "click", () => this.link())
-    this.listen("disconnect", "click", () => this.device?.release())
+    this.listen("disconnect", "click", () => this.leave())
     this.listen("send", "submit", event => this.sendLine(event))
     this.listen("sendjson", "submit", event => this.sendJson(event))
     this.listen("clearstream", "click", () => { this.field("stream").textContent = "-" })
@@ -44,7 +44,9 @@ export default class extends Controller {
           if (frame) this.write("replies", printable(frame), "ok")
           else this.write("replies", `${error.message}: ${hex(bytes)}`, "warn")
           if (frame?.reason === "small_mtu") this.write("replies", SMALL_MTU, "warn")
+          this.dispatch("reply", { detail: { frame } })
         },
+        onLog: (frame, bytes, error) => { if (!signal.aborted) this.dispatch("log", { detail: { frame, bytes, error } }) },
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })
       if (signal.aborted) {
@@ -54,6 +56,7 @@ export default class extends Controller {
         this.state(`${device.name} over ${device.transport}`, "up")
         this.field("disconnect").disabled = false
         this.field("configpanel").hidden = !device.hasConfig
+        this.dispatch("linked", { detail: { device } })
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -63,12 +66,22 @@ export default class extends Controller {
     }
   }
 
+  // INFO: fc 12nov26 a released link closes without calling back the client that released it
+  leave() {
+    const { device } = this
+    if (device) {
+      device.release()
+      this.closed(device.name)
+    }
+  }
+
   closed(name) {
     this.device = null
     this.state(`${name || "device"} disconnected`, "down")
     this.field("connect").disabled = false
     this.field("disconnect").disabled = true
     this.field("configpanel").hidden = true
+    this.dispatch("closed")
   }
 
   async sendLine(event) {

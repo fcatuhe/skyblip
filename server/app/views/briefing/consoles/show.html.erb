@@ -1,6 +1,7 @@
 <% content_for :stylesheets, area_stylesheet_link_tags("workbench") %>
 <% content_for :title, "Bluetooth console" %>
-<section class="dev-tools dev-console" data-controller="console">
+<section class="dev-tools dev-console" data-controller="console capture"
+         data-action="console:linked->capture#linked console:reply->capture#reply console:log->capture#log console:closed->capture#closed">
   <h1>skyBlip&nbsp;Go: Bluetooth console <span>&middot; a real device over Web Bluetooth,
     <a href="<%= briefing_simulator_path %>">the simulator</a> is next door</span></h1>
 
@@ -51,6 +52,8 @@
         A <code>set</code> is refused in flight and on a low cell, then staged: the device asks
         for a button press, and the reply lands here when you give it.</div>
     </div>
+
+    <%= render "briefing/consoles/capture" %>
   </div>
 
 </section>
