@@ -87,6 +87,7 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     bool receive_air(const uint8_t* chips, size_t chip_bytes, int8_t rssi_dbm = -70) {
         if (!listening_for_adsb()) return false;
         std::vector<bool> wanted;
+        wanted.reserve(static_cast<size_t>(pattern_length) + static_cast<size_t>(sync_bits));
         for (int bit = 0; bit < pattern_length; bit++) wanted.push_back((pattern >> bit) & 1u);
         for (int bit = sync_bits - 1; bit >= 0; bit--) wanted.push_back((sync >> bit) & 1u);
         const size_t total = chip_bytes * 8;
@@ -99,7 +100,7 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
             for (uint16_t i = 0; i < payload_bytes; i++) {
                 uint8_t byte = 0;
                 for (size_t bit = 0; bit < 8; bit++) {
-                    const size_t index = first + i * 8u + bit;
+                    const size_t index = first + static_cast<size_t>(i) * 8u + bit;
                     const bool set_bit = index < total && bit_at(chips, index);
                     byte = static_cast<uint8_t>((byte << 1) | (set_bit ? 1u : 0u));
                 }
@@ -295,11 +296,13 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
         const size_t argument_bytes = mosi_.size() - 2;
         commands_seen.push_back(opcode);
         command_status_ = kCommandOk;
-        if (std::find(fail_opcodes.begin(), fail_opcodes.end(), opcode) != fail_opcodes.end())
-            return refuse(parts::lr2021::kCommandFail);
+        if (std::find(fail_opcodes.begin(), fail_opcodes.end(), opcode) != fail_opcodes.end()) {
+            refuse(parts::lr2021::kCommandFail);
+            return;
+        }
         namespace chip = parts::lr2021;
         switch (opcode) {
-            case chip::kNop: break;
+            case chip::kNop:
             case chip::kReadRadioRxFifo: break;
             case chip::kGetVersion: respond({version_major, version_minor}); break;
             case chip::kGetErrors: respond({high(errors), low(errors)}); break;
@@ -309,13 +312,19 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 break;
             // INFO: fc 11nov26 DS 6.11.3 and 5.1.1: TCXO and DIO functions are set in STBY_RC only
             case chip::kSetTcxoMode:
-                if (mode != Mode::StandbyRc) return refuse(chip::kCommandFail);
+                if (mode != Mode::StandbyRc) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 tcxo_set = true;
                 tcxo_tune = args[0];
                 tcxo_start_time = be32(args + 1);
                 break;
             case chip::kSetDioFunction:
-                if (mode != Mode::StandbyRc) return refuse(chip::kCommandFail);
+                if (mode != Mode::StandbyRc) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 dio_function[args[0]] = args[1];
                 break;
             case chip::kSetDioIrqConfig: dio_irq_mask[args[0]] = be32(args + 1); break;
@@ -327,14 +336,20 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 irq = 0;
                 break;
             case chip::kCalibrate:
-                if (mode == Mode::Receive) return refuse(chip::kCommandFail);
+                if (mode == Mode::Receive) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 calibrated = true;
                 calibrated_blocks = args[0];
                 mode = Mode::StandbyRc;
                 busy_until_us_ = elapsed_us + calibrate_busy_us;
                 break;
             case chip::kCalibFe:
-                if (mode == Mode::Receive) return refuse(chip::kCommandFail);
+                if (mode == Mode::Receive) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 calib_fe_word = be16(args);
                 calib_fe_bytes = argument_bytes;
                 errors = static_cast<uint16_t>(errors | calibration_errors);
@@ -342,14 +357,20 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
             case chip::kSetPacketType: packet_type = args[0]; break;
             // INFO: fc 11nov26 DS 16.3.2: the OOK commands fail on any other packet type
             case chip::kSetOokModulationParams:
-                if (packet_type != chip::kPacketTypeOok) return refuse(chip::kCommandFail);
+                if (packet_type != chip::kPacketTypeOok) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 bitrate_bps = be32(args);
                 pulse_shape = args[4];
                 rx_bandwidth = args[5];
                 depth = args[6];
                 break;
             case chip::kSetOokPacketParams:
-                if (packet_type != chip::kPacketTypeOok) return refuse(chip::kCommandFail);
+                if (packet_type != chip::kPacketTypeOok) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 preamble_chips = be16(args);
                 packet_format = args[2];
                 payload_bytes = be16(args + 3);
@@ -385,7 +406,10 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
             case chip::kSetRfFrequency: frequency_hz = be32(args); break;
             // INFO: fc 11nov26 DS 6.3.5: SetRx fails on a part already in Rx
             case chip::kSetRx:
-                if (mode == Mode::Receive || packet_type == 0xFF) return refuse(chip::kCommandFail);
+                if (mode == Mode::Receive || packet_type == 0xFF) {
+                    refuse(chip::kCommandFail);
+                    return;
+                }
                 mode = Mode::Receive;
                 rx_timeout = (static_cast<uint32_t>(args[0]) << 16) |
                              (static_cast<uint32_t>(args[1]) << 8) | args[2];

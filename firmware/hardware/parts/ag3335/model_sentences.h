@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_AG3335_SENTENCES_H
 #define SKYBLIP_HARDWARE_MODEL_AG3335_SENTENCES_H
 
+#include <algorithm>
+
 #include "core/protocol/nmea_out.h"
 #include "core/util/format.h"
 #include "hardware/parts/ag3335/model.h"
@@ -199,7 +201,7 @@ inline void Ag3335::emit_gsa() {
         if (constellations != 0 && (constellations & system.bit) == 0) continue;
         int used = budget / emitted + (remainder > 0 ? 1 : 0);
         if (remainder > 0) remainder--;
-        if (used > kGsaSlots) used = kGsaSlots;
+        used = std::min(used, kGsaSlots);
         emit_gsa_for(system.id, system.first_satellite, static_cast<uint8_t>(used));
     }
 }

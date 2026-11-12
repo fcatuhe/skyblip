@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-#if defined(CONFIG_BOARD_MESHTRACKER_X1)
+#ifdef CONFIG_BOARD_MESHTRACKER_X1
 #include <zephyr/devicetree.h>
 #endif
 
@@ -22,7 +22,7 @@ constexpr int kHapticEnable = pin_number(1, 5);
 // TODO: fc 12nov26 the T-Echo's debounce, kept until #169 scopes the X1's button bounce
 constexpr uint32_t kButtonHoldMs = 30;
 
-#if defined(CONFIG_BOARD_MESHTRACKER_X1)
+#ifdef CONFIG_BOARD_MESHTRACKER_X1
 #define SKYBLIP_DEVICETREE_PIN(node_id) \
     (DT_PROP(DT_GPIO_CTLR(node_id, gpios), port) * 32 + DT_GPIO_PIN(node_id, gpios))
 
