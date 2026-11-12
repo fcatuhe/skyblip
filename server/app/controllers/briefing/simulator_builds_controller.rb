@@ -1,6 +1,4 @@
-class Briefing::SimulatorBuildsController < ApplicationController
-  allow_unauthenticated_access
-
+class Briefing::SimulatorBuildsController < Briefing::ApplicationController
   def show
     @release = Release.simulator
     @workbench = params[:mode] == "workbench"

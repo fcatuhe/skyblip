@@ -9,10 +9,6 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/activate</loc>
-    <lastmod>2026-11-11</lastmod>
-  </url>
-  <url>
     <loc>https://skyblip.eu/ads-l-registry</loc>
     <lastmod>2026-11-09</lastmod>
   </url>
@@ -26,10 +22,6 @@
   </url>
   <url>
     <loc>https://skyblip.eu/buy</loc>
-    <lastmod>2026-11-11</lastmod>
-  </url>
-  <url>
-    <loc>https://skyblip.eu/configure</loc>
     <lastmod>2026-11-11</lastmod>
   </url>
   <url>
@@ -55,10 +47,6 @@
   <url>
     <loc>https://skyblip.eu/fr/a-venir</loc>
     <lastmod>2026-11-09</lastmod>
-  </url>
-  <url>
-    <loc>https://skyblip.eu/fr/activer</loc>
-    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/alimentation</loc>
@@ -97,20 +85,12 @@
     <lastmod>2026-11-09</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/fr/mettre-a-jour</loc>
-    <lastmod>2026-11-11</lastmod>
-  </url>
-  <url>
     <loc>https://skyblip.eu/fr/radar</loc>
     <lastmod>2026-11-10</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/radio</loc>
     <lastmod>2026-11-09</lastmod>
-  </url>
-  <url>
-    <loc>https://skyblip.eu/fr/regler</loc>
-    <lastmod>2026-11-11</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/s-equiper</loc>
@@ -171,9 +151,5 @@
   <url>
     <loc>https://skyblip.eu/try</loc>
     <lastmod>2026-11-09</lastmod>
-  </url>
-  <url>
-    <loc>https://skyblip.eu/update</loc>
-    <lastmod>2026-11-11</lastmod>
   </url>
 </urlset>

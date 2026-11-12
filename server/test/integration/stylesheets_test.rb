@@ -2,7 +2,7 @@ require "test_helper"
 
 class StylesheetsTest < ActionDispatch::IntegrationTest
   test "a public page links the site's stylesheets and only the areas it uses" do
-    areas_by_page = { "skyblip-go" => %w[simulator], "update" => %w[manage], "configure" => %w[manage], "activate" => %w[manage] }
+    areas_by_page = { "skyblip-go" => %w[simulator] }
 
     Content::Page.all.each do |page|
       get page.url_path
@@ -12,21 +12,23 @@ class StylesheetsTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the admin, the sign-in page and the briefing tools link their own areas" do
+  test "the admin, the sign-in page and the briefing pages link their own areas" do
     get "/session/new"
     assert_equal %w[admin], linked_areas
 
     get "/briefing/simulator"
-    assert_equal %w[simulator workbench], linked_areas
+    assert_equal %w[simulator workbench briefing], linked_areas
 
     get "/briefing/console"
-    assert_equal %w[workbench], linked_areas
+    assert_equal %w[workbench briefing], linked_areas
 
     get "/briefing/ownship"
-    assert_equal %w[ownship], linked_areas
+    assert_equal %w[ownship briefing], linked_areas
 
-    get "/briefing"
-    assert_equal [], linked_areas
+    %w[/briefing /briefing/activate /briefing/tools /briefing/devices/go-00012a /briefing/devices/go-00012a/firmware].each do |path|
+      get path
+      assert_equal %w[briefing], linked_areas, path
+    end
 
     sign_in_as users(:francois)
     get "/admin/users"
@@ -35,10 +37,10 @@ class StylesheetsTest < ActionDispatch::IntegrationTest
 
   test "the frames the briefing pages load link their areas when opened on their own" do
     VCR.use_cassette("github/releases", allow_playback_repeats: true) do
-      { "/briefing/firmwares" => %w[manage], "/fr/briefing/firmwares" => %w[manage],
-        "/briefing/simulator_build" => %w[simulator], "/fr/briefing/simulator_build" => %w[simulator],
-        "/briefing/simulator_build?mode=workbench" => %w[simulator workbench],
-        "/fr/briefing/simulator_build?mode=workbench" => %w[simulator workbench] }.each do |path, areas|
+      { "/briefing/firmwares" => %w[briefing], "/fr/briefing/firmwares" => %w[briefing],
+        "/briefing/simulator_build" => %w[simulator briefing], "/fr/briefing/simulator_build" => %w[simulator briefing],
+        "/briefing/simulator_build?mode=workbench" => %w[simulator workbench briefing],
+        "/fr/briefing/simulator_build?mode=workbench" => %w[simulator workbench briefing] }.each do |path, areas|
         get path
 
         assert_response :success, path

@@ -1,0 +1,47 @@
+<%= tag.nav class: "fleet fleet--#{variant}", aria: { label: t("briefing.devices.title") }, data: {
+      controller: "fleet",
+      fleet_variant_value: variant,
+      fleet_current_value: local_assigns[:current],
+      fleet_devices_value: "#{briefing_root_path}/devices",
+      fleet_activation_value: briefing_activation_path
+    } do %>
+  <% if variant == "home" %>
+    <div class="fleet-unsupported" data-fleet-target="unsupported" hidden>
+      <h1><%= t("briefing.devices.no_bluetooth_title") %></h1>
+      <p><%= t("briefing.devices.no_bluetooth") %></p>
+      <button type="button" class="button-app button-app--quiet" data-controller="copy-to-clipboard" data-action="copy-to-clipboard#copy"
+              data-copy-to-clipboard-content-value="<%= request.url %>" data-copy-to-clipboard-success-class="is-copied">
+        <span class="when-idle"><%= t("briefing.devices.copy_link") %></span><span class="when-copied"><%= t("briefing.devices.copied") %></span>
+      </button>
+      <p class="note"><%= t("briefing.devices.no_bluetooth_tools") %> <%= link_to t("briefing.menu.tools"), briefing_tools_path %></p>
+    </div>
+    <div class="fleet-first" data-fleet-target="first" hidden>
+      <h1><%= t("briefing.devices.first_title") %></h1>
+      <p class="fleet-hint"><%= t("briefing.devices.first_hint") %></p>
+    </div>
+    <h1 class="fleet-title" data-fleet-target="title" hidden><%= t("briefing.devices.title") %></h1>
+  <% end %>
+
+  <ul class="fleet-list" data-fleet-target="list"></ul>
+  <template data-fleet-target="row">
+    <li class="fleet-unit">
+      <a class="fleet-unit-link" data-slot="link">
+        <span class="fleet-dot" aria-hidden="true"></span>
+        <span class="fleet-unit-name" data-slot="name"></span>
+        <span class="fleet-unit-facts" data-slot="facts"></span>
+        <span class="fleet-unit-news" data-slot="news" hidden></span>
+        <span class="visually-hidden" data-slot="attention" hidden><%= t("briefing.devices.attention") %></span>
+      </a>
+      <button type="button" class="button-app fleet-connect" data-slot="connect" data-action="fleet#link"><%= t("briefing.unit.connect") %></button>
+    </li>
+  </template>
+
+  <p class="fleet-notice" role="status" data-fleet-target="notice" hidden></p>
+  <div class="fleet-actions">
+    <button type="button" class="button-app fleet-connect-new" data-fleet-target="connectNew" data-action="fleet#connectNew" aria-label="<%= t("briefing.devices.connect_new") %>">
+      <span class="fleet-connect-new-plus" aria-hidden="true">+</span>
+      <span class="fleet-connect-new-label"><%= t("briefing.devices.connect_new") %></span>
+    </button>
+    <%= link_to t("briefing.devices.activate_new"), briefing_activation_path, class: "fleet-activate", data: { fleet_target: "activate" } %>
+  </div>
+<% end %>

@@ -1,12 +1,8 @@
 require "application_system_test_case"
 
 class ConsoleTest < ApplicationSystemTestCase
-  setup do
-    script = Rails.root.join("test/system/fake_skyblip.js").read
-    page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
-  end
-
   test "the console shows each frame as JSON with full names, and writes the JSON typed into it" do
+    in_range a_go
     visit "/briefing/console"
     click_button "Connect"
     click_button "status"
@@ -15,7 +11,7 @@ class ConsoleTest < ApplicationSystemTestCase
     fill_in "json", with: '{"command":"set","units":"nautical"}'
     click_button "Write"
     assert_selector "#replies .ok", text: '{"command":"acknowledgement","acknowledge":false,"pending":true,"reason":"confirm"}'
-    assert_equal({ "units" => "nautical" }, page.evaluate_script("fakeSkyblip.staged"))
+    assert_equal({ "units" => "nautical" }, page.evaluate_script("#{unit("00012A")}.staged"))
 
     fill_in "json", with: '{"command":"set","units":"imperial"}'
     click_button "Write"
@@ -23,8 +19,8 @@ class ConsoleTest < ApplicationSystemTestCase
   end
 
   test "the console explains a reply refused as too wide for the link" do
+    in_range a_go(mtu: 23)
     visit "/briefing/console"
-    page.execute_script("fakeSkyblip.mtu = 23")
     click_button "Connect"
     click_button "get"
     assert_selector "#replies .ok", text: '{"command":"acknowledgement","acknowledge":false,"reason":"small_mtu"}'

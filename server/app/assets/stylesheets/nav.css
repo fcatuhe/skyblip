@@ -68,31 +68,6 @@
 
   .site-nav-manage { font-weight: 700; color: var(--sky-deep); }
 
-  .site-session {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: baseline;
-    gap: var(--space-inline-s);
-    margin: 0;
-    padding: var(--space-2xs) var(--gutter);
-    border-block-start: 1px solid var(--card-border);
-    font-size: var(--text-xs);
-    color: var(--ink-soft);
-  }
-
-  .site-session[hidden] { display: none; }
-
-  .site-session-disconnect {
-    padding: 0;
-    border: 0;
-    background: none;
-    font: inherit;
-    color: var(--sky-deep);
-    text-decoration: underline;
-    cursor: pointer;
-  }
-
   @media (min-width: 60rem) {
     .site-nav { display: grid; grid-template-columns: 1fr auto 1fr; }
     .site-nav-links { justify-content: center; }

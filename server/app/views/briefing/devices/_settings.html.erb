@@ -1,0 +1,60 @@
+<form class="unit-settings" data-unit-target="settings" data-action="input->unit#edit change->unit#edit submit->unit#save" hidden>
+  <fieldset class="unit-fields" data-unit-target="fields">
+    <legend class="visually-hidden"><%= t("briefing.unit.settings") %></legend>
+
+    <div class="field">
+      <label for="unit-aircraft-type"><%= t("settings.aircraft_type") %></label>
+      <select id="unit-aircraft-type" name="aircraft_type">
+        <% Ownship::AircraftType.all.each do |type| %>
+          <option value="<%= type.code %>"><%= type.name %></option>
+        <% end %>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="unit-callsign"><%= t("settings.callsign") %></label>
+      <input type="text" id="unit-callsign" name="callsign" maxlength="9" pattern="[A-Za-z0-9 \-]*"
+             autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-callsign-hint">
+      <p class="field-hint" id="unit-callsign-hint"><%= t("settings.callsign_hint") %></p>
+    </div>
+
+    <div class="field" hidden>
+      <label for="unit-own-icao"><%= t("settings.own_icao") %></label>
+      <input type="text" id="unit-own-icao" name="own_icao" maxlength="6" pattern="[0-9A-Fa-f]{6}"
+             autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-own-icao-hint">
+      <p class="field-hint" id="unit-own-icao-hint"><%= t("settings.own_icao_hint") %></p>
+    </div>
+
+    <div class="field">
+      <label for="unit-units"><%= t("briefing.settings.units") %></label>
+      <select id="unit-units" name="units">
+        <% t("briefing.settings.unit_names").each do |value, name| %>
+          <option value="<%= value %>"><%= name %></option>
+        <% end %>
+      </select>
+      <p class="field-default" data-unit-target="default" data-setting="units" hidden></p>
+    </div>
+
+    <div class="field field--check">
+      <label for="unit-alarm-enabled"><%= t("briefing.settings.alarm_enabled") %></label>
+      <input type="checkbox" id="unit-alarm-enabled" name="alarm_enabled" role="switch">
+      <p class="field-default" data-unit-target="default" data-setting="alarm_enabled" hidden></p>
+    </div>
+
+    <div class="field">
+      <label for="unit-alarm-volume"><%= t("briefing.settings.alarm_volume") %></label>
+      <select id="unit-alarm-volume" name="alarm_volume">
+        <% t("briefing.settings.volume_names").each do |value, name| %>
+          <option value="<%= value %>"><%= name %></option>
+        <% end %>
+      </select>
+      <p class="field-default" data-unit-target="default" data-setting="alarm_volume" hidden></p>
+    </div>
+  </fieldset>
+
+  <p class="unit-message" role="status" data-unit-target="settingsMessage" hidden></p>
+  <div class="app-actions">
+    <button type="submit" class="button-app" data-unit-target="save" data-label="<%= t("briefing.settings.save") %>" disabled><%= t("briefing.settings.save") %></button>
+    <button type="button" class="button-app button-app--quiet" data-unit-target="reset" data-action="unit#reset" hidden><%= t("briefing.settings.reset") %></button>
+  </div>
+</form>

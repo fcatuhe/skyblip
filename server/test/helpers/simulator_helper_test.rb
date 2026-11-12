@@ -6,13 +6,12 @@ class SimulatorHelperTest < ActionView::TestCase
 
   test "runtime firmware sources use the same-origin release proxy" do
     assert_equal "/releases/v0.2.0/embed.js", simulator_module_path(tag: "v0.2.0")
-    assert_match %r{\A/assets/skyblip/update-[a-f0-9]+\.js\z}, ApplicationController.helpers.update_module_path
   end
 
   test "browser and node share app-owned protocol module names" do
     imports = JSON.parse(Rails.application.importmap.to_json(resolver: ApplicationController.helpers)).fetch("imports")
 
-    %w[ble cbor dev_simulator image smp update].each do |name|
+    %w[ble cbor dev_simulator fleet image smp update].each do |name|
       assert_match %r{\A/assets/skyblip/#{name}-[a-f0-9]+\.js\z}, imports.fetch("#skyblip/#{name}")
     end
   end

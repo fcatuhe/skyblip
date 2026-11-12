@@ -1,6 +1,4 @@
-class Briefing::OwnshipsController < ApplicationController
-  allow_unauthenticated_access
-
+class Briefing::OwnshipsController < Briefing::ApplicationController
   def show
     @aircraft_type = Ownship::AircraftType.find(params[:type])
     @linked = linked_ownship

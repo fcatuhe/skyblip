@@ -81,10 +81,11 @@ export class FakeSkyblip {
     downgrade = false,
     address = 0x00012a,
     product = 'skyblip_go',
+    name = 'skyBlip Go 5B5AFE',
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -142,7 +143,7 @@ export class FakeSkyblip {
       },
     };
     return {
-      name: 'skyBlip Go 5B5AFE',
+      name: this.name,
       addEventListener: (type, listener) => this.listeners.push(listener),
       gatt: {
         get connected() {

@@ -97,4 +97,15 @@ class ReleaseTest < ActiveSupport::TestCase
       Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "published_at" => published_at,
                   "assets" => assets.map { |asset| { "name" => asset } })
     end
+
+  # Every device page asks for the list, so a burst of pilots must not spend the hourly GitHub allowance.
+  test "the release list is asked of GitHub once, then read from the cache" do
+    cache, Rails.cache = Rails.cache, ActiveSupport::Cache::MemoryStore.new
+    VCR.use_cassette("github/releases") do
+      first = Release.all
+      assert_equal first.map(&:tag), Release.all.map(&:tag)
+    end
+  ensure
+    Rails.cache = cache
+  end
 end

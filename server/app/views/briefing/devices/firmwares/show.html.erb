@@ -1,0 +1,55 @@
+<% name = device_name(@slug) %>
+<% content_for :title, "#{t("briefing.firmware.title")} · #{name}" %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: @slug) %>
+<%= tag.div class: "unit unit--firmware", data: {
+      controller: "unit firmware",
+      unit_slug_value: @slug,
+      unit_home_value: briefing_root_path,
+      unit_activation_value: briefing_activation_path,
+      unit_glass_outlet: ".glass-prompt",
+      firmware_slug_value: @slug,
+      firmware_glass_outlet: ".glass-prompt"
+    } do %>
+  <%= link_to t("briefing.firmware.back", name:), briefing_device_path(slug: @slug), class: "unit-back" %>
+  <%= render "briefing/devices/header", name: t("briefing.firmware.title") %>
+
+  <%= render "briefing/glass" %>
+
+  <div class="unit-offline" data-unit-target="offline">
+    <div class="app-actions">
+      <button type="button" class="button-app" data-unit-target="connect" data-action="unit#link" data-label="<%= t("briefing.unit.connect") %>"><%= t("briefing.unit.connect") %></button>
+    </div>
+  </div>
+
+  <section class="firmware" data-firmware-target="panel" hidden>
+    <p class="firmware-status" id="firmware-status" role="status" data-firmware-target="status"></p>
+
+    <div class="firmware-progress" data-firmware-target="progress" hidden>
+      <progress data-firmware-target="bar" max="1" value="0" aria-labelledby="firmware-status"></progress>
+      <p class="firmware-progress-text" data-firmware-target="progressText"></p>
+    </div>
+
+    <p class="unit-message" role="status" data-firmware-target="message" hidden></p>
+
+    <div class="app-actions">
+      <button type="button" class="button-app" data-firmware-target="install" data-action="firmware#install" data-label="<%= t("briefing.firmware.install") %>" disabled><%= t("briefing.firmware.install") %></button>
+      <%= link_to t("briefing.words.back_to_settings"), briefing_device_path(slug: @slug), class: "button-app", hidden: true, data: { firmware_target: "back" } %>
+    </div>
+
+    <details class="firmware-other" data-firmware-target="other">
+      <summary><%= t("briefing.firmware.other") %></summary>
+      <%= render "briefing/shelf" %>
+      <div class="field">
+        <label for="firmware-file"><%= t("briefing.firmware.file") %></label>
+        <input type="file" id="firmware-file" accept=".bin" data-firmware-target="file" data-action="firmware#choose">
+      </div>
+      <a class="firmware-release" data-firmware-target="release" hidden><%= t("briefing.firmware.release") %></a>
+    </details>
+
+    <details class="firmware-recovery" data-firmware-target="recovery">
+      <summary><%= t("briefing.firmware.recovery") %></summary>
+      <p class="note"><%= t("briefing.firmware.recovery_hint") %></p>
+      <button type="button" class="button-app button-app--quiet" data-firmware-target="recover" data-action="firmware#recover" disabled><%= t("briefing.firmware.recover") %></button>
+    </details>
+  </section>
+<% end %>

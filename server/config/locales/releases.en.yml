@@ -1,13 +1,12 @@
 en:
   firmwares:
-    label: A published image for this device
+    label: Published image
     prompt: Choose an image
-    release: Its release on GitHub, with the .uf2
-    slim: Slim image
-    full: Full image
-    loading: Loading published firmware from GitHub. You can also choose a file below.
-    unavailable: GitHub's release list is unavailable. Reload to try again, or choose a firmware file below.
-    empty: No published firmware is available. You can choose a firmware file below.
+    slim: slim
+    full: full
+    loading: Loading the published firmware.
+    unavailable: The published firmware list is unavailable. Choose a file instead.
+    empty: No firmware is published yet. Choose a file instead.
   simulator_builds:
     loading: Loading the simulator from GitHub.
     unavailable: The simulator could not be loaded from GitHub. Reload to try again.
@@ -20,12 +19,3 @@ en:
       key: "The device button: press to open the menu of the page you are on, hold two seconds to switch off, hold it again to switch on"
       pad: "The capacitive pad: tap to change page, hold one second to come back to the radar"
       reset: "RST: reboot the device"
-  briefing:
-    title: Briefing
-    description: Prepare your device before a flight.
-    activate: Activate a new unit
-    update: Update the firmware of your device
-    configure: Change the settings of your device
-    ownship: Draw the ownship symbol, one per aircraft type
-    simulator: Try the simulator and edit the ownship
-    console: Open the Bluetooth console

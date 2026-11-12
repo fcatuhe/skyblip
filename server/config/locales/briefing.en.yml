@@ -1,0 +1,225 @@
+en:
+  briefing:
+    title: Briefing
+    app:
+      name: skyBlip Briefing
+      title: Briefing
+      description: Activate, set up and update your skyBlip over Bluetooth.
+    menu:
+      open: Menu
+      activate: Activate a new Go
+      tools: Developer tools
+      install: Install the app
+      site: skyblip.eu
+    devices:
+      attention: Needs attention
+      no_bluetooth_title: Open this on Android or a computer
+      no_bluetooth_tools: The simulator and the ownship editor work here.
+      title: Your devices
+      first_title: Your skyBlip
+      first_hint: Switch it on and keep it close.
+      connect_new: Connect a device
+      activate_new: Activate a new Go
+      no_bluetooth: "This browser cannot reach Bluetooth devices. Chrome or Edge can, on Android, Windows, macOS or Linux."
+      copy_link: Copy the link
+      copied: Copied
+    unit:
+      menu: Disconnect or forget
+      connect: Connect
+      reconnect: Reconnect
+      disconnect: Disconnect
+      forget: Forget this device
+      forget_detail: This browser forgets it. The device keeps its settings.
+      keep: Keep
+      last_read: As last read
+      settings: Settings
+      firmware: Firmware
+      update: Update
+    settings:
+      units: Units
+      unit_names:
+        nautical: "NM, kt"
+        metric: "km, km/h"
+      alarm_enabled: Alarm sound
+      alarm_volume: Alarm volume
+      volume_names:
+        "off": "Off"
+        soft: Soft
+        loud: Loud
+      save: Save
+      reset: Back to defaults
+    firmware:
+      title: Firmware
+      back: "Back to %{name}"
+      install: Install
+      other: Another image
+      file: Or a file ending in .signed.bin
+      release: Release notes and the .uf2
+      recovery: Firmware will not take?
+      recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
+      recover: Restart into the USB drive
+    activation:
+      title: Activate a new Go
+      hint: Its glass shows ACTIVATE and a code like 3F2A. Pick that code in the list.
+      find: Find the new Go
+      activate: Activate
+      kept_summary: What skyblip.eu keeps
+      kept: skyblip.eu keeps its chip identifier, its key, its serial, its firmware and the internet address it came from. No account.
+    glass:
+      header: AUTHORISE
+      allow: PRESS TWICE TO ALLOW
+      refuse: ONE PRESS REFUSES
+      lamp: The lamp blinks green fast.
+    tools:
+      back: Back to your devices
+      title: Developer tools
+      console: Bluetooth console
+      console_hint: Every frame the device sends, and any command.
+      simulator: Simulator
+      simulator_hint: The firmware in your browser, with an editable sky.
+      ownship: Ownship editor
+      ownship_hint: The aircraft at the centre of the radar, one per type.
+    words:
+      forget_question: "Forget %{name}?"
+      sending_short: "Sending, %{percent} %"
+      activate_now: Activate
+      glass_refuse: One press refuses.
+      locked: Locked in flight
+      reconnect_needed: Refused on the device. Nothing changed, and it asks nothing more until you reconnect.
+      reset_count: "Back to defaults (%{count})"
+      back_to_settings: Back to settings
+      activate_unit: "Activate %{name}"
+      reconnect: "Reconnect"
+      firmware: "Firmware"
+      activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
+      connected: Connected
+      not_connected: Not connected
+      connecting: Connecting
+      restarting: Restarting
+      not_activated: Not activated
+      seen: "seen %{date}"
+      not_met: Not met in this browser
+      battery: "%{percent} %"
+      charging: "%{percent} %, charging"
+      flight:
+        ground: On the ground
+        airborne: Airborne
+        unknown: No GPS fix yet
+      track:
+        release: release
+        development: development
+      running: "%{version}, %{track}"
+      firmware_current: up to date
+      firmware_out: "%{version} is out"
+      update_banner: "%{version} is out. You run %{running}."
+      save_count:
+        one: Save 1 change
+        other: "Save %{count} changes"
+      default: "Default: %{value}"
+      "on": "on"
+      "off": "off"
+      none: none
+      in_flight_lock: Changes unlock once it lands.
+      glass_press: "Press the %{product}'s button twice."
+      glass_left: "REFUSED IN %{seconds} S"
+      glass_waiting: Waiting for its answer.
+      install_version: "Install %{version}"
+      install_full: "Install %{version}, with the sensor hub firmware"
+      newest: "You run the newest image, %{version}."
+      no_image: No published image for this device yet. Choose a file below.
+      sending: "Sending %{version}, %{percent} %"
+      sent: "%{sent} of %{total} kB"
+      left: "about %{minutes} min left"
+      estimating: working out the time left
+      keep_close: "Keep this screen open and the %{product} close."
+      stops: "One press on the %{product} stops the upload."
+      installing: The device installs and restarts, about thirty seconds.
+      reconnecting: It connects again by itself.
+      probation: "%{version} is starting. It checks its radio, GPS and screen."
+      done: "Running %{version}."
+      asking_server: Asking skyblip.eu
+      registering: Getting its serial
+    notices:
+      no_bluetooth: This browser has no Web Bluetooth. Use Chrome or Edge, on Android or a computer.
+      not_skyblip: This device has no skyBlip update service. It is not a skyBlip, or its firmware is too old for Bluetooth updates.
+      link_lost: The link dropped. Bring the device closer and connect again. An upload under way picks up where it stopped.
+      not_back: The device did not come back after its restart. Connect it again.
+      timeout: The device stopped answering. Reconnect and try again.
+      no_params: The device did not say how much it takes at once. Reconnect.
+      claimed: Another app holds this device's settings. Close it, then reconnect.
+      small_mtu: This phone or browser kept Bluetooth's smallest packet, too small for the answer. Reconnect. If it happens again, update the browser or use another phone or a computer.
+      in_flight: It is flying. Install once it has landed. Older firmware also waits for a GPS fix.
+      low_power: The battery is too low to install. Charge it first.
+      expired: Nobody pressed twice within thirty seconds. Try again.
+      cancelled: Refused on the device. It asks nothing more until you reconnect.
+      refused_on_device: Refused on the device. It asks nothing more until you reconnect.
+      prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
+      nothing_staged: The device could not read the image back. Install again.
+      not_approved: The image that arrived is not the version you allowed. Install again.
+      window_closed: "The upload window closed. Install again: it picks up where it stopped."
+      older: This image is older than the firmware on the device, and a released device never goes back.
+      wrong_key: This image is signed for another kind of device, development or release. Choose an image of its kind.
+      wrong_product: This image is for another skyBlip product. Choose one whose name starts with the device's.
+      unmarked_image: This image names no product. Choose a newer one, or drop its .uf2 on the USB drive.
+      too_large: This image is too big for the device.
+      not_image: This is not a signed firmware image. Choose the file ending in .signed.bin.
+      flash: The device could not write the image. Try again, then try the USB drive.
+      unknown_command: This firmware is too old for that. Update it over USB.
+      no_file: Choose an image first.
+      needs_full: This device needs the image with the sensor hub firmware, ending in .full.signed.bin.
+      shelf_failed: The image did not download. Check the connection and choose it again.
+      smp: "The device refused the image:"
+      failed: "Something failed:"
+      refused: "The device refused:"
+      probation: The new firmware is proving itself. This takes a few seconds.
+      reverted: "The new firmware did not prove itself, so the device went back to the one it had. Try again. If it happens twice, tell us which version:"
+      image_refused: "The device would not start the update, the image failed its check, and it kept the firmware it had. Download it again:"
+      settings_prior: Its settings are the ones from before the update. Check them.
+      settings_defaults: It lost its settings and runs on defaults. Check the callsign and the aircraft type.
+      swap_unpowered: The battery is critical, too low to install. Charge it first.
+      went_dark_flat: It last switched off on a flat battery. Charge it before you install.
+      imu_writing: Writing the sensor hub firmware, up to a minute. Leave it on.
+      no_key: This firmware is too old to name the key it trusts. Install one file by hand once, the .full.signed.bin of a release.
+      not_activated: Not activated yet, so it neither transmits nor receives.
+      recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PRESS THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RST to go back to skyBlip. Nothing transmits meanwhile."
+    set_notices:
+      saved: Saved on the device.
+      in_flight: It is flying, so nothing changed. Save once it has landed.
+      low_power: The battery is too low to store settings. Charge it first.
+      expired: Nobody pressed twice within thirty seconds, so nothing changed.
+      cancelled: Refused on the device, so nothing changed.
+      refused_on_device: Refused on the device, so nothing changed.
+      prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
+      unknown_command: This firmware is too old to change settings. Update it first.
+    activation_notices:
+      activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
+      no_bluetooth: This browser has no Web Bluetooth. Use Chrome or Edge, on Android or a computer.
+      not_skyblip: That device has no skyBlip settings service. It is not a skyBlip.
+      link_lost: The link dropped. Bring the unit closer, connect again and activate again.
+      failed: "Something failed:"
+      refused: "The unit refused:"
+      keyless: The unit could not read or make its own key. Restart it and activate again.
+      no_session: The unit no longer holds the number this activation started from. Activate again.
+      bad_signature: The unit did not recognise what skyblip.eu signed. Activate again. If it happens twice, tell us which firmware it runs.
+      small_mtu: This phone or browser kept Bluetooth's smallest packet, too small for the answer. Reconnect. If it happens again, use another phone or a computer.
+      in_flight: This unit is already activated, and it is flying. Activate it again once it has landed.
+      low_power: The battery is too low to store the serial. Charge it, then activate.
+      flash: The unit could not store its serial. Activate again. If it happens again, tell us.
+      expired: Nobody pressed twice within thirty seconds. Activate again.
+      cancelled: Refused on the Go. Reconnect, then activate again.
+      refused_on_device: Refused on the Go. Reconnect, then activate again.
+      prompt_pending: The unit is already asking a question. Answer it, or wait thirty seconds.
+      claimed: Another app holds this unit's settings. Close it, then reconnect.
+      unknown_command: This firmware is older than activation and needs none. Update it first.
+      server_unknown_server_key: This firmware trusts a key skyblip.eu does not hold. Install a release first.
+      server_expired: More than five minutes passed. Activate again.
+      server_bad_signature: skyblip.eu could not check what the unit signed. Activate again. If it happens twice, tell us which firmware it runs.
+      server_other_key: "skyblip.eu knows this unit under another key, so it gave no serial. Write to us with this code:"
+      server_revoked_key: "skyblip.eu revoked this unit's key. Write to us with this code:"
+      server_daily_cap: skyblip.eu activated as many new units today as it does in a day. Try again tomorrow.
+      server_network_cap: Your connection activated as many new units today as it may. Try again tomorrow, or write to us for a fleet.
+      server_no_serial: Every serial is assigned. Write to us.
+      server_rate_limited: Too many requests from your connection. Wait a minute, then activate again.
+      server_invalid: skyblip.eu could not read the request. Reload the page and activate again.
+      server_unreachable: skyblip.eu did not answer. Check the internet connection, then activate again.
+      server_failed: "skyblip.eu failed to answer:"

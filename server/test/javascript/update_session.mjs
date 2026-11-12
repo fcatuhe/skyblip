@@ -4,9 +4,10 @@ import { Updater } from '#skyblip/update';
 export const NEWER = { major: 0, minor: 2, revision: 0, build: 15 };
 export const IMAGE_BYTES = 6000;
 
-export function session() {
+export function session(options = {}) {
   const watchers = [];
   const updater = new Updater({
+    ...options,
     onChange: state => {
       for (const watcher of watchers.splice(0)) {
         if (watcher.until(state)) watcher.resolve(state);
@@ -27,9 +28,9 @@ export const asking = task => state => state.phase === 'confirming' && state.tas
 export const installing = state => state.phase === 'installing';
 export const settled = state => state.phase === 'ready' && state.notice;
 
-export async function connected(options = {}) {
+export async function connected({ returnEveryMs, returnWithinMs, ...options } = {}) {
   const device = new FakeSkyblip({ bufSize: 300, ...options }).install();
-  const { updater, until } = session();
+  const { updater, until } = session({ returnEveryMs, returnWithinMs });
   await updater.connect();
   await until(state => state.status && state.running);
   return { device, updater, until };
