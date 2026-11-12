@@ -113,9 +113,10 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         y += kLineHeight;
     }
 
-    // INFO: fc 12nov26 one row for both: a loss outranks the own-ICAO warning, which outranks LIVE
+    // INFO: fc 12nov26 one row for both: a loss or a wait outranks the own-ICAO warning, then LIVE
     const bool paired = snapshot.bravo != comms::BravoState::Unpaired;
-    const bool warned = snapshot.own_icao_warning && !comms::lost(snapshot.bravo);
+    const bool warned = snapshot.own_icao_warning && !comms::lost(snapshot.bravo) &&
+                        snapshot.bravo != comms::BravoState::Waiting;
     if ((paired || warned) && y < self_test_row_y(kSelfTestRows)) {
         if (warned)
             canvas.draw_text(kLeft, y, kSelfTestOwnIcaoText, true, 1);

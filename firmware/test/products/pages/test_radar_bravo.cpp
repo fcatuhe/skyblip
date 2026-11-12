@@ -1,4 +1,4 @@
-// What the radar says of a paired Bravo: its mark over the count while live, BRAVO LOST and why.
+// What the radar says of a paired Bravo: its mark while live, BRAVO LOST and why, or that it waits.
 #include "core/comms/peer.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
@@ -21,8 +21,7 @@ TEST_CASE("radar page: a live Bravo stands over the count, in both plots, and no
     live.plot = RadarPlot::All;
     CHECK(reads_in(radar(live), "BRAVO", 160, 160, 200, 178));
 
-    for (const BravoState state :
-         {BravoState::Unpaired, BravoState::Waiting, BravoState::LinkDown}) {
+    for (const BravoState state : {BravoState::Unpaired, BravoState::LinkDown}) {
         RadarSnapshot other = flying(0);
         other.bravo = state;
         CHECK_FALSE(reads_in(radar(other), "BRAVO", 0, 0, 200, 199));
@@ -50,6 +49,25 @@ TEST_CASE("radar page: a lost Bravo takes the ring's banner, and the line under 
     RadarSnapshot waiting = flying(0);
     waiting.bravo = BravoState::Waiting;
     CHECK_FALSE(reads_in(radar(waiting), "BRAVO LOST", 0, 0, 200, 199, 2));
+}
+
+TEST_CASE("radar page: a waiting Bravo takes the loss's place, BRAVO over WAITING as a banner") {
+    for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
+        RadarSnapshot waiting = flying(0);
+        waiting.plot = plot;
+        waiting.bravo = BravoState::Waiting;
+        const Glass canvas = radar(waiting);
+        CHECK(reads_in(canvas, "BRAVO", 20, 110, 180, 165, 2));
+        CHECK(reads_in(canvas, "WAITING", 20, 130, 180, 175));
+        CHECK_FALSE(reads_in(canvas, "BRAVO", 160, 160, 200, 178));
+    }
+
+    RadarSnapshot blind = flying(0);
+    blind.fix_valid = false;
+    blind.bravo = BravoState::Waiting;
+    const Glass searching = radar(blind);
+    CHECK(reads_in(searching, "NO FIX", 40, 120, 160, 160, 2));
+    CHECK(reads_in(searching, "BRAVO WAITING", 20, 140, 180, 175));
 }
 
 // The ring's two slots read top down: the cell, NO FIX, BRAVO LOST and its reason, then the rest.

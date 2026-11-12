@@ -113,6 +113,8 @@ class BravoService : public runtime::Service {
     uint32_t unplaced_{0};
     uint32_t refused_{0};
     bool health_heard_{false};
+    // INFO: fc 12nov26 the pinned Bravo sent UTC since the Go booted, so no UTC from now is lost
+    bool utc_heard_{false};
     bool started_{false};
     bool settled_{false};
     uint32_t farewell_ms_{0};

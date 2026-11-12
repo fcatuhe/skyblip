@@ -23,15 +23,8 @@ using Flow = PairedLink::Flow;
 
 constexpr events::BluetoothAddress kSecondGo{1, {0x11, 0x22, 0x33, 0x44, 0x55, 0xE8}};
 
-std::string stored_blob(platform::host::MeshtrackerX1& platform) {
-    uint8_t blob[64] = {};
-    size_t bytes = 0;
-    if (platform.key_value().read("settings", blob, sizeof(blob), bytes) != Status::Ok) return {};
-    return std::string(reinterpret_cast<const char*>(blob), bytes);
-}
-
 bool stored_pin(platform::host::MeshtrackerX1& platform, events::BluetoothAddress& out) {
-    const std::string blob = stored_blob(platform);
+    const std::string blob = PairedProducts::stored_in(platform.key_value());
     bravo::Settings stored{};
     if (bravo::from_blob(reinterpret_cast<const uint8_t*>(blob.data()), blob.size(), stored) !=
         Status::Ok)
@@ -384,13 +377,11 @@ TEST_CASE("bravo pairing: the pin survives Bravo's reboot, with its connection k
     std::optional<BravoRig> booted{};
     PairedProducts tango;
     tango.pair_and_store();
-    const std::string blob = stored_blob(tango.bravo.platform);
+    const std::string blob = PairedProducts::stored_in(tango.bravo.platform.key_value());
     REQUIRE_FALSE(blob.empty());
 
     BravoRig& rebooted = booted.emplace([&blob](platform::host::MeshtrackerX1& platform) {
-        REQUIRE(platform.key_value().write("settings",
-                                           reinterpret_cast<const uint8_t*>(blob.data()),
-                                           blob.size()) == Status::Ok);
+        PairedProducts::keep(platform.key_value(), blob);
     });
     REQUIRE(rebooted.setup() == Status::Ok);
     CHECK(rebooted.product.peer().paired());
