@@ -24,6 +24,8 @@ Each aircraft is placed north and east of where own-ship was when it was added, 
 
 The paired Go is a Go+: its host platform fits a buzzer and a motor (`platform::host::Platform::kFullyFitted`). Once it has a fix and reads Bravo `Live`, its claims take the alarm, and Bravo keeps its buzzer and motor silent while it holds such a claim from its connected Go (#179, `products/skyblip_bravo/README.md`). `paired.json` flies a converging ADS-B aircraft that both units hear: they both sound for at most one claim period after the Go reads Bravo `Live`, then only the Go+ sounds. A second ADS-B aircraft reaches advisory after that, and only the Go+ sounds for it. `paired_link_lost.json` keeps an ADS-B aircraft in advisory, so Bravo sounds again from its own settings on the pass the link drops, and keeps silent once the link is back and the next claim arrives. A second ADS-B aircraft reaches advisory after the link is back, and only the Go+ sounds for it.
 
+From boot until Bravo's first `health` with UTC, the Go reads Bravo `Waiting` and its radar says `BRAVO WAITING`, with no `BRAVO LOST` tone (`../products/skyblip_go/pages/README.md`). `paired_bravo_without_fix.json` takes Bravo's fix alone. The AG3335 model still sends the time and date without a fix, so Bravo keeps UTC and the Go keeps reading it `Live` and showing its targets under `B`, with no `BRAVO WAITING` or `BRAVO LOST`. Bravo gates on the position in the Go's claims, and its own phone gets no `$PFLAA` and a `$PFLAU` with GPS 0.
+
 Bravo's phone, when a scenario connects one, takes the session after the Go's. `BravoAboard::set_link(false)` drops the connection at once, as a supervision timeout ends it, and no reconnect comes up until `set_link(true)`.
 
 ## ADS-B Out
