@@ -155,8 +155,6 @@ TEST_CASE(
     CHECK(indication_for(Condition::NoFixLinked).lamp == indication_for(Condition::NoFix).lamp);
 }
 
-// Bravo has no glass, so the lamp is the one thing that says a capture armed from a page is
-// running.
 TEST_CASE("indication: a capture winks twice in the fix colour, below a prompt and above a link") {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;

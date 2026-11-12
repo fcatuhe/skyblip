@@ -185,21 +185,22 @@ class ReplyFraming(unittest.TestCase):
 class FakeBravo:
     """The config endpoint of a unit that stages the prompt, then gives the presses' verdict."""
 
-    def __init__(self, first, verdict=None):
-        self.first = first
+    def __init__(self, *answers):
         self.replies = asyncio.Queue()
-        if verdict is not None:
-            self.replies.put_nowait((0.0, frames.encode_frame(verdict)))
+        for answer in answers:
+            self.replies.put_nowait((0.0, frames.encode_frame(answer)))
         self.sent = []
 
-    async def command(self, body, timeout):
+    async def write_config(self, body):
+        frames.encode_frame(body)
         self.sent.append(body)
-        return [(0.0, self.first)]
 
 
 PENDING = {"command": "acknowledgement", "acknowledge": False, "pending": True,
            "reason": "confirm_capture"}
 GRANTED = {"command": "acknowledgement", "acknowledge": True, "reason": "capture"}
+PUSHED = {"command": "status", "flight": "ground", "upload": False, "charging": False,
+          "power_level": "normal", "went_dark_flat": False}
 
 
 class Capture(unittest.TestCase):
@@ -210,6 +211,21 @@ class Capture(unittest.TestCase):
         self.assertEqual(unit.sent, [{"command": "capture", "profile": "power_run"}])
         self.assertEqual(said, [blip_capture.PRESS_TWICE])
         self.assertEqual(outcome, "power_run capture armed")
+
+    # The unit pushes status on a flight, battery or Bravo change, which is no verdict.
+    def test_a_status_pushed_while_the_prompt_stands_is_passed_over(self):
+        unit = FakeBravo(PUSHED, PENDING, PUSHED, GRANTED)
+        said = []
+        outcome = asyncio.run(blip_capture.run(unit, "full", 1.0, said.append))
+        self.assertEqual(said, [blip_capture.PRESS_TWICE])
+        self.assertEqual(outcome, "full capture armed")
+
+    def test_a_frame_outside_the_registry_stops_by_name_rather_than_hanging(self):
+        unit = FakeBravo()
+        unit.replies.put_nowait((0.0, b"<truncated"))
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_capture.run(unit, "full", 1.0, list().append, blip.decoded_or_refused))
+        self.assertIn("3c7472756e6361746564", str(caught.exception))
 
     def test_a_stop_allowed_on_the_unit_says_the_capture_stopped(self):
         outcome = asyncio.run(blip_capture.run(FakeBravo(PENDING, GRANTED), "stop", 1.0, list().append))

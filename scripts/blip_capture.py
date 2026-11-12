@@ -8,6 +8,7 @@ so this waits for that verdict as long as the prompt stands. A Go answers
 unknown_command: its captures are armed on its glass only.
 """
 import asyncio
+import time
 
 import blip_frames as frames
 
@@ -25,22 +26,28 @@ def add_parser(sub, run):
     capture.set_defaults(run=run)
 
 
-async def run(link, profile, timeout, say=print):
+async def run(link, profile, timeout, say=print, decode=frames.decode_frame):
     """The unit's verdict on one capture command, said as it comes."""
-    replies = await link.command({"command": "capture", "profile": profile}, timeout)
-    frame = replies[-1][1]
+    await link.write_config({"command": "capture", "profile": profile})
+    frame = await next_acknowledgement(link, timeout, decode)
     if frame.get("pending"):
         say(PRESS_TWICE)
-        frame = await next_reply(link, timeout)
+        frame = await next_acknowledgement(link, timeout, decode)
     return verdict(frame, profile)
 
 
-async def next_reply(link, timeout):
-    try:
-        _, data = await asyncio.wait_for(link.replies.get(), timeout)
-    except asyncio.TimeoutError:
-        raise SystemExit("no verdict from the unit within %.0f s" % timeout)
-    return frames.decode_frame(data)
+async def next_acknowledgement(link, timeout, decode):
+    """The next acknowledgement, past the status and update frames the unit pushes unasked."""
+    deadline = time.monotonic() + timeout
+    while True:
+        left = deadline - time.monotonic()
+        try:
+            _, data = await asyncio.wait_for(link.replies.get(), max(left, 0))
+        except asyncio.TimeoutError:
+            raise SystemExit("no verdict from the unit within %.0f s" % timeout)
+        frame = decode(data)
+        if frame.get("command") == "acknowledgement":
+            return frame
 
 
 def verdict(frame, profile):

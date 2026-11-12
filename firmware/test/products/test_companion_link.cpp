@@ -151,7 +151,6 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
 }
 
-// A write is refused in the air, so a name is set before the aircraft moves.
 // The Go arms a capture on its glass only, so the command Bravo answers is not one it knows.
 TEST_CASE("companion link: a Go answers a capture command unknown_command and arms nothing") {
     Rig rig;
@@ -169,6 +168,7 @@ TEST_CASE("companion link: a Go answers a capture command unknown_command and ar
     CHECK_FALSE(rig.product.capture().capturing());
 }
 
+// A write is refused in the air, so a name is set before the aircraft moves.
 TEST_CASE("companion link: a callsign written in flight is refused, not staged") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

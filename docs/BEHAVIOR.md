@@ -1359,7 +1359,6 @@ The state-to-indicator table on its own: given the cell, the fix and the alarm, 
 **indication**
 
 - a capture winks twice in the fix colour, below a prompt and above a link
-  > Bravo has no glass, so the lamp is the one thing that says a capture armed from a page is running.
 - a change shows itself at once, not at the end of the cycle
 - a critical cell keeps SoftRF's blink rate at a tenth of its duty
 - a prompt yields only to traffic, and a link keeps the fix colour twice as fast
@@ -3676,10 +3675,11 @@ The companion connection on the running product: raised by the platform's own li
 **companion link**
 
 - a Go answers a capture command unknown_command and arms nothing
-  > A write is refused in the air, so a name is set before the aircraft moves. The Go arms a capture on its glass only, so the command Bravo answers is not one it knows.
+  > The Go arms a capture on its glass only, so the command Bravo answers is not one it knows.
 - a callsign is written by an app and authorised on the glass
   > A name typed on a phone, end to end: the glass names it, and two presses store it.
 - a callsign written in flight is refused, not staged
+  > A write is refused in the air, so a name is set before the aircraft moves.
 - a config reply held for a phone that left never reaches the next one
 - a connected tablet's gauge moves without asking, and stops when it goes
   > G1, end to end and on the wire: the launch gate says the state of charge reaches the pilot's tablet without it asking. It never did on silicon, because the push is gated on a link being up and nothing ever said one was.

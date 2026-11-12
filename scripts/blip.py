@@ -145,7 +145,7 @@ async def run_command(args):
 
 async def run_capture(args):
     async with await connect(args, config=True) as link:
-        print(await blip_capture.run(link, args.profile, args.timeout))
+        print(await blip_capture.run(link, args.profile, args.timeout, decode=decoded_or_refused))
     return 0
 
 
@@ -487,6 +487,9 @@ class Link:
             out.append((at - sent, frame))
             if not frames.more_follows(frame):
                 return out
+
+    async def write_config(self, body):
+        await self.client.write_gatt_char(CONFIG_CHAR, frames.encode_frame(body), response=True)
 
     async def write(self, body):
         await self.client.write_gatt_char(LOG_CHAR, frames.encode_frame(body), response=True)
