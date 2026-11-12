@@ -61,7 +61,7 @@ uint32_t GateReference::own_icao(uint32_t bravo_own_icao) const {
     return go_own_icao_ != 0 ? go_own_icao_ : bravo_own_icao;
 }
 
-// INFO: fc 11nov26 a claim the Go wrote without UTC cannot be dated, so it never gates
+// INFO: fc 11nov26 a claim the Go wrote without UTC cannot be dated, so it is never the reference
 bool GateReference::fresh(uint32_t age_ms, uint32_t now_ms) const {
     if (!heard_ || !claim_.utc_valid) return false;
     const uint64_t total_ms = static_cast<uint64_t>(age_ms) + transit_ms_ + (now_ms - heard_ms_);

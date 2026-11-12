@@ -4,7 +4,6 @@
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
-#include "core/traffic/gate.h"
 
 namespace skyblip::traffic {
 
@@ -142,26 +141,15 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         implausible_++;
         return -1;
     }
-    const bool gated =
-        observation.source == model::Source::Adsb && outside_adsb_gate(own_, observation);
     int index = find(observation.address_mapping_table, observation.address);
     if (index >= 0) {
         Target& held = slots_[index];
         if (!prefer_new(observation, held.observation)) return index;
-        if (gated && held.alarm_level == Level::None) {
-            adsb_outside_gate_++;
-            release(held);
-            return -1;
-        }
         watch_liftoff(held, observation);
         held.observation = observation;
         held.revision = ++revisions_;
         sample_turn(held.turn, observation);
         return index;
-    }
-    if (gated) {
-        adsb_outside_gate_++;
-        return -1;
     }
     index = allocate_slot(observation, now_s);
     if (index < 0) return -1;

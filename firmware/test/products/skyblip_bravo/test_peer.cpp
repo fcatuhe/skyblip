@@ -1,4 +1,4 @@
-// Bravo serving its Go on the peer endpoint: health, observations and the gate reference (#192).
+// Bravo serving its Go on the peer endpoint: health, observations and the reference (#192).
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -145,7 +145,7 @@ TEST_CASE("bravo peer: health goes to the pinned Go once a second, whatever the 
     CHECK(field(last, "last_sequence").empty());
 }
 
-TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and its position gates nothing") {
+TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and is never the reference") {
     Served served(false);
     const GoPosition far{BravoRig::kLatitude1e7 + 5000000};
     served.seconds(3, true, &far);
@@ -156,7 +156,7 @@ TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and its position gate
           comms::ExportReference::Own);
 }
 
-TEST_CASE("bravo peer: without a fix but with UTC, Bravo gates on its Go's fresh position") {
+TEST_CASE("bravo peer: without a fix but with UTC, Bravo takes its Go's fresh position") {
     Served served;
     const GoPosition here{};
     served.seconds(2, false, &here);
@@ -191,7 +191,7 @@ TEST_CASE("bravo peer: without UTC Bravo says so and exports nothing, even with 
     CHECK(served.sent("observation").empty());
 }
 
-TEST_CASE("bravo peer: a stale peer_claim stops gating, and Bravo with no fix exports nothing") {
+TEST_CASE("bravo peer: a stale peer_claim is no reference, and Bravo with no fix exports nothing") {
     Served served;
     const GoPosition here{};
     served.seconds(2, false, &here);
@@ -215,33 +215,26 @@ TEST_CASE("bravo peer: a stale peer_claim stops gating, and Bravo with no fix ex
     CHECK(field(served.last_health(), "export_reference") == "none");
 }
 
-TEST_CASE("bravo peer: with no vertical reference the gate never drops a target on its height") {
-    // 10000 ft is about 2.5 km above the Go's 500 m, past kAdsbGateHeightCeilingM.
+// No gate: a target far above the Go is exported, whatever height the Go's claim carries.
+TEST_CASE("bravo peer: a target 2.5 km above the Go is exported, with or without the Go's height") {
+    // 10000 ft is about 2.5 km above the Go's 500 m.
     constexpr int32_t kHighFt = 10000;
     Served served;
     GoPosition here{};
     served.seconds(2, false, &here);
     served.rig.hear_aircraft(kAircraft, 2000, kHighFt);
     served.seconds(1, false, &here);
-    CHECK(served.observations_of(kAircraft).empty());
+    CHECK_FALSE(served.observations_of(kAircraft).empty());
 
     here.pressure_altitude_valid = false;
     served.seconds(1, false, &here);
     served.rig.hear_aircraft(kOtherAircraft, 2000, kHighFt);
     served.seconds(1, false, &here);
-    CHECK(served.observations_of(kOtherAircraft).size() == 1);
-
-    // A pressure altitude older than the claim's ceiling is no reference either.
-    GoPosition stale_height{};
-    stale_height.pressure_altitude_age_ms = bravo::GateReference::kClaimMaxAgeMs + 1;
-    served.seconds(1, false, &stale_height);
-    served.rig.hear_aircraft(kAircraft, 2500, kHighFt);
-    served.seconds(1, false, &stale_height);
-    CHECK_FALSE(served.observations_of(kAircraft).empty());
+    CHECK_FALSE(served.observations_of(kOtherAircraft).empty());
 }
 
 // GPT's review: one height older than the claim's ceiling threw the whole position away.
-TEST_CASE("bravo peer: a stale height keeps the Go's fresh position, gating on it horizontally") {
+TEST_CASE("bravo peer: a stale height keeps the Go's fresh position as the reference") {
     constexpr int32_t kHighFt = 10000;
     Served served;
     GoPosition here{};
@@ -255,30 +248,18 @@ TEST_CASE("bravo peer: a stale height keeps the Go's fresh position, gating on i
     CHECK(choice.own.fix_valid);
     CHECK_FALSE(choice.own.altitude_hae_valid);
 
+    GoPosition stale_pressure = here;
+    stale_pressure.pressure_altitude_valid = true;
+    stale_pressure.pressure_altitude_age_ms = bravo::GateReference::kClaimMaxAgeMs + 1;
+    served.seconds(1, false, &stale_pressure);
+    const bravo::GateChoice without_pressure =
+        served.rig.product.gate().choose(served.rig.state().own, served.rig.now_ms);
+    CHECK(without_pressure.own.fix_valid);
+    CHECK_FALSE(without_pressure.own.pressure_altitude_valid);
+
     served.rig.hear_aircraft(kAircraft, 2000, kHighFt);
-    served.seconds(1, false, &here);
+    served.seconds(1, false, &stale_pressure);
     CHECK_FALSE(served.observations_of(kAircraft).empty());
-
-    const auto hear_gnss_height = [&served](uint32_t address) {
-        const double latitude = BravoRig::kLatitude1e7 / 1e7 + 2000 / 111320.0;
-        const double longitude = BravoRig::kLongitude1e7 / 1e7;
-        served.rig.hear(
-            adsb_airborne_position(address, 0, latitude, longitude, false, kHighFt, true));
-        served.rig.hear(
-            adsb_airborne_position(address, 0, latitude, longitude, true, kHighFt, true));
-    };
-    GoPosition fresh_height = here;
-    fresh_height.altitude_hae_age_ms = 200;
-    served.seconds(1, false, &fresh_height);
-    hear_gnss_height(kOtherAircraft);
-    served.seconds(1, false, &fresh_height);
-    CHECK(served.observations_of(kOtherAircraft).empty());
-
-    constexpr uint32_t kThirdAircraft = 0x48A1B2;
-    served.seconds(1, false, &here);
-    hear_gnss_height(kThirdAircraft);
-    served.seconds(1, false, &here);
-    CHECK_FALSE(served.observations_of(kThirdAircraft).empty());
 }
 
 // GPT's review: a Go whose buffers were full lost the frame another Go took.

@@ -150,7 +150,7 @@ What left this page is the radio: RSSI, and the e.r.p. that level implied at tha
 
 No fix means no range, and the page says so instead of listing: every figure here is geometry against own-ship's position, and without one there is nothing to be nearest.
 
-A range past 99.9 reads `FAR` and a separation past 9900 ft stops at `+99`. Three double-height columns fill a 200 px glass exactly, so a figure that grew a digit would not overflow its own column, it would land in the one beside it. Neither reading is one a pilot acts on: what is that far away is in the ring of the next flight, not this one, and the sanity gate (`core/traffic/README.md`) has already refused anything past 30 km.
+A range past 99.9 reads `FAR` and a separation past 9900 ft stops at `+99`. Three double-height columns fill a 200 px glass exactly, so a figure that grew a digit would not overflow its own column, it would land in the one beside it. Neither reading is one a pilot acts on: what is that far away is in the ring of the next flight, not this one. The sanity check (`core/traffic/README.md`) refuses a direct target past 30 km and a relayed one past 60 km, but ADS-B has no gate and reaches the table from up to 1115 km, so a far `B` aircraft, an airliner at cruise above all, often reads `FAR`, `+99` or both.
 
 ## radio_log
 

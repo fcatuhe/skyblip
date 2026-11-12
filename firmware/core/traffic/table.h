@@ -65,7 +65,6 @@ class TrafficTable {
     // this radio can hear (core/traffic/sanity.h). Not silent: a rate that climbs
     // is a receiver at the edge of its budget or a decoder that is wrong.
     uint32_t implausible() const { return implausible_; }
-    uint32_t adsb_outside_gate() const { return adsb_outside_gate_; }
     uint32_t adsb_without_position() const { return adsb_without_position_; }
 
     int update(const model::AircraftObservation& observation, uint32_t now_s);
@@ -86,7 +85,6 @@ class TrafficTable {
     uint8_t own_address_mapping_table_{0};
     uint32_t own_icao_{0};
     uint32_t implausible_{0};
-    uint32_t adsb_outside_gate_{0};
     uint32_t adsb_without_position_{0};
     uint32_t revisions_{0};
 
