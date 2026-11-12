@@ -11,6 +11,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
 | [`link_budget.py`](link_budget.py) | turn two units' captures of one link into a path loss and an e.r.p. estimate |
+| [`adsb_rejects.py`](adsb_rejects.py) | read the 1090 MHz frames a skyBlip Bravo refused off its console: the DF, the ICAO, the CRC residue, the doubtful chip pairs, and whether one flipped bit or a chip gained or lost would pass the CRC |
 | `mkuf2.py` | build the drag-and-drop install image for a board, and refuse to write outside that board's factory bootloader window |
 | `build_local.sh` | build the device images of the products it is given, `skyblip_go` when none is named, off a committed ref, from a bare machine |
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
@@ -19,7 +20,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py` and `check_image_product.py`, which `build_image.sh` runs on the images it signs; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says. `size_check.py` prints each image's flash and RAM headroom against its slot and its board's SRAM, and fails a build with no slot |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |
-| `test_mkuf2.py`, `test_check_imu_image.py`, `test_check_image_product.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_blip_frames.py`, `test_blip_altitude.py`, `test_link_registry.py`, `test_power_budget.py`, `test_link_budget.py`, `test_shared_layers.py`, `test_size_check.py` | the Python self-checks, run by the `firmware` workflow. `test_shared_layers.py` configures `firmware/test/cmake/shared_layers` with cmake, with and without `CONFIG_SKYBLIP_ACTIVATION` and `CONFIG_SKYBLIP_IMU_IMAGE` |
+| `test_mkuf2.py`, `test_check_imu_image.py`, `test_check_image_product.py`, `test_blip.py`, `test_blip_offload.py`, `test_blip_link.py`, `test_blip_frames.py`, `test_blip_altitude.py`, `test_link_registry.py`, `test_power_budget.py`, `test_link_budget.py`, `test_adsb_rejects.py`, `test_shared_layers.py`, `test_size_check.py` | the Python self-checks, run by the `firmware` workflow. `test_shared_layers.py` configures `firmware/test/cmake/shared_layers` with cmake, with and without `CONFIG_SKYBLIP_ACTIVATION` and `CONFIG_SKYBLIP_IMU_IMAGE` |
 
 ## blip.py
 

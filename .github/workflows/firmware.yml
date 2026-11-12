@@ -118,6 +118,9 @@ jobs:
       # that moves in payload.h, or a figure that moves in sx1262.h, must fail here.
       - name: link budget pairing, free space and what it sets
         run: python3 scripts/test_link_budget.py
+      # The bench reads Bravo's refused frames through it, so it must decode chips as core/protocol does.
+      - name: the reader of Bravo's refused 1090 MHz frames
+        run: python3 scripts/test_adsb_rejects.py
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite
