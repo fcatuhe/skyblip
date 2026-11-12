@@ -61,6 +61,9 @@ class Link {
 
     // INFO: fc 11nov26 the address of the central on that connection, false once it is gone
     virtual bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const = 0;
+
+    // INFO: fc 12nov26 the centrals connected now, less the paired peer's kept connection
+    virtual int phones() const = 0;
 };
 
 }

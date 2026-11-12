@@ -103,6 +103,22 @@ TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs bo
     CHECK(stored == PairedLink::kCentralAddress);
 }
 
+// A paired Go stays connected all flight, so counting it as a phone held the lamp at the doubled wink.
+TEST_CASE("bravo pairing: its paired Go is no phone, so only a phone doubles the lamp's wink") {
+    PairedProducts tango;
+    tango.pair_and_store();
+    REQUIRE(tango.service().link() == go::BravoLink::Up);
+    CHECK(tango.bravo.lamp() == indication::Condition::NoFix);
+
+    tango.bravo.raise_link(2);
+    tango.run_for(100);
+    CHECK(tango.bravo.lamp() == indication::Condition::NoFixLinked);
+
+    tango.bravo.platform.link().drop_link(2);
+    tango.run_for(100);
+    CHECK(tango.bravo.lamp() == indication::Condition::NoFix);
+}
+
 TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side stores a pin") {
     PairedProducts tango;
     tango.ask();
