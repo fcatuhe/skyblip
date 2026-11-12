@@ -23,6 +23,32 @@ ZTEST(platform_adapters, test_kvstore_round_trips_through_nvs) {
     zassert_mem_equal(read, written, sizeof(written));
 }
 
+// NVS never reads sector 2 of an otherwise clean store, so only the check can erase a ring page
+// there.
+ZTEST(platform_adapters, test_kvstore_erases_a_meshtastic_ring_before_mounting) {
+    const struct device* flash = PARTITION_DEVICE(storage_partition);
+    const off_t start = PARTITION_OFFSET(storage_partition);
+    struct flash_pages_info page;
+    zassert_equal(flash_get_page_info_by_offs(flash, start, &page), 0);
+    zassert_equal(flash_flatten(flash, start, 3 * page.size), 0);
+    const off_t ring_page = start + static_cast<off_t>(2 * page.size);
+    const uint32_t header[2] = {platform::kWarmRingMagicV3, 7};
+    zassert_equal(flash_write(flash, ring_page, header, sizeof(header)), 0);
+
+    platform::zephyr::KeyValueStore key_value;
+    zassert_equal(key_value.begin(), Status::Ok, "NVS did not come up over the ring");
+    uint32_t first_word = 0;
+    zassert_equal(flash_read(flash, ring_page, &first_word, sizeof(first_word)), 0);
+    zassert_not_equal(first_word, platform::kWarmRingMagicV3, "the ring page survived");
+
+    const uint8_t written[] = {1, 2, 3, 4};
+    zassert_equal(key_value.write("settings", written, sizeof(written)), Status::Ok);
+    uint8_t read[8] = {0};
+    size_t stored_bytes = 0;
+    zassert_equal(key_value.read("settings", read, sizeof(read), stored_bytes), Status::Ok);
+    zassert_mem_equal(read, written, sizeof(written));
+}
+
 ZTEST(platform_adapters, test_missing_key_is_not_found) {
     platform::zephyr::KeyValueStore key_value;
     zassert_equal(key_value.begin(), Status::Ok);
