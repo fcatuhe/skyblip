@@ -391,8 +391,7 @@ TEST_CASE("adsb: DF16, an unparsed type code and a short report are refused") {
     CHECK(adsb_receive(chips, kAdsbChipBytes - 1, kReception, message) == Status::Invalid);
 }
 
-// The console line products/skyblip_bravo/README.md reads, which scripts/adsb_rejects.py decodes.
-TEST_CASE("adsb: the chips a Bravo prints for a refused frame are the chips it refused") {
+TEST_CASE("adsb: Bravo's README example fails its parity and reads KLM1023 once mended") {
     uint8_t chips[kAdsbChipBytes];
     REQUIRE(hex::read("a665956555a669595559a5a55a6a16a55a59a5a955666a69579695", ByteSpan(chips)));
     CHECK(hear_chips(chips).status == Status::Crc);

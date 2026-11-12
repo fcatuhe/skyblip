@@ -71,10 +71,10 @@ def read(match):
         flip = next((bit for bit in range(1, BITS + 1) if SYNDROMES[bit] == residue), None)
     if residue != 0 and flip is None:
         for first, last, by in runs(slips(stream)):
-            if first == 8:
-                shift = by
-            else:
+            if first != 8:
                 slip.append((first, last, by))
+            elif shift is None:
+                shift = by
     return Reading(match["status"], match["rssi"], df, icao, type_code, residue, doubtful, flip,
                    shift, slip)
 

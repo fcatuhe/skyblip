@@ -423,6 +423,7 @@ DF17 from the LR2021's chips to typed messages, pinned to the decodes core/proto
 
 **adsb**
 
+- Bravo's README example fails its parity and reads KLM1023 once mended
 - DF16, an unparsed type code and a short report are refused
 - GVA is read only from an airborne version 2 status
 - Gillham codes decode in 100 ft steps, reflected when the 500 ft count is odd
@@ -445,8 +446,6 @@ DF17 from the LR2021's chips to typed messages, pinned to the decodes core/proto
 - the Riddle's ground speed frame reads its components, a GNSS descent and 550 ft
 - the Riddle's identification frame names KLM1023 with no category
 - the Riddle's surface frame moves at 17 kt on a track of 33 steps
-- the chips a Bravo prints for a refused frame are the chips it refused
-  > The console line products/skyblip_bravo/README.md reads, which scripts/adsb_rejects.py decodes.
 - the type code names the category set, D at 1 up to A at 4
 - velocity zeros mean nothing sent and top codes saturate
 
