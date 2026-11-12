@@ -10,7 +10,7 @@ export default class extends Controller {
     this.session = new AbortController()
     this.device = null
     this.listen("connect", "click", () => this.link())
-    this.listen("disconnect", "click", () => this.device?.disconnect())
+    this.listen("disconnect", "click", () => this.device?.release())
     this.listen("send", "submit", event => this.sendLine(event))
     this.listen("sendjson", "submit", event => this.sendJson(event))
     this.listen("clearstream", "click", () => { this.field("stream").textContent = "-" })
@@ -29,7 +29,7 @@ export default class extends Controller {
 
   disconnect() {
     this.session.abort()
-    this.device?.disconnect()
+    this.device?.release()
     this.device = null
   }
 
@@ -48,7 +48,7 @@ export default class extends Controller {
         onClose: name => { if (!signal.aborted) this.closed(name) }
       })
       if (signal.aborted) {
-        device.disconnect()
+        device.release()
       } else {
         this.device = device
         this.state(`${device.name} over ${device.transport}`, "up")

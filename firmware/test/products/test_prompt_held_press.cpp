@@ -68,6 +68,7 @@ struct Unit {
                 return;
             }
             case comms::Pending::EraseLog: rig.send_log("{\"command\":\"erase\"}"); return;
+            case comms::Pending::Capture:
             case comms::Pending::None: return;
         }
     }

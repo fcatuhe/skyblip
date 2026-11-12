@@ -1,13 +1,16 @@
 // A whole Go pairs with a whole Bravo over the simulated link, and neither keeps half a pin (#192).
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "doctest/doctest.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/bravo_rig.h"
 #include "test/support/log_transfer.h"
 #include "test/support/paired_link.h"
+#include "test/support/paired_products.h"
 #include "test/support/product_rig.h"
 #include "test/support/registry_frames.h"
 
@@ -48,8 +51,7 @@ struct Asked {
         REQUIRE(go.connect());
         REQUIRE(go.write(complete_registry_frame(
                     "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-                    "\"alarm_passes\":1,\"alarm_volume\":\"loud\",\"paired\":false}")) ==
-                Status::Ok);
+                    "\"paired\":false}")) == Status::Ok);
         run_for(30);
         REQUIRE(rig.product.peer().requested());
     }
@@ -81,61 +83,10 @@ uint32_t pairing_arms_at_ms() {
     return dry.rig.now_ms - 10;
 }
 
-struct Tango {
-    Rig go{};
-    BravoRig bravo{};
-    PairedLink air{bravo.platform.link(), go.platform.central()};
-    uint32_t now_ms{100};
-
-    Tango() {
-        REQUIRE(go.setup() == Status::Ok);
-        REQUIRE(bravo.setup() == Status::Ok);
-        go.world = [this](uint32_t at_ms) {
-            bravo.now_ms = at_ms;
-            bravo.step();
-            air.pump();
-        };
-    }
-
-    go::BravoService& service() { return go.product.bravo(); }
-    bravo::PeerService& peer() { return bravo.product.peer(); }
-
-    void run_for(uint32_t span_ms) {
-        go.run(now_ms, now_ms + span_ms);
-        now_ms += span_ms + 50;
-    }
-
-    // The pilot opens the BRAVO page on the Go, picks the one listed and confirms it.
-    void ask() {
-        go.show(now_ms, go::Page::Bravo);
-        run_for(300);
-        REQUIRE(service().found_count() == 1);
-        go.press(now_ms);
-        go.press(now_ms);
-        run_for(2000);
-    }
-
-    void press_bravo() {
-        bravo.platform.set_button_down(true);
-        run_for(150);
-        bravo.platform.set_button_down(false);
-        run_for(150);
-    }
-
-    // INFO: fc 11nov26 each side's settings write waits for a write window, forced after 3 s
-    void pair_and_store() {
-        ask();
-        press_bravo();
-        run_for(5000);
-    }
-
-    bool go_pinned() { return go::paired(go.settings()); }
-};
-
 }  // namespace
 
 TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs both sides") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     CHECK(tango.service().step() == go::BravoStep::Waiting);
     CHECK(tango.peer().requested());
@@ -160,7 +111,7 @@ TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs bo
 }
 
 TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side stores a pin") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.run_for(go::BravoService::kAnswerCeilingMs);
     CHECK(tango.service().step() == go::BravoStep::Refused);
@@ -174,7 +125,7 @@ TEST_CASE("bravo pairing: no press, no health: the Go gives up and neither side 
 
 // Opus's review: the held press outlasted kLongPressHoldMs, so it was never a press at all.
 TEST_CASE("bravo pairing: a press held from before the request never pairs") {
-    Tango tango;
+    PairedProducts tango;
     tango.go.show(tango.now_ms, go::Page::Bravo);
     tango.run_for(300);
     REQUIRE(tango.service().found_count() == 1);
@@ -215,7 +166,7 @@ TEST_CASE("bravo pairing: an advisory outranks the request, and its press only d
     rig.hear_aircraft(0x3C6586, 800);
     REQUIRE(go.write(complete_registry_frame(
                 "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-                "\"alarm_passes\":1,\"alarm_volume\":\"loud\",\"paired\":false}")) == Status::Ok);
+                "\"paired\":false}")) == Status::Ok);
     rig.push_fix(25000);
     run_for(1000);
     REQUIRE(rig.state().alarm_undismissed == traffic::Level::Advisory);
@@ -246,7 +197,7 @@ TEST_CASE("bravo pairing: an advisory outranks the request, and its press only d
 
 // The Go pins on the first health, so a health lost after the press must leave Bravo unpinned.
 TEST_CASE("bravo pairing: a pairing interrupted on the Go's side leaves no pin on either side") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToCentral, Flow::Lost);
     tango.press_bravo();
@@ -264,7 +215,7 @@ TEST_CASE("bravo pairing: a pairing interrupted on the Go's side leaves no pin o
 
 TEST_CASE("bravo pairing: a pairing interrupted by Bravo's reboot leaves no pin on either side") {
     BravoRig rebooted{};
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToCentral, Flow::Stalled);
     tango.press_bravo();
@@ -285,7 +236,7 @@ TEST_CASE("bravo pairing: a pairing interrupted by Bravo's reboot leaves no pin 
 
 // The Go read the health and pinned, then the link went before Bravo read its confirmation.
 TEST_CASE("bravo pairing: a Go that pinned and lost the link completes Bravo's half on return") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Lost);
     tango.press_bravo();
@@ -302,7 +253,7 @@ TEST_CASE("bravo pairing: a Go that pinned and lost the link completes Bravo's h
 
 // Opus's review: a Go that retried inside the offer window paired with no new press.
 TEST_CASE("bravo pairing: a Go that retries after a lost health needs a new press") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToCentral, Flow::Lost);
     tango.press_bravo();
@@ -351,7 +302,7 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     constexpr uint32_t kAircraft = 0x3C6586;
     // INFO: fc 11nov26 the Go's barometer model reads sea level, and the gate holds Bravo to it
     constexpr int32_t kNearGoBarometerFt = 100;
-    Tango tango;
+    PairedProducts tango;
     tango.pair_and_store();
     const auto second = [&tango] {
         tango.go.push_timed_fix(0, BravoRig::kOwnAltitudeMm / 1000);
@@ -383,33 +334,55 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     CHECK(std::string(callsign) == "AFR123");
 }
 
-// #179 hands the alarm over only once both sides hold the pin.
+// #179 hands the alarm over only once both sides hold the pin, to a Go+ with a fix.
 TEST_CASE("bravo pairing: no peer is paired, and no health grants, before both sides confirm") {
-    Tango tango;
+    PairedProducts tango;
+    const std::function<void(uint32_t)> world = tango.go.world;
+    uint32_t next_fix_ms = 0;
+    tango.go.world = [&](uint32_t at_ms) {
+        if (at_ms >= next_fix_ms) {
+            tango.go.push_timed_fix(0, 0);
+            tango.bravo.push_fix();
+            tango.go.utc_offset_s++;
+            tango.bravo.utc_offset_s++;
+            next_fix_ms = at_ms + 1000;
+        }
+        world(at_ms);
+    };
+    const auto healths = [&tango](size_t from, size_t to) {
+        std::vector<std::string> out;
+        const auto& sent = tango.bravo.platform.link().sent;
+        for (size_t i = from; i < to; i++) {
+            if (sent[i].endpoint != events::Endpoint::Peer) continue;
+            const std::string text = link_text(sent[i].bytes);
+            if (field(text, "command") == "health") out.push_back(text);
+        }
+        return out;
+    };
+
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Stalled);
     tango.press_bravo();
     tango.run_for(1000);
     CHECK(tango.go_pinned());
     CHECK_FALSE(tango.peer().paired());
+    const size_t confirmed_at = tango.bravo.platform.link().sent.size();
+    const std::vector<std::string> before = healths(0, confirmed_at);
+    CHECK_FALSE(before.empty());
+    for (const std::string& health : before) CHECK(field(health, "alarm_granted") == "false");
 
     tango.air.set_flow(Flow::Flowing);
-    tango.run_for(1500);
+    tango.run_for(3000);
     CHECK(tango.peer().paired());
-    int healths = 0;
-    for (const platform::host::Link::Frame& sent : tango.bravo.platform.link().sent) {
-        if (sent.endpoint != events::Endpoint::Peer) continue;
-        const std::string text = link_text(sent.bytes);
-        if (field(text, "command") != "health") continue;
-        healths++;
-        CHECK(field(text, "alarm_granted") == "false");
-    }
-    CHECK(healths > 0);
+    const std::vector<std::string> after =
+        healths(confirmed_at, tango.bravo.platform.link().sent.size());
+    REQUIRE_FALSE(after.empty());
+    CHECK(field(after.back(), "alarm_granted") == "true");
 }
 
 TEST_CASE("bravo pairing: the pin survives Bravo's reboot, with its connection kept from phones") {
     std::optional<BravoRig> booted{};
-    Tango tango;
+    PairedProducts tango;
     tango.pair_and_store();
     const std::string blob = stored_blob(tango.bravo.platform);
     REQUIRE_FALSE(blob.empty());
@@ -441,7 +414,7 @@ TEST_CASE("bravo pairing: the pin survives Bravo's reboot, with its connection k
 
 // GPT's review: a Go that unpaired left Bravo pinned, its connection kept from phones.
 TEST_CASE("bravo pairing: a Go that unpairs tells Bravo, which drops its pin and frees the slot") {
-    Tango tango;
+    PairedProducts tango;
     tango.pair_and_store();
     REQUIRE(tango.peer().paired());
 
@@ -467,7 +440,7 @@ TEST_CASE("bravo pairing: a Go that unpairs tells Bravo, which drops its pin and
 }
 
 TEST_CASE("bravo pairing: a Go unpaired with Bravo away unpins it when it asks again") {
-    Tango tango;
+    PairedProducts tango;
     tango.pair_and_store();
     tango.air.set_in_range(false);
     tango.air.drop();
@@ -488,7 +461,7 @@ TEST_CASE("bravo pairing: a Go unpaired with Bravo away unpins it when it asks a
 // GPT's review: Bravo restarted after the Go read its health, and the Go read CONNECTED for ever.
 TEST_CASE("bravo pairing: a Go pinned alone by Bravo's restart drops its pin and says so") {
     std::optional<BravoRig> booted{};
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Lost);
     tango.press_bravo();
@@ -518,7 +491,7 @@ TEST_CASE("bravo pairing: a Go pinned alone by Bravo's restart drops its pin and
 
 // GPT's review: a Go back after Bravo's offer lapsed kept a pin Bravo never stored.
 TEST_CASE("bravo pairing: a Go back after Bravo's offer lapsed drops its pin and says so") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Lost);
     tango.press_bravo();
@@ -544,7 +517,7 @@ TEST_CASE("bravo pairing: a Go back after Bravo's offer lapsed drops its pin and
 }
 
 TEST_CASE("bravo pairing: a Go that leaves its request takes the blinking lamp with it") {
-    Tango tango;
+    PairedProducts tango;
     tango.ask();
     REQUIRE(tango.bravo.lamp() == indication::Condition::Pairing);
     tango.go.tap(tango.now_ms);
@@ -554,7 +527,7 @@ TEST_CASE("bravo pairing: a Go that leaves its request takes the blinking lamp w
 }
 
 TEST_CASE("bravo pairing: a second Go's request and a press replace the pin") {
-    Tango tango;
+    PairedProducts tango;
     tango.pair_and_store();
 
     Rig second{};

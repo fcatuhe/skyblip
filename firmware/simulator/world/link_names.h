@@ -83,8 +83,12 @@ inline constexpr Value kReasonValues[] = {
     {"erased", 41},
     {"prompt_pending", 42},
     {"refused_on_device", 43},
+    {"confirm_capture", 44},
+    {"capture", 45},
+    {"capturing", 46},
+    {"not_capturing", 47},
 };
-inline constexpr Enumeration kReason{kReasonValues, 43};
+inline constexpr Enumeration kReason{kReasonValues, 47};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},
@@ -193,6 +197,14 @@ inline constexpr Value kLogValues[] = {
 };
 inline constexpr Enumeration kLog{kLogValues, 2};
 
+inline constexpr Value kCaptureProfileValues[] = {
+    {"full", 0},
+    {"power_run", 1},
+    {"flight_run", 2},
+    {"stop", 3},
+};
+inline constexpr Enumeration kCaptureProfile{kCaptureProfileValues, 4};
+
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},
     {"get", 1},
@@ -223,8 +235,9 @@ inline constexpr Value kCommandValues[] = {
     {"observation", 26},
     {"health", 27},
     {"peer_claim", 28},
+    {"capture", 29},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 29};
+inline constexpr Enumeration kCommand{kCommandValues, 30};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -511,9 +524,6 @@ inline constexpr Key kHealthKeys[] = {
     {"last_sequence", 5, Type::Unsigned, nullptr, 0, false},
     {"own_icao_set", 6, Type::Boolean, nullptr, 0, true},
     {"alarm_granted", 7, Type::Boolean, nullptr, 0, true},
-    {"lease_ms", 8, Type::Unsigned, nullptr, 0, false},
-    {"request_epoch", 9, Type::Unsigned, nullptr, 0, false},
-    {"request_sequence", 10, Type::Unsigned, nullptr, 0, false},
     {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
     {"paired", 12, Type::Boolean, nullptr, 0, true},
 };
@@ -532,12 +542,12 @@ inline constexpr Key kPeerClaimKeys[] = {
     {"pressure_altitude_age_ms", 10, Type::Unsigned, nullptr, 0, false},
     {"own_icao", 11, Type::Unsigned, nullptr, 0, false},
     {"alarm_requested", 12, Type::Boolean, nullptr, 0, true},
-    {"request_sequence", 13, Type::Unsigned, nullptr, 0, false},
-    {"alarm_passes", 14, Type::Unsigned, nullptr, 0, true},
-    {"alarm_volume", 15, Type::Enum, &kAlarmVolume, 0, true},
-    {"assessed_epoch", 16, Type::Unsigned, nullptr, 0, false},
-    {"assessed_sequence", 17, Type::Unsigned, nullptr, 0, false},
     {"paired", 18, Type::Boolean, nullptr, 0, true},
+};
+
+inline constexpr Key kCaptureKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"profile", 1, Type::Enum, &kCaptureProfile, 0, true},
 };
 
 inline constexpr Frame kFrames[] = {
@@ -568,8 +578,9 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
-    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 19},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 10},
+    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 14},
+    {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
 };
 
 }

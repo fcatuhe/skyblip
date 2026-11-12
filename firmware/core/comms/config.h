@@ -35,8 +35,11 @@ enum class Pending : uint8_t {
     PowerOff = 5,
     EraseLog = 6,
     GnssColdStart = 7,
-    Register = 8
+    Register = 8,
+    Capture = 9
 };
+
+enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
 
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
@@ -216,6 +219,16 @@ class ConfigService {
     // INFO: fc 12nov26 a paired Go's glass says BRAVO LOST, and a page learns it without polling
     void set_bravo_state(BravoState state);
 
+    // INFO: fc 12nov26 only Bravo arms a capture over the link: every other product answers
+    // unknown_command
+    void serve_captures() { serves_captures_ = true; }
+    void set_capture(bool available, bool armed) {
+        capture_available_ = available;
+        capture_armed_ = armed;
+    }
+    std::optional<CaptureProfile> capture_requested() const { return capture_requested_; }
+    void clear_capture_request() { capture_requested_.reset(); }
+
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
     // flight log service asks, the panel shows the prompt, and only the
@@ -312,6 +325,7 @@ class ConfigService {
     void request_firmware(const cbor::Reader& frame);
     void stage_settings(const events::RxFrame& frame);
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
+    void request_capture(const cbor::Reader& frame);
     void install_received_image();
     bool signed_by_trusted_key() const;
     bool in_flight() const { return flight_state_ == flight::FlightState::Airborne; }
@@ -341,6 +355,11 @@ class ConfigService {
     bool log_erase_requested_{false};
     events::Peer log_erase_peer_{0, 0};
     bool gnss_cold_start_requested_{false};
+    bool serves_captures_{false};
+    bool capture_available_{false};
+    bool capture_armed_{false};
+    CaptureProfile staged_capture_{CaptureProfile::Stop};
+    std::optional<CaptureProfile> capture_requested_{};
     Pending pending_{Pending::None};
     bool refused_on_device_{false};
     bool settings_dirty_{false};

@@ -40,11 +40,10 @@ const std::vector<BravoStub::Recorded> kRecording = {
      "\"pressure_altitude_age_ms\":80"},
 };
 
-std::string peer_claim(uint32_t passes) {
+std::string peer_claim(uint32_t epoch) {
     return complete_registry_frame(
-        "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-        "\"alarm_passes\":" +
-        std::to_string(passes) + ",\"alarm_volume\":\"loud\",\"paired\":false}");
+        "{\"command\":\"peer_claim\",\"boot_epoch\":" + std::to_string(epoch) +
+        ",\"alarm_requested\":false,\"paired\":false}");
 }
 
 std::string peer_claim_with_position() {
@@ -52,7 +51,7 @@ std::string peer_claim_with_position() {
         "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"at_s\":1785628800,\"into_ms\":250,"
         "\"latitude_1e7\":485000000,\"longitude_1e7\":85000000,\"position_age_ms\":200,"
         "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,\"alarm_requested\":false,"
-        "\"alarm_passes\":3,\"alarm_volume\":\"loud\",\"paired\":false}");
+        "\"paired\":false}");
 }
 
 struct Pair {
@@ -112,8 +111,8 @@ TEST_CASE("paired link: the central's peer_claim reaches Bravo on the peer endpo
 
     REQUIRE(pair.bravo.claims.size() == 1);
     CHECK(pair.bravo.claims[0] ==
-          "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-          "\"alarm_passes\":12,\"alarm_volume\":\"loud\",\"paired\":false}");
+          "{\"command\":\"peer_claim\",\"boot_epoch\":12,\"alarm_requested\":false,"
+          "\"paired\":false}");
     CHECK(pair.link.delivered(Direction::ToPeripheral) == 1);
 }
 
@@ -163,8 +162,8 @@ TEST_CASE(
 
     pair.run_until(2050);
     REQUIRE(pair.bravo.claims.size() == 2);
-    CHECK(field(pair.bravo.claims[0], "alarm_passes") == "1");
-    CHECK(field(pair.bravo.claims[1], "alarm_passes") == "2");
+    CHECK(field(pair.bravo.claims[0], "boot_epoch") == "1");
+    CHECK(field(pair.bravo.claims[1], "boot_epoch") == "2");
 }
 
 TEST_CASE("paired link: a drop loses what was in flight, and a reconnect is a new connection") {
@@ -248,7 +247,7 @@ TEST_CASE(
 
     CHECK(commands(pair.received()) == std::vector<std::string>{"health", "observation"});
     REQUIRE(pair.bravo.claims.size() == 1);
-    CHECK(field(pair.bravo.claims[0], "alarm_passes") == "2");
+    CHECK(field(pair.bravo.claims[0], "boot_epoch") == "2");
 }
 
 TEST_CASE("paired link: a peer frame wider than the link's payload is refused on either side") {
@@ -290,8 +289,8 @@ TEST_CASE("paired link: writes Bravo cannot take yet wait for its next pass, non
     Pair pair;
     REQUIRE(pair.link.connect());
     pair.link.set_flow(Flow::Stalled);
-    for (uint32_t passes = 1; passes <= 6; passes++)
-        CHECK(pair.link.write(peer_claim(passes)) == Status::Ok);
+    for (uint32_t epoch = 1; epoch <= 6; epoch++)
+        CHECK(pair.link.write(peer_claim(epoch)) == Status::Ok);
     pair.run_until(1000);
 
     pair.link.set_flow(Flow::Flowing);
@@ -303,7 +302,7 @@ TEST_CASE("paired link: writes Bravo cannot take yet wait for its next pass, non
     CHECK(pair.link.lost(Direction::ToPeripheral) == 0);
     REQUIRE(pair.bravo.claims.size() == 6);
     for (size_t i = 0; i < 6; i++)
-        CHECK(field(pair.bravo.claims[i], "alarm_passes") == std::to_string(i + 1));
+        CHECK(field(pair.bravo.claims[i], "boot_epoch") == std::to_string(i + 1));
 }
 
 TEST_CASE("paired link: two centrals on one Bravo each receive what it sends to all") {

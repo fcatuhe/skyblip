@@ -37,11 +37,9 @@ std::string claim_text(const comms::PeerClaim& claim) {
 TEST_CASE("peer frames: a Go with no fix and no UTC claims only what it holds, and no alarm") {
     comms::PeerClaim claim{};
     claim.boot_epoch = 7;
-    claim.alarm_passes = 12;
-    claim.alarm_volume = 2;
     CHECK(claim_text(claim) ==
           "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
-          "\"alarm_passes\":12,\"alarm_volume\":\"loud\",\"paired\":false}");
+          "\"paired\":false}");
 }
 
 TEST_CASE("peer frames: a Go's peer_claim carries each own-ship field with its age") {
@@ -62,16 +60,14 @@ TEST_CASE("peer frames: a Go's peer_claim carries each own-ship field with its a
     claim.pressure_altitude_mm = 1100000;
     claim.pressure_altitude_age_ms = 80;
     claim.own_icao = 0x3C6586;
-    claim.alarm_passes = 3;
-    claim.alarm_volume = 0;
+    claim.alarm_requested = true;
     claim.paired = true;
     CHECK(claim_text(claim) ==
           "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"at_s\":1785628800,\"into_ms\":250,"
           "\"latitude_1e7\":485000000,\"longitude_1e7\":-85000000,\"position_age_ms\":200,"
           "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,"
           "\"pressure_altitude_mm\":1100000,\"pressure_altitude_age_ms\":80,"
-          "\"own_icao\":3958150,\"alarm_requested\":false,\"alarm_passes\":3,"
-          "\"alarm_volume\":\"off\",\"paired\":true}");
+          "\"own_icao\":3958150,\"alarm_requested\":true,\"paired\":true}");
 }
 
 TEST_CASE("peer frames: a claim that will not fit its buffer is refused whole") {
@@ -137,9 +133,8 @@ ConstByteSpan bytes_of(const std::string& frame) {
 }
 
 std::string claim_frame(const std::string& fields) {
-    return complete_registry_frame(
-        "{\"command\":\"peer_claim\",\"boot_epoch\":7," + fields +
-        "\"alarm_requested\":false,\"alarm_passes\":3,\"alarm_volume\":\"soft\",\"paired\":true}");
+    return complete_registry_frame("{\"command\":\"peer_claim\",\"boot_epoch\":7," + fields +
+                                   "\"alarm_requested\":false,\"paired\":true}");
 }
 
 }  // namespace
@@ -162,8 +157,7 @@ TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes"
     written.pressure_altitude_mm = -1100000;
     written.pressure_altitude_age_ms = 80;
     written.own_icao = 0x3C6586;
-    written.alarm_passes = 3;
-    written.alarm_volume = 1;
+    written.alarm_requested = true;
     written.paired = true;
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(written, frame, sizeof(frame));
@@ -188,8 +182,7 @@ TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes"
     CHECK(claim.pressure_altitude_mm == -1100000);
     CHECK(claim.pressure_altitude_age_ms == 80);
     CHECK(claim.own_icao == 0x3C6586u);
-    CHECK(claim.alarm_passes == 3);
-    CHECK(claim.alarm_volume == 1);
+    CHECK(claim.alarm_requested);
     CHECK(claim.paired);
 }
 
@@ -224,8 +217,6 @@ TEST_CASE("peer frames: a claim with half a field or a value out of range is ref
     writer.add_code(link::kCommandKey, link::Command::PeerClaim);
     writer.add_unsigned(link::peer_claim_key::kBootEpoch, 7);
     writer.add_boolean(link::peer_claim_key::kAlarmRequested, false);
-    writer.add_unsigned(link::peer_claim_key::kAlarmPasses, 3);
-    writer.add_unsigned(link::peer_claim_key::kAlarmVolume, 2);
     const int bytes = writer.finish();
     REQUIRE(bytes > 0);
     CHECK(comms::read_peer_claim(ConstByteSpan(frame, static_cast<size_t>(bytes))).status() ==

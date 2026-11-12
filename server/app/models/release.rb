@@ -14,9 +14,10 @@ class Release
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
 
+  # INFO: fc 11nov26 every device page asks for the list, and GitHub grants 60 unauthenticated requests an hour to the server's address
   def self.all
-    response = request(URI(API_URL))
-    entries = JSON.parse(response.body)
+    body = Rails.cache.fetch("github/releases", expires_in: 5.minutes) { request(URI(API_URL)).body }
+    entries = JSON.parse(body)
     raise TypeError unless entries.is_a?(Array)
 
     shelf entries.reject { |entry| entry.fetch("draft") }

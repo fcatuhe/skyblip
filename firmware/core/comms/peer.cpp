@@ -141,8 +141,6 @@ bool read_callsign(const cbor::Reader& reader, PeerObservation& out) {
     return !dated || text == Status::Ok;
 }
 
-constexpr uint32_t kAlarmVolumeCeiling = 2;
-
 // INFO: fc 11nov26 a value with no age, or an age with no value, is half a field and refused
 Status read_claim_position(const cbor::Reader& reader, PeerClaim& claim) {
     bool longitude = false, position_age = false, height_age = false;
@@ -216,9 +214,7 @@ int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
                             claim.pressure_altitude_age_ms);
     }
     if (claim.own_icao != 0) writer.add_unsigned(link::peer_claim_key::kOwnIcao, claim.own_icao);
-    writer.add_boolean(link::peer_claim_key::kAlarmRequested, false);
-    writer.add_unsigned(link::peer_claim_key::kAlarmPasses, claim.alarm_passes);
-    writer.add_unsigned(link::peer_claim_key::kAlarmVolume, claim.alarm_volume);
+    writer.add_boolean(link::peer_claim_key::kAlarmRequested, claim.alarm_requested);
     writer.add_boolean(link::peer_claim_key::kPaired, claim.paired);
     return writer.finish();
 }
@@ -230,17 +226,12 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame) {
     if (!code.ok() || code.value() != static_cast<uint32_t>(link::Command::PeerClaim))
         return Status::Invalid;
     const Result<uint32_t> epoch = reader.read_unsigned(link::peer_claim_key::kBootEpoch);
-    const Result<uint32_t> passes = reader.read_unsigned(link::peer_claim_key::kAlarmPasses);
-    const Result<uint32_t> volume = reader.read_unsigned(link::peer_claim_key::kAlarmVolume);
     const Result<bool> requested = reader.read_boolean(link::peer_claim_key::kAlarmRequested);
     const Result<bool> paired = reader.read_boolean(link::peer_claim_key::kPaired);
-    if (!epoch.ok() || !passes.ok() || !volume.ok() || !requested.ok() || !paired.ok())
-        return Status::Invalid;
-    if (volume.value() > kAlarmVolumeCeiling) return Status::OutOfRange;
+    if (!epoch.ok() || !requested.ok() || !paired.ok()) return Status::Invalid;
     PeerClaim claim{};
     claim.boot_epoch = epoch.value();
-    claim.alarm_passes = passes.value();
-    claim.alarm_volume = static_cast<uint8_t>(volume.value());
+    claim.alarm_requested = requested.value();
     claim.paired = paired.value();
     Status status = read_claim_instant(reader, claim);
     if (status == Status::Ok) status = read_claim_position(reader, claim);
@@ -259,8 +250,7 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     if (health.last_sequence_valid)
         writer.add_unsigned(link::health_key::kLastSequence, health.last_sequence);
     writer.add_boolean(link::health_key::kOwnIcaoSet, health.own_icao_set);
-    // INFO: fc 11nov26 the grant is #179's lease, so Bravo keeps the alarm until it lands
-    writer.add_boolean(link::health_key::kAlarmGranted, false);
+    writer.add_boolean(link::health_key::kAlarmGranted, health.alarm_granted);
     writer.add_code(link::health_key::kExportReference, health.export_reference);
     writer.add_boolean(link::health_key::kPaired, health.paired);
     return writer.finish();

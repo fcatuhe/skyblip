@@ -38,6 +38,7 @@ enum class Command : uint8_t {
     Observation = 26,
     Health = 27,
     PeerClaim = 28,
+    Capture = 29,
 };
 
 enum class Reason : uint8_t {
@@ -84,6 +85,10 @@ enum class Reason : uint8_t {
     Erased = 41,
     PromptPending = 42,
     RefusedOnDevice = 43,
+    ConfirmCapture = 44,
+    Capture = 45,
+    Capturing = 46,
+    NotCapturing = 47,
 };
 
 namespace acknowledgement_key {
@@ -401,9 +406,6 @@ enum : uint32_t {
     kLastSequence = 5,
     kOwnIcaoSet = 6,
     kAlarmGranted = 7,
-    kLeaseMs = 8,
-    kRequestEpoch = 9,
-    kRequestSequence = 10,
     kExportReference = 11,
     kPaired = 12,
 };
@@ -423,12 +425,13 @@ enum : uint32_t {
     kPressureAltitudeAgeMs = 10,
     kOwnIcao = 11,
     kAlarmRequested = 12,
-    kRequestSequence = 13,
-    kAlarmPasses = 14,
-    kAlarmVolume = 15,
-    kAssessedEpoch = 16,
-    kAssessedSequence = 17,
     kPaired = 18,
+};
+}
+
+namespace capture_key {
+enum : uint32_t {
+    kProfile = 1,
 };
 }
 
@@ -462,13 +465,14 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Health: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
-        case Command::Erase: return 0x3;
+        case Command::Erase:
+        case Command::Capture: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
-        case Command::PeerClaim: return 0x7FFFF;
+        case Command::PeerClaim: return 0x41FFF;
     }
     return 0;
 }

@@ -1,0 +1,16 @@
+<div class="glass-prompt" data-controller="glass" hidden>
+  <div class="glass" data-glass-target="glass" aria-hidden="true">
+    <p class="glass-header"><%= t("briefing.glass.header") %></p>
+    <p class="glass-title" data-glass-target="title"></p>
+    <p class="glass-detail" data-glass-target="detail"></p>
+    <p class="glass-allow"><%= t("briefing.glass.allow") %></p>
+    <p class="glass-refuse"><%= t("briefing.glass.refuse") %></p>
+    <p class="glass-left" data-glass-target="left"></p>
+  </div>
+  <div class="glass-lamp" data-glass-target="lamp" hidden>
+    <span class="lamp" aria-hidden="true"></span>
+    <p><%= t("briefing.glass.lamp") %> <%= t("briefing.words.glass_refuse") %></p>
+  </div>
+  <p class="glass-press" role="status" data-glass-target="press"></p>
+  <p class="glass-seconds" data-glass-target="seconds" aria-hidden="true"></p>
+</div>

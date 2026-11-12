@@ -301,6 +301,9 @@ const std::vector<Answer> kAnswers = {
     {"ownship", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
+    {"capture", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
+     "unknown_command"},
 };
 
 const Answer* answer_to(const names::Frame& frame) {
@@ -339,6 +342,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"ownship.width", "8"},
         {"ownship.hot_spot", "2"},
         {"ownship.rows", "\"00ff00ff\""},
+        {"capture.profile", "\"full\""},
     };
 }
 

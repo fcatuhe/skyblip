@@ -1,0 +1,35 @@
+<% content_for :stylesheets, area_stylesheet_link_tags("briefing") %>
+<% content_for :head, tag.link(rel: "manifest", href: briefing_manifest_path) %>
+<% content_for :noindex, "noindex" %>
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+  <head>
+    <%= render "layouts/head" %>
+  </head>
+
+  <body class="app" data-briefing-words="<%= briefing_words.to_json %>">
+    <header class="app-bar">
+      <%= link_to briefing_root_path, class: "app-bar-brand" do %>
+        <%= render "layouts/wordmark", css: "wordmark-app" %>
+        <span class="app-bar-title"><%= t("briefing.app.title") %></span>
+      <% end %>
+      <%= render "layouts/locale_switcher" %>
+      <details class="app-menu" data-controller="install">
+        <summary><%= t("briefing.menu.open") %></summary>
+        <ul>
+          <li><%= link_to t("briefing.menu.activate"), briefing_activation_path %></li>
+          <li><%= link_to t("briefing.menu.tools"), briefing_tools_path %></li>
+          <li data-install-target="offer" hidden><button type="button" data-action="install#prompt"><%= t("briefing.menu.install") %></button></li>
+          <li><%= link_to t("briefing.menu.site"), root_path, data: { turbo: false } %></li>
+        </ul>
+      </details>
+    </header>
+
+    <div class="app-shell<%= " app-shell--rail" if content_for?(:rail) %>">
+      <%= content_for :rail %>
+      <main class="app-main">
+        <%= yield %>
+      </main>
+    </div>
+  </body>
+</html>

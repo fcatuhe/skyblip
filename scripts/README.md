@@ -6,6 +6,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a skyBlip Bravo's diagnostics capture and wait for the presses' verdict |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec and the names `schemas/link.v1.json` gives its numbers, which `blip.py` speaks through |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
@@ -45,6 +46,8 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser client does (a notification is a slice of a byte stream, not a sentence), verifies every NMEA checksum and prints each sentence with a host timestamp. A sentence whose checksum does not match is printed and flagged, never dropped.
 
 `./scripts/blip.py command '{"command":"diagnostics"}'` takes one command as JSON with the registry's full names, writes it to the config endpoint (`69c21302`) as the numbered CBOR the unit reads, and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A name the registry does not hold is refused before anything is sent. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
+
+`./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a diagnostics capture on a skyBlip Bravo, which has no glass to arm one on, and `capture stop` stops it. The profile is `full`, `power_run` or `flight_run`, the names the registry's `capture_profile` gives. The unit blinks its prompt on the lamp, `blip.py` says to press the button twice, and it waits up to 35 s for the verdict: `capture` once two presses allowed it, or the refusal, which it prints and stops on. A Go answers `unknown_command`, because its captures are armed on its glass only.
 
 `blip_frames.py` reads [`schemas/link.v1.json`](../schemas/link.v1.json) as it stands, so a key the registry gains is a key `blip.py` speaks with no edit here. Its decoder refuses what the unit's own does, a frame outside the grammar the registry describes, and its encoder refuses a value its key's type does not take, a boolean where a number goes, a negative where an unsigned one does, hex that is not hex or a byte string of the wrong width, as the pages' does: `schemas/link.v1.vectors.json` lists both. `blip.py` stops on either with a `FrameError` it prints, the bytes of a frame it could not read beside it, rather than guessing.
 

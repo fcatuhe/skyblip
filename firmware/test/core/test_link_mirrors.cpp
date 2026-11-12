@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include "core/comms/config.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
@@ -206,6 +207,16 @@ constexpr bool on_the_wire(store::SectorOwner value) {
     return false;
 }
 
+constexpr bool on_the_wire(comms::CaptureProfile value) {
+    switch (value) {
+        case comms::CaptureProfile::Full:
+        case comms::CaptureProfile::PowerRun:
+        case comms::CaptureProfile::FlightRun:
+        case comms::CaptureProfile::Stop: return true;
+    }
+    return false;
+}
+
 }
 
 static_assert(code(go::AlarmVolume::Off) == 0, "alarm_volume off");
@@ -318,5 +329,11 @@ static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");
 static_assert(on_the_wire(store::SectorOwner::Flights), "log");
+
+static_assert(code(comms::CaptureProfile::Full) == 0, "capture_profile full");
+static_assert(code(comms::CaptureProfile::PowerRun) == 1, "capture_profile power_run");
+static_assert(code(comms::CaptureProfile::FlightRun) == 2, "capture_profile flight_run");
+static_assert(code(comms::CaptureProfile::Stop) == 3, "capture_profile stop");
+static_assert(on_the_wire(comms::CaptureProfile::Full), "capture_profile");
 
 }

@@ -47,6 +47,40 @@ test('an install asks once on the glass, naming the version, and installs once t
   assert.deepEqual(device.commands.filter(command => !READS.has(command)), ['dfu']);
 });
 
+test('a chosen image newer than the running firmware is an upgrade, and the same version is not', async () => {
+  const { updater } = await chosen({ running: '0.1.0.12' });
+  assert.equal(updater.state.upgrade, true);
+  await updater.choose(signedImage({ major: 0, minor: 1, revision: 0, build: 12 }, IMAGE_BYTES), 'skyblip-go-0.1.0+12.signed.bin');
+  assert.equal(updater.state.upgrade, false);
+  updater.clearImage();
+  assert.equal(updater.state.upgrade, null);
+});
+
+// The page holds the device it connected, so it finds it again after the restart without the chooser.
+test('after an install the device is connected again by itself once it restarts', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0 });
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+  device.running = '0.2.0.15';
+  const back = await until(state => state.phase === 'ready' && state.running);
+  assert.equal(back.running, '0.2.0+15');
+  assert.equal(device.connected, true);
+  updater.disconnect();
+});
+
+test('a device that does not come back in time is left offline, and says so', async () => {
+  const { device, updater, until } = await chosen({ returnEveryMs: 0, returnWithinMs: 0 });
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+  updater.bluetoothDevice.gatt.connect = () => Promise.reject(new Error('Connection attempt failed.'));
+  const lost = await until(state => state.phase === 'offline');
+  assert.equal(lost.notice.key, 'not_back');
+});
+
 test('a verdict that lands before the reply to the last chunk still reads as installing', async () => {
   const { device, updater, until } = await chosen({ verdictFirst: true });
   updater.install();
@@ -409,9 +443,8 @@ test('a status frame says the cell went flat, and has no percent until the gauge
 });
 
 test('another app holding the config link is named, not waited on', async () => {
-  const { updater, until } = await chosen();
-  const device = new FakeSkyblip({ claimedBy: 2 }).install();
-  await updater.connect();
+  const { device, updater, until } = await chosen();
+  device.claimedBy = 2;
   updater.install();
   assert.equal((await until(state => state.notice)).notice.key, 'claimed');
   assert.ok(device.commands.length > 0);

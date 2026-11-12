@@ -20,7 +20,7 @@ A paired Go whose `own_icao` is unset, beside a Bravo whose own ICAO is unset to
 
 ## Bravo
 
-`services/bravo.h` is the Go's link to a paired skyBlip Bravo: the pairing a pilot drives from the `BRAVO` row, the pin it keeps in the settings, the connection it keeps for Bravo, and the reconnection. What it does and why is in `../../core/comms/README.md`, "The Go's link to its Bravo", and the page is in `pages/README.md`. `services/bravo_fold.cpp` folds Bravo's observations into the traffic table, and the service publishes what it makes of Bravo's health as `bus::State::bravo`, which the radar, the self-test page, the alarm's one tone, the flight log and the `status` frame read (`../../core/comms/README.md`, "What the Go makes of its Bravo"). It is the eleventh service and the last, after `screen`, so the codes the loop meter records for the ten before it hold: its code is 11, past the board poll's 10 (`core/diagnostics/payload.h`, `loop_service_code`).
+`services/bravo.h` is the Go's link to a paired skyBlip Bravo: the pairing a pilot drives from the `BRAVO` row, the pin it keeps in the settings, the connection it keeps for Bravo, and the reconnection. What it does and why is in `../../core/comms/README.md`, "The Go's link to its Bravo", and the page is in `pages/README.md`. `services/bravo_fold.cpp` folds Bravo's observations into the traffic table, and the service publishes what it makes of Bravo's health as `bus::State::bravo`, which the radar, the self-test page, the alarm's one tone, the flight log and the `status` frame read (`../../core/comms/README.md`, "What the Go makes of its Bravo"). On a Go+ with a fix and a live Bravo, its claim takes the alarm, so Bravo keeps silent while the Go+ sounds for both (`../../core/comms/README.md`, The alarm). It is the eleventh service and the last, after `screen`, so the codes the loop meter records for the ten before it hold: its code is 11, past the board poll's 10 (`core/diagnostics/payload.h`, `loop_service_code`).
 
 ## What a service is
 
@@ -52,7 +52,7 @@ What that costs is a rate, and the rate follows the dwell map. Since own-ship's 
 
 ### Which capture is armed
 
-A capture is `Full`, `PowerRun` or `FlightRun` (`../../core/diagnostics/README.md`), and the glass is the only place one is chosen: nothing arms a capture over Bluetooth. The focus a pilot moves with the pad lives in `ScreenService`, the profile that is running lives in `diagnostics::Recorder` and is read back from there, so a boot comes up armed with nothing and remembering nothing.
+A capture is `Full`, `PowerRun` or `FlightRun` (`../../core/diagnostics/README.md`), and the glass is the only place one is chosen: nothing arms a capture over Bluetooth. The link's `capture` command is Bravo's, which has no glass, and a Go answers it `unknown_command` (#247). The focus a pilot moves with the pad lives in `ScreenService`, the profile that is running lives in `diagnostics::Recorder` and is read back from there, so a boot comes up armed with nothing and remembering nothing.
 
 A flight run flies the glass and nothing else, and `OwnshipService` is the one place that does it. While the recorder is armed with it, the `bus::FlightState` clock (`running`, `seconds`, `time_valid`) is published from a second `flight::FlightTimer` held airborne, and the g-meter clears its extremes on that clock's takeoff as it does on a real one. Those three fields have no reader but the glass and the g-meter, which is what makes them the seam. Everything else that flight changes reads `state.own.flight_state` or the ground latch, and those stay the machine's own: the transmit cadence and the payload are on air, the flight log is the pilot's, and the offload and update gates are what let a bench fetch the run it is taking. Disarming the recorder, for any of the reasons a capture ends, puts the real timer back on the next pass.
 
@@ -90,7 +90,7 @@ Advertising starts after the refusal and only on a unit that flies, once `config
 
 ## Go and Go+
 
-A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three fitted, and a skyBlip Go otherwise (`product_name.h`). Fitted, not answering: a Plus whose sensor hub waits for its image is still a Go+. The word is only the Bluetooth name's: `skyBlip Go+ 00012A` once activated (`core/identity/README.md`).
+A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three fitted, and a skyBlip Go otherwise (`product_name.h`). Fitted, not answering: a Plus whose sensor hub waits for its image is still a Go+. The word is only the Bluetooth name's: `skyBlip Go+ 00012A` once activated (`core/identity/README.md`). Taking a paired Bravo's alarm asks less, a buzzer or a haptic, because either one sounds the alarm (`../../core/comms/README.md`, The alarm).
 
 ## Activation
 

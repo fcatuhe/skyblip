@@ -71,21 +71,16 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
      "1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"),
     ({"command": "health", "protocol_version": 1, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
       "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "own_icao_set": True,
-      "alarm_granted": True, "lease_ms": WIDEST_UNSIGNED, "request_epoch": WIDEST_UNSIGNED,
-      "request_sequence": WIDEST_UNSIGNED, "export_reference": "own", "paired": True},
-     "ad00181b0101021affffffff03f504f5051affffffff06f507f5081affffffff091affffffff0a1affffffff"
-     "0b020cf5"),
+      "alarm_granted": True, "export_reference": "own", "paired": True},
+     "aa00181b0101021affffffff03f504f5051affffffff06f507f50b020cf5"),
     ({"command": "peer_claim", "boot_epoch": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED,
       "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
       "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,
       "altitude_hae_age_ms": WIDEST_UNSIGNED, "pressure_altitude_mm": WIDEST_INTEGER,
       "pressure_altitude_age_ms": WIDEST_UNSIGNED, "own_icao": 0xFFFFFF, "alarm_requested": True,
-      "request_sequence": WIDEST_UNSIGNED, "alarm_passes": WIDEST_UNSIGNED,
-      "alarm_volume": "loud", "assessed_epoch": WIDEST_UNSIGNED,
-      "assessed_sequence": WIDEST_UNSIGNED, "paired": True},
-     "b300181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
-     "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf50d1affffffff0e1affffffff0f02101a"
-     "ffffffff111affffffff12f5"),
+      "paired": True},
+     "ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
+     "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf512f5"),
 )
 
 

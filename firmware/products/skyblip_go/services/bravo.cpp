@@ -1,6 +1,7 @@
 #include "products/skyblip_go/services/bravo.h"
 
 #include "core/comms/peer.h"
+#include "ports/capabilities.h"
 
 namespace skyblip::go {
 
@@ -8,10 +9,6 @@ namespace {
 
 // INFO: fc 11nov26 Bravo advertises "skyBlip Bravo 3F2A" (products/common/README.md, Settings)
 constexpr char kBravoNamePrefix[] = "skyBlip Bravo ";
-
-uint8_t pair_volume(const Settings& settings) {
-    return static_cast<uint8_t>(settings.alarm_enabled ? settings.alarm_volume : AlarmVolume::Off);
-}
 
 }  // namespace
 
@@ -300,13 +297,20 @@ void BravoService::claim(uint32_t now_ms) {
     claim.pressure_altitude_mm = own.pressure_altitude_mm;
     claim.pressure_altitude_age_ms = now_ms - own.pressure_altitude_at_ms;
     claim.own_icao = settings_.own_icao;
-    claim.alarm_passes = alarm_.passes();
-    claim.alarm_volume = pair_volume(settings_);
+    claim.alarm_requested = takes_alarm();
     claim.paired = paired(settings_);
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(claim, frame, sizeof(frame));
     // INFO: fc 11nov26 the central counts and logs every write it refuses, so the result is its own
     if (bytes > 0) (void)central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+}
+
+// INFO: fc 12nov26 a Go+ sounds for both units whatever its volume, so off on it silences the pair
+bool BravoService::takes_alarm() const {
+    const ports::Capabilities fitted = context_.roles.capabilities;
+    const bool sounds = ports::has(fitted, ports::Capability::Buzzer) ||
+                        ports::has(fitted, ports::Capability::Haptic);
+    return sounds && context_.state.own.fix_valid && state_now() == comms::BravoState::Live;
 }
 
 }  // namespace skyblip::go

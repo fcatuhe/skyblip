@@ -81,10 +81,11 @@ export class FakeSkyblip {
     downgrade = false,
     address = 0x00012a,
     product = 'skyblip_go',
+    name = 'skyBlip Go 5B5AFE',
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -92,6 +93,7 @@ export class FakeSkyblip {
     this.pending = null;
     this.refusedOnDevice = false;
     this.staged = null;
+    this.capturing = false;
     this.windowOpen = false;
     this.slot = null;
     this.finished = false;
@@ -142,7 +144,7 @@ export class FakeSkyblip {
       },
     };
     return {
-      name: 'skyBlip Go 5B5AFE',
+      name: this.name,
       addEventListener: (type, listener) => this.listeners.push(listener),
       gatt: {
         get connected() {
@@ -227,6 +229,7 @@ export class FakeSkyblip {
     if (command === 'status') return this.sendStatus();
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
+    if (command === 'capture' && this.product === 'skyblip_bravo') return this.stageCapture(fields);
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
     if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
@@ -240,6 +243,18 @@ export class FakeSkyblip {
       return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
     }
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: `confirm_${command}` });
+  }
+
+  // INFO: fc 12nov26 capture_request.cpp's order: the prompt guards, the flight, then the capture's state
+  stageCapture({ profile }) {
+    if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
+    if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+    const stop = profile === 'stop';
+    if (this.capturing && !stop) return this.acknowledge(false, 'capturing');
+    if (!this.capturing && stop) return this.acknowledge(false, 'not_capturing');
+    this.pending = 'capture';
+    this.staged = profile;
+    this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_capture' });
   }
 
   addressFields() {
@@ -307,6 +322,10 @@ export class FakeSkyblip {
     if (task === 'set') {
       Object.assign(this.stored, this.staged);
       return this.reply({ command: 'acknowledgement', acknowledge: true });
+    }
+    if (task === 'capture') {
+      this.capturing = this.staged !== 'stop';
+      return this.acknowledge(true, 'capture');
     }
     if (task === 'dfu') {
       this.windowOpen = true;

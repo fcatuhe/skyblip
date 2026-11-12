@@ -1845,21 +1845,6 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "lease_ms",
-          "number": 8,
-          "type": "unsigned"
-        },
-        {
-          "name": "request_epoch",
-          "number": 9,
-          "type": "unsigned"
-        },
-        {
-          "name": "request_sequence",
-          "number": 10,
-          "type": "unsigned"
-        },
-        {
           "name": "export_reference",
           "number": 11,
           "type": "enum",
@@ -1949,37 +1934,30 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "request_sequence",
-          "number": 13,
-          "type": "unsigned"
-        },
-        {
-          "name": "alarm_passes",
-          "number": 14,
-          "type": "unsigned",
-          "required": true
-        },
-        {
-          "name": "alarm_volume",
-          "number": 15,
-          "type": "enum",
-          "enum": "alarm_volume",
-          "required": true
-        },
-        {
-          "name": "assessed_epoch",
-          "number": 16,
-          "type": "unsigned"
-        },
-        {
-          "name": "assessed_sequence",
-          "number": 17,
-          "type": "unsigned"
-        },
-        {
           "name": "paired",
           "number": 18,
           "type": "boolean",
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "capture",
+      "code": 29,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "profile",
+          "number": 1,
+          "type": "enum",
+          "enum": "capture_profile",
           "required": true
         }
       ]
@@ -2159,6 +2137,22 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "refused_on_device",
           "code": 43
+        },
+        {
+          "name": "confirm_capture",
+          "code": 44
+        },
+        {
+          "name": "capture",
+          "code": 45
+        },
+        {
+          "name": "capturing",
+          "code": 46
+        },
+        {
+          "name": "not_capturing",
+          "code": 47
         }
       ]
     },
@@ -2689,6 +2683,34 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
+    "capture_profile": {
+      "mirrors": {
+        "type": "comms::CaptureProfile",
+        "header": "core/comms/config.h"
+      },
+      "values": [
+        {
+          "name": "full",
+          "code": 0,
+          "mirrors": "Full"
+        },
+        {
+          "name": "power_run",
+          "code": 1,
+          "mirrors": "PowerRun"
+        },
+        {
+          "name": "flight_run",
+          "code": 2,
+          "mirrors": "FlightRun"
+        },
+        {
+          "name": "stop",
+          "code": 3,
+          "mirrors": "Stop"
+        }
+      ]
+    },
     "command": {
       "values": [
         {
@@ -2806,6 +2828,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "peer_claim",
           "code": 28
+        },
+        {
+          "name": "capture",
+          "code": 29
         }
       ]
     }

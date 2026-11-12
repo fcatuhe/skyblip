@@ -28,7 +28,6 @@ Status AlarmService::setup() {
 }
 
 void AlarmService::tick(uint32_t now_ms) {
-    passes_++;
     accrue_annunciator(now_ms);
     traffic::Level worst = traffic::Level::None;
     traffic::Level live = traffic::Level::None;
@@ -71,7 +70,8 @@ void AlarmService::tick(uint32_t now_ms) {
     const bool bravo_lost = comms::lost(context_.state.bravo);
     situation.bravo_lost = bravo_lost && !bravo_lost_;
     bravo_lost_ = bravo_lost;
-    situation.enabled = settings_.enabled && settings_.volume != AlarmVolume::Off;
+    situation.enabled =
+        settings_.enabled && settings_.volume != AlarmVolume::Off && !context_.state.alarm_granted;
     situation.running = running_;
     drive(situation, now_ms);
     drive_lamp(now_ms, running_);
@@ -140,6 +140,7 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.prompting = lamp_shows_link_ && context_.state.link.prompt_standing;
     situation.pairing = lamp_shows_link_ && context_.state.link.pairing_standing;
     situation.linked = lamp_shows_link_ && context_.state.link.connected;
+    situation.capturing = lamp_shows_link_ && context_.state.capture.armed;
 
     const indication::Command command = indication_.update(situation, now_ms);
     if (command.changed) context_.roles.indicator.show(command.lamp);

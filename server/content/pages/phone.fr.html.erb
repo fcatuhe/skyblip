@@ -22,7 +22,7 @@ updated_on: "2026-11-11"
       <h3 id="by-name">Il apparaît par son nom, et <span class="highlight">trois écrans</span> le lisent à la fois.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>&nbsp;: le produit, puis
-        l&rsquo;adresse 24 bits reçue à son <%= link_to_page "activate", label: "activation" %>.
+        l&rsquo;adresse 24 bits reçue à son <%= link_to "activation", briefing_activation_path %>.
         Rien à appairer, aucun code à taper. Il porte le
         flux NMEA FLARM sur les deux profils série Bluetooth que cherchent les
         logiciels de navigation, donc l&rsquo;application avec laquelle vous
@@ -74,7 +74,7 @@ updated_on: "2026-11-11"
     sur les ondes une fois toutes les dix secondes, et sur les écrans des
     aéronefs autour de vous. Vous pouvez aussi le taper sur l&rsquo;appareil
     lui-même, dans <%= link_to_page "controls", label: "le champ indicatif", anchor: "callsign" %>,
-    ou le régler depuis un navigateur sur <%= link_to_page "configure", label: "la page des réglages" %>,
+    ou le régler depuis un navigateur dans <%= link_to "le Briefing", briefing_root_path %>,
     à côté du type d&rsquo;aéronef, des unités et de l&rsquo;alarme.
   </p>
   <p class="lede">
@@ -86,7 +86,7 @@ updated_on: "2026-11-11"
 
   <h3 id="firmware">Le nouveau firmware vient <span class="highlight">d&rsquo;une page web</span>.</h3>
   <p class="lede">
-    <%= link_to_page "update", label: "La page de mise à jour" %> envoie une
+    <%= link_to "Le Briefing", briefing_root_path %> envoie une
     image signée par le même Bluetooth, depuis Chrome ou Edge, et l&rsquo;écran
     demande une fois, en nommant la version, avant de prendre l&rsquo;image et
     de l&rsquo;installer. Le nouveau firmware doit ensuite démarrer sa radio,
@@ -127,7 +127,7 @@ updated_on: "2026-11-11"
   <p class="lede">
     Activer l&rsquo;appairage Bluetooth chiffre les caractéristiques GATT, ce qui
     est une panne connue de Web Bluetooth sous Windows et casserait
-    <%= link_to_page "update", label: "la page de navigateur qui installe le firmware" %>.
+    <%= link_to "la page de navigateur qui installe le firmware", briefing_root_path %>.
     La frontière est donc l&rsquo;image, pas la liaison.
   </p>
 

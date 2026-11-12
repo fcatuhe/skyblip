@@ -129,6 +129,7 @@ TEST_CASE("bravo: a press held through a prompt's arrival, and one press after, 
         "{\"command\":\"recovery\"}",
         "{\"command\":\"power_off\"}",
         "{\"command\":\"gnss_cold_start\"}",
+        "{\"command\":\"capture\",\"profile\":\"full\"}",
     };
     for (const char* prompt : prompts) {
         CAPTURE(prompt);
@@ -150,6 +151,7 @@ TEST_CASE("bravo: a press held through a prompt's arrival, and one press after, 
         CHECK_FALSE(rig.product.config_link().config().receiving_firmware());
         CHECK_FALSE(rig.product.shutdown().going_down());
         CHECK(rig.product.settings().alarm_enabled);
+        CHECK_FALSE(rig.product.capture().capturing());
         CHECK(rig.last_on(events::Endpoint::Config).find("\"acknowledge\":true") ==
               std::string::npos);
     }

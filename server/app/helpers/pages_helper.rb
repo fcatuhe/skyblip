@@ -13,10 +13,6 @@ module PagesHelper
     @page&.base_slug == slug
   end
 
-  def briefing_area?
-    controller_path.start_with?("briefing/") || %w[update configure activate].any? { on_page?(it) }
-  end
-
   def pages_image_tag(path, options = {})
     content_image_tag "pages/#{@page.base_slug}/#{path}", options
   end
