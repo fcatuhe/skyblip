@@ -31,10 +31,10 @@ TEST_CASE("bravo: a long press switches it off with the receiver asleep and ever
     check_parked(rig);
 }
 
+// The X1's bootloader lets a cable wake through, and the nRF52840 reports it as VBUS without OFF.
 TEST_CASE("bravo: a cable plugged into a unit switched off goes straight back to sleep") {
     BravoRig rig;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     rig.platform.battery().external_power = true;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.product.boot_path() == power::BootPath::SleepAgain);
@@ -50,10 +50,10 @@ TEST_CASE("bravo: a cable plugged into a unit switched off goes straight back to
     CHECK_FALSE(rig.platform.link().advertise_calls > 0);
 }
 
+// A press that lands after the bootloader read the button up is still down when Bravo reads it.
 TEST_CASE("bravo: a press wakes it, even with the cable in") {
     BravoRig rig;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     rig.platform.battery().external_power = true;
     rig.platform.set_button_down(true);
     REQUIRE(rig.setup() == Status::Ok);
@@ -126,8 +126,7 @@ TEST_CASE("bravo: a platform that fails its bring-up still parks the radio it pr
 
 TEST_CASE("bravo: a refused cable wake never brings the receiver, the link or the settings up") {
     BravoRig rig;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     rig.platform.battery().external_power = true;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.product.boot_path() == power::BootPath::SleepAgain);
@@ -161,8 +160,8 @@ struct RefusedBoot {
 // held in reset through GPIO, and no SPI command, probe or haptic enable is spent on a refusal.
 TEST_CASE("bravo: every refused boot holds the radio in reset and talks to no part") {
     const RefusedBoot refusals[] = {
-        {"a cable wake from SYSTEM OFF",
-         power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus, 4050, true},
+        {"a cable wake from SYSTEM OFF", power::ResetCause::UsbVbus | power::ResetCause::PowerOn,
+         4050, true},
         {"a cold start on a low cell", power::ResetCause::PowerOn, 3350, false},
         {"a press from SYSTEM OFF on a low cell", power::ResetCause::LowPowerWake, 3350, false},
         {"a watchdog restart on a flat cell", power::ResetCause::Watchdog, 3150, false},

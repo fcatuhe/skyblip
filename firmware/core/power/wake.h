@@ -45,9 +45,9 @@ static_assert(kBootLockoutMv < kCriticalMv,
 static_assert(kImplausibleFloorMv < kFlatMv,
               "an unpopulated divider must fall through the lockout, not into it");
 
-// Same shape as the two references that fly on this hardware: nrf52-ogn-tracker
-// src/main.cpp:517-532 (T_Echo_StayOffOnChargerWake) and SoftRF-lyusupov
-// src/platform/nRF52.cpp:944-951.
+// The charger rule refuses RESETREAS.VBUS on its own, as SoftRF-lyusupov does on the X1
+// (d091924 src/platform/nRF52.cpp:925-931). nrf52-ogn-tracker's T_Echo_StayOffOnChargerWake
+// also asks for OFF, which no cable wake sets: README.md.
 //
 // INFO: fc 05aug26 charge mode was considered and refused: README.md
 BootPath boot_path(ResetCause causes, bool button_down, const BootCell& cell);

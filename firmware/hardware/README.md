@@ -39,6 +39,18 @@ And what the board asks about the unit it is running on: `begin()`, `capabilitie
 
 `imu_firmware()` is the odd one: not a reading, but a hundred kilobytes of vendor firmware the BHI260AP has to be given before it is a sensor at all. It is a platform member rather than a constant in the part because only the device image should carry it - the host build hands over eight bytes and its part model boots on them, and the WASM the browser downloads stays the size it was. A slim image carries none and hands over an empty span: it has `imu_firmware_digest()`, the SHA-256 of the image it was built against, and `imu_flash()`, the partition where a full image left a copy (`parts/bhi260/firmware/README.md`).
 
+## The settings store, over what another firmware left
+
+`platform/zephyr/kvstore.h` mounts NVS on the first three 4 KB sectors of `storage_partition`: 0xEA000..0xED000 on the X1 and 0xEC000..0xEF000 on the T-Echo. A unit that ran Meshtastic 2.8.0 or later before skyBlip may still hold Meshtastic's WarmNodeStore ring at 0xEA000..0xED000 (`meshtastic/firmware` `v2.8.0.47db0e3`, `src/mesh/WarmNodeStore.h:93-97`). That is all three of the X1's sectors, and the first of the T-Echo's. Each page opens on an 8-byte header whose first word is one of three magics, `WRNG`, `WRN2` or `WRN3` (`WarmNodeStore.cpp:16-18`), and keeps its last 8 bytes erased. NVS reads those last bytes as a sector it never closed, so it does not reliably refuse the partition: depending on what the records hold, Zephyr 4.4.2's `nvs_startup` may erase part of it, restart garbage collection, mount over it or refuse it (`subsys/kvss/nvs/nvs.c:963-1208`). A Bravo whose store does not mount keeps its settings in RAM and forgets its pairing at every boot.
+
+So `begin()` runs `platform/store_mount.h` first. If any of the three sectors opens on a WarmNodeStore magic, it erases all three once and mounts. Otherwise it mounts, and if NVS refuses the partition for what it holds, `-EDEADLK` or `-ESPIPE`, it erases all three and mounts again. Any other failure comes from the flash or the configuration, which an erase cannot cure, so it erases nothing and the store stays down. Every erase, every failed read, erase and mount, and the reason for an erase print a line on the console. Erasing what another firmware left is the intent: the partition is ours from the first install.
+
+Our own values cannot open on a magic, which opens on `W` then `R`, 0x57 0x52. A settings blob opens on its version byte (`core/settings/blob.h`), 1 on Bravo and 13 on the Go (`products/skyblip_bravo/settings.h`, `products/skyblip_go/settings.h`). The update record opens on the major and minor of the image it updated from (`core/dfu/update.cpp`), so it matches only for a version 87.82. `test/hardware/test_store_mount.cpp` holds both.
+
+A unit that ran a skyBlip build without this check over a leftover ring may have had NVS collect garbage over it and keep a page with its magic. The first boot with the check erases that page with the settings beside it, once. On the T-Echo that page can only be the first sector.
+
+Meshtastic's LittleFS sits at 0xED000..0xF4000 (`meshtastic/Adafruit_nRF52_Arduino` `0fd295f1`, `libraries/InternalFileSytem/src/InternalFileSystem.cpp:29,34`), outside the X1's sectors. On the T-Echo the second and third sectors fall inside it, and nothing here recognises a LittleFS block: it is left to NVS, and a refusal erases it like any other content.
+
 ## The two questions a pin and a register answer
 
 `buzzer_pin_held_low()` and `read_panel_signature()` are the two facts only the board port can take, before any driver owns the pins, and both are read rather than declared because LilyGO fits more than one thing behind the same footprint.
