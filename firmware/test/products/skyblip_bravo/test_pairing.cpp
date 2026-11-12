@@ -293,8 +293,6 @@ TEST_CASE("bravo pairing: a press that began before the gesture armed never pair
 // Bravo's writer into the Go's reader: no case ran the two apart from #193's stub.
 TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's time and callsign") {
     constexpr uint32_t kAircraft = 0x3C6586;
-    // INFO: fc 11nov26 the Go's barometer model reads sea level, and the gate holds Bravo to it
-    constexpr int32_t kNearGoBarometerFt = 100;
     PairedProducts tango;
     tango.pair_and_store();
     const auto second = [&tango] {
@@ -305,7 +303,7 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
         tango.bravo.utc_offset_s++;
     };
     for (int i = 0; i < 3; i++) second();
-    tango.bravo.hear_aircraft(kAircraft, 2000, kNearGoBarometerFt);
+    tango.bravo.hear_aircraft(kAircraft, 2000);
     tango.bravo.hear(adsb_identification(kAircraft, 5, 4, 1, "AFR123"));
     second();
     second();

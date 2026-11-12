@@ -147,6 +147,8 @@ AlarmTracker::Slot* AlarmTracker::slot_for(const model::AircraftObservation& tar
             if (free_slot == nullptr) free_slot = &candidate;
             continue;
         }
+        // INFO: fc 12nov26 an announced slot, recycled, would sound again and lose its dismissal
+        if (candidate.notified_level != Level::None) continue;
         if (oldest == nullptr || now_ms - candidate.seen_ms > now_ms - oldest->seen_ms)
             oldest = &candidate;
     }

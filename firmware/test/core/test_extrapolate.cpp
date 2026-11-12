@@ -236,7 +236,7 @@ TEST_CASE("extrapolate: a target's height is GNSS against GNSS, else pressure ag
     CHECK(up == 0);
 }
 
-// #192: Bravo gating on a paired Go's claim can hold a fresh position with a stale height.
+// #192: a paired Go's claim, as Bravo's reference, can hold a fresh position with a stale height.
 TEST_CASE("extrapolate: a height known invalid apart from the fix compares no GNSS height") {
     model::Ownship own = flying(48.5, 8.5, 30.0, 0.0);
     own.altitude_hae_valid = false;

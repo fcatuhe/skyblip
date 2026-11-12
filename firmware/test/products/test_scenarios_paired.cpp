@@ -214,8 +214,7 @@ TEST_CASE("paired scenario: Bravo flies the Go's own-ship, and hears the sky the
     CHECK(paired.simulator.bravo().adsb().assembly().count() == 4);
 }
 
-TEST_CASE(
-    "paired scenario: the Go shows Bravo's ADS-B as B targets, not the airliner it gates out") {
+TEST_CASE("paired scenario: the Go shows Bravo's ADS-B as B targets, the airliner at FL370 too") {
     Paired paired("scenarios/paired.json");
     paired.run_until(10000);
     CHECK(paired.bravo() == comms::BravoState::Live);
@@ -223,7 +222,9 @@ TEST_CASE(
     REQUIRE(ga != nullptr);
     CHECK(ga->observation.source == model::Source::Adsb);
     CHECK(ga->observation.address_mapping_table == 5);
-    CHECK(target_of(paired.go(), kAirliner) == nullptr);
+    const traffic::Target* airliner = target_of(paired.go(), kAirliner);
+    REQUIRE(airliner != nullptr);
+    CHECK(airliner->observation.source == model::Source::Adsb);
     CHECK(paired.reads("BRAVO"));
     CHECK_FALSE(paired.reads_lost());
 
@@ -326,7 +327,9 @@ TEST_CASE("paired scenario: the Go reads BRAVO WAITING until Bravo has UTC, then
     CHECK_FALSE(paired.reads("WAITING"));
 }
 
-TEST_CASE("paired scenario: Bravo without a fix gates on the Go, which keeps its B targets") {
+TEST_CASE(
+    "paired scenario: Bravo without a fix takes the Go's position, and the Go keeps its B "
+    "targets") {
     Paired paired("scenarios/paired_bravo_without_fix.json");
     paired.run_until(13000);
     const uint32_t read = paired.simulator.phone().sentences_read();

@@ -7,7 +7,7 @@ namespace skyblip::bravo {
 
 void AdsbService::tick(uint32_t now_ms) {
     bus::State& state = context_.state;
-    // INFO: fc 11nov26 gated on the Go's position while paired, so its exports are where the Go is
+    // INFO: fc 11nov26 placed against the Go's position while paired, so exports are around the Go
     const GateChoice gate = gate_.choose(state.own, now_ms);
     const uint32_t own_icao = gate_.own_icao(settings_.own_icao);
     state.traffic.set_own_reference(gate.own);
