@@ -24,6 +24,7 @@ SLIPS = (1, 2, -1, -2)
 
 LINE = re.compile(r"adsb reject status=(?P<status>\w+) rssi=(?P<rssi>-?\d+|none) "
                   r"chips=(?P<chips>[0-9a-f]{54})\b")
+DROPPED = re.compile(r"--- (?P<count>\d+) messages dropped ---")
 
 Reading = collections.namedtuple(
     "Reading", "status rssi df icao type_code residue doubtful flip shift slip")
@@ -32,18 +33,28 @@ Reading = collections.namedtuple(
 def main(argv):
     if len(argv) > 1:
         with open(argv[1], encoding="utf-8", errors="replace") as source:
-            readings = readings_in(source)
+            readings, dropped = read_console(source)
     else:
-        readings = readings_in(sys.stdin)
-    for reading in readings:
-        print(describe(reading))
-    for line in summary(readings):
+        sys.stdin.reconfigure(errors="replace")
+        readings, dropped = read_console(sys.stdin)
+    for line in summary(readings, dropped):
         print(line)
     return 0
 
 
-def readings_in(lines):
-    return [read(match) for match in map(LINE.search, lines) if match]
+def read_console(lines):
+    """Prints each refused frame as it comes, so a live console shows them before it closes."""
+    readings = []
+    dropped = 0
+    for line in lines:
+        match = LINE.search(line)
+        if match:
+            readings.append(read(match))
+            print(describe(readings[-1]), flush=True)
+        lost = DROPPED.search(line)
+        if lost:
+            dropped += int(lost["count"])
+    return readings, dropped
 
 
 def read(match):
@@ -58,11 +69,12 @@ def read(match):
     slip = []
     if residue != 0:
         flip = next((bit for bit in range(1, BITS + 1) if SYNDROMES[bit] == residue), None)
-        for at, by in slips(stream):
-            if at == 8:
+    if residue != 0 and flip is None:
+        for first, last, by in runs(slips(stream)):
+            if first == 8:
                 shift = by
             else:
-                slip.append((at, by))
+                slip.append((first, last, by))
     return Reading(match["status"], match["rssi"], df, icao, type_code, residue, doubtful, flip,
                    shift, slip)
 
@@ -99,7 +111,7 @@ SYNDROMES = {bit: remainder(1 << (BITS - bit)) for bit in range(1, BITS + 1)}
 
 
 def slips(stream):
-    """Every chip position where gaining or losing one or two chips gives a sound DF17."""
+    """Every chip, from 0 at the first sync chip, where one or two chips more or less pass."""
     for at in range(8, STREAM_CHIPS):
         for by in SLIPS:
             for filler in fillers(abs(by)):
@@ -113,6 +125,17 @@ def slips(stream):
                     break
 
 
+def runs(found):
+    """One slip inside a run of equal chips passes at every chip of the run, so a run is one."""
+    merged = []
+    for at, by in sorted(found, key=lambda item: (item[1], item[0])):
+        if merged and merged[-1][2] == by and merged[-1][1] == at - 1:
+            merged[-1][1] = at
+        else:
+            merged.append([at, at, by])
+    return sorted((tuple(run) for run in merged), key=lambda run: run[0])
+
+
 def fillers(count):
     return [[(n >> i) & 1 for i in range(count)] for n in range(1 << count)]
 
@@ -124,17 +147,22 @@ def describe(reading):
         passes.append("flip=%d%s" % (reading.flip, doubted))
     if reading.shift is not None:
         passes.append("shift=%+d" % reading.shift)
-    passes.extend("slip=%+d@%d" % (by, at) for at, by in reading.slip)
-    type_code = " tc=%d" % reading.type_code if reading.type_code is not None else ""
+    passes.extend("slip=%+d@%s" % (by, first if first == last else "%d-%d" % (first, last))
+                  for first, last, by in reading.slip)
+    address = (" icao=%06x tc=%d" % (reading.icao, reading.type_code)
+               if reading.df == EXTENDED_SQUITTER else "")
     doubtful = " at " + ",".join(map(str, reading.doubtful)) if reading.doubtful else ""
-    return "%s rssi=%s df=%d icao=%06x%s residue=%06x doubtful=%d%s%s" % (
-        reading.status, reading.rssi, reading.df, reading.icao, type_code, reading.residue,
+    return "%s rssi=%s df=%d%s residue=%06x doubtful=%d%s%s" % (
+        reading.status, reading.rssi, reading.df, address, reading.residue,
         len(reading.doubtful), doubtful, " " + " ".join(passes) if passes else "")
 
 
-def summary(readings):
+def summary(readings, dropped=0):
+    lost = ["the console dropped %d log messages, so some refused frames are missing" % dropped
+            ] if dropped else []
     if not readings:
-        return ["no adsb reject line: is the image a development one, with a host on the console?"]
+        return lost + [
+            "no adsb reject line: is the image a development one, with a host on the console?"]
     statuses = collections.Counter(reading.status for reading in readings)
     formats = collections.Counter(reading.df for reading in readings)
     repeated = collections.Counter(
@@ -156,7 +184,7 @@ def summary(readings):
         "a slip inside the frame passes: %d" % sum(bool(reading.slip) for reading in readings),
         "doubtful pairs by quarter of the frame, bits 1-28 to 85-112: %s"
         % " ".join(map(str, quarters)),
-    ]
+    ] + lost
 
 
 if __name__ == "__main__":

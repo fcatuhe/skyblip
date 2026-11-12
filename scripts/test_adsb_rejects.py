@@ -64,13 +64,27 @@ class Reading(unittest.TestCase):
         self.assertEqual(reading.doubtful, [100])
         self.assertIn("doubtful=1 at 100", adsb_rejects.describe(reading))
 
-    def test_an_extra_chip_inside_the_frame_is_found_where_it_landed(self):
+    def test_an_extra_chip_inside_the_frame_is_one_slip_over_the_run_it_landed_in(self):
         stream = stream_of(SOUND)
-        stream.insert(150, 1 - stream[149])
+        stream.insert(150, stream[149])
         reading = reading_of(line_of(stream))
         self.assertNotEqual(reading.residue, 0)
-        self.assertIn((150, 1), reading.slip)
+        self.assertEqual(reading.slip, [(146, 151, 1)])
         self.assertIsNone(reading.shift)
+        self.assertTrue(adsb_rejects.describe(reading).endswith(" slip=+1@146-151"))
+
+    def test_a_wrong_last_bit_is_a_flip_and_not_a_slip(self):
+        stream = stream_of(SOUND)
+        stream[2 * 111], stream[2 * 111 + 1] = stream[2 * 111 + 1], stream[2 * 111]
+        reading = reading_of(line_of(stream))
+        self.assertEqual((reading.flip, reading.shift, reading.slip), (112, None, []))
+
+    def test_a_df16_line_names_no_icao(self):
+        stream = stream_of(SOUND)
+        stream[8], stream[9] = stream[9], stream[8]
+        reading = reading_of(line_of(stream))
+        self.assertEqual(reading.df, 16)
+        self.assertNotIn("icao=", adsb_rejects.describe(reading))
 
     def test_a_chip_lost_after_the_sync_is_a_whole_frame_shift(self):
         stream = stream_of(SOUND)
@@ -85,7 +99,7 @@ class Summary(unittest.TestCase):
         late = stream_of(SOUND)
         late[2 * 99] = late[2 * 99 + 1]
         log = "\n".join([line_of(stream_of(SOUND), status="unsupported"), "radio rx_ok=3",
-                         line_of(late), ""])
+                         "--- 4 messages dropped ---", line_of(late), ""])
         with tempfile.NamedTemporaryFile("w", suffix=".log") as console:
             console.write(log)
             console.flush()
@@ -97,7 +111,9 @@ class Summary(unittest.TestCase):
                          "unsupported rssi=-87 df=17 icao=4840d6 tc=4 residue=000000 doubtful=0")
         self.assertEqual(lines[2], "frames 2: crc 1, unsupported 1")
         self.assertIn("4840d6 (2)", lines[4])
-        self.assertTrue(lines[-1].endswith(": 0 0 0 1"))
+        self.assertTrue(lines[-2].endswith(": 0 0 0 1"))
+        self.assertEqual(lines[-1],
+                         "the console dropped 4 log messages, so some refused frames are missing")
 
 
 class Firmware(unittest.TestCase):
@@ -111,6 +127,8 @@ class Firmware(unittest.TestCase):
         readme = (FIRMWARE / "products" / "skyblip_bravo" / "README.md").read_text()
         logged, printed = re.search(r"\n(adsb reject [^\n]*)\n([^\n]*)\n", readme).groups()
         self.assertEqual(adsb_rejects.describe(reading_of(logged)), printed)
+        decoder_test = (FIRMWARE / "test" / "core" / "test_adsb.cpp").read_text()
+        self.assertIn('"%s"' % adsb_rejects.LINE.search(logged)["chips"], decoder_test)
 
     def test_every_line_main_cpp_logs_is_a_line_it_reads(self):
         main = (FIRMWARE / "products" / "skyblip_bravo" / "main.cpp").read_text()
