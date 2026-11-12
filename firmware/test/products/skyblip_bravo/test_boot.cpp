@@ -30,6 +30,21 @@ TEST_CASE("bravo: the inventory names the barometer, the haptic driver and the R
     CHECK(found.has_i2c_address(parts::Drv2605::kAddress));
 }
 
+// Meshtastic drives the X1's motor as an LRA, and our ERM drive gave the first unit a weak buzz.
+TEST_CASE("bravo: the X1's motor is an LRA in closed loop, never buzzed by a calibration at boot") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    models::Drv2605& chip = rig.platform.haptic();
+    CHECK(chip.lra_closed_loop());
+    CHECK(chip.calibrations == 0);
+    CHECK(chip.standby());
+
+    rig.product.board().roles().annunciator.vibrate();
+    CHECK(int(chip.drive()) == 0x7F);
+    rig.product.board().roles().annunciator.still();
+    CHECK_FALSE(chip.moving());
+}
+
 TEST_CASE("bravo: the name is the tag's whatever activation says, because Bravo has none") {
     char name[identity::kBluetoothNameBytes + 1];
     CHECK(bravo::bluetooth_name(name, sizeof(name), bravo::kProductName,

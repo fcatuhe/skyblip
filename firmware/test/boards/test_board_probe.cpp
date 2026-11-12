@@ -72,6 +72,20 @@ TEST_CASE("board: a haptic that answers the bus is a capability, and it is the p
     CHECK_FALSE(chip.moving());
 }
 
+// The X1 runs an LRA through the same part, and that choice must not leak into this board.
+TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncalibrated") {
+    platform::host::Platform platform;
+    bus::Bus bus;
+    Board board{platform, bus};
+    board.probe();
+    models::Drv2605& chip = platform.chips().haptic;
+
+    CHECK(chip.erm_selected());
+    CHECK(chip.open_loop());
+    CHECK(chip.calibrations == 0);
+    CHECK_FALSE(board.haptic().calibration().ran);
+}
+
 // A loop that stalls mid-call would otherwise hold an output on until the watchdog bites.
 TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both") {
     platform::host::Platform platform;

@@ -38,7 +38,8 @@ class MeshtrackerX1 {
           receiver_(radio_, platform.clock(), platform.radio_irq(), adsb),
           gnss_(platform.uart(io::BusId::Gnss)),
           barometer_(platform.i2c(io::BusId::Sensor)),
-          haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), meshtracker_x1::kHapticEnable),
+          haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), platform.delay(),
+                  meshtracker_x1::kHapticEnable, meshtracker_x1::kHapticActuator),
           rtc_(platform.i2c(io::BusId::Rtc)),
           capabilities_(platform.capabilities()) {}
 
