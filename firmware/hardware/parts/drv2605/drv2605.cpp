@@ -34,7 +34,7 @@ Status Drv2605::begin() {
     // the part awake.
     if (!write_register(kRegisterMode, kModeInternalTrigger)) return Status::Down;
     write_register(kRegisterRealTimePlaybackInput, 0x00);
-    write_register(kRegisterLibrary, kErmLibraryA);
+    write_register(kRegisterLibrary, actuator_ == Actuator::Lra ? kLraLibrary : kErmLibraryA);
     write_register(kRegisterWaveSequence1, 0x01);
     write_register(kRegisterWaveSequence2, 0x00);  // the terminator: a sequence with no end runs on
     write_register(kRegisterOverdrive, 0x00);
@@ -42,8 +42,11 @@ Status Drv2605::begin() {
     write_register(kRegisterSustainNegative, 0x00);
     write_register(kRegisterBreak, 0x00);
     write_register(kRegisterAudioMaximumInput, kAudioMaximumInputDefault);
-    update_register(kRegisterFeedback, kFeedbackLraSelect, 0x00);
-    update_register(kRegisterControl3, 0x00, kControl3ErmOpenLoop);
+    if (actuator_ == Actuator::Lra) {
+        configure_lra();
+    } else {
+        configure_erm();
+    }
 
     // Configured and idle. Standby rather than awake: this device counts
     // microamps in a flight bag, and an idle driver stage is milliamps.
@@ -80,6 +83,75 @@ void Drv2605::park() {
         gpio_.set(enable_pin_, false);
     } else {
         gpio_.mode_input(enable_pin_, false);
+    }
+}
+
+// INFO: fc 12nov26 a failed calibration restores the results the part held, which Meshtastic drives
+void Drv2605::calibrate() {
+    calibration_ = Calibration{};
+    if (!ready_ || driving_ || actuator_ != Actuator::Lra) return;
+    uint8_t held_compensation = 0;
+    uint8_t held_back_emf = 0;
+    uint8_t held_feedback = 0;
+    if (read_register(kRegisterCalibrationCompensation, held_compensation) &&
+        read_register(kRegisterCalibrationBackEmf, held_back_emf) &&
+        read_register(kRegisterFeedback, held_feedback) &&
+        write_register(kRegisterMode, kModeAutoCalibration) &&
+        write_register(kRegisterGo, kGoFire)) {
+        calibration_.ran = true;
+        const bool finished = calibration_finished();
+        if (!finished) write_register(kRegisterGo, 0x00);
+        uint8_t status = 0;
+        uint8_t feedback = 0;
+        const bool reported =
+            read_register(kRegisterStatus, status) &&
+            read_register(kRegisterCalibrationCompensation, calibration_.compensation) &&
+            read_register(kRegisterCalibrationBackEmf, calibration_.back_emf) &&
+            read_register(kRegisterFeedback, feedback);
+        calibration_.back_emf_gain = static_cast<uint8_t>(feedback & kFeedbackBackEmfGain);
+        calibration_.passed = finished && reported && (status & kStatusDiagnosticResult) == 0;
+        if (!calibration_.passed) {
+            write_register(kRegisterCalibrationCompensation, held_compensation);
+            write_register(kRegisterCalibrationBackEmf, held_back_emf);
+            write_register(kRegisterFeedback, held_feedback);
+        }
+    }
+    write_register(kRegisterMode, kModeStandby);
+}
+
+void Drv2605::configure_erm() {
+    update_register(kRegisterFeedback, kFeedbackLraSelect, 0x00);
+    update_register(kRegisterControl3, 0x00, kControl3ErmOpenLoop);
+}
+
+// INFO: fc 12nov26 SLOS854D 9.3.1 step 4: a part with programmed OTP keeps its 0x16 to 0x1A
+void Drv2605::configure_lra() {
+    uint8_t control4 = 0;
+    otp_programmed_ =
+        read_register(kRegisterControl4, control4) && (control4 & kControl4OtpStatus) != 0;
+    if (otp_programmed_) {
+        update_register(kRegisterFeedback, 0x00, kFeedbackLraSelect);
+    } else {
+        update_register(kRegisterFeedback, static_cast<uint8_t>(~kFeedbackBackEmfGain),
+                        kLraFeedback & ~kFeedbackBackEmfGain);
+        write_register(kRegisterRatedVoltage, kLraRatedVoltage);
+        write_register(kRegisterOverdriveClamp, kLraOverdriveClamp);
+    }
+    write_register(kRegisterControl1, kLraControl1);
+    write_register(kRegisterControl2, kLraControl2);
+    update_register(kRegisterControl3, kControl3LraOpenLoop | kControl3DataFormatRtpUnsigned, 0x00);
+    write_register(kRegisterControl4, kLraControl4);
+    write_register(kRegisterControl5, kLraControl5);
+}
+
+bool Drv2605::calibration_finished() {
+    uint32_t waited_ms = 0;
+    for (;;) {
+        uint8_t go = kGoFire;
+        if (read_register(kRegisterGo, go) && (go & kGoFire) == 0) return true;
+        if (waited_ms >= kCalibrationCeilingMs) return false;
+        delay_.wait_at_least_us(kCalibrationPollMs * 1000);
+        waited_ms += kCalibrationPollMs;
     }
 }
 

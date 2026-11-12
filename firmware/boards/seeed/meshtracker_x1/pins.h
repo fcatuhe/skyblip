@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "core/power/shutdown.h"
+#include "hardware/parts/drv2605/drv2605.h"
 
 #ifdef CONFIG_BOARD_MESHTRACKER_X1
 #include <zephyr/devicetree.h>
@@ -20,6 +21,8 @@ constexpr int kRadioIrq = pin_number(1, 1);
 // TODO: fc 12nov26 DIO8 from SoftRF radiolib.cpp:2132, unverified until #169 benches a unit
 constexpr uint8_t kRadioIrqDio = 8;
 constexpr int kHapticEnable = pin_number(1, 5);
+// TODO: fc 12nov26 Meshtastic's DRV2605_USE_LRA and a weak ERM buzz, until #169 names the motor
+constexpr parts::Drv2605::Actuator kHapticActuator = parts::Drv2605::Actuator::Lra;
 
 // TODO: fc 12nov26 the T-Echo's debounce, kept until #169 scopes the X1's button bounce
 constexpr uint32_t kButtonHoldMs = 30;

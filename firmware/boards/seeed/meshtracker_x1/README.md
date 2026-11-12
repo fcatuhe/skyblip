@@ -44,7 +44,7 @@ SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2
 | Part | Bus | Address | Sources |
 |---|---|---|---|
 | SPA06-003 barometer | sensor I2C | 0x77 | SoftRF `nRF52.h:151`, Seeed |
-| DRV2605L haptic driver | sensor I2C | 0x5A | SoftRF `nRF52.h:140`, Seeed |
+| DRV2605L haptic driver, LRA | sensor I2C | 0x5A | SoftRF `nRF52.h:140`, Seeed |
 | LSM6DSO IMU, optional | sensor I2C | 0x6A | SoftRF `nRF52.h:153` |
 | BMM350 magnetometer, optional | sensor I2C | 0x14 | SoftRF `nRF52.h:150` |
 | YSN8900 RTC | RTC I2C | 0x32 | SoftRF `nRF52.h:154`, Seeed |

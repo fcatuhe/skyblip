@@ -36,7 +36,8 @@ constexpr BusPart kSensorBusParts[] = {
 constexpr BusPart kRtcBusParts[] = {{0x32, "YSN8900"}};
 
 platform::zephyr::MeshtrackerX1Lines g_platform;
-parts::Drv2605 g_haptic{g_platform.i2c(io::BusId::Sensor), g_platform.gpio(), kHapticEnablePin};
+parts::Drv2605 g_haptic{g_platform.i2c(io::BusId::Sensor), g_platform.gpio(), g_platform.delay(),
+                        kHapticEnablePin, boards::meshtracker_x1::kHapticActuator};
 platform::zephyr::I2c g_rtc_bus{DEVICE_DT_GET(DT_ALIAS(rtc_i2c))};
 const struct gpio_dt_spec g_button = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
 const struct gpio_dt_spec g_sensor_rail = GPIO_DT_SPEC_GET(DT_ALIAS(sensor_rail), gpios);
@@ -75,6 +76,20 @@ void show_outputs() {
     g_platform.annunciator().still();
 }
 
+void print_calibration() {
+    const parts::Drv2605::Calibration& calibration = g_haptic.calibration();
+    if (!calibration.ran) {
+        printk("smoke: DRV2605 calibration did not run\n");
+        return;
+    }
+    printk(
+        "smoke: DRV2605 LRA calibration %s: A_CAL_COMP 0x%02x A_CAL_BEMF 0x%02x BEMF_GAIN %u, "
+        "OTP %s\n",
+        calibration.passed ? "passed" : "FAILED, earlier results kept", calibration.compensation,
+        calibration.back_emf, calibration.back_emf_gain,
+        g_haptic.otp_programmed() ? "programmed" : "blank");
+}
+
 void report() {
     uint16_t battery_mv = 0;
     const bool battery_plausible = g_platform.read_battery_mv(battery_mv);
@@ -93,10 +108,12 @@ void announce() {
     printk("smoke: meshtracker_x1 capabilities=%x tag=%04x storage=%d\n",
            static_cast<unsigned>(g_platform.capabilities()), g_platform.bluetooth_tag(),
            g_platform.storage_mounted());
-    if (g_haptic_ready)
+    if (g_haptic_ready) {
         printk("smoke: DRV2605 device id %u\n", g_haptic.device_id());
-    else
+        print_calibration();
+    } else {
         printk("smoke: no DRV2605 answered\n");
+    }
     scan("sensor bus", g_platform.i2c(io::BusId::Sensor), kSensorBusParts);
     scan("rtc bus", g_rtc_bus, kRtcBusParts);
     show_outputs();
@@ -138,6 +155,7 @@ int main(void) {
     if (g_platform.begin() != Status::Ok) return -1;
     g_haptic.power_up();
     g_haptic_ready = g_haptic.begin() == Status::Ok;
+    g_haptic.calibrate();
     if (g_haptic_ready) g_platform.annunciator().attach_haptic(g_haptic);
     const int rtc_powered = gpio_pin_configure_dt(&g_rtc_enable, GPIO_OUTPUT_ACTIVE);
     if (rtc_powered != 0) printk("smoke: RTC enable not raised (%d)\n", rtc_powered);
