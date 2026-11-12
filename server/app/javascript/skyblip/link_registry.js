@@ -1845,21 +1845,6 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "lease_ms",
-          "number": 8,
-          "type": "unsigned"
-        },
-        {
-          "name": "request_epoch",
-          "number": 9,
-          "type": "unsigned"
-        },
-        {
-          "name": "request_sequence",
-          "number": 10,
-          "type": "unsigned"
-        },
-        {
           "name": "export_reference",
           "number": 11,
           "type": "enum",
@@ -1947,34 +1932,6 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "boolean",
           "required": true
-        },
-        {
-          "name": "request_sequence",
-          "number": 13,
-          "type": "unsigned"
-        },
-        {
-          "name": "alarm_passes",
-          "number": 14,
-          "type": "unsigned",
-          "required": true
-        },
-        {
-          "name": "alarm_volume",
-          "number": 15,
-          "type": "enum",
-          "enum": "alarm_volume",
-          "required": true
-        },
-        {
-          "name": "assessed_epoch",
-          "number": 16,
-          "type": "unsigned"
-        },
-        {
-          "name": "assessed_sequence",
-          "number": 17,
-          "type": "unsigned"
         },
         {
           "name": "paired",

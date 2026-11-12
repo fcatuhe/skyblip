@@ -49,7 +49,7 @@ struct ScreenRig {
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};
     go::CaptureSettings capture_settings{settings};
     common::CaptureService capture{context, capture_store, flights_store, capture_settings, config};
-    go::BravoService bravo{context, settings, config, null.central, alarm_service};
+    go::BravoService bravo{context, settings, config, null.central};
     go::ScreenService screen{context, settings, config, alarm_service, capture, self_test, bravo};
 
     ScreenRig() {

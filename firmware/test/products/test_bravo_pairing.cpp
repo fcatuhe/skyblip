@@ -257,15 +257,13 @@ TEST_CASE("bravo pairing: Bravo's own ICAO, or the Go's, keeps the warning down"
     CHECK_FALSE(tango.go.product.screen().noticing());
 }
 
-TEST_CASE("bravo pairing: the peer_claim carries the Go's own ICAO and its alarm volume") {
+TEST_CASE("bravo pairing: the peer_claim carries the Go's own ICAO") {
     Tango tango;
     tango.go.settings().own_icao = 0x3C6586;
-    tango.go.settings().alarm_enabled = false;
     tango.pair();
     REQUIRE_FALSE(tango.bravo.claims.empty());
     const std::string& claim = tango.bravo.claims.back();
     CHECK(field(claim, "own_icao") == std::to_string(0x3C6586));
-    CHECK(field(claim, "alarm_volume") == "off");
     CHECK(field(claim, "latitude_1e7").empty());
     CHECK(tango.go.platform.central().writes_refused == 0);
 }

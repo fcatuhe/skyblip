@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 
 #include "core/comms/config.h"
 #include "core/comms/link_sessions.h"
@@ -22,6 +23,8 @@ class PeerService : public runtime::Service {
    public:
     // INFO: fc 11nov26 schemas/link.v1.json health: once a second whatever the traffic
     static constexpr uint32_t kHealthPeriodMs = 1000;
+    // INFO: fc 12nov26 unverified: three claim periods, so one lost claim keeps Bravo silent (#194)
+    static constexpr uint32_t kAlarmRequestMaxAgeMs = 3000;
 
     PeerService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
                 const ports::AdsbReceiver& receiver, GateReference& gate)
@@ -36,7 +39,7 @@ class PeerService : public runtime::Service {
 
     bool answer(uint32_t now_ms);
     bool requested() const { return pairing_.requested(); }
-    // INFO: fc 11nov26 both sides hold the pin, the one state #179 may hand the alarm over in
+    // INFO: fc 11nov26 both sides hold the pin, the one state a Go+ may take the alarm in (#179)
     bool paired() const { return pairing_.pinned(); }
     uint32_t boot_epoch() const { return boot_epoch_; }
     uint32_t refused() const { return refused_; }
@@ -50,7 +53,15 @@ class PeerService : public runtime::Service {
         bool used{false};
     };
 
+    struct AlarmRequest {
+        events::BluetoothAddress go{};
+        uint32_t heard_ms{0};
+    };
+
     void forget_gone();
+    void hear_alarm_request(const events::BluetoothAddress& go, bool requested, uint32_t now_ms);
+    void expire_alarm_request(uint32_t now_ms);
+    bool grants_alarm_to(const events::BluetoothAddress& go) const;
     void take(const events::RxFrame& frame, uint32_t now_ms);
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
@@ -67,6 +78,7 @@ class PeerService : public runtime::Service {
     ObservationPacer pacer_{};
     std::array<Go, ObservationPacer::kRecipients> gos_{};
     PeerPin kept_{};
+    std::optional<AlarmRequest> alarm_request_{};
     uint32_t boot_epoch_{0};
     uint32_t sequence_{0};
     int next_target_{0};
