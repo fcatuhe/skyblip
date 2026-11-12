@@ -1983,6 +1983,27 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "capture",
+      "code": 29,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "profile",
+          "number": 1,
+          "type": "enum",
+          "enum": "capture_profile",
+          "required": true
+        }
+      ]
     }
   ],
   "enums": {
@@ -2159,6 +2180,22 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "refused_on_device",
           "code": 43
+        },
+        {
+          "name": "confirm_capture",
+          "code": 44
+        },
+        {
+          "name": "capture",
+          "code": 45
+        },
+        {
+          "name": "capturing",
+          "code": 46
+        },
+        {
+          "name": "not_capturing",
+          "code": 47
         }
       ]
     },
@@ -2689,6 +2726,34 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
+    "capture_profile": {
+      "mirrors": {
+        "type": "comms::CaptureProfile",
+        "header": "core/comms/config.h"
+      },
+      "values": [
+        {
+          "name": "full",
+          "code": 0,
+          "mirrors": "Full"
+        },
+        {
+          "name": "power_run",
+          "code": 1,
+          "mirrors": "PowerRun"
+        },
+        {
+          "name": "flight_run",
+          "code": 2,
+          "mirrors": "FlightRun"
+        },
+        {
+          "name": "stop",
+          "code": 3,
+          "mirrors": "Stop"
+        }
+      ]
+    },
     "command": {
       "values": [
         {
@@ -2806,6 +2871,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "peer_claim",
           "code": 28
+        },
+        {
+          "name": "capture",
+          "code": 29
         }
       ]
     }

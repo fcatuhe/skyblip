@@ -28,6 +28,7 @@ const SMALLER_WRITES = [244, 182, GATT_WRITE_BYTES];
 export const LINKED_PHASES = new Set(['ready', 'asking', 'confirming', 'uploading', 'installing']);
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
+const NOTED_TASKS = new Set(['set', 'capture']);
 
 class LinkLost extends Error {
   constructor() {
@@ -93,6 +94,7 @@ export class Updater {
   #version = null;
   #key = null;
   #product = null;
+  #captureProfile = null;
   #windowOpen = false;
   #leaving = false;
   #state = {
@@ -206,6 +208,14 @@ export class Updater {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
   }
 
+  // INFO: fc 12nov26 only a skyBlip Bravo answers capture, and a Go answers it unknown_command
+  orderCapture(profile) {
+    if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'capture' } });
+    this.#captureProfile = profile;
+    this.#set({ notice: null });
+    return this.#ask('capture', { profile });
+  }
+
   #refusal() {
     const unit = this.#state.image;
     if (this.#product && this.#product !== productOf(unit)) return 'wrong_product';
@@ -275,6 +285,10 @@ export class Updater {
   }
 
   #granted(task) {
+    if (task === 'capture') {
+      const key = this.#captureProfile === 'stop' ? 'capture_stopped' : 'capture_armed';
+      return this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
+    }
     if (task === 'dfu') {
       this.#windowOpen = true;
       return this.#upload();
@@ -339,7 +353,7 @@ export class Updater {
   }
 
   #noticeDuring(task, notice) {
-    return task === 'set' ? { ...notice, during: 'set' } : notice;
+    return NOTED_TASKS.has(task) ? { ...notice, during: task } : notice;
   }
 
   #noticeOf(error) {

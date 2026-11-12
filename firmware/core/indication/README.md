@@ -30,15 +30,17 @@ SoftRF is the reference vocabulary and we keep its distinction and not its duty:
 
 Blue was the obvious colour for a first battery step and it is the wrong one. It already means no fix, the lamp shows one thing at a time, and a colour with two meanings is a colour with none. The step is also a voltage and not a percentage: the percentage comes off a textbook curve (`core/power/README.md`), so keying the lamp to it would make the lamp exactly as trustworthy as a table nobody has measured yet.
 
-## Four rows for a device with no glass
+## Six rows for a device with no glass
 
-`Prompt`, `Pairing`, `NoFixLinked` and `AliveLinked` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt, a Go's pairing request or a connection on. The Go makes no claim, so `Situation::prompting`, `Situation::pairing` and `Situation::linked` stay false there and its lamp is the one above.
+`Prompt`, `Pairing`, `NoFixLinked`, `AliveLinked`, `NoFixCapturing` and `AliveCapturing` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt, a Go's pairing request, a connection or a running capture on. The Go makes no claim, so `Situation::prompting`, `Situation::pairing`, `Situation::linked` and `Situation::capturing` stay false there and its lamp is the one above.
 
 `Prompt` is a fast green blink, 60 ms in every 250, a `Transient` row because a prompt expires in thirty seconds. It sits below `Alarm`, so an advisory keeps the lamp, and above the cell, because a pilot answering a phone is standing beside the unit. Bravo arms the two-press gesture only while this row is showing (`products/skyblip_bravo/README.md`).
 
 `Pairing` is a fast blue blink, the prompt's cadence in the colour of no fix, a `Transient` row because a request expires in thirty seconds. Blue at the steady wink means no fix, and blue at the fast blink means a Go asks to pair: the rhythm tells them apart, as it tells a prompt from a green wink. It sits below `Prompt`, so a phone's prompt keeps the press, and above the cell, because a pilot pairing is standing beside the unit. Bravo arms its one-press pairing gesture only while this row is showing.
 
 A connected phone keeps the fix colour and doubles the wink rate: one wink every 1.5 s instead of 3 s, which is 2% and the edge of the `Steady` budget. The colour still says the fix and the rhythm says the link, so the lamp shows one thing at a time and a pilot reads both.
+
+An armed capture keeps the fix colour too, and winks twice every 3 s: two 30 ms flashes 150 ms apart, then dark until the cycle ends. That is 2%, the connected rows' spend, and a capture runs for hours, so it is a `Steady` row. A row's `flashes` and `between_ms` say how many flashes a cycle holds and how far apart, and `cycle_ms()` and `duty_permille()` count them all. The capture rows sit above the connected ones: a pilot arms a capture from a page, so a phone is connected at the moment the lamp has to say the capture runs (#247).
 
 ## Why charge is not a row
 

@@ -83,8 +83,12 @@ inline constexpr Value kReasonValues[] = {
     {"erased", 41},
     {"prompt_pending", 42},
     {"refused_on_device", 43},
+    {"confirm_capture", 44},
+    {"capture", 45},
+    {"capturing", 46},
+    {"not_capturing", 47},
 };
-inline constexpr Enumeration kReason{kReasonValues, 43};
+inline constexpr Enumeration kReason{kReasonValues, 47};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},
@@ -193,6 +197,14 @@ inline constexpr Value kLogValues[] = {
 };
 inline constexpr Enumeration kLog{kLogValues, 2};
 
+inline constexpr Value kCaptureProfileValues[] = {
+    {"full", 0},
+    {"power_run", 1},
+    {"flight_run", 2},
+    {"stop", 3},
+};
+inline constexpr Enumeration kCaptureProfile{kCaptureProfileValues, 4};
+
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},
     {"get", 1},
@@ -223,8 +235,9 @@ inline constexpr Value kCommandValues[] = {
     {"observation", 26},
     {"health", 27},
     {"peer_claim", 28},
+    {"capture", 29},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 29};
+inline constexpr Enumeration kCommand{kCommandValues, 30};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -540,6 +553,11 @@ inline constexpr Key kPeerClaimKeys[] = {
     {"paired", 18, Type::Boolean, nullptr, 0, true},
 };
 
+inline constexpr Key kCaptureKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"profile", 1, Type::Enum, &kCaptureProfile, 0, true},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -570,6 +588,7 @@ inline constexpr Frame kFrames[] = {
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
     {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 19},
+    {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
 };
 
 }

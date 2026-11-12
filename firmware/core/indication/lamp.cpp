@@ -26,6 +26,8 @@ const char* to_string(Condition condition) {
         case Condition::Pairing: return "pairing";
         case Condition::NoFixLinked: return "no-fix-linked";
         case Condition::AliveLinked: return "alive-linked";
+        case Condition::NoFixCapturing: return "no-fix-capturing";
+        case Condition::AliveCapturing: return "alive-capturing";
         default: return "?";
     }
 }
@@ -54,6 +56,8 @@ Condition condition_for(const Situation& situation) {
         case power::PowerLevel::Unknown:
         case power::PowerLevel::Normal: break;
     }
+    if (situation.capturing)
+        return situation.fix_valid ? Condition::AliveCapturing : Condition::NoFixCapturing;
     if (situation.linked)
         return situation.fix_valid ? Condition::AliveLinked : Condition::NoFixLinked;
     return situation.fix_valid ? Condition::Alive : Condition::NoFix;
@@ -65,6 +69,7 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
         condition_ = wanted;
         started_ = true;
         phase_ms_ = now_ms;
+        flash_ = 0;
         // A condition that has just changed shows itself immediately: the flash a
         // pilot is owed is the one that follows the event, not the one that
         // follows the rest of the previous cycle.
@@ -89,19 +94,23 @@ void Policy::advance(uint32_t now_ms) {
     // Unsigned subtraction throughout, so the 49.7-day wrap of the millisecond
     // counter costs at most one restarted flash rather than a lamp stuck in the
     // phase it was in when the counter turned over.
-    const uint32_t cycle = static_cast<uint32_t>(indication.on_ms) + indication.off_ms;
+    const uint32_t cycle = cycle_ms(indication);
     const uint32_t elapsed = now_ms - phase_ms_;
     // A pass that arrives a whole cycle or more late restarts the flash instead of
     // unwinding the phases it missed: nobody saw them, and replaying them would
     // spend the loop catching up with a blink.
     if (elapsed >= cycle) {
         phase_ms_ = now_ms;
+        flash_ = 0;
         lit_ = true;
         return;
     }
-    const uint16_t phase_ms = lit_ ? indication.on_ms : indication.off_ms;
+    const bool another_flash = flash_ + 1 < indication.flashes;
+    const uint16_t dark_ms = another_flash ? indication.between_ms : indication.off_ms;
+    const uint16_t phase_ms = lit_ ? indication.on_ms : dark_ms;
     if (elapsed < phase_ms) return;
     phase_ms_ += phase_ms;
+    if (!lit_) flash_ = another_flash ? flash_ + 1 : 0;
     lit_ = !lit_;
 }
 

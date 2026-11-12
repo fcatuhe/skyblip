@@ -69,8 +69,9 @@ TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
     for (int i = 0; i < kRowCount; i++) {
         const Row& row = kTable[i];
         MESSAGE(i, ": ", std::string(to_string(row.condition)), " -> ",
-                std::string(to_string(row.indication.lamp)), " on=", row.indication.on_ms,
-                "ms off=", row.indication.off_ms,
+                std::string(to_string(row.indication.lamp)),
+                " flashes=", static_cast<int>(row.indication.flashes), " on=", row.indication.on_ms,
+                "ms between=", row.indication.between_ms, "ms off=", row.indication.off_ms,
                 "ms duty=", indication::duty_permille(row.indication),
                 "/1000 : ", std::string(row.meaning));
         REQUIRE(row.meaning != nullptr);
@@ -152,6 +153,36 @@ TEST_CASE(
     CHECK(linked.lamp == alive.lamp);
     CHECK(2 * (linked.on_ms + linked.off_ms) == alive.on_ms + alive.off_ms);
     CHECK(indication_for(Condition::NoFixLinked).lamp == indication_for(Condition::NoFix).lamp);
+}
+
+// Bravo has no glass, so the lamp is the one thing that says a capture armed from a page is
+// running.
+TEST_CASE("indication: a capture winks twice in the fix colour, below a prompt and above a link") {
+    Situation situation{};
+    situation.power_level = power::PowerLevel::Normal;
+    situation.prompting = true;
+    situation.linked = true;
+    situation.capturing = true;
+    CHECK(condition_for(situation) == Condition::Prompt);
+    situation.prompting = false;
+    CHECK(condition_for(situation) == Condition::NoFixCapturing);
+    situation.fix_valid = true;
+    CHECK(condition_for(situation) == Condition::AliveCapturing);
+    situation.power_level = power::PowerLevel::Low;
+    CHECK(condition_for(situation) == Condition::Low);
+    situation.power_level = power::PowerLevel::Normal;
+
+    LampRig lamp;
+    lamp.run(situation, 0, 30000);
+    CHECK(lamp.policy.condition() == Condition::AliveCapturing);
+    CHECK(indication_for(Condition::AliveCapturing).lamp == indication::Lamp::Green);
+    CHECK(indication_for(Condition::NoFixCapturing).lamp == indication::Lamp::Blue);
+    // Two winks in each of ten 3 s cycles, at the same duty a phone connected spends.
+    CHECK(lamp.flashes >= 19);
+    CHECK(lamp.flashes <= 21);
+    CHECK(lamp.duty_permille() <= kSteadyDutyCeilingPermille);
+    CHECK(cycle_ms(indication_for(Condition::AliveCapturing)) ==
+          cycle_ms(indication_for(Condition::Alive)));
 }
 
 TEST_CASE("indication: the cutoff monitor decides what low means, not a second threshold") {

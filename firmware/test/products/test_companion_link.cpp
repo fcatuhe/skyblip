@@ -152,6 +152,23 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
 }
 
 // A write is refused in the air, so a name is set before the aircraft moves.
+// The Go arms a capture on its glass only, so the command Bravo answers is not one it knows.
+TEST_CASE("companion link: a Go answers a capture command unknown_command and arms nothing") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 3);
+    rig.raise_link(1);
+    rig.platform.link().push_rx(
+        link_frame(events::Endpoint::Config, 1, "{\"command\":\"capture\",\"profile\":\"full\"}"));
+    taxi(rig, now_ms, 1);
+    CHECK(last_frame_on(rig, events::Endpoint::Config) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":"
+          "\"unknown_command\"}");
+    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+    CHECK_FALSE(rig.product.capture().capturing());
+}
+
 TEST_CASE("companion link: a callsign written in flight is refused, not staged") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

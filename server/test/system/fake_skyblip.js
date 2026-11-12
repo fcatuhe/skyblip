@@ -9,6 +9,7 @@
   const unit = {
     stored: { aircraft_type: 4, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-CABC', own_icao: 0 },
     staged: null,
+    capture: null,
     mtu: 247,
     product: 'skyblip_go',
     address: 3,
@@ -33,10 +34,15 @@
         this.staged = fields;
         return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
       }
+      if (command === 'capture' && this.product === 'skyblip_bravo') {
+        this.capture = fields.profile;
+        return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_capture' });
+      }
       return this.reply({ command: 'acknowledgement', acknowledge: false, reason: 'unknown_command' });
     },
 
     press() {
+      if (this.capture) return this.reply({ command: 'acknowledgement', acknowledge: true, reason: 'capture' });
       Object.assign(this.stored, this.staged);
       return this.reply({ command: 'acknowledgement', acknowledge: true });
     },

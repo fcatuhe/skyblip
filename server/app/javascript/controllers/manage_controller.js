@@ -11,11 +11,14 @@ const PHASE_WORD = { connecting: "connecting", recovering: "recovering" }
 const IMAGE_NOTES = { probation: "probation", reverted: "reverted", refused: "image_refused" }
 const FILE_ENDING = { slim: ".signed.bin", full: ".full.signed.bin" }
 const ACTIVATED_PRODUCTS = new Set(["skyblip_go"])
+const CAPTURING_PRODUCTS = new Set(["skyblip_bravo"])
+const NOTED_ELSEWHERE = new Set(["set", "capture"])
 
 export default class extends Controller {
   static targets = ["unsupported", "connect", "disconnect", "hint", "file", "shelf", "release", "install", "recover",
                     "device", "firmware", "track", "battery", "flight", "advice", "chosen", "notes", "step",
-                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset", "settingsMessage"]
+                    "progress", "progressText", "message", "settings", "fields", "default", "save", "reset", "settingsMessage",
+                    "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage"]
   static values = { src: String, remaining: String, charging: String, full: String, slim: String, labels: Object }
 
   async connect() {
@@ -99,6 +102,15 @@ export default class extends Controller {
     this.updater.resetSettings()
   }
 
+  armCapture(event) {
+    event.preventDefault()
+    this.updater.orderCapture(this.captureProfileTarget.value)
+  }
+
+  stopCapture() {
+    this.updater.orderCapture("stop")
+  }
+
   async #selectImage(read, name) {
     // INFO: fc 17oct26 selections are serialized and installation stays disabled until the new image is fully read and checked.
     this.selecting = true
@@ -133,6 +145,7 @@ export default class extends Controller {
     this.#facts(state)
     this.#notes(state)
     if (this.hasSettingsTarget) this.#settings(state)
+    if (this.hasCaptureTarget) this.#capture(state)
     if (this.hasInstallTarget) this.#firmware(state, idle, asks)
     else this.messageTarget.textContent = this.#linkMessage(state)
   }
@@ -254,6 +267,17 @@ export default class extends Controller {
     for (const note of this.defaultTargets) this.#default(note, settings, defaults)
   }
 
+  #capture({ phase, image, notice, refusedOnDevice }) {
+    const bravo = Boolean(image) && CAPTURING_PRODUCTS.has(this.productOf(image))
+    this.captureTarget.hidden = !bravo
+    if (!bravo) return
+    const idle = phase === "ready" && !this.updater.inFlight && !refusedOnDevice
+    this.captureFieldsTarget.disabled = !idle
+    this.captureArmTarget.disabled = !idle
+    this.captureStopTarget.disabled = !idle
+    this.captureMessageTarget.textContent = notice?.during === "capture" ? this.#said(notice) : ""
+  }
+
   #fill(settings) {
     this.shown = settings
     const { elements } = this.settingsTarget
@@ -340,7 +364,7 @@ export default class extends Controller {
   }
 
   #notice({ notice }) {
-    return notice?.during === "set" ? null : notice
+    return NOTED_ELSEWHERE.has(notice?.during) ? null : notice
   }
 
   #said({ key, detail }) {

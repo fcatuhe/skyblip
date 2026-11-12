@@ -19,6 +19,10 @@ const DEVICE_NOTES = [
 ];
 const NEVER_ASKED_BY_THE_PAGE = new Set(['no_command', 'no_version', 'invalid']);
 
+const CAPTURE = '../../../firmware/core/comms/capture_request.cpp';
+const CAPTURE_NOTICES = ['capture_armed', 'capture_stopped'];
+// INFO: fc 12nov26 the page offers the registry's profiles by name, so it never sends one past stop
+const NEVER_SENT_BY_THE_PAGE = new Set([...NEVER_ASKED_BY_THE_PAGE, 'out_of_range']);
 const CONFIGURE_PAGES = ['../../content/pages/configure.html.erb', '../../content/pages/configure.fr.html.erb'];
 // INFO: fc 11nov26 what config.cpp answers a set with, the claim and the link included
 const SET_REFUSALS = ['in_flight', 'low_power', 'expired', 'cancelled', 'prompt_pending', 'refused_on_device', 'small_mtu', 'unknown_command'];
@@ -98,15 +102,28 @@ for (const page of CONFIGURE_PAGES) {
   });
 }
 
+test('the firmware still refuses a capture with the reasons this test reads', () => {
+  assert.ok(reasonsIn(CAPTURE, 'refuse\\(').includes('not_capturing'), `${CAPTURE} no longer reads as it did`);
+});
+
+for (const page of CONFIGURE_PAGES) {
+  test(`every refusal and notice of a capture has words on ${page.split('/').pop()}`, () => {
+    const refusals = reasonsIn(CAPTURE, 'refuse\\(').filter(reason => !NEVER_SENT_BY_THE_PAGE.has(reason));
+    const missing = [...refusals, ...PROMPT_REFUSALS, ...CAPTURE_NOTICES].filter(key => !words(page).has(key));
+    assert.deepEqual(missing, []);
+  });
+}
+
 test('both settings pages word the same keys', () => {
   const [english, french] = CONFIGURE_PAGES.map(page => words(page));
   assert.deepEqual([...english].sort(), [...french].sort());
 });
 
 for (const page of CONFIGURE_PAGES) {
-  test(`${page.split('/').pop()} offers the units and the alarm volumes under the registry's names`, () => {
+  test(`${page.split('/').pop()} offers the units, the alarm volumes and the captures under the registry's names`, () => {
     assert.deepEqual(offered(page, 'unit_names'), registryNames('units'));
     assert.deepEqual(offered(page, 'volume_names'), registryNames('alarm_volume'));
+    assert.deepEqual(offered(page, 'profile_names'), registryNames('capture_profile').filter(name => name !== 'stop'));
   });
 }
 

@@ -11,6 +11,7 @@ const char* pending_title(Pending pending) {
         case Pending::EraseLog: return "ERASE LOGS";
         case Pending::GnssColdStart: return "GNSS RESET";
         case Pending::Register: return "ACTIVATE";
+        case Pending::Capture: return "CAPTURE";
         case Pending::None: break;
     }
     return "";
@@ -25,6 +26,7 @@ const char* pending_detail(Pending pending) {
         case Pending::EraseLog: return "DELETE EVERY FLIGHT ON THE DEVICE";
         case Pending::GnssColdStart: return "THROW AWAY THE STORED SATELLITE DATA";
         case Pending::Register: return "SEND THE KEY OF THIS UNIT TO SKYBLIP.EU";
+        case Pending::Capture: return "ARM OR STOP THE DIAGNOSTICS CAPTURE";
         case Pending::None: break;
     }
     return "";

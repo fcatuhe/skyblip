@@ -20,6 +20,15 @@ updated_on: "2026-11-11"
      none: "none",
      confirm_set: "Allow the change: the glass says SETTINGS, press twice."
    } %>
+<% capture = {
+     legend: "Diagnostics capture on a skyBlip Bravo",
+     lede: "Bravo has no screen, so its capture is armed from here. It records what the unit hears and decides, for us to read with you after a flight.",
+     profile: "Capture",
+     profile_names: { full: "Full: every subject", power_run: "Power run: power and duty", flight_run: "Flight run: power and duty, with the flight clock running" },
+     arm: "Arm",
+     stop: "Stop the capture",
+     confirm: "Allow it on Bravo: its lamp blinks green fast, press the button twice."
+   } %>
 
 <section id="settings">
   <p class="kicker">skyBlip Go</p>
@@ -47,6 +56,7 @@ updated_on: "2026-11-11"
         settings:
       } do %>
     <%= render "shared/manage_settings", settings: %>
+    <%= render "shared/manage_capture", capture: %>
   <% end %>
 </section>
 
@@ -98,6 +108,8 @@ updated_on: "2026-11-11"
         <tr><th class="mono">settings: prior</th><td data-manage-word="settings_prior">Your settings are the ones from before the last update: what you changed while the newer firmware ran stayed with it.</td></tr>
         <tr><th class="mono">settings: defaults</th><td data-manage-word="settings_defaults">The stored settings could not be read, so the device runs on its defaults. Check the callsign and the aircraft type before you fly.</td></tr>
         <tr><th class="mono">no address</th><td data-manage-word="not_activated">This unit is not activated yet, so it neither transmits nor receives. Give it its serial on the activation page, skyblip.eu/activate.</td></tr>
+        <tr><th>Capture armed</th><td data-manage-word="capture_armed">Bravo records the capture you chose, and its lamp winks twice every 3 s until it stops. It keeps recording across a flight. Stop it from this page on the ground, or switch the unit off.</td></tr>
+        <tr><th>Capture stopped</th><td data-manage-word="capture_stopped">Bravo closed the capture, and its lamp winks once again.</td></tr>
       </tbody>
     </table>
   </div>
@@ -124,6 +136,9 @@ updated_on: "2026-11-11"
         <tr><th class="mono">refused_on_device</th><td data-manage-word="refused_on_device">One press on the device refused a question from this connection, so the device asks nothing more from it. Disconnect and connect again, then try again.</td></tr>
         <tr><th class="mono">small_mtu</th><td data-manage-word="small_mtu">The answer did not fit the link: this phone or browser kept Bluetooth&rsquo;s smallest packet size, 20 bytes. Disconnect and connect again. If it happens again, update the browser and the phone, or connect from another phone or a computer with Chrome or Edge.</td></tr>
         <tr><th class="mono">claimed</th><td data-manage-word="claimed">Another app holds this device&rsquo;s settings. Disconnect it or close it, then connect again.</td></tr>
+        <tr><th class="mono">capturing</th><td data-manage-word="capturing">A capture already runs on Bravo. Stop it first, then arm the one you want.</td></tr>
+        <tr><th class="mono">not_capturing</th><td data-manage-word="not_capturing">No capture runs on Bravo, so there is nothing to stop.</td></tr>
+        <tr><th class="mono">no_storage</th><td data-manage-word="no_storage">Bravo found no memory to record a capture in. Tell us, with its firmware version.</td></tr>
         <tr><th class="mono">unknown_command</th><td data-manage-word="unknown_command">The firmware on the device is older than this page and does not know the question. Update it on <%= link_to_page "update", label: "the update page" %>.</td></tr>
         <tr><th class="mono">anything else</th><td data-manage-word="refused">The device refused, with a reason this page does not know:</td></tr>
       </tbody>

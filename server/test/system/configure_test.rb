@@ -84,6 +84,27 @@ class ConfigureTest < ApplicationSystemTestCase
     assert_no_selector "[data-manage-target=notes] p", text: "This unit is not activated yet"
   end
 
+  test "a Bravo offers its capture, armed with two presses on the unit, and a Go does not" do
+    visit "/configure"
+    connect_go
+    assert_select "Units"
+    assert_no_button "Arm"
+    within(".manage") { click_button "Disconnect" }
+
+    page.execute_script("Object.assign(fakeSkyblip, { address: null, product: 'skyblip_bravo' })")
+    click_button "Connect"
+    select "Power run: power and duty", from: "Capture"
+    click_button "Arm"
+    assert_equal "power_run", page.evaluate_script("fakeSkyblip.capture")
+    page.execute_script("fakeSkyblip.press()")
+    assert_selector "[role=status]", text: "Bravo records the capture you chose"
+
+    click_button "Stop the capture"
+    assert_equal "stop", page.evaluate_script("fakeSkyblip.capture")
+    page.execute_script("fakeSkyblip.press()")
+    assert_selector "[role=status]", text: "Bravo closed the capture"
+  end
+
   test "a phone that kept the smallest Bluetooth packet is told so on the settings page too" do
     visit "/configure"
     page.execute_script("fakeSkyblip.mtu = 23")

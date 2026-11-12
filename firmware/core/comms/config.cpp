@@ -27,7 +27,8 @@ bool stages_prompt(link::Command command) {
         case link::Command::Recovery:
         case link::Command::PowerOff:
         case link::Command::GnssColdStart:
-        case link::Command::Register: return true;
+        case link::Command::Register:
+        case link::Command::Capture: return true;
         default: return false;
     }
 }
@@ -353,6 +354,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Challenge: challenge(); return;
         case link::Command::Register: register_unit(reader); return;
         case link::Command::Unlock: unlock(reader); return;
+        case link::Command::Capture: request_capture(reader); return;
         default: return;
     }
 }
@@ -375,6 +377,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Challenge:
         case link::Command::Register:
         case link::Command::Unlock: return identity_ != nullptr;
+        case link::Command::Capture: return serves_captures_;
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:
@@ -525,6 +528,10 @@ void ConfigService::confirm() {
         pending_ = Pending::None;
         gnss_cold_start_requested_ = true;
         acknowledge(true, link::Reason::GnssColdStart);
+    } else if (pending_ == Pending::Capture) {
+        pending_ = Pending::None;
+        capture_requested_ = staged_capture_;
+        acknowledge(true, link::Reason::Capture);
     }
 }
 
