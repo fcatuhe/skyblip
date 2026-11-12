@@ -2,6 +2,7 @@ import createModule from './skyblip_simulator.js';
 
 export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', 'raw', 'capture', 'self test', 'bravo'];
 export const ALARM = ['none', 'advisory'];
+export const PRODUCT = ['go', 'bravo'];
 export const SHUTDOWN = ['running', 'parking', 'await release', 'off'];
 export const REFRESH = ['idle', 'partial refresh', 'full refresh'];
 export const DWELL = ['uplink RX · 869.525', 'retune O->M', 'slot 0 · 868.200',
@@ -26,6 +27,7 @@ export async function load(options = {}) {
     parkRefusal: call('simulator_park_refusal', 'number', oneNumber),
     loadScenario: call('simulator_load_scenario', 'number', ['string', 'number']),
     mode: call('simulator_mode', 'number', noArgs),
+    product: call('simulator_product', 'number', noArgs),
     failures: call('simulator_failures', 'number', noArgs),
 
     button: call('simulator_press_button', null, noArgs),
@@ -111,6 +113,10 @@ export async function load(options = {}) {
     airEvent: call('simulator_air_event', 'number', oneNumber),
     airFrequencyKhz: call('simulator_air_frequency_khz', 'number', oneNumber),
     airLine: call('simulator_air_line', 'string', oneNumber),
+    nmeaCount: call('simulator_nmea_count', 'number', noArgs),
+    nmeaLine: call('simulator_nmea_line', 'string', oneNumber),
+    adsbHeard: call('simulator_adsb_heard', 'number', noArgs),
+    adsbAircraft: call('simulator_adsb_aircraft', 'number', noArgs),
   };
 
   let simMs = 0;

@@ -2,6 +2,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <utility>
 
 #include "simulator/world/json.h"
 
@@ -57,6 +58,7 @@ bool event_from(const json::Reader& reader, ScenarioEvent& out) {
         {"speed_kt", EventKind::Speed},
         {"track_deg", EventKind::Track},
         {"aircraft", EventKind::Aircraft},
+        {"companion", EventKind::Companion},
         {"expect_alarm_minimum", EventKind::ExpectAlarmMinimum},
         {"expect_traffic_minimum", EventKind::ExpectTrafficMinimum},
     };
@@ -75,7 +77,31 @@ protocol::System system_from(const std::string& name) {
     // Not a fit: an aircraft this device never hears for itself, reaching it
     // only through a skyPost's O-band relay.
     if (name == "adsl_uplink") return protocol::System::AdslUplink;
+    // INFO: fc 13nov26 ADS-B Out alone puts nothing on 868
+    if (name == "adsb") return protocol::System::Unknown;
     return protocol::System::AdslDirect;
+}
+
+// INFO: fc 13nov26 core/protocol/README.md's shorthand: A is type code 4, B 3 and C 2
+bool category_from(const std::string& name, AdsbOut& out) {
+    if (name.size() != 2 || name[0] < 'A' || name[0] > 'C' || name[1] < '0' || name[1] > '7')
+        return false;
+    out.category_type_code = static_cast<uint8_t>(4 - (name[0] - 'A'));
+    out.category = static_cast<uint8_t>(name[1] - '0');
+    return true;
+}
+
+bool adsb_from(const json::Reader& reader, protocol::System system, AdsbOut& adsb) {
+    adsb.fitted = system == protocol::System::Unknown || integer_or(reader, "adsb", 0) != 0;
+    adsb.on_ground = integer_or(reader, "on_ground", 0) != 0;
+    adsb.pressure_only = integer_or(reader, "pressure_only", 0) != 0;
+    char category[8] = {0};
+    return !reader.read_string("category", category, sizeof(category)) ||
+           category_from(category, adsb);
+}
+
+Product product_from(const std::string& name) {
+    return name == "bravo" ? Product::Bravo : Product::Go;
 }
 
 Mode mode_from(const std::string& name) {
@@ -86,8 +112,9 @@ Mode mode_from(const std::string& name) {
 
 }  // namespace
 
-bool parse_scenario(const char* json, int bytes, Scenario& out) {
+bool parse_scenario(const char* json, int bytes, Scenario& parsed) {
     if (json == nullptr || bytes <= 0) return false;
+    Scenario out = parsed;
     const std::string text(json, static_cast<size_t>(bytes));
     const json::Reader top(json, bytes);
 
@@ -95,6 +122,7 @@ bool parse_scenario(const char* json, int bytes, Scenario& out) {
     if (top.read_string("name", buffer, sizeof(buffer))) out.name = buffer;
     if (top.read_string("callsign", buffer, sizeof(buffer))) out.callsign = buffer;
     if (top.read_string("mode", buffer, sizeof(buffer))) out.mode = mode_from(buffer);
+    if (top.read_string("product", buffer, sizeof(buffer))) out.product = product_from(buffer);
 
     out.latitude_1e7 = static_cast<int32_t>(integer_or(top, "latitude_1e7", out.latitude_1e7));
     out.longitude_1e7 = static_cast<int32_t>(integer_or(top, "longitude_1e7", out.longitude_1e7));
@@ -109,6 +137,7 @@ bool parse_scenario(const char* json, int bytes, Scenario& out) {
         ScenarioAircraft aircraft;
         if (reader.read_string("system", buffer, sizeof(buffer)))
             aircraft.system = system_from(buffer);
+        if (!adsb_from(reader, aircraft.system, aircraft.adsb)) return false;
         aircraft.north_m = static_cast<double>(integer_or(reader, "north_m", 0));
         aircraft.east_m = static_cast<double>(integer_or(reader, "east_m", 0));
         aircraft.up_m = static_cast<double>(integer_or(reader, "up_m", 0));
@@ -126,6 +155,7 @@ bool parse_scenario(const char* json, int bytes, Scenario& out) {
         ScenarioEvent event;
         if (event_from(reader, event)) out.events.push_back(event);
     }
+    parsed = std::move(out);
     return true;
 }
 

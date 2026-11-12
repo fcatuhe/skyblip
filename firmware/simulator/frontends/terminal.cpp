@@ -8,6 +8,7 @@
 
 #include "core/model/ownship.h"
 #include "core/units/units.h"
+#include "simulator/bravo_simulator.h"
 #include "simulator/simulator.h"
 
 using namespace skyblip;
@@ -41,6 +42,7 @@ static_assert(sizeof(kPages) / sizeof(kPages[0]) == go::kPageCount,
               "a page with no name here prints past the end of the array");
 const char* kAlarms[] = {"none", "ADVISORY"};
 constexpr int kRecordLines = 6;
+constexpr size_t kSentenceLines = 12;
 const char* kModes[] = {"dev", "demo", "training"};
 
 void render(simulator::Simulator& simulator) {
@@ -108,21 +110,108 @@ void render(simulator::Simulator& simulator) {
     std::fflush(stdout);
 }
 
+void render_bravo(simulator::BravoSimulator& simulator) {
+    const bus::State& state = simulator.product().state();
+    const model::Ownship& own = state.own;
+    std::printf("\033[2J\033[H skyBlip Bravo, receive only at 1090 MHz   lamp:%s\n",
+                indication::to_string(simulator.lamp_since_last_look()));
+    std::printf("  fix:%-6s sats:%2u  pos:%.5f,%.5f  alt:%5dm\n", own.fix_valid ? "3D" : "none",
+                own.satellites, own.latitude_1e7 / 1e7, own.longitude_1e7 / 1e7,
+                to_metres(Millimetres(own.altitude_hae_mm)).value);
+    std::printf("  squitters on air/heard:%u/%u  folded:%u  aircraft:%d  traffic:%d  ALARM:%s\n",
+                simulator.world().adsb_sent(), simulator.world().adsb_heard(),
+                simulator.product().adsb().folded(), simulator.product().adsb().assembly().count(),
+                state.traffic.count(), kAlarms[traffic::to_number(state.alarm_level)]);
+    std::printf(" the phone, newest sentences:\n");
+    const auto& sentences = simulator.sentences();
+    const size_t shown = sentences.size() < kSentenceLines ? sentences.size() : kSentenceLines;
+    for (size_t i = sentences.size() - shown; i < sentences.size(); i++)
+        std::printf("   %s\n", sentences[i].c_str());
+    std::printf(
+        " [m] button [f]ix  alt a/z  speed s/x  track d/c   traffic: [g]+1 [h]threat [k]clear"
+        "   [q]uit\n");
+    std::fflush(stdout);
+}
+
+int fly_bravo(const simulator::Scenario& scenario) {
+    simulator::BravoSimulator simulator;
+    if (simulator.setup() != Status::Ok) {
+        std::printf("simulator setup failed\n");
+        return 1;
+    }
+    simulator.load(scenario);
+    simulator::AdsbOut adsb;
+    adsb.fitted = true;
+    adsb.category = 1;
+    uint32_t last_step_ms = now_ms();
+    bool fix = true;
+    int32_t altitude_m = scenario.altitude_m, speed_kt = scenario.speed_kt,
+            track_deg = scenario.track_deg;
+
+    RawTerminal raw;
+    bool running = true;
+    while (running) {
+        char key;
+        while (read(STDIN_FILENO, &key, 1) == 1) {
+            simulator::World<platform::host::MeshtrackerX1>& world = simulator.world();
+            switch (key) {
+                case 'q': running = false; break;
+                case 'm': world.press_button(); break;
+                case 'f':
+                    fix = !fix;
+                    world.set_fix(fix);
+                    break;
+                case 'a': world.set_altitude_m(altitude_m += 100); break;
+                case 'z': world.set_altitude_m(altitude_m -= 100); break;
+                case 's': world.set_speed_kt(speed_kt += 5); break;
+                case 'x': world.set_speed_kt(speed_kt = speed_kt > 5 ? speed_kt - 5 : 0); break;
+                case 'd': world.set_track_deg(track_deg = (track_deg + 15) % 360); break;
+                case 'c': world.set_track_deg(track_deg = (track_deg + 345) % 360); break;
+                case 'g':
+                    world.add_aircraft(1500, 800, 50, 50, 250, -1, -1, protocol::System::Unknown, 0,
+                                       0, 0, adsb);
+                    break;
+                case 'h':
+                    world.add_aircraft(0, 1000, 30, 50, 270, -1, -1, protocol::System::Unknown, 0,
+                                       -3, 0, adsb);
+                    break;
+                case 'k': world.clear_aircraft(); break;
+                default: break;
+            }
+        }
+        const uint32_t target_ms = now_ms();
+        while (last_step_ms + simulator::BravoSimulator::kStepMs <= target_ms) {
+            last_step_ms += simulator::BravoSimulator::kStepMs;
+            simulator.step(last_step_ms);
+        }
+        render_bravo(simulator);
+        usleep(50 * 1000);
+    }
+    std::printf("\nbye: traffic=%d squitters=%u failures=%d\n",
+                simulator.product().state().traffic.count(), simulator.world().adsb_heard(),
+                simulator.world().failures());
+    return 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
+    simulator::Scenario scenario;
+    const char* scenario_path = nullptr;
+    for (int i = 1; i < argc; i++)
+        if (std::strncmp(argv[i], "--scenario=", 11) == 0) scenario_path = argv[i] + 11;
+    if (scenario_path != nullptr && !simulator::load_scenario(scenario_path, scenario)) {
+        std::printf("cannot load scenario %s\n", scenario_path);
+        return 1;
+    }
+    if (scenario.product == simulator::Product::Bravo) return fly_bravo(scenario);
+
     simulator::Simulator simulator;
     if (simulator.setup() != Status::Ok) {
         std::printf("simulator setup failed\n");
         return 1;
     }
-    for (int i = 1; i < argc; i++) {
-        if (std::strncmp(argv[i], "--scenario=", 11) != 0) continue;
-        if (!simulator.load_file(argv[i] + 11)) {
-            std::printf("cannot load scenario %s\n", argv[i] + 11);
-            return 1;
-        }
-    }
+    if (scenario_path != nullptr) simulator.load(scenario);
 
     uint32_t last_step_ms = now_ms();
     bool fix = true, pps = true, pad = false;

@@ -8,6 +8,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/settings/address.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
 #include "simulator/world/link_text.h"
@@ -19,7 +20,8 @@ constexpr double kPi = 3.14159265358979;
 constexpr double kMetresPerDegreeLatitude = 111320.0;
 }  // namespace
 
-void World::step(uint32_t now_ms, const bus::State& state) {
+template <class Platform>
+void World<Platform>::step(uint32_t now_ms, const bus::State& state) {
     if (!started_) {
         started_ = true;
         start_ms_ = now_ms;
@@ -40,21 +42,24 @@ void World::step(uint32_t now_ms, const bus::State& state) {
     update_inertial();
     service_button(now_ms);
     service_pad(now_ms);
-    service_aircraft(now_ms, state.own);
+    move_aircraft(now_ms);
     apply_events(now_ms, state);
+    listen(platform_.clock().microseconds(), state, platform_);
+}
 
-    const uint64_t now_us = platform_.clock().microseconds();
+void Sky::fly_868(uint64_t now_us, const model::Ownship& own, models::Sx1262& radio) {
     const uint64_t epoch_us = now_us - now_us % 1000000;
     const uint32_t second = static_cast<uint32_t>(now_us / 1000000);
     if (!scheduled_ || second != scheduled_second_) {
         scheduled_ = true;
         scheduled_second_ = second;
-        schedule_second(epoch_us, state.own);
+        schedule_second(epoch_us, own);
     }
-    air_.step(now_us, platform_.chips().radio);
+    air_.step(now_us, radio);
 }
 
-void World::service_button(uint32_t now_ms) {
+template <class Platform>
+void World<Platform>::service_button(uint32_t now_ms) {
     if (press_pending_) {
         press_pending_ = false;
         press_since_ms_ = now_ms;
@@ -63,17 +68,17 @@ void World::service_button(uint32_t now_ms) {
     // A start instant and a flag, not an end instant: ports/clock.h's rule, and the
     // same shape as the wrap bug section M found in the transmitter. A simulator
     // that models a button with arithmetic nobody may copy is worse than useless.
-    platform_.board_gpio().button_down =
-        button_held_ || (pressing_ && now_ms - press_since_ms_ < kPressMs);
+    set_button_down(platform_, button_held_ || (pressing_ && now_ms - press_since_ms_ < kPressMs));
 }
 
-void World::service_pad(uint32_t now_ms) {
+template <class Platform>
+void World<Platform>::service_pad(uint32_t now_ms) {
     if (tap_pending_) {
         tap_pending_ = false;
         tap_since_ms_ = now_ms;
         tapping_ = true;
     }
-    platform_.board_gpio().pad_down = pad_held_ || (tapping_ && now_ms - tap_since_ms_ < kPressMs);
+    set_pad_down(platform_, pad_held_ || (tapping_ && now_ms - tap_since_ms_ < kPressMs));
 }
 
 // INFO: fc 03aug26 An aircraft is placed where the pilot would point at it - so
@@ -82,7 +87,7 @@ void World::service_pad(uint32_t now_ms) {
 // Before this the two positions were only ever differenced, so a scenario in
 // which own-ship manoeuvres described no encounter at all: the range closed at
 // the target's speed alone while the alarm was told both speeds.
-void World::name_aircraft(int index, const char* callsign) {
+void Sky::name_aircraft(int index, const char* callsign) {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used || callsign == nullptr) return;
     char* out = aircraft_[index].callsign;
     int copied = 0;
@@ -93,21 +98,22 @@ void World::name_aircraft(int index, const char* callsign) {
     out[copied] = 0;
 }
 
-int World::add_aircraft(double north_m, double east_m, double up_m, double speed_mps,
-                        double track_deg, int phase_ms, int slot, protocol::System system,
-                        double turn_dps, double climb_mps, uint32_t address) {
+int Sky::add_aircraft(double north_m, double east_m, double up_m, double speed_mps,
+                      double track_deg, int phase_ms, int slot, protocol::System system,
+                      double turn_dps, double climb_mps, uint32_t address, const AdsbOut& adsb) {
     set_origin();
     for (int i = 0; i < kMaxAircraft; i++) {
         if (aircraft_[i].used) continue;
         aircraft_[i] = VirtualAircraft{};
         aircraft_[i].used = true;
         aircraft_[i].system = system;
+        aircraft_[i].adsb = adsb;
         aircraft_[i].address = address != 0 ? address : 0x300000u + static_cast<uint32_t>(i) + 1u;
         aircraft_[i].north_m = own_north_m() + north_m;
         aircraft_[i].east_m = own_east_m() + east_m;
         aircraft_[i].up_m = up_m;
         aircraft_[i].speed_mps = speed_mps;
-        aircraft_[i].track_deg = track_deg;
+        aircraft_[i].track_deg = std::fmod(std::fmod(track_deg, 360.0) + 360.0, 360.0);
         aircraft_[i].turn_dps = turn_dps;
         aircraft_[i].climb_mps = climb_mps;
         aircraft_[i].phase_ms = phase_ms;
@@ -117,29 +123,41 @@ int World::add_aircraft(double north_m, double east_m, double up_m, double speed
     return -1;
 }
 
-void World::set_origin() {
+void Sky::set_origin() {
     if (origin_valid_) return;
     origin_valid_ = true;
-    origin_latitude_1e7_ = gnss().latitude_1e7;
-    origin_longitude_1e7_ = gnss().longitude_1e7;
+    origin_latitude_1e7_ = own_.latitude_1e7;
+    origin_longitude_1e7_ = own_.longitude_1e7;
 }
 
-double World::own_north_m() const {
-    return (gnss().latitude_1e7 - origin_latitude_1e7_) * kMetresPerDegreeLatitude / 1e7;
+double Sky::own_north_m() const {
+    return (own_.latitude_1e7 - origin_latitude_1e7_) * kMetresPerDegreeLatitude / 1e7;
 }
 
-double World::own_east_m() const {
-    const double cos_latitude = std::cos(gnss().latitude_1e7 / 1e7 * kPi / 180.0);
-    return (gnss().longitude_1e7 - origin_longitude_1e7_) * kMetresPerDegreeLatitude *
-           cos_latitude / 1e7;
+double Sky::own_east_m() const {
+    const double cos_latitude = std::cos(own_.latitude_1e7 / 1e7 * kPi / 180.0);
+    return (own_.longitude_1e7 - origin_longitude_1e7_) * kMetresPerDegreeLatitude * cos_latitude /
+           1e7;
 }
 
-const VirtualAircraft* World::aircraft_at(int index) const {
+int32_t Sky::latitude_1e7_of(const VirtualAircraft& aircraft) const {
+    return origin_latitude_1e7_ +
+           static_cast<int32_t>(aircraft.north_m * 1e7 / kMetresPerDegreeLatitude);
+}
+
+int32_t Sky::longitude_1e7_of(const VirtualAircraft& aircraft) const {
+    const double cos_latitude = std::cos(origin_latitude_1e7_ / 1e7 * kPi / 180.0);
+    if (cos_latitude <= 0.01) return origin_longitude_1e7_;
+    return origin_longitude_1e7_ +
+           static_cast<int32_t>(aircraft.east_m * 1e7 / (kMetresPerDegreeLatitude * cos_latitude));
+}
+
+const VirtualAircraft* Sky::aircraft_at(int index) const {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used) return nullptr;
     return &aircraft_[index];
 }
 
-double World::separation_m(int index) const {
+double Sky::separation_m(int index) const {
     const VirtualAircraft* aircraft = aircraft_at(index);
     if (aircraft == nullptr) return -1;
     const double north_m = aircraft->north_m - own_north_m();
@@ -147,28 +165,27 @@ double World::separation_m(int index) const {
     return std::sqrt(north_m * north_m + east_m * east_m);
 }
 
-void World::clear_aircraft() {
+void Sky::clear_aircraft() {
     for (auto& aircraft : aircraft_) aircraft.used = false;
 }
 
-void World::remove_aircraft(int index) {
+void Sky::remove_aircraft(int index) {
     if (index < 0 || index >= kMaxAircraft) return;
     aircraft_[index].used = false;
 }
 
-int World::aircraft_count() const {
+int Sky::aircraft_count() const {
     int count = 0;
     for (const auto& aircraft : aircraft_)
         if (aircraft.used) count++;
     return count;
 }
 
-void World::service_aircraft(uint32_t now_ms, const model::Ownship& own) {
-    (void)own;
+void Sky::move_aircraft(uint32_t now_ms) {
     if (now_ms - aircraft_moved_ms_ < 100) return;
     const double elapsed_s = (now_ms - aircraft_moved_ms_) / 1000.0;
     aircraft_moved_ms_ = now_ms;
-    const double own_climb_mps = gnss().climb_mm_s / 1000.0;
+    const double own_climb_mps = own_.climb_mm_s / 1000.0;
 
     for (auto& aircraft : aircraft_) {
         if (!aircraft.used) continue;
@@ -186,8 +203,9 @@ void World::service_aircraft(uint32_t now_ms, const model::Ownship& own) {
 
 // The accelerometer feels the ball and the wing load, and nothing here reads a
 // rate: the hub's gyroscope is never subscribed to (hardware/parts/bhi260).
-void World::update_inertial() {
-    imu().set_acceleration(kLevelFlightUpMg, static_cast<int16_t>(-slip_mg_), 0);
+template <class Platform>
+void World<Platform>::update_inertial() {
+    lean(platform_, kLevelFlightUpMg, static_cast<int16_t>(-slip_mg_));
 }
 
 // Every aircraft transmits once per second, at its own instant of the direct
@@ -195,9 +213,11 @@ void World::update_inertial() {
 // §C.5). Scheduling the whole second up front is what a real transmitter's
 // clock does, and it keeps the emission instant independent of how coarsely the
 // simulation is stepped.
-void World::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
+void Sky::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
     for (auto& aircraft : aircraft_) {
-        if (!aircraft.used || aircraft.system == protocol::System::AdslUplink) continue;
+        if (!aircraft.used || (aircraft.system != protocol::System::AdslDirect &&
+                               aircraft.system != protocol::System::Alptas))
+            continue;
         transmit(aircraft, epoch_us, own);
     }
     relay(epoch_us, own);
@@ -207,9 +227,8 @@ void World::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
 // aircraft's own frame carries: an address, a place, a height, a speed. No
 // climb rate and no track, because an uplink record has no room for them - which
 // is the whole reason a direct reception outranks a relay of the same aircraft.
-model::AircraftObservation World::as_relayed(const VirtualAircraft& aircraft,
-                                             const model::Ownship& own) const {
-    const double cos_latitude = std::cos(origin_latitude_1e7_ / 1e7 * kPi / 180.0);
+model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
+                                           const model::Ownship& own) const {
     model::AircraftObservation observation{};
     observation.address = aircraft.address;
     observation.address_mapping_table = 6;
@@ -217,13 +236,8 @@ model::AircraftObservation World::as_relayed(const VirtualAircraft& aircraft,
     observation.flight_state = 2;
     observation.speed_q = static_cast<uint16_t>(aircraft.speed_mps * 4);
     observation.speed_valid = true;
-    observation.latitude_1e7 =
-        origin_latitude_1e7_ +
-        static_cast<int32_t>(aircraft.north_m * 1e7 / kMetresPerDegreeLatitude);
-    observation.longitude_1e7 = origin_longitude_1e7_;
-    if (cos_latitude > 0.01)
-        observation.longitude_1e7 +=
-            static_cast<int32_t>(aircraft.east_m * 1e7 / (kMetresPerDegreeLatitude * cos_latitude));
+    observation.latitude_1e7 = latitude_1e7_of(aircraft);
+    observation.longitude_1e7 = longitude_1e7_of(aircraft);
     observation.altitude_m =
         to_metres(Millimetres(own.altitude_hae_mm)).value + static_cast<int32_t>(aircraft.up_m);
     observation.position_valid = true;
@@ -235,7 +249,7 @@ model::AircraftObservation World::as_relayed(const VirtualAircraft& aircraft,
 // finishing well before the dwell closes at 395 (core/timing/slot.h). A relay
 // costs the aircraft nothing - it never transmits on the O band - so this is
 // scheduled apart from the direct transmitters rather than per aircraft.
-void World::relay(uint64_t epoch_us, const model::Ownship& own) {
+void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     int relayed_count = 0;
     for (auto& aircraft : aircraft_) {
@@ -258,7 +272,7 @@ void World::relay(uint64_t epoch_us, const model::Ownship& own) {
 
 // Free-space-ish: a burst 100 m away lands at -40 dBm and every decade of
 // distance costs 20 dB, which puts a 10 km target near the receiver's floor.
-int8_t World::rssi_at(double range_m) {
+int8_t Sky::rssi_at(double range_m) {
     const double clamped_range_m = range_m < 10.0 ? 10.0 : range_m;
     const double rssi_dbm = -40.0 - 20.0 * std::log10(clamped_range_m / 100.0);
     if (rssi_dbm < -127.0) return -127;
@@ -272,9 +286,15 @@ int16_t climb_e8_of(const VirtualAircraft& aircraft) {
     return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
 }
 
+// INFO: fc 13nov26 ADS-L F.2.3: a unit beside a transponder sends its ICAO address, under table 5
+uint8_t address_mapping_table_of(const VirtualAircraft& aircraft) {
+    return aircraft.adsb.fitted ? settings::kIcaoAddressMappingTable : 6;
+}
+
 size_t callsign_burst(const VirtualAircraft& aircraft, uint8_t* chips) {
     protocol::AdslPacket packet;
-    protocol::from_own_callsign(packet, aircraft.address, 6, aircraft.callsign);
+    protocol::from_own_callsign(packet, aircraft.address, address_mapping_table_of(aircraft),
+                                aircraft.callsign);
     packet.scramble();
     packet.set_crc();
     return protocol::encode_m_band(protocol::kAdslSyncWord, packet.data, protocol::kAdslFrameBytes,
@@ -286,7 +306,7 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     protocol::AdslPacket packet;
     packet.reset();
     packet.set_address(aircraft.address);
-    packet.set_address_mapping_table(6);
+    packet.set_address_mapping_table(address_mapping_table_of(aircraft));
     packet.timestamp = static_cast<uint8_t>((utc_s % 15) * 4);
     packet.flight_state = 2;
     packet.aircraft_category = 4;
@@ -338,14 +358,9 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
 
 }  // namespace
 
-void World::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own) {
-    const double cos_latitude = std::cos(origin_latitude_1e7_ / 1e7 * kPi / 180.0);
-    int32_t latitude_1e7 = origin_latitude_1e7_ +
-                           static_cast<int32_t>(aircraft.north_m * 1e7 / kMetresPerDegreeLatitude);
-    int32_t longitude_1e7 = origin_longitude_1e7_;
-    if (cos_latitude > 0.01)
-        longitude_1e7 +=
-            static_cast<int32_t>(aircraft.east_m * 1e7 / (kMetresPerDegreeLatitude * cos_latitude));
+void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own) {
+    const int32_t latitude_1e7 = latitude_1e7_of(aircraft);
+    const int32_t longitude_1e7 = longitude_1e7_of(aircraft);
 
     // ALP-TAS keys its frames on the UTC second, so a transmitter has to use the
     // second the receiver is in, not the simulation's own count of seconds.
@@ -389,8 +404,8 @@ void World::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::
 
 // What a skyBlip or an OGN tracker adds to its position bursts: its registration,
 // in slot 1's tail, in the one second of ten its own address owns.
-void World::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
-                        double range_m) {
+void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
+                      double range_m) {
     if (aircraft.callsign[0] == 0) return;
     const uint32_t period_s = timing::Transmitter::kCallsignPeriodS;
     if (utc_s % period_s != aircraft.address % period_s) return;
@@ -407,7 +422,8 @@ void World::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint
               static_cast<uint8_t>(chip_bytes), rssi_at(range_m));
 }
 
-bool World::send_config(const char* json) {
+template <class Platform>
+bool World<Platform>::send_config(const char* json) {
     events::RxFrame frame{};
     const int bytes =
         link_text::frame_from_text(json, frame.data.data(), static_cast<int>(frame.data.size()));
@@ -420,13 +436,14 @@ bool World::send_config(const char* json) {
     return true;
 }
 
-void World::load(const Scenario& scenario) {
+template <class Platform>
+void World<Platform>::load(const Scenario& scenario) {
     scenario_ = scenario;
     next_event_ = 0;
     failures_ = 0;
     failure_[0] = 0;
     started_ = false;
-    origin_valid_ = false;
+    restart();
 
     gnss().latitude_1e7 = scenario.latitude_1e7;
     gnss().longitude_1e7 = scenario.longitude_1e7;
@@ -439,10 +456,11 @@ void World::load(const Scenario& scenario) {
     for (const ScenarioAircraft& aircraft : scenario.aircraft)
         add_aircraft(aircraft.north_m, aircraft.east_m, aircraft.up_m, aircraft.speed_mps,
                      aircraft.track_deg, aircraft.phase_ms, aircraft.slot, aircraft.system,
-                     aircraft.turn_dps, aircraft.climb_mps);
+                     aircraft.turn_dps, aircraft.climb_mps, 0, aircraft.adsb);
 }
 
-void World::apply_events(uint32_t now_ms, const bus::State& state) {
+template <class Platform>
+void World<Platform>::apply_events(uint32_t now_ms, const bus::State& state) {
     const uint32_t elapsed_ms = now_ms - start_ms_;
     while (next_event_ < scenario_.events.size() &&
            scenario_.events[next_event_].at_ms <= elapsed_ms) {
@@ -450,7 +468,7 @@ void World::apply_events(uint32_t now_ms, const bus::State& state) {
         switch (event.kind) {
             case EventKind::Fix: set_fix(event.value != 0); break;
             case EventKind::Pps: set_pps_locked(event.value != 0); break;
-            case EventKind::Barometer: platform_.barometer().fitted = event.value != 0; break;
+            case EventKind::Barometer: fit_barometer(platform_, event.value != 0); break;
             case EventKind::BatteryMv: set_battery_mv(static_cast<int32_t>(event.value)); break;
             case EventKind::ExternalPower: set_external_power(event.value != 0); break;
             case EventKind::Button: press_button(); break;
@@ -458,6 +476,12 @@ void World::apply_events(uint32_t now_ms, const bus::State& state) {
             case EventKind::Speed: set_speed_kt(static_cast<int32_t>(event.value)); break;
             case EventKind::Track: set_track_deg(static_cast<int32_t>(event.value)); break;
             case EventKind::Aircraft: add_threat(); break;
+            case EventKind::Companion:
+                if (event.value != 0)
+                    connect_companion();
+                else
+                    disconnect_companion();
+                break;
             case EventKind::ExpectAlarmMinimum:
                 if (traffic::to_number(state.alarm_level) < event.value)
                     fail("alarm level below expectation");
@@ -469,9 +493,7 @@ void World::apply_events(uint32_t now_ms, const bus::State& state) {
     }
 }
 
-void World::fail(const char* what) {
-    failures_++;
-    if (failure_[0] == 0) std::snprintf(failure_, sizeof(failure_), "%s", what);
-}
+template class World<platform::host::Platform>;
+template class World<platform::host::MeshtrackerX1>;
 
 }  // namespace skyblip::simulator

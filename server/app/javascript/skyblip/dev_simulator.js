@@ -79,11 +79,18 @@ export async function mountSimulator(element, src, manifest, signal) {
   const MODES = ['dev', 'demo', 'training'];
   SIM.applyMode = () => {
     const mode = MODES[f.mode()] || 'dev';
+    // TODO: fc 13nov26 a release before simulator_product flies only a Go: drop the ?. once Release.simulator serves one that exports it
+    const bravo = f.product?.() === 1;
     element.dataset.mode = mode;
+    element.dataset.product = bravo ? 'bravo' : 'go';
     for (const panel of element.querySelectorAll('.panel')) {
       if (panel.id === 'scenariopanel') continue;
       panel.hidden = mode !== 'dev';
     }
+    $('product_name').textContent = bravo ? 'skyBlip\u00a0Bravo' : 'skyBlip\u00a0Go';
+    $('phonepanel').hidden = !bravo;
+    $('device').hidden = bravo;
+    if (bravo) $('bandpanel').hidden = true;
     $('modehint').textContent = mode === 'dev'
       ? 'mode: dev, every control visible'
       : 'mode: ' + mode + ', controls hidden, the scenario is driving';
@@ -209,8 +216,17 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('tape').replaceChildren(...(out.length ? out : ['-']));
   }
 
+  function drawPhone() {
+    const n = f.nmeaCount(), out = [];
+    for (let i = Math.max(0, n - 12); i < n; i++) out.push(f.nmeaLine(i) + '\n');
+    $('phone').textContent = out.length ? out.join('') : '-';
+    $('phone').scrollTop = $('phone').scrollHeight;
+    $('adsbhint').textContent = f.adsbHeard() + ' squitters heard, ' + f.adsbAircraft() + ' aircraft assembled.';
+  }
+
   function draw() {
     f.advance(Math.min(f.elapsedMs() + 100, performance.now() - startedAt));
+    if (element.dataset.product === 'bravo') drawPhone();
     f.paint(canvas);
     const refresh = f.refreshing() ? (f.refreshIsFull() ? 2 : 1) : 0;
     canvas.className = 'sb-glass ' + (f.powered() ? '' : 'off ') + (f.backlightOn() ? 'bl ' : '') +
