@@ -8,7 +8,7 @@
 #include "core/protocol/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/lr2021/model.h"
-#include "test/support/adsb_chips.h"
+#include "simulator/world/adsb_out.h"
 #include "test/support/adsb_frames.h"
 
 namespace skyblip {
@@ -18,22 +18,9 @@ inline parts::Lr2021 lr2021_for(models::Lr2021& chip) {
                          chip.irq_dio);
 }
 
-// INFO: fc 11nov26 the 8 us preamble at two chips a microsecond: pulses at 0, 1, 3.5 and 4.5 us
-constexpr uint8_t kAdsbPreambleAir[2] = {0xA1, 0x40};
-
-struct AdsbAir {
-    uint8_t chips[sizeof(kAdsbPreambleAir) + 1 + protocol::kAdsbChipBytes + 1]{};
-};
-
-inline AdsbAir adsb_air(AdsbFrame frame) {
-    adsb_seal(frame.bytes);
-    AdsbAir air;
-    air.chips[0] = kAdsbPreambleAir[0];
-    air.chips[1] = kAdsbPreambleAir[1];
-    air.chips[2] = protocol::kAdsbSyncChips;
-    adsb_chips(frame.bytes, air.chips + 3);
-    return air;
-}
+using simulator::adsb_air;
+using simulator::AdsbAir;
+using simulator::kAdsbPreambleAir;
 
 inline parts::Lr2021 lr2021_receiving(models::Lr2021& chip) {
     parts::Lr2021 radio = lr2021_for(chip);

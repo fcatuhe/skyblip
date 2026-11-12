@@ -1,0 +1,23 @@
+{
+  "name": "Bravo alone: ADS-B traffic to a phone EFB",
+  "product": "bravo",
+  "mode": "training",
+  "latitude_1e7": 485000000,
+  "longitude_1e7": 85000000,
+  "altitude_m": 1000,
+  "speed_kt": 90,
+  "track_deg": 90,
+  "duration_ms": 30000,
+  "aircraft": [
+    {"system": "adsb", "category": "A3", "north_m": 8000, "east_m": -2000, "up_m": 10300, "speed_mps": 231, "track_deg": 180},
+    {"system": "adsb", "category": "A1", "north_m": 0, "east_m": 1500, "up_m": 30, "speed_mps": 50, "track_deg": 270, "climb_mps_e1": -15},
+    {"system": "adsl_direct", "adsb": 1, "category": "A1", "north_m": 2000, "east_m": 500, "up_m": -100, "speed_mps": 45, "track_deg": 200},
+    {"system": "adsb", "pressure_only": 1, "category": "A1", "north_m": -3000, "east_m": 2500, "up_m": 200, "speed_mps": 55, "track_deg": 45},
+    {"system": "adsb", "on_ground": 1, "category": "A3", "north_m": 4000, "east_m": 0, "speed_mps": 8, "track_deg": 270}
+  ],
+  "events": [
+    {"at_ms": 0, "companion": 1},
+    {"at_ms": 10000, "expect_traffic_minimum": 3},
+    {"at_ms": 14000, "expect_alarm_minimum": 1}
+  ]
+}
