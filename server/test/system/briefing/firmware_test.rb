@@ -89,18 +89,13 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "the firmware page keeps the file picker when the published list is unavailable" do
     in_range a_go
     VCR.use_cassette("github/unavailable", allow_playback_repeats: true) do
-      connect_go
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_field "Callsign", with: "F-JXYZ"
       click_link "Firmware"
       find(".firmware-other summary").click
       assert_text "The published firmware list is unavailable. Choose a file instead."
       assert_field "Or a file ending in .signed.bin"
     end
   end
-
-  private
-    def connect_go
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_field "Callsign", with: "F-JXYZ"
-    end
 end

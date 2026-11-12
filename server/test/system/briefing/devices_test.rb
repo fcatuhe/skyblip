@@ -242,11 +242,4 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       screen "13-french"
     end
   end
-
-  private
-    def connect_go
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_field "Callsign", with: "F-JXYZ"
-    end
 end

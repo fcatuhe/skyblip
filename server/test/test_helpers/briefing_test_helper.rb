@@ -21,6 +21,13 @@ module BriefingTestHelper
 
     def unit(name) = "fakeFleet.unit(#{name.to_json})"
 
+    # INFO: fc 12nov26 the page moves once it has read the newest image, so a test waits for that before it clicks anything
+    def connect_go
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_selector ".unit-row", text: /is out|up to date/, wait: 15
+    end
+
     # INFO: fc 11nov26 BRIEFING_SCREENS=dir saves every screen a test walks through, at phone and laptop sizes, for the pull request
     def screen(name)
       return unless (directory = ENV["BRIEFING_SCREENS"])
