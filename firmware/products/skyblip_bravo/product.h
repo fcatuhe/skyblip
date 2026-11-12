@@ -52,7 +52,9 @@ class Product {
     using Board = boards::MeshtrackerX1<Platform>;
 
     explicit Product(Platform& platform)
-        : platform_(platform), board_(platform, bus_, adsb_frames_) {}
+        : platform_(platform), board_(platform, bus_, adsb_frames_) {
+        config_link_.config().serve_captures();
+    }
 
     Status setup() {
         // INFO: fc 12nov26 decided before bring-up, so a refused cable wake starts no radio, link
@@ -205,6 +207,23 @@ class Product {
         if (config.recovery_requested()) {
             config.clear_recovery_request();
             shutdown_.request(power::ShutdownReason::Recovery, now_ms);
+        }
+        if (const std::optional<comms::CaptureProfile> profile = config.capture_requested()) {
+            config.clear_capture_request();
+            order_capture(*profile);
+        }
+    }
+
+    void order_capture(comms::CaptureProfile profile) {
+        switch (profile) {
+            case comms::CaptureProfile::Full: diagnostics_.arm(diagnostics::Profile::Full); return;
+            case comms::CaptureProfile::PowerRun:
+                diagnostics_.arm(diagnostics::Profile::PowerRun);
+                return;
+            case comms::CaptureProfile::FlightRun:
+                diagnostics_.arm(diagnostics::Profile::FlightRun);
+                return;
+            case comms::CaptureProfile::Stop: diagnostics_.disarm(); return;
         }
     }
 

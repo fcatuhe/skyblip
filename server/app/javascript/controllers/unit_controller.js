@@ -7,6 +7,9 @@ import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
 
 const SET_NOTICES = ["set_notices", "notices"]
+const CAPTURE_NOTICES = ["capture_notices", "notices"]
+const CAPTURE_DONE = new Set(["capture_armed", "capture_stopped"])
+const PROMPTS = { set: "SETTINGS", capture: "CAPTURE" }
 const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "small_mtu", "no_bluetooth", "not_skyblip", "failed", "no_params"])
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 const WORKING = new Set(["asking", "confirming", "uploading", "installing", "rebooting"])
@@ -15,6 +18,7 @@ const LAST_READ = ["aircraft_type", "callsign", "own_icao", "units", "alarm_enab
 export default class extends Controller {
   static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware",
+                    "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "forgetDialog", "forgetQuestion"]
   static values = { slug: String, home: String, activation: String }
   static outlets = ["glass"]
@@ -88,6 +92,15 @@ export default class extends Controller {
     this.unit.updater.saveSettings(edited)
   }
 
+  armCapture(event) {
+    event.preventDefault()
+    this.unit.updater.orderCapture(this.captureProfileTarget.value)
+  }
+
+  stopCapture() {
+    this.unit.updater.orderCapture("stop")
+  }
+
   #activated() {
     return new URLSearchParams(location.search).has("activated")
   }
@@ -111,18 +124,19 @@ export default class extends Controller {
     if (page) this.nameTarget.textContent = unit?.name ?? nameOf(this.slugValue)
     this.#facts(unit, state)
     const settling = !page && state?.image?.state === "probation"
-    this.menuTarget.hidden = !unit || settling || (working && !(page && state.task === "set"))
+    this.menuTarget.hidden = !unit || settling || (working && !(page && PROMPTS[state.task]))
     this.disconnectTarget.hidden = !linked
     this.reconnectTargets.forEach(button => (button.hidden = !state?.refusedOnDevice))
     this.#offline(unit, linked || state?.phase === "rebooting")
     const activated = page && linked && this.#activated()
     this.#notes(unit, state, page, activated)
     if (!page) return
-    const asking = state?.phase === "confirming" && state.task === "set"
+    const asking = state?.phase === "confirming" && Boolean(PROMPTS[state.task])
     const quiet = asking || activated || state?.refusedOnDevice || state?.status?.flight === "airborne"
     this.#banner(unit, linked, quiet)
     this.#settings(state)
     this.#firmwareRow(state, linked && !asking)
+    this.#capture(unit, state)
     this.#glass(unit, asking)
     if (linked) offerNewest(unit, shelfIn(this.element))?.then(() => this.#render())
   }
@@ -224,15 +238,14 @@ export default class extends Controller {
 
   #glass(unit, asking) {
     if (!this.hasGlassOutlet) return
-    if (asking) this.glassOutlet.show({ title: "SETTINGS", product: productWord(unit), lamp: unit.product === "skyblip_bravo" })
+    if (asking) this.glassOutlet.show({ title: PROMPTS[unit.state.task], product: productWord(unit), lamp: unit.product === "skyblip_bravo" })
     else this.glassOutlet.hide()
   }
 
   #settings(state) {
     const settings = state?.settings
     const linked = this.unit?.linked ?? false
-    const asking = ["asking", "confirming"].includes(state?.phase) && state.task === "set"
-    this.settingsTarget.hidden = !linked || !settings || asking
+    this.settingsTarget.hidden = !linked || !settings || this.#prompting(state)
     const notice = state?.notice?.during === "set" && !this.#refusedHere(state) ? sayNotice(state.notice, ...SET_NOTICES) : ""
     this.settingsMessageTarget.hidden = !notice
     this.settingsMessageTarget.textContent = notice
@@ -257,6 +270,29 @@ export default class extends Controller {
     this.resetTarget.disabled = !idle
     this.resetTarget.textContent = say("words.reset_count", { count: differs.length })
     for (const note of this.defaultTargets) this.#default(note, edited, defaults)
+  }
+
+  #prompting(state) {
+    return ["asking", "confirming"].includes(state?.phase) && Boolean(PROMPTS[state.task])
+  }
+
+  // INFO: fc 12nov26 only a Bravo arms a capture over the link, since a Go arms one on its glass
+  #capture(unit, state) {
+    const linked = unit?.linked ?? false
+    this.captureTarget.hidden = !linked || unit.product !== "skyblip_bravo" || this.#prompting(state)
+    const notice = state?.notice?.during === "capture" && !this.#refusedHere(state) && !LINK_NOTICES.has(state.notice.key) ? sayNotice(state.notice, ...CAPTURE_NOTICES) : ""
+    this.captureMessageTarget.hidden = !notice
+    this.captureMessageTarget.textContent = notice
+    this.captureMessageTarget.classList.toggle("is-good", CAPTURE_DONE.has(state?.notice?.key))
+    if (this.captureTarget.hidden) return
+    const airborne = state.status?.flight === "airborne"
+    const idle = state.phase === "ready" && !airborne && !state.refusedOnDevice
+    this.captureFieldsTarget.disabled = !idle
+    this.captureArmTarget.disabled = !idle
+    this.captureArmTarget.hidden = state.refusedOnDevice
+    this.captureArmTarget.textContent = airborne ? say("words.locked") : this.captureArmTarget.dataset.label
+    this.captureStopTarget.disabled = !idle
+    this.captureStopTarget.hidden = airborne || state.refusedOnDevice
   }
 
   #refusedHere({ notice, refusedOnDevice }) {

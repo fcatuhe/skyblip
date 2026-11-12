@@ -171,6 +171,7 @@
         return this.ask('dfu', 'confirm_dfu');
       }
       if (command === 'recovery') return this.ask('recovery', 'confirm_recovery');
+      if (command === 'capture' && this.product === 'skyblip_bravo') return this.orderCapture(fields.profile);
       if (command === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
         return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
@@ -184,9 +185,21 @@
       return this.acknowledge(false, 'unknown_command');
     }
 
+    // INFO: fc 12nov26 capture_request.cpp's checks after the prompt guards and the flight
+    orderCapture(profile) {
+      const stop = profile === 'stop';
+      if (!this.refused && this.flight !== 'airborne' && Boolean(this.capturing) !== stop) return this.acknowledge(false, stop ? 'not_capturing' : 'capturing');
+      this.capture = profile;
+      return this.ask('capture', 'confirm_capture');
+    }
+
     async press() {
       const task = this.pending;
       this.pending = null;
+      if (task === 'capture') {
+        this.capturing = this.capture !== 'stop';
+        return this.acknowledge(true, 'capture');
+      }
       if (task === 'set') {
         Object.assign(this.stored, this.staged);
         return this.reply({ command: 'acknowledgement', acknowledge: true });

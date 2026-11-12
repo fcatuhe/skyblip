@@ -48,6 +48,16 @@ en:
         loud: Loud
       save: Save
       reset: Back to defaults
+    capture:
+      title: Diagnostics capture
+      profile: Profile
+      profile_names:
+        full: Full
+        power_run: Power run
+        flight_run: Flight run
+      hint: "Full records every subject. Power run records power and duty, and Flight run does too with its flight clock running. We read it with you after a flight."
+      arm: Arm
+      stop: Stop the capture
     firmware:
       title: Firmware
       back: "Back to %{name}"
@@ -192,6 +202,18 @@ en:
       refused_on_device: Refused on the device, so nothing changed.
       prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
       unknown_command: This firmware is too old to change settings. Update it first.
+    capture_notices:
+      capture_armed: Armed. The lamp winks twice every 3 s until the capture stops, flights included.
+      capture_stopped: Stopped. The lamp is back to its single wink.
+      capturing: A capture already runs. Stop it first.
+      not_capturing: No capture runs, so there is nothing to stop.
+      no_storage: This Bravo has no memory for a capture. Tell us, with its firmware version.
+      in_flight: It is flying, so nothing changed. Try again once it has landed.
+      expired: Nobody pressed twice within thirty seconds, so nothing changed.
+      cancelled: Refused on the device, so nothing changed.
+      refused_on_device: Refused on the device, so nothing changed.
+      prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
+      unknown_command: This firmware is too old to capture. Update it first.
     activation_notices:
       activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
       no_bluetooth: This browser has no Web Bluetooth. Use Chrome or Edge, on Android or a computer.

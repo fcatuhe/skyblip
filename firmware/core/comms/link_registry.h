@@ -38,6 +38,7 @@ enum class Command : uint8_t {
     Observation = 26,
     Health = 27,
     PeerClaim = 28,
+    Capture = 29,
 };
 
 enum class Reason : uint8_t {
@@ -84,6 +85,10 @@ enum class Reason : uint8_t {
     Erased = 41,
     PromptPending = 42,
     RefusedOnDevice = 43,
+    ConfirmCapture = 44,
+    Capture = 45,
+    Capturing = 46,
+    NotCapturing = 47,
 };
 
 namespace acknowledgement_key {
@@ -432,6 +437,12 @@ enum : uint32_t {
 };
 }
 
+namespace capture_key {
+enum : uint32_t {
+    kProfile = 1,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -462,7 +473,8 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Health: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
-        case Command::Erase: return 0x3;
+        case Command::Erase:
+        case Command::Capture: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;

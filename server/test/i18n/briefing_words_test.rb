@@ -11,6 +11,9 @@ class BriefingWordsTest < ActiveSupport::TestCase
     timeout link_lost not_back not_skyblip no_bluetooth no_file no_params shelf_failed needs_full recovering
     probation reverted image_refused settings_prior settings_defaults swap_unpowered went_dark_flat imu_writing no_key not_activated
   ].freeze
+  # INFO: fc 12nov26 the page offers the registry's profiles by name, so it never sends one past stop
+  NEVER_SENT = %w[out_of_range].freeze
+  CAPTURE_NOTICES = %w[capture_armed capture_stopped expired cancelled prompt_pending refused_on_device unknown_command].freeze
   SET_REFUSALS = %w[in_flight low_power expired cancelled prompt_pending refused_on_device small_mtu unknown_command].freeze
   PROMPT_REFUSALS = %w[expired cancelled prompt_pending refused_on_device claimed unknown_command small_mtu].freeze
   SERVER_REFUSALS = %w[invalid unknown_server_key expired bad_signature other_key revoked_key daily_cap network_cap no_serial rate_limited unreachable failed].freeze
@@ -18,6 +21,7 @@ class BriefingWordsTest < ActiveSupport::TestCase
 
   test "the firmware still refuses with the reasons this test reads" do
     assert_includes refusals("config.cpp", "acknowledge\\(false, "), "not_approved"
+    assert_includes refusals("capture_request.cpp", "refuse\\("), "not_capturing"
     assert_includes refusals("identity_link.cpp", "refuse\\("), "bad_signature"
   end
 
@@ -30,6 +34,15 @@ class BriefingWordsTest < ActiveSupport::TestCase
     test "every refusal of a settings change has words in #{locale}" do
       assert_empty SET_REFUSALS - (words(locale, :set_notices) + words(locale, :notices))
       assert_includes words(locale, :set_notices), "saved"
+    end
+
+    test "every refusal and verdict of a capture has words in #{locale}" do
+      keys = refusals("capture_request.cpp", "refuse\\(") - NEVER_ASKED - NEVER_SENT + CAPTURE_NOTICES
+      assert_empty keys - words(locale, :capture_notices)
+    end
+
+    test "the captures are offered under the registry's names in #{locale}" do
+      assert_equal enum("capture_profile") - %w[stop], I18n.t("briefing.capture.profile_names", locale:).keys.map(&:to_s)
     end
 
     test "every refusal of an activation has words in #{locale}" do

@@ -25,6 +25,8 @@ enum class Condition : uint8_t {
     Alive,
     NoFixLinked,
     AliveLinked,
+    NoFixCapturing,
+    AliveCapturing,
     Count
 };
 
@@ -38,6 +40,8 @@ struct Indication {
     indication::Lamp lamp{indication::Lamp::None};
     uint16_t on_ms{0};
     uint16_t off_ms{0};
+    uint8_t flashes{1};
+    uint16_t between_ms{0};
 };
 
 // Whose budget the row is spending. This is the honest half of "keep it cheap":
@@ -87,14 +91,14 @@ inline constexpr Row kTable[kRowCount] = {
      {indication::Lamp::Red, 30, 2970},
      Budget::Steady,
      "red, one wink every 3 s: cell low, past the knee and into the last of its charge"},
-    {Condition::NoFix,
-     {indication::Lamp::Blue, 30, 2970},
+    {Condition::NoFixCapturing,
+     {indication::Lamp::Blue, 30, 2790, 2, 150},
      Budget::Steady,
-     "blue, one wink every 3 s: running, no GNSS fix yet"},
-    {Condition::Alive,
-     {indication::Lamp::Green, 30, 2970},
+     "blue, two winks every 3 s: a diagnostics capture is armed, no GNSS fix yet"},
+    {Condition::AliveCapturing,
+     {indication::Lamp::Green, 30, 2790, 2, 150},
      Budget::Steady,
-     "green, one wink every 3 s: running, fix valid"},
+     "green, two winks every 3 s: a diagnostics capture is armed, fix valid"},
     {Condition::NoFixLinked,
      {indication::Lamp::Blue, 30, 1470},
      Budget::Steady,
@@ -103,12 +107,26 @@ inline constexpr Row kTable[kRowCount] = {
      {indication::Lamp::Green, 30, 1470},
      Budget::Steady,
      "green, one wink every 1.5 s: a phone is connected, fix valid"},
+    {Condition::NoFix,
+     {indication::Lamp::Blue, 30, 2970},
+     Budget::Steady,
+     "blue, one wink every 3 s: running, no GNSS fix yet"},
+    {Condition::Alive,
+     {indication::Lamp::Green, 30, 2970},
+     Budget::Steady,
+     "green, one wink every 3 s: running, fix valid"},
 };
 
+constexpr uint32_t cycle_ms(const Indication& indication) {
+    return static_cast<uint32_t>(indication.flashes) * indication.on_ms +
+           static_cast<uint32_t>(indication.flashes - 1) * indication.between_ms +
+           indication.off_ms;
+}
+
 constexpr uint16_t duty_permille(const Indication& indication) {
-    const uint32_t cycle = static_cast<uint32_t>(indication.on_ms) + indication.off_ms;
+    const uint32_t cycle = cycle_ms(indication);
     if (indication.lamp == indication::Lamp::None || indication.on_ms == 0 || cycle == 0) return 0;
-    return static_cast<uint16_t>(1000u * indication.on_ms / cycle);
+    return static_cast<uint16_t>(1000u * indication.flashes * indication.on_ms / cycle);
 }
 
 constexpr uint16_t duty_ceiling_permille(Budget budget) {
@@ -150,6 +168,7 @@ constexpr uint16_t shortest_phase_ms() {
         if (indication.lamp == indication::Lamp::None) continue;
         shortest = std::min(indication.on_ms, shortest);
         shortest = std::min(indication.off_ms, shortest);
+        if (indication.flashes > 1) shortest = std::min(indication.between_ms, shortest);
     }
     return shortest;
 }
@@ -166,6 +185,14 @@ static_assert(every_lit_row_blinks(), "a lamp held solid on an 850 mAh pack");
 static_assert(kTable[1].condition == Condition::Alarm,
               "traffic outranks every other thing the device has to say");
 static_assert(kShortestPhaseMs >= kShortestFlashEyeCanCatchMs, "a flash a glance would miss");
+
+constexpr bool every_row_flashes_at_least_once() {
+    for (int i = 0; i < kRowCount; i++)
+        if (kTable[i].indication.flashes == 0) return false;
+    return true;
+}
+
+static_assert(every_row_flashes_at_least_once(), "a row whose cycle holds no flash");
 
 const Indication& indication_for(Condition condition);
 const char* to_string(Condition condition);
@@ -194,6 +221,7 @@ struct Situation {
     bool prompting{false};
     bool pairing{false};
     bool linked{false};
+    bool capturing{false};
 };
 
 constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;
@@ -223,6 +251,7 @@ class Policy {
     Condition condition_{Condition::Off};
     indication::Lamp shown_{indication::Lamp::None};
     uint32_t phase_ms_{0};
+    uint8_t flash_{0};
     bool lit_{false};
     bool started_{false};
 };

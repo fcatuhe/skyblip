@@ -60,6 +60,7 @@ uint8_t wire(comms::Pending value) {
         case comms::Pending::EraseLog: return 6;
         case comms::Pending::GnssColdStart: return 7;
         case comms::Pending::Register: return 8;
+        case comms::Pending::Capture: return 9;
     }
     return kUnpinned;
 }
@@ -103,5 +104,5 @@ TEST_CASE(
     "diagnostics product codes: comms::Pending's codes are the screen record's prompt byte, and a "
     "code changed or added here moves the prompt list in the schema") {
     // 3 was apply, and stays out of use so a capture written before still reads
-    codes_pinned<comms::Pending>(9, /*retired=*/1);
+    codes_pinned<comms::Pending>(10, /*retired=*/1);
 }

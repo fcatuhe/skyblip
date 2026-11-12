@@ -6,6 +6,7 @@
 Stdlib alone and no radio. Run by test_blip.py as well, which is the file CI invokes.
 """
 import argparse
+import asyncio
 import json
 import pathlib
 import sys
@@ -15,6 +16,7 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import blip  # noqa: E402
+import blip_capture  # noqa: E402
 import blip_frames as frames  # noqa: E402
 import blip_records as records  # noqa: E402
 
@@ -178,6 +180,78 @@ class ReplyFraming(unittest.TestCase):
     def test_an_acknowledged_reply_passes_through_untouched(self):
         frame = {"command": "log", "acknowledge": True, "sessions": 2}
         self.assertIs(blip.refuse_if_nacked(frame), frame)
+
+
+class FakeBravo:
+    """The config endpoint of a unit that stages the prompt, then gives the presses' verdict."""
+
+    def __init__(self, *answers):
+        self.replies = asyncio.Queue()
+        for answer in answers:
+            self.replies.put_nowait((0.0, frames.encode_frame(answer)))
+        self.sent = []
+
+    async def write_config(self, body):
+        frames.encode_frame(body)
+        self.sent.append(body)
+
+
+PENDING = {"command": "acknowledgement", "acknowledge": False, "pending": True,
+           "reason": "confirm_capture"}
+GRANTED = {"command": "acknowledgement", "acknowledge": True, "reason": "capture"}
+PUSHED = {"command": "status", "flight": "ground", "upload": False, "charging": False,
+          "power_level": "normal", "went_dark_flat": False}
+
+
+class Capture(unittest.TestCase):
+    def test_two_presses_on_the_unit_arm_the_profile_asked_for(self):
+        unit = FakeBravo(PENDING, GRANTED)
+        said = []
+        outcome = asyncio.run(blip_capture.run(unit, "power_run", 1.0, said.append))
+        self.assertEqual(unit.sent, [{"command": "capture", "profile": "power_run"}])
+        self.assertEqual(said, [blip_capture.PRESS_TWICE])
+        self.assertEqual(outcome, "power_run capture armed")
+
+    # The unit pushes status on a flight, battery or Bravo change, which is no verdict.
+    def test_a_status_pushed_while_the_prompt_stands_is_passed_over(self):
+        unit = FakeBravo(PUSHED, PENDING, PUSHED, GRANTED)
+        said = []
+        outcome = asyncio.run(blip_capture.run(unit, "full", 1.0, said.append))
+        self.assertEqual(said, [blip_capture.PRESS_TWICE])
+        self.assertEqual(outcome, "full capture armed")
+
+    def test_a_frame_outside_the_registry_stops_by_name_rather_than_hanging(self):
+        unit = FakeBravo()
+        unit.replies.put_nowait((0.0, b"<truncated"))
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_capture.run(unit, "full", 1.0, list().append, blip.decoded_or_refused))
+        self.assertIn("3c7472756e6361746564", str(caught.exception))
+
+    def test_a_stop_allowed_on_the_unit_says_the_capture_stopped(self):
+        outcome = asyncio.run(blip_capture.run(FakeBravo(PENDING, GRANTED), "stop", 1.0, list().append))
+        self.assertEqual(outcome, "capture stopped")
+
+    def test_one_press_on_the_unit_stops_with_the_reason(self):
+        cancelled = {"command": "acknowledgement", "acknowledge": False, "reason": "cancelled"}
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_capture.run(FakeBravo(PENDING, cancelled), "full", 1.0, list().append))
+        self.assertIn("cancelled", str(caught.exception))
+
+    def test_a_go_answers_unknown_command_and_nothing_waits_for_a_press(self):
+        unknown = {"command": "acknowledgement", "acknowledge": False, "reason": "unknown_command"}
+        said = []
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_capture.run(FakeBravo(unknown), "full", 1.0, said.append))
+        self.assertIn("unknown_command", str(caught.exception))
+        self.assertEqual(said, [])
+
+    def test_a_prompt_nobody_answers_ends_without_a_verdict(self):
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_capture.run(FakeBravo(PENDING), "full", 0.01, list().append))
+        self.assertIn("no verdict", str(caught.exception))
+
+    def test_the_profiles_offered_are_the_registry_s(self):
+        self.assertEqual(blip_capture.PROFILES, ("full", "power_run", "flight_run", "stop"))
 
 
 if __name__ == "__main__":

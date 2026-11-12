@@ -140,6 +140,7 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.prompting = lamp_shows_link_ && context_.state.link.prompt_standing;
     situation.pairing = lamp_shows_link_ && context_.state.link.pairing_standing;
     situation.linked = lamp_shows_link_ && context_.state.link.connected;
+    situation.capturing = lamp_shows_link_ && context_.state.capture.armed;
 
     const indication::Command command = indication_.update(situation, now_ms);
     if (command.changed) context_.roles.indicator.show(command.lamp);

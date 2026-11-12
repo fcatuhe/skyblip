@@ -371,6 +371,13 @@
         {"name": "assessed_sequence", "number": 17, "type": "unsigned", "description": "The sequence of the last observation the Go finished ingesting and assessing. It is not alarm_passes, which also moves over an empty sky. Absent until the Go has assessed one"},
         {"name": "paired", "number": 18, "type": "boolean", "required": true, "description": "The Go holds this Bravo's pin: true from the health that pinned it, false while the Go asks to pair. A claim with paired false is the Go's pairing request, and Bravo stores its own pin only once it reads true from the Go its press answered, and health's paired tells a Go when Bravo holds none, so neither side keeps a pin alone (#192). A Go that unpairs while connected writes one claim with false, so Bravo drops its pin too"}
       ]
+    },
+    {
+      "command": "capture", "code": 29, "endpoint": "config", "sender": "host",
+      "description": "Host to unit: asks to arm a diagnostics capture under profile, or to stop the one running (#247). Only a skyBlip Bravo answers it, because it has no glass to arm one on. A Go answers unknown_command and arms a capture on its glass only (firmware/products/skyblip_go/README.md, Which capture is armed). Refused, in the order checked: prompt_pending while a prompt stands and refused_on_device after one press refused a prompt on this link (firmware/core/comms/README.md, One prompt at a time), in_flight while the unit is airborne, invalid without a profile, out_of_range for a profile past stop, no_storage on a unit whose flash holds no capture ring, capturing for an arm while a capture runs, and not_capturing for a stop while none runs. Otherwise the unit answers confirm_capture and blinks the prompt on its lamp, and two presses answer capture and arm the profile or stop the capture. A take-off cancels the prompt. 6 bytes at its widest.",
+      "keys": [
+        {"name": "profile", "number": 1, "type": "enum", "enum": "capture_profile", "required": true, "description": "full, power_run or flight_run arms a capture of that profile (firmware/core/diagnostics/README.md), and stop stops the capture that runs"}
+      ]
     }
   ],
   "enums": {
@@ -418,7 +425,11 @@
         {"name": "read_failed", "code": 40},
         {"name": "erased", "code": 41},
         {"name": "prompt_pending", "code": 42},
-        {"name": "refused_on_device", "code": 43}
+        {"name": "refused_on_device", "code": 43},
+        {"name": "confirm_capture", "code": 44},
+        {"name": "capture", "code": 45},
+        {"name": "capturing", "code": 46},
+        {"name": "not_capturing", "code": 47}
       ]
     },
     "alarm_volume": {
@@ -581,6 +592,15 @@
       "values": [
         {"name": "flights", "code": 1, "mirrors": "Flights"},
         {"name": "diagnostics", "code": 2, "mirrors": "Diagnostics"}
+      ]
+    },
+    "capture_profile": {
+      "mirrors": {"type": "comms::CaptureProfile", "header": "core/comms/config.h"},
+      "values": [
+        {"name": "full", "code": 0, "mirrors": "Full"},
+        {"name": "power_run", "code": 1, "mirrors": "PowerRun"},
+        {"name": "flight_run", "code": 2, "mirrors": "FlightRun"},
+        {"name": "stop", "code": 3, "mirrors": "Stop"}
       ]
     }
   }

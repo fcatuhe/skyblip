@@ -48,6 +48,16 @@ fr:
         loud: "Fort"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
+    capture:
+      title: "Capture de diagnostic"
+      profile: "Profil"
+      profile_names:
+        full: "Complète"
+        power_run: "Autonomie"
+        flight_run: "Vol simulé"
+      hint: "Complète enregistre tous les sujets. Autonomie enregistre l\u2019énergie et le rapport cyclique, et Vol simulé aussi, chronomètre de vol en marche. Nous la lisons avec vous après un vol."
+      arm: "Armer"
+      stop: "Arrêter la capture"
     firmware:
       title: "Firmware"
       back: "Retour à %{name}"
@@ -192,6 +202,18 @@ fr:
       refused_on_device: "Refusé sur l\u2019appareil, rien n\u2019a changé."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y, ou attendez trente secondes."
       unknown_command: "Ce firmware est trop ancien pour changer ses réglages. Mettez-le à jour d\u2019abord."
+    capture_notices:
+      capture_armed: "Armée. Le voyant clignote deux fois toutes les 3\u00a0s jusqu\u2019à l\u2019arrêt de la capture, vols compris."
+      capture_stopped: "Arrêtée. Le voyant reprend son clignotement simple."
+      capturing: "Une capture est déjà en cours. Arrêtez-la d\u2019abord."
+      not_capturing: "Aucune capture en cours, rien à arrêter."
+      no_storage: "Ce Bravo n\u2019a pas de mémoire pour une capture. Prévenez-nous, avec sa version de firmware."
+      in_flight: "Il vole, rien n\u2019a changé. Réessayez une fois posé."
+      expired: "Personne n\u2019a appuyé deux fois en trente secondes, rien n\u2019a changé."
+      cancelled: "Refusé sur l\u2019appareil, rien n\u2019a changé."
+      refused_on_device: "Refusé sur l\u2019appareil, rien n\u2019a changé."
+      prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y, ou attendez trente secondes."
+      unknown_command: "Ce firmware est trop ancien pour une capture. Mettez-le à jour d\u2019abord."
     activation_notices:
       not_skyblip: "Cet appareil n\u2019a pas le service de réglages skyBlip. Ce n\u2019est pas un skyBlip."
       activated: "Activé\u00a0: %{name}. Sa radio émet. Ajoutez votre indicatif et votre type d\u2019aéronef."

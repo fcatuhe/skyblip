@@ -234,6 +234,14 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     CHECK(settings.frequency_trim_e1_ppm == -100);
 }
 
+// The capture command is the profile and nothing else, and its widest code is one byte.
+TEST_CASE("comms: the capture command is 6 bytes at its widest, inside any link's one write") {
+    const events::RxFrame capture = config_frame("{\"command\":\"capture\",\"profile\":\"stop\"}");
+    CHECK(std::string(reinterpret_cast<const char*>(capture.data.data()), capture.bytes) ==
+          std::string("\xA2\x00\x18\x1D\x01\x03", 6));
+    CHECK(capture.bytes <= ports::kMinimumLinkPayloadBytes);
+}
+
 namespace {
 
 struct UpdateBench {
