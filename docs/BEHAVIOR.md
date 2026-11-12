@@ -1393,7 +1393,7 @@ The state-to-indicator table on its own: given the cell, the fix and the alarm, 
 - the whole state-to-indicator table, in priority order
 - traffic outranks everything the device has to say about itself
 - two units locked to UTC wink together, whenever each condition began
-  > A Go and its Bravo side by side in one cockpit used to wink at whatever offset their last change left.
+  > Side by side in one cockpit, a Go and its Bravo used to wink at unrelated offsets.
 
 ### test/core/test_key_slots.cpp
 
@@ -5425,7 +5425,7 @@ A whole Go pairs with a whole Bravo over the simulated link, and neither keeps h
 - an aircraft Bravo hears reaches the Go with Bravo's time and callsign
   > Bravo's writer into the Go's reader: no case ran the two apart from #193's stub.
 - its paired Go is no phone, so only a phone doubles the lamp's wink
-  > A paired Go stays connected all flight, so counting it as a phone held the lamp at the doubled wink.
+  > A paired Go stays connected all flight, and counting it as a phone doubled the wink.
 - no peer is paired, and no health grants, before both sides confirm
   > #179 hands the alarm over only once both sides hold the pin, to a Go+ with a fix.
 - no press, no health: the Go gives up and neither side stores a pin

@@ -103,7 +103,7 @@ TEST_CASE("bravo pairing: a Go's request blinks the lamp, and one press pairs bo
     CHECK(stored == PairedLink::kCentralAddress);
 }
 
-// A paired Go stays connected all flight, so counting it as a phone held the lamp at the doubled wink.
+// A paired Go stays connected all flight, and counting it as a phone doubled the wink.
 TEST_CASE("bravo pairing: its paired Go is no phone, so only a phone doubles the lamp's wink") {
     PairedProducts tango;
     tango.pair_and_store();

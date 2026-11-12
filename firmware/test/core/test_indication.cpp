@@ -292,7 +292,7 @@ TEST_CASE("indication: a change shows itself at once, not at the end of the cycl
     CHECK(lamp.shown == indication::Lamp::Red);
 }
 
-// A Go and its Bravo side by side in one cockpit used to wink at whatever offset their last change left.
+// Side by side in one cockpit, a Go and its Bravo used to wink at unrelated offsets.
 TEST_CASE("indication: two units locked to UTC wink together, whenever each condition began") {
     constexpr uint64_t kUtcAtZeroMs = 1700000000000ull + 1234;
     Situation situation{};

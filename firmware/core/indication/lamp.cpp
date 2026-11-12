@@ -8,8 +8,7 @@ bool lit_at(const Indication& indication, uint32_t into_cycle_ms) {
     const uint32_t stride = static_cast<uint32_t>(indication.on_ms) + indication.between_ms;
     for (uint32_t flash = 0; flash < indication.flashes; flash++) {
         const uint32_t starts_ms = flash * stride;
-        if (into_cycle_ms >= starts_ms && into_cycle_ms < starts_ms + indication.on_ms)
-            return true;
+        if (into_cycle_ms >= starts_ms && into_cycle_ms < starts_ms + indication.on_ms) return true;
     }
     return false;
 }
@@ -110,8 +109,7 @@ uint32_t Policy::into_cycle_ms(const Situation& situation, const Indication& ind
         on_grid_ = false;
     } else {
         const uint32_t on_grid = static_cast<uint32_t>(situation.utc_ms % cycle);
-        if (!on_grid_ && !lit_at(indication, into) && !lit_at(indication, on_grid))
-            on_grid_ = true;
+        if (!on_grid_ && !lit_at(indication, into) && !lit_at(indication, on_grid)) on_grid_ = true;
         if (on_grid_) into = on_grid;
     }
     cycle_start_ms_ = now_ms - into;
