@@ -172,8 +172,7 @@ TEST_CASE("product: a charger wake past the bootloader takes the word back off t
     rig.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     rig.platform.battery().external_power = true;
     rig.platform.system_power().retained_cell_on_glass = power::CellOnGlass::Flat;
-    rig.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    rig.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     REQUIRE(rig.setup() == Status::Ok);
     REQUIRE(rig.product.boot_path() == power::BootPath::SleepAgain);
     rig.sleep_again();
@@ -188,8 +187,7 @@ TEST_CASE("product: a charger wake past the bootloader takes the word back off t
     Rig again;
     again.platform.battery().divider_mv = power::kBootLockoutMv - 1;
     again.platform.battery().external_power = true;
-    again.platform.system_power().causes =
-        power::ResetCause::LowPowerWake | power::ResetCause::UsbVbus;
+    again.platform.system_power().causes = power::ResetCause::UsbVbus | power::ResetCause::PowerOn;
     REQUIRE(again.setup() == Status::Ok);
     again.sleep_again();
     CHECK(again.platform.chips().epd.present_count == 0);
