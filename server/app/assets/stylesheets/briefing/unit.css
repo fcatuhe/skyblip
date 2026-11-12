@@ -141,6 +141,7 @@
   .unit-last dd { margin: 0; font-weight: 700; }
 
   .unit-settings { display: grid; gap: var(--space-m); }
+  .unit-capture-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-inline-s); align-items: center; }
 
   .unit-fields {
     display: grid;

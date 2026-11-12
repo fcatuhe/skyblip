@@ -178,7 +178,7 @@ export default class extends Controller {
     const lines = []
     const { notice, image, status } = state
     const refusedHere = state.refusedOnDevice && REFUSALS.has(notice?.key)
-    if (notice && notice.during !== "set" && notice.key !== "needs_full" && !refusedHere) lines.push(sayNotice(notice, "notices"))
+    if (notice && !notice.during && notice.key !== "needs_full" && !refusedHere) lines.push(sayNotice(notice, "notices"))
     if (this.shelfFailed) lines.push(say("notices.shelf_failed"))
     if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
     if (image?.imu === "writing") lines.push(say("notices.imu_writing"))
