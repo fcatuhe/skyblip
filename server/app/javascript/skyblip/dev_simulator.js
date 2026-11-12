@@ -79,7 +79,7 @@ export async function mountSimulator(element, src, manifest, signal) {
   const MODES = ['dev', 'demo', 'training'];
   SIM.applyMode = () => {
     const mode = MODES[f.mode()] || 'dev';
-    // TODO: fc 13nov26 builds before simulator_product fly a Go only, drop the ?. once main exports it
+    // TODO: fc 13nov26 a release before simulator_product flies only a Go: drop the ?. once Release.simulator serves one that exports it
     const bravo = f.product?.() === 1;
     element.dataset.mode = mode;
     element.dataset.product = bravo ? 'bravo' : 'go';
@@ -87,6 +87,7 @@ export async function mountSimulator(element, src, manifest, signal) {
       if (panel.id === 'scenariopanel') continue;
       panel.hidden = mode !== 'dev';
     }
+    $('product_name').textContent = bravo ? 'skyBlip\u00a0Bravo' : 'skyBlip\u00a0Go';
     $('phonepanel').hidden = !bravo;
     $('device').hidden = bravo;
     if (bravo) $('bandpanel').hidden = true;
@@ -217,8 +218,9 @@ export async function mountSimulator(element, src, manifest, signal) {
 
   function drawPhone() {
     const n = f.nmeaCount(), out = [];
-    for (let i = 0; i < n; i++) out.push(f.nmeaLine(i) + '\n');
+    for (let i = Math.max(0, n - 12); i < n; i++) out.push(f.nmeaLine(i) + '\n');
     $('phone').textContent = out.length ? out.join('') : '-';
+    $('phone').scrollTop = $('phone').scrollHeight;
     $('adsbhint').textContent = f.adsbHeard() + ' squitters heard, ' + f.adsbAircraft() + ' aircraft assembled.';
   }
 

@@ -128,7 +128,7 @@ const WAKE_HOLD_MS = 1000
 const BOOT_DELAY_MS = 2000
 const FIRST_TRAFFIC_MS = 3000
 const TRAFFIC_MIN = 1
-// INFO: fc 08oct26 the world's own ceiling, World::kMaxAircraft
+// INFO: fc 13nov26 the public page keeps the sky it shipped with, under the world's 32
 const TRAFFIC_MAX = 8
 const TRAFFIC_TICK_MIN_MS = 10_000
 const TRAFFIC_TICK_MAX_MS = 30_000

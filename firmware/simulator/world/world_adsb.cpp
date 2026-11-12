@@ -1,5 +1,4 @@
 #include <cmath>
-#include <optional>
 
 #include "simulator/world/adsb_out.h"
 #include "simulator/world/world.h"
@@ -24,13 +23,17 @@ constexpr double kKnotsPerMps = 1 / 0.514444;
 constexpr double kFeetPerMinutePerMps = 60 * kFeetPerMetre;
 constexpr double kPi = 3.14159265358979;
 
-std::optional<uint64_t> due(uint64_t from_us, uint64_t to_us, uint64_t period_us,
-                            uint64_t phase_us) {
+struct Due {
+    uint64_t first{0};
+    uint64_t end{0};
+};
+
+// INFO: fc 13nov26 every instant phase + k * period in (from, to], so a long step loses none
+Due due(uint64_t from_us, uint64_t to_us, uint64_t period_us, uint64_t phase_us) {
     const auto sent_by = [&](uint64_t at_us) -> uint64_t {
         return at_us < phase_us ? 0 : (at_us - phase_us) / period_us + 1;
     };
-    if (sent_by(to_us) == sent_by(from_us)) return std::nullopt;
-    return sent_by(to_us) - 1;
+    return Due{sent_by(from_us), sent_by(to_us)};
 }
 
 int32_t feet_of(double millimetres) {
@@ -59,8 +62,9 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
     const uint8_t capability = out.on_ground ? kGroundCapability : kAirborneCapability;
 
     const uint64_t position_period_us = still ? kStillPositionPeriodUs : kSquitterPeriodUs;
-    if (const auto position = due(from_us, to_us, position_period_us, phase % position_period_us)) {
-        const bool odd = (*position & 1u) != 0;
+    const Due positions = due(from_us, to_us, position_period_us, phase % position_period_us);
+    for (uint64_t position = positions.first; position < positions.end; position++) {
+        const bool odd = (position & 1u) != 0;
         if (out.on_ground) {
             const int32_t speed_mkt =
                 static_cast<int32_t>(aircraft.speed_mps * kKnotsPerMps * 1000);
@@ -81,7 +85,9 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
     }
 
     const uint64_t velocity_phase_us = (phase + kSquitterPeriodUs / 2) % kSquitterPeriodUs;
-    if (!out.on_ground && due(from_us, to_us, kSquitterPeriodUs, velocity_phase_us)) {
+    const Due velocities = due(from_us, to_us, kSquitterPeriodUs, velocity_phase_us);
+    for (uint64_t velocity = velocities.first; !out.on_ground && velocity < velocities.end;
+         velocity++) {
         const int32_t east_kt = static_cast<int32_t>(
             std::lround(aircraft.speed_mps * std::sin(track_radians) * kKnotsPerMps));
         const int32_t north_kt = static_cast<int32_t>(
@@ -98,7 +104,10 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
 
     const uint64_t identification_period_us =
         still ? kStillIdentificationPeriodUs : kIdentificationPeriodUs;
-    if (due(from_us, to_us, identification_period_us, phase % identification_period_us))
+    const Due identifications =
+        due(from_us, to_us, identification_period_us, phase % identification_period_us);
+    for (uint64_t identification = identifications.first; identification < identifications.end;
+         identification++)
         send(adsb_identification(aircraft.address, capability, out.category_type_code, out.category,
                                  aircraft.callsign),
              radio);

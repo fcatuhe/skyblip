@@ -116,26 +116,39 @@ KEEPALIVE void simulator_set_position(int latitude_1e7, int longitude_1e7) {
 // ALP-TAS. Both land on the same two M-band channels, so it is the shared sync
 // window that decides whether we hear it, not the button.
 static protocol::System system_of(int alptas) {
+    if (g_bravo_flying) return protocol::System::Unknown;
     return alptas != 0 ? protocol::System::Alptas : protocol::System::AdslDirect;
+}
+
+// INFO: fc 13nov26 a Bravo hears 1090 MHz only: an aircraft added while it flies is ADS-B, A1
+static simulator::AdsbOut adsb_of_added() {
+    simulator::AdsbOut adsb;
+    adsb.fitted = g_bravo_flying;
+    adsb.category = 1;
+    return adsb;
 }
 
 KEEPALIVE int simulator_add_aircraft(int north_m, int east_m, int up_m, int speed_mps,
                                      int track_deg, int turn_dps_e1, int climb_mm_s, int alptas,
                                      int address) {
-    return g_simulator.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, -1, -1,
-                                            system_of(alptas), turn_dps_e1 / 10.0,
-                                            climb_mm_s / 1000.0, static_cast<uint32_t>(address));
+    return on_unit([&](auto& unit) {
+        return unit.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, -1, -1,
+                                         system_of(alptas), turn_dps_e1 / 10.0, climb_mm_s / 1000.0,
+                                         static_cast<uint32_t>(address), adsb_of_added());
+    });
 }
 // phase_ms/slot below zero let the aircraft pick its own instant, as a
 // conforming transmitter does. Pinned, they put a burst where the dwell map
 // says we should or should not hear it.
 KEEPALIVE void simulator_add_aircraft_at(int north_m, int east_m, int up_m, int speed_mps,
                                          int track_deg, int phase_ms, int slot, int alptas) {
-    g_simulator.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, phase_ms, slot,
-                                     system_of(alptas));
+    on_unit([&](auto& unit) {
+        unit.world().add_aircraft(north_m, east_m, up_m, speed_mps, track_deg, phase_ms, slot,
+                                  system_of(alptas), 0, 0, 0, adsb_of_added());
+    });
 }
 KEEPALIVE void simulator_add_threat(int alptas) {
-    g_simulator.world().add_threat(system_of(alptas));
+    on_unit([&](auto& unit) { unit.world().add_threat(system_of(alptas), adsb_of_added()); });
 }
 KEEPALIVE int simulator_tx_named() {
     return static_cast<int>(g_simulator.product().state().air.tx_named);

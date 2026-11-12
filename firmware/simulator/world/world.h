@@ -70,8 +70,9 @@ class Sky {
                      protocol::System system = protocol::System::AdslDirect, double turn_dps = 0,
                      double climb_mps = 0, uint32_t address = 0, const AdsbOut& adsb = AdsbOut{});
     // INFO: fc 14sep26 a kilometre ahead on our track, reciprocal, sinking through our level
-    int add_threat(protocol::System system = protocol::System::AdslDirect) {
-        return add_aircraft(0, 1000, 30, 40, 270, -1, -1, system, 0, kThreatSinkMps);
+    int add_threat(protocol::System system = protocol::System::AdslDirect,
+                   const AdsbOut& adsb = AdsbOut{}) {
+        return add_aircraft(0, 1000, 30, 40, 270, -1, -1, system, 0, kThreatSinkMps, 0, adsb);
     }
     void clear_aircraft();
     void remove_aircraft(int index);
@@ -89,6 +90,8 @@ class Sky {
     void restart() {
         origin_valid_ = false;
         squittering_ = false;
+        adsb_sent_ = 0;
+        adsb_heard_ = 0;
     }
     void set_origin();
     void move_aircraft(uint32_t now_ms);
@@ -113,7 +116,7 @@ class Sky {
     static int8_t rssi_at(double range_m);
 
     static constexpr double kThreatSinkMps = -3;
-    // INFO: fc 05aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
+    // INFO: fc 03aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
     static constexpr double kGroundStationRangeM = 12000;
 
     const models::GnssTruth& own_;

@@ -32,6 +32,7 @@ The world does not model:
 - **path loss at 1090 MHz:** every squitter lands at -70 dBm, the level the host suite hears at;
 - **garbling:** two squitters that overlap are both heard;
 - **DF18:** Bravo receives DF17 only (`core/protocol/README.md`).
+- **aircraft status, target state and operational status,** TC 28, 29 and 31: none is sent, so Bravo never learns an aircraft's ADS-B version or GVA.
 
 ## Scenarios
 
@@ -41,7 +42,7 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
-- `"category"` is the emitter category, `A1` to `C7`: the letter is the set and the digit the category (The 1090MHz Riddle, wake vortex table).
+- `"category"` is the emitter category, `A0` to `C7`, in `core/protocol/README.md`'s shorthand: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
 
 ## The browser

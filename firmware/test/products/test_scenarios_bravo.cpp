@@ -1,13 +1,16 @@
 // Bravo's scenarios: the world's ADS-B squitters through the real receiver to a phone's NMEA.
+#include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
 
 #include "core/model/aircraft.h"
+#include "core/protocol/adsb.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
 #include "simulator/bravo_simulator.h"
 #include "simulator/simulator.h"
+#include "simulator/world/adsb_out.h"
 
 using namespace skyblip;
 
@@ -32,10 +35,16 @@ std::vector<std::vector<std::string>> newest(const simulator::BravoSimulator& si
     return found;
 }
 
-bool exported(const simulator::BravoSimulator& simulator, const char* address) {
+std::vector<std::vector<std::string>> pflaa_of(const simulator::BravoSimulator& simulator,
+                                               const char* address) {
+    std::vector<std::vector<std::string>> found;
     for (const auto& pflaa : newest(simulator, "$PFLAA"))
-        if (pflaa[6] == address) return true;
-    return false;
+        if (pflaa[6] == address) found.push_back(pflaa);
+    return found;
+}
+
+bool exported(const simulator::BravoSimulator& simulator, const char* address) {
+    return !pflaa_of(simulator, address).empty();
 }
 
 const traffic::Target* target_of(const bus::State& state, uint32_t address) {
@@ -51,14 +60,15 @@ void replay(simulator::BravoSimulator& simulator) {
     simulator.run(simulator.scenario().duration_ms);
 }
 
-uint32_t squitters_in_twenty_seconds(const simulator::AdsbOut& adsb, double speed_mps) {
+uint32_t squitters_in_twenty_seconds(const simulator::AdsbOut& adsb, double speed_mps,
+                                     uint32_t step_ms = simulator::BravoSimulator::kStepMs) {
     simulator::BravoSimulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().add_aircraft(2000, 0, 0, speed_mps, 90, -1, -1, protocol::System::Unknown, 0,
                                    0, 0, adsb);
     simulator.run(2000);
     const uint32_t before = simulator.world().adsb_sent();
-    for (uint32_t now_ms = 2005; now_ms <= 22000; now_ms += simulator::BravoSimulator::kStepMs)
+    for (uint32_t now_ms = 2000 + step_ms; now_ms <= 22000; now_ms += step_ms)
         simulator.step(now_ms);
     return simulator.world().adsb_sent() - before;
 }
@@ -131,13 +141,27 @@ TEST_CASE("bravo scenario: a target with pressure altitude only is placed agains
     CHECK(pressure_only->observation.source == model::Source::Adsb);
     CHECK(pressure_only->observation.pressure_altitude_valid);
     CHECK_FALSE(pressure_only->observation.height_difference_valid);
-    for (const auto& fields : newest(simulator, "$PFLAA"))
-        if (fields[6] == "300004")
-            CHECK(std::stoi(fields[4]) == doctest::Approx(200).epsilon(0.05));
+    const auto pressure_reports = pflaa_of(simulator, "300004");
+    REQUIRE_FALSE(pressure_reports.empty());
+    for (const auto& fields : pressure_reports)
+        CHECK(std::stoi(fields[4]) == doctest::Approx(200).epsilon(0.05));
+}
+
+// A GNSS-baro difference of the wrong sign would put this target twice the geoid, 94 m, off.
+TEST_CASE("bravo scenario: a target sending its GNSS-baro difference is placed by GNSS height") {
+    simulator::BravoSimulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/bravo_alone.json"));
+    simulator.run(6000);
 
     const traffic::Target* with_gnss = target_of(simulator.product().state(), 0x300002);
     REQUIRE(with_gnss != nullptr);
     CHECK(with_gnss->observation.height_difference_valid);
+    const simulator::VirtualAircraft* truth = simulator.world().aircraft_at(1);
+    REQUIRE(truth != nullptr);
+    const auto reports = pflaa_of(simulator, "300002");
+    REQUIRE_FALSE(reports.empty());
+    for (const auto& fields : reports) CHECK(std::abs(std::stoi(fields[4]) - truth->up_m) < 12);
 }
 
 // ADS-L F.2.3: the same aircraft on both systems carries its ICAO address on both.
@@ -149,8 +173,9 @@ TEST_CASE("bravo scenario: an aircraft on ADS-L and ADS-B is ICAO on each, Go an
     const traffic::Target* heard_by_bravo = target_of(bravo.product().state(), 0x300003);
     REQUIRE(heard_by_bravo != nullptr);
     CHECK(heard_by_bravo->observation.source == model::Source::Adsb);
-    for (const auto& fields : newest(bravo, "$PFLAA"))
-        if (fields[6] == "300003") CHECK(fields[5] == "1");
+    const auto reports = pflaa_of(bravo, "300003");
+    REQUIRE_FALSE(reports.empty());
+    for (const auto& fields : reports) CHECK(fields[5] == "1");
 
     simulator::Simulator go;
     REQUIRE(go.setup() == Status::Ok);
@@ -203,12 +228,74 @@ TEST_CASE("bravo scenario: a dense sky of thirty aircraft is heard whole and gat
     CHECK(simulator.product().state().traffic.count() < 30);
 }
 
+// The 1090MHz Riddle Table 1.4: airborne 2 Hz and 0.2 Hz, still on the ground 0.2 Hz and 0.1 Hz.
 TEST_CASE("bravo scenario: the world squitters at the rates ADS-B version 2 broadcasts") {
     simulator::AdsbOut adsb;
     adsb.fitted = true;
-    // The 1090MHz Riddle Table 1.4 over 20 s: 2 Hz positions and velocities, 0.2 Hz identification.
     CHECK(squitters_in_twenty_seconds(adsb, 50) == 40 + 40 + 4);
     adsb.on_ground = true;
-    // Still on the ground: 0.2 Hz positions, no airborne velocity, 0.1 Hz identification.
     CHECK(squitters_in_twenty_seconds(adsb, 0) == 4 + 2);
+}
+
+TEST_CASE("bravo scenario: a step longer than a squitter period loses no squitter") {
+    simulator::AdsbOut adsb;
+    adsb.fitted = true;
+    CHECK(squitters_in_twenty_seconds(adsb, 50, 2000) == 40 + 40 + 4);
+}
+
+TEST_CASE("bravo scenario: a category the emitter tables do not hold refuses the scenario") {
+    simulator::Scenario scenario;
+    for (const char* json : {"{\"aircraft\":[{\"system\":\"adsb\",\"category\":\"A1\"},"
+                             "{\"system\":\"adsb\",\"category\":\"D1\"}]}",
+                             "{\"aircraft\":[{\"system\":\"adsb\",\"category\":\"A3\"},"
+                             "{\"system\":\"adsb\",\"category\":\"A8\"}]}",
+                             "{\"aircraft\":[{\"system\":\"adsb\"},"
+                             "{\"system\":\"adsb\",\"category\":\"light\"}]}"})
+        CHECK_FALSE(simulator::parse_scenario(json, static_cast<int>(std::strlen(json)), scenario));
+    CHECK(scenario.aircraft.empty());
+}
+
+TEST_CASE("bravo scenario: loading a scenario again counts its squitters from zero") {
+    simulator::BravoSimulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    REQUIRE(simulator.load_file("scenarios/bravo_alone.json"));
+    simulator.run(3000);
+    REQUIRE(simulator.world().adsb_sent() > 0);
+    REQUIRE(simulator.world().adsb_heard() > 0);
+
+    REQUIRE(simulator.load_file("scenarios/bravo_alone.json"));
+    CHECK(simulator.world().adsb_sent() == 0);
+    CHECK(simulator.world().adsb_heard() == 0);
+}
+
+// A track of -10 degrees is 350, which ADS-L's 9-bit course codes as 350 * 512 / 360, 497.
+TEST_CASE("bravo scenario: a negative track flies and is sent as the same track in [0, 360)") {
+    const char* json =
+        "{\"name\":\"west\",\"aircraft\":[{\"north_m\":-1500,\"east_m\":200,\"up_m\":20,"
+        "\"speed_mps\":30,\"track_deg\":-10}]}";
+    simulator::Scenario scenario;
+    REQUIRE(simulator::parse_scenario(json, static_cast<int>(std::strlen(json)), scenario));
+    simulator::Simulator go;
+    REQUIRE(go.setup() == Status::Ok);
+    go.load(scenario);
+    go.run(5000);
+
+    REQUIRE(go.world().aircraft_at(0) != nullptr);
+    CHECK(go.world().aircraft_at(0)->track_deg == doctest::Approx(350));
+    const traffic::Target* heard = target_of(go.product().state(), 0x300001);
+    REQUIRE(heard != nullptr);
+    CHECK(heard->observation.track_c9 == 497);
+}
+
+// -295 fpm is 4.6 steps of 64, and 4000 ft is past the 3125 ft the field holds.
+TEST_CASE("bravo scenario: ADS-B Out rounds a velocity field to its nearest step and saturates") {
+    simulator::AdsbFrame frame = simulator::adsb_ground_velocity(0x300001, 5, 10, 10, -295, 4000);
+    simulator::adsb_seal(frame.bytes);
+    uint8_t chips[protocol::kAdsbChipBytes];
+    simulator::adsb_chips(frame.bytes, chips);
+    protocol::AdsbMessage message;
+    REQUIRE(protocol::adsb_receive(chips, sizeof(chips), protocol::AdsbReception{}, message) ==
+            Status::Ok);
+    CHECK(message.velocity.climb_fpm.value == -320);
+    CHECK(message.velocity.gnss_minus_pressure_ft.saturated);
 }

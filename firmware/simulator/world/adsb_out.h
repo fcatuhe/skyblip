@@ -126,8 +126,10 @@ inline AdsbFrame adsb_surface_position(uint32_t address, uint8_t capability, dou
 
 inline uint64_t adsb_signed_field(int32_t value, int32_t step, uint8_t width) {
     const uint64_t sign = value < 0 ? 1u : 0u;
-    const uint64_t code = static_cast<uint64_t>(value < 0 ? -value : value) / step + 1;
-    return (sign << width) | code;
+    const uint64_t magnitude = static_cast<uint64_t>(value < 0 ? -int64_t{value} : value);
+    const uint64_t top_code = (uint64_t{1} << width) - 1;
+    const uint64_t code = (magnitude + static_cast<uint64_t>(step) / 2) / step + 1;
+    return (sign << width) | (code < top_code ? code : top_code);
 }
 
 inline AdsbFrame adsb_ground_velocity(uint32_t address, uint8_t capability, int32_t east_kt,

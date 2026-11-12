@@ -113,7 +113,7 @@ int Sky::add_aircraft(double north_m, double east_m, double up_m, double speed_m
         aircraft_[i].east_m = own_east_m() + east_m;
         aircraft_[i].up_m = up_m;
         aircraft_[i].speed_mps = speed_mps;
-        aircraft_[i].track_deg = track_deg;
+        aircraft_[i].track_deg = std::fmod(std::fmod(track_deg, 360.0) + 360.0, 360.0);
         aircraft_[i].turn_dps = turn_dps;
         aircraft_[i].climb_mps = climb_mps;
         aircraft_[i].phase_ms = phase_ms;

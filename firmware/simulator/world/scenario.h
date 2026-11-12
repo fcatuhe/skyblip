@@ -83,7 +83,7 @@ struct Scenario {
     std::vector<ScenarioEvent> events;
 };
 
-bool parse_scenario(const char* json, int bytes, Scenario& out);
+bool parse_scenario(const char* json, int bytes, Scenario& parsed);
 bool load_scenario(const char* path, Scenario& out);
 
 }  // namespace skyblip::simulator
