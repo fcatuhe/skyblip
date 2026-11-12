@@ -13,9 +13,13 @@ module BriefingTestHelper
     def a_go(**options) = { name: "skyBlip Go 00012A", **options }
     def a_bravo(**options) = { name: "skyBlip Bravo 3F2A", product: "skyblip_bravo", address: nil, running: "0.1.0+40", key: "BBBBBBBB", imu: nil, **options }
 
-    def on_the_shelf(&)
+    # INFO: fc 12nov26 a shelf frame still loading when the cassettes close would reach GitHub, so the block waits for it
+    def on_the_shelf
       VCR.use_cassette("github/releases", allow_playback_repeats: true) do
-        VCR.use_cassette("github/firmware", allow_playback_repeats: true, &)
+        VCR.use_cassette("github/firmware", allow_playback_repeats: true) do
+          yield
+          assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all
+        end
       end
     end
 

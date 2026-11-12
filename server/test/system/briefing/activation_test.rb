@@ -31,6 +31,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
       click_button "Done"
       assert_current_path "/briefing/devices/go-000003"
       assert_no_selector ".unit-notes .is-good"
+      assert_selector ".unit-row", text: "0.1.0+1005 is out"
     end
   end
 
