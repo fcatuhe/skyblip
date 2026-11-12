@@ -20,6 +20,8 @@ class CallsignTable {
     void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
                uint32_t now_s);
     const char* find(uint8_t address_mapping_table, uint32_t address) const;
+    // INFO: fc 11nov26 when the name was last heard, as traffic_now_s() counts, 0 for none
+    uint32_t heard_s(uint8_t address_mapping_table, uint32_t address) const;
     void age_out(uint32_t now_s, uint32_t forget_s = kCallsignForgetS);
 
     int count() const;

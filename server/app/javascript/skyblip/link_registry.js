@@ -1865,6 +1865,12 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "enum",
           "enum": "export_reference",
           "required": true
+        },
+        {
+          "name": "paired",
+          "number": 12,
+          "type": "boolean",
+          "required": true
         }
       ]
     },
@@ -1969,6 +1975,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "assessed_sequence",
           "number": 17,
           "type": "unsigned"
+        },
+        {
+          "name": "paired",
+          "number": 18,
+          "type": "boolean",
+          "required": true
         }
       ]
     }
@@ -2557,18 +2569,25 @@ export const LINK_REGISTRY = Object.freeze({
       ]
     },
     "export_reference": {
+      "mirrors": {
+        "type": "comms::ExportReference",
+        "header": "core/comms/peer.h"
+      },
       "values": [
         {
           "name": "none",
-          "code": 0
+          "code": 0,
+          "mirrors": "None"
         },
         {
           "name": "go",
-          "code": 1
+          "code": 1,
+          "mirrors": "Go"
         },
         {
           "name": "own",
-          "code": 2
+          "code": 2,
+          "mirrors": "Own"
         }
       ]
     },

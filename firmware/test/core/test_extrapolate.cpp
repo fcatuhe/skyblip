@@ -236,6 +236,29 @@ TEST_CASE("extrapolate: a target's height is GNSS against GNSS, else pressure ag
     CHECK(up == 0);
 }
 
+// #192: Bravo gating on a paired Go's claim can hold a fresh position with a stale height.
+TEST_CASE("extrapolate: a height known invalid apart from the fix compares no GNSS height") {
+    model::Ownship own = flying(48.5, 8.5, 30.0, 0.0);
+    own.altitude_hae_valid = false;
+    model::AircraftObservation target{};
+    target.position_valid = true;
+    target.latitude_1e7 = own.latitude_1e7;
+    target.longitude_1e7 = own.longitude_1e7;
+    target.altitude_m = 1500;
+    target.altitude_valid = true;
+    int32_t up = 0;
+    CHECK_FALSE(gnss_relative_altitude_m(own, target, up));
+
+    int32_t north = 0, east = 0;
+    bool up_valid = true;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK_FALSE(up_valid);
+
+    own.altitude_hae_valid = true;
+    REQUIRE(relative_north_east_up(own, target, north, east, up, up_valid));
+    CHECK(up_valid);
+}
+
 // F3. The burst leaves a second after its solution: as it stands, it is 50 m behind at 50 m/s.
 // The height difference overflowed int32 when a target's altitude sat at the type's limit.
 TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit") {

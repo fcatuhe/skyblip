@@ -278,3 +278,42 @@ TEST_CASE("link sessions: a session already up comes up again past a reservation
     CHECK(sessions.payload_bytes(2) == 185);
     CHECK(sessions.refused() == 0);
 }
+
+// Bravo's side of #192: its pinned Go is a session, so the kept slot is named by address.
+TEST_CASE("link sessions: a slot kept for a named central admits it past the phone ceiling") {
+    constexpr events::BluetoothAddress kGo{1, {0x5B, 0x1C, 0x44, 0x55, 0x66, 0xD7}};
+    LinkSessions sessions;
+    REQUIRE(sessions.reserve_peer_for(kGo) == Status::Ok);
+    REQUIRE(sessions.connected(1, 244));
+    REQUIRE(sessions.connected(2, 244));
+    CHECK(sessions.admits());
+    CHECK_FALSE(sessions.connected(3, 244));
+    CHECK(sessions.refused() == 1);
+
+    CHECK(sessions.connected(3, 244, kGo));
+    CHECK(sessions.count() == 3);
+    CHECK_FALSE(sessions.admits());
+    events::BluetoothAddress central{};
+    CHECK(sessions.central({3, sessions.connection(3)}, central));
+    CHECK(central == kGo);
+
+    sessions.disconnected(3);
+    CHECK_FALSE(sessions.central({3, 3}, central));
+    CHECK(sessions.admits());
+    REQUIRE(sessions.reserve_peer(false) == Status::Ok);
+    CHECK(sessions.connected(4, 244));
+}
+
+TEST_CASE("link sessions: a slot is kept for a named central already among the connected") {
+    constexpr events::BluetoothAddress kGo{1, {0x5B, 0x1C, 0x44, 0x55, 0x66, 0xD7}};
+    LinkSessions sessions;
+    REQUIRE(sessions.connected(1, 244));
+    REQUIRE(sessions.connected(2, 244));
+    REQUIRE(sessions.connected(3, 244, kGo));
+    CHECK(sessions.reserve_peer_for(kGo) == Status::Ok);
+    CHECK_FALSE(sessions.admits());
+
+    LinkSessions full;
+    for (uint16_t id = 1; id <= LinkSessions::kMaxSessions; id++) REQUIRE(full.connected(id, 244));
+    CHECK(full.reserve_peer_for(kGo) == Status::Full);
+}

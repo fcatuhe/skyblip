@@ -35,8 +35,8 @@ class Link : public ports::Link {
     }
     bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
-    void raise_link(uint16_t session_id = 1) {
-        if (!sessions_.connected(session_id, declared_payload_bytes_)) return;
+    void raise_link(uint16_t session_id = 1, const events::BluetoothAddress& central = {}) {
+        if (!sessions_.connected(session_id, declared_payload_bytes_, central)) return;
         live_.push_back(session_id);
         last_session_id_ = session_id;
     }
@@ -110,8 +110,22 @@ class Link : public ports::Link {
         return sessions_.reserve_peer(reserved);
     }
 
+    Status reserve_peer_connection_for(const events::BluetoothAddress& central) override {
+        return sessions_.reserve_peer_for(central);
+    }
+
+    bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const override {
+        return sessions_.central(peer, out);
+    }
+
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
     void hold_after(int frames) { notification_share_ = frames; }
+    // INFO: fc 11nov26 one central's buffers full: what goes to it alone answers WouldBlock
+    void hold_session(uint16_t session_id, bool held) {
+        held_sessions_.erase(std::remove(held_sessions_.begin(), held_sessions_.end(), session_id),
+                             held_sessions_.end());
+        if (held) held_sessions_.push_back(session_id);
+    }
     void serve() { in_flight_ = 0; }
 
     void force_status(Status status, bool once = true) {
@@ -164,6 +178,9 @@ class Link : public ports::Link {
             return forced;
         }
         if (notification_share_ > 0 && in_flight_ >= notification_share_) return Status::WouldBlock;
+        if (std::find(held_sessions_.begin(), held_sessions_.end(), session_id) !=
+            held_sessions_.end())
+            return Status::WouldBlock;
         in_flight_++;
         sent.push_back({endpoint,
                         std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size()),
@@ -175,6 +192,7 @@ class Link : public ports::Link {
     bus::Queue<events::RxFrame, 4> rx_;
     comms::LinkSessions sessions_{};
     std::vector<uint16_t> live_;
+    std::vector<uint16_t> held_sessions_;
     std::vector<std::deque<Frame>*> mailboxes_;
     uint16_t declared_payload_bytes_{kDefaultPayloadBytes};
     uint16_t last_session_id_{0};

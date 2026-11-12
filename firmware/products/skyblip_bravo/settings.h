@@ -3,7 +3,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <tuple>
 
+#include "core/events/central.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
 #include "products/common/alarm_volume.h"
@@ -21,6 +23,12 @@ struct PeerPin {
     uint8_t address_type{0};
     bool pinned{false};
 };
+
+static_assert(kPeerAddressBytes == std::tuple_size<decltype(events::BluetoothAddress::bytes)>(),
+              "the pin holds the whole address the link names a central by");
+
+events::BluetoothAddress address_of(const PeerPin& pin);
+PeerPin pin_of(const events::BluetoothAddress& address);
 
 struct Settings {
     uint32_t own_icao{kOwnIcaoUnset};

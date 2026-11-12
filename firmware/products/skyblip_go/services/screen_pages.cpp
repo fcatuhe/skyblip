@@ -152,7 +152,10 @@ void ScreenService::render(uint32_t now_ms) {
         return;
     }
     if (notice_) {
-        draw_own_icao_notice(framebuffer_);
+        if (notice_kind_ == Notice::BravoForgot)
+            draw_bravo_forgot_notice(framebuffer_);
+        else
+            draw_own_icao_notice(framebuffer_);
         return;
     }
     if (mode_ == Mode::Menu) {

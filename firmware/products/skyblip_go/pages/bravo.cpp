@@ -186,6 +186,16 @@ void draw_own_icao_notice(ui::Canvas& canvas) {
     centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
 }
 
+// INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere
+void draw_bravo_forgot_notice(ui::Canvas& canvas) {
+    header(canvas, "BRAVO");
+    centred(canvas, kReasonY, "NOT PAIRED", kMenuScale);
+    centred(canvas, kReasonY + kReasonLineGap, "ON BRAVO", kMenuScale);
+    centred(canvas, kDetailY, "THE GO FORGOT IT TOO", 1);
+    centred(canvas, kDetailY + kNoticeDetailGap, "PAIR AGAIN FROM SETTINGS", 1);
+    centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
+}
+
 void BravoPage::open(uint32_t now_ms) {
     idle_since_ms_ = now_ms;
     focus_ = 0;

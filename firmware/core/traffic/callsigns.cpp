@@ -28,6 +28,11 @@ const char* CallsignTable::find(uint8_t address_mapping_table, uint32_t address)
     return slots_[static_cast<size_t>(index)].text;
 }
 
+uint32_t CallsignTable::heard_s(uint8_t address_mapping_table, uint32_t address) const {
+    const int index = find_slot(address_mapping_table, address);
+    return index < 0 ? 0 : slots_[static_cast<size_t>(index)].heard_s;
+}
+
 void CallsignTable::age_out(uint32_t now_s, uint32_t forget_s) {
     for (Entry& entry : slots_) {
         if (!entry.used) continue;

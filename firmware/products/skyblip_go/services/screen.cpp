@@ -29,26 +29,26 @@ void ScreenService::handle_input(uint32_t now_ms) {
     const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
                                        ? config_.pending()
                                        : comms::Pending::None;
-    if (pending != prompt_) {
+    const uint32_t staged = config_.prompts_staged();
+    if (pending != prompt_ || staged != prompts_staged_) {
         prompt_ = pending;
-        prompt_since_ms_ = now_ms;
+        prompts_staged_ = staged;
         change_screen();
-        confirm_.disarm();
+        answer_.ask(now_ms);
         prompt_on_glass_ = false;
     }
-    if (answering() && !confirm_.armed()) {
+    if (answering()) {
         // INFO: cf 02aug26 The two conditions that make a press an answer
         // rather than an accident: the question has reached the glass where it
-        // can be read, and the thumb has stopped. A run of presses that began
-        // before the prompt - pages being cycled, or a value being stepped on
-        // the settings page - keeps the gesture disarmed until it ends, so
-        // nothing already in flight can be spent on an authorisation. With no
-        // panel fitted there is nothing to read and presence is all there is.
+        // can be read, and the thumb is up and has stopped. A run of presses
+        // that began before the prompt - pages being cycled, a value being
+        // stepped on the settings page, or a button still held - keeps the
+        // gesture disarmed until it ends, so nothing already in flight can be
+        // spent on an authorisation. With no panel fitted there is nothing to
+        // read and presence is all there is.
         const bool readable = prompt_on_glass_ ||
                               !ports::has(context_.roles.capabilities, ports::Capability::Display);
-        const bool quiet = settled_for_a_double_press(now_ms, prompt_since_ms_) &&
-                           (!pressed_once_ || settled_for_a_double_press(now_ms, last_press_ms_));
-        if (readable && quiet) confirm_.arm(now_ms);
+        answer_.arm_once_quiet(readable, now_ms);
     }
 
     sync_receiving(now_ms);
@@ -57,6 +57,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
 
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
+        answer_.contact(event, now_ms);
         const Gesture gesture = controls_.read(event);
         record_contact(event, gesture, now_ms);
         obey(gesture, now_ms);
@@ -64,7 +65,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
     obey(controls_.tick(now_ms), now_ms);
 
     if (answering()) {
-        resolve(confirm_.tick(now_ms));
+        resolve(answer_.tick(now_ms));
         return;
     }
     if (arming_.tick(now_ms) != common::Answer::None) dirty_ = true;
@@ -179,10 +180,8 @@ void ScreenService::long_touch() {
 }
 
 void ScreenService::press(uint32_t now_ms) {
-    last_press_ms_ = now_ms;
-    pressed_once_ = true;
     if (answering()) {
-        if (confirm_.armed()) resolve(confirm_.press(now_ms));
+        resolve(answer_.press(now_ms));
         return;
     }
     if (receiving_) {
@@ -320,7 +319,7 @@ void ScreenService::resolve(common::Answer answer) {
     else
         config_.cancel();
     prompt_ = comms::Pending::None;
-    confirm_.disarm();
+    answer_.disarm();
     prompt_on_glass_ = false;
     change_screen();
 }

@@ -16,6 +16,7 @@
 
 #include "core/util/fifo.h"
 #include "hardware/platform/zephyr/att_budget.h"
+#include "hardware/platform/zephyr/bluetooth_address.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
 
 LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
@@ -96,20 +97,6 @@ uint16_t scan_units(uint32_t us) {
 uint16_t payload_from_mtu(uint16_t mtu) {
     return mtu > kNotifyHeaderBytes ? static_cast<uint16_t>(mtu - kNotifyHeaderBytes)
                                     : static_cast<uint16_t>(0);
-}
-
-events::BluetoothAddress address_of(const bt_addr_le_t* address) {
-    events::BluetoothAddress out{};
-    out.type = address->type;
-    for (size_t i = 0; i < out.bytes.size(); i++) out.bytes[i] = address->a.val[i];
-    return out;
-}
-
-bt_addr_le_t le_address(const events::BluetoothAddress& address) {
-    bt_addr_le_t out = {};
-    out.type = address.type;
-    for (size_t i = 0; i < address.bytes.size(); i++) out.a.val[i] = address.bytes[i];
-    return out;
 }
 
 void raise(const CentralEvent& event) {

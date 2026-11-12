@@ -23,6 +23,8 @@ struct TargetTurn {
 
 struct Target {
     model::AircraftObservation observation;
+    // INFO: fc 11nov26 moves each time the table takes an observation, so a reader tells news apart
+    uint32_t revision{0};
     TargetTurn turn;
     flight::Liftoff liftoff;
     Level alarm_level{Level::None};
@@ -86,6 +88,7 @@ class TrafficTable {
     uint32_t implausible_{0};
     uint32_t adsb_outside_gate_{0};
     uint32_t adsb_without_position_{0};
+    uint32_t revisions_{0};
 
     struct Weight {
         bool on_ground;

@@ -155,6 +155,7 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         }
         watch_liftoff(held, observation);
         held.observation = observation;
+        held.revision = ++revisions_;
         sample_turn(held.turn, observation);
         return index;
     }
@@ -166,6 +167,7 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
     if (index < 0) return -1;
     slots_[index].used = true;
     slots_[index].observation = observation;
+    slots_[index].revision = ++revisions_;
     slots_[index].turn = TargetTurn{};
     slots_[index].liftoff = flight::Liftoff{};
     sample_turn(slots_[index].turn, observation);

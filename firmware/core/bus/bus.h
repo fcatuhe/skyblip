@@ -68,7 +68,7 @@ struct Bus {
     // while-pop, so a log command sharing that queue would be read and dropped
     // by the wrong service.
     Queue<events::RxFrame, 2> log_rx;
-    // INFO: fc 11nov26 the Go's link to its Bravo, which the Bravo service alone drains
+    // INFO: fc 11nov26 the peer endpoint: the Go's BravoService drains it, and Bravo's PeerService
     Queue<events::CentralEvent, 8> central_events;
     Queue<events::RxFrame, 4> peer_rx;
     Queue<events::ContactEvent, 8> input;

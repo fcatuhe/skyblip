@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_CORE_COMMS_LINK_SESSIONS_H
 #define SKYBLIP_CORE_COMMS_LINK_SESSIONS_H
 
+#include "core/events/central.h"
 #include "core/events/link.h"
 #include "core/util/fifo.h"
 #include "ports/link.h"
@@ -14,10 +15,11 @@ class LinkSessions {
     static constexpr size_t kMaxEvents = 8;
     static constexpr int kPeerConnections = 1;
 
-    bool connected(uint16_t session_id, uint16_t payload_bytes) {
+    bool connected(uint16_t session_id, uint16_t payload_bytes,
+                   const events::BluetoothAddress& central = {}) {
         Slot* slot = find(session_id);
         const uint32_t connection = slot == nullptr ? 0 : slot->connection;
-        if (slot == nullptr && admits()) slot = free_slot();
+        if (slot == nullptr && admits(central)) slot = free_slot();
         if (slot == nullptr) {
             refused_++;
             return false;
@@ -26,6 +28,7 @@ class LinkSessions {
         slot->used = true;
         slot->session_id = session_id;
         slot->connection = connection != 0 ? connection : next_connection();
+        slot->central = central;
         slot->payload_bytes = floor_payload(payload_bytes);
         slot->mtu_updates = slot->payload_bytes > ports::kMinimumLinkPayloadBytes ? 1 : 0;
         raise(events::LinkEventType::Up, *slot);
@@ -37,6 +40,19 @@ class LinkSessions {
         if (reserved && !peer_reserved_ && count() >= static_cast<int>(kMaxSessions))
             return Status::Full;
         peer_reserved_ = reserved;
+        peer_named_ = false;
+        return Status::Ok;
+    }
+
+    // INFO: fc 11nov26 Bravo's pinned Go is a session, so its slot is kept by address
+    Status reserve_peer_for(const events::BluetoothAddress& central) {
+        int others = 0;
+        for (const Slot& slot : slots_)
+            if (slot.used && slot.central != central) others++;
+        if (others >= static_cast<int>(kMaxSessions)) return Status::Full;
+        peer_reserved_ = true;
+        peer_named_ = true;
+        peer_ = central;
         return Status::Ok;
     }
 
@@ -46,7 +62,20 @@ class LinkSessions {
         return static_cast<int>(kMaxSessions) - (peer_reserved_ ? kPeerConnections : 0);
     }
 
-    bool admits() const { return count() < phone_ceiling(); }
+    // INFO: fc 11nov26 what advertising is decided on: a phone more may connect, or the named peer
+    bool admits() const { return phones() < phone_ceiling() || (peer_named_ && !peer_present()); }
+
+    bool admits(const events::BluetoothAddress& central) const {
+        return named_peer(central) || phones() < phone_ceiling();
+    }
+
+    // INFO: fc 11nov26 false once that connection is gone, even if its session id came back
+    bool central(const events::Peer& peer, events::BluetoothAddress& out) const {
+        const Slot* slot = find(peer.session_id);
+        if (slot == nullptr || slot->connection != peer.connection) return false;
+        out = slot->central;
+        return true;
+    }
 
     // INFO: le 04aug26 The MTU exchange lands late, so this is a second Up on one session.
     void payload_changed(uint16_t session_id, uint16_t payload_bytes) {
@@ -112,6 +141,7 @@ class LinkSessions {
 
    private:
     struct Slot {
+        events::BluetoothAddress central{};
         uint32_t connection{0};
         uint16_t session_id{0};
         uint16_t payload_bytes{ports::kMinimumLinkPayloadBytes};
@@ -119,6 +149,19 @@ class LinkSessions {
         bool exchanged_by_unit{false};
         bool used{false};
     };
+
+    bool named_peer(const events::BluetoothAddress& central) const {
+        return peer_named_ && central == peer_;
+    }
+
+    int phones() const {
+        int phones = 0;
+        for (const Slot& slot : slots_)
+            if (slot.used && !named_peer(slot.central)) phones++;
+        return phones;
+    }
+
+    bool peer_present() const { return count() > phones(); }
 
     static events::MtuExchangeStarter starter_of(const Slot& slot) {
         const bool by_central = slot.mtu_updates > (slot.exchanged_by_unit ? 1 : 0);
@@ -170,7 +213,9 @@ class LinkSessions {
     uint32_t last_connection_{0};
     uint32_t dropped_{0};
     uint32_t refused_{0};
+    events::BluetoothAddress peer_{};
     bool peer_reserved_{false};
+    bool peer_named_{false};
 };
 
 }

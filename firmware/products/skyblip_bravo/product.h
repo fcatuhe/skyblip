@@ -19,9 +19,11 @@
 #include "products/skyblip_bravo/capture_settings.h"
 #include "products/skyblip_bravo/features.h"
 #include "products/skyblip_bravo/flash_window.h"
+#include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/name.h"
 #include "products/skyblip_bravo/services/adsb.h"
 #include "products/skyblip_bravo/services/button.h"
+#include "products/skyblip_bravo/services/peer.h"
 #include "products/skyblip_bravo/settings.h"
 #include "products/skyblip_bravo/settings_store.h"
 #include "runtime/loop.h"
@@ -156,6 +158,8 @@ class Product {
     AdsbService& adsb() { return adsb_; }
     common::AlarmService& alarm() { return alarm_; }
     ButtonService& button() { return button_; }
+    PeerService& peer() { return peer_; }
+    const GateReference& gate() const { return gate_; }
     common::NmeaService& nmea() { return nmea_; }
     common::ConfigLinkService& config_link() { return config_link_; }
     common::FlightLogService& flight_log() { return flight_log_; }
@@ -283,10 +287,12 @@ class Product {
         context_,     settings_store_,       power_.cutoff_monitor(),
         kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
-    AdsbService adsb_{context_, adsb_frames_, settings_.own_icao};
+    GateReference gate_{};
+    AdsbService adsb_{context_, adsb_frames_, settings_.own_icao, gate_};
     common::AlarmService alarm_{
         context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
-    ButtonService button_{context_, config_link_.config(), alarm_};
+    PeerService peer_{context_, settings_, config_link_.config(), board_.receiver(), gate_};
+    ButtonService button_{context_, config_link_.config(), alarm_, peer_};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,
                                          config_link_.config()};
@@ -295,12 +301,14 @@ class Product {
 
     // INFO: fc 12nov26 ownship fixes before adsb folds, and the lamp's prompt before the button
     // answers
-    static constexpr int kServiceCount = 9;
-    runtime::Service* services_[kServiceCount]{&config_link_, &ownship_,    &power_,
-                                               &adsb_,        &alarm_,      &button_,
-                                               &nmea_,        &flight_log_, &capture_};
+    // INFO: fc 11nov26 peer goes last, so the loop codes of the nine services before it hold
+    static constexpr int kServiceCount = 10;
+    runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &adsb_,
+                                               &alarm_,       &button_,  &nmea_,  &flight_log_,
+                                               &capture_,     &peer_};
     static constexpr const char* kServiceNames[kServiceCount] = {
-        "config", "ownship", "power", "adsb", "alarm", "button", "nmea", "flight_log", "capture"};
+        "config", "ownship", "power",      "adsb",    "alarm",
+        "button", "nmea",    "flight_log", "capture", "peer"};
     runtime::Loop loop_{services_, kServiceCount, kServiceNames};
 
     power::ShutdownSequencer shutdown_{};

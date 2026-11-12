@@ -19,6 +19,8 @@ struct Ownship {
     // relative height only means something if ours uses it too. altitude_msl_mm is the
     // geoid-referenced figure a panel or an IGC file wants.
     int32_t altitude_hae_mm;
+    // INFO: fc 11nov26 false only for a height dated apart from its position, a paired Go's
+    bool altitude_hae_valid{true};
     int32_t altitude_msl_mm;
     int32_t pressure_altitude_mm;
     uint32_t pressure_altitude_at_ms;

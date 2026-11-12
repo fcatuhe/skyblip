@@ -25,15 +25,21 @@ class PairedLink {
     static constexpr events::BluetoothAddress kPeripheralAddress{
         1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
 
-    explicit PairedLink(platform::host::Link& peripheral, uint16_t session_id = 1)
-        : peripheral_(&peripheral), session_id_(session_id) {
+    // INFO: fc 11nov26 a Go's static random address, as the peripheral reads it off the connection
+    static constexpr events::BluetoothAddress kCentralAddress{1,
+                                                              {0x5B, 0x1C, 0x44, 0x55, 0x66, 0xD7}};
+
+    explicit PairedLink(platform::host::Link& peripheral, uint16_t session_id = 1,
+                        const events::BluetoothAddress& central_address = kCentralAddress)
+        : peripheral_(&peripheral), session_id_(session_id), central_address_(central_address) {
         peripheral_->tap(sent_);
     }
 
     // INFO: fc 11nov26 a Go's central drives this one: it scans, connects, writes and reads
     PairedLink(platform::host::Link& peripheral, platform::host::Central& central,
-               uint16_t session_id = 1)
-        : PairedLink(peripheral, session_id) {
+               uint16_t session_id = 1,
+               const events::BluetoothAddress& central_address = kCentralAddress)
+        : PairedLink(peripheral, session_id, central_address) {
         central_ = &central;
     }
     ~PairedLink() { peripheral_->untap(sent_); }
@@ -45,7 +51,7 @@ class PairedLink {
     bool connect() {
         if (central_up_ || peripheral_up_) return false;
         collect_notifications();
-        peripheral_->raise_link(session_id_);
+        peripheral_->raise_link(session_id_, central_address_);
         if (peripheral_->connection(session_id_) == 0) return false;
         central_up_ = true;
         peripheral_up_ = true;
@@ -213,6 +219,7 @@ class PairedLink {
     platform::host::Link* peripheral_;
     platform::host::Central* central_{nullptr};
     uint16_t session_id_;
+    events::BluetoothAddress central_address_;
     bool in_range_{true};
     bool heard_{false};
     uint16_t payload_bytes_{ports::kMinimumLinkPayloadBytes};
