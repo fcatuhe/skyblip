@@ -68,7 +68,8 @@ int32_t to_pixels(int32_t metres, int64_t range, int ring) {
 }
 
 bool inside_ring(int32_t right, int32_t ahead, int ring) {
-    return right * right + ahead * ahead <= ring * ring;
+    const int64_t wide_right = right, wide_ahead = ahead;
+    return wide_right * wide_right + wide_ahead * wide_ahead <= static_cast<int64_t>(ring) * ring;
 }
 
 bool on_glass(int x, int y) { return x >= 0 && x < kGlassWidth && y >= 0 && y < kGlassHeight; }
