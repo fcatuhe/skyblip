@@ -213,8 +213,7 @@ TEST_CASE("paired scenario: BRAVO LOST shows only where the link is lost") {
         CAPTURE(file);
         Paired paired(file);
         bool shown = false;
-        // Bravo's first health comes before its first UTC, so the Go reads NoUtc for about a
-        // second.
+        // TODO: fc 14nov26 drop the 2000 ms once BravoService holds a boot NoUtc as Waiting (#179)
         bool lost_after_boot = false;
         while (paired.now_ms <= paired.simulator.scenario().duration_ms) {
             paired.run_until(paired.now_ms + 100);

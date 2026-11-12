@@ -38,7 +38,6 @@ namespace skyblip::common {
 // again; what is protected is every setting they ever made.
 class ConfigLinkService : public runtime::Service {
    public:
-    static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kSettingsKey = "settings";
 
     ConfigLinkService(runtime::Context& context, SettingsStore& store,
@@ -107,6 +106,7 @@ class ConfigLinkService : public runtime::Service {
 
     // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
+    static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kPriorSettingsKey = "settings.prior";
 

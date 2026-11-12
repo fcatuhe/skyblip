@@ -1,7 +1,7 @@
 {
   "name": "Go paired with Bravo: ADS-B on the Go",
   "product": "paired",
-  "mode": "training",
+  "mode": "device",
   "latitude_1e7": 485000000,
   "longitude_1e7": 85000000,
   "altitude_m": 1000,

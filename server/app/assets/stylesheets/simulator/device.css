@@ -1,4 +1,14 @@
 @layer device {
+/* INFO: fc 14nov26 on the root, because the workbench draws Bravo's lamp outside any case */
+:root {
+  --sb-lamp-green: #12a03f;
+  --sb-lamp-green-glow: #12a03f88;
+  --sb-lamp-red: #e8401f;
+  --sb-lamp-red-glow: #e8401f88;
+  --sb-lamp-blue: #2f6fe8;
+  --sb-lamp-blue-glow: #2f6fe888;
+}
+
 .sb-case {
   --sb-case-light: #fbfbf9;
   --sb-case-dark: #dedfda;
@@ -19,12 +29,6 @@
   --sb-key-paper: #e9e7e1;
   --sb-led-idle: #c6c8c3;
   --sb-led-shadow: #00000040;
-  --sb-lamp-green: #12a03f;
-  --sb-lamp-green-glow: #12a03f88;
-  --sb-lamp-red: #e8401f;
-  --sb-lamp-red-glow: #e8401f88;
-  --sb-lamp-blue: #2f6fe8;
-  --sb-lamp-blue-glow: #2f6fe888;
   --sb-charge: #ffab3d;
   --sb-charge-glow: #ffab3d88;
   --sb-glass: 400px;

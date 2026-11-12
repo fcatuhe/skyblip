@@ -23,8 +23,7 @@ class PairedSimulator {
     using Bravo = bravo::Product<platform::host::MeshtrackerX1>;
 
     static constexpr uint32_t kStepMs = Simulator::kStepMs;
-    // INFO: fc 14nov26 the own ICAO test_menu.cpp sets: a Tango's pilot sets one, so no notice
-    // shows
+    // INFO: fc 14nov26 test_menu.cpp's own ICAO: a Tango's pilot sets one, so no notice shows
     static constexpr uint32_t kOwnIcao = 0x3C6586;
 
     Status setup() {
