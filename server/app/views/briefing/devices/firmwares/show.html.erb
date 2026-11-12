@@ -32,6 +32,7 @@
     <p class="unit-message" role="status" data-firmware-target="message" hidden></p>
 
     <div class="app-actions">
+      <button type="button" class="button-app" data-unit-target="reconnect" data-action="unit#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
       <button type="button" class="button-app" data-firmware-target="install" data-action="firmware#install" data-label="<%= t("briefing.firmware.install") %>" disabled><%= t("briefing.firmware.install") %></button>
       <%= link_to t("briefing.words.back_to_settings"), briefing_device_path(slug: @slug), class: "button-app", hidden: true, data: { firmware_target: "back" } %>
     </div>

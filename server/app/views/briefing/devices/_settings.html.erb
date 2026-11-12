@@ -54,7 +54,8 @@
 
   <p class="unit-message" role="status" data-unit-target="settingsMessage" hidden></p>
   <div class="app-actions">
+    <button type="button" class="button-app" data-unit-target="reconnect" data-action="unit#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
     <button type="submit" class="button-app" data-unit-target="save" data-label="<%= t("briefing.settings.save") %>" disabled><%= t("briefing.settings.save") %></button>
-    <button type="button" class="button-app button-app--quiet" data-unit-target="reset" data-action="unit#reset" hidden><%= t("briefing.settings.reset") %></button>
+    <button type="button" class="button-app button-app--text" data-unit-target="reset" data-action="unit#reset" hidden><%= t("briefing.settings.reset") %></button>
   </div>
 </form>

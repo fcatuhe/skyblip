@@ -80,6 +80,7 @@ fr:
       ownship: "Éditeur de l\u2019appareil"
       ownship_hint: "L\u2019aéronef au centre du radar, un par type."
     words:
+      done_setting_up: "Terminé"
       forget_question: "Oublier %{name}\u00a0?"
       sending_short: "Envoi, %{percent}\u00a0%"
       activate_now: "Activer"
@@ -127,8 +128,8 @@ fr:
       install_full: "Installer %{version}, avec le firmware de la centrale"
       newest: "Vous avez la dernière image, %{version}."
       no_image: "Aucune image publiée pour cet appareil pour l\u2019instant. Choisissez un fichier ci-dessous."
-      sending: "Envoi de %{version}, %{percent}\u00a0%"
-      sent: "%{sent} sur %{total} ko"
+      sending: "Envoi de %{version}"
+      sent: "%{percent}\u00a0%, %{sent} sur %{total} ko"
       left: "environ %{minutes} min restantes"
       estimating: "calcul du temps restant"
       keep_close: "Gardez cet écran ouvert et le %{product} près de vous."

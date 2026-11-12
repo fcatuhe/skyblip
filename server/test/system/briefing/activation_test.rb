@@ -27,6 +27,10 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
       assert_field "Callsign"
       assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
       screen "33-activated"
+
+      click_button "Done"
+      assert_current_path "/briefing/devices/go-000003"
+      assert_no_selector ".unit-notes .is-good"
     end
   end
 

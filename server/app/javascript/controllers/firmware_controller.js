@@ -98,7 +98,6 @@ export default class extends Controller {
     this.#progress(unit, state)
     this.#message(state)
     this.#glass(unit, state)
-    clearTimeout(this.recheck)
     if (state.settling) this.recheck = setTimeout(() => unit.updater.refresh(), RECHECK_MS)
   }
 
@@ -127,7 +126,7 @@ export default class extends Controller {
     const airborne = state.status?.flight === "airborne"
     this.installTarget.disabled = !asks || !file || Boolean(taken(unit))
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
-    this.installTarget.hidden = (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
+    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
     else this.installTarget.textContent = this.installTarget.dataset.label
@@ -139,14 +138,13 @@ export default class extends Controller {
 
   #status(state, unit) {
     const { phase, file, upgrade, image, running, progress } = state
-    if (phase === "uploading") return say("words.sending", { version: file?.version ?? "", percent: progress ? Math.floor(100 * progress.sent / progress.total) : 0 })
+    if (phase === "uploading") return say("words.sending", { version: file?.version ?? "" })
     if (phase === "installing") return say("words.installing")
     if (phase === "rebooting") return `${say("words.installing")} ${say("words.reconnecting")}`
     if (phase === "recovering") return say("notices.recovering")
     if (image?.state === "probation") return say("words.probation", { version: running ?? image.to ?? "" })
     if (this.#done(state)) return say("words.done", { version: running })
     if (taken(unit)) return ""
-    if (upgrade === true) return say("words.update_banner", { version: file.version, running })
     if (upgrade === false) return say("words.newest", { version: running })
     if (!file && this.shelf && fitting(this.shelf, unit).length === 0) return say("words.no_image")
     return ""
@@ -158,7 +156,8 @@ export default class extends Controller {
     if (!shown) return
     this.barTarget.max = progress.total
     this.barTarget.value = progress.sent
-    const sent = say("words.sent", { sent: Math.floor(progress.sent / KILOBYTE), total: Math.ceil(progress.total / KILOBYTE) })
+    const percent = Math.floor(100 * progress.sent / progress.total)
+    const sent = say("words.sent", { percent, sent: Math.floor(progress.sent / KILOBYTE), total: Math.ceil(progress.total / KILOBYTE) })
     const minutes = this.#minutesLeft(progress)
     const left = minutes ? say("words.left", { minutes }) : say("words.estimating")
     const product = productWord(unit)
@@ -187,6 +186,9 @@ export default class extends Controller {
     if (image && !image.swapPowered) lines.push(say("notices.swap_unpowered"))
     if (status?.wentDarkFlat) lines.push(say("notices.went_dark_flat"))
     this.messageTarget.hidden = lines.length === 0
+    const drawn = lines.join("\n")
+    if (drawn === this.drawnMessage) return
+    this.drawnMessage = drawn
     this.messageTarget.replaceChildren(...lines.map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 

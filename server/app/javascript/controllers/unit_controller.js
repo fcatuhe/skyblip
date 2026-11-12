@@ -13,7 +13,7 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const LAST_READ = ["aircraft_type", "callsign", "own_icao", "units", "alarm_enabled", "alarm_volume"]
 
 export default class extends Controller {
-  static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect",
+  static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware",
                     "forgetDialog", "forgetQuestion"]
   static values = { slug: String, home: String, activation: String }
@@ -82,11 +82,24 @@ export default class extends Controller {
 
   save(event) {
     event.preventDefault()
-    this.unit.updater.saveSettings(this.#edited())
+    const edited = this.#edited()
+    const changed = Object.keys(edited).some(key => edited[key] !== this.unit.state.settings[key])
+    if (!changed && this.#activated()) return Turbo.visit(location.pathname, { action: "replace" })
+    this.unit.updater.saveSettings(edited)
   }
 
+  #activated() {
+    return new URLSearchParams(location.search).has("activated")
+  }
+
+  // INFO: fc 11nov26 the defaults fill the form, and Save sends them, so the pilot sees what will change before the glass asks
   reset() {
-    this.unit.updater.resetSettings()
+    const { defaults } = this.unit.state
+    const { elements } = this.settingsTarget
+    for (const [key, value] of Object.entries(defaults)) {
+      if (elements[key] && !elements[key].disabled) showSetting(elements[key], value)
+    }
+    this.#settings(this.unit.state)
   }
 
   #render() {
@@ -96,12 +109,13 @@ export default class extends Controller {
     const page = this.hasSettingsTarget
     const working = WORKING.has(state?.phase)
     if (page) this.nameTarget.textContent = unit?.name ?? nameOf(this.slugValue)
-    this.factsTarget.textContent = unit ? factsOf(unit).join(" · ") : say("words.not_met")
-    this.factsTarget.classList.toggle("is-airborne", state?.status?.flight === "airborne")
-    this.menuTarget.hidden = !unit || (working && !(page && state.task === "set"))
+    this.#facts(unit, state)
+    const settling = !page && state?.image?.state === "probation"
+    this.menuTarget.hidden = !unit || settling || (working && !(page && state.task === "set"))
     this.disconnectTarget.hidden = !linked
-    this.#offline(unit, linked || ["rebooting", "recovering"].includes(state?.phase))
-    const activated = page && linked && new URLSearchParams(location.search).has("activated")
+    this.reconnectTargets.forEach(button => (button.hidden = !state?.refusedOnDevice))
+    this.#offline(unit, linked || state?.phase === "rebooting")
+    const activated = page && linked && this.#activated()
     this.#notes(unit, state, page, activated)
     if (!page) return
     const asking = state?.phase === "confirming" && state.task === "set"
@@ -111,6 +125,16 @@ export default class extends Controller {
     this.#firmwareRow(state, linked && !asking)
     this.#glass(unit, asking)
     if (linked) offerNewest(unit, shelfIn(this.element))?.then(() => this.#render())
+  }
+
+  #facts(unit, state) {
+    const facts = unit ? factsOf(unit) : [say("words.not_met")]
+    const airborne = state?.status?.flight === "airborne" ? say("words.flight.airborne") : null
+    this.factsTarget.replaceChildren(...facts.flatMap((fact, index) => {
+      const item = Object.assign(document.createElement("span"), { textContent: fact })
+      if (fact === airborne) item.className = "is-airborne"
+      return index === 0 ? [item] : [" · ", item]
+    }))
   }
 
   #offline(unit, away) {
@@ -147,7 +171,7 @@ export default class extends Controller {
     if (activated) notes.push([say("words.activated", { name: unit.name }), null, "is-good"])
     if (unit?.needsActivation) notes.push([say("notices.not_activated"), "activate"])
     if (state?.status?.flight === "airborne") notes.push([say("words.in_flight_lock")])
-    if (state?.refusedOnDevice) notes.push([say("words.reconnect_needed"), "reconnect"])
+    if (state?.refusedOnDevice) notes.push([say("words.reconnect_needed")])
     if (state?.image?.settings) notes.push([say(`notices.settings_${state.image.settings}`)])
     const notice = state?.notice
     if (page && notice && notice.during !== "set" && LINK_NOTICES.has(notice.key) && !state?.refusedOnDevice) notes.push([sayNotice(notice, "notices"), unit.linked ? "reconnect" : null])
@@ -223,11 +247,13 @@ export default class extends Controller {
     for (const field of this.settingsTarget.querySelectorAll(".field")) {
       field.classList.toggle("is-edited", changed.includes(field.querySelector("[name]")?.name))
     }
-    this.saveTarget.disabled = !idle || changed.length === 0
-    this.saveTarget.textContent = airborne ? say("words.locked") : changed.length === 0 ? this.saveTarget.dataset.label : sayCount("words.save_count", changed.length)
+    const done = this.#activated() && changed.length === 0
+    this.saveTarget.hidden = state.refusedOnDevice
+    this.saveTarget.disabled = !done && (!idle || changed.length === 0)
+    this.saveTarget.textContent = airborne ? say("words.locked") : done ? say("words.done_setting_up") : changed.length === 0 ? this.saveTarget.dataset.label : sayCount("words.save_count", changed.length)
     const { defaults } = state
     const differs = defaults ? Object.keys(defaults).filter(key => key in edited && defaults[key] !== edited[key]) : []
-    this.resetTarget.hidden = differs.length === 0 || airborne
+    this.resetTarget.hidden = differs.length === 0 || airborne || state.refusedOnDevice
     this.resetTarget.disabled = !idle
     this.resetTarget.textContent = say("words.reset_count", { count: differs.length })
     for (const note of this.defaultTargets) this.#default(note, edited, defaults)

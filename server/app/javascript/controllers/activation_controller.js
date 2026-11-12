@@ -59,7 +59,7 @@ export default class extends Controller {
 
   #render() {
     const unit = this.candidate
-    if (unit && !unit.slug.startsWith("activate-") && !unit.needsActivation) return this.#activated(unit)
+    if (unit?.state?.address) return this.#activated(unit)
     const linked = unit?.linked ?? false
     const activator = linked ? this.#activator : null
     if (activator && activator.state.phase === "offline") activator.connect()

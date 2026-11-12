@@ -103,6 +103,7 @@ export class Updater {
   #windowOpen = false;
   #leaving = false;
   #choice = 0;
+  #opening = null;
   #bluetoothDevice;
   #returnEveryMs;
   #returnWithinMs;
@@ -149,6 +150,7 @@ export class Updater {
     if (!hasWebBluetooth()) return this.#set({ notice: { key: 'no_bluetooth' } });
     // INFO: fc 11nov26 a second client on the same link would hear every reply twice, and an install would fail on it
     if (this.#device || this.#state.phase === 'connecting') return;
+    if (this.#opening) return this.#opening;
     this.#stopReturn();
     this.#leaving = false;
     this.#set({ phase: 'connecting', notice: null });
@@ -160,6 +162,11 @@ export class Updater {
   }
 
   async #open() {
+    this.#opening ??= this.#link().finally(() => (this.#opening = null));
+    return this.#opening;
+  }
+
+  async #link() {
     const device = await connect({
       device: this.#bluetoothDevice,
       onReply: reply => this.#receive(reply),
@@ -294,7 +301,7 @@ export class Updater {
   }
 
   async #send(command) {
-    if (!this.#device) return;
+    if (!this.#device) return this.#set({ phase: 'offline', task: null, notice: this.#noticeDuring(this.#state.task, { key: 'link_lost' }) });
     try {
       await this.#device.sendConfig(command);
     } catch (error) {

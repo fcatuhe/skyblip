@@ -135,6 +135,8 @@
   .button-app[hidden] { display: none; }
 
   .button-app--quiet { background: transparent; color: var(--ink); border-color: var(--card-border); }
+  .button-app--text { padding-inline: var(--space-inline-xs); border-color: transparent; background: transparent; color: var(--ink-soft); font-size: var(--text-s); font-weight: 400; text-decoration: underline; text-decoration-color: var(--quiet); }
+  .button-app--text:hover:not(:disabled) { background: transparent; border-color: transparent; color: var(--blip-text); }
   .button-app--small { min-block-size: 2.25rem; padding: var(--space-2xs) var(--space-inline-s); font-size: var(--text-s); }
 
   .app-actions {
@@ -156,7 +158,11 @@
       background: var(--paper);
       border-block-start: 1px solid var(--card-border);
     }
-    .app-actions > .button-app:not(.button-app--quiet) { flex: 1; }
+    .app-actions > .button-app:not(.button-app--quiet, .button-app--text) { flex: 1; }
+  }
+
+  @media (display-mode: standalone) {
+    .app-bar .locale-switcher { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {

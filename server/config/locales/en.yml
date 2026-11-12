@@ -51,7 +51,7 @@ en:
     callsign: "Callsign"
     callsign_hint: "Up to nine letters, digits, dashes or blanks."
     own_icao: "Own ICAO address"
-    own_icao_hint: "Your Mode S transponder's address, six hexadecimal digits such as 3C6586, so the unit never shows it as traffic. Empty without one."
+    own_icao_hint: "From your transponder, like 3C6586, so it never shows as traffic. Empty if none."
   footer:
     description: "Electronic conspicuity for light aviation. skyBlip Go broadcasts your position in ADS-L, receives ADS-L and FLARM traffic and tells you where to look."
     open_source: "Open source, no subscription, no account."

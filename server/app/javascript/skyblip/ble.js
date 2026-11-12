@@ -230,10 +230,6 @@ export async function connect({ device = null, onLine, onReply, onSmp, onClose }
       }
     },
 
-    leave() {
-      link.clients.delete(client);
-    },
-
     release() {
       link.clients.delete(client);
       if (link.clients.size === 0 && device.gatt.connected) device.gatt.disconnect();

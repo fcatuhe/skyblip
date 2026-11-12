@@ -20,7 +20,7 @@
     font-variant-numeric: tabular-nums;
   }
   .unit-facts:empty { display: none; }
-  .unit-facts.is-airborne { color: var(--blip-text); }
+  .unit-facts .is-airborne { color: var(--blip-text); font-weight: 700; }
 
   .unit-menu { grid-column: 2; grid-row: 1 / span 2; position: relative; }
   .unit-menu summary {
@@ -221,8 +221,8 @@
     border-block-start: 1px solid var(--card-border);
     padding-block-start: var(--space-s);
   }
-  .firmware-other[open],
-  .firmware-recovery[open] { display: grid; gap: var(--space-s); }
+  .firmware-other[open]:not([hidden]),
+  .firmware-recovery[open]:not([hidden]) { display: grid; gap: var(--space-s); }
   .firmware-other summary,
   .firmware-recovery summary { cursor: pointer; font-size: var(--text-s); color: var(--ink-muted); }
   .firmware-other summary:focus-visible,

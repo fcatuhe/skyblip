@@ -25,7 +25,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_field "Callsign", with: "F-JXYZ"
+      assert_selector ".unit-banner", text: "0.1.0+1005 is out."
 
       visit "/briefing"
       assert_current_path "/briefing/devices/go-00012a"
@@ -93,6 +93,22 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "back to defaults fills the form with the firmware's values, and Save sends them" do
+    in_range a_go
+    on_the_shelf do
+      connect_go
+      click_button "Back to defaults (3)"
+      assert_select "Aircraft type", selected: "Light aircraft"
+      assert_field "Callsign", with: ""
+      assert_select "Alarm volume", selected: "Loud"
+      click_button "Save 3 changes"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".unit-message", text: "Saved on the device."
+      assert_equal({ "aircraft_type" => 1, "callsign" => "", "alarm_volume" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_no_selector "[data-unit-target=reset]"
+    end
+  end
+
   test "a press that refuses holds every question until a reconnect, which needs no chooser" do
     in_range a_go
     on_the_shelf do
@@ -103,11 +119,11 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.refuse()")
       assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
       assert_no_selector ".unit-message"
-      assert_button "Save 1 change", disabled: true
+      assert_no_button "Save 1 change"
       assert_no_selector ".unit-banner"
       screen "09-refused-on-device"
 
-      within(".unit-notes") { click_button "Reconnect" }
+      within(".unit-settings") { click_button "Reconnect" }
       assert_no_selector ".unit-notes", text: "It asks nothing more"
       assert_button "Save", disabled: true
       assert_equal 1, page.evaluate_script("fakeFleet.asked.length")

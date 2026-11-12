@@ -119,6 +119,7 @@ export default class extends Controller {
 
   #news(unit) {
     const state = unit.state
+    if (unit.slug.startsWith("activate-")) return false
     return Boolean(newsOf(unit) || state?.refusedOnDevice || state?.image?.settings || unit.needsActivation)
   }
 

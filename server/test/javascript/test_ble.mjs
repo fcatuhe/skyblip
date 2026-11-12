@@ -137,3 +137,15 @@ test('a device that dropped connects again on the next request', async () => {
   assert.equal(fake.connected, true);
   fake.drop();
 });
+
+// The console and the app share a device: leaving one must not drop the other's link.
+test('a client that releases a shared link leaves it up for the others, and the last one closes it', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  const app = await connect({ device, onReply: () => {}, onClose: () => {} });
+  const workbench = await connect({ device, onReply: () => {}, onClose: () => {} });
+  workbench.release();
+  assert.equal(fake.connected, true);
+  app.release();
+  assert.equal(fake.connected, false);
+});

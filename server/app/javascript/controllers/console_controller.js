@@ -10,7 +10,7 @@ export default class extends Controller {
     this.session = new AbortController()
     this.device = null
     this.listen("connect", "click", () => this.link())
-    this.listen("disconnect", "click", () => this.device?.disconnect())
+    this.listen("disconnect", "click", () => this.device?.release())
     this.listen("send", "submit", event => this.sendLine(event))
     this.listen("sendjson", "submit", event => this.sendJson(event))
     this.listen("clearstream", "click", () => { this.field("stream").textContent = "-" })

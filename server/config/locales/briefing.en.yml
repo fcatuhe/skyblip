@@ -80,6 +80,7 @@ en:
       ownship: Ownship editor
       ownship_hint: The aircraft at the centre of the radar, one per type.
     words:
+      done_setting_up: Done
       forget_question: "Forget %{name}?"
       sending_short: "Sending, %{percent} %"
       activate_now: Activate
@@ -127,8 +128,8 @@ en:
       install_full: "Install %{version}, with the sensor hub firmware"
       newest: "You run the newest image, %{version}."
       no_image: No published image for this device yet. Choose a file below.
-      sending: "Sending %{version}, %{percent} %"
-      sent: "%{sent} of %{total} kB"
+      sending: "Sending %{version}"
+      sent: "%{percent} %, %{sent} of %{total} kB"
       left: "about %{minutes} min left"
       estimating: working out the time left
       keep_close: "Keep this screen open and the %{product} close."

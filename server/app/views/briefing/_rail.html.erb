@@ -37,7 +37,7 @@
   </template>
 
   <p class="fleet-notice" role="status" data-fleet-target="notice" hidden></p>
-  <div class="fleet-actions">
+  <div class="fleet-actions<%= " app-actions" if variant == "home" %>">
     <button type="button" class="button-app fleet-connect-new" data-fleet-target="connectNew" data-action="fleet#connectNew" aria-label="<%= t("briefing.devices.connect_new") %>">
       <span class="fleet-connect-new-plus" aria-hidden="true">+</span>
       <span class="fleet-connect-new-label"><%= t("briefing.devices.connect_new") %></span>

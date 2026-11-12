@@ -16,10 +16,10 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       screen "21-firmware-asking"
 
       page.execute_script("#{unit("00012A")}.press()")
-      assert_selector ".firmware-status", text: /Sending 0.1.0\+1005, \d+ %/
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
       assert_no_selector ".firmware-other"
       assert_no_selector ".unit-menu"
-      assert_selector ".firmware-progress-text", text: /\d+ of 394 kB/
+      assert_selector ".firmware-progress-text", text: /\d+ %, \d+ of 394 kB/
       screen "22-firmware-uploading"
 
       assert_selector ".firmware-status", text: "The device installs and restarts, about thirty seconds. It connects again by itself.", wait: 30
@@ -61,7 +61,8 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".glass-title", text: "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
       assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
-      assert_button "Install 0.1.0+1005", disabled: true
+      assert_no_button "Install 0.1.0+1005"
+      assert_button "Reconnect"
       screen "27-firmware-refused"
     end
   end
@@ -76,7 +77,12 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".glass-title", text: "RECOVERY"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".firmware-status", text: "The device is now a USB drive named TECHOBOOT"
+      assert_no_button "Restart into the USB drive"
       screen "28-firmware-usb-drive"
+
+      within(".unit") { click_button "Connect" }
+      assert_selector ".unit-facts", text: "Connected"
+      assert_equal 1, page.evaluate_script("fakeFleet.asked.length")
     end
   end
 
