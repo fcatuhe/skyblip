@@ -31,10 +31,19 @@ void log_inventory() {
         LOG_INF("inventory: sensor bus 0x%02x answered", found.i2c_addresses[i]);
 }
 
+// INFO: fc 12nov26 eight lines a 10 ms pass keep the 4096-byte log buffer clear and the ring empty
+constexpr int kRejectsLoggedPerPass = 8;
+
 // INFO: fc 12nov26 scripts/adsb_rejects.py parses this line, so keep its keys and their order
 void log_adsb_rejects() {
     bravo::AdsbReject reject{};
-    while (g_product.adsb().take_reject(reject)) {
+    if (CONFIG_SKYBLIP_BRAVO_LOG_LEVEL < LOG_LEVEL_DBG || !g_diagnostics.sink().ready()) {
+        while (g_product.adsb().take_reject(reject)) {
+        }
+        return;
+    }
+    for (int logged = 0; logged < kRejectsLoggedPerPass && g_product.adsb().take_reject(reject);
+         logged++) {
         char chips[2 * protocol::kAdsbChipBytes + 1];
         chips[hex::write(ConstByteSpan(reject.chips.data(), reject.chips.size()), chips)] = 0;
         const char* status = reject.status == Status::Unsupported ? "unsupported" : "crc";

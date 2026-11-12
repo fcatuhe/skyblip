@@ -207,15 +207,15 @@ The `adsb` line of the status dump follows a frame from the antenna to the table
 
 `tracked`, on the `traffic` line, counts the aircraft that reached the table, each with a position. So `crc` close to `frames` is a reception problem, and `aircraft` above 0 with `tracked` at 0 is aircraft heard without a decoded position.
 
-A development image also prints each refused frame on the USB console, one line each:
+A development image also prints each refused frame on the USB console, one line each, once a host has opened the port:
 
 ```
-<dbg> skyblip: log_adsb_rejects: adsb reject status=crc rssi=-87 chips=<54 hex digits>
+[00:01:02.345,000] <dbg> skyblip: log_adsb_rejects: adsb reject status=crc rssi=-87 chips=<54 hex digits>
 ```
 
 `status` is `crc` or `unsupported`, as the counters. `rssi` is the frame's RssiHigh level in dBm, or `none` when the LR2021 gave the frame no level of its own (`../../hardware/parts/lr2021/README.md`, Reading a frame). `chips` is the 27 bytes the LR2021 put in its FIFO after the sync, as the decoder read them. `hardware/parts/lr2021/README.md` (Reading a dumped frame) says how to decode them by hand.
 
-`AdsbService` keeps the refused frames in a ring of `kRejectsKept`, 32, and `main.cpp` empties it on every pass, so the console sees every refused frame unless more than 32 arrive in one pass. Past 32 a frame is counted and not printed. The ring is filled on every image, and only the log level decides whether `main.cpp` prints it. `prj.conf` sets `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_DBG`, so the development images CI publishes and `scripts/build_local.sh` builds print the lines. `release/app.conf` sets the level back to info, so a release image prints none. To silence a development build, add `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_INF=y` to its configuration.
+`AdsbService` keeps the refused frames in a ring of `kRejectsKept`, 32. A frame refused while 32 wait is counted and not kept. `main.cpp` prints at most `kRejectsLoggedPerPass`, 8, a pass, and leaves the rest in the ring for the next pass, 10 ms later at most. Zephyr holds each line in its log buffer until its log thread writes it out, and `prj.conf` sizes that buffer at 4096 bytes, room for about 32 lines. A console that falls further behind prints `--- N messages dropped ---`, and the frames in those messages are lost. The ring is filled on every image. While no host holds the port, or at a level above debug, `main.cpp` empties it without formatting a line. `prj.conf` sets `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_DBG`, so the development images CI publishes and `scripts/build_local.sh` builds print the lines. `release/app.conf` sets the level back to info, so a release image prints none. To silence a development build, add `CONFIG_SKYBLIP_BRAVO_LOG_LEVEL_INF=y` to its configuration.
 
 Save the console to a file with any serial terminal, for example `picocom -g console.log /dev/ttyACM0` on Linux, and read it with the offline helper:
 
@@ -223,7 +223,7 @@ Save the console to a file with any serial terminal, for example `picocom -g con
 python3 scripts/adsb_rejects.py console.log
 ```
 
-It prints one line per refused frame, then a summary. The DF17 identification every Mode S primer decodes, `8D4840D6202CC371C32CE0576098`, with bit 61 read wrong from a doubtful pair and the pair of bit 104 doubtful too, reads:
+It prints one line per refused frame as it reads it, then a summary, which also counts the dropped messages. The DF17 identification every Mode S primer decodes, `8D4840D6202CC371C32CE0576098`, with bit 61 read wrong from a doubtful pair and the pair of bit 104 doubtful too, reads:
 
 ```
 adsb reject status=crc rssi=-87 chips=a665956555a669595559a5a55a6a16a55a59a5a955666a69579695
@@ -232,14 +232,15 @@ crc rssi=-87 df=17 icao=4840d6 tc=4 residue=a01e91 doubtful=2 at 61,104 flip=61 
 
 The decoder refused it, because it repairs one doubtful pair and no more.
 
-- **`df` and `icao`**: bits 1 to 5 and 9 to 32. A real aircraft repeats its ICAO across frames, and noise does not, so the summary lists the DF17 addresses heard twice or more.
-- **`residue`**: the CRC remainder over the 112 bits, 0 for a sound frame. A DF16's residue is its address, because its parity carries it.
-- **`doubtful`**: the bits whose chip pair read `00` or `11`, numbered 1 to 112. The summary counts them by quarter of the frame. Doubtful pairs that pile up in the last quarter point at a chip clock that slips inside the frame, which is why cb-tfc dropped a capture laid out as ours (`../../hardware/parts/lr2021/README.md`).
-- **`flip=N`**: flipping bit N alone clears the residue. `doubtful` after it says the chips doubted that bit, which is the only flip the decoder makes. A flip on a bit the chips did not doubt is one the decoder refuses, and dump1090 would accept.
-- **`shift=±1` or `±2`**: the whole frame passes once one or two chips are added or dropped right after the sync, so the frame was misaligned.
-- **`slip=±N@C`**: the frame passes once N chips are dropped, for `+`, or added, for `-`, at chip C, counted from the first chip of the sync. A slip inside the frame is the chip clock losing its place.
+- **`df`**: bits 1 to 5, 17 or 16.
+- **`icao` and `tc`**: bits 9 to 32 and 33 to 37 of a DF17, printed only for a DF17. A real aircraft repeats its ICAO across frames, and noise does not, so the summary lists the DF17 addresses heard twice or more.
+- **`residue`**: the CRC remainder over the 112 bits, 0 for a sound frame. A DF16's residue is its address, because its parity carries it. An `unsupported` line can show a residue too: the decoder repaired one doubtful pair before it read the type, and the line holds the chips from before the repair.
+- **`doubtful`**: the bits whose chip pair read `00` or `11`, numbered 1 to 112. The summary counts them by quarter of the frame. A chip clock that slips inside the frame, which is why cb-tfc dropped a capture laid out as ours (`../../hardware/parts/lr2021/README.md`), leaves about half the pairs after the slip doubtful, so the counts grow from quarter to quarter.
+- **`flip=N`**: flipping bit N alone clears the residue. `doubtful` after it says the chips doubted that bit, which is the only flip the decoder makes. A flip on a bit the chips did not doubt is one the decoder refuses, and dump1090 would accept. A frame one flip clears is not searched for slips, because a wrong bit in the last chips passes as a slip too.
+- **`shift=+N` or `shift=-N`**: the whole frame passes once N chips, 1 or 2, are dropped, for `+`, or added, for `-`, right after the sync, so the frame was misaligned from its start.
+- **`slip=+N@C` or `slip=-N@C`**: the frame passes once N chips are dropped or added at chip C, as for `shift`. Chips count from 0 at the first sync chip, so the first chip after the sync is 8. A slip that lands in a run of equal chips passes anywhere in the run, so it reads as a range, `slip=+1@146-151`. A slip inside the frame is the chip clock losing its place.
 
-The slip search tries about 2600 streams a frame, so it passes a random frame about once in 6500: read one `slip` as a hint and many as a finding.
+The slip search tries about 2600 streams a frame, so it passes a random frame about once in 6500. One frame with a slip is a hint, and many frames with one are a finding.
 
 ## The cell
 

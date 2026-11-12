@@ -390,3 +390,18 @@ TEST_CASE("adsb: DF16, an unparsed type code and a short report are refused") {
     AdsbMessage message;
     CHECK(adsb_receive(chips, kAdsbChipBytes - 1, kReception, message) == Status::Invalid);
 }
+
+// The console line products/skyblip_bravo/README.md reads, which scripts/adsb_rejects.py decodes.
+TEST_CASE("adsb: the chips a Bravo prints for a refused frame are the chips it refused") {
+    uint8_t chips[kAdsbChipBytes];
+    REQUIRE(hex::read("a665956555a669595559a5a55a6a16a55a59a5a955666a69579695", ByteSpan(chips)));
+    CHECK(hear_chips(chips).status == Status::Crc);
+
+    // Bit 61 is the FIFO chips 112 and 113, the high two bits of chip byte 14.
+    uint8_t sound[kAdsbChipBytes];
+    adsb_chips(frame_of("8d4840d6202cc371c32ce0576098").bytes, sound);
+    chips[14] = static_cast<uint8_t>((chips[14] & 0x3F) | (sound[14] & 0xC0));
+    const Heard heard = hear_chips(chips);
+    REQUIRE(heard.status == Status::Ok);
+    CHECK(std::strcmp(heard.message.identification.callsign, "KLM1023") == 0);
+}
