@@ -3625,6 +3625,8 @@ The commands that take the device out of service, each behind a confirmation on 
 - a link that comes up on an unconfirmed or reverted image is told without asking
   > A phone that connects to a device whose last update did not take is told so before it asks, because it is the one fact the pilot would otherwise discover from a version number that did not change.
 - a link that comes up on settings that fell back is told, on a confirmed image
+- a take-off leaves an upload window the pilot confirmed open
+  > D5: the reset reason was read at boot and shown on the self-test page, and a device in a field with a phone next to it has no self-test page in view. G6's plug-in-and-read: the same on_rx dispatch that answers "status" answers "timing" from whatever core/timing::SlotTimingStatistics the device has been accumulating - no second channel, no panel real estate a bucket array would not fit on anyway. A taxi fast enough to read as a take-off once aborted an upload the pilot had confirmed.
 - an image other than the one the press named is refused, not installed
 - an ownship drawing is refused as unknown_command, nothing stored
   > The editor's ownship frame is a proposal: the registry numbers it, the firmware reads none yet.
@@ -3640,8 +3642,6 @@ The commands that take the device out of service, each behind a confirmation on 
 - recovery refused in flight
 - recovery routed through confirmation, latched and never entered inline
   > The product paints the recovery page first, so a confirmed recovery is a latch the sequencer spends.
-- takeoff closes an open upload window and it stays latched
-  > D5: the reset reason was read at boot and shown on the self-test page, and a device in a field with a phone next to it has no self-test page in view. G6's plug-in-and-read: the same on_rx dispatch that answers "status" answers "timing" from whatever core/timing::SlotTimingStatistics the device has been accumulating - no second channel, no panel real estate a bucket array would not fit on anyway. Fail closed: takeoff must revoke an authorisation granted on the ground, or a long upload could still be running when the aircraft leaves.
 - the firmware prompt names the version the phone is about to send
   > The press is the whole authorisation, so the glass names what it authorises.
 - the update question names the image state and the versions of the attempt
@@ -3665,7 +3665,7 @@ What the flight state gates on the config endpoint: Airborne refuses, and the gr
 - a set with no fix since boot is staged, confirmed and stored
   > Two presses on the device stand in for pairing, and Unknown is a unit with no fix since boot.
 - a take-off cancels a staged set, from the ground or with no fix
-- an upload finished after the fix is lost installs, and a take-off shuts it
+- an upload the pilot confirmed installs through a take-off
 - install, recovery, power-off, cold start and erase are refused aloft
 - install, recovery, power-off, cold start and erase ask on the ground or with no fix
 
@@ -4031,6 +4031,7 @@ The whole product taking an update; the bootloader is the one thing the host can
 - a set on an image older than its settings never writes over them
   > A reverted image that wrote over a newer blob lost the pilot's settings for good.
 - a single press on the receiving page closes the window, and nothing installs
+- a take-off leaves the SMP hook's gate open once the window is confirmed
 - an image nobody staged over the air clears a stale attempt
 - an image signed by a key the bootloader does not trust lands and is not installed
 - an image staged before a restart is not installed by the next window
@@ -4044,8 +4045,6 @@ The whole product taking an update; the bootloader is the one thing the host can
 - the SMP hook's gate opens on the pass after the window is confirmed
 - the image that boots after a revert tells the phone which update did not take
 - the image that lands forgets the attempt once it has confirmed itself
-- the pass that learns of the take-off closes the SMP hook's gate in that pass
-  > A chunk the MCUmgr work queue reads against a stale gate is a chunk written in flight.
 - the update frame names the trusted key and, on a development unit, the rule
 - under a running watchdog a recovery asks for the press, then drops the rails
 - with no watchdog running a recovery paints the bootloader page, then reboots

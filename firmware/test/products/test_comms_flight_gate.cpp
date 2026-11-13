@@ -155,9 +155,7 @@ TEST_CASE(
     }
 }
 
-TEST_CASE(
-    "comms flight gate: an upload finished after the fix is lost installs, and a take-off shuts "
-    "it") {
+TEST_CASE("comms flight gate: an upload the pilot confirmed installs through a take-off") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -168,16 +166,8 @@ TEST_CASE(
     config.confirm();
     REQUIRE(config.receiving_firmware());
     config.set_flight_state(flight::FlightState::Airborne);
-    CHECK_FALSE(config.upload_allowed());
-    config.tick(100);
-    CHECK_FALSE(config.install_requested());
-
-    config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
-    config.confirm();
-    config.set_flight_state(flight::FlightState::Unknown);
     CHECK(config.upload_allowed());
-    config.tick(200);
+    config.tick(100);
     CHECK(config.install_requested());
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");

@@ -101,16 +101,12 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     // The page it was on is the page it comes back to.
     CHECK(rig.product.screen().page() == go::Page::Radar);
 
-    // The same two presses, airborne. Fail closed: the window shuts on takeoff
-    // and no gesture reopens it.
+    // A take-off keeps the window the pilot opened, and no new one opens in flight.
     rig.airborne(now_ms);
-    CHECK_FALSE(rig.config().upload_allowed());
+    CHECK(rig.config().upload_allowed());
     rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
     rig.run(now_ms, now_ms + 3000);
-    now_ms += 3000;
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    CHECK_FALSE(rig.config().upload_allowed());
+    CHECK(rig.config().pending() == comms::Pending::None);
 }
 
 TEST_CASE("product: the panel names the operation while it waits, and stops cycling pages") {

@@ -106,7 +106,7 @@ class ConfigService {
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
     // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window two presses open
-    bool upload_allowed() const { return upload_window_open_ && !in_flight(); }
+    bool upload_allowed() const { return upload_window_open_; }
     void close_upload_window() { upload_window_open_ = false; }
     bool receiving_firmware() const { return upload_window_open_; }
 

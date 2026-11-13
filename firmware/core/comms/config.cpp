@@ -57,7 +57,6 @@ void ConfigService::set_flight_state(flight::FlightState state) {
     const bool changed = state != flight_state_;
     flight_state_ = state;
     if (state == flight::FlightState::Airborne) {
-        upload_window_open_ = false;
         // A prompt that survived the take-off roll would be an authorisation a
         // pilot could confirm with an elbow in the air.
         if (pending_ != Pending::None && !prompt_allowed()) {
@@ -294,8 +293,6 @@ void ConfigService::install_received_image() {
         acknowledge(false, link::Reason::NotApproved);
     } else if (!signed_by_trusted_key()) {
         acknowledge(false, link::Reason::WrongKey);
-    } else if (in_flight()) {
-        acknowledge(false, link::Reason::InFlight);
     } else if (!swap_powered()) {
         acknowledge(false, link::Reason::LowPower);
     } else {
