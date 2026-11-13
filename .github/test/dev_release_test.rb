@@ -97,9 +97,7 @@ class DevReleaseTest < Minitest::Test
       assert bravo[bravo.index("--notes") + 1].start_with?("skyBlip Bravo 0.1.0+1010 from main")
       notes = bravo[bravo.index("--notes") + 1]
       refute_includes notes, ".full.signed.bin"
-      refute_includes notes, "installs on any unit"
-      assert_includes notes, "- `.uf2` installs by drag-and-drop on a MeshTracker X1 only, after backing up its factory flash as " \
-                             "[#169](https://github.com/fcatuhe/skyblip/issues/169) describes. No skyBlip Bravo image has run on an X1 yet."
+      assert_includes notes, "- `.uf2` installs on any unit by drag-and-drop, and moves it to the development key."
       assert_equal %w[bravo-dev-1001 bravo-dev-998 dev-998], run.deletes.map { |call| call[2] }.sort
       assert_checksums File.join(root, "gh/uploads/bravo-dev-1010")
     end
