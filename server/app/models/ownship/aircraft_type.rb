@@ -1,8 +1,10 @@
 class Ownship::AircraftType
-  KEYS = %w[
-    unknown light_aircraft heavy_aircraft helicopter glider balloon
-    microlight paraglider skydiver vtol gyrocopter
-  ].freeze
+  CODES = {
+    "unknown" => 0, "light_aircraft" => 1, "heavy_aircraft" => 2, "helicopter" => 3, "glider" => 4,
+    "balloon" => 5, "microlight" => 6, "paraglider" => 7, "skydiver" => 8, "vtol" => 9,
+    "gyrocopter" => 10, "heavy_helicopter" => 15
+  }.freeze
+  KEYS = CODES.keys.freeze
   DEFAULT = "light_aircraft".freeze
   DRAWINGS = Rails.root.join("content/ownships")
 
@@ -20,7 +22,7 @@ class Ownship::AircraftType
     @key = key
   end
 
-  def code = KEYS.index(key)
+  def code = CODES.fetch(key)
   def name = I18n.t(key, scope: "ownships.aircraft_types")
 
   def drawn? = drawing_path.exist?

@@ -12,6 +12,7 @@ fr:
       skydiver: "Parachutiste"
       vtol: "VTOL"
       gyrocopter: "Autogire"
+      heavy_helicopter: "Hélicoptère lourd"
   briefing:
     ownships:
       show:

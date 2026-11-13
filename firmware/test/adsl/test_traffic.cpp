@@ -138,7 +138,6 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
     CHECK(go::kNamedAircraftTypes <= issue1_named_categories);
 }
 
-// A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
 // The adapter decides the code, so the clause is checked on what own-ship sends and what a receiver
 // keeps.
 TEST_CASE(
@@ -172,6 +171,7 @@ TEST_CASE(
     CHECK(observation.position_valid);
 }
 
+// A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
     own.vdop_e2 = 0;

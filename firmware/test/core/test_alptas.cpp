@@ -213,3 +213,15 @@ TEST_CASE("alptas: an observation goes out as the frame other receivers already 
     CHECK(int(got.climb_e8) == -397);
     CHECK(int(got.track_c9) == 77);
 }
+
+// G.1.3 gives the heavy rotorcraft 15, and AcftType has one helicopter for every rotorcraft.
+TEST_CASE("alptas: a heavy rotorcraft goes out as a helicopter and comes back as rotorcraft") {
+    model::AircraftObservation observation = make_observation(481234567, 87654321);
+    observation.aircraft_category = 15;
+    uint8_t frame[alptas::kFrameBytes];
+    REQUIRE(alptas_encode(frame, observation, kUtcS) == Status::Ok);
+    model::AircraftObservation got{};
+    REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
+    CHECK(int(adsl_category_to_alptas_type(15)) == 0x3);
+    CHECK(int(got.aircraft_category) == 3);
+}

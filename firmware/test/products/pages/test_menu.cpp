@@ -168,7 +168,7 @@ TEST_CASE("menu page: no label and value a row can hold meet at double height") 
                 kMenuLeftX +
                 static_cast<int>(std::strlen(menu_row_label(menu.rows[i]))) * kMenuCellWidth;
             CHECK(label_end <= kMenuRightX);
-            for (uint8_t type = 0; type < kNamedAircraftTypes + 2; type++) {
+            for (uint8_t type = 0; type < 18; type++) {
                 values.settings.aircraft_type = type;
                 for (Units units : {Units::Nautical, Units::Metric}) {
                     values.settings.units = units;
@@ -220,6 +220,15 @@ TEST_CASE("menu page: a category the phone stored but the page does not name is 
 
     // The first change moves it into the list the page can name.
     CHECK(next_aircraft_type(13) == 0);
+}
+
+TEST_CASE("menu page: a heavy rotorcraft is a choice a pilot can make, and the list closes after it") {
+    MenuValues values = default_menu_values();
+    values.settings.aircraft_type = 15;
+    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
+    CHECK(row_value_reads(menu, MenuRow::AircraftType, "HEAVY HELI", false));
+    CHECK(next_aircraft_type(10) == 15);
+    CHECK(next_aircraft_type(15) == 0);
 }
 
 TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {

@@ -12,6 +12,7 @@ en:
       skydiver: "Skydiver"
       vtol: "VTOL"
       gyrocopter: "Gyrocopter"
+      heavy_helicopter: "Heavy helicopter"
   briefing:
     ownships:
       show:
