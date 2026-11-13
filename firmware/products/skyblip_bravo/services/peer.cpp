@@ -82,6 +82,7 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Pinned:
         case Heard::Committed:
             gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
+            adopt_own_icao(claim.value().own_icao);
             hear_alarm_request(go->address, claim.value().alarm_requested, now_ms);
             break;
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
@@ -95,6 +96,14 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Stranger: health_owed_ = true; break;
         case Heard::Awaited: break;
     }
+}
+
+// INFO: fc 13nov26 a cleared Go sends none, so Bravo keeps what a phone set rather than lose it
+void PeerService::adopt_own_icao(uint32_t own_icao) {
+    if (own_icao == kOwnIcaoUnset || own_icao == settings_.own_icao) return;
+    settings_.own_icao = own_icao;
+    config_.note_settings_changed();
+    health_owed_ = true;
 }
 
 // INFO: fc 12nov26 only the pinned Go's claims reach here, so a stranger never silences Bravo
@@ -156,6 +165,7 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     health.last_sequence_valid = observed_;
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;
+    health.own_transponder = own_transponder_.heard();
     bool blocked = false;
     for (const Go& go : gos_) {
         if (!go.used) continue;

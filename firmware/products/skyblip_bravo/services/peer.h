@@ -12,6 +12,7 @@
 #include "ports/adsb_receiver.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/observation_pacer.h"
+#include "products/skyblip_bravo/own_transponder.h"
 #include "products/skyblip_bravo/pairing.h"
 #include "products/skyblip_bravo/settings.h"
 #include "runtime/service.h"
@@ -27,12 +28,14 @@ class PeerService : public runtime::Service {
     static constexpr uint32_t kAlarmRequestMaxAgeMs = 3000;
 
     PeerService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                const ports::AdsbReceiver& receiver, GateReference& gate)
+                const ports::AdsbReceiver& receiver, GateReference& gate,
+                const OwnTransponder& own_transponder)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           receiver_(receiver),
-          gate_(gate) {}
+          gate_(gate),
+          own_transponder_(own_transponder) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -65,6 +68,7 @@ class PeerService : public runtime::Service {
     void take(const events::RxFrame& frame, uint32_t now_ms);
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
+    void adopt_own_icao(uint32_t own_icao);
     void send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void send_observations(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void serve(int slot, const traffic::Target& target,
@@ -74,6 +78,7 @@ class PeerService : public runtime::Service {
     comms::ConfigService& config_;
     const ports::AdsbReceiver& receiver_;
     GateReference& gate_;
+    const OwnTransponder& own_transponder_;
     Pairing pairing_{settings_.peer};
     ObservationPacer pacer_{};
     std::array<Go, ObservationPacer::kRecipients> gos_{};

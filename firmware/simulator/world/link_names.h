@@ -529,6 +529,9 @@ inline constexpr Key kHealthKeys[] = {
     {"alarm_granted", 7, Type::Boolean, nullptr, 0, true},
     {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
     {"paired", 12, Type::Boolean, nullptr, 0, true},
+    {"own_transponder", 13, Type::Unsigned, nullptr, 0, false},
+    {"own_transponder_callsign", 14, Type::Text, nullptr, 0, false},
+    {"own_transponder_category", 15, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -581,7 +584,7 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 10},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 14},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
 };

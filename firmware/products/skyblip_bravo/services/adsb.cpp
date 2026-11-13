@@ -16,6 +16,7 @@ void AdsbService::tick(uint32_t now_ms) {
     const protocol::AdsbReference here = reference(gate.own);
     events::AdsbFrame frame{};
     while (frames_.pop(frame)) hear(frame, here, now_ms);
+    own_transponder_.tick(now_ms);
     // INFO: fc 12nov26 every pass, so no time the cache holds outlives its rule across the clock's
     // wrap
     assembly_.age_out(now_ms);
@@ -49,6 +50,8 @@ void AdsbService::hear(const events::AdsbFrame& frame, const protocol::AdsbRefer
         refuse(frame, status);
         return;
     }
+    // INFO: fc 13nov26 before the fold drops the own ICAO, so a set address still reads as heard
+    own_transponder_.hear(message, now_ms);
     const bus::State& state = context_.state;
     const uint32_t now_s = state.traffic_now_s(now_ms);
     const events::Stamp received =

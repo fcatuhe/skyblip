@@ -2,6 +2,7 @@
 #define SKYBLIP_CORE_COMMS_PEER_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/comms/link_registry.h"
 #include "core/events/stamp.h"
@@ -48,6 +49,15 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame);
 
 enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
+// INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
+constexpr int kPeerCallsignBytes = 9;
+
+struct OwnTransponderHeard {
+    uint32_t address{0};
+    char callsign[kPeerCallsignBytes]{};
+    uint8_t aircraft_category{0};
+};
+
 struct PeerHealth {
     uint32_t boot_epoch{0};
     bool listening{false};
@@ -58,6 +68,7 @@ struct PeerHealth {
     bool alarm_granted{false};
     ExportReference export_reference{ExportReference::None};
     bool paired{false};
+    std::optional<OwnTransponderHeard> own_transponder{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);
@@ -72,9 +83,6 @@ struct ObservationFrame {
 
 int write_observation(const model::AircraftObservation& observation, const ObservationFrame& frame,
                       uint8_t* out, int capacity);
-
-// INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
-constexpr int kPeerCallsignBytes = 9;
 
 struct PeerObservation {
     uint32_t boot_epoch{0};

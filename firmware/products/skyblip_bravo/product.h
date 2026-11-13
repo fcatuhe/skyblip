@@ -310,7 +310,8 @@ class Product {
     AdsbService adsb_{context_, adsb_frames_, settings_.own_icao, gate_};
     common::AlarmService alarm_{
         context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
-    PeerService peer_{context_, settings_, config_link_.config(), board_.receiver(), gate_};
+    PeerService peer_{context_,          settings_, config_link_.config(),
+                      board_.receiver(), gate_,     adsb_.own_transponder()};
     ButtonService button_{context_, config_link_.config(), alarm_, peer_};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,

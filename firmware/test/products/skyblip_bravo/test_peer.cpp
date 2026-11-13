@@ -415,6 +415,51 @@ TEST_CASE("bravo peer: the pinned Go's own ICAO drops its transponder, else Brav
     CHECK(field(served.last_health(), "own_icao_set") == "true");
 }
 
+// The Go proposes this address as its own ICAO, so it must outlive the filter it then sets.
+TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtered or not") {
+    Served served;
+    const auto cockpit_second = [&served](uint32_t own_icao) {
+        constexpr int8_t kCockpitDbm = -12;
+        const double latitude = BravoRig::kLatitude1e7 / 1e7;
+        const double longitude = BravoRig::kLongitude1e7 / 1e7;
+        served.rig.hear(adsb_identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
+        for (const bool odd : {false, true, false, true})
+            served.rig.hear(adsb_airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
+                            kCockpitDbm);
+        served.rig.push_fix();
+        served.claim(nullptr, own_icao);
+        served.run_for(1000);
+        served.rig.utc_offset_s++;
+    };
+    for (int second = 0; second < 3; second++) cockpit_second(0);
+    CHECK(field(served.last_health(), "own_transponder").empty());
+
+    for (uint32_t second = 0; second * 1000 <= bravo::OwnTransponder::kLeadHoldMs; second++)
+        cockpit_second(0);
+    CHECK(field(served.last_health(), "own_transponder") == std::to_string(kAircraft));
+    CHECK(field(served.last_health(), "own_transponder_callsign") == "FJABC");
+    CHECK(field(served.last_health(), "own_transponder_category") == "1");
+
+    for (int second = 0; second < 3; second++) cockpit_second(kAircraft);
+    CHECK(field(served.last_health(), "own_transponder") == std::to_string(kAircraft));
+}
+
+// The Go stores an own ICAO the pilot confirmed, and the Bravo in the same aircraft keeps it too.
+TEST_CASE(
+    "bravo peer: Bravo stores the own ICAO of its pinned Go, and keeps it when the Go has none") {
+    Served served;
+    served.seconds(1, true, nullptr);
+    REQUIRE(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    served.claim(nullptr, kAircraft);
+    served.seconds(1, true, nullptr);
+    CHECK(served.rig.product.settings().own_icao == kAircraft);
+    CHECK(field(served.last_health(), "own_icao_set") == "true");
+
+    // A Go cleared on its glass sends no own_icao, and Bravo keeps what it was given.
+    served.seconds(2, true, nullptr);
+    CHECK(served.rig.product.settings().own_icao == kAircraft);
+}
+
 TEST_CASE("bravo peer: a stranger's claim never sets the reference or the own ICAO") {
     Served served(false);
     PairedLink stranger{served.rig.platform.link(), 2, kStranger};
@@ -427,6 +472,7 @@ TEST_CASE("bravo peer: a stranger's claim never sets the reference or the own IC
     CHECK(served.rig.product.gate().choose(served.rig.state().own, served.rig.now_ms).reference ==
           comms::ExportReference::None);
     CHECK(served.rig.product.gate().own_icao(0) == 0);
+    CHECK(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
 }
 
 TEST_CASE("bravo peer: a malformed claim is refused and counted, and changes nothing") {

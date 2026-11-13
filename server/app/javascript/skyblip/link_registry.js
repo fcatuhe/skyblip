@@ -1886,6 +1886,21 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "boolean",
           "required": true
+        },
+        {
+          "name": "own_transponder",
+          "number": 13,
+          "type": "unsigned"
+        },
+        {
+          "name": "own_transponder_callsign",
+          "number": 14,
+          "type": "text"
+        },
+        {
+          "name": "own_transponder_category",
+          "number": 15,
+          "type": "unsigned"
         }
       ]
     },
