@@ -963,7 +963,7 @@ The install report's arithmetic and its blob (#278, retired with #294).
 
 **install report**
 
-- a boot on probation starts a new run, a boot on the old image does not
+- a probation boot starts a new run, a boot of the old image does not
 - the blob reads back what was written, and refuses another layout
 - the boot counts stop at 255 rather than wrap to none
 
