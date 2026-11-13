@@ -117,7 +117,7 @@ TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz chann
     config.gaussian_bt_e2 = adsl::kUplinkGaussianBtE2;
     config.sync = adsl::kUplinkSync;
     config.sync_bits = adsl::kUplinkSyncBits;
-    config.payload_bytes = adsl::kUplinkFrameBytes;
+    config.payload_bytes = 1 + adsl::kUplinkMaxLength;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.bitrate == 200000);
     CHECK(chip.deviation_hz > 49990);
@@ -126,10 +126,9 @@ TEST_CASE("sx1262: the O band is programmed for 200 kbps GMSK in a 250 kHz chann
     // The narrowest entry of DS 13.4.6's table that still passes 250 kHz. The
     // one below it, 234.3 kHz, clips the channel.
     CHECK(chip.rx_bandwidth == 0x19);
-    CHECK(chip.payload_bytes == adsl::kUplinkFrameBytes);
-    // A whole RS(255,223) codeword is what this band reads, and the packet
-    // handler's length field is exactly wide enough for it.
-    CHECK(chip.payload_bytes == 255);
+    CHECK(chip.payload_bytes == 1 + adsl::kUplinkMaxLength);
+    // The length byte and the longest G.3 packet, ten records, read as one fixed block.
+    CHECK(chip.payload_bytes == 230);
 }
 
 TEST_CASE("sx1262: a modem left on its reset defaults frames nothing off the air") {

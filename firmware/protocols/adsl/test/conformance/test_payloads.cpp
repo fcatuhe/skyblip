@@ -1,30 +1,114 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status payload the component writes, and the payloads it
 // does not.
 #include <cstdint>
+#include <cstring>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl/reed_solomon.h"
+#include "protocols/adsl/test/conformance/reference.h"
 #include "protocols/adsl/transmit.h"
 #include "protocols/adsl/uplink.h"
 #include "protocols/common/bit_field.h"
+#include "protocols/common/xxtea.h"
 
 using namespace skyblip;
 
-// TODO: fc 18sep26 the uplink frame is a house format: 16-byte records, no verbatim payload
-TEST_CASE(
-    "ADS-L.4.SRD860.G.3: an uplink record is a 30-bit address and the Traffic payload, "
-    "verbatim" *
-    doctest::skip()) {
-    const int record_bits = 30 + 2 + 120;
-    CHECK(record_bits == 152);
-    CHECK(adsl::Uplink::kRecordBytes * 8 == record_bits);
-    CHECK(adsl::Uplink::kMaxTargets == 10);
+namespace {
+adsl::Packet relayed_traffic(uint32_t address, uint8_t timestamp) {
+    adsl::Traffic traffic = adsl::conformance::reference_traffic();
+    traffic.address = address;
+    traffic.timestamp = timestamp;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, traffic);
+    return packet;
 }
 
-// TODO: fc 18sep26 an uplink record carries no timestamp, so its age cannot be checked at all
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed Traffic payload older than 10 seconds is not forwarded" *
-          doctest::skip()) {
-    FAIL("no timestamp travels with a relayed target, so nothing here can refuse a stale one");
+void sent_uplink(const adsl::Packet* traffic, int count, uint8_t* packet) {
+    REQUIRE(adsl::Uplink{}.encode(0x00FFFE, adsl::kAddressTableManufacturerFirst, traffic, count,
+                                  packet) == wire::Status::Ok);
+}
+}  // namespace
+
+// The payload is read back by hand from the scrambled bytes, at G.3's own offsets.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.3: an uplink record is a 30-bit address and the Traffic payload, "
+    "verbatim") {
+    adsl::Packet traffic[2] = {relayed_traffic(0x3C1234, 8), relayed_traffic(0x3C5678, 12)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent_uplink(traffic, 2, packet);
+
+    const int data_bytes = adsl::kUplinkHeaderBytes + adsl::uplink_payload_bytes(2);
+    uint32_t words[(adsl::kUplinkHeaderBytes + 191) / 4];
+    std::memcpy(words, packet + 2, static_cast<size_t>(data_bytes));
+    wire::xxtea_decrypt(words, static_cast<uint32_t>(data_bytes / 4), wire::kXxteaZeroKey, 6);
+    uint8_t data[adsl::kUplinkHeaderBytes + 191];
+    std::memcpy(data, words, static_cast<size_t>(data_bytes));
+
+    CHECK(data[0] == 4);
+    for (int i = 0; i < 2; i++) {
+        const uint8_t* record = data + adsl::kUplinkHeaderBytes + 19 * i;
+        const uint32_t address_word = wire::read_bits(record, {0, 30});
+        CHECK(address_word == wire::read_bits(traffic[i].payload + 1, {0, 30}));
+        CHECK(wire::read_bits(record, {30, 2}) == 0);
+        CHECK(std::memcmp(record + 4, traffic[i].payload + 5, 15) == 0);
+    }
+    CHECK(adsl::uplink_payload_bytes(1) == 19);
+    CHECK(adsl::uplink_payload_bytes(2) == 39);
+    CHECK(adsl::uplink_payload_bytes(10) == 191);
+    CHECK(adsl::kUplinkMaxTargets == 10);
+}
+
+// The receiver counts records from D.1.1's length byte, since nothing else in the packet says.
+TEST_CASE("ADS-L.4.SRD860.G.3: the number of targets is read from the Packet Length field") {
+    for (int count = 0; count <= adsl::kUplinkMaxTargets; count++) {
+        adsl::Packet traffic[adsl::kUplinkMaxTargets];
+        for (int i = 0; i < count; i++)
+            traffic[i] = relayed_traffic(0x100000u + static_cast<uint32_t>(i), 0);
+        uint8_t packet[1 + adsl::kUplinkMaxLength];
+        sent_uplink(traffic, count, packet);
+        CHECK(packet[0] == adsl::uplink_length(count));
+
+        adsl::Packet heard[adsl::kUplinkMaxTargets];
+        adsl::UplinkStatistics statistics;
+        REQUIRE(adsl::Uplink{}.decode(packet, sizeof(packet), heard, adsl::kUplinkMaxTargets,
+                                      statistics) == wire::Status::Ok);
+        CHECK(statistics.targets == count);
+    }
+}
+
+// G.1.1 counts quarter seconds inside 15 s, so a record dated 40 quarters ago is exactly 10 s old.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed Traffic payload older than 10 seconds is not forwarded") {
+    const uint32_t cycle_start_s = 1785628815;
+    const adsl::Packet record = relayed_traffic(0x3C1234, 0);
+    CHECK(adsl::uplink_record_current(record, cycle_start_s + 10, 0));
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 10, 250));
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 14, 750));
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed timestamp may not be in the future") {
+    const uint32_t cycle_start_s = 1785628815;
+    const adsl::Packet record = relayed_traffic(0x3C1234, 4);
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s, 0));
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s, 750));
+    CHECK(adsl::uplink_record_current(record, cycle_start_s + 1, 0));
+}
+
+// The header byte is in clear, and its error control bit says the parity is E.3.2's.
+TEST_CASE("ADS-L.4.SRD860.G.3: the uplink is sent with FEC, as an Issue 2 payload") {
+    adsl::Packet traffic[1] = {relayed_traffic(0x3C1234, 0)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent_uplink(traffic, 1, packet);
+    CHECK((packet[1] & 0x0F) == adsl::Packet::kProtocolVersionIssue2);
+    CHECK(((packet[1] >> 7) & 1) == 1);
+    CHECK(((packet[1] >> 4) & 1) == 0);
+
+    const int covered = 1 + adsl::kUplinkHeaderBytes + 19;
+    uint8_t block[adsl::ReedSolomon255::kDataBytes] = {0};
+    std::memcpy(block + adsl::ReedSolomon255::kDataBytes - covered, packet + 1, covered);
+    uint8_t parity[adsl::ReedSolomon255::kParityBytes];
+    adsl::ReedSolomon255{}.encode(block, parity);
+    CHECK(std::memcmp(packet + 1 + covered, parity, sizeof(parity)) == 0);
 }
 
 // TODO: fc 18sep26 no FIS-B: DO-358B ground uplink messages are neither received nor decoded

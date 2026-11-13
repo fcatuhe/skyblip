@@ -243,6 +243,7 @@ struct State {
         uint32_t uplink_frames{0};
         uint32_t uplink_bad{0};
         uint32_t uplink_targets{0};
+        uint32_t uplink_stale{0};
     } air{};
 
     bool panel_presented{false};

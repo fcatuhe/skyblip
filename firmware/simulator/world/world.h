@@ -120,6 +120,8 @@ class Sky {
     static constexpr double kThreatSinkMps = -3;
     // INFO: fc 03aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
     static constexpr double kGroundStationRangeM = 12000;
+    // INFO: fc 13nov26 the simulated skyPost sends as a skyBlip, under serial 0xFFFE nobody holds
+    static constexpr uint32_t kGroundStationAddress = 0x00FFFE;
 
     const models::GnssTruth& own_;
     Air air_{};

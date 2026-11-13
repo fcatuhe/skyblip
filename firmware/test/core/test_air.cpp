@@ -216,21 +216,26 @@ TEST_CASE("air: a report shorter than the dwell reads is refused") {
 // O-band uplink frame into the M-band framer, where it failed and was counted
 // as radio noise.
 TEST_CASE("air: an O-band burst is named an uplink frame without being decoded") {
-    uint8_t frame[adsl::kUplinkFrameBytes];
-    fill(frame, adsl::kFrameBytes, 9);
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    fill(packet, sizeof(packet), 9);
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3));
     protocol::Frame out{};
-    CHECK(protocol::receive_burst(model::Band::O, frame, adsl::kUplinkFrameBytes, out) ==
+    CHECK(protocol::receive_burst(model::Band::O, packet, sizeof(packet), out) ==
           protocol::System::AdslUplink);
-    // The codeword is eleven times longer than a Frame and stays where the
+    // The packet is up to nine times longer than a Frame and stays where the
     // executor put it, so nothing was copied into out.
     CHECK(out.system == protocol::System::Unknown);
     CHECK(out.bytes == 0);
 }
 
 TEST_CASE("air: an O-band burst of the wrong length is not an uplink frame") {
-    uint8_t frame[adsl::kUplinkFrameBytes] = {0};
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
     protocol::Frame out{};
-    CHECK(protocol::receive_burst(model::Band::O, frame, adsl::kFrameBytes, out) ==
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(3) + 1);
+    CHECK(protocol::receive_burst(model::Band::O, packet, sizeof(packet), out) ==
+          protocol::System::Unknown);
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(10));
+    CHECK(protocol::receive_burst(model::Band::O, packet, adsl::kFrameBytes, out) ==
           protocol::System::Unknown);
 }
 
@@ -251,14 +256,16 @@ TEST_CASE("air: an M-band burst is still framed and named from its sync tail") {
 
 // The O-band framing a transmitter uses, round-tripped through the same sync
 // strip the radio performs: encode and decode change together.
-TEST_CASE("air: an O-band burst carries the sync word, the length byte and the codeword") {
-    uint8_t frame[adsl::kUplinkFrameBytes];
-    for (int i = 0; i < adsl::kUplinkFrameBytes; i++) frame[i] = static_cast<uint8_t>(i * 7 + 1);
-    uint8_t burst[adsl::kUplinkBurstBytes] = {0};
-    CHECK(adsl::encode_o_band(frame, burst) == static_cast<size_t>(adsl::kUplinkBurstBytes));
+TEST_CASE("air: an O-band burst carries the sync word, the length byte and the packet") {
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    for (int i = 0; i < static_cast<int>(sizeof(packet)); i++)
+        packet[i] = static_cast<uint8_t>(i * 7 + 1);
+    packet[0] = static_cast<uint8_t>(adsl::kUplinkMaxLength);
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
+    CHECK(adsl::encode_o_band(packet, burst) == static_cast<size_t>(adsl::kUplinkMaxBurstBytes));
     // §C.4.3, then §D.1.1: no Manchester on this band, so the bytes are the bytes.
     CHECK(burst[0] == 0x2D);
     CHECK(burst[1] == 0xD4);
-    CHECK(burst[2] == adsl::kUplinkFrameBytes);
-    CHECK(std::memcmp(burst + 3, frame, adsl::kUplinkFrameBytes) == 0);
+    CHECK(burst[2] == adsl::kUplinkMaxLength);
+    CHECK(std::memcmp(burst + 2, packet, sizeof(packet)) == 0);
 }

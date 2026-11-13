@@ -158,11 +158,13 @@ TEST_CASE("scenario: uplink RX merges with direct RX (dedup, prefer direct)") {
 
     // Encode+decode through the real uplink codec (the anti-drift lock).
     protocol::AdslUplink codec;
-    uint8_t frame[protocol::AdslUplink::kFrameBytes];
-    REQUIRE(codec.encode(&up, 1, 0, frame) == Status::Ok);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes];
+    REQUIRE(codec.encode(&up, 1, own.utc_s, 300, 0x00FFFE, adsl::kAddressTableManufacturerFirst,
+                         packet) == Status::Ok);
     model::AircraftObservation decoded[4];
     protocol::AdslUplink::DecodeStatistics statistics;
-    REQUIRE(codec.decode(frame, decoded, 4, statistics) == Status::Ok);
+    REQUIRE(codec.decode(packet, sizeof(packet), own.utc_s, 300, decoded, 4, statistics) ==
+            Status::Ok);
     REQUIRE(statistics.targets == 1);
     table.update(decoded[0], own.utc_s);
     CHECK(table.at(table.find(5, 0x3FBEEF))->observation.source == model::Source::AdslUplink);

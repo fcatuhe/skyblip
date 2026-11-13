@@ -36,13 +36,20 @@ void shift_left(uint8_t* data, size_t bytes, uint8_t bits) {
     }
 }
 
+bool uplink_packet(const uint8_t* data, size_t bytes) {
+    if (bytes < 1 || static_cast<size_t>(data[0]) + 1 > bytes) return false;
+    for (int count = 0; count <= adsl::kUplinkMaxTargets; count++)
+        if (data[0] == adsl::uplink_length(count)) return true;
+    return false;
+}
+
 }  // namespace
 
 uint8_t frame_bytes(System system) {
     switch (system) {
         case System::AdslDirect: return adsl::kFrameBytes;
         case System::Alptas: return alptas::kFrameBytes;
-        case System::AdslUplink: return adsl::kUplinkFrameBytes;
+        case System::AdslUplink: return static_cast<uint8_t>(1 + adsl::kUplinkMaxLength);
         case System::Unknown: return 0;
     }
     return 0;
@@ -85,7 +92,7 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
 System receive_burst(model::Band band, const uint8_t* data, size_t bytes, Frame& out) {
     if (band == model::Band::O) {
         out = Frame{};
-        return bytes == adsl::kUplinkFrameBytes ? System::AdslUplink : System::Unknown;
+        return uplink_packet(data, bytes) ? System::AdslUplink : System::Unknown;
     }
     return receive_m_band(data, bytes, out) ? out.system : System::Unknown;
 }

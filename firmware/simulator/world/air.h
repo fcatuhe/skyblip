@@ -24,7 +24,7 @@ enum class AirEvent : uint8_t {
 
 // The longest burst the channel carries: an O-band uplink frame, which is not
 // Manchester-coded and is eleven times what an M-band one is.
-constexpr int kMaxBurstBytes = adsl::kUplinkBurstBytes;
+constexpr int kMaxBurstBytes = adsl::kUplinkMaxBurstBytes;
 static_assert(protocol::kTxChipBytes <= kMaxBurstBytes, "an M-band burst would not fit the air");
 
 struct AirRecord {
@@ -88,7 +88,7 @@ class Air {
 
     // The same for the O band, where there is no Manchester and no shared
     // window: strip §C.4.3's sync word and the length byte behind it, and what
-    // is left is the codeword.
+    // is left is the length byte and the uplink packet.
     static bool framed_uplink(const AirRecord& record, uint8_t* frame);
 
     void clear();

@@ -18,7 +18,8 @@ TEST_CASE("ADS-L.4.SRD860.D.1: the data link mediates the channel, adds parity, 
     FAIL("prose: the layer's remit, specified by D.1.1, D.1.2, D.3 and E.3");
 }
 
-// The length byte rides in the sync word, which is why a burst of any other length never frames.
+// The M-band length byte rides in the sync word, which is why a burst of any other length never
+// frames.
 TEST_CASE(
     "ADS-L.4.SRD860.D.1.1: the Packet Length field counts the message behind it, not itself") {
     const int network_header = 1;
@@ -27,7 +28,10 @@ TEST_CASE(
     CHECK(int(adsl::Packet::kDataBytes) == network_header + adsl_data + parity);
     CHECK(sizeof(adsl::Packet) == adsl::Packet::kDataBytes);
     CHECK(int(adsl::kSyncWord & 0xFFu) == adsl::Packet::kDataBytes);
-    CHECK(adsl::kUplinkSync[2] == adsl::kUplinkFrameBytes);
+    const int uplink_header = 5;
+    const int fec_parity = 32;
+    CHECK(adsl::uplink_length(1) == network_header + uplink_header + 19 + fec_parity);
+    CHECK(adsl::uplink_length(10) == network_header + uplink_header + 191 + fec_parity);
 }
 
 // TODO: fc 18sep26 no O-band LDR radio here: the dwell map carries M-band and O-band HDR only

@@ -4,22 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "protocols/adsl/packet.h"
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/common/status.h"
 
 namespace skyblip::adsl {
 
-// §C.4: the O-band HDR carrier is not Manchester-coded, so the detector matches
-// the sync word itself. §C.4.3 gives two bytes, 0x2D 0xD4, and §D.1.1 puts the
-// Packet Length field immediately behind them: the length of the message
-// excluding the length byte itself, which for this frame is the whole RS
-// codeword. Arming on all three costs nothing and rejects a burst of any other
-// length before the decoder ever sees it.
-static_assert(ReedSolomon255::kCodewordBytes <= 255, "the §D.1.1 length field is one byte wide");
-constexpr uint8_t kUplinkFrameBytes = static_cast<uint8_t>(ReedSolomon255::kCodewordBytes);
-constexpr uint8_t kUplinkSync[3] = {0x2D, 0xD4, kUplinkFrameBytes};
-constexpr uint8_t kUplinkSyncBits = 24;
-constexpr int kUplinkBurstBytes = static_cast<int>(sizeof(kUplinkSync)) + kUplinkFrameBytes;
+constexpr uint8_t kUplinkSync[2] = {0x2D, 0xD4};
+constexpr uint8_t kUplinkSyncBits = 16;
 
 // §C.4's modulation table, which is not §C.2's: the O band runs at twice the
 // chip rate, is Gaussian-shaped, and needs a wider receiver. A dwell that
@@ -33,55 +25,57 @@ constexpr uint16_t kUplinkGaussianBtE2 = 50;
 // §C.4.2: the preamble is "10" twelve times, ahead of the sync word.
 constexpr uint16_t kUplinkPreambleChips = 24;
 
-// How long one uplink burst occupies the channel: preamble, sync word, length
-// byte and codeword, at §C.4's chip rate. The dwell map (core/timing/slot.h) is
+// INFO: fc 13nov26 G.3: a 30-bit address, 2 reserved bits and the 120-bit Traffic payload, verbatim
+constexpr int kUplinkRecordBytes = 19;
+constexpr int kUplinkMaxTargets = 10;
+constexpr int kUplinkHeaderBytes = 5;
+constexpr int kUplinkParityBytes = ReedSolomon255::kParityBytes;
+
+// INFO: fc 13nov26 F.2.5: the payload is padded so that it is 3 bytes past a whole number of words
+constexpr int uplink_payload_bytes(int count) {
+    return kUplinkRecordBytes * count + (3 - kUplinkRecordBytes * count % 4 + 4) % 4;
+}
+// INFO: fc 13nov26 D.1.1's Packet Length: network header, ADS-L data and parity, not itself
+constexpr int uplink_length(int count) {
+    return 1 + kUplinkHeaderBytes + uplink_payload_bytes(count) + kUplinkParityBytes;
+}
+constexpr int kUplinkMaxLength = uplink_length(kUplinkMaxTargets);
+static_assert(kUplinkMaxLength <= 255, "the §D.1.1 length field is one byte wide");
+static_assert(1 + kUplinkHeaderBytes + uplink_payload_bytes(kUplinkMaxTargets) <=
+                  ReedSolomon255::kDataBytes,
+              "E.3.2 covers at most 223 bytes");
+constexpr int kUplinkMaxBurstBytes = static_cast<int>(sizeof(kUplinkSync)) + 1 + kUplinkMaxLength;
+
+// How long the longest uplink burst occupies the channel: preamble, sync word, length
+// byte and packet, at §C.4's chip rate. The dwell map (core/timing/slot.h) is
 // cut against this, so it is derived rather than remembered.
 constexpr uint32_t kUplinkBurstBits =
-    kUplinkPreambleChips + kUplinkSyncBits + 8u * kUplinkFrameBytes;
+    kUplinkPreambleChips + kUplinkSyncBits + 8u * (1u + kUplinkMaxLength);
 constexpr uint32_t kUplinkBurstUs = kUplinkBurstBits * 1000000u / kUplinkChipRateBps;
 
-size_t encode_o_band(const uint8_t* frame, uint8_t* out);
+// INFO: fc 13nov26 G.3: a relayed Traffic payload no older than 10 s and not from the future
+constexpr uint32_t kUplinkRecordMaxAgeMs = 10000;
+bool uplink_record_current(const Packet& traffic, uint32_t utc_s, int32_t into_ms);
 
-struct UplinkTarget {
-    uint32_t address{0};
-    uint8_t address_mapping_table{0};
-    uint8_t flight_state{0};
-    uint8_t aircraft_category{0};
-    uint16_t speed_q{0};
-    int32_t latitude_1e7{0};
-    int32_t longitude_1e7{0};
-    int32_t altitude_m{0};
+struct UplinkStatistics {
+    int targets{0};
+    int corrected{0};
+    int rejected{0};
 };
 
 class Uplink {
    public:
-    static constexpr int kVersion = 1;
-    static constexpr int kRecordBytes = 16;
-    static constexpr int kHeaderBytes = 3;
-    static constexpr int kMaxTargets = (ReedSolomon255::kDataBytes - kHeaderBytes) / kRecordBytes;
-    static constexpr int kFrameBytes = ReedSolomon255::kCodewordBytes;
-
-    struct DecodeStatistics {
-        int targets{0};
-        int corrected{0};
-        // Records the frame carried and the decoder refused. Reed-Solomon can
-        // correct to a valid codeword that is not the one that was sent, so a
-        // frame that passes parity can still hold nonsense: what it holds is
-        // checked before any of it becomes traffic.
-        int rejected{0};
-    };
-
-    Uplink() = default;
-
-    wire::Status encode(const UplinkTarget* targets, int count, uint8_t key_index,
-                        uint8_t out_frame[kFrameBytes]) const;
-
-    wire::Status decode(const uint8_t frame[kFrameBytes], UplinkTarget* targets, int capacity,
-                        DecodeStatistics& statistics) const;
+    // INFO: fc 13nov26 packet is the Packet Length byte and what follows it, as D.1.1 sends them
+    wire::Status encode(uint32_t sender_address, uint8_t sender_table, const Packet* traffic,
+                        int count, uint8_t* packet) const;
+    wire::Status decode(const uint8_t* packet, size_t bytes, Packet* traffic, int capacity,
+                        UplinkStatistics& statistics) const;
 
    private:
     ReedSolomon255 reed_solomon_;
 };
+
+size_t encode_o_band(const uint8_t* packet, uint8_t* out);
 
 }
 

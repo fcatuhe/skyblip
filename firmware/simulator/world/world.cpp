@@ -216,19 +216,30 @@ void Sky::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
     relay(epoch_us, own);
 }
 
-// What the ground station knows about one aircraft, which is less than the
-// aircraft's own frame carries: an address, a place, a height, a speed. No
-// climb rate and no track, because an uplink record has no room for them - which
-// is the whole reason a direct reception outranks a relay of the same aircraft.
+namespace {
+
+int16_t climb_e8_of(const VirtualAircraft& aircraft) {
+    constexpr double kEighthsPerMps = 8;
+    return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
+}
+
+}  // namespace
+
+// What the ground station heard of one aircraft, which G.3 forwards as a whole
+// Traffic payload: the aircraft's own address, place, height and motion.
 model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
                                            const model::Ownship& own) const {
     model::AircraftObservation observation{};
     observation.address = aircraft.address;
-    observation.address_mapping_table = 6;
+    observation.address_mapping_table = adsl::kAddressTableFlarm;
     observation.aircraft_category = 4;
     observation.flight_state = 2;
+    observation.emergency = adsl::kEmergencyNone;
     observation.speed_q = static_cast<uint16_t>(aircraft.speed_mps * 4);
     observation.speed_valid = true;
+    observation.climb_e8 = climb_e8_of(aircraft);
+    observation.climb_valid = true;
+    observation.track_c9 = static_cast<uint16_t>(aircraft.track_deg * 512 / 360) & 0x1FF;
     observation.latitude_1e7 = latitude_1e7_of(aircraft);
     observation.longitude_1e7 = longitude_1e7_of(aircraft);
     observation.altitude_m =
@@ -253,10 +264,13 @@ void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
     }
     if (relayed_count == 0) return;
 
-    uint8_t frame[adsl::kUplinkFrameBytes] = {0};
-    if (uplink_.encode(relayed, relayed_count, /*key_index=*/0, frame) != Status::Ok) return;
-    uint8_t burst[adsl::kUplinkBurstBytes] = {0};
-    const size_t burst_bytes = adsl::encode_o_band(frame, burst);
+    const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    if (uplink_.encode(relayed, relayed_count, utc_s, timing::kGroundEmitStartMs,
+                       kGroundStationAddress, settings::kAddressMappingTable, packet) != Status::Ok)
+        return;
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
+    const size_t burst_bytes = adsl::encode_o_band(packet, burst);
 
     air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, adsl::kOBandHz,
               burst, static_cast<uint16_t>(burst_bytes), rssi_at(kGroundStationRangeM),
@@ -273,11 +287,6 @@ int8_t Sky::rssi_at(double range_m) {
 }
 
 namespace {
-
-int16_t climb_e8_of(const VirtualAircraft& aircraft) {
-    constexpr double kEighthsPerMps = 8;
-    return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
-}
 
 // INFO: fc 13nov26 ADS-L F.2.3: a unit beside a transponder sends its ICAO address, under table 5
 uint8_t address_mapping_table_of(const VirtualAircraft& aircraft) {

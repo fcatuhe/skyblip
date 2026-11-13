@@ -12,6 +12,10 @@ class ReedSolomon255 {
     static constexpr int kDataBytes = 223;
     static constexpr int kParityBytes = kCodewordBytes - kDataBytes;
     static constexpr int kMaxErrors = kParityBytes / 2;
+    // INFO: fc 13nov26 E.3.2: field 1+x2+x3+x4+x8, roots beta^(121+i) where beta is alpha^11
+    static constexpr uint16_t kFieldPolynomial = 0x11D;
+    static constexpr int kPrimitiveElement = 11;
+    static constexpr int kFirstRoot = 121;
 
     ReedSolomon255();
 
@@ -31,6 +35,9 @@ class ReedSolomon255 {
         return antilogarithm_[logarithm_[left] + logarithm_[right]];
     }
     uint8_t inverse(uint8_t left) const { return antilogarithm_[255 - logarithm_[left]]; }
+    uint8_t root_power(int exponent) const {
+        return antilogarithm_[(kPrimitiveElement * exponent) % 255];
+    }
     void compute_syndromes(const uint8_t* codeword, uint8_t* syndromes, bool& all_zero) const;
 };
 

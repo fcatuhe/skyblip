@@ -175,7 +175,7 @@ void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     if (band == timing::Band::O) {
         plan.sync = adsl::kUplinkSync;
         plan.sync_bits = adsl::kUplinkSyncBits;
-        plan.rx_bytes = adsl::kUplinkFrameBytes;
+        plan.rx_bytes = 1 + adsl::kUplinkMaxLength;
         plan.bitrate = adsl::kUplinkChipRateBps;
         plan.deviation_hz = adsl::kUplinkDeviationHz;
         plan.bandwidth_hz = adsl::kUplinkChannelBandwidthHz;

@@ -93,11 +93,13 @@ TEST_CASE("ADS-L.4.SRD860.C.4.3: the O-band HDR sync word is 0x2D 0xD4, uncoded"
     CHECK(adsl::kUplinkSync[0] == 0x2D);
     CHECK(adsl::kUplinkSync[1] == 0xD4);
 
-    uint8_t frame[adsl::kUplinkFrameBytes] = {0};
-    frame[0] = 0xA5;
-    uint8_t out[adsl::kUplinkBurstBytes] = {0};
-    CHECK(adsl::encode_o_band(frame, out) == static_cast<size_t>(adsl::kUplinkBurstBytes));
+    uint8_t packet[1 + adsl::kUplinkMaxLength] = {0};
+    packet[0] = static_cast<uint8_t>(adsl::uplink_length(1));
+    packet[1] = 0xA5;
+    uint8_t out[adsl::kUplinkMaxBurstBytes] = {0};
+    CHECK(adsl::encode_o_band(packet, out) == 3u + adsl::uplink_length(1));
     CHECK(out[0] == 0x2D);
     CHECK(out[1] == 0xD4);
+    CHECK(out[2] == adsl::uplink_length(1));
     CHECK(out[3] == 0xA5);
 }

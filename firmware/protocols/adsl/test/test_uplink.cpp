@@ -14,17 +14,36 @@ using skyblip::adsl::ReedSolomon255;
 using skyblip::wire::Status;
 
 namespace {
-adsl::UplinkTarget make_target(uint32_t address) {
-    adsl::UplinkTarget target;
-    target.address = address & 0xFFFFFF;
-    target.address_mapping_table = 6;
-    target.aircraft_category = 4;
-    target.flight_state = 2;
-    target.speed_q = 180;
-    target.latitude_1e7 = 481234500;
-    target.longitude_1e7 = 81234500;
-    target.altitude_m = 1234;
-    return target;
+constexpr uint32_t kStation = 0x00FFFE;
+constexpr uint8_t kStationTable = 9;
+
+adsl::Packet make_target(uint32_t address, uint8_t timestamp = 0) {
+    adsl::Traffic traffic;
+    traffic.address = address & 0xFFFFFF;
+    traffic.address_mapping_table = adsl::kAddressTableFlarm;
+    traffic.timestamp = timestamp;
+    traffic.aircraft_category = 4;
+    traffic.flight_state = 2;
+    traffic.emergency = adsl::kEmergencyNone;
+    traffic.position_valid = true;
+    traffic.latitude_1e7 = 481234500;
+    traffic.longitude_1e7 = 81234500;
+    traffic.altitude_valid = true;
+    traffic.altitude_m = 1234;
+    traffic.speed_valid = true;
+    traffic.speed_q = 180;
+    traffic.climb_valid = true;
+    traffic.climb_e8 = -12;
+    traffic.track_c9 = 77;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, traffic);
+    return packet;
+}
+
+int sent(const adsl::Packet* targets, int count, uint8_t* packet) {
+    adsl::Uplink up;
+    REQUIRE(up.encode(kStation, kStationTable, targets, count, packet) == Status::Ok);
+    return 1 + packet[0];
 }
 }  // namespace
 
@@ -121,78 +140,70 @@ TEST_CASE("reed-solomon: beyond 16 errors, detected vs silent miscorrection, cou
 }
 
 TEST_CASE("uplink: air<->ground round-trip is lossless at BER 0 (anti-drift lock)") {
+    adsl::Packet tx[adsl::kUplinkMaxTargets];
+    for (int i = 0; i < adsl::kUplinkMaxTargets; i++) tx[i] = make_target(0x200000 + i);
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    CHECK(sent(tx, adsl::kUplinkMaxTargets, packet) == 1 + adsl::kUplinkMaxLength);
+
     adsl::Uplink up;
-    adsl::UplinkTarget tx[adsl::Uplink::kMaxTargets];
-    int count = adsl::Uplink::kMaxTargets;
-    for (int i = 0; i < count; i++) tx[i] = make_target(0x200000 + i);
-
-    uint8_t frame[adsl::Uplink::kFrameBytes];
-    CHECK(up.encode(tx, count, /*key=*/0, frame) == Status::Ok);
-
-    adsl::UplinkTarget rx[adsl::Uplink::kMaxTargets];
-    adsl::Uplink::DecodeStatistics statistics;
-    CHECK(up.decode(frame, rx, count, statistics) == Status::Ok);
-    CHECK(statistics.targets == count);
+    adsl::Packet rx[adsl::kUplinkMaxTargets];
+    adsl::UplinkStatistics statistics;
+    CHECK(up.decode(packet, sizeof(packet), rx, adsl::kUplinkMaxTargets, statistics) == Status::Ok);
+    CHECK(statistics.targets == adsl::kUplinkMaxTargets);
     CHECK(statistics.corrected == 0);
-    for (int i = 0; i < count; i++) {
-        CHECK(rx[i].address == tx[i].address);
-        CHECK(rx[i].latitude_1e7 == tx[i].latitude_1e7);
-        CHECK(rx[i].longitude_1e7 == tx[i].longitude_1e7);
-        CHECK(rx[i].altitude_m == tx[i].altitude_m);
-        CHECK(int(rx[i].aircraft_category) == int(tx[i].aircraft_category));
-    }
+    for (int i = 0; i < adsl::kUplinkMaxTargets; i++)
+        CHECK(std::memcmp(rx[i].payload + 1, tx[i].payload + 1, adsl::Packet::kPayloadBytes - 1) ==
+              0);
 }
 
 TEST_CASE("uplink: survives up to 16 symbol errors on the wire") {
-    adsl::Uplink up;
     wire::Random random(0x55AA);
-    adsl::UplinkTarget tx[4];
+    adsl::Packet tx[4];
     for (int i = 0; i < 4; i++) tx[i] = make_target(0x300000 + i * 7);
-    uint8_t frame[adsl::Uplink::kFrameBytes];
-    REQUIRE(up.encode(tx, 4, 0, frame) == Status::Ok);
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    const int bytes = sent(tx, 4, packet);
 
-    // inject 16 symbol errors
-    bool used[adsl::Uplink::kFrameBytes] = {false};
+    bool used[1 + adsl::kUplinkMaxLength] = {false};
     for (int error = 0; error < 16; error++) {
         int position;
         do {
-            position = random.next() % adsl::Uplink::kFrameBytes;
+            position = 1 + static_cast<int>(random.next() % static_cast<uint32_t>(bytes - 1));
         } while (used[position]);
         used[position] = true;
-        frame[position] ^= static_cast<uint8_t>(0x80 | (random.next() & 0x7F));
+        packet[position] ^= static_cast<uint8_t>(0x80 | (random.next() & 0x7F));
     }
-    adsl::UplinkTarget rx[4];
-    adsl::Uplink::DecodeStatistics statistics;
-    CHECK(up.decode(frame, rx, 4, statistics) == Status::Ok);
+    adsl::Uplink up;
+    adsl::Packet rx[4];
+    adsl::UplinkStatistics statistics;
+    CHECK(up.decode(packet, static_cast<size_t>(bytes), rx, 4, statistics) == Status::Ok);
     CHECK(statistics.corrected == 16);
     CHECK(statistics.targets == 4);
-    CHECK(rx[0].address == tx[0].address);
-    CHECK(rx[3].latitude_1e7 == tx[3].latitude_1e7);
+    CHECK(rx[0].address() == tx[0].address());
+    CHECK(rx[3].latitude_1e7() == tx[3].latitude_1e7());
 }
 
 TEST_CASE("uplink: a destroyed frame is DETECTED (Status::Crc), never silently wrong") {
+    adsl::Packet tx[2] = {make_target(1), make_target(2)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 2, packet);
+    for (int i = 1; i < 41; i++) packet[i] ^= 0xFF;
     adsl::Uplink up;
-    adsl::UplinkTarget tx[2] = {make_target(1), make_target(2)};
-    uint8_t frame[adsl::Uplink::kFrameBytes];
-    REQUIRE(up.encode(tx, 2, 0, frame) == Status::Ok);
-    for (int i = 0; i < 40; i++) frame[i] ^= 0xFF;  // 40 > 16 errors
-    adsl::UplinkTarget rx[2];
-    adsl::Uplink::DecodeStatistics statistics;
-    Status status = up.decode(frame, rx, 2, statistics);
-    CHECK(status == Status::Crc);  // detected, not delivered
+    adsl::Packet rx[2];
+    adsl::UplinkStatistics statistics;
+    CHECK(up.decode(packet, sizeof(packet), rx, 2, statistics) == Status::Crc);
 }
 
-// What the dwell has to be armed with to hear a skyPost at all. Every one of
-// these is a number the receiver and the transmitter must agree on, and the
-// third was wrong: 0x18 is the M band's ADS-L data length, 24 bytes, and it was
-// carried over to a frame that is 255. A detector armed for it never matched.
+// What the dwell has to be armed with to hear a skyPost at all: C.4.3's two bytes, then the length.
 TEST_CASE("uplink: the sync word is C.4.3's, and the byte behind it is D.1.1's length") {
     CHECK(adsl::kUplinkSync[0] == 0x2D);
     CHECK(adsl::kUplinkSync[1] == 0xD4);
-    CHECK(adsl::kUplinkSync[2] == adsl::kUplinkFrameBytes);
-    CHECK(adsl::kUplinkFrameBytes == adsl::Uplink::kFrameBytes);
-    CHECK(adsl::kUplinkSyncBits == 24);
-    CHECK(adsl::kUplinkBurstBytes == 3 + adsl::Uplink::kFrameBytes);
+    CHECK(adsl::kUplinkSyncBits == 16);
+    adsl::Packet tx[3] = {make_target(1), make_target(2), make_target(3)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 3, packet);
+    uint8_t burst[adsl::kUplinkMaxBurstBytes];
+    CHECK(adsl::encode_o_band(packet, burst) == 3u + adsl::uplink_length(3));
+    CHECK(burst[2] == adsl::uplink_length(3));
     // §C.4: 200 kbps GMSK, BT 0.5, in a 250 kHz channel, ±50 kHz deviation.
     CHECK(adsl::kUplinkChipRateBps == 200000);
     CHECK(adsl::kUplinkDeviationHz == 50000);
@@ -200,21 +211,47 @@ TEST_CASE("uplink: the sync word is C.4.3's, and the byte behind it is D.1.1's l
     CHECK(adsl::kUplinkGaussianBtE2 == 50);
 }
 
+// A length that names no whole number of records is not an uplink packet, whatever it holds.
+TEST_CASE("uplink: a length G.3 cannot spell is refused before any decoding") {
+    adsl::Packet tx[1] = {make_target(1)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 1, packet);
+    adsl::Uplink up;
+    adsl::Packet rx[1];
+    adsl::UplinkStatistics statistics;
+    packet[0] = static_cast<uint8_t>(packet[0] + 1);
+    CHECK(up.decode(packet, sizeof(packet), rx, 1, statistics) == Status::Invalid);
+    packet[0] = static_cast<uint8_t>(packet[0] - 1);
+    CHECK(up.decode(packet, 10, rx, 1, statistics) == Status::Invalid);
+}
+
 // Reed-Solomon can decode to a valid codeword that is not the one that was sent.
 // A ground station reaches every aircraft in range at once, so one miscorrected
 // frame is a screenful of phantoms in front of everybody, and what a frame
 // carries is checked before any of it becomes a target.
 TEST_CASE("uplink: a record with no address and no place on the globe is refused") {
-    adsl::Uplink up;
-    adsl::UplinkTarget tx[3] = {make_target(0x600001), make_target(0), make_target(0x600003)};
-    tx[2].latitude_1e7 = 1200000000;  // 120 degrees north of nowhere
-    uint8_t frame[adsl::Uplink::kFrameBytes];
-    REQUIRE(up.encode(tx, 3, 0, frame) == Status::Ok);
+    adsl::Packet tx[3] = {make_target(0x600001), make_target(0), make_target(0x600003)};
+    tx[2].set_position_invalid();
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 3, packet);
 
-    adsl::UplinkTarget rx[3];
-    adsl::Uplink::DecodeStatistics statistics;
-    CHECK(up.decode(frame, rx, 3, statistics) == Status::Ok);
+    adsl::Uplink up;
+    adsl::Packet rx[3];
+    adsl::UplinkStatistics statistics;
+    CHECK(up.decode(packet, sizeof(packet), rx, 3, statistics) == Status::Ok);
     CHECK(statistics.targets == 1);
     CHECK(statistics.rejected == 2);
-    CHECK(rx[0].address == 0x600001u);
+    CHECK(rx[0].address() == 0x600001u);
+}
+
+// G.1.1's timestamp counts quarters inside 15 s, so 10 s of age is 40 quarters behind.
+TEST_CASE("uplink: a relayed record is current up to 10 s old, and never from the future") {
+    const uint32_t utc_s = 1785628815;  // 0 quarters into the 15 s cycle
+    const adsl::Packet fresh = make_target(1, 0);
+    CHECK(adsl::uplink_record_current(fresh, utc_s, 0));
+    CHECK(adsl::uplink_record_current(fresh, utc_s + 10, 0));
+    CHECK_FALSE(adsl::uplink_record_current(fresh, utc_s + 10, 250));
+    const adsl::Packet ahead = make_target(1, 1);
+    CHECK_FALSE(adsl::uplink_record_current(ahead, utc_s, 0));
+    CHECK(adsl::uplink_record_current(ahead, utc_s, 250));
 }

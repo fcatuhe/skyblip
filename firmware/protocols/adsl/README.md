@@ -8,7 +8,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 |---|---|---|
 | `packet.{h,cpp}` | E, F.2, G.1, G.2 | `Packet`, the 24 bytes the CRC covers: the network header, the F.2 header and its sender address, the G.1 Traffic and G.2 Status fields at the offsets the tables print, XXTEA scrambling (E.2), the CRC-24 (E.3.1) and the erasure repair a receiver runs before it. `Traffic` and `encode_traffic()`, `decode_traffic()` are the Traffic payload as plain values. `StatusReport` and `encode_status()` are the Status payload. `timestamp_code()` is G.1.1, `hfom_cm()` is G.1.14's HFOM, and the NACp and GVA tables are G.1.14 and G.1.15. The F.2.2 address tables and G.1.4's "no emergency" are named constants |
 | `physical.h` | C.2, C.4, D.1.1 | the two M-band channels and the O band, the M-band modulation and its 14 dBm e.r.p. ceiling, and the sync word with D.1.1's length byte behind it |
-| `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, E.3.2, G.3 | the O-band HDR modulation, sync and burst, and an RS(255,223) code. The records are still skyBlip's own format, not G.3's |
+| `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation, sync and burst, the G.3 Traffic Uplink packet with up to ten verbatim Traffic payloads and its 10 s age rule, and E.3.2's RS(255,223) code with its roots and zero prefix |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
 | `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the Traffic schedule for a ground second the integrator chooses, channel alternation, the 500 ms nav age and the Status period |
 | `version.h` | | `kVersion` and `kSpecification` |
@@ -27,7 +27,7 @@ These are skyBlip's choices, built on this stack:
 
 ## What is not implemented
 
-Each gap is a skipped case in the conformance suite, written as the clause requires (below): O-band LDR (C.3, D.1.2), the secure signature (E.4), the Reed-Solomon roots and block prefix E.3.2 names, the verbatim Traffic payload in an uplink record and its age (G.3), FIS-B (G.4), Remote Identification (G.5), privacy mode (F.2.4) and soft versioning (B.5). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
+Each gap is a skipped case in the conformance suite, written as the clause requires (below): O-band LDR (C.3, D.1.2), the secure signature (E.4), FIS-B (G.4), Remote Identification (G.5), privacy mode (F.2.4) and soft versioning (B.5). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
 
 ## Public API
 
@@ -37,7 +37,7 @@ Everything is in namespace `skyblip::adsl`.
 - `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `check_crc()` and `correct()`, and `kSyncWord`, `kFrameBytes`
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
-- `Uplink`, `UplinkTarget`, `encode_o_band()`, `ReedSolomon255`
+- `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
 - `on_schedule()`, `channel_in()`, `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
 - `kVersion`, `kSpecification`
@@ -78,6 +78,12 @@ The payload is 12 bytes, header included. The frame still carries 20 payload byt
 
 Every other G.1 table only writes its bounds out, and G.1.10, G.1.16 and G.1.17 add rules and no codes. A code marked 0 in the last column is one an Issue 1 receiver still reads as a true statement, so it stays at version 0 for the widest reach. The clause cases in `test/conformance/test_network.cpp` pin one row each.
 
+## The Traffic Uplink
+
+`Uplink::encode()` builds G.3's payload type 4 for a ground station: the station's own address in the F.2 header, then for each target the 30-bit address of the aircraft that sent it and its 120-bit Traffic payload copied byte for byte, then the padding F.2.5 asks for. The network header says version 1, because Issue 1 has no uplink, and sets the error control bit, because the parity is E.3.2's and not the CRC. `Uplink::decode()` counts the records from the D.1.1 length byte, as G.3 asks, refuses a length no whole number of records can spell, and refuses a record with no address or no position before it becomes a target. `uplink_record_current()` is G.3's age rule: a record is current up to 10 s after the instant its G.1.1 timestamp names, and never before it. The longest packet, ten records, is 229 bytes behind its length byte and takes 9.4 ms of air at C.4's 200 kbps (`kUplinkBurstUs`).
+
+E.3.2 computes the parity over the network header and the scrambled data, prefixed with zeros to 223 bytes, and sends no padding. `ReedSolomon255` is the code the clause prints: the field 1+x2+x3+x4+x8 (`kFieldPolynomial`, 0x11D), the primitive element 11 counted in index form, alpha^11, as CCSDS 131.0 and Karn's fec library count it (`kPrimitiveElement`), and 32 roots from the 121st (`kFirstRoot`). The conformance case compares it to a bit-by-bit encoder written from those three numbers and to one block the reedsolo library encoded.
+
 ## Reed-Solomon, `reed_solomon.cpp`
 
 | Our name | Textbook name |
@@ -93,6 +99,7 @@ Every other G.1 table only writes its bounds out, and G.1.10, G.1.16 and G.1.17 
 | `evaluator` | the error evaluator Ω(x) |
 | `locator_derivative` | Λ'(x), the formal derivative in Forney's formula |
 | `position_power`, `inverse_power` | X_k and its inverse |
+| `root_power(i)` | beta^i, where beta is alpha^11 |
 
 ## The conformance suite
 

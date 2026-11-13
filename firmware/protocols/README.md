@@ -8,7 +8,7 @@ A stack holds what its specification decides. What skyBlip chose stays outside i
 
 A file under `protocols/` includes only the C++ standard library, its own directory and `protocols/common/`. It never includes `core/`, `ports/`, `hardware/`, `products/`, `runtime/`, `ui/`, `simulator/` or Zephyr, and one stack never includes another. `core/` and `products/` may include `protocols/`. `scripts/check_protocol_boundary.py` holds every include to this rule, `scripts/test_check_protocol_boundary.py` checks the checker, and CI runs both.
 
-A stack speaks in its own plain types: `adsl::Traffic`, `adsl::StatusReport` and `adsl::UplinkTarget`, `adsb::Message` and `adsb::Track`, `alptas::Position`, and `wire::Status` for a frame it refuses. No `model::`, `events::` or `settings::` type appears inside one.
+A stack speaks in its own plain types: `adsl::Traffic`, `adsl::StatusReport` and `adsl::UplinkStatistics`, `adsb::Message` and `adsb::Track`, `alptas::Position`, and `wire::Status` for a frame it refuses. No `model::`, `events::` or `settings::` type appears inside one.
 
 Each stack carries a `README.md` saying what it implements and what it leaves out, a `version.h`, its code and a `test/` folder. Its tests include nothing from skyBlip either. They use the vendored doctest and `common/test/channel.h`, the bit-error channel the frames are pushed through.
 

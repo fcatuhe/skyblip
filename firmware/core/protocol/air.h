@@ -20,7 +20,7 @@ namespace skyblip::protocol {
 
 enum class System : uint8_t { Unknown, AdslDirect, Alptas, AdslUplink };
 
-static_assert(adsl::kUplinkFrameBytes <= events::kRfEventBytes,
+static_assert(1 + adsl::kUplinkMaxLength <= events::kRfEventBytes,
               "an uplink frame would be truncated on its way off the radio");
 
 constexpr uint8_t kSharedSyncBits = 16;
@@ -91,10 +91,10 @@ bool framed_noise(const Frame& frame);
 // The M band carries two systems past one shared sync window, so there the name
 // has to be Manchester-decoded out of the sync tail. The O band carries the
 // ground station's uplink and nothing else: the dwell was armed for §C.4.3's
-// sync word and for the one frame length that follows it, so a burst reported
-// on that band either is an uplink frame or has the wrong length and is not one.
-// out is filled for the M band only - an uplink codeword is eleven times longer
-// than a Frame and stays where the executor already put it.
+// sync word, and the §D.1.1 length byte behind it names one of G.3's eleven
+// packet lengths or the burst is not an uplink packet. out is filled for the M
+// band only - an uplink packet is nine times longer than a Frame and stays where
+// the executor already put it.
 //
 // Naming a burst is protocol policy, so it lives here rather than in the
 // service that pulls the event: the service moves messages.

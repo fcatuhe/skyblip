@@ -51,6 +51,47 @@ uint32_t spec_crc24(const uint8_t* data, size_t bytes) {
     }
     return crc >> 8;
 }
+
+// INFO: fc 13nov26 E.3.2 transcribed, reading element 11 as alpha^11 the way CCSDS 131.0 does
+uint8_t spec_multiply(uint8_t left, uint8_t right) {
+    uint8_t product = 0;
+    while (right != 0) {
+        if (right & 1u) product ^= left;
+        const bool carry = (left & 0x80u) != 0;
+        left = static_cast<uint8_t>(left << 1);
+        if (carry) left ^= 0x1Du;
+        right = static_cast<uint8_t>(right >> 1);
+    }
+    return product;
+}
+
+uint8_t spec_power(uint8_t base, int exponent) {
+    uint8_t result = 1;
+    for (int i = 0; i < exponent; i++) result = spec_multiply(result, base);
+    return result;
+}
+
+void spec_reed_solomon(const uint8_t* data, uint8_t* parity) {
+    const int kParity = 32;
+    uint8_t generator[kParity + 1] = {1};
+    for (int i = 0; i < kParity; i++) {
+        const uint8_t root = spec_power(spec_power(2, 11), 121 + i);
+        for (int j = i + 1; j > 0; j--)
+            generator[j] =
+                static_cast<uint8_t>(generator[j - 1] ^ spec_multiply(generator[j], root));
+        generator[0] = spec_multiply(generator[0], root);
+    }
+    uint8_t remainder[kParity] = {0};
+    for (int i = 0; i < 223; i++) {
+        const uint8_t feedback = data[i] ^ remainder[0];
+        for (int j = 0; j < kParity - 1; j++)
+            remainder[j] = static_cast<uint8_t>(
+                remainder[j + 1] ^ spec_multiply(feedback, generator[kParity - 1 - j]));
+        remainder[kParity - 1] = spec_multiply(feedback, generator[0]);
+    }
+    std::memcpy(parity, remainder, kParity);
+}
+
 }  // namespace
 
 TEST_CASE("ADS-L.4.SRD860.E.1: the network header is one byte, and this one claims nothing") {
@@ -138,7 +179,8 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: a category Issue 2 added, 14 to 17, goes out as
 }
 
 // Issue 1's payload table names Traffic, type 2, and reserves every other type.
-TEST_CASE("ADS-L.4.SRD860.E.1.1: a payload Issue 1 reserves, Status among them, goes out as version 1") {
+TEST_CASE(
+    "ADS-L.4.SRD860.E.1.1: a payload Issue 1 reserves, Status among them, goes out as version 1") {
     adsl::Packet status{};
     adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
     CHECK(status.protocol_version() == 1);
@@ -215,12 +257,33 @@ TEST_CASE("ADS-L.4.SRD860.E.3.2: the forward error correction is Reed-Solomon ov
     CHECK(adsl::ReedSolomon255::kMaxErrors == 16);
 }
 
-// TODO: fc 18sep26 the roots here are alpha^0 up, the clause wants element 11 from root 121
-TEST_CASE("ADS-L.4.SRD860.E.3.2: the code is generated from the roots the clause names" *
-          doctest::skip()) {
-    FAIL(
-        "neither the roots nor the zero-prefixed 223-byte block are the clause's, so a ground "
-        "station's frame would not decode");
+// The clause's own parameters, worked bit by bit: no table is shared with the stack's coder.
+TEST_CASE("ADS-L.4.SRD860.E.3.2: the code is generated from the roots the clause names") {
+    uint8_t data[adsl::ReedSolomon255::kDataBytes];
+    for (int i = 0; i < adsl::ReedSolomon255::kDataBytes; i++)
+        data[i] = static_cast<uint8_t>(i * 29 + 7);
+    uint8_t expected[adsl::ReedSolomon255::kParityBytes];
+    spec_reed_solomon(data, expected);
+    uint8_t parity[adsl::ReedSolomon255::kParityBytes];
+    adsl::ReedSolomon255{}.encode(data, parity);
+    CHECK(std::memcmp(parity, expected, sizeof(parity)) == 0);
+}
+
+// The parity of 200 zeros then 1 to 23, as the reedsolo library computes it with fcr 121 and
+// generator 232.
+TEST_CASE("ADS-L.4.SRD860.E.3.2: a short block is prefixed with zeros to 223 bytes") {
+    const uint8_t kExpected[adsl::ReedSolomon255::kParityBytes] = {
+        0xC1, 0x8D, 0xFB, 0x52, 0xD3, 0x0D, 0x57, 0xF7, 0x27, 0xE0, 0x99,
+        0xF7, 0x2B, 0x87, 0x2B, 0xB2, 0x0F, 0x36, 0xE9, 0xAA, 0xA6, 0x71,
+        0xE0, 0x4F, 0x10, 0xF5, 0x9D, 0xE6, 0x90, 0x71, 0xDA, 0x95};
+    uint8_t data[adsl::ReedSolomon255::kDataBytes] = {0};
+    for (int i = 0; i < 23; i++) data[200 + i] = static_cast<uint8_t>(i + 1);
+    uint8_t parity[adsl::ReedSolomon255::kParityBytes];
+    adsl::ReedSolomon255{}.encode(data, parity);
+    CHECK(std::memcmp(parity, kExpected, sizeof(parity)) == 0);
+    CHECK(adsl::ReedSolomon255::kPrimitiveElement == 11);
+    CHECK(adsl::ReedSolomon255::kFirstRoot == 121);
+    CHECK(adsl::ReedSolomon255::kFieldPolynomial == 0x11D);
 }
 
 // Optional, and not taken: no key is held, so no packet is signed and none claims to be.

@@ -20,6 +20,9 @@
 using namespace skyblip;
 
 namespace {
+constexpr uint32_t kUplinkUtcS = 1785628800;
+constexpr uint32_t kStation = 0x00FFFE;
+
 model::AircraftObservation target(uint32_t address) {
     model::AircraftObservation observation{};
     observation.address = address;
@@ -32,6 +35,8 @@ model::AircraftObservation target(uint32_t address) {
     observation.speed_q = 160;
     observation.speed_valid = true;
     observation.position_valid = true;
+    observation.altitude_valid = true;
+    observation.emergency = adsl::kEmergencyNone;
     return observation;
 }
 const adsl::Packet& status_heard() {
@@ -172,15 +177,61 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[4] = {target(0x300001), target(0), target(0x300003),
                                              target(0x300004)};
-    targets[3].latitude_1e7 = 1800000000;
+    targets[3].position_valid = false;
 
-    uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
-    REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 4, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
 
     model::AircraftObservation out[4]{};
     protocol::AdslUplink::DecodeStatistics statistics{};
-    REQUIRE(uplink.decode(frame, out, 4, statistics) == Status::Ok);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS, 300, out, 4, statistics) ==
+            Status::Ok);
     CHECK(statistics.targets == 2);
     CHECK(statistics.rejected == 2);
     for (int i = 0; i < statistics.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
+}
+
+// The device dates each relayed record by the second it heard the packet in.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn") {
+    protocol::AdslUplink uplink;
+    model::AircraftObservation targets[2] = {target(0x300001), target(0x300002)};
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 2, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+
+    model::AircraftObservation out[2]{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 10, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.targets == 2);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 11, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.targets == 0);
+    CHECK(statistics.stale == 2);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS - 1, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.stale == 2);
+}
+
+// What the ground station sends is the aircraft's own payload, so the climb and track a relay once
+// lost now arrive.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload") {
+    protocol::AdslUplink uplink;
+    model::AircraftObservation targets[1] = {target(0x300001)};
+    targets[0].climb_valid = true;
+    targets[0].climb_e8 = -20;
+    targets[0].track_c9 = 300;
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 1, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+    model::AircraftObservation out[1]{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS, 300, out, 1, statistics) ==
+            Status::Ok);
+    REQUIRE(statistics.targets == 1);
+    CHECK(out[0].address == 0x300001u);
+    CHECK(out[0].climb_valid);
+    CHECK(out[0].climb_e8 == -20);
+    CHECK(out[0].track_c9 == 300);
 }

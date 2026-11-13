@@ -6,7 +6,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 |---|---|
 | `adsl.{h,cpp}` | own-ship as an ADS-L Traffic payload, extrapolated to the instant the timestamp names, with the accuracy claimed from the receiver's DOP. A received Traffic payload as an `AircraftObservation`. The Status values this device declares |
 | `callsign.{h,cpp}` | OGN's payload 66, the name ADS-L has no field for (below) |
-| `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's uplink codec over observations |
+| `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's G.3 uplink over observations: each target is dated the instant the station forwards it, and a record older than 10 s or dated ahead of the second it was heard in is counted stale and not drawn |
 | `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window, names the system from the sync tail, and lays out the M-band buffer the SX1262 sends |
 | `alptas.{h,cpp}` | an ALP-TAS position as an observation and back: the ADS-L category, address table and flight state its fields map to |
 | `adsb_observation.{h,cpp}` | an ADS-B track as an observation, in ADS-L units |

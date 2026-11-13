@@ -459,7 +459,10 @@ TEST_CASE("scenario: a skyPost relay puts aircraft on the radar that we cannot h
     // M-band framing failure.
     CHECK(state.air.uplink_frames > 5);
     CHECK(state.air.uplink_bad == 0);
-    CHECK(state.air.uplink_targets >= 3 * state.air.uplink_frames);
+    // The world's ownship has no UTC for its first second, so that one frame is dated wrong and
+    // refused as stale.
+    CHECK(state.air.uplink_targets + state.air.uplink_stale == 3 * state.air.uplink_frames);
+    CHECK(state.air.uplink_stale <= 3);
     CHECK(state.air.rx_ok > 0);
 
     // The tape says what it heard and where: the relay is on 869.525 and it is

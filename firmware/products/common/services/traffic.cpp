@@ -159,10 +159,10 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     log(event, stamp, radio::Verdict::Received, &observation);
 }
 
-// One frame from the ground, up to thirteen aircraft in it (§C.4's higher rate
+// One packet from the ground, up to ten aircraft in it (§C.4's higher rate
 // buys the room the M band has no space for), each one an observation in its
-// own right.
-// The counters are the uplink's own: a codeword Reed-Solomon refuses is not an
+// own right, and each dated by the second it was heard in so G.3's age rule holds.
+// The counters are the uplink's own: a packet Reed-Solomon refuses is not an
 // M-band framing failure, and counting it as one is what let this whole path go
 // missing without a single number moving.
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
@@ -172,8 +172,13 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
 
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStatistics statistics{};
-    if (uplink_codec_.decode(event.data.data(), relayed, protocol::AdslUplink::kMaxTargets,
-                             statistics) != Status::Ok) {
+    const uint32_t heard_s = context_.state.traffic_now_s(now_ms);
+    const int32_t heard_ms = stamp.phase_valid ? stamp.into_ms : 0;
+    const Status decoded =
+        uplink_codec_.decode(event.data.data(), event.bytes, heard_s, heard_ms, relayed,
+                             protocol::AdslUplink::kMaxTargets, statistics);
+    context_.state.air.uplink_stale += static_cast<uint32_t>(statistics.stale);
+    if (decoded != Status::Ok) {
         context_.state.air.uplink_bad++;
         log(event, stamp, radio::Verdict::BadCrc);
         return;

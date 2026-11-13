@@ -99,11 +99,12 @@ model::AircraftObservation over_adsl_without_altitude(const model::AircraftObser
 
 model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
     protocol::AdslUplink codec;
-    uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
-    REQUIRE(codec.encode(&sent, 1, 0, frame) == Status::Ok);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(codec.encode(&sent, 1, kUtcS, 300, 0x00FFFE, adsl::kAddressTableManufacturerFirst,
+                         packet) == Status::Ok);
     model::AircraftObservation heard{};
     protocol::AdslUplink::DecodeStatistics statistics{};
-    REQUIRE(codec.decode(frame, &heard, 1, statistics) == Status::Ok);
+    REQUIRE(codec.decode(packet, sizeof(packet), kUtcS, 300, &heard, 1, statistics) == Status::Ok);
     REQUIRE(statistics.targets == 1);
     return stamped(heard);
 }

@@ -145,7 +145,7 @@ bool Air::framed(const AirRecord& record, protocol::Frame& out) {
 bool Air::framed_uplink(const AirRecord& record, uint8_t* frame) {
     return models::Sx1262::deliver_after_sync(record.chips, record.bytes, adsl::kUplinkSync,
                                               adsl::kUplinkSyncBits, frame,
-                                              adsl::kUplinkFrameBytes) != 0;
+                                              protocol::AdslUplink::kPacketBytes) != 0;
 }
 
 const AirRecord& Air::record_at(int index) const {
@@ -181,14 +181,14 @@ int Air::format(int index, char* out, int capacity) const {
     // its own way: how many aircraft the ground station put in the frame, which
     // is the number a relay is worth judging by.
     if (tuned_to(record.frequency_hz, adsl::kOBandHz)) {
-        uint8_t frame_bytes[adsl::kUplinkFrameBytes] = {0};
-        if (!framed_uplink(record, frame_bytes))
+        uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+        if (!framed_uplink(record, packet))
             return head + std::snprintf(out + head, left, "unframed");
-        protocol::AdslUplink codec;
-        model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
-        protocol::AdslUplink::DecodeStatistics statistics{};
-        if (codec.decode(frame_bytes, relayed, protocol::AdslUplink::kMaxTargets, statistics) !=
-            Status::Ok)
+        adsl::Uplink codec;
+        adsl::Packet relayed[adsl::kUplinkMaxTargets];
+        adsl::UplinkStatistics statistics;
+        if (codec.decode(packet, sizeof(packet), relayed, adsl::kUplinkMaxTargets, statistics) !=
+            wire::Status::Ok)
             return head + std::snprintf(out + head, left, "UPLINK RS BAD");
         return head + std::snprintf(out + head, left, "UPLINK %d aircraft, %d corrected",
                                     statistics.targets, statistics.corrected);

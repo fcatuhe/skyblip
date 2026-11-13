@@ -8,7 +8,7 @@ ReedSolomon255::ReedSolomon255() {
         antilogarithm_[i] = static_cast<uint8_t>(element);
         logarithm_[element] = static_cast<uint8_t>(i);
         element <<= 1;
-        if (element & 0x100) element ^= 0x11D;
+        if (element & 0x100) element ^= kFieldPolynomial;
     }
     for (int i = 255; i < 512; i++) antilogarithm_[i] = antilogarithm_[i - 255];
     logarithm_[0] = 0;
@@ -16,7 +16,7 @@ ReedSolomon255::ReedSolomon255() {
     generator_[0] = 1;
     for (int i = 0; i < kParityBytes; i++) {
         generator_[i + 1] = 0;
-        uint8_t root = antilogarithm_[i];
+        uint8_t root = root_power(kFirstRoot + i);
         for (int j = i + 1; j > 0; j--) {
             generator_[j] = static_cast<uint8_t>(generator_[j - 1] ^ multiply(generator_[j], root));
         }
@@ -41,7 +41,7 @@ void ReedSolomon255::compute_syndromes(const uint8_t* codeword, uint8_t* syndrom
     all_zero = true;
     for (int i = 0; i < kParityBytes; i++) {
         uint8_t syndrome = 0;
-        uint8_t root = antilogarithm_[i];
+        uint8_t root = root_power(kFirstRoot + i);
         for (int j = 0; j < kCodewordBytes; j++)
             syndrome = static_cast<uint8_t>(codeword[j] ^ multiply(syndrome, root));
         syndromes[i] = syndrome;
@@ -106,7 +106,7 @@ int ReedSolomon255::decode(uint8_t codeword[kCodewordBytes]) const {
     int found = 0;
     for (int i = 0; i < kCodewordBytes; i++) {
         uint8_t evaluated = 1;
-        uint8_t inverse_power = antilogarithm_[(255 - i) % 255];
+        uint8_t inverse_power = root_power(255 - i);
         uint8_t power = 1;
         for (int j = 1; j <= error_count; j++) {
             power = multiply(power, inverse_power);
@@ -125,7 +125,7 @@ int ReedSolomon255::decode(uint8_t codeword[kCodewordBytes]) const {
     }
     for (int error = 0; error < found; error++) {
         int position = error_positions[error];
-        uint8_t inverse_power = antilogarithm_[(255 - position) % 255];
+        uint8_t inverse_power = root_power(255 - position);
         uint8_t evaluator_value = 0;
         uint8_t power = 1;
         for (int j = 0; j < kParityBytes; j++) {
@@ -139,7 +139,7 @@ int ReedSolomon255::decode(uint8_t codeword[kCodewordBytes]) const {
             odd_power = multiply(odd_power, multiply(inverse_power, inverse_power));
         }
         if (locator_derivative == 0) return -1;
-        uint8_t position_power = antilogarithm_[position];
+        uint8_t position_power = root_power((position * (255 + 1 - kFirstRoot)) % 255);
         uint8_t magnitude =
             multiply(position_power, multiply(evaluator_value, inverse(locator_derivative)));
         int byte_index = kCodewordBytes - 1 - position;
