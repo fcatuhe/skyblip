@@ -376,7 +376,7 @@
     },
     {
       "command": "browser_challenge", "code": 30, "endpoint": "config", "sender": "both",
-      "description": "Opens a trusted-browser session (firmware/core/comms/README.md, Trusted browsers). The host asks with the bare command, the unit draws a fresh nonce for the session that holds the claim, which replaces any it held, and answers it: 22 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when trust_browser uses it or when the link of the session that holds the claim drops. Refused keyless by a unit that cannot draw a nonce. Answered in flight as on the ground.",
+      "description": "Opens a trusted-browser session (firmware/core/comms/README.md, Trusted browsers). The host asks with the bare command, the unit draws a fresh nonce for the session that holds the claim, which replaces any it held, and answers it: 22 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when trust_browser uses it or when the link of the session that holds the claim drops, and a new browser_challenge also ends the trust a trusted session held until trust_browser proves a key again. Refused keyless by a unit that cannot draw a nonce. Answered in flight as on the ground.",
       "keys": [
         {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "16 random bytes from the hardware RNG, used once"}
       ]

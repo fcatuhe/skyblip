@@ -99,7 +99,8 @@ class ConfigLinkService : public runtime::Service {
     diagnostics::Link link_record(diagnostics::LinkAction action, uint16_t session,
                                   uint16_t frame_bytes) const;
     void record_link_down(const events::LinkEvent& down, uint32_t now_ms);
-    void record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms);
+    void record_write(const timing::DurableWriteWindow& window, timing::DurableWriteVerdict verdict,
+                      uint32_t now_ms);
     void watch_claim(uint32_t now_ms);
     void watch_link_drops(uint32_t now_ms);
     void accrue_connected(uint32_t now_ms);

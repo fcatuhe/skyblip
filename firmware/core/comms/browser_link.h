@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "core/comms/trusted_browsers.h"
+#include "core/events/link.h"
 #include "core/identity/messages.h"
 
 namespace skyblip::comms {
@@ -18,14 +19,14 @@ class BrowserLink {
     TrustedBrowsers& trusted() { return trusted_; }
     const TrustedBrowsers& trusted() const { return trusted_; }
 
-    void open(uint16_t session_id, const identity::Nonce& nonce) {
-        forget(session_id_);
-        session_id_ = session_id;
+    void open(const events::Peer& peer, const identity::Nonce& nonce) {
+        forget(peer_.session_id);
+        peer_ = peer;
         nonce_ = nonce;
         nonce_live_ = true;
     }
-    bool spend_nonce(uint16_t session_id, identity::Nonce& out) {
-        if (!nonce_live_ || session_id != session_id_) return false;
+    bool spend_nonce(const events::Peer& peer, identity::Nonce& out) {
+        if (!nonce_live_ || !(peer == peer_)) return false;
         nonce_live_ = false;
         out = nonce_;
         return true;
@@ -37,11 +38,11 @@ class BrowserLink {
         proven_ = true;
         trusted_session_ = trusted_.holds(key);
     }
-    bool trusts(uint16_t session_id) const { return trusted_session_ && session_id == session_id_; }
+    bool trusts(const events::Peer& peer) const { return trusted_session_ && peer == peer_; }
 
     // INFO: fc 13nov26 two presses on a set or a dfu are what turn a proven key into a trusted one
-    bool remember(uint16_t session_id) {
-        if (!proven_ || session_id != session_id_ || trusted_.holds(key_)) return false;
+    bool remember(const events::Peer& peer) {
+        if (!proven_ || !(peer == peer_) || trusted_.holds(key_)) return false;
         trusted_.store(key_, label_);
         trusted_session_ = true;
         return true;
@@ -57,8 +58,8 @@ class BrowserLink {
     }
 
     void forget(uint16_t session_id) {
-        if (session_id != session_id_) return;
-        session_id_ = 0;
+        if (session_id != peer_.session_id) return;
+        peer_ = events::Peer{0, 0};
         nonce_live_ = false;
         proven_ = false;
         trusted_session_ = false;
@@ -69,7 +70,7 @@ class BrowserLink {
     identity::Nonce nonce_{};
     crypto::Ed25519::PublicKey key_{};
     char label_[kBrowserLabelBytes + 1]{};
-    uint16_t session_id_{0};
+    events::Peer peer_{0, 0};
     bool nonce_live_{false};
     bool proven_{false};
     bool trusted_session_{false};

@@ -27,7 +27,7 @@ void ConfigService::browser_challenge() {
         refuse(link::Reason::Keyless);
         return;
     }
-    browsers_.open(claim_.holder(), nonce);
+    browsers_.open(claim_.peer(), nonce);
     uint8_t frame[BrowserLink::kChallengeFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::BrowserChallenge);
@@ -44,7 +44,7 @@ void ConfigService::browser_challenge() {
 // INFO: fc 13nov26 the nonce is spent before the check, so a refused proof is never retried on it
 void ConfigService::trust_browser(const cbor::Reader& frame) {
     identity::Nonce nonce{};
-    if (!browsers_.spend_nonce(claim_.holder(), nonce)) {
+    if (!browsers_.spend_nonce(claim_.peer(), nonce)) {
         refuse(link::Reason::NoSession);
         return;
     }
@@ -124,7 +124,7 @@ void ConfigService::forget_browser(const cbor::Reader& frame) {
 }
 
 void ConfigService::remember_browser() {
-    if (browsers_.remember(claim_.holder())) browsers_dirty_ = true;
+    if (browsers_.remember(claim_.peer())) browsers_dirty_ = true;
 }
 
 }  // namespace skyblip::comms

@@ -61,10 +61,10 @@ class DurableWriteWindow {
     // (hardware/platform/zephyr/kvstore.h, three sectors of the internal
     // storage_partition) appends until a sector is full, then closes it and
     // garbage-collects the next one: one tERASEPAGE, plus the live entries
-    // copied forward a word at a time. The settings blob is 64 bytes, so the
-    // copy is kBlobWords words. Budgeted from the datasheet, not measured - the
-    // bench figure is what settles it.
-    static constexpr uint32_t kBlobWords = 16;
+    // copied forward a word at a time. The settings blob is 64 bytes and the
+    // trusted browsers 462, so the copy is kBlobWords words. Budgeted from the
+    // datasheet, not measured - the bench figure is what settles it.
+    static constexpr uint32_t kBlobWords = (64 + 462 + 3) / 4;
     static constexpr uint32_t kWorstWriteMs =
         kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000;
 

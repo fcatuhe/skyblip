@@ -1003,7 +1003,7 @@ core/timing's durable-write policy, alone: a slot plan, a phase, a clock the cas
 - the cost is the nRF52840's own page erase plus the copy
   > The datasheet, in the code. If either of these two figures ever moves, every window arithmetic below moves with it and this is the case that says so.
 - the free phase is the one the dwell map leaves
-  > The whole second, phase by phase. One stretch and no others: 205..304 the uplink dwell, which closes at 395 - the write finishes by 390 and the guard in front of the safety-critical O->M edge is still whole. Slot 1's tail was the second one until the callsign burst was placed there (core/timing/README.md), and a write inside it now stalls the core through an instant own-ship may have keyed the PA at.
+  > The whole second, phase by phase. One stretch and no others: 205..299 the uplink dwell, which closes at 395 - the write finishes by 390 and the guard in front of the safety-critical O->M edge is still whole. Slot 1's tail was the second one until the callsign burst was placed there (core/timing/README.md), and a write inside it now stalls the core through an instant own-ship may have keyed the PA at.
 - the retune guards between dwells are not free time
   > The two retune guards, 200..204 and 395..399, are the gaps between dwells. They are also where the next dwell gets armed, so they are refused rather than taken for free time: a write there delays the opening of the dwell that follows.
 - the settle, the bound and the stale view span the 49.7-day wrap
@@ -3638,7 +3638,7 @@ The commands that take the device out of service, each behind a confirmation on 
   > A phone that connects to a device whose last update did not take is told so before it asks, because it is the one fact the pilot would otherwise discover from a version number that did not change.
 - a link that comes up on settings that fell back is told, on a confirmed image
 - a take-off leaves an upload window the pilot confirmed open
-  > D5: the reset reason was read at boot and shown on the self-test page, and a device in a field with a phone next to it has no self-test page in view. G6's plug-in-and-read: the same on_rx dispatch that answers "status" answers "timing" from whatever core/timing::SlotTimingStatistics the device has been accumulating - no second channel, no panel real estate a bucket array would not fit on anyway. A taxi fast enough to read as a take-off once aborted an upload the pilot had confirmed.
+  > A taxi read as a take-off once aborted a confirmed upload, which now runs on behind the radar.
 - an image other than the one the press named is refused, not installed
 - an ownship drawing is refused as unknown_command, nothing stored
   > The editor's ownship frame is a proposal: the registry numbers it, the firmware reads none yet.
@@ -3677,7 +3677,8 @@ What the flight state gates on the config endpoint: Airborne refuses, and the gr
 - a set with no fix since boot is staged, confirmed and stored
   > Two presses on the device stand in for pairing, and Unknown is a unit with no fix since boot.
 - a take-off cancels a staged set, from the ground or with no fix
-- an upload the pilot confirmed installs through a take-off
+- an upload that lands in flight installs once the unit is on the ground
+  > A swap takes the unit dark, so an image that lands in flight waits for the ground.
 - install, recovery, power-off, cold start and erase are refused aloft
 - install, recovery, power-off, cold start and erase ask on the ground or with no fix
 

@@ -6,6 +6,10 @@
 
 namespace skyblip::common {
 
+static_assert(comms::TrustedBrowsers::kBlobBytes + 64 <=
+                  size_t{timing::DurableWriteWindow::kBlobWords} * 4,
+              "the durable-write budget copies every live record a garbage collection moves");
+
 Status ConfigLinkService::setup() {
     load();
     load_browsers();
@@ -237,7 +241,7 @@ void ConfigLinkService::drain_settings(uint32_t now_ms) {
     // INFO: fc 03oct26 the stall starts at the clock, not where the pass began
     const timing::DurableWriteVerdict verdict = writes_.decide(
         context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
-    if (verdict != timing::DurableWriteVerdict::Idle) record_write(verdict, now_ms);
+    if (verdict != timing::DurableWriteVerdict::Idle) record_write(writes_, verdict, now_ms);
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
@@ -272,6 +276,8 @@ void ConfigLinkService::drain_browsers(uint32_t now_ms) {
     }
     const timing::DurableWriteVerdict verdict = browser_writes_.decide(
         context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
+    if (verdict != timing::DurableWriteVerdict::Idle)
+        record_write(browser_writes_, verdict, now_ms);
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
@@ -289,17 +295,18 @@ void ConfigLinkService::write_browsers(uint32_t now_ms, bool forced) {
     }
 }
 
-void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms) {
+void ConfigLinkService::record_write(const timing::DurableWriteWindow& window,
+                                     timing::DurableWriteVerdict verdict, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
     diagnostics::Write value{};
-    value.waited_ms = writes_.waited_ms(now_ms);
+    value.waited_ms = window.waited_ms(now_ms);
     value.phase_ms = static_cast<uint16_t>(context_.state.rf.dwell.phase_ms);
-    value.requests = writes_.requests();
-    value.writes = writes_.writes();
-    value.forced = writes_.forced();
+    value.requests = window.requests();
+    value.writes = window.writes();
+    value.forced = window.forced();
     value.placement = verdict;
     value.kind = power::DurableWrite::Settings;
-    value.pending = writes_.pending();
+    value.pending = window.pending();
     context_.diagnostics.record(value, context_.instant(now_ms));
 }
 

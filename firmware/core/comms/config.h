@@ -98,7 +98,6 @@ class ConfigService {
     // INFO: fc 18oct26 writes the held code if the power rule allows, else drops it as low_power
     void settle_unlock();
 
-    // INFO: fc 13nov26 trust_browser, browser and forget_browser live in browser_link.cpp
     TrustedBrowsers& trusted_browsers() { return browsers_.trusted(); }
     bool browsers_dirty() const { return browsers_dirty_; }
     void clear_browsers_dirty() { browsers_dirty_ = false; }
@@ -326,7 +325,7 @@ class ConfigService {
     void send_browser(const cbor::Reader& frame);
     void forget_browser(const cbor::Reader& frame);
     void remember_browser();
-    bool trusted_browser() const { return browsers_.trusts(claim_.holder()); }
+    bool trusted_browser() const { return browsers_.trusts(claim_.peer()); }
     void refuse(link::Reason reason) { acknowledge(false, reason); }
     template <class Report, class... Arguments>
     void start_report(std::optional<Report>& report, int frame_bytes,
