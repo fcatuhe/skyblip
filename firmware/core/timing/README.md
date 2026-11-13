@@ -77,7 +77,7 @@ On the ground channel A carries 0, 7, 13, 20, 27, 33, 40, 47 and 53, and channel
 
 Why these offsets:
 
-- The parity rule would put two positions 10 s apart on the same channel, which §C.2.5's alternation forbids, so the ground positions are 9 then 11 s apart. That is exactly §G.1.16's "0.1 Hz (once every 10 seconds)" on average, and the same clause gives media access priority over the rate.
+- The parity rule would put two positions 10 s apart on the same channel, which §C.2.5's alternation forbids, so the ground positions are 9 then 11 s apart. That is skyBlip's reading of §G.1.16's "0.1 Hz (once every 10 seconds)": exactly 0.1 Hz on average, the 11 s gap coming from §C.2.5 with the parity rule.
 - Every placement of the six bursts was checked, and this one gives the most even spacing on each channel, which is what a receiver on one channel sees: 7, 6, 7 s on one and 7, 7, 6 s on the other, never more than 7. Across both channels the bursts are 2 to 5 s apart.
 - Every type alternates channel from one transmission to the next: positions, Status (§C.2.5) and names. Each channel carries a Status every 20 s, so a receiver that listens on one channel only still gets §G.2.11's rate, and the Status gaps alternate 11 and 9 s.
 - Two bursts of ours on one frequency are always at least 100 ms apart, which is EN 300 220-1's off-time.

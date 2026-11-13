@@ -4,9 +4,13 @@
 
 namespace skyblip::adsl {
 
-uint8_t declared_max_version(const Packet& clear) {
-    if (clear.payload_type == Packet::kPayloadTypeStatus)
-        return static_cast<uint8_t>(clear.field(Packet::kMaxProtocolVersionField));
+std::optional<uint8_t> status_max_version(const Packet& clear) {
+    if (clear.payload_type != Packet::kPayloadTypeStatus) return std::nullopt;
+    return static_cast<uint8_t>(clear.field(Packet::kMaxProtocolVersionField));
+}
+
+std::optional<uint8_t> traffic_max_version(const Packet& clear) {
+    if (!clear.is_position()) return std::nullopt;
     return clear.protocol_version();
 }
 

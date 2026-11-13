@@ -4,7 +4,6 @@
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
-#include "core/units/units.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/versioning.h"
 
@@ -195,8 +194,7 @@ uint8_t TrafficTable::readable_version(const model::Ownship& own, uint32_t now_m
         const AlarmAssessment seen = assess(own, target.observation, now_ms);
         if (!seen.valid) continue;
         const int32_t vertical_m = seen.relative_altitude_valid ? seen.relative_altitude_m : 0;
-        if (adsl::close_client(seen.relative_distance_m, vertical_m,
-                               seen.closing_mps * kMillimetresPerMetre))
+        if (adsl::close_client(seen.relative_distance_m, vertical_m, seen.closing_mm_s))
             version = target.version.max;
     }
     return version;

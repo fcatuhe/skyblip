@@ -30,6 +30,7 @@ This tree is open source, and some of what it compiles in names skyBlip and nobo
 | Bluetooth names `skyBlip Go`, `skyBlip Go+`, `skyBlip Bravo`, with the serial behind them | `CONFIG_BT_DEVICE_NAME` in each `prj.conf`, `products/skyblip_go/product.h`, `products/skyblip_bravo/name.h`, `core/identity/` | names its own product, so a companion app does not take it for a skyBlip |
 | Bluetooth service and characteristic UUIDs, base `69c21300-0187-4204-a91d-02eb8858b440` | `hardware/platform/zephyr/skyblip_uuid.h` | draws its own 128-bit base |
 | MCUboot signing keys | `keys/development.pub.pem`, `keys/production.pub.pem` | signs with keys of its own (`keys/README.md`) |
+| MCUboot image vendor name `skyblip.eu` | `CONFIG_MCUBOOT_IMGTOOL_UUID_VID_NAME` in `products/skyblip_go/prj.conf` and `products/skyblip_bravo/prj.conf` | sets its own domain, from which imgtool derives the image's vendor UUID |
 | The skyblip.eu server key, id `8c06724d` | `keys/server.pub`, compiled in by `cmake/skyblip.cmake` | runs its own activation server with its own key, or leaves `CONFIG_SKYBLIP_ACTIVATION` off |
 
 ## Naming a boolean

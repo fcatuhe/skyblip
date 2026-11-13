@@ -3,11 +3,13 @@
 // corrects all patterns up to 16 symbol errors and, beyond 16, that silent
 // miscorrection is counted SEPARATELY from detected failure.
 #include <cstring>
+#include <initializer_list>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/adsl/uplink.h"
 #include "protocols/common/test/channel.h"
+#include "protocols/common/xxtea.h"
 
 using namespace skyblip;
 using skyblip::adsl::ReedSolomon255;
@@ -253,4 +255,52 @@ TEST_CASE("uplink: a relayed record is current up to 10 s old, and never from th
     const adsl::Packet ahead = make_target(1, 1);
     CHECK_FALSE(adsl::uplink_record_current(ahead, utc_s, 0));
     CHECK(adsl::uplink_record_current(ahead, utc_s, 250));
+}
+
+namespace {
+// The parity E.3.2 prints, computed again over a packet whose header or data a case changed.
+void reparity(uint8_t* packet) {
+    const int covered = packet[0] - ReedSolomon255::kParityBytes;
+    uint8_t block[ReedSolomon255::kDataBytes] = {0};
+    std::memcpy(block + ReedSolomon255::kDataBytes - covered, packet + 1,
+                static_cast<size_t>(covered));
+    ReedSolomon255{}.encode(block, packet + 1 + covered);
+}
+}  // namespace
+
+// E.1: a later version, a signature or a reserved key index is a packet this decoder cannot read.
+TEST_CASE("uplink: a header naming a later version, a signature or a reserved key is refused") {
+    adsl::Packet tx[1] = {make_target(0x700001)};
+    adsl::Uplink up;
+    adsl::Packet rx[1];
+    adsl::UplinkStatistics statistics;
+    for (const uint8_t header : {uint8_t{0x82}, uint8_t{0x91}, uint8_t{0xA1}, uint8_t{0xC1}}) {
+        CAPTURE(int(header));
+        uint8_t packet[1 + adsl::kUplinkMaxLength];
+        sent(tx, 1, packet);
+        packet[1] = header;
+        reparity(packet);
+        CHECK(up.decode(packet, sizeof(packet), rx, 1, statistics) == Status::Unsupported);
+    }
+}
+
+// E.1.3's key index 3 is scrambling switched off, so the data arrives as it was written.
+TEST_CASE("uplink: key index 3 carries the data in the clear, and it decodes as sent") {
+    adsl::Packet tx[1] = {make_target(0x700002)};
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 1, packet);
+    const int data_bytes = adsl::kUplinkHeaderBytes + adsl::uplink_payload_bytes(1);
+    uint32_t words[(adsl::kUplinkHeaderBytes + 191) / 4];
+    std::memcpy(words, packet + 2, static_cast<size_t>(data_bytes));
+    wire::xxtea_decrypt(words, static_cast<uint32_t>(data_bytes / 4), wire::kXxteaZeroKey, 6);
+    std::memcpy(packet + 2, words, static_cast<size_t>(data_bytes));
+    packet[1] = static_cast<uint8_t>(packet[1] | (3u << 5));
+    reparity(packet);
+
+    adsl::Uplink up;
+    adsl::Packet rx[1];
+    adsl::UplinkStatistics statistics;
+    REQUIRE(up.decode(packet, sizeof(packet), rx, 1, statistics) == Status::Ok);
+    CHECK(statistics.targets == 1);
+    CHECK(rx[0].address() == 0x700002u);
 }

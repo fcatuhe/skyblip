@@ -55,7 +55,7 @@ Everything is in namespace `skyblip::adsl`.
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
-- `declared_max_version()`, `close_client()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
+- `status_max_version()`, `traffic_max_version()`, `close_client()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
 - `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
 - `kVersion`, `kSpecification`
@@ -64,7 +64,7 @@ Everything is in namespace `skyblip::adsl`.
 
 `transmit.h` holds the rules the specification sets for a transmitter, and leaves every choice inside them to the integrator. §C.5 gives the ground stations 200 to 450 ms of each UTC second and the aircraft 450 to 1000 (`kUplinkSlotStartMs` to `kDirectEndMs`), and a burst starts and completes inside the direct slot. §C.2 puts a 24-byte frame on air for 4.64 ms, so `kAirTimeMs` books 5. §G.1.16 asks for at least 1 Hz airborne and 0.1 Hz on the ground (`report_period_s()`), and no navigation data older than 500 ms (`kFixMaxAgeMs`), measured to the top of the transmit second because the encoder carries the fix forward to the instant the burst names. §G.2.11 asks for a Status at least every 20 s (`kStatusPeriodS`).
 
-§G.1.16's ground rate is "0.1 Hz (once every 10 seconds)", and the same clause puts media access above it, so an integrator may space ground reports unevenly as long as they average 0.1 Hz. §C.2.5 asks every payload type to change channel from one transmission to the next, which the stack leaves to the integrator to schedule.
+§G.1.16's ground rate is "0.1 Hz (once every 10 seconds)". skyBlip reads that as an average: its ground positions go 9 then 11 s apart, exactly 0.1 Hz on average, because §C.2.5's alternation with a channel picked by the second's parity cannot put two positions 10 s apart. §C.2.5 asks consecutive Traffic transmissions, and consecutive Status transmissions, to change channel, which the stack leaves to the integrator to schedule.
 
 Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`: the second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status and the name, inside a 20 s cycle per unit with ground positions 9 then 11 s apart, plus the channel-access route a device declares in place of §D.3's listen-before-talk.
 
@@ -98,7 +98,7 @@ Every other G.1 table only writes its bounds out: SIL, SDA, NIC, HFOM and the ve
 
 ## Soft versioning
 
-§B.5 lets the specification move on without splitting the air. Every packet carries the version it is written in (§E.1.1, above), and the Status carries the highest version its sender reads (§G.2.1, `Packet::kMaxProtocolVersion`, 1 here). `declared_max_version()` reads either: the Status field, or for any other packet the version it came in, which §B.5 tells a receiver to assume until it hears a Status. `close_client()` is §B.5's test for a neighbour own Traffic has to stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and less than 30 s from the closest point of approach, that time being the horizontal distance over the closure rate. A Traffic packet then goes out in the lowest version any close neighbour reads. Which targets are tracked, and how a Traffic payload is re-coded for an older issue, are skyBlip's, in `core/traffic/README.md` and `core/protocol/README.md`.
+§B.5 lets the specification move on without splitting the air. Every packet carries the version it is written in (§E.1.1, above), and the Status carries the highest version its sender reads (§G.2.1, `Packet::kMaxProtocolVersion`, 1 here). `status_max_version()` reads the Status field, and `traffic_max_version()` the version a Traffic payload came in, which §B.5 tells a receiver to assume until it hears a Status. Each returns nothing for any other payload, since §B.5 names only those two. `close_client()` is §B.5's test for a neighbour own Traffic has to stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and less than 30 s from the closest point of approach, that time being the horizontal distance over the closure rate. A Traffic packet then goes out in the lowest version any close neighbour reads. Which targets are tracked, and how a Traffic payload is re-coded for an older issue, are skyBlip's, in `core/traffic/README.md` and `core/protocol/README.md`.
 
 ## The Traffic Uplink
 

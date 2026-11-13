@@ -100,18 +100,25 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a client under 800 m and less than 30 s from CPA 
 }
 
 TEST_CASE(
-    "ADS-L.4.SRD860.B.5: the Max. Protocol Version is the Status field, or else the packet's") {
+    "ADS-L.4.SRD860.B.5: the Max. Protocol Version is the Status field, or else the Traffic's") {
     adsl::Packet status{};
     adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
-    CHECK(adsl::declared_max_version(status) == adsl::Packet::kMaxProtocolVersion);
+    CHECK(adsl::status_max_version(status) == adsl::Packet::kMaxProtocolVersion);
+    CHECK_FALSE(adsl::traffic_max_version(status).has_value());
     status.set_field(adsl::Packet::kMaxProtocolVersionField, 0);
-    CHECK(adsl::declared_max_version(status) == 0);
+    CHECK(adsl::status_max_version(status) == 0);
 
     adsl::Packet traffic = traffic_packet();
+    CHECK_FALSE(adsl::status_max_version(traffic).has_value());
     traffic.set_protocol_version(0);
-    CHECK(adsl::declared_max_version(traffic) == 0);
+    CHECK(adsl::traffic_max_version(traffic) == 0);
     traffic.set_protocol_version(1);
-    CHECK(adsl::declared_max_version(traffic) == 1);
+    CHECK(adsl::traffic_max_version(traffic) == 1);
+
+    adsl::Packet name = traffic;
+    name.payload_type = adsl::Packet::kPayloadTypeOgnDiagnostics;
+    CHECK_FALSE(adsl::traffic_max_version(name).has_value());
+    CHECK_FALSE(adsl::status_max_version(name).has_value());
 }
 
 // Both reserved bits set: the one at header offset 38, and the one closing the payload.

@@ -55,8 +55,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
         protocol::m_band_payload(adsl::kSyncWord, outgoing_.data, adsl::kFrameBytes, chips));
 }
 
-// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset, so ADS-B counts only while Bravo is
-// live
+// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset: ADS-B counts while Bravo is live
 adsl::StatusReport RadioService::status_report() const {
     adsl::StatusReport report{};
     report.m_band = adsl::receive_class(timing::Scheduler::direct_heard_permille());

@@ -27,7 +27,7 @@ class AdslUplink {
         int stale{0};
     };
 
-    // INFO: fc 13nov26 a relayed target is dated now, the instant the ground station forwards it
+    // INFO: fc 13nov26 dates each record now, which G.3 allows for non-ADS-L sources, never ADS-L
     Status encode(const model::AircraftObservation* targets, int count, uint32_t utc_s,
                   int32_t into_ms, uint32_t sender_address, uint8_t sender_table,
                   uint8_t out_packet[kPacketBytes]) const;

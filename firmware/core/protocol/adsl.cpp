@@ -1,6 +1,7 @@
 #include "core/protocol/adsl.h"
 
 #include <initializer_list>
+#include <optional>
 
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
@@ -8,6 +9,7 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "protocols/adsl/flight_state.h"
+#include "protocols/adsl/versioning.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
@@ -50,7 +52,9 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     out.rssi_dbm = rssi_dbm;
     out.source = source;
     out.position_valid = true;
-    out.adsl_version = packet.protocol_version();
+    const std::optional<uint8_t> version = adsl::traffic_max_version(packet);
+    if (!version) return false;
+    out.adsl_version = *version;
     return true;
 }
 

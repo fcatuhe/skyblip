@@ -13,6 +13,12 @@ namespace {
 
 constexpr uint8_t kPayloadTypeTrafficUplink = 0x04;
 constexpr uint8_t kErrorControlFec = 0x80;
+// INFO: fc 13nov26 E.1: version in bits 0-3, signature flag bit 4, key index bits 5-6, FEC bit 7
+constexpr uint8_t kSignatureFlag = 0x10;
+constexpr int kKeyIndexShift = 5;
+constexpr uint8_t kKeyIndexMask = 0x03;
+constexpr uint8_t kKeyScrambled = 0;
+constexpr uint8_t kKeyClear = 3;
 constexpr int kQuartersPerCycle = static_cast<int>(kTimestampCycleS * 1000 / kTimestampQuarterMs);
 constexpr int kMaxAgeQuarters = static_cast<int>(kUplinkRecordMaxAgeMs / kTimestampQuarterMs);
 constexpr uint8_t kReservedBits = 0xC0;
@@ -106,9 +112,15 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
     statistics.corrected = corrected;
 
     uint8_t* covered = codeword + pad;
-    if ((covered[0] & kErrorControlFec) == 0) return Status::Invalid;
+    const uint8_t header = covered[0];
+    if ((header & kErrorControlFec) == 0) return Status::Invalid;
+    if ((header & Packet::kProtocolVersionMask) > Packet::kMaxProtocolVersion ||
+        (header & kSignatureFlag) != 0)
+        return Status::Unsupported;
+    const uint8_t key_index = static_cast<uint8_t>((header >> kKeyIndexShift) & kKeyIndexMask);
+    if (key_index != kKeyScrambled && key_index != kKeyClear) return Status::Unsupported;
     const int data_bytes = covered_bytes - 1;
-    scramble(covered + 1, data_bytes, false);
+    if (key_index == kKeyScrambled) scramble(covered + 1, data_bytes, false);
     if (covered[1] != kPayloadTypeTrafficUplink) return Status::Unsupported;
 
     int kept = 0;

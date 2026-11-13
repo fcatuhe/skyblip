@@ -71,9 +71,9 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     assessment.relative_altitude_m = up_m;
     assessment.relative_altitude_valid = up_valid;
     assessment.relative_distance_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
-    assessment.closing_mps = wire::divide_rounded(
-        closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
-        kMillimetresPerMetre);
+    assessment.closing_mm_s =
+        closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m);
+    assessment.closing_mps = wire::divide_rounded(assessment.closing_mm_s, kMillimetresPerMetre);
 
     const int16_t bearing = arctangent(east_m, north_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;

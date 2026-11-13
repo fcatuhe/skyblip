@@ -272,8 +272,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 50
     CHECK_FALSE(tx.attempt(plan, 100, 1000, true, 501).go);
 }
 
-// "Reduced to 0.1 Hz (once every 10 seconds)", and media access above the rate: 9 then 11 s keeps
-// C.2.5.
+// skyBlip reads "0.1 Hz (once every 10 seconds)" as an average: C.2.5 and the parity rule make it
+// 9 then 11 s.
 TEST_CASE(
     "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart") {
     for (uint32_t serial = 1; serial <= 1024; serial++) {

@@ -1,5 +1,7 @@
 #include "products/common/services/traffic.h"
 
+#include <optional>
+
 #include "core/events/rf.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
@@ -255,9 +257,9 @@ radio::Verdict TrafficService::learn_status(const adsl::Packet& packet,
     observation.address = packet.address();
     observation.address_mapping_table = packet.address_mapping_table();
     observation.source = model::Source::AdslDirect;
-    if (!context_.state.traffic.declare_max_version(observation.address_mapping_table,
-                                                    observation.address,
-                                                    adsl::declared_max_version(packet)))
+    const std::optional<uint8_t> declared = adsl::status_max_version(packet);
+    if (!declared || !context_.state.traffic.declare_max_version(observation.address_mapping_table,
+                                                                 observation.address, *declared))
         return radio::Verdict::Unsupported;
     return radio::Verdict::Declared;
 }
