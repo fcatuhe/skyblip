@@ -164,6 +164,20 @@ TEST_CASE("radio log page: own-ship's callsign burst says so where its schedule 
     CHECK_FALSE(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "CALLSIGN"));
 }
 
+// On the ground the Status goes out about a tenth of a second from the position, as a second row.
+TEST_CASE("radio log page: own-ship's Status burst says so where its schedule is printed") {
+    radio::Log log;
+    radio::Entry status = entry_of(radio::Verdict::Transmitted);
+    status.status = true;
+    log.record(status);
+
+    Glass canvas;
+    draw_radio_log(canvas, with(log));
+    CHECK(reads_at(canvas, 4 + 10 * 6, kFirstRowY, "TX"));
+    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY, "STATUS"));
+    CHECK_FALSE(reads_at(canvas, 4 + 22 * 6, kFirstRowY, "GROUND"));
+}
+
 // A name carries no position, so the row has to say what it was or it reads as a target.
 TEST_CASE("radio log page: a received registration says it named its sender, and who") {
     radio::Log log;

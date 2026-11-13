@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 
+#include <algorithm>
+#include <iterator>
+
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/protocol/adsl_uplink.h"
@@ -36,14 +39,16 @@ class RadioService : public runtime::Service {
         return transmitter_.air_time().permille(now_ms);
     }
     bool over_budget() const { return over_budget_; }
+    protocol::StatusReport status_report() const;
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
-    static constexpr int kPayloads = 2;
-    static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Callsign};
+    static constexpr int kPayloads = timing::Transmitter::kPayloads;
+    static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Status,
+                                                         Payload::Callsign};
 
     struct Armed {
         ports::RfMode mode{ports::RfMode::Idle};
@@ -57,16 +62,24 @@ class RadioService : public runtime::Service {
 
         bool carries(Payload payload) const { return carried[static_cast<int>(payload)]; }
         uint64_t at(Payload payload) const { return at_us[static_cast<int>(payload)]; }
-        bool carries_any() const { return carried[0] || carried[1]; }
+        bool carries_any() const {
+            return std::any_of(std::begin(carried), std::end(carried), [](bool on) { return on; });
+        }
         void carry(Payload payload, uint64_t tx_at_us) {
             carried[static_cast<int>(payload)] = true;
             at_us[static_cast<int>(payload)] = tx_at_us;
         }
         void drop(Payload payload) { carried[static_cast<int>(payload)] = false; }
         Payload first() const {
-            if (!carries(Payload::Callsign)) return Payload::Position;
-            if (!carries(Payload::Position)) return Payload::Callsign;
-            return at_us[0] <= at_us[1] ? Payload::Position : Payload::Callsign;
+            Payload earliest = Payload::Position;
+            uint64_t earliest_us = UINT64_MAX;
+            for (const Payload payload : kEveryPayload) {
+                if (carries(payload) && at(payload) < earliest_us) {
+                    earliest = payload;
+                    earliest_us = at(payload);
+                }
+            }
+            return earliest;
         }
     };
 

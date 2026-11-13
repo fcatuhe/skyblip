@@ -45,6 +45,7 @@ struct Entry {
     bool phase_valid{false};
     bool tx_span_valid{false};
     bool callsign{false};
+    bool status{false};
 };
 
 // INFO: fc 16sep26 the field's own ceiling: a burst this late is a dwell that already ended

@@ -103,6 +103,7 @@ Record record_of(const radio::Entry& value) {
     set_flag(record.flags, kBurstFlagAirborne, value.airborne);
     set_flag(record.flags, kBurstFlagTxSpanValid, value.tx_span_valid);
     set_flag(record.flags, kBurstFlagCallsign, value.callsign);
+    set_flag(record.flags, kBurstFlagStatus, value.status);
     return record;
 }
 
@@ -130,6 +131,7 @@ bool read(const Record& record, radio::Entry& out) {
     out.airborne = record.flagged(kBurstFlagAirborne);
     out.tx_span_valid = record.flagged(kBurstFlagTxSpanValid);
     out.callsign = record.flagged(kBurstFlagCallsign);
+    out.status = record.flagged(kBurstFlagStatus);
     return true;
 }
 

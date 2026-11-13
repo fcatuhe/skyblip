@@ -181,6 +181,30 @@ uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms) {
     return static_cast<uint8_t>(ms / kTimestampQuarterMs);
 }
 
+ReceiveClass receive_class(int heard_permille) {
+    if (heard_permille > 800) return ReceiveClass::Full;
+    if (heard_permille > 400) return ReceiveClass::Partial;
+    if (heard_permille > 50) return ReceiveClass::Occasional;
+    return ReceiveClass::None;
+}
+
+bool from_own_status(AdslPacket& packet, settings::AirAddress address,
+                     uint8_t address_mapping_table, const StatusReport& report) {
+    if (!address) return false;
+    packet.reset(AdslPacket::kPayloadTypeStatus);
+    packet.version = AdslPacket::kProtocolVersionIssue2;
+    packet.set_address(*address & settings::kAddressMask);
+    packet.set_address_mapping_table(address_mapping_table);
+    packet.set_field(AdslPacket::kMaxProtocolVersionField, AdslPacket::kProtocolVersionIssue2);
+    packet.set_field(AdslPacket::kMBandReceiveField, static_cast<uint32_t>(report.m_band));
+    packet.set_field(AdslPacket::kOBandLdrReceiveField, static_cast<uint32_t>(report.o_band_ldr));
+    packet.set_field(AdslPacket::kOBandHdrReceiveField, static_cast<uint32_t>(report.o_band_hdr));
+    packet.set_field(AdslPacket::kConspicuityReceiveField, report.conspicuity_received);
+    packet.set_field(AdslPacket::kConspicuityTransmitField, report.conspicuity_transmitted);
+    packet.set_field(AdslPacket::kTrafficUplinkClientField, report.traffic_uplink_client ? 1 : 0);
+    return true;
+}
+
 bool is_callsign_character(char c) {
     return c == ' ' || c == '-' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
 }

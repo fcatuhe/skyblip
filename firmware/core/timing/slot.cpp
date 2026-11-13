@@ -1,6 +1,7 @@
 #include "core/timing/slot.h"
 
 #include <algorithm>
+#include <initializer_list>
 
 namespace skyblip::timing {
 
@@ -40,6 +41,16 @@ SlotState Scheduler::state_at(int phase_ms) {
     if (phase_ms >= kSlot0EndMs - kHopGuardMs && phase_ms < kSlot1StartMs) return SlotState::Hop;
     if (phase_ms >= kSlot1StartMs) return SlotState::Slot1;
     return SlotState::SwitchMBandToOBand;
+}
+
+int Scheduler::direct_heard_permille() {
+    int heard_ms = 0;
+    for (const int slot : {0, 1}) {
+        const int from = std::max(slot_start(slot), kDirectStartMs);
+        const int to = std::min(dwell_end(slot), kDirectEndMs);
+        heard_ms += std::max(to - from, 0);
+    }
+    return heard_ms * 1000 / (2 * (kDirectEndMs - kDirectStartMs));
 }
 
 Band Scheduler::band_at(int phase_ms) {

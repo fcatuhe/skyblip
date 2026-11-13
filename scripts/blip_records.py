@@ -186,7 +186,7 @@ DIAGNOSTICS_TYPES = {
         ("verdict", enum8(8, VERDICT)), ("source", enum8(9, SOURCE)), ("band", enum8(10, BAND)),
         ("channel", uint8(11)), ("bytes", uint8(12)), ("rssi_dbm", int8(13)), ("key_offset_s", int8(14)),
         ("tx_stage_margin_us", scaled(int8(15), 10)), ("address_valid", flag(2)), ("rssi_valid", flag(3)), ("airborne", flag(4)),
-        ("tx_span_valid", flag(5)), ("callsign", flag(6)))),
+        ("tx_span_valid", flag(5)), ("callsign", flag(6)), ("status", flag(7)))),
     6: ("dwell", (
         ("frequency_hz", uint32(0)), ("start_ms", uint16(4)), ("end_ms", uint16(6)), ("phase_ms", uint16(8)),
         ("duty_permille", uint16(10)), ("state", enum8(12, SLOT_STATE)), ("band", enum8(13, BAND)),

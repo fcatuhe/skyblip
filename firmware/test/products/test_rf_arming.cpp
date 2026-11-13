@@ -504,7 +504,7 @@ void fly_ground_second(Armings& armings, Outcomes& outcomes) {
     std::strncpy(armings.settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
     armings.clock.set_microseconds(Armings::kEdgeUs);
     REQUIRE(armings.radio.setup() == Status::Ok);
-    const uint32_t utc_s = 1000 + armings.radio.transmitter().ground_second();
+    const uint32_t utc_s = 1000 + armings.radio.transmitter().callsign_second();
     armings.ready_to_transmit(utc_s);
     armings.state.clock.utc_s = utc_s;
     for (int phase = 0; phase < 1000; phase += 10) {

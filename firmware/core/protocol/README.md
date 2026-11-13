@@ -18,6 +18,25 @@ Each version covers these paths today, under `firmware/`, so a change to one of 
 | `alptas.version` | `core/protocol/alptas.*`, the ALP-TAS half of `core/protocol/air.*` |
 | `adsb.version` | `core/protocol/adsb*`, `hardware/parts/lr2021/`, the 1090 MHz receiver, and `products/skyblip_bravo/services/adsb.*` |
 
+## The Status payload
+
+`from_own_status` writes §G.2's payload type 3: what this device can hear and process, so a peer or a ground station can plan around it. Its network header says protocol version 1, because the Status payload first appears in Issue 2 and §E.1.1 numbers Issue 2 as 1. The Traffic payload keeps version 0, since Issue 1 encodes it the same way.
+
+| Field | Value | Why |
+|---|---|---|
+| Max. Protocol Version | 1 | this device reads Issue 2 payloads (`test/adsl/test_network.cpp`, E.1.1) |
+| M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
+| O-band LDR receive | 0 | not received |
+| O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
+| ADS-L 4 Mobile | 0 | none |
+| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the FLARM-generation wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
+| E-conspicuity transmit | 0 | nothing but ADS-L goes out |
+| XPDR | 0 | no transponder is known |
+| Traffic Uplink client | 1 | the uplink is decoded and drawn |
+| FIS-B client | 0 | not decoded |
+
+The payload is 12 bytes, header included. The frame still carries 20 payload bytes, as a Traffic frame does, with the last 8 left zero, so it goes out behind the same sync word and the same length byte. §D.1.1 lets a receiver read the length, but ours checks it as 0x18 in the sync tail it reads after the shared window (`air.cpp`), and the OGN code SoftRF carries builds every frame at 24 bytes (`libraries/OGN/ads-l.h:17-22`). A 16-byte Status frame would not be heard by a receiver built like ours.
+
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
