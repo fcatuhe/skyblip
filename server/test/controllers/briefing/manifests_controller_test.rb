@@ -11,12 +11,13 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "standalone", manifest["display"]
   end
 
-  test "the French app starts in French" do
-    get briefing_manifest_path(format: :json, locale: :fr)
+  test "the app installed in French starts in French, at the same address" do
+    cookies[:locale] = "fr"
+    get briefing_manifest_path(format: :json)
 
     manifest = response.parsed_body
-    assert_equal "/fr/briefing", manifest["start_url"]
-    assert_equal "/fr/briefing", manifest["scope"]
+    assert_equal "/briefing", manifest["start_url"]
+    assert_equal "/briefing", manifest["scope"]
     assert_equal "fr", manifest["lang"]
   end
 

@@ -9,8 +9,13 @@ en:
       open: Menu
       activate: Activate a new Go
       tools: Developer tools
+      preferences: Settings
       install: Install the app
       site: skyblip.eu
+    preferences:
+      title: Settings
+      language: Language
+      language_name: English
     devices:
       attention: Needs attention
       no_bluetooth_title: Open this on Android or a computer

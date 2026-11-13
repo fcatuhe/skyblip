@@ -37,10 +37,9 @@ class StylesheetsTest < ActionDispatch::IntegrationTest
 
   test "the frames the briefing pages load link their areas when opened on their own" do
     VCR.use_cassette("github/releases", allow_playback_repeats: true) do
-      { "/briefing/firmwares" => %w[briefing], "/fr/briefing/firmwares" => %w[briefing],
-        "/briefing/simulator_build" => %w[simulator briefing], "/fr/briefing/simulator_build" => %w[simulator briefing],
-        "/briefing/simulator_build?mode=workbench" => %w[simulator workbench briefing],
-        "/fr/briefing/simulator_build?mode=workbench" => %w[simulator workbench briefing] }.each do |path, areas|
+      { "/briefing/firmwares" => %w[briefing],
+        "/briefing/simulator_build" => %w[simulator briefing],
+        "/briefing/simulator_build?mode=workbench" => %w[simulator workbench briefing] }.each do |path, areas|
         get path
 
         assert_response :success, path

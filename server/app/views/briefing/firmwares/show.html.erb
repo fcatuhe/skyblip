@@ -9,7 +9,7 @@
       <select id="firmware-shelf" data-shelf data-action="firmware#take" disabled>
         <option value=""><%= t("firmwares.prompt") %></option>
         <% @images.each do |release, file| %>
-          <option value="<%= release_asset_path(release.tag, file, locale: nil) %>"
+          <option value="<%= release_asset_path(release.tag, file) %>"
                   data-channel="<%= release.channel %>" data-product="<%= Release.product_of(file) %>" data-kind="<%= Release.kind_of(file) %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t("firmwares.#{Release.kind_of(file)}") %></option>
         <% end %>
       </select>

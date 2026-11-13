@@ -5,11 +5,10 @@ export default class extends Controller {
   static values = { current: String, default: String, available: Array, alternates: Object }
 
   connect() {
-    if (this.currentValue !== this.defaultValue) return
+    this.cookie ??= this.#browserLocale()
 
-    const locale = this.cookie ?? this.#browserLocale()
-    const url = this.alternatesValue[locale]
-    if (locale !== this.currentValue && url) Turbo.visit(url, { action: "replace" })
+    const url = this.alternatesValue[this.cookie]
+    if (this.cookie !== this.currentValue && url) Turbo.visit(url, { action: "replace" })
   }
 
   choose({ params: { locale } }) {

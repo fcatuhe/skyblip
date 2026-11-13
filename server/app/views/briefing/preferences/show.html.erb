@@ -1,0 +1,17 @@
+<% content_for :title, t("briefing.preferences.title") %>
+<div class="preferences">
+  <%= link_to t("briefing.tools.back"), briefing_root_path, class: "unit-back" %>
+  <h1><%= t("briefing.preferences.title") %></h1>
+
+  <%= form_with model: @preferences, scope: :preferences, url: briefing_preferences_path, method: :patch, class: "unit-settings", data: { turbo: false, controller: "auto-submit", action: "change->auto-submit#submit" } do |form| %>
+    <fieldset class="unit-fields">
+      <legend><%= t("briefing.preferences.language") %></legend>
+      <% Briefing::Preferences.locales.each do |locale| %>
+        <div class="field field--check">
+          <%= form.label :locale, t("briefing.preferences.language_name", locale:), value: locale, lang: locale %>
+          <%= form.radio_button :locale, locale %>
+        </div>
+      <% end %>
+    </fieldset>
+  <% end %>
+</div>

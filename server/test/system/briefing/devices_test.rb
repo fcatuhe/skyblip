@@ -289,13 +289,20 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "the app speaks French from its French address" do
+  test "the app speaks French once the pilot chooses it in the settings" do
     in_range a_go
     on_the_shelf do
-      visit "/fr/briefing"
+      visit "/briefing"
+      find("summary", text: "Menu").click
+      click_link "Settings"
+      screen "15-settings"
+      choose "Français"
+      assert_selector "h1", text: "Paramètres"
+
+      click_link "Retour à vos appareils"
       assert_selector "h1", text: "Votre skyBlip"
       click_button "Connecter un appareil"
-      assert_current_path "/fr/briefing/devices/go-00012a"
+      assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
       assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
