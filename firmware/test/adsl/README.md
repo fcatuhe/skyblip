@@ -22,11 +22,19 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 
 ## A gap is a skipped case, never a missing one
 
-Where the firmware does not satisfy a clause, the case is still written as the clause requires, marked `doctest::skip()` over a one-line `TODO:` naming why. `build/skyblip_tests --no-skip --test-case="ADS-L*"` runs them all and prints what is not conformant, which is the list of what this device would have to do to claim the clause. Three kinds of skip live in the two halves, told apart by the message:
+Where the firmware does not satisfy a clause, the case is still written as the clause requires, marked `doctest::skip()` over a one-line `TODO:` naming why. `build/skyblip_tests --no-skip --test-case="ADS-L*"` runs them all and prints what is not conformant, which is the list of what this device would have to do to claim the clause. Four kinds of skip live in the two halves, told apart by how the message opens, and `scripts/check_adsl_clauses.py` refuses a skip that opens on none of them:
 
-- `not implemented` / a failing assertion: a real gap, the firmware could satisfy the clause and does not.
-- `prose:` the clause has nothing executable, such as the block diagram or the OSI table.
+- `not implemented:` a mandatory clause the firmware does not meet. Today that is D.3's listen-before-talk, which the clause says "must be implemented", and F.2.3's configured ICAO address.
+- `prose:` the clause has nothing executable, such as the block diagram or the OSI table. G.5 is one too: it reserves a payload for drones and leaves its format to a later issue.
 - `paperwork:` a duty of the manufacturer rather than of the device, such as the declaration of conformity.
+- `optional:` a clause the specification leaves optional, because its wording says "may", "optionally" or "should", or because the Status payload lets a device declare the capability absent. These are the ones this device does not take:
+
+| Clause | What it is | The wording that makes it optional | What our Status declares |
+|---|---|---|---|
+| C.3, C.3.1, C.3.2, D.1.2 | the O-band LDR channel at 38.4 kbps, its sync word, preamble and legacy packet | G.2.3 gives O-band LDR receive a None class, so a device can declare the channel absent | O-band LDR receive 0, None |
+| E.4, E.4.1, E.4.2 | the Ed25519 secure signature and its timestamp | E.4: "ADS-L clients may optionally digitally sign the transmitted data packets". E.1 calls it "the optional secure signature" | no Status field. Every packet sets E.1.2's Secure Signature flag to 0 |
+| F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
+| G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
 Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks.
 

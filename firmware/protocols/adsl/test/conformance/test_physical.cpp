@@ -58,20 +58,20 @@ TEST_CASE("ADS-L.4.SRD860.C.2.4: the sync word is 0x72 0x4B, Manchester-coded") 
     CHECK(chips[5] == static_cast<uint8_t>(chips_of(0x4B)));
 }
 
-// TODO: fc 18sep26 no O-band LDR: one radio, and the dwell map spends the second on M-band and HDR
+// INFO: fc 13nov26 optional: G.2.3 lets a Status declare O-band LDR receive None, as ours does
 TEST_CASE("ADS-L.4.SRD860.C.3: the O-band LDR channel is 38.4 kbps behind sync word 0xB4 0x2B" *
           doctest::skip()) {
-    FAIL("O-band LDR is not implemented: nothing tunes 869.525 MHz at 38.4 kbps");
+    FAIL("optional: O-band LDR is not taken, so nothing tunes 869.525 MHz at 38.4 kbps");
 }
 
-// TODO: fc 18sep26 no O-band LDR, so neither its sync word nor its preamble is ever sent
+// INFO: fc 13nov26 optional: G.2.3 lets a Status declare O-band LDR receive None, as ours does
 TEST_CASE("ADS-L.4.SRD860.C.3.1: the O-band LDR sync word is 0xB4 0x2B" * doctest::skip()) {
-    FAIL("O-band LDR is not implemented: no sync word is armed for that channel");
+    FAIL("optional: O-band LDR is not taken, so no sync word is armed for that channel");
 }
 
-// TODO: fc 18sep26 no O-band LDR, so nothing emits its 40 repetitions either
+// INFO: fc 13nov26 optional: G.2.3 lets a Status declare O-band LDR receive None, as ours does
 TEST_CASE("ADS-L.4.SRD860.C.3.2: the O-band LDR preamble is 10, forty times" * doctest::skip()) {
-    FAIL("O-band LDR is not implemented: no preamble is emitted on that channel");
+    FAIL("optional: O-band LDR is not taken, so no preamble is emitted on that channel");
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.4: the O-band HDR channel is modulated as the table prints it") {

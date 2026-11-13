@@ -110,12 +110,14 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
 TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured" *
           doctest::skip()) {
     CHECK(traffic_packet(0x3C0A11u, 5).address() == 0x3C0A11u);
-    FAIL("the packet carries any table it is handed, and no configuration path hands it table 5");
+    FAIL(
+        "not implemented: the packet carries any table it is handed, and no configuration path "
+        "hands it table 5");
 }
 
-// TODO: fc 19sep26 no privacy mode on this device: the stealth setting and its table 0 are gone
+// INFO: fc 13nov26 optional: F.2.4 says a device "may be operated in privacy mode", ours is not
 TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" * doctest::skip()) {
-    FAIL("the address table is the one a pilot configured, and nothing switches it at transmit");
+    FAIL("optional: no privacy mode, so the table is the one configured and nothing switches it");
 }
 
 // The clause asks a device to disallow an inconsistent configuration: this one cannot make any.

@@ -29,7 +29,18 @@ These are skyBlip's choices, built on this stack:
 
 ## What is not implemented
 
-Each gap is a skipped case in the conformance suite, written as the clause requires (below): O-band LDR (C.3, D.1.2), the secure signature (E.4), FIS-B (G.4), Remote Identification (G.5), and privacy mode (F.2.4). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
+Each clause this directory does not meet is a skipped case in the conformance suite, written as the clause requires, and the message says which kind of gap it is (`firmware/test/adsl/README.md`). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
+
+Two mandatory clauses are not met. §D.3 says listen-before-talk "must be implemented", and the hour's air time is the only rule that refuses a burst (`core/timing/README.md`). §F.2.3 says a configured ICAO address "shall" go on air, and the stored one does not yet (#191). Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
+
+The rest are optional, and this device does not take them:
+
+| Clause | What it is | The wording that makes it optional | What our Status declares |
+|---|---|---|---|
+| C.3, C.3.1, C.3.2, D.1.2 | the O-band LDR channel at 38.4 kbps, its sync word, preamble and legacy packet | G.2.3 gives O-band LDR receive a None class, so a device can declare the channel absent | O-band LDR receive 0, None |
+| E.4, E.4.1, E.4.2 | the Ed25519 secure signature and its timestamp | E.4: "ADS-L clients may optionally digitally sign the transmitted data packets". E.1 calls it "the optional secure signature" | no Status field. Every packet sets E.1.2's Secure Signature flag to 0 |
+| F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
+| G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
 ## Public API
 

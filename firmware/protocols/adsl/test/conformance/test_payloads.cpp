@@ -119,16 +119,16 @@ TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version it
     CHECK(adsl::Packet::kMaxProtocolVersion == adsl::Packet::kProtocolVersionIssue2);
 }
 
-// TODO: fc 18sep26 no FIS-B: DO-358B ground uplink messages are neither received nor decoded
+// INFO: fc 13nov26 optional: G.2.10 lets a Status declare FIS-B is not processed, as ours does
 TEST_CASE("ADS-L.4.SRD860.G.4: a FIS-B Uplink payload carries a DO-358B ground uplink message" *
           doctest::skip()) {
-    FAIL("the FIS-B payload is not implemented: type 5 is dropped with every other unknown type");
+    FAIL("optional: FIS-B is not processed, and type 5 is dropped with every other unknown type");
 }
 
-// TODO: fc 18sep26 no Remote Identification: a drone payload this aircraft device never sends
+// INFO: fc 13nov26 prose: G.5 reserves the payload for drones, its format left to a later issue
 TEST_CASE("ADS-L.4.SRD860.G.5: a Remote Identification payload carries an EN 4709-002 block" *
           doctest::skip()) {
-    FAIL("the Remote Identification payload is not implemented: type 6 is dropped as unknown");
+    FAIL("prose: a provision for drones whose encapsulation a future issue will specify");
 }
 
 // Every field of the payload table, written from a report that sets each one apart.

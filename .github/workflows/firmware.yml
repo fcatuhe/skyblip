@@ -79,6 +79,8 @@ jobs:
       # clause nobody read is the one a product is found non-conformant on.
       - name: every ADS-L clause has a case
         run: python3 scripts/check_adsl_clauses.py
+      - name: the clause check refuses a skipped case of no kind
+        run: python3 scripts/test_check_adsl_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks

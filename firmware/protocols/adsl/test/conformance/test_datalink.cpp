@@ -34,12 +34,12 @@ TEST_CASE(
     CHECK(adsl::uplink_length(10) == network_header + uplink_header + 191 + fec_parity);
 }
 
-// TODO: fc 18sep26 no O-band LDR radio here: the dwell map carries M-band and O-band HDR only
+// INFO: fc 13nov26 optional: G.2.3 lets a Status declare O-band LDR receive None, as ours does
 TEST_CASE(
     "ADS-L.4.SRD860.D.1.2: the O-band LDR packet is a 6-byte header, 24 bytes of data and a "
     "CRC8" *
     doctest::skip()) {
-    FAIL("O-band LDR is not implemented: no header, no CRC8, no 38.4 kbps dwell");
+    FAIL("optional: O-band LDR is not taken, so no header, no CRC8 and no 38.4 kbps dwell");
 }
 
 // The parity covers the scrambled form, so a receiver checks it before it can read a single field.
@@ -61,8 +61,10 @@ TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the netwo
     CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);
 }
 
-// TODO: fc 18sep26 no listen-before-talk: the hour's duty cycle is the only rule refusing a burst
+// TODO: fc 18sep26 D.3 makes LBT a must, and it waits on a carrier-sense hold inside the slot map
 TEST_CASE("ADS-L.4.SRD860.D.3: a burst waits on a carrier sense, and forces after 3000 ms" *
           doctest::skip()) {
-    FAIL("no listen-before-talk, so neither the 3000 ms force nor the 2000 ms silence after it");
+    FAIL(
+        "not implemented: no listen-before-talk, so neither the 3000 ms force nor the 2000 ms "
+        "silence after it");
 }

@@ -300,14 +300,14 @@ TEST_CASE("ADS-L.4.SRD860.E.4: nothing is signed, and nothing says it is") {
     CHECK(chip_bytes == 2u * (wire::kSyncWordBytes + adsl::kFrameBytes));
 }
 
-// TODO: fc 18sep26 no signature, so no UNIX timestamp is appended to one either
+// INFO: fc 13nov26 optional: E.4 says ADS-L clients "may optionally" sign, and this one does not
 TEST_CASE("ADS-L.4.SRD860.E.4.1: a signature carries the UTC second it was made in" *
           doctest::skip()) {
-    FAIL("no secure signature is produced, so there is no timestamp field to fill");
+    FAIL("optional: no secure signature is produced, so there is no timestamp field to fill");
 }
 
-// TODO: fc 18sep26 no Ed25519 key is held, generated or stored on this device
+// INFO: fc 13nov26 optional: E.4 says clients "may optionally" sign, so no Ed25519 key is held
 TEST_CASE("ADS-L.4.SRD860.E.4.2: the signature is Ed25519 over the header, the data and the time" *
           doctest::skip()) {
-    FAIL("no Ed25519 key is held, so nothing signs a packet");
+    FAIL("optional: no Ed25519 key is held, so nothing signs a packet");
 }
