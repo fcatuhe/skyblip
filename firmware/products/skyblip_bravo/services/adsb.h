@@ -14,6 +14,7 @@
 #include "products/common/services/adsb_capture.h"
 #include "products/common/services/traffic.h"
 #include "products/skyblip_bravo/gate_reference.h"
+#include "products/skyblip_bravo/own_transponder.h"
 #include "runtime/service.h"
 
 namespace skyblip::bravo {
@@ -46,6 +47,7 @@ class AdsbService : public runtime::Service {
     bool take_reject(AdsbReject& out);
     const protocol::AdsbAssembly& assembly() const { return assembly_; }
     const common::AdsbCapture& capture() const { return capture_; }
+    const OwnTransponder& own_transponder() const { return own_transponder_; }
 
    private:
     static protocol::AdsbReference reference(const model::Ownship& own);
@@ -57,6 +59,7 @@ class AdsbService : public runtime::Service {
     const GateReference& gate_;
     common::AdsbCapture capture_;
     protocol::AdsbAssembly assembly_{};
+    OwnTransponder own_transponder_{};
     model::AircraftObservation observation_{};
     uint32_t crc_{0};
     uint32_t unsupported_{0};

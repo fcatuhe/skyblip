@@ -189,6 +189,27 @@ Status read_claim_pressure_and_icao(const cbor::Reader& reader, PeerClaim& claim
     return claim.own_icao > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
 }
 
+// INFO: fc 13nov26 a callsign or a category with no address is half a field, refused whole
+bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
+    OwnTransponderHeard heard{};
+    bool addressed = false, categorised = false;
+    uint32_t category = 0;
+    if (!take(reader.read_unsigned(link::health_key::kOwnTransponder), heard.address, addressed) ||
+        !take(reader.read_unsigned(link::health_key::kOwnTransponderCategory), category,
+              categorised))
+        return false;
+    const Status text = reader.read_text(link::health_key::kOwnTransponderCallsign, heard.callsign,
+                                         kPeerCallsignBytes);
+    if (text != Status::Ok && text != Status::NotFound) return false;
+    const bool named = text == Status::Ok;
+    if (!addressed) return !named && !categorised;
+    if (heard.address == 0 || heard.address > settings::kAddressMask || category > UINT8_MAX)
+        return false;
+    heard.aircraft_category = static_cast<uint8_t>(category);
+    health.own_transponder = heard;
+    return true;
+}
+
 }  // namespace
 
 int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
@@ -253,6 +274,14 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     writer.add_boolean(link::health_key::kAlarmGranted, health.alarm_granted);
     writer.add_code(link::health_key::kExportReference, health.export_reference);
     writer.add_boolean(link::health_key::kPaired, health.paired);
+    if (health.own_transponder) {
+        const OwnTransponderHeard& heard = *health.own_transponder;
+        writer.add_unsigned(link::health_key::kOwnTransponder, heard.address);
+        if (heard.callsign[0] != 0)
+            writer.add_text(link::health_key::kOwnTransponderCallsign, heard.callsign);
+        if (heard.aircraft_category != 0)
+            writer.add_unsigned(link::health_key::kOwnTransponderCategory, heard.aircraft_category);
+    }
     return writer.finish();
 }
 
@@ -335,6 +364,7 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.utc_valid = utc_valid.value();
     health.own_icao_set = own_icao_set.value();
     health.paired = paired.value();
+    if (!read_own_transponder(reader, health)) return Status::Invalid;
     return health;
 }
 

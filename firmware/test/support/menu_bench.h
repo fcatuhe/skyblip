@@ -49,9 +49,19 @@ struct Bench {
         return run(100);
     }
 
-    int rows() const { return menu_for(page).row_count; }
+    int rows() const { return editor.menu().row_count; }
 
+    // A row of the AIRCRAFT menu is reached through the settings row that opens it.
     void focus_on(MenuRow row) {
+        if (!editor.aircraft() && menu_row_index(aircraft_menu(), row) >= 0) {
+            walk_to(MenuRow::Aircraft);
+            REQUIRE(change() == MenuAction::Moved);
+            REQUIRE(editor.aircraft());
+        }
+        walk_to(row);
+    }
+
+    void walk_to(MenuRow row) {
         for (int i = 0; i < rows() && editor.focus() != row; i++) move();
         REQUIRE(editor.focus() == row);
     }

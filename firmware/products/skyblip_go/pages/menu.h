@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/aircraft.h"
 #include "products/skyblip_go/pages/page.h"
 #include "products/skyblip_go/settings.h"
 
@@ -26,6 +27,8 @@ enum class MenuRow : uint8_t {
     SelfTest,
     Light,
     Bravo,
+    Aircraft,
+    Detected,
     kCount
 };
 
@@ -35,16 +38,20 @@ struct Menu {
 };
 
 Menu menu_for(Page page);
+// INFO: fc 13nov26 the rows AIRCRAFT opens: what Bravo heard, then the three it sets
+Menu aircraft_menu();
 
 struct MenuValues {
     go::Settings settings{};
     bool light{false};
+    Detected detected{};
 };
 
 struct MenuSnapshot {
     Page page{Page::Radar};
     MenuValues values{};
     MenuRow focus{MenuRow::Light};
+    bool aircraft{false};
 };
 
 // Nine characters, which is what the settings blob has always held, and the ring
@@ -166,6 +173,8 @@ class MenuEditor {
 
     bool active() const { return active_; }
     Page page() const { return page_; }
+    bool aircraft() const { return aircraft_; }
+    Menu menu() const;
     MenuRow focus() const;
     Page opening() const { return opening_; }
 
@@ -186,6 +195,8 @@ class MenuEditor {
    private:
     MenuAction act(const MenuValues& current, MenuValues& next);
     MenuAction advance();
+    MenuAction use_detected(const MenuValues& current, MenuValues& next);
+    void back_to_settings();
     void edit(MenuRow field, const MenuValues& current);
     int characters() const;
     MenuAction roll();
@@ -204,6 +215,7 @@ class MenuEditor {
     uint32_t idle_since_ms_{0};
     Pending pending_{Pending::None};
     bool active_{false};
+    bool aircraft_{false};
     bool editing_{false};
     bool clearing_{false};
     MenuRow field_{MenuRow::Callsign};

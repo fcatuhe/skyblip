@@ -99,7 +99,7 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
-    enum class Notice : uint8_t { OwnIcao, BravoForgot };
+    enum class Notice : uint8_t { OwnIcao, BravoForgot, NewAircraft };
 
     bool noticing() const { return notice_; }
     Notice notice() const { return notice_kind_; }
@@ -117,6 +117,11 @@ class ScreenService : public runtime::Service {
     void step_bravo(uint32_t now_ms);
     void sync_notice(uint32_t now_ms);
     bool close_notice();
+    Detected detected() const;
+    Detected detected_to_store(const Detected& shown) const;
+    bool new_aircraft(const Detected& detected) const;
+    bool notice_read(uint32_t now_ms) const;
+    void use_noticed_aircraft();
     bool picking_a_capture() const;
     bool step_capture_focus();
     void sync_arming(uint32_t now_ms);
@@ -215,6 +220,11 @@ class ScreenService : public runtime::Service {
     uint32_t notice_since_ms_{0};
     Notice notice_kind_{Notice::OwnIcao};
     bool notice_{false};
+    Detected noticed_aircraft_{};
+    Detected detected_on_glass_{};
+    bool aircraft_noticed_{false};
+    bool notice_on_glass_{false};
+    uint32_t notice_on_glass_since_ms_{0};
     diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     uint32_t prompts_staged_{0};

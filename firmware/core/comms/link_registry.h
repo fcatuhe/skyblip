@@ -420,6 +420,9 @@ enum : uint32_t {
     kAlarmGranted = 7,
     kExportReference = 11,
     kPaired = 12,
+    kOwnTransponder = 13,
+    kOwnTransponderCallsign = 14,
+    kOwnTransponderCategory = 15,
 };
 }
 

@@ -1,5 +1,6 @@
 // The peer frames the Go writes and reads, held to the registry's key table.
 #include <cstdint>
+#include <cstring>
 #include <string>
 
 #include "core/comms/peer.h"
@@ -248,6 +249,56 @@ TEST_CASE("peer frames: Bravo's health carries its state, and no last_sequence b
     CHECK(read.value().boot_epoch == 9);
     CHECK(read.value().own_icao_set);
     CHECK_FALSE(read.value().paired);
+}
+
+TEST_CASE("peer frames: Bravo's health names the transponder it takes for the aircraft's own") {
+    comms::PeerHealth health{};
+    health.boot_epoch = 9;
+    comms::OwnTransponderHeard heard{};
+    heard.address = 0x3A4B5C;
+    std::strcpy(heard.callsign, "FJABC");
+    heard.aircraft_category = 4;
+    health.own_transponder = heard;
+    uint8_t frame[comms::kPeerPayloadFloorBytes];
+    int bytes = comms::write_health(health, frame, sizeof(frame));
+    Result<comms::PeerHealth> read =
+        comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    REQUIRE(read.value().own_transponder.has_value());
+    CHECK(read.value().own_transponder->address == 0x3A4B5Cu);
+    CHECK(std::string(read.value().own_transponder->callsign) == "FJABC");
+    CHECK(read.value().own_transponder->aircraft_category == 4);
+
+    heard.callsign[0] = 0;
+    heard.aircraft_category = 0;
+    health.own_transponder = heard;
+    bytes = comms::write_health(health, frame, sizeof(frame));
+    read = comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    REQUIRE(read.value().own_transponder.has_value());
+    CHECK(read.value().own_transponder->callsign[0] == 0);
+
+    health.own_transponder.reset();
+    bytes = comms::write_health(health, frame, sizeof(frame));
+    read = comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    CHECK_FALSE(read.value().own_transponder.has_value());
+}
+
+TEST_CASE("peer frames: a transponder's callsign or category without its address is refused") {
+    const auto health_with = [](const std::string& fields) {
+        const std::string frame = complete_registry_frame(
+            "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
+            "\"utc_valid\":true,\"own_icao_set\":false,\"alarm_granted\":false,"
+            "\"export_reference\":\"own\",\"paired\":true," +
+            fields + "}");
+        return comms::read_health(bytes_of(frame)).status();
+    };
+    CHECK(health_with("\"own_transponder\":3820380") == Status::Ok);
+    CHECK(health_with("\"own_transponder_callsign\":\"FJABC\"") == Status::Invalid);
+    CHECK(health_with("\"own_transponder_category\":4") == Status::Invalid);
+    CHECK(health_with("\"own_transponder\":16777216") == Status::Invalid);
+    CHECK(health_with("\"own_transponder\":0") == Status::Invalid);
 }
 
 // #192: a Go reads paired off every health to tell a pin Bravo holds from one it does not.

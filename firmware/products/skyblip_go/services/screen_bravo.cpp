@@ -1,3 +1,4 @@
+#include "core/protocol/adsb_registration.h"
 #include "products/skyblip_go/services/screen.h"
 
 namespace skyblip::go {
@@ -44,20 +45,71 @@ void ScreenService::step_bravo(uint32_t now_ms) {
 
 // INFO: fc 11nov26 once a boot, never over an alarm, and gone after the menu's idle hold
 void ScreenService::sync_notice(uint32_t now_ms) {
-    if (notice_ &&
-        (alarm_takes_glass() || now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
+    const Detected heard = detected();
+    // INFO: fc 13nov26 an aircraft no longer heard on the ground, takeoff included, is no proposal
+    const bool proposal_gone =
+        notice_kind_ == Notice::NewAircraft && !same_aircraft(heard, noticed_aircraft_);
+    if (notice_ && (alarm_takes_glass() || proposal_gone ||
+                    now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
         close_notice();
     if (alarm_takes_glass()) return;
     // INFO: fc 11nov26 a lost pin outranks the own-ICAO notice, which no longer stands unpaired
-    if (bravo_.take_forgotten_notice())
+    if (bravo_.take_forgotten_notice()) {
         notice_kind_ = Notice::BravoForgot;
-    else if (!notice_ && bravo_.own_icao_warning().take_notice(settings_.own_icao))
+    } else if (!notice_ && bravo_.own_icao_warning().take_notice(settings_.own_icao)) {
         notice_kind_ = Notice::OwnIcao;
-    else
+    } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
+        notice_kind_ = Notice::NewAircraft;
+        noticed_aircraft_ = heard;
+        aircraft_noticed_ = true;
+    } else {
         return;
+    }
     notice_ = true;
     notice_since_ms_ = now_ms;
     change_screen();
+}
+
+// INFO: fc 13nov26 on the ground only, so a wingman in the air is never proposed
+Detected ScreenService::detected() const {
+    Detected out;
+    if (!paired(settings_)) return out;
+    out.state = Detection::NotConnected;
+    if (context_.state.bravo != comms::BravoState::Live) return out;
+    out.state = Detection::Airborne;
+    if (context_.state.flight.confirmed_state == flight::FlightState::Airborne) return out;
+    out.state = Detection::NoFix;
+    if (context_.state.flight.confirmed_state != flight::FlightState::Ground) return out;
+    out.state = Detection::Listening;
+    const std::optional<comms::OwnTransponderHeard> heard = bravo_.own_transponder();
+    if (!heard) return out;
+    out.state = Detection::Heard;
+    out.address = heard->address;
+    protocol::adsb_registration(out.callsign, sizeof(out.callsign), heard->callsign,
+                                heard->address);
+    out.aircraft_type = heard->aircraft_category;
+    return out;
+}
+
+// INFO: fc 13nov26 a press stores what the glass showed, while Bravo still hears exactly it
+Detected ScreenService::detected_to_store(const Detected& shown) const {
+    const Detected now = detected();
+    if (shown.state == Detection::Heard && same_aircraft(shown, now)) return shown;
+    if (shown.state != Detection::Heard && now.state != Detection::Heard) return now;
+    Detected unseen = now;
+    unseen.state = Detection::Listening;
+    return unseen;
+}
+
+// INFO: fc 13nov26 once a boot, for an address the Go does not hold: a new aircraft or a first one
+bool ScreenService::new_aircraft(const Detected& detected) const {
+    return detected.state == Detection::Heard && detected.address != settings_.own_icao;
+}
+
+void ScreenService::use_noticed_aircraft() {
+    if (!same_aircraft(detected(), noticed_aircraft_)) return;
+    if (!adopt(noticed_aircraft_, settings_)) return;
+    config_.note_settings_changed();
 }
 
 bool ScreenService::close_notice() {

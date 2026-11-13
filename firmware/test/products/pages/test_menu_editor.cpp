@@ -36,9 +36,7 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
     CHECK(bench.editor.focus() == MenuRow::Light);
 
     CHECK(bench.move() == MenuAction::Moved);
-    CHECK(bench.editor.focus() == MenuRow::AircraftType);
-    CHECK(bench.move() == MenuAction::Moved);
-    CHECK(bench.editor.focus() == MenuRow::Callsign);
+    CHECK(bench.editor.focus() == MenuRow::Aircraft);
     CHECK(bench.move() == MenuAction::Moved);
     CHECK(bench.editor.focus() == MenuRow::Units);
     CHECK(bench.move() == MenuAction::Moved);

@@ -57,6 +57,8 @@ void ScreenService::draw_menu_page() {
     snapshot.page = editor_.page();
     snapshot.values = menu_values();
     snapshot.focus = editor_.focus();
+    snapshot.aircraft = editor_.aircraft();
+    detected_on_glass_ = snapshot.values.detected;
     draw_menu(framebuffer_, snapshot);
 }
 
@@ -152,10 +154,11 @@ void ScreenService::render(uint32_t now_ms) {
         return;
     }
     if (notice_) {
-        if (notice_kind_ == Notice::BravoForgot)
-            draw_bravo_forgot_notice(framebuffer_);
-        else
-            draw_own_icao_notice(framebuffer_);
+        switch (notice_kind_) {
+            case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
+            case Notice::NewAircraft: draw_aircraft_notice(framebuffer_, noticed_aircraft_); break;
+            case Notice::OwnIcao: draw_own_icao_notice(framebuffer_); break;
+        }
         return;
     }
     if (mode_ == Mode::Menu) {

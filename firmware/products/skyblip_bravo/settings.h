@@ -35,9 +35,11 @@ struct Settings {
     PeerPin peer{};
     bool alarm_enabled{true};
     AlarmVolume alarm_volume{AlarmVolume::Loud};
+    // INFO: fc 13nov26 own_icao came from the pinned Go, so that Go clearing it clears it here
+    bool own_icao_from_go{false};
 };
 
-constexpr uint8_t kBlobVersion = 1;
+constexpr uint8_t kBlobVersion = 2;
 
 Settings defaults();
 

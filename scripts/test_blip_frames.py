@@ -71,8 +71,11 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
      "1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"),
     ({"command": "health", "protocol_version": 1, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
       "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "own_icao_set": True,
-      "alarm_granted": True, "export_reference": "own", "paired": True},
-     "aa00181b0101021affffffff03f504f5051affffffff06f507f50b020cf5"),
+      "alarm_granted": True, "export_reference": "own", "paired": True,
+      "own_transponder": 0xFFFFFF, "own_transponder_callsign": "ABCD1234",
+      "own_transponder_category": 17},
+     "ad00181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334"
+     "0f11"),
     ({"command": "peer_claim", "boot_epoch": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED,
       "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
       "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,

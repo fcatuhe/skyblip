@@ -38,9 +38,10 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
   [
     {
       command: 'health', protocol_version: 1, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
-      own_icao_set: true, alarm_granted: true, export_reference: 'own', paired: true,
+      own_icao_set: true, alarm_granted: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
+      own_transponder_callsign: 'ABCD1234', own_transponder_category: 17,
     },
-    'aa00181b0101021affffffff03f504f5051affffffff06f507f50b020cf5',
+    'ad00181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334' + '0f11',
   ],
   [
     {

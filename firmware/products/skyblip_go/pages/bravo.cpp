@@ -182,7 +182,7 @@ void draw_own_icao_notice(ui::Canvas& canvas) {
     centred(canvas, kReasonY, "NOT SET ON", kMenuScale);
     centred(canvas, kReasonY + kReasonLineGap, "GO OR BRAVO", kMenuScale);
     centred(canvas, kDetailY, "OWN TRANSPONDER SHOWS AS TRAFFIC", 1);
-    centred(canvas, kDetailY + kNoticeDetailGap, "SET OWN ICAO IN SETTINGS", 1);
+    centred(canvas, kDetailY + kNoticeDetailGap, "SET IT UNDER SETTINGS AIRCRAFT", 1);
     centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
 }
 

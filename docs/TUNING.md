@@ -282,6 +282,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFlashPassCeilingMs` | `events::kAdsbQueueDrainWindowMs / 2` = 50 | milliseconds | Ceiling | the ADS-B queue holds the design load for its drain window, so flash takes half |
 | `kClaimMaxAgeMs` | 4000 (4 s) | milliseconds | MaxAge | a fix period, a second of unknown phase and two claim periods, one lost |
 | `kTargetUpdateFloorMs` | 500 | milliseconds | Floor | schemas/link.v1.json observation: two frames a second for a target at most |
+| `kLevelDampingSamples` | 4 | samples | Damping | a frame moves the level a quarter of the way, so one fade decides nothing |
+| `kLeadHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/products/skyblip_bravo/README.md) argues it |
+| `kEmitterMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | a transponder squitters about six times a second, so 5 s quiet is gone |
 | `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s, inside the Go's 35 s kAnswerCeilingMs |
 | `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
@@ -360,4 +363,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-235 constants over 22 folders.
+238 constants over 22 folders.

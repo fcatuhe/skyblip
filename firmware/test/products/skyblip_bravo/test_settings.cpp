@@ -79,8 +79,30 @@ TEST_CASE("bravo: the settings come back from flash after a reboot") {
     CHECK_FALSE(second.settings().peer.pinned);
 }
 
-// #192 stores the pinned Go in version 1, so the field is in the blob from the first image.
-TEST_CASE("bravo: blob version 1 carries the peer pin whole, and refuses any other version") {
+// Version 2 adds where the own ICAO came from, and must not cost a Bravo its pin.
+TEST_CASE("bravo: a version 1 blob is read whole, the pin kept and the own ICAO a phone's") {
+    struct {
+        uint32_t own_icao{0x3C6586};
+        bravo::PeerPin peer{};
+        bool alarm_enabled{false};
+        bravo::AlarmVolume alarm_volume{bravo::AlarmVolume::Soft};
+    } v1{};
+    v1.peer.pinned = true;
+    v1.peer.address_type = 1;
+    uint8_t blob[64]{};
+    settings::seal(1, &v1, sizeof(v1), blob, sizeof(blob));
+    bravo::Settings read{};
+    REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(v1)), read) == Status::Ok);
+    CHECK(read.own_icao == 0x3C6586u);
+    CHECK_FALSE(read.own_icao_from_go);
+    CHECK(read.peer.pinned);
+    CHECK(read.peer.address_type == 1);
+    CHECK_FALSE(read.alarm_enabled);
+    CHECK(read.alarm_volume == bravo::AlarmVolume::Soft);
+}
+
+// #192 stores the pinned Go from the first image, and version 2 keeps it.
+TEST_CASE("bravo: blob version 2 carries the peer pin whole, and refuses any other version") {
     bravo::Settings pinned = bravo::defaults();
     pinned.peer.pinned = true;
     pinned.peer.address_type = 1;
@@ -89,13 +111,13 @@ TEST_CASE("bravo: blob version 1 carries the peer pin whole, and refuses any oth
 
     uint8_t blob[64]{};
     bravo::to_blob(pinned, blob, sizeof(blob));
-    CHECK(settings::blob_version(blob) == 1);
+    CHECK(settings::blob_version(blob) == 2);
     bravo::Settings read{};
     REQUIRE(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Ok);
     CHECK(read.peer.pinned);
     CHECK(read.peer.address_type == 1);
     CHECK(std::memcmp(read.peer.address, address, sizeof(address)) == 0);
 
-    blob[0] = 2;
+    blob[0] = 3;
     CHECK(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Unsupported);
 }

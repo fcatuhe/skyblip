@@ -137,7 +137,7 @@ The sanity check and the slant both measure from the table's reference, `set_own
 
 ### Accepted for v1
 
-**Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO).
+**Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO). A paired Bravo also proposes the address on the ground, from the transponder it hears loudest by a clear lead, and the pilot takes it with one press (`products/skyblip_go/pages/README.md`, aircraft). It is a proposal and never a filter of its own: geometry cannot tell our own transponder from a wingman a few metres off, and an address set in error drops a real aircraft from the plot, which formation never does.
 
 ### Not accepted: an aircraft that shows twice
 

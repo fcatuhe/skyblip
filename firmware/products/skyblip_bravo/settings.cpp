@@ -10,6 +10,28 @@ namespace {
 
 constexpr size_t kPayload = sizeof(Settings);
 
+// INFO: fc 13nov26 version 1's layout, read once and migrated: it had no own_icao_from_go
+struct SettingsV1 {
+    uint32_t own_icao{kOwnIcaoUnset};
+    PeerPin peer{};
+    bool alarm_enabled{true};
+    AlarmVolume alarm_volume{AlarmVolume::Loud};
+};
+
+constexpr uint8_t kBlobVersionV1 = 1;
+
+Status open_v1(const uint8_t* in, size_t length, Settings& out) {
+    SettingsV1 read{};
+    const Status status = settings::open(in, length, sizeof(SettingsV1), &read);
+    if (status != Status::Ok) return status;
+    out = Settings{};
+    out.own_icao = read.own_icao;
+    out.peer = read.peer;
+    out.alarm_enabled = read.alarm_enabled;
+    out.alarm_volume = read.alarm_volume;
+    return Status::Ok;
+}
+
 template <class Value, class Assign>
 Status apply_key(const Result<Value>& read, Assign assign) {
     if (read.status() == Status::NotFound) return Status::Ok;
@@ -50,9 +72,11 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity) {
 
 Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (length < settings::kBlobOverhead) return Status::Crc;
-    if (settings::blob_version(in) != kBlobVersion) return Status::Unsupported;
+    const uint8_t version = settings::blob_version(in);
+    if (version != kBlobVersion && version != kBlobVersionV1) return Status::Unsupported;
     Settings read{};
-    const Status status = settings::open(in, length, kPayload, &read);
+    const Status status = version == kBlobVersionV1 ? open_v1(in, length, read)
+                                                    : settings::open(in, length, kPayload, &read);
     if (status != Status::Ok) return status;
     if (validate(read) != Status::Ok) return Status::Invalid;
     out = read;
@@ -82,6 +106,7 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame) {
         status = apply_key(frame.read_unsigned(link::set_key::kOwnIcao), [&](uint32_t value) {
             if (value > settings::kAddressMask) return Status::OutOfRange;
             next.own_icao = value;
+            next.own_icao_from_go = false;
             return Status::Ok;
         });
     if (status == Status::Ok) status = validate(next);
