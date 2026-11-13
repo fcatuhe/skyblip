@@ -398,13 +398,7 @@ TEST_CASE("comms: power_off refused in flight") {
     CHECK_FALSE(config.power_off_requested());
 }
 
-// D5: the reset reason was read at boot and shown on the self-test page, and a
-// device in a field with a phone next to it has no self-test page in view.
-// G6's plug-in-and-read: the same on_rx dispatch that answers "status"
-// answers "timing" from whatever core/timing::SlotTimingStatistics the device has
-// been accumulating - no second channel, no panel real estate a bucket array
-// would not fit on anyway.
-// A taxi fast enough to read as a take-off once aborted an upload the pilot had confirmed.
+// A taxi read as a take-off once aborted a confirmed upload, which now runs on behind the radar.
 TEST_CASE("comms: a take-off leaves an upload window the pilot confirmed open") {
     platform::host::Link link;
     link.raise_link(1);
@@ -418,7 +412,7 @@ TEST_CASE("comms: a take-off leaves an upload window the pilot confirmed open") 
 
     config.set_flight_state(flight::FlightState::Airborne);
     CHECK(config.upload_allowed());
-    CHECK(config.receiving_firmware());
+    CHECK_FALSE(config.receiving_firmware());
 }
 
 TEST_CASE("comms: upload window expires") {

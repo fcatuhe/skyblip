@@ -155,7 +155,9 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("comms flight gate: an upload the pilot confirmed installs through a take-off") {
+// A swap takes the unit dark, so an image that lands in flight waits for the ground.
+TEST_CASE(
+    "comms flight gate: an upload that lands in flight installs once the unit is on the ground") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -166,8 +168,14 @@ TEST_CASE("comms flight gate: an upload the pilot confirmed installs through a t
     config.confirm();
     REQUIRE(config.receiving_firmware());
     config.set_flight_state(flight::FlightState::Airborne);
-    CHECK(config.upload_allowed());
     config.tick(100);
+    CHECK_FALSE(config.install_requested());
+    CHECK_FALSE(config.upload_allowed());
+    CHECK_FALSE(config.receiving_firmware());
+
+    config.tick(100 + 11u * 60u * 1000u);
+    config.set_flight_state(flight::FlightState::Ground);
+    config.tick(100 + 12u * 60u * 1000u);
     CHECK(config.install_requested());
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"install\"}");

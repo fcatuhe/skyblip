@@ -41,10 +41,11 @@ void ConfigService::tick(uint32_t now_ms) {
     // pass rather than costing a pilot a stale gauge. Only a transient refusal
     // arms this: a frame too big for the payload would retry forever.
     if (status_push_due_ && link_up()) push_status();
-    if (upload_window_open_ && now_ms - upload_window_opened_ms_ >= kUploadWindowMs) {
+    install_held_ = upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished();
+    if (upload_window_open_ && !install_held_ &&
+        now_ms - upload_window_opened_ms_ >= kUploadWindowMs)
         upload_window_open_ = false;
-    }
-    if (upload_window_open_ && dfu_ != nullptr && dfu_->upload_finished()) install_received_image();
+    if (install_held_ && !in_flight()) install_received_image();
     if (identity_ != nullptr) identity_->tick(now_ms);
     if (pending_ != Pending::None && now_ms - pending_since_ms_ >= kPromptCeilingMs) {
         pending_ = Pending::None;
@@ -56,14 +57,12 @@ void ConfigService::tick(uint32_t now_ms) {
 void ConfigService::set_flight_state(flight::FlightState state) {
     const bool changed = state != flight_state_;
     flight_state_ = state;
-    if (state == flight::FlightState::Airborne) {
-        // A prompt that survived the take-off roll would be an authorisation a
-        // pilot could confirm with an elbow in the air.
-        if (pending_ != Pending::None && !prompt_allowed()) {
-            pending_ = Pending::None;
-            pending_set_bytes_ = 0;
-            acknowledge(false, link::Reason::InFlight);
-        }
+    // A prompt that survived the take-off roll would be an authorisation a
+    // pilot could confirm with an elbow in the air.
+    if (pending_ != Pending::None && !prompt_allowed()) {
+        pending_ = Pending::None;
+        pending_set_bytes_ = 0;
+        acknowledge(false, link::Reason::InFlight);
     }
     // INFO: fc 03oct26 a page holding its buttons in flight learns it landed without polling
     if (changed && link_up()) push_status();
@@ -292,6 +291,7 @@ void ConfigService::request_firmware(const cbor::Reader& frame) {
 // INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
 void ConfigService::install_received_image() {
     upload_window_open_ = false;
+    install_held_ = false;
     ports::ImageVersion staged;
     if (!dfu_->staged_version(staged)) {
         acknowledge(false, link::Reason::NothingStaged);

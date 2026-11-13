@@ -111,10 +111,11 @@ class ConfigService {
     // While true the next command waits on the bus: its answer would have nowhere to go.
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
-    // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window two presses open
-    bool upload_allowed() const { return upload_window_open_; }
+    // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window the pilot opened
+    bool upload_allowed() const { return upload_window_open_ && !install_held_; }
     void close_upload_window() { upload_window_open_ = false; }
-    bool receiving_firmware() const { return upload_window_open_; }
+    // INFO: fc 13nov26 in flight the glass keeps the radar while an upload runs on behind it
+    bool receiving_firmware() const { return upload_allowed() && !in_flight(); }
 
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
@@ -380,6 +381,8 @@ class ConfigService {
     bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
+    // INFO: fc 13nov26 an image that lands in flight installs on the ground, since a swap goes dark
+    bool install_held_{false};
     uint32_t now_ms_{0};
     uint32_t upload_window_opened_ms_{0};
     uint32_t pending_since_ms_{0};
