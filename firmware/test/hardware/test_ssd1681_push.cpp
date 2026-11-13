@@ -94,6 +94,29 @@ TEST_CASE(
     }
 }
 
+// The T-Echo Plus glass is turned, so the re-ink must invert the turned bank, not the canvas.
+TEST_CASE("ssd1681: a turned re-ink sends the inverse of the turned frame to 0x26") {
+    const std::vector<parts::Ssd1681Glass> frames = patterns();
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = turned_driver_for(chip);
+    driver.begin();
+    driver.present(frames[0], ports::Refresh::Full, 0);
+    refresh_to_ready(driver, 0);
+
+    for (int partial = 1; partial <= parts::Ssd1681::kReinkPeriodPartials; partial++) {
+        const uint32_t now_ms = uint32_t(partial) * 5000;
+        driver.present(frames[size_t(partial) % frames.size()], ports::Refresh::Partial, now_ms);
+        CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterFullMs));
+    }
+
+    const parts::Ssd1681Glass& frame =
+        frames[size_t(parts::Ssd1681::kReinkPeriodPartials) % frames.size()];
+    std::vector<uint8_t> inverse = per_pixel_bank(frame);
+    for (uint8_t& byte : inverse) byte = static_cast<uint8_t>(~byte);
+    CHECK(chip.ram_previous == inverse);
+    CHECK(chip.ram == per_pixel_bank(frame));
+}
+
 TEST_CASE("ssd1681: an unturned glass sends the framebuffer inverted, byte for byte") {
     const parts::Ssd1681Glass canvas = patterns()[2];
     models::Ssd1681 chip;
