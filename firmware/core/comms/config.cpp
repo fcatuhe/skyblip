@@ -102,6 +102,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 void ConfigService::on_link_down(const events::LinkDown& event) {
     note_disconnected(event.session_id);
     if (identity_ != nullptr) identity_->forget(event.session_id);
+    browsers_.forget(event.session_id);
     if (!claim_.holds(event.session_id)) return;
     claim_.release();
     refused_on_device_ = false;
@@ -275,6 +276,11 @@ void ConfigService::request_firmware(const cbor::Reader& frame) {
         return;
     }
     approved_version_ = version;
+    if (trusted_browser()) {
+        open_upload_window();
+        acknowledge(true, link::Reason::Dfu);
+        return;
+    }
     stage(Pending::Dfu, link::Reason::ConfirmDfu);
     int written = format_string(prompt_detail_, "INSTALL ");
     written +=
@@ -352,6 +358,10 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Register: register_unit(reader); return;
         case link::Command::Unlock: unlock(reader); return;
         case link::Command::Capture: request_capture(reader); return;
+        case link::Command::BrowserChallenge: browser_challenge(); return;
+        case link::Command::TrustBrowser: trust_browser(reader); return;
+        case link::Command::Browsers: send_browser(reader); return;
+        case link::Command::ForgetBrowser: forget_browser(reader); return;
         default: return;
     }
 }
@@ -373,7 +383,11 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::GnssColdStart: return true;
         case link::Command::Challenge:
         case link::Command::Register:
-        case link::Command::Unlock: return identity_ != nullptr;
+        case link::Command::Unlock:
+        case link::Command::BrowserChallenge:
+        case link::Command::TrustBrowser:
+        case link::Command::Browsers:
+        case link::Command::ForgetBrowser: return identity_ != nullptr;
         case link::Command::Capture: return serves_captures_;
         case link::Command::Acknowledgement:
         case link::Command::Config:
@@ -387,7 +401,8 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Ownship:
         case link::Command::Observation:
         case link::Command::Health:
-        case link::Command::PeerClaim: return false;
+        case link::Command::PeerClaim:
+        case link::Command::Browser: return false;
     }
     return false;
 }
@@ -407,7 +422,7 @@ void ConfigService::send_config() {
 }
 
 void ConfigService::stage_settings(const events::RxFrame& frame) {
-    if (in_flight()) {
+    if (in_flight() && !trusted_browser()) {
         acknowledge(false, link::Reason::InFlight);
         return;
     }
@@ -422,6 +437,10 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
         store_.describe_changes(reader, detail, static_cast<int>(sizeof(detail)));
     if (described != Status::Ok) {
         acknowledge(false, settings_refusal(described));
+        return;
+    }
+    if (trusted_browser()) {
+        apply_settings(reader);
         return;
     }
     pending_set_bytes_ = frame.bytes;
@@ -487,24 +506,18 @@ void ConfigService::confirm() {
             acknowledge(false, link::Reason::LowPower);
             return;
         }
-        const Status applied = store_.apply(pending_set());
+        const cbor::Reader staged = pending_set();
         pending_ = Pending::None;
         pending_set_bytes_ = 0;
-        if (applied == Status::Ok) {
-            settings_dirty_ = true;
-            acknowledge(true);
-        } else {
-            acknowledge(false, settings_refusal(applied));
-        }
+        apply_settings(staged);
     } else if (pending_ == Pending::Dfu && !swap_powered()) {
         pending_ = Pending::None;
         upload_window_open_ = false;
         acknowledge(false, link::Reason::LowPower);
     } else if (pending_ == Pending::Dfu) {
         pending_ = Pending::None;
-        upload_window_open_ = true;
-        upload_window_opened_ms_ = now_ms_;
-        if (dfu_) dfu_->forget_upload();
+        remember_browser();
+        open_upload_window();
         acknowledge(true, link::Reason::Dfu);
     } else if (pending_ == Pending::Recovery) {
         pending_ = Pending::None;
@@ -530,6 +543,23 @@ void ConfigService::confirm() {
         capture_requested_ = staged_capture_;
         acknowledge(true, link::Reason::Capture);
     }
+}
+
+void ConfigService::apply_settings(const cbor::Reader& frame) {
+    const Status applied = store_.apply(frame);
+    if (applied != Status::Ok) {
+        acknowledge(false, settings_refusal(applied));
+        return;
+    }
+    remember_browser();
+    settings_dirty_ = true;
+    acknowledge(true);
+}
+
+void ConfigService::open_upload_window() {
+    upload_window_open_ = true;
+    upload_window_opened_ms_ = now_ms_;
+    if (dfu_) dfu_->forget_upload();
 }
 
 void ConfigService::cancel() {

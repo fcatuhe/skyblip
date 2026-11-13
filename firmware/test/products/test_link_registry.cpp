@@ -100,6 +100,22 @@ std::string register_signature() {
     return hex_text(ConstByteSpan(signature.data(), signature.size()));
 }
 
+const crypto::Ed25519::Seed kBrowserSeed{0x42};
+
+std::string browser_key() {
+    const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
+    return hex_text(ConstByteSpan(key.data(), key.size()));
+}
+
+std::string browser_signature() {
+    std::string message = "skyblip:browser:v1";
+    message.append(reinterpret_cast<const char*>(kUnitNonce.data()), kUnitNonce.size());
+    const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
+        kBrowserSeed,
+        ConstByteSpan(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
+    return hex_text(ConstByteSpan(signature.data(), signature.size()));
+}
+
 std::string unlock_signature() {
     const identity::UnlockCode code = Identity::unlock_code_for(Identity::kSerial, kUnitNonce);
     return hex_text(ConstByteSpan(code.signature.data(), code.signature.size()));
@@ -178,6 +194,20 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.reconnect();
     unit.say("{\"command\":\"gnss_cold_start\"}");
     unit.confirm();
+    const std::string trust = "{\"command\":\"trust_browser\",\"key\":\"" + browser_key() +
+                              "\",\"signature\":\"" + browser_signature() +
+                              "\",\"label\":\"Chrome on Android\"}";
+    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.say("{\"command\":\"browser_challenge\"}");
+    unit.say(trust);
+    unit.say("{\"command\":\"set\",\"units\":\"nautical\"}");
+    unit.confirm();
+    unit.reconnect();
+    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.say("{\"command\":\"browser_challenge\"}");
+    unit.say(trust);
+    unit.say("{\"command\":\"browsers\",\"index\":0}");
+    unit.say("{\"command\":\"browsers\",\"index\":1}");
     unit.rig.platform.identity().queue_random(kUnitNonce);
     unit.say("{\"command\":\"challenge\"}");
     unit.say("{\"command\":\"register\",\"server_nonce\":\"" +
@@ -304,6 +334,13 @@ const std::vector<Answer> kAnswers = {
     {"capture", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
+    {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
+    {"trust_browser", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
+    {"browsers", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
+    {"forget_browser", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
 };
 
 const Answer* answer_to(const names::Frame& frame) {
@@ -343,6 +380,11 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"ownship.hot_spot", "2"},
         {"ownship.rows", "\"00ff00ff\""},
         {"capture.profile", "\"full\""},
+        {"trust_browser.key", "\"" + browser_key() + "\""},
+        {"trust_browser.signature", "\"" + browser_signature() + "\""},
+        {"trust_browser.label", "\"Chrome on Android\""},
+        {"browsers.index", "0"},
+        {"forget_browser.id", "\"" + browser_key().substr(0, 16) + "\""},
     };
 }
 
@@ -386,6 +428,7 @@ std::string refusal(const names::Frame& frame, const Answer& answer) {
 TEST_CASE("link registry: the unit reads every key a host frame may carry, and refuses any other") {
     GroundedUnitWithLogs unit;
     unit.rig.raise_link(1);
+    unit.rig.platform.identity().queue_random(kUnitNonce);
     unit.rig.platform.identity().queue_random(kUnitNonce);
     const std::map<std::string, std::string> values = samples(unit);
     for (const names::Frame& frame : names::kFrames) {

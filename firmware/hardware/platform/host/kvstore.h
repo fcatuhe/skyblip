@@ -60,10 +60,10 @@ class KeyValueStore : public ports::KeyValueStore {
     struct Entry {
         bool used{false};
         std::string key;
-        uint8_t data[64]{};
+        uint8_t data[512]{};
         size_t bytes{0};
     };
-    Entry entries_[4];
+    Entry entries_[6];
     uint32_t writes_{0};
 };
 

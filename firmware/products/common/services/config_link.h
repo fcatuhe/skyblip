@@ -39,6 +39,7 @@ namespace skyblip::common {
 class ConfigLinkService : public runtime::Service {
    public:
     static constexpr const char* kSettingsKey = "settings";
+    static constexpr const char* kBrowsersKey = "browsers";
 
     ConfigLinkService(runtime::Context& context, SettingsStore& store,
                       const power::CutoffMonitor& power, const char* product_name,
@@ -59,6 +60,7 @@ class ConfigLinkService : public runtime::Service {
 
     Status setup() override;
     void load();
+    void load_browsers();
     void load_identity();
     void tick(uint32_t now_ms) override;
 
@@ -114,6 +116,8 @@ class ConfigLinkService : public runtime::Service {
     void take_request(uint32_t now_ms);
     void drain_settings(uint32_t now_ms);
     void write_settings(uint32_t now_ms, bool forced);
+    void drain_browsers(uint32_t now_ms);
+    void write_browsers(uint32_t now_ms, bool forced);
     bool persist();
     bool newer_layout(const uint8_t* blob, size_t blob_bytes) const;
     static bool blob_fits(size_t blob_bytes) { return blob_bytes > 0 && blob_bytes <= kBlobBytes; }
@@ -153,6 +157,7 @@ class ConfigLinkService : public runtime::Service {
     // INFO: fc 18oct26 an activated unit's unlock page is placed like the settings, outside a dwell
     timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};
+    timing::DurableWriteWindow browser_writes_{};
     power::OnTime connected_{};
     uint16_t recorded_holder_{0};
     bool recorded_claim_held_{false};

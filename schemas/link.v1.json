@@ -39,7 +39,7 @@
     },
     {
       "command": "set", "code": 4, "endpoint": "config", "sender": "host", "keys_of": "config",
-      "description": "Host to unit: the keys of config to change, all or none. A value out of range is refused out_of_range, a wrong type or a callsign the menu cannot type invalid, and nothing is stored. version, address and address_mapping_table are read-only and ignored. Refused low_power while the cell is below the settings write rule, and in_flight while the unit is airborne. A take-off cancels a staged set. Otherwise the unit asks on its glass under confirm, and two presses store the change and answer an acknowledgement with no reason. While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
+      "description": "Host to unit: the keys of config to change, all or none. A value out of range is refused out_of_range, a wrong type or a callsign the menu cannot type invalid, and nothing is stored. version, address and address_mapping_table are read-only and ignored. Refused low_power while the cell is below the settings write rule, and in_flight while the unit is airborne. A take-off cancels a staged set. Otherwise the unit asks on its glass under confirm, and two presses store the change and answer an acknowledgement with no reason. A trusted browser (trust_browser) is not asked: the change is stored at once and answered the same way, in flight too. While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time)."
     },
     {
       "command": "status", "code": 5, "endpoint": "config", "sender": "both",
@@ -180,7 +180,7 @@
     },
     {
       "command": "dfu", "code": 11, "endpoint": "config", "sender": "host",
-      "description": "Host to unit: asks to install the image of version, never in flight (in_flight) and with a cell that allows the swap (low_power). The unit answers confirm_dfu and asks on its glass, naming the version, and two presses answer dfu and open a ten-minute upload window for MCUmgr. The image that lands installs unasked, answered install, or refused nothing_staged, not_approved (not the version the presses authorised), wrong_key or low_power. A take-off neither closes the window nor refuses the install (server/app/javascript/skyblip/README.md). While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time).",
+      "description": "Host to unit: asks to install the image of version, never in flight (in_flight) and with a cell that allows the swap (low_power). The unit answers confirm_dfu and asks on its glass, naming the version, and two presses answer dfu and open a ten-minute upload window for MCUmgr. A trusted browser (trust_browser) is not asked: the unit answers dfu and opens the window at once. The image that lands installs unasked, answered install, or refused nothing_staged, not_approved (not the version the presses authorised), wrong_key or low_power. A take-off neither closes the window nor refuses the install (server/app/javascript/skyblip/README.md). While a prompt stands it is refused prompt_pending, and after one press refused a prompt on this link refused_on_device, until the link drops (firmware/core/comms/README.md, One prompt at a time).",
       "keys": [
         {"name": "version", "number": 1, "type": "text", "required": true, "description": "The image's version as read off its header, 0.2.0+15. Absent or unreadable is refused no_version, and older than the running image refused older unless the unit accepts a downgrade"}
       ]
@@ -373,6 +373,46 @@
       "keys": [
         {"name": "profile", "number": 1, "type": "enum", "enum": "capture_profile", "required": true, "description": "full, power_run or flight_run arms a capture of that profile (firmware/core/diagnostics/README.md), and stop stops the capture that runs"}
       ]
+    },
+    {
+      "command": "browser_challenge", "code": 30, "endpoint": "config", "sender": "both",
+      "description": "Opens a trusted-browser session (firmware/core/comms/README.md, Trusted browsers). The host asks with the bare command, the unit draws a fresh nonce for the session that holds the claim, which replaces any it held, and answers it: 22 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when trust_browser uses it or when the link of the session that holds the claim drops. Refused keyless by a unit that cannot draw a nonce. Answered in flight as on the ground.",
+      "keys": [
+        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "16 random bytes from the hardware RNG, used once"}
+      ]
+    },
+    {
+      "command": "trust_browser", "code": 31, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, at most 133 bytes: the browser's public key, signed over the nonce of browser_challenge. The nonce is spent before the check. Refused no_session without a live nonce for this claim holder, invalid for a label wider than 24 bytes and bad_signature when the signature does not verify with key. A key the unit trusts answers acknowledgement true with reason trusted, and the session stays trusted until its link drops: a set is stored without a prompt, in flight too, and a dfu opens the upload window without a prompt. Any other key answers acknowledgement false with reason untrusted, and the unit holds it with its label for this session: the next set or dfu that two presses confirm on this link stores it among the trusted browsers. The unit keeps eight, and a ninth replaces the one stored first. Answered in flight as on the ground.",
+      "keys": [
+        {"name": "key", "number": 1, "type": "bytes", "bytes": 32, "required": true, "description": "The browser's raw Ed25519 public key, from a key pair it generated and cannot export (server/app/javascript/skyblip/README.md, Trusted browsers)"},
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "The browser's Ed25519 signature over 'skyblip:browser:v1' || the nonce of browser_challenge"},
+        {"name": "label", "number": 3, "type": "text", "description": "What the browser calls itself in the list of trusted browsers, such as 'Chrome on Android', at most 24 bytes of UTF-8. Absent is an empty label"}
+      ]
+    },
+    {
+      "command": "browsers", "code": 32, "endpoint": "config", "sender": "host",
+      "description": "Host to unit: asks for one entry of the unit's trusted browsers, which it answers with browser. Answered only to a trusted session (trust_browser), refused untrusted otherwise. A page asks from index 0 until browser says the index is past the last entry.",
+      "keys": [
+        {"name": "index", "number": 1, "type": "unsigned", "required": true, "description": "Which entry, from 0, in the order the unit stored them"}
+      ]
+    },
+    {
+      "command": "browser", "code": 33, "endpoint": "config", "sender": "unit",
+      "description": "Unit to host, the answer to browsers: the entry at index, or index and count alone past the last entry. 45 bytes at its widest.",
+      "keys": [
+        {"name": "index", "number": 1, "type": "unsigned", "required": true, "description": "The index browsers asked for"},
+        {"name": "count", "number": 2, "type": "unsigned", "required": true, "description": "How many browsers the unit trusts, 0 to 8"},
+        {"name": "id", "number": 3, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the browser's public key, which names it to forget_browser and lets a browser find itself in the list. Absent past the last entry"},
+        {"name": "label", "number": 4, "type": "text", "description": "The label the browser sent with its key, possibly empty. Absent past the last entry"}
+      ]
+    },
+    {
+      "command": "forget_browser", "code": 34, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, 14 bytes: drops the browser id names from the trusted browsers. Answered only to a trusted session, refused untrusted otherwise. The unit answers acknowledgement true with reason forgotten, or false with reason unknown_browser when it trusts no browser by that id. A session that forgets its own browser is no longer trusted. Answered in flight as on the ground.",
+      "keys": [
+        {"name": "id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "The browser to forget, as browser names it"}
+      ]
     }
   ],
   "enums": {
@@ -424,7 +464,11 @@
         {"name": "confirm_capture", "code": 44},
         {"name": "capture", "code": 45},
         {"name": "capturing", "code": 46},
-        {"name": "not_capturing", "code": 47}
+        {"name": "not_capturing", "code": 47},
+        {"name": "trusted", "code": 48},
+        {"name": "untrusted", "code": 49},
+        {"name": "forgotten", "code": 50},
+        {"name": "unknown_browser", "code": 51}
       ]
     },
     "alarm_volume": {
