@@ -2113,11 +2113,11 @@ When a burst goes out: the instant inside the direct slot, the channel it altern
 - a shared instant in one second is a fresh draw in the next
   > Two addresses differ by a fixed XOR delta forever: a mixer that carried it would marry the pair.
 - a slot-1 dwell owes the position and then the name, never at once
-  > One slot-1 dwell carries both bursts, so the position has to be off the air before the name keys.
+  > Airborne in an odd second one slot-1 dwell carries both, so the position is off the air first.
 - an exhausted hour blocks the burst and says so
   > A transmitter at twice the design rate is faulted, and a faulted one that will not stop is worse.
 - consecutive transmissions alternate channel and slot
-- every address names itself every twenty seconds, airborne or on the ground
+- every address names itself every ten seconds, airborne or on the ground
   > Half of all addresses once lost every name to their own slot-1 position burst.
 - no dwell owes more than two bursts, and two in one dwell never overlap
   > The executor holds two bursts a dwell, and keys the second only once the first is off the air.
@@ -2133,16 +2133,16 @@ When a burst goes out: the instant inside the direct slot, the channel it altern
   > §C.2.5: traffic alternates between the two M-band channels. The second dwell hears traffic past 1000 ms. The direct slot ends there, so our own burst never does.
 - the callsign burst belongs to slot 1 and to no other dwell
   > Slot 0 is the other channel and the direct slot's own half of the second.
-- the callsign goes out in the ground second, once every twenty
+- the callsign goes out five seconds after the ground second, once every ten
 - the design rate never reaches the limit, so nothing is ever blocked
 - the first instant of a dwell is the moment it opens
   > The upper channel's dwell opens at 800 already tuned - the hop guard before it is what paid for the retune - so 800 is its first legal instant.
 - the ground schedule is UTC's, so the millisecond wrap cannot move it
-- the ground second carries the Status and the name by turns
-  > The address's ground second comes round twice in twenty: the Status takes the first, the name the second, so the extra burst it adds to the position is one, never two.
 - the ground second is the address's, not the boot's
   > A device that reboots comes back to the same second of the ten, not to a new one.
 - the instant is inside the direct slot, with room for the burst
+- the name never shares a second with the Status or the ground position
+  > The name keeps out of the second the ground position and the Status share, every address.
 - two devices do not pick the same instant every second
 
 ### test/core/test_trusted_browsers.cpp
@@ -5100,8 +5100,8 @@ Two bursts in one dwell: the ground second's position and the name in slot 1's t
   > The position's gate clears on the fix, so it is armed after the name that was decided at 400.
 - a dwell that closes on two unfinished bursts reports each lost, by its instant
   > A lost burst is reported by the instant it was armed for, so the tape can say which one it was.
-- on the ground the name follows its own position, sharing slot 1 with it
-  > The name's ground second is the odd one of the twenty, whose position always rides slot 1.
+- on the ground the name follows its own position by five seconds, alone
+  > The name goes out five seconds after the ground position, alone in slot 1's tail.
 
 ### test/products/test_rf_executor.cpp
 
@@ -5186,7 +5186,7 @@ What own-ship puts on air: the rate, the window, the channel, the callsign secon
 - own-ship transmits once a second, inside its window, alternating channel
 - the burst is dated when it leaves, and carries the position from then
   > F3. The burst leaves in the direct slot, 450 to 1000 ms into the second, and the ADS-L TimeStamp resolves to a quarter of a second. Encoding the fix's own second left every transmission claiming quarter zero - an instant 450 ms or more before the burst existed - while carrying a position from a third instant. This pins the pair together: the quarter the frame claims is the quarter it went on air in.
-- the callsign goes out in slot 1's tail, once every twenty seconds, on channel 1
+- the callsign goes out in slot 1's tail, once every ten seconds, on channel 1
   > §C.5 reserves 0..200 and this is the one burst that goes there: core/timing/README.md.
 - the extrapolation residual is measured against the fix that arrives
   > F3's quality metric, through the whole pipeline: own-ship predicts the fix it last had forward to the instant the next one arrives and keeps the miss. A model that has stopped describing the aircraft is then a number on the bench rather than a surprise in the air (oss/nrf52-ogn-tracker src/ogn.h:1424-1430).

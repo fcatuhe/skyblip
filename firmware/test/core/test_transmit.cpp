@@ -177,11 +177,11 @@ TEST_CASE("transmit: one burst per second airborne, one per ten on the ground") 
     CHECK(on_ground.attempt(slot_plan(phase), owned + 10, (owned + 10) * 1000, false, 0).go);
 }
 
-TEST_CASE("transmit: the callsign goes out in the ground second, once every twenty") {
+TEST_CASE("transmit: the callsign goes out five seconds after the ground second, once every ten") {
     constexpr Transmitter::Payload kName = Transmitter::Payload::Callsign;
     Transmitter transmitter = airborne_transmitter();
     const uint32_t owned = transmitter.callsign_second();
-    CHECK(owned % skyblip::flight::kGroundReportPeriodS == transmitter.ground_second());
+    CHECK((owned + 10 - transmitter.ground_second()) % 10 == 5);
     const SlotPlan tail = slot_plan(kSlot1StartMs);
 
     for (uint32_t utc_s = owned + 1; utc_s < owned + Transmitter::kCallsignPeriodS; utc_s++) {
@@ -201,19 +201,19 @@ TEST_CASE("transmit: the callsign goes out in the ground second, once every twen
     CHECK_FALSE(transmitter.attempt(tail, due, due * 1000, true, 0, kName).go);
 }
 
-// One slot-1 dwell carries both bursts, so the position has to be off the air before the name keys.
+// Airborne in an odd second one slot-1 dwell carries both, so the position is off the air first.
 TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never at once") {
     int both = 0;
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         Transmitter transmitter = airborne_transmitter(address);
-        const uint32_t due = transmitter.callsign_second() + Transmitter::kCallsignPeriodS;
-        REQUIRE(Transmitter::slot_in(due, false) == Transmitter::kCallsignSlot);
+        const uint32_t due = 100 + transmitter.callsign_second();
+        if (Transmitter::slot_in(due, true) != Transmitter::kCallsignSlot) continue;
         CAPTURE(address);
         const SlotPlan slot1 = slot_plan(kSlot1StartMs);
         const Transmitter::Attempt position =
-            transmitter.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Position);
+            transmitter.attempt(slot1, due, due * 1000, true, 0, Transmitter::Payload::Position);
         const Transmitter::Attempt name =
-            transmitter.attempt(slot1, due, due * 1000, false, 0, Transmitter::Payload::Callsign);
+            transmitter.attempt(slot1, due, due * 1000, true, 0, Transmitter::Payload::Callsign);
         REQUIRE(position.go);
         REQUIRE(name.go);
         CHECK(position.frequency_hz == name.frequency_hz);
@@ -222,11 +222,11 @@ TEST_CASE("transmit: a slot-1 dwell owes the position and then the name, never a
               name.at_ms);
         both++;
     }
-    CHECK(both == 0x400);
+    CHECK(both > 400);
 }
 
 // Half of all addresses once lost every name to their own slot-1 position burst.
-TEST_CASE("transmit: every address names itself every twenty seconds, airborne or on the ground") {
+TEST_CASE("transmit: every address names itself every ten seconds, airborne or on the ground") {
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         for (const bool airborne : {true, false}) {
             CAPTURE(address);
@@ -234,7 +234,7 @@ TEST_CASE("transmit: every address names itself every twenty seconds, airborne o
             Transmitter transmitter = airborne_transmitter(address);
             int named = 0;
             int positions = 0;
-            for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kCallsignPeriodS; utc_s++) {
+            for (uint32_t utc_s = 100; utc_s < 100 + 4 * Transmitter::kCallsignPeriodS; utc_s++) {
                 for (const int phase : {500, kSlot1StartMs}) {
                     for (const Transmitter::Payload payload :
                          {Transmitter::Payload::Position, Transmitter::Payload::Callsign}) {
@@ -250,7 +250,7 @@ TEST_CASE("transmit: every address names itself every twenty seconds, airborne o
                     }
                 }
             }
-            CHECK(named == 2);
+            CHECK(named == 4);
             // 40 s: one position a second airborne, four ground seconds on the ground.
             CHECK(positions == (airborne ? 40 : 4));
         }
@@ -285,15 +285,15 @@ TEST_CASE("transmit: the Status goes out in the ground second, once every twenty
     }
 }
 
-// The address's ground second comes round twice in twenty: the Status takes the first, the name
-// the second, so the extra burst it adds to the position is one, never two.
-TEST_CASE("transmit: the ground second carries the Status and the name by turns") {
+// The name keeps out of the second the ground position and the Status share, every address.
+TEST_CASE("transmit: the name never shares a second with the Status or the ground position") {
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         CAPTURE(address);
         const Transmitter transmitter = airborne_transmitter(address);
-        CHECK(transmitter.callsign_second() ==
-              transmitter.status_second() + skyblip::flight::kGroundReportPeriodS);
         CHECK(transmitter.callsign_second() < Transmitter::kCallsignPeriodS);
+        CHECK(transmitter.callsign_second() !=
+              transmitter.status_second() % skyblip::flight::kGroundReportPeriodS);
+        CHECK(transmitter.callsign_second() != transmitter.ground_second());
     }
 }
 

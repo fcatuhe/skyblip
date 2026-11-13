@@ -99,7 +99,7 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
 }
 
 // §C.5 reserves 0..200 and this is the one burst that goes there: core/timing/README.md.
-TEST_CASE("rf: the callsign goes out in slot 1's tail, once every twenty seconds, on channel 1") {
+TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -121,10 +121,10 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every twenty seconds
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
         CHECK(simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz));
     }
-    // Forty-one seconds of flight: forty-one positions, two Status bursts and two names.
+    // Forty-one seconds of flight: forty-one positions, two Status bursts and four names.
     CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypePosition) >= 39);
     CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypeStatus) == 2);
-    CHECK(named == 2);
+    CHECK(named == 4);
 
     // And the tape says which burst was which, where a position prints its rate.
     const radio::Log& log = simulator.product().state().radio_log;

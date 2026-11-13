@@ -24,7 +24,7 @@ class Transmitter {
     // INFO: fc 13nov26 G.2.11 asks for a Status at least once every 20 s
     static constexpr uint32_t kStatusPeriodS = 20;
     // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a target is hex
-    static constexpr uint32_t kCallsignPeriodS = 20;
+    static constexpr uint32_t kCallsignPeriodS = 10;
     // INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
     static constexpr int32_t kFixMaxAgeMs = 500;
     // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
@@ -66,7 +66,10 @@ class Transmitter {
     }
     uint32_t ground_second() const;
     uint32_t status_second() const { return ground_second(); }
-    uint32_t callsign_second() const { return ground_second() + flight::kGroundReportPeriodS; }
+    // INFO: fc 13nov26 half a ground period after the address's own second, which the Status holds
+    uint32_t callsign_second() const {
+        return (ground_second() + kCallsignPeriodS / 2) % kCallsignPeriodS;
+    }
     // INFO: fc 13nov26 §C.2.5 alternates Status as it does Traffic, on its own count
     static int status_slot_in(uint32_t utc_s) {
         return static_cast<int>((utc_s / kStatusPeriodS) & 1u);
@@ -95,10 +98,9 @@ class Transmitter {
     bool ever_sent_[kPayloads]{};
 };
 
-// INFO: fc 13nov26 the ground second's two turns in twenty: Status first, the name ten seconds on
-static_assert(Transmitter::kCallsignPeriodS == Transmitter::kStatusPeriodS &&
-                  Transmitter::kStatusPeriodS == 2 * flight::kGroundReportPeriodS,
-              "the Status and the name share the ground second by turns");
+static_assert(Transmitter::kCallsignPeriodS == flight::kGroundReportPeriodS &&
+                  Transmitter::kStatusPeriodS % flight::kGroundReportPeriodS == 0,
+              "the name's second is never the ground second the position and the Status use");
 
 }  // namespace skyblip::timing
 

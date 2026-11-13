@@ -174,8 +174,8 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);
 }
 
-// The name's ground second is the odd one of the twenty, whose position always rides slot 1.
-TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 with it") {
+// The name goes out five seconds after the ground position, alone in slot 1's tail.
+TEST_CASE("rf: on the ground the name follows its own position by five seconds, alone") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -184,28 +184,27 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     run_on(simulator, past_settling(simulator), 40000);
 
     const simulator::Air& air = simulator.world().air();
-    int names = 0, shared_dwell = 0;
+    int names = 0;
     uint64_t position_at_us = 0;
-    bool position_on_channel1 = false;
+    uint64_t last_at_us = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
         const uint8_t payload_type = payload_type_of(record);
-        if (payload_type == protocol::AdslPacket::kPayloadTypePosition) {
+        if (payload_type == protocol::AdslPacket::kPayloadTypePosition)
             position_at_us = record.at_us;
-            position_on_channel1 = simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz);
-            continue;
+        if (payload_type == protocol::AdslPacket::kPayloadTypeOgnDiagnostics &&
+            position_at_us != 0) {
+            names++;
+            CAPTURE(record.at_us);
+            // Five seconds on, from 450 ms into the ground second to 1200 ms into the name's.
+            CHECK(record.at_us - position_at_us >= (5000 + timing::kCallsignStartMs - 1000) * 1000);
+            CHECK(record.at_us - position_at_us <= (5000 + timing::kCallsignEndMs - 450) * 1000);
+            // Nothing else of ours is on air within a second of it.
+            CHECK(record.at_us - last_at_us > 1000000);
         }
-        if (payload_type != protocol::AdslPacket::kPayloadTypeOgnDiagnostics) continue;
-        names++;
-        CAPTURE(record.at_us);
-        // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
-        CHECK(position_at_us != 0);
-        CHECK(record.at_us - position_at_us <
-              (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
-        if (position_on_channel1) shared_dwell++;
+        if (payload_type != 0) last_at_us = record.at_us;
     }
-    CHECK(names >= 2);
-    CHECK(shared_dwell == names);
+    CHECK(names >= 3);
 
     // Two bursts closing in one dwell go on the tape as what they were, each at its own instant.
     const radio::Log& log = simulator.product().state().radio_log;
