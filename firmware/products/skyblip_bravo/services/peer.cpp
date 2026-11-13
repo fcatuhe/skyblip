@@ -98,10 +98,13 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
     }
 }
 
-// INFO: fc 13nov26 a cleared Go sends none, so Bravo keeps what a phone set rather than lose it
+// INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo
 void PeerService::adopt_own_icao(uint32_t own_icao) {
-    if (own_icao == kOwnIcaoUnset || own_icao == settings_.own_icao) return;
+    const bool cleared = own_icao == kOwnIcaoUnset;
+    if (cleared && !settings_.own_icao_from_go) return;
+    if (own_icao == settings_.own_icao && settings_.own_icao_from_go == !cleared) return;
     settings_.own_icao = own_icao;
+    settings_.own_icao_from_go = !cleared;
     config_.note_settings_changed();
     health_owed_ = true;
 }

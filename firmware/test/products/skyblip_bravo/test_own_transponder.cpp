@@ -124,3 +124,26 @@ TEST_CASE("own transponder: a frame with no level of its own is no evidence of l
     }
     CHECK_FALSE(cockpit.own.heard().has_value());
 }
+
+TEST_CASE("own transponder: address 000000 is never named, since as own ICAO it means unset") {
+    Cockpit cockpit;
+    for (int i = 0; i < 100; i++) {
+        cockpit.own.hear(position_of(0, kCockpitDbm), cockpit.now_ms);
+        cockpit.own.tick(cockpit.now_ms);
+        cockpit.now_ms += kSquitterMs;
+    }
+    CHECK_FALSE(cockpit.own.heard().has_value());
+}
+
+// A slot heard last 2^32 ms ago would read live again, so a quiet one must be freed.
+TEST_CASE("own transponder: an emitter gone quiet is forgotten across the clock's wrap") {
+    Cockpit cockpit;
+    cockpit.now_ms = 0xFFFFFFFFu - 60000;
+    cockpit.listen(OwnTransponder::kLeadHoldMs + kSquitterMs, kCockpitDbm);
+    REQUIRE(cockpit.own.heard().has_value());
+    cockpit.listen(OwnTransponder::kEmitterMaxAgeMs + kSquitterMs, 0);
+    REQUIRE_FALSE(cockpit.own.heard().has_value());
+    cockpit.now_ms += 0xFFFFFFFFu - 2 * OwnTransponder::kEmitterMaxAgeMs;
+    cockpit.listen(OwnTransponder::kLeadHoldMs + kSquitterMs, 0);
+    CHECK_FALSE(cockpit.own.heard().has_value());
+}

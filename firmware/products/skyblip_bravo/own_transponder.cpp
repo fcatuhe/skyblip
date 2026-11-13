@@ -15,6 +15,8 @@ constexpr int32_t kLevelDampingSamples = 4;
 }  // namespace
 
 void OwnTransponder::hear(const protocol::AdsbMessage& message, uint32_t now_ms) {
+    // INFO: fc 13nov26 a misconfigured transponder squitters 000000, which as own ICAO means unset
+    if (message.address == 0) return;
     Emitter* emitter = nullptr;
     for (Emitter& candidate : emitters_)
         if (candidate.used && candidate.address == message.address) emitter = &candidate;
@@ -37,7 +39,10 @@ void OwnTransponder::hear(const protocol::AdsbMessage& message, uint32_t now_ms)
         protocol::adsb_emitter_to_adsl_category(message.type_code, message.identification.category);
 }
 
+// INFO: fc 13nov26 a quiet emitter is freed, so its age never wraps round to live after 49.7 days
 void OwnTransponder::tick(uint32_t now_ms) {
+    for (Emitter& emitter : emitters_)
+        if (emitter.used && !live(emitter, now_ms)) emitter = Emitter{};
     const Emitter* loudest = leader(now_ms);
     if (loudest == nullptr) {
         leading_ = false;

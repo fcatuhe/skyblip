@@ -203,7 +203,8 @@ bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
     if (text != Status::Ok && text != Status::NotFound) return false;
     const bool named = text == Status::Ok;
     if (!addressed) return !named && !categorised;
-    if (heard.address > settings::kAddressMask || category > UINT8_MAX) return false;
+    if (heard.address == 0 || heard.address > settings::kAddressMask || category > UINT8_MAX)
+        return false;
     heard.aircraft_category = static_cast<uint8_t>(category);
     health.own_transponder = heard;
     return true;

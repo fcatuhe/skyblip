@@ -409,7 +409,9 @@ TEST_CASE("bravo peer: the pinned Go's own ICAO drops its transponder, else Brav
     served.run_for(100);
     served.rig.hear_aircraft(kAircraft, 2000);
     served.rig.hear_aircraft(kOtherAircraft, 2500);
-    served.seconds(1, true, nullptr);
+    served.rig.push_fix();
+    served.claim(nullptr, kAircraft);
+    served.run_for(1000);
     CHECK(served.observations_of(kAircraft).empty());
     CHECK(served.observations_of(kOtherAircraft).size() == 1);
     CHECK(field(served.last_health(), "own_icao_set") == "true");
@@ -446,18 +448,28 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
 
 // The Go stores an own ICAO the pilot confirmed, and the Bravo in the same aircraft keeps it too.
 TEST_CASE(
-    "bravo peer: Bravo stores the own ICAO of its pinned Go, and keeps it when the Go has none") {
+    "bravo peer: Bravo stores the own ICAO its pinned Go gives, and drops it when the Go does") {
     Served served;
     served.seconds(1, true, nullptr);
     REQUIRE(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    served.rig.push_fix();
     served.claim(nullptr, kAircraft);
-    served.seconds(1, true, nullptr);
+    served.run_for(1000);
     CHECK(served.rig.product.settings().own_icao == kAircraft);
     CHECK(field(served.last_health(), "own_icao_set") == "true");
 
-    // A Go cleared on its glass sends no own_icao, and Bravo keeps what it was given.
+    // A Go cleared on its glass sends none, and Bravo drops the address that Go gave it.
     served.seconds(2, true, nullptr);
-    CHECK(served.rig.product.settings().own_icao == kAircraft);
+    CHECK(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    CHECK(field(served.last_health(), "own_icao_set") == "false");
+}
+
+TEST_CASE("bravo peer: a Go with no own ICAO leaves the one a phone set on Bravo") {
+    Served served;
+    served.rig.product.settings().own_icao = kOtherAircraft;
+    served.seconds(3, true, nullptr);
+    CHECK(served.rig.product.settings().own_icao == kOtherAircraft);
+    CHECK(field(served.last_health(), "own_icao_set") == "true");
 }
 
 TEST_CASE("bravo peer: a stranger's claim never sets the reference or the own ICAO") {

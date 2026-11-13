@@ -298,6 +298,7 @@ TEST_CASE("peer frames: a transponder's callsign or category without its address
     CHECK(health_with("\"own_transponder_callsign\":\"FJABC\"") == Status::Invalid);
     CHECK(health_with("\"own_transponder_category\":4") == Status::Invalid);
     CHECK(health_with("\"own_transponder\":16777216") == Status::Invalid);
+    CHECK(health_with("\"own_transponder\":0") == Status::Invalid);
 }
 
 // #192: a Go reads paired off every health to tell a pin Bravo holds from one it does not.
