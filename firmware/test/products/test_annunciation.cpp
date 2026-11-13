@@ -210,6 +210,7 @@ TEST_CASE("product: a device on its way down does not leave the buzzer sounding"
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(int(sky.announcing_level()) == 0);
+    CHECK_FALSE(sky.simulator.platform().chips().haptic.moving());
     // The panel's own peripheral goes the same way: nothing is left driven.
     CHECK_FALSE(sky.simulator.backlight());
 }

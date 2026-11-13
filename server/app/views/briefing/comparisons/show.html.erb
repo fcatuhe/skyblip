@@ -10,14 +10,15 @@
     <%= render "source", source: "retro", name: "SoftRF Retro Mk II", transport: "serial" %>
     <%= render "source", source: "bravo", name: "skyBlip Bravo", transport: "bluetooth" %>
 
-    <div class="panel panel-wide">
+    <div class="panel panel-chart">
       <h2>Chart</h2>
       <div class="bar">
         <button type="button" data-action="comparison#zoomOut" aria-label="Zoom out">&minus;</button>
         <button type="button" data-action="comparison#zoomIn" aria-label="Zoom in">+</button>
         <span class="state" data-comparison-target="chartState">-</span>
       </div>
-      <canvas class="chart" data-comparison-target="chart" aria-label="Traffic from both receivers on the OACI chart" role="img"></canvas>
+      <canvas class="chart" data-comparison-target="chart" data-action="click->comparison#pick"
+              aria-label="Traffic from both receivers on the OACI chart, pick an aircraft to compare it" role="img"></canvas>
       <form class="row" data-action="comparison#saveChart">
         <label class="check">Latitude <input type="number" name="latitude" step="any" value="<%= chart.centre[:latitude] %>" required></label>
         <label class="check">Longitude <input type="number" name="longitude" step="any" value="<%= chart.centre[:longitude] %>" required></label>
@@ -28,7 +29,29 @@
       <div class="hint">The chart centres on the receiver that has a fix, and on the saved area before that.
         Save the area before the flight, and open the page before takeoff: tiles come from IGN's Géoplateforme and stay in this browser, the page does not.
         <span class="chart-key chart-key-retro">Retro</span> <span class="chart-key chart-key-bravo">Bravo</span>
-        draw the same aircraft joined by a dashed line, with the height above us in hundreds of feet.</div>
+        draw the same aircraft joined by a dashed line, with the height above us in hundreds of feet. Pick one to compare it.</div>
+    </div>
+
+    <div class="panel panel-focus">
+      <h2>Selected aircraft</h2>
+      <p class="state" data-comparison-target="focusEmpty">Pick an aircraft on the chart or in the table below.</p>
+      <div data-comparison-target="focusBody" hidden>
+        <p class="focus-title" data-comparison-target="focusTitle"></p>
+        <p class="state" data-comparison-target="focusSummary"></p>
+        <canvas class="timeline" data-comparison-target="timeline" role="img"
+                aria-label="The seconds each receiver listed the aircraft, its distance and its signal level"></canvas>
+        <div class="hint">A lane marks each second a receiver listed the aircraft, and a tall mark a new position, which only GDL&nbsp;90 tells apart.
+          Below the lanes: distance, then RSSI when a receiver sends one.</div>
+        <div class="traffic-scroll">
+          <table class="traffic focus-table">
+            <thead>
+              <tr><th scope="col"></th><th scope="col" class="chart-key-retro">Retro</th><th scope="col" class="chart-key-bravo">Bravo</th><th scope="col">Retro &minus; Bravo</th></tr>
+            </thead>
+            <tbody data-comparison-target="focusRows"></tbody>
+          </table>
+        </div>
+        <div class="bar"><button type="button" data-action="comparison#unfocus">Clear the selection</button></div>
+      </div>
     </div>
 
     <div class="panel panel-wide">
@@ -47,14 +70,18 @@
             </tr>
             <tr>
               <% 2.times do %>
-                <th scope="col">Age, s</th><th scope="col">Dist, km</th><th scope="col">Brg</th><th scope="col">Rel, ft</th>
-                <th scope="col">GS, kt</th><th scope="col">Reports</th><th scope="col">Farthest, km</th>
+                <th scope="col">Age, s</th><th scope="col">Dist, km</th><th scope="col">Rel, ft</th><th scope="col">Listed</th>
+                <th scope="col">Drops</th><th scope="col">New/min</th><th scope="col">RSSI</th>
               <% end %>
             </tr>
           </thead>
           <tbody data-comparison-target="aircraft"></tbody>
         </table>
       </div>
+      <div class="hint">Listed is the share of the seconds either receiver listed the aircraft, and a drop a gap of more than 3&nbsp;s.
+        New/min counts new positions, which only GDL&nbsp;90 tells apart: NMEA repeats or dead-reckons a target between messages.
+        RSSI shows when a receiver's <code>$PFLAA</code> carries one: SoftRF on the Retro's STM32 sends none, in GDL&nbsp;90 or NMEA.
+        Distances and heights come from the Bravo's fix and pressure altitude, and from the Retro's own when the Bravo has none.</div>
     </div>
 
     <% { "retro" => "Retro", "bravo" => "Bravo" }.each do |source, label| %>
@@ -65,6 +92,15 @@
         </div>
       </div>
     <% end %>
+    <div class="panel panel-wide">
+      <h2>Why the two lists differ</h2>
+      <div class="hint">The Retro speaks GDL&nbsp;90 by default and the Bravo FLARM NMEA, so each list shows its protocol's fields.
+        GDL&nbsp;90 sends an absolute position, the pressure altitude, the position's integrity and accuracy (NIC, NACp) and the ADS-B emitter category.
+        <code>$PFLAA</code> sends a position relative to the receiver's own fix, a FLARM aircraft type, and on a skyBlip the source.
+        Set the Retro to NMEA to read <code>$PFLAA</code> on both sides, without the Retro's RSSI.
+        SoftRF also leaves out of GDL&nbsp;90 an aircraft farther than 25.5&nbsp;km while the Retro has its own fix, out of NMEA one farther than 75.5&nbsp;km, and out of both one silent for 5&nbsp;s.
+        The Bravo forgets an airborne aircraft after 6&nbsp;s of silence and one on the ground after 60&nbsp;s.</div>
+    </div>
 
     <div class="panel panel-wide">
       <h2>Log</h2>
