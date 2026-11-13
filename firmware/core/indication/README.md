@@ -42,6 +42,18 @@ A connected phone keeps the fix colour and doubles the wink rate: one wink every
 
 An armed capture keeps the fix colour too, and winks twice every 3 s: two 30 ms flashes 150 ms apart, then dark until the cycle ends. That is 2%, the connected rows' spend, and a capture runs for hours, so it is a `Steady` row. A row's `flashes` and `between_ms` say how many flashes a cycle holds and how far apart, and `cycle_ms()` and `duty_permille()` count them all. The capture rows sit above the connected ones: a pilot arms a capture from a page, so a phone is connected at the moment the lamp has to say the capture runs (#247).
 
+## Every flash is on the UTC minute's grid
+
+Every row's flash starts on second 00 of the UTC minute, on every unit, paired or alone. A Go and its Bravo sit side by side in one cockpit, and two lamps winking at unrelated offsets read as two devices disagreeing.
+
+`Policy::update()` takes the `timing::ClockState` with the situation, so no caller can light the lamp without the clock. It reads the UTC millisecond from `timing::utc_ms()`, which answers only while the PPS is locked and the clock holds a UTC second. Its place in the cycle is then the millisecond into the UTC minute, modulo the row's cycle. A `static_assert` holds every row's cycle to a divisor of the minute, so every cycle restarts at second 00 and no flash drifts across the minute. That is why the advisory flicker is 50 ms in every 200 and not 45 in 180: 180 ms does not divide a minute.
+
+Every unit with a lock lights the same flash in the same pass, whichever moment its condition began.
+
+A change still shows itself at once, on the unit's own clock, because the flash a pilot is owed is the one that follows the event. The policy joins the grid at the first pass where its own phase and the grid's are both dark, so neither the change's flash nor the grid's first flash is cut short. A lost lock keeps the phase the grid left, and the lamp runs free on it until the lock comes back.
+
+The buzzer and the motor stay off the grid. They announce an event, and waiting for the next grid line would delay a traffic call by up to a cycle.
+
 ## Why charge is not a row
 
 The board already answers it in hardware. The charger IC drives its own LED, documented in LilyGO's T-Echo pin table: lit while charging, blinking with the cell missing or faulty, off when full. It reports while the SoC is asleep, which nothing here can do, and it reads the charger rather than guessing from a terminal voltage.

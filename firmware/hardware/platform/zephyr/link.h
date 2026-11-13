@@ -28,6 +28,7 @@ class Link : public ports::Link {
     Status reserve_peer_connection(bool reserved) override;
     Status reserve_peer_connection_for(const events::BluetoothAddress& central) override;
     bool central_of(const events::Peer& peer, events::BluetoothAddress& out) const override;
+    int phones() const override;
 
     // Non-blocking: pop one queued inbound frame (config writes). The shell
     // drains this into App::on_link_rx(). Returns false when empty.

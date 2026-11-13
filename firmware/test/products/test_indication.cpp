@@ -7,6 +7,8 @@
 // device is going down (a lit LED on a device that is off is the bug, not a
 // cosmetic slip), and a unit with no lamp fitted runs the same table and lights
 // nothing.
+#include <vector>
+
 #include "core/indication/lamp.h"
 #include "core/power/cutoff.h"
 #include "core/power/shutdown.h"
@@ -80,6 +82,31 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
     // And it did light: a lamp that is cheap because it never comes on is not an
     // indicator.
     CHECK(lamp_of(rig).lightings() >= 15);
+}
+
+TEST_CASE("product: with a PPS lock the wink falls on the UTC grid, not on when the fix came") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    // Host second 0 is UTC 1 past a multiple of three, so the grid's winks fall at 2 s, 5 s, 8 s.
+    rig.utc_offset_s = 1;
+    std::vector<uint32_t> green_from_ms;
+    bool was_lit = false;
+    for (uint32_t now_ms = 0; now_ms <= 15000; now_ms += 10) {
+        if (now_ms % 1000 == 0) {
+            rig.push_timed_fix(0, 500);
+            rig.utc_offset_s++;
+        }
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        const bool lit = lamp_of(rig).lit();
+        if (lit && !was_lit && lamp_of(rig).lamp() == indication::Lamp::Green)
+            green_from_ms.push_back(now_ms);
+        was_lit = lit;
+    }
+    REQUIRE(rig.state().clock.utc_s != 0);
+    REQUIRE(green_from_ms.size() >= 4);
+    MESSAGE("the fix's own wink at ", green_from_ms.front(), " ms");
+    for (size_t i = 1; i < green_from_ms.size(); i++) CHECK(green_from_ms[i] % 3000 == 2000);
 }
 
 TEST_CASE("product: a critical cell blinks the lamp red") {
