@@ -282,12 +282,14 @@ TEST_CASE(
         tx.configure(serial);
         std::vector<uint32_t> sent;
         for (uint32_t utc_s = 2000; utc_s < 2200; utc_s++)
-            if (tx.position_second(utc_s, /*airborne=*/false)) sent.push_back(utc_s);
+            if (tx.turn(timing::Transmitter::Payload::Position, utc_s, /*airborne=*/false))
+                sent.push_back(utc_s);
         CHECK(sent.size() == 20);
         for (size_t i = 2; i < sent.size(); i++) {
             CHECK(sent[i] - sent[i - 2] == 20);
             CHECK((sent[i] - sent[i - 1] == 9 || sent[i] - sent[i - 1] == 11));
         }
-        for (uint32_t utc_s = 2000; utc_s < 2020; utc_s++) CHECK(tx.position_second(utc_s, true));
+        for (uint32_t utc_s = 2000; utc_s < 2020; utc_s++)
+            CHECK(tx.turn(timing::Transmitter::Payload::Position, utc_s, true));
     }
 }

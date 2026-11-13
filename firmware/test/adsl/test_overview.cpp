@@ -157,23 +157,26 @@ namespace {
 struct Flown {
     int sent{0};
     uint32_t held{0};
+    uint32_t given_up{0};
     uint8_t version{0};
     uint8_t category{0};
 };
 
 // Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
 // more. A VDOP of 0 is a 2D fix, whose altitude goes out as unknown.
-Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150) {
+Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150, int speed_kt = 60,
+            uint32_t for_ms = 15000) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.product().settings().aircraft_type = category;
     simulator.world().set_fix(true);
-    simulator.world().set_speed_kt(60);
+    simulator.world().set_speed_kt(speed_kt);
     simulator.world().gnss().vdop_e2 = vdop_e2;
-    if (beside_issue1) simulator.world().add_aircraft(0, 400, 0, 30, 90);
+    if (beside_issue1) simulator.world().add_aircraft(0, 400, 0, speed_kt == 0 ? 1 : 30, 90);
     const uint32_t settled_ms = past_settling(simulator);
     const uint32_t held_before = simulator.product().state().air.tx_held_for_b5;
-    run_on(simulator, settled_ms, 15000);
+    const uint32_t given_up_before = simulator.product().state().air.tx_given_up;
+    run_on(simulator, settled_ms, for_ms);
 
     Flown out;
     for (const simulator::AirRecord& record :
@@ -190,6 +193,7 @@ Flown flown(uint8_t category, bool beside_issue1, uint16_t vdop_e2 = 150) {
         out.sent++;
     }
     out.held = simulator.product().state().air.tx_held_for_b5 - held_before;
+    out.given_up = simulator.product().state().air.tx_given_up - given_up_before;
     return out;
 }
 
@@ -228,4 +232,12 @@ TEST_CASE("ADS-L.4.SRD860.B.5: beside an Issue 1 client a glider still goes out 
     CHECK(glider.held == 0);
     CHECK(glider.version == adsl::Packet::kProtocolVersionIssue1);
     CHECK(int(glider.category) == 4);
+}
+
+// On the ground a held position tries again every 2 s, +2 to +8 and +11 to +19, then gives up.
+TEST_CASE("ADS-L.4.SRD860.B.5: a held ground position is retried 2 s on until its next turn") {
+    const Flown parked = flown(4, true, /*vdop_e2=*/0, /*speed_kt=*/0, /*for_ms=*/40000);
+    CHECK(parked.sent == 0);
+    CHECK(parked.held >= 15);
+    CHECK(parked.given_up >= 3);
 }

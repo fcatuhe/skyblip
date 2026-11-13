@@ -239,6 +239,7 @@ enum : uint32_t {
     kTxHeldForB5 = 64,
     kRxStatus = 65,
     kUplinkStale = 66,
+    kTxGivenUp = 67,
 };
 }
 

@@ -1,4 +1,4 @@
-// Two bursts in one dwell, as the executor flies them, and the name's place in the ground cycle.
+// Two bursts in one dwell, as the executor flies them, and the name in slot 1's tail.
 #include <cstring>
 #include <vector>
 
@@ -174,8 +174,8 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);
 }
 
-// The name goes out seven seconds after each ground position, with nothing of ours near it.
-TEST_CASE("rf: on the ground the name follows its own position by seven seconds, alone") {
+// The name goes out in the tail of +4 and +14, after the position at +0 and the Status at +2.
+TEST_CASE("rf: on the ground the name goes out in slot 1's tail, two seconds clear of ours") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -194,17 +194,14 @@ TEST_CASE("rf: on the ground the name follows its own position by seven seconds,
         if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
             names++;
             CAPTURE(record.at_us);
-            // Seven seconds on, inside both direct slots: 450 to 993 ms of each second.
-            CHECK(record.at_us - position_at_us >= (7000 + 450 - 993) * 1000);
-            CHECK(record.at_us - position_at_us <= (7000 + 993 - 450) * 1000);
-            // The burst before it is a whole second earlier at least: two seconds less a slot.
-            CHECK(record.at_us - last_at_us > 2000000 - 543000);
+            CHECK(record.phase_ms < timing::kSlot1WrapMs);
+            CHECK(record.at_us - last_at_us > 2000000);
         }
         if (payload_type != 0) last_at_us = record.at_us;
     }
     CHECK(names >= 3);
 
-    // Two bursts closing in one dwell go on the tape as what they were, each at its own instant.
+    // The tape names the row that carried the name, and dates each row by its own report.
     const radio::Log& log = simulator.product().state().radio_log;
     int rows = 0;
     for (int i = 0; i < log.count(); i++) {
@@ -212,7 +209,13 @@ TEST_CASE("rf: on the ground the name follows its own position by seven seconds,
         if (entry.verdict != radio::Verdict::Transmitted) continue;
         rows++;
         CAPTURE(entry.at_s);
-        CHECK(timing::Scheduler::in_direct_slot(entry.into_ms));
+        const int step_ms = static_cast<int>(simulator::Simulator::kStepMs);
+        if (entry.callsign) {
+            CHECK(entry.channel == 1);
+            CHECK(entry.into_ms <= timing::kSlot1WrapMs + step_ms);
+        } else {
+            CHECK((entry.into_ms >= adsl::kDirectStartMs || entry.into_ms <= step_ms));
+        }
         // one 5 ms host step late at most, a neighbour's instant would be 10 ms or more off
         CHECK(entry.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
     }

@@ -1,6 +1,5 @@
 #include "simulator/world/world.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -398,12 +397,12 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     air_.emit(epoch_us + static_cast<uint64_t>(tail ? phase_ms + 1000 : phase_ms) * 1000,
               timing::Scheduler::slot_frequency_hz(slot), chips, static_cast<uint8_t>(chip_bytes),
               rssi_at(range_m));
-    name_itself(aircraft, epoch_us, utc_s, 1 - slot, range_m);
+    name_itself(aircraft, epoch_us, utc_s, range_m);
 }
 
 // What a skyBlip or an OGN tracker adds to its position bursts: its registration,
-// once every ten seconds, in the direct slot of the channel its position left free.
-void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s, int slot,
+// in slot 1's tail, in the one second of ten its own address owns.
+void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
                       double range_m) {
     if (aircraft.callsign[0] == 0) return;
     if (utc_s % adsl::kGroundReportPeriodS != aircraft.address % adsl::kGroundReportPeriodS) return;
@@ -411,14 +410,13 @@ void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes = callsign_burst(aircraft, chips);
     if (chip_bytes == 0) return;
-    const int first_ms = std::max(timing::Scheduler::slot_start(slot), adsl::kDirectStartMs);
-    const int last_ms = std::min(timing::Scheduler::slot_end(slot), adsl::kDirectEndMs) -
-                        timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
+    const int first_ms = timing::kCallsignStartMs;
+    const int last_ms =
+        timing::kCallsignEndMs - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
     const int phase_ms = first_ms + static_cast<int>((aircraft.address * 2654435761u) %
                                                      static_cast<uint32_t>(last_ms - first_ms));
-    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000,
-              timing::Scheduler::slot_frequency_hz(slot), chips, static_cast<uint8_t>(chip_bytes),
-              rssi_at(range_m));
+    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, adsl::kMBand1Hz, chips,
+              static_cast<uint8_t>(chip_bytes), rssi_at(range_m));
 }
 
 template <class Platform>

@@ -22,12 +22,15 @@ class Transmitter {
    public:
     static constexpr uint32_t kAirTimeMs = adsl::kAirTimeMs;
     static constexpr uint32_t kStatusPeriodS = adsl::kStatusPeriodS;
-    // INFO: fc 13nov26 each unit's cycle starts at its ground second, and holds every burst it owes
+    // INFO: fc 13nov26 each unit's cycle starts on an even second, c = 2 * (serial % 10)
     static constexpr uint32_t kCycleS = 20;
-    // INFO: fc 13nov26 of every placement, the most even per channel: gaps of 7, 6, 7 and 7, 7, 6 s
     static constexpr uint32_t kPositionOffsetsS[2] = {0, 9};
-    static constexpr uint32_t kStatusOffsetsS[2] = {2, 13};
-    static constexpr uint32_t kCallsignOffsetsS[2] = {7, 16};
+    static constexpr uint32_t kStatusOffsetsS[2] = {2, 11};
+    // INFO: fc 13nov26 the name is skyBlip's, so it keeps to slot 1's tail, empty of ADS-L today
+    static constexpr uint32_t kCallsignOffsetsS[2] = {4, 14};
+    static constexpr int kCallsignSlot = 1;
+    // INFO: fc 13nov26 a burst that missed its second tries the same channel two seconds on
+    static constexpr uint32_t kRetryStepS = 2;
     static constexpr int32_t kFixMaxAgeMs = adsl::kFixMaxAgeMs;
     // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
     static constexpr int kCompletionGuardMs = 2;
@@ -50,7 +53,7 @@ class Transmitter {
     // calling it twice with the same arguments gives the same answer.
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms, Payload payload) const;
-    // INFO: fc 13nov26 the first burst the dwell owes, in Payload order: a dwell can owe two
+    // INFO: fc 13nov26 the first burst the dwell owes, in Payload order
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms) const;
 
@@ -60,17 +63,23 @@ class Transmitter {
     const AirTime& air_time() const { return air_time_; }
     // INFO: fc 13nov26 the second alone picks the channel: A in an even second, B in an odd one
     static int slot_in(uint32_t utc_s) { return static_cast<int>(utc_s & 1u); }
-    // INFO: fc 13nov26 Status and the name take the channel the second's position leaves free
+    // INFO: fc 13nov26 the Status takes the channel the second's position leaves free
     static int extra_slot_in(uint32_t utc_s) { return 1 - slot_in(utc_s); }
-    // INFO: fc 13nov26 serial % 10, and skyblip.eu hands out serials densely from 1
-    uint32_t ground_second() const;
-    bool position_second(uint32_t utc_s, bool airborne) const;
-    bool status_second(uint32_t utc_s) const;
-    bool callsign_second(uint32_t utc_s) const;
+    static int channel_of(Payload payload, uint32_t utc_s);
+    uint32_t cycle_start() const;
+    bool turn(Payload payload, uint32_t utc_s, bool airborne) const;
+    bool retry(Payload payload, uint32_t utc_s, bool airborne) const;
+    // INFO: fc 13nov26 turns that ended unsent as utc_s opens, each counted once
+    uint32_t give_up(uint32_t utc_s, bool airborne, bool named);
+    static int last_callsign_instant();
 
    private:
     bool sent_in(uint32_t utc_s, Payload payload) const;
+    bool sent_since(Payload payload, uint32_t utc_s) const;
+    void start(uint32_t utc_s);
     uint32_t cycle_second(uint32_t utc_s) const;
+    uint32_t latest_turn(Payload payload, uint32_t utc_s, bool airborne) const;
+    bool scheduled_on(int slot, uint32_t utc_s, bool airborne) const;
     bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
              int32_t fix_lag_ms) const;
     static int first_instant_in(int slot);
@@ -86,15 +95,21 @@ class Transmitter {
     uint32_t sent_{0};
     uint32_t last_utc_s_[kPayloads]{};
     bool ever_sent_[kPayloads]{};
+    uint32_t closed_s_{0};
+    // INFO: fc 13nov26 the first second this transmitter acted in: no turn before it is retried
+    uint32_t first_s_{0};
+    bool started_{false};
 };
 
 static_assert(Transmitter::kCycleS == Transmitter::kStatusPeriodS &&
                   Transmitter::kCycleS == 2 * adsl::kGroundReportPeriodS,
               "one cycle holds G.2.11's Status period and two of G.1.16's ground periods");
 static_assert((Transmitter::kPositionOffsetsS[1] - Transmitter::kPositionOffsetsS[0]) % 2 == 1 &&
-                  (Transmitter::kStatusOffsetsS[1] - Transmitter::kStatusOffsetsS[0]) % 2 == 1 &&
-                  (Transmitter::kCallsignOffsetsS[1] - Transmitter::kCallsignOffsetsS[0]) % 2 == 1,
-              "an odd gap is what alternates each payload's channel under the parity rule");
+                  (Transmitter::kStatusOffsetsS[1] - Transmitter::kStatusOffsetsS[0]) % 2 == 1,
+              "an odd gap is what alternates a position's and a Status's channel");
+static_assert(Transmitter::kCallsignOffsetsS[0] % 2 == 0 &&
+                  Transmitter::kCallsignOffsetsS[1] % 2 == 0,
+              "the name sits in an even second, where the position is on A and B is ours alone");
 
 }  // namespace skyblip::timing
 

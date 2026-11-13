@@ -178,6 +178,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSlot1StartMs` | 800 | milliseconds | - | - |
 | `kSlot1EndMs` | 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kSlot1WrapMs` | `kSlot1EndMs - 1000` = 200 | milliseconds | - | How far slot 1 reaches past the second it started in. |
+| `kCallsignStartMs` | `adsl::kDirectEndMs` = 1000 (1 s) | milliseconds | - | §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on |
+| `kCallsignEndMs` | `kSlot1EndMs` = 1200 (1.2 s) | milliseconds | - | - |
 | `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
 | `kHopGuardMs` | 2 | milliseconds | - | bench worst dwell end to listening 1.16 ms over 2880 hops, 2 leaves 0.84 |
 | `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
@@ -188,7 +190,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
-| `kCycleS` | 20 | seconds | - | each unit's cycle starts at its ground second, and holds every burst it owes |
+| `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
+| `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | - |
 | `kCompletionGuardMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
@@ -386,4 +389,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-246 constants over 25 folders.
+249 constants over 25 folders.

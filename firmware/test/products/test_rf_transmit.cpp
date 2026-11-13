@@ -98,8 +98,8 @@ TEST_CASE("rf: the simulator puts own-ship's burst on air in the step that keyed
     CHECK(done >= 5);
 }
 
-// Payload 66 is a broadcast type F.2.1 lists, so the name rides the direct slot like any other.
-TEST_CASE("rf: the callsign goes out in the direct slot, once every ten seconds, by turns") {
+// The name is skyBlip's, so it keeps to slot 1's tail, where ADS-L transmits nothing today.
+TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, on channel 1") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -110,16 +110,16 @@ TEST_CASE("rf: the callsign goes out in the direct slot, once every ten seconds,
 
     const simulator::Air& air = simulator.world().air();
     int named = 0;
-    uint32_t last_hz = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx) continue;
-        CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
-        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= adsl::kDirectEndMs);
-        if (payload_type_of(record) != adsl::Packet::kPayloadTypeOgnDiagnostics) continue;
+        if (record.event != simulator::AirEvent::Tx ||
+            timing::Scheduler::in_direct_slot(record.phase_ms))
+            continue;
         named++;
-        if (last_hz != 0) CHECK(record.frequency_hz != last_hz);
-        last_hz = record.frequency_hz;
+        CHECK(payload_type_of(record) == adsl::Packet::kPayloadTypeOgnDiagnostics);
+        CHECK(record.phase_ms < timing::kSlot1WrapMs);
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
+        CHECK(simulator::Air::tuned_to(record.frequency_hz, adsl::kMBand1Hz));
     }
     // Forty-one seconds of flight: forty-one positions, four Status bursts and four names.
     CHECK(count_payloads(air, adsl::Packet::kPayloadTypePosition) >= 39);

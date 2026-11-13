@@ -43,6 +43,9 @@ constexpr int kSlot1StartMs = 800;
 constexpr int kSlot1EndMs = 1200;
 // How far slot 1 reaches past the second it started in.
 constexpr int kSlot1WrapMs = kSlot1EndMs - 1000;
+// INFO: fc 20sep26 §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on
+constexpr int kCallsignStartMs = adsl::kDirectEndMs;
+constexpr int kCallsignEndMs = kSlot1EndMs;
 // Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at
 // 205. The uplink dwell ends at 395, M-band opens at 400. The O->M edge is the
 // safety-critical one - traffic is on air there and the radio has to be tuned,

@@ -71,8 +71,7 @@ uint32_t Scheduler::frequency_hz_at(int phase_ms) {
 
 bool Scheduler::in_own_tx_dwell(int phase_ms) {
     const SlotState state = state_at(phase_ms);
-    if (state == SlotState::Slot0 || state == SlotState::Hop) return true;
-    return state == SlotState::Slot1 && phase_ms >= kSlot1StartMs;
+    return state == SlotState::Slot0 || state == SlotState::Hop || state == SlotState::Slot1;
 }
 
 int Scheduler::slot_of(int phase_ms) {

@@ -97,9 +97,10 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `tx_lost` | own-ship's burst was armed and never completed |
 | `tx_named` | how many of the bursts in `tx_ok` carried own-ship's registration rather than a position |
 | `uplink_stale` | records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or ahead of the second they were heard in (G.3) |
+| `tx_given_up` | turns of own-ship's schedule that never went out, neither in their second nor on a retry 2 s on, before their type's next turn (`core/timing/README.md`) |
 | `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
 
-`rx_status`, `uplink_stale` and `tx_held_for_b5` reach the diagnostics dump's radio group like the rest, and the RAW page prints them as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row.
+`rx_status`, `uplink_stale`, `tx_held_for_b5` and `tx_given_up` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row.
 
 `BadCrc` is counted in `rx_bad` beside `Undecoded` rather than apart from it, even though the two are answered differently. What a counter is read for is whether anything is wrong, and both say yes: a burst the air damaged and a burst nothing here could read are each a reason to go and look. Which of the two it was is the tape's column, one row per burst, and a number that only ever climbs cannot carry that distinction anyway.
 

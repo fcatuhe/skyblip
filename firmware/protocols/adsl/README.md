@@ -11,7 +11,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 | `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation, sync and burst, the G.3 Traffic Uplink packet with up to ten verbatim Traffic payloads and its 10 s age rule, and E.3.2's RS(255,223) code with its roots and zero prefix |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
 | `versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
-| `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the Traffic schedule for a ground second the integrator chooses, channel alternation, the 500 ms nav age and the Status period |
+| `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the airborne and ground report periods, the 500 ms nav age and the Status period |
 | `version.h` | | `kVersion` and `kSpecification` |
 
 ## What is out, and where it is
@@ -22,7 +22,7 @@ These are skyBlip's choices, built on this stack:
 - which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route in place of §D.3's listen-before-talk (`core/timing/transmit.*`, `core/timing/channel.*`)
 - the address table 58 and the manufacturer prefix (`core/settings/address.h`), and airborne detection (`core/flight/state.*`)
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
-- the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
+- the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record, its place in slot 1's tail and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
 - the dual-system receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
 - B.5's bookkeeping: each target's Max. Protocol Version and the lowest any close one reads (`core/traffic/table.*`), and how own Traffic is re-coded for Issue 1 or held when it cannot be (`core/protocol/adsl.*`)
 - `RadioService` and the SX1262 settings that put a frame on air
@@ -66,7 +66,7 @@ Everything is in namespace `skyblip::adsl`.
 
 §G.1.16's ground rate is "0.1 Hz (once every 10 seconds)". skyBlip reads that as an average: its ground positions go 9 then 11 s apart, exactly 0.1 Hz on average, because §C.2.5's alternation with a channel picked by the second's parity cannot put two positions 10 s apart. §C.2.5 asks consecutive Traffic transmissions, and consecutive Status transmissions, to change channel, which the stack leaves to the integrator to schedule.
 
-Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`: the second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status and the name, inside a 20 s cycle per unit with ground positions 9 then 11 s apart, plus the channel-access route a device declares in place of §D.3's listen-before-talk.
+Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`. The second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status, inside a 20 s cycle per unit that starts on an even second, with ground positions 9 then 11 s apart. The name, skyBlip's own payload, goes in slot 1's tail on B, where ADS-L transmits nothing today. A burst that did not go out in its second, for any reason, a §B.5 hold among them, is retried 2 s later on the same channel, or at the next same-parity second whose dwell on that channel is free of ours, until it goes out or its type's next turn is due. skyBlip reads §C.2.5 so: every transmission the schedule makes alternates, and a burst that never went out does not move the next one's channel. The channel-access route a device declares in place of §D.3's listen-before-talk is skyBlip's too.
 
 ## The Status payload
 

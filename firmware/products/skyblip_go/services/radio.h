@@ -107,6 +107,7 @@ class RadioService : public runtime::Service {
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms() const;
+    void count_given_up(uint32_t now_ms);
     protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,
                                          uint64_t tx_at_us, uint32_t utc_s) const;
     static ports::RfMode mode_for(const timing::SlotPlan& plan);

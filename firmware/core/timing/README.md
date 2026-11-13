@@ -2,7 +2,7 @@
 
 One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
 
-The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates, the two channels and the Status period. `Transmitter` composes them with what skyBlip decided: the channel each second carries, the 20 s cycle a unit owns and where in it each burst goes, the instant drawn inside each window, the window each dwell leaves a burst, the radio's completion guard, and the hour's air time it declares as its channel-access route.
+The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates, the two channels and the Status period. `Transmitter` composes them with what skyBlip decided: the channel each second carries, the 20 s cycle a unit owns and where in it each burst goes, the retry 2 s later, the instant drawn inside each window, the window each dwell leaves a burst, the radio's completion guard, the name in slot 1's tail, and the hour's air time it declares as its channel-access route.
 
 ## The burst is placed, and nothing on air moves it
 
@@ -46,53 +46,57 @@ EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what thi
 
 ## The seconds each burst owns
 
-The second alone picks the channel. A position goes on channel A, 868.2 MHz in slot 0, in an even UTC second, and on B, 868.4 MHz in slot 1's direct part, in an odd one, on the ground as well as airborne (`Transmitter::slot_in()`). The Status (§G.2) and the name go on the other channel from the position of their second, B in an even second and A in an odd one (`extra_slot_in()`). So no extra ever shares a dwell with a position, and no dwell carries more than one burst of ours.
+The second alone picks the channel for ADS-L. A position goes on channel A, 868.2 MHz in slot 0, in an even UTC second, and on B, 868.4 MHz in slot 1's direct part, in an odd one, on the ground as well as airborne (`Transmitter::slot_in()`). The Status (§G.2) goes on the other channel from the position of its second, B in an even second and A in an odd one (`extra_slot_in()`). The name always goes on B, in slot 1's tail (below).
 
-Each unit owns a 20 s cycle that starts at its ground second, `g = serial % 10`. The serial is the low 16 bits of the address, and skyblip.eu hands serials out densely from 1, so a fleet spreads exactly evenly over the ten starting seconds and ten consecutive serials never share one. On the ground the cycle holds six bursts, at the same offsets from g for every unit (`kPositionOffsetsS`, `kStatusOffsetsS`, `kCallsignOffsetsS`):
+Each unit owns a 20 s cycle that starts on an even second, `c = 2 * (serial % 10)` (`cycle_start()`). The serial is the low 16 bits of the address, and skyblip.eu hands serials out densely from 1, so a fleet spreads exactly evenly over ten starting seconds 2 s apart. The start is even because the name has to sit in an even second: there the position is on A, so nothing of ours is on B within 100 ms of the name, and the cycle keeps the name out of the second whose Status is on B. On the ground the cycle holds six bursts, at the same offsets from c for every unit (`kPositionOffsetsS`, `kStatusOffsetsS`, `kCallsignOffsetsS`):
 
-| Offset | Burst | Channel for an even g |
+| Offset | Burst | Channel |
 |---|---|---|
 | +0 | position | A |
 | +2 | Status | B |
-| +7 | name | A |
+| +4 | name | B, in the tail, on air 1000 to 1193 ms after second c + 4 starts |
 | +9 | position | B |
-| +13 | Status | A |
-| +16 | name | B |
+| +11 | Status | A |
+| +14 | name | B, in the tail of c + 14 |
 
-An odd g mirrors the channels. Airborne the position goes every second, and the Status and the name go in the same seconds and on the same channels as on the ground, so a takeoff or a landing changes nothing about them.
+Airborne the position goes every second, and the Status and the name go in the same seconds and on the same channels as on the ground, so a takeoff or a landing changes nothing about them.
 
-A minute for g = 0, A being 868.2 MHz at 450 to 793 ms and B 868.4 MHz at 800 to 993 ms. The 20 s cycle repeats at 20 and 40:
+A minute for c = 0, A being 868.2 MHz at 450 to 793 ms and B 868.4 MHz at 800 to 993 ms and its tail. The 20 s cycle repeats at 20 and 40:
 
 | Second | Airborne | On the ground |
 |---|---|---|
 | 0 | position A | position A |
 | 2 | position A, Status B | Status B |
-| 7 | position B, name A | name A |
+| 4 | position A, name B in the tail | name B in the tail |
 | 9 | position B | position B |
-| 13 | position B, Status A | Status A |
-| 16 | position A, name B | name B |
+| 11 | position B, Status A | Status A |
+| 14 | position A, name B in the tail | name B in the tail |
 | any other | position, A in an even second, B in an odd one | |
 
-On the ground channel A carries 0, 7, 13, 20, 27, 33, 40, 47 and 53, and channel B 2, 9, 16, 22, 29, 36, 42, 49 and 56.
+On the ground channel A carries 0, 11, 20, 31, 40 and 51, and channel B 2, 5, 9, 15, 22, 25, 29, 35, 42, 45, 49 and 55, where 5, 15, 25 and so on are the names on air in the tail of 4, 14, 24.
 
-Why these offsets:
+Why these offsets, which an exhaustive search over every placement chose:
 
+- With the name pinned to B, channel A carries only a position and a Status per cycle, 11 and 9 s apart, and B carries four bursts, 3, 4, 6 and 7 s apart. Across both channels the bursts are 2, 3, 4, 2, 4 and 5 s apart.
 - The parity rule would put two positions 10 s apart on the same channel, which §C.2.5's alternation forbids, so the ground positions are 9 then 11 s apart. That is skyBlip's reading of §G.1.16's "0.1 Hz (once every 10 seconds)": exactly 0.1 Hz on average, the 11 s gap coming from §C.2.5 with the parity rule.
-- Every placement of the six bursts was checked, and this one gives the most even spacing on each channel, which is what a receiver on one channel sees: 7, 6, 7 s on one and 7, 7, 6 s on the other, never more than 7. Across both channels the bursts are 2 to 5 s apart.
-- Every type alternates channel from one transmission to the next: positions, Status (§C.2.5) and names. Each channel carries a Status every 20 s, so a receiver that listens on one channel only still gets §G.2.11's rate, and the Status gaps alternate 11 and 9 s.
-- Two bursts of ours on one frequency are always at least 100 ms apart, which is EN 300 220-1's off-time.
+- Positions and Status alternate channel, 9 and 11 s apart, so each channel carries a Status every 20 s and a receiver on one channel only still gets §G.2.11's rate. Names go every 10 s.
+- Two bursts of ours on one frequency are always at least 100 ms apart, EN 300 220-1's off-time, the name's tail included, and no dwell carries more than one burst of ours.
 
-The instant inside a window is drawn from the address and the UTC second, so two units that do share a second still do not share an instant: the position from `hash(address ^ hash(utc_s))`, the Status from one more round of the hash and the name from two more, so no two bursts share a draw (`Transmitter::extra_instant_in()`). Each is drawn over its whole window, since nothing else of ours is in that dwell. The air time is one position a second airborne plus a Status and a name every ten seconds, 6 ms a second, 0.6 of the allowance, and 0.15% of the hour on the ground. `test/core/test_transmit.cpp` checks the offsets, the per-channel gaps, the alternation of each type, the one burst a dwell and the 100 ms off-time over 1024 serials and a whole minute, airborne and on the ground.
+The instant inside a window is drawn from the address and the UTC second, so two units that share a second still do not share an instant: the position from `hash(address ^ hash(utc_s))`, the Status from one more round of the hash and the name from two more, so no two bursts share a draw (`Transmitter::extra_instant_in()`). The air time is one position a second airborne plus a Status and a name every ten seconds, 6 ms a second, 0.6 of the allowance, and 0.15% of the hour on the ground. `test/core/test_transmit_cycle.cpp` checks the offsets, the per-channel gaps, the alternation, the one burst a dwell, the 100 ms off-time and the retries over 1024 serials and a whole minute, airborne, on the ground and across a takeoff and a landing.
 
-The alternation is the clock's, so a burst refused for an hour's air time spent or a dwell not armed leaves a gap and puts nothing out of step.
+## A burst that did not go out tries again 2 s later
 
-## The name rides the direct slot
+A burst that did not go out in its second, for any reason (a fix too old, the hour's air time spent, a dwell not armed, a §B.5 hold, and listen-before-talk if it ever comes), is retried 2 s later on the same channel (`Transmitter::retry()`, `kRetryStepS`). Two seconds later is the same parity, so the same channel, and §C.2.5's alternation still holds, because the burst that missed was never transmitted. If that second's dwell on the channel already carries a burst of ours, the retry goes to the next same-parity second whose dwell is free, which keeps every dwell to one burst and every frequency's bursts 100 ms apart: the Status at c + 2, whose retry would land on the name's c + 4, goes at c + 6. It keeps trying every 2 s until it goes out or its type's next turn is due, and then that turn is given up and counted in `air.tx_given_up` (`give_up()`). On the ground the position at +0 is retried at +2, +4, +6 and +8, and the one at +9 at +11 to +19. Airborne positions need nothing extra, since their next turn on the same channel is 2 s later anyway.
 
-ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, a broadcast type §F.2.1 lists and leaves to OGN (`core/protocol/README.md`). It goes out like any other ADS-L payload, in the direct slot of the channel its second's position leaves free. It used to go in slot 1's tail, 1000 to 1193 ms, which §C.5 reserves, and that was the one deliberate deviation from the clause this tree made. With it gone, the tail is receive only again.
+The suite reads §C.2.5 this way: every transmission the schedule makes alternates channel, and a burst that never went out does not move the next one's channel.
 
-A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). Airborne the target is a second old at most. On the ground the name follows a position by 7 s, inside the ten seconds any receiver has to keep a ground target to show it at all.
+## The tail names us, once every ten seconds
 
-The tail pays it back to the flash-write window. `core/timing/durable_write.h` places a settings write inside an armed receive dwell that own-ship cannot transmit in, and slot 1's tail is one of the two such stretches again, beside the uplink dwell.
+ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66 (`core/protocol/README.md`). The name is skyBlip's payload, not ADS-L's, so it goes in slot 1's tail, 1000 to 1193 ms after the start of its second, on 868.4 MHz, where ADS-L transmits nothing today, until ADS-L says where it belongs. §C.5 reserves 0 to 200 ms and lists only Traffic, Status and Remote ID for the direct slot. The name is ours, so it keeps out of the direct slot ADS-L uses and goes in the stretch ADS-L leaves empty.
+
+The instant is drawn over the width the tail leaves once the air time and the completion guard are taken off it, 1000 to 1193 (`last_callsign_instant()`). A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). Airborne the target is a second old at most. On the ground the name follows a position by 4 or 5 s, inside the ten seconds any receiver has to keep a ground target to show it at all.
+
+What it costs elsewhere is the flash-write window. `core/timing/durable_write.h` places a settings write inside an armed receive dwell that own-ship cannot transmit in, and slot 1's tail cannot be one, because a name may go out there. The uplink dwell is the one stretch, and it is also the dwell whose traffic we can most afford to be deaf to.
 
 ## The next dwell is armed ahead, the burst when it is due
 

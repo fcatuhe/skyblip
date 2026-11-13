@@ -49,7 +49,7 @@ Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`,
 | GVA 2 for a VFOM from 10 to 15 m | 3 | Issue 1 G.1.15 draws code 3 at 15 m, Issue 2 at 10 m |
 | altitude, ground speed or vertical rate unknown | the position is held for that second | Issue 1 has no code for unknown, and 0x3FFF, 0xFF or 0x1FF would read as 61112 m, 238 m/s or a 119 m/s descent |
 
-A held position is counted once a second in `air.tx_held_for_b5`, and the next position the schedule owes tries again. Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.
+A held position is counted once a second in `air.tx_held_for_b5`, and like any burst that did not go out it is retried 2 s later on the same channel, until it goes out or the next position is due (`core/timing/README.md`). Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.
 
 ## The name ADS-L has no field for
 

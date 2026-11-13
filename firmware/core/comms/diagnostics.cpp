@@ -131,6 +131,8 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.rx_status);
         add(Group::Radio, "uplink_stale", link::diagnostics_key::kUplinkStale, Kind::Unsigned,
             diagnostics.uplink_stale);
+        add(Group::Radio, "tx_given_up", link::diagnostics_key::kTxGivenUp, Kind::Unsigned,
+            diagnostics.tx_given_up);
     }
 
     if (traffic) {

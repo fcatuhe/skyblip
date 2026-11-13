@@ -26,6 +26,7 @@ void RadioService::tick(uint32_t now_ms) {
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
+    count_given_up(now_ms);
     take_carrier_samples();
     take_switching(now_ms);
     collect_outcome(now_ms);
@@ -239,6 +240,16 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
     return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
+}
+
+void RadioService::count_given_up(uint32_t now_ms) {
+    const model::Ownship& own = context_.state.own;
+    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
+        return;
+    const bool full_rate =
+        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
+    context_.state.air.tx_given_up +=
+        transmitter_.give_up(slot_utc_s(now_ms), full_rate, settings_.callsign[0] != 0);
 }
 
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed

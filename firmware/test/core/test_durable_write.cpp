@@ -3,11 +3,11 @@
 //
 // The thing being pinned down is that 1-ARCHITECTURE.md §5.1's "no flash work
 // inside a dwell" has to be read as a statement about deadlines, because the
-// dwell map leaves no unarmed phase to write in: 0..200 is slot 1's tail, 205..395
-// the uplink dwell, 400..1200 the two M-band dwells, and the only two gaps are the
-// 5 ms retune guards, which are the worst place in the second for an 85 ms stall.
-// So the cases below say where the stall IS allowed, and prove that the set is the
-// two stretches the map's own numbers leave.
+// dwell map leaves no unarmed phase to write in: 205..395 is the uplink dwell,
+// 400..1200 the two M-band dwells own-ship keys the PA inside, and the only two
+// gaps are the 5 ms retune guards, which are the worst place in the second for an
+// 85 ms stall. So the cases below say where the stall IS allowed, and prove that
+// the set is the one stretch the map's own numbers leave.
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
 
@@ -74,12 +74,13 @@ TEST_CASE("durable write: the cost is the nRF52840's own page erase plus the cop
     CHECK(DurableWriteWindow::kPartialEraseMs < static_cast<uint32_t>(kJitterGuardMs));
 }
 
-// The whole second, phase by phase. Two stretches and no others:
-//   0..104   slot 1's tail, which closes at 200 (kSlot1WrapMs) - the write finishes
-//            by 195 and the 5 ms guard before the uplink dwell is still whole.
+// The whole second, phase by phase. One stretch and no others:
 //   205..299 the uplink dwell, which closes at 395 - the write finishes by 390 and
 //            the guard in front of the safety-critical O->M edge is still whole.
-TEST_CASE("durable write: the free phases are the two the dwell map leaves") {
+// Slot 1's tail was the second one until the callsign burst was placed there
+// (core/timing/README.md), and a write inside it now stalls the core through an
+// instant own-ship may have keyed the PA at.
+TEST_CASE("durable write: the free phase is the one the dwell map leaves") {
     int first_free = -1;
     int last_free = -1;
     int stretches = 0;
@@ -93,13 +94,13 @@ TEST_CASE("durable write: the free phases are the two the dwell map leaves") {
         if (free) last_free = phase;
         was_free = free;
     }
-    CHECK(stretches == 2);
-    CHECK(first_free == 0);
+    CHECK(stretches == 1);
+    CHECK(first_free == 205);
     CHECK(last_free == 299);
 
     // Named, so a moved constant fails here and not in a product case.
-    CHECK(free_at(104));
-    CHECK_FALSE(free_at(105));
+    CHECK_FALSE(free_at(0));
+    CHECK_FALSE(free_at(109));
     CHECK(free_at(205));
     CHECK(free_at(299));
     CHECK_FALSE(free_at(300));

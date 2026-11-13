@@ -116,7 +116,7 @@
         {"name": "rx_named", "number": 16, "type": "unsigned", "description": "radio. Bursts that framed and carried an aircraft's registration instead of its position: ADS-L payload 66, OGN's, read for the callsign and filed under the sender's address (core/radio/README.md, radio::Verdict::Named). Counted apart from rx_ok, which counts positions"},
         {"name": "tx_ok", "number": 17, "type": "unsigned", "description": "radio. Bursts the executor reported as transmitted"},
         {"name": "tx_lost", "number": 18, "type": "unsigned", "description": "radio. Bursts of ours that were armed and never completed: the dwell ran out, or the radio's transmit timeout did. Never a reception"},
-        {"name": "tx_named", "number": 19, "type": "unsigned", "description": "radio. How many of the bursts in tx_ok carried own-ship's registration rather than a position: the callsign goes on the air once every ten seconds, in the direct slot (core/timing/README.md)"},
+        {"name": "tx_named", "number": 19, "type": "unsigned", "description": "radio. How many of the bursts in tx_ok carried own-ship's registration rather than a position: the callsign goes on the air once every ten seconds, in slot 1's tail (core/timing/README.md)"},
         {"name": "tx_keyed_us", "number": 20, "type": "unsigned", "description": "radio. Microseconds the last burst held the carrier keyed, measured by the executor rather than budgeted"},
         {"name": "tx_span_us", "number": 21, "type": "unsigned", "description": "radio. Microseconds from arming the last burst to the radio reporting it sent, which is the keyed time plus everything around it"},
         {"name": "range_refused", "number": 22, "type": "unsigned", "description": "radio. Receptions core/traffic refused because the position they claimed was further away than this radio can hear (core/traffic/sanity.h). A rate that climbs is a receiver at the edge of its link budget or a decoder that is silently miscorrecting"},
@@ -162,7 +162,8 @@
         {"name": "aircraft", "number": 63, "type": "unsigned", "description": "adsb. Aircraft adsb::Assembly holds now, at most 100: each heard inside the last 250 s, with or without a position, before the traffic table. tracked, in the traffic group, counts the ones the table took"},
         {"name": "tx_held_for_b5", "number": 64, "type": "unsigned", "description": "radio. Seconds own-ship held a position because a close neighbour reads only ADS-L Issue 1 and the position carried an unknown altitude, ground speed or vertical rate Issue 1 has no code for (ADS-L B.5, core/protocol/README.md)"},
         {"name": "rx_status", "number": 65, "type": "unsigned", "description": "radio. ADS-L Status payloads heard from an aircraft in the traffic table, whose Max. Protocol Version B.5 now holds for it (radio::Verdict::Declared)"},
-        {"name": "uplink_stale", "number": 66, "type": "unsigned", "description": "radio. Records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or in the future (ADS-L G.3)"}
+        {"name": "uplink_stale", "number": 66, "type": "unsigned", "description": "radio. Records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or in the future (ADS-L G.3)"},
+        {"name": "tx_given_up", "number": 67, "type": "unsigned", "description": "radio. Turns of own-ship's schedule, a position, a Status or a name, that never went out: neither in their second nor on a retry 2 s on the same channel before their type's next turn (core/timing/README.md)"}
       ]
     },
     {
