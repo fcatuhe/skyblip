@@ -7,9 +7,10 @@ module Localized
 
   private
     def switch_locale(&action)
-      locale = params[:locale] || I18n.default_locale
-      I18n.with_locale(locale, &action)
+      I18n.with_locale(requested_locale, &action)
     end
+
+    def requested_locale = params[:locale] || I18n.default_locale
 
     def default_url_options
       return {} if I18n.locale == I18n.default_locale

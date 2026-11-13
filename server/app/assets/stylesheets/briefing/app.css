@@ -161,10 +161,6 @@
     .app-actions > .button-app:not(.button-app--quiet, .button-app--text) { flex: 1; }
   }
 
-  @media (display-mode: standalone) {
-    .app-bar .locale-switcher { display: none; }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .button-app { transition: none; }
   }

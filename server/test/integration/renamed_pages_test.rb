@@ -1,25 +1,29 @@
 require "test_helper"
 
 class RenamedPagesTest < ActionDispatch::IntegrationTest
-  test "the activation address the glass prints leads to the briefing app, in both languages" do
+  test "the activation address the glass prints leads to the briefing app, from both languages" do
     get "/activate"
     assert_response :moved_permanently
     assert_redirected_to "/briefing/activate"
 
     get "/fr/activer"
     assert_response :moved_permanently
-    assert_redirected_to "/fr/briefing/activate"
+    assert_redirected_to "/briefing/activate"
   end
 
   test "the old update and settings pages lead to the briefing app, where the device is" do
-    %w[/update /configure /manage].each do |path|
+    %w[/update /configure /manage /fr/mettre-a-jour /fr/regler /fr/mise-a-jour].each do |path|
       get path
       assert_redirected_to "/briefing", path
     end
+  end
 
-    %w[/fr/mettre-a-jour /fr/regler /fr/mise-a-jour].each do |path|
-      get path
-      assert_redirected_to "/fr/briefing", path
-    end
+  test "the old French briefing addresses lead to the same page, query kept" do
+    get "/fr/briefing"
+    assert_response :moved_permanently
+    assert_redirected_to "/briefing"
+
+    get "/fr/briefing/ownship?type=glider&rows=ff"
+    assert_redirected_to "/briefing/ownship?type=glider&rows=ff"
   end
 end
