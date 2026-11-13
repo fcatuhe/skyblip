@@ -67,28 +67,33 @@ export function reassembleLines(onLine) {
   return event => feed(bytesOf(event));
 }
 
+async function subscribe(chr, listener) {
+  await chr.startNotifications();
+  chr.addEventListener('characteristicvaluechanged', listener);
+  return async () => {
+    chr.removeEventListener('characteristicvaluechanged', listener);
+    await chr.stopNotifications();
+  };
+}
+
 async function openStream(server, onLine) {
   const nus = await serviceOrNull(server, UUID.nus);
   if (nus) {
-    const tx = await nus.getCharacteristic(UUID.nusTx);
-    await tx.startNotifications();
-    tx.addEventListener('characteristicvaluechanged', reassembleLines(onLine));
-    return { write: await nus.getCharacteristic(UUID.nusRx), transport: 'Nordic UART' };
+    const stop = await subscribe(await nus.getCharacteristic(UUID.nusTx), reassembleLines(onLine));
+    return { write: await nus.getCharacteristic(UUID.nusRx), transport: 'Nordic UART', stop };
   }
   const hm10 = await serviceOrNull(server, UUID.hm10);
   if (!hm10) return null;
   const chr = await hm10.getCharacteristic(UUID.hm10Chr);
-  await chr.startNotifications();
-  chr.addEventListener('characteristicvaluechanged', reassembleLines(onLine));
-  return { write: chr, transport: 'HM-10' };
+  const stop = await subscribe(chr, reassembleLines(onLine));
+  return { write: chr, transport: 'HM-10', stop };
 }
 
 async function openFrames(server, uuid, onFrame) {
   const svc = await serviceOrNull(server, UUID.skyblip);
   if (!svc) return null;
   const chr = await svc.getCharacteristic(uuid);
-  await chr.startNotifications();
-  chr.addEventListener('characteristicvaluechanged', event => {
+  const stop = await subscribe(chr, event => {
     const bytes = bytesOf(event);
     let frame;
     try {
@@ -98,7 +103,7 @@ async function openFrames(server, uuid, onFrame) {
     }
     onFrame(frame, bytes);
   });
-  return chr;
+  return { chr, stop };
 }
 
 const openConfig = (server, onReply) => openFrames(server, UUID.config, onReply);
@@ -153,7 +158,7 @@ function linkOf(device) {
 
 async function openLink(device, forget) {
   const server = await device.gatt.connect();
-  const link = { device, closed: false, server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, log: null, smp: null };
+  const link = { device, closed: false, server, clients: new Set(), exclusive: gattQueue(), tapped: null, stream: null, config: null, log: null, smp: null };
   device.addEventListener('gattserverdisconnected', () => {
     if (!forget()) return;
     for (const client of link.clients) client.onClose?.(device.name);
@@ -175,8 +180,8 @@ const HEARD = {
 
 function open(link, endpoint, opener) {
   link[endpoint] ??= opener(link.server, (...args) => {
-    for (const client of link.clients) client[CALLBACKS[endpoint]]?.(...args);
     overheard(link, { endpoint, direction: 'in', ...HEARD[endpoint](...args) });
+    for (const client of link.clients) client[CALLBACKS[endpoint]]?.(...args);
   }).catch(error => {
     link[endpoint] = null;
     throw error;
@@ -187,17 +192,44 @@ function open(link, endpoint, opener) {
 // INFO: fc 14nov26 a characteristic can keep the listener of a link that closed, which must not reach a tap twice
 function overheard(link, entry) {
   if (link.closed) return;
-  for (const listener of taps.get(link.device) ?? []) listener(entry);
+  for (const listener of taps.get(link.device) ?? []) {
+    try {
+      listener(entry);
+    } catch (error) {
+      // INFO: fc 14nov26 a tap only draws, so its failure is logged and never fails the write or the client that made the frame
+      console.error('A tap failed on a frame, and the link carried on:', error);
+    }
+  }
 }
 
-// INFO: fc 14nov26 a tap opens the two endpoints no page client asks for, so it hears every endpoint the device serves
-async function openTapped(link) {
-  try {
-    await open(link, 'stream', openStream);
-    await open(link, 'log', openLog);
-  } catch (error) {
-    overheard(link, { event: 'failed', error });
-  }
+const TAPPED = { stream: openStream, log: openLog };
+
+// INFO: fc 14nov26 a tap opens the two endpoints no page client asks for, queued behind the writes so it never collides with an upload
+function openTapped(link) {
+  link.tapped ??= link.exclusive(async () => {
+    for (const [endpoint, opener] of Object.entries(TAPPED)) {
+      try {
+        await open(link, endpoint, opener);
+      } catch (error) {
+        overheard(link, { event: 'failed', endpoint, error });
+      }
+    }
+  });
+  return link.tapped;
+}
+
+// INFO: fc 14nov26 once the last tap lets go, the endpoints only taps wanted stop notifying, so NMEA takes nothing from an install
+function closeTapped(link) {
+  link.tapped = null;
+  return link.exclusive(async () => {
+    for (const endpoint of Object.keys(TAPPED)) {
+      const wanted = taps.has(link.device) || [...link.clients].some(client => client[CALLBACKS[endpoint]]);
+      const opened = link[endpoint];
+      if (wanted || link.closed || !opened) continue;
+      link[endpoint] = null;
+      await (await opened)?.stop();
+    }
+  });
 }
 
 // INFO: fc 14nov26 a tap outlives the links of its device, so it hears a reconnect from its first write
@@ -206,8 +238,13 @@ export function tap(device, listener) {
   taps.get(device).add(listener);
   links.get(device)?.then(openTapped, error => listener({ event: 'failed', error }));
   return () => {
-    taps.get(device)?.delete(listener);
-    if (taps.get(device)?.size === 0) taps.delete(device);
+    const listeners = taps.get(device);
+    listeners?.delete(listener);
+    if (listeners?.size !== 0) return;
+    taps.delete(device);
+    if (device.gatt.connected) {
+      links.get(device)?.then(closeTapped).catch(error => console.warn('The terminal could not stop the endpoints it opened:', error.message));
+    }
   };
 }
 
@@ -231,9 +268,17 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
     link.clients.delete(client);
     throw new Error('No serial or config service on this device.');
   }
-  if (taps.has(device)) await openTapped(link);
+  if (taps.has(device)) openTapped(link);
   const { exclusive } = link;
   const sent = (endpoint, bytes) => overheard(link, { endpoint, direction: 'out', bytes });
+  const written = async (endpoint, write) => {
+    try {
+      return await write();
+    } catch (error) {
+      overheard(link, { event: 'failed', endpoint, error });
+      throw error;
+    }
+  };
 
   return {
     device,
@@ -249,7 +294,7 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
       const bytes = encoder.encode(nmeaSentence(text) + '\r\n');
       sent('stream', bytes);
       for (const chunk of chunks(bytes)) {
-        await exclusive(() => stream.write.writeValueWithoutResponse(chunk));
+        await exclusive(() => written('stream', () => stream.write.writeValueWithoutResponse(chunk)));
       }
     },
 
@@ -258,7 +303,7 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
       const bytes = encodeFrame(fields);
       await exclusive(() => {
         sent('config', bytes);
-        return config.writeValueWithResponse(bytes);
+        return written('config', () => config.chr.writeValueWithResponse(bytes));
       });
     },
 
@@ -267,7 +312,7 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
       const bytes = encodeFrame(fields);
       await exclusive(() => {
         sent('log', bytes);
-        return log.writeValueWithResponse(bytes);
+        return written('log', () => log.chr.writeValueWithResponse(bytes));
       });
     },
 
@@ -275,7 +320,7 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
       if (!smp) throw new Error('This device has no SMP service.');
       sent('smp', packet);
       for (const chunk of chunks(packet, writeBytes)) {
-        await exclusive(() => smp.writeValueWithoutResponse(chunk));
+        await exclusive(() => written('smp', () => smp.writeValueWithoutResponse(chunk)));
       }
     },
 
