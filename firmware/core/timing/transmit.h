@@ -5,6 +5,7 @@
 #include "core/flight/state.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
+#include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "protocols/adsl/transmit.h"
 
@@ -52,16 +53,19 @@ class Transmitter {
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
     uint32_t sent_count() const { return sent_; }
-    const adsl::AirTime& air_time() const { return air_time_; }
+    const AirTime& air_time() const { return air_time_; }
     static uint32_t period_s(bool airborne) { return adsl::period_s(airborne); }
     static int slot_in(uint32_t utc_s, bool airborne) { return adsl::channel_in(utc_s, airborne); }
-    uint32_t ground_second() const { return adsl::ground_second(address_); }
+    uint32_t ground_second() const;
     uint32_t status_second() const { return ground_second(); }
     // INFO: fc 13nov26 half a ground period after the address's own second, which the Status holds
     uint32_t callsign_second() const {
         return (ground_second() + kCallsignPeriodS / 2) % kCallsignPeriodS;
     }
-    static int status_slot_in(uint32_t utc_s) { return adsl::status_channel_in(utc_s); }
+    // INFO: fc 13nov26 §C.2.5 alternates Status as it does Traffic, on its own count
+    static int status_slot_in(uint32_t utc_s) {
+        return static_cast<int>((utc_s / kStatusPeriodS) & 1u);
+    }
     static constexpr int kCallsignSlot = 1;
     static int last_callsign_instant();
 
@@ -71,10 +75,14 @@ class Transmitter {
              int32_t fix_lag_ms) const;
     static int first_instant_in(int slot);
     static int last_instant_in(int slot);
+    // Uniform over the slot's usable width and decorrelated between devices:
+    // two aircraft with different addresses do not collide every second, and
+    // one aircraft's instant is reproducible in a test.
     int instant_in(int slot, uint32_t utc_s) const;
+    int instant_between(int first, int last, uint32_t utc_s) const;
     int status_instant_in(int slot, uint32_t utc_s) const;
 
-    adsl::AirTime air_time_{};
+    AirTime air_time_{};
     uint32_t address_{0};
     uint32_t sent_{0};
     uint32_t last_utc_s_[kPayloads]{};

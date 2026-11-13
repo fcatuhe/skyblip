@@ -7,6 +7,7 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/packet.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/adsb_receiver.h"
 
@@ -17,7 +18,7 @@ TEST_CASE("adsb assembly: an observation is an ICAO ADS-B target with its own ad
     Bravo bravo;
     bravo.fly(kLatitude, kLongitude, 0, false);
     CHECK(bravo.heard.address == kAddress);
-    CHECK(bravo.heard.address_mapping_table == settings::kIcaoAddressMappingTable);
+    CHECK(bravo.heard.address_mapping_table == adsl::kAddressTableIcao);
     CHECK(bravo.heard.source == model::Source::Adsb);
     CHECK(bravo.heard.received.at_s == kUtcS);
 }

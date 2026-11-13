@@ -98,7 +98,7 @@ TEST_CASE("bravo: the aircraft's own transponder, named by own ICAO, is never tr
     rig.seconds_with_fix(2);
 
     CHECK(rig.product.adsb().assembly().count() == 1);
-    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, kAircraft) < 0);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, kAircraft) < 0);
     CHECK(rig.state().traffic.count() == 1);
 }
 
@@ -190,13 +190,13 @@ TEST_CASE(
         rig.step();
     }
     rig.seconds_with_fix(1);
-    const int slot = rig.state().traffic.find(settings::kIcaoAddressMappingTable, kAircraft);
+    const int slot = rig.state().traffic.find(adsl::kAddressTableIcao, kAircraft);
     REQUIRE(slot >= 0);
     CHECK_FALSE(rig.state().traffic.at(slot)->observation.rssi_valid);
 
     rig.hear_aircraft(0x4CA2B1, 2000);
     rig.seconds_with_fix(1);
-    const int other = rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x4CA2B1);
+    const int other = rig.state().traffic.find(adsl::kAddressTableIcao, 0x4CA2B1);
     REQUIRE(other >= 0);
     CHECK(rig.state().traffic.at(other)->observation.rssi_valid);
     CHECK(rig.state().traffic.at(other)->observation.rssi_dbm == -70);

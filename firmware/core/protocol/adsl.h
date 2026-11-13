@@ -30,8 +30,10 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
 bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
                      uint8_t address_mapping_table, const adsl::StatusReport& report);
 
-// INFO: fc 23sep26 G.1.14: a figure of merit is 2 * DOP * 6 m, and VFOM takes the same model
-constexpr uint32_t kMeritPerDopCm = 1200;
+// G.1.16, NACv. A GNSS-only velocity is as good as the position fix behind it,
+// which is the relation the reference encoder uses verbatim
+// (oss/SoftRF-moshe-braner .../libraries/OGN/ads-l.h:453).
+uint8_t velocity_accuracy_code(uint8_t horizontal_code);
 
 adsl::Integrity integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2);
 

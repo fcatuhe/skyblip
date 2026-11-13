@@ -33,7 +33,7 @@ bool crc_ok(const uint8_t* frame);
 int correct(uint8_t* frame, const uint8_t* erasures, int max_erasures = 6);
 
 // INFO: fc 19sep26 GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by
-constexpr int32_t kAlptasKeyWindowS = 18;
+constexpr int32_t kKeyWindowS = 18;
 
 wire::Status keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc_s);
 

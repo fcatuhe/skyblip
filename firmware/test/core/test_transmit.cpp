@@ -437,7 +437,7 @@ TEST_CASE("transmit: own-ship with every fact but an address does not go on air"
 TEST_CASE("transmit: an exhausted hour blocks the burst and says so") {
     Transmitter transmitter = airborne_transmitter();
     for (uint32_t i = 0; i < 7200; i++) transmitter.sent(i, i * 500);
-    REQUIRE(transmitter.air_time().window_ms(3599500) == adsl::AirTime::kBudgetMs);
+    REQUIRE(transmitter.air_time().window_ms(3599500) == timing::AirTime::kBudgetMs);
 
     const Transmitter::Attempt attempt =
         transmitter.attempt(slot_plan(500), 7200, 3599500, true, 0);

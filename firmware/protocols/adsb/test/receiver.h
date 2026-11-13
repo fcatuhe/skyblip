@@ -7,7 +7,7 @@
 #include "doctest/doctest.h"
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
-#include "protocols/adsb/test/squitter.h"
+#include "protocols/adsb/squitter.h"
 
 namespace skyblip::adsb {
 

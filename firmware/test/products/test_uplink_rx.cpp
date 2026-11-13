@@ -32,8 +32,8 @@
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
 #include "ports/null.h"
+#include "protocols/common/test/channel.h"
 #include "test/support/product_rig.h"
-#include "test/support/rf_channel.h"
 
 using namespace skyblip;
 
@@ -75,7 +75,7 @@ bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraf
     uint8_t frame[adsl::kUplinkFrameBytes] = {0};
     REQUIRE(codec.encode(aircraft, count, /*key_index=*/0, frame) == Status::Ok);
     if (corrupt_bytes > 0) {
-        RfChannel channel(0x5150);
+        wire::RfChannel channel(0x5150);
         channel.apply_symbol_errors(frame, sizeof(frame), corrupt_bytes);
     }
 
@@ -359,19 +359,19 @@ TEST_CASE("uplink: our aircraft's transponder relayed back is traffic until the 
         relayed_aircraft(rig, 0x3C6586, 0, 0, 0),
         relayed_aircraft(rig, 0x4D0001, 2000, 0, 0),
     };
-    heard[0].address_mapping_table = settings::kIcaoAddressMappingTable;
+    heard[0].address_mapping_table = adsl::kAddressTableIcao;
     REQUIRE(relay(rig, now_ms, heard, 2));
-    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) >= 0);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) >= 0);
     CHECK(rig.state().traffic.count() == 2);
 
     rig.settings().own_icao = 0x3C6586;
     fly(rig, now_ms, 1);
-    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) < 0);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
     CHECK(target_for(rig, 0x4D0001) != nullptr);
     CHECK(rig.state().traffic.count() == 1);
 
     REQUIRE(relay(rig, now_ms, heard, 2));
-    CHECK(rig.state().traffic.find(settings::kIcaoAddressMappingTable, 0x3C6586) < 0);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
     CHECK(rig.state().traffic.count() == 1);
 }
 

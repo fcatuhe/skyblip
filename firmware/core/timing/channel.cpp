@@ -49,4 +49,40 @@ int8_t ChannelLevel::mean_dbm(const int8_t* samples, uint8_t count) {
     return static_cast<int8_t>(static_cast<int>(peak) - down);
 }
 
+void AirTime::spend(uint32_t now_ms, uint32_t air_ms) {
+    if (!started_) {
+        started_ = true;
+        head_start_ms_ = now_ms;
+    } else if (now_ms - head_start_ms_ >= kWindowMs && head_start_ms_ - now_ms >= kWindowMs) {
+        // A gap wider than the window in either direction: nothing the ring holds
+        // is inside the hour any more. Only one of the two differences can be
+        // under the window, so an instant a little BEHIND the head is a caller
+        // repeating a pass, not a gap, and it lands in the head bucket below.
+        for (uint8_t i = 0; i < kBuckets; i++) bucket_ms_[i] = 0;
+        head_ = 0;
+        head_start_ms_ = now_ms;
+    } else {
+        while (now_ms - head_start_ms_ >= kBucketMs && now_ms - head_start_ms_ < kWindowMs) {
+            head_ = static_cast<uint8_t>(head_ + 1 == kBuckets ? 0 : head_ + 1);
+            bucket_ms_[head_] = 0;
+            head_start_ms_ += kBucketMs;
+        }
+    }
+    bucket_ms_[head_] += air_ms;
+    total_ms_ += air_ms;
+    bursts_++;
+}
+
+uint32_t AirTime::window_ms(uint32_t now_ms) const {
+    if (!started_) return 0;
+    uint32_t sum = 0;
+    uint32_t start_ms = head_start_ms_;
+    for (uint8_t back = 0; back < kBuckets; back++) {
+        const uint8_t at = static_cast<uint8_t>((head_ + kBuckets - back) % kBuckets);
+        if (now_ms - start_ms < kWindowMs) sum += bucket_ms_[at];
+        start_ms -= kBucketMs;
+    }
+    return sum;
+}
+
 }  // namespace skyblip::timing

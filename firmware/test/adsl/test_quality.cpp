@@ -89,3 +89,13 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and 
     CHECK(packet.design_assurance == 0);
     CHECK(packet.navigation_integrity == 0);
 }
+
+// The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code follows NACp down") {
+    CHECK(protocol::velocity_accuracy_code(7) == 3);
+    CHECK(protocol::velocity_accuracy_code(6) == 2);
+    CHECK(protocol::velocity_accuracy_code(5) == 1);
+    CHECK(protocol::velocity_accuracy_code(4) == 0);
+    CHECK(protocol::velocity_accuracy_code(3) == 0);
+    CHECK(protocol::velocity_accuracy_code(0) == 0);
+}

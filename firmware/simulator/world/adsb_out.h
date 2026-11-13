@@ -6,7 +6,7 @@
 #include <cstdint>
 
 #include "protocols/adsb/message.h"
-#include "protocols/adsb/test/squitter.h"
+#include "protocols/adsb/squitter.h"
 
 namespace skyblip::simulator {
 

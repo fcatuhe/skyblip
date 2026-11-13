@@ -5,6 +5,8 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
+#include "protocols/adsl/packet.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
 
@@ -28,13 +30,13 @@ void speed_of(const adsb::Motion& motion, model::AircraftObservation& out) {
         const int32_t north_mm_s = to_mm_s(Knots(motion.north_kt)).value;
         const uint16_t track_angle16 = static_cast<uint16_t>(arctangent(east_mm_s, north_mm_s));
         out.speed_q = to_speed_q(MillimetresPerSecond(
-                                     static_cast<int32_t>(hypotenuse(east_mm_s, north_mm_s))))
+                                     static_cast<int32_t>(wire::hypotenuse(east_mm_s, north_mm_s))))
                           .value;
         out.track_c9 = to_cordic9(centi_degrees_of_angle16(track_angle16)).value;
         return;
     }
     const int32_t speed_mm_s = static_cast<int32_t>(
-        divide_rounded<int64_t>(int64_t{motion.speed_mkt} * kMetresPerNm, kSecondsPerHour));
+        wire::divide_rounded<int64_t>(int64_t{motion.speed_mkt} * kMetresPerNm, kSecondsPerHour));
     out.speed_q = to_speed_q(MillimetresPerSecond(speed_mm_s)).value;
     out.track_c9 =
         motion.track_valid ? static_cast<uint16_t>(motion.track_c7 * kCordic9PerCordic7) : 0;
@@ -45,7 +47,7 @@ void speed_of(const adsb::Motion& motion, model::AircraftObservation& out) {
 void observation_of(const adsb::Track& track, model::AircraftObservation& out) {
     out = model::AircraftObservation{};
     out.address = track.address;
-    out.address_mapping_table = settings::kIcaoAddressMappingTable;
+    out.address_mapping_table = adsl::kAddressTableIcao;
     out.source = model::Source::Adsb;
     out.aircraft_category = track.identified ? adsb_emitter_to_adsl_category(
                                                    track.emitter_type_code, track.emitter_category)

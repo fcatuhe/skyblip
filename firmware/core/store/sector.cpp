@@ -1,7 +1,7 @@
 #include "core/store/sector.h"
 
-#include "core/util/little_endian.h"
 #include "protocols/common/crc.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::store {
 
@@ -17,27 +17,27 @@ bool owner_known(uint8_t code) {
 }  // namespace
 
 void encode_sector_header(const SectorHeader& header, uint8_t* out) {
-    put_uint16(out + 0, kSectorMagic);
+    wire::put_uint16(out + 0, kSectorMagic);
     out[2] = header.version;
     out[3] = static_cast<uint8_t>(header.owner);
-    put_uint32(out + 4, header.sequence);
-    put_uint32(out + 8, header.session_id);
+    wire::put_uint32(out + 4, header.sequence);
+    wire::put_uint32(out + 8, header.session_id);
     // INFO: fc 20sep26 written down, not assumed: a later codec's sectors stay walkable
     out[12] = header.record_bytes;
     out[13] = header.session_start ? kSectorFlagSessionStart : 0;
-    put_uint16(out + kChecksummedBytes, wire::crc16_ccitt(out, kChecksummedBytes));
+    wire::put_uint16(out + kChecksummedBytes, wire::crc16_ccitt(out, kChecksummedBytes));
 }
 
 Status decode_sector_header(const uint8_t* raw, SectorHeader& out) {
     if (erased(raw, kSectorHeaderBytes)) return Status::Empty;
-    if (get_uint16(raw + 0) != kSectorMagic) return Status::Invalid;
-    if (wire::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
+    if (wire::get_uint16(raw + 0) != kSectorMagic) return Status::Invalid;
+    if (wire::crc16_ccitt(raw, kChecksummedBytes) != wire::get_uint16(raw + kChecksummedBytes))
         return Status::Crc;
 
     out = SectorHeader{};
     out.version = raw[2];
-    out.sequence = get_uint32(raw + 4);
-    out.session_id = get_uint32(raw + 8);
+    out.sequence = wire::get_uint32(raw + 4);
+    out.session_id = wire::get_uint32(raw + 8);
     out.record_bytes = raw[12];
     out.session_start = (raw[13] & kSectorFlagSessionStart) != 0;
     if (out.version != kSectorVersion || !owner_known(raw[3])) return Status::Unsupported;

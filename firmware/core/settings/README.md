@@ -6,7 +6,7 @@ Two things that are not a product's to decide: the address space this device cla
 
 Issue 2 F.2.2 gives the table 64 entries: 0 is random/privacy, 1 to 4 are reserved, 5 ICAO, 6 FLARM, 7 OGN-Tracker, 8 FANET, and 9 upwards are manufacturer pages, each one an 8-bit prefix plus a 16-bit base address that `registry@ads-l.aero` assigns and the manufacturer is required to fill densely.
 
-`kIcaoAddressMappingTable` is table 5. Every ADS-B address is an ICAO address, and F.2.3 has an ADS-L unit in an aircraft that also carries a transponder send that address under table 5. The traffic table refuses our own aircraft's ICAO address under it (`core/traffic/README.md`, "Our own aircraft").
+`adsl::kAddressTableIcao` (`protocols/adsl/packet.h`) is table 5. Every ADS-B address is an ICAO address, and F.2.3 has an ADS-L unit in an aircraft that also carries a transponder send that address under table 5. The traffic table refuses our own aircraft's ICAO address under it (`core/traffic/README.md`, "Our own aircraft").
 
 We transmit table 58 (`kAddressMappingTable`), manufacturer page 49, which `registry@ads-l.aero` assigned on 5 October 2026 with manufacturer prefix 0x00 (`kManufacturerPrefix`, [skyblip.eu/ads-l-registry](https://skyblip.eu/ads-l-registry)). F.2.2 numbers the manufacturer pages from 9, so page 49 is value 58 in the 6-bit field. The 16 bits below the prefix are the unit's serial, which skyblip.eu assigns densely from 1 at activation and signs into an unlock code the unit verifies at every boot (`core/identity/README.md`). Dense because F.2.2 asks for it and because derived ones collide: truncated to 16 bits, two units collide with a probability of about n^2 / 131072, roughly 7 % at 100 units and 50 % at 300.
 

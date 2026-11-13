@@ -1,6 +1,6 @@
 #include "core/flight/state.h"
 
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
 
@@ -8,7 +8,7 @@ namespace {
 
 int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     if (hdop_e2 <= kDopUnityE2) return evidence;
-    return divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
+    return wire::divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
 
 }  // namespace

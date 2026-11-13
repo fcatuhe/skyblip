@@ -8,6 +8,7 @@
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/packet.h"
 #include "test/support/config_frame.h"
 #include "test/support/registry_frames.h"
 
@@ -429,7 +430,7 @@ TEST_CASE("peer frames: an observation reads back every field, its validity and 
     CHECK(peer.at.phase_valid);
     const model::AircraftObservation& target = peer.observation;
     CHECK(target.address == 4479337);
-    CHECK(target.address_mapping_table == settings::kIcaoAddressMappingTable);
+    CHECK(target.address_mapping_table == adsl::kAddressTableIcao);
     CHECK(target.source == model::Source::Adsb);
     CHECK(target.position_valid);
     CHECK(target.latitude_1e7 == 485000000);

@@ -139,6 +139,39 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
 }
 
 // A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
+// The adapter decides the code, so the clause is checked on what own-ship sends and what a receiver
+// keeps.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.4: own-ship sends emergency status 1, no emergency, and a target keeps "
+    "it") {
+    const adsl::Packet packet = traffic_packet();
+    CHECK(packet.emergency == adsl::kEmergencyNone);
+    model::AircraftObservation observation{};
+    REQUIRE(protocol::to_observation(packet, events::Stamp{}, -80, model::Source::AdslDirect,
+                                     observation));
+    CHECK(observation.emergency == adsl::kEmergencyNone);
+}
+
+// skyBlip's gate, not the stack's: a frame whose position is 0x800000 is never handed on as
+// traffic.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.5: own-ship without a fix sends 0x800000, which is never an aircraft") {
+    model::Ownship own = flying();
+    own.fix_valid = false;
+    adsl::Packet packet{};
+    REQUIRE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    CHECK(packet.field(adsl::Packet::kLatitudeField) == adsl::Packet::kPositionInvalidCode);
+    CHECK(packet.field(adsl::Packet::kLongitudeField) == adsl::Packet::kPositionInvalidCode);
+    model::AircraftObservation observation{};
+    CHECK_FALSE(protocol::to_observation(packet, events::Stamp{}, -80, model::Source::AdslDirect,
+                                         observation));
+    CHECK_FALSE(observation.position_valid);
+
+    REQUIRE(protocol::to_observation(traffic_packet(), events::Stamp{}, -80,
+                                     model::Source::AdslDirect, observation));
+    CHECK(observation.position_valid);
+}
+
 TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
     own.vdop_e2 = 0;

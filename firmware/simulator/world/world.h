@@ -15,6 +15,7 @@
 #include "hardware/parts/gnss_truth.h"
 #include "hardware/platform/host/meshtracker_x1.h"
 #include "hardware/platform/host/platform.h"
+#include "protocols/common/geometry.h"
 #include "simulator/world/adsb_out.h"
 #include "simulator/world/air.h"
 #include "simulator/world/scenario.h"
@@ -167,7 +168,7 @@ class World : public Sky {
     }
     void set_altitude_m(int32_t altitude_m) { gnss().altitude_m = altitude_m; }
     void set_speed_kt(int32_t speed_kt) {
-        gnss().speed_mm_s = divide_rounded(speed_kt * 514444, 1000);
+        gnss().speed_mm_s = wire::divide_rounded(speed_kt * 514444, 1000);
     }
     void set_track_deg(int32_t track_deg) { gnss().track_deg = ((track_deg % 360) + 360) % 360; }
     void set_turn_dps(double turn_dps) { gnss().turn_dps = turn_dps; }

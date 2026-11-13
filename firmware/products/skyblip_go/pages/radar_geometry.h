@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-#include "core/util/intmath.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/page.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go::radar {
 
@@ -49,9 +49,10 @@ struct HeadingUp {
 };
 
 inline HeadingUp heading_up(int32_t north, int32_t east, int16_t track_angle16) {
-    const int64_t track_cosine = cosine(track_angle16), track_sine = sine(track_angle16);
-    return {static_cast<int32_t>((north * track_cosine + east * track_sine) / kTrigOne),
-            static_cast<int32_t>((east * track_cosine - north * track_sine) / kTrigOne)};
+    const int64_t track_cosine = wire::cosine(track_angle16),
+                  track_sine = wire::sine(track_angle16);
+    return {static_cast<int32_t>((north * track_cosine + east * track_sine) / wire::kTrigOne),
+            static_cast<int32_t>((east * track_cosine - north * track_sine) / wire::kTrigOne)};
 }
 
 }  // namespace skyblip::go::radar

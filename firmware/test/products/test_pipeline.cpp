@@ -21,7 +21,7 @@
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
 #include "protocols/common/manchester.h"
-#include "test/support/rf_channel.h"
+#include "protocols/common/test/channel.h"
 
 using namespace skyblip;
 
@@ -78,7 +78,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     //    manchester decode, CRC-correct, verify, descramble.
     uint8_t coded[48];
     wire::manchester_encode(tx.data, adsl::Packet::kDataBytes, coded);
-    RfChannel channel(12345);
+    wire::RfChannel channel(12345);
     channel.apply_bit_error_rate(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
     adsl::Packet rx = tx;  // start from a copy; overwrite the data region

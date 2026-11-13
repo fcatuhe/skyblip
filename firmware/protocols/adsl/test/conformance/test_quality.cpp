@@ -45,12 +45,11 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: the vertical accuracy code sits on the table's
     CHECK(adsl::Packet::vertical_accuracy_code(15000) == 0);
 }
 
-// The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code follows NACp down") {
-    CHECK(adsl::Packet::velocity_accuracy_code(7) == 3);
-    CHECK(adsl::Packet::velocity_accuracy_code(6) == 2);
-    CHECK(adsl::Packet::velocity_accuracy_code(5) == 1);
-    CHECK(adsl::Packet::velocity_accuracy_code(4) == 0);
-    CHECK(adsl::Packet::velocity_accuracy_code(3) == 0);
-    CHECK(adsl::Packet::velocity_accuracy_code(0) == 0);
+// The clause's formula for the figure the NACp table is read with.
+TEST_CASE("ADS-L.4.SRD860.G.1.14: HFOM is 2 x HDOP x a UERE of 6 m") {
+    CHECK(adsl::kUereCm == 600u);
+    CHECK(adsl::hfom_cm(100) == 1200u);
+    CHECK(adsl::hfom_cm(90) == 1080u);
+    CHECK(adsl::hfom_cm(0) == 0u);
+    CHECK(adsl::Packet::horizontal_accuracy_code(adsl::hfom_cm(90)) == 5);
 }

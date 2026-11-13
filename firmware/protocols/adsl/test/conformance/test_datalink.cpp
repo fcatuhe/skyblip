@@ -7,7 +7,6 @@
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/test/conformance/reference.h"
-#include "protocols/adsl/transmit.h"
 #include "protocols/adsl/uplink.h"
 
 using namespace skyblip;
@@ -62,14 +61,4 @@ TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the netwo
 TEST_CASE("ADS-L.4.SRD860.D.3: a burst waits on a carrier sense, and forces after 3000 ms" *
           doctest::skip()) {
     FAIL("no listen-before-talk, so neither the 3000 ms force nor the 2000 ms silence after it");
-}
-
-// The route taken instead of polite spectrum access, and the only rule that does refuse a burst.
-TEST_CASE("ADS-L.4.SRD860.D.3: nothing refuses a burst here but the hour's duty cycle") {
-    adsl::AirTime air;
-    CHECK(adsl::AirTime::kLimitPermille == 10u);
-    const uint32_t budget_ms = adsl::AirTime::kBudgetMs;
-    air.spend(0, budget_ms);
-    CHECK_FALSE(air.may_spend(0, 1));
-    CHECK(air.may_spend(adsl::AirTime::kWindowMs + 1, 1));
 }

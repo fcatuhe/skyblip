@@ -17,7 +17,7 @@ The wire arithmetic two or more stacks share, in namespace `skyblip::wire`. None
 
 Both air frames are read and written field by field. A field is a `BitField`, so `adsl/packet.h` and `alptas/frame.cpp` hold tables of offsets rather than shift sequences, and the ADS-L offsets are the ones G.1 prints. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it.
 
-skyBlip reuses `geometry.h` and `little_endian.h` rather than keeping its own copies: `core/util/intmath.h` and `core/util/little_endian.h` name the same functions in namespace `skyblip`, so a distance the traffic table measures and one the ADS-B cache ranks by are the same arithmetic. `geometry.h` holds the tree's one size of the earth, `kMicrometresPerE7`.
+skyBlip includes `geometry.h`, `little_endian.h` and `test/channel.h` directly rather than keeping copies of its own, so a distance the traffic table measures and one the ADS-B cache ranks by are the same arithmetic. `core/util/intmath.h` keeps only the arctangent, which no stack uses. `geometry.h` holds the tree's one size of the earth, `kMicrometresPerE7`.
 
 ## XXTEA, `xxtea.cpp`
 

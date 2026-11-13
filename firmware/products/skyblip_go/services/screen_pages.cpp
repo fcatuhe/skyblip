@@ -6,9 +6,9 @@
 #include "core/timing/transmit.h"
 #include "core/traffic/range.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/services/screen.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go {
 

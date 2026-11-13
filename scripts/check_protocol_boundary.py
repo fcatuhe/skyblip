@@ -4,19 +4,23 @@
     python3 scripts/check_protocol_boundary.py
 
 Each radio protocol stack in firmware/protocols/ is copied into other projects with its tests, so
-it must build with nothing from skyBlip (firmware/protocols/README.md). A quoted include names a
-path from firmware/: a file in protocols/<stack>/ may include protocols/<stack>/ and
-protocols/common/, and a test file may also include the vendored doctest. An angle include must be
-a C++ standard library header, so no Zephyr, no platform and no vendor header gets in that way.
+it must build with nothing from skyBlip (firmware/protocols/README.md). Every file is read,
+whatever its extension. A quoted include names a path from firmware/, written plainly with no
+`..`: a file in protocols/<stack>/ may include protocols/<stack>/ and protocols/common/, a file
+directly under protocols/ only protocols/common/, and a test file may also include the vendored
+doctest. An angle include must be a C++ standard library header, so no Zephyr, no platform and no
+vendor header gets in that way. An include that names no header in <> or "", such as one built
+from a macro, is refused, because nothing can say where it leads.
 """
 import os
+import posixpath
 import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROTOCOLS = os.path.join(ROOT, "firmware", "protocols")
-SOURCES = (".h", ".cpp")
-INCLUDE = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', re.M)
+DIRECTIVE = re.compile(r"^\s*#\s*include\b(.*)$", re.M)
+HEADER = re.compile(r'^\s*([<"])([^>"]+)[>"]')
 TEST_ONLY = {"doctest/doctest.h"}
 
 STANDARD = {
@@ -32,27 +36,41 @@ STANDARD = {
 
 def violations(protocols=PROTOCOLS):
     found = []
-    for stack in sorted(os.listdir(protocols)):
-        directory = os.path.join(protocols, stack)
-        if not os.path.isdir(directory):
-            continue
-        allowed = (f"protocols/{stack}/", "protocols/common/")
-        for folder, _, names in sorted(os.walk(directory)):
-            for name in sorted(names):
-                if not name.endswith(SOURCES):
-                    continue
-                path = os.path.join(folder, name)
-                relative = os.path.relpath(path, os.path.dirname(protocols))
-                is_test = f"{os.sep}test{os.sep}" in path
+    for folder, _, names in sorted(os.walk(protocols)):
+        for name in sorted(names):
+            path = os.path.join(folder, name)
+            relative = os.path.relpath(path, os.path.dirname(protocols)).replace(os.sep, "/")
+            parts = relative.split("/")
+            stack = parts[1] if len(parts) > 2 else None
+            allowed = ("protocols/common/",) if stack is None else (f"protocols/{stack}/", "protocols/common/")
+            is_test = "test" in parts[2:-1]
+            try:
                 with open(path, encoding="utf-8") as source:
                     text = source.read()
-                for kind, header in INCLUDE.findall(text):
-                    if kind == "<":
-                        if header not in STANDARD:
-                            found.append(f"{relative} includes <{header}>, which is not the C++ standard library")
-                    elif not header.startswith(allowed) and not (is_test and header in TEST_ONLY):
-                        found.append(f'{relative} includes "{header}", outside {allowed[0]} and {allowed[1]}')
+            except UnicodeDecodeError:
+                continue
+            for directive in DIRECTIVE.findall(text):
+                found += judge(relative, directive, allowed, is_test)
     return found
+
+
+def judge(relative, directive, allowed, is_test):
+    match = HEADER.match(directive)
+    if not match:
+        return [f"{relative} includes{directive}, which names no header in <> or \"\""]
+    kind, header = match.groups()
+    if kind == "<":
+        if header in STANDARD:
+            return []
+        return [f"{relative} includes <{header}>, which is not the C++ standard library"]
+    if is_test and header in TEST_ONLY:
+        return []
+    normal = posixpath.normpath(header)
+    if ".." in header.split("/") or normal != header:
+        return [f'{relative} includes "{header}", a path that is not written plainly from firmware/']
+    if not header.startswith(allowed):
+        return [f'{relative} includes "{header}", outside {" and ".join(allowed)}']
+    return []
 
 
 def main():

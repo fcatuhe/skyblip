@@ -1,6 +1,7 @@
 #include "core/protocol/adsl_uplink.h"
 
 #include "core/model/aircraft.h"
+#include "protocols/adsl/packet.h"
 
 namespace skyblip::protocol {
 
@@ -41,7 +42,7 @@ Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObser
         target.altitude_m = records[i].altitude_m;
         target.position_valid = true;
         target.source = model::Source::AdslUplink;
-        target.emergency = 1;
+        target.emergency = adsl::kEmergencyNone;
     }
     return Status::Ok;
 }

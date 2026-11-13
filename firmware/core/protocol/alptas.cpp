@@ -3,8 +3,9 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/nmea_out.h"
-#include "core/util/intmath.h"
+#include "protocols/adsl/packet.h"
 #include "protocols/alptas/frame.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
 
@@ -25,16 +26,16 @@ uint8_t alptas_flight_state(uint8_t alptas_airborne) {
 
 uint8_t alptas_address_type_to_address_mapping_table(uint8_t alptas_address_type) {
     switch (alptas_address_type & 3) {
-        case alptas::kAddressTypeIcao: return 0x05;
-        case alptas::kAddressTypeFlarm: return 0x06;
+        case alptas::kAddressTypeIcao: return adsl::kAddressTableIcao;
+        case alptas::kAddressTypeFlarm: return adsl::kAddressTableFlarm;
         default: return 0;
     }
 }
 
 uint8_t address_mapping_table_to_alptas_address_type(uint8_t address_mapping_table) {
     switch (address_mapping_table) {
-        case 0x05: return alptas::kAddressTypeIcao;
-        case 0x06: return alptas::kAddressTypeFlarm;
+        case adsl::kAddressTableIcao: return alptas::kAddressTypeIcao;
+        case adsl::kAddressTableFlarm: return alptas::kAddressTypeFlarm;
         default: return 0;
     }
 }
@@ -51,14 +52,15 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     out.address_mapping_table = alptas_address_type_to_address_mapping_table(position.address_type);
     out.aircraft_category = alptas_type_to_adsl_category(position.aircraft_type);
     out.flight_state = alptas_flight_state(position.airborne);
-    out.emergency = 1;  // INFO: fc 09mar26 no emergency field on the wire; 1 is ADS-L "OK"
+    out.emergency = adsl::kEmergencyNone;
     out.latitude_1e7 = position.latitude_1e7;
     out.longitude_1e7 = position.longitude_1e7;
     out.altitude_m = position.altitude_m;
-    out.speed_q = static_cast<uint16_t>(divide_rounded<int32_t>(position.speed_e1 * 2, 5));
-    out.climb_e8 = static_cast<int16_t>(divide_rounded<int32_t>(position.climb_e1 * 4, 5));
+    out.speed_q = static_cast<uint16_t>(wire::divide_rounded<int32_t>(position.speed_e1 * 2, 5));
+    out.climb_e8 = static_cast<int16_t>(wire::divide_rounded<int32_t>(position.climb_e1 * 4, 5));
     out.track_c9 = static_cast<uint16_t>(
-        divide_rounded<int32_t>(static_cast<int32_t>(position.course_deg) * 512, 360) & 0x1FF);
+        wire::divide_rounded<int32_t>(static_cast<int32_t>(position.course_deg) * 512, 360) &
+        0x1FF);
     out.received.at_s = rx_utc_s;
     out.source = model::Source::Alptas;
     out.speed_valid = true;
@@ -81,11 +83,12 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observati
     position.longitude_1e7 = observation.longitude_1e7;
     position.altitude_m = observation.altitude_m;
     position.speed_e1 =
-        observation.speed_valid ? divide_rounded<int32_t>(observation.speed_q * 5, 2) : 0;
+        observation.speed_valid ? wire::divide_rounded<int32_t>(observation.speed_q * 5, 2) : 0;
     position.climb_e1 =
-        observation.climb_valid ? divide_rounded<int32_t>(observation.climb_e8 * 5, 4) : 0;
+        observation.climb_valid ? wire::divide_rounded<int32_t>(observation.climb_e8 * 5, 4) : 0;
     position.course_deg = static_cast<uint16_t>(
-        static_cast<uint32_t>(divide_rounded<int32_t>(observation.track_c9 * 360, 512)) % 360u);
+        static_cast<uint32_t>(wire::divide_rounded<int32_t>(observation.track_c9 * 360, 512)) %
+        360u);
     alptas::encode(frame, position, utc_s);
     return Status::Ok;
 }

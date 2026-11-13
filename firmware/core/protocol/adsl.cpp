@@ -5,8 +5,8 @@
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
 #include "protocols/adsl/flight_state.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
 
@@ -36,16 +36,20 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     return true;
 }
 
+uint8_t velocity_accuracy_code(uint8_t horizontal_code) {
+    return horizontal_code >= 4 ? static_cast<uint8_t>(horizontal_code - 4) : 0;
+}
+
 // INFO: fc 13sep26 no VDOP is a 2D solution, whose height is not a figure to claim accuracy for
 adsl::Integrity integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     adsl::Integrity integrity;
     if (hdop_e2 == 0) return integrity;
-    const uint32_t hfom_cm = divide_rounded<uint32_t>(hdop_e2 * kMeritPerDopCm, 100);
-    const uint32_t vfom_cm = divide_rounded<uint32_t>(vdop_e2 * kMeritPerDopCm, 100);
+    const uint32_t hfom_cm = adsl::hfom_cm(hdop_e2);
+    // INFO: fc 23sep26 G.1.15 gives no VFOM model, so skyBlip takes G.1.14's to VDOP as well
+    const uint32_t vfom_cm = adsl::hfom_cm(vdop_e2);
     integrity.horizontal_accuracy = adsl::Packet::horizontal_accuracy_code(hfom_cm);
     integrity.vertical_accuracy = vdop_e2 == 0 ? 0 : adsl::Packet::vertical_accuracy_code(vfom_cm);
-    integrity.velocity_accuracy =
-        adsl::Packet::velocity_accuracy_code(integrity.horizontal_accuracy);
+    integrity.velocity_accuracy = velocity_accuracy_code(integrity.horizontal_accuracy);
     return integrity;
 }
 
@@ -81,7 +85,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
         adsl::timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
     traffic.flight_state = adsl::announced_state(own.flight_state, aircraft_category);
     traffic.aircraft_category = aircraft_category;
-    traffic.emergency = 1;
+    traffic.emergency = adsl::kEmergencyNone;
     traffic.position_valid = own.fix_valid;
     traffic.latitude_1e7 = where.latitude_1e7;
     traffic.longitude_1e7 = where.longitude_1e7;

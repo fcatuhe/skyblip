@@ -164,8 +164,8 @@ Status keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc
     if (!crc_ok(frame)) return Status::Crc;
     if (read_bits(frame, kMessageTypeField) != kMessageTypePosition) return Status::Unsupported;
 
-    const uint32_t first = (rx_utc_s - kAlptasKeyWindowS) >> 4;
-    const uint32_t last = (rx_utc_s + kAlptasKeyWindowS) >> 4;
+    const uint32_t first = (rx_utc_s - kKeyWindowS) >> 4;
+    const uint32_t last = (rx_utc_s + kKeyWindowS) >> 4;
     for (uint32_t block = first; block <= last; block++) {
         uint8_t data[kDataBytes];
         __builtin_memcpy(data, frame, kDataBytes);
@@ -173,7 +173,7 @@ Status keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc
         if (!structured(data)) continue;
         const uint32_t second = (block << 4) | read_bits(data, kTimeBitsField);
         const int32_t offset = static_cast<int32_t>(second - rx_utc_s);
-        if (offset < -kAlptasKeyWindowS || offset > kAlptasKeyWindowS) continue;
+        if (offset < -kKeyWindowS || offset > kKeyWindowS) continue;
         keyed_utc_s = second;
         return Status::Ok;
     }

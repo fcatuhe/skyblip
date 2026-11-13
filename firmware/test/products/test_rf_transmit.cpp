@@ -17,8 +17,8 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/common/test/channel.h"
 #include "simulator/simulator.h"
-#include "test/support/rf_channel.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -74,7 +74,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     CHECK(simulator.product().radio().transmitter().air_time().total_ms() - before.air_time_ms ==
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
     CHECK(simulator.product().radio().duty_permille(from_ms + 6000) <
-          adsl::AirTime::kLimitPermille);
+          timing::AirTime::kLimitPermille);
     CHECK_FALSE(simulator.product().radio().over_budget());
 }
 
@@ -430,10 +430,10 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
 
     // And the hour that straddles the wrap is still an hour: the design rate is
     // half the band's allowance and the window did not forget what it holds.
-    const adsl::AirTime& air_time = simulator.product().radio().transmitter().air_time();
+    const timing::AirTime& air_time = simulator.product().radio().transmitter().air_time();
     CHECK(air_time.window_ms(now_ms) >=
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
-    CHECK(simulator.product().radio().duty_permille(now_ms) < adsl::AirTime::kLimitPermille);
+    CHECK(simulator.product().radio().duty_permille(now_ms) < timing::AirTime::kLimitPermille);
     CHECK_FALSE(simulator.product().radio().over_budget());
 }
 

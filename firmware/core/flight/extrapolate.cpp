@@ -8,7 +8,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
 
@@ -22,7 +22,7 @@ constexpr int64_t kMicrometresPerMillimetre = 1000;
 constexpr int64_t kLatitudeCosineFloor = 512;
 
 int64_t latitude_cosine(int32_t latitude_1e7) {
-    const int64_t cosine_of_latitude = cosine(latitude_angle16(latitude_1e7));
+    const int64_t cosine_of_latitude = wire::cosine(wire::latitude_angle16(latitude_1e7));
     return cosine_of_latitude < kLatitudeCosineFloor ? kLatitudeCosineFloor : cosine_of_latitude;
 }
 
@@ -57,19 +57,19 @@ Prediction carry(const Carried& motion, int32_t elapsed_ms) {
     const int16_t heading = static_cast<int16_t>(
         static_cast<uint16_t>(to_angle16(CentiDegrees(motion.track_cdeg)) + turn_angle / 2));
 
-    const int64_t scale = kTrigOne * kMicrometresPerE7;
-    const int64_t travel = divide_rounded<int64_t>(
+    const int64_t scale = wire::kTrigOne * wire::kMicrometresPerE7;
+    const int64_t travel = wire::divide_rounded<int64_t>(
         static_cast<int64_t>(motion.speed_mm_s) * elapsed_ms * kMicrometresPerMillimetre,
         kMillisecondsPerSecond);
-    out.latitude_1e7 =
-        motion.latitude_1e7 + static_cast<int32_t>(divide_rounded(travel * cosine(heading), scale));
-    const int64_t east = divide_rounded(travel * sine(heading), scale);
-    out.longitude_1e7 = wrapped_longitude_1e7(
+    out.latitude_1e7 = motion.latitude_1e7 + static_cast<int32_t>(wire::divide_rounded(
+                                                 travel * wire::cosine(heading), scale));
+    const int64_t east = wire::divide_rounded(travel * wire::sine(heading), scale);
+    out.longitude_1e7 = wire::wrapped_longitude_1e7(
         static_cast<int64_t>(motion.longitude_1e7) +
-        divide_rounded(east * kTrigOne, latitude_cosine(motion.latitude_1e7)));
+        wire::divide_rounded(east * wire::kTrigOne, latitude_cosine(motion.latitude_1e7)));
 
     if (motion.climb_valid) {
-        const int32_t rise = static_cast<int32_t>(divide_rounded<int64_t>(
+        const int32_t rise = static_cast<int32_t>(wire::divide_rounded<int64_t>(
             static_cast<int64_t>(motion.climb_mm_s) * elapsed_ms, kMillisecondsPerSecond));
         out.altitude_hae_mm = motion.altitude_hae_mm + rise;
         out.altitude_msl_mm = motion.altitude_msl_mm + rise;
@@ -140,13 +140,13 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
                                int32_t longitude_1e7, int32_t altitude_hae_mm) {
     const int64_t latitude_delta_1e7 = static_cast<int64_t>(latitude_1e7) - predicted.latitude_1e7;
     const int64_t longitude_delta_1e7 =
-        wrapped_longitude_1e7(static_cast<int64_t>(longitude_1e7) - predicted.longitude_1e7);
+        wire::wrapped_longitude_1e7(static_cast<int64_t>(longitude_1e7) - predicted.longitude_1e7);
     const int64_t north =
-        divide_rounded(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre);
-    const int64_t east = divide_rounded(
-        longitude_delta_1e7 * kMicrometresPerE7 * latitude_cosine(predicted.latitude_1e7),
-        kMicrometresPerMetre * kTrigOne);
-    const int64_t up = divide_rounded<int64_t>(
+        wire::divide_rounded(latitude_delta_1e7 * wire::kMicrometresPerE7, kMicrometresPerMetre);
+    const int64_t east = wire::divide_rounded(
+        longitude_delta_1e7 * wire::kMicrometresPerE7 * latitude_cosine(predicted.latitude_1e7),
+        kMicrometresPerMetre * wire::kTrigOne);
+    const int64_t up = wire::divide_rounded<int64_t>(
         static_cast<int64_t>(altitude_hae_mm) - predicted.altitude_hae_mm, kMillimetresPerMetre);
     return static_cast<uint32_t>(std::abs(north) + std::abs(east) + std::abs(up));
 }
@@ -178,7 +178,7 @@ bool pressure_relative_altitude_m(const model::Ownship& own,
     if (!own.pressure_altitude_valid || !target.pressure_altitude_valid) return false;
     const int64_t target_mm = to_millimetres(Feet(target.pressure_altitude_ft)).value;
     up_m = static_cast<int32_t>(
-        divide_rounded<int64_t>(target_mm - own.pressure_altitude_mm, kMillimetresPerMetre));
+        wire::divide_rounded<int64_t>(target_mm - own.pressure_altitude_mm, kMillimetresPerMetre));
     return true;
 }
 

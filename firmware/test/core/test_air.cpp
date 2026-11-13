@@ -7,7 +7,7 @@
 #include "core/protocol/air.h"
 #include "doctest/doctest.h"
 #include "protocols/common/manchester.h"
-#include "test/support/rf_channel.h"
+#include "protocols/common/test/channel.h"
 
 using namespace skyblip;
 
@@ -165,7 +165,7 @@ TEST_CASE("air: a foreign sync word frames as nothing") {
 // The 16-chip window is thin enough that the band's own noise walks through it.
 TEST_CASE("air: the window a neighbour missed reads apart from the one noise walked through") {
     uint8_t reported[protocol::kRxChipBytes];
-    RfChannel channel(0xA1B2);
+    wire::RfChannel channel(0xA1B2);
     for (uint8_t& byte : reported) byte = static_cast<uint8_t>(channel.next());
 
     protocol::Frame frame{};

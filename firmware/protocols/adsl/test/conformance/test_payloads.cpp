@@ -81,17 +81,8 @@ TEST_CASE(
     CHECK(adsl::receive_class(801) == adsl::ReceiveClass::Full);
 }
 
-// G.2.11 asks for one at least every 20 s, and the ground second hosts it every other time round.
-TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status is due every 20 seconds and alternates channel") {
+// Where in those 20 s a unit sends it is the integrator's choice, and the device half checks
+// skyBlip's.
+TEST_CASE("ADS-L.4.SRD860.G.2.11: the Status period the clause sets is 20 seconds") {
     CHECK(adsl::kStatusPeriodS == 20u);
-    int due = 0;
-    int previous_channel = -1;
-    for (uint32_t utc_s = 1785628800; utc_s < 1785628800 + 200; utc_s++) {
-        if (!adsl::status_due(0x2ABCDE, utc_s)) continue;
-        due++;
-        const int channel = adsl::status_channel_in(utc_s);
-        if (previous_channel >= 0) CHECK(channel != previous_channel);
-        previous_channel = channel;
-    }
-    CHECK(due == 10);
 }

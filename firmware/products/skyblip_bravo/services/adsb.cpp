@@ -62,7 +62,7 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     if (!protocol::adsb_fold(assembly_, message, at_ms, received, here, observation_)) return;
     folded_++;
     if (message.kind == adsb::Kind::Identification && message.identification.callsign_valid)
-        context_.state.callsigns.learn(settings::kIcaoAddressMappingTable, message.address,
+        context_.state.callsigns.learn(adsl::kAddressTableIcao, message.address,
                                        message.identification.callsign, now_s);
     (void)capture_.record(observation_, now_ms);
     if (!observation_.position_valid) return;

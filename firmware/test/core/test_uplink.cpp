@@ -11,11 +11,6 @@ using namespace skyblip;
 using namespace skyblip::protocol;
 
 namespace {
-// §C.5's uplink slot, which is wider at both ends than the dwell one radio can
-// give it. The dwell map's own figures are in core/timing/slot.h.
-constexpr int kUplinkSlotStartMs = 200;
-constexpr int kUplinkSlotEndMs = 450;
-
 model::AircraftObservation make_target(uint32_t address) {
     model::AircraftObservation observation{};
     observation.address = address & 0xFFFFFF;
@@ -63,9 +58,9 @@ TEST_CASE("uplink: a frame fits the window the dwell map is cut against") {
     // slot is one we do not hear. skyPost transmits at 210 for exactly this
     // reason, and hearing our own network is the capability we ship; a
     // third-party station that starts late is a known and accepted deaf spot.
-    const uint32_t conforming_last_start_us = kUplinkSlotEndMs * 1000u - adsl::kUplinkBurstUs;
+    const uint32_t conforming_last_start_us = adsl::kUplinkSlotEndMs * 1000u - adsl::kUplinkBurstUs;
     CHECK(conforming_last_start_us > timing::kUplinkRxEndMs * 1000u);
-    CHECK(kUplinkSlotStartMs < timing::kUplinkRxStartMs);
+    CHECK(adsl::kUplinkSlotStartMs < timing::kUplinkRxStartMs);
 }
 
 TEST_CASE("uplink: a relayed record is an uplink observation, with a speed only when it has one") {

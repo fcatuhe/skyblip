@@ -10,6 +10,7 @@
 #include "core/traffic/range.h"
 #include "core/units/units.h"
 #include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::traffic {
 
@@ -17,8 +18,8 @@ namespace {
 
 // Millimetres a second, north and east, scaled by the cordic one.
 void velocity_north_east(int32_t speed_mm_s, int16_t angle, int64_t& north, int64_t& east) {
-    north = static_cast<int64_t>(speed_mm_s) * cosine(angle);
-    east = static_cast<int64_t>(speed_mm_s) * sine(angle);
+    north = static_cast<int64_t>(speed_mm_s) * wire::cosine(angle);
+    east = static_cast<int64_t>(speed_mm_s) * wire::sine(angle);
 }
 
 Level level_for(const AlarmAssessment& assessment) {
@@ -49,8 +50,8 @@ int32_t closing_mm_s(const model::Ownship& own, const model::AircraftObservation
                             to_angle16(Cordic9(target.track_c9)), target_north, target_east);
 
     const int64_t along = (target_north - own_north) * north_m + (target_east - own_east) * east_m;
-    const int64_t scale = static_cast<int64_t>(distance_m) * kTrigOne;
-    int32_t closing = static_cast<int32_t>(divide_rounded<int64_t>(-along, scale));
+    const int64_t scale = static_cast<int64_t>(distance_m) * wire::kTrigOne;
+    int32_t closing = static_cast<int32_t>(wire::divide_rounded<int64_t>(-along, scale));
     if (!target.speed_valid) closing += unknown_closing_mm_s;
     return closing;
 }
@@ -69,16 +70,16 @@ AlarmAssessment assess(const model::Ownship& own_fix, const model::AircraftObser
     assessment.valid = true;
     assessment.relative_altitude_m = up_m;
     assessment.relative_altitude_valid = up_valid;
-    assessment.relative_distance_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
-    assessment.closing_mps =
-        divide_rounded(closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
-                       kMillimetresPerMetre);
+    assessment.relative_distance_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
+    assessment.closing_mps = wire::divide_rounded(
+        closing_mm_s(own, target, north_m, east_m, assessment.relative_distance_m),
+        kMillimetresPerMetre);
 
     const int16_t bearing = arctangent(east_m, north_m);
     const int own_deg = to_degrees(CentiDegrees(own.track_cdeg)).value;
-    const int bearing_deg =
-        divide_rounded<int32_t>(static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
-        360;
+    const int bearing_deg = wire::divide_rounded<int32_t>(
+                                static_cast<int32_t>(static_cast<uint16_t>(bearing)) * 360, 65536) %
+                            360;
     assessment.relative_bearing_deg =
         static_cast<uint16_t>(((bearing_deg - own_deg) % 360 + 360) % 360);
 

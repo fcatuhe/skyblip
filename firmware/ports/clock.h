@@ -22,7 +22,7 @@
 //
 // Nothing here needs an interval longer than 49.7 days, so no 64-bit accumulator
 // is maintained from this tick: the widest deadline in the tree is the rolling
-// duty-cycle hour (protocols/adsl/transmit.h) and the rest are seconds. microseconds() is
+// duty-cycle hour (core/timing/channel.h) and the rest are seconds. microseconds() is
 // already 64-bit and does not wrap in any life this device has, which is why
 // ports/rf.h arms slot deadlines on it and slot timing is not exposed to any of
 // the above.

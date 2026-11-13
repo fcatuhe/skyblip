@@ -9,6 +9,25 @@
 
 namespace skyblip::adsl {
 
+// INFO: fc 13nov26 F.2.2's address mapping tables; 9 to 63 are manufacturer pages 0 to 54
+constexpr uint8_t kAddressTableRandom = 0;
+constexpr uint8_t kAddressTableIcao = 5;
+constexpr uint8_t kAddressTableFlarm = 6;
+constexpr uint8_t kAddressTableOgnTracker = 7;
+constexpr uint8_t kAddressTableFanet = 8;
+constexpr uint8_t kAddressTableManufacturerFirst = 9;
+constexpr uint8_t kAddressTableManufacturerLast = 63;
+
+constexpr uint8_t manufacturer_page_table(uint8_t page) {
+    return static_cast<uint8_t>(kAddressTableManufacturerFirst + page);
+}
+
+// INFO: fc 13nov26 G.1.4 codes "no emergency" as 1, so 0 is "undefined", not "all well"
+constexpr uint8_t kEmergencyNone = 1;
+
+// INFO: fc 13nov26 G.1.14 prints HFOM = 2 * HDOP * UERE with a UERE of 6 m
+constexpr uint32_t kUereCm = 600;
+
 using wire::BitField;
 using wire::Exponential;
 
@@ -158,7 +177,6 @@ struct __attribute__((packed)) Packet {
 
     static uint8_t horizontal_accuracy_code(uint32_t hfom_cm);
     static uint8_t vertical_accuracy_code(uint32_t vfom_cm);
-    static uint8_t velocity_accuracy_code(uint8_t horizontal_code);
 
     void set_integrity_unknown();
 
@@ -178,6 +196,8 @@ static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC 
 static constexpr uint32_t kTimestampCycleS = 15;
 static constexpr uint32_t kTimestampQuarterMs = 250;
 uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms);
+
+uint32_t hfom_cm(uint16_t hdop_e2);
 
 struct Integrity {
     uint8_t source_integrity{0};

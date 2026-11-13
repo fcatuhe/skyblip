@@ -117,11 +117,8 @@ uint8_t Packet::vertical_accuracy_code(uint32_t vfom_cm) {
     return 0;
 }
 
-// G.1.16, NACv. A GNSS-only velocity is as good as the position fix behind it,
-// which is the relation the reference encoder uses verbatim
-// (oss/SoftRF-moshe-braner .../libraries/OGN/ads-l.h:453).
-uint8_t Packet::velocity_accuracy_code(uint8_t horizontal_code) {
-    return horizontal_code >= 4 ? static_cast<uint8_t>(horizontal_code - 4) : 0;
+uint32_t hfom_cm(uint16_t hdop_e2) {
+    return divide_rounded<uint32_t>(uint32_t{hdop_e2} * 2u * kUereCm, 100u);
 }
 
 void Packet::set_integrity_unknown() {

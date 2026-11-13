@@ -61,7 +61,7 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
     observation.speed_valid = in.ConsumeBool();
     observation.position_valid = true;
     const int32_t keyed_off_s =
-        in.ConsumeIntegralInRange<int32_t>(-alptas::kAlptasKeyWindowS, alptas::kAlptasKeyWindowS);
+        in.ConsumeIntegralInRange<int32_t>(-alptas::kKeyWindowS, alptas::kKeyWindowS);
     (void)protocol::alptas_encode(frame, observation,
                                   receiver.utc_s + static_cast<uint32_t>(keyed_off_s));
 }

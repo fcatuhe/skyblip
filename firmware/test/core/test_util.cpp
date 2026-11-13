@@ -14,6 +14,7 @@
 #include "core/util/intmath.h"
 #include "core/util/result.h"
 #include "doctest/doctest.h"
+#include "protocols/common/geometry.h"
 
 using namespace skyblip;
 

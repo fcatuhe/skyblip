@@ -6,6 +6,7 @@
 #include "core/traffic/lease.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/packet.h"
 #include "test/support/traffic_scene.h"
 
 using namespace skyblip;
@@ -13,7 +14,7 @@ using namespace skyblip::traffic;
 
 namespace {
 
-constexpr uint8_t kIcao = settings::kIcaoAddressMappingTable;
+constexpr uint8_t kIcao = adsl::kAddressTableIcao;
 
 model::AircraftObservation heard(const model::Ownship& own, uint32_t address, int north_m, int up_m,
                                  model::Source source, uint32_t at_s = 100) {

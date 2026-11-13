@@ -19,8 +19,8 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/common/test/channel.h"
 #include "simulator/simulator.h"
-#include "test/support/rf_channel.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -78,7 +78,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
 
     uint8_t burst[protocol::kSyncWindowChipBytes + protocol::kRxChipBytes];
     std::memcpy(burst, protocol::kSharedSync, protocol::kSyncWindowChipBytes);
-    RfChannel noise(0xC0FFEE);
+    wire::RfChannel noise(0xC0FFEE);
     for (size_t i = protocol::kSyncWindowChipBytes; i < sizeof(burst); i++)
         burst[i] = static_cast<uint8_t>(noise.next());
 

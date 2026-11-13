@@ -281,7 +281,7 @@ int16_t climb_e8_of(const VirtualAircraft& aircraft) {
 
 // INFO: fc 13nov26 ADS-L F.2.3: a unit beside a transponder sends its ICAO address, under table 5
 uint8_t address_mapping_table_of(const VirtualAircraft& aircraft) {
-    return aircraft.adsb.fitted ? settings::kIcaoAddressMappingTable : 6;
+    return aircraft.adsb.fitted ? adsl::kAddressTableIcao : adsl::kAddressTableFlarm;
 }
 
 size_t callsign_burst(const VirtualAircraft& aircraft, uint8_t* chips) {
@@ -302,7 +302,7 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     packet.timestamp = static_cast<uint8_t>((utc_s % 15) * 4);
     packet.flight_state = 2;
     packet.aircraft_category = 4;
-    packet.emergency = 1;
+    packet.emergency = adsl::kEmergencyNone;
     packet.set_latitude_1e7(latitude_1e7);
     packet.set_longitude_1e7(longitude_1e7);
     packet.set_altitude_m(altitude_m);
@@ -326,7 +326,7 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
                     int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
     model::AircraftObservation observation{};
     observation.address = aircraft.address;
-    observation.address_mapping_table = 0x06;
+    observation.address_mapping_table = adsl::kAddressTableFlarm;
     observation.aircraft_category = 4;
     observation.flight_state = 2;
     observation.latitude_1e7 = latitude_1e7;
