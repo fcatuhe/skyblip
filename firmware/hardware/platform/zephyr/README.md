@@ -6,11 +6,13 @@ What `link.cpp` puts on the air, and why those UUIDs.
 
 | Service | Characteristics | Who reads it |
 |---|---|---|
-| Nordic UART `6E400001-B5A3-F393-E0A9-E50E24DCCA9E` | `...0002` written by the app, `...0003` notified by us | XCSoar, Enroute Flight Navigation, anything SoftRF-shaped |
-| HM-10 `FFE0` | `FFE1`, notify and write on one characteristic | LK8000, and the profile PowerFLARM Flex ships |
+| Nordic UART `6E400001-B5A3-F393-E0A9-E50E24DCCA9E` | `...0002` written by the app, `...0003` notified by us | XCSoar, Enroute Flight Navigation, LK8000 since 7.6.8, anything SoftRF-shaped |
+| HM-10 `FFE0` | `FFE1`, notify and write on one characteristic | SkyDemon, LK8000 before 7.6.8, Enroute on a device without Nordic UART, and the profile PowerFLARM Fusion and Flex ship |
 | skyBlip `69C21301-0187-4204-A91D-02EB8858B440` | `...02` config, `...03` flight log, each write and notify, and `...04` peer, written by a paired Go and notified by Bravo, which only a product that sets `CONFIG_SKYBLIP_PEER_SERVER` serves, Bravo (#192) | our own configuration page, and a paired Go (`core/comms/README.md`, The peer endpoint) |
 
-The NMEA stream goes out on both public profiles at once, which is what SoftRF does (`src/platform/bluetooth/Bluefruit.cpp`, `bleuart_HM10` beside `bleuart_NUS`). The two conventions split the market: the open-source soaring stack prefers Nordic UART and XCSoar checks it first, while FLARM chose `FFE0`/`FFE1` for Fusion and Flex, which is what SkyDemon's 2024 BLE support was built against. Offering both costs one service definition and covers every client we know of.
+The NMEA stream goes out on both public profiles at once, which is what SoftRF does (`src/platform/bluetooth/Bluefruit.cpp`, `bleuart_HM10` beside `bleuart_NUS`). The two conventions split the market: the open-source soaring stack prefers Nordic UART and XCSoar checks it first, while FLARM chose `FFE0`/`FFE1` for Fusion and Flex, their only Bluetooth interface since Hub 1.80, and its Hub EFB guide lists SkyDemon among the apps that read it (FTD-115 v1.02). Offering both costs one service definition and covers every client we know of.
+
+The EFB chooses the service, not the firmware. Each app looks up the UUID it knows, whatever its place in the GATT table: XCSoar and Enroute try Nordic UART first, and Enroute falls back to `FFE0` only when a device has no Nordic UART (`TrafficDataSource_BluetoothLowEnergy.cpp` at enroute `8e5bc1b`). LK8000 from 7.6.8 subscribes to every UART characteristic it knows (`BluetoothGattClientPort.configureCharacteristics()`). `notify_one()` sends each frame on one service per connection, Nordic UART when the connection subscribed to it, so a client subscribed to both gets each frame once.
 
 Nordic's roles are not ours to reinterpret. `6E400002` is what the central writes and `6E400003` is what the peripheral notifies, and XCSoar refuses a service missing either (`android/src/BleSerialPort.java`). So `...0002` exists, accepts writes and drops them: nothing in this firmware reads an inbound NMEA sentence yet. Config and the log are on our own base, from `uuidgen`, because they are our protocol and a UART pipe is what three apps would read them as.
 
