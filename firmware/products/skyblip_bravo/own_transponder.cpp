@@ -36,7 +36,7 @@ void OwnTransponder::hear(const adsb::Message& message, uint32_t now_ms) {
         std::strncpy(emitter->callsign, message.identification.callsign,
                      sizeof(emitter->callsign) - 1);
     emitter->category =
-        protocol::adsb_emitter_to_adsl_category(message.type_code, message.identification.category);
+        protocol::adsb_emitter_to_own_category(message.type_code, message.identification.category);
 }
 
 // INFO: fc 13nov26 a quiet emitter is freed, so its age never wraps round to live after 49.7 days

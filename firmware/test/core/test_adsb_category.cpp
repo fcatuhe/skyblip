@@ -57,3 +57,16 @@ TEST_CASE("adsb category: an airliner reaches PFLAA as a jet, and a light aircra
     CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetA, 1)) == 0x8);
     CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetB, 4)) == 0x8);
 }
+
+// A weight split read heavier for traffic is read lighter for the aircraft a pilot sits in.
+TEST_CASE("adsb category: own-ship takes the lighter side of every weight split") {
+    const uint8_t set_a[8] = {0, 1, 2, 2, 2, 2, 1, 3};
+    const uint8_t set_b[8] = {0, 4, 5, 8, 6, 0, 11, 0};
+    for (uint8_t emitter = 0; emitter < 8; emitter++) {
+        CAPTURE(int(emitter));
+        CHECK(int(adsb_emitter_to_own_category(kSetA, emitter)) == int(set_a[emitter]));
+        CHECK(int(adsb_emitter_to_own_category(kSetB, emitter)) == int(set_b[emitter]));
+        CHECK(adsb_emitter_to_own_category(kSetC, emitter) == 0);
+        CHECK(adsb_emitter_to_own_category(kSetD, emitter) == 0);
+    }
+}

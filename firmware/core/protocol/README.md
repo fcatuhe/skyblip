@@ -107,6 +107,8 @@ Where an ADS-B emitter category or a FLARM aircraft type covers more than one G.
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
+Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the panel.
+
 ## The type a tablet draws
 
 `adsl_category_to_alptas_type` turns the G.1.3 category of a target, from any source, into the AcftType field of `$PFLAA`. FTD-012 §8.2 lists that field from 0 to F, and the tablet draws the target with the icon of its type. G.1.3 is the table in `docs/reference/ads-l_4_srd860_issue_2.md`. G.1.3 splits fixed wing by weight at 7031 kg, and AcftType splits it by engine, so a light jet or turboprop reaches the tablet as a piston aircraft and a heavy piston aircraft as a jet. Before #216 the table sent category 2 as a piston aircraft, so every airliner Bravo heard was drawn as one, and it sent category 6 as an airship and 14 to 17 as no type.
