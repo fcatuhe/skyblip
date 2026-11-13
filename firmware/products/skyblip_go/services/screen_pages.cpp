@@ -104,6 +104,9 @@ RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
     snapshot.radio.tx_ok = state.air.tx_ok;
     snapshot.radio.tx_lost = state.air.tx_lost;
     snapshot.radio.tx_named = state.air.tx_named;
+    snapshot.radio.tx_held_for_b5 = state.air.tx_held_for_b5;
+    snapshot.radio.rx_status = state.air.rx_status;
+    snapshot.radio.uplink_stale = state.air.uplink_stale;
     snapshot.radio.missed = statistics.missed();
     snapshot.radio.refused = statistics.refused();
     snapshot.radio.duty_permille = state.rf.duty_permille;

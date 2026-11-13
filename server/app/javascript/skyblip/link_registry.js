@@ -811,6 +811,21 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "aircraft",
           "number": 63,
           "type": "unsigned"
+        },
+        {
+          "name": "tx_held_for_b5",
+          "number": 64,
+          "type": "unsigned"
+        },
+        {
+          "name": "rx_status",
+          "number": 65,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_stale",
+          "number": 66,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1144,6 +1159,21 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "aircraft",
           "number": 63,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_held_for_b5",
+          "number": 64,
+          "type": "unsigned"
+        },
+        {
+          "name": "rx_status",
+          "number": 65,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_stale",
+          "number": 66,
           "type": "unsigned"
         }
       ]

@@ -42,6 +42,9 @@ Diagnostics busy_device() {
     diagnostics.tx_ok = 880;
     diagnostics.tx_lost = 3;
     diagnostics.tx_named = 41;
+    diagnostics.tx_held_for_b5 = 6;
+    diagnostics.rx_status = 9;
+    diagnostics.uplink_stale = 2;
     diagnostics.tx_keyed_us = 609;
     diagnostics.tx_span_us = 5919;
     diagnostics.range_refused = 5;
@@ -113,6 +116,9 @@ Diagnostics widest_device() {
     diagnostics.tx_ok = 0xFFFFFFFFu;
     diagnostics.tx_lost = 0xFFFFFFFFu;
     diagnostics.tx_named = 0xFFFFFFFFu;
+    diagnostics.tx_held_for_b5 = 0xFFFFFFFFu;
+    diagnostics.rx_status = 0xFFFFFFFFu;
+    diagnostics.uplink_stale = 0xFFFFFFFFu;
     diagnostics.tx_keyed_us = 65535;
     diagnostics.tx_span_us = 65535;
     diagnostics.range_refused = 0xFFFFFFFFu;
@@ -195,6 +201,8 @@ Frames frames(const Diagnostics& diagnostics, int payload,
     while (!report.exhausted()) {
         const int written = report.next_frame(payload, buffer, static_cast<int>(sizeof(buffer)));
         REQUIRE(written > 0);
+        // INFO: fc 13nov26 REQUIRE does not stop this build, so a frame that is not cut ends it
+        if (written <= 0) break;
         REQUIRE(written <= payload);
         out.last = text(buffer, written);
         REQUIRE(!out.last.empty());
@@ -221,7 +229,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "radio noise_dbm=-101 duty_permille=7 rx_ok=1204 rx_bad=37 rx_wait=58 rx_type=19 "
               "rx_unframed=11 rx_miskeyed=7 rx_noise=96 rx_named=12 tx_ok=880 tx_lost=3 "
               "tx_named=41 tx_keyed_us=609 tx_span_us=5919 range_refused=5 dio1_armed=true "
-              "dio1_edges=1500 dio1_missed=4\n"));
+              "dio1_edges=1500 dio1_missed=4 tx_held_for_b5=6 rx_status=9 uplink_stale=2\n"));
     CHECK(has(text, "traffic tracked=4 alarm=2\n"));
     CHECK(has(text,
               "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "
@@ -440,13 +448,13 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
 }
 
 // The radio group, alone in the radio reply and in its frame of the whole dump.
-TEST_CASE("diagnostics: the widest radio frame is 112 bytes, one frame on an iPhone's link") {
+TEST_CASE("diagnostics: the widest radio frame is 134 bytes, one frame on an iPhone's link") {
     for (link::Command command : {link::Command::Diagnostics, link::Command::Radio}) {
         DiagnosticsReport report(widest_device(), command, DiagnosticsReport::Group::Radio);
         uint8_t buffer[DiagnosticsReport::kFrameBytes];
-        // 1 + four 2-byte heads + noise 3 + duty 4 + twelve counters of 6 + two of 4 + 2 + two
-        // of 7.
-        CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 112);
+        // A 2-byte map head past 23 entries + four 2-byte heads + noise 3 + duty 4 + twelve
+        // counters of 6 + two of 4 + 2 + five of 7, three of them keyed past 23.
+        CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 134);
         CHECK(report.exhausted());
     }
 }
@@ -516,5 +524,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 59);
+    CHECK(fields == 62);
 }
