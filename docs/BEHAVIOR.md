@@ -500,15 +500,15 @@ The ALP-TAS frame as an observation, in ADS-L's units, category, address table a
 - a decoded frame is an observation in ADS-L units, dated and sourced
 - a heavy rotorcraft goes out as a helicopter and comes back as rotorcraft
   > G.1.3 gives the heavy rotorcraft 15, and AcftType has one helicopter for every rotorcraft.
-- a light aircraft goes out as a piston and comes back as an ultralight
-  > AcftType 8 is sent for a light aircraft and an ultralight alike, and FLARM reads the lighter.
 - aircraft type maps back to the ADS-L category it came from
 - an ICAO address keeps its table, an unknown one degrades to 0
 - an observation goes out as the frame other receivers already read
   > A codec that agrees with itself can still put a frame on air no other receiver reads.
+- an ultralight goes out as a piston and comes back as a light aircraft
+  > AcftType 8 is sent for a light aircraft and an ultralight alike, and most piston aircraft are light.
 - encoding refuses to claim a position it does not have
 - every FLARM aircraft type is read as the ADS-L category it names
-  > core/protocol/README.md argues each row: where a type covers several, FLARM reads the lighter.
+  > core/protocol/README.md argues each row against FTD-012 section 8.2 and ADS-L G.1.3.
 - on-ground and airborne flight state survive the 2-bit field
 - speed, climb and track round trip in ADS-L units over their ranges
 - the airborne field is 1 on the ground, 2 or 3 airborne, and 0 unknown
