@@ -35,4 +35,13 @@ class RenamedPagesTest < ActionDispatch::IntegrationTest
     get "/fr/briefing/ownship?type=glider&rows=ff"
     assert_redirected_to "/briefing/ownship?type=glider&rows=ff"
   end
+
+  test "the ADS-L pages' old addresses lead to their place under /ads-l" do
+    get "/ads-l-registry"
+    assert_response :moved_permanently
+    assert_redirected_to "/ads-l/registry"
+
+    get "/ads-l-registry/nmea"
+    assert_redirected_to "/ads-l/nmea"
+  end
 end

@@ -23,7 +23,7 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
   end
 
   test "untranslated content does not advertise a missing French alternate" do
-    get "/ads-l-registry/nmea"
+    get "/ads-l/nmea"
 
     assert_response :success
     assert_select "link[rel=alternate][hreflang=fr]", count: 0
@@ -31,7 +31,7 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
   end
 
   test "unknown and noncanonical content slugs are not recognized" do
-    %w[/unknown /index /fr/index /fr/about /a-propos /fr/ads-l-registry/nmea /fr/fr /fr/fr/a-propos].each do |path|
+    %w[/unknown /index /fr/index /fr/about /a-propos /fr/ads-l/nmea /fr/fr /fr/fr/a-propos].each do |path|
       assert_raises(ActionController::RoutingError, path) do
         Rails.application.routes.recognize_path(path, method: :get)
       end
