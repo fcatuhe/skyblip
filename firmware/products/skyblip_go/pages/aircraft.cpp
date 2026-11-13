@@ -26,6 +26,7 @@ const char* state_text(Detection state) {
         case Detection::Unpaired: return "NOT PAIRED";
         case Detection::NotConnected: return "NOT CONNECTED";
         case Detection::Airborne: return "IN FLIGHT";
+        case Detection::NoFix: return "NO FIX";
         case Detection::Listening: return "LISTENING";
         case Detection::Heard: break;
     }
@@ -35,7 +36,8 @@ const char* state_text(Detection state) {
 const char* detail_text(Detection state) {
     switch (state) {
         case Detection::Unpaired: return "PAIR ONE TO DETECT THE AIRCRAFT";
-        case Detection::Airborne: return "IT DETECTS ON THE GROUND";
+        case Detection::Airborne:
+        case Detection::NoFix: return "IT DETECTS ON THE GROUND";
         case Detection::Listening: return "TRANSPONDER TO ON OR ALT";
         case Detection::NotConnected:
         case Detection::Heard: break;
@@ -63,7 +65,11 @@ bool adopt(const Detected& detected, Settings& settings) {
     if (detected.state != Detection::Heard) return false;
     Settings next = settings;
     next.own_icao = detected.address;
-    if (detected.callsign[0] != 0) callsign_stored(next.callsign, detected.callsign);
+    // INFO: fc 13nov26 another aircraft's name must not stay on the air beside this one's address
+    if (detected.callsign[0] != 0)
+        callsign_stored(next.callsign, detected.callsign);
+    else if (detected.address != settings.own_icao)
+        next.callsign[0] = 0;
     if (named_type(detected.aircraft_type)) next.aircraft_type = detected.aircraft_type;
     const bool changed = next.own_icao != settings.own_icao ||
                          std::strcmp(next.callsign, settings.callsign) != 0 ||
@@ -76,6 +82,11 @@ bool adopt(const Detected& detected, Settings& settings) {
 bool matches(const Detected& detected, const Settings& settings) {
     Settings copy = settings;
     return detected.state == Detection::Heard && !adopt(detected, copy);
+}
+
+bool same_aircraft(const Detected& a, const Detected& b) {
+    return a.state == b.state && a.address == b.address &&
+           std::strcmp(a.callsign, b.callsign) == 0 && a.aircraft_type == b.aircraft_type;
 }
 
 void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings& settings,

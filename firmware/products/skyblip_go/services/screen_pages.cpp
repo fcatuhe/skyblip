@@ -58,6 +58,7 @@ void ScreenService::draw_menu_page() {
     snapshot.values = menu_values();
     snapshot.focus = editor_.focus();
     snapshot.aircraft = editor_.aircraft();
+    detected_on_glass_ = snapshot.values.detected;
     draw_menu(framebuffer_, snapshot);
 }
 

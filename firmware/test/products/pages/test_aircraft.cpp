@@ -55,23 +55,36 @@ TEST_CASE("aircraft: what Bravo heard becomes the own ICAO, the callsign and the
     CHECK_FALSE(adopt(heard_glider(), settings));
 }
 
-// A transponder with no flight ID, or no category, leaves what the pilot typed alone.
+// The same transponder with no flight ID, or no category, leaves what the pilot typed alone.
 TEST_CASE("aircraft: a callsign or a type the transponder does not send is kept as it was") {
     Settings settings = go::defaults();
     std::strcpy(settings.callsign, "TYPED");
     settings.aircraft_type = 6;
+    settings.own_icao = kHeardAddress;
     Detected detected = heard_glider();
     detected.callsign[0] = 0;
     detected.aircraft_type = 0;
-    CHECK(adopt(detected, settings));
+    CHECK_FALSE(adopt(detected, settings));
     CHECK(settings.own_icao == kHeardAddress);
     CHECK(std::string(settings.callsign) == "TYPED");
     CHECK(settings.aircraft_type == 6);
 }
 
+// A Go moved to another aircraft must not put the last one's name on the air with this address.
+TEST_CASE("aircraft: a new address heard with no callsign clears the one stored") {
+    Settings settings = go::defaults();
+    REQUIRE(adopt(heard_glider(), settings));
+    Detected other = heard_glider();
+    other.address = 0x3A0001;
+    other.callsign[0] = 0;
+    CHECK(adopt(other, settings));
+    CHECK(settings.own_icao == 0x3A0001u);
+    CHECK(settings.callsign[0] == 0);
+}
+
 TEST_CASE("aircraft: nothing but a transponder heard on the ground is ever adopted") {
     for (const Detection state : {Detection::Unpaired, Detection::NotConnected, Detection::Airborne,
-                                  Detection::Listening}) {
+                                  Detection::NoFix, Detection::Listening}) {
         Detected detected = heard_glider();
         detected.state = state;
         Settings settings = go::defaults();
@@ -132,6 +145,7 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
         {Detection::Unpaired, "NOT PAIRED", "PAIR ONE TO DETECT THE AIRCRAFT"},
         {Detection::NotConnected, "NOT CONNECTED", nullptr},
         {Detection::Airborne, "IN FLIGHT", "IT DETECTS ON THE GROUND"},
+        {Detection::NoFix, "NO FIX", "IT DETECTS ON THE GROUND"},
         {Detection::Listening, "LISTENING", "TRANSPONDER TO ON OR ALT"},
     };
     for (const auto& each : cases) {

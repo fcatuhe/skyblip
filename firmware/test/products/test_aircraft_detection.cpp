@@ -28,10 +28,14 @@ bool glass_reads(Rig& rig, const char* text, int scale) {
                     go::kGlassHeight, scale);
 }
 
-// Paired, with Bravo holding an own ICAO, so the own-ICAO notice stands aside.
-void paired_on_the_radar(Tango& tango) {
+// Parked with a fix, and Bravo holding an own ICAO so the own-ICAO notice stands aside.
+void paired_on_the_radar(Tango& tango, bool fixed = true) {
     tango.bravo.health.own_icao_set = true;
     tango.pair_and_store();
+    if (fixed) {
+        tango.go.seconds(tango.now_ms, 5, 0, 500);
+        REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
+    }
     tango.go.long_touch(tango.now_ms);
     REQUIRE(tango.go.product.screen().page() == go::Page::Radar);
     REQUIRE_FALSE(tango.go.product.screen().noticing());
@@ -131,4 +135,47 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
                    go::kMenuScale, false));
     change(flight.go(), now_ms);
     CHECK(flight.go().settings().own_icao == go::kOwnIcaoUnset);
+}
+
+// A Go switched on in the air has no fix yet, and its loudest neighbour may be a wingman.
+TEST_CASE("aircraft detection: a Go with no fix proposes nothing, and the menu says why") {
+    Tango tango;
+    paired_on_the_radar(tango, false);
+    REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Unknown);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.run_for(3000);
+    CHECK_FALSE(tango.go.product.screen().noticing());
+
+    uint32_t& now_ms = tango.now_ms;
+    open_menu(tango.go, now_ms);
+    focus_on(tango.go, now_ms, go::MenuRow::Detected);
+    tango.go.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
+    CHECK(reads_in(tango.go.product.screen().framebuffer(), "NO FIX", 0, 0, go::kGlassWidth,
+                   go::kGlassHeight, go::kMenuScale, false));
+    change(tango.go, now_ms);
+    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+}
+
+TEST_CASE("aircraft detection: a press before the notice is read stores nothing") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    for (int i = 0; i < 60 && !tango.go.product.screen().noticing(); i++) tango.run_for(50);
+    REQUIRE(tango.go.product.screen().noticing());
+    tango.go.press(tango.now_ms);
+    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(tango.go.product.screen().noticing());
+}
+
+TEST_CASE("aircraft detection: the notice goes when Bravo stops hearing what it showed") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.run_for(2500);
+    REQUIRE(tango.go.product.screen().noticing());
+    tango.bravo.health.own_transponder_fields.clear();
+    tango.run_for(1500);
+    CHECK_FALSE(tango.go.product.screen().noticing());
+    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
 }

@@ -191,7 +191,11 @@ void ScreenService::press(uint32_t now_ms) {
     }
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
-    if (notice_ && notice_kind_ == Notice::NewAircraft) use_noticed_aircraft();
+    if (notice_ && notice_kind_ == Notice::NewAircraft) {
+        // INFO: fc 13nov26 this press stores an address, so only once read with the thumb quiet
+        if (!notice_read(now_ms)) return;
+        use_noticed_aircraft();
+    }
     if (close_notice()) return;
     if (on_bravo_page()) {
         act_on_bravo(bravo_page_.button(bravo_view(), now_ms), now_ms);
@@ -288,7 +292,8 @@ MenuValues ScreenService::menu_values() const {
 void ScreenService::step_editor(uint32_t now_ms) {
     if (!editor_.active()) return;
 
-    const MenuValues current = menu_values();
+    MenuValues current = menu_values();
+    current.detected = detected_to_store(detected_on_glass_);
     MenuValues next;
 
     switch (editor_.tick(now_ms, current, next)) {
@@ -392,6 +397,10 @@ void ScreenService::flash_alarm() {
     dirty_ = true;
 }
 
+bool ScreenService::notice_read(uint32_t now_ms) const {
+    return notice_on_glass_ && settled_for_a_double_press(now_ms, notice_on_glass_since_ms_);
+}
+
 bool ScreenService::refresh_allowed() const {
     return thermal() == Thermal::Refresh &&
            power::may_refresh(context_.state.power.level, context_.state.power.supply_warned,
@@ -409,6 +418,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
     paint_black(now_ms);
     note_presented(now_ms);
     prompt_on_glass_ = false;
+    notice_on_glass_ = false;
     capture_on_glass_ = false;
     last_render_ms_ = now_ms;
     dirty_ = true;
@@ -430,6 +440,8 @@ void ScreenService::note_presented(uint32_t now_ms) {
     context_.state.panel_presented = true;
     prompt_on_glass_ = answering();
     capture_on_glass_ = on_capture_page();
+    if (notice_ && !notice_on_glass_) notice_on_glass_since_ms_ = now_ms;
+    notice_on_glass_ = notice_;
     last_present_ms_ = now_ms;
 }
 

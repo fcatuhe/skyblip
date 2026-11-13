@@ -8,7 +8,7 @@
 
 namespace skyblip::go {
 
-enum class Detection : uint8_t { Unpaired, NotConnected, Airborne, Listening, Heard };
+enum class Detection : uint8_t { Unpaired, NotConnected, Airborne, NoFix, Listening, Heard };
 
 struct Detected {
     Detection state{Detection::Unpaired};
@@ -20,6 +20,7 @@ struct Detected {
 // INFO: fc 13nov26 false when nothing heard would change, so a press on a match stores nothing
 bool adopt(const Detected& detected, Settings& settings);
 bool matches(const Detected& detected, const Settings& settings);
+bool same_aircraft(const Detected& a, const Detected& b);
 
 constexpr int kDetectedLines = 4;
 constexpr const char* kAircraftNoticePadText = "PAD CLOSES";
