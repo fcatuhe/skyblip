@@ -58,6 +58,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
         // burst runs 200 ms past it.
         CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
+        if (payload_type_of(record) != protocol::AdslPacket::kPayloadTypePosition) continue;
         if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
         last_frequency = record.frequency_hz;
     }
@@ -105,26 +106,25 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(50);
     const uint32_t from_ms = past_settling(simulator);
-    run_on(simulator, from_ms, 21000);
+    run_on(simulator, from_ms, 41000);
 
     const simulator::Air& air = simulator.world().air();
     int named = 0;
-    int positions = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(record.phase_ms)) {
-            positions++;
+        if (record.event != simulator::AirEvent::Tx ||
+            timing::Scheduler::in_direct_slot(record.phase_ms))
             continue;
-        }
         named++;
+        CHECK(payload_type_of(record) == protocol::AdslPacket::kPayloadTypeOgnDiagnostics);
         CHECK(record.phase_ms < timing::kSlot1WrapMs);
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
         CHECK(simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz));
     }
-    // Twenty-one seconds of flight: twenty-one positions and two names.
-    CHECK(positions >= 19);
-    CHECK(named == 2);
+    // Forty-one seconds of flight: forty-one positions, two Status bursts and four names.
+    CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypePosition) >= 39);
+    CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypeStatus) == 2);
+    CHECK(named == 4);
 
     // And the tape says which burst was which, where a position prints its rate.
     const radio::Log& log = simulator.product().state().radio_log;
@@ -164,16 +164,9 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
         if (record.event != simulator::AirEvent::Tx) continue;
-        // Own bursts go on air as chips behind the ADS-L sync word, so reading
-        // them back means framing them the way the receiver does.
-        protocol::Frame frame{};
-        REQUIRE(simulator::Air::framed(record, frame));
-        REQUIRE(frame.system == protocol::System::AdslDirect);
         protocol::AdslPacket packet{};
-        packet.reset();
-        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
-        REQUIRE(packet.check_crc() == 0);
-        packet.descramble();
+        REQUIRE(packet_of(record, packet));
+        if (!packet.is_position()) continue;
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         CHECK(packet.altitude_m() ==
               to_metres(Millimetres(simulator.product().state().own.altitude_hae_mm)).value);
@@ -253,7 +246,7 @@ TEST_CASE("rf: on the ground the transmit rate drops to 0.1 Hz") {
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(0);
     run_on(simulator, past_settling(simulator), 8000);
-    CHECK(count_of(simulator.world().air(), simulator::AirEvent::Tx) == 1);
+    CHECK(count_payloads(simulator.world().air(), protocol::AdslPacket::kPayloadTypePosition) == 1);
 }
 
 // F5. A cold receiver's first solutions walk, and the flight state we derive

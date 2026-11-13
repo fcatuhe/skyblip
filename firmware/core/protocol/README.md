@@ -6,6 +6,37 @@ Both air frames are read and written field by field. A field is a `BitField`: an
 
 `from_own` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`).
 
+## Three radio protocols, three versions
+
+`adsl.version`, `adsb.version` and `alptas.version` version ADS-L, ADS-B and ALP-TAS apart from the firmware, and `firmware/README.md` says what moves each under Versions. `adsl.version` is the version of skyBlip's ADS-L implementation, not the Protocol Version field every ADS-L packet carries on air (E.1.1). The ADS-L declaration of conformity names firmware versions, in the template's "Firmware Version" field (`docs/reference/ads-l_4_srd860_issue_2.md:1659`). `adsl.version` decides which firmware releases a declaration still covers, because each release lists the protocol versions it carries. All three stay below 1.0.0 until the protocol is ready for production.
+
+Each version covers these paths today, under `firmware/`, so a change to one of them is also a decision on that version. The list is for review: no CI check holds a change to it yet.
+
+| Version | Paths |
+|---|---|
+| `adsl.version` | `core/protocol/adsl*`, the ADS-L half of `core/protocol/air.*`, `core/fec/`, `core/timing/slot.*`, `core/timing/transmit.*`, `core/timing/channel.*`, `core/flight/state.*`, `core/flight/extrapolate.*`, `core/settings/address.h`, `products/skyblip_go/services/radio.*`, and the ERP and modulation constants in `hardware/parts/sx1262/sx1262.h` |
+| `alptas.version` | `core/protocol/alptas.*`, the ALP-TAS half of `core/protocol/air.*` |
+| `adsb.version` | `core/protocol/adsb*`, `hardware/parts/lr2021/`, the 1090 MHz receiver, and `products/skyblip_bravo/services/adsb.*` |
+
+## The Status payload
+
+`from_own_status` writes §G.2's payload type 3: what this device can hear and process, so a peer or a ground station can plan around it. Its network header says protocol version 1, because the Status payload first appears in Issue 2 and §E.1.1 numbers Issue 2 as 1. The Traffic payload keeps version 0, since Issue 1 encodes it the same way.
+
+| Field | Value | Why |
+|---|---|---|
+| Max. Protocol Version | 1 | this device reads Issue 2 payloads (`test/adsl/test_network.cpp`, E.1.1) |
+| M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
+| O-band LDR receive | 0 | not received |
+| O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
+| ADS-L 4 Mobile | 0 | none |
+| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the FLARM-generation wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
+| E-conspicuity transmit | 0 | nothing but ADS-L goes out |
+| XPDR | 0 | no transponder is known |
+| Traffic Uplink client | 1 | the uplink is decoded and drawn |
+| FIS-B client | 0 | not decoded |
+
+The payload is 12 bytes, header included. The frame still carries 20 payload bytes, as a Traffic frame does, with the last 8 left zero, so it goes out behind the same sync word and the same length byte. §D.1.1 lets a receiver read the length, but ours checks it as 0x18 in the sync tail it reads after the shared window (`air.cpp`), and the OGN code SoftRF carries builds every frame at 24 bytes (`libraries/OGN/ads-l.h:17-22`). A 16-byte Status frame would not be heard by a receiver built like ours.
+
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
@@ -57,14 +88,56 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 | A1 | light, under 15 500 lb | 1 | G.1.3 draws its line between 1 and 2 at the same 7031 kg, 15 500 lb |
 | A2 to A5 | small, large, high vortex large, heavy | 2 | at or above that line |
 | A6 | high performance, over 5 g and 400 kt | 2 | ADS-B gives it no weight. The tree already reads a FLARM jet, type 9, as 2 (`alptas_type_to_adsl_category`) |
-| A7 | rotorcraft | 3 | ADS-B gives it no weight either. Issue 1 named 3 plain rotorcraft before Issue 2 split it into light, 3, and heavy, 15. A FLARM helicopter is read as 3 too, and 15 would reach `$PFLAA` as type 0 |
+| A7 | rotorcraft | 3 | ADS-B gives it no weight either. Issue 1 named 3 plain rotorcraft before Issue 2 split it into light, 3, and heavy, 15. A FLARM helicopter is read as 3 too |
 | B1 | glider, sailplane | 4 | |
 | B2 | lighter-than-air | 5 | |
 | B3 | parachutist, skydiver | 8 | |
-| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight. `adsl_category_to_alptas_type` sends 6 to `$PFLAA` as C, an airship, until #216 is fixed |
+| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight |
 | B6 | unmanned aerial vehicle | 11 | ADS-B carries no EU operational category. A FLARM UAV, type D, is read as 11 too |
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
+
+## The type a tablet draws
+
+`adsl_category_to_alptas_type` turns the G.1.3 category of a target, from any source, into the AcftType field of `$PFLAA`. FTD-012 §8.2 lists that field from 0 to F, and the tablet draws the target with the icon of its type. G.1.3 is the table in `docs/reference/ads-l_4_srd860_issue_2.md`. G.1.3 splits fixed wing by weight at 7031 kg, and AcftType splits it by engine, so a light jet or turboprop reaches the tablet as a piston aircraft and a heavy piston aircraft as a jet. Before #216 the table sent category 2 as a piston aircraft, so every airliner Bravo heard was drawn as one, and it sent category 6 as an airship and 14 to 17 as no type.
+
+| G.1.3 | Kind | AcftType | Why |
+|---|---|---|---|
+| 0 | no information | 0 | FTD-012 reserves 0 and names A unknown. XCSoar reads 0 as unknown and A as a flying saucer (`AircraftType` in `src/FLARM/Traffic.hpp` at XCSoar `71cd8bca`). The tree has always sent 0 |
+| 1 | light fixed wing, under 7031 kg | 8, reciprocating engines | most aircraft under 7031 kg have piston engines, though light turboprops and jets fly there too. Tow planes, AcftType 2, and drop planes, AcftType 5, fall here as well, but G.1.3 does not mark them |
+| 2 | small to heavy fixed wing, 7031 kg and over | 9, jet or turboprop | nearly every aircraft that heavy is a jet or a turboprop |
+| 3 | light rotorcraft | 3, helicopter, gyrocopter, rotorcraft | |
+| 4 | glider, sailplane | 1, glider, motor glider | |
+| 5 | lighter-than-air | B, balloon | G.1.3 does not tell a balloon from an airship, AcftType C, and balloons are the more common |
+| 6 | ultralight and motorized hang-glider | 8, reciprocating engines | an ultralight, and a trike, fly on a reciprocating engine. AcftType 6 is a hang glider with no engine |
+| 7 | paraglider | 7, paraglider | |
+| 8 | parachutist, skydiver, wingsuit | 4, skydiver | |
+| 9 | eVTOL, UAM | 3, rotorcraft | it carries people, takes off on its rotors and hovers like a helicopter. D would tell the pilot it is a drone |
+| 10 | gyrocopter | 3 | FTD-012 names the gyrocopter in 3 |
+| 11 to 13 | UAS open, specific and certified | D, UAV | |
+| 14 | model plane | D, UAV | a model plane flies with no one on board, which is what D names |
+| 15 | heavy rotorcraft | 3 | |
+| 16 | hang-glider | 6, hang glider | |
+| 17 | paramotor | 7, paraglider | it flies a paraglider wing, and FTD-012 has no powered paraglider |
+| 18 and over | outside G.1.3 | 0 | |
+
+`alptas_type_to_adsl_category` goes the other way, from the AcftType of an ALP-TAS frame to G.1.3. An AcftType names an engine or a kind of wing and gives no weight. Where the table above sends one category to a type, that category is the one read back. Where it sends several, the rows below say which one is read.
+
+| AcftType | Kind | G.1.3 | Why |
+|---|---|---|---|
+| 0, A, E | reserved, unknown, reserved | 0 | |
+| 1 | glider, motor glider | 4 | |
+| 2, 5 | tow plane, drop plane | 1 | tow and drop planes nearly all weigh under 7031 kg. A turboprop drop plane, such as a Caravan or a Twin Otter, then reaches `$PFLAA` as AcftType 8 |
+| 3 | helicopter, gyrocopter, rotorcraft | 3 | it is sent for 3, 9, 10 and 15. It gives no weight and names no eVTOL, so it is read as light rotorcraft, as Issue 1's plain rotorcraft was |
+| 4 | skydiver | 8 | |
+| 6 | hang glider | 16 | 16 is the one category sent as 6. Issue 1 put the hang glider with the paraglider in 7 |
+| 7 | paraglider | 7 | it is sent for 7 and 17. A paramotor is the rarer of the two |
+| 8 | reciprocating engines | 1 | it is sent for 1 and 6. An ultralight is a light aircraft too |
+| 9 | jet or turboprop | 2 | 2 is the one category sent as 9, so a jet reaches `$PFLAA` as a jet again. A light jet or turboprop lands in the heavier weight class |
+| B, C | balloon, airship | 5 | |
+| D | UAV | 11 | it is sent for 11 to 14. FLARM carries no EU operational category, so 11, the open category, is the default |
+| F | static obstacle | 0 | G.1.3 has no value for it |
+| past F | outside FTD-012's table | 0 | |
 
 ## The registration an ADS-B flight ID spells
 

@@ -1,6 +1,7 @@
 // ADS-L 4 SRD-860 issue 2 Subpart C, the physical layer: the bands, the coding and the second's
 // slots.
 #include <cstdint>
+#include <vector>
 
 #include "core/fec/manchester.h"
 #include "core/protocol/adsl.h"
@@ -10,6 +11,8 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
@@ -89,6 +92,16 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
         CHECK((frequency == timing::kMBand0Hz || frequency == timing::kMBand1Hz));
         if (previous != 0) CHECK(frequency != previous);
         previous = frequency;
+    }
+}
+
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency") {
+    for (const int speed_kt : {0, 50}) {
+        CAPTURE(speed_kt);
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
+        CHECK(statuses.size() >= 3);
+        for (size_t i = 1; i < statuses.size(); i++)
+            CHECK(statuses[i].frequency_hz != statuses[i - 1].frequency_hz);
     }
 }
 

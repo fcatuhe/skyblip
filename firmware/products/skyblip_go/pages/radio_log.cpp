@@ -37,6 +37,7 @@ bool own_burst(radio::Verdict verdict) {
 // schedule the burst went out on, or the name that is on neither schedule.
 const char* own_burst_word(const radio::Entry& entry) {
     if (entry.callsign) return "CALLSIGN";
+    if (entry.status) return "STATUS";
     return entry.airborne ? "AIR" : "GROUND";
 }
 

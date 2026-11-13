@@ -37,7 +37,7 @@ TEST_CASE("nmea: PFLAA keeps the widest callsign whole under 1000 km, and drops 
     const auto adsb = widest(model::Source::Adsb, -89000000, -89000000);
     const int adsb_written = format_pflaa(buffer, sizeof(buffer), own, adsb, 3, "ABCDEFGH");
     CHECK(std::string(buffer, adsb_written) ==
-          "$PFLAA,3,-990748,-990748,-99999,1,3C6586!ABCDEFGH,359,,16384,-4095.9,8,0,1,*14\r\n");
+          "$PFLAA,3,-990748,-990748,-99999,1,3C6586!ABCDEFGH,359,,16384,-4095.9,9,0,1,*15\r\n");
     CHECK(adsb_written <= kNmeaSentenceCeilingBytes);
 }
 
@@ -58,7 +58,7 @@ TEST_CASE("nmea: PFLAA drops the RSSI, then shortens the callsign, never a field
     const int adsb_written = format_pflaa(buffer, sizeof(buffer), own, adsb, 3, "ABCDEFGH");
     const std::string adsb_sentence(buffer, adsb_written);
     CHECK(adsb_sentence ==
-          "$PFLAA,3,-10018800,-20037600,-99999,1,3C6586!ABCDEF,359,,16384,-4095.9,8,0,1,*1B\r\n");
+          "$PFLAA,3,-10018800,-20037600,-99999,1,3C6586!ABCDEF,359,,16384,-4095.9,9,0,1,*1A\r\n");
     CHECK(adsb_written == kNmeaSentenceCeilingBytes);
     CHECK(data_fields(adsb_sentence) == 14);
 }
@@ -71,7 +71,7 @@ TEST_CASE("nmea: PFLAA fits 82 characters at its types' widest, without callsign
     char buffer[128];
     const int written = format_pflaa(buffer, sizeof(buffer), own, adsb, 255, "ABCDEFGH");
     CHECK(std::string(buffer, written) ==
-          "$PFLAA,255,-10018800,-20037600,-2147483648,1,3C6586,359,,16384,-4095.9,8,0,1,*00\r\n");
+          "$PFLAA,255,-10018800,-20037600,-2147483648,1,3C6586,359,,16384,-4095.9,9,0,1,*01\r\n");
     CHECK(written == kNmeaSentenceCeilingBytes);
 }
 

@@ -135,12 +135,14 @@ class DiagnosticsPayloads(unittest.TestCase):
             "burst", 0b0011_1100, address=0x0102AB, tx_keyed_us=410, tx_span_us=960,
             verdict="miskeyed", source="alptas", band="O", channel=1, bytes=26, rssi_dbm=-97,
             key_offset_s=-2, tx_stage_margin_us=-230, address_valid=True, rssi_valid=True, airborne=True, tx_span_valid=True,
-            callsign=False))
+            callsign=False, status=False))
 
-    def test_a_transmitted_burst_says_whether_it_carried_the_callsign_or_a_position(self):
+    def test_a_transmitted_burst_says_whether_it_carried_the_callsign_the_status_or_a_position(self):
         payload = struct.pack("<I2H5B2b", 0x0102AB, 410, 960, 0, 3, 0, 0, 20, 0, 0)
         self.assertTrue(decoded(5, payload, 0b0100_0000)["callsign"])
+        self.assertTrue(decoded(5, payload, 0b1000_0000)["status"])
         self.assertFalse(decoded(5, payload, 0b0000_0000)["callsign"])
+        self.assertFalse(decoded(5, payload, 0b0000_0000)["status"])
 
     # radio::Verdict gained Named at 5 in PR #69 and the six verdicts behind it each moved one up.
     def test_the_verdict_behind_received_is_the_callsign_one_and_not_a_bad_crc(self):

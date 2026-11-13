@@ -146,6 +146,8 @@ class Scheduler {
     static int slot_start(int slot) { return slot == 1 ? kSlot1StartMs : kSlot0StartMs; }
     static int slot_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs; }
     static int dwell_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs - kHopGuardMs; }
+    // INFO: fc 13nov26 G.2.2: the share of the direct slot heard, averaged over both channels
+    static int direct_heard_permille();
 };
 
 }  // namespace skyblip::timing

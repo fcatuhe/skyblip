@@ -120,7 +120,7 @@ export default class extends Controller {
   #upgradeToFull(unit, state) {
     if (state.notice?.key !== "needs_full" || taken(unit)) return
     const slim = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
-    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.kind === "full")
+    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.product === slim.dataset.product && option.dataset.kind === "full")
     if (full) this.#taking(take(unit, full))
   }
 

@@ -25,20 +25,14 @@ constexpr uint32_t kAirWindowMs = 30000;
 
 struct Said {
     int positions{0};
+    int statuses{0};
     int names{0};
 };
 
 Said said_on_air(const simulator::Air& air) {
-    Said said{};
-    for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(record.phase_ms))
-            said.positions++;
-        else
-            said.names++;
-    }
-    return said;
+    return {count_payloads(air, protocol::AdslPacket::kPayloadTypePosition),
+            count_payloads(air, protocol::AdslPacket::kPayloadTypeStatus),
+            count_payloads(air, protocol::AdslPacket::kPayloadTypeOgnDiagnostics)};
 }
 
 void park_on_the_bench(simulator::Simulator& simulator) {
@@ -75,9 +69,12 @@ TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the g
 
     CHECK(simulator.product().state().flight.running);
     const Said said = said_on_air(simulator.world().air());
-    // a position and a name every ten seconds, at most one more for the window's two ends
+    // a position and a name every ten seconds, a Status every twenty, one more for the window's
+    // ends
     CHECK(said.positions >= 3);
     CHECK(said.positions <= 4);
+    CHECK(said.statuses >= 1);
+    CHECK(said.statuses <= 2);
     CHECK(said.names >= 3);
     CHECK(said.names <= 4);
 }
@@ -94,17 +91,8 @@ TEST_CASE("flight run: every burst on air says on ground, at the real position, 
     const simulator::Air& air = simulator.world().air();
     int checked = 0;
     for (int i = 0; i < air.record_count(); i++) {
-        const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx ||
-            !timing::Scheduler::in_direct_slot(record.phase_ms))
-            continue;
-        protocol::Frame frame{};
-        REQUIRE(simulator::Air::framed(record, frame));
         protocol::AdslPacket packet{};
-        packet.reset();
-        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
-        REQUIRE(packet.check_crc() == 0);
-        packet.descramble();
+        if (!packet_of(air.record_at(i), packet) || !packet.is_position()) continue;
         CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Ground));
         // the payload carries latitude in steps of 107 and longitude of 215, in 1e-7 degrees
         CHECK(std::abs(packet.latitude_1e7() - own.latitude_1e7) < 200);
