@@ -93,7 +93,10 @@ void AlarmService::sign_off(uint32_t now_ms) {
     const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (command.tone_changed) drive_buzzer(command);
     drive_motor(false);
-    show(indication::Lamp::None);
+    // INFO: fc 13nov26 a Bravo refused to fly lit the lamp around this service, so dark is told,
+    // not compared
+    shown_ = indication::Lamp::None;
+    context_.roles.indicator.show(indication::Lamp::None);
     sign_off_pending_ = true;
 }
 

@@ -178,6 +178,18 @@ TEST_CASE("bravo: a radio whose probe failed is put to sleep on the way down, no
     CHECK(rig.platform.radio().mode == models::Lr2021::Mode::Sleep);
 }
 
+// Reviewer: the refusal's red blink stayed lit through the sign's lead, as a fourth pulse.
+TEST_CASE("bravo: a unit refused to fly goes dark before it signs off") {
+    BravoRig rig([](platform::host::MeshtrackerX1& x1) { x1.radio().version_major = 2; });
+    REQUIRE(rig.setup() == Status::Down);
+    for (int i = 0; i < 100 && !rig.platform.indicator().lit(); i++) rig.run_for(10);
+    REQUIRE(rig.platform.indicator().lamp() == indication::Lamp::Red);
+
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
+    rig.run_for(indication::kSignOff.lead_ms / 2);
+    CHECK_FALSE(rig.platform.indicator().lit());
+}
+
 TEST_CASE(
     "bravo: a radio whose probe failed and whose BUSY sticks is held in reset on the way down") {
     BravoRig rig([](platform::host::MeshtrackerX1& x1) { x1.radio().version_major = 2; });
