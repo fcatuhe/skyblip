@@ -73,7 +73,7 @@ The report lives exactly as long as the update record. `install()` writes a new 
 
 ### When an update does not land
 
-From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report whenever the unit says its image is not confirmed, names the cause in plain words, and shows one line with a Copy report button. The user sends that line. The unit keeps the report until its next install, so a page reopened days later still reads it.
+From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The user sends that line. The unit keeps the report until its next install, so a page reopened days later still reads it.
 
 On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`. Keep the USB console running with the loop in #278 to catch the `dfu:` line before the restart.
 
