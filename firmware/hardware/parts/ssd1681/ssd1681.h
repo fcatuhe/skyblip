@@ -62,6 +62,8 @@ class Ssd1681 : public ports::Display {
     static constexpr uint32_t kReadyAfterFullMs = 1500;
     // INFO: fc 13sep26 GxEPD2 gives the D67 10 s: the cold waveform is slow, and this bounds a hang
     static constexpr uint32_t kBusyTimeoutMs = 10000;
+    // INFO: fc 13nov26 Good Display wants a full after five partials, a flash a pilot cannot take
+    static constexpr int kReinkPeriodPartials = 60;
 
    private:
     void initialise_panel();
@@ -74,6 +76,7 @@ class Ssd1681 : public ports::Display {
     void data(uint8_t byte);
     void write_bank(uint8_t opcode);
     void stage(const uint8_t* canvas_bytes);
+    void invert_shadow();
     void set_window(int x0, int y0, int x1, int y1);
     void set_cursor(int x, int y);
     bool wait_busy(uint32_t max_spins = 200000);
@@ -89,6 +92,7 @@ class Ssd1681 : public ports::Display {
     bool asleep_{false};
     bool refreshing_{false};
     bool partial_refresh_{false};
+    int partials_since_reink_{0};
     Panel panel_{Panel::Unknown};
     uint32_t ready_at_ms_{0};
     uint32_t timeout_at_ms_{0};
