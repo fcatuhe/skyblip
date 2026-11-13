@@ -249,6 +249,8 @@
     // INFO: fc 13nov26 browser_link.cpp's answers, for a unit made with a browsers list
     async answerBrowser(command, fields) {
       if (command === 'browser_challenge') {
+        this.proven = null;
+        this.trusted = false;
         this.browserNonce = crypto.getRandomValues(new Uint8Array(16));
         return this.reply({ command, nonce: this.browserNonce });
       }
@@ -256,6 +258,7 @@
         const nonce = this.browserNonce;
         this.browserNonce = null;
         if (!nonce) return this.acknowledge(false, 'no_session');
+        if (encoder.encode(fields.label ?? '').length > 24) return this.acknowledge(false, 'invalid');
         const key = await crypto.subtle.importKey('raw', fields.key, { name: 'Ed25519' }, false, ['verify']);
         if (!(await crypto.subtle.verify('Ed25519', key, fields.signature, join(label('browser'), nonce)))) return this.acknowledge(false, 'bad_signature');
         this.proven = { id: hex(fields.key.slice(0, 8)), label: fields.label ?? '' };
@@ -270,7 +273,10 @@
       const id = hex(fields.id);
       if (!this.browsers.some(entry => entry.id === id)) return this.acknowledge(false, 'unknown_browser');
       this.browsers = this.browsers.filter(entry => entry.id !== id);
-      if (id === this.proven.id) this.trusted = false;
+      if (id === this.proven.id) {
+        this.proven = null;
+        this.trusted = false;
+      }
       return this.acknowledge(true, 'forgotten');
     }
 

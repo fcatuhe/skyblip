@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { browserKeyFrom, idOf, labelOf, storedBrowserKey } from '#skyblip/trust';
+import { BrowserTrust, browserKeyFrom, idOf, labelOf, storedBrowserKey } from '#skyblip/trust';
 import { IMAGE_BYTES, NEWER, asking, chosen, connected } from './update_session.mjs';
 import { signedImage } from './fake_skyblip.mjs';
 
@@ -148,4 +148,17 @@ test('a browser names itself by its brand and platform, in at most 24 bytes', ()
 
 test('a browser with no IndexedDB has no key', async () => {
   assert.equal(await storedBrowserKey(), null);
+});
+
+test('a trust verdict that outlived its waiter is never read as the answer to a task', () => {
+  const trust = new BrowserTrust({ send: async () => {}, loadKey: async () => null, onChange: () => {} });
+  assert.equal(trust.receive({ command: 'acknowledgement', acknowledge: true, reason: 'trusted' }), true);
+  assert.equal(trust.receive({ command: 'acknowledgement', acknowledge: false, reason: 'cancelled' }), false);
+});
+
+test('a request the link could not carry leaves no waiter for the next link', async () => {
+  const { load } = await browserKey();
+  const trust = new BrowserTrust({ send: async () => { throw new Error('GATT Server is disconnected.'); }, loadKey: load, onChange: () => {} });
+  await assert.rejects(trust.prove(), /disconnected/);
+  assert.equal(trust.receive({ command: 'browser_challenge', nonce: new Uint8Array(16) }), false);
 });

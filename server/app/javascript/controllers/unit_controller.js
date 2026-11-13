@@ -249,7 +249,8 @@ export default class extends Controller {
 
   #glass(unit, asking) {
     if (!this.hasGlassOutlet) return
-    if (asking) this.glassOutlet.show({ title: PROMPTS[unit.state.task], product: productWord(unit), lamp: unit.product === "skyblip_bravo" })
+    const remembers = unit?.state?.task === "set" && unit.state.trust === "proven"
+    if (asking) this.glassOutlet.show({ title: PROMPTS[unit.state.task], product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers })
     else this.glassOutlet.hide()
   }
 
@@ -308,24 +309,29 @@ export default class extends Controller {
 
   // INFO: fc 13nov26 only a browser the unit trusts reads the list, so the section waits for that trust
   #browsers(unit, state) {
-    const trusted = (unit?.linked ?? false) && state.trust === "trusted"
+    const trusted = (unit?.linked ?? false) && state.trust === "trusted" && Boolean(state.browsers)
     this.browsersTarget.hidden = !trusted || this.#prompting(state)
     const notice = state?.notice?.during === "browsers" ? sayNotice(state.notice, ...BROWSER_NOTICES) : ""
     this.browsersMessageTarget.hidden = !notice
     this.browsersMessageTarget.textContent = notice
     if (!trusted) return
-    if (!state.browsers) return unit.updater.listBrowsers()
     const idle = state.phase === "ready"
-    this.browserListTarget.replaceChildren(...state.browsers.map(browser => this.#browser(browser, idle)))
+    const drawn = JSON.stringify([state.browsers, idle])
+    if (drawn !== this.drawnBrowsers) {
+      this.drawnBrowsers = drawn
+      this.browserListTarget.replaceChildren(...state.browsers.map(browser => this.#browser(browser, idle)))
+    }
     this.forgetOthersTarget.hidden = !state.browsers.some(browser => !browser.self)
     this.forgetOthersTarget.disabled = !idle
   }
 
   #browser({ id, label, self }, idle) {
     const row = document.createElement("li")
-    const name = Object.assign(document.createElement("span"), { textContent: label || say("browsers.unnamed") })
+    const shown = label || say("browsers.unnamed")
+    const name = Object.assign(document.createElement("span"), { textContent: shown })
     if (self) name.append(Object.assign(document.createElement("span"), { className: "is-self", textContent: ` · ${say("browsers.this_browser")}` }))
     const forget = Object.assign(document.createElement("button"), { type: "button", className: "button-app button-app--small", textContent: say("browsers.forget"), disabled: !idle })
+    forget.setAttribute("aria-label", say("browsers.forget_named", { name: shown }))
     forget.dataset.action = "unit#forgetBrowser"
     forget.dataset.unitIdParam = id
     row.append(name, forget)

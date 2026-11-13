@@ -288,13 +288,24 @@ export class Updater {
     return this.#ask('capture', { profile });
   }
 
+  // INFO: fc 13nov26 the unit's replies carry no request id, so the list waits for the link to be quiet
   listBrowsers() {
-    return this.#trust.list();
+    return this.#browsing(() => this.#trust.list());
   }
 
-  async forgetBrowsers(ids) {
-    const refusal = await this.#trust.forget(ids);
-    if (typeof refusal === 'string') this.#set({ notice: { key: refusal, during: 'browsers' } });
+  forgetBrowsers(ids) {
+    return this.#browsing(async () => {
+      this.#set({ notice: null });
+      const refusal = await this.#trust.forget(ids);
+      if (typeof refusal === 'string') this.#set({ notice: { key: refusal, during: 'browsers' } });
+    });
+  }
+
+  async #browsing(exchange) {
+    if (this.#state.phase !== 'ready' || !this.#trust.trusted) return;
+    this.#set({ phase: 'asking', task: 'browsers' });
+    await exchange();
+    if (this.#state.task === 'browsers') this.#set({ phase: 'ready', task: null });
   }
 
   #refusal() {
@@ -318,6 +329,7 @@ export class Updater {
       return this.#fail(error);
     }
     this.#set({ running: this.#running && versionText(this.#running) });
+    await this.listBrowsers();
   }
 
   #needsFull({ full, pin }) {
@@ -380,10 +392,12 @@ export class Updater {
     return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
   }
 
-  #saved() {
+  async #saved() {
+    const trusting = !this.#trust.trusted;
     this.#trust.confirmed();
     this.#set({ phase: 'ready', task: null, notice: { key: 'saved', during: 'set' } });
-    return this.#send({ command: 'get' });
+    await this.#send({ command: 'get' });
+    if (trusting) await this.listBrowsers();
   }
 
   async #upload() {

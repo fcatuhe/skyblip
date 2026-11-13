@@ -46,7 +46,12 @@ export async function storedBrowserKey() {
   if (!globalThis.indexedDB || !globalThis.crypto?.subtle) return null;
   const database = await opened();
   const kept = await request(database.transaction(STORE).objectStore(STORE).get(ENTRY));
-  if (kept) return browserKeyFrom(kept);
+  const keys = kept ?? (await generated(database));
+  return keys ? browserKeyFrom(keys) : null;
+}
+
+// INFO: fc 13nov26 two tabs may each make a key on a first visit, and the one stored first wins
+async function generated(database) {
   let keys;
   try {
     keys = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
@@ -54,8 +59,13 @@ export async function storedBrowserKey() {
     if (error.name === 'NotSupportedError') return null;
     throw error;
   }
-  await request(database.transaction(STORE, 'readwrite').objectStore(STORE).put(keys, ENTRY));
-  return browserKeyFrom(keys);
+  try {
+    await request(database.transaction(STORE, 'readwrite').objectStore(STORE).add(keys, ENTRY));
+    return keys;
+  } catch (error) {
+    if (error.name !== 'ConstraintError') throw error;
+    return request(database.transaction(STORE).objectStore(STORE).get(ENTRY));
+  }
 }
 
 function opened() {
@@ -81,6 +91,8 @@ export class BrowserTrust {
   #browsers = [];
   #listing = null;
   #waiting = [];
+  #generation = 0;
+  #opened = 0;
 
   constructor({ send, loadKey, onChange }) {
     this.#send = send;
@@ -95,7 +107,7 @@ export class BrowserTrust {
   // INFO: fc 13nov26 claimed and small_mtu also reach the updater, which tells the pilot about the link
   receive(reply) {
     const index = this.#waiting.findIndex(({ matches }) => matches(reply));
-    if (index < 0) return false;
+    if (index < 0) return reply.command === 'acknowledgement' && TRUST_REASONS.has(reply.reason);
     const [waiter] = this.#waiting.splice(index, 1);
     clearTimeout(waiter.timer);
     waiter.resolve(reply);
@@ -103,6 +115,7 @@ export class BrowserTrust {
   }
 
   close() {
+    this.#generation++;
     for (const waiter of this.#waiting.splice(0)) {
       clearTimeout(waiter.timer);
       waiter.resolve(null);
@@ -112,6 +125,7 @@ export class BrowserTrust {
 
   // INFO: fc 13nov26 a key the browser cannot keep is no reason to refuse the unit: the presses still work
   async prove() {
+    this.#opened = this.#generation;
     try {
       this.#key ??= await this.#loadKey();
     } catch (error) {
@@ -168,20 +182,35 @@ export class BrowserTrust {
     this.#onChange({ trust, browsers });
   }
 
-  #ask(command, matches) {
+  // INFO: fc 13nov26 a request from before a reconnect is never sent, so no stale waiter takes a new reply
+  async #ask(command, matches) {
+    if (this.#generation !== this.#opened) return null;
+    let waiter;
     const answered = new Promise(resolve => {
-      const waiter = { matches, resolve };
-      waiter.timer = setTimeout(() => {
-        this.#waiting.splice(this.#waiting.indexOf(waiter), 1);
-        resolve(null);
-      }, ANSWER_WITHIN_MS);
+      waiter = { matches, resolve };
+      waiter.timer = setTimeout(() => this.#drop(waiter, null), ANSWER_WITHIN_MS);
       this.#waiting.push(waiter);
     });
-    return this.#send(command).then(() => answered);
+    try {
+      await this.#send(command);
+    } catch (error) {
+      this.#drop(waiter, null);
+      throw error;
+    }
+    return answered;
+  }
+
+  #drop(waiter, reply) {
+    const index = this.#waiting.indexOf(waiter);
+    if (index >= 0) this.#waiting.splice(index, 1);
+    clearTimeout(waiter.timer);
+    waiter.resolve(reply);
   }
 }
 
 const LINK_REASONS = new Set(['claimed', 'small_mtu']);
+// INFO: fc 13nov26 only this exchange answers these, so a verdict that arrives after its timeout is still ours
+const TRUST_REASONS = new Set(['trusted', 'untrusted', 'forgotten', 'unknown_browser']);
 const PROOF_REFUSALS = new Set(['keyless', 'unknown_command', 'small_mtu', 'claimed']);
 const PROOF_VERDICTS = new Set(['trusted', 'untrusted', 'no_session', 'bad_signature', 'invalid', 'unknown_command', 'small_mtu', 'claimed']);
 const LIST_REFUSALS = new Set(['untrusted', 'unknown_command', 'small_mtu', 'claimed']);

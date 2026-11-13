@@ -19,7 +19,7 @@ class BriefingWordsTest < ActiveSupport::TestCase
   SERVER_REFUSALS = %w[invalid unknown_server_key expired bad_signature other_key revoked_key daily_cap network_cap no_serial rate_limited unreachable failed].freeze
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze
   # INFO: fc 13nov26 a forget the unit never answers is a timeout, which trust.js names
-  BROWSER_NOTICES = %w[untrusted timeout].freeze
+  BROWSER_NOTICES = %w[untrusted invalid timeout].freeze
 
   test "the firmware still refuses with the reasons this test reads" do
     assert_includes refusals("config.cpp", "acknowledge\\(false, "), "not_approved"

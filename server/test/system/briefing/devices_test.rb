@@ -137,6 +137,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_no_selector "[data-unit-target=browsers]"
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
+      assert_selector ".glass-remembers", text: "Allowing it also trusts this browser"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
 
@@ -169,7 +170,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_selector "[data-unit-target=browsers] li", text: "this browser"
 
       page.execute_script("#{unit("00012A")}.takeOff()")
-      assert_selector ".unit-notes", text: "Updates unlock once it lands. This browser may still change its settings."
+      assert_selector ".unit-notes", text: "This browser may still change its settings. The rest unlocks once it lands."
       select "Soft", from: "Alarm volume"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."

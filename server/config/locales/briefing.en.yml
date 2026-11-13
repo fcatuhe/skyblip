@@ -64,6 +64,7 @@ en:
       this_browser: this browser
       unnamed: A browser with no name
       forget: Forget
+      forget_named: "Forget %{name}"
       forget_others: Forget the other browsers
     firmware:
       title: Firmware
@@ -87,6 +88,7 @@ en:
       allow: PRESS TWICE TO ALLOW
       refuse: ONE PRESS REFUSES
       lamp: The lamp blinks green fast.
+      remembers: "Allowing it also trusts this browser: its next saves and updates ask for no press. You can forget it from this page."
     tools:
       back: Back to your devices
       title: Developer tools
@@ -140,7 +142,7 @@ en:
       "off": "off"
       none: none
       in_flight_lock: Changes unlock once it lands.
-      in_flight_lock_trusted: Updates unlock once it lands. This browser may still change its settings.
+      in_flight_lock_trusted: This browser may still change its settings. The rest unlocks once it lands.
       glass_press: "Press the %{product}'s button twice."
       glass_left: "REFUSED IN %{seconds} S"
       glass_waiting: Waiting for its answer.
@@ -225,6 +227,7 @@ en:
       prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
       unknown_command: This firmware is too old to capture. Update it first.
     browsers_notices:
+      invalid: The device could not read which browser to forget. Reload the page and try again.
       unknown_browser: The device no longer trusts that browser.
       untrusted: The device no longer trusts this browser. Reconnect.
       timeout: The device stopped answering. Reconnect and try again.

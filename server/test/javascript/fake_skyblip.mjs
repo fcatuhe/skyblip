@@ -268,6 +268,7 @@ export class FakeSkyblip {
   // INFO: fc 13nov26 browser_link.cpp's order: the nonce, the label, then the signature
   async answerBrowser(command, fields) {
     if (command === 'browser_challenge') {
+      this.forgetSession();
       this.nonce = crypto.getRandomValues(new Uint8Array(16));
       return this.reply({ command, nonce: this.nonce });
     }
@@ -374,8 +375,9 @@ export class FakeSkyblip {
   }
 
   press() {
-    if (['set', 'dfu'].includes(this.pending) && this.proven) this.trust(this.proven);
+    const remembers = ['set', 'dfu'].includes(this.pending) && this.proven;
     this.carryOut();
+    if (remembers) this.trust(this.proven);
   }
 
   carryOut() {

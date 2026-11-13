@@ -64,6 +64,7 @@ fr:
       this_browser: "ce navigateur"
       unnamed: "Un navigateur sans nom"
       forget: "Oublier"
+      forget_named: "Oublier %{name}"
       forget_others: "Oublier les autres navigateurs"
     firmware:
       title: "Firmware"
@@ -83,6 +84,7 @@ fr:
       kept_summary: "Ce que skyblip.eu garde"
       kept: "skyblip.eu garde l\u2019identifiant de sa puce, sa clé, son numéro de série, son firmware et l\u2019adresse internet d\u2019où il vient. Aucun compte."
     glass:
+      remembers: "L\u2019autoriser fait aussi confiance à ce navigateur\u00a0: ses prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
       header: "AUTHORISE"
       allow: "PRESS TWICE TO ALLOW"
       refuse: "ONE PRESS REFUSES"
@@ -140,7 +142,7 @@ fr:
       "off": "coupé"
       none: "aucun"
       in_flight_lock: "Les changements reviennent une fois posé."
-      in_flight_lock_trusted: "Les mises à jour reviennent une fois posé. Ce navigateur peut encore changer ses réglages."
+      in_flight_lock_trusted: "Ce navigateur peut encore changer ses réglages. Le reste revient une fois posé."
       glass_press: "Appuyez deux fois sur le bouton du %{product}."
       glass_left: "REFUSED IN %{seconds} S"
       glass_waiting: "En attente de sa réponse."
@@ -225,6 +227,7 @@ fr:
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y, ou attendez trente secondes."
       unknown_command: "Ce firmware est trop ancien pour une capture. Mettez-le à jour d\u2019abord."
     browsers_notices:
+      invalid: "L\u2019appareil n\u2019a pas compris quel navigateur oublier. Rechargez la page et réessayez."
       unknown_browser: "L\u2019appareil ne fait plus confiance à ce navigateur."
       untrusted: "L\u2019appareil ne fait plus confiance à ce navigateur-ci. Reconnectez."
       timeout: "L\u2019appareil ne répond plus. Reconnectez et réessayez."
