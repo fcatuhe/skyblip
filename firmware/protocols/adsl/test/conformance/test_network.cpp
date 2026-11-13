@@ -130,7 +130,7 @@ adsl::Packet traffic_with(void (*change)(adsl::Traffic&)) {
     adsl::Traffic traffic = reference_traffic();
     change(traffic);
     adsl::Packet packet{};
-    adsl::encode_traffic(packet, traffic);
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
     return packet;
 }
 }  // namespace
@@ -172,7 +172,7 @@ TEST_CASE("ADS-L.4.SRD860.E.1.1: a category Issue 2 added, 14 to 17, goes out as
         adsl::Traffic traffic = reference_traffic();
         traffic.aircraft_category = category;
         adsl::Packet packet{};
-        adsl::encode_traffic(packet, traffic);
+        adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
         CAPTURE(int(category));
         CHECK(packet.protocol_version() == (category >= 14 && category <= 17 ? 1 : 0));
     }

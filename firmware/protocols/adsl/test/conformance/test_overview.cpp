@@ -127,7 +127,7 @@ TEST_CASE("ADS-L.4.SRD860.B.6: a reserved bit a sender filled changes nothing a 
     REQUIRE(heard(noisy, from_noisy));
 
     CHECK(from_noisy.address == from_clean.address);
-    CHECK(from_noisy.address_mapping_table == from_clean.address_mapping_table);
+    CHECK(noisy.address_mapping_table() == clean.address_mapping_table());
     CHECK(from_noisy.latitude_1e7 == from_clean.latitude_1e7);
     CHECK(from_noisy.longitude_1e7 == from_clean.longitude_1e7);
     CHECK(from_noisy.altitude_m == from_clean.altitude_m);

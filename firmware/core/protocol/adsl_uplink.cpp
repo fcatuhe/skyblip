@@ -11,7 +11,6 @@ namespace {
 adsl::Packet traffic_of(const model::AircraftObservation& target, uint8_t timestamp) {
     adsl::Traffic traffic;
     traffic.address = target.address;
-    traffic.address_mapping_table = target.address_mapping_table;
     traffic.timestamp = timestamp;
     traffic.flight_state = target.flight_state;
     traffic.aircraft_category = target.aircraft_category;
@@ -27,7 +26,7 @@ adsl::Packet traffic_of(const model::AircraftObservation& target, uint8_t timest
     traffic.climb_e8 = target.climb_e8;
     traffic.track_c9 = target.track_c9;
     adsl::Packet packet{};
-    adsl::encode_traffic(packet, traffic);
+    adsl::encode_traffic(packet, target.address_mapping_table, traffic);
     return packet;
 }
 

@@ -78,7 +78,8 @@ void write_config_fields(cbor::Writer& writer, const Settings& settings,
                          settings::AirAddress address) {
     writer.add_unsigned(link::config_key::kVersion, settings.version);
     if (address) writer.add_unsigned(link::config_key::kAddress, *address);
-    writer.add_unsigned(link::config_key::kAddressMappingTable, settings::kAddressMappingTable);
+    writer.add_unsigned(link::config_key::kAddressMappingTable,
+                        settings::kSkyblipAddressMappingTable);
     write_settings_fields(writer, settings);
 }
 

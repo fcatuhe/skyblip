@@ -16,7 +16,6 @@ constexpr size_t kTxChipBytes = 2u * (wire::kSyncWordBytes + kFrameBytes);
 inline Traffic reference_traffic() {
     Traffic traffic;
     traffic.address = 0x123456;
-    traffic.address_mapping_table = 6;
     traffic.flight_state = 2;
     traffic.aircraft_category = 4;
     traffic.emergency = 1;
@@ -39,9 +38,8 @@ inline Traffic reference_traffic() {
 inline Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     Traffic traffic = reference_traffic();
     traffic.address = address;
-    traffic.address_mapping_table = table;
     Packet packet{};
-    encode_traffic(packet, traffic);
+    encode_traffic(packet, table, traffic);
     return packet;
 }
 

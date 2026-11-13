@@ -177,10 +177,10 @@ void encode_status(Packet& packet, uint32_t address, uint8_t address_mapping_tab
     packet.set_field(Packet::kTrafficUplinkClientField, report.traffic_uplink_client ? 1 : 0);
 }
 
-void encode_traffic(Packet& packet, const Traffic& traffic) {
+void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic& traffic) {
     packet.reset(Packet::kPayloadTypePosition);
     packet.set_address(traffic.address);
-    packet.set_address_mapping_table(traffic.address_mapping_table);
+    packet.set_address_mapping_table(address_mapping_table);
     packet.timestamp = traffic.timestamp;
     packet.flight_state = traffic.flight_state;
     packet.aircraft_category = traffic.aircraft_category;
@@ -217,7 +217,6 @@ bool decode_traffic(const Packet& packet, Traffic& out) {
     out = Traffic{};
     if (!packet.is_position()) return false;
     out.address = packet.address();
-    out.address_mapping_table = packet.address_mapping_table();
     out.timestamp = packet.timestamp;
     out.flight_state = packet.flight_state;
     out.aircraft_category = packet.aircraft_category;

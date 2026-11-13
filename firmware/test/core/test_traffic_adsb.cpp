@@ -82,22 +82,23 @@ TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merge
     CHECK(source_of(table, table.find(kIcao, 0x3C6586)) == model::Source::Alptas);
 
     table.update(observation(0x3C6586, 6, 100, model::Source::Alptas), 100);
-    table.update(observation(0x3C6586, settings::kAddressMappingTable, 100), 100);
+    table.update(observation(0x3C6586, settings::kSkyblipAddressMappingTable, 100), 100);
     CHECK(table.count() == 3);
 }
 
 // The Bravo in our cockpit, a FLARM set to our ICAO and every ground station all report our own.
 TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both not traffic") {
     TrafficTable table;
-    table.set_own_address(settings::kAddressMappingTable, 0x00ABCD);
+    table.set_own_address(settings::kSkyblipAddressMappingTable, 0x00ABCD);
     table.set_own_icao(0x3C6586);
-    CHECK(table.update(observation(0x00ABCD, settings::kAddressMappingTable, 100), 100) < 0);
+    CHECK(table.update(observation(0x00ABCD, settings::kSkyblipAddressMappingTable, 100), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Alptas), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::AdslUplink), 100) < 0);
     CHECK(table.count() == 0);
 
-    CHECK(table.update(observation(0x3C6586, settings::kAddressMappingTable, 100), 100) >= 0);
+    CHECK(table.update(observation(0x3C6586, settings::kSkyblipAddressMappingTable, 100), 100) >=
+          0);
     CHECK(table.update(observation(0x3C6586, 6, 100, model::Source::Alptas), 100) >= 0);
     CHECK(table.update(observation(0x00ABCD, kIcao, 100, model::Source::Adsb), 100) >= 0);
     CHECK(table.count() == 3);

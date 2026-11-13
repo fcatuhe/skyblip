@@ -20,7 +20,7 @@ adsl::Packet relayed_traffic(uint32_t address, uint8_t timestamp) {
     traffic.address = address;
     traffic.timestamp = timestamp;
     adsl::Packet packet{};
-    adsl::encode_traffic(packet, traffic);
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
     return packet;
 }
 
@@ -143,12 +143,12 @@ TEST_CASE(
     report.conspicuity_transmitted = 0x5A;
     report.traffic_uplink_client = true;
     adsl::Packet packet{};
-    adsl::encode_status(packet, 0x2ABCDE, 58, report);
+    adsl::encode_status(packet, 0x2ABCDE, adsl::kAddressTableFlarm, report);
 
     CHECK(packet.payload_type == 3);
     CHECK((packet.version & 0x0F) == 1);
     CHECK(packet.address() == 0x2ABCDEu);
-    CHECK(packet.address_mapping_table() == 58);
+    CHECK(packet.address_mapping_table() == adsl::kAddressTableFlarm);
     CHECK(wire::read_bits(packet.payload, wire::BitField{40, 4}) == 1);
     CHECK(wire::read_bits(packet.payload, wire::BitField{44, 2}) == 2);
     CHECK(wire::read_bits(packet.payload, wire::BitField{46, 2}) == 1);

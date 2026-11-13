@@ -72,7 +72,7 @@ TEST_CASE("diagnostics config: arming names the settings every other record was 
     diagnostics::Config config{};
     REQUIRE(first_of(records, config));
     CHECK(config.address == settings::address_of(platform::host::Identity::kSerial));
-    CHECK(config.address_mapping_table == settings::kAddressMappingTable);
+    CHECK(config.address_mapping_table == settings::kSkyblipAddressMappingTable);
     CHECK(config.aircraft_type == 9);
     CHECK(config.alarm_volume == 1);
     CHECK(config.battery_offset_mv == -30);

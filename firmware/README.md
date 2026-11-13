@@ -18,6 +18,20 @@ Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for 
 
 The other three are the radio protocols' versions, one per stack under `protocols/`: `protocols/adsl/version.h` for ADS-L, `protocols/adsb/version.h` for ADS-B and `protocols/alptas/version.h` for ALP-TAS, each a `kVersion` string beside the `kSpecification` it implements. A protocol version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. Each product lists the protocols it carries in `products/<product>/PROTOCOLS`, one stack name per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
 
+## Before you ship a copy
+
+This tree is open source, and some of what it compiles in names skyBlip and nobody else. A product built from it replaces each of these with its own before a unit leaves the bench. They are listed here and none of them changes:
+
+| Identity | Where | What a copy does |
+|---|---|---|
+| ADS-L address table 58 and manufacturer prefix 0 | `core/settings/address.h` (`kSkyblipAddressMappingTable`, `kSkyblipManufacturerPrefix`) | applies to the ADS-L registry (`registry@ads-l.aero`) for its own: the registry assigned these to skyBlip, ticket #228794 (`protocols/adsl/README.md`) |
+| USB Product ID 0x5AFE under pid.codes' Vendor ID 0x1209 | `products/skyblip_go/prj.conf`, `products/skyblip_bravo/prj.conf`, `test/twister/meshtracker_x1/prj.conf` | requests its own PID from pid.codes. No host tool, udev rule or WebSerial filter in this repository matches on it |
+| USB manufacturer and product strings `skyBlip`, `skyBlip Go`, `skyBlip Bravo` | the same `prj.conf` files | names its own product |
+| Bluetooth names `skyBlip Go`, `skyBlip Go+`, `skyBlip Bravo`, with the serial behind them | `CONFIG_BT_DEVICE_NAME` in each `prj.conf`, `products/skyblip_go/product.h`, `products/skyblip_bravo/name.h`, `core/identity/` | names its own product, so a companion app does not take it for a skyBlip |
+| Bluetooth service and characteristic UUIDs, base `69c21300-0187-4204-a91d-02eb8858b440` | `hardware/platform/zephyr/skyblip_uuid.h` | draws its own 128-bit base |
+| MCUboot signing keys | `keys/development.pub.pem`, `keys/production.pub.pem` | signs with keys of its own (`keys/README.md`) |
+| The skyblip.eu server key, id `8c06724d` | `keys/server.pub`, compiled in by `cmake/skyblip.cmake` | runs its own activation server with its own key, or leaves `CONFIG_SKYBLIP_ACTIVATION` off |
+
 ## Naming a boolean
 
 A boolean field says which kind of fact it is in its suffix, never in a prefix. `has_` and `have_` both read as "somebody has something" and the two were two lines apart in one struct before this rule existed.

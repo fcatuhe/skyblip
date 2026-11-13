@@ -32,7 +32,7 @@ void TrafficService::tick(uint32_t now_ms) {
     // own-ship has already run this pass, so this is the newest fix there is.
     context_.state.traffic.set_own_reference(context_.state.own);
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
-    context_.state.traffic.set_own_address(settings::kAddressMappingTable,
+    context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
     context_.state.traffic.set_own_icao(settings_.own_icao);
     events::RfEvent event{};

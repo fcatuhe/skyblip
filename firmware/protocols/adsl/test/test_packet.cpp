@@ -342,11 +342,10 @@ TEST_CASE("adsl: a field reads back the middle of the step its code names") {
     }
 }
 
-// The frame a fix becomes in skyBlip, written here from the fields it decodes to.
+// The frame a fix becomes, written here from the fields it decodes to, under the FLARM table.
 TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers already read") {
     adsl::Traffic traffic;
     traffic.address = 0x2ABCDE;
-    traffic.address_mapping_table = 58;
     traffic.timestamp = 48;
     traffic.aircraft_category = 1;
     traffic.emergency = 1;
@@ -364,16 +363,16 @@ TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers al
     traffic.integrity.vertical_accuracy = 2;
     traffic.integrity.velocity_accuracy = 1;
     adsl::Packet packet{};
-    adsl::encode_traffic(packet, traffic);
-    const uint8_t clear[] = {0x00, 0x02, 0xBA, 0x37, 0xAF, 0x0A, 0x30, 0x21,
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    const uint8_t clear[] = {0x00, 0x02, 0x86, 0x37, 0xAF, 0x0A, 0x30, 0x21,
                              0x7B, 0xFA, 0xCF, 0x31, 0x8B, 0x6B, 0x8D, 0x6A,
                              0x8A, 0xC6, 0xC2, 0x00, 0x35, 0x00, 0x00, 0x00};
     CHECK(std::memcmp(packet.data, clear, sizeof(clear)) == 0);
 
     packet.scramble();
     packet.set_crc();
-    const uint8_t air[] = {0x00, 0x5E, 0x6F, 0xC1, 0xDB, 0x84, 0x85, 0x87, 0xBC, 0xBF, 0x23, 0x61,
-                           0x44, 0x47, 0x51, 0xC5, 0xA3, 0x07, 0x3D, 0xE0, 0x15, 0x22, 0x93, 0x11};
+    const uint8_t air[] = {0x00, 0xBF, 0x3E, 0xA7, 0x8B, 0xC4, 0xA8, 0x66, 0x4F, 0xF6, 0x1B, 0xAC,
+                           0x1F, 0xAD, 0x99, 0xC2, 0x3A, 0xE5, 0xC5, 0x25, 0xC0, 0x00, 0x1A, 0xFC};
     CHECK(std::memcmp(packet.data, air, sizeof(air)) == 0);
 
     adsl::Traffic heard;

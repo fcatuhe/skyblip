@@ -42,6 +42,10 @@ The rest are optional, and this device does not take them:
 | F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
 | G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
+## Before you ship a copy
+
+Nothing in this directory names skyBlip, and nothing in it picks an address table for you. `encode_traffic()`, `encode_status()` and `Uplink::encode()` take the F.2.2 table as an argument with no default, because it is a registry assignment and not a constant of the specification. skyBlip transmits under table 58 with manufacturer prefix 0, which the ADS-L registry assigned to skyBlip (ticket #228794), and keeps both in `core/settings/address.h`. A product built from this code applies to the registry (`registry@ads-l.aero`) for its own. The other identities a copy has to replace are listed in `firmware/README.md`.
+
 ## Public API
 
 Everything is in namespace `skyblip::adsl`.

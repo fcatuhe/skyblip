@@ -26,7 +26,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     switch (attempt.payload) {
         case Payload::Position:
             built = protocol::from_own(
-                outgoing_, context_.state.own, address, settings::kAddressMappingTable,
+                outgoing_, context_.state.own, address, settings::kSkyblipAddressMappingTable,
                 context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
             if (built && protocol::lower_to(outgoing_, context_.state.traffic.readable_version(
                                                            context_.state.own,
@@ -34,12 +34,12 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                 context_.state.air.tx_lowered++;
             break;
         case Payload::Status:
-            built = protocol::from_own_status(outgoing_, address, settings::kAddressMappingTable,
-                                              status_report());
+            built = protocol::from_own_status(
+                outgoing_, address, settings::kSkyblipAddressMappingTable, status_report());
             break;
         case Payload::Callsign:
-            built = protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
-                                                settings_.callsign);
+            built = protocol::from_own_callsign(
+                outgoing_, address, settings::kSkyblipAddressMappingTable, settings_.callsign);
             break;
     }
     if (!built) return 0;

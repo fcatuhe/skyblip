@@ -20,7 +20,6 @@ constexpr uint8_t kStationTable = 9;
 adsl::Packet make_target(uint32_t address, uint8_t timestamp = 0) {
     adsl::Traffic traffic;
     traffic.address = address & 0xFFFFFF;
-    traffic.address_mapping_table = adsl::kAddressTableFlarm;
     traffic.timestamp = timestamp;
     traffic.aircraft_category = 4;
     traffic.flight_state = 2;
@@ -36,7 +35,7 @@ adsl::Packet make_target(uint32_t address, uint8_t timestamp = 0) {
     traffic.climb_e8 = -12;
     traffic.track_c9 = 77;
     adsl::Packet packet{};
-    adsl::encode_traffic(packet, traffic);
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
     return packet;
 }
 

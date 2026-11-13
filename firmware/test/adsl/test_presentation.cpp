@@ -98,11 +98,11 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK((packet.address() & 0xFFFFu) == 0x1234u);
     CHECK(packet.table_and_address() == ((9u << 24) | 0xAB1234u));
 
-    CHECK(int(settings::kAddressMappingTable) == 58);
+    CHECK(int(settings::kSkyblipAddressMappingTable) == 58);
     const adsl::Packet ours =
-        traffic_packet(settings::address_of(0x1234), settings::kAddressMappingTable);
+        traffic_packet(settings::address_of(0x1234), settings::kSkyblipAddressMappingTable);
     CHECK(ours.address_mapping_table() == 58);
-    CHECK((ours.address() >> 16) == settings::kManufacturerPrefix);
+    CHECK((ours.address() >> 16) == settings::kSkyblipManufacturerPrefix);
     CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }
 

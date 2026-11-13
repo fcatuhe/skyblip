@@ -222,7 +222,6 @@ struct Integrity {
 
 struct Traffic {
     uint32_t address{0};
-    uint8_t address_mapping_table{0};
     uint8_t timestamp{0};
     uint8_t flight_state{0};
     uint8_t aircraft_category{0};
@@ -240,7 +239,8 @@ struct Traffic {
     Integrity integrity;
 };
 
-void encode_traffic(Packet& packet, const Traffic& traffic);
+// INFO: fc 13nov26 the F.2.2 table is the integrator's registry assignment, so it has no default
+void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic& traffic);
 bool decode_traffic(const Packet& packet, Traffic& out);
 
 enum class ReceiveClass : uint8_t { None = 0, Occasional = 1, Partial = 2, Full = 3 };

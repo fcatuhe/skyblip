@@ -5429,7 +5429,7 @@ The ADS-L position packet end to end, a radio protocol checked with no RF hardwa
 
 - Monte-Carlo BER, detected vs silent miscorrection accounting
 - a Traffic payload is byte for byte the frame other receivers already read
-  > The frame a fix becomes in skyBlip, written here from the fields it decodes to.
+  > The frame a fix becomes, written here from the fields it decodes to, under the FLARM table.
 - a field reads back the middle of the step its code names
 - a flagged bit past the eighth is searched, not wrapped back onto the first
 - a frame no repair fits is left as it arrived

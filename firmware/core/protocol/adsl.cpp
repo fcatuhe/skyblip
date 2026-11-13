@@ -33,7 +33,7 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     adsl::Traffic traffic;
     if (!adsl::decode_traffic(packet, traffic) || !traffic.position_valid) return false;
     out.address = traffic.address;
-    out.address_mapping_table = traffic.address_mapping_table;
+    out.address_mapping_table = packet.address_mapping_table();
     out.aircraft_category = traffic.aircraft_category;
     out.flight_state = traffic.flight_state;
     out.emergency = traffic.emergency;
@@ -104,7 +104,6 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     if (!address) return false;
     adsl::Traffic traffic;
     traffic.address = *address & settings::kAddressMask;
-    traffic.address_mapping_table = address_mapping_table;
 
     // The burst leaves later than the fix was solved, so the position goes
     // forward to the instant the timestamp names. Past the model's bound the
@@ -143,7 +142,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     if (own.climb_valid) traffic.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value;
 
     traffic.track_c9 = to_cordic9(CentiDegrees(where.track_cdeg)).value;
-    adsl::encode_traffic(packet, traffic);
+    adsl::encode_traffic(packet, address_mapping_table, traffic);
     return true;
 }
 

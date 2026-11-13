@@ -64,7 +64,7 @@ model::AircraftObservation neighbour(const model::Ownship& own, int32_t east_m, 
 
 adsl::Packet own_traffic(const model::Ownship& own, const traffic::TrafficTable& table) {
     adsl::Packet packet{};
-    REQUIRE(protocol::from_own(packet, own, 0x5AFE01, settings::kAddressMappingTable,
+    REQUIRE(protocol::from_own(packet, own, 0x5AFE01, settings::kSkyblipAddressMappingTable,
                                kHeavyRotorcraft));
     protocol::lower_to(packet, table.readable_version(own, own.fix_at_ms));
     return packet;

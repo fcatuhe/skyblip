@@ -267,7 +267,8 @@ void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
     const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
     uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
     if (uplink_.encode(relayed, relayed_count, utc_s, timing::kGroundEmitStartMs,
-                       kGroundStationAddress, settings::kAddressMappingTable, packet) != Status::Ok)
+                       kGroundStationAddress, settings::kSkyblipAddressMappingTable,
+                       packet) != Status::Ok)
         return;
     uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
     const size_t burst_bytes = adsl::encode_o_band(packet, burst);
