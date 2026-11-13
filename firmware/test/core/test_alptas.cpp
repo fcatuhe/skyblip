@@ -318,10 +318,10 @@ TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
 
 TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") {
     // Invertible both ways: unknown, glider, rotorcraft, skydiver, paraglider,
-    // powered, balloon, UAV. The rest of the FLARM taxonomy is many-to-one into
+    // powered, jet, balloon, UAV. The rest of the FLARM taxonomy is many-to-one into
     // ADS-L (tow plane and drop plane are both "light", gyrocopter is
     // "rotorcraft", airship is "balloon"), so only one representative survives.
-    static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x7, 0x8, 0xB, 0xD};
+    static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x7, 0x8, 0x9, 0xB, 0xD};
     for (uint8_t type : kInvertible) {
         CAPTURE(type);
         CHECK(int(adsl_category_to_alptas_type(alptas_type_to_adsl_category(type))) == int(type));
