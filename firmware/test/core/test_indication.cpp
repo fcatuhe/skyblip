@@ -40,6 +40,7 @@ Situation everything_at_once() {
 // duty that nothing measures is a comment.
 struct LampRig {
     Policy policy{};
+    timing::ClockState clock{};
     indication::Lamp shown{indication::Lamp::None};
     uint32_t shows{0};
     uint32_t lit_ms{0};
@@ -47,7 +48,7 @@ struct LampRig {
     uint32_t flashes{0};
 
     void step(const Situation& situation, uint32_t now_ms) {
-        const Command command = policy.update(situation, now_ms);
+        const Command command = policy.update(situation, now_ms, clock);
         if (shown != indication::Lamp::None) lit_ms += kStepMs;
         total_ms += kStepMs;
         if (!command.changed) return;
@@ -62,6 +63,18 @@ struct LampRig {
 
     uint32_t duty_permille() const { return total_ms == 0 ? 0 : 1000u * lit_ms / total_ms; }
 };
+
+// Second 00 of a UTC minute.
+constexpr uint64_t kMinuteMs = 1699999980000ull;
+
+timing::ClockState locked_at(uint64_t utc_ms) {
+    timing::ClockState clock{};
+    clock.utc_valid = true;
+    clock.pps_locked = true;
+    clock.utc_s = static_cast<uint32_t>(utc_ms / 1000);
+    clock.since_edge_ms = static_cast<uint32_t>(utc_ms % 1000);
+    return clock;
+}
 
 }  // namespace
 
@@ -294,17 +307,16 @@ TEST_CASE("indication: a change shows itself at once, not at the end of the cycl
 
 // Side by side in one cockpit, a Go and its Bravo used to wink at unrelated offsets.
 TEST_CASE("indication: two units locked to UTC wink together, whenever each condition began") {
-    constexpr uint64_t kUtcAtZeroMs = 1700000000000ull + 1234;
+    constexpr uint64_t kUtcAtZeroMs = kMinuteMs + 1234;
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;
     situation.fix_valid = true;
-    situation.utc_locked = true;
 
     LampRig early;
     LampRig late;
     int together = 0;
     for (uint32_t now_ms = 0; now_ms <= 30000; now_ms += kStepMs) {
-        situation.utc_ms = kUtcAtZeroMs + now_ms;
+        early.clock = late.clock = locked_at(kUtcAtZeroMs + now_ms);
         early.step(situation, now_ms);
         if (now_ms >= 1700) late.step(situation, now_ms);
         if (now_ms < 10000) continue;
@@ -317,19 +329,49 @@ TEST_CASE("indication: two units locked to UTC wink together, whenever each cond
     CHECK(together == 7 * 3);
 }
 
+TEST_CASE("indication: every row's flash starts on second 00 of the UTC minute") {
+    Situation alive{};
+    alive.power_level = power::PowerLevel::Normal;
+    alive.fix_valid = true;
+    Situation linked = alive;
+    linked.linked = true;
+    Situation capturing = alive;
+    capturing.capturing = true;
+    Situation prompting = alive;
+    prompting.prompting = true;
+    Situation low{};
+    low.power_level = power::PowerLevel::Low;
+    Situation critical{};
+    critical.power_level = power::PowerLevel::Critical;
+    Situation alarm{};
+    alarm.alarm_level = Level::Advisory;
+
+    for (const Situation& situation : {alive, linked, capturing, prompting, low, critical, alarm}) {
+        LampRig lamp;
+        for (uint32_t now_ms = 0; now_ms < 10000; now_ms += kStepMs) {
+            lamp.clock = locked_at(kMinuteMs - 10000 + now_ms);
+            lamp.step(situation, now_ms);
+        }
+        CAPTURE(to_string(lamp.policy.condition()));
+        CHECK(lamp.shown == indication::Lamp::None);
+        lamp.clock = locked_at(kMinuteMs);
+        lamp.step(situation, 10000);
+        CHECK(lamp.shown != indication::Lamp::None);
+    }
+}
+
 TEST_CASE("indication: the grid takes over after the change's own flash, and cuts no flash short") {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;
     situation.fix_valid = true;
-    situation.utc_locked = true;
     // The grid's wink is 1500 ms away when the condition begins.
-    constexpr uint64_t kGridHalfwayMs = 1699999999500ull;
+    constexpr uint64_t kGridHalfwayMs = kMinuteMs + 1500;
 
     LampRig lamp;
     uint32_t lit_run_ms = 0;
     bool cut_short = false;
     for (uint32_t now_ms = 0; now_ms <= 10000; now_ms += kStepMs) {
-        situation.utc_ms = kGridHalfwayMs + now_ms;
+        lamp.clock = locked_at(kGridHalfwayMs + now_ms);
         lamp.step(situation, now_ms);
         if (now_ms == 0) CHECK(lamp.shown == indication::Lamp::Green);
         if (lamp.shown != indication::Lamp::None) {
@@ -349,17 +391,16 @@ TEST_CASE("indication: a lost PPS lock keeps the rhythm it was winking on") {
     Situation situation{};
     situation.power_level = power::PowerLevel::Normal;
     situation.fix_valid = true;
-    situation.utc_locked = true;
-    constexpr uint64_t kGridHalfwayMs = 1699999999500ull;
+    constexpr uint64_t kGridHalfwayMs = kMinuteMs + 1500;
 
     LampRig lamp;
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += kStepMs) {
-        situation.utc_ms = kGridHalfwayMs + now_ms;
+        lamp.clock = locked_at(kGridHalfwayMs + now_ms);
         lamp.step(situation, now_ms);
     }
     REQUIRE(lamp.policy.on_utc_grid());
 
-    situation.utc_locked = false;
+    lamp.clock = timing::ClockState{};
     lamp.run(situation, 5010, 7490);
     CHECK(lamp.shown == indication::Lamp::None);
     CHECK_FALSE(lamp.policy.on_utc_grid());

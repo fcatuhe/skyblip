@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "core/power/cutoff.h"
+#include "core/timing/slot.h"
 #include "core/traffic/alarm.h"
 #include "ports/indicator.h"
 
@@ -72,7 +73,7 @@ constexpr int kRowCount = static_cast<int>(Condition::Count);
 inline constexpr Row kTable[kRowCount] = {
     {Condition::Off, {indication::Lamp::None, 0, 0}, Budget::Dark, "dark: off, or on its way down"},
     {Condition::Alarm,
-     {indication::Lamp::Red, 45, 135},
+     {indication::Lamp::Red, 50, 150},
      Budget::Transient,
      "red, fast flicker: a traffic advisory stands"},
     {Condition::Prompt,
@@ -194,6 +195,19 @@ constexpr bool every_row_flashes_at_least_once() {
 
 static_assert(every_row_flashes_at_least_once(), "a row whose cycle holds no flash");
 
+// INFO: fc 12nov26 every row's cycle divides the UTC minute, so a flash starts on second 00
+constexpr uint32_t kUtcGridMs = 60000;
+
+constexpr bool every_cycle_divides_the_minute() {
+    for (int i = 0; i < kRowCount; i++) {
+        const uint32_t cycle = cycle_ms(kTable[i].indication);
+        if (cycle != 0 && kUtcGridMs % cycle != 0) return false;
+    }
+    return true;
+}
+
+static_assert(every_cycle_divides_the_minute(), "a row whose flashes drift off second 00");
+
 const Indication& indication_for(Condition condition);
 const char* to_string(Condition condition);
 const char* to_string(indication::Lamp lamp);
@@ -222,9 +236,6 @@ struct Situation {
     bool pairing{false};
     bool linked{false};
     bool capturing{false};
-    // INFO: fc 12nov26 PPS-locked UTC, so every unit in a cockpit winks on the same grid
-    bool utc_locked{false};
-    uint64_t utc_ms{0};
 };
 
 constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;
@@ -242,7 +253,7 @@ struct Command {
 
 class Policy {
    public:
-    Command update(const Situation& situation, uint32_t now_ms);
+    Command update(const Situation& situation, uint32_t now_ms, const timing::ClockState& clock);
 
     Condition condition() const { return condition_; }
     // What is lit right now, gaps included: None during the off phase of a wink.
@@ -250,8 +261,8 @@ class Policy {
     bool on_utc_grid() const { return on_grid_; }
 
    private:
-    uint32_t into_cycle_ms(const Situation& situation, const Indication& indication,
-                           uint32_t now_ms);
+    uint32_t into_cycle_ms(const Indication& indication, uint32_t now_ms,
+                           const timing::ClockState& clock);
 
     Condition condition_{Condition::Off};
     indication::Lamp shown_{indication::Lamp::None};

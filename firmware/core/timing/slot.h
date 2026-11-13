@@ -4,6 +4,7 @@
 #define SKYBLIP_CORE_TIMING_SLOT_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/model/band.h"
 
@@ -102,6 +103,9 @@ constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
 
 // Unlocked since an edge recent enough that the slot map still flies on it, receive only.
 bool in_pps_holdover(const ClockState& clock);
+
+// INFO: fc 12nov26 UTC to the millisecond, none without a PPS lock and a dated second
+std::optional<uint64_t> utc_ms(const ClockState& clock);
 
 struct SlotPlan {
     SlotState state{SlotState::UplinkRxOBand};

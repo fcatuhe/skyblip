@@ -76,7 +76,8 @@ Condition condition_for(const Situation& situation) {
     return situation.fix_valid ? Condition::Alive : Condition::NoFix;
 }
 
-Command Policy::update(const Situation& situation, uint32_t now_ms) {
+Command Policy::update(const Situation& situation, uint32_t now_ms,
+                       const timing::ClockState& clock) {
     const Condition wanted = condition_for(situation);
     if (wanted != condition_ || !started_) {
         condition_ = wanted;
@@ -90,7 +91,7 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
 
     const Indication& indication = indication_for(condition_);
     const bool lit = indication.lamp != indication::Lamp::None && indication.on_ms != 0 &&
-                     lit_at(indication, into_cycle_ms(situation, indication, now_ms));
+                     lit_at(indication, into_cycle_ms(indication, now_ms, clock));
 
     Command command{};
     command.lamp = lit ? indication.lamp : indication::Lamp::None;
@@ -100,15 +101,16 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
 }
 
 // INFO: fc 12nov26 the grid is joined only where both phases are dark, so no flash is cut short
-uint32_t Policy::into_cycle_ms(const Situation& situation, const Indication& indication,
-                               uint32_t now_ms) {
+uint32_t Policy::into_cycle_ms(const Indication& indication, uint32_t now_ms,
+                               const timing::ClockState& clock) {
     const uint32_t cycle = cycle_ms(indication);
     if (cycle == 0) return 0;
     uint32_t into = (now_ms - cycle_start_ms_) % cycle;
-    if (!situation.utc_locked) {
+    const std::optional<uint64_t> utc_ms = timing::utc_ms(clock);
+    if (!utc_ms) {
         on_grid_ = false;
     } else {
-        const uint32_t on_grid = static_cast<uint32_t>(situation.utc_ms % cycle);
+        const uint32_t on_grid = static_cast<uint32_t>(*utc_ms % kUtcGridMs) % cycle;
         if (!on_grid_ && !lit_at(indication, into) && !lit_at(indication, on_grid)) on_grid_ = true;
         if (on_grid_) into = on_grid;
     }

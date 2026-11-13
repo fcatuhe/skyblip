@@ -190,7 +190,7 @@ class Product {
     void show_refusal(uint32_t now_ms) {
         indication::Situation refused{};
         refused.power_level = power::PowerLevel::Critical;
-        const indication::Command command = refusal_lamp_.update(refused, now_ms);
+        const indication::Command command = refusal_lamp_.update(refused, now_ms, state_.clock);
         if (command.changed) roles_.indicator.show(command.lamp);
     }
 
