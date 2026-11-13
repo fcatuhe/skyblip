@@ -8,10 +8,11 @@ const KEPT_LINES = 2000
 const ARROWS = { in: "<", out: ">" }
 
 export default class extends Controller {
-  static targets = ["panel", "tape", "follow"]
-  static values = { slug: String, opened: String, closed: String, failed: String }
+  static targets = ["panel", "tape", "pause"]
+  static values = { slug: String, opened: String, closed: String, failed: String, resume: String }
 
   connect() {
+    this.held = []
     this.session = joinFleet(() => this.#listen())
     this.fleet = this.session.fleet
     this.#listen()
@@ -22,8 +23,17 @@ export default class extends Controller {
     this.session.leave()
   }
 
+  // INFO: fc 14nov26 a paused tape holds what arrives, so the line being read never moves under the reader
+  pause() {
+    this.paused = !this.paused
+    if (!this.paused) this.#show(...this.held.splice(0))
+    this.#pauseLabel()
+  }
+
   clear() {
     this.tapeTarget.replaceChildren()
+    this.held = []
+    this.#pauseLabel()
   }
 
   // INFO: fc 14nov26 the tap hangs on the device and not on its link, so it hears a reconnect from its first frame
@@ -42,9 +52,25 @@ export default class extends Controller {
     if (line.bad) row.classList.add("is-bad")
     const at = Object.assign(document.createElement("span"), { className: "terminal-at", textContent: this.#now() })
     row.append(at, ` ${this.#text(line)}\n`)
-    this.tapeTarget.append(row)
+    if (this.paused) {
+      this.held.push(row)
+      if (this.held.length > KEPT_LINES) this.held.shift()
+      this.#pauseLabel()
+    } else {
+      this.#show(row)
+    }
+  }
+
+  #show(...rows) {
+    this.tapeTarget.append(...rows)
     while (this.tapeTarget.childElementCount > KEPT_LINES) this.tapeTarget.firstElementChild.remove()
-    if (this.followTarget.checked) this.tapeTarget.scrollTop = this.tapeTarget.scrollHeight
+    this.tapeTarget.scrollTop = this.tapeTarget.scrollHeight
+  }
+
+  #pauseLabel() {
+    const button = this.pauseTarget
+    button.setAttribute("aria-pressed", String(Boolean(this.paused)))
+    button.textContent = this.paused ? this.resumeValue.replace("%{count}", this.held.length) : button.dataset.label
   }
 
   #text({ event, endpoint, direction, text }) {

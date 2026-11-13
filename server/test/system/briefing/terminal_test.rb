@@ -14,6 +14,15 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
       assert_selector ".terminal-line.is-config.is-in", text: 'config < {"command":"status","flight":"ground"'
       screen "40-terminal"
 
+      click_button "Pause"
+      page.execute_script("#{unit("00012A")}.sentence('$PGRMZ,1000,f,3*1A')")
+      assert_button "Resume (1 new)"
+      assert_no_selector ".terminal-line", text: "$PGRMZ"
+      screen "41-terminal-paused"
+      click_button "Resume (1 new)"
+      assert_selector ".terminal-line.is-nmea", text: "$PGRMZ,1000,f,3*1A"
+      assert_button "Pause"
+
       uncheck "nmea"
       assert_no_selector ".terminal-line.is-nmea"
       assert_selector ".terminal-line.is-config"

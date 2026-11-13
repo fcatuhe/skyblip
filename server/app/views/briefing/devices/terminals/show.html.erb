@@ -9,7 +9,8 @@
       terminal_slug_value: @slug,
       terminal_opened_value: t("briefing.terminal.opened"),
       terminal_closed_value: t("briefing.terminal.closed"),
-      terminal_failed_value: t("briefing.terminal.failed")
+      terminal_failed_value: t("briefing.terminal.failed"),
+      terminal_resume_value: t("briefing.terminal.resume")
     } do %>
   <%= link_to t("briefing.firmware.back", name:), briefing_device_path(slug: @slug), class: "unit-back" %>
   <%= render "briefing/devices/header", name: t("briefing.terminal.title") %>
@@ -29,8 +30,10 @@
           <label><input type="checkbox" value="<%= endpoint %>" checked> <%= endpoint %></label>
         <% end %>
       </fieldset>
-      <label><input type="checkbox" data-terminal-target="follow" checked> <%= t("briefing.terminal.follow") %></label>
-      <button type="button" class="button-app button-app--small button-app--quiet" data-action="terminal#clear"><%= t("briefing.terminal.clear") %></button>
+      <span class="terminal-actions">
+        <button type="button" class="button-app button-app--small button-app--quiet" data-terminal-target="pause" data-action="terminal#pause" data-label="<%= t("briefing.terminal.pause") %>" aria-pressed="false"><%= t("briefing.terminal.pause") %></button>
+        <button type="button" class="button-app button-app--small button-app--quiet" data-action="terminal#clear"><%= t("briefing.terminal.clear") %></button>
+      </span>
     </div>
     <div class="terminal-tape" data-terminal-target="tape" role="log" aria-live="off" aria-label="<%= t("briefing.terminal.tape") %>" tabindex="0"></div>
   </section>

@@ -10,7 +10,7 @@
   }
   .terminal-bar label { display: inline-flex; align-items: center; gap: var(--space-inline-2xs); }
   .terminal-bar input { accent-color: var(--blip); }
-  .terminal-bar button { margin-inline-start: auto; }
+  .terminal-actions { display: flex; gap: var(--space-inline-s); margin-inline-start: auto; }
 
   .terminal-endpoints {
     display: flex;
