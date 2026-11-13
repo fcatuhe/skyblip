@@ -85,9 +85,9 @@ int nmea_finish(char* sentence, int body_bytes) {
 }
 
 uint8_t adsl_category_to_alptas_type(uint8_t adsl_category) {
-    static const uint8_t kMap[18] = {0x0, 0x8, 0x8, 0x3, 0x1, 0xB, 0xC, 0x7, 0x4,
-                                     0x8, 0x3, 0xD, 0xD, 0xD, 0x0, 0x0, 0x0, 0x0};
-    return adsl_category < 18 ? kMap[adsl_category] : 0;
+    static const uint8_t kTypeOfCategory[18] = {0x0, 0x8, 0x9, 0x3, 0x1, 0xB, 0x8, 0x7, 0x4,
+                                                0x3, 0x3, 0xD, 0xD, 0xD, 0xD, 0x3, 0x6, 0x7};
+    return adsl_category < 18 ? kTypeOfCategory[adsl_category] : 0;
 }
 
 // INFO: fc 03aug26 SkyDemon draws nothing at IDType 0, so ICAO is 1 and all else 2 (README.md)

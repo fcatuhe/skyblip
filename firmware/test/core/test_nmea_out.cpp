@@ -168,7 +168,7 @@ TEST_CASE(
     char buffer[128];
     const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "DLH4AB");
     const std::string sentence(buffer, written);
-    CHECK(sentence == "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,-87*4A\r\n");
+    CHECK(sentence == "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,9,0,1,-87*4B\r\n");
     CHECK(data_fields(sentence) == 14);
     CHECK(checksum_ok(sentence));
 }
@@ -182,7 +182,7 @@ TEST_CASE("nmea: PFLAA leaves RSSI empty for an ADS-B target placed by a frame w
     char buffer[128];
     const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "DLH4AB");
     CHECK(std::string(buffer, written) ==
-          "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,*68\r\n");
+          "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,9,0,1,*69\r\n");
 }
 
 // A source other than ADS-B keeps the eleven fields the Go always sent, which EFBs already read.
@@ -325,9 +325,20 @@ TEST_CASE("nmea: PFLAU's TX field follows the transmitter's own gate, not the cl
     CHECK(std::string(buffer, sending).rfind("$PFLAU,2,1,2,1,0,", 0) == 0);
 }
 
-TEST_CASE("nmea: category mapping ADS-L glider -> ALP-TAS 1") {
-    CHECK(adsl_category_to_alptas_type(4) == 0x1);  // glider
-    CHECK(adsl_category_to_alptas_type(3) == 0x3);  // heli
+// core/protocol/README.md argues each row against ADS-L G.1.3 and FTD-012 section 8.2.
+TEST_CASE("nmea: every ADS-L category reaches PFLAA as the FLARM aircraft type it names") {
+    const uint8_t expected[18] = {0x0, 0x8, 0x9, 0x3, 0x1, 0xB, 0x8, 0x7, 0x4,
+                                  0x3, 0x3, 0xD, 0xD, 0xD, 0xD, 0x3, 0x6, 0x7};
+    for (uint8_t category = 0; category < 18; category++) {
+        CAPTURE(int(category));
+        CHECK(int(adsl_category_to_alptas_type(category)) == int(expected[category]));
+    }
+}
+
+TEST_CASE("nmea: an ADS-L category past G.1.3's table reaches PFLAA as no type") {
+    CHECK(adsl_category_to_alptas_type(18) == 0x0);
+    CHECK(adsl_category_to_alptas_type(31) == 0x0);
+    CHECK(adsl_category_to_alptas_type(0xFF) == 0x0);
 }
 
 // oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658 is the source for
