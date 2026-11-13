@@ -366,6 +366,7 @@ Result<PeerObservation> read_observation(ConstByteSpan frame) {
     observation.address = address.value();
     observation.address_mapping_table = settings::kIcaoAddressMappingTable;
     observation.source = model::Source::Adsb;
+    observation.rssi_valid = false;
     if (!read_position(reader, observation) || !read_altitudes(reader, observation) ||
         !read_velocity(reader, observation) || !read_identity(reader, observation) ||
         !read_callsign(reader, out))

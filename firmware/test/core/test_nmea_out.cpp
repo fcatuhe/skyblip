@@ -159,15 +159,29 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
 }
 
 // NoTrack is FTD-012's data port version 8, Source and RSSI version 9 (sections 6.4, 6.5 and 8.2).
-TEST_CASE("nmea: PFLAA marks an ADS-B target with NoTrack 0, Source 1 and an empty RSSI") {
+TEST_CASE(
+    "nmea: PFLAA marks an ADS-B target with NoTrack 0, Source 1 and the level that placed it") {
     const auto own = own_at(481000000, 81000000, 1000);
-    const auto target = heard(model::Source::Adsb, 481100000, 81100000, 1500);
+    auto target = heard(model::Source::Adsb, 481100000, 81100000, 1500);
+    target.rssi_dbm = -87;
     char buffer[128];
     const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "DLH4AB");
     const std::string sentence(buffer, written);
-    CHECK(sentence == "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,*68\r\n");
+    CHECK(sentence == "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,-87*4A\r\n");
     CHECK(data_fields(sentence) == 14);
     CHECK(checksum_ok(sentence));
+}
+
+// The LR2021 levels only the newest frame of a FIFO read, so a position may arrive with none.
+TEST_CASE("nmea: PFLAA leaves RSSI empty for an ADS-B target placed by a frame with no level") {
+    const auto own = own_at(481000000, 81000000, 1000);
+    auto target = heard(model::Source::Adsb, 481100000, 81100000, 1500);
+    target.rssi_dbm = -87;
+    target.rssi_valid = false;
+    char buffer[128];
+    const int written = format_pflaa(buffer, sizeof(buffer), own, target, 0, "DLH4AB");
+    CHECK(std::string(buffer, written) ==
+          "$PFLAA,0,1113,743,500,1,3C6586!DLH4AB,90,,62,5.0,8,0,1,*68\r\n");
 }
 
 // A source other than ADS-B keeps the eleven fields the Go always sent, which EFBs already read.
