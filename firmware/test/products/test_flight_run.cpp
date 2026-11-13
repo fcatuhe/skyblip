@@ -69,12 +69,11 @@ TEST_CASE("flight run: a parked unit keeps the ground cadence on air while the g
 
     CHECK(simulator.product().state().flight.running);
     const Said said = said_on_air(simulator.world().air());
-    // a position and a name every ten seconds, a Status every twenty, one more for the window's
-    // ends
+    // a position, a Status and a name every ten seconds, one more for the window's ends
     CHECK(said.positions >= 3);
     CHECK(said.positions <= 4);
-    CHECK(said.statuses >= 1);
-    CHECK(said.statuses <= 2);
+    CHECK(said.statuses >= 3);
+    CHECK(said.statuses <= 4);
     CHECK(said.names >= 3);
     CHECK(said.names <= 4);
 }

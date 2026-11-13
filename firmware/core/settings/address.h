@@ -14,6 +14,8 @@ constexpr uint8_t kManufacturerPrefix = 0x00;
 
 using AirAddress = std::optional<uint32_t>;
 
+constexpr uint32_t kSerialMask = 0x0000FFFFu;
+
 constexpr uint32_t address_of(uint16_t serial) {
     return (static_cast<uint32_t>(kManufacturerPrefix) << 16) | serial;
 }

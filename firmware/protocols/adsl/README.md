@@ -62,7 +62,7 @@ Everything is in namespace `skyblip::adsl`.
 
 `on_schedule()` says whether a second carries Traffic: every second airborne, and on the ground the one second of ten the integrator hands it, so the ground population spreads by the integrator's choice of second and a unit that reboots comes back to the same one. `channel_in()` is §C.2.5's alternation from one transmission to the next, counted by the clock, `(utc_s / period) & 1`: counting a device's own transmissions instead would put it out of step with the grid the first time anything refused a burst.
 
-The rest is the integrator's, and skyBlip's choices are in `core/timing/README.md`: which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the channel-access route a device declares in place of §D.3's listen-before-talk.
+The rest is the integrator's, and skyBlip's choices are in `core/timing/README.md`: which second of ten a unit owns (its serial's last digit), the instant drawn inside the direct slot, where the Status goes (every 10 s, on the channel the airborne position leaves free), and the channel-access route a device declares in place of §D.3's listen-before-talk.
 
 ## The Status payload
 

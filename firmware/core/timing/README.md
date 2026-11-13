@@ -36,7 +36,7 @@ That number answers a question the counters cannot: a device hearing nothing at 
 
 EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what this product declares in place of §D.3's listen-before-talk. `AirTime` is the evidence: sixty one-minute buckets on a ring that turns by elapsed time, so the hour that straddles `milliseconds()`'s 49.7-day wrap is an hour like any other.
 
-`Transmitter` asks `AirTime` before every burst and spends it after. At the design rate of one 5 ms position burst per second, a Status every twenty seconds and a name every ten (below), we sit at 0.575 of the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
+`Transmitter` asks `AirTime` before every burst and spends it after. At the design rate of one 5 ms position burst per second, a Status and a name every ten seconds (below), we spend 6 ms a second and sit at 0.6 of the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
 
 ## What the dwell map is for
 
@@ -46,21 +46,31 @@ EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what thi
 
 ## The seconds each burst owns
 
-Each address owns one second of ten, its ground second, `g = hash(address) % 10`, which `adsl::on_schedule()` is handed. The position goes out in it on the ground, and in every second airborne. The Status (§G.2) takes the ground second every other time it comes round, and the callsign takes the second half a period away from it:
+Each unit owns one second of ten, its ground second, `g = serial % 10`, which `adsl::on_schedule()` is handed. The serial is the low 16 bits of the address, and skyblip.eu hands serials out densely from 1, so a fleet spreads exactly evenly over the ten seconds and ten consecutive serials never share one. The instant inside the second is still drawn from a hash of the address and the UTC second, so two units that do share a second still do not share an instant. The position goes out in the ground second on the ground, and in every second airborne. The Status (§G.2) takes two seconds of every twenty, and the callsign takes the second half a period from the ground second:
 
 | Second | Position | Extra burst | Where the extra burst goes |
 |---|---|---|---|
-| `utc_s % 20 == g` | yes, on the ground and airborne | Status | the direct slot of the dwell `(utc_s / 20) & 1`, so 868.2 and 868.4 MHz by turns |
+| `utc_s % 20` is `(g + 2) % 20` or `(g + 13) % 20` | airborne only | Status | the direct slot of dwell `1 - (utc_s & 1)`, the channel the airborne position leaves free |
 | `utc_s % 10 == (g + 5) % 10` | airborne only | callsign | slot 1's tail, 1000 to 1193 ms, on 868.4 MHz |
+| `utc_s % 10 == g` | on the ground and airborne | none | |
 | any other | airborne only | none | |
 
-§G.2.11 asks for a Status at least every 20 s, and `kStatusPeriodS` is exactly 20. The callsign is outside ADS-L's timing altogether (below), so it keeps its own rate, once every ten seconds, and keeps out of the seconds ADS-L uses on the ground: five seconds after the ground position, it is the only burst of ours in that second on the ground. A receiver keeps a ground target it hears every ten seconds for longer than that, or the target would blink, so the name still finds the target it belongs to. On the ground the bursts are spread out instead of stacked: a position every ten seconds, a Status beside every other one, and a name halfway between them. The air time is one position a second airborne, a Status every twenty seconds and a name every ten, 0.575 of the allowance.
+A regular minute for g = 0, A being 868.2 MHz and B 868.4 MHz:
 
-§C.2.5 makes Status alternate channels just as Traffic does, and dwell slot n carries channel n, so `Transmitter::status_slot_in()` is `(utc_s / kStatusPeriodS) & 1` and `slot_in()` is `adsl::channel_in()`. On the ground the position of the Status second always rides slot 0, since `(20k + g) / 10` is even. So the Status shares slot 0 with it every other time and has slot 1 to itself the rest. Airborne the position's slot is the parity of the second, and the two meet in one dwell every other time as well.
+| Second | Airborne | On the ground |
+|---|---|---|
+| 0, 20, 40 | position A | position A |
+| 2, 22, 42 | position A, Status B | Status B |
+| 5 to 55 by 10 | position, name B | name B |
+| 10, 30, 50 | position A | position B |
+| 13, 33, 53 | position B, Status A | Status A |
+| any other | position, A in an even second, B in an odd one | |
 
-The Status instant is drawn from `hash(hash(address ^ hash(utc_s)))`, one more round of the hash the position's own instant is drawn from, over the same window as the position's, less the 13 instants that would start within `kAirTimeMs + kCompletionGuardMs` of the position's own, so the executor's two bursts never overlap when they share a dwell (`Transmitter::status_instant_in()`). No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the Status and the callsign never share a second, and the callsign keeps slot 1's tail to itself. `test/core/test_transmit.cpp` checks both over 1024 addresses.
+§G.2.11 asks for a Status at least every 20 s, and `kStatusPeriodS` is exactly 20. A Status goes out every 10 s overall, so each channel carries one every 20 s and a receiver that listens on one channel only still gets §G.2.11's rate. The gaps alternate 11 and 9 s (`kStatusOffsetsS`). An odd gap flips the parity of the second, so "the other channel from the airborne position" alternates by itself as §C.2.5 asks, one rule for the ground and the air. On the ground every burst has a second of its own, at least 2 s from the next: the position at g, the Status at g + 2 or g + 3, the name at g + 5, counted mod 10. The callsign is outside ADS-L's timing altogether (below), so it keeps its own rate, once every ten seconds. A receiver keeps a ground target it hears every ten seconds for longer than that, or the target would blink, so the name still finds the target it belongs to. The air time is one position a second airborne, a Status and a name every ten seconds, 6 ms a second, 0.6 of the allowance.
 
-The alternation is the clock's, as it is for the position, so a Status refused for an hour's air time spent or a dwell not armed leaves a 40-second gap (`protocols/adsl/README.md`).
+Airborne the Status never shares a dwell with the position, so its instant is drawn over the whole window from `hash(hash(address ^ hash(utc_s)))`, one more round of the hash the position's own instant is drawn from, with no instants blocked (`Transmitter::status_instant_in()`). No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the name's second is never a Status second, and airborne in an odd name second slot 1 carries the position and then the name. `test/core/test_transmit.cpp` checks the cadence on each channel, the alternation, the two-burst bound and the ground spacing over 1024 addresses.
+
+The alternation is the clock's, as it is for the position, so a Status refused for an hour's air time spent or a dwell not armed leaves a gap of 20 s on that channel and 10 s on the band.
 
 ## The tail names us, once every ten seconds
 

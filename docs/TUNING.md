@@ -188,7 +188,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHopGuardUs` | `kHopGuardMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
-| `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | [README](../firmware/core/timing/README.md) argues it |
 | `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a target is hex |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | - |

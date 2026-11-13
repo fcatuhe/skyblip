@@ -22,6 +22,8 @@ class Transmitter {
    public:
     static constexpr uint32_t kAirTimeMs = adsl::kAirTimeMs;
     static constexpr uint32_t kStatusPeriodS = adsl::kStatusPeriodS;
+    // INFO: fc 13nov26 two Status a cycle, 11 s then 9 s apart, one on each channel
+    static constexpr uint32_t kStatusOffsetsS[2] = {2, 13};
     // INFO: fc 20sep26 a name never changes in flight, this only bounds how long a target is hex
     static constexpr uint32_t kCallsignPeriodS = 10;
     static constexpr int32_t kFixMaxAgeMs = adsl::kFixMaxAgeMs;
@@ -56,16 +58,15 @@ class Transmitter {
     const AirTime& air_time() const { return air_time_; }
     static uint32_t period_s(bool airborne) { return adsl::period_s(airborne); }
     static int slot_in(uint32_t utc_s, bool airborne) { return adsl::channel_in(utc_s, airborne); }
+    // INFO: fc 13nov26 serial % 10, and skyblip.eu hands out serials densely from 1
     uint32_t ground_second() const;
-    uint32_t status_second() const { return ground_second(); }
-    // INFO: fc 13nov26 half a ground period after the address's own second, which the Status holds
+    bool status_second(uint32_t utc_s) const;
+    // INFO: fc 13nov26 half a ground period after the ground second, so never a Status second
     uint32_t callsign_second() const {
         return (ground_second() + kCallsignPeriodS / 2) % kCallsignPeriodS;
     }
-    // INFO: fc 13nov26 §C.2.5 alternates Status as it does Traffic, on its own count
-    static int status_slot_in(uint32_t utc_s) {
-        return static_cast<int>((utc_s / kStatusPeriodS) & 1u);
-    }
+    // INFO: fc 13nov26 the channel the airborne position leaves free, alternating as gaps are odd
+    static int status_slot_in(uint32_t utc_s) { return 1 - static_cast<int>(utc_s & 1u); }
     static constexpr int kCallsignSlot = 1;
     static int last_callsign_instant();
 
@@ -90,8 +91,14 @@ class Transmitter {
 };
 
 static_assert(Transmitter::kCallsignPeriodS == adsl::kGroundReportPeriodS &&
-                  Transmitter::kStatusPeriodS % adsl::kGroundReportPeriodS == 0,
-              "the name's second is never the ground second the position and the Status use");
+                  Transmitter::kStatusPeriodS == 2 * adsl::kGroundReportPeriodS,
+              "the ground second, the Status seconds and the name's second are counted mod 10");
+static_assert(
+    Transmitter::kStatusOffsetsS[1] - Transmitter::kStatusOffsetsS[0] == 11 &&
+        Transmitter::kStatusOffsetsS[0] % 10 != 0 && Transmitter::kStatusOffsetsS[1] % 10 != 0 &&
+        Transmitter::kStatusOffsetsS[0] % 10 != Transmitter::kCallsignPeriodS / 2 &&
+        Transmitter::kStatusOffsetsS[1] % 10 != Transmitter::kCallsignPeriodS / 2,
+    "an odd gap alternates the Status channel, and no Status shares a ground burst's second");
 
 }  // namespace skyblip::timing
 

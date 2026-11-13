@@ -258,84 +258,150 @@ TEST_CASE("transmit: every address names itself every ten seconds, airborne or o
     }
 }
 
-// G.2.11 and C.2.5: a Status every twenty seconds, each on the other channel from the last.
-TEST_CASE("transmit: the Status goes out in the ground second, once every twenty, alternating") {
+// G.2.11 asks for one every 20 s, and a receiver parked on one channel hears every other one.
+TEST_CASE("transmit: a Status every ten seconds overall, every twenty on each channel") {
     constexpr Transmitter::Payload kStatus = Transmitter::Payload::Status;
-    for (const bool airborne : {true, false}) {
-        CAPTURE(airborne);
-        Transmitter transmitter = airborne_transmitter();
-        CHECK(transmitter.status_second() == transmitter.ground_second());
-        int sent = 0;
-        uint32_t last_hz = 0;
-        for (uint32_t utc_s = 100; utc_s < 100 + 4 * Transmitter::kStatusPeriodS; utc_s++) {
-            for (const int phase : {500, kSlot1StartMs}) {
-                const Transmitter::Attempt attempt = transmitter.attempt(
-                    slot_plan(phase), utc_s, utc_s * 1000, airborne, 0, kStatus);
-                if (!attempt.go) continue;
-                CAPTURE(utc_s);
-                CHECK(utc_s % Transmitter::kStatusPeriodS == transmitter.status_second());
-                CHECK(Scheduler::in_direct_slot(attempt.at_ms));
-                CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <=
-                      adsl::kDirectEndMs);
-                if (last_hz != 0) CHECK(attempt.frequency_hz != last_hz);
-                last_hz = attempt.frequency_hz;
-                transmitter.sent(utc_s, utc_s * 1000 + static_cast<uint32_t>(phase), kStatus);
-                sent++;
+    for (uint32_t address = 0x5B0000; address < 0x5B0040; address++) {
+        for (const bool airborne : {true, false}) {
+            CAPTURE(address);
+            CAPTURE(airborne);
+            Transmitter transmitter = airborne_transmitter(address);
+            uint32_t last_s[2] = {0, 0};
+            int per_channel[2] = {0, 0};
+            for (uint32_t utc_s = 100; utc_s < 100 + 4 * Transmitter::kStatusPeriodS; utc_s++) {
+                for (const int phase : {500, kSlot1StartMs}) {
+                    const Transmitter::Attempt attempt = transmitter.attempt(
+                        slot_plan(phase), utc_s, utc_s * 1000, airborne, 0, kStatus);
+                    if (!attempt.go) continue;
+                    CAPTURE(utc_s);
+                    const int channel = attempt.frequency_hz == adsl::kMBand0Hz ? 0 : 1;
+                    if (per_channel[channel] > 0)
+                        CHECK(utc_s - last_s[channel] == Transmitter::kStatusPeriodS);
+                    last_s[channel] = utc_s;
+                    per_channel[channel]++;
+                    CHECK(Scheduler::in_direct_slot(attempt.at_ms));
+                    CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <=
+                          adsl::kDirectEndMs);
+                    transmitter.sent(utc_s, utc_s * 1000 + static_cast<uint32_t>(phase), kStatus);
+                }
             }
+            CHECK(per_channel[0] == 4);
+            CHECK(per_channel[1] == 4);
         }
-        CHECK(sent == 4);
     }
 }
 
-// The name keeps out of the second the ground position and the Status share, every address.
+// For g = 0 the Status seconds are 2 and 13 of every twenty: gaps of 11 and 9, so the parity flips.
+TEST_CASE(
+    "transmit: the Status goes at g+2 and g+13, on the channel the airborne position leaves") {
+    constexpr Transmitter::Payload kStatus = Transmitter::Payload::Status;
+    for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
+        CAPTURE(address);
+        Transmitter transmitter = airborne_transmitter(address);
+        const uint32_t g = transmitter.ground_second();
+        uint32_t previous = 0;
+        for (uint32_t utc_s = 200; utc_s < 200 + 2 * Transmitter::kStatusPeriodS; utc_s++) {
+            const uint32_t phase = utc_s % Transmitter::kStatusPeriodS;
+            const bool expected = phase == (g + 2) % 20 || phase == (g + 13) % 20;
+            CHECK(transmitter.status_second(utc_s) == expected);
+            if (!expected) continue;
+            CHECK(Transmitter::status_slot_in(utc_s) != Transmitter::slot_in(utc_s, true));
+            if (previous != 0) CHECK((utc_s - previous == 11 || utc_s - previous == 9));
+            previous = utc_s;
+            const int slot = Transmitter::status_slot_in(utc_s);
+            CHECK(transmitter
+                      .attempt(slot_plan(slot == 0 ? 500 : kSlot1StartMs), utc_s, utc_s * 1000,
+                               true, 0, kStatus)
+                      .go);
+            CHECK_FALSE(transmitter
+                            .attempt(slot_plan(slot == 0 ? kSlot1StartMs : 500), utc_s,
+                                     utc_s * 1000, true, 0, kStatus)
+                            .go);
+        }
+    }
+}
+
+// The name keeps out of the ground position's second and out of both Status seconds, every address.
 TEST_CASE("transmit: the name never shares a second with the Status or the ground position") {
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         CAPTURE(address);
         const Transmitter transmitter = airborne_transmitter(address);
         CHECK(transmitter.callsign_second() < Transmitter::kCallsignPeriodS);
-        CHECK(transmitter.callsign_second() !=
-              transmitter.status_second() % skyblip::adsl::kGroundReportPeriodS);
         CHECK(transmitter.callsign_second() != transmitter.ground_second());
+        for (uint32_t utc_s = 100; utc_s < 100 + Transmitter::kStatusPeriodS; utc_s++)
+            if (utc_s % Transmitter::kCallsignPeriodS == transmitter.callsign_second())
+                CHECK_FALSE(transmitter.status_second(utc_s));
+    }
+}
+
+// On the ground g, g+2 or g+3, and g+5 hold a burst each, so the nearest two are two seconds apart.
+TEST_CASE("transmit: on the ground every burst has a second to itself, two from the next") {
+    constexpr Transmitter::Payload kEvery[] = {Transmitter::Payload::Position,
+                                               Transmitter::Payload::Status,
+                                               Transmitter::Payload::Callsign};
+    for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
+        CAPTURE(address);
+        const Transmitter transmitter = airborne_transmitter(address);
+        uint32_t previous = 0;
+        int bursts = 0;
+        for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kStatusPeriodS; utc_s++) {
+            int owed = 0;
+            for (const int phase : {500, kSlot1StartMs})
+                for (const Transmitter::Payload payload : kEvery)
+                    if (transmitter
+                            .attempt(slot_plan(phase), utc_s, utc_s * 1000, false, 0, payload)
+                            .go)
+                        owed++;
+            CAPTURE(utc_s);
+            CHECK(owed <= 1);
+            if (owed == 0) continue;
+            if (bursts > 0) CHECK(utc_s - previous >= 2);
+            previous = utc_s;
+            bursts++;
+        }
+        CHECK(bursts == 12);
     }
 }
 
 // The executor holds two bursts a dwell, and keys the second only once the first is off the air.
-TEST_CASE("transmit: no dwell owes more than two bursts, and two in one dwell never overlap") {
+TEST_CASE("transmit: no dwell owes more than two bursts, and a Status never shares one") {
     constexpr Transmitter::Payload kEvery[] = {Transmitter::Payload::Position,
                                                Transmitter::Payload::Status,
                                                Transmitter::Payload::Callsign};
     const int apart = static_cast<int>(Transmitter::kAirTimeMs) + Transmitter::kCompletionGuardMs;
     int shared = 0;
-    int shared_slot0_on_ground = 0;
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         for (const bool airborne : {true, false}) {
             const Transmitter transmitter = airborne_transmitter(address);
             for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kStatusPeriodS; utc_s++) {
                 for (const int phase : {500, kSlot1StartMs}) {
                     int instants[3] = {};
+                    bool status = false;
                     int owed = 0;
                     for (const Transmitter::Payload payload : kEvery) {
                         const Transmitter::Attempt attempt = transmitter.attempt(
                             slot_plan(phase), utc_s, utc_s * 1000, airborne, 0, payload);
-                        if (attempt.go) instants[owed++] = attempt.at_ms;
+                        if (!attempt.go) continue;
+                        instants[owed++] = attempt.at_ms;
+                        status = status || payload == Transmitter::Payload::Status;
                     }
                     CAPTURE(address);
                     CAPTURE(utc_s);
                     REQUIRE(owed <= skyblip::ports::RfBursts::kMaxBursts);
                     if (owed == 2) {
+                        CHECK_FALSE(status);
                         const int gap = instants[0] > instants[1] ? instants[0] - instants[1]
                                                                   : instants[1] - instants[0];
                         CHECK(gap >= apart);
+                        CHECK(airborne);
                         shared++;
-                        if (!airborne && phase == 500) shared_slot0_on_ground++;
                     }
                 }
             }
         }
     }
+    // Airborne, the name's slot-1 dwell carries the position too in every odd name second.
     CHECK(shared > 0x400);
-    // Every address's ground Status shares slot 0 with its position once in each forty seconds.
-    CHECK(shared_slot0_on_ground == 0x400);
 }
 
 // The position burst is the one G.1.16 dates, and a name carries no instant to be stale.
@@ -361,16 +427,20 @@ TEST_CASE("transmit: the callsign burst belongs to slot 1 and to no other dwell"
 }
 
 // A device that reboots comes back to the same second of the ten, not to a new one.
-TEST_CASE("transmit: the ground second is the address's, not the boot's") {
-    CHECK(airborne_transmitter(0x5B7E57).ground_second() ==
-          airborne_transmitter(0x5B7E57).ground_second());
+TEST_CASE("transmit: the ground second is the serial's last digit, whatever the prefix") {
+    CHECK(airborne_transmitter(0x5B7E57).ground_second() == 0x7E57 % 10);
+    CHECK(airborne_transmitter(0x007E57).ground_second() == 0x7E57 % 10);
+    CHECK(airborne_transmitter(0x000001).ground_second() == 1);
+}
 
-    int taken[skyblip::adsl::kGroundReportPeriodS] = {0};
-    for (uint32_t address = 0x5B0000; address < 0x5B1000; address++)
-        taken[airborne_transmitter(address).ground_second()]++;
-    for (uint32_t second = 0; second < skyblip::adsl::kGroundReportPeriodS; second++) {
-        CAPTURE(second);
-        CHECK(taken[second] > 0x1000 / 20);
+// skyblip.eu hands out serials densely from 1, so a fleet fills the ten seconds evenly.
+TEST_CASE("transmit: ten consecutive serials own ten different ground seconds") {
+    for (uint32_t first = 1; first < 1000; first += 7) {
+        CAPTURE(first);
+        bool taken[skyblip::adsl::kGroundReportPeriodS] = {};
+        for (uint32_t serial = first; serial < first + 10; serial++)
+            taken[airborne_transmitter(serial).ground_second()] = true;
+        for (const bool second : taken) CHECK(second);
     }
 }
 

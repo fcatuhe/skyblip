@@ -149,14 +149,19 @@ TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is p
 
 // Twenty seconds from second to second, and the instant inside each one is the direct slot's own
 // draw.
+// Gaps alternate 11 and 9 s, so a receiver parked on one channel still hears one every 20 s.
 TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
-    constexpr uint64_t kWithinUs = 20000000 + (adsl::kDirectEndMs - adsl::kDirectStartMs) * 1000;
+    constexpr uint64_t kSlotUs = (adsl::kDirectEndMs - adsl::kDirectStartMs) * 1000;
     for (const int speed_kt : {0, 50}) {
         CAPTURE(speed_kt);
         const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
-        CHECK(statuses.size() >= 3);
+        CHECK(statuses.size() >= 6);
         for (size_t i = 1; i < statuses.size(); i++)
-            CHECK(statuses[i].at_us - statuses[i - 1].at_us <= kWithinUs);
+            CHECK(statuses[i].at_us - statuses[i - 1].at_us <= 11000000 + kSlotUs);
+        for (size_t i = 2; i < statuses.size(); i++) {
+            CHECK(statuses[i].frequency_hz == statuses[i - 2].frequency_hz);
+            CHECK(statuses[i].at_us - statuses[i - 2].at_us <= 20000000 + kSlotUs);
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 #include "core/timing/transmit.h"
 
-#include <algorithm>
 #include <initializer_list>
 
 namespace skyblip::timing {
@@ -46,22 +45,24 @@ int Transmitter::instant_between(int first, int last, uint32_t utc_s) const {
            static_cast<int>(hash(address_ ^ hash(utc_s)) % static_cast<uint32_t>(last - first + 1));
 }
 
-// INFO: fc 13nov26 drawn around the position's instant, so two bursts sharing a dwell never overlap
+// INFO: fc 13nov26 a hash of its own, since a Status never shares a dwell with a position
 int Transmitter::status_instant_in(int slot, uint32_t utc_s) const {
     const int first = first_instant_in(slot);
     const int last = last_instant_in(slot);
-    const int position = instant_in(slot, utc_s);
-    const int apart = static_cast<int>(kAirTimeMs) + kCompletionGuardMs;
-    const int blocked_from = std::max(first, position - apart + 1);
-    const int blocked = std::min(last, position + apart - 1) - blocked_from + 1;
-    const int free = last - first + 1 - blocked;
-    if (free <= 0) return first;
-    const int drawn =
-        first + static_cast<int>(hash(hash(address_ ^ hash(utc_s))) % static_cast<uint32_t>(free));
-    return drawn < blocked_from ? drawn : drawn + blocked;
+    if (last <= first) return first;
+    return first + static_cast<int>(hash(hash(address_ ^ hash(utc_s))) %
+                                    static_cast<uint32_t>(last - first + 1));
 }
 
-uint32_t Transmitter::ground_second() const { return hash(address_) % adsl::kGroundReportPeriodS; }
+uint32_t Transmitter::ground_second() const {
+    return (address_ & settings::kSerialMask) % adsl::kGroundReportPeriodS;
+}
+
+bool Transmitter::status_second(uint32_t utc_s) const {
+    const uint32_t phase = utc_s % kStatusPeriodS;
+    return phase == (ground_second() + kStatusOffsetsS[0]) % kStatusPeriodS ||
+           phase == (ground_second() + kStatusOffsetsS[1]) % kStatusPeriodS;
+}
 
 bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
     const int index = static_cast<int>(payload);
@@ -116,8 +117,7 @@ bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, boo
             return fix_lag_ms <= kFixMaxAgeMs &&
                    adsl::on_schedule(utc_s, airborne, ground_second()) &&
                    dwell_slot == slot_in(utc_s, airborne);
-        case Payload::Status:
-            return utc_s % kStatusPeriodS == status_second() && dwell_slot == status_slot_in(utc_s);
+        case Payload::Status: return status_second(utc_s) && dwell_slot == status_slot_in(utc_s);
         case Payload::Callsign:
             return utc_s % kCallsignPeriodS == callsign_second() && dwell_slot == kCallsignSlot;
     }

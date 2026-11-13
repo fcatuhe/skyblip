@@ -121,9 +121,9 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
         CHECK(simulator::Air::tuned_to(record.frequency_hz, adsl::kMBand1Hz));
     }
-    // Forty-one seconds of flight: forty-one positions, two Status bursts and four names.
+    // Forty-one seconds of flight: forty-one positions, four Status bursts and four names.
     CHECK(count_payloads(air, adsl::Packet::kPayloadTypePosition) >= 39);
-    CHECK(count_payloads(air, adsl::Packet::kPayloadTypeStatus) == 2);
+    CHECK(count_payloads(air, adsl::Packet::kPayloadTypeStatus) == 4);
     CHECK(named == 4);
 
     // And the tape says which burst was which, where a position prints its rate.
@@ -245,7 +245,7 @@ TEST_CASE("rf: on the ground the transmit rate drops to 0.1 Hz") {
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(0);
-    run_on(simulator, past_settling(simulator), 8000);
+    run_on(simulator, past_settling(simulator), 10000);
     CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypePosition) == 1);
 }
 
@@ -338,6 +338,7 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         REQUIRE(packet.check_crc() == 0);
         packet.descramble();
         REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
+        if (!packet.is_position()) continue;
 
         // Inside the direct slot the quarter is 1, 2 or 3. Zero is the old bug.
         REQUIRE(timing::Scheduler::in_direct_slot(record.phase_ms));
@@ -419,6 +420,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
         // off the PPS edge in microseconds(), which is 64-bit and does not wrap.
         CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= adsl::kDirectEndMs);
+        if (payload_type_of(record) != adsl::Packet::kPayloadTypePosition) continue;
         if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
         last_frequency = record.frequency_hz;
     }

@@ -62,6 +62,32 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequen
     }
 }
 
+// Airborne the position takes one channel each second, and the Status takes the other.
+TEST_CASE("ADS-L.4.SRD860.C.2.5: a Status flies on the channel the second's position leaves free") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), 41000);
+
+    const simulator::Air& air = simulator.world().air();
+    int checked = 0;
+    for (int i = 0; i < air.record_count(); i++) {
+        const simulator::AirRecord& status = air.record_at(i);
+        if (payload_type_of(status) != adsl::Packet::kPayloadTypeStatus) continue;
+        const uint64_t second = (status.at_us - status.phase_ms * 1000ull) / 1000000;
+        for (int j = 0; j < air.record_count(); j++) {
+            const simulator::AirRecord& position = air.record_at(j);
+            if (payload_type_of(position) != adsl::Packet::kPayloadTypePosition ||
+                (position.at_us - position.phase_ms * 1000ull) / 1000000 != second)
+                continue;
+            CHECK(position.frequency_hz != status.frequency_hz);
+            checked++;
+        }
+    }
+    CHECK(checked >= 3);
+}
+
 TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else") {
     CHECK(adsl::kDirectStartMs == 450);
     CHECK(adsl::kDirectEndMs == 1000);
