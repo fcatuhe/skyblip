@@ -1,4 +1,6 @@
 module LocaleHelper
+  def crawler? = DeviceDetector.new(request.user_agent).bot?
+
   def page_alternate_paths
     @page_alternate_paths ||= if @page
       page_alternates.transform_values { |page| page_url_for(page, only_path: true) }

@@ -1,9 +1,10 @@
-<nav class="locale-switcher" aria-label="Language"
-     data-controller="locale"
-     data-locale-current-value="<%= I18n.locale %>"
-     data-locale-default-value="<%= I18n.default_locale %>"
-     data-locale-available-value="<%= I18n.available_locales.to_json %>"
-     data-locale-alternates-value="<%= page_alternate_paths.to_json %>">
+<%= tag.nav class: "locale-switcher", aria: { label: "Language" }, data: {
+      controller: ("locale" unless crawler?),
+      locale_current_value: I18n.locale,
+      locale_default_value: I18n.default_locale,
+      locale_available_value: I18n.available_locales.to_json,
+      locale_alternates_value: page_alternate_paths.to_json
+    } do %>
   <% I18n.available_locales.each do |locale| %>
     <% if locale == I18n.locale %>
       <span aria-current="true"><%= locale.to_s.upcase %></span>
@@ -14,4 +15,4 @@
       <span aria-disabled="true"><%= locale.to_s.upcase %></span>
     <% end %>
   <% end %>
-</nav>
+<% end %>

@@ -49,4 +49,13 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
       assert_not_equal "content/pages", route&.fetch(:controller), path
     end
   end
+
+  # Google runs the page's script with an English browser and no cookie, and must still index the French pages.
+  test "a crawler gets no language redirect, a browser does" do
+    get "/fr/a-propos", headers: { "User-Agent" => "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Googlebot/2.1; +http://www.google.com/bot.html) Chrome/120.0.0.0 Safari/537.36" }
+    assert_select ".locale-switcher:not([data-controller])"
+
+    get "/fr/a-propos", headers: { "User-Agent" => "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" }
+    assert_select ".locale-switcher[data-controller=locale]"
+  end
 end
