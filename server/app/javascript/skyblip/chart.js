@@ -9,6 +9,8 @@ const EQUATOR_M = 40075016.686;
 const RING_STEPS_M = [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000];
 const RETRY_MS = 30_000;
 const SAVE_CONCURRENCY = 4;
+const HIT_PIXELS = 18;
+const FADED = 0.4;
 
 export function worldPixel({ latitude, longitude }, zoom) {
   const size = TILE_PIXELS * 2 ** zoom;
@@ -107,13 +109,22 @@ export class Chart {
     this.store = store;
     this.attribution = attribution;
     this.zoom = 10;
+    this.drawn = [];
   }
 
   zoomBy(step) {
     this.zoom = Math.min(VIEW_ZOOMS.max, Math.max(VIEW_ZOOMS.min, this.zoom + step));
   }
 
-  draw({ centre, owns, aircraft }) {
+  hit(x, y) {
+    const near = this.drawn
+      .map(point => ({ ...point, away: Math.hypot(point.x - x, point.y - y) }))
+      .filter(point => point.away <= HIT_PIXELS)
+      .sort((a, b) => a.away - b.away)[0];
+    return near?.address ?? null;
+  }
+
+  draw({ centre, owns, aircraft, focus = null }) {
     const { canvas } = this;
     const ratio = globalThis.devicePixelRatio || 1;
     const width = canvas.clientWidth;
@@ -136,7 +147,14 @@ export class Chart {
     this.drawTiles(context, middle, width, height, colour('empty'));
     this.drawRings(context, centre, width, height, colour);
     for (const own of owns) drawOwn(context, screen(own), own.trackDeg, colour(own.source));
-    for (const plane of aircraft) drawAircraft(context, plane, screen, colour);
+    this.drawn = [];
+    const focused = aircraft.filter(plane => plane.address === focus);
+    for (const plane of aircraft.filter(plane => plane.address !== focus)) {
+      context.globalAlpha = focus ? FADED : 1;
+      this.drawn.push(...drawAircraft(context, plane, screen, colour));
+    }
+    context.globalAlpha = 1;
+    for (const plane of focused) this.drawn.push(...drawAircraft(context, plane, screen, colour, { ringed: true }));
     context.textAlign = 'right';
     halo(context, this.attribution, width - 6, height - 6, colour('label'), colour('halo'));
   }
@@ -189,8 +207,17 @@ function drawOwn(context, point, trackDeg, stroke) {
   context.restore();
 }
 
-function drawAircraft(context, { label, points }, screen, colour) {
+function drawAircraft(context, { address, label, points }, screen, colour, { ringed = false } = {}) {
   const placed = points.map(point => ({ ...point, ...screen(point) }));
+  if (ringed) {
+    for (const point of placed) {
+      context.strokeStyle = colour(point.source);
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(point.x, point.y, HIT_PIXELS, 0, 2 * Math.PI);
+      context.stroke();
+    }
+  }
   if (placed.length > 1) {
     context.strokeStyle = colour('link');
     context.lineWidth = 1;
@@ -207,6 +234,7 @@ function drawAircraft(context, { label, points }, screen, colour) {
     const text = [index === 0 ? label : null, relativeHundreds(point.relativeVerticalFt)].filter(Boolean).join(' ');
     halo(context, text, point.x + 12, point.y + 4 + index * 14, colour(point.source), colour('halo'));
   });
+  return placed.map(({ x, y }) => ({ address, x, y }));
 }
 
 function drawChevron(context, point, stroke, fill) {
