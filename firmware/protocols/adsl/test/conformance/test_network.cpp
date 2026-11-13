@@ -69,18 +69,83 @@ TEST_CASE("ADS-L.4.SRD860.E.1: the network header is one byte, and this one clai
 // Issue 2 is version 1, but this payload encodes as Issue 1's did, and the clause wants the lowest.
 TEST_CASE("ADS-L.4.SRD860.E.1.1: version 0 goes out, and a version 1 payload reads the same way") {
     adsl::Packet packet = traffic_packet();
-    CHECK((packet.version & 0x0F) == 0);
+    CHECK(packet.protocol_version() == 0);
+    CHECK(adsl::lowest_version(packet) == 0);
 
     adsl::Traffic as_sent;
     REQUIRE(heard(packet, as_sent));
 
     adsl::Packet issue2 = packet;
-    issue2.version = (issue2.version & 0xF0) | 0x01;
+    issue2.set_protocol_version(1);
     adsl::Traffic as_received;
     REQUIRE(heard(issue2, as_received));
     CHECK(as_received.address == as_sent.address);
     CHECK(as_received.latitude_1e7 == as_sent.latitude_1e7);
     CHECK(as_received.altitude_m == as_sent.altitude_m);
+}
+
+namespace {
+adsl::Packet traffic_with(void (*change)(adsl::Traffic&)) {
+    adsl::Traffic traffic = reference_traffic();
+    change(traffic);
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, traffic);
+    return packet;
+}
+}  // namespace
+
+// Issue 1 G.1.7 reads 0x3FFF as 61112 m, so an altitude marked invalid is Issue 2's code.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: an invalid altitude, 0x3FFF, goes out as version 1") {
+    const adsl::Packet packet = traffic_with([](adsl::Traffic& t) { t.altitude_valid = false; });
+    CHECK(packet.field(adsl::Packet::kAltitudeField) == 0x3FFFu);
+    CHECK(packet.protocol_version() == 1);
+    const adsl::Packet top = traffic_with([](adsl::Traffic& t) { t.altitude_m = 70000; });
+    CHECK(top.field(adsl::Packet::kAltitudeField) == 0x3FFEu);
+    CHECK(top.protocol_version() == 0);
+}
+
+// Issue 1 G.1.8 reads 0xFF as 238 m/s.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: an invalid ground speed, 0xFF, goes out as version 1") {
+    const adsl::Packet packet = traffic_with([](adsl::Traffic& t) { t.speed_valid = false; });
+    CHECK(packet.field(adsl::Packet::kSpeedField) == 0xFFu);
+    CHECK(packet.protocol_version() == 1);
+}
+
+// Issue 1 G.1.9 reads 0x1FF as -119 m/s.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: an invalid vertical rate, 0x1FF, goes out as version 1") {
+    const adsl::Packet packet = traffic_with([](adsl::Traffic& t) { t.climb_valid = false; });
+    CHECK(packet.field(adsl::Packet::kClimbField) == 0x1FFu);
+    CHECK(packet.protocol_version() == 1);
+}
+
+// Issue 1 G.1.5 marks no fix with 0xFFFFFF, and reads 0x800000 as 90 S and 180 W.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: a position marked absent, 0x800000, goes out as version 1") {
+    const adsl::Packet packet = traffic_with([](adsl::Traffic& t) { t.position_valid = false; });
+    CHECK(packet.field(adsl::Packet::kLatitudeField) == 0x800000u);
+    CHECK(packet.protocol_version() == 1);
+}
+
+// Issue 1 G.1.3 reserves 14 to 31, where Issue 2 names four more kinds of aircraft.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: a category Issue 2 added, 14 to 17, goes out as version 1") {
+    for (uint8_t category = 0; category < 32; category++) {
+        adsl::Traffic traffic = reference_traffic();
+        traffic.aircraft_category = category;
+        adsl::Packet packet{};
+        adsl::encode_traffic(packet, traffic);
+        CAPTURE(int(category));
+        CHECK(packet.protocol_version() == (category >= 14 && category <= 17 ? 1 : 0));
+    }
+}
+
+// Issue 1's payload table names Traffic, type 2, and reserves every other type.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: a payload Issue 1 reserves, Status among them, goes out as version 1") {
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
+    CHECK(status.protocol_version() == 1);
+    CHECK(adsl::lowest_version(status) == 1);
+    adsl::Packet other{};
+    other.reset(adsl::Packet::kPayloadTypeOgnDiagnostics);
+    CHECK(adsl::lowest_version(other) == 1);
 }
 
 // No signature promised, so the packet ends at its parity: 27 bytes of air, sync word included.

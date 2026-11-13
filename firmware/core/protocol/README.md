@@ -21,7 +21,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 
 | Field | Value | Why |
 |---|---|---|
-| Max. Protocol Version | 1 | this device reads Issue 2 payloads (`protocols/adsl/test/conformance/test_network.cpp`, E.1.1) |
+| Max. Protocol Version | 1 | this device reads Issue 2 payloads (`protocols/adsl/README.md`, Which issue a payload is) |
 | M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
 | O-band LDR receive | 0 | not received |
 | O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |

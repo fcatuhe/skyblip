@@ -35,7 +35,7 @@ Everything is in namespace `skyblip::adsl`.
 
 - `kAddressTableRandom` to `kAddressTableManufacturerLast`, `manufacturer_page_table()`, `kEmergencyNone`, `kUereCm`, `hfom_cm()`
 - `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `check_crc()` and `correct()`, and `kSyncWord`, `kFrameBytes`
-- `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`
+- `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkTarget`, `encode_o_band()`, `ReedSolomon255`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
@@ -52,9 +52,31 @@ The rest is the integrator's, and skyBlip's choices are in `core/timing/README.m
 
 ## The Status payload
 
-`encode_status()` writes §G.2's payload type 3: what a device can hear and process, so a peer or a ground station can plan around it. Its network header says protocol version 1, because the Status payload first appears in Issue 2 and §E.1.1 numbers Issue 2 as 1. The Traffic payload keeps version 0, since Issue 1 encodes it the same way. `receive_class()` turns a share of the direct slot heard into §G.2.2's classes: more than 5% is Occasional, more than 40% Partial and more than 80% Full. What skyBlip declares in each field, and why, is in `core/protocol/README.md`.
+`encode_status()` writes §G.2's payload type 3: what a device can hear and process, so a peer or a ground station can plan around it. Its network header says protocol version 1, because the Status payload first appears in Issue 2 (below). `receive_class()` turns a share of the direct slot heard into §G.2.2's classes: more than 5% is Occasional, more than 40% Partial and more than 80% Full. What skyBlip declares in each field, and why, is in `core/protocol/README.md`.
 
 The payload is 12 bytes, header included. The frame still carries 20 payload bytes, as a Traffic frame does, with the last 8 left zero, so it goes out behind the same sync word and the same length byte. §D.1.1 lets a receiver read the length, but a receiver that checks it as 0x18 in the sync tail, as skyBlip's does (`core/protocol/air.cpp`), would not hear a 16-byte Status frame, and the OGN code SoftRF carries builds every frame at 24 bytes (`libraries/OGN/ads-l.h:17-22`).
+
+## Which issue a payload is
+
+§E.1.1 asks every packet to carry the lowest protocol version whose encoding of its payload is the same, Issue 1 being 0 and Issue 2 being 1. `lowest_version()` reads it off the clear packet, and `encode_traffic()` and `encode_status()` set it. Issue 1's payload table names only Traffic, type 2, so every other payload is version 1: the Status, and OGN's payload 66, which skyBlip sends its name in. A Traffic payload is version 0 unless it carries a code whose meaning Issue 2 changed. These are every code of G.1 that changed between `docs/reference/ads-l_4_srd860_issue_1.md` and Issue 2:
+
+| Field | Code | Issue 1 | Issue 2 | Version |
+|---|---|---|---|---|
+| G.1.5 latitude, longitude | 0x800000 | a position, 90 S or 180 W | no 2D fix (Issue 1 marked that 0xFFFFFF) | 1 |
+| G.1.7 altitude | 0x3FFF | 61112 m | invalid | 1 |
+| G.1.7 altitude | 0x3FFE | 61104 m | 61104 m or more | 0, the limit reads true in both |
+| G.1.8 ground speed | 0xFF | 238 m/s | invalid | 1 |
+| G.1.8 ground speed | 0xFE | 236 m/s | 236 m/s or more | 0 |
+| G.1.9 vertical rate | 0x1FF | -119 m/s | invalid | 1 |
+| G.1.9 vertical rate | 0x1FE | -118 m/s | -118 m/s or less | 0 |
+| G.1.3 category | 3 | rotorcraft | light rotorcraft | 0, a light rotorcraft is a rotorcraft |
+| G.1.3 category | 6 | ultralight | ultralight and motorized hang-glider | 0, a motorized hang-glider is flown as an ultralight |
+| G.1.3 category | 7 | hang-glider or paraglider | paraglider | 0, a paraglider is one of the two |
+| G.1.3 category | 14 to 17 | reserved | model plane, heavy rotorcraft, hang-glider, paramotor | 1 |
+| G.1.15 GVA | 3 | VFOM under 15 m | VFOM under 10 m | 0, under 10 m is under 15 m |
+| G.1.15 GVA | 2 | VFOM under 45 m | VFOM from 10 to 45 m | 0 |
+
+Every other G.1 table only writes its bounds out, and G.1.10, G.1.16 and G.1.17 add rules and no codes. A code marked 0 in the last column is one an Issue 1 receiver still reads as a true statement, so it stays at version 0 for the widest reach. The clause cases in `test/conformance/test_network.cpp` pin one row each.
 
 ## Reed-Solomon, `reed_solomon.cpp`
 

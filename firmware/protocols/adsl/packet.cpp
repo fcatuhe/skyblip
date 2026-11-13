@@ -13,6 +13,9 @@ using wire::divide_rounded;
 
 namespace {
 
+// INFO: fc 13nov26 Issue 1 reserves 14 up, and Issue 2 names model plane, heavy rotorcraft, hang-glider, paramotor
+constexpr uint8_t kFirstIssue2Category = 14;
+constexpr uint8_t kLastIssue2Category = 17;
 constexpr uint16_t kFrameBits = Packet::kDataBytes * 8;
 constexpr int kMostErasures = 16;
 constexpr int64_t kE7PerDegree = 10000000;
@@ -117,6 +120,20 @@ uint8_t Packet::vertical_accuracy_code(uint32_t vfom_cm) {
     return 0;
 }
 
+bool issue2_category(uint8_t aircraft_category) {
+    return aircraft_category >= kFirstIssue2Category && aircraft_category <= kLastIssue2Category;
+}
+
+uint8_t lowest_version(const Packet& packet) {
+    if (!packet.is_position()) return Packet::kProtocolVersionIssue2;
+    const bool issue2_codes =
+        !packet.has_altitude() || !packet.has_speed() || !packet.has_climb() ||
+        packet.field(Packet::kLatitudeField) == Packet::kPositionInvalidCode ||
+        packet.field(Packet::kLongitudeField) == Packet::kPositionInvalidCode ||
+        issue2_category(packet.aircraft_category);
+    return issue2_codes ? Packet::kProtocolVersionIssue2 : Packet::kProtocolVersionIssue1;
+}
+
 uint32_t hfom_cm(uint16_t hdop_e2) {
     return divide_rounded<uint32_t>(uint32_t{hdop_e2} * 2u * kUereCm, 100u);
 }
@@ -148,7 +165,7 @@ ReceiveClass receive_class(int heard_permille) {
 void encode_status(Packet& packet, uint32_t address, uint8_t address_mapping_table,
                    const StatusReport& report) {
     packet.reset(Packet::kPayloadTypeStatus);
-    packet.version = Packet::kProtocolVersionIssue2;
+    packet.set_protocol_version(Packet::kProtocolVersionIssue2);
     packet.set_address(address);
     packet.set_address_mapping_table(address_mapping_table);
     packet.set_field(Packet::kMaxProtocolVersionField, Packet::kProtocolVersionIssue2);
@@ -193,6 +210,7 @@ void encode_traffic(Packet& packet, const Traffic& traffic) {
     packet.horizontal_accuracy = traffic.integrity.horizontal_accuracy;
     packet.vertical_accuracy = traffic.integrity.vertical_accuracy;
     packet.velocity_accuracy = traffic.integrity.velocity_accuracy;
+    packet.set_protocol_version(lowest_version(packet));
 }
 
 bool decode_traffic(const Packet& packet, Traffic& out) {

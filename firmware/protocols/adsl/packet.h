@@ -40,7 +40,9 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kPayloadTypePosition = 0x02;
     static constexpr uint8_t kPayloadTypeStatus = 0x03;
     // INFO: fc 13nov26 E.1.1 numbers Issue 2 as 1, and the Status payload first appears in Issue 2
+    static constexpr uint8_t kProtocolVersionIssue1 = 0;
     static constexpr uint8_t kProtocolVersionIssue2 = 1;
+    static constexpr uint8_t kProtocolVersionMask = 0x0F;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
 
     union {
@@ -111,6 +113,10 @@ struct __attribute__((packed)) Packet {
     void set_field(BitField where, uint32_t value) { wire::write_bits(payload, where, value); }
 
     bool is_position() const { return payload_type == kPayloadTypePosition; }
+    uint8_t protocol_version() const { return version & kProtocolVersionMask; }
+    void set_protocol_version(uint8_t value) {
+        version = static_cast<uint8_t>((version & ~kProtocolVersionMask) | (value & kProtocolVersionMask));
+    }
 
     uint32_t address() const { return field(kAddressField); }
     void set_address(uint32_t address) { set_field(kAddressField, address); }
@@ -198,6 +204,10 @@ static constexpr uint32_t kTimestampQuarterMs = 250;
 uint8_t timestamp_code(uint32_t utc_s, int32_t lead_ms);
 
 uint32_t hfom_cm(uint16_t hdop_e2);
+
+// INFO: fc 13nov26 E.1.1: the lowest issue whose encoding of this clear payload means the same
+uint8_t lowest_version(const Packet& packet);
+bool issue2_category(uint8_t aircraft_category);
 
 struct Integrity {
     uint8_t source_integrity{0};

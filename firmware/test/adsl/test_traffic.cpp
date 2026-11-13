@@ -133,9 +133,12 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
     protocol::from_own(glider, flying(), 0x123456, 6, 4);
     CHECK(glider.aircraft_category == 4);
 
-    // Every category a pilot can pick here is one issue 1 names too, which is what E.1.1 rests on.
-    const int issue1_named_categories = 14;
-    CHECK(go::kNamedAircraftTypes <= issue1_named_categories);
+    // A pilot can pick 15, which Issue 1 does not name, and E.1.1 dates that payload to Issue 2.
+    adsl::Packet heavy{};
+    protocol::from_own(heavy, flying(), 0x123456, 6, 15);
+    CHECK(heavy.aircraft_category == 15);
+    CHECK(heavy.protocol_version() == 1);
+    CHECK(glider.protocol_version() == 0);
 }
 
 // The adapter decides the code, so the clause is checked on what own-ship sends and what a receiver

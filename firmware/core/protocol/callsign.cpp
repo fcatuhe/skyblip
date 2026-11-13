@@ -22,6 +22,7 @@ bool from_own_callsign(adsl::Packet& packet, settings::AirAddress address,
         count++;
     }
     while (count < kInformationTextBytes) text[count++] = 0;
+    packet.set_protocol_version(adsl::lowest_version(packet));
     return true;
 }
 
