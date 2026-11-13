@@ -73,9 +73,9 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     end
   end
 
-  test "the French address on the glass leads to the French activation" do
+  test "the old French activation address leads to the activation" do
     visit "/fr/activer"
-    assert_current_path "/fr/briefing/activate"
-    assert_selector "h1", text: "Activer un Go neuf"
+    assert_current_path "/briefing/activate"
+    assert_selector "h1", text: "Activate a new Go"
   end
 end

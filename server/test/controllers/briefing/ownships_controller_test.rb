@@ -25,13 +25,6 @@ class Briefing::OwnshipsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "width" => 24, "words" => glider.words, "hotSpot" => 4 }, linked)
   end
 
-  test "switching language keeps the drawing in the address" do
-    get briefing_ownship_path(type: "glider", w: 24, rows: "ff")
-
-    assert_select ".locale-switcher a[href='/fr/briefing/ownship?rows=ff&type=glider&w=24']", text: "FR"
-    assert_select "link[rel=alternate][hreflang=fr][href=?]", "https://skyblip.eu/fr/briefing/ownship"
-  end
-
   test "an unreadable drawing in the address says so and hands nothing over" do
     get briefing_ownship_path(type: "light_aircraft", rows: "zz", w: "24")
 
@@ -58,7 +51,8 @@ class Briefing::OwnshipsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a type with no drawing starts from the light aircraft and says so" do
-    get briefing_ownship_path(type: "balloon", locale: "fr")
+    cookies[:locale] = "fr"
+    get briefing_ownship_path(type: "balloon")
 
     assert_response :success
     assert_select ".ownship-note", text: /type Ballon : l.appareil affiche celui du type Avion léger/
@@ -66,7 +60,8 @@ class Briefing::OwnshipsControllerTest < ActionDispatch::IntegrationTest
 
   test "every type opens in both languages" do
     Ownship::AircraftType::KEYS.product(I18n.available_locales).each do |type, locale|
-      get briefing_ownship_path(type:, locale: (locale unless locale == I18n.default_locale))
+      cookies[:locale] = locale.to_s
+      get briefing_ownship_path(type:)
       assert_response :success, "#{type} in #{locale}"
     end
   end

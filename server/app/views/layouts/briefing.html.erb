@@ -13,14 +13,14 @@
         <%= render "layouts/wordmark", css: "wordmark-app" %>
         <span class="app-bar-title"><%= t("briefing.app.title") %></span>
       <% end %>
-      <%= render "layouts/locale_switcher" %>
       <details class="app-menu" data-controller="install">
         <summary><%= t("briefing.menu.open") %></summary>
         <ul>
           <li><%= link_to t("briefing.menu.activate"), briefing_activation_path %></li>
           <li><%= link_to t("briefing.menu.tools"), briefing_tools_path %></li>
+          <li><%= link_to t("briefing.menu.preferences"), briefing_preferences_path %></li>
           <li data-install-target="offer" hidden><button type="button" data-action="install#prompt"><%= t("briefing.menu.install") %></button></li>
-          <li><%= link_to t("briefing.menu.site"), root_path, data: { turbo: false } %></li>
+          <li><%= link_to t("briefing.menu.site"), site_root_path, data: { turbo: false } %></li>
         </ul>
       </details>
     </header>

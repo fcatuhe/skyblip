@@ -6,7 +6,7 @@
     <p class="note"><%= link_to @release.name, @release.url %></p>
     <% if @workbench %>
       <%= render "shared/simulator_dev", module_path: simulator_module_path(tag: @release.tag),
-            scenario_manifest_url: release_asset_path(@release.tag, "scenarios.json", locale: nil) %>
+            scenario_manifest_url: release_asset_path(@release.tag, "scenarios.json") %>
     <% else %>
       <%= render "shared/simulator", **t("simulator_builds.controls").symbolize_keys, module_path: simulator_module_path(tag: @release.tag) %>
     <% end %>
