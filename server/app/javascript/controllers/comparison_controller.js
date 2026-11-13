@@ -5,17 +5,25 @@ import { gdl90Frames } from "#skyblip/gdl90"
 import { hasPosition } from "#skyblip/geo"
 import { nmeaLines, parseNmea } from "#skyblip/nmea"
 import { hasWebSerial, openSerial } from "#skyblip/serial"
-import { LIVE_MS, TrafficPicture } from "#skyblip/traffic"
+import { drawTimeline } from "#skyblip/timeline"
+import { TrafficPicture } from "#skyblip/traffic"
+import {
+  SOURCES, aircraftRow, describe, element, focusRows, focusSummary, focusTitle, km, renderAttributes, seconds
+} from "controllers/comparison/tables"
 
-const SOURCES = ["retro", "bravo"]
+const REFERENCE_ORDER = ["bravo", "retro"]
 const RENDER_MS = 1000
 
 export default class extends Controller {
-  static targets = ["link", "unlink", "state", "baud", "own", "chart", "chartState", "saveState", "tally", "aircraft", "attributes", "logState"]
+  static targets = [
+    "link", "unlink", "state", "baud", "own", "chart", "chartState", "saveState", "tally", "aircraft", "attributes", "logState",
+    "focusEmpty", "focusBody", "focusTitle", "focusSummary", "focusRows", "timeline"
+  ]
   static values = { tiles: String, attribution: String }
 
   connect() {
-    this.picture = new TrafficPicture(SOURCES)
+    this.picture = new TrafficPicture(SOURCES, { referenceOrder: REFERENCE_ORDER })
+    this.focused = null
     this.links = {}
     this.counts = Object.fromEntries(SOURCES.map(source => [source, { ok: 0, bad: 0, lastAt: null }]))
     this.log = []
@@ -140,8 +148,24 @@ export default class extends Controller {
     setTimeout(() => URL.revokeObjectURL(url))
   }
 
+  focus({ params: { address } }) {
+    this.focused = address
+    this.render()
+  }
+
+  pick(event) {
+    const address = this.chart.hit(event.offsetX, event.offsetY)
+    if (address) this.focus({ params: { address } })
+  }
+
+  unfocus() {
+    this.focused = null
+    this.render()
+  }
+
   clear() {
-    this.picture = new TrafficPicture(SOURCES)
+    this.picture = new TrafficPicture(SOURCES, { referenceOrder: REFERENCE_ORDER })
+    this.focused = null
     this.log = []
     this.render()
   }
@@ -150,11 +174,24 @@ export default class extends Controller {
     const at = Date.now()
     const rows = this.picture.aircraft(at)
     for (const source of SOURCES) this.renderOwn(source, at)
-    this.renderTally(this.picture.tally(at))
-    this.aircraftTarget.replaceChildren(...rows.map(row => aircraftRow(row, at)))
+    this.renderTally(this.picture.tally(at), this.picture.reference(at))
+    this.aircraftTarget.replaceChildren(...rows.map(row => aircraftRow(row, at, this.focused)))
     for (const table of this.attributesTargets) renderAttributes(table, this.picture.source(table.dataset.source), at)
     this.logStateTarget.textContent = `${this.log.length} entries`
-    this.draw(rows)
+    this.renderFocus(at)
+    this.draw(rows, at)
+  }
+
+  renderFocus(at) {
+    const row = this.focused && this.picture.row(this.focused, at)
+    this.focusEmptyTarget.hidden = Boolean(row)
+    this.focusBodyTarget.hidden = !row
+    if (!row) return
+    this.focusTitleTarget.textContent = focusTitle(row)
+    this.focusSummaryTarget.textContent = focusSummary(row, this.picture.reference(at))
+    this.focusRowsTarget.replaceChildren(...focusRows(row, at))
+    const lanes = SOURCES.filter(source => row.by[source]).map(source => ({ source, label: source, samples: row.by[source].samples }))
+    drawTimeline(this.timelineTarget, { lanes, nowS: Math.floor(at / 1000) })
   }
 
   renderOwn(source, at) {
@@ -171,27 +208,29 @@ export default class extends Controller {
     this.sourced("own", source).replaceChildren(...Object.entries(fields).flatMap(([term, value]) => [element("dt", term), element("dd", value)]))
   }
 
-  renderTally({ total, everyone, only, live, farthestM }) {
+  renderTally({ total, everyone, only, live, farthestM }, reference) {
     this.tallyTarget.textContent = `${total} aircraft heard: ${everyone} by both, ${only.retro} by the Retro only, ${only.bravo} by the Bravo only. ` +
       `Now: ${live.retro} on the Retro, ${live.bravo} on the Bravo. ` +
-      `Farthest: ${km(farthestM.retro)} km on the Retro, ${km(farthestM.bravo)} km on the Bravo.`
+      `Farthest: ${km(farthestM.retro)} km on the Retro, ${km(farthestM.bravo)} km on the Bravo. ` +
+      (reference ? `Distances from the ${reference.source} fix.` : "No fix yet to measure GDL 90 distances from.")
   }
 
   drawSoon() {
     this.frame ??= requestAnimationFrame(() => {
       this.frame = null
-      this.draw(this.picture.aircraft(Date.now()))
+      const at = Date.now()
+      this.draw(this.picture.aircraft(at), at)
     })
   }
 
-  draw(rows) {
+  draw(rows, at) {
     const owns = SOURCES.map(source => ({ source, ...this.picture.source(source).own })).filter(hasPosition)
-    const freshest = owns.toSorted((a, b) => b.at - a.at)[0]
     const aircraft = rows.filter(row => row.live.length > 0).map(row => ({
+      address: row.address,
       label: row.callsign ?? row.address,
       points: row.live.map(source => ({ source, ...row.by[source].report })).filter(hasPosition)
     }))
-    this.chart.draw({ centre: freshest ?? this.centre, owns, aircraft })
+    this.chart.draw({ centre: this.picture.reference(at) ?? this.centre, owns, aircraft, focus: this.focused })
   }
 
   async showSavedTiles() {
@@ -231,79 +270,10 @@ export default class extends Controller {
   }
 }
 
-const AIRCRAFT_COLUMNS = [
-  (target, at) => seconds(at - target.lastAt),
-  target => km(target.report.distanceM),
-  target => describe(target.report.bearingDeg, "°"),
-  target => describe(target.report.relativeVerticalFt, ""),
-  target => describe(target.report.groundSpeedKt, ""),
-  target => target.reports,
-  target => km(target.farthestM)
-]
-
-function aircraftRow(row, at) {
-  const tr = document.createElement("tr")
-  tr.className = row.live.length > 0 ? "" : "stale"
-  const heard = SOURCES.filter(source => row.by[source])
-  const first = heard.length > 1 ? `${row.firstBy} by ${seconds(row.leadMs)} s` : row.firstBy
-  tr.append(element("td", row.address), element("td", row.callsign ?? ""), element("td", heard.join(" + ")), element("td", first))
-  for (const source of SOURCES) {
-    const target = row.by[source]
-    for (const column of AIRCRAFT_COLUMNS) {
-      const cell = element("td", target ? String(column(target, at)) : "")
-      if (target && !row.live.includes(source)) cell.className = "stale"
-      tr.append(cell)
-    }
-  }
-  return tr
-}
-
-function renderAttributes(table, { targets }, at) {
-  const decoded = [...targets.values()].sort((a, b) => b.lastAt - a.lastAt)
-  const keys = [...new Set(decoded.flatMap(target => Object.keys(target.decoded)))].filter(key => key !== "kind")
-  const head = document.createElement("thead")
-  head.append(rowOf("th", ["Age, s", "Reports", ...keys]))
-  const body = document.createElement("tbody")
-  body.append(...decoded.map(target => {
-    const tr = rowOf("td", [seconds(at - target.lastAt), target.reports, ...keys.map(key => target.decoded[key])])
-    if (at - target.lastAt > LIVE_MS) tr.className = "stale"
-    return tr
-  }))
-  table.replaceChildren(head, body)
-}
-
-function rowOf(cell, values) {
-  const tr = document.createElement("tr")
-  tr.append(...values.map(value => element(cell, value === null || value === undefined ? "" : String(round(value)))))
-  return tr
-}
-
 function statusOf(status) {
   if (status.kind === "pflau") return `PFLAU: ${status.rx} heard, GPS ${status.gps}, alarm ${status.alarmLevel}`
   if (status.kind === "heartbeat") return `Heartbeat: GPS ${status.gpsValid ? "valid" : "invalid"}, UTC ${status.utcValid ? "valid" : "invalid"}`
   return "-"
-}
-
-function element(name, text) {
-  const node = document.createElement(name)
-  node.textContent = text
-  return node
-}
-
-function describe(value, unit) {
-  return value === null || value === undefined ? "" : `${Math.round(value)}${unit}`
-}
-
-function round(value) {
-  return typeof value === "number" && !Number.isInteger(value) ? Number(value.toFixed(5)) : value
-}
-
-function km(metres) {
-  return metres === null || metres === undefined ? "" : (metres / 1000).toFixed(1)
-}
-
-function seconds(ms) {
-  return Math.round(ms / 1000)
 }
 
 function hex(bytes) {

@@ -4,6 +4,7 @@
 #include "core/annunciation/annunciator.h"
 #include "core/diagnostics/payload.h"
 #include "core/indication/lamp.h"
+#include "core/indication/signature.h"
 #include "core/power/duty.h"
 #include "core/traffic/alarm.h"
 #include "core/traffic/formation.h"
@@ -32,8 +33,8 @@ struct AlarmSettings {
 
 // The lamp lives here rather than in PowerService, whose state most of it reads,
 // because the highest-priority row in the table is the alarm level and because a
-// device going down has to be silenced and darkened in the same breath - park()
-// is already called at exactly the right point in the shutdown sequence.
+// device going down has to be silenced, signed off and then darkened by the one
+// owner of the lamp, the buzzer and the motor.
 class AlarmService : public runtime::Service {
    public:
     AlarmService(runtime::Context& context, Feature declared, AlarmSettings settings)
@@ -46,6 +47,17 @@ class AlarmService : public runtime::Service {
     // released and the lamp is darkened and let go here rather than left latched
     // on a rail that is about to drop.
     void park(uint32_t now_ms);
+
+    // INFO: fc 13nov26 asked before the first pass, and played from it, so the sign costs bring-up
+    // nothing
+    void sign_on() { sign_on_pending_ = true; }
+    // INFO: fc 13nov26 the loop has stopped, so the product advances the signature and parks once
+    // it ends
+    void sign_off(uint32_t now_ms);
+    // INFO: fc 13nov26 a sign off starts on the next pass, as the shutdown's own pass may block on
+    // flash
+    void advance_signature(uint32_t now_ms);
+    bool signing() const { return sign_off_pending_ || signature_.playing(); }
 
     void dismiss() { tracker_.dismiss(); }
 
@@ -61,17 +73,17 @@ class AlarmService : public runtime::Service {
     // because they differ in the gaps of a wink and a test has to be able to say
     // which of the two it means.
     indication::Condition indicator_condition() const { return indication_.condition(); }
-    indication::Lamp lamp() const { return indication_.lamp(); }
+    indication::Lamp lamp() const { return shown_; }
 
    private:
     bool silenced(traffic::Target& target, formation::State state);
     void record_traffic(int slot, const traffic::Target& target,
                         const traffic::AlarmTracker::Decision& decision, uint32_t now_ms);
     formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
-    void drive(const annunciation::Situation& situation, uint32_t now_ms);
     void drive_buzzer(const annunciation::Command& command);
     void drive_motor(bool vibrating);
-    void drive_lamp(uint32_t now_ms, bool running);
+    void drive_lamp(uint32_t now_ms, bool running, indication::Signal signal);
+    void show(indication::Lamp lamp);
     void accrue_annunciator(uint32_t now_ms);
 
     // Eight passes through the shortest note or gap of either tune: the
@@ -91,6 +103,16 @@ class AlarmService : public runtime::Service {
     static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
                       indication::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest flash");
+    static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
+                      indication::kSignatureShortestPhaseMs,
+                  "the service loop is too coarse to resolve the shortest signature pulse");
+    static_assert(indication::kSignOn.pulse_ms < annunciation::kAnnunciatorOnCeilingMs &&
+                      indication::kSignOff.pulse_ms < annunciation::kAnnunciatorOnCeilingMs,
+                  "the motor's guard would cut a signature pulse");
+    static_assert(indication::kSignOn.pulses != annunciation::calls(annunciation::kAdvisoryTune) &&
+                      indication::kSignOff.pulses !=
+                          annunciation::calls(annunciation::kAdvisoryTune),
+                  "a signature felt as many times as the advisory is felt as traffic");
 
     power::OnTime sounding_{};
     power::OnTime vibrating_{};
@@ -100,6 +122,11 @@ class AlarmService : public runtime::Service {
     bool bravo_lost_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
+    indication::SignaturePlayer signature_{};
+    indication::Lamp shown_{indication::Lamp::None};
+    bool motor_on_{false};
+    bool sign_on_pending_{false};
+    bool sign_off_pending_{false};
     bool dirty_{false};
     bool running_{true};
     bool lamp_shows_link_{false};
