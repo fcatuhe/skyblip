@@ -6,6 +6,18 @@ Both air frames are read and written field by field. A field is a `BitField`: an
 
 `from_own` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`).
 
+## Three radio protocols, three versions
+
+`adsl.version`, `adsb.version` and `alptas.version` version ADS-L, ADS-B and ALP-TAS apart from the firmware, and `firmware/README.md` says what moves each under Versions. `adsl.version` is the version of skyBlip's ADS-L implementation, not the Protocol Version field every ADS-L packet carries on air (E.1.1). The ADS-L declaration of conformity names firmware versions, in the template's "Firmware Version" field (`docs/reference/ads-l_4_srd860_issue_2.md:1659`). `adsl.version` decides which firmware releases a declaration still covers, because each release lists the protocol versions it carries. All three stay below 1.0.0 until the protocol is ready for production.
+
+Each version covers these paths today, under `firmware/`, so a change to one of them is also a decision on that version. The list is for review: no CI check holds a change to it yet.
+
+| Version | Paths |
+|---|---|
+| `adsl.version` | `core/protocol/adsl*`, the ADS-L half of `core/protocol/air.*`, `core/fec/`, `core/timing/slot.*`, `core/timing/transmit.*`, `core/timing/channel.*`, `core/flight/state.*`, `core/flight/extrapolate.*`, `core/settings/address.h`, `products/skyblip_go/services/radio.*`, and the ERP and modulation constants in `hardware/parts/sx1262/sx1262.h` |
+| `alptas.version` | `core/protocol/alptas.*`, the ALP-TAS half of `core/protocol/air.*` |
+| `adsb.version` | `core/protocol/adsb*`, `hardware/parts/lr2021/`, the 1090 MHz receiver, and `products/skyblip_bravo/services/adsb.*` |
+
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
