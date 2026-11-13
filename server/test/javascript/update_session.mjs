@@ -23,7 +23,7 @@ export function session(options = {}) {
   return { updater, until };
 }
 
-export const READS = new Set(['update', 'status', 'get', 'defaults']);
+export const READS = new Set(['update', 'install_report', 'status', 'get', 'defaults']);
 export const asking = task => state => state.phase === 'confirming' && state.task === task;
 export const installing = state => state.phase === 'installing';
 export const settled = state => state.phase === 'ready' && state.notice;

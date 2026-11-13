@@ -63,6 +63,8 @@
         vectors: null,
         diagnostics: [],
         browsers: null,
+        installReport: null,
+        failure: null,
       }, options);
       this.connected = false;
       this.rebooting = false;
@@ -183,6 +185,7 @@
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
       if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
+      if (command === 'install_report') return this.reply({ command, ...this.installReport });
       if (command === 'set') {
         this.staged = fields;
         return this.ask('set', 'confirm');
@@ -414,6 +417,8 @@
         this.rebooting = false;
         this.from = this.running;
         this.to = version;
+        // INFO: fc 13nov26 an install that does not land comes back on the version it had, as failure says
+        if (this.failure) return Object.assign(this, this.failure);
         this.running = version;
         this.image = 'probation';
         later(() => {

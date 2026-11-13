@@ -38,6 +38,43 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  # The silence of #278: back on its old firmware, confirmed, and nothing on record.
+  test "an install that comes back on the old firmware says so, and offers a report to copy" do
+    page.driver.browser.command("Browser.grantPermissions", permissions: %w[clipboardReadWrite clipboardSanitizedWrite])
+    in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      click_button "Install 0.1.0+1005"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
+      assert_no_selector ".firmware-report"
+      assert_selector ".firmware-status", text: "The device installs and restarts", wait: 30
+      assert_selector ".unit-message", text: "The device came back on 0.1.0+1000, not 0.1.0+1005, and kept no record of the install.", wait: 10
+      assert_no_selector ".firmware-progress"
+      assert_selector ".firmware-report-line", text: /\Askyblip-install-report v1 product=skyblip_go running=0\.1\.0\+1000 tried=0\.1\.0\+1005 image=confirmed .* cause=no_record report=none /
+      screen "28-firmware-no-record"
+
+      click_button "Copy the report"
+      assert_selector ".firmware-report.is-copied", text: "Copied"
+    end
+  end
+
+  # TODO: fc 13nov26 the install report, retired with #294
+  test "a Bravo that reverted names how far the new firmware got, whenever the page connects" do
+    report = { check: "matched", swap: "test", request_error: 0, boots: 2, probation_boots: 1, proof: "started", reset: "watchdog" }
+    in_range a_bravo(image: "reverted", from: "0.1.0+40", to: "0.1.0+44", installReport: report)
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      click_link "Firmware"
+      assert_selector ".unit-message", text: "The new firmware started, then stopped before it proved itself, so the device went back to the one it had."
+      assert_selector ".firmware-report-line", text: "image=reverted from=0.1.0+40 to=0.1.0+44 cause=probation_failed check=matched swap=test"
+      assert_selector ".firmware-report-line", text: "probation_boots=1 proof=started reset=watchdog"
+      screen "29-firmware-reverted-report"
+    end
+  end
+
   test "a device on the newest image is told so, and can still install a file of its own" do
     in_range a_go(running: "0.1.0+1005")
     on_the_shelf do

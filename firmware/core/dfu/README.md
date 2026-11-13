@@ -1,6 +1,6 @@
 # core/dfu
 
-What the firmware decides about an update image: how it reads MCUboot's header and TLVs (`image.h`), the record a unit writes before a swap and what the next boot makes of it (`update.h`), which SMP commands a phone may send (`smp_policy.h`), and which product an image is for (`product_check.h`). The Zephyr side is `hardware/platform/zephyr/dfu.h` and `mcumgr_hooks.cpp`, and the product rules for a whole update are in `core/comms/config.cpp`.
+What the firmware decides about an update image: how it reads MCUboot's header and TLVs (`image.h`), the record a unit writes before a swap and what the next boot makes of it (`update.h`), what the unit writes down about its last install (`install_report.h`), which SMP commands a phone may send (`smp_policy.h`), and which product an image is for (`product_check.h`). The Zephyr side is `hardware/platform/zephyr/dfu.h` and `mcumgr_hooks.cpp`, and the product rules for a whole update are in `core/comms/config.cpp`.
 
 ## One product's images only
 
@@ -44,3 +44,43 @@ The `update` frame names the product the unit runs, `product` in `schemas/link.v
 - A Go on firmware built before this check takes any image signed by its key. The page reads a unit that names no product as a Go, and offers it only Go images.
 - An image built before this check names no product, so a unit on a newer image refuses it over the air. Going back to one is a drag-and-drop of its `.uf2`. A Go leaves `product` out of its frame, so the page cannot tell a Go with the check from one without it: it sends such a file to a Go, and a Go with the check refuses it once the upload reaches its protected area, near its end.
 - The hook itself has run only on `native_sim`, in `test/twister/smp_gate`. The refusal on an nRF52840, through the page and through `mcumgr`, is a hardware acceptance item of #187.
+
+## Before the restart
+
+`ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs, as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit then reads MCUboot's swap type back from the slots and prints one console line, `dfu: slot1 <check>, swap request <errno>, swap type <type>`. It restarts whatever the result, because it has already parked its parts, and the old image comes back to say what went wrong. `test/core/test_dfu_check.cpp` holds the check to an image `imgtool sign` made, protected TLVs included.
+
+## The install report
+
+The install report is troubleshooting for #278. #294 retires it once Bluetooth updates install and confirm in the field. It is one entry of 9 bytes in NVS, under the key `install.report`, beside the update record:
+
+| Field | Written by | What it says |
+|---|---|---|
+| `check` | the image that sends the update, before the restart | what `check_image()` found in slot1: `matched`, `damaged`, `unreadable` or `undigested` |
+| `swap`, `request_error` | the same image | the swap type MCUboot reads back, and what `boot_request_upgrade()` returned |
+| `boots` | every image that boots while the record stands | the restarts since the install |
+| `probation_boots`, `proof` | the new image, on probation | how many times it ran, and how far its last run got: `booted`, `started`, `gnss_heard`, `hub_bootable`, `proven` or `confirm_failed` |
+| `reset` | every image that boots | the reason for the latest restart. After a revert, it names what ended the new image's run |
+
+The report lives exactly as long as the update record. `install()` writes a new one, and an image that confirms itself, or that finds an image the record does not name, erases both. A boot that finds no record erases the report too, so an entry an older image left behind does not outlive the next boot of an image that knows the key. The new image writes at most six times during its probation, unplaced, because only the first minute after an install pays for them. A host asks for it with the bare `install_report` command, and the answer is 22 bytes at its widest.
+
+### What it leaves behind
+
+- On each unit: the `install.report` entry, 9 bytes, erased with the update record. A unit that went back to firmware without the report keeps it until a firmware that knows the key boots.
+- On the link: the `install_report` command, 35, and the `staged_check`, `swap_type` and `proof` enums in `schemas/link.v1.json`. `proof` stays, because `ConfigLinkService::proof()` decides when an image confirms itself.
+- In the firmware: `install_report.{h,cpp}` here; in `ConfigLinkService`, `report_`, `reported_`, `kReportKey`, `load_report()`, `write_report()`, `note_proof()` and `forget_report()`, called from `load_image_state()`, `record_update()`, `forget_update()`, `publish_image_state()` and `confirm_image_once_healthy()`; `ConfigService::set_install_report()` and `send_install_report()`; their tests in `test/core/test_dfu_install_report.cpp`, `test/products/test_install_report.cpp` and `test/products/test_link_payload.cpp`. `request_swap()` and its check stay: they keep a damaged image from reaching MCUboot.
+- On the page: `server/app/javascript/skyblip/install_report.js`, the `install_report` ask in `update.js`, the report line in `firmware_controller.js`, `briefing/devices/firmwares/show.html.erb` and the `.firmware-report` rules of `briefing/unit.css`, and the `install_report` and `report_*` words in `config/locales/briefing.*.yml`. Their tests are `test/javascript/test_install_report.mjs`, the `installReport` option of both fakes, two tests in `test/system/briefing/firmware_test.rb` and one in `test/i18n/briefing_words_test.rb`.
+- `rg '#294'` finds a `TODO:` beside each part. The firmware that retires the report keeps one `erase("install.report")` at boot, so no unit keeps the entry.
+
+### When an update does not land
+
+From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The user sends that line. The unit keeps the report until its next install, so a page reopened days later still reads it.
+
+On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`. Keep the USB console running with the loop in #278 to catch the `dfu:` line before the restart.
+
+| What the report says | What happened |
+|---|---|
+| no report, and `update` says `confirmed` on the old version | the unit never wrote its update record: the store was not ready, or the write failed |
+| `check` other than `matched` | slot1 does not hold the image that was sent, or the flash refused to read it. Send the image again |
+| `matched`, then `swap` other than `test` or a `request_error` | the swap flag never reached slot1's trailer, so MCUboot booted the old image |
+| `matched`, `test`, `probation_boots` 0 | MCUboot refused the image at boot without running it: its signature, its key or the slot geometry |
+| `probation_boots` 1 or more | the new image ran and never confirmed. `proof` says where it stopped, and `reset` what ended it |

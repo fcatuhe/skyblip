@@ -31,6 +31,14 @@
 
     <p class="unit-message" role="status" data-firmware-target="message" hidden></p>
 
+    <div class="firmware-report" data-firmware-target="report" data-controller="copy-to-clipboard" data-copy-to-clipboard-success-class="is-copied" hidden>
+      <p class="note"><%= t("briefing.firmware.report_hint") %></p>
+      <code class="firmware-report-line" data-firmware-target="reportLine"></code>
+      <button type="button" class="button-app button-app--quiet" data-action="copy-to-clipboard#copy">
+        <span class="when-idle"><%= t("briefing.firmware.report_copy") %></span><span class="when-copied"><%= t("briefing.devices.copied") %></span>
+      </button>
+    </div>
+
     <div class="app-actions">
       <button type="button" class="button-app" data-unit-target="reconnect" data-action="unit#reconnect" hidden><%= t("briefing.unit.reconnect") %></button>
       <button type="button" class="button-app" data-firmware-target="install" data-action="firmware#install" data-label="<%= t("briefing.firmware.install") %>" disabled><%= t("briefing.firmware.install") %></button>

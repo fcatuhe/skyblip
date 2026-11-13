@@ -77,6 +77,23 @@ TEST_CASE("bravo: an install goes down unsigned, since the unit comes straight b
     CHECK(rig.platform.annunciator().motor_starts() == 0);
 }
 
+// The X1 is where a Bluetooth update did not land (#278), so its install keeps the report too.
+TEST_CASE("bravo: an install checks slot 1, keeps the install report, then restarts") {
+    BravoRig rig;
+    rig.platform.dfu().running_version_valid = true;
+    rig.platform.dfu().staged_version_valid = true;
+    rig.platform.dfu().staged_image_version = {0, 2, 0, 15};
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.product.shutdown().request(power::ShutdownReason::Install, rig.now_ms);
+    rig.run_for(power::kParkSettleMs + power::kReleaseSettleMs + 500);
+    CHECK(rig.platform.dfu().swap_requests == 1);
+    CHECK(rig.platform.dfu().triggered == 1);
+    uint8_t blob[16];
+    size_t count = 0;
+    CHECK(rig.platform.key_value().read("install.report", blob, sizeof(blob), count) == Status::Ok);
+}
+
 TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp takes its row") {
     BravoRig rig;
     rig.platform.system_power().causes = power::ResetCause::LowPowerWake;

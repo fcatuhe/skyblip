@@ -81,6 +81,8 @@ fr:
       recovery: "Le firmware ne prend pas\u00a0?"
       recovery_hint: "Sans Bluetooth\u00a0: branchez l\u2019appareil sur un ordinateur et appuyez deux fois sur RST en moins d\u2019une demi-seconde. Il apparaît comme une clé USB nommée TECHOBOOT\u00a0: déposez-y le fichier .uf2 d\u2019une version."
       recover: "Redémarrer en clé USB"
+      report_hint: "Envoyez-nous cette ligne, par message ou par mail, avec ce que vous avez fait. Elle nous dit pourquoi la mise à jour n\u2019a pas pris."
+      report_copy: "Copier le rapport"
     activation:
       title: "Activer un Go neuf"
       hint: "Son écran affiche ACTIVATE et un code comme 3F2A. Choisissez ce code dans la liste."
@@ -202,6 +204,14 @@ fr:
       probation: "Le nouveau firmware fait ses preuves. Cela prend quelques secondes."
       reverted: "Le nouveau firmware n\u2019a pas fait ses preuves, l\u2019appareil est revenu à celui qu\u2019il avait. Réessayez. Si cela arrive deux fois, dites-nous quelle version\u00a0:"
       image_refused: "L\u2019appareil n\u2019a pas démarré la mise à jour, l\u2019image a échoué à sa vérification, et il a gardé son firmware. Téléchargez-la à nouveau\u00a0:"
+      install_report:
+        slot_damaged: "Le nouveau firmware est arrivé abîmé dans la mémoire de l\u2019appareil, qui a gardé celui qu\u2019il avait. Installez à nouveau."
+        slot_unreadable: "L\u2019appareil n\u2019a pas pu relire le nouveau firmware dans sa mémoire, et il a gardé celui qu\u2019il avait. Installez à nouveau."
+        slot_undigested: "Le nouveau firmware n\u2019a pas de somme de contrôle, et l\u2019appareil a gardé celui qu\u2019il avait. Téléchargez l\u2019image à nouveau."
+        swap_not_marked: "L\u2019appareil n\u2019a pas pu marquer le nouveau firmware à installer, et il a démarré celui qu\u2019il avait."
+        bootloader_refused: "Le chargeur de démarrage a refusé le nouveau firmware sans le lancer, et l\u2019appareil a gardé celui qu\u2019il avait."
+        probation_failed: "Le nouveau firmware a démarré, puis s\u2019est arrêté avant de faire ses preuves, et l\u2019appareil est revenu à celui qu\u2019il avait."
+        no_record: "L\u2019appareil est revenu sur %{running}, pas sur %{attempted}, sans garder trace de l\u2019installation."
       settings_prior: "Ses réglages sont ceux d\u2019avant la mise à jour. Vérifiez-les."
       settings_defaults: "Il a perdu ses réglages et tourne sur ceux d\u2019origine. Vérifiez l\u2019indicatif et le type d\u2019aéronef."
       swap_unpowered: "La batterie est critique, trop faible pour installer. Chargez-le d\u2019abord."

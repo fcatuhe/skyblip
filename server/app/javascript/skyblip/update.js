@@ -1,5 +1,6 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
+import { installReportOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
@@ -131,6 +132,7 @@ export class Updater {
     notice: null,
     trust: null,
     browsers: null,
+    installReport: null,
   };
 
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey }) {
@@ -319,6 +321,8 @@ export class Updater {
 
   async #learn() {
     await this.#send({ command: 'update' });
+    // TODO: fc 13nov26 the install report, retired with #294
+    await this.#send({ command: 'install_report' });
     await this.#send({ command: 'status' });
     await this.#send({ command: 'get' });
     await this.#send({ command: 'defaults' });
@@ -357,6 +361,7 @@ export class Updater {
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
+    else if (reply.command === 'install_report') this.#set({ installReport: installReportOf(reply) });
     else if (reply.command === 'acknowledgement') this.#acked(reply);
   }
 
@@ -472,14 +477,14 @@ export class Updater {
     this.#trust.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });
+      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
       phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
-      progress: null,
+      progress: null, installReport: null,
       notice,
     });
   }
