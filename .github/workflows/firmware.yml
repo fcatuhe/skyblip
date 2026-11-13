@@ -363,12 +363,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Each product's development image becomes its own pre-release, one click from the
+  # Every product's development image goes into one pre-release, one click from the
   # Releases page: dev-<build> for main, the newest three kept, dev-<build>-<branch> for
-  # a branch run by hand, the newest kept until its pull request closes. Every product
-  # but the Go puts its name in front, as in bravo-dev-<build>. A new tag per build,
-  # because immutable releases lock a published one, and a deleted name is never reused.
-  # The rules are lib/dev_release.rb's, tested in .github/test/dev_release_test.rb.
+  # a branch run by hand, the newest kept until its pull request closes. A new tag per
+  # build, because immutable releases lock a published one, and a deleted name is never
+  # reused. The rules are lib/dev_release.rb's, tested in .github/test/dev_release_test.rb.
   dev-release:
     name: dev pre-release
     needs: [changes, product-image, simulator]
@@ -393,7 +392,7 @@ jobs:
           name: browser-simulator
           path: simulator
 
-      # The third-party notices travel with every image, so they come from the commit it was built from, as does the publisher.
+      # The third-party notices and the protocol versions travel with every image, so they come from the commit it was built from, as does the publisher.
       - uses: actions/checkout@v7
         with:
           path: source
@@ -402,12 +401,13 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
+            firmware/core/protocol/*.version
             lib/dev_release.rb
             scripts/dev_release.rb
           sparse-checkout-cone-mode: false
 
       # A rerun of one commit stamps the same number, which a unit would refuse anyway.
-      - name: create and prune each product's pre-releases
+      - name: create the pre-release and prune the old ones
         run: ruby source/scripts/dev_release.rb image simulator source
 
   platform-adapters:

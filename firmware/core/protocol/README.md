@@ -6,6 +6,10 @@ Both air frames are read and written field by field. A field is a `BitField`: an
 
 `from_own` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`).
 
+## Three radio protocols, three versions
+
+`adsl.version`, `adsb.version` and `alptas.version` version ADS-L, ADS-B and ALP-TAS apart from the firmware, and `firmware/README.md` says what moves each under Versions. The ADS-L declaration of conformity names the ADS-L version, so a firmware release that leaves `adsl.version` alone stays under the same declaration. All three stay below 1.0.0 until the protocol is ready for production.
+
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.

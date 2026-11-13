@@ -79,74 +79,98 @@ class DeploymentTest < Minitest::Test
     checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
 
     assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES lib/dev_release.rb scripts/dev_release.rb], checkout.dig("with", "sparse-checkout").split
+    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/core/protocol/*.version lib/dev_release.rb scripts/dev_release.rb], checkout.dig("with", "sparse-checkout").split
     assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
   end
 
-  def test_each_release_tag_names_its_product_and_its_version
+  def test_the_tag_must_equal_the_firmware_version
     Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/skyblip_go"))
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/skyblip_bravo"))
+      FileUtils.mkdir_p(File.join(tree, "firmware"))
+      File.write(File.join(tree, "firmware/VERSION"), "# a comment\nVERSION_MAJOR = 0\nVERSION_MINOR = 2\nPATCHLEVEL = 0\nVERSION_TWEAK = 0\n")
+      step = release_step("tag", "the tag is firmware/VERSION")
 
-      assert_equal({ "product" => "skyblip_go", "prefix" => "", "slug" => "skyblip-go", "version" => "0.1.0" }, tag_outputs(tree, "v0.1.0"))
-      assert_equal({ "product" => "skyblip_bravo", "prefix" => "bravo-", "slug" => "skyblip-bravo", "version" => "0.2.0" }, tag_outputs(tree, "bravo-v0.2.0"))
-      assert_equal %w[v* bravo-v*], workflow("release").fetch(true).fetch("push").fetch("tags")
+      assert_equal({ "version" => "0.2.0" }, step_outputs(tree, step, "GITHUB_REF_NAME" => "v0.2.0"))
+      output, status = run_step(tree, step, "GITHUB_REF_NAME" => "v0.2.1", "GITHUB_OUTPUT" => File::NULL)
+      refute status.success?
+      assert_includes output, "FAIL: tag v0.2.1, but firmware/VERSION says 0.2.0"
+      assert_equal %w[v*], workflow("release").fetch(true).fetch("push").fetch("tags")
     end
   end
 
-  def test_a_tag_naming_no_product_in_the_tree_is_refused_before_the_approval
+  def test_every_product_that_declares_a_board_is_built_and_released
     Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/skyblip_go"))
-      output, status = run_step(tree, release_step("tag", "the tag names a product"), "GITHUB_REF_NAME" => "bravo-v0.1.0")
+      { "skyblip_go" => "skyblip_product_board(t_echo_plus)\n", "skyblip_bravo" => "skyblip_product_board(meshtracker_x1)\n", "common" => "" }.each do |product, board|
+        FileUtils.mkdir_p(File.join(tree, "firmware/products", product))
+        File.write(File.join(tree, "firmware/products", product, "CMakeLists.txt"), "project(#{product})\n#{board}")
+      end
+
+      assert_equal({ "products" => '["skyblip_bravo","skyblip_go"]' }, step_outputs(tree, release_step("tag", "every product in the tree")))
+      assert_equal "${{ fromJSON(needs.tag.outputs.products) }}", workflow("release").dig("jobs", "image", "strategy", "matrix", "product")
+    end
+  end
+
+  def test_a_tree_with_no_product_is_refused_before_the_approval
+    Dir.mktmpdir do |tree|
+      FileUtils.mkdir_p(File.join(tree, "firmware/products/common"))
+      File.write(File.join(tree, "firmware/products/common/CMakeLists.txt"), "project(common)\n")
+      output, status = run_step(tree, release_step("tag", "every product in the tree"), "GITHUB_OUTPUT" => File::NULL)
 
       refute status.success?
-      assert_includes output, "FAIL: bravo-v0.1.0 names skyblip_bravo, which is not in firmware/products/"
+      assert_includes output, "FAIL: no directory in firmware/products/ declares a board"
       assert_includes workflow("release").fetch("jobs").fetch("image").fetch("needs"), "tag"
     end
   end
 
-  def test_the_tag_must_equal_its_products_version
-    Dir.mktmpdir do |tree|
-      FileUtils.mkdir_p(File.join(tree, "firmware/products/skyblip_bravo"))
-      File.write(File.join(tree, "firmware/products/skyblip_bravo/VERSION"), "VERSION_MAJOR = 0\nVERSION_MINOR = 2\nPATCHLEVEL = 0\nVERSION_TWEAK = 0\n")
-      step = release_step("tag", "the tag is the product's VERSION")
+  # Zephyr reads products/<product>/VERSION, and a copy there would sign one version and report another.
+  def test_every_product_carries_the_firmware_version
+    products = Dir.glob(File.join(ROOT, "firmware/products/*/CMakeLists.txt")).select { |cmake| File.read(cmake).match?(/^skyblip_product_board\(/) }.map { |cmake| File.dirname(cmake) }
 
-      assert run_step(tree, step, "GITHUB_REF_NAME" => "bravo-v0.2.0", "PRODUCT" => "skyblip_bravo", "RELEASE_VERSION" => "0.2.0").last.success?
-      output, status = run_step(tree, step, "GITHUB_REF_NAME" => "bravo-v0.2.1", "PRODUCT" => "skyblip_bravo", "RELEASE_VERSION" => "0.2.1")
-      refute status.success?
-      assert_includes output, "FAIL: tag bravo-v0.2.1, but firmware/products/skyblip_bravo/VERSION says 0.2.0"
-    end
+    assert_equal %w[skyblip_bravo skyblip_go], products.map { |product| File.basename(product) }.sort
+    products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(product, "VERSION")), product }
   end
 
-  def test_a_drafts_notes_start_at_its_own_products_last_release
+  # Before one release carried every product, Bravo's were tagged bravo-v*.
+  def test_a_drafts_notes_start_at_the_last_published_release
     Dir.mktmpdir do |tree|
       fake_gh(tree, %w[bravo-v0.2.0 v0.1.0])
-      draft = ->(tag, prefix) { run_step(tree, release_step("draft", "create the draft"), "PATH" => "#{tree}:#{ENV.fetch("PATH")}", "GITHUB_REF_NAME" => tag, "GITHUB_REPOSITORY" => "fcatuhe/skyblip", "PREFIX" => prefix) }
+      draft = ->(tag) { run_step(tree, release_step("draft", "create the draft"), "PATH" => "#{tree}:#{ENV.fetch("PATH")}", "GITHUB_REF_NAME" => tag, "GITHUB_REPOSITORY" => "fcatuhe/skyblip") }
 
-      assert_includes draft.("v0.2.0", "").first, "--generate-notes --notes-start-tag v0.1.0"
-      assert_includes draft.("bravo-v0.3.0", "bravo-").first, "--generate-notes --notes-start-tag bravo-v0.2.0"
+      assert_includes draft.("v0.2.0").first, "--generate-notes --notes-start-tag v0.1.0"
 
-      fake_gh(tree, %w[v0.1.0])
-      output, status = draft.("bravo-v0.1.0", "bravo-")
+      fake_gh(tree, %w[bravo-v0.2.0])
+      output, status = draft.("v0.1.0")
       assert status.success?, output
-      assert_includes output, "gh release create bravo-v0.1.0"
+      assert_includes output, "gh release create v0.1.0"
       refute_includes output, "--notes-start-tag"
     end
   end
 
-  # The Go's release files keep the names they had before a second product.
-  def test_a_release_names_its_files_after_the_product_and_the_version
+  def test_a_release_names_each_products_files_after_the_product_and_the_version
     Dir.mktmpdir do |tree|
       release_tree(tree, slug: "skyblip-go", hub_image: true)
-      assert run_step(tree, release_step("image", "name the files after the release"), "SLUG" => "skyblip-go", "RELEASE_VERSION" => "0.1.0").last.success?
-      assert_equal %w[skyblip-go-0.1.0.full.signed.bin skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.uf2], Dir.children(File.join(tree, "release")).grep(/\Askyblip-/).sort
+      assert run_step(tree, release_step("image", "name the files after the release"), "PRODUCT" => "skyblip_go", "RELEASE_VERSION" => "0.1.0").last.success?
+      assert_equal %w[skyblip-go-0.1.0.full.signed.bin skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.uf2], Dir.children(File.join(tree, "release")).sort
     end
 
     Dir.mktmpdir do |tree|
       release_tree(tree, slug: "skyblip-bravo", hub_image: false)
-      assert run_step(tree, release_step("image", "name the files after the release"), "SLUG" => "skyblip-bravo", "RELEASE_VERSION" => "0.2.0").last.success?
-      assert_equal %w[skyblip-bravo-0.2.0.signed.bin skyblip-bravo-0.2.0.uf2], Dir.children(File.join(tree, "release")).grep(/\Askyblip-/).sort
-      assert_includes File.read(File.join(tree, "release/SHA256SUMS")), "  skyblip-bravo-0.2.0.uf2\n"
+      assert run_step(tree, release_step("image", "name the files after the release"), "PRODUCT" => "skyblip_bravo", "RELEASE_VERSION" => "0.2.0").last.success?
+      assert_equal %w[skyblip-bravo-0.2.0.signed.bin skyblip-bravo-0.2.0.uf2], Dir.children(File.join(tree, "release")).sort
+    end
+  end
+
+  def test_the_release_files_hold_every_products_images_beside_the_simulator_and_the_notices
+    Dir.mktmpdir do |tree|
+      release_tree(tree, slug: "skyblip-go", hub_image: true)
+      FileUtils.mkdir_p(File.join(tree, "release"))
+      %w[skyblip-go-0.2.0.signed.bin skyblip-bravo-0.2.0.signed.bin].each { |file| File.write(File.join(tree, "release", file), file) }
+      assert run_step(tree, release_step("files", "add the simulator, the notices and the checksums"), {}).last.success?
+
+      listed = File.readlines(File.join(tree, "release/SHA256SUMS"), chomp: true).map { |line| line.split("  ", 2).last }
+      assert_equal Dir.children(File.join(tree, "release")).sort - %w[SHA256SUMS], listed.sort
+      assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
+      assert_includes listed, "scenarios.json"
+      assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
     end
   end
 
@@ -161,11 +185,15 @@ class DeploymentTest < Minitest::Test
     end
   end
 
-  def test_the_job_holding_the_production_key_runs_no_emscripten
-    image = YAML.load_file(File.join(ROOT, ".github/workflows/release.yml")).fetch("jobs").fetch("image")
+  def test_the_jobs_holding_the_production_key_run_no_emscripten_and_write_nothing
+    jobs = workflow("release").fetch("jobs")
+    image = jobs.fetch("image")
 
     assert_includes image.fetch("needs"), "simulator"
     refute image.fetch("steps").any? { |step| step["uses"].to_s.include?("setup-emsdk") || step["run"].to_s.include?("make -C firmware browser") }
+    refute image.key?("permissions")
+    assert_equal({ "contents" => "read" }, workflow("release").fetch("permissions"))
+    assert_equal [ "draft" ], jobs.select { |_name, job| job.dig("permissions", "contents") == "write" }.keys
   end
 
   def test_scenario_bundle_contains_the_firmware_scenarios_from_any_directory
@@ -223,10 +251,10 @@ class DeploymentTest < Minitest::Test
       File.chmod(0o755, File.join(tree, "gh"))
     end
 
-    def tag_outputs(tree, tag)
+    def step_outputs(tree, step, env = {})
       outputs = File.join(tree, "outputs")
       File.write(outputs, "")
-      output, status = run_step(tree, release_step("tag", "the tag names a product"), "GITHUB_REF_NAME" => tag, "GITHUB_OUTPUT" => outputs)
+      output, status = run_step(tree, step, env.merge("GITHUB_OUTPUT" => outputs))
       assert status.success?, output
       File.readlines(outputs, chomp: true).to_h { |line| line.split("=", 2) }
     end

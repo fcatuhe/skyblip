@@ -12,12 +12,25 @@ class DevReleaseTest < Minitest::Test
   GO_NOTES = <<~NOTES.chomp
     skyBlip 0.1.0+1010 from main, built from deadbeef and signed with the development key.
 
+    ## skyBlip Go
+
+    Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0.
+
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
     - `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for.
     - `.uf2` installs on any unit by drag-and-drop, and moves it to the development key.
   NOTES
-  GO_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip-go-%s.full.signed.bin
-                skyblip-go-%s.signed.bin skyblip-go-%s.uf2 skyblip_simulator.js skyblip_simulator.wasm].freeze
+  BRAVO_NOTES = <<~NOTES.chomp
+    ## skyBlip Bravo
+
+    Radio protocols: ADS-B 0.1.0.
+
+    - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
+    - `.uf2` installs by drag-and-drop on a MeshTracker X1 only, after backing up its factory flash as [#169](https://github.com/fcatuhe/skyblip/issues/169) describes. No skyBlip Bravo image has run on an X1 yet.
+  NOTES
+  SHARED_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
+  GO_FILES = %w[skyblip-go-%s.full.signed.bin skyblip-go-%s.signed.bin skyblip-go-%s.uf2].freeze
+  BRAVO_FILES = %w[skyblip-bravo-%s.signed.bin skyblip-bravo-%s.uf2].freeze
 
   # Answers like gh: a created tag appears in the next list, an uploaded file is kept under uploads/<tag>/.
   FAKE_GH = <<~'RUBY'.freeze
@@ -40,17 +53,28 @@ class DevReleaseTest < Minitest::Test
     end
   RUBY
 
-  # The Go's calls are the ones the inline shell made before a second product existed.
-  def test_main_publishes_the_go_as_before_and_prunes_its_fourth_newest
+  def test_main_publishes_every_product_in_one_release_and_prunes_the_fourth_newest
     Dir.mktmpdir do |root|
-      run = publish(root, ref: "main", products: %w[skyblip-go], tags: %w[dev-998 dev-1002 dev-1005 v0.1.0])
+      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: %w[dev-998 dev-1002 dev-1005 v0.1.0])
 
       assert run.success, run.output
-      assert_equal [ "release", "create", "dev-1010", *GO_FILES.map { |file| file % "dev-1010" },
-                     "--target", "deadbeef", "--prerelease", "--latest=false", "--title", "skyBlip dev 0.1.0+1010",
-                     "--notes", GO_NOTES, "--generate-notes", "--notes-start-tag", "dev-1005" ], run.creates.first
+      files = (SHARED_FILES + (GO_FILES + BRAVO_FILES).map { |file| file % "dev-1010" }).sort
+      assert_equal [ [ "release", "create", "dev-1010", *files, "--target", "deadbeef", "--prerelease", "--latest=false",
+                       "--title", "skyBlip dev 0.1.0+1010", "--notes", "#{GO_NOTES}\n\n#{BRAVO_NOTES}",
+                       "--generate-notes", "--notes-start-tag", "dev-1005" ] ], run.creates
       assert_equal [ %w[release delete dev-998 --cleanup-tag --yes] ], run.deletes
       assert_checksums File.join(root, "gh/uploads/dev-1010")
+    end
+  end
+
+  def test_a_run_of_one_product_publishes_that_product_alone
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: [])
+
+      assert run.success, run.output
+      create = run.creates.first
+      assert_equal (SHARED_FILES + GO_FILES.map { |file| file % "dev-1010" }).sort, create[3...create.index("--target")]
+      assert_equal GO_NOTES, create[create.index("--notes") + 1]
     end
   end
 
@@ -83,38 +107,49 @@ class DevReleaseTest < Minitest::Test
     assert_equal "fix-caf---v1.2", DevRelease.branch_label("fix/café v1.2")
   end
 
-  # The slug already names the product, so the file drops the tag's prefix, as a release drops it from bravo-v0.2.0.
-  def test_bravo_publishes_beside_the_go_under_its_own_prefix_and_keeps_its_own_three
+  # Each product had its own pre-releases before one release carried them all, and their owner deletes them by hand.
+  def test_the_pre_releases_of_one_product_are_left_alone
     Dir.mktmpdir do |root|
-      tags = %w[dev-998 dev-1002 dev-1005 bravo-dev-1002 bravo-dev-1005 bravo-dev-998 bravo-dev-1001]
-      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags:)
+      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: %w[dev-1002 dev-1005 bravo-dev-998 bravo-dev-1001 bravo-dev-1005])
 
       assert run.success, run.output
-      bravo = run.creates.find { |call| call[2] == "bravo-dev-1010" }
-      assert_equal "skyBlip Bravo dev 0.1.0+1010", bravo[bravo.index("--title") + 1]
-      assert_equal "bravo-dev-1005", bravo[bravo.index("--notes-start-tag") + 1]
-      assert_equal %w[skyblip-bravo-dev-1010.signed.bin skyblip-bravo-dev-1010.uf2], bravo.grep(/\Askyblip-/)
-      assert bravo[bravo.index("--notes") + 1].start_with?("skyBlip Bravo 0.1.0+1010 from main")
-      notes = bravo[bravo.index("--notes") + 1]
-      refute_includes notes, ".full.signed.bin"
-      refute_includes notes, "installs on any unit"
-      assert_includes notes, "- `.uf2` installs by drag-and-drop on a MeshTracker X1 only, after backing up its factory flash as " \
-                             "[#169](https://github.com/fcatuhe/skyblip/issues/169) describes. No skyBlip Bravo image has run on an X1 yet."
-      assert_equal %w[bravo-dev-1001 bravo-dev-998 dev-998], run.deletes.map { |call| call[2] }.sort
-      assert_checksums File.join(root, "gh/uploads/bravo-dev-1010")
+      create = run.creates.first
+      assert_equal "dev-1005", create[create.index("--notes-start-tag") + 1]
+      assert_empty run.deletes
     end
   end
 
-  def test_one_products_failure_still_publishes_the_others_then_fails_the_run
+  def test_products_that_disagree_on_the_version_publish_nothing
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: []) do |images, _source|
+        File.write(File.join(images, "skyblip-bravo.version"), "skyblip-bravo 0.2.0+1010 abc1234 development\n")
+      end
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "The products disagree on the version: skyblip-bravo 0.2.0+1010, skyblip-go 0.1.0+1010"
+    end
+  end
+
+  def test_a_product_missing_a_file_publishes_nothing
     Dir.mktmpdir do |root|
       run = publish(root, ref: "main", products: %w[skyblip-go skyblip-bravo], tags: []) do |images, _source|
         File.delete(File.join(images, "skyblip-bravo.uf2"))
       end
 
       refute run.success
-      assert_equal %w[dev-1010], run.creates.map { |call| call[2] }
-      assert_includes run.output, "No pre-release for skyblip-bravo"
+      assert_empty run.creates
       assert_includes run.output, "skyblip-bravo.uf2"
+    end
+  end
+
+  def test_a_product_with_no_radio_protocols_listed_publishes_nothing
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go skyblip-tango], tags: [])
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "No radio protocols listed for skyblip-tango"
     end
   end
 
@@ -127,6 +162,18 @@ class DevReleaseTest < Minitest::Test
       refute run.success
       assert_empty run.creates
       assert_includes run.output, "No license texts"
+    end
+  end
+
+  def test_a_protocol_version_that_is_not_a_triple_fails_the_run
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |_images, source|
+        File.write(File.join(source, "firmware/core/protocol/adsl.version"), "1.0\n")
+      end
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "Invalid ADS-L version in adsl.version"
     end
   end
 
@@ -151,6 +198,8 @@ class DevReleaseTest < Minitest::Test
       DevRelease::SIMULATOR_FILES.each { |file| File.write(File.join(simulator, file), file) }
       FileUtils.mkdir_p(File.join(source, "LICENSES"))
       %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt LICENSES/TinyCrypt.txt].each { |file| File.write(File.join(source, file), file) }
+      FileUtils.mkdir_p(File.join(source, "firmware/core/protocol"))
+      %w[adsl adsb alptas].each { |protocol| File.write(File.join(source, "firmware/core/protocol/#{protocol}.version"), "0.1.0\n") }
       yield images, source if block_given?
       File.write(File.join(state, "tags"), tags.map { |tag| "#{tag}\n" }.join)
       File.write(File.join(state, "branches"), branches.map { |branch| "#{branch}\n" }.join)

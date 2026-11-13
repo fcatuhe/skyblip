@@ -12,6 +12,12 @@ A service that more than one product runs lives in `products/common/`, in namesp
 
 `.clang-format` and `.clang-tidy` live here rather than at the root because this is the only C++ in the repository, and both tools read the nearest config above the file they are given. `make tidy` runs the linter over what the host build compiles; CI runs the same target.
 
+## Versions
+
+Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for every product: it moves with anything a product does, such as a page, an alarm or a power saving, and a `v<version>` tag releases every product at it (`.github/workflows/release.yml`). Each `products/<product>/VERSION` is a link to it, because Zephyr reads the version from the application's own directory.
+
+The other three are the radio protocols' versions, one `major.minor.patch` line each in `core/protocol/`: `adsl.version` for ADS-L, `adsb.version` for ADS-B and `alptas.version` for ALP-TAS. A protocol version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. Every pre-release names the protocol versions each product carries (`lib/dev_release.rb`), and `core/protocol/README.md` says what hangs on them.
+
 ## Naming a boolean
 
 A boolean field says which kind of fact it is in its suffix, never in a prefix. `has_` and `have_` both read as "somebody has something" and the two were two lines apart in one struct before this rule existed.
