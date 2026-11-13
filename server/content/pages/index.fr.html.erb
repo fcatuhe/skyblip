@@ -1,7 +1,7 @@
 ---
 title: "ADS-L et visibilité électronique pour pilotes"
 description: "Émettez votre position en ADS-L et voyez le trafic ADS-L et FLARM avec skyBlip Go. Sur un T-Echo, dès 68 €. Sans abonnement."
-updated_on: "2026-11-09"
+updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
@@ -9,7 +9,7 @@ updated_on: "2026-11-09"
   <h1>Le trafic alentour, dans votre poche.</h1>
   <p class="page-hero-subtitle">
     skyBlip Go émet votre position en ADS-L et affiche le trafic ADS-L et
-    FLARM, dès aujourd&rsquo;hui. skyBlip Bravo y ajoutera l&rsquo;ADS-B.
+    FLARM. skyBlip Bravo y ajoute l&rsquo;ADS-B.
     Ensemble, ils forment un skyBlip Tango.
   </p>
 
@@ -18,7 +18,7 @@ updated_on: "2026-11-09"
   <ul class="lineup">
     <li>
       <figure class="pair">
-        <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go : un boîtier blanc avec son antenne, le radar du trafic sur son écran e-paper" %>
+        <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go : un boîtier blanc avec son antenne, le radar du trafic sur son écran e-paper" %>
       </figure>
       <h2><%= link_to_page "features", label: "skyBlip Go" %></h2>
       <p class="status status--available">Disponible</p>
@@ -26,11 +26,11 @@ updated_on: "2026-11-09"
     </li>
     <li>
       <figure class="pair">
-        <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "photo-x1" %>
+        <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "photo-x1" %>
       </figure>
       <h2><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></h2>
-      <p class="status">Firmware en développement</p>
-      <p>Recevra l&rsquo;ADS&#8209;B, avions de ligne compris. N&rsquo;émettra pas votre position.</p>
+      <p class="status status--available">Disponible</p>
+      <p>Reçoit l&rsquo;ADS&#8209;B, avions de ligne compris. N&rsquo;émet rien.</p>
     </li>
     <li>
       <figure class="pair">
@@ -39,8 +39,8 @@ updated_on: "2026-11-09"
         <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo", class: "photo-x1" %>
       </figure>
       <h2><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></h2>
-      <p class="status">Firmware en développement</p>
-      <p>Go + Bravo. Affichera l&rsquo;ADS&#8209;B, l&rsquo;ADS&#8209;L et le FLARM sur un seul radar.</p>
+      <p class="status status--available">Disponible</p>
+      <p>Go + Bravo. Affiche l&rsquo;ADS&#8209;B, l&rsquo;ADS&#8209;L et le FLARM sur un seul radar.</p>
     </li>
   </ul>
 
@@ -59,13 +59,13 @@ updated_on: "2026-11-09"
       <p class="eyebrow">Voyez le trafic</p>
       <h3>Un radar <span class="highlight">lisible d&rsquo;un coup d&rsquo;œil</span>.</h3>
       <p>
-        Vous êtes au centre, route en haut. L&rsquo;icône du trafic dit
-        s&rsquo;il est au-dessus, à votre niveau ou en dessous, et sa
-        trajectoire est projetée sur une minute.
+        Vous êtes au centre, route en haut. Chaque icône indique si l&rsquo;aéronef
+        est au-dessus, à votre niveau ou en dessous. Son trait indique
+        où il sera dans une minute.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec son trait d'une minute" %>
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant où il sera dans une minute" %>
     </figure>
   </div>
 
@@ -79,7 +79,7 @@ updated_on: "2026-11-09"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : le quart de l'écran tourné vers le trafic est passé au noir" %>
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : le quart de l'écran du côté du trafic est devenu noir" %>
     </figure>
   </div>
 
@@ -88,12 +88,12 @@ updated_on: "2026-11-09"
       <p class="eyebrow">Soyez vu</p>
       <h3>Votre position <span class="highlight">émise chaque seconde</span>.</h3>
       <p>
-        En vol, chaque seconde, le Go émet votre position en ADS-L. Tout aéronef
-        équipé vous voit, avec votre indicatif.
+        En vol, le Go émet votre position en ADS-L chaque seconde. Tout aéronef
+        équipé pour recevoir l&rsquo;ADS-L vous voit, avec votre indicatif.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source ADS-L ou FLARM, leur indicatif, leur distance et leur altitude relative" %>
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source ADS-L ou FLARM, leur indicatif, leur distance et leur différence d'altitude par rapport à vous" %>
     </figure>
   </div>
 
@@ -103,11 +103,11 @@ updated_on: "2026-11-09"
       <h3>Le trafic <span class="highlight">dans votre application</span>.</h3>
       <p>
         En Bluetooth, le trafic s&rsquo;affiche dans SDVFR Next, SkyDemon,
-        ForeFlight et les autres applications.
+        ForeFlight et d&rsquo;autres applications.
       </p>
     </div>
     <figure class="shot shot--photo shot--app">
-      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next : la carte avec le trafic reçu de skyBlip Go, chaque aéronef étiqueté de son indicatif" %>
+      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next : la carte avec le trafic reçu de skyBlip Go, chaque aéronef accompagné de son indicatif" %>
       <figcaption>SkyDreamSoft SDVFR Next <a href="https://skydreamsoft.fr">skydreamsoft.fr</a></figcaption>
     </figure>
   </div>
@@ -124,19 +124,17 @@ updated_on: "2026-11-09"
       <p class="eyebrow">skyBlip Bravo et Tango</p>
       <h3>ADS-B, ADS-L et FLARM, <span class="highlight">sur un seul radar</span>.</h3>
       <p>
-        skyBlip Bravo recevra l&rsquo;ADS-B sur 1090&nbsp;MHz. Seul, il enverra
-        ce trafic à votre application de navigation. Il n&rsquo;émettra pas
-        votre position.
+        skyBlip Bravo reçoit l&rsquo;ADS-B sur 1090&nbsp;MHz. Seul, il envoie
+        ce trafic à votre application de navigation. Il n&rsquo;émet rien.
       </p>
       <p>
-        Associé à un Go pour former un skyBlip Tango, il mettra les avions de
+        Associé à un Go pour former un skyBlip Tango, il affiche les avions de
         ligne sur le radar du Go, avec le trafic ADS-L et FLARM. Le Go continue
         d&rsquo;émettre votre position en ADS-L.
       </p>
       <p class="note">
-        Le Seeed SenseCAP MeshTracker X1 est en vente. Le firmware skyBlip
-        Bravo est en développement et n&rsquo;a pas encore été testé sur ce
-        matériel.
+        Le Seeed SenseCAP MeshTracker X1 est en vente. Le firmware
+        skyBlip Bravo est publié sur GitHub, comme celui du Go.
       </p>
       <p class="feature-guide">
         <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> &middot;
@@ -156,7 +154,7 @@ updated_on: "2026-11-09"
     </div>
     <div>
       <h3>Aucun abonnement.</h3>
-      <p>Émission, réception, alarme et mises à jour, sans rien payer.</p>
+      <p>Vous ne payez rien pour l&rsquo;émission, la réception, l&rsquo;alarme ou les mises à jour.</p>
     </div>
     <div>
       <h3>Open source, pour de bon.</h3>
@@ -177,26 +175,25 @@ updated_on: "2026-11-09"
       <summary>Est-ce que je vois les avions de ligne&nbsp;?</summary>
       <p>
         Pas avec un Go seul. Les avions de ligne émettent en ADS-B sur
-        1090&nbsp;MHz, qu&rsquo;un Go ne reçoit pas. skyBlip Bravo le recevra,
-        seul avec votre téléphone ou associé à votre Go pour former un Tango,
-        une fois son firmware sorti&nbsp;:
+        1090&nbsp;MHz, qu&rsquo;un Go ne reçoit pas. skyBlip Bravo le reçoit.
+        Utilisez-le avec votre téléphone ou associez-le à votre Go pour former un Tango&nbsp;:
         <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %>.
       </p>
     </details>
     <details>
-      <summary>Bravo verra-t-il tous les aéronefs équipés d&rsquo;un transpondeur&nbsp;?</summary>
+      <summary>Bravo voit-il tous les aéronefs équipés d&rsquo;un transpondeur&nbsp;?</summary>
       <p>
-        Non. Bravo recevra l&rsquo;ADS-B, qu&rsquo;un transpondeur mode S
-        n&rsquo;émet que s&rsquo;il a l&rsquo;ADS-B out, ou Extended Squitter.
-        Un transpondeur qui n&rsquo;en est pas équipé reste invisible pour
-        Bravo, comme pour tout récepteur ADS-B.
+        Non. Bravo reçoit l&rsquo;ADS-B. Un transpondeur mode S ne l&rsquo;émet
+        que s&rsquo;il dispose de la fonction ADS-B out, aussi appelée Extended Squitter.
+        Sans cette fonction, le transpondeur est invisible pour Bravo
+        comme pour tout autre récepteur ADS-B.
       </p>
     </details>
     <details>
       <summary>Bravo me rend-il visible&nbsp;?</summary>
       <p>
-        Non. Bravo ne fera que recevoir. Votre position part en ADS-L depuis un
-        Go, seul ou associé à un Bravo pour former un Tango.
+        Non. Bravo ne fait que recevoir le trafic. Un Go émet votre position en ADS-L,
+        seul ou associé à un Bravo pour former un Tango.
       </p>
     </details>
     <details>
@@ -210,7 +207,7 @@ updated_on: "2026-11-09"
     </details>
     <details>
       <summary>Faut-il un abonnement&nbsp;?</summary>
-      <p>Non. Une fois un Go acheté, tout fonctionne&nbsp;: émission, réception, alarme, mises à jour. Le firmware est gratuit, et celui de Bravo, en développement, le sera aussi.</p>
+      <p>Non. Une fois un Go acheté, tout fonctionne&nbsp;: émission, réception, alarme, mises à jour. Le firmware est gratuit, y compris celui de Bravo.</p>
     </details>
     <details>
       <summary>Est-ce certifié&nbsp;?</summary>
@@ -224,23 +221,23 @@ updated_on: "2026-11-09"
       <p>
         Pas avec un Go. Le radar, l&rsquo;alarme et les réglages sont sur
         l&rsquo;appareil. Le téléphone sert à voir le trafic dans votre
-        application de navigation. Un Bravo seul en aura besoin, puisqu&rsquo;il
-        n&rsquo;a pas d&rsquo;écran.
+        application de navigation. Avec un Bravo seul, il faut un téléphone
+        pour voir le trafic, car Bravo n&rsquo;a pas d&rsquo;écran.
       </p>
     </details>
     <details>
       <summary>Existe-t-il une autre version&nbsp;?</summary>
       <p>
-        Oui, skyBlip Go+, sur un LilyGO T-Echo Plus&nbsp;: alarme au buzzer et au
-        vibreur, batterie plus grande.
+        Oui. skyBlip Go+ utilise un LilyGO T-Echo Plus, avec un avertisseur sonore et un
+        vibreur pour les alarmes, ainsi qu&rsquo;une batterie plus grande.
         <%= link_to_page "buy", label: "Comparer", anchor: "compare" %>.
       </p>
     </details>
     <details>
       <summary>Et si je veux revenir en arrière&nbsp;?</summary>
       <p>
-        Le firmware skyBlip ne touche pas au bootloader d&rsquo;origine du
-        T-Echo. Les autres logiciels disponibles sur l&rsquo;appareil se
+        Le firmware skyBlip ne touche pas au programme de démarrage (bootloader)
+        d&rsquo;origine du T-Echo. Les autres logiciels disponibles pour l&rsquo;appareil se
         réinstallent comme avant.
       </p>
     </details>
@@ -250,19 +247,19 @@ updated_on: "2026-11-09"
 <section class="band band--tint">
   <h2 class="section-title">ADS-L, <span class="highlight">le langage commun</span> de tout ce qui vole</h2>
   <p class="section-intro">
-    Le standard européen de visibilité électronique, publié par l&rsquo;EASA.
-    Il couvre l&rsquo;avion léger jusqu&rsquo;au parachutiste, en passant par
+    L&rsquo;ADS-L est le standard européen de partage des positions par radio, publié par l&rsquo;EASA.
+    Il couvre aussi bien l&rsquo;avion léger que le parachutiste, en passant par
     l&rsquo;ULM, le planeur, l&rsquo;autogire, l&rsquo;hélicoptère, le ballon
     et le parapente, et demain les drones.
   </p>
   <div class="columns">
     <div>
       <h3>Ouvert.</h3>
-      <p>Une spécification publique, que chacun peut lire et mettre en œuvre, et que skyBlip implémente en open source.</p>
+      <p>Chacun peut lire et utiliser la spécification publique. Le code de skyBlip qui la met en œuvre est open source.</p>
     </div>
     <div>
       <h3>Léger.</h3>
-      <p>Une trame de quelques millisecondes, une fois par seconde, sur la bande libre des 868&nbsp;MHz. Un boîtier de poche sur batterie suffit.</p>
+      <p>Un message de quelques millisecondes est émis une fois par seconde sur la bande des 868&nbsp;MHz utilisable sans licence. Un appareil de poche sur batterie suffit.</p>
     </div>
     <div>
       <h3>Interopérable.</h3>
@@ -276,12 +273,12 @@ updated_on: "2026-11-09"
   <div class="resource-cards">
     <article>
       <h3>Sept guides.</h3>
-      <p>Le radar, les instruments, les commandes, la batterie, le téléphone, la radio et tous les écrans.</p>
+      <p>Les guides couvrent le radar, les instruments, les commandes, la batterie, le téléphone, la radio et tous les écrans.</p>
       <p><%= link_to_page "guides", label: "Lire les guides" %></p>
     </article>
     <article>
       <h3>Voir et éviter.</h3>
-      <p>Ce qu&rsquo;un pilote voit vraiment, avec les chiffres publiés à l&rsquo;appui.</p>
+      <p>Ce qu&rsquo;un pilote peut voir, avec les chiffres publiés à l&rsquo;appui.</p>
       <p><%= link_to_page "see-and-avoid", label: "Lire l&rsquo;article".html_safe %></p>
     </article>
     <article>

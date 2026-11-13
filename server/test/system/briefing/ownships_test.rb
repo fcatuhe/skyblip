@@ -7,7 +7,7 @@ class Briefing::OwnshipsTest < ApplicationSystemTestCase
 
     find("[aria-label='Row 1, column 1']").click
 
-    assert_text "2 loose px with no neighbour"
+    assert_text "2 px have no neighbour"
     assert_selector "[aria-label='Row 1, column 24']:checked"
     assert_current_path(/rows=00801801\./)
   end
@@ -96,7 +96,7 @@ class Briefing::OwnshipsTest < ApplicationSystemTestCase
     assert_selector ".ownship-row--hot-spot [aria-label='Row 2, column 1']:checked"
     fill_in "Drawing as text", with: "not a drawing"
     click_on "Use this drawing"
-    assert_text "That text is not a drawing"
+    assert_text "This text is not a drawing"
   end
 
   private
