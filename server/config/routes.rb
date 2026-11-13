@@ -53,6 +53,7 @@ Rails.application.routes.draw do
     resource :manifest, only: :show, defaults: { format: :json }
     resources :devices, only: :show, param: :slug, constraints: { slug: /(go|bravo)-[0-9a-f]+/ } do
       resource :firmware, only: :show, module: :devices
+      resource :terminal, only: :show, module: :devices
     end
     resource :activation, only: :show, path: "activate"
     resource :preferences, only: %i[show update]

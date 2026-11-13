@@ -83,6 +83,17 @@ en:
       recover: Restart into the USB drive
       report_hint: "Send us this line, by message or mail, with what you did. It tells us why the update did not take."
       report_copy: Copy the report
+    terminal:
+      title: Terminal
+      row: Every Bluetooth frame
+      hint: "Every frame on every Bluetooth endpoint of this device, as it passes. > leaves this browser, < comes from the device."
+      endpoints: Endpoints
+      follow: Follow
+      clear: Clear
+      tape: Bluetooth frames
+      opened: link open
+      closed: link closed
+      failed: an endpoint did not open
     activation:
       title: Activate a new Go
       hint: Its glass shows ACTIVATE and a code like 3F2A. Pick that code in the list.

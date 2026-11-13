@@ -1,5 +1,8 @@
 (() => {
   const UUID = {
+    nus: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+    nusRx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
+    nusTx: '6e400003-b5a3-f393-e0a9-e50e24dcca9e',
     skyblip: '69c21301-0187-4204-a91d-02eb8858b440',
     config: '69c21302-0187-4204-a91d-02eb8858b440',
     log: '69c21303-0187-4204-a91d-02eb8858b440',
@@ -71,7 +74,7 @@
       this.pending = null;
       this.refused = false;
       this.windowOpen = false;
-      this.listeners = { config: [], log: [], smp: [] };
+      this.listeners = { nmea: [], config: [], log: [], smp: [] };
       this.closed = [];
       this.held = new Uint8Array(0);
       this.device = this.#device();
@@ -85,7 +88,9 @@
         writeValueWithResponse: write,
         writeValueWithoutResponse: write,
       });
+      // INFO: fc 14nov26 the unit discards what a central writes to its UART, as on_stream_write does
       const services = {
+        [UUID.nus]: { [UUID.nusTx]: characteristic('nmea', null), [UUID.nusRx]: characteristic('nmea', async () => {}) },
         [UUID.skyblip]: { [UUID.config]: characteristic('config', raw => unit.onConfig(raw)), [UUID.log]: characteristic('log', raw => unit.onLog(raw)) },
         [UUID.smp]: { [UUID.smpChr]: characteristic('smp', raw => unit.onSmp(raw)) },
       };
@@ -126,7 +131,7 @@
       this.browserNonce = null;
       this.proven = null;
       this.trusted = false;
-      this.listeners = { config: [], log: [], smp: [] };
+      this.listeners = { nmea: [], config: [], log: [], smp: [] };
       const closed = this.closed.splice(0);
       later(() => closed.forEach(listener => listener()));
     }
@@ -137,6 +142,11 @@
       const frame = whole.length <= this.mtu - 3 ? whole : encodeFrame({ command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' });
       const value = new DataView(frame.buffer);
       later(() => this.connected && this.listeners.config.forEach(listener => listener({ target: { value } })));
+    }
+
+    sentence(line) {
+      const value = new DataView(encoder.encode(`${line}\r\n`).buffer);
+      later(() => this.connected && this.listeners.nmea.forEach(listener => listener({ target: { value } })));
     }
 
     acknowledge(acknowledge, reason, pending = undefined) {

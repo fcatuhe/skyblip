@@ -18,7 +18,7 @@ const LAST_READ = ["aircraft_type", "callsign", "own_icao", "units", "alarm_enab
 
 export default class extends Controller {
   static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware",
+                    "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "forgetDialog", "forgetQuestion", "browsers", "browserList", "browsersMessage", "forgetOthers"]
   static values = { slug: String, home: String, activation: String }
@@ -146,6 +146,7 @@ export default class extends Controller {
     this.#banner(unit, linked, quiet)
     this.#settings(state)
     this.#firmwareRow(state, linked && !asking)
+    this.terminalRowTarget.hidden = !linked || asking
     this.#capture(unit, state)
     this.#browsers(unit, state)
     this.#glass(unit, asking)
