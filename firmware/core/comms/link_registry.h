@@ -44,6 +44,7 @@ enum class Command : uint8_t {
     Browsers = 32,
     Browser = 33,
     ForgetBrowser = 34,
+    InstallReport = 35,
 };
 
 enum class Reason : uint8_t {
@@ -502,6 +503,18 @@ namespace forget_browser_bytes {
 constexpr size_t kId = 8;
 }
 
+namespace install_report_key {
+enum : uint32_t {
+    kCheck = 1,
+    kSwap = 2,
+    kRequestError = 3,
+    kBoots = 4,
+    kProbationBoots = 5,
+    kProof = 6,
+    kReset = 7,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -531,7 +544,8 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Observation:
         case Command::Health:
         case Command::BrowserChallenge:
-        case Command::Browser: return 0x1;
+        case Command::Browser:
+        case Command::InstallReport: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:

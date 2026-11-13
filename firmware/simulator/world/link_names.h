@@ -209,6 +209,23 @@ inline constexpr Value kCaptureProfileValues[] = {
 };
 inline constexpr Enumeration kCaptureProfile{kCaptureProfileValues, 4};
 
+inline constexpr Value kStagedCheckValues[] = {
+    {"unchecked", 0}, {"matched", 1}, {"damaged", 2}, {"unreadable", 3}, {"undigested", 4},
+};
+inline constexpr Enumeration kStagedCheck{kStagedCheckValues, 5};
+
+inline constexpr Value kSwapTypeValues[] = {
+    {"unknown", 0}, {"none", 1}, {"test", 2},  {"permanent", 3},
+    {"revert", 4},  {"fail", 5}, {"panic", 6},
+};
+inline constexpr Enumeration kSwapType{kSwapTypeValues, 7};
+
+inline constexpr Value kProofValues[] = {
+    {"none", 0},         {"booted", 1}, {"started", 2},        {"gnss_heard", 3},
+    {"hub_bootable", 4}, {"proven", 5}, {"confirm_failed", 6},
+};
+inline constexpr Enumeration kProof{kProofValues, 7};
+
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},
     {"get", 1},
@@ -245,8 +262,9 @@ inline constexpr Value kCommandValues[] = {
     {"browsers", 32},
     {"browser", 33},
     {"forget_browser", 34},
+    {"install_report", 35},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 35};
+inline constexpr Enumeration kCommand{kCommandValues, 36};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -593,6 +611,17 @@ inline constexpr Key kForgetBrowserKeys[] = {
     {"id", 1, Type::Bytes, nullptr, 8, true},
 };
 
+inline constexpr Key kInstallReportKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"check", 1, Type::Enum, &kStagedCheck, 0, false},
+    {"swap", 2, Type::Enum, &kSwapType, 0, false},
+    {"request_error", 3, Type::Integer, nullptr, 0, false},
+    {"boots", 4, Type::Unsigned, nullptr, 0, false},
+    {"probation_boots", 5, Type::Unsigned, nullptr, 0, false},
+    {"proof", 6, Type::Enum, &kProof, 0, false},
+    {"reset", 7, Type::Enum, &kReset, 0, false},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -629,6 +658,7 @@ inline constexpr Frame kFrames[] = {
     {"browsers", 32, events::Endpoint::Config, Sender::Host, kBrowsersKeys, 2},
     {"browser", 33, events::Endpoint::Config, Sender::Unit, kBrowserKeys, 5},
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
+    {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 8},
 };
 
 }

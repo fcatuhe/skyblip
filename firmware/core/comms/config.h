@@ -12,6 +12,7 @@
 #include "core/comms/link_sessions.h"
 #include "core/comms/peer.h"
 #include "core/comms/timing_report.h"
+#include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
 #include "core/events/link.h"
 #include "core/flight/state.h"
@@ -190,6 +191,9 @@ class ConfigService {
     }
     dfu::ImageState image_state() const { return image_state_; }
 
+    // TODO: fc 13nov26 the install report on the link, retired with #294
+    void set_install_report(const dfu::InstallReport* report) { install_report_ = report; }
+
     void set_settings_fallback(settings::Fallback fallback) { settings_fallback_ = fallback; }
 
     void set_hub_image(const dfu::HubImageReport& report) { hub_image_ = report; }
@@ -307,6 +311,7 @@ class ConfigService {
     // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update();
+    void send_install_report();
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
     // And the whole dump, which is the same table as the console's: one frame per
@@ -405,6 +410,7 @@ class ConfigService {
     int pending_set_bytes_{0};
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
+    const dfu::InstallReport* install_report_{nullptr};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
     std::optional<dfu::Product> product_{};

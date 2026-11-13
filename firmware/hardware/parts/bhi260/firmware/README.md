@@ -39,7 +39,7 @@ A full image carries it and a slim one does not. Both are built from one commit,
 
 A slim image whose hub answers and finds no usable copy leaves the hub at `IDLE` and says `NOBLOB`: on the status page's `IMU` line, on the self test's IMU row (`BHI260AP NOBLOB`), and as `"imu"` in the `update` reply. Everything else runs, because the hub feeds the slip ball and nothing else.
 
-It also never confirms itself. `ConfigLinkService::hardware_proven()` waits for `state.imu.bootable`, so a slim image sent to a unit that needed the full one stays on probation, and the next reset reverts it to the image before, which booted the hub.
+It also never confirms itself. `ConfigLinkService::proof()` waits for `state.imu.bootable`, so a slim image sent to a unit that needed the full one stays on probation, and the next reset reverts it to the image before, which booted the hub.
 
 A plain T-Echo has no hub to answer: it reports `"imu":"none"`, writes nothing, and takes the slim image for good.
 

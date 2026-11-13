@@ -13,6 +13,17 @@ enum class ImageState : uint8_t { Confirmed = 0, Probation = 1, Reverted = 2, Re
 
 enum class Product : uint8_t { SkyblipGo = 0, SkyblipBravo = 1 };
 
+// INFO: fc 13nov26 how far an image on probation got towards confirming, in the order it checks
+enum class Proof : uint8_t {
+    None = 0,
+    Booted = 1,
+    Started = 2,
+    GnssHeard = 3,
+    HubBootable = 4,
+    Proven = 5,
+    ConfirmFailed = 6,
+};
+
 struct UpdateRecord {
     ports::ImageVersion from{};
     ports::ImageVersion to{};

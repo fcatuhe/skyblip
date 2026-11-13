@@ -130,6 +130,24 @@ void ConfigService::send_update() {
     (void)reply(frame, bytes);
 }
 
+// TODO: fc 13nov26 the install report's frame, retired with #294
+void ConfigService::send_install_report() {
+    uint8_t frame[kSmallestSupportedPayloadBytes];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::InstallReport);
+    if (install_report_ != nullptr) {
+        const dfu::InstallReport& report = *install_report_;
+        writer.add_code(link::install_report_key::kCheck, report.request.check);
+        writer.add_code(link::install_report_key::kSwap, report.request.swap);
+        writer.add_integer(link::install_report_key::kRequestError, report.request.error);
+        writer.add_unsigned(link::install_report_key::kBoots, report.boots);
+        writer.add_unsigned(link::install_report_key::kProbationBoots, report.probation_boots);
+        writer.add_code(link::install_report_key::kProof, report.proof);
+        writer.add_code(link::install_report_key::kReset, report.reset);
+    }
+    (void)reply(frame, writer.finish());
+}
+
 void ConfigService::push_update(const events::Peer& peer) {
     uint8_t frame[kSmallestSupportedPayloadBytes];
     const int bytes = format_update(frame, static_cast<int>(sizeof(frame)));
