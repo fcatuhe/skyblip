@@ -6,7 +6,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/activate"
       assert_current_path "/briefing/activate"
-      assert_text "Its glass shows ACTIVATE and a code like 3F2A."
+      assert_text "Its screen shows ACTIVATE and a code like 3F2A."
       screen "30-activate-find"
 
       click_button "Find the new Go"
@@ -68,7 +68,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing/activate"
       click_button "Find the new Go"
-      assert_selector ".unit-message", text: "kept Bluetooth's smallest packet"
+      assert_selector ".unit-message", text: "is using the smallest Bluetooth packet"
       assert_nil Unit.find_by(device_id: vectors["device_id"])
     end
   end
