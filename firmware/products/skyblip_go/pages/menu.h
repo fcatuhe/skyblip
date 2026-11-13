@@ -76,9 +76,9 @@ struct AircraftType {
 
 // INFO: cf 02aug26 ADS-L 4 SRD-860 issue 2 G.1.3 wire values: the code stored is transmitted
 constexpr AircraftType kAircraftTypes[] = {
-    {0, "UNKNOWN"},  {1, "LIGHT"},   {2, "HEAVY"},       {3, "HELICOPTER"},
-    {4, "GLIDER"},   {5, "BALLOON"}, {6, "MICROLIGHT"},  {7, "PARAGLIDER"},
-    {8, "SKYDIVER"}, {9, "VTOL"},    {10, "GYROCOPTER"}, {15, "HEAVY HELI"}};
+    {0, "UNKNOWN"},     {1, "LIGHT"},       {2, "HEAVY"},        {3, "LIGHT HELI"}, {4, "GLIDER"},
+    {5, "BALLOON"},     {6, "MICROLIGHT"},  {7, "PARAGLIDER"},   {8, "SKYDIVER"},   {9, "VTOL"},
+    {10, "GYROCOPTER"}, {15, "HEAVY HELI"}, {16, "HANG GLIDER"}, {17, "PARAMOTOR"}};
 constexpr int kNamedAircraftTypes =
     static_cast<int>(sizeof(kAircraftTypes) / sizeof(kAircraftTypes[0]));
 bool named_aircraft_type(uint8_t code);

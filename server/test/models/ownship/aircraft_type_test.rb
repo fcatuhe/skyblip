@@ -9,10 +9,11 @@ class Ownship::AircraftTypeTest < ActiveSupport::TestCase
     assert_equal menu.map(&:last).map { it.split.first }, Ownship::AircraftType::KEYS.map { it.split("_").first.upcase }
     assert_equal 4, Ownship::AircraftType.find("glider").code
     assert_equal 15, Ownship::AircraftType.find("heavy_helicopter").code
+    assert_equal [ 3, 16, 17 ], %w[light_helicopter hang_glider paramotor].map { Ownship::AircraftType.find(it).code }
   end
 
   test "a type with no drawing shows the light aircraft's" do
-    helicopter = Ownship::AircraftType.find("helicopter")
+    helicopter = Ownship::AircraftType.find("light_helicopter")
 
     assert_not helicopter.drawn?
     assert_equal Ownship::AircraftType.default.ownship, helicopter.ownship

@@ -142,6 +142,18 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
     CHECK(glider.protocol_version() == 0);
 }
 
+// Every type the panel offers is a G.1.3 code a person flies seated in, and goes out as that code.
+TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own code") {
+    for (const go::AircraftType& type : go::kAircraftTypes) {
+        CAPTURE(int(type.code));
+        CHECK((type.code <= 10 || (type.code >= 15 && type.code <= 17)));
+        adsl::Packet packet{};
+        protocol::from_own(packet, flying(), 0x123456, 6, type.code);
+        CHECK(packet.aircraft_category == type.code);
+        CHECK(packet.protocol_version() == (type.code >= 15 ? 1 : 0));
+    }
+}
+
 // Issue 2 split broader Issue 1 classes, so each new category has a truthful Issue 1 reading.
 TEST_CASE("ADS-L.4.SRD860.G.1.3: for an Issue 1 client 14 to 17 read as Issue 1's own classes") {
     const struct {

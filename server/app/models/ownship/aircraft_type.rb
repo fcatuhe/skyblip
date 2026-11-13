@@ -1,8 +1,8 @@
 class Ownship::AircraftType
   CODES = {
-    "unknown" => 0, "light_aircraft" => 1, "heavy_aircraft" => 2, "helicopter" => 3, "glider" => 4,
+    "unknown" => 0, "light_aircraft" => 1, "heavy_aircraft" => 2, "light_helicopter" => 3, "glider" => 4,
     "balloon" => 5, "microlight" => 6, "paraglider" => 7, "skydiver" => 8, "vtol" => 9,
-    "gyrocopter" => 10, "heavy_helicopter" => 15
+    "gyrocopter" => 10, "heavy_helicopter" => 15, "hang_glider" => 16, "paramotor" => 17
   }.freeze
   KEYS = CODES.keys.freeze
   DEFAULT = "light_aircraft".freeze

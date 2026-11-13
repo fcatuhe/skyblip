@@ -4,7 +4,7 @@ fr:
       unknown: "Inconnu"
       light_aircraft: "Avion léger"
       heavy_aircraft: "Avion lourd"
-      helicopter: "Hélicoptère"
+      light_helicopter: "Hélicoptère léger"
       glider: "Planeur"
       balloon: "Ballon"
       microlight: "ULM"
@@ -13,6 +13,8 @@ fr:
       vtol: "VTOL"
       gyrocopter: "Autogire"
       heavy_helicopter: "Hélicoptère lourd"
+      hang_glider: "Deltaplane"
+      paramotor: "Paramoteur"
   briefing:
     ownships:
       show:

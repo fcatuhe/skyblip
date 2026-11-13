@@ -222,14 +222,25 @@ TEST_CASE("menu page: a category the phone stored but the page does not name is 
     CHECK(next_aircraft_type(13) == 0);
 }
 
+// Issue 2 splits the helicopter by weight and adds the hang-glider and the paramotor, all flown
+// seated.
 TEST_CASE(
-    "menu page: a heavy rotorcraft is a choice a pilot can make, and the list closes after it") {
-    MenuValues values = default_menu_values();
-    values.settings.aircraft_type = 15;
-    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
-    CHECK(row_value_reads(menu, MenuRow::AircraftType, "HEAVY HELI", false));
+    "menu page: Issue 2's rotorcraft, hang-glider and paramotor are choices, and the list closes") {
+    const struct {
+        uint8_t code;
+        const char* name;
+    } kIssue2[] = {{3, "LIGHT HELI"}, {15, "HEAVY HELI"}, {16, "HANG GLIDER"}, {17, "PARAMOTOR"}};
+    for (const auto& type : kIssue2) {
+        CAPTURE(int(type.code));
+        MenuValues values = default_menu_values();
+        values.settings.aircraft_type = type.code;
+        const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
+        CHECK(row_value_reads(menu, MenuRow::AircraftType, type.name, false));
+    }
     CHECK(next_aircraft_type(10) == 15);
-    CHECK(next_aircraft_type(15) == 0);
+    CHECK(next_aircraft_type(15) == 16);
+    CHECK(next_aircraft_type(16) == 17);
+    CHECK(next_aircraft_type(17) == 0);
 }
 
 TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {
