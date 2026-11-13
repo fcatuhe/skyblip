@@ -236,8 +236,7 @@ class Product {
         if (phase == acted_phase_) return;
         acted_phase_ = phase;
         if (phase == power::ShutdownPhase::Off && installing()) {
-            config_link_.record_update();
-            roles_.dfu.trigger();
+            config_link_.install();
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;

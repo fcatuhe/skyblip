@@ -362,6 +362,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::TrustBrowser: trust_browser(reader); return;
         case link::Command::Browsers: send_browser(reader); return;
         case link::Command::ForgetBrowser: forget_browser(reader); return;
+        case link::Command::InstallReport: send_install_report(); return;
         default: return;
     }
 }
@@ -375,6 +376,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Flash:
         case link::Command::Radio:
         case link::Command::Update:
+        case link::Command::InstallReport:
         case link::Command::Diagnostics:
         case link::Command::Set:
         case link::Command::Dfu:

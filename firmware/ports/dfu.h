@@ -40,10 +40,37 @@ constexpr bool operator!=(const ImageHash& left, const ImageHash& right) {
 
 using SigningKeyHash = std::array<uint8_t, 32>;
 
+enum class StagedCheck : uint8_t {
+    Unchecked = 0,
+    Matched = 1,
+    Damaged = 2,
+    Unreadable = 3,
+    Undigested = 4,
+};
+
+// INFO: fc 13nov26 MCUboot's BOOT_SWAP_TYPE_* numbers, with Unknown for a read that failed
+enum class SwapType : uint8_t {
+    Unknown = 0,
+    None = 1,
+    Test = 2,
+    Permanent = 3,
+    Revert = 4,
+    Fail = 5,
+    Panic = 6,
+};
+
+struct SwapRequest {
+    StagedCheck check{StagedCheck::Unchecked};
+    int16_t error{0};
+    SwapType swap{SwapType::Unknown};
+};
+
 class Dfu {
    public:
     virtual ~Dfu() = default;
 
+    // INFO: fc 13nov26 marks slot 1 for a test swap only once its whole image matches its digest
+    virtual SwapRequest request_swap() { return {}; }
     // INFO: fc 07sep26 one-shot swap: an image that never calls confirm() is reverted next boot
     virtual void trigger() = 0;
 

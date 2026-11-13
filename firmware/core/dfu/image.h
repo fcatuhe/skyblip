@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "core/util/sha256.h"
 #include "ports/dfu.h"
 
 namespace skyblip::dfu {
@@ -27,6 +28,18 @@ bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out);
 bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out);
 
 bool find_image_class(const uint8_t* tlvs, size_t bytes, ImageClass& out);
+
+bool find_image_digest(const uint8_t* tlvs, size_t bytes, Sha256::Digest& out);
+
+class ImageReader {
+   public:
+    virtual ~ImageReader() = default;
+    virtual uint32_t bytes() const = 0;
+    virtual bool read(uint32_t offset, uint8_t* out, size_t bytes) = 0;
+};
+
+// INFO: fc 13nov26 MCUboot hashes the header, the body and the protected TLVs, and so does this
+ports::StagedCheck check_image(ImageReader& image);
 
 }  // namespace skyblip::dfu
 
