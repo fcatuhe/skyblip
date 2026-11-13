@@ -7,6 +7,9 @@
   --chart-label: var(--ink);
   --chart-halo: var(--paper);
   --chart-empty: var(--sky-soft);
+  --chart-timeline-text: var(--dev-muted);
+  --chart-timeline-grid: var(--dev-border);
+  --chart-timeline-empty: var(--dev-button);
 }
 .dev-console.dev-comparison {
   inline-size: min(1400px, 100vw - 2 * var(--gutter));
@@ -15,6 +18,28 @@
 }
 .dev-console.dev-comparison .layout { max-width: none; }
 .dev-comparison .panel.panel-wide { flex-basis: 100%; }
+.dev-comparison .panel.panel-chart { flex: 3 1 560px; }
+.dev-comparison .panel.panel-focus { flex: 2 1 420px; }
+.dev-comparison .focus-title { margin: 0 0 var(--space-2xs); font-size: var(--text-m); font-weight: 600; }
+.dev-comparison .timeline {
+  display: block;
+  inline-size: 100%;
+  block-size: 240px;
+  margin-top: var(--space-s);
+  font: var(--text-xs) var(--mono);
+}
+.dev-comparison .focus-table th[scope=row] { text-align: left; color: var(--dim); font-weight: 400; }
+.dev-comparison .focus-table td { white-space: normal; }
+.dev-comparison .traffic .pick {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+}
+.dev-comparison .traffic tr.selected td { background: var(--dev-button); }
+.dev-comparison .chart { cursor: crosshair; }
 .dev-comparison .chart {
   display: block;
   inline-size: 100%;

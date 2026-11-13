@@ -19,11 +19,12 @@ static model::AircraftObservation widest(model::Source source, int32_t latitude_
     target.track_c9 = 511;
     target.speed_q = 65535;
     target.climb_e8 = -32768;
+    target.rssi_dbm = -128;
     return target;
 }
 
 // Speed and climb at their type's limits, a 6-character height and 3 digits of track.
-TEST_CASE("nmea: PFLAA keeps the widest callsign whole while north and east stay under 1000 km") {
+TEST_CASE("nmea: PFLAA keeps the widest callsign whole under 1000 km, and drops the RSSI first") {
     const auto own = own_at(0, 0, 99999);
     char buffer[128];
 
@@ -41,7 +42,7 @@ TEST_CASE("nmea: PFLAA keeps the widest callsign whole while north and east stay
 }
 
 // Half the earth away, north and east take 9 characters each.
-TEST_CASE("nmea: PFLAA shortens the callsign, never a field, to stay within 82 characters") {
+TEST_CASE("nmea: PFLAA drops the RSSI, then shortens the callsign, never a field, to fit 82") {
     const auto own = own_at(0, 0, 99999);
     char buffer[128];
 
@@ -63,7 +64,7 @@ TEST_CASE("nmea: PFLAA shortens the callsign, never a field, to stay within 82 c
 }
 
 // An alarm level of 255 and an 11-character height are the widest the parameter types carry.
-TEST_CASE("nmea: PFLAA fits 82 characters at the widest its types allow, without the callsign") {
+TEST_CASE("nmea: PFLAA fits 82 characters at its types' widest, without callsign or RSSI") {
     const auto own = own_at(0, 0, 0);
     auto adsb = widest(model::Source::Adsb, -899999999, -1799999999);
     adsb.altitude_m = INT32_MIN;

@@ -9,8 +9,13 @@ fr:
       open: "Menu"
       activate: "Activer un Go neuf"
       tools: "Outils de développement"
+      preferences: "Paramètres"
       install: "Installer l\u2019application"
       site: "skyblip.eu"
+    preferences:
+      title: "Paramètres"
+      language: "Langue"
+      language_name: "Français"
     devices:
       attention: "Demande votre attention"
       no_bluetooth_title: "Ouvrez ceci sur Android ou un ordinateur"

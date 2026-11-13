@@ -234,7 +234,10 @@
   .firmware .field { grid-template-columns: minmax(0, 1fr); border: 0; padding: 0; }
   .firmware .field :is(select, input) { inline-size: 100%; }
 
-  .tools { display: grid; gap: var(--space-m); }
+  .tools,
+  .preferences { display: grid; gap: var(--space-m); }
+  .preferences legend { padding: 0; margin-block-end: var(--space-xs); font-weight: 700; }
+  .preferences .field--check { grid-template-columns: minmax(0, 1fr) auto; }
   .tools-list { display: grid; margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--card-border); }
   .tools-link {
     display: grid;

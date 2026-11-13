@@ -76,3 +76,45 @@ test('a PFLAA before any fix has a distance but no place on the chart', () => {
   assert.equal(report.distanceM, 500);
   assert.equal(report.latitude, undefined);
 });
+
+test('the Bravo fix and pressure altitude place a Retro that has neither', () => {
+  const picture = new TrafficPicture(['retro', 'bravo'], { referenceOrder: ['bravo', 'retro'] });
+  picture.record('bravo', sentence('GPRMC,101530.00,A,4449.698,N,00042.936,W,95.2,271.5,201126,,,A'), 0);
+  picture.record('bravo', sentence('PGRMZ,2000,F,3'), 0);
+  picture.record('retro', report(20, 0x3c6589, offset(MERIGNAC, 0, 6000), 3500), 500);
+
+  assert.equal(picture.reference(500).source, 'bravo');
+  const { report: placed } = picture.source('retro').targets.get('3C6589');
+  assert.ok(Math.abs(placed.distanceM - 6000) < 5);
+  assert.ok(Math.abs(placed.bearingDeg - 90) < 0.1);
+  assert.equal(placed.relativeVerticalFt, 1500);
+});
+
+test('a reference silent for longer than LIVE_MS gives way to the next receiver', () => {
+  const picture = new TrafficPicture(['retro', 'bravo'], { referenceOrder: ['bravo', 'retro'] });
+  picture.record('bravo', sentence('GPRMC,101530.00,A,4449.698,N,00042.936,W,95.2,271.5,201126,,,A'), 0);
+  picture.record('retro', report(10, 0xabcdef, offset(MERIGNAC, 1000, 0), 2000), LIVE_MS);
+  assert.equal(picture.reference(LIVE_MS).source, 'bravo');
+  assert.equal(picture.reference(LIVE_MS + 1).source, 'retro');
+});
+
+// The Retro misses seconds 3 to 6, and repeats its second-2 position because it heard nothing new.
+test('coverage, dropouts and fresh positions say how steadily each receiver held an aircraft', () => {
+  const picture = flying();
+  for (const [second, step] of [[0, 0], [1, 1], [2, 1], [7, 3]]) {
+    picture.record('retro', report(20, 0x3c6589, offset(MERIGNAC, 5000 + step * 50, 0), 3000), second * 1000);
+  }
+  for (const second of [0, 1, 2, 3, 4, 5, 6, 7]) {
+    picture.record('bravo', sentence(`PFLAA,0,${5000 + second * 50},0,0,1,3C6589,0,,50,0,9,0,1,${-80 + second}`), second * 1000 + 200);
+  }
+
+  const { signal } = picture.row('3C6589', 7500);
+  assert.deepEqual(
+    [signal.retro.listedS, signal.retro.coverage, signal.retro.dropouts, signal.retro.longestGapS],
+    [4, 0.5, 1, 5],
+  );
+  assert.deepEqual([signal.retro.freshCount, signal.retro.longestFreshGapS], [3, 6]);
+  assert.equal(signal.retro.rssi, null);
+  assert.deepEqual([signal.bravo.coverage, signal.bravo.dropouts, signal.bravo.freshCount], [1, 0, null]);
+  assert.deepEqual(signal.bravo.rssi, { last: -73, mean: -76.5, min: -80, max: -73 });
+});

@@ -26,7 +26,7 @@ int deliver(char* out, size_t capacity, char* sentence, int body_bytes) {
     return written;
 }
 
-int format_pflaa_tail(char* out, const model::AircraftObservation& target) {
+int format_pflaa_tail(char* out, const model::AircraftObservation& target, bool with_rssi) {
     int written = 0;
     out[written++] = ',';
     if (!flight::on_ground(target.flight_state)) {
@@ -46,8 +46,17 @@ int format_pflaa_tail(char* out, const model::AircraftObservation& target) {
     }
     out[written++] = ',';
     out[written++] = hex_digit(adsl_category_to_alptas_type(target.aircraft_category));
-    if (target.source == model::Source::Adsb) written += format_string(out + written, ",0,1,");
+    if (target.source == model::Source::Adsb) {
+        written += format_string(out + written, ",0,1,");
+        if (with_rssi && target.rssi_valid)
+            written += format_signed(out + written, target.rssi_dbm, 1, 0, false);
+    }
     return written;
+}
+
+int callsign_bytes(const char* callsign) {
+    if (callsign == nullptr || callsign[0] == 0) return 0;
+    return 1 + static_cast<int>(std::strlen(callsign));
 }
 
 int format_callsign_suffix(char* out, const char* callsign, int room) {
@@ -109,7 +118,10 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
     sentence[written++] = ',';
     written += format_hex(sentence + written, target.address, 6);
     char tail[kPflaaTailBytes];
-    const int tail_bytes = format_pflaa_tail(tail, target);
+    int tail_bytes = format_pflaa_tail(tail, target, true);
+    const int whole_callsign_bytes = callsign_bytes(callsign);
+    if (written + whole_callsign_bytes + tail_bytes + kNmeaFinishBytes > kNmeaSentenceCeilingBytes)
+        tail_bytes = format_pflaa_tail(tail, target, false);
     const int callsign_room = kNmeaSentenceCeilingBytes - kNmeaFinishBytes - written - tail_bytes;
     written += format_callsign_suffix(sentence + written, callsign, callsign_room);
     std::memcpy(sentence + written, tail, static_cast<size_t>(tail_bytes));

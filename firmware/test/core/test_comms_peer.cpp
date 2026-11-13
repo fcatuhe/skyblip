@@ -468,6 +468,13 @@ TEST_CASE("peer frames: a field Bravo has no reading of is absent, and read as i
     CHECK(read.value().callsign[0] == 0);
 }
 
+// The observation frame carries no RSSI, so a Go's $PFLAA must not print a level of 0 for it.
+TEST_CASE("peer frames: an observation never carries a signal level") {
+    const Result<comms::PeerObservation> read = observation_of("\"at_s\":1785628800");
+    REQUIRE(read.ok());
+    CHECK_FALSE(read.value().observation.rssi_valid);
+}
+
 TEST_CASE("peer frames: an observation with half a field, or a field without its age, is refused") {
     CHECK_FALSE(observation_of("\"at_s\":1,\"latitude_1e7\":485000000").ok());
     CHECK_FALSE(observation_of("\"at_s\":1,\"altitude_m\":1500").ok());

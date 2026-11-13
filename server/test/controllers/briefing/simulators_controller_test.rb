@@ -11,11 +11,12 @@ class Briefing::SimulatorsControllerTest < ActionDispatch::IntegrationTest
     assert_select "main script, main style, main [style]", count: 0
   end
 
-  test "the localized workbench loads its localized build frame" do
-    get briefing_simulator_path(locale: :fr)
+  test "the French workbench loads its build frame at the same address" do
+    cookies[:locale] = "fr"
+    get briefing_simulator_path
 
     assert_response :success
-    assert_select "turbo-frame#simulator_build[src='#{briefing_simulator_build_path(locale: :fr, mode: :workbench)}']", count: 1
+    assert_select "turbo-frame#simulator_build[src='#{briefing_simulator_build_path(mode: :workbench)}']", count: 1
     assert_select "turbo-frame#simulator_build [role=status]", text: I18n.t("simulator_builds.loading", locale: :fr)
   end
 end

@@ -21,12 +21,14 @@ class Briefing::DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_select "main script, main style, main [style], main [onclick]", count: 0
   end
 
-  test "a Bravo page names the Bravo, in French too" do
-    get briefing_device_path(slug: "bravo-3f2a", locale: :fr)
+  test "a Bravo page names the Bravo, in French too, at the same address" do
+    cookies[:locale] = "fr"
+    get briefing_device_path(slug: "bravo-3f2a")
 
     assert_response :success
+    assert_select "html[lang=fr]"
     assert_select "h1", text: "skyBlip Bravo 3F2A"
-    assert_select "link[rel=manifest][href='/fr/briefing/manifest']"
+    assert_select "link[rel=manifest][href='/briefing/manifest']"
   end
 
   test "an address that names no skyBlip is not a device page" do
