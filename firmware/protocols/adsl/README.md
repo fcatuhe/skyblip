@@ -24,7 +24,7 @@ These are skyBlip's choices, built on this stack:
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
 - the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
 - the dual-system receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
-- B.5's bookkeeping: each target's Max. Protocol Version and the lowest any close one reads (`core/traffic/table.*`), and how own Traffic is re-coded for Issue 1 (`core/protocol/adsl.*`)
+- B.5's bookkeeping: each target's Max. Protocol Version and the lowest any close one reads (`core/traffic/table.*`), and how own Traffic is re-coded for Issue 1 or held when it cannot be (`core/protocol/adsl.*`)
 - `RadioService` and the SX1262 settings that put a frame on air
 
 ## What is not implemented

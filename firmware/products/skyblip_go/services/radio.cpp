@@ -309,7 +309,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
             continue;
         uint8_t* chips = outgoing_chips_[armed.chip_buffer][static_cast<int>(payload)];
         const uint8_t tx_bytes = encode(payload_attempt, tx_at_us, armed.utc_s, chips);
-        // INFO: fc 18oct26 defence in depth, unreachable: ownship_transmits needs an address
+        // INFO: fc 18oct26 no address, no burst | 13nov26 also B.5 holding a position
         if (tx_bytes == 0) continue;
         ports::RfPlan with_burst = plan;
         with_burst.tx = chips;

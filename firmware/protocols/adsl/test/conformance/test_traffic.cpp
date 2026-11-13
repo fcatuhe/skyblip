@@ -121,6 +121,19 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp is a quarter second inside a 15-s
 }
 
 // No pilot here can declare an emergency, so what goes out is the code for "no emergency".
+// E.1.1 sends the lowest issue that encodes a payload the same way, so 14 to 17 go as themselves.
+TEST_CASE("ADS-L.4.SRD860.G.1.3: a category Issue 2 added goes out exactly, as version 1") {
+    for (uint8_t category = 0; category < 32; category++) {
+        adsl::Traffic traffic = reference_traffic();
+        traffic.aircraft_category = category;
+        adsl::Packet packet{};
+        adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+        CAPTURE(int(category));
+        CHECK(packet.aircraft_category == category);
+        CHECK(packet.protocol_version() == (adsl::issue2_category(category) ? 1 : 0));
+    }
+}
+
 TEST_CASE("ADS-L.4.SRD860.G.1.4: the emergency status transmitted is 1, no emergency") {
     adsl::Packet packet = traffic_packet();
     CHECK(packet.emergency == 1);

@@ -96,7 +96,7 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `tx_ok` | own-ship's burst left the antenna |
 | `tx_lost` | own-ship's burst was armed and never completed |
 | `tx_named` | how many of the bursts in `tx_ok` carried own-ship's registration rather than a position |
-| `tx_lowered` | own-ship's Traffic re-coded to Issue 1 because a close neighbour reads no higher (B.5) |
+| `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
 
 `BadCrc` is counted in `rx_bad` beside `Undecoded` rather than apart from it, even though the two are answered differently. What a counter is read for is whether anything is wrong, and both say yes: a burst the air damaged and a burst nothing here could read are each a reason to go and look. Which of the two it was is the tape's column, one row per burst, and a number that only ever climbs cannot carry that distinction anyway.
 

@@ -62,31 +62,54 @@ model::AircraftObservation neighbour(const model::Ownship& own, int32_t east_m, 
     return observation;
 }
 
-adsl::Packet own_traffic(const model::Ownship& own, const traffic::TrafficTable& table) {
-    adsl::Packet packet{};
-    REQUIRE(protocol::from_own(packet, own, 0x5AFE01, settings::kSkyblipAddressMappingTable,
-                               kHeavyRotorcraft));
-    protocol::lower_to(packet, table.readable_version(own, own.fix_at_ms));
-    return packet;
+// What RadioService decides: a position goes out only in a version every close client reads.
+bool sent_beside(const traffic::TrafficTable& table, const model::Ownship& own, uint8_t category,
+                 adsl::Packet& packet) {
+    REQUIRE(
+        protocol::from_own(packet, own, 0x5AFE01, settings::kSkyblipAddressMappingTable, category));
+    return packet.protocol_version() <= table.readable_version(own, own.fix_at_ms) ||
+           protocol::issue1_form(packet);
 }
 
 }  // namespace
 
-// A heavy rotorcraft is category 15, which Issue 1 reserves, so its Traffic is version 1 alone.
+// Beside an Issue 1 client category 15 goes as Issue 1's rotorcraft, and alone as itself.
 TEST_CASE("ADS-L.4.SRD860.B.5: the version transmitted is one every close neighbour can read") {
     const model::Ownship own = flying_own();
     traffic::TrafficTable table;
     table.set_own_reference(own);
     REQUIRE(table.update(neighbour(own, 500, 0), own.utc_s) >= 0);
-
-    const adsl::Packet lowered = own_traffic(own, table);
-    CHECK(lowered.protocol_version() == adsl::Packet::kProtocolVersionIssue1);
-    CHECK(int(lowered.aircraft_category) == 3);
+    adsl::Packet packet{};
+    REQUIRE(sent_beside(table, own, kHeavyRotorcraft, packet));
+    CHECK(packet.protocol_version() == adsl::Packet::kProtocolVersionIssue1);
+    CHECK(int(packet.aircraft_category) == 3);
+    REQUIRE(sent_beside(table, own, 4, packet));
+    CHECK(packet.protocol_version() == adsl::Packet::kProtocolVersionIssue1);
 
     traffic::TrafficTable empty;
-    const adsl::Packet alone = own_traffic(own, empty);
-    CHECK(alone.protocol_version() == adsl::Packet::kProtocolVersionIssue2);
-    CHECK(int(alone.aircraft_category) == kHeavyRotorcraft);
+    REQUIRE(sent_beside(empty, own, kHeavyRotorcraft, packet));
+    CHECK(packet.protocol_version() == adsl::Packet::kProtocolVersionIssue2);
+    CHECK(int(packet.aircraft_category) == kHeavyRotorcraft);
+}
+
+// Issue 1 has no code for an unknown altitude, speed or climb, and we never claim one we lack.
+TEST_CASE("ADS-L.4.SRD860.B.5: beside an Issue 1 client a position with an unknown field is held") {
+    const model::Ownship own = flying_own();
+    traffic::TrafficTable table;
+    table.set_own_reference(own);
+    REQUIRE(table.update(neighbour(own, 500, 0), own.utc_s) >= 0);
+    adsl::Packet packet{};
+
+    model::Ownship two_d = own;
+    two_d.vdop_e2 = 0;
+    CHECK_FALSE(sent_beside(table, two_d, 4, packet));
+    model::Ownship no_climb = own;
+    no_climb.climb_valid = false;
+    CHECK_FALSE(sent_beside(table, no_climb, kHeavyRotorcraft, packet));
+
+    traffic::TrafficTable empty;
+    REQUIRE(sent_beside(empty, two_d, 4, packet));
+    CHECK_FALSE(packet.has_altitude());
 }
 
 TEST_CASE("ADS-L.4.SRD860.B.5: a neighbour that is neither close nor closing leaves the version") {
@@ -177,31 +200,51 @@ TEST_CASE("ADS-L.4.SRD860.B.5: a Status from an aircraft not in the table change
     CHECK(rig.state().traffic.count() == 0);
 }
 
+namespace {
+
+struct Flown {
+    int sent{0};
+    uint32_t held{0};
+};
+
 // Every simulated aircraft sends version 0, so to a Go it is an Issue 1 client until a Status says
 // more.
-TEST_CASE(
-    "ADS-L.4.SRD860.B.5: a Go flying a heavy rotorcraft beside an Issue 1 client sends Issue 1") {
+Flown flown_beside_issue1(uint8_t category, uint8_t sent_as) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
-    simulator.product().settings().aircraft_type = kHeavyRotorcraft;
+    simulator.product().settings().aircraft_type = category;
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(60);
     simulator.world().add_aircraft(0, 400, 0, 30, 90);
     const uint32_t settled_ms = past_settling(simulator);
-    const uint32_t lowered_before = simulator.product().state().air.tx_lowered;
+    const uint32_t held_before = simulator.product().state().air.tx_held_for_b5;
     run_on(simulator, settled_ms, 15000);
 
-    int lowered = 0;
+    Flown flown;
     for (const simulator::AirRecord& record :
          records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
         adsl::Packet packet{};
         REQUIRE(packet_of(record, packet));
         if (packet.address() != settings::address_of(platform::host::Identity::kSerial)) continue;
-        if (packet.protocol_version() != adsl::Packet::kProtocolVersionIssue1) continue;
-        CHECK(int(packet.aircraft_category) == 3);
-        lowered++;
+        CHECK(packet.protocol_version() == adsl::Packet::kProtocolVersionIssue1);
+        CHECK(packet.aircraft_category == sent_as);
+        flown.sent++;
     }
-    CHECK(lowered > 5);
-    CHECK(simulator.product().state().air.tx_lowered - lowered_before ==
-          static_cast<uint32_t>(lowered));
+    flown.held = simulator.product().state().air.tx_held_for_b5 - held_before;
+    return flown;
+}
+
+}  // namespace
+
+TEST_CASE(
+    "ADS-L.4.SRD860.B.5: beside an Issue 1 client a heavy rotorcraft goes out as rotorcraft") {
+    const Flown heavy = flown_beside_issue1(kHeavyRotorcraft, 3);
+    CHECK(heavy.sent > 10);
+    CHECK(heavy.held == 0);
+}
+
+TEST_CASE("ADS-L.4.SRD860.B.5: beside an Issue 1 client a glider still goes out every second") {
+    const Flown glider = flown_beside_issue1(4, 4);
+    CHECK(glider.sent > 10);
+    CHECK(glider.held == 0);
 }

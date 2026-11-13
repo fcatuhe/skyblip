@@ -142,6 +142,22 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
     CHECK(glider.protocol_version() == 0);
 }
 
+// Issue 2 split broader Issue 1 classes, so each new category has a truthful Issue 1 reading.
+TEST_CASE("ADS-L.4.SRD860.G.1.3: for an Issue 1 client 14 to 17 read as Issue 1's own classes") {
+    const struct {
+        uint8_t issue2;
+        uint8_t issue1;
+    } kClasses[] = {{14, 0}, {15, 3}, {16, 7}, {17, 7}, {3, 3}, {4, 4}, {7, 7}, {13, 13}};
+    for (const auto& pair : kClasses) {
+        CAPTURE(int(pair.issue2));
+        adsl::Packet packet{};
+        protocol::from_own(packet, flying(), 0x123456, 6, pair.issue2);
+        REQUIRE(protocol::issue1_form(packet));
+        CHECK(packet.aircraft_category == pair.issue1);
+        CHECK(packet.protocol_version() == 0);
+    }
+}
+
 // The adapter decides the code, so the clause is checked on what own-ship sends and what a receiver
 // keeps.
 TEST_CASE(

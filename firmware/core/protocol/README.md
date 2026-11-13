@@ -34,18 +34,20 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 
 ## Writing for an Issue 1 neighbour
 
-§B.5 asks own Traffic to go out in a version every close neighbour reads, and `core/traffic/README.md` says how the lowest one is found. `lower_to` re-codes a clear Traffic packet for that version and returns whether its version dropped. `RadioService` runs it on every own Traffic packet and counts each drop in `air.tx_lowered`. Issue 1 has no code for some of what Issue 2 says, so the closest true reading is chosen, and where none exists, the one a receiver extrapolates least from:
+§B.5 asks own Traffic to go out in a version every close neighbour reads, and `core/traffic/README.md` says how the lowest one is found. With no close Issue 1 client, a position goes out in the lowest version whose encoding is the same (§E.1.1), so a payload carrying category 14 to 17 or an unknown field goes as version 1, exactly as it is.
 
-| Issue 2 code | Issue 1 code | Why |
+Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`, which re-codes it as version 0 only where Issue 1 has a truthful code for every field. This device never claims a value it does not have:
+
+| Issue 2 code | Beside an Issue 1 client | Why |
 |---|---|---|
-| category 14, model plane | 11, UAS open category | a model plane flies in the open category |
+| category 14, model plane | 0, no category information | Issue 1 has no code for it |
 | category 15, heavy rotorcraft | 3, rotorcraft | Issue 1's rotorcraft covers every weight |
-| category 16, hang-glider | 7, hang-glider or paraglider | the same class |
-| category 17, paramotor | 7, hang-glider or paraglider | a paraglider wing with an engine, flown at a paraglider's speed |
+| category 16, hang-glider | 7, hang-glider or paraglider | Issue 2 split that class |
+| category 17, paramotor | 7, hang-glider or paraglider | a powered paraglider, and Issue 1's closest wing |
 | position 0x800000, no fix | 0xFFFFFF | Issue 1's own marker for no fix |
-| ground speed 0xFF, invalid | 0 | Issue 1 reads 0xFF as 238 m/s, and a receiver would carry the target off at that speed |
-| vertical rate 0x1FF, invalid | 0, level | Issue 1 reads 0x1FF as a 119 m/s descent |
-| altitude 0x3FFF, invalid | unchanged | Issue 1 has no code for an unknown height, and 0x3FFF reads as 61112 m, the top of its scale |
+| altitude, ground speed or vertical rate unknown | the position is held for that second | Issue 1 has no code for unknown, and 0x3FFF, 0xFF or 0x1FF would read as 61112 m, 238 m/s or a 119 m/s descent |
+
+A held position is counted once a second in `air.tx_held_for_b5`, and the next position the schedule owes tries again. Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.
 
 ## The name ADS-L has no field for
 

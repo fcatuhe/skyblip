@@ -15,9 +15,10 @@ namespace {
 // INFO: fc 13nov26 Issue 1 G.1.5 marked a missing fix 0xFFFFFF, where Issue 2 writes 0x800000
 constexpr uint32_t kIssue1PositionInvalidCode = 0xFFFFFF;
 
+// INFO: fc 13nov26 Issue 2 split broader Issue 1 classes, and a model plane has no Issue 1 code
 uint8_t issue1_category(uint8_t category) {
     switch (category) {
-        case 14: return 11;
+        case 14: return 0;
         case 15: return 3;
         case 16:
         case 17: return 7;
@@ -54,18 +55,15 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     return true;
 }
 
-bool lower_to(adsl::Packet& packet, uint8_t version) {
-    if (!packet.is_position() || packet.protocol_version() <= version) return false;
-    if (version == adsl::Packet::kProtocolVersionIssue1) {
-        packet.aircraft_category = issue1_category(packet.aircraft_category);
-        if (packet.field(adsl::Packet::kLatitudeField) == adsl::Packet::kPositionInvalidCode) {
-            packet.set_field(adsl::Packet::kLatitudeField, kIssue1PositionInvalidCode);
-            packet.set_field(adsl::Packet::kLongitudeField, kIssue1PositionInvalidCode);
-        }
-        if (!packet.has_speed()) packet.set_speed_q(0);
-        if (!packet.has_climb()) packet.set_climb_e8(0);
+bool issue1_form(adsl::Packet& packet) {
+    if (!packet.is_position()) return false;
+    if (!packet.has_altitude() || !packet.has_speed() || !packet.has_climb()) return false;
+    packet.aircraft_category = issue1_category(packet.aircraft_category);
+    if (packet.field(adsl::Packet::kLatitudeField) == adsl::Packet::kPositionInvalidCode) {
+        packet.set_field(adsl::Packet::kLatitudeField, kIssue1PositionInvalidCode);
+        packet.set_field(adsl::Packet::kLongitudeField, kIssue1PositionInvalidCode);
     }
-    packet.set_protocol_version(version);
+    packet.set_protocol_version(adsl::Packet::kProtocolVersionIssue1);
     return true;
 }
 
