@@ -92,6 +92,22 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     }
 }
 
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency") {
+    timing::Transmitter transmitter;
+    transmitter.configure(0x5B7E57);
+    uint32_t previous = 0;
+    int statuses = 0;
+    for (uint32_t utc_s = 1785628800; utc_s < 1785628800 + 100; utc_s++) {
+        if (utc_s % timing::Transmitter::kStatusPeriodS != transmitter.status_second()) continue;
+        const int slot = timing::Transmitter::status_slot_in(utc_s);
+        const uint32_t frequency = timing::Scheduler::slot_frequency_hz(slot);
+        if (previous != 0) CHECK(frequency != previous);
+        previous = frequency;
+        statuses++;
+    }
+    CHECK(statuses == 5);
+}
+
 // TODO: fc 18sep26 no O-band LDR: one radio, and the dwell map spends the second on M-band and HDR
 TEST_CASE("ADS-L.4.SRD860.C.3: the O-band LDR channel is 38.4 kbps behind sync word 0xB4 0x2B" *
           doctest::skip()) {

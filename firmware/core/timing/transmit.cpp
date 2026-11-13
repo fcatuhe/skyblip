@@ -1,5 +1,8 @@
 #include "core/timing/transmit.h"
 
+#include <algorithm>
+#include <initializer_list>
+
 namespace skyblip::timing {
 
 namespace {
@@ -43,6 +46,21 @@ int Transmitter::instant_between(int first, int last, uint32_t utc_s) const {
            static_cast<int>(hash(address_ ^ hash(utc_s)) % static_cast<uint32_t>(last - first + 1));
 }
 
+// INFO: fc 13nov26 drawn around the position's instant, so two bursts sharing a dwell never overlap
+int Transmitter::status_instant_in(int slot, uint32_t utc_s) const {
+    const int first = first_instant_in(slot);
+    const int last = last_instant_in(slot);
+    const int position = instant_in(slot, utc_s);
+    const int apart = static_cast<int>(kAirTimeMs) + kCompletionGuardMs;
+    const int blocked_from = std::max(first, position - apart + 1);
+    const int blocked = std::min(last, position + apart - 1) - blocked_from + 1;
+    const int free = last - first + 1 - blocked;
+    if (free <= 0) return first;
+    const int drawn =
+        first + static_cast<int>(hash(hash(address_ ^ hash(utc_s))) % static_cast<uint32_t>(free));
+    return drawn < blocked_from ? drawn : drawn + blocked;
+}
+
 uint32_t Transmitter::ground_second() const {
     return hash(address_) % flight::kGroundReportPeriodS;
 }
@@ -51,16 +69,9 @@ bool Transmitter::on_schedule(uint32_t utc_s, bool airborne) const {
     return utc_s % period_s(airborne) == (airborne ? 0u : ground_second());
 }
 
-bool Transmitter::position_sent_in(uint32_t utc_s) const {
-    return ever_sent_position_ && utc_s == last_position_utc_s_;
-}
-
-bool Transmitter::callsign_sent_in(uint32_t utc_s) const {
-    return ever_sent_callsign_ && utc_s == last_callsign_utc_s_;
-}
-
-bool Transmitter::on_callsign_schedule(uint32_t utc_s) const {
-    return utc_s % kCallsignPeriodS == ground_second();
+bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
+    const int index = static_cast<int>(payload);
+    return ever_sent_[index] && utc_s == last_utc_s_[index];
 }
 
 int Transmitter::last_callsign_instant() {
@@ -69,10 +80,10 @@ int Transmitter::last_callsign_instant() {
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
                                           bool airborne, int32_t fix_lag_ms) const {
-    const Attempt position = attempt(plan, utc_s, now_ms, airborne, fix_lag_ms, Payload::Position);
-    if (position.go || position.over_budget) return position;
-    const Attempt callsign = attempt(plan, utc_s, now_ms, airborne, fix_lag_ms, Payload::Callsign);
-    if (callsign.go || callsign.over_budget) return callsign;
+    for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
+        const Attempt owed = attempt(plan, utc_s, now_ms, airborne, fix_lag_ms, payload);
+        if (owed.go || owed.over_budget) return owed;
+    }
     return Attempt{};
 }
 
@@ -84,12 +95,7 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     if (!plan.tx_allowed) return attempt;
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
 
-    const bool position_due = !position_sent_in(utc_s) && fix_lag_ms <= kFixMaxAgeMs &&
-                              on_schedule(utc_s, airborne) &&
-                              dwell_slot == slot_in(utc_s, airborne);
-    const bool callsign_due =
-        !callsign_sent_in(utc_s) && on_callsign_schedule(utc_s) && dwell_slot == kCallsignSlot;
-    if (!(payload == Payload::Position ? position_due : callsign_due)) return attempt;
+    if (sent_in(utc_s, payload) || !due(payload, plan, utc_s, airborne, fix_lag_ms)) return attempt;
 
     if (!air_time_.may_spend(now_ms, kAirTimeMs)) {
         attempt.over_budget = true;
@@ -97,27 +103,37 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     }
 
     attempt.go = true;
-    if (payload == Payload::Position) {
-        const int slot = slot_in(utc_s, airborne);
-        attempt.at_ms = instant_in(slot, utc_s);
-        attempt.frequency_hz = Scheduler::slot_frequency_hz(slot);
-        return attempt;
+    attempt.frequency_hz = Scheduler::slot_frequency_hz(dwell_slot);
+    switch (payload) {
+        case Payload::Position: attempt.at_ms = instant_in(dwell_slot, utc_s); break;
+        case Payload::Status: attempt.at_ms = status_instant_in(dwell_slot, utc_s); break;
+        case Payload::Callsign:
+            attempt.at_ms = instant_between(kCallsignStartMs, last_callsign_instant(), utc_s);
+            break;
     }
-    attempt.at_ms = instant_between(kCallsignStartMs, last_callsign_instant(), utc_s);
-    attempt.frequency_hz = Scheduler::slot_frequency_hz(kCallsignSlot);
     return attempt;
+}
+
+bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
+                      int32_t fix_lag_ms) const {
+    const int dwell_slot = Scheduler::slot_of(plan.start_ms);
+    switch (payload) {
+        case Payload::Position:
+            return fix_lag_ms <= kFixMaxAgeMs && on_schedule(utc_s, airborne) &&
+                   dwell_slot == slot_in(utc_s, airborne);
+        case Payload::Status:
+            return utc_s % kStatusPeriodS == status_second() && dwell_slot == status_slot_in(utc_s);
+        case Payload::Callsign:
+            return utc_s % kCallsignPeriodS == callsign_second() && dwell_slot == kCallsignSlot;
+    }
+    return false;
 }
 
 void Transmitter::sent(uint32_t utc_s, uint32_t now_ms, Payload payload) {
     sent_++;
     air_time_.spend(now_ms, kAirTimeMs);
-    if (payload == Payload::Callsign) {
-        ever_sent_callsign_ = true;
-        last_callsign_utc_s_ = utc_s;
-        return;
-    }
-    ever_sent_position_ = true;
-    last_position_utc_s_ = utc_s;
+    ever_sent_[static_cast<int>(payload)] = true;
+    last_utc_s_[static_cast<int>(payload)] = utc_s;
 }
 
 }  // namespace skyblip::timing

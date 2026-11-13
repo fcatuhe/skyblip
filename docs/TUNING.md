@@ -213,7 +213,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
-| `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a target is hex |
+| `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
+| `kCallsignPeriodS` | 20 | seconds | Period | a name never changes in flight, this only bounds how long a target is hex |
 | `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
 | `kCompletionGuardMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
@@ -363,4 +364,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-238 constants over 22 folders.
+239 constants over 22 folders.

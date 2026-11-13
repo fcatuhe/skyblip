@@ -42,8 +42,9 @@ class RadioService : public runtime::Service {
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
-    static constexpr int kPayloads = 2;
-    static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Callsign};
+    static constexpr int kPayloads = 3;
+    static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Status,
+                                                         Payload::Callsign};
 
     struct Armed {
         ports::RfMode mode{ports::RfMode::Idle};
@@ -57,16 +58,22 @@ class RadioService : public runtime::Service {
 
         bool carries(Payload payload) const { return carried[static_cast<int>(payload)]; }
         uint64_t at(Payload payload) const { return at_us[static_cast<int>(payload)]; }
-        bool carries_any() const { return carried[0] || carried[1]; }
+        bool carries_any() const { return carried[0] || carried[1] || carried[2]; }
         void carry(Payload payload, uint64_t tx_at_us) {
             carried[static_cast<int>(payload)] = true;
             at_us[static_cast<int>(payload)] = tx_at_us;
         }
         void drop(Payload payload) { carried[static_cast<int>(payload)] = false; }
         Payload first() const {
-            if (!carries(Payload::Callsign)) return Payload::Position;
-            if (!carries(Payload::Position)) return Payload::Callsign;
-            return at_us[0] <= at_us[1] ? Payload::Position : Payload::Callsign;
+            Payload earliest = Payload::Position;
+            uint64_t earliest_us = UINT64_MAX;
+            for (const Payload payload : kEveryPayload) {
+                if (carries(payload) && at(payload) < earliest_us) {
+                    earliest = payload;
+                    earliest_us = at(payload);
+                }
+            }
+            return earliest;
         }
     };
 
@@ -104,6 +111,7 @@ class RadioService : public runtime::Service {
               uint32_t now_ms) const;
     uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc_s,
                    uint8_t* chips);
+    protocol::StatusReport status_report() const;
     bool transmit_due(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) const;
     void queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void promote();

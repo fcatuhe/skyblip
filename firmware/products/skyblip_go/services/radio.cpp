@@ -278,10 +278,10 @@ void RadioService::queue_next(const timing::SlotPlan& plan, int64_t origin_us, u
 
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
                                                    uint32_t now_ms) const {
-    const timing::Transmitter::Attempt position = attempt(plan, now_ms, Payload::Position);
-    if (position.go || position.over_budget) return position;
-    const timing::Transmitter::Attempt callsign = attempt(plan, now_ms, Payload::Callsign);
-    if (callsign.go || callsign.over_budget) return callsign;
+    for (const Payload payload : kEveryPayload) {
+        const timing::Transmitter::Attempt owed = attempt(plan, now_ms, payload);
+        if (owed.go || owed.over_budget) return owed;
+    }
     return timing::Transmitter::Attempt{};
 }
 
@@ -422,18 +422,38 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                              uint32_t utc_s, uint8_t* chips) {
     // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
     const settings::AirAddress address = context_.state.activation.address();
-    const bool built =
-        attempt.payload == Payload::Callsign
-            ? protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
-                                          settings_.callsign)
-            : protocol::from_own(
-                  outgoing_, context_.state.own, address, settings::kAddressMappingTable,
-                  context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
+    bool built = false;
+    switch (attempt.payload) {
+        case Payload::Position:
+            built = protocol::from_own(
+                outgoing_, context_.state.own, address, settings::kAddressMappingTable,
+                context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
+            break;
+        case Payload::Status:
+            built = protocol::from_own_status(outgoing_, address, settings::kAddressMappingTable,
+                                              status_report());
+            break;
+        case Payload::Callsign:
+            built = protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
+                                                settings_.callsign);
+            break;
+    }
     if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
     return static_cast<uint8_t>(protocol::m_band_payload(protocol::kAdslSyncWord, outgoing_.data,
                                                          protocol::kAdslFrameBytes, chips));
+}
+
+// INFO: fc 13nov26 a Go pairs the Bravo in the aircraft it flies, so a paired one is installed
+protocol::StatusReport RadioService::status_report() const {
+    protocol::StatusReport report{};
+    report.m_band = protocol::receive_class(timing::Scheduler::direct_heard_permille());
+    report.conspicuity_received = protocol::conspicuity::kFlarm;
+    if (context_.state.bravo != comms::BravoState::Unpaired)
+        report.conspicuity_received |= protocol::conspicuity::kAdsb1090;
+    report.traffic_uplink_client = true;
+    return report;
 }
 
 void RadioService::record_dwell(const timing::SlotPlan& slot,

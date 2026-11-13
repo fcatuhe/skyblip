@@ -1,10 +1,18 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status, Traffic Uplink, FIS-B and Remote ID payloads.
 #include <cstdint>
 
+#include "core/events/central.h"
 #include "core/model/aircraft.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "core/timing/transmit.h"
+#include "core/util/bit_field.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
@@ -23,78 +31,103 @@ model::AircraftObservation target(uint32_t address) {
     observation.position_valid = true;
     return observation;
 }
+// What a simulated Go puts on air as its Status, read back at G.2's bit offsets.
+protocol::AdslPacket status_on_air(bool bravo_paired) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    if (bravo_paired)
+        simulator.product().settings().bravo = events::BluetoothAddress{0, {1, 2, 3, 4, 5, 6}};
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), (timing::Transmitter::kStatusPeriodS + 1) * 1000);
+    const simulator::Air& air = simulator.world().air();
+    for (int i = 0; i < air.record_count(); i++) {
+        protocol::AdslPacket packet{};
+        if (packet_of(air.record_at(i), packet) &&
+            packet.payload_type == protocol::AdslPacket::kPayloadTypeStatus)
+            return packet;
+    }
+    FAIL("no Status burst in twenty-one seconds of flight");
+    return protocol::AdslPacket{};
+}
+
+const protocol::AdslPacket& status_heard() {
+    static const protocol::AdslPacket packet = status_on_air(false);
+    return packet;
+}
+
+uint32_t status_field(BitField where) { return status_heard().field(where); }
+
 }  // namespace
 
-// TODO: fc 18sep26 no Status payload is transmitted, so G.2.1 to G.2.11 have nothing to encode
-TEST_CASE("ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version" *
-          doctest::skip()) {
-    FAIL("the Status payload is not implemented: no type 3 is ever transmitted");
+TEST_CASE(
+    "ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version") {
+    const protocol::AdslPacket& packet = status_heard();
+    CHECK(packet.payload_type == 3);
+    CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
+    // E.1.1: the Status payload is Issue 2's, so its network header says version 1.
+    CHECK((packet.version & 0x0F) == 1);
+    // 24 reserved bits close the 56 the payload table lists.
+    CHECK(read_bits(packet.payload, BitField{72, 24}) == 0);
 }
 
-// TODO: fc 18sep26 no Status payload, so none of its fields is encoded: G.2.1 to G.2.11 below
-TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version this device reads" *
-          doctest::skip()) {
-    FAIL("no Status payload: the Max. Protocol Version field is never transmitted");
+TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version this device reads") {
+    CHECK(status_field(BitField{40, 4}) == 1);
 }
 
-// TODO: fc 18sep26 the M-band dwell is one channel at a time, which is a Partial claim to declare
-TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the M-band receive capability is never declared");
+// The dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, of the direct slot's
+// 550.
+TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class") {
+    CHECK(timing::Scheduler::direct_heard_permille() == (348 + 200) * 1000 / 1100);
+    CHECK(status_field(BitField{44, 2}) == 2);
 }
 
-// TODO: fc 18sep26 nothing receives O-band LDR, which is the None class, still undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.3: the Status payload declares the O-band LDR receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the O-band LDR receive capability is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.3: the Status payload declares the O-band LDR receive class") {
+    CHECK(status_field(BitField{46, 2}) == 0);
 }
 
-// TODO: fc 18sep26 the O-band HDR dwell is 190 ms of the second, and nothing says so on air
-TEST_CASE("ADS-L.4.SRD860.G.2.4: the Status payload declares the O-band HDR receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the O-band HDR receive capability is never declared");
+// The O-band dwell sits in the uplink slot, which the clause says does not count.
+TEST_CASE("ADS-L.4.SRD860.G.2.4: the Status payload declares the O-band HDR receive class") {
+    CHECK(timing::kUplinkRxEndMs <= timing::kDirectStartMs);
+    CHECK(status_field(BitField{48, 2}) == 0);
 }
 
-// TODO: fc 18sep26 no ADS-L 4 Mobile client on this device, which is the None value, undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile state" *
-          doctest::skip()) {
-    FAIL("no Status payload: the ADS-L 4 Mobile state is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile state") {
+    CHECK(status_field(BitField{50, 2}) == 0);
 }
 
-// TODO: fc 18sep26 this device receives the FLARM-generation wire, which is bit 0 of the bitmap
-TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received" *
-          doctest::skip()) {
-    FAIL("no Status payload: the e-conspicuity receive bitmap is never declared");
+// Bit 0 is the FLARM-generation wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
+TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
+    CHECK(status_field(BitField{52, 8}) == 0x01);
+    CHECK(status_on_air(true).field(BitField{52, 8}) == 0x11);
 }
 
-// TODO: fc 18sep26 nothing but ADS-L is transmitted here, so the bitmap would be empty and honest
-TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted" *
-          doctest::skip()) {
-    FAIL("no Status payload: the e-conspicuity transmit bitmap is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted") {
+    CHECK(status_field(BitField{60, 8}) == 0);
 }
 
-// TODO: fc 18sep26 no transponder is wired to this device, and no setting records one
-TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status payload declares the transponder fitted" *
-          doctest::skip()) {
-    FAIL("no Status payload: the XPDR capability is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status payload declares the transponder fitted") {
+    CHECK(status_field(BitField{68, 2}) == 0);
 }
 
-// TODO: fc 18sep26 this device does process Traffic Uplink, and no peer is told
-TEST_CASE("ADS-L.4.SRD860.G.2.9: the Status payload declares that Traffic Uplink is processed" *
-          doctest::skip()) {
-    FAIL("no Status payload: the Traffic Uplink client flag is never set");
+TEST_CASE("ADS-L.4.SRD860.G.2.9: the Status payload declares that Traffic Uplink is processed") {
+    CHECK(status_field(BitField{70, 1}) == 1);
 }
 
-// TODO: fc 18sep26 no FIS-B is processed, which is the zero flag, still undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is processed" *
-          doctest::skip()) {
-    FAIL("no Status payload: the FIS-B client flag is never set");
+TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is processed") {
+    CHECK(status_field(BitField{71, 1}) == 0);
 }
 
-// TODO: fc 18sep26 a Status payload every 20 s is a slot in the transmit schedule, unbuilt
-TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds" *
-          doctest::skip()) {
-    FAIL("no Status payload: nothing schedules one");
+TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
+    timing::Transmitter transmitter;
+    transmitter.configure(0x5B7E57);
+    uint32_t last_s = 0;
+    for (uint32_t utc_s = 1785628800; utc_s < 1785628800 + 100; utc_s++) {
+        if (utc_s % timing::Transmitter::kStatusPeriodS != transmitter.status_second()) continue;
+        if (last_s != 0) CHECK(utc_s - last_s <= 20);
+        last_s = utc_s;
+    }
+    CHECK(last_s != 0);
 }
 
 // The uplink carried here is the ground station's own, on the channel and in the slot G.3 names.

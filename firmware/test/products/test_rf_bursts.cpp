@@ -174,8 +174,8 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);
 }
 
-// Every other ground second puts the position in slot 1, the dwell the name's tail is part of.
-TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 when they must") {
+// The name's ground second is the odd one of the twenty, whose position always rides slot 1.
+TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 with it") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -184,18 +184,18 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     run_on(simulator, past_settling(simulator), 40000);
 
     const simulator::Air& air = simulator.world().air();
-    int positions = 0, names = 0, shared_dwell = 0;
+    int names = 0, shared_dwell = 0;
     uint64_t position_at_us = 0;
     bool position_on_channel1 = false;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(record.phase_ms)) {
-            positions++;
+        const uint8_t payload_type = payload_type_of(record);
+        if (payload_type == protocol::AdslPacket::kPayloadTypePosition) {
             position_at_us = record.at_us;
             position_on_channel1 = simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz);
             continue;
         }
+        if (payload_type != protocol::AdslPacket::kPayloadTypeOgnDiagnostics) continue;
         names++;
         CAPTURE(record.at_us);
         // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
@@ -204,9 +204,8 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
               (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
         if (position_on_channel1) shared_dwell++;
     }
-    CHECK(names >= 3);
-    CHECK(positions == names);
-    CHECK(shared_dwell >= 1);
+    CHECK(names >= 2);
+    CHECK(shared_dwell == names);
 
     // Two bursts closing in one dwell go on the tape as what they were, each at its own instant.
     const radio::Log& log = simulator.product().state().radio_log;

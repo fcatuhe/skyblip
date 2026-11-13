@@ -21,6 +21,9 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr uint8_t kTxBytes = 3 + kDataBytes;
     // INFO: fc 20sep26 F.2.1 leaves payload 66 to OGN, layout: nrf52-ogn-tracker/src/adsl.h:120
     static constexpr uint8_t kPayloadTypePosition = 0x02;
+    static constexpr uint8_t kPayloadTypeStatus = 0x03;
+    // INFO: fc 13nov26 E.1.1 numbers Issue 2 as 1, and the Status payload first appears in Issue 2
+    static constexpr uint8_t kProtocolVersionIssue2 = 1;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
     static constexpr uint8_t kTelemetryTypeInformation = 1;
     static constexpr uint8_t kInformationTypeRegistration = 5;
@@ -68,6 +71,18 @@ struct __attribute__((packed)) AdslPacket {
     static constexpr BitField kAltitudeField{kTrafficOffset + 72, 14};
     static constexpr BitField kClimbField{kTrafficOffset + 86, 9};
     static constexpr BitField kTrackField{kTrafficOffset + 95, 9};
+
+    static constexpr uint16_t kStatusOffset = kTrafficOffset;
+    static constexpr BitField kMaxProtocolVersionField{kStatusOffset, 4};
+    static constexpr BitField kMBandReceiveField{kStatusOffset + 4, 2};
+    static constexpr BitField kOBandLdrReceiveField{kStatusOffset + 6, 2};
+    static constexpr BitField kOBandHdrReceiveField{kStatusOffset + 8, 2};
+    static constexpr BitField kMobileField{kStatusOffset + 10, 2};
+    static constexpr BitField kConspicuityReceiveField{kStatusOffset + 12, 8};
+    static constexpr BitField kConspicuityTransmitField{kStatusOffset + 20, 8};
+    static constexpr BitField kTransponderField{kStatusOffset + 28, 2};
+    static constexpr BitField kTrafficUplinkClientField{kStatusOffset + 30, 1};
+    static constexpr BitField kFisBClientField{kStatusOffset + 31, 1};
 
     static constexpr Exponential kSpeedCode{6, 2, false};
     static constexpr Exponential kAltitudeCode{12, 2, false};
@@ -207,6 +222,28 @@ bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddres
               uint8_t address_mapping_table, uint8_t aircraft_category);
 bool from_own(AdslPacket& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at);
+
+enum class ReceiveClass : uint8_t { None = 0, Occasional = 1, Partial = 2, Full = 3 };
+ReceiveClass receive_class(int heard_permille);
+
+namespace conspicuity {
+constexpr uint8_t kFlarm = 1u << 0;
+constexpr uint8_t kAdsb1090 = 1u << 4;
+}  // namespace conspicuity
+
+// INFO: fc 13nov26 a G.2 field left out sends its zero code: no Mobile, no transponder, no FIS-B
+struct StatusReport {
+    ReceiveClass m_band{ReceiveClass::None};
+    ReceiveClass o_band_ldr{ReceiveClass::None};
+    ReceiveClass o_band_hdr{ReceiveClass::None};
+    uint8_t conspicuity_received{0};
+    uint8_t conspicuity_transmitted{0};
+    bool traffic_uplink_client{false};
+};
+
+// INFO: fc 13nov26 padded to Traffic's 24 bytes, so a receiver whose sync fixes the length hears it
+bool from_own_status(AdslPacket& packet, settings::AirAddress address,
+                     uint8_t address_mapping_table, const StatusReport& report);
 
 // INFO: fc 23sep26 F.2.1 leaves payload 66 to OGN, so the set is the menu's: blank, dash, A-Z, 0-9
 bool is_callsign_character(char c);
