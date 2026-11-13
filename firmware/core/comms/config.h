@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "core/comms/browser_link.h"
 #include "core/comms/config_store.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/identity_link.h"
@@ -97,6 +98,10 @@ class ConfigService {
     // INFO: fc 18oct26 writes the held code if the power rule allows, else drops it as low_power
     void settle_unlock();
 
+    TrustedBrowsers& trusted_browsers() { return browsers_.trusted(); }
+    bool browsers_dirty() const { return browsers_dirty_; }
+    void clear_browsers_dirty() { browsers_dirty_ = false; }
+
     // Drives the upload-window timeout. Called once per App::step().
     void tick(uint32_t now_ms);
 
@@ -105,10 +110,11 @@ class ConfigService {
     // While true the next command waits on the bus: its answer would have nowhere to go.
     bool replying() const { return held_bytes_ > 0 || diagnostics_report_ || timing_report_; }
 
-    // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window two presses open
-    bool upload_allowed() const { return upload_window_open_ && !in_flight(); }
+    // INFO: fc 11nov26 SMP is unauthenticated, so an image lands only in a window the pilot opened
+    bool upload_allowed() const { return upload_window_open_ && !install_held_; }
     void close_upload_window() { upload_window_open_ = false; }
-    bool receiving_firmware() const { return upload_window_open_; }
+    // INFO: fc 13nov26 in flight the glass keeps the radar while an upload runs on behind it
+    bool receiving_firmware() const { return upload_allowed() && !in_flight(); }
 
     void on_link_up(const events::LinkUp& event);
     void on_link_down(const events::LinkDown& event);
@@ -314,6 +320,12 @@ class ConfigService {
     bool running_version_text(char* out, size_t capacity) const;
     bool identity_refused_in_flight();
     void unlock(const cbor::Reader& frame);
+    void browser_challenge();
+    void trust_browser(const cbor::Reader& frame);
+    void send_browser(const cbor::Reader& frame);
+    void forget_browser(const cbor::Reader& frame);
+    void remember_browser();
+    bool trusted_browser() const { return browsers_.trusts(claim_.peer()); }
     void refuse(link::Reason reason) { acknowledge(false, reason); }
     template <class Report, class... Arguments>
     void start_report(std::optional<Report>& report, int frame_bytes,
@@ -327,6 +339,8 @@ class ConfigService {
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void request_capture(const cbor::Reader& frame);
     void install_received_image();
+    void open_upload_window();
+    void apply_settings(const cbor::Reader& frame);
     bool signed_by_trusted_key() const;
     bool in_flight() const { return flight_state_ == flight::FlightState::Airborne; }
     bool activated() const { return identity_ != nullptr && identity_->activated(); }
@@ -340,6 +354,8 @@ class ConfigService {
     const timing::SlotTimingStatistics* timing_statistics_;
     const timing::DurableWriteWindow* durable_writes_{nullptr};
     IdentityLink* identity_{nullptr};
+    BrowserLink browsers_{};
+    bool browsers_dirty_{false};
     flight::FlightState flight_state_{flight::FlightState::Unknown};
     Diagnostics diagnostics_{};
     bool supply_warned_{false};
@@ -364,6 +380,8 @@ class ConfigService {
     bool refused_on_device_{false};
     bool settings_dirty_{false};
     bool upload_window_open_{false};
+    // INFO: fc 13nov26 an image that lands in flight installs on the ground, since a swap goes dark
+    bool install_held_{false};
     uint32_t now_ms_{0};
     uint32_t upload_window_opened_ms_{0};
     uint32_t pending_since_ms_{0};

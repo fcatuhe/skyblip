@@ -1,7 +1,8 @@
 import { decode, encode } from '#skyblip/cbor';
 import { UUID } from '#skyblip/ble';
 import { compareVersions, parseVersion, readImage, versionText } from '#skyblip/image';
-import { decodeFrame, encodeFrame } from '#skyblip/link';
+import { decodeFrame, encodeFrame, hex } from '#skyblip/link';
+import { signedMessage } from '#skyblip/trust';
 import { PRODUCTION_KEY } from './fake_image.mjs';
 import { FakeLogStore } from './fake_log.mjs';
 
@@ -77,6 +78,7 @@ export class FakeSkyblip {
     oversize = 'truncate',
     stored = DEFAULTS,
     knowsDefaults = true,
+    knowsBrowsers = true,
     verdictFirst = false,
     key = PRODUCTION_KEY,
     downgrade = false,
@@ -86,7 +88,7 @@ export class FakeSkyblip {
     logStore = new FakeLogStore(),
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, key, downgrade, address, product });
+    Object.assign(this, { stored: { ...stored }, knowsDefaults, knowsBrowsers, key, downgrade, address, product });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -118,6 +120,14 @@ export class FakeSkyblip {
     this.dropAfterPackets = Infinity;
     this.held = new Uint8Array(0);
     this.listeners = [];
+    this.trustedBrowsers = [];
+    this.forgetSession();
+  }
+
+  forgetSession() {
+    this.nonce = null;
+    this.proven = null;
+    this.sessionTrusted = false;
   }
 
   install() {
@@ -196,6 +206,7 @@ export class FakeSkyblip {
     this.pending = null;
     this.refusedOnDevice = false;
     this.windowOpen = false;
+    this.forgetSession();
     for (const listener of this.listeners) listener();
   }
 
@@ -239,19 +250,57 @@ export class FakeSkyblip {
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (command === 'capture' && this.product === 'skyblip_bravo') return this.stageCapture(fields);
+    if (BROWSER_COMMANDS.has(command) && this.knowsBrowsers) return this.answerBrowser(command, fields);
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
-    if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+    if (this.flight === 'airborne' && !(command === 'set' && this.sessionTrusted)) return this.acknowledge(false, 'in_flight');
     if (command !== 'recovery' && !this.swapPowered) return this.acknowledge(false, 'low_power');
     if (command === 'dfu' && !fields.version) return this.acknowledge(false, 'no_version');
     if (command === 'dfu' && this.older(parseVersion(fields.version))) return this.acknowledge(false, 'older');
     if (command === 'dfu') this.approved = fields.version;
     this.pending = command;
-    if (command === 'set') {
-      this.staged = fields;
-      return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
-    }
+    if (command === 'set') this.staged = fields;
+    if (this.sessionTrusted && command !== 'recovery') return this.carryOut();
+    if (command === 'set') return this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm' });
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: `confirm_${command}` });
+  }
+
+  // INFO: fc 13nov26 browser_link.cpp's order: the nonce, the label, then the signature
+  async answerBrowser(command, fields) {
+    if (command === 'browser_challenge') {
+      this.forgetSession();
+      this.nonce = crypto.getRandomValues(new Uint8Array(16));
+      return this.reply({ command, nonce: this.nonce });
+    }
+    if (command === 'trust_browser') {
+      const nonce = this.nonce;
+      this.nonce = null;
+      if (!nonce) return this.acknowledge(false, 'no_session');
+      if (new TextEncoder().encode(fields.label ?? '').length > 24) return this.acknowledge(false, 'invalid');
+      const key = await crypto.subtle.importKey('raw', fields.key, { name: 'Ed25519' }, false, ['verify']);
+      if (!(await crypto.subtle.verify({ name: 'Ed25519' }, key, fields.signature, signedMessage(nonce)))) return this.acknowledge(false, 'bad_signature');
+      this.proven = { id: hex(fields.key.subarray(0, 8)), label: fields.label ?? '' };
+      this.sessionTrusted = this.trustedBrowsers.some(({ id }) => id === this.proven.id);
+      return this.acknowledge(this.sessionTrusted, this.sessionTrusted ? 'trusted' : 'untrusted');
+    }
+    if (!this.sessionTrusted) return this.acknowledge(false, 'untrusted');
+    if (command === 'browsers') {
+      const entry = this.trustedBrowsers[fields.index];
+      const found = entry ? { id: entry.id, label: entry.label } : {};
+      return this.reply({ command: 'browser', index: fields.index, count: this.trustedBrowsers.length, ...found });
+    }
+    const id = hex(fields.id);
+    const before = this.trustedBrowsers.length;
+    this.trustedBrowsers = this.trustedBrowsers.filter(entry => entry.id !== id);
+    if (this.trustedBrowsers.length === before) return this.acknowledge(false, 'unknown_browser');
+    if (id === this.proven?.id) this.forgetSession();
+    this.acknowledge(true, 'forgotten');
+  }
+
+  trust(browser) {
+    if (this.trustedBrowsers.some(({ id }) => id === browser.id)) return;
+    this.trustedBrowsers = [...this.trustedBrowsers, browser].slice(-8);
+    this.sessionTrusted = true;
   }
 
   // INFO: fc 12nov26 capture_request.cpp's order: the prompt guards, the flight, then the capture's state
@@ -326,6 +375,12 @@ export class FakeSkyblip {
   }
 
   press() {
+    const remembers = ['set', 'dfu'].includes(this.pending) && this.proven;
+    this.carryOut();
+    if (remembers) this.trust(this.proven);
+  }
+
+  carryOut() {
     const task = this.pending;
     this.pending = null;
     if (task === 'set') {
@@ -472,6 +527,8 @@ function classEndOf(header) {
   const protectedBytes = view.getUint16(10, true);
   return protectedBytes === 0 ? null : view.getUint16(8, true) + view.getUint32(12, true) + protectedBytes;
 }
+
+const BROWSER_COMMANDS = new Set(['browser_challenge', 'trust_browser', 'browsers', 'forget_browser']);
 
 function keyName(byte) {
   return byte.toString(16).padStart(2, '0').repeat(4).toUpperCase();

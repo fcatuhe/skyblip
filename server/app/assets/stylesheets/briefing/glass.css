@@ -4,7 +4,8 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       "glass seconds"
-      "glass press";
+      "glass press"
+      "glass remembers";
     align-items: end;
     gap: var(--space-xs) var(--space-inline-l);
   }
@@ -53,6 +54,8 @@
   }
 
   .glass-press { grid-area: press; margin: 0; font-weight: 700; font-size: var(--text-m); }
+  .glass-remembers { grid-area: remembers; margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
+  .glass-remembers[hidden] { display: none; }
   .glass-seconds {
     grid-area: seconds;
     margin: 0;
@@ -69,7 +72,8 @@
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
         "glass glass"
-        "press seconds";
+        "press seconds"
+        "remembers remembers";
     }
     .glass { justify-self: center; --pixel: 0.08rem; }
   }

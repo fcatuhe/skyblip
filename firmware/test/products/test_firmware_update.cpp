@@ -243,8 +243,7 @@ TEST_CASE("product: the SMP hook's gate opens on the pass after the window is co
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
-// A chunk the MCUmgr work queue reads against a stale gate is a chunk written in flight.
-TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's gate in that pass") {
+TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window is confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -254,7 +253,7 @@ TEST_CASE("product: the pass that learns of the take-off closes the SMP hook's g
 
     climb_until_the_link_sees_it(rig, now_ms);
     REQUIRE(config(rig).flight_state() == flight::FlightState::Airborne);
-    CHECK_FALSE(rig.platform.dfu().upload_allowed_published);
+    CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
 TEST_CASE("product: a single press on the receiving page closes the window, and nothing installs") {

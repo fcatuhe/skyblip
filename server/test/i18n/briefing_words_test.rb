@@ -18,6 +18,8 @@ class BriefingWordsTest < ActiveSupport::TestCase
   PROMPT_REFUSALS = %w[expired cancelled prompt_pending refused_on_device claimed unknown_command small_mtu].freeze
   SERVER_REFUSALS = %w[invalid unknown_server_key expired bad_signature other_key revoked_key daily_cap network_cap no_serial rate_limited unreachable failed].freeze
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze
+  # INFO: fc 13nov26 a forget the unit never answers is a timeout, which trust.js names
+  BROWSER_NOTICES = %w[untrusted invalid timeout].freeze
 
   test "the firmware still refuses with the reasons this test reads" do
     assert_includes refusals("config.cpp", "acknowledge\\(false, "), "not_approved"
@@ -39,6 +41,11 @@ class BriefingWordsTest < ActiveSupport::TestCase
     test "every refusal and verdict of a capture has words in #{locale}" do
       keys = refusals("capture_request.cpp", "refuse\\(") - NEVER_ASKED - NEVER_SENT + CAPTURE_NOTICES
       assert_empty keys - words(locale, :capture_notices)
+    end
+
+    test "every refusal of a forget has words in #{locale}" do
+      keys = refusals("browser_link.cpp", "acknowledge\\(false, ") + BROWSER_NOTICES
+      assert_empty keys - words(locale, :browsers_notices)
     end
 
     test "the captures are offered under the registry's names in #{locale}" do

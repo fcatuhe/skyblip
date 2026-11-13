@@ -130,6 +130,56 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a save two presses allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
+    in_range a_go(browsers: [ { id: "0102030405060708", label: "Edge on Windows" } ])
+    on_the_shelf do
+      connect_go
+      assert_no_selector "[data-unit-target=browsers]"
+      select "Loud", from: "Alarm volume"
+      click_button "Save 1 change"
+      assert_selector ".glass-remembers", text: "Allowing it also trusts this browser"
+      screen "15-glass-trusts"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".unit-message", text: "Saved on the device."
+
+      within("[data-unit-target=browsers]") do
+        assert_selector "li", count: 2
+        assert_selector "li", text: "Edge on Windows"
+        assert_selector "li", text: "· this browser"
+      end
+      screen "16-trusted-browsers"
+
+      select "Soft", from: "Alarm volume"
+      click_button "Save 1 change"
+      assert_selector ".unit-message", text: "Saved on the device."
+      assert_no_selector ".glass-prompt"
+
+      click_button "Forget the other browsers"
+      within("[data-unit-target=browsers]") { assert_selector "li", count: 1, text: "this browser" }
+      assert_no_button "Forget the other browsers"
+      assert_equal 1, page.evaluate_script("#{unit("00012A")}.browsers.length")
+    end
+  end
+
+  test "a trusted browser changes settings in flight, and the notes say updates wait for the landing" do
+    in_range a_go(browsers: [])
+    on_the_shelf do
+      connect_go
+      select "Loud", from: "Alarm volume"
+      click_button "Save 1 change"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector "[data-unit-target=browsers] li", text: "this browser"
+
+      page.execute_script("#{unit("00012A")}.takeOff()")
+      assert_selector ".unit-notes", text: "This browser may still change its settings. The rest unlocks once it lands."
+      screen "17-trusted-airborne"
+      select "Soft", from: "Alarm volume"
+      click_button "Save 1 change"
+      assert_selector ".unit-message", text: "Saved on the device."
+      assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm_volume")
+    end
+  end
+
   test "a device in flight holds every change until it lands" do
     in_range a_go
     on_the_shelf do

@@ -186,7 +186,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBudgetMs` | `kWindowMs / 1000 * kLimitPermille` = 36000 (36 s) | milliseconds | - | - |
 | `kWordWriteUs` | 41 | microseconds | - | nRF52840 PS v1.8, NVMC chapter, "Electrical specification": tWRITE = 41 us to write one 32-bit word, tERASEPAGE = 85 ms to erase one 4 kB page. |
 | `kPageEraseMs` | 85 | milliseconds | - | - |
-| `kWorstWriteMs` | `kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000` = 86 | milliseconds | - | - |
+| `kWorstWriteMs` | `kPageEraseMs + (kBlobWords * kWordWriteUs + 999) / 1000` = 91 | milliseconds | - | - |
 | `kPartialEraseMs` | 4 | milliseconds | - | The longest SINGLE stall inside that worst case, which is a different number: |
 | `kSettleMs` | 750 | milliseconds | Settle | How long the policy waits for a stream of changes to stop before it writes the one blob they add up to. |
 | `kDeferCeilingMs` | 3000 (3 s) | milliseconds | Ceiling | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |

@@ -63,6 +63,14 @@ fr:
       hint: "Complète enregistre tous les sujets. Autonomie enregistre l\u2019énergie et le rapport cyclique, et Vol simulé aussi, chronomètre de vol en marche. Nous la lisons avec vous après un vol."
       arm: "Armer"
       stop: "Arrêter la capture"
+    browsers:
+      title: "Navigateurs de confiance"
+      hint: "Ces navigateurs changent ses réglages et lancent une mise à jour sans appui sur l\u2019appareil. Un navigateur entre dans la liste quand vous autorisez par deux appuis son premier enregistrement ou sa première mise à jour."
+      this_browser: "ce navigateur"
+      unnamed: "Un navigateur sans nom"
+      forget: "Oublier"
+      forget_named: "Oublier %{name}"
+      forget_others: "Oublier les autres navigateurs"
     firmware:
       title: "Firmware"
       back: "Retour à %{name}"
@@ -81,6 +89,7 @@ fr:
       kept_summary: "Ce que skyblip.eu garde"
       kept: "skyblip.eu garde l\u2019identifiant de sa puce, sa clé, son numéro de série, son firmware et l\u2019adresse internet d\u2019où il vient. Aucun compte."
     glass:
+      remembers: "L\u2019autoriser fait aussi confiance à ce navigateur\u00a0: ses prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
       header: "AUTHORISE"
       allow: "PRESS TWICE TO ALLOW"
       refuse: "ONE PRESS REFUSES"
@@ -138,6 +147,7 @@ fr:
       "off": "coupé"
       none: "aucun"
       in_flight_lock: "Les changements reviennent une fois posé."
+      in_flight_lock_trusted: "Ce navigateur peut encore changer ses réglages. Le reste revient une fois posé."
       glass_press: "Appuyez deux fois sur le bouton du %{product}."
       glass_left: "REFUSED IN %{seconds} S"
       glass_waiting: "En attente de sa réponse."
@@ -221,6 +231,11 @@ fr:
       refused_on_device: "Refusé sur l\u2019appareil, rien n\u2019a changé."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y, ou attendez trente secondes."
       unknown_command: "Ce firmware est trop ancien pour une capture. Mettez-le à jour d\u2019abord."
+    browsers_notices:
+      invalid: "L\u2019appareil n\u2019a pas compris quel navigateur oublier. Rechargez la page et réessayez."
+      unknown_browser: "L\u2019appareil ne fait plus confiance à ce navigateur."
+      untrusted: "L\u2019appareil ne fait plus confiance à ce navigateur-ci. Reconnectez."
+      timeout: "L\u2019appareil ne répond plus. Reconnectez et réessayez."
     activation_notices:
       not_skyblip: "Cet appareil n\u2019a pas le service de réglages skyBlip. Ce n\u2019est pas un skyBlip."
       activated: "Activé\u00a0: %{name}. Sa radio émet. Ajoutez votre indicatif et votre type d\u2019aéronef."

@@ -1,0 +1,9 @@
+<section class="unit-browsers" data-unit-target="browsers" aria-labelledby="unit-browsers-title" hidden>
+  <h2 class="unit-label" id="unit-browsers-title"><%= t("briefing.browsers.title") %></h2>
+  <p class="field-hint"><%= t("briefing.browsers.hint") %></p>
+  <ul class="unit-browser-list" data-unit-target="browserList"></ul>
+  <p class="unit-message" role="status" data-unit-target="browsersMessage" hidden></p>
+  <div class="unit-capture-actions">
+    <button type="button" class="button-app button-app--text" data-unit-target="forgetOthers" data-action="unit#forgetOtherBrowsers" hidden><%= t("briefing.browsers.forget_others") %></button>
+  </div>
+</section>

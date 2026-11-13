@@ -6,8 +6,13 @@
 
 namespace skyblip::common {
 
+static_assert(comms::TrustedBrowsers::kBlobBytes + 64 <=
+                  size_t{timing::DurableWriteWindow::kBlobWords} * 4,
+              "the durable-write budget copies every live record a garbage collection moves");
+
 Status ConfigLinkService::setup() {
     load();
+    load_browsers();
     return Status::Ok;
 }
 
@@ -52,6 +57,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     config_.tick(now_ms);
     publish_link();
     drain_settings(now_ms);
+    drain_browsers(now_ms);
     spend_gnss_cold_start();
     confirm_image_once_healthy();
     watch_claim(now_ms);
@@ -235,7 +241,7 @@ void ConfigLinkService::drain_settings(uint32_t now_ms) {
     // INFO: fc 03oct26 the stall starts at the clock, not where the pass began
     const timing::DurableWriteVerdict verdict = writes_.decide(
         context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
-    if (verdict != timing::DurableWriteVerdict::Idle) record_write(verdict, now_ms);
+    if (verdict != timing::DurableWriteVerdict::Idle) record_write(writes_, verdict, now_ms);
     if (verdict != timing::DurableWriteVerdict::Place &&
         verdict != timing::DurableWriteVerdict::Forced)
         return;
@@ -252,17 +258,55 @@ void ConfigLinkService::write_settings(uint32_t now_ms, bool forced) {
     }
 }
 
-void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32_t now_ms) {
+// INFO: fc 13nov26 a list that will not load is empty, so each browser asks for two presses again
+void ConfigLinkService::load_browsers() {
+    if (!storable()) return;
+    uint8_t blob[comms::TrustedBrowsers::kBlobBytes];
+    size_t blob_bytes = 0;
+    if (!is_ok(context_.roles.key_value.read(kBrowsersKey, blob, sizeof(blob), blob_bytes))) return;
+    (void)config_.trusted_browsers().adopt(blob, blob_bytes);
+}
+
+// INFO: fc 13nov26 placed like the settings, and held on a low cell like them, never forced onto it
+void ConfigLinkService::drain_browsers(uint32_t now_ms) {
+    if (!may_persist()) return;
+    if (config_.browsers_dirty()) {
+        config_.clear_browsers_dirty();
+        browser_writes_.request(now_ms);
+    }
+    const timing::DurableWriteVerdict verdict = browser_writes_.decide(
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
+    if (verdict != timing::DurableWriteVerdict::Idle)
+        record_write(browser_writes_, verdict, now_ms);
+    if (verdict != timing::DurableWriteVerdict::Place &&
+        verdict != timing::DurableWriteVerdict::Forced)
+        return;
+    write_browsers(now_ms, verdict == timing::DurableWriteVerdict::Forced);
+}
+
+void ConfigLinkService::write_browsers(uint32_t now_ms, bool forced) {
+    uint8_t blob[comms::TrustedBrowsers::kBlobBytes];
+    const size_t blob_bytes = config_.trusted_browsers().to_blob(blob, sizeof(blob));
+    if (!storable() || is_ok(context_.roles.key_value.write(kBrowsersKey, blob, blob_bytes))) {
+        browser_writes_.placed(now_ms, forced);
+    } else {
+        failed_++;
+        browser_writes_.refused(now_ms, forced);
+    }
+}
+
+void ConfigLinkService::record_write(const timing::DurableWriteWindow& window,
+                                     timing::DurableWriteVerdict verdict, uint32_t now_ms) {
     if (!context_.diagnostics.armed()) return;
     diagnostics::Write value{};
-    value.waited_ms = writes_.waited_ms(now_ms);
+    value.waited_ms = window.waited_ms(now_ms);
     value.phase_ms = static_cast<uint16_t>(context_.state.rf.dwell.phase_ms);
-    value.requests = writes_.requests();
-    value.writes = writes_.writes();
-    value.forced = writes_.forced();
+    value.requests = window.requests();
+    value.writes = window.writes();
+    value.forced = window.forced();
     value.placement = verdict;
     value.kind = power::DurableWrite::Settings;
-    value.pending = writes_.pending();
+    value.pending = window.pending();
     context_.diagnostics.record(value, context_.instant(now_ms));
 }
 
@@ -273,6 +317,10 @@ void ConfigLinkService::record_write(timing::DurableWriteVerdict verdict, uint32
 // pilot was making, against every change they ever made.
 void ConfigLinkService::flush_settings(uint32_t now_ms) {
     if (hold_for_power()) return;
+    if (config_.browsers_dirty() || browser_writes_.pending()) {
+        config_.clear_browsers_dirty();
+        write_browsers(now_ms, /*forced=*/false);
+    }
     take_request(now_ms);
     if (!writes_.pending()) return;
     write_settings(now_ms, /*forced=*/false);

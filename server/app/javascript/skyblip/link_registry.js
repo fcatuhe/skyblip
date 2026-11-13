@@ -1991,6 +1991,138 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "browser_challenge",
+      "code": 30,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "nonce",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 16,
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "trust_browser",
+      "code": 31,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "key",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 32,
+          "required": true
+        },
+        {
+          "name": "signature",
+          "number": 2,
+          "type": "bytes",
+          "bytes": 64,
+          "required": true
+        },
+        {
+          "name": "label",
+          "number": 3,
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "command": "browsers",
+      "code": 32,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "index",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "browser",
+      "code": 33,
+      "endpoint": "config",
+      "sender": "unit",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "index",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "count",
+          "number": 2,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "id",
+          "number": 3,
+          "type": "bytes",
+          "bytes": 8
+        },
+        {
+          "name": "label",
+          "number": 4,
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "command": "forget_browser",
+      "code": 34,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "id",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        }
+      ]
     }
   ],
   "enums": {
@@ -2183,6 +2315,22 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "not_capturing",
           "code": 47
+        },
+        {
+          "name": "trusted",
+          "code": 48
+        },
+        {
+          "name": "untrusted",
+          "code": 49
+        },
+        {
+          "name": "forgotten",
+          "code": 50
+        },
+        {
+          "name": "unknown_browser",
+          "code": 51
         }
       ]
     },
@@ -2862,6 +3010,26 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "capture",
           "code": 29
+        },
+        {
+          "name": "browser_challenge",
+          "code": 30
+        },
+        {
+          "name": "trust_browser",
+          "code": 31
+        },
+        {
+          "name": "browsers",
+          "code": 32
+        },
+        {
+          "name": "browser",
+          "code": 33
+        },
+        {
+          "name": "forget_browser",
+          "code": 34
         }
       ]
     }

@@ -13,6 +13,7 @@
   const CHUNK_ENVELOPE_BYTES = 20;
   const MAX_RECORDS_PER_CHUNK = 19;
   const MAX_READ_CHUNKS = 8;
+  const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
   const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
@@ -61,6 +62,7 @@
         probationMs: 1500,
         vectors: null,
         diagnostics: [],
+        browsers: null,
       }, options);
       this.connected = false;
       this.rebooting = false;
@@ -119,6 +121,9 @@
       this.pending = null;
       this.refused = false;
       this.windowOpen = false;
+      this.browserNonce = null;
+      this.proven = null;
+      this.trusted = false;
       this.listeners = { config: [], log: [], smp: [] };
       const closed = this.closed.splice(0);
       later(() => closed.forEach(listener => listener()));
@@ -163,8 +168,10 @@
 
     ask(task, reason) {
       if (this.refused) return this.acknowledge(false, 'refused_on_device');
-      if (this.flight === 'airborne' && task !== 'register') return this.acknowledge(false, 'in_flight');
+      const trustedSet = task === 'set' && this.trusted;
+      if (this.flight === 'airborne' && task !== 'register' && !trustedSet) return this.acknowledge(false, 'in_flight');
       this.pending = task;
+      if (this.trusted && ['set', 'dfu'].includes(task)) return this.press();
       this.acknowledge(false, reason, true);
       if (this.pressAfterMs !== null) later(() => this.pending === task && this.press(), this.pressAfterMs);
     }
@@ -196,6 +203,7 @@
         return this.ask('register', 'confirm_register');
       }
       if (command === 'unlock') return this.unlock(fields);
+      if (this.browsers && BROWSER_COMMANDS.includes(command)) return this.answerBrowser(command, fields);
       return this.acknowledge(false, 'unknown_command');
     }
 
@@ -238,9 +246,47 @@
       return this.ask('capture', 'confirm_capture');
     }
 
+    // INFO: fc 13nov26 browser_link.cpp's answers, for a unit made with a browsers list
+    async answerBrowser(command, fields) {
+      if (command === 'browser_challenge') {
+        this.proven = null;
+        this.trusted = false;
+        this.browserNonce = crypto.getRandomValues(new Uint8Array(16));
+        return this.reply({ command, nonce: this.browserNonce });
+      }
+      if (command === 'trust_browser') {
+        const nonce = this.browserNonce;
+        this.browserNonce = null;
+        if (!nonce) return this.acknowledge(false, 'no_session');
+        if (encoder.encode(fields.label ?? '').length > 24) return this.acknowledge(false, 'invalid');
+        const key = await crypto.subtle.importKey('raw', fields.key, { name: 'Ed25519' }, false, ['verify']);
+        if (!(await crypto.subtle.verify('Ed25519', key, fields.signature, join(label('browser'), nonce)))) return this.acknowledge(false, 'bad_signature');
+        this.proven = { id: hex(fields.key.slice(0, 8)), label: fields.label ?? '' };
+        this.trusted = this.browsers.some(({ id }) => id === this.proven.id);
+        return this.acknowledge(this.trusted, this.trusted ? 'trusted' : 'untrusted');
+      }
+      if (!this.trusted) return this.acknowledge(false, 'untrusted');
+      if (command === 'browsers') {
+        const entry = this.browsers[fields.index];
+        return this.reply({ command: 'browser', index: fields.index, count: this.browsers.length, ...(entry ?? {}) });
+      }
+      const id = hex(fields.id);
+      if (!this.browsers.some(entry => entry.id === id)) return this.acknowledge(false, 'unknown_browser');
+      this.browsers = this.browsers.filter(entry => entry.id !== id);
+      if (id === this.proven.id) {
+        this.proven = null;
+        this.trusted = false;
+      }
+      return this.acknowledge(true, 'forgotten');
+    }
+
     async press() {
       const task = this.pending;
       this.pending = null;
+      if (['set', 'dfu'].includes(task) && this.proven && !this.trusted) {
+        this.browsers = [...this.browsers, this.proven];
+        this.trusted = true;
+      }
       if (task === 'capture') {
         this.capturing = this.capture !== 'stop';
         return this.acknowledge(true, 'capture');

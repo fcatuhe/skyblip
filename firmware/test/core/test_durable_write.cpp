@@ -64,9 +64,9 @@ DwellPhase view_at(int phase_ms, uint32_t at_ms) {
 TEST_CASE("durable write: the cost is the nRF52840's own page erase plus the copy") {
     CHECK(DurableWriteWindow::kPageEraseMs == 85);
     CHECK(DurableWriteWindow::kWordWriteUs == 41);
-    // 85 ms of erase, plus 16 words of settings blob copied forward at 41 us each,
-    // rounded up to the millisecond.
-    CHECK(DurableWriteWindow::kWorstWriteMs == 86);
+    // 85 ms of erase, plus 132 words of the settings blob and the trusted browsers
+    // copied forward at 41 us each, rounded up to the millisecond.
+    CHECK(DurableWriteWindow::kWorstWriteMs == 91);
     // The whole worst case fits inside a free stretch, which is what makes
     // deferring a sufficient answer rather than only half of one. The other half is
     // the partial-erase slice, which bounds the longest SINGLE stall to less than
@@ -75,7 +75,7 @@ TEST_CASE("durable write: the cost is the nRF52840's own page erase plus the cop
 }
 
 // The whole second, phase by phase. One stretch and no others:
-//   205..304 the uplink dwell, which closes at 395 - the write finishes by 390 and
+//   205..299 the uplink dwell, which closes at 395 - the write finishes by 390 and
 //            the guard in front of the safety-critical O->M edge is still whole.
 // Slot 1's tail was the second one until the callsign burst was placed there
 // (core/timing/README.md), and a write inside it now stalls the core through an
@@ -96,14 +96,14 @@ TEST_CASE("durable write: the free phase is the one the dwell map leaves") {
     }
     CHECK(stretches == 1);
     CHECK(first_free == 205);
-    CHECK(last_free == 304);
+    CHECK(last_free == 299);
 
     // Named, so a moved constant fails here and not in a product case.
     CHECK_FALSE(free_at(0));
     CHECK_FALSE(free_at(109));
     CHECK(free_at(205));
-    CHECK(free_at(304));
-    CHECK_FALSE(free_at(305));
+    CHECK(free_at(299));
+    CHECK_FALSE(free_at(300));
 }
 
 // The two retune guards, 200..204 and 395..399, are the gaps between dwells. They
@@ -129,10 +129,10 @@ TEST_CASE("durable write: slot 0's head is refused because the direct slot follo
 // dwell: it moves the anchor under every dwell that follows.
 TEST_CASE("durable write: a write is never allowed to span the top of the second") {
     CHECK(free_in_holdover_at(800));
-    // 909 is the last phase whose write still finishes a whole guard before the
-    // edge: 909 + 86 = 995, and the guard runs to 1000 exactly.
-    CHECK(free_in_holdover_at(909));
-    for (int phase = 910; phase < 1000; phase++) CHECK_FALSE(free_in_holdover_at(phase));
+    // 904 is the last phase whose write still finishes a whole guard before the
+    // edge: 904 + 91 = 995, and the guard runs to 1000 exactly.
+    CHECK(free_in_holdover_at(904));
+    for (int phase = 905; phase < 1000; phase++) CHECK_FALSE(free_in_holdover_at(phase));
 }
 
 TEST_CASE("durable write: nothing pending is not a decision to make") {
