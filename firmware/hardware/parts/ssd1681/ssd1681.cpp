@@ -81,10 +81,19 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
     set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
     command(kBorderWaveform);
     data(full ? kBorderFollowLut1 : kBorderVcom);
+    const bool reink = !full && ++partials_since_reink_ >= kReinkPeriodPartials;
     if (full) {
         // INFO: fc 09mar26 GxEPD2 writes the new frame into both banks before a full refresh
         stage(canvas.data());
         write_bank(kWriteRamPrevious);
+        partials_since_reink_ = 0;
+    } else if (reink) {
+        // INFO: fc 13nov26 0x26 as the inverse of 0x24 re-drives every pixel, black and white
+        stage(canvas.data());
+        invert_shadow();
+        write_bank(kWriteRamPrevious);
+        invert_shadow();
+        partials_since_reink_ = 0;
     } else {
         write_bank(kWriteRamPrevious);
         stage(canvas.data());
@@ -105,6 +114,7 @@ void Ssd1681::paint_black(uint32_t now_ms) {
     write_bank(kWriteRamPrevious);
     std::memset(shadow_, kRamBlack, sizeof(shadow_));
     write_bank(kWriteRam);
+    partials_since_reink_ = 0;
 
     activate(kSequenceWipe, /*full=*/false, now_ms);
 }
@@ -237,6 +247,10 @@ void Ssd1681::stage(const uint8_t* canvas_bytes) {
                 turn_block(canvas_bytes + band * 8 * kGlassStride + column,
                            shadow_ + (kGlassHeight - 8 - column * 8) * kGlassStride + band);
     }
+}
+
+void Ssd1681::invert_shadow() {
+    for (uint8_t& byte : shadow_) byte = static_cast<uint8_t>(~byte);
 }
 
 void Ssd1681::set_window(int x0, int y0, int x1, int y1) {
