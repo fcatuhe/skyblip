@@ -1,6 +1,6 @@
 # core/protocol
 
-The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link, `adsb_category.{h,cpp}` what an ADS-B emitter category is in ADS-L's terms. `adsb.{h,cpp}` reads the 1090 MHz extended squitter skyBlip Bravo receives, in one direction only, `adsb_cpr.{h,cpp}` turns its compact positions into coordinates, and `adsb_assembly.{h,cpp}` folds each aircraft's messages into one `AircraftObservation`.
+The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link, `adsb_category.{h,cpp}` what an ADS-B emitter category is in ADS-L's terms, `adsb_registration.{h,cpp}` the registration an ADS-B flight ID spells once its dash is put back. `adsb.{h,cpp}` reads the 1090 MHz extended squitter skyBlip Bravo receives, in one direction only, `adsb_cpr.{h,cpp}` turns its compact positions into coordinates, and `adsb_assembly.{h,cpp}` folds each aircraft's messages into one `AircraftObservation`.
 
 Both air frames are read and written field by field. A field is a `BitField`: an offset and a width counted from bit 0 of the first byte. ADS-L B.3 numbers bits in that order, and the ALP-TAS frame shares it. So `adsl.h` and `alptas.cpp` hold tables of offsets rather than shift sequences, and the ADS-L offsets are the ones G.1 prints. The variable-resolution fields are an `Exponential`: the encoding of ADS-L G.1.6, which the ALP-TAS frame also uses with other widths. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it.
 
@@ -65,6 +65,10 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 | B6 | unmanned aerial vehicle | 11 | ADS-B carries no EU operational category. A FLARM UAV, type D, is read as 11 too |
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
+
+## The registration an ADS-B flight ID spells
+
+ADS-B's identification charset is A to Z, 0 to 9 and blank, so a transponder set to F-JABC sends `FJABC`. `adsb_registration` puts the dash back so a Go stores what a pilot would type. It reads the nationality mark from the address block the address falls in, ICAO Annex 10 Volume III Part I Chapter 9, for eighteen European states, and inserts the dash only when the callsign starts with that mark and the rest is three to five letters, or three to five digits, as a German, Swiss or Dutch glider number is. Anything else is copied as heard: an airline's `DLH4AB` from a German address, a mark of another state, and every address outside the table. The United States is left out on purpose, because `N905NA` is written without a dash. Luxembourg and Slovenia are left out until their block bounds are checked against the Annex, because two published tables disagree on them.
 
 ## The flight state every decoder owes
 
