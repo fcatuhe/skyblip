@@ -66,6 +66,10 @@ class BravoService : public runtime::Service {
     // INFO: fc 12nov26 observation frames comms::read_observation() refused
     uint32_t refused() const { return refused_; }
     bool leaving() const { return leaving_; }
+    // INFO: fc 13nov26 the transponder the last fresh health named, for AIRCRAFT to propose
+    std::optional<comms::OwnTransponderHeard> own_transponder() const {
+        return health_heard_ ? health_.own_transponder : std::nullopt;
+    }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
 

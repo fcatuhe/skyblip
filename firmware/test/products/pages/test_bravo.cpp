@@ -120,7 +120,7 @@ TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it")
     Glass canvas;
     draw_own_icao_notice(canvas);
     CHECK(centred_reads(canvas, "OWN TRANSPONDER SHOWS AS TRAFFIC", 1));
-    CHECK(centred_reads(canvas, "SET OWN ICAO IN SETTINGS", 1));
+    CHECK(centred_reads(canvas, "SET IT UNDER SETTINGS AIRCRAFT", 1));
 }
 
 TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropped it too") {

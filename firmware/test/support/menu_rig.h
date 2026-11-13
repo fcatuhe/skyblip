@@ -61,12 +61,23 @@ inline void run_past_the_write_settle(Rig& rig, uint32_t& now_ms) {
     now_ms += settle_ms;
 }
 
-inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
-    for (int i = 0; i < go::menu_for(go::Page::Radar).row_count; i++) {
+inline void walk_to(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
+    for (int i = 0; i < rig.product.screen().editor().menu().row_count; i++) {
         if (rig.product.screen().editor().focus() == row) break;
         move(rig, now_ms);
     }
     REQUIRE(rig.product.screen().editor().focus() == row);
+}
+
+// A row of the AIRCRAFT menu is reached through the settings row that opens it.
+inline void focus_on(Rig& rig, uint32_t& now_ms, go::MenuRow row) {
+    if (!rig.product.screen().editor().aircraft() &&
+        go::menu_row_index(go::aircraft_menu(), row) >= 0) {
+        walk_to(rig, now_ms, go::MenuRow::Aircraft);
+        change(rig, now_ms);
+        REQUIRE(rig.product.screen().editor().aircraft());
+    }
+    walk_to(rig, now_ms, row);
 }
 
 inline bool stored_settings(Rig& rig, go::Settings& out) {

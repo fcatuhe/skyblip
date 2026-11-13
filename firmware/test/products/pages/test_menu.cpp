@@ -29,9 +29,11 @@ struct Drawn {
     Glass canvas;
     Page page{Page::Radar};
     MenuRow focus{MenuRow::Light};
+    bool aircraft{false};
 };
 
 int line_of(const Drawn& drawn, MenuRow row) {
+    if (drawn.aircraft) return kDetectedLines + menu_row_index(aircraft_menu(), row) - 1;
     const Menu menu = menu_for(drawn.page);
     return menu_row_index(menu, row) - menu_first_row(menu, drawn.focus);
 }
@@ -59,19 +61,31 @@ Drawn page_of(Page page, const MenuValues& values, MenuRow focus) {
     return drawn;
 }
 
+Drawn aircraft_of(const MenuValues& values, MenuRow focus) {
+    MenuSnapshot snapshot;
+    snapshot.values = values;
+    snapshot.focus = focus;
+    snapshot.aircraft = true;
+    Drawn drawn;
+    drawn.focus = focus;
+    drawn.aircraft = true;
+    draw_menu(drawn.canvas, snapshot);
+    return drawn;
+}
+
 }  // namespace
 
 TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out") {
     MenuValues values = default_menu_values();
-    values.settings.aircraft_type = 4;
+    std::strcpy(values.settings.callsign, "F-JABCDEF");
     values.settings.alarm_volume = go::AlarmVolume::Soft;
 
     const Drawn drawn = page_of(Page::Radar, values, MenuRow::Alarm);
 
     CHECK(row_label_reads(drawn, MenuRow::Light, false));
     CHECK(row_value_reads(drawn, MenuRow::Light, "OFF", false));
-    CHECK(row_label_reads(drawn, MenuRow::AircraftType, false));
-    CHECK(row_value_reads(drawn, MenuRow::AircraftType, "GLIDER", false));
+    CHECK(row_label_reads(drawn, MenuRow::Aircraft, false));
+    CHECK(row_value_reads(drawn, MenuRow::Aircraft, "F-JABC", false));
     CHECK(row_value_reads(drawn, MenuRow::Range, "4 NM", false));
     CHECK(row_value_reads(drawn, MenuRow::Plot, "ALL", false));
     CHECK(row_value_reads(drawn, MenuRow::Units, "NAUTICAL", false));
@@ -101,35 +115,28 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
-// Ten rows and seven lines: the rows slide up under the focus, one line at a time.
+// Eight rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
     MenuValues values = default_menu_values();
     values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 3);
+    REQUIRE(menu.row_count == kMenuLines + 1);
 
     const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
     CHECK(line_of(top, MenuRow::Light) == 0);
-    CHECK(line_of(top, MenuRow::Volume) == kMenuLines);
-    CHECK(line_of(top, MenuRow::OwnIcao) == kMenuLines + 1);
-    CHECK(line_of(top, MenuRow::Bravo) == kMenuLines + 2);
+    CHECK(line_of(top, MenuRow::Volume) == kMenuLines - 1);
+    CHECK(line_of(top, MenuRow::Bravo) == kMenuLines);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
     CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 
-    const Drawn slid = page_of(Page::Radar, values, MenuRow::Volume);
-    CHECK(line_of(slid, MenuRow::Volume) == kMenuLines - 1);
-    CHECK(row_label_reads(slid, MenuRow::Volume, true));
-    CHECK(row_value_reads(slid, MenuRow::Volume, "SOFT", true));
-    CHECK(row_label_reads(slid, MenuRow::AircraftType, false));
-    CHECK(line_of(slid, MenuRow::AircraftType) == 0);
-    CHECK(reads_at(slid.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
-
-    const Drawn last = page_of(Page::Radar, values, MenuRow::OwnIcao);
-    CHECK(line_of(last, MenuRow::OwnIcao) == kMenuLines - 1);
-    CHECK(row_label_reads(last, MenuRow::OwnIcao, true));
-    CHECK(row_value_reads(last, MenuRow::OwnIcao, "NONE", true));
+    const Drawn last = page_of(Page::Radar, values, MenuRow::Bravo);
+    CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
+    CHECK(row_label_reads(last, MenuRow::Bravo, true));
+    CHECK(row_value_reads(last, MenuRow::Bravo, "NONE", true));
     CHECK(row_value_reads(last, MenuRow::Volume, "SOFT", false));
-    CHECK(line_of(last, MenuRow::Callsign) == 0);
+    CHECK(row_label_reads(last, MenuRow::Aircraft, false));
+    CHECK(line_of(last, MenuRow::Aircraft) == 0);
+    CHECK(reads_at(last.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
 }
 
 // The address a controller reads off the aircraft's papers, six hex digits as they are written.
@@ -145,16 +152,18 @@ TEST_CASE("radar menu: the own ICAO row shows the six hex digits stored, or NONE
     menu_row_value(value, MenuRow::OwnIcao, values);
     CHECK(std::string(value) == "00A0F1");
 
-    const Drawn drawn = page_of(Page::Radar, values, MenuRow::OwnIcao);
+    const Drawn drawn = aircraft_of(values, MenuRow::OwnIcao);
     CHECK(row_label_reads(drawn, MenuRow::OwnIcao, true));
     CHECK(row_value_reads(drawn, MenuRow::OwnIcao, "00A0F1", true));
 }
 
 TEST_CASE("menu page: no label and value a row can hold meet at double height") {
     MenuValues values = default_menu_values();
-    for (Page page : {Page::Radar, Page::Nearby}) {
-        const Menu menu = menu_for(page);
+    std::strcpy(values.settings.callsign, "F-JABCDEF");
+    values.settings.own_icao = 0xFFFFFF;
+    for (const Menu& menu : {menu_for(Page::Radar), menu_for(Page::Nearby), aircraft_menu()}) {
         for (int i = 0; i < menu.row_count; i++) {
+            if (menu.rows[i] == MenuRow::Detected) continue;
             const int label_end =
                 kMenuLeftX +
                 static_cast<int>(std::strlen(menu_row_label(menu.rows[i]))) * kMenuCellWidth;
@@ -206,7 +215,7 @@ TEST_CASE("menu page: a page with nothing behind it opens no menu at all") {
 TEST_CASE("menu page: a category the phone stored but the page does not name is still shown") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 13;
-    const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
+    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 13", false));
 
     // The first change moves it into the list the page can name.
@@ -216,7 +225,7 @@ TEST_CASE("menu page: a category the phone stored but the page does not name is 
 TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 11;
-    const Drawn menu = page_of(Page::Radar, values, MenuRow::Alarm);
+    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 11", false));
     CHECK(next_aircraft_type(11) == 0);
 }

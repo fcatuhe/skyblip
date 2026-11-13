@@ -36,6 +36,7 @@ class BravoStub {
         bool own_icao_set{false};
         std::string export_reference{"own"};
         bool paired{true};
+        std::string own_transponder_fields{};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -123,6 +124,7 @@ class BravoStub {
                            ",\"alarm_granted\":false,\"export_reference\":\"" +
                            health.export_reference + "\",\"paired\":" + text_of(health.paired);
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
+        if (!health.own_transponder_fields.empty()) json += "," + health.own_transponder_fields;
         return complete_registry_frame(json + "}");
     }
 

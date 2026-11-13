@@ -191,6 +191,7 @@ void ScreenService::press(uint32_t now_ms) {
     }
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
+    if (notice_ && notice_kind_ == Notice::NewAircraft) use_noticed_aircraft();
     if (close_notice()) return;
     if (on_bravo_page()) {
         act_on_bravo(bravo_page_.button(bravo_view(), now_ms), now_ms);
@@ -280,6 +281,7 @@ MenuValues ScreenService::menu_values() const {
     MenuValues values;
     values.settings = settings_;
     values.light = backlight_;
+    values.detected = detected();
     return values;
 }
 
