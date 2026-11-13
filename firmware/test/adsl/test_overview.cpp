@@ -68,7 +68,7 @@ bool sent_beside(const traffic::TrafficTable& table, const model::Ownship& own, 
     REQUIRE(
         protocol::from_own(packet, own, 0x5AFE01, settings::kSkyblipAddressMappingTable, category));
     return packet.protocol_version() <= table.readable_version(own, own.fix_at_ms) ||
-           protocol::issue1_form(packet);
+           protocol::issue1_form(packet, own);
 }
 
 }  // namespace

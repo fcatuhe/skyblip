@@ -177,6 +177,22 @@ TEST_CASE("ADS-L.4.SRD860.G.1.5: 0x800000 means no fix, and no fix is not an air
     CHECK_FALSE(observation.position_valid);
 }
 
+// One step south of the equator is 0xFFFFFF, which Issue 1 G.1.5 spent on "no fix".
+TEST_CASE("ADS-L.4.SRD860.G.1.5: 0xFFFFFF is a place in Issue 2, and Issue 1's no fix") {
+    adsl::Traffic traffic = reference_traffic();
+    traffic.latitude_1e7 = -100;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    REQUIRE(field(payload_of(packet), 16, 24) == 0xFFFFFFu);
+    CHECK(packet.protocol_version() == 1);
+    CHECK(packet.has_position());
+
+    packet.set_protocol_version(0);
+    CHECK_FALSE(packet.has_position());
+    adsl::Traffic observation;
+    CHECK_FALSE(heard(packet, observation));
+}
+
 // The clause's own algorithm, against the codec the three variable-range fields share.
 TEST_CASE("ADS-L.4.SRD860.G.1.6: the exponential encoding is the clause's, over its whole range") {
     const wire::Exponential six{6, 2, false};

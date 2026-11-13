@@ -45,6 +45,8 @@ Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`,
 | category 16, hang-glider | 7, hang-glider or paraglider | Issue 2 split that class |
 | category 17, paramotor | 7, hang-glider or paraglider | a powered paraglider, and Issue 1's closest wing |
 | position 0x800000, no fix | 0xFFFFFF | Issue 1's own marker for no fix |
+| a real position at 0xFFFFFF, one step south or west of zero | 0xFFFFFE | one step on, well inside any accuracy we claim, so Issue 1 does not read it as no fix |
+| GVA 2 for a VFOM from 10 to 15 m | 3 | Issue 1 G.1.15 draws code 3 at 15 m, Issue 2 at 10 m |
 | altitude, ground speed or vertical rate unknown | the position is held for that second | Issue 1 has no code for unknown, and 0x3FFF, 0xFF or 0x1FF would read as 61112 m, 238 m/s or a 119 m/s descent |
 
 A held position is counted once a second in `air.tx_held_for_b5`, and the next position the schedule owes tries again. Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.

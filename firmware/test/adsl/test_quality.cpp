@@ -55,6 +55,40 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: a solution with no VDOP claims no vertical acc
     CHECK(from_dop(90, 150).vertical_accuracy > 0);
 }
 
+// HFOM's model taken to VDOP: 1.00 is a 12 m VFOM, which the two issues code differently.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.15: own-ship sends a 10 to 15 m VFOM as Issue 2, or GVA 3 for Issue 1") {
+    const auto sent = [](uint16_t vdop_e2, model::Ownship& own) {
+        own.fix_valid = true;
+        own.utc_valid = true;
+        own.climb_valid = true;
+        own.latitude_1e7 = 481234500;
+        own.longitude_1e7 = 81234500;
+        own.altitude_hae_mm = 1000000;
+        own.speed_mm_s = 100000;
+        own.hdop_e2 = 90;
+        own.vdop_e2 = vdop_e2;
+        own.flight_state = 2;
+        adsl::Packet packet{};
+        protocol::from_own(packet, own, 0x123456, 6, 4);
+        return packet;
+    };
+    model::Ownship own{};
+    adsl::Packet twelve = sent(100, own);
+    CHECK(twelve.vertical_accuracy == 2);
+    CHECK(twelve.protocol_version() == 1);
+    REQUIRE(protocol::issue1_form(twelve, own));
+    CHECK(twelve.vertical_accuracy == 3);
+    CHECK(twelve.protocol_version() == 0);
+
+    const adsl::Packet nine = sent(80, own);
+    CHECK(nine.vertical_accuracy == 3);
+    CHECK(nine.protocol_version() == 0);
+    const adsl::Packet eighteen = sent(150, own);
+    CHECK(eighteen.vertical_accuracy == 2);
+    CHECK(eighteen.protocol_version() == 0);
+}
+
 // Every code in the block has a zero meaning "no fix", and without one that is the honest answer.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: with no fix the whole quality block claims nothing") {
     adsl::Packet packet = from_dop(90, 150, /*fix=*/false);

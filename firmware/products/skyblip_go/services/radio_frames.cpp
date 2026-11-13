@@ -32,7 +32,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                 outgoing_.protocol_version() >
                     context_.state.traffic.readable_version(
                         context_.state.own, static_cast<uint32_t>(tx_at_us / 1000)) &&
-                !protocol::issue1_form(outgoing_)) {
+                !protocol::issue1_form(outgoing_, context_.state.own)) {
                 built = false;
                 if (!held_for_b5_ || held_for_b5_s_ != utc_s) context_.state.air.tx_held_for_b5++;
                 held_for_b5_ = true;

@@ -81,6 +81,7 @@ The payload is 12 bytes, header included. The frame still carries 20 payload byt
 | Field | Code | Issue 1 | Issue 2 | Version |
 |---|---|---|---|---|
 | G.1.5 latitude, longitude | 0x800000 | a position, 90 S or 180 W | no 2D fix (Issue 1 marked that 0xFFFFFF) | 1 |
+| G.1.5 latitude, longitude | 0xFFFFFF | no 2D fix | a position one step south of the equator or west of Greenwich | 1. A version 0 packet with 0xFFFFFF in either field is Issue 1's no fix, and `has_position()` reads it so |
 | G.1.7 altitude | 0x3FFF | 61112 m | invalid | 1 |
 | G.1.7 altitude | 0x3FFE | 61104 m | 61104 m or more | 0, the limit reads true in both |
 | G.1.8 ground speed | 0xFF | 238 m/s | invalid | 1 |
@@ -91,10 +92,9 @@ The payload is 12 bytes, header included. The frame still carries 20 payload byt
 | G.1.3 category | 6 | ultralight | ultralight and motorized hang-glider | 0, a motorized hang-glider is flown as an ultralight |
 | G.1.3 category | 7 | hang-glider or paraglider | paraglider | 0, a paraglider is one of the two |
 | G.1.3 category | 14 to 17 | reserved | model plane, heavy rotorcraft, hang-glider, paramotor | 1 |
-| G.1.15 GVA | 3 | VFOM under 15 m | VFOM under 10 m | 0, under 10 m is under 15 m |
-| G.1.15 GVA | 2 | VFOM under 45 m | VFOM from 10 to 45 m | 0 |
+| G.1.15 GVA | 3 or 2 | 3 for a VFOM under 15 m | 3 under 10 m, 2 from 10 to 45 m | 1 for a VFOM from 10 to 15 m, which the two issues code differently (`Integrity::vertical_accuracy_issue2_only`). 0 otherwise |
 
-Every other G.1 table only writes its bounds out, and G.1.10, G.1.16 and G.1.17 add rules and no codes. A code marked 0 in the last column is one an Issue 1 receiver still reads as a true statement, so it stays at version 0 for the widest reach. The clause cases in `test/conformance/test_network.cpp` pin one row each.
+Every other G.1 table only writes its bounds out: SIL, SDA, NIC, HFOM and the velocity accuracy keep the same thresholds and the same codes, Issue 2 writing each row as a range where Issue 1 wrote its upper bound, and NIC's 13 to 15, reserved in Issue 2, are codes Issue 1 never defined and this device never sends. G.1.10, G.1.16 and G.1.17 add rules and no codes. A code marked 0 in the last column is one an Issue 1 receiver still reads as a true statement, so it stays at version 0 for the widest reach. The clause cases in `test/conformance/test_network.cpp`, `test_traffic.cpp` and `test_quality.cpp` pin one row each.
 
 ## Soft versioning
 

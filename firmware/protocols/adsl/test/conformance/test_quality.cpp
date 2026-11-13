@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl/test/conformance/reference.h"
 
 using namespace skyblip;
 
@@ -43,6 +44,25 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: the vertical accuracy code sits on the table's
     CHECK(adsl::Packet::vertical_accuracy_code(4500) == 1);
     CHECK(adsl::Packet::vertical_accuracy_code(14999) == 1);
     CHECK(adsl::Packet::vertical_accuracy_code(15000) == 0);
+}
+
+// Issue 1 drew GVA 3 under 15 m and Issue 2 under 10 m, so 10 to 15 m is coded apart (E.1.1).
+TEST_CASE("ADS-L.4.SRD860.G.1.15: a VFOM of 10 to 15 m is GVA 2 in Issue 2 and 3 in Issue 1") {
+    CHECK(adsl::Packet::issue1_vertical_accuracy_code(999) == 3);
+    CHECK(adsl::Packet::issue1_vertical_accuracy_code(1499) == 3);
+    CHECK(adsl::Packet::issue1_vertical_accuracy_code(1500) == 2);
+    CHECK(adsl::Packet::issue1_vertical_accuracy_code(4500) == 1);
+    CHECK(adsl::Packet::vertical_accuracy_code(1200) == 2);
+
+    adsl::Traffic traffic = adsl::conformance::reference_traffic();
+    traffic.integrity.vertical_accuracy = 2;
+    traffic.integrity.vertical_accuracy_issue2_only = true;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    CHECK(packet.protocol_version() == 1);
+    traffic.integrity.vertical_accuracy_issue2_only = false;
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    CHECK(packet.protocol_version() == 0);
 }
 
 // The clause's formula for the figure the NACp table is read with.

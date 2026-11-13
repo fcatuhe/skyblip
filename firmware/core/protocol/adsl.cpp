@@ -1,5 +1,7 @@
 #include "core/protocol/adsl.h"
 
+#include <initializer_list>
+
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
@@ -11,9 +13,6 @@
 namespace skyblip::protocol {
 
 namespace {
-
-// INFO: fc 13nov26 Issue 1 G.1.5 marked a missing fix 0xFFFFFF, where Issue 2 writes 0x800000
-constexpr uint32_t kIssue1PositionInvalidCode = 0xFFFFFF;
 
 // INFO: fc 13nov26 Issue 2 split broader Issue 1 classes, and a model plane has no Issue 1 code
 uint8_t issue1_category(uint8_t category) {
@@ -55,14 +54,21 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     return true;
 }
 
-bool issue1_form(adsl::Packet& packet) {
+// INFO: fc 13nov26 0xFFFFFE is one step from a real 0xFFFFFF, well inside any accuracy we claim
+bool issue1_form(adsl::Packet& packet, const model::Ownship& own) {
     if (!packet.is_position()) return false;
     if (!packet.has_altitude() || !packet.has_speed() || !packet.has_climb()) return false;
     packet.aircraft_category = issue1_category(packet.aircraft_category);
-    if (packet.field(adsl::Packet::kLatitudeField) == adsl::Packet::kPositionInvalidCode) {
-        packet.set_field(adsl::Packet::kLatitudeField, kIssue1PositionInvalidCode);
-        packet.set_field(adsl::Packet::kLongitudeField, kIssue1PositionInvalidCode);
+    for (const wire::BitField field : {adsl::Packet::kLatitudeField, adsl::Packet::kLongitudeField})
+        if (packet.field(field) == adsl::Packet::kIssue1PositionInvalidCode)
+            packet.set_field(field, adsl::Packet::kIssue1PositionInvalidCode - 1);
+    if (!packet.has_position()) {
+        packet.set_field(adsl::Packet::kLatitudeField, adsl::Packet::kIssue1PositionInvalidCode);
+        packet.set_field(adsl::Packet::kLongitudeField, adsl::Packet::kIssue1PositionInvalidCode);
     }
+    if (own.vdop_e2 != 0)
+        packet.vertical_accuracy =
+            adsl::Packet::issue1_vertical_accuracy_code(adsl::hfom_cm(own.vdop_e2));
     packet.set_protocol_version(adsl::Packet::kProtocolVersionIssue1);
     return true;
 }
@@ -80,6 +86,9 @@ adsl::Integrity integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     const uint32_t vfom_cm = adsl::hfom_cm(vdop_e2);
     integrity.horizontal_accuracy = adsl::Packet::horizontal_accuracy_code(hfom_cm);
     integrity.vertical_accuracy = vdop_e2 == 0 ? 0 : adsl::Packet::vertical_accuracy_code(vfom_cm);
+    integrity.vertical_accuracy_issue2_only =
+        vdop_e2 != 0 &&
+        integrity.vertical_accuracy != adsl::Packet::issue1_vertical_accuracy_code(vfom_cm);
     integrity.velocity_accuracy = velocity_accuracy_code(integrity.horizontal_accuracy);
     return integrity;
 }

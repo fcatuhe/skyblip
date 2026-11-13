@@ -28,7 +28,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
               uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at);
 
 // INFO: fc 13nov26 B.5: re-coded for Issue 1, or false when a field is unknown to Issue 1
-bool issue1_form(adsl::Packet& packet);
+bool issue1_form(adsl::Packet& packet, const model::Ownship& own);
 
 bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
                      uint8_t address_mapping_table, const adsl::StatusReport& report);

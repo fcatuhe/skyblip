@@ -134,9 +134,14 @@ struct __attribute__((packed)) Packet {
 
     // INFO: fc 18sep26 G.1.5: 0x800000 in either field is "no 2D fix", not a place on the globe
     static constexpr uint32_t kPositionInvalidCode = 0x800000;
+    // INFO: fc 13nov26 Issue 1 marked no fix 0xFFFFFF, one step west or south of zero in Issue 2
+    static constexpr uint32_t kIssue1PositionInvalidCode = 0xFFFFFF;
     bool has_position() const {
-        return field(kLatitudeField) != kPositionInvalidCode &&
-               field(kLongitudeField) != kPositionInvalidCode;
+        const uint32_t latitude = field(kLatitudeField);
+        const uint32_t longitude = field(kLongitudeField);
+        if (latitude == kPositionInvalidCode || longitude == kPositionInvalidCode) return false;
+        return protocol_version() != kProtocolVersionIssue1 ||
+               (latitude != kIssue1PositionInvalidCode && longitude != kIssue1PositionInvalidCode);
     }
     void set_position_invalid() {
         set_field(kLatitudeField, kPositionInvalidCode);
@@ -185,6 +190,8 @@ struct __attribute__((packed)) Packet {
 
     static uint8_t horizontal_accuracy_code(uint32_t hfom_cm);
     static uint8_t vertical_accuracy_code(uint32_t vfom_cm);
+    // INFO: fc 13nov26 Issue 1 G.1.15 drew GVA 3 at 15 m, where Issue 2 draws it at 10 m
+    static uint8_t issue1_vertical_accuracy_code(uint32_t vfom_cm);
 
     void set_integrity_unknown();
 
@@ -218,6 +225,8 @@ struct Integrity {
     uint8_t horizontal_accuracy{0};
     uint8_t vertical_accuracy{0};
     uint8_t velocity_accuracy{0};
+    // INFO: fc 13nov26 E.1.1: a VFOM of 10 to 15 m is GVA 2 in Issue 2 and 3 in Issue 1
+    bool vertical_accuracy_issue2_only{false};
 };
 
 struct Traffic {

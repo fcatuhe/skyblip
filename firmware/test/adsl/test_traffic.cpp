@@ -154,6 +154,20 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own co
     }
 }
 
+// A Go one step south of the equator sends Issue 2, or 0xFFFFFE, one step on, to an Issue 1 client.
+TEST_CASE("ADS-L.4.SRD860.G.1.5: own-ship never sends Issue 1 a 0xFFFFFF it would read as no fix") {
+    model::Ownship own = flying();
+    own.latitude_1e7 = -100;
+    adsl::Packet packet{};
+    protocol::from_own(packet, own, 0x123456, 6, 4);
+    REQUIRE(field(payload_of(packet), 16, 24) == 0xFFFFFFu);
+    CHECK(packet.protocol_version() == 1);
+    REQUIRE(protocol::issue1_form(packet, own));
+    CHECK(field(payload_of(packet), 16, 24) == 0xFFFFFEu);
+    CHECK(packet.protocol_version() == 0);
+    CHECK(packet.has_position());
+}
+
 // Issue 2 split broader Issue 1 classes, so each new category has a truthful Issue 1 reading.
 TEST_CASE("ADS-L.4.SRD860.G.1.3: for an Issue 1 client 14 to 17 read as Issue 1's own classes") {
     const struct {
@@ -164,7 +178,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: for an Issue 1 client 14 to 17 read as Issue 1'
         CAPTURE(int(pair.issue2));
         adsl::Packet packet{};
         protocol::from_own(packet, flying(), 0x123456, 6, pair.issue2);
-        REQUIRE(protocol::issue1_form(packet));
+        REQUIRE(protocol::issue1_form(packet, flying()));
         CHECK(packet.aircraft_category == pair.issue1);
         CHECK(packet.protocol_version() == 0);
     }

@@ -121,11 +121,11 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
         target.payload[4] = static_cast<uint8_t>(target.payload[4] & ~kReservedBits);
         std::memcpy(target.payload + kUplinkHeaderBytes, record + 4,
                     Packet::kPayloadBytes - kUplinkHeaderBytes);
+        target.set_protocol_version(lowest_version(target));
         if (target.address() == 0 || !target.has_position()) {
             statistics.rejected++;
             continue;
         }
-        target.set_protocol_version(lowest_version(target));
         traffic[kept++] = target;
     }
     statistics.targets = kept;

@@ -120,6 +120,11 @@ uint8_t Packet::vertical_accuracy_code(uint32_t vfom_cm) {
     return 0;
 }
 
+uint8_t Packet::issue1_vertical_accuracy_code(uint32_t vfom_cm) {
+    if (vfom_cm < 1500) return 3;
+    return vertical_accuracy_code(vfom_cm);
+}
+
 bool issue2_category(uint8_t aircraft_category) {
     return aircraft_category >= kFirstIssue2Category && aircraft_category <= kLastIssue2Category;
 }
@@ -130,6 +135,8 @@ uint8_t lowest_version(const Packet& packet) {
         !packet.has_altitude() || !packet.has_speed() || !packet.has_climb() ||
         packet.field(Packet::kLatitudeField) == Packet::kPositionInvalidCode ||
         packet.field(Packet::kLongitudeField) == Packet::kPositionInvalidCode ||
+        packet.field(Packet::kLatitudeField) == Packet::kIssue1PositionInvalidCode ||
+        packet.field(Packet::kLongitudeField) == Packet::kIssue1PositionInvalidCode ||
         issue2_category(packet.aircraft_category);
     return issue2_codes ? Packet::kProtocolVersionIssue2 : Packet::kProtocolVersionIssue1;
 }
@@ -210,7 +217,9 @@ void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic
     packet.horizontal_accuracy = traffic.integrity.horizontal_accuracy;
     packet.vertical_accuracy = traffic.integrity.vertical_accuracy;
     packet.velocity_accuracy = traffic.integrity.velocity_accuracy;
-    packet.set_protocol_version(lowest_version(packet));
+    packet.set_protocol_version(traffic.integrity.vertical_accuracy_issue2_only
+                                    ? Packet::kProtocolVersionIssue2
+                                    : lowest_version(packet));
 }
 
 bool decode_traffic(const Packet& packet, Traffic& out) {
