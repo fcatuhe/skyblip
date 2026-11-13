@@ -19,7 +19,7 @@ export function installReportOf(reply) {
 }
 
 export function installCause({ image, report, running, attempted }) {
-  if (report && image?.state !== 'probation') {
+  if (report && FAILED_IMAGES.has(image?.state)) {
     if (CHECK_CAUSES[report.check]) return CHECK_CAUSES[report.check];
     if (report.requestError !== 0 || report.swap !== 'test') return 'swap_not_marked';
     return report.probationBoots === 0 ? 'bootloader_refused' : 'probation_failed';

@@ -27,7 +27,9 @@ test('the report names the step that failed, from slot 1 to the probation', () =
 });
 
 test('an image still on probation has no cause yet, and a landed install none at all', () => {
-  assert.equal(installCause({ image: { state: 'probation' }, report: { ...MARKED, probationBoots: 1 } }), null);
+  const onProbation = { ...MARKED, probationBoots: 1, proof: 'gnss_heard' };
+  assert.equal(installCause({ image: { state: 'probation' }, report: onProbation }), null);
+  assert.equal(installCause({ image: { state: 'confirmed' }, report: onProbation }), null, 'a report read on probation is stale once the image confirms');
   assert.equal(installCause({ image: { state: 'confirmed' }, report: null, running: '0.2.0+15', attempted: '0.2.0+15' }), null);
   assert.equal(reportShown({ image: { state: 'confirmed' }, cause: null }), false);
 });
