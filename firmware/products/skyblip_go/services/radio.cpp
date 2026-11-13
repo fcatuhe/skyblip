@@ -389,6 +389,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         carried_now = true;
         armed.carry(payload, tx_at_us);
         if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
+        if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     }
     if (!dwell_armed && context_.roles.rf.arm(plan) != Status::Ok) {
         refuse_dwell(slot, first, phase, role, false, now_ms);
@@ -445,12 +446,13 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                                                          protocol::kAdslFrameBytes, chips));
 }
 
-// INFO: fc 13nov26 a Go pairs the Bravo in the aircraft it flies, so a paired one is installed
+// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset, so ADS-B counts only while Bravo is
+// live
 protocol::StatusReport RadioService::status_report() const {
     protocol::StatusReport report{};
     report.m_band = protocol::receive_class(timing::Scheduler::direct_heard_permille());
     report.conspicuity_received = protocol::conspicuity::kFlarm;
-    if (context_.state.bravo != comms::BravoState::Unpaired)
+    if (context_.state.bravo == comms::BravoState::Live)
         report.conspicuity_received |= protocol::conspicuity::kAdsb1090;
     report.traffic_uplink_client = true;
     return report;

@@ -1,6 +1,7 @@
 // ADS-L 4 SRD-860 issue 2 Subpart C, the physical layer: the bands, the coding and the second's
 // slots.
 #include <cstdint>
+#include <vector>
 
 #include "core/fec/manchester.h"
 #include "core/protocol/adsl.h"
@@ -10,6 +11,8 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
@@ -93,19 +96,13 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency") {
-    timing::Transmitter transmitter;
-    transmitter.configure(0x5B7E57);
-    uint32_t previous = 0;
-    int statuses = 0;
-    for (uint32_t utc_s = 1785628800; utc_s < 1785628800 + 100; utc_s++) {
-        if (utc_s % timing::Transmitter::kStatusPeriodS != transmitter.status_second()) continue;
-        const int slot = timing::Transmitter::status_slot_in(utc_s);
-        const uint32_t frequency = timing::Scheduler::slot_frequency_hz(slot);
-        if (previous != 0) CHECK(frequency != previous);
-        previous = frequency;
-        statuses++;
+    for (const int speed_kt : {0, 50}) {
+        CAPTURE(speed_kt);
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
+        CHECK(statuses.size() >= 3);
+        for (size_t i = 1; i < statuses.size(); i++)
+            CHECK(statuses[i].frequency_hz != statuses[i - 1].frequency_hz);
     }
-    CHECK(statuses == 5);
 }
 
 // TODO: fc 18sep26 no O-band LDR: one radio, and the dwell map spends the second on M-band and HDR

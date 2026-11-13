@@ -31,6 +31,7 @@ class Transmitter {
     static constexpr int kCompletionGuardMs = 2;
 
     enum class Payload : uint8_t { Position, Status, Callsign };
+    static constexpr int kPayloads = 3;
 
     struct Attempt {
         bool go{false};
@@ -65,7 +66,7 @@ class Transmitter {
     }
     uint32_t ground_second() const;
     uint32_t status_second() const { return ground_second(); }
-    uint32_t callsign_second() const { return ground_second() + kStatusPeriodS / 2; }
+    uint32_t callsign_second() const { return ground_second() + flight::kGroundReportPeriodS; }
     // INFO: fc 13nov26 §C.2.5 alternates Status as it does Traffic, on its own count
     static int status_slot_in(uint32_t utc_s) {
         return static_cast<int>((utc_s / kStatusPeriodS) & 1u);
@@ -90,10 +91,14 @@ class Transmitter {
     AirTime air_time_{};
     uint32_t address_{0};
     uint32_t sent_{0};
-    static constexpr int kPayloads = 3;
     uint32_t last_utc_s_[kPayloads]{};
     bool ever_sent_[kPayloads]{};
 };
+
+// INFO: fc 13nov26 the ground second's two turns in twenty: Status first, the name ten seconds on
+static_assert(Transmitter::kCallsignPeriodS == Transmitter::kStatusPeriodS &&
+                  Transmitter::kStatusPeriodS == 2 * flight::kGroundReportPeriodS,
+              "the Status and the name share the ground second by turns");
 
 }  // namespace skyblip::timing
 

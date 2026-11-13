@@ -133,6 +133,21 @@ TEST_CASE(
     CHECK_FALSE(out.callsign);
 }
 
+TEST_CASE("diagnostics record: a burst that carried the Status says so, and a position does not") {
+    radio::Entry status{};
+    status.verdict = radio::Verdict::Transmitted;
+    status.status = true;
+    radio::Entry position{};
+    position.verdict = radio::Verdict::Transmitted;
+
+    radio::Entry out{};
+    CHECK(diagnostics::read(diagnostics::record_of(status), out));
+    CHECK(out.status);
+    CHECK_FALSE(out.callsign);
+    CHECK(diagnostics::read(diagnostics::record_of(position), out));
+    CHECK_FALSE(out.status);
+}
+
 TEST_CASE("diagnostics record: every one of the twelve verdicts survives the slot") {
     for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Unattempted); i++) {
         radio::Entry in{};

@@ -1,7 +1,9 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status, Traffic Uplink, FIS-B and Remote ID payloads.
 #include <cstdint>
+#include <vector>
 
-#include "core/events/central.h"
+#include "core/comms/peer.h"
+#include "core/gnss/first_fix.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
@@ -11,6 +13,7 @@
 #include "core/util/bit_field.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 #include "test/support/simulator_run.h"
 
@@ -31,29 +34,39 @@ model::AircraftObservation target(uint32_t address) {
     observation.position_valid = true;
     return observation;
 }
-// What a simulated Go puts on air as its Status, read back at G.2's bit offsets.
-protocol::AdslPacket status_on_air(bool bravo_paired) {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    if (bravo_paired)
-        simulator.product().settings().bravo = events::BluetoothAddress{0, {1, 2, 3, 4, 5, 6}};
-    simulator.world().set_fix(true);
-    simulator.world().set_speed_kt(50);
-    run_on(simulator, past_settling(simulator), (timing::Transmitter::kStatusPeriodS + 1) * 1000);
-    const simulator::Air& air = simulator.world().air();
-    for (int i = 0; i < air.record_count(); i++) {
-        protocol::AdslPacket packet{};
-        if (packet_of(air.record_at(i), packet) &&
-            packet.payload_type == protocol::AdslPacket::kPayloadTypeStatus)
-            return packet;
-    }
-    FAIL("no Status burst in twenty-one seconds of flight");
-    return protocol::AdslPacket{};
+const protocol::AdslPacket& status_heard() {
+    static const protocol::AdslPacket packet = [] {
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(50, 21);
+        REQUIRE_FALSE(statuses.empty());
+        protocol::AdslPacket heard{};
+        REQUIRE(packet_of(statuses.front(), heard));
+        return heard;
+    }();
+    return packet;
 }
 
-const protocol::AdslPacket& status_heard() {
-    static const protocol::AdslPacket packet = status_on_air(false);
-    return packet;
+// A Go and its Bravo in one aircraft, the link left up or dropped, and the Go's next Status.
+protocol::AdslPacket status_beside_bravo(bool link_up, comms::BravoState& bravo) {
+    simulator::PairedSimulator paired;
+    REQUIRE(paired.setup() == Status::Ok);
+    paired.world().set_fix(true);
+    paired.world().set_speed_kt(50);
+    paired.aboard().set_fix(true);
+    paired.aboard().set_link(link_up);
+    paired.run(gnss::kFirstFixSettleMs);
+    paired.world().air().clear();
+    const uint32_t until_ms =
+        gnss::kFirstFixSettleMs + (timing::Transmitter::kStatusPeriodS + 1) * 1000;
+    for (uint32_t now_ms = gnss::kFirstFixSettleMs; now_ms <= until_ms;
+         now_ms += simulator::PairedSimulator::kStepMs)
+        paired.step(now_ms);
+    bravo = paired.product().state().bravo;
+    const std::vector<simulator::AirRecord> statuses =
+        records_of(paired.world().air(), protocol::AdslPacket::kPayloadTypeStatus);
+    REQUIRE_FALSE(statuses.empty());
+    protocol::AdslPacket heard{};
+    REQUIRE(packet_of(statuses.back(), heard));
+    return heard;
 }
 
 uint32_t status_field(BitField where) { return status_heard().field(where); }
@@ -99,7 +112,18 @@ TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile 
 // Bit 0 is the FLARM-generation wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
 TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
     CHECK(status_field(BitField{52, 8}) == 0x01);
-    CHECK(status_on_air(true).field(BitField{52, 8}) == 0x11);
+
+    comms::BravoState bravo = comms::BravoState::Unpaired;
+    CHECK(status_beside_bravo(true, bravo).field(BitField{52, 8}) == 0x11);
+    CHECK(bravo == comms::BravoState::Live);
+}
+
+// G.2.6 leaves an unknown capability unset, and a Bravo the Go cannot reach hears nothing for it.
+TEST_CASE("ADS-L.4.SRD860.G.2.6: a paired Bravo the Go cannot reach is not declared") {
+    comms::BravoState bravo = comms::BravoState::Unpaired;
+    CHECK(status_beside_bravo(false, bravo).field(BitField{52, 8}) == 0x01);
+    CHECK(bravo != comms::BravoState::Live);
+    CHECK(bravo != comms::BravoState::Unpaired);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted") {
@@ -118,16 +142,18 @@ TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is p
     CHECK(status_field(BitField{71, 1}) == 0);
 }
 
+// Twenty seconds from second to second, and the instant inside each one is the direct slot's own
+// draw.
 TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
-    timing::Transmitter transmitter;
-    transmitter.configure(0x5B7E57);
-    uint32_t last_s = 0;
-    for (uint32_t utc_s = 1785628800; utc_s < 1785628800 + 100; utc_s++) {
-        if (utc_s % timing::Transmitter::kStatusPeriodS != transmitter.status_second()) continue;
-        if (last_s != 0) CHECK(utc_s - last_s <= 20);
-        last_s = utc_s;
+    constexpr uint64_t kWithinUs =
+        20000000 + (timing::kDirectEndMs - timing::kDirectStartMs) * 1000;
+    for (const int speed_kt : {0, 50}) {
+        CAPTURE(speed_kt);
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
+        CHECK(statuses.size() >= 3);
+        for (size_t i = 1; i < statuses.size(); i++)
+            CHECK(statuses[i].at_us - statuses[i - 1].at_us <= kWithinUs);
     }
-    CHECK(last_s != 0);
 }
 
 // The uplink carried here is the ground station's own, on the channel and in the slot G.3 names.

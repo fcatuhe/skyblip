@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SERVICES_RADIO_H
 
+#include <algorithm>
+#include <iterator>
+
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
 #include "core/protocol/adsl_uplink.h"
@@ -36,13 +39,14 @@ class RadioService : public runtime::Service {
         return transmitter_.air_time().permille(now_ms);
     }
     bool over_budget() const { return over_budget_; }
+    protocol::StatusReport status_report() const;
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
-    static constexpr int kPayloads = 3;
+    static constexpr int kPayloads = timing::Transmitter::kPayloads;
     static constexpr Payload kEveryPayload[kPayloads] = {Payload::Position, Payload::Status,
                                                          Payload::Callsign};
 
@@ -58,7 +62,9 @@ class RadioService : public runtime::Service {
 
         bool carries(Payload payload) const { return carried[static_cast<int>(payload)]; }
         uint64_t at(Payload payload) const { return at_us[static_cast<int>(payload)]; }
-        bool carries_any() const { return carried[0] || carried[1] || carried[2]; }
+        bool carries_any() const {
+            return std::any_of(std::begin(carried), std::end(carried), [](bool on) { return on; });
+        }
         void carry(Payload payload, uint64_t tx_at_us) {
             carried[static_cast<int>(payload)] = true;
             at_us[static_cast<int>(payload)] = tx_at_us;
@@ -111,7 +117,6 @@ class RadioService : public runtime::Service {
               uint32_t now_ms) const;
     uint8_t encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us, uint32_t utc_s,
                    uint8_t* chips);
-    protocol::StatusReport status_report() const;
     bool transmit_due(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms) const;
     void queue_next(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
     void promote();

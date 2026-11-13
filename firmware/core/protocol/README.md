@@ -17,13 +17,13 @@ Both air frames are read and written field by field. A field is a `BitField`: an
 | O-band LDR receive | 0 | not received |
 | O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
 | ADS-L 4 Mobile | 0 | none |
-| E-conspicuity receive | bit 0, and bit 4 while a Bravo is paired | the FLARM-generation wire is decoded here, and a paired Bravo hears ADS-B 1090 in the same aircraft |
+| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the FLARM-generation wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
 | E-conspicuity transmit | 0 | nothing but ADS-L goes out |
 | XPDR | 0 | no transponder is known |
 | Traffic Uplink client | 1 | the uplink is decoded and drawn |
 | FIS-B client | 0 | not decoded |
 
-The payload is 12 bytes, header included. The frame still carries 20 payload bytes, as a Traffic frame does, with the last 8 left zero, so it goes out behind the same sync word and the same length byte. §D.1.1 lets a receiver read the length, but ours fixes it as 0x18 in the sync word it arms (`air.h`), and the OGN code SoftRF carries builds every frame at 24 bytes (`libraries/OGN/ads-l.h:17-22`). A 16-byte Status frame would not be heard by a receiver built like ours.
+The payload is 12 bytes, header included. The frame still carries 20 payload bytes, as a Traffic frame does, with the last 8 left zero, so it goes out behind the same sync word and the same length byte. §D.1.1 lets a receiver read the length, but ours checks it as 0x18 in the sync tail it reads after the shared window (`air.cpp`), and the OGN code SoftRF carries builds every frame at 24 bytes (`libraries/OGN/ads-l.h:17-22`). A 16-byte Status frame would not be heard by a receiver built like ours.
 
 ## The name ADS-L has no field for
 

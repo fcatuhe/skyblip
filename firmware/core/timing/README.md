@@ -68,6 +68,8 @@ The Status takes the first turn because it is ADS-L and the callsign is not. §G
 
 When they meet, the Status instant is drawn over the same window as the position's, less the 13 instants that would start within `kAirTimeMs + kCompletionGuardMs` of the position's own, so the executor's two bursts never overlap (`Transmitter::status_instant_in()`). The window is left the same whether or not the position goes out this second, so the draw stays a pure function of the address and the second. No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the Status and the callsign never share a second, and the callsign keeps slot 1's tail to itself. `test/core/test_transmit.cpp` checks both over 1024 addresses.
 
+The alternation is the clock's, as it is for the position. A Status refused once, for an hour's air time spent or a dwell not armed, leaves the next one on the channel the last one used, and a 40-second gap: §G.2.11's twenty seconds is the nominal rate, which is how the clause words it.
+
 ## The tail names us, once every twenty seconds
 
 ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, the one §F.2.1 assigns to them and whose definition it leaves to them (`core/protocol/README.md`). Own-ship sends one in slot 1's tail, `kCallsignStartMs` to `kCallsignEndMs`: §C.5 reserves 0..200 and we transmit there anyway, which is a deliberate deviation and the one in this tree that is not forced by physics.

@@ -304,10 +304,11 @@ TEST_CASE("transmit: no dwell owes more than two bursts, and two in one dwell ne
                                                Transmitter::Payload::Callsign};
     const int apart = static_cast<int>(Transmitter::kAirTimeMs) + Transmitter::kCompletionGuardMs;
     int shared = 0;
+    int shared_slot0_on_ground = 0;
     for (uint32_t address = 0x5B0000; address < 0x5B0400; address++) {
         for (const bool airborne : {true, false}) {
             const Transmitter transmitter = airborne_transmitter(address);
-            for (uint32_t utc_s = 100; utc_s < 100 + Transmitter::kStatusPeriodS; utc_s++) {
+            for (uint32_t utc_s = 100; utc_s < 100 + 2 * Transmitter::kStatusPeriodS; utc_s++) {
                 for (const int phase : {500, kSlot1StartMs}) {
                     int instants[3] = {};
                     int owed = 0;
@@ -324,12 +325,15 @@ TEST_CASE("transmit: no dwell owes more than two bursts, and two in one dwell ne
                                                                   : instants[1] - instants[0];
                         CHECK(gap >= apart);
                         shared++;
+                        if (!airborne && phase == 500) shared_slot0_on_ground++;
                     }
                 }
             }
         }
     }
     CHECK(shared > 0x400);
+    // Every address's ground Status shares slot 0 with its position once in each forty seconds.
+    CHECK(shared_slot0_on_ground == 0x400);
 }
 
 // The position burst is the one G.1.16 dates, and a name carries no instant to be stale.
