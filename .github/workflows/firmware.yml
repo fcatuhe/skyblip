@@ -65,9 +65,17 @@ jobs:
       - name: build & run host tests
         working-directory: firmware
         run: make test CXX="ccache g++"
+      # Another project takes a stack with its tests, so each must build from a copy holding nothing of skyBlip's.
+      - name: each radio protocol stack builds and passes alone
+        working-directory: firmware
+        run: make test-protocols CXX="ccache g++"
+      - name: the protocol stacks include nothing from skyBlip
+        run: python3 scripts/check_protocol_boundary.py
+      - name: the boundary check refuses an include that crosses it
+        run: python3 scripts/test_check_protocol_boundary.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # firmware/test/adsl/ reads the published specification clause by clause, and a
+      # The conformance suite reads the published specification clause by clause, and a
       # clause nobody read is the one a product is found non-conformant on.
       - name: every ADS-L clause has a case
         run: python3 scripts/check_adsl_clauses.py
@@ -246,8 +254,8 @@ jobs:
         run: pip install --disable-pip-version-check -r .github/lint/requirements.txt
       - name: check formatting
         run: |
-          find firmware/core firmware/ui firmware/ports firmware/hardware firmware/boards \
-               firmware/runtime firmware/products firmware/simulator firmware/test \
+          find firmware/protocols firmware/core firmware/ui firmware/ports firmware/hardware \
+               firmware/boards firmware/runtime firmware/products firmware/simulator firmware/test \
             -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
 
       # The tree is clean, so the config fails the job on any finding at all.
@@ -401,7 +409,7 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
-            firmware/core/protocol/*.version
+            firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/dev_release.rb
             lib/radio_protocols.rb

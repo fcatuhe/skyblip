@@ -188,9 +188,9 @@ TEST_CASE("diagnostics dwell: every dwell the radio arms is a record, band edges
         diagnostics::Dwell dwell{};
         if (!diagnostics::read(record, dwell)) continue;
         CHECK(dwell.armed);
-        uplink = uplink || dwell.frequency_hz == timing::kOBandHz;
-        slot0 = slot0 || dwell.frequency_hz == timing::kMBand0Hz;
-        slot1 = slot1 || dwell.frequency_hz == timing::kMBand1Hz;
+        uplink = uplink || dwell.frequency_hz == adsl::kOBandHz;
+        slot0 = slot0 || dwell.frequency_hz == adsl::kMBand0Hz;
+        slot1 = slot1 || dwell.frequency_hz == adsl::kMBand1Hz;
         if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1EndMs);
     }
     CHECK(uplink);
@@ -213,11 +213,11 @@ TEST_CASE("diagnostics switch: every dwell change is recorded, with the channel 
         if (!diagnostics::read(record, switch_record)) continue;
         CHECK(switch_record.armed_ahead);
         if (switch_record.change == diagnostics::SwitchKind::Hop)
-            hop = switch_record.to_hz == timing::kMBand1Hz;
+            hop = switch_record.to_hz == adsl::kMBand1Hz;
         if (switch_record.change == diagnostics::SwitchKind::ToOBand)
-            to_o_band = switch_record.to_hz == timing::kOBandHz;
+            to_o_band = switch_record.to_hz == adsl::kOBandHz;
         if (switch_record.change == diagnostics::SwitchKind::ToMBand)
-            to_m_band = switch_record.to_hz == timing::kMBand0Hz;
+            to_m_band = switch_record.to_hz == adsl::kMBand0Hz;
     }
     CHECK(hop);
     CHECK(to_o_band);

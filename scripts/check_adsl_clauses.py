@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Fail if a clause of ADS-L 4 SRD-860 issue 2 has no case in firmware/test/adsl/.
+"""Fail if a clause of ADS-L 4 SRD-860 issue 2 has no case in the conformance suite.
 
 The clause list is the specification's own: every `ADS-L.4.SRD860.x.y` heading in
 docs/reference/ads-l_4_srd860_issue_2.md. The suite's list is the subject of every
-TEST_CASE in firmware/test/adsl/, which reads `ADS-L.4.SRD860.x.y: what holds`.
+TEST_CASE in its two halves, which reads `ADS-L.4.SRD860.x.y: what holds`: the
+component's cases in firmware/protocols/adsl/test/conformance/, and the device's in
+firmware/test/adsl/.
 
 The two must match exactly. A clause the firmware does not implement still gets a
 case, written as the clause requires and marked doctest::skip() over a TODO: the
@@ -16,7 +18,10 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC = os.path.join(ROOT, "docs", "reference", "ads-l_4_srd860_issue_2.md")
-SUITE = os.path.join(ROOT, "firmware", "test", "adsl")
+SUITES = (
+    os.path.join(ROOT, "firmware", "protocols", "adsl", "test", "conformance"),
+    os.path.join(ROOT, "firmware", "test", "adsl"),
+)
 
 CLAUSE = r"ADS-L\.4\.SRD860\.[A-Z](?:\.\d+)+"
 HEADING = re.compile(rf"^#+\s+({CLAUSE})\b", re.M)
@@ -33,13 +38,15 @@ def spec_clauses():
 
 def suite_clauses():
     covered, named = set(), []
-    for name in sorted(os.listdir(SUITE)):
-        if not name.endswith(".cpp"):
-            continue
-        with open(os.path.join(SUITE, name), encoding="utf-8") as source:
-            text = source.read()
-        covered |= {match.group(1) for match in SUBJECT.finditer(text)}
-        named += [(name, case) for case in NAMED.findall(text)]
+    for suite in SUITES:
+        for name in sorted(os.listdir(suite)):
+            if not name.endswith(".cpp"):
+                continue
+            path = os.path.join(suite, name)
+            with open(path, encoding="utf-8") as source:
+                text = source.read()
+            covered |= {match.group(1) for match in SUBJECT.finditer(text)}
+            named += [(os.path.relpath(path, ROOT), case) for case in NAMED.findall(text)]
     return covered, named
 
 

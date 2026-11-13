@@ -1,8 +1,7 @@
 // The integer arithmetic the rest of the firmware trusts without checking: fixed
-// point instead of floats, a CORDIC sine, an integer square root, the exponential
-// codes ADS-L packs its fields into. Every one is a silent failure
-// mode. An exponential code that rounds the wrong way or an arctangent that is a quadrant out
-// reaches the pilot as a target in the wrong place, with nothing logged.
+// point instead of floats, the unit conversions and an arctangent. Every one is a
+// silent failure mode. An arctangent that is a quadrant out reaches the pilot as a
+// target in the wrong place, with nothing logged.
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>  // std::abs
@@ -10,7 +9,6 @@
 #include <string>
 
 #include "core/units/units.h"
-#include "core/util/exponential.h"
 #include "core/util/fifo.h"
 #include "core/util/format.h"
 #include "core/util/intmath.h"
@@ -80,63 +78,6 @@ TEST_CASE("fifo: bounded ring behaviour") {
     CHECK(fifo.pop().value() == 3);
     CHECK(fifo.pop().value() == 5);
     CHECK(fifo.pop().status() == Status::Empty);
-}
-
-TEST_CASE("exponential: an unsigned value comes back within the step its code names") {
-    const Exponential speed{6, 2, false};
-    for (int32_t value = 0; value < 900; value += 7) {
-        const int32_t decoded = speed.decode_middle(speed.encode(value));
-        CHECK(std::abs(decoded - value) <= 8);
-    }
-    CHECK(speed.encode(5000) == speed.largest_magnitude_code());
-    CHECK(speed.encode(-5) == 0);
-}
-
-TEST_CASE("exponential: a signed value keeps its sign and the step its magnitude names") {
-    const Exponential climb{6, 2, true};
-    for (int32_t value = -900; value < 900; value += 13) {
-        const int32_t decoded = climb.decode_middle(climb.encode(value));
-        CHECK(((value < 0) == (decoded < 0) || decoded == 0));
-        CHECK(std::abs(std::abs(value) - std::abs(decoded)) <= 8);
-    }
-}
-
-// One exponent bit, as an ALP-TAS altitude carries: 12 bits at 1 m, then 12 bits at 2 m.
-TEST_CASE("exponential: a single exponent bit doubles the step once") {
-    const Exponential altitude{12, 1, false};
-    CHECK(altitude.encode(4095) == 4095u);
-    CHECK(altitude.encode(4096) == 4096u);
-    CHECK(altitude.encode(4097) == 4096u);
-    CHECK(altitude.decode(4097) == 4098);
-    CHECK(altitude.encode(1000000) == 8191u);
-    CHECK(altitude.decode(8191) == 12286);
-}
-
-TEST_CASE("intmath: sine/cosine magnitude and quadrature") {
-    CHECK(std::abs(sine(0)) <= 1);
-    CHECK(std::abs(sine(0x4000) - 0x4000) <= 2);  // sin(90) == 1.0
-    CHECK(std::abs(cosine(0) - 0x4000) <= 2);     // cos(0) == 1.0
-    CHECK(std::abs(sine(int16_t(0x8000))) <= 2);  // sin(180) == 0
-    // sin^2 + cos^2 ~= 1 (scaled to 0x4000^2)
-    for (int angle = 0; angle < 0x10000; angle += 997) {
-        int32_t sine_value = sine(int16_t(angle));
-        int32_t cosine_value = cosine(int16_t(angle));
-        int32_t magnitude =
-            (sine_value * sine_value + cosine_value * cosine_value) >> 14;  // ~0x4000
-        CHECK(std::abs(magnitude - 0x4000) <= 40);
-    }
-}
-
-TEST_CASE("intmath: square root and hypotenuse") {
-    CHECK(square_root<uint32_t>(0) == 0);
-    CHECK(square_root<uint32_t>(144) == 12);
-    CHECK(square_root<uint32_t>(1000000) == 1000);
-    CHECK(hypotenuse(3000, 4000) == 5000);
-    // Rounded to the nearest whole root: 2.83 is 3 and 3.87 is 4, and a negative square has none.
-    CHECK(square_root<int64_t>(8) == 3);
-    CHECK(square_root<int64_t>(15) == 4);
-    CHECK(square_root<int64_t>(4294967295LL) == 65536);
-    CHECK(square_root<int32_t>(-4) == 0);
 }
 
 TEST_CASE("intmath: arctangent cardinal directions (16-bit cyclic)") {

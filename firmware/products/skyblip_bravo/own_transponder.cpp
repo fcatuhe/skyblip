@@ -14,7 +14,7 @@ constexpr int32_t kLevelDampingSamples = 4;
 
 }  // namespace
 
-void OwnTransponder::hear(const protocol::AdsbMessage& message, uint32_t now_ms) {
+void OwnTransponder::hear(const adsb::Message& message, uint32_t now_ms) {
     // INFO: fc 13nov26 a misconfigured transponder squitters 000000, which as own ICAO means unset
     if (message.address == 0) return;
     Emitter* emitter = nullptr;
@@ -31,7 +31,7 @@ void OwnTransponder::hear(const protocol::AdsbMessage& message, uint32_t now_ms)
         }
         emitter->heard_ms = now_ms;
     }
-    if (emitter == nullptr || message.kind != protocol::AdsbKind::Identification) return;
+    if (emitter == nullptr || message.kind != adsb::Kind::Identification) return;
     if (message.identification.callsign_valid)
         std::strncpy(emitter->callsign, message.identification.callsign,
                      sizeof(emitter->callsign) - 1);

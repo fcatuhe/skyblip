@@ -9,7 +9,6 @@
 #include <string>
 
 #include "core/events/link.h"
-#include "core/fec/manchester.h"
 #include "core/gnss/nmea.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
@@ -21,6 +20,7 @@
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/link.h"
+#include "protocols/common/manchester.h"
 #include "test/support/rf_channel.h"
 
 using namespace skyblip;
@@ -69,7 +69,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
         own.latitude_1e7 + static_cast<int32_t>((int64_t)800 * 1000000 / 11132);
     intruder_state.track_cdeg = 18000;  // due south
     intruder_state.utc_s = own.utc_s;
-    protocol::AdslPacket tx;
+    adsl::Packet tx;
     protocol::from_own(tx, intruder_state, 0xC5D804, /*table=*/6, /*cat=*/4);
     tx.scramble();
     tx.set_crc();
@@ -77,13 +77,13 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     // 3) go over the air: manchester encode 24 data bytes, inject light BER,
     //    manchester decode, CRC-correct, verify, descramble.
     uint8_t coded[48];
-    fec::manchester_encode(tx.data, protocol::AdslPacket::kDataBytes, coded);
+    wire::manchester_encode(tx.data, adsl::Packet::kDataBytes, coded);
     RfChannel channel(12345);
     channel.apply_bit_error_rate(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
-    protocol::AdslPacket rx = tx;  // start from a copy; overwrite the data region
-    uint8_t error[protocol::AdslPacket::kDataBytes];
-    fec::manchester_decode(coded, protocol::AdslPacket::kDataBytes, rx.data, error);
+    adsl::Packet rx = tx;  // start from a copy; overwrite the data region
+    uint8_t error[adsl::Packet::kDataBytes];
+    wire::manchester_decode(coded, adsl::Packet::kDataBytes, rx.data, error);
     rx.correct(error, 6);
     REQUIRE(rx.check_crc() == 0);  // recovered a valid packet
     rx.descramble();

@@ -193,12 +193,24 @@ class DevReleaseTest < Minitest::Test
   def test_a_protocol_version_that_is_not_a_triple_fails_the_run
     Dir.mktmpdir do |root|
       run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |_images, source|
-        File.write(File.join(source, "firmware/core/protocol/adsl.version"), "1.0\n")
+        File.write(File.join(source, "firmware/protocols/adsl/version.h"), "inline constexpr char kVersion[] = \"1.0\";\n")
       end
 
       refute run.success
       assert_empty run.creates
-      assert_includes run.output, "Invalid ADS-L version in adsl.version"
+      assert_includes run.output, "Invalid ADS-L version in protocols/adsl/version.h"
+    end
+  end
+
+  def test_a_protocol_header_without_one_version_fails_the_run
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |_images, source|
+        File.write(File.join(source, "firmware/protocols/alptas/version.h"), "inline constexpr char kSpecification[] = \"ALP-TAS\";\n")
+      end
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "No single kVersion in protocols/alptas/version.h"
     end
   end
 
@@ -223,8 +235,10 @@ class DevReleaseTest < Minitest::Test
       DevRelease::SIMULATOR_FILES.each { |file| File.write(File.join(simulator, file), file) }
       FileUtils.mkdir_p(File.join(source, "LICENSES"))
       %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt LICENSES/TinyCrypt.txt].each { |file| File.write(File.join(source, file), file) }
-      FileUtils.mkdir_p(File.join(source, "firmware/core/protocol"))
-      %w[adsl adsb alptas].each { |protocol| File.write(File.join(source, "firmware/core/protocol/#{protocol}.version"), "0.1.0\n") }
+      %w[adsl adsb alptas].each do |protocol|
+        FileUtils.mkdir_p(File.join(source, "firmware/protocols", protocol))
+        FileUtils.cp(File.join(ROOT, "firmware/protocols", protocol, "version.h"), File.join(source, "firmware/protocols", protocol))
+      end
       %w[skyblip_go skyblip_bravo].each do |product|
         FileUtils.mkdir_p(File.join(source, "firmware/products", product))
         FileUtils.cp(File.join(ROOT, "firmware/products", product, "PROTOCOLS"), File.join(source, "firmware/products", product))

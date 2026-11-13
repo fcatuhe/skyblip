@@ -23,7 +23,7 @@ double free_space_loss_db(int32_t range_m) {
 }  // namespace
 
 // Everything below the CRC has already passed. These cases are about what
-// happens when the CRC was fooled: test/core/test_adsl.cpp counts silent
+// happens when the CRC was fooled: protocols/adsl/test/test_packet.cpp counts silent
 // miscorrections and the count is not zero, and a miscorrected position field
 // decodes to a perfectly well-formed aircraft somewhere it cannot be.
 

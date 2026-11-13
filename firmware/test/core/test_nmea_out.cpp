@@ -13,6 +13,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
+#include "core/protocol/callsign.h"
 #include "core/protocol/nmea_out.h"
 #include "core/traffic/range.h"
 #include "doctest/doctest.h"
@@ -140,10 +141,10 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
     observation.altitude_m = 1000;
 
     for (int character = 1; character < 256; character++) {
-        AdslPacket packet{};
+        adsl::Packet packet{};
         from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
-        packet.information_text()[1] = static_cast<char>(character);
-        char name[AdslPacket::kInformationTextBytes + 1] = {0};
+        protocol::information_text(packet)[1] = static_cast<char>(character);
+        char name[protocol::kInformationTextBytes + 1] = {0};
         if (callsign_of(packet, name, sizeof(name)) == 0) continue;
 
         CAPTURE(character);

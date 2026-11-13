@@ -5,6 +5,7 @@
 #include <limits>
 
 #include "core/model/ownship.h"
+#include "core/protocol/callsign.h"
 
 namespace skyblip::go {
 
@@ -232,22 +233,22 @@ ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {
 // dwell that only moved the synthesiser was tuned to the O band and deaf on it.
 void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     if (band == timing::Band::O) {
-        plan.sync = protocol::kUplinkSync;
-        plan.sync_bits = protocol::kUplinkSyncBits;
-        plan.rx_bytes = protocol::kUplinkFrameBytes;
-        plan.bitrate = protocol::kUplinkChipRateBps;
-        plan.deviation_hz = protocol::kUplinkDeviationHz;
-        plan.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
-        plan.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
+        plan.sync = adsl::kUplinkSync;
+        plan.sync_bits = adsl::kUplinkSyncBits;
+        plan.rx_bytes = adsl::kUplinkFrameBytes;
+        plan.bitrate = adsl::kUplinkChipRateBps;
+        plan.deviation_hz = adsl::kUplinkDeviationHz;
+        plan.bandwidth_hz = adsl::kUplinkChannelBandwidthHz;
+        plan.gaussian_bt_e2 = adsl::kUplinkGaussianBtE2;
         return;
     }
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
-    plan.bitrate = protocol::kMBandChipRateBps;
-    plan.deviation_hz = protocol::kMBandDeviationHz;
-    plan.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
-    plan.gaussian_bt_e2 = protocol::kMBandGaussianBtE2;
+    plan.bitrate = adsl::kMBandChipRateBps;
+    plan.deviation_hz = adsl::kMBandDeviationHz;
+    plan.bandwidth_hz = adsl::kMBandChannelBandwidthHz;
+    plan.gaussian_bt_e2 = adsl::kMBandGaussianBtE2;
 }
 
 // INFO: fc 15sep26 the gates a burst waits on clear inside the dwell, ports::Rf::arm() joins it
@@ -294,7 +295,7 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return timing::Transmitter::Attempt{};
     const bool full_rate =
-        !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_category));
+        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
     return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
@@ -442,18 +443,18 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     if (!built) return 0;
     outgoing_.scramble();
     outgoing_.set_crc();
-    return static_cast<uint8_t>(protocol::m_band_payload(protocol::kAdslSyncWord, outgoing_.data,
-                                                         protocol::kAdslFrameBytes, chips));
+    return static_cast<uint8_t>(
+        protocol::m_band_payload(adsl::kSyncWord, outgoing_.data, adsl::kFrameBytes, chips));
 }
 
 // INFO: fc 13nov26 G.2.6 leaves an unknown capability unset, so ADS-B counts only while Bravo is
 // live
-protocol::StatusReport RadioService::status_report() const {
-    protocol::StatusReport report{};
-    report.m_band = protocol::receive_class(timing::Scheduler::direct_heard_permille());
-    report.conspicuity_received = protocol::conspicuity::kFlarm;
+adsl::StatusReport RadioService::status_report() const {
+    adsl::StatusReport report{};
+    report.m_band = adsl::receive_class(timing::Scheduler::direct_heard_permille());
+    report.conspicuity_received = adsl::conspicuity::kFlarm;
     if (context_.state.bravo == comms::BravoState::Live)
-        report.conspicuity_received |= protocol::conspicuity::kAdsb1090;
+        report.conspicuity_received |= adsl::conspicuity::kAdsb1090;
     report.traffic_uplink_client = true;
     return report;
 }
@@ -503,7 +504,7 @@ void RadioService::log_refusal(radio::Verdict outcome, const timing::SlotPlan& s
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = slot.band;
-    entry.channel = slot.frequency_hz == timing::kMBand1Hz ? 1 : 0;
+    entry.channel = slot.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;

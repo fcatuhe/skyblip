@@ -21,11 +21,6 @@ constexpr int64_t kMicrometresPerMillimetre = 1000;
 // north than anything this device will fly over.
 constexpr int64_t kLatitudeCosineFloor = 512;
 
-int16_t latitude_angle16(int32_t latitude_1e7) {
-    return static_cast<int16_t>((static_cast<int64_t>(latitude_1e7) * kAngle16PerTurn) /
-                                kE7PerTurn);
-}
-
 int64_t latitude_cosine(int32_t latitude_1e7) {
     const int64_t cosine_of_latitude = cosine(latitude_angle16(latitude_1e7));
     return cosine_of_latitude < kLatitudeCosineFloor ? kLatitudeCosineFloor : cosine_of_latitude;
@@ -159,15 +154,10 @@ uint32_t prediction_residual_m(const Prediction& predicted, int32_t latitude_1e7
 bool relative_north_east_up(const model::Ownship& own, const model::AircraftObservation& target,
                             int32_t& north_m, int32_t& east_m, int32_t& up_m, bool& up_valid) {
     if (!own.fix_valid || !target.position_valid) return false;
-    const int64_t latitude_delta_1e7 = static_cast<int64_t>(target.latitude_1e7) - own.latitude_1e7;
-    const int64_t longitude_delta_1e7 =
-        wrapped_longitude_1e7(static_cast<int64_t>(target.longitude_1e7) - own.longitude_1e7);
-    north_m = static_cast<int32_t>(
-        divide_rounded<int64_t>(latitude_delta_1e7 * kMicrometresPerE7, kMicrometresPerMetre));
-    const int64_t cosine_of_latitude = cosine(latitude_angle16(own.latitude_1e7));
-    const int64_t east_micrometres = divide_rounded<int64_t>(
-        longitude_delta_1e7 * kMicrometresPerE7 * cosine_of_latitude, kTrigOne);
-    east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_micrometres, kMicrometresPerMetre));
+    const wire::NorthEast offset = wire::north_east_m(own.latitude_1e7, own.longitude_1e7,
+                                                      target.latitude_1e7, target.longitude_1e7);
+    north_m = offset.north_m;
+    east_m = offset.east_m;
     up_m = 0;
     up_valid = gnss_relative_altitude_m(own, target, up_m) ||
                pressure_relative_altitude_m(own, target, up_m);

@@ -72,9 +72,9 @@ What a support case reads lives where it is asked for. The address and the calls
 Only a unit with a 1090 MHz receiver, a skyBlip Bravo, sends the `adsb` group of the diagnostics dump. Its keys follow a frame from the LR2021 to the decoder's aircraft:
 
 - `frames`, `frame_rate_hz`, `dropped`, `rearms`, `resets`, `command_errors`, `errors` and `rssi_dbm` are the receiver's own, `ports::AdsbReceiverStatistics`, filled by `hardware/parts/lr2021`.
-- `crc` counts the frames `protocol::adsb_receive` refused on parity: the CRC failed, and its one repair, a single doubtful chip pair, did not clear it. Weak or damaged frames land here, and DF16 too, whose parity carries an address.
+- `crc` counts the frames `adsb::receive` refused on parity: the CRC failed, and its one repair, a single doubtful chip pair, did not clear it. Weak or damaged frames land here, and DF16 too, whose parity carries an address.
 - `unsupported` counts the frames whose parity held but whose DF17 message the decoder does not read, such as type codes 0 and 23 to 30. They are sound receptions.
-- `folded` counts the decoded messages `protocol::AdsbAssembly` folded into an aircraft. A message from the own ICAO is not folded.
+- `folded` counts the decoded messages `adsb::Assembly` folded into an aircraft. A message from the own ICAO is not folded.
 - `aircraft` is how many aircraft the assembly holds now, with or without a position. `tracked`, in the traffic group, is how many reached the table.
 
 So the frames that reached the decoder are `crc`, plus `unsupported`, plus the frames it read, and `folded` is at most that last term. Key 53, `invalid`, once counted `crc` and `unsupported` together. It is retired and never reused, and `crc`, `unsupported`, `folded` and `aircraft` are 60 to 63. They follow `rssi_dbm`, on the console as on the link, because a frame's keys ascend and the console prints the table in the same order. `products/skyblip_bravo/README.md` (Reading the rejects) says how to read the frames a development image prints.

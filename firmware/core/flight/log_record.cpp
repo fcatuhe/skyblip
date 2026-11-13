@@ -1,12 +1,12 @@
 #include "core/flight/log_record.h"
 
-#include "core/fec/crc.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
 #include "core/store/sector.h"
 #include "core/units/units.h"
 #include "core/util/clamp.h"
 #include "core/util/little_endian.h"
+#include "protocols/common/crc.h"
 
 namespace skyblip::flight {
 
@@ -33,12 +33,12 @@ void put_offset(uint8_t* out, uint32_t utc_s, uint32_t base_utc_s) {
 }
 
 void seal(uint8_t* out) {
-    put_uint16(out + kChecksummedBytes, fec::crc16_ccitt(out, kChecksummedBytes));
+    put_uint16(out + kChecksummedBytes, wire::crc16_ccitt(out, kChecksummedBytes));
 }
 
 Status checked(const uint8_t* raw) {
     if (log_slot_erased(raw, kLogRecordBytes)) return Status::Empty;
-    if (fec::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
+    if (wire::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
         return Status::Crc;
     return Status::Ok;
 }

@@ -10,6 +10,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/protocol/callsign.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/gnss_truth.h"
 #include "hardware/platform/host/meshtracker_x1.h"
@@ -49,7 +50,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::AdslPacket::kInformationTextBytes + 1]{0};
+    char callsign[protocol::kInformationTextBytes + 1]{0};
 };
 
 struct AdsbDatum {

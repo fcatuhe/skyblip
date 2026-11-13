@@ -8,14 +8,15 @@
 
 #include "core/events/rf.h"
 #include "core/events/stamp.h"
-#include "core/fec/reed_solomon.h"
 #include "core/model/aircraft.h"
 #include "core/model/band.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "core/protocol/alptas.h"
+#include "core/protocol/callsign.h"
 #include "core/traffic/callsigns.h"
+#include "protocols/adsl/reed_solomon.h"
 
 using namespace skyblip;
 
@@ -34,11 +35,11 @@ struct Receiver {
 enum class Sealing : uint8_t { Raw, Sealed, Encoded };
 
 void seal_adsl(uint8_t* frame) {
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     packet.reset();
-    std::memcpy(packet.data, frame, protocol::kAdslFrameBytes);
+    std::memcpy(packet.data, frame, adsl::kFrameBytes);
     packet.set_crc();
-    std::memcpy(frame, packet.data, protocol::kAdslFrameBytes);
+    std::memcpy(frame, packet.data, adsl::kFrameBytes);
 }
 
 // ALP-TAS is encrypted under its second, so only an encoder gets a mutation past the key.
@@ -59,47 +60,46 @@ void encode_alptas(FuzzedDataProvider& in, const Receiver& receiver, uint8_t* fr
     observation.climb_valid = in.ConsumeBool();
     observation.speed_valid = in.ConsumeBool();
     observation.position_valid = true;
-    const int32_t keyed_off_s = in.ConsumeIntegralInRange<int32_t>(-protocol::kAlptasKeyWindowS,
-                                                                   protocol::kAlptasKeyWindowS);
+    const int32_t keyed_off_s =
+        in.ConsumeIntegralInRange<int32_t>(-alptas::kAlptasKeyWindowS, alptas::kAlptasKeyWindowS);
     (void)protocol::alptas_encode(frame, observation,
-                                  receiver.utc_s + static_cast<uint32_t>(keyed_off_s),
-                                  receiver.latitude_1e7, receiver.longitude_1e7);
+                                  receiver.utc_s + static_cast<uint32_t>(keyed_off_s));
 }
 
 // One M-band transmitter, then the chips past the shared sync window the radio consumed.
 size_t transmit_m_band(FuzzedDataProvider& in, Sealing sealing, const Receiver& receiver,
                        uint8_t* chips) {
     const bool adsl = in.ConsumeBool();
-    const uint32_t sync_word = adsl ? protocol::kAdslSyncWord : protocol::kAlptasSyncWord;
-    const uint8_t frame_bytes = adsl ? protocol::kAdslFrameBytes : protocol::kAlptasFrameBytes;
-    uint8_t frame[protocol::kAlptasFrameBytes]{};
+    const uint32_t sync_word = adsl ? adsl::kSyncWord : alptas::kSyncWord;
+    const uint8_t frame_bytes = adsl ? adsl::kFrameBytes : alptas::kFrameBytes;
+    uint8_t frame[alptas::kFrameBytes]{};
     if (sealing == Sealing::Encoded && !adsl)
         encode_alptas(in, receiver, frame);
     else
         in.ConsumeData(frame, frame_bytes);
     if (sealing != Sealing::Raw && adsl) seal_adsl(frame);
-    if (sealing == Sealing::Sealed && !adsl) protocol::alptas_set_crc(frame);
+    if (sealing == Sealing::Sealed && !adsl) alptas::set_crc(frame);
     protocol::m_band_payload(sync_word, frame, frame_bytes, chips);
     return protocol::kRxChipBytes;
 }
 
 size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, uint8_t* codeword) {
-    static const fec::ReedSolomon255 parity;
-    in.ConsumeData(codeword, fec::ReedSolomon255::kDataBytes);
+    static const adsl::ReedSolomon255 parity;
+    in.ConsumeData(codeword, adsl::ReedSolomon255::kDataBytes);
     if (sealing != Sealing::Raw)
-        parity.encode(codeword, codeword + fec::ReedSolomon255::kDataBytes);
-    return protocol::kUplinkFrameBytes;
+        parity.encode(codeword, codeword + adsl::ReedSolomon255::kDataBytes);
+    return adsl::kUplinkFrameBytes;
 }
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     packet.reset();
-    std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
     if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
         return;
     packet.descramble();
 
-    if (packet.is_registration()) {
+    if (protocol::is_registration(packet)) {
         char callsign[traffic::CallsignTable::kTextBytes];
         protocol::callsign_of(packet, callsign, sizeof(callsign));
         return;
@@ -111,14 +111,14 @@ void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
 }
 
 void hear_alptas(protocol::Frame& frame, const Receiver& receiver) {
-    if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return;
-    protocol::alptas_address(frame.data);
+    if (alptas::correct(frame.data, frame.erasures) < 0) return;
+    alptas::address(frame.data);
     model::AircraftObservation observation{};
     if (protocol::alptas_decode(frame.data, receiver.utc_s, receiver.latitude_1e7,
                                 receiver.longitude_1e7, observation) == Status::Ok)
         return;
     uint32_t keyed = 0;
-    (void)protocol::alptas_keyed_second(frame.data, receiver.utc_s, keyed);
+    (void)alptas::keyed_second(frame.data, receiver.utc_s, keyed);
 }
 
 void hear_uplink(const uint8_t* codeword) {

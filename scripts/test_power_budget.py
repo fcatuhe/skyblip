@@ -25,7 +25,7 @@ import power_budget  # noqa: E402
 FIRMWARE = pathlib.Path(__file__).resolve().parents[1] / "firmware"
 PAYLOAD_H = FIRMWARE / "core" / "diagnostics" / "payload.h"
 CAPABILITIES_H = FIRMWARE / "ports" / "capabilities.h"
-TRANSMIT_H = FIRMWARE / "core" / "timing" / "transmit.h"
+TRANSMIT_H = FIRMWARE / "protocols" / "adsl" / "transmit.h"
 
 BOOT = 1
 POWER = 8

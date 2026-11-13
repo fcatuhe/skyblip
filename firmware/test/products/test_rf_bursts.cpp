@@ -33,14 +33,14 @@ struct Executor {
     platform::host::Clock clock{};
     bus::Queue<events::RfEvent, 8> events{};
     platform::host::Rf rf{radio, clock, events};
-    uint8_t position[protocol::AdslPacket::kTxBytes] = {kPositionMarker};
-    uint8_t name[protocol::AdslPacket::kTxBytes] = {kNameMarker};
+    uint8_t position[adsl::Packet::kTxBytes] = {kPositionMarker};
+    uint8_t name[adsl::Packet::kTxBytes] = {kNameMarker};
     bool completes{true};
 
     static ports::RfPlan slot1() {
         ports::RfPlan plan{};
         plan.mode = ports::RfMode::RxMBand;
-        plan.frequency_hz = timing::kMBand1Hz;
+        plan.frequency_hz = adsl::kMBand1Hz;
         plan.start_us = 800000;
         plan.end_us = 1200000;
         return plan;
@@ -49,7 +49,7 @@ struct Executor {
     ports::RfPlan carrying(const uint8_t* frame, uint64_t at_us) const {
         ports::RfPlan plan = slot1();
         plan.tx = frame;
-        plan.tx_bytes = protocol::AdslPacket::kTxBytes;
+        plan.tx_bytes = adsl::Packet::kTxBytes;
         plan.tx_at_us = at_us;
         return plan;
     }
@@ -62,7 +62,7 @@ struct Executor {
             uint8_t sent[protocol::kTxPayloadChipBytes];
             uint8_t bytes = 0;
             if (!completes || !chip.take_tx(sent, bytes)) continue;
-            keyed.push_back({sent[bytes - protocol::AdslPacket::kTxBytes], now_ms});
+            keyed.push_back({sent[bytes - adsl::Packet::kTxBytes], now_ms});
             chip.signal_tx_done();
         }
         return keyed;
@@ -105,7 +105,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
     ports::RfPlan slot0 = Executor::slot1();
-    slot0.frequency_hz = timing::kMBand0Hz;
+    slot0.frequency_hz = adsl::kMBand0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 797000;
     executor.clock.set_milliseconds(400);
@@ -190,10 +190,8 @@ TEST_CASE("rf: on the ground the name follows its own position by five seconds, 
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
         const uint8_t payload_type = payload_type_of(record);
-        if (payload_type == protocol::AdslPacket::kPayloadTypePosition)
-            position_at_us = record.at_us;
-        if (payload_type == protocol::AdslPacket::kPayloadTypeOgnDiagnostics &&
-            position_at_us != 0) {
+        if (payload_type == adsl::Packet::kPayloadTypePosition) position_at_us = record.at_us;
+        if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
             names++;
             CAPTURE(record.at_us);
             // Five seconds on, from 450 ms into the ground second to 1200 ms into the name's.

@@ -1,7 +1,7 @@
 #include "core/store/sector.h"
 
-#include "core/fec/crc.h"
 #include "core/util/little_endian.h"
+#include "protocols/common/crc.h"
 
 namespace skyblip::store {
 
@@ -25,13 +25,13 @@ void encode_sector_header(const SectorHeader& header, uint8_t* out) {
     // INFO: fc 20sep26 written down, not assumed: a later codec's sectors stay walkable
     out[12] = header.record_bytes;
     out[13] = header.session_start ? kSectorFlagSessionStart : 0;
-    put_uint16(out + kChecksummedBytes, fec::crc16_ccitt(out, kChecksummedBytes));
+    put_uint16(out + kChecksummedBytes, wire::crc16_ccitt(out, kChecksummedBytes));
 }
 
 Status decode_sector_header(const uint8_t* raw, SectorHeader& out) {
     if (erased(raw, kSectorHeaderBytes)) return Status::Empty;
     if (get_uint16(raw + 0) != kSectorMagic) return Status::Invalid;
-    if (fec::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
+    if (wire::crc16_ccitt(raw, kChecksummedBytes) != get_uint16(raw + kChecksummedBytes))
         return Status::Crc;
 
     out = SectorHeader{};

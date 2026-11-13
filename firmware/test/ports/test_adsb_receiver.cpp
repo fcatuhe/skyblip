@@ -1,9 +1,9 @@
 // What the 1090 MHz receiver counts for the bench, and how deep its queue is and why.
 #include "core/bus/bus.h"
 #include "core/events/adsb.h"
-#include "core/protocol/adsb_assembly.h"
 #include "doctest/doctest.h"
 #include "ports/adsb_receiver.h"
+#include "protocols/adsb/assembly.h"
 
 using namespace skyblip;
 using ports::AdsbReceiverStatistics;
@@ -51,7 +51,7 @@ TEST_CASE("adsb receiver: the frame rate is the last whole second, and a silent 
 
 // 100 aircraft at DO-260B's average of 6.2 squitters a second, over 100 ms, is 62 frames.
 TEST_CASE("adsb receiver: the queue holds the average load over the drain window") {
-    CHECK(events::kAdsbDesignAircraft == protocol::AdsbAssembly::kMaxAircraft);
+    CHECK(events::kAdsbDesignAircraft == adsb::Assembly::kMaxAircraft);
     CHECK(events::kAdsbQueueFrames == 62);
     bus::AdsbQueue queue;
     events::AdsbFrame frame{};

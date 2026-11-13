@@ -46,5 +46,5 @@ The input is in `build/fuzz/crashes/` (or `build/fuzz-ilp32/crashes/`), and CI u
 
 ## What these cannot see
 
-- `alptas_decode` reads no field the encoder cannot write, except a course of 360 to 511 and the two constants behind the decrypt check. Each is one comparison and a refusal, reached only through a raw frame. Turn rate and GNSS accuracy are on the wire and not decoded at all.
+- `alptas::decode` reads no field the encoder cannot write, except a course of 360 to 511 and the two constants behind the decrypt check. Each is one comparison and a refusal, reached only through a raw frame. Turn rate and GNSS accuracy are on the wire and not decoded at all.
 - `fuzz_link` runs about 300 inputs a second. The same input takes 0.4 ms uninstrumented and about 4 ms under ASan, UBSan and coverage. Under callgrind a third of it is `Product::setup()`, most of that drawing the self-test page into a framebuffer no panel shows, and the rest is the product stepping. A 32-sector partition would buy 1.5 times and a device that does not exist; leaving `ui/`, the pages, the simulator and `hardware/` without coverage would buy 1.1 times. It gets the most seconds instead.

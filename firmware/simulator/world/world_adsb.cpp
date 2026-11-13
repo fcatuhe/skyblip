@@ -15,7 +15,7 @@ constexpr uint64_t kStillPositionPeriodUs = 5000000;
 constexpr uint64_t kStillIdentificationPeriodUs = 10000000;
 // INFO: fc 13nov26 the world models no 1090 MHz path loss, so every squitter lands at -70 dBm
 constexpr int8_t kSquitterLevelDbm = -70;
-// INFO: fc 13nov26 the capability core/protocol/adsb_assembly.cpp reads: 4 on ground, 5 airborne
+// INFO: fc 13nov26 the capability protocols/adsb/assembly.cpp reads: 4 on ground, 5 airborne
 constexpr uint8_t kGroundCapability = 4;
 constexpr uint8_t kAirborneCapability = 5;
 constexpr double kFeetPerMetre = 1 / 0.3048;

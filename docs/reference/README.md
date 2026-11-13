@@ -1,6 +1,6 @@
 # Reference specifications
 
-Normative sources the firmware is written against, kept locally so a clause citation in `docs/BEHAVIOR.md` or a comment in `firmware/core/protocol/` can be checked without a network round trip.
+Normative sources the firmware is written against, kept locally so a clause citation in `docs/BEHAVIOR.md` or a comment in `firmware/protocols/` can be checked without a network round trip.
 
 Both issues are published by EASA as attachments to [ED Decision 2022/024/R](https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r). The firmware targets Issue 2; Issue 1 is here because deployed hardware and most third-party implementations predate Issue 2, and the two differ in the payload set and in Subpart C.
 
@@ -22,7 +22,7 @@ The one the firmware implements. 52 pages, dated 1 December 2025. Adds the Statu
 
 ## The conformance suite
 
-Issue 2 is read clause by clause by [`firmware/test/adsl/`](../../firmware/test/adsl), one file per subpart, every case named after the clause it checks: `ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked examples`. Every heading of the document has a case, including the clauses this firmware does not satisfy, which are written as the clause requires and skipped over a `TODO:` naming the gap.
+Issue 2 is read clause by clause by [`firmware/protocols/adsl/test/conformance/`](../../firmware/protocols/adsl/test/conformance), the cases the ADS-L component satisfies alone, and [`firmware/test/adsl/`](../../firmware/test/adsl), the cases that need the device around it, one file per subpart, every case named after the clause it checks: `ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked examples`. Every heading of the document has a case, including the clauses this firmware does not satisfy, which are written as the clause requires and skipped over a `TODO:` naming the gap.
 
 `scripts/check_adsl_clauses.py` is what keeps the two lists equal: it reads the clause headings out of the markdown beside this file and the case subjects out of the suite, and fails on either a clause nobody read or a case naming a clause that does not exist. The suite's own README says how a gap is written.
 

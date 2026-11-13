@@ -35,7 +35,8 @@ bool DurableWriteWindow::free_at(const SlotPlan& plan, int phase_ms, uint32_t co
     // §C.5's direct slot is narrower than the M-band dwells at both ends, so a
     // write placed in slot 0's head would still be holding the core at 450 ms,
     // which is an instant core/timing::Transmitter is allowed to have chosen.
-    if (at_ms < kDirectStartMs && done_ms + kJitterGuardMs > kDirectStartMs) return false;
+    if (at_ms < adsl::kDirectStartMs && done_ms + kJitterGuardMs > adsl::kDirectStartMs)
+        return false;
     const int next_edge_ms = at_ms < kSecondMs ? kSecondMs : 2 * kSecondMs;
     return done_ms + kJitterGuardMs <= next_edge_ms;
 }

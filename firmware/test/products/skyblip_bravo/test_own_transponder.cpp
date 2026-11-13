@@ -19,15 +19,15 @@ constexpr uint8_t kSetB = 3;
 constexpr uint8_t kSetA = 4;
 constexpr uint8_t kFirstEmitter = 1;
 
-protocol::AdsbMessage heard(AdsbFrame frame, int8_t rssi_dbm) {
-    protocol::AdsbMessage message{};
+adsb::Message heard(AdsbFrame frame, int8_t rssi_dbm) {
+    adsb::Message message{};
     REQUIRE(adsb_hear(frame, message) == Status::Ok);
     message.reception.rssi_dbm = rssi_dbm;
     message.reception.rssi_valid = true;
     return message;
 }
 
-protocol::AdsbMessage position_of(uint32_t address, int8_t rssi_dbm) {
+adsb::Message position_of(uint32_t address, int8_t rssi_dbm) {
     return heard(adsb_airborne_position(address, 0, 48.5, 8.5, false, 1500), rssi_dbm);
 }
 
@@ -116,7 +116,7 @@ TEST_CASE("own transponder: a single frame of a neighbour does not break the lea
 TEST_CASE("own transponder: a frame with no level of its own is no evidence of loudness") {
     Cockpit cockpit;
     for (int i = 0; i < 100; i++) {
-        protocol::AdsbMessage message = position_of(kOwn, kCockpitDbm);
+        adsb::Message message = position_of(kOwn, kCockpitDbm);
         message.reception.rssi_valid = false;
         cockpit.own.hear(message, cockpit.now_ms);
         cockpit.own.tick(cockpit.now_ms);

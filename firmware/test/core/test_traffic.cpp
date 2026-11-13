@@ -80,7 +80,7 @@ TEST_CASE("traffic: the direct hold is the alarm layer's patience with a target"
 
 // At 0.1 Hz a relay taking over five seconds in replaces every ground report with a poorer copy.
 TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one is due") {
-    CHECK(direct_preferred_max_age_s(parked(0x111, 6, 100)) == flight::kGroundReportPeriodS);
+    CHECK(direct_preferred_max_age_s(parked(0x111, 6, 100)) == adsl::kGroundReportPeriodS);
 
     TrafficTable table;
     table.update(parked(0x111, 6, 100), 100);

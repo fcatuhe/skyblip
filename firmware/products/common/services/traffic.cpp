@@ -4,8 +4,11 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/protocol/alptas.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "protocols/alptas/frame.h"
 
 namespace skyblip::common {
 
@@ -77,7 +80,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = event.band;
-    entry.channel = event.frequency_hz == timing::kMBand1Hz ? 1 : 0;
+    entry.channel = event.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
@@ -218,13 +221,13 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     packet.reset();
-    __builtin_memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    __builtin_memcpy(packet.data, frame.data, adsl::kFrameBytes);
     if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
         return radio::Verdict::BadCrc;
     packet.descramble();
-    if (packet.is_registration()) return learn_callsign(packet, utc_s, observation);
+    if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
     if (!packet.is_position()) return radio::Verdict::Unsupported;
     events::Stamp received = stamp;
     received.at_s = utc_s;
@@ -233,7 +236,7 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
     return radio::Verdict::Received;
 }
 
-radio::Verdict TrafficService::learn_callsign(const protocol::AdslPacket& packet, uint32_t utc_s,
+radio::Verdict TrafficService::learn_callsign(const adsl::Packet& packet, uint32_t utc_s,
                                               model::AircraftObservation& observation) {
     char callsign[traffic::CallsignTable::kTextBytes];
     if (protocol::callsign_of(packet, callsign, sizeof(callsign)) == 0)
@@ -252,8 +255,8 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
                                              int8_t& key_offset_s) const {
     const model::Ownship& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Verdict::Unattempted;
-    if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
-    observation.address = protocol::alptas_address(frame.data);
+    if (alptas::correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
+    observation.address = alptas::address(frame.data);
     observation.source = model::Source::Alptas;
     const int32_t latitude = own.latitude_1e7;
     const int32_t longitude = own.longitude_1e7;
@@ -265,7 +268,7 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
     if (verdict != radio::Verdict::Undecoded) return verdict;
 
     uint32_t keyed = 0;
-    if (protocol::alptas_keyed_second(frame.data, utc_s, keyed) != Status::Ok) return verdict;
+    if (alptas::keyed_second(frame.data, utc_s, keyed) != wire::Status::Ok) return verdict;
     const int32_t offset = static_cast<int32_t>(keyed - utc_s);
     if (offset == 0) return verdict;
     key_offset_s = static_cast<int8_t>(offset);

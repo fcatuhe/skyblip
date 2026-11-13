@@ -57,8 +57,8 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
         // Always inside the direct slot, even though the dwell that carries the
         // burst runs 200 ms past it.
         CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
-        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
-        if (payload_type_of(record) != protocol::AdslPacket::kPayloadTypePosition) continue;
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= adsl::kDirectEndMs);
+        if (payload_type_of(record) != adsl::Packet::kPayloadTypePosition) continue;
         if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
         last_frequency = record.frequency_hz;
     }
@@ -74,7 +74,7 @@ TEST_CASE("rf: own-ship transmits once a second, inside its window, alternating 
     CHECK(simulator.product().radio().transmitter().air_time().total_ms() - before.air_time_ms ==
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
     CHECK(simulator.product().radio().duty_permille(from_ms + 6000) <
-          timing::AirTime::kLimitPermille);
+          adsl::AirTime::kLimitPermille);
     CHECK_FALSE(simulator.product().radio().over_budget());
 }
 
@@ -116,14 +116,14 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
             timing::Scheduler::in_direct_slot(record.phase_ms))
             continue;
         named++;
-        CHECK(payload_type_of(record) == protocol::AdslPacket::kPayloadTypeOgnDiagnostics);
+        CHECK(payload_type_of(record) == adsl::Packet::kPayloadTypeOgnDiagnostics);
         CHECK(record.phase_ms < timing::kSlot1WrapMs);
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
-        CHECK(simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz));
+        CHECK(simulator::Air::tuned_to(record.frequency_hz, adsl::kMBand1Hz));
     }
     // Forty-one seconds of flight: forty-one positions, two Status bursts and four names.
-    CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypePosition) >= 39);
-    CHECK(count_payloads(air, protocol::AdslPacket::kPayloadTypeStatus) == 2);
+    CHECK(count_payloads(air, adsl::Packet::kPayloadTypePosition) >= 39);
+    CHECK(count_payloads(air, adsl::Packet::kPayloadTypeStatus) == 2);
     CHECK(named == 4);
 
     // And the tape says which burst was which, where a position prints its rate.
@@ -164,7 +164,7 @@ TEST_CASE("rf: what own-ship put on air decodes back to own-ship state") {
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
         if (record.event != simulator::AirEvent::Tx) continue;
-        protocol::AdslPacket packet{};
+        adsl::Packet packet{};
         REQUIRE(packet_of(record, packet));
         if (!packet.is_position()) continue;
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
@@ -246,7 +246,7 @@ TEST_CASE("rf: on the ground the transmit rate drops to 0.1 Hz") {
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(0);
     run_on(simulator, past_settling(simulator), 8000);
-    CHECK(count_payloads(simulator.world().air(), protocol::AdslPacket::kPayloadTypePosition) == 1);
+    CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypePosition) == 1);
 }
 
 // F5. A cold receiver's first solutions walk, and the flight state we derive
@@ -332,9 +332,9 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         if (record.event != simulator::AirEvent::Tx) continue;
         protocol::Frame frame{};
         REQUIRE(simulator::Air::framed(record, frame));
-        protocol::AdslPacket packet{};
+        adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+        std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
         REQUIRE(packet.check_crc() == 0);
         packet.descramble();
         REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
@@ -418,7 +418,7 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
         // Still inside the direct slot, still alternating channel: the phase comes
         // off the PPS edge in microseconds(), which is 64-bit and does not wrap.
         CHECK(timing::Scheduler::in_direct_slot(record.phase_ms));
-        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kDirectEndMs);
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= adsl::kDirectEndMs);
         if (last_frequency != 0) CHECK(record.frequency_hz != last_frequency);
         last_frequency = record.frequency_hz;
     }
@@ -430,10 +430,10 @@ TEST_CASE("rf: own-ship keeps transmitting across the 49.7-day wrap") {
 
     // And the hour that straddles the wrap is still an hour: the design rate is
     // half the band's allowance and the window did not forget what it holds.
-    const timing::AirTime& air_time = simulator.product().radio().transmitter().air_time();
+    const adsl::AirTime& air_time = simulator.product().radio().transmitter().air_time();
     CHECK(air_time.window_ms(now_ms) >=
           static_cast<uint32_t>(transmissions) * timing::Transmitter::kAirTimeMs);
-    CHECK(simulator.product().radio().duty_permille(now_ms) < timing::AirTime::kLimitPermille);
+    CHECK(simulator.product().radio().duty_permille(now_ms) < adsl::AirTime::kLimitPermille);
     CHECK_FALSE(simulator.product().radio().over_budget());
 }
 

@@ -44,11 +44,11 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
 
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     for (uint8_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(i + 1);
     uint8_t buffer[protocol::kTxPayloadChipBytes] = {0};
     const size_t buffer_bytes =
-        protocol::m_band_payload(protocol::kAdslSyncWord, payload, sizeof(payload), buffer);
+        protocol::m_band_payload(adsl::kSyncWord, payload, sizeof(payload), buffer);
     REQUIRE(radio.transmit(buffer, static_cast<uint8_t>(buffer_bytes)) == Status::Ok);
 
     uint8_t on_air[protocol::kTxChipBytes] = {0};
@@ -56,7 +56,7 @@ TEST_CASE("sx1262: what goes on air is the sync window the part inserts, then th
     REQUIRE(chip.take_tx(on_air, bytes));
     uint8_t expected[protocol::kTxChipBytes] = {0};
     const size_t expected_bytes =
-        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), expected);
+        wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), expected);
     CHECK(bytes == expected_bytes);
     CHECK(std::memcmp(on_air, expected, expected_bytes) == 0);
 }
@@ -138,7 +138,7 @@ TEST_CASE("sx1262: a burst's air time is its preamble, sync window and payload a
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
 
-    const uint8_t adsl_burst = protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes;
+    const uint8_t adsl_burst = protocol::kSyncTailChipBytes + 2 * adsl::kFrameBytes;
     // 16 preamble + 16 sync + 54 x 8 payload chips at 100 kchip/s: transmit.h's 4.64 ms.
     CHECK(radio.air_us(adsl_burst) == 4640);
     config.bitrate = 50000;
@@ -185,12 +185,12 @@ TEST_CASE("sx1262: a burst is framed from the chips after the sync window, eithe
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
-    for (uint32_t sync_word : {protocol::kAdslSyncWord, protocol::kAlptasSyncWord}) {
-        uint8_t payload[protocol::kAlptasFrameBytes];
+    for (uint32_t sync_word : {adsl::kSyncWord, alptas::kSyncWord}) {
+        uint8_t payload[alptas::kFrameBytes];
         for (uint8_t i = 0; i < sizeof(payload); i++) payload[i] = static_cast<uint8_t>(i + 1);
         uint8_t chips[protocol::kTxChipBytes] = {0};
         const size_t chip_bytes =
-            protocol::encode_m_band(sync_word, payload, sizeof(payload), chips);
+            wire::manchester_frame(sync_word, payload, sizeof(payload), chips);
         REQUIRE(chip.receive_air(chips, static_cast<uint8_t>(chip_bytes)));
 
         uint8_t buffer[64];
@@ -198,7 +198,7 @@ TEST_CASE("sx1262: a burst is framed from the chips after the sync window, eithe
         REQUIRE(event.type == RadioEventType::RxDone);
         protocol::Frame frame{};
         REQUIRE(protocol::receive_m_band(buffer, event.bytes, frame));
-        const bool adsl = sync_word == protocol::kAdslSyncWord;
+        const bool adsl = sync_word == adsl::kSyncWord;
         if (adsl) CHECK(frame.system == protocol::System::AdslDirect);
         if (!adsl) CHECK(frame.system == protocol::System::Alptas);
         CHECK(frame.data[0] == 1);
@@ -211,16 +211,16 @@ TEST_CASE("sx1262: a burst carrying a sync word the dwell is not armed for is no
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
     RadioConfig config{};
-    config.sync = protocol::kUplinkSync;
-    config.sync_bits = protocol::kUplinkSyncBits;
+    config.sync = adsl::kUplinkSync;
+    config.sync_bits = adsl::kUplinkSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
-    uint8_t payload[protocol::kAdslFrameBytes] = {0};
+    uint8_t payload[adsl::kFrameBytes] = {0};
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes =
-        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
+        wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), chips);
     CHECK_FALSE(chip.receive_air(chips, static_cast<uint8_t>(chip_bytes)));
     uint8_t buffer[64];
     CHECK(radio.poll(buffer, sizeof(buffer)).type == RadioEventType::None);
@@ -239,7 +239,7 @@ TEST_CASE("sx1262: a burst goes on air at its own length, and the receiver reads
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
-    const uint8_t burst[protocol::kSyncTailChipBytes + 2 * protocol::kAdslFrameBytes] = {0x55};
+    const uint8_t burst[protocol::kSyncTailChipBytes + 2 * adsl::kFrameBytes] = {0x55};
     REQUIRE(radio.transmit(burst, sizeof(burst)) == Status::Ok);
     uint8_t on_air[64] = {0};
     uint8_t bytes = 0;

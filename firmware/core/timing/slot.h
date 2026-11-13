@@ -7,13 +7,10 @@
 #include <optional>
 
 #include "core/model/band.h"
+#include "protocols/adsl/physical.h"
+#include "protocols/adsl/transmit.h"
 
 namespace skyblip::timing {
-
-// §C.2: two 200 kHz M-band channels. §C.4: one O-band HDR channel.
-constexpr uint32_t kMBand0Hz = 868200000;
-constexpr uint32_t kMBand1Hz = 868400000;
-constexpr uint32_t kOBandHz = 869525000;
 
 // §C.5 gives the second to the bands: 200..450 ms is the uplink slot the ground
 // infrastructure transmits in, 450..1000 the direct slot. One radio cannot hold
@@ -23,7 +20,7 @@ constexpr uint32_t kOBandHz = 869525000;
 //
 // INFO: fc 05aug26 kGroundEmitEndMs is a completion deadline, not a start
 // deadline. A full uplink frame is 10.44 ms of air at §C.4's 200 kbps
-// (protocol::kUplinkBurstUs), so a burst begun at 390 would still be on air at
+// (adsl::kUplinkBurstUs), so a burst begun at 390 would still be on air at
 // 400, where the radio has already retuned. What this costs us is stated rather
 // than discovered: §C.5 lets a ground station that is not ours begin one as late
 // as 439.56 ms, and a third-party uplink in the back half of its own slot is one
@@ -46,12 +43,8 @@ constexpr int kSlot1StartMs = 800;
 constexpr int kSlot1EndMs = 1200;
 // How far slot 1 reaches past the second it started in.
 constexpr int kSlot1WrapMs = kSlot1EndMs - 1000;
-// The ADS-L direct slot, which our own bursts respect on top of the dwell map:
-// we listen on M-band from 400 ms, we start transmitting at 450.
-constexpr int kDirectStartMs = 450;
-constexpr int kDirectEndMs = 1000;
 // INFO: fc 20sep26 §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on
-constexpr int kCallsignStartMs = kDirectEndMs;
+constexpr int kCallsignStartMs = adsl::kDirectEndMs;
 constexpr int kCallsignEndMs = kSlot1EndMs;
 // Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at
 // 205. The uplink dwell ends at 395, M-band opens at 400. The O->M edge is the
@@ -110,7 +103,7 @@ std::optional<uint64_t> utc_ms(const ClockState& clock);
 struct SlotPlan {
     SlotState state{SlotState::UplinkRxOBand};
     Band band{Band::O};
-    uint32_t frequency_hz{kOBandHz};
+    uint32_t frequency_hz{adsl::kOBandHz};
     // The dwell this state belongs to, as a phase in the second. Guards are
     // already subtracted: a dwell that runs to its end_ms leaves the radio time
     // to retune before the next one starts.
@@ -135,14 +128,14 @@ class Scheduler {
     // M-band dwells listen to: they open 50 ms before the direct slot does and
     // close 200 ms after it.
     static bool in_direct_slot(int phase_ms) {
-        return phase_ms >= kDirectStartMs && phase_ms < kDirectEndMs;
+        return phase_ms >= adsl::kDirectStartMs && phase_ms < adsl::kDirectEndMs;
     }
     // INFO: fc 13sep26 not in_direct_slot: the dwell opens at 400 and carries the burst it places
     static bool in_own_tx_dwell(int phase_ms);
     // Which M-band dwell, and so which channel, a phase belongs to. -1 outside
     // the M-band half of the second.
     static int slot_of(int phase_ms);
-    static uint32_t slot_frequency_hz(int slot) { return slot == 1 ? kMBand1Hz : kMBand0Hz; }
+    static uint32_t slot_frequency_hz(int slot) { return adsl::channel_hz(slot); }
     static int slot_start(int slot) { return slot == 1 ? kSlot1StartMs : kSlot0StartMs; }
     static int slot_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs; }
     static int dwell_end(int slot) { return slot == 1 ? kSlot1EndMs : kSlot0EndMs - kHopGuardMs; }

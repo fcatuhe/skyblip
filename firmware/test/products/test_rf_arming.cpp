@@ -37,7 +37,7 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
 
     ports::RfPlan flying{};
     flying.mode = ports::RfMode::RxMBand;
-    flying.frequency_hz = timing::kMBand0Hz;
+    flying.frequency_hz = adsl::kMBand0Hz;
     flying.start_us = 400000;
     flying.end_us = 799000;
     REQUIRE(rf.arm(flying) == Status::Ok);
@@ -45,17 +45,17 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
         clock.set_milliseconds(now_ms);
         rf.service(now_ms);
     }
-    REQUIRE(tuned_khz(chip) == timing::kMBand0Hz / 1000);
+    REQUIRE(tuned_khz(chip) == adsl::kMBand0Hz / 1000);
 
     ports::RfPlan next = flying;
-    next.frequency_hz = timing::kMBand1Hz;
+    next.frequency_hz = adsl::kMBand1Hz;
     next.start_us = 800000;
     next.end_us = 1200000;
     REQUIRE(rf.arm(next) == Status::Ok);
 
-    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    const uint8_t frame[adsl::Packet::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan stranded = flying;
-    stranded.frequency_hz = timing::kMBand1Hz;
+    stranded.frequency_hz = adsl::kMBand1Hz;
     stranded.start_us = 455000;
     stranded.tx = frame;
     stranded.tx_bytes = sizeof(frame);
@@ -63,7 +63,7 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
     CHECK(rf.arm(stranded) == Status::WouldBlock);
 
     ports::RfPlan listening = flying;
-    listening.frequency_hz = timing::kMBand1Hz;
+    listening.frequency_hz = adsl::kMBand1Hz;
     listening.start_us = 455000;
     listening.end_us = 600000;
     CHECK(rf.arm(listening) == Status::WouldBlock);
@@ -73,14 +73,14 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
         rf.service(now_ms);
     }
     // The dwell in flight kept the channel it was armed for, and the burst never went on air.
-    CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
+    CHECK(tuned_khz(chip) == adsl::kMBand0Hz / 1000);
     CHECK_FALSE(chip.tx_pending);
 
     for (uint32_t now_ms = 800; now_ms <= 850; now_ms += 10) {
         clock.set_milliseconds(now_ms);
         rf.service(now_ms);
     }
-    CHECK(tuned_khz(chip) == timing::kMBand1Hz / 1000);
+    CHECK(tuned_khz(chip) == adsl::kMBand1Hz / 1000);
     int missed = 0;
     events::RfEvent event{};
     while (events.pop(event))
@@ -100,23 +100,23 @@ TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahea
 
     ports::RfPlan uplink{};
     uplink.mode = ports::RfMode::RxOBand;
-    uplink.frequency_hz = timing::kOBandHz;
+    uplink.frequency_hz = adsl::kOBandHz;
     uplink.start_us = 205000;
     uplink.end_us = 395000;
     ports::RfPlan slot0 = uplink;
     slot0.mode = ports::RfMode::RxMBand;
-    slot0.frequency_hz = timing::kMBand0Hz;
+    slot0.frequency_hz = adsl::kMBand0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 799000;
     clock.set_milliseconds(200);
     REQUIRE(rf.arm(uplink) == Status::Ok);
     REQUIRE(rf.arm(slot0) == Status::Ok);
     rf.service(200);
-    REQUIRE(tuned_khz(chip) == timing::kOBandHz / 1000);
+    REQUIRE(tuned_khz(chip) == adsl::kOBandHz / 1000);
 
     clock.set_milliseconds(395);
     rf.service(395);
-    CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
+    CHECK(tuned_khz(chip) == adsl::kMBand0Hz / 1000);
     CHECK(chip.receiving);
     CHECK(rf.switching().late_starts == 0);
     const ports::RfSwitch& change = rf.switching().last;
@@ -138,7 +138,7 @@ TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late")
 
     ports::RfPlan slot1{};
     slot1.mode = ports::RfMode::RxMBand;
-    slot1.frequency_hz = timing::kMBand1Hz;
+    slot1.frequency_hz = adsl::kMBand1Hz;
     slot1.start_us = 800000;
     slot1.end_us = 1200000;
     clock.set_milliseconds(500);
@@ -146,7 +146,7 @@ TEST_CASE("rf: a dwell armed ahead and reached after its start is counted late")
     clock.set_milliseconds(810);
     rf.service(810);
 
-    CHECK(tuned_khz(chip) == timing::kMBand1Hz / 1000);
+    CHECK(tuned_khz(chip) == adsl::kMBand1Hz / 1000);
     CHECK(rf.switching().late_starts == 1);
     CHECK(rf.switching().last.late_start());
     CHECK(rf.switching().last.margin_us() == -10000);
@@ -281,7 +281,7 @@ TEST_CASE("rf: the next dwell is armed ahead of its edge, at the edge the latche
         const ports::RfPlan& plan = armings.rf.plans[i];
         CHECK(armings.rf.armed_at_us[i] < plan.start_us);
         CHECK((plan.start_us - Armings::kEdgeUs) % 1000 == 0);
-        if (plan.frequency_hz != timing::kMBand1Hz) continue;
+        if (plan.frequency_hz != adsl::kMBand1Hz) continue;
         slot1_dwells++;
         CHECK((plan.start_us - Armings::kEdgeUs) % 1000000 == 800000);
         CHECK(plan.end_us - plan.start_us == 400000);
@@ -303,7 +303,7 @@ TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwel
 
     const ports::RfPlan* queued = nullptr;
     for (uint32_t i = 0; i < armings.rf.handed; i++)
-        if (armings.rf.plans[i].frequency_hz == timing::kMBand1Hz &&
+        if (armings.rf.plans[i].frequency_hz == adsl::kMBand1Hz &&
             armings.rf.plans[i].tx != nullptr)
             queued = &armings.rf.plans[i];
     REQUIRE(queued != nullptr);
@@ -329,7 +329,7 @@ TEST_CASE("rf: a pass that straddles a dwell edge keeps the dwell already queued
     CHECK(armings.rf.aborts == 0);
     REQUIRE(armings.rf.handed > handed);
     for (uint32_t i = handed; i < armings.rf.handed; i++)
-        CHECK(armings.rf.plans[i].frequency_hz != timing::kMBand1Hz);
+        CHECK(armings.rf.plans[i].frequency_hz != adsl::kMBand1Hz);
 }
 
 // Whether a burst may go out is decided on the fix, the rate and the slot, and
@@ -374,7 +374,7 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
 
     ports::RfPlan dwell{};
     dwell.mode = ports::RfMode::RxMBand;
-    dwell.frequency_hz = timing::kMBand0Hz;
+    dwell.frequency_hz = adsl::kMBand0Hz;
     dwell.start_us = 400000;
     dwell.end_us = 799000;
     REQUIRE(rf.arm(dwell) == Status::Ok);
@@ -383,7 +383,7 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
         rf.service(now_ms);
     }
 
-    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    const uint8_t frame[adsl::Packet::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan burst = dwell;
     burst.start_us = 455000;
     burst.tx = frame;
@@ -400,7 +400,7 @@ TEST_CASE("rf: a burst armed for the dwell in flight goes out in it") {
     }
 
     CHECK(on_air_bytes > 0);
-    CHECK(tuned_khz(chip) == timing::kMBand0Hz / 1000);
+    CHECK(tuned_khz(chip) == adsl::kMBand0Hz / 1000);
     int sent = 0, missed = 0;
     events::RfEvent event{};
     while (events.pop(event)) {

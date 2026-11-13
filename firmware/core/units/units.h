@@ -181,9 +181,6 @@ constexpr Degrees to_degrees(CentiDegrees angle) {
 }
 constexpr Degrees to_degrees(Cordic9 cordic) { return to_degrees(to_centi_degrees(cordic)); }
 
-constexpr int32_t kAngle16PerTurn = 65536;
-
-// INFO: fc 19sep26 the angle core/util/intmath's sine table is indexed by, 65536 to the turn
 constexpr int16_t to_angle16(CentiDegrees angle) {
     return static_cast<int16_t>(static_cast<uint16_t>(divide_rounded<int64_t>(
         static_cast<int64_t>(wrapped(angle).value) * kAngle16PerTurn, kCentiDegreesPerTurn)));

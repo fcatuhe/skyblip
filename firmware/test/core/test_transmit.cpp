@@ -11,6 +11,7 @@
 #include "ports/rf.h"
 #include "test/support/anchored_clock.h"
 
+using namespace skyblip;
 using namespace skyblip::timing;
 
 namespace {
@@ -54,19 +55,19 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
             transmitter.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0);
         REQUIRE(attempt.go);
         // Not from kSlot0StartMs: the dwell opens at 400, the direct slot at 450.
-        CHECK(attempt.at_ms >= kDirectStartMs);
+        CHECK(attempt.at_ms >= adsl::kDirectStartMs);
         // The burst also has to end before the dwell closes for the channel hop, not just
         // before the direct slot ends at 1000.
         CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
                   Transmitter::kCompletionGuardMs <=
               Scheduler::dwell_end(0));
-        CHECK(attempt.frequency_hz == kMBand0Hz);
+        CHECK(attempt.frequency_hz == adsl::kMBand0Hz);
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
         if (attempt.at_ms > latest) latest = attempt.at_ms;
     }
     // The whole slot is usable: an open dwell is a tuned dwell, so 450 itself is
     // a legal instant and no guard is owed at the front.
-    CHECK(earliest == kDirectStartMs);
+    CHECK(earliest == adsl::kDirectStartMs);
     CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionGuardMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
@@ -84,7 +85,7 @@ TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
         if (attempt.at_ms > latest) latest = attempt.at_ms;
     }
     CHECK(earliest == kSlot1StartMs);
-    CHECK(latest == kDirectEndMs - Transmitter::kCompletionGuardMs -
+    CHECK(latest == adsl::kDirectEndMs - Transmitter::kCompletionGuardMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
 
@@ -130,11 +131,11 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
         const Transmitter::Attempt attempt =
             transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(attempt.go);
-        CHECK(attempt.frequency_hz == kMBand1Hz);
+        CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
         CHECK(attempt.at_ms >= kSlot1StartMs);
         CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
                   Transmitter::kCompletionGuardMs <=
-              kDirectEndMs);
+              adsl::kDirectEndMs);
     }
     // And the tail is not a position opportunity, however anchored the clock is.
     CHECK_FALSE(position_burst(transmitter.attempt(slot_plan(100), 500, 500000, true, 0)));
@@ -142,19 +143,19 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
 
 TEST_CASE("transmit: consecutive transmissions alternate channel and slot") {
     Transmitter transmitter = airborne_transmitter();
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMBand0Hz);
+    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == adsl::kMBand0Hz);
     CHECK_FALSE(position_burst(transmitter.attempt(slot_plan(900), 10, 10000, true, 0)));
     transmitter.sent(10, 10500);
     CHECK_FALSE(transmitter.attempt(slot_plan(500), 11, 11000, true, 0).go);
-    CHECK(transmitter.attempt(slot_plan(900), 11, 11000, true, 0).frequency_hz == kMBand1Hz);
+    CHECK(transmitter.attempt(slot_plan(900), 11, 11000, true, 0).frequency_hz == adsl::kMBand1Hz);
 }
 
 // A burst refused for any reason used to shift the alternation for ever after.
 TEST_CASE("transmit: a missed transmission does not put the channel out of step") {
     Transmitter transmitter = airborne_transmitter();
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == kMBand0Hz);
-    CHECK(transmitter.attempt(slot_plan(500), 12, 12000, true, 0).frequency_hz == kMBand0Hz);
-    CHECK(transmitter.attempt(slot_plan(900), 13, 13000, true, 0).frequency_hz == kMBand1Hz);
+    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == adsl::kMBand0Hz);
+    CHECK(transmitter.attempt(slot_plan(500), 12, 12000, true, 0).frequency_hz == adsl::kMBand0Hz);
+    CHECK(transmitter.attempt(slot_plan(900), 13, 13000, true, 0).frequency_hz == adsl::kMBand1Hz);
 }
 
 // §G.1.16: at least 1 Hz airborne, 0.1 Hz on the ground, one second of UTC's own ten.
@@ -193,7 +194,7 @@ TEST_CASE("transmit: the callsign goes out five seconds after the ground second,
     const Transmitter::Attempt attempt = transmitter.attempt(tail, due, due * 1000, true, 0, kName);
     REQUIRE(attempt.go);
     CHECK(attempt.payload == kName);
-    CHECK(attempt.frequency_hz == kMBand1Hz);
+    CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
     CHECK(attempt.at_ms >= kCallsignStartMs);
     CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kCallsignEndMs);
 
@@ -274,7 +275,8 @@ TEST_CASE("transmit: the Status goes out in the ground second, once every twenty
                 CAPTURE(utc_s);
                 CHECK(utc_s % Transmitter::kStatusPeriodS == transmitter.status_second());
                 CHECK(Scheduler::in_direct_slot(attempt.at_ms));
-                CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <= kDirectEndMs);
+                CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) <=
+                      adsl::kDirectEndMs);
                 if (last_hz != 0) CHECK(attempt.frequency_hz != last_hz);
                 last_hz = attempt.frequency_hz;
                 transmitter.sent(utc_s, utc_s * 1000 + static_cast<uint32_t>(phase), kStatus);
@@ -292,7 +294,7 @@ TEST_CASE("transmit: the name never shares a second with the Status or the groun
         const Transmitter transmitter = airborne_transmitter(address);
         CHECK(transmitter.callsign_second() < Transmitter::kCallsignPeriodS);
         CHECK(transmitter.callsign_second() !=
-              transmitter.status_second() % skyblip::flight::kGroundReportPeriodS);
+              transmitter.status_second() % skyblip::adsl::kGroundReportPeriodS);
         CHECK(transmitter.callsign_second() != transmitter.ground_second());
     }
 }
@@ -363,10 +365,10 @@ TEST_CASE("transmit: the ground second is the address's, not the boot's") {
     CHECK(airborne_transmitter(0x5B7E57).ground_second() ==
           airborne_transmitter(0x5B7E57).ground_second());
 
-    int taken[skyblip::flight::kGroundReportPeriodS] = {0};
+    int taken[skyblip::adsl::kGroundReportPeriodS] = {0};
     for (uint32_t address = 0x5B0000; address < 0x5B1000; address++)
         taken[airborne_transmitter(address).ground_second()]++;
-    for (uint32_t second = 0; second < skyblip::flight::kGroundReportPeriodS; second++) {
+    for (uint32_t second = 0; second < skyblip::adsl::kGroundReportPeriodS; second++) {
         CAPTURE(second);
         CHECK(taken[second] > 0x1000 / 20);
     }
@@ -395,7 +397,7 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     const Transmitter::Attempt early =
         transmitter.attempt(scheduler.plan(420, anchored()), 10, 10000, true, 0);
     CHECK(early.go);
-    CHECK(early.at_ms >= kDirectStartMs);
+    CHECK(early.at_ms >= adsl::kDirectStartMs);
 }
 
 TEST_CASE("transmit: own-ship goes on air only with a settled fix on an anchored clock") {
@@ -435,7 +437,7 @@ TEST_CASE("transmit: own-ship with every fact but an address does not go on air"
 TEST_CASE("transmit: an exhausted hour blocks the burst and says so") {
     Transmitter transmitter = airborne_transmitter();
     for (uint32_t i = 0; i < 7200; i++) transmitter.sent(i, i * 500);
-    REQUIRE(transmitter.air_time().window_ms(3599500) == AirTime::kBudgetMs);
+    REQUIRE(transmitter.air_time().window_ms(3599500) == adsl::AirTime::kBudgetMs);
 
     const Transmitter::Attempt attempt =
         transmitter.attempt(slot_plan(500), 7200, 3599500, true, 0);

@@ -1,32 +1,8 @@
 # core/timing
 
-One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like and what we have already spent on it. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
+One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
 
-## The burst is placed, and nothing on air moves it
-
-`Transmitter::instant_in()` draws the instant from `hash(address ^ hash(utc_s))`, uniform over the slot's usable width, re-keyed every second. The executor keys the PA there. It does not listen first, it does not back off, it does not defer to anything it receives: `RfPlan::tx_at_us` is the whole contract, and the only rule that can still refuse a burst is the hour's air time (`AirTime`, below).
-
-This is a deliberate deviation from a plain reading of ADS-L 4 SRD-860 issue 2 §D.3, which describes CSMA with listen-before-talk. Carrier sense cannot do the job the clause implies here, for four reasons.
-
-It cannot see the burst it would collide with. A burst is 5 ms and the direct slot 550 ms wide, so two aircraft collide when their drawn instants land within 5 ms of each other: about 1.8% per target in range. Half of those we drew the earlier instant for, and an assessment only ever detects a burst *already* on air. The theoretical ceiling against our own kind is around 0.9% of bursts saved per neighbour.
-
-It listens in the wrong place. The collision happens at the receiver's antenna and the assessment is made at ours. A third aircraft the other side of us hears both bursts collide while we heard nothing, and we defer to a station the intended receiver cannot hear at all. At these ranges the hidden terminal is the normal case, not the corner one.
-
-It is weighted backwards. A burst has to clear the floor by a good margin to register at all, so the traffic we would successfully defer to is the near, loud traffic whose position we already have, while the distant aircraft near the noise floor, the one whose update matters, is never heard and never deferred to.
-
-And it costs the one thing this device exists for. An aircraft that goes quiet is invisible. What protects the band is the randomised instant, decorrelated by device address and redrawn every second so a collision is not repeated, and the 1% duty cycle this product declares as its channel-access route.
-
-None of the references cancel a burst either. `pjalocha/nrf52-ogn-tracker` (`src/ogn-radio.cpp:840-851`) backs off and escalates, then falls through and transmits when the slot runs out; its loop has no path that drops the packet. `pjalocha/esp32-ogn-tracker` has the code but both `TimeSlot()` call sites pass `MaxWait=0`, which skips it entirely. Neither SoftRF fork has listen-before-talk at all. This device is the same on air as those, with one fewer moving part.
-
-## The schedule is UTC's, not the transmitter's
-
-Airborne, own-ship speaks in every second. On the ground §G.1.16 asks for 0.1 Hz, and that is one second of UTC's own ten: `utc_s % 10 == hash(address) % 10`. The second is the address's, so the ground population spreads evenly over the ten by construction, and a device that reboots or loses its fix for a minute comes back to the same one rather than to wherever the restart left it.
-
-It used to be a gate: ten seconds since the last completed burst, then wait for the alternating channel's dwell to come round, then draw an instant inside it. That reads 10.2 to 12.5 seconds on a bench, which is under 0.1 Hz whichever way the clause is read, and the interval carried the previous burst's jitter into the next one for ever.
-
-`slot_in()` is the same argument one level down. §C.2.5 alternates the two M-band channels from one transmission to the next, and the clock counts them: `(utc_s / period) & 1`. Counting our own transmissions instead put the alternation permanently out of step with the grid the first time anything refused a burst, and nothing on the device could see that it had.
-
-What is not the clock's is the instant inside the slot: that stays a fresh draw per second, which is what decorrelates two devices that share a second (above).
+The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the direct slot, the schedule and its channel alternation, the Status cadence, the instant drawn inside a window and the hour's air time that is the declared channel-access route, with the reasons a burst is never deferred to anything heard. `Transmitter` composes them with what skyBlip decided: the window each dwell leaves a burst, the radio's completion guard, and the callsign.
 
 ## The second a burst is dated by
 
@@ -40,15 +16,13 @@ The receiver names a second in a sentence that lands hundreds of milliseconds in
 
 That number answers a question the counters cannot: a device hearing nothing at a site reading -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons. Nothing waits on it.
 
-## The duty cycle is the channel-access route
+## When the hour is spent
 
-EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what this product declares. `AirTime` is the evidence: sixty one-minute buckets on a ring that turns by elapsed time, so the hour that straddles `milliseconds()`'s 49.7-day wrap is an hour like any other.
-
-At the design rate of one 5 ms position burst per second, and a Status every twenty seconds and a name every ten (below), we sit at 0.575 of the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
+`Transmitter` asks `adsl::AirTime` before every burst and spends it after. At the design rate of one 5 ms position burst per second, a Status every twenty seconds and a name every ten (below), we sit at 0.575 of the allowance, so an empty budget can only be a fault. The burst is refused, `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
 
 ## What the dwell map is for
 
-`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the draw so it always completes inside both the slot and the dwell that carries it.
+`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the window `adsl::instant_between()` draws over, so the burst always completes inside both the slot and the dwell that carries it.
 
 `SlotPlan::own_tx_dwell` is a property of the dwell, not of the phase the service happens to tick on. Slot 0's dwell opens at 400 and its burst is placed from 450, so the plan that opens the dwell has to carry it.
 
@@ -64,11 +38,11 @@ Each address owns one second of ten, its ground second, `g = hash(address) % 10`
 
 §G.2.11 asks for a Status at least every 20 s, and `kStatusPeriodS` is exactly 20. The callsign is outside ADS-L's timing altogether (below), so it keeps its own rate, once every ten seconds, and keeps out of the seconds ADS-L uses on the ground: five seconds after the ground position, it is the only burst of ours in that second on the ground. A receiver keeps a ground target it hears every ten seconds for longer than that, or the target would blink, so the name still finds the target it belongs to. On the ground the bursts are spread out instead of stacked: a position every ten seconds, a Status beside every other one, and a name halfway between them. The air time is one position a second airborne, a Status every twenty seconds and a name every ten, 0.575 of the allowance.
 
-§C.2.5 makes Status alternate channels just as Traffic does, counted on its own transmissions, so `Transmitter::status_slot_in()` is `(utc_s / kStatusPeriodS) & 1`, the same clock count `slot_in()` uses for the position. On the ground the position of the Status second always rides slot 0, since `(20k + g) / 10` is even. So the Status shares slot 0 with it every other time and has slot 1 to itself the rest. Airborne the position's slot is the parity of the second, and the two meet in one dwell every other time as well.
+§C.2.5 makes Status alternate channels just as Traffic does, and dwell slot n carries channel n, so `Transmitter::status_slot_in()` is `adsl::status_channel_in()` and `slot_in()` is `adsl::channel_in()`. On the ground the position of the Status second always rides slot 0, since `(20k + g) / 10` is even. So the Status shares slot 0 with it every other time and has slot 1 to itself the rest. Airborne the position's slot is the parity of the second, and the two meet in one dwell every other time as well.
 
-The Status instant is drawn from `hash(hash(address ^ hash(utc_s)))`, one more round of the hash the position's own instant is drawn from, so the two are as unrelated as two devices' instants are. It is drawn over the same window as the position's, less the 13 instants that would start within `kAirTimeMs + kCompletionGuardMs` of the position's own, so the executor's two bursts never overlap when they share a dwell (`Transmitter::status_instant_in()`). The window is left the same whether or not the position goes out this second, so the draw stays a pure function of the address and the second. No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the Status and the callsign never share a second, and the callsign keeps slot 1's tail to itself. `test/core/test_transmit.cpp` checks both over 1024 addresses.
+The Status instant is `adsl::status_instant_between()`, over the same window as the position's, less the 13 instants that would start within `kAirTimeMs + kCompletionGuardMs` of the position's own, so the executor's two bursts never overlap when they share a dwell (`Transmitter::status_instant_in()`). No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the Status and the callsign never share a second, and the callsign keeps slot 1's tail to itself. `test/core/test_transmit.cpp` checks both over 1024 addresses.
 
-The alternation is the clock's, as it is for the position. A Status refused once, for an hour's air time spent or a dwell not armed, leaves the next one on the channel the last one used, and a 40-second gap: §G.2.11's twenty seconds is the nominal rate, which is how the clause words it.
+The alternation is the clock's, as it is for the position, so a Status refused for an hour's air time spent or a dwell not armed leaves a 40-second gap (`protocols/adsl/README.md`).
 
 ## The tail names us, once every ten seconds
 
@@ -76,7 +50,7 @@ ADS-L carries no callsign. What a pilot is called on the radio reaches the glass
 
 The tail is what it costs least. The dwell is already tuned to §C.2.5's channel 1, so there is no retune; the direct slot keeps every position burst it had; and the 5 ms this spends every ten seconds is 0.05% of the hour. What is on air there is FLARM-generation traffic and OGN trackers, whose own slot 2 runs to 1200 (`oss/nrf52-ogn-tracker/src/ogn-radio.cpp:1140-1142`), so a burst in the tail is neither novel nor quiet.
 
-The instant is drawn by the same `hash(address ^ hash(utc_s))` every other burst is drawn by, over the width the window leaves once the air time and the completion guard are taken off it: 1000 to 1190, which is 191 instants, exactly as many as slot 1's own position window offers between 800 and 990.
+The instant is drawn by `adsl::instant_between()`, the same `hash(address ^ hash(utc_s))` every other burst is drawn by, over the width the window leaves once the air time and the completion guard are taken off it: 1000 to 1190, which is 191 instants, exactly as many as slot 1's own position window offers between 800 and 990.
 
 The second is five seconds after the address's own ground second (above). A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). Airborne the target is a second old at most. On the ground it is five seconds old, inside the ten seconds any receiver has to keep a ground target to show it at all. Airborne in an odd second the position rides slot 1 as well, so that dwell carries two bursts, position first. They cannot meet: slot 1's last position instant is 993, which completes inside `kCompletionGuardMs`, and the name's first is 1000.
 

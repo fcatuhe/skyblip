@@ -5,6 +5,7 @@
 #include "core/comms/link_registry.h"
 #include "core/power/battery.h"
 #include "core/protocol/adsl.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
 #include "core/util/cbor.h"

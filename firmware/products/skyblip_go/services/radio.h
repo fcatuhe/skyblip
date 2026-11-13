@@ -6,6 +6,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
@@ -39,7 +40,7 @@ class RadioService : public runtime::Service {
         return transmitter_.air_time().permille(now_ms);
     }
     bool over_budget() const { return over_budget_; }
-    protocol::StatusReport status_report() const;
+    adsl::StatusReport status_report() const;
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
@@ -155,7 +156,7 @@ class RadioService : public runtime::Service {
     // nothing transmits from either. Adding the comparison would put work inside a
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
-    protocol::AdslPacket outgoing_{};
+    adsl::Packet outgoing_{};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};

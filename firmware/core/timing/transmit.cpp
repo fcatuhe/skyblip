@@ -5,17 +5,6 @@
 
 namespace skyblip::timing {
 
-namespace {
-uint32_t hash(uint32_t value) {
-    value ^= value >> 16;
-    value *= 0x7feb352du;
-    value ^= value >> 15;
-    value *= 0x846ca68bu;
-    value ^= value >> 16;
-    return value;
-}
-}  // namespace
-
 // The M-band dwells are wider than the direct slot at both ends: they open at
 // 400 ms to catch traffic that transmits from 405, and the second one runs to
 // 1200 ms to hear traffic still using its own slot there. Our own burst lives
@@ -24,49 +13,25 @@ uint32_t hash(uint32_t value) {
 // would truncate it on air.
 int Transmitter::first_instant_in(int slot) {
     const int opens = Scheduler::slot_start(slot);
-    return opens > kDirectStartMs ? opens : kDirectStartMs;
+    return opens > adsl::kDirectStartMs ? opens : adsl::kDirectStartMs;
 }
 
 int Transmitter::last_instant_in(int slot) {
     const int dwell_end = Scheduler::dwell_end(slot);
-    const int closes = dwell_end < kDirectEndMs ? dwell_end : kDirectEndMs;
+    const int closes = dwell_end < adsl::kDirectEndMs ? dwell_end : adsl::kDirectEndMs;
     const int last = closes - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
     const int first = first_instant_in(slot);
     return last > first ? last : first;
 }
 
 int Transmitter::instant_in(int slot, uint32_t utc_s) const {
-    return instant_between(first_instant_in(slot), last_instant_in(slot), utc_s);
+    return adsl::instant_between(address_, utc_s, first_instant_in(slot), last_instant_in(slot));
 }
 
-int Transmitter::instant_between(int first, int last, uint32_t utc_s) const {
-    if (last <= first) return first;
-    // Inclusive of last: a burst starting there still ends inside the slack.
-    return first +
-           static_cast<int>(hash(address_ ^ hash(utc_s)) % static_cast<uint32_t>(last - first + 1));
-}
-
-// INFO: fc 13nov26 drawn around the position's instant, so two bursts sharing a dwell never overlap
 int Transmitter::status_instant_in(int slot, uint32_t utc_s) const {
-    const int first = first_instant_in(slot);
-    const int last = last_instant_in(slot);
-    const int position = instant_in(slot, utc_s);
-    const int apart = static_cast<int>(kAirTimeMs) + kCompletionGuardMs;
-    const int blocked_from = std::max(first, position - apart + 1);
-    const int blocked = std::min(last, position + apart - 1) - blocked_from + 1;
-    const int free = last - first + 1 - blocked;
-    if (free <= 0) return first;
-    const int drawn =
-        first + static_cast<int>(hash(hash(address_ ^ hash(utc_s))) % static_cast<uint32_t>(free));
-    return drawn < blocked_from ? drawn : drawn + blocked;
-}
-
-uint32_t Transmitter::ground_second() const {
-    return hash(address_) % flight::kGroundReportPeriodS;
-}
-
-bool Transmitter::on_schedule(uint32_t utc_s, bool airborne) const {
-    return utc_s % period_s(airborne) == (airborne ? 0u : ground_second());
+    return adsl::status_instant_between(address_, utc_s, first_instant_in(slot),
+                                        last_instant_in(slot),
+                                        static_cast<int>(kAirTimeMs) + kCompletionGuardMs);
 }
 
 bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
@@ -108,7 +73,8 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
         case Payload::Position: attempt.at_ms = instant_in(dwell_slot, utc_s); break;
         case Payload::Status: attempt.at_ms = status_instant_in(dwell_slot, utc_s); break;
         case Payload::Callsign:
-            attempt.at_ms = instant_between(kCallsignStartMs, last_callsign_instant(), utc_s);
+            attempt.at_ms =
+                adsl::instant_between(address_, utc_s, kCallsignStartMs, last_callsign_instant());
             break;
     }
     return attempt;
@@ -119,10 +85,10 @@ bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, boo
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
     switch (payload) {
         case Payload::Position:
-            return fix_lag_ms <= kFixMaxAgeMs && on_schedule(utc_s, airborne) &&
+            return fix_lag_ms <= kFixMaxAgeMs && adsl::on_schedule(address_, utc_s, airborne) &&
                    dwell_slot == slot_in(utc_s, airborne);
         case Payload::Status:
-            return utc_s % kStatusPeriodS == status_second() && dwell_slot == status_slot_in(utc_s);
+            return adsl::status_due(address_, utc_s) && dwell_slot == status_slot_in(utc_s);
         case Payload::Callsign:
             return utc_s % kCallsignPeriodS == callsign_second() && dwell_slot == kCallsignSlot;
     }

@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <cstring>
 
-#include "core/fec/manchester.h"
 #include "core/model/band.h"
 #include "core/protocol/air.h"
 #include "doctest/doctest.h"
+#include "protocols/common/manchester.h"
 #include "test/support/rf_channel.h"
 
 using namespace skyblip;
@@ -30,7 +30,7 @@ void deliver(const uint8_t* chips, size_t chip_bytes, uint8_t* out, size_t out_b
 void frame_of(uint32_t sync_word, const uint8_t* payload, uint8_t payload_bytes,
               protocol::Frame& out) {
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_bytes = protocol::encode_m_band(sync_word, payload, payload_bytes, chips);
+    const size_t chip_bytes = wire::manchester_frame(sync_word, payload, payload_bytes, chips);
     uint8_t reported[protocol::kRxChipBytes] = {0};
     deliver(chips, chip_bytes, reported, sizeof(reported));
     REQUIRE(protocol::receive_m_band(reported, sizeof(reported), out));
@@ -42,12 +42,12 @@ void fill(uint8_t* bytes, uint8_t count, uint8_t seed) {
 
 }  // namespace
 
-TEST_CASE("air: the constexpr chip coding is the one fec::manchester_encode uses") {
+TEST_CASE("air: the constexpr chip coding is the one wire::manchester_encode uses") {
     for (int byte = 0; byte < 256; byte++) {
         uint8_t coded[2];
         const uint8_t in = static_cast<uint8_t>(byte);
-        fec::manchester_encode(&in, 1, coded);
-        const uint16_t chips = protocol::manchester_chips(in);
+        wire::manchester_encode(&in, 1, coded);
+        const uint16_t chips = wire::manchester_chips(in);
         CHECK(coded[0] == static_cast<uint8_t>(chips >> 8));
         CHECK(coded[1] == static_cast<uint8_t>(chips));
     }
@@ -55,53 +55,52 @@ TEST_CASE("air: the constexpr chip coding is the one fec::manchester_encode uses
 
 // The trick: two sync words whose chips agree for 18, and a detector armed with 16 of them.
 TEST_CASE("air: the two sync words share the window the detector matches") {
-    CHECK(protocol::kAdslSyncWord != protocol::kAlptasSyncWord);
-    CHECK(protocol::shared_sync(protocol::kAdslSyncWord) ==
-          protocol::shared_sync(protocol::kAlptasSyncWord));
+    CHECK(adsl::kSyncWord != alptas::kSyncWord);
+    CHECK(protocol::shared_sync(adsl::kSyncWord) == protocol::shared_sync(alptas::kSyncWord));
     // The chips of 0xF5, the sync-word byte both systems open on.
     CHECK(protocol::kSharedSync[0] == 0x55);
     CHECK(protocol::kSharedSync[1] == 0x99);
 
     // The 24 bits of sync word still ahead of the frame when the report starts name the system.
     CHECK(protocol::kSyncTailBits == 24);
-    CHECK(protocol::sync_tail(protocol::kAdslSyncWord) == 0x724B18u);
-    CHECK(protocol::sync_tail(protocol::kAlptasSyncWord) == 0x31FAB6u);
+    CHECK(protocol::sync_tail(adsl::kSyncWord) == 0x724B18u);
+    CHECK(protocol::sync_tail(alptas::kSyncWord) == 0x31FAB6u);
 }
 
 TEST_CASE("air: an ADS-L burst frames as ADS-L, byte-aligned on its data") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 7);
 
     protocol::Frame frame{};
-    frame_of(protocol::kAdslSyncWord, payload, sizeof(payload), frame);
+    frame_of(adsl::kSyncWord, payload, sizeof(payload), frame);
     CHECK(frame.system == protocol::System::AdslDirect);
-    CHECK(frame.bytes == protocol::kAdslFrameBytes);
+    CHECK(frame.bytes == adsl::kFrameBytes);
     CHECK(std::memcmp(frame.data, payload, sizeof(payload)) == 0);
     CHECK(frame.bad_chips == 0);
 }
 
 TEST_CASE("air: an ALP-TAS burst frames as ALP-TAS through the same window") {
-    uint8_t payload[protocol::kAlptasFrameBytes];
+    uint8_t payload[alptas::kFrameBytes];
     fill(payload, sizeof(payload), 19);
 
     protocol::Frame frame{};
-    frame_of(protocol::kAlptasSyncWord, payload, sizeof(payload), frame);
+    frame_of(alptas::kSyncWord, payload, sizeof(payload), frame);
     CHECK(frame.system == protocol::System::Alptas);
-    CHECK(frame.bytes == protocol::kAlptasFrameBytes);
+    CHECK(frame.bytes == alptas::kFrameBytes);
     CHECK(std::memcmp(frame.data, payload, sizeof(payload)) == 0);
 }
 
 // The burst two devices on a bench could not exchange: both had written the window into the buffer.
 TEST_CASE("air: the buffer a radio is handed is the burst, less the window the radio inserts") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 23);
 
     uint8_t on_air[protocol::kTxChipBytes] = {0};
     const size_t air_bytes =
-        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), on_air);
+        wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), on_air);
     uint8_t buffer[protocol::kTxPayloadChipBytes] = {0};
     const size_t buffer_bytes =
-        protocol::m_band_payload(protocol::kAdslSyncWord, payload, sizeof(payload), buffer);
+        protocol::m_band_payload(adsl::kSyncWord, payload, sizeof(payload), buffer);
 
     CHECK(air_bytes == buffer_bytes + protocol::kSyncWindowChipBytes);
     CHECK(std::memcmp(on_air, protocol::kSharedSync, protocol::kSyncWindowChipBytes) == 0);
@@ -111,11 +110,11 @@ TEST_CASE("air: the buffer a radio is handed is the burst, less the window the r
 // A dead chip pair in the sync tail must not cost the frame: it is 24 bits long
 // and the two systems differ in far more than one of them.
 TEST_CASE("air: one flipped chip in the sync tail still names the system") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 3);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes =
-        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
+        wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), chips);
     chips[5] ^= 0x40;  // inside the sync word, past the matched window
 
     uint8_t reported[protocol::kRxChipBytes] = {0};
@@ -127,11 +126,11 @@ TEST_CASE("air: one flipped chip in the sync tail still names the system") {
 }
 
 TEST_CASE("air: a chip error inside the frame is reported, not hidden") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 11);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes =
-        protocol::encode_m_band(protocol::kAdslSyncWord, payload, sizeof(payload), chips);
+        wire::manchester_frame(adsl::kSyncWord, payload, sizeof(payload), chips);
     chips[20] ^= 0x01;  // one chip of a pair: no transition left, so no bit either
 
     uint8_t reported[protocol::kRxChipBytes] = {0};
@@ -147,12 +146,12 @@ TEST_CASE("air: a chip error inside the frame is reported, not hidden") {
 }
 
 TEST_CASE("air: a foreign sync word frames as nothing") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 5);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     // Same leading byte, so the shared window still matches, then a tail neither
     // system uses: OGN's own sync word past its first byte.
-    const size_t chip_bytes = protocol::encode_m_band(0xF5F3656Cu, payload, sizeof(payload), chips);
+    const size_t chip_bytes = wire::manchester_frame(0xF5F3656Cu, payload, sizeof(payload), chips);
 
     uint8_t reported[protocol::kRxChipBytes] = {0};
     deliver(chips, chip_bytes, reported, sizeof(reported));
@@ -176,10 +175,10 @@ TEST_CASE("air: the window a neighbour missed reads apart from the one noise wal
 }
 
 TEST_CASE("air: a foreign burst keeps its chips, so it is not counted as noise") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 5);
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_bytes = protocol::encode_m_band(0xF5F3656Cu, payload, sizeof(payload), chips);
+    const size_t chip_bytes = wire::manchester_frame(0xF5F3656Cu, payload, sizeof(payload), chips);
 
     uint8_t reported[protocol::kRxChipBytes] = {0};
     deliver(chips, chip_bytes, reported, sizeof(reported));
@@ -190,10 +189,10 @@ TEST_CASE("air: a foreign burst keeps its chips, so it is not counted as noise")
 
 // The dwell reads past the end of a short burst, and those chips are nobody's.
 TEST_CASE("air: the noise window ends inside the shortest burst the band carries") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 5);
     uint8_t chips[protocol::kTxChipBytes] = {0};
-    const size_t chip_bytes = protocol::encode_m_band(0xF5F3656Cu, payload, sizeof(payload), chips);
+    const size_t chip_bytes = wire::manchester_frame(0xF5F3656Cu, payload, sizeof(payload), chips);
 
     uint8_t reported[protocol::kRxChipBytes] = {0};
     deliver(chips, chip_bytes, reported, sizeof(reported));
@@ -217,10 +216,10 @@ TEST_CASE("air: a report shorter than the dwell reads is refused") {
 // O-band uplink frame into the M-band framer, where it failed and was counted
 // as radio noise.
 TEST_CASE("air: an O-band burst is named an uplink frame without being decoded") {
-    uint8_t frame[protocol::kUplinkFrameBytes];
-    fill(frame, protocol::kAdslFrameBytes, 9);
+    uint8_t frame[adsl::kUplinkFrameBytes];
+    fill(frame, adsl::kFrameBytes, 9);
     protocol::Frame out{};
-    CHECK(protocol::receive_burst(model::Band::O, frame, protocol::kUplinkFrameBytes, out) ==
+    CHECK(protocol::receive_burst(model::Band::O, frame, adsl::kUplinkFrameBytes, out) ==
           protocol::System::AdslUplink);
     // The codeword is eleven times longer than a Frame and stays where the
     // executor put it, so nothing was copied into out.
@@ -229,39 +228,37 @@ TEST_CASE("air: an O-band burst is named an uplink frame without being decoded")
 }
 
 TEST_CASE("air: an O-band burst of the wrong length is not an uplink frame") {
-    uint8_t frame[protocol::kUplinkFrameBytes] = {0};
+    uint8_t frame[adsl::kUplinkFrameBytes] = {0};
     protocol::Frame out{};
-    CHECK(protocol::receive_burst(model::Band::O, frame, protocol::kAdslFrameBytes, out) ==
+    CHECK(protocol::receive_burst(model::Band::O, frame, adsl::kFrameBytes, out) ==
           protocol::System::Unknown);
 }
 
 TEST_CASE("air: an M-band burst is still framed and named from its sync tail") {
-    uint8_t payload[protocol::kAdslFrameBytes];
+    uint8_t payload[adsl::kFrameBytes];
     fill(payload, sizeof(payload), 3);
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes =
-        protocol::encode_m_band(protocol::kAlptasSyncWord, payload, sizeof(payload), chips);
+        wire::manchester_frame(alptas::kSyncWord, payload, sizeof(payload), chips);
     uint8_t reported[protocol::kRxChipBytes] = {0};
     deliver(chips, chip_bytes, reported, sizeof(reported));
 
     protocol::Frame out{};
     CHECK(protocol::receive_burst(model::Band::M, reported, sizeof(reported), out) ==
           protocol::System::Alptas);
-    CHECK(out.bytes == protocol::kAlptasFrameBytes);
+    CHECK(out.bytes == alptas::kFrameBytes);
 }
 
 // The O-band framing a transmitter uses, round-tripped through the same sync
 // strip the radio performs: encode and decode change together.
 TEST_CASE("air: an O-band burst carries the sync word, the length byte and the codeword") {
-    uint8_t frame[protocol::kUplinkFrameBytes];
-    for (int i = 0; i < protocol::kUplinkFrameBytes; i++)
-        frame[i] = static_cast<uint8_t>(i * 7 + 1);
-    uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    CHECK(protocol::encode_o_band(frame, burst) ==
-          static_cast<size_t>(protocol::kUplinkBurstBytes));
+    uint8_t frame[adsl::kUplinkFrameBytes];
+    for (int i = 0; i < adsl::kUplinkFrameBytes; i++) frame[i] = static_cast<uint8_t>(i * 7 + 1);
+    uint8_t burst[adsl::kUplinkBurstBytes] = {0};
+    CHECK(adsl::encode_o_band(frame, burst) == static_cast<size_t>(adsl::kUplinkBurstBytes));
     // §C.4.3, then §D.1.1: no Manchester on this band, so the bytes are the bytes.
     CHECK(burst[0] == 0x2D);
     CHECK(burst[1] == 0xD4);
-    CHECK(burst[2] == protocol::kUplinkFrameBytes);
-    CHECK(std::memcmp(burst + 3, frame, protocol::kUplinkFrameBytes) == 0);
+    CHECK(burst[2] == adsl::kUplinkFrameBytes);
+    CHECK(std::memcmp(burst + 3, frame, adsl::kUplinkFrameBytes) == 0);
 }

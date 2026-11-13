@@ -295,12 +295,12 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
     own.vdop_e2 = 150;
     own.utc_s = 1000;  // 1000 % 15 == 10 s into the timestamp cycle
 
-    AdslPacket at_fix{};
+    adsl::Packet at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
     CHECK(int(at_fix.timestamp) == 40);  // 10 s, quarter zero
 
     // A burst 600 ms later names the quarter at 500 ms, and the position goes to it.
-    AdslPacket in_flight{};
+    adsl::Packet in_flight{};
     from_own(in_flight, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, 600, 600});
     CHECK(int(in_flight.timestamp) == 42);
     CHECK(in_flight.altitude_m() == at_fix.altitude_m() + 1);
@@ -324,17 +324,17 @@ TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix"
     own.track_cdeg = 9000;
     own.utc_s = 1000;
 
-    AdslPacket at_fix{};
+    adsl::Packet at_fix{};
     from_own(at_fix, own, 0xABCDEF, 6, 4);
 
     const int32_t bound = kExtrapolationCeilingMs;
-    AdslPacket inside{};
+    adsl::Packet inside{};
     from_own(inside, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, bound, bound});
     CHECK(inside.longitude_1e7() != at_fix.longitude_1e7());
-    CHECK(int(inside.timestamp) == timestamp_code(own.utc_s, bound));
+    CHECK(int(inside.timestamp) == adsl::timestamp_code(own.utc_s, bound));
 
-    const int32_t past = bound + static_cast<int32_t>(kTimestampQuarterMs);
-    AdslPacket beyond{};
+    const int32_t past = bound + static_cast<int32_t>(adsl::kTimestampQuarterMs);
+    adsl::Packet beyond{};
     from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, past, past});
     CHECK(beyond.longitude_1e7() == at_fix.longitude_1e7());
     CHECK(beyond.latitude_1e7() == at_fix.latitude_1e7());
@@ -344,13 +344,13 @@ TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix"
 // Quarter seconds inside a 15 s cycle: six bits, and the wrap is part of the
 // encoding rather than an edge case somebody has to remember.
 TEST_CASE("adsl: the timestamp is quarter seconds inside a fifteen second cycle") {
-    CHECK(int(timestamp_code(0, 0)) == 0);
-    CHECK(int(timestamp_code(14, 0)) == 56);
-    CHECK(int(timestamp_code(15, 0)) == 0);
-    CHECK(int(timestamp_code(14, 999)) == 59);
-    CHECK(int(timestamp_code(14, 1000)) == 0);  // wraps into the next cycle
-    CHECK(int(timestamp_code(0, -250)) == 59);  // and backwards out of it
+    CHECK(int(adsl::timestamp_code(0, 0)) == 0);
+    CHECK(int(adsl::timestamp_code(14, 0)) == 56);
+    CHECK(int(adsl::timestamp_code(15, 0)) == 0);
+    CHECK(int(adsl::timestamp_code(14, 999)) == 59);
+    CHECK(int(adsl::timestamp_code(14, 1000)) == 0);  // wraps into the next cycle
+    CHECK(int(adsl::timestamp_code(0, -250)) == 59);  // and backwards out of it
     for (uint32_t utc_s = 0; utc_s < 60; utc_s++)
         for (int32_t lead = -1000; lead <= 1000; lead += 125)
-            CHECK(int(timestamp_code(utc_s, lead)) < 60);
+            CHECK(int(adsl::timestamp_code(utc_s, lead)) < 60);
 }
