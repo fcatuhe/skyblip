@@ -414,6 +414,13 @@ bool Link::central_of(const events::Peer& peer, events::BluetoothAddress& out) c
     return live;
 }
 
+int Link::phones() const {
+    k_spinlock_key_t key = k_spin_lock(&g_lock);
+    const int phones = g_sessions.phones();
+    k_spin_unlock(&g_lock, key);
+    return phones;
+}
+
 Status Link::advertise_within_ceiling(Status status, bool admits) {
     if (status != Status::Ok) return status;
     if (admits) {

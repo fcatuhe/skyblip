@@ -109,7 +109,7 @@ void ConfigLinkService::place_unlock(uint32_t now_ms) {
 }
 
 void ConfigLinkService::publish_link() {
-    context_.state.link.connected = config_.link_up();
+    context_.state.link.phone_connected = context_.roles.link.phones() > 0;
     context_.state.link.prompt_standing =
         config_.pending() != comms::Pending::None &&
         config_.prompt_allowed_in(context_.state.flight.confirmed_state);

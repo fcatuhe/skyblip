@@ -24,6 +24,11 @@ bool in_pps_holdover(const ClockState& clock) {
            clock.since_edge_ms <= kPpsHoldoverMs;
 }
 
+std::optional<uint64_t> utc_ms(const ClockState& clock) {
+    if (!clock.pps_locked || clock.utc_s == 0 || clock.since_edge_ms >= 1000) return std::nullopt;
+    return static_cast<uint64_t>(clock.utc_s) * 1000u + clock.since_edge_ms;
+}
+
 SlotState Scheduler::state_at(int phase_ms) {
     // The tail first: before anything else in a second, the radio is still in
     // the slot 1 that opened 800 ms into the previous one.
