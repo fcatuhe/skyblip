@@ -1,15 +1,15 @@
 ---
 title: "ADS-B, EFIS and skyPost ground-station plans"
 nav_title: Roadmap
-description: "Bravo and Tango are in development for onboard ADS-B. The EFIS Panel and skyPost ground stations are in design. Explore the planned devices."
-updated_on: "2026-11-09"
+description: "Bravo and Tango receive ADS-B on board. The EFIS Panel and skyPost ground stations are in design. Explore the devices and plans."
+updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
-  <h1>Today skyBlip Go. Next, ADS-B on board.</h1>
+  <h1>skyBlip Go. Add ADS-B with Bravo.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Go and Go+ are available. The skyBlip Bravo firmware is in
-    development, for an X1 you can buy today. The Panel and the skyPost
+    skyBlip Go, Go+, Bravo and Tango are available. The skyBlip Bravo
+    firmware is on GitHub, for an X1 you can buy today. The Panel and the skyPost
     stations are in design, on the same code base.
   </p>
 </header>
@@ -19,19 +19,19 @@ updated_on: "2026-11-09"
   <p class="section-intro">
     skyBlip Go receives ADS-L and FLARM. It does not receive ADS-B on
     1090&nbsp;MHz, which airliners, business jets, helicopters and many touring
-    aircraft transmit. skyBlip Bravo will receive it in the aircraft, with no
+    aircraft transmit. skyBlip Bravo receives it in the aircraft, with no
     ground station.
   </p>
 
   <div class="columns">
     <div>
       <h3 id="bravo">skyBlip Bravo.</h3>
-      <p>The ADS-B receiver, for your phone or your Go. The hardware, a Seeed SenseCAP MeshTracker X1, is on sale. The skyBlip Bravo firmware is in development.</p>
+      <p>The ADS-B receiver, for your phone or your Go. The hardware, a Seeed SenseCAP MeshTracker X1, is on sale. The skyBlip Bravo firmware is on GitHub.</p>
       <p class="more"><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></p>
     </div>
     <div>
       <h3 id="tango">skyBlip Tango.</h3>
-      <p>A Go paired with a Bravo: ADS-B, ADS-L and FLARM on the Go&rsquo;s radar, and your position in ADS-L. A Go+ and a Bravo make a Tango+.</p>
+      <p>A Go paired with a Bravo shows ADS-B, ADS-L and FLARM on the Go&rsquo;s radar and broadcasts your position in ADS-L. A Go+ and a Bravo make a Tango+.</p>
       <p class="more"><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></p>
     </div>
   </div>
@@ -41,13 +41,13 @@ updated_on: "2026-11-09"
       <p class="eyebrow">For glass cockpits</p>
       <h3>skyBlip <span class="highlight">Panel</span>.</h3>
       <p>
-        A fixed box behind the instrument panel, powered by the aircraft. No
-        screen: the traffic shows on the panel display, Garmin G3X, Dynon
-        SkyView and the others, like a factory traffic source.
+        A fixed box behind the instrument panel, powered by the aircraft. It will have no
+        screen. Traffic will appear on a panel display, such as a Garmin G3X or Dynon
+        SkyView, as with factory-installed traffic equipment.
       </p>
       <p>
-        ADS-L transmit and receive. RS-232 outputs (FLARM NMEA or GDL90) to the
-        EFIS, GDL90 over Wi-Fi, FLARM NMEA over Bluetooth.
+        It will transmit and receive ADS-L. RS-232 outputs will send FLARM NMEA or GDL90 to the
+        electronic flight display (EFIS). It will send GDL90 over Wi-Fi and FLARM NMEA over Bluetooth.
       </p>
       <p class="feature-guide"><small>Hardware: LilyGO T-Beam Supreme, MAX3232 RS-232 adapter.</small></p>
     </div>
@@ -60,19 +60,19 @@ updated_on: "2026-11-09"
 <section class="band">
   <h2 class="section-title">On the ground</h2>
   <p class="section-intro">
-    Around the airfield, a skyPost station will receive ADS-B, add the traffic
-    of the Open Glider Network and the weather (QNH, METAR, TAF), and relay it
+    Around the airfield, a skyPost station will receive ADS-B, add traffic
+    from the Open Glider Network (OGN) and weather data (QNH, METAR, TAF), and relay it
     all in ADS-L to every skyBlip Go in range.
   </p>
   <div class="columns">
     <div>
       <h3>skyPost Helio.</h3>
-      <p>The solar station. Self-powered, in a weatherproof case on a mast. Will receive ADS-B, ADS-L and FLARM.</p>
+      <p>The solar station. Self-powered, in a weatherproof case on a mast. It will receive ADS-B, ADS-L and FLARM.</p>
       <p class="note">LilyGO T-Beam Supreme, Ebyte E80-900MBL 1090 receiver, LilyGO T-Solar kit.</p>
     </div>
     <div>
       <h3>skyPost Bridge.</h3>
-      <p>For existing stations: OGN, PiAware, adsb.lol. Will relay in ADS-L the traffic they already decode, without touching their feeds.</p>
+      <p>For existing stations: OGN, PiAware, adsb.lol. It will relay the traffic they already decode over ADS-L, without changing their data feeds.</p>
       <p class="note">LilyGO T-Beam Supreme.</p>
     </div>
   </div>

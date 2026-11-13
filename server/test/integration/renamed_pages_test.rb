@@ -18,6 +18,15 @@ class RenamedPagesTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the Go's old page address leads to its own, from both languages" do
+    get "/features"
+    assert_response :moved_permanently
+    assert_redirected_to "/go"
+
+    get "/fr/fonctionnalites"
+    assert_redirected_to "/fr/go"
+  end
+
   test "the old French briefing addresses lead to the same page, query kept" do
     get "/fr/briefing"
     assert_response :moved_permanently

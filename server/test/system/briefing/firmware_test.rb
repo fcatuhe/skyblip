@@ -22,7 +22,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".firmware-progress-text", text: /\d+ %, \d+ of 394 kB/
       screen "22-firmware-uploading"
 
-      assert_selector ".firmware-status", text: "The device installs and restarts, about thirty seconds. It connects again by itself.", wait: 30
+      assert_selector ".firmware-status", text: "The device is installing the firmware and restarting. This takes about thirty seconds. It connects again by itself.", wait: 30
       screen "23-firmware-restarting"
 
       assert_selector ".firmware-status", text: "0.1.0+1005 is starting.", wait: 10
@@ -49,8 +49,8 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
       assert_no_selector ".firmware-report"
-      assert_selector ".firmware-status", text: "The device installs and restarts", wait: 30
-      assert_selector ".unit-message", text: "The device came back on 0.1.0+1000, not 0.1.0+1005, and kept no record of the install.", wait: 10
+      assert_selector ".firmware-status", text: "The device is installing the firmware and restarting", wait: 30
+      assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1005. It kept no record of the installation.", wait: 10
       assert_no_selector ".firmware-progress"
       assert_selector ".firmware-report-line", text: /\Askyblip-install-report v1 product=skyblip_go running=0\.1\.0\+1000 tried=0\.1\.0\+1005 image=confirmed .* cause=no_record report=none /
       screen "28-firmware-no-record"
@@ -68,7 +68,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       click_link "Firmware"
-      assert_selector ".unit-message", text: "The new firmware started, then stopped before it proved itself, so the device went back to the one it had."
+      assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
       assert_selector ".firmware-report-line", text: "image=reverted from=0.1.0+40 to=0.1.0+44 cause=probation_failed check=matched swap=test"
       assert_selector ".firmware-report-line", text: "probation_boots=1 proof=started reset=watchdog"
       screen "29-firmware-reverted-report"
@@ -82,7 +82,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".unit-row", text: "up to date"
       assert_no_selector ".unit-banner"
       click_link "Firmware"
-      assert_selector ".firmware-status", text: "You run the newest image, 0.1.0+1005."
+      assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1005."
       find(".firmware-other summary").click
       assert_field "Or a file ending in .signed.bin"
       screen "26-firmware-current"
@@ -97,7 +97,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       click_button "Install 0.1.0+1005"
       assert_selector ".glass-title", text: "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
-      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
+      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
       assert_no_button "Install 0.1.0+1005"
       assert_button "Reconnect"
       screen "27-firmware-refused"

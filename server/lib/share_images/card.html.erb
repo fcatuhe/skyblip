@@ -10,9 +10,6 @@
       <%= render "layouts/wordmark", css: "card-wordmark" %>
       <p class="card-name"><%= card[:name] %></p>
       <p class="card-protocols"><%= card[:protocols] %></p>
-      <% if card[:in_development] %>
-        <p class="card-status"><%= t "share.in_development" %></p>
-      <% end %>
       <p class="card-site">skyblip.eu</p>
     </div>
     <div class="card-art">
