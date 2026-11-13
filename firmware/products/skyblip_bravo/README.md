@@ -55,7 +55,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 
 | State | Lamp |
 |---|---|
-| on | the condition below lights from the first pass of the loop |
+| on | after a press from off, one green pulse felt on the motor, then the condition below |
 | no fix | blue, one wink every 3 s |
 | fix | green, one wink every 3 s |
 | a phone connected | the same colour, one wink every 1.5 s |
@@ -65,6 +65,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 | a capture armed | the fix colour, two winks every 3 s |
 | low battery | red, one wink every 3 s, and a 600 ms blink when critical |
 | refused to fly | red, a 600 ms blink, as a critical cell |
+| going off | three red pulses felt on the motor, then dark |
 | off | dark |
 
 `core/indication/README.md` holds the table, its priority order and what each row may spend.
@@ -79,7 +80,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 | one press with a prompt on the lamp | refuse the prompt |
 | one press with a Go's pairing request on the lamp | pair with that Go |
 | one press while an upload window is open | close it, once the press that opened it has settled |
-| a hold past `power::kLongPressHoldMs` | off |
+| a hold past `power::kLongPressHoldMs` | off, signed with three pulses under the thumb |
 
 The hold is the shutdown sequencer's, read off the pin, so it works as on the Go. A press is a release before the hold, so a hold never answers a prompt or a pairing request.
 
@@ -164,7 +165,7 @@ USB is VID 0x1209 and PID 0x5AFE, with the product string `skyBlip Bravo` (`prj.
 
 ## The way down
 
-A long press, a phone's `power_off`, a cutoff, an install and a recovery all go through `core/power`'s shutdown sequencer, as on the Go. Parking puts the LR2021 to sleep through its receiver, silences the buzzer and the motor, darkens the lamp, and puts the DRV2605 in standby. The settings are flushed and a running capture parks. The X1's platform then walks `core/power`'s power-down order on its own lines before SYSTEM OFF (`../../boards/seeed/meshtracker_x1/README.md`).
+A long press, a phone's `power_off`, a cutoff, an install and a recovery all go through `core/power`'s shutdown sequencer, as on the Go. Parking puts the LR2021 to sleep through its receiver and silences the buzzer. A shutdown that leaves the unit off then signs off: three red pulses felt on the motor, inside the park's wait (`../../core/indication/README.md`). Once the sign ends, or at once for an install or a recovery that reboots, it stops the motor, darkens the lamp and puts the DRV2605 in standby. The settings are flushed and a running capture parks. The X1's platform then walks `core/power`'s power-down order on its own lines before SYSTEM OFF (`../../boards/seeed/meshtracker_x1/README.md`).
 
 A receiver that never confirms its sleep is held in reset after `kReceiverParkCeilingMs`. That ceiling is the LR2021's worst sleep, a stuck standby and the reset after it, 4 s.
 
@@ -251,7 +252,7 @@ The slip search tries about 2600 streams a frame, so it passes a random frame ab
 The host suite runs every service above on the part models. On an X1 nothing has run. The bench (#169) checks, in this order:
 
 - the image boots from the `.uf2` and enumerates as `1209:5AFE` `skyBlip Bravo`, with the inventory on the console;
-- the lamp winks blue, then green once the AG3335 has a fix, and the button switches the unit off and on;
+- the lamp winks blue, then green once the AG3335 has a fix, and the button switches the unit off and on, and the hand feels three pulses going off and one coming on;
 - the AG3335 acknowledges its configuration and its PPS edge reaches the platform;
 - the LR2021 comes up, its version reads 1.24, and frames reach the `adsb` diagnostics group;
 - the refused frames a development image prints, read with `scripts/adsb_rejects.py`, say whether the chip clock slips inside a frame (Reading the rejects);

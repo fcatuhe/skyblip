@@ -8,6 +8,7 @@
 // cosmetic slip), and a unit with no lamp fitted runs the same table and lights
 // nothing.
 #include "core/indication/lamp.h"
+#include "core/indication/signature.h"
 #include "core/power/cutoff.h"
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
@@ -173,7 +174,8 @@ TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor i
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::NoFix);
 }
 
-TEST_CASE("product: a device on its way down darkens the lamp and lets go of the pins") {
+TEST_CASE(
+    "product: a device on its way down signs off, then darkens the lamp and lets go of the pins") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -187,7 +189,10 @@ TEST_CASE("product: a device on its way down darkens the lamp and lets go of the
     rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
     rig.run(now_ms, now_ms + 100);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
+    CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
 
+    const uint32_t signed_off_ms = now_ms + indication::length_ms(indication::kSignOff) + 100;
+    rig.run(now_ms + 100, signed_off_ms);
     CHECK_FALSE(lamp_of(rig).lit());
     CHECK(lamp_of(rig).parked());
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Off);
@@ -195,9 +200,38 @@ TEST_CASE("product: a device on its way down darkens the lamp and lets go of the
     // And nothing brings it back: the loop is not running, and a cable still in
     // is not a reason to light a device that is going off.
     const uint32_t lightings = lamp_of(rig).lightings();
-    rig.run(now_ms + 100, now_ms + 20000);
+    rig.run(signed_off_ms, signed_off_ms + 20000);
     CHECK(lamp_of(rig).lightings() == lightings);
     CHECK_FALSE(lamp_of(rig).lit());
+}
+
+TEST_CASE("product: a press from off signs on with one green pulse, felt as it is lit") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 100, 10);
+    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(rig.platform.annunciator().vibrating());
+
+    rig.run(110, 100 + indication::kSignOnPulseMs, 10);
+    CHECK_FALSE(rig.platform.annunciator().vibrating());
+    CHECK(rig.platform.annunciator().motor_starts() == 1);
+    CHECK(rig.platform.annunciator().silences() == 0);
+}
+
+// The signs say the unit is on or off, which is not an alarm the pilot switched off.
+TEST_CASE("product: alarms switched off still sign off in the hand, and sound nothing") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.settings().alarm_enabled = false;
+    uint32_t now_ms = 0;
+    settle(rig, now_ms);
+
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
+    rig.run(now_ms, now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
+    CHECK(rig.platform.annunciator().motor_starts() == 3);
+    CHECK(rig.platform.annunciator().tone_commands() == 0);
+    CHECK(lamp_of(rig).parked());
 }
 
 TEST_CASE("product: a unit with no status LED flies and lights nothing") {

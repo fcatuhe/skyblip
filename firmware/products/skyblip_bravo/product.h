@@ -76,6 +76,7 @@ class Product {
         if (flyable_) config_link_.load_identity();
         if (board != Status::Ok) return board;
         if (!flyable_) return Status::Down;
+        if (reset_reason_ == power::ResetReason::LowPowerWake) alarm_.sign_on();
         const Status loop = loop_.setup();
         state_.started = loop == Status::Ok;
         return loop;
@@ -98,6 +99,7 @@ class Product {
         }
         shutdown_.tick(now_ms, platform_.button_down());
         drive_shutdown(now_ms);
+        if (shutdown_.going_down()) finish_sign_off(now_ms);
         if (shutdown_.going_down()) await_receiver_park(now_ms, ready_but_for_receiver());
         enter_recovery_once_parked();
     }
@@ -237,22 +239,40 @@ class Product {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
-        park_parts(now_ms);
+        board_.receiver().sleep();
+        if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
+            alarm_.sign_off(now_ms);
+        else
+            park_outputs(now_ms);
         config_link_.flush_settings(now_ms);
         power_.record_last_pass(now_ms);
         capture_.park(now_ms);
     }
 
-    // INFO: fc 12nov26 the switch-off and the refused boot both run this, so both leave the parts
-    // alike
+    // INFO: fc 13nov26 a refused boot parks these at once, and a switch-off parks the outputs once
+    // its sign ends
     void park_parts(uint32_t now_ms) {
         board_.receiver().sleep();
+        park_outputs(now_ms);
+    }
+
+    void park_outputs(uint32_t now_ms) {
         alarm_.park(now_ms);
         board_.park();
     }
 
+    void finish_sign_off(uint32_t now_ms) {
+        if (!alarm_.signing()) return;
+        alarm_.advance_signature(now_ms);
+        if (!alarm_.signing()) park_outputs(now_ms);
+    }
+
+    bool recovery_powers_off() const {
+        return roles_.dfu.recovery_path() == ports::RecoveryPath::PowerOffToFinish;
+    }
+
     bool ready_but_for_receiver() const {
-        return shutdown_.ready_to_power_off() && !installing() &&
+        return shutdown_.ready_to_power_off() && !installing() && !alarm_.signing() &&
                (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
     }
 

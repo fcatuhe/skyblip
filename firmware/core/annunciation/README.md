@@ -14,7 +14,7 @@ The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major thi
 
 ## The motor says the calls, and only the calls
 
-A call is the notes that run together between two silences. The traffic voice runs the motor exactly while a call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The motor is driven the way the buzzer is, on until told off, so it stops on the pass the buzzer does, whatever released it. `kAnnunciatorOnCeilingMs` is the guard the adapters hold under both, for a loop that stops running mid-call (`ports/README.md`). The fix tune is never felt: the motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
+A call is the notes that run together between two silences. The traffic voice runs the motor exactly while a call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The motor is driven the way the buzzer is, on until told off, so it stops on the pass the buzzer does, whatever released it. `kAnnunciatorOnCeilingMs` is the guard the adapters hold under both, for a loop that stops running mid-call (`ports/README.md`). The fix tune is never felt. The motor is reserved for traffic and for the signs on and off (`../indication/README.md`), which are one pulse and three, so a pilot who feels two calls knows what they mean without looking.
 
 The ERM on the T-Echo Plus takes time to spin up and to stop. Whether a 270 ms pulse is felt through a harness, and whether the 270 ms rest reads as a gap, is a bench question that has not been measured.
 

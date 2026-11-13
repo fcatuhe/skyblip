@@ -192,6 +192,17 @@ TEST_CASE("shutdown: low battery and the link take the same road as the button")
     }
 }
 
+TEST_CASE(
+    "shutdown: every road that leaves the unit off is signed, an install and a reboot are not") {
+    using power::ShutdownReason;
+    for (const ShutdownReason reason : {ShutdownReason::LongPress, ShutdownReason::Stow,
+                                        ShutdownReason::LowBattery, ShutdownReason::LinkRequest})
+        CHECK(power::ends_switched_off(reason, false));
+    CHECK_FALSE(power::ends_switched_off(ShutdownReason::Install, true));
+    CHECK(power::ends_switched_off(ShutdownReason::Recovery, true));
+    CHECK_FALSE(power::ends_switched_off(ShutdownReason::Recovery, false));
+}
+
 TEST_CASE("shutdown: nothing cancels a shutdown once it has started") {
     ShutdownSequencer shutdown;
     shutdown.request(ShutdownReason::LowBattery, 0);

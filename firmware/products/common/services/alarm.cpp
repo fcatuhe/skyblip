@@ -73,13 +73,39 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.enabled =
         settings_.enabled && settings_.volume != AlarmVolume::Off && !context_.state.alarm_granted;
     situation.running = running_;
-    drive(situation, now_ms);
-    drive_lamp(now_ms, running_);
+    if (sign_on_pending_) {
+        sign_on_pending_ = false;
+        signature_.begin(indication::kSignOn, now_ms);
+    }
+    const annunciation::Command command = annunciation_.update(situation, now_ms);
+    if (annunciation_.voice() == annunciation::Voice::Traffic) signature_.cancel();
+    const indication::Signal signal = signature_.update(now_ms);
+    if (command.tone_changed) drive_buzzer(command);
+    drive_motor(signature_.playing() ? signal.vibrating : command.vibrating);
+    drive_lamp(now_ms, running_, signal);
+}
+
+void AlarmService::sign_off(uint32_t now_ms) {
+    accrue_annunciator(now_ms);
+    running_ = false;
+    annunciation::Situation situation{};
+    situation.running = false;
+    const annunciation::Command command = annunciation_.update(situation, now_ms);
+    if (command.tone_changed) drive_buzzer(command);
+    signature_.begin(indication::kSignOff, now_ms);
+    advance_signature(now_ms);
+}
+
+void AlarmService::advance_signature(uint32_t now_ms) {
+    accrue_annunciator(now_ms);
+    const indication::Signal signal = signature_.update(now_ms);
+    drive_motor(signal.vibrating);
+    show(signal.lamp);
 }
 
 void AlarmService::accrue_annunciator(uint32_t now_ms) {
     sounding_.observe(annunciation_.sounding(), now_ms);
-    vibrating_.observe(annunciation_.vibrating(), now_ms);
+    vibrating_.observe(motor_on_, now_ms);
     context_.state.duty.annunciator_ms = sounding_.on_ms() + vibrating_.on_ms();
 }
 
@@ -115,14 +141,17 @@ void AlarmService::record_traffic(int slot, const traffic::Target& target,
 void AlarmService::park(uint32_t now_ms) {
     accrue_annunciator(now_ms);
     running_ = false;
+    signature_.cancel();
     annunciation::Situation situation{};
     situation.running = false;
-    drive(situation, now_ms);
+    const annunciation::Command command = annunciation_.update(situation, now_ms);
+    if (command.tone_changed) drive_buzzer(command);
+    drive_motor(false);
     // Dark first, through the same table that lit it, and only then let go of the
     // pins. The order matters on silicon: these LEDs are active-low, so dark is a
     // pin driven high, and releasing before darkening would leave the last colour
     // lit on a floating line for as long as the rail lasts.
-    drive_lamp(now_ms, /*running=*/false);
+    drive_lamp(now_ms, /*running=*/false, indication::Signal{});
     context_.roles.indicator.park();
 }
 
@@ -131,7 +160,7 @@ void AlarmService::park(uint32_t now_ms) {
 // OwnshipService, the worst standing level by this one, a few lines above. Nothing
 // is derived a second time here, which is what keeps the lamp saying LOW at
 // exactly the voltage the panel and the tablet do.
-void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
+void AlarmService::drive_lamp(uint32_t now_ms, bool running, indication::Signal signal) {
     indication::Situation situation{};
     situation.running = running;
     situation.alarm_level = context_.state.alarm_undismissed;
@@ -143,13 +172,13 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running) {
     situation.capturing = lamp_shows_link_ && context_.state.capture.armed;
 
     const indication::Command command = indication_.update(situation, now_ms);
-    if (command.changed) context_.roles.indicator.show(command.lamp);
+    show(signature_.playing() ? signal.lamp : command.lamp);
 }
 
-void AlarmService::drive(const annunciation::Situation& situation, uint32_t now_ms) {
-    const annunciation::Command command = annunciation_.update(situation, now_ms);
-    if (command.tone_changed) drive_buzzer(command);
-    if (command.vibration_changed) drive_motor(command.vibrating);
+void AlarmService::show(indication::Lamp lamp) {
+    if (lamp == shown_) return;
+    shown_ = lamp;
+    context_.roles.indicator.show(lamp);
 }
 
 void AlarmService::drive_buzzer(const annunciation::Command& command) {
@@ -163,6 +192,8 @@ void AlarmService::drive_buzzer(const annunciation::Command& command) {
 }
 
 void AlarmService::drive_motor(bool vibrating) {
+    if (vibrating == motor_on_) return;
+    motor_on_ = vibrating;
     if (vibrating) {
         context_.roles.annunciator.vibrate();
     } else {

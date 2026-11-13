@@ -200,7 +200,6 @@ TEST_CASE("product: a device on its way down does not leave the buzzer sounding"
     REQUIRE(sky.simulator.platform().chips().haptic.moving());
     sky.simulator.product().shutdown().request(power::ShutdownReason::LongPress, now_ms);
     sky.simulator.step(now_ms + kStepMs);
-    CHECK_FALSE(sky.simulator.platform().chips().haptic.moving());
     REQUIRE(sky.simulator.product().shutdown().going_down());
     CHECK(int(sky.sounding_level()) == 0);
     CHECK_FALSE(sky.simulator.product().alarm().sounding());
@@ -210,6 +209,7 @@ TEST_CASE("product: a device on its way down does not leave the buzzer sounding"
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(int(sky.announcing_level()) == 0);
+    CHECK_FALSE(sky.simulator.platform().chips().haptic.moving());
     // The panel's own peripheral goes the same way: nothing is left driven.
     CHECK_FALSE(sky.simulator.backlight());
 }

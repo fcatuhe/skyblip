@@ -93,6 +93,7 @@ class Product {
 
         if (board != Status::Ok) return board;
         if (!flyable_) return Status::Down;
+        if (reset_reason_ == power::ResetReason::LowPowerWake) alarm_.sign_on();
         const Status loop = loop_.setup();
         state_.started = loop == Status::Ok;
         return loop;
@@ -127,6 +128,7 @@ class Product {
         }
         shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
         drive_shutdown(now_ms);
+        if (shutdown_.going_down()) finish_sign_off(now_ms);
         if (shutdown_.going_down()) screen_.settle_park(now_ms);
         if (shutdown_.going_down()) await_radio_park(now_ms, ready_but_for_radio());
         enter_recovery_once_parked();
@@ -327,7 +329,11 @@ class Product {
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;
-        park_parts(now_ms);
+        park_radio();
+        if (power::ends_switched_off(shutdown_.reason(), recovery_powers_off()))
+            alarm_.sign_off(now_ms);
+        else
+            park_outputs(now_ms);
         // And now that nothing is armed, the second is nobody's: a settings change
         // still waiting for a free phase (core/timing/durable_write.h) goes to
         // flash here rather than dying with the rails. From this point the service
@@ -349,14 +355,22 @@ class Product {
             screen_.set_power(false);
     }
 
-    // INFO: fc 08nov26 the switch-off and the refused boot both run this, so every road leaves
-    // these parts alike
+    // INFO: fc 13nov26 a refused boot parks these at once, and a switch-off parks the outputs once
+    // its sign ends
     void park_parts(uint32_t now_ms) {
-        // The radio goes first. An armed dwell keeps the receiver and the PA
-        // alive right through the seconds the panel takes to park.
+        park_radio();
+        park_outputs(now_ms);
+    }
+
+    // The radio goes first. An armed dwell keeps the receiver and the PA
+    // alive right through the seconds the panel takes to park.
+    void park_radio() {
         roles_.rf.abort();
         roles_.rf.sleep();
         publish_radio_asleep();
+    }
+
+    void park_outputs(uint32_t now_ms) {
         // Every peripheral that can be left driven is switched off by the owner
         // that drives it, because from here the service loop no longer runs: a
         // buzzer mid-pattern would sound until the rails drop.
@@ -368,8 +382,19 @@ class Product {
         board_.park();
     }
 
+    void finish_sign_off(uint32_t now_ms) {
+        if (!alarm_.signing()) return;
+        alarm_.advance_signature(now_ms);
+        if (!alarm_.signing()) park_outputs(now_ms);
+    }
+
+    bool recovery_powers_off() const {
+        return roles_.dfu.recovery_path() == ports::RecoveryPath::PowerOffToFinish;
+    }
+
     bool ready_but_for_radio() const {
         return shutdown_.ready_to_power_off() && !installing() && !screen_.parking() &&
+               !alarm_.signing() &&
                (!recovering() || recovery_taken_ == ports::RecoveryPath::PowerOffToFinish);
     }
 
