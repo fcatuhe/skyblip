@@ -84,7 +84,11 @@
       const unit = this;
       const characteristic = (kind, write) => ({
         startNotifications: async () => {},
+        stopNotifications: async () => {},
         addEventListener: (type, listener) => unit.listeners[kind].push(listener),
+        removeEventListener: (type, listener) => {
+          unit.listeners[kind] = unit.listeners[kind].filter(each => each !== listener);
+        },
         writeValueWithResponse: write,
         writeValueWithoutResponse: write,
       });

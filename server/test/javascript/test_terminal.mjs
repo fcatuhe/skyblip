@@ -39,7 +39,15 @@ test('an SMP notification that is not one whole packet is a slice', () => {
   assert.equal(lineOf({ endpoint: 'smp', direction: 'in', bytes: whole }).text, `read reply os echo seq 1 {"r":"${'x'.repeat(40)}"}`);
 });
 
-test('a link event carries the reason it failed', () => {
-  assert.deepEqual(lineOf({ event: 'close' }), { event: 'close', text: '' });
-  assert.deepEqual(lineOf({ event: 'failed', error: new Error('GATT Error') }), { event: 'failed', text: 'GATT Error' });
+test('a link event that failed names its endpoint and why, marked bad', () => {
+  assert.deepEqual(lineOf({ event: 'close' }), { event: 'close', bad: false, text: '' });
+  assert.deepEqual(lineOf({ event: 'failed', endpoint: 'stream', error: new Error('GATT Error') }), { event: 'failed', bad: true, text: 'nmea: GATT Error' });
+});
+
+test('an SMP reply that refuses is marked bad', () => {
+  const refusal = packet({ op: OP.writeResponse, group: GROUP.image, id: ID.imageUpload, seq: 3, body: { err: { group: 1, rc: 27 } } });
+  const line = lineOf({ endpoint: 'smp', direction: 'in', bytes: refusal });
+  assert.equal(line.text, 'write reply image upload seq 3 {"err":{"group":1,"rc":27}}');
+  assert.equal(line.bad, true);
+  assert.equal(lineOf({ endpoint: 'smp', direction: 'in', bytes: packet({ op: OP.readResponse, group: GROUP.os, id: ID.osParams, seq: 0, body: { buf_size: 2475 } }) }).bad, false);
 });

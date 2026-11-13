@@ -31,16 +31,32 @@ class Characteristic {
     this.link = link;
     this.onWrite = onWrite;
     this.listeners = [];
+    this.notifying = false;
     this.longestAttempt = 0;
   }
 
-  async startNotifications() {}
+  async startNotifications() {
+    if (this.link.writing) this.link.overlaps++;
+    this.link.writing = true;
+    await tick();
+    this.link.writing = false;
+    this.notifying = true;
+  }
+
+  async stopNotifications() {
+    this.notifying = false;
+  }
 
   addEventListener(type, listener) {
     if (type === 'characteristicvaluechanged') this.listeners.push(listener);
   }
 
+  removeEventListener(type, listener) {
+    this.listeners = this.listeners.filter(each => each !== listener);
+  }
+
   notify(bytes) {
+    if (!this.notifying) return;
     if (bytes.length > this.link.mtu - ATT_HEADER_BYTES) {
       this.link.refusedNotifications++;
       return;
