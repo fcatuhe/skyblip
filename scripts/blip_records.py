@@ -140,7 +140,7 @@ PROFILE = ("full", "power_run", "flight_run")
 REJECT = ("NONE", "NO SOLUTION", "NO RMC", "NO GGA", "STALE", "NO DATE", "JUMP")
 STAGE = ("silent", "blind", "solving", "fixed")
 VERDICT = ("transmitted", "lost", "held", "unarmed", "received", "named", "bad_crc", "unframed",
-           "miskeyed", "undecoded", "unsupported", "unattempted")
+           "miskeyed", "undecoded", "unsupported", "unattempted", "declared")
 SOURCE = ("adsl_direct", "adsl_uplink", "alptas", "own", "adsb")
 BAND = ("M", "O")
 SLOT_STATE = ("uplink_rx_o_band", "switch_o_band_to_m_band", "slot0", "hop", "slot1",

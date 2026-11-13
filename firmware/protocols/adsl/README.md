@@ -10,6 +10,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 | `physical.h` | C.2, C.4, D.1.1 | the two M-band channels and the O band, the M-band modulation and its 14 dBm e.r.p. ceiling, and the sync word with D.1.1's length byte behind it |
 | `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation, sync and burst, the G.3 Traffic Uplink packet with up to ten verbatim Traffic payloads and its 10 s age rule, and E.3.2's RS(255,223) code with its roots and zero prefix |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
+| `versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
 | `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the Traffic schedule for a ground second the integrator chooses, channel alternation, the 500 ms nav age and the Status period |
 | `version.h` | | `kVersion` and `kSpecification` |
 
@@ -23,11 +24,12 @@ These are skyBlip's choices, built on this stack:
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
 - the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record, its window in slot 1's tail and its second (`core/protocol/callsign.*`, `core/timing/transmit.*`)
 - the dual-system receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
+- B.5's bookkeeping: each target's Max. Protocol Version and the lowest any close one reads (`core/traffic/table.*`), and how own Traffic is re-coded for Issue 1 (`core/protocol/adsl.*`)
 - `RadioService` and the SX1262 settings that put a frame on air
 
 ## What is not implemented
 
-Each gap is a skipped case in the conformance suite, written as the clause requires (below): O-band LDR (C.3, D.1.2), the secure signature (E.4), FIS-B (G.4), Remote Identification (G.5), privacy mode (F.2.4) and soft versioning (B.5). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
+Each gap is a skipped case in the conformance suite, written as the clause requires (below): O-band LDR (C.3, D.1.2), the secure signature (E.4), FIS-B (G.4), Remote Identification (G.5), and privacy mode (F.2.4). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
 
 ## Public API
 
@@ -38,6 +40,7 @@ Everything is in namespace `skyblip::adsl`.
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
+- `declared_max_version()`, `close_client()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
 - `on_schedule()`, `channel_in()`, `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
 - `kVersion`, `kSpecification`
@@ -77,6 +80,10 @@ The payload is 12 bytes, header included. The frame still carries 20 payload byt
 | G.1.15 GVA | 2 | VFOM under 45 m | VFOM from 10 to 45 m | 0 |
 
 Every other G.1 table only writes its bounds out, and G.1.10, G.1.16 and G.1.17 add rules and no codes. A code marked 0 in the last column is one an Issue 1 receiver still reads as a true statement, so it stays at version 0 for the widest reach. The clause cases in `test/conformance/test_network.cpp` pin one row each.
+
+## Soft versioning
+
+§B.5 lets the specification move on without splitting the air. Every packet carries the version it is written in (§E.1.1, above), and the Status carries the highest version its sender reads (§G.2.1, `Packet::kMaxProtocolVersion`, 1 here). `declared_max_version()` reads either: the Status field, or for any other packet the version it came in, which §B.5 tells a receiver to assume until it hears a Status. `close_client()` is §B.5's test for a neighbour own Traffic has to stay readable to: under 1 km horizontally and 800 m vertically, or under 800 m vertically and less than 30 s from the closest point of approach, that time being the horizontal distance over the closure rate. A Traffic packet then goes out in the lowest version any close neighbour reads. Which targets are tracked, and how a Traffic payload is re-coded for an older issue, are skyBlip's, in `core/traffic/README.md` and `core/protocol/README.md`.
 
 ## The Traffic Uplink
 

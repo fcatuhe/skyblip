@@ -13,7 +13,7 @@ using wire::divide_rounded;
 
 namespace {
 
-// INFO: fc 13nov26 Issue 1 reserves 14 up, and Issue 2 names model plane, heavy rotorcraft, hang-glider, paramotor
+// INFO: fc 13nov26 Issue 1 reserves 14 up, Issue 2 names 14 to 17 from model plane to paramotor
 constexpr uint8_t kFirstIssue2Category = 14;
 constexpr uint8_t kLastIssue2Category = 17;
 constexpr uint16_t kFrameBits = Packet::kDataBytes * 8;
@@ -168,7 +168,7 @@ void encode_status(Packet& packet, uint32_t address, uint8_t address_mapping_tab
     packet.set_protocol_version(Packet::kProtocolVersionIssue2);
     packet.set_address(address);
     packet.set_address_mapping_table(address_mapping_table);
-    packet.set_field(Packet::kMaxProtocolVersionField, Packet::kProtocolVersionIssue2);
+    packet.set_field(Packet::kMaxProtocolVersionField, Packet::kMaxProtocolVersion);
     packet.set_field(Packet::kMBandReceiveField, static_cast<uint32_t>(report.m_band));
     packet.set_field(Packet::kOBandLdrReceiveField, static_cast<uint32_t>(report.o_band_ldr));
     packet.set_field(Packet::kOBandHdrReceiveField, static_cast<uint32_t>(report.o_band_hdr));

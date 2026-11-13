@@ -42,6 +42,7 @@ struct __attribute__((packed)) Packet {
     // INFO: fc 13nov26 E.1.1 numbers Issue 2 as 1, and the Status payload first appears in Issue 2
     static constexpr uint8_t kProtocolVersionIssue1 = 0;
     static constexpr uint8_t kProtocolVersionIssue2 = 1;
+    static constexpr uint8_t kMaxProtocolVersion = kProtocolVersionIssue2;
     static constexpr uint8_t kProtocolVersionMask = 0x0F;
     static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
 
@@ -115,7 +116,8 @@ struct __attribute__((packed)) Packet {
     bool is_position() const { return payload_type == kPayloadTypePosition; }
     uint8_t protocol_version() const { return version & kProtocolVersionMask; }
     void set_protocol_version(uint8_t value) {
-        version = static_cast<uint8_t>((version & ~kProtocolVersionMask) | (value & kProtocolVersionMask));
+        version = static_cast<uint8_t>((version & ~kProtocolVersionMask) |
+                                       (value & kProtocolVersionMask));
     }
 
     uint32_t address() const { return field(kAddressField); }

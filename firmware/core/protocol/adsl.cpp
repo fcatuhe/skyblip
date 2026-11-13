@@ -10,6 +10,23 @@
 
 namespace skyblip::protocol {
 
+namespace {
+
+// INFO: fc 13nov26 Issue 1 G.1.5 marked a missing fix 0xFFFFFF, where Issue 2 writes 0x800000
+constexpr uint32_t kIssue1PositionInvalidCode = 0xFFFFFF;
+
+uint8_t issue1_category(uint8_t category) {
+    switch (category) {
+        case 14: return 11;
+        case 15: return 3;
+        case 16:
+        case 17: return 7;
+        default: return category;
+    }
+}
+
+}  // namespace
+
 bool to_observation(const adsl::Packet& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out) {
     out = model::AircraftObservation{};
@@ -33,6 +50,22 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     out.rssi_dbm = rssi_dbm;
     out.source = source;
     out.position_valid = true;
+    out.adsl_version = packet.protocol_version();
+    return true;
+}
+
+bool lower_to(adsl::Packet& packet, uint8_t version) {
+    if (!packet.is_position() || packet.protocol_version() <= version) return false;
+    if (version == adsl::Packet::kProtocolVersionIssue1) {
+        packet.aircraft_category = issue1_category(packet.aircraft_category);
+        if (packet.field(adsl::Packet::kLatitudeField) == adsl::Packet::kPositionInvalidCode) {
+            packet.set_field(adsl::Packet::kLatitudeField, kIssue1PositionInvalidCode);
+            packet.set_field(adsl::Packet::kLongitudeField, kIssue1PositionInvalidCode);
+        }
+        if (!packet.has_speed()) packet.set_speed_q(0);
+        if (!packet.has_climb()) packet.set_climb_e8(0);
+    }
+    packet.set_protocol_version(version);
     return true;
 }
 

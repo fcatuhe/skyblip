@@ -5,6 +5,7 @@
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/test/conformance/reference.h"
+#include "protocols/adsl/versioning.h"
 #include "protocols/common/little_endian.h"
 #include "protocols/common/manchester.h"
 
@@ -78,6 +79,39 @@ TEST_CASE("ADS-L.4.SRD860.B.4: a transmission is the sync word and the packet, n
     CHECK(decoded[3] == adsl::kFrameBytes);
     for (int i = 0; i < adsl::kFrameBytes; i++)
         CHECK(decoded[wire::kSyncWordBytes + i] == packet.data[i]);
+}
+
+TEST_CASE("ADS-L.4.SRD860.B.5: a client inside 1 km and 800 m is close, whatever its closure") {
+    CHECK(adsl::close_client(999, 0, 0));
+    CHECK(adsl::close_client(999, 799, -50000));
+    CHECK(adsl::close_client(999, -799, 0));
+    CHECK_FALSE(adsl::close_client(999, 800, 0));
+    CHECK_FALSE(adsl::close_client(1000, 0, 0));
+}
+
+// TCPA is the horizontal distance over the closure rate: 3000 m at 101 m/s is 29.7 s, at 100 m/s it
+// is 30.
+TEST_CASE("ADS-L.4.SRD860.B.5: a client under 800 m and less than 30 s from CPA is close") {
+    CHECK(adsl::close_client(3000, 0, 101000));
+    CHECK_FALSE(adsl::close_client(3000, 0, 100000));
+    CHECK(adsl::close_client(3000, -799, 101000));
+    CHECK_FALSE(adsl::close_client(3000, 800, 101000));
+    CHECK_FALSE(adsl::close_client(3000, 0, -101000));
+}
+
+TEST_CASE(
+    "ADS-L.4.SRD860.B.5: the Max. Protocol Version is the Status field, or else the packet's") {
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
+    CHECK(adsl::declared_max_version(status) == adsl::Packet::kMaxProtocolVersion);
+    status.set_field(adsl::Packet::kMaxProtocolVersionField, 0);
+    CHECK(adsl::declared_max_version(status) == 0);
+
+    adsl::Packet traffic = traffic_packet();
+    traffic.set_protocol_version(0);
+    CHECK(adsl::declared_max_version(traffic) == 0);
+    traffic.set_protocol_version(1);
+    CHECK(adsl::declared_max_version(traffic) == 1);
 }
 
 // Both reserved bits set: the one at header offset 38, and the one closing the payload.

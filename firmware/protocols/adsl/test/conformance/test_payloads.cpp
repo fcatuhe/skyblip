@@ -111,6 +111,14 @@ TEST_CASE("ADS-L.4.SRD860.G.3: the uplink is sent with FEC, as an Issue 2 payloa
     CHECK(std::memcmp(packet + 1 + covered, parity, sizeof(parity)) == 0);
 }
 
+// G.2's table puts the field at payload bit 0, which is bit 40 behind the five-byte ADS-L header.
+TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version its sender reads") {
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
+    CHECK(wire::read_bits(status.payload, {40, 4}) == adsl::Packet::kMaxProtocolVersion);
+    CHECK(adsl::Packet::kMaxProtocolVersion == adsl::Packet::kProtocolVersionIssue2);
+}
+
 // TODO: fc 18sep26 no FIS-B: DO-358B ground uplink messages are neither received nor decoded
 TEST_CASE("ADS-L.4.SRD860.G.4: a FIS-B Uplink payload carries a DO-358B ground uplink message" *
           doctest::skip()) {

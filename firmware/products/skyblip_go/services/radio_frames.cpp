@@ -28,6 +28,10 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
             built = protocol::from_own(
                 outgoing_, context_.state.own, address, settings::kAddressMappingTable,
                 context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
+            if (built && protocol::lower_to(outgoing_, context_.state.traffic.readable_version(
+                                                           context_.state.own,
+                                                           static_cast<uint32_t>(tx_at_us / 1000))))
+                context_.state.air.tx_lowered++;
             break;
         case Payload::Status:
             built = protocol::from_own_status(outgoing_, address, settings::kAddressMappingTable,

@@ -11,10 +11,10 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 | File | Clauses | Here, in the device's half | In the component's half |
 |---|---|---|---|
 | `test_general.cpp` | A.1 to A.5, and the performance appendix | the manufacturer's paperwork and the transmitter's power and latency | what the specification is for and covers |
-| `test_overview.cpp` | B.1 to B.6 | soft versioning | bit order, the transmission sequence, reserved bits |
+| `test_overview.cpp` | B.1 to B.6 | soft versioning as flown: the version own Traffic goes out in beside a close neighbour, and a Status filed against its sender | bit order, the transmission sequence, reserved bits, B.5's close-client test and the version a packet declares |
 | `test_physical.cpp` | C.1 to C.5 | the radio's preamble and power, channel alternation as flown, the time multiplexing the dwell map does | bands, modulation, Manchester coding, sync words |
-| `test_datalink.cpp` | D.1 to D.3 | | the whole subpart |
-| `test_network.cpp` | E.1 to E.4.2 | | the whole subpart |
+| `test_datalink.cpp` | D.1 to D.3 | the hour's duty cycle as the only thing that refuses a burst | the whole subpart |
+| `test_network.cpp` | E.1 to E.4.2 | the version own-ship's Traffic goes out in | the whole subpart |
 | `test_presentation.cpp` | F.1 to F.2.5 | payload 66, skyBlip's address table and the configuration that sets it | the header and the payload types |
 | `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the instant, the flight state, the category | every field's offset and code |
 | `test_quality.cpp` | G.1.11 to G.1.17 | the integrity and accuracy own-ship claims | the code tables |

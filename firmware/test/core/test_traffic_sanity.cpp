@@ -118,8 +118,8 @@ TEST_CASE("traffic: a table with no reference set behaves exactly as it did befo
 }
 
 // The uplink is the case that makes the gate per-observation rather than
-// per-frame: one ground-station frame carries up to thirteen aircraft, and one
-// ghost among them says nothing about the other twelve.
+// per-frame: one ground-station frame carries up to ten aircraft, and one
+// ghost among them says nothing about the other nine.
 TEST_CASE("traffic: a ghost in a relayed frame does not take the good targets with it") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;

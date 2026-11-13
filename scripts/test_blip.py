@@ -151,6 +151,11 @@ class DiagnosticsPayloads(unittest.TestCase):
         payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, 6, 0, 0, 0, 20, -70, 0)
         self.assertEqual(decoded(5, payload)["verdict"], "bad_crc")
 
+    # radio::Verdict gained Declared at 12, appended, for an ADS-L Status a target's B.5 version comes from.
+    def test_the_verdict_after_unattempted_is_a_status_heard(self):
+        payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, 12, 0, 0, 0, 24, -70, 0)
+        self.assertEqual(decoded(5, payload)["verdict"], "declared")
+
     def test_dwell_reads_the_slot_map_and_a_refusal(self):
         payload = struct.pack("<I4H3Bb", 868_200_000, 450, 1200, 612, 7, 4, 0, 1, -105)
         self.assertEqual(decoded(6, payload, 0b0100_0100), whole(

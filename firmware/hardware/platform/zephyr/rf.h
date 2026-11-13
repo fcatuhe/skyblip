@@ -443,7 +443,7 @@ class Rf : public ports::Rf {
     }
 
     // The frame is already in the event that will carry it. An O-band uplink
-    // codeword is 255 bytes, and staging one on this thread's 2 KB stack as well
+    // packet is up to 230 bytes, and staging one on this thread's 2 KB stack as well
     // as on the queue would be the same bytes twice. The band the dwell was
     // armed for travels with it: the O band carries one system and the M band
     // two, and only the arming knows which of them this burst is.

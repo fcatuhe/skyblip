@@ -4,7 +4,9 @@
 #include "core/flight/turn.h"
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
+#include "core/units/units.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl/versioning.h"
 
 namespace skyblip::traffic {
 
@@ -132,8 +134,8 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
         return -1;
     }
     // One observation at a time, deliberately: an uplink frame carries up to
-    // thirteen aircraft and one implausible entry among them says nothing about
-    // the other twelve, so a ghost is refused without taking a good report with
+    // ten aircraft and one implausible entry among them says nothing about
+    // the other nine, so a ghost is refused without taking a good report with
     // it. A refused observation also never displaces the slot an aircraft of that
     // address already holds - the refusal happens before find().
     int32_t slant_m = 0;
@@ -144,6 +146,7 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
     int index = find(observation.address_mapping_table, observation.address);
     if (index >= 0) {
         Target& held = slots_[index];
+        note_version(held.version, observation);
         if (!prefer_new(observation, held.observation)) return index;
         watch_liftoff(held, observation);
         held.observation = observation;
@@ -157,12 +160,46 @@ int TrafficTable::update(const model::AircraftObservation& observation, uint32_t
     slots_[index].observation = observation;
     slots_[index].revision = ++revisions_;
     slots_[index].turn = TargetTurn{};
+    slots_[index].version = PeerVersion{};
+    note_version(slots_[index].version, observation);
     slots_[index].liftoff = flight::Liftoff{};
     sample_turn(slots_[index].turn, observation);
     slots_[index].alarm_level = Level::None;
     slots_[index].alarm_dismissed = false;
     slots_[index].in_formation = false;
     return index;
+}
+
+void TrafficTable::note_version(PeerVersion& version,
+                                const model::AircraftObservation& observation) {
+    if (observation.source != model::Source::AdslDirect) return;
+    version.adsl = true;
+    if (!version.declared) version.max = observation.adsl_version;
+}
+
+bool TrafficTable::declare_max_version(uint8_t address_mapping_table, uint32_t address,
+                                       uint8_t version) {
+    const int index = find(address_mapping_table, address);
+    if (index < 0) return false;
+    slots_[index].version.adsl = true;
+    slots_[index].version.declared = true;
+    slots_[index].version.max = version;
+    return true;
+}
+
+// INFO: fc 13nov26 a neighbour with no valid height counts as level with us, the cautious reading
+uint8_t TrafficTable::readable_version(const model::Ownship& own, uint32_t now_ms) const {
+    uint8_t version = adsl::Packet::kMaxProtocolVersion;
+    for (const Target& target : slots_) {
+        if (!target.used || !target.version.adsl || target.version.max >= version) continue;
+        const AlarmAssessment seen = assess(own, target.observation, now_ms);
+        if (!seen.valid) continue;
+        const int32_t vertical_m = seen.relative_altitude_valid ? seen.relative_altitude_m : 0;
+        if (adsl::close_client(seen.relative_distance_m, vertical_m,
+                               seen.closing_mps * kMillimetresPerMetre))
+            version = target.version.max;
+    }
+    return version;
 }
 
 void TrafficTable::watch_liftoff(Target& target, const model::AircraftObservation& incoming) {
@@ -193,6 +230,7 @@ void TrafficTable::clear() {
 void TrafficTable::release(Target& target) {
     target.used = false;
     target.turn = TargetTurn{};
+    target.version = PeerVersion{};
     target.alarm_level = Level::None;
     target.alarm_dismissed = false;
     target.in_formation = false;

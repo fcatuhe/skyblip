@@ -6,7 +6,7 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 |---|---|
 | `sanity` | whether a decoded position is close enough to have been heard at all |
 | `lease` | how long one reception is believed, for every layer that holds a slot |
-| `table` | which aircraft the finite table holds, and each one's turn rate |
+| `table` | which aircraft the finite table holds, each one's turn rate, and the ADS-L version each one reads |
 | `alarm` | whether a target is an advisory, and what the annunciator is allowed to say |
 | `formation` | which targets are flying with us, on geometry alone |
 | `range` | how far a target is and how far above, and the order the nearby page lists them in |
@@ -156,6 +156,10 @@ A ground roll is not leaving. While either side is on the ground the level falls
 An advisory is announced once and never repeats itself. A ring can stand for a whole climb, and a tone that came back every two seconds for as long as a glider shared the thermal is the device switched off.
 
 What is deliberately absent: there is no co-circling test, no gaggle range gate, no steady-range timer, and no constant anywhere in this directory that assumes a glider.
+
+## Which ADS-L version a target reads
+
+§B.5 asks a transmitter to keep track of the highest ADS-L version each neighbour reads, and `Target::version` holds it. An ADS-L Traffic reception sets it to the version the packet came in, which §B.5 tells a receiver to assume. A Status from the same address replaces it with the Max. Protocol Version the Status declares, and from then on the Status wins until the slot is freed (`declare_max_version`). A Status from an address the table does not hold is dropped: the next one, at most 20 s later, finds the target. `readable_version` returns the lowest version among the ADS-L targets `adsl::close_client()` calls close, assessed as the alarm assesses them (`assess`), with a target that sends no altitude counted as level with us. A relayed target is left out, because the uplink record does not carry the version its sender used.
 
 ## Turn rate
 

@@ -19,11 +19,11 @@ namespace skyblip::timing {
 // completes by 390 ms.
 //
 // INFO: fc 05aug26 kGroundEmitEndMs is a completion deadline, not a start
-// deadline. A full uplink frame is 10.44 ms of air at §C.4's 200 kbps
+// deadline. The longest uplink packet is 9.4 ms of air at §C.4's 200 kbps
 // (adsl::kUplinkBurstUs), so a burst begun at 390 would still be on air at
 // 400, where the radio has already retuned. What this costs us is stated rather
 // than discovered: §C.5 lets a ground station that is not ours begin one as late
-// as 439.56 ms, and a third-party uplink in the back half of its own slot is one
+// as 440.6 ms, and a third-party uplink in the back half of its own slot is one
 // this dwell does not hear. test/core/test_uplink.cpp holds the arithmetic.
 //
 // The two M-band dwells are 400 ms and 400 ms, one channel each (§C.2.5 makes

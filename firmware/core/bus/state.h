@@ -228,6 +228,10 @@ struct State {
         uint32_t rx_miskeyed{0};
         uint32_t rx_noise{0};
         uint32_t rx_named{0};
+        // INFO: fc 13nov26 B.5: Status payloads whose Max. Protocol Version a target now holds
+        uint32_t rx_status{0};
+        // INFO: fc 13nov26 B.5: own Traffic re-coded so a close neighbour reads it
+        uint32_t tx_lowered{0};
         uint32_t tx_ok{0};
         uint32_t tx_lost{0};
         uint32_t tx_named{0};

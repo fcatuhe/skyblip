@@ -32,6 +32,21 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | Traffic Uplink client | 1 | the uplink is decoded and drawn |
 | FIS-B client | 0 | not decoded |
 
+## Writing for an Issue 1 neighbour
+
+§B.5 asks own Traffic to go out in a version every close neighbour reads, and `core/traffic/README.md` says how the lowest one is found. `lower_to` re-codes a clear Traffic packet for that version and returns whether its version dropped. `RadioService` runs it on every own Traffic packet and counts each drop in `air.tx_lowered`. Issue 1 has no code for some of what Issue 2 says, so the closest true reading is chosen, and where none exists, the one a receiver extrapolates least from:
+
+| Issue 2 code | Issue 1 code | Why |
+|---|---|---|
+| category 14, model plane | 11, UAS open category | a model plane flies in the open category |
+| category 15, heavy rotorcraft | 3, rotorcraft | Issue 1's rotorcraft covers every weight |
+| category 16, hang-glider | 7, hang-glider or paraglider | the same class |
+| category 17, paramotor | 7, hang-glider or paraglider | a paraglider wing with an engine, flown at a paraglider's speed |
+| position 0x800000, no fix | 0xFFFFFF | Issue 1's own marker for no fix |
+| ground speed 0xFF, invalid | 0 | Issue 1 reads 0xFF as 238 m/s, and a receiver would carry the target off at that speed |
+| vertical rate 0x1FF, invalid | 0, level | Issue 1 reads 0x1FF as a 119 m/s descent |
+| altitude 0x3FFF, invalid | unchanged | Issue 1 has no code for an unknown height, and 0x3FFF reads as 61112 m, the top of its scale |
+
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.

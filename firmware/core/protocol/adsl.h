@@ -27,6 +27,9 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
 bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at);
 
+// INFO: fc 13nov26 B.5: a Traffic packet re-coded for an older issue, true when its version dropped
+bool lower_to(adsl::Packet& packet, uint8_t version);
+
 bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
                      uint8_t address_mapping_table, const adsl::StatusReport& report);
 

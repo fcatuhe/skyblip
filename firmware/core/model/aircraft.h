@@ -72,6 +72,8 @@ struct AircraftObservation {
     bool pressure_altitude_valid;
     uint8_t adsb_version;
     bool adsb_version_valid;
+    // INFO: fc 13nov26 the E.1.1 version the ADS-L packet came in, B.5's stand-in for a Status
+    uint8_t adsl_version;
     uint8_t gva;
     bool gva_valid;
     bool height_difference_valid;

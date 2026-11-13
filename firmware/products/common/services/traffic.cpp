@@ -8,6 +8,7 @@
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "protocols/adsl/versioning.h"
 #include "protocols/alptas/frame.h"
 
 namespace skyblip::common {
@@ -143,6 +144,11 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
         log(event, stamp, outcome, &observation);
         return;
     }
+    if (outcome == radio::Verdict::Declared) {
+        context_.state.air.rx_status++;
+        log(event, stamp, outcome, &observation);
+        return;
+    }
     if (outcome != radio::Verdict::Received) {
         count_refusal(outcome);
         const bool named = alptas && names_its_sender(outcome);
@@ -233,12 +239,27 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
         return radio::Verdict::BadCrc;
     packet.descramble();
     if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
+    if (packet.payload_type == adsl::Packet::kPayloadTypeStatus)
+        return learn_status(packet, observation);
     if (!packet.is_position()) return radio::Verdict::Unsupported;
     events::Stamp received = stamp;
     received.at_s = utc_s;
     if (!protocol::to_observation(packet, received, 0, model::Source::AdslDirect, observation))
         return radio::Verdict::Undecoded;
     return radio::Verdict::Received;
+}
+
+// INFO: fc 13nov26 B.5: a Status from an untracked aircraft is dropped, and its next one counts
+radio::Verdict TrafficService::learn_status(const adsl::Packet& packet,
+                                            model::AircraftObservation& observation) {
+    observation.address = packet.address();
+    observation.address_mapping_table = packet.address_mapping_table();
+    observation.source = model::Source::AdslDirect;
+    if (!context_.state.traffic.declare_max_version(observation.address_mapping_table,
+                                                    observation.address,
+                                                    adsl::declared_max_version(packet)))
+        return radio::Verdict::Unsupported;
+    return radio::Verdict::Declared;
 }
 
 radio::Verdict TrafficService::learn_callsign(const adsl::Packet& packet, uint32_t utc_s,

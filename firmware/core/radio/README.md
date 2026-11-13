@@ -4,7 +4,7 @@ The station log: every burst this radio sent or heard, in the order it happened,
 
 `rx_ok` and `tx_ok` are totals, and a total cannot tell an empty sky from a receiver that frames nothing. The traffic table only ever holds what already decoded, so a burst that arrived and did not become a frame leaves no trace in it. That burst is the one worth seeing: it is the difference between "nobody is transmitting" and "everybody is transmitting and I am deaf to them", and the two have the same reading on every other page. Two skyBlips that both transmit and neither hears is the fault this exists for, and it happened: `git log core/protocol/air.cpp`.
 
-`Verdict` names the twelve things that can happen to a burst.
+`Verdict` names the thirteen things that can happen to a burst.
 
 | | |
 |---|---|
@@ -20,6 +20,7 @@ The station log: every burst this radio sent or heard, in the order it happened,
 | `Undecoded` | the frame was attempted and refused: the ALP-TAS plausibility gate with no second that would have read it, or an ADS-L frame carrying no position |
 | `Unsupported` | the frame framed and carried a message type this firmware does not implement: ALP-TAS reads its 2024 position frame and nothing else, so Air V6 (type 0) and text messages (type 3) land here, and ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and any other telemetry carried in 66 land here too |
 | `Unattempted` | nothing was tried, because own-ship had no fix or no UTC to decode an ALP-TAS frame against |
+| `Declared` | an ADS-L Status from an aircraft in the table, whose Max. Protocol Version B.5 now holds for it, printed `STAT` |
 
 `BadCrc` and `Undecoded` were one verdict until the bench had two devices on it, and the pair of them is the reading that separates a marginal link from a protocol disagreement. Bits the air corrupted are a radio problem, and bits nothing here knew what to do with are ours: one is answered by moving the antenna and the other by reading `core/protocol/`.
 
@@ -91,9 +92,11 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `rx_miskeyed` | `Miskeyed`, a frame whose sender keyed another second |
 | `rx_noise` | a sync window the band's own noise walked through |
 | `rx_named` | `Named`, a registration heard from somebody else |
+| `rx_status` | `Declared`, a Status that told us the highest ADS-L version a target reads |
 | `tx_ok` | own-ship's burst left the antenna |
 | `tx_lost` | own-ship's burst was armed and never completed |
 | `tx_named` | how many of the bursts in `tx_ok` carried own-ship's registration rather than a position |
+| `tx_lowered` | own-ship's Traffic re-coded to Issue 1 because a close neighbour reads no higher (B.5) |
 
 `BadCrc` is counted in `rx_bad` beside `Undecoded` rather than apart from it, even though the two are answered differently. What a counter is read for is whether anything is wrong, and both say yes: a burst the air damaged and a burst nothing here could read are each a reason to go and look. Which of the two it was is the tape's column, one row per burst, and a number that only ever climbs cannot carry that distinction anyway.
 
