@@ -12,6 +12,7 @@
 #include "core/power/reset_reason.h"
 #include "core/settings/blob.h"
 #include "core/store/sector.h"
+#include "ports/dfu.h"
 #include "ports/gnss.h"
 #include "products/skyblip_go/settings.h"
 
@@ -217,6 +218,43 @@ constexpr bool on_the_wire(comms::CaptureProfile value) {
     return false;
 }
 
+constexpr bool on_the_wire(ports::StagedCheck value) {
+    switch (value) {
+        case ports::StagedCheck::Unchecked:
+        case ports::StagedCheck::Matched:
+        case ports::StagedCheck::Damaged:
+        case ports::StagedCheck::Unreadable:
+        case ports::StagedCheck::Undigested: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(ports::SwapType value) {
+    switch (value) {
+        case ports::SwapType::Unknown:
+        case ports::SwapType::None:
+        case ports::SwapType::Test:
+        case ports::SwapType::Permanent:
+        case ports::SwapType::Revert:
+        case ports::SwapType::Fail:
+        case ports::SwapType::Panic: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(dfu::Proof value) {
+    switch (value) {
+        case dfu::Proof::None:
+        case dfu::Proof::Booted:
+        case dfu::Proof::Started:
+        case dfu::Proof::GnssHeard:
+        case dfu::Proof::HubBootable:
+        case dfu::Proof::Proven:
+        case dfu::Proof::ConfirmFailed: return true;
+    }
+    return false;
+}
+
 }
 
 static_assert(code(go::AlarmVolume::Off) == 0, "alarm_volume off");
@@ -335,5 +373,30 @@ static_assert(code(comms::CaptureProfile::PowerRun) == 1, "capture_profile power
 static_assert(code(comms::CaptureProfile::FlightRun) == 2, "capture_profile flight_run");
 static_assert(code(comms::CaptureProfile::Stop) == 3, "capture_profile stop");
 static_assert(on_the_wire(comms::CaptureProfile::Full), "capture_profile");
+
+static_assert(code(ports::StagedCheck::Unchecked) == 0, "staged_check unchecked");
+static_assert(code(ports::StagedCheck::Matched) == 1, "staged_check matched");
+static_assert(code(ports::StagedCheck::Damaged) == 2, "staged_check damaged");
+static_assert(code(ports::StagedCheck::Unreadable) == 3, "staged_check unreadable");
+static_assert(code(ports::StagedCheck::Undigested) == 4, "staged_check undigested");
+static_assert(on_the_wire(ports::StagedCheck::Unchecked), "staged_check");
+
+static_assert(code(ports::SwapType::Unknown) == 0, "swap_type unknown");
+static_assert(code(ports::SwapType::None) == 1, "swap_type none");
+static_assert(code(ports::SwapType::Test) == 2, "swap_type test");
+static_assert(code(ports::SwapType::Permanent) == 3, "swap_type permanent");
+static_assert(code(ports::SwapType::Revert) == 4, "swap_type revert");
+static_assert(code(ports::SwapType::Fail) == 5, "swap_type fail");
+static_assert(code(ports::SwapType::Panic) == 6, "swap_type panic");
+static_assert(on_the_wire(ports::SwapType::Unknown), "swap_type");
+
+static_assert(code(dfu::Proof::None) == 0, "proof none");
+static_assert(code(dfu::Proof::Booted) == 1, "proof booted");
+static_assert(code(dfu::Proof::Started) == 2, "proof started");
+static_assert(code(dfu::Proof::GnssHeard) == 3, "proof gnss_heard");
+static_assert(code(dfu::Proof::HubBootable) == 4, "proof hub_bootable");
+static_assert(code(dfu::Proof::Proven) == 5, "proof proven");
+static_assert(code(dfu::Proof::ConfirmFailed) == 6, "proof confirm_failed");
+static_assert(on_the_wire(dfu::Proof::None), "proof");
 
 }

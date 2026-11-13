@@ -81,6 +81,20 @@ en:
       recovery: Firmware will not take?
       recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
       recover: Restart into the USB drive
+      report_hint: "Send us this line, by message or mail, with what you did. It tells us why the update did not take."
+      report_copy: Copy the report
+    terminal:
+      title: Terminal
+      row: Every Bluetooth frame
+      hint: "Every frame this browser exchanges with the device over Bluetooth, as it passes. > leaves this browser, < comes from the device."
+      endpoints: Endpoints
+      pause: Pause
+      resume: "Resume (%{count} new)"
+      clear: Clear
+      tape: Bluetooth frames
+      opened: link open
+      closed: link closed
+      failed: failed
     activation:
       title: Activate a new Go
       hint: Its glass shows ACTIVATE and a code like 3F2A. Pick that code in the list.
@@ -202,6 +216,14 @@ en:
       probation: The new firmware is proving itself. This takes a few seconds.
       reverted: "The new firmware did not prove itself, so the device went back to the one it had. Try again. If it happens twice, tell us which version:"
       image_refused: "The device would not start the update, the image failed its check, and it kept the firmware it had. Download it again:"
+      install_report:
+        slot_damaged: The new firmware arrived damaged in the device's storage, so it kept the one it had. Install again.
+        slot_unreadable: The device could not read the new firmware back from its storage, so it kept the one it had. Install again.
+        slot_undigested: The new firmware carries no checksum, so the device kept the one it had. Download the image again.
+        swap_not_marked: The device could not mark the new firmware for install, so it started the one it had.
+        bootloader_refused: The device's bootloader refused the new firmware without starting it, so it kept the one it had.
+        probation_failed: The new firmware started, then stopped before it proved itself, so the device went back to the one it had.
+        no_record: "The device came back on %{running}, not %{attempted}, and kept no record of the install."
       settings_prior: Its settings are the ones from before the update. Check them.
       settings_defaults: It lost its settings and runs on defaults. Check the callsign and the aircraft type.
       swap_unpowered: The battery is critical, too low to install. Charge it first.

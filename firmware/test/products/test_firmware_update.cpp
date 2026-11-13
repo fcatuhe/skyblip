@@ -17,22 +17,6 @@ using namespace skyblip;
 
 namespace {
 
-constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
-constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
-
-void pass(Rig& rig, uint32_t& now_ms) {
-    now_ms += 50;
-    rig.run(now_ms, now_ms);
-}
-
-void open_upload_window(Rig& rig, uint32_t& now_ms) {
-    on_ground(rig, now_ms);
-    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
-    config(rig).confirm();
-}
-
 void climb_until_the_link_sees_it(Rig& rig, uint32_t& now_ms) {
     for (int second = 0; second < 20; second++) {
         gnss::GnssSolution climbing{};
@@ -46,25 +30,6 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& now_ms) {
             if (config(rig).flight_state() == flight::FlightState::Airborne) return;
         }
     }
-}
-
-void stage_versions(Rig& rig) {
-    rig.platform.dfu().running_version_valid = true;
-    rig.platform.dfu().running_image_version = kRunning;
-    rig.platform.dfu().staged_version_valid = true;
-    rig.platform.dfu().staged_image_version = kStaged;
-}
-
-void land_upload(Rig& rig, uint32_t& now_ms) {
-    rig.platform.dfu().finished_upload = true;
-    pass(rig, now_ms);
-}
-
-void install_and_swap(Rig& rig) {
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
 }
 
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
@@ -81,20 +46,6 @@ bool attempt_recorded(Rig& rig) {
     size_t count = 0;
     return rig.platform.key_value().read("update", blob, sizeof(blob), count) == Status::Ok;
 }
-
-// The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.
-struct Rebooted {
-    Rig rig;
-    Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
-             std::optional<ports::ImageVersion> slot1 = std::nullopt) {
-        rig.platform.key_value() = before.platform.key_value();
-        rig.platform.dfu().running_version_valid = true;
-        rig.platform.dfu().running_image_version = running;
-        rig.platform.dfu().image_confirmed = confirmed;
-        rig.platform.dfu().staged_version_valid = slot1.has_value();
-        if (slot1) rig.platform.dfu().staged_image_version = *slot1;
-    }
-};
 
 const go::SelfTestPart& storage_row(Rig& rig) {
     for (int i = 0; i < go::kSelfTestPartCount; i++)

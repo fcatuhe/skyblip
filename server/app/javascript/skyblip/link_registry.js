@@ -2138,6 +2138,59 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "install_report",
+      "code": 35,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "check",
+          "number": 1,
+          "type": "enum",
+          "enum": "staged_check"
+        },
+        {
+          "name": "swap",
+          "number": 2,
+          "type": "enum",
+          "enum": "swap_type"
+        },
+        {
+          "name": "request_error",
+          "number": 3,
+          "type": "integer"
+        },
+        {
+          "name": "boots",
+          "number": 4,
+          "type": "unsigned"
+        },
+        {
+          "name": "probation_boots",
+          "number": 5,
+          "type": "unsigned"
+        },
+        {
+          "name": "proof",
+          "number": 6,
+          "type": "enum",
+          "enum": "proof"
+        },
+        {
+          "name": "reset",
+          "number": 7,
+          "type": "enum",
+          "enum": "reset"
+        }
+      ]
     }
   ],
   "enums": {
@@ -2904,6 +2957,125 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
+    "staged_check": {
+      "mirrors": {
+        "type": "ports::StagedCheck",
+        "header": "ports/dfu.h"
+      },
+      "values": [
+        {
+          "name": "unchecked",
+          "code": 0,
+          "mirrors": "Unchecked"
+        },
+        {
+          "name": "matched",
+          "code": 1,
+          "mirrors": "Matched"
+        },
+        {
+          "name": "damaged",
+          "code": 2,
+          "mirrors": "Damaged"
+        },
+        {
+          "name": "unreadable",
+          "code": 3,
+          "mirrors": "Unreadable"
+        },
+        {
+          "name": "undigested",
+          "code": 4,
+          "mirrors": "Undigested"
+        }
+      ]
+    },
+    "swap_type": {
+      "mirrors": {
+        "type": "ports::SwapType",
+        "header": "ports/dfu.h"
+      },
+      "values": [
+        {
+          "name": "unknown",
+          "code": 0,
+          "mirrors": "Unknown"
+        },
+        {
+          "name": "none",
+          "code": 1,
+          "mirrors": "None"
+        },
+        {
+          "name": "test",
+          "code": 2,
+          "mirrors": "Test"
+        },
+        {
+          "name": "permanent",
+          "code": 3,
+          "mirrors": "Permanent"
+        },
+        {
+          "name": "revert",
+          "code": 4,
+          "mirrors": "Revert"
+        },
+        {
+          "name": "fail",
+          "code": 5,
+          "mirrors": "Fail"
+        },
+        {
+          "name": "panic",
+          "code": 6,
+          "mirrors": "Panic"
+        }
+      ]
+    },
+    "proof": {
+      "mirrors": {
+        "type": "dfu::Proof",
+        "header": "core/dfu/update.h"
+      },
+      "values": [
+        {
+          "name": "none",
+          "code": 0,
+          "mirrors": "None"
+        },
+        {
+          "name": "booted",
+          "code": 1,
+          "mirrors": "Booted"
+        },
+        {
+          "name": "started",
+          "code": 2,
+          "mirrors": "Started"
+        },
+        {
+          "name": "gnss_heard",
+          "code": 3,
+          "mirrors": "GnssHeard"
+        },
+        {
+          "name": "hub_bootable",
+          "code": 4,
+          "mirrors": "HubBootable"
+        },
+        {
+          "name": "proven",
+          "code": 5,
+          "mirrors": "Proven"
+        },
+        {
+          "name": "confirm_failed",
+          "code": 6,
+          "mirrors": "ConfirmFailed"
+        }
+      ]
+    },
     "command": {
       "values": [
         {
@@ -3045,6 +3217,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "forget_browser",
           "code": 34
+        },
+        {
+          "name": "install_report",
+          "code": 35
         }
       ]
     }

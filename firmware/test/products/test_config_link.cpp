@@ -116,9 +116,9 @@ TEST_CASE("config link: an update records itself but no revert copy wider than t
     rig.roles.capabilities = ports::Capability::Storage | ports::Capability::Dfu;
     rig.dfu.running_version_valid = true;
     rig.dfu.staged_version_valid = true;
-    rig.link.record_update();
+    rig.link.install();
 
-    CHECK(rig.key_value.written_keys == std::vector<std::string>{"update"});
+    CHECK(rig.key_value.written_keys == std::vector<std::string>{"update", "install.report"});
     CHECK(rig.link.failed_writes() == 1);
 }
 

@@ -31,16 +31,32 @@ class Characteristic {
     this.link = link;
     this.onWrite = onWrite;
     this.listeners = [];
+    this.notifying = false;
     this.longestAttempt = 0;
   }
 
-  async startNotifications() {}
+  async startNotifications() {
+    if (this.link.writing) this.link.overlaps++;
+    this.link.writing = true;
+    await tick();
+    this.link.writing = false;
+    this.notifying = true;
+  }
+
+  async stopNotifications() {
+    this.notifying = false;
+  }
 
   addEventListener(type, listener) {
     if (type === 'characteristicvaluechanged') this.listeners.push(listener);
   }
 
+  removeEventListener(type, listener) {
+    this.listeners = this.listeners.filter(each => each !== listener);
+  }
+
   notify(bytes) {
+    if (!this.notifying) return;
     if (bytes.length > this.link.mtu - ATT_HEADER_BYTES) {
       this.link.refusedNotifications++;
       return;
@@ -86,10 +102,11 @@ export class FakeSkyblip {
     product = 'skyblip_go',
     name = 'skyBlip Go 5B5AFE',
     logStore = new FakeLogStore(),
+    installReport = undefined,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, knowsBrowsers, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -250,6 +267,8 @@ export class FakeSkyblip {
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (command === 'capture' && this.product === 'skyblip_bravo') return this.stageCapture(fields);
+    // INFO: fc 13nov26 undefined is firmware older than the install report, which answers unknown_command
+    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport });
     if (BROWSER_COMMANDS.has(command) && this.knowsBrowsers) return this.answerBrowser(command, fields);
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
