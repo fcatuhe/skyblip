@@ -44,7 +44,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two
 TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency") {
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
-        const int slot = timing::Transmitter::slot_in(utc_s, /*airborne=*/true);
+        const int slot = timing::Transmitter::slot_in(utc_s);
         const uint32_t frequency = timing::Scheduler::slot_frequency_hz(slot);
         CHECK((frequency == adsl::kMBand0Hz || frequency == adsl::kMBand1Hz));
         if (previous != 0) CHECK(frequency != previous);
@@ -88,6 +88,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: a Status flies on the channel the second's posi
     CHECK(checked >= 3);
 }
 
+// Every payload, the name among them: payload 66 is a broadcast type F.2.1 lists, sent like any
+// other.
 TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else") {
     CHECK(adsl::kDirectStartMs == 450);
     CHECK(adsl::kDirectEndMs == 1000);
@@ -96,55 +98,37 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
     clock.utc_valid = true;
     clock.pps_locked = true;
 
+    int names = 0;
     for (uint32_t address = 1; address < 64; address++) {
         timing::Transmitter tx;
         tx.configure(address * 0x9E37u);
-        for (uint32_t utc_s = 0; utc_s < 32; utc_s++) {
+        for (uint32_t utc_s = 0; utc_s < 40; utc_s++) {
             for (int slot = 0; slot < 2; slot++) {
                 const timing::SlotPlan plan =
                     timing::Scheduler::plan(timing::Scheduler::slot_start(slot), clock);
-                const timing::Transmitter::Attempt attempt = tx.attempt(plan, utc_s, 1000, true, 0);
-                if (!attempt.go) continue;
-                if (attempt.payload == timing::Transmitter::Payload::Callsign) continue;
-                CHECK(timing::Scheduler::in_direct_slot(attempt.at_ms));
-                CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                      adsl::kDirectEndMs);
+                for (const timing::Transmitter::Payload payload :
+                     {timing::Transmitter::Payload::Position, timing::Transmitter::Payload::Status,
+                      timing::Transmitter::Payload::Callsign}) {
+                    const timing::Transmitter::Attempt owed =
+                        tx.attempt(plan, utc_s, 1000, true, 0, payload);
+                    if (!owed.go) continue;
+                    if (payload == timing::Transmitter::Payload::Callsign) names++;
+                    CHECK(timing::Scheduler::in_direct_slot(owed.at_ms));
+                    CHECK(owed.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
+                          adsl::kDirectEndMs);
+                }
             }
         }
     }
+    CHECK(names > 0);
 }
 
-// The one burst this device places outside the clause, stated here rather than
-// discovered by a conformance bench: core/timing/README.md carries the argument.
-TEST_CASE(
-    "ADS-L.4.SRD860.C.5: the callsign burst is a deliberate deviation into the reserved 0-200") {
-    timing::ClockState clock{};
-    clock.utc_valid = true;
-    clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1StartMs, clock);
-
-    int seen = 0;
-    for (uint32_t address = 1; address < 64; address++) {
-        timing::Transmitter tx;
-        tx.configure(address * 0x9E37u);
-        for (uint32_t utc_s = 0; utc_s < 32; utc_s++) {
-            const timing::Transmitter::Attempt attempt = tx.attempt(slot1, utc_s, 1000, true, 0);
-            if (!attempt.go || attempt.payload != timing::Transmitter::Payload::Callsign) continue;
-            seen++;
-            // Past the direct slot, inside slot 1's dwell, and complete before it ends.
-            CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
-            CHECK(attempt.at_ms >= timing::kCallsignStartMs);
-            CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kCallsignEndMs);
-            CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
-        }
-    }
-    CHECK(seen > 0);
-}
-
+// C.5 reserves 0 to 200 ms, and slot 1's tail there is receive only.
 TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {
     CHECK(timing::kUplinkRxStartMs >= 200);
     CHECK(timing::kUplinkRxEndMs <= 450);
+    for (int phase = 0; phase < timing::kSlot1WrapMs; phase++)
+        CHECK_FALSE(timing::Scheduler::in_own_tx_dwell(phase));
     for (int phase = timing::kUplinkRxStartMs; phase < timing::kUplinkRxEndMs; phase++) {
         CHECK(timing::Scheduler::band_at(phase) == timing::Band::O);
         CHECK(timing::Scheduler::frequency_hz_at(phase) == adsl::kOBandHz);

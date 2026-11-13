@@ -107,7 +107,7 @@ class Sky {
     int32_t longitude_1e7_of(const VirtualAircraft& aircraft) const;
     void schedule_second(uint64_t epoch_us, const model::Ownship& own);
     void transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ownship& own);
-    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
+    void name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s, int slot,
                      double range_m);
     void relay(uint64_t epoch_us, const model::Ownship& own);
     model::AircraftObservation as_relayed(const VirtualAircraft& aircraft,

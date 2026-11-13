@@ -23,16 +23,6 @@ inline uint32_t period_s(bool airborne) {
     return report_period_s(airborne ? FlightState::Airborne : FlightState::Ground);
 }
 
-// INFO: fc 13nov26 which second of the ground period a unit owns is the integrator's to choose
-inline bool on_schedule(uint32_t utc_s, bool airborne, uint32_t ground_second) {
-    return utc_s % period_s(airborne) == (airborne ? 0u : ground_second);
-}
-
-// INFO: fc 16sep26 §C.2.5 alternates the channel per transmission, and the clock counts them
-inline int channel_in(uint32_t utc_s, bool airborne) {
-    return static_cast<int>((utc_s / period_s(airborne)) & 1u);
-}
-
 }
 
 #endif

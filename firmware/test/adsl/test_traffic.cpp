@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <initializer_list>
+#include <vector>
 
 #include "core/flight/extrapolate.h"
 #include "core/flight/state.h"
@@ -227,4 +228,24 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 50
     tx.configure(0x123456);
     CHECK(tx.attempt(plan, 100, 1000, true, 499).go);
     CHECK_FALSE(tx.attempt(plan, 100, 1000, true, 501).go);
+}
+
+// "Reduced to 0.1 Hz (once every 10 seconds)", and media access above the rate: 9 then 11 s keeps
+// C.2.5.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart") {
+    for (uint32_t serial = 1; serial <= 1024; serial++) {
+        CAPTURE(serial);
+        timing::Transmitter tx;
+        tx.configure(serial);
+        std::vector<uint32_t> sent;
+        for (uint32_t utc_s = 2000; utc_s < 2200; utc_s++)
+            if (tx.position_second(utc_s, /*airborne=*/false)) sent.push_back(utc_s);
+        CHECK(sent.size() == 20);
+        for (size_t i = 2; i < sent.size(); i++) {
+            CHECK(sent[i] - sent[i - 2] == 20);
+            CHECK((sent[i] - sent[i - 1] == 9 || sent[i] - sent[i - 1] == 11));
+        }
+        for (uint32_t utc_s = 2000; utc_s < 2020; utc_s++) CHECK(tx.position_second(utc_s, true));
+    }
 }

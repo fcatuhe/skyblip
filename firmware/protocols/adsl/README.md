@@ -22,7 +22,7 @@ These are skyBlip's choices, built on this stack:
 - which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route in place of §D.3's listen-before-talk (`core/timing/transmit.*`, `core/timing/channel.*`)
 - the address table 58 and the manufacturer prefix (`core/settings/address.h`), and airborne detection (`core/flight/state.*`)
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
-- the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record, its window in slot 1's tail and its second (`core/protocol/callsign.*`, `core/timing/transmit.*`)
+- the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
 - the dual-system receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
 - B.5's bookkeeping: each target's Max. Protocol Version and the lowest any close one reads (`core/traffic/table.*`), and how own Traffic is re-coded for Issue 1 (`core/protocol/adsl.*`)
 - `RadioService` and the SX1262 settings that put a frame on air
@@ -57,16 +57,16 @@ Everything is in namespace `skyblip::adsl`.
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
 - `declared_max_version()`, `close_client()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
-- `on_schedule()`, `channel_in()`, `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
+- `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
 - `kVersion`, `kSpecification`
 
 ## The transmit rules
 
 `transmit.h` holds the rules the specification sets for a transmitter, and leaves every choice inside them to the integrator. §C.5 gives the ground stations 200 to 450 ms of each UTC second and the aircraft 450 to 1000 (`kUplinkSlotStartMs` to `kDirectEndMs`), and a burst starts and completes inside the direct slot. §C.2 puts a 24-byte frame on air for 4.64 ms, so `kAirTimeMs` books 5. §G.1.16 asks for at least 1 Hz airborne and 0.1 Hz on the ground (`report_period_s()`), and no navigation data older than 500 ms (`kFixMaxAgeMs`), measured to the top of the transmit second because the encoder carries the fix forward to the instant the burst names. §G.2.11 asks for a Status at least every 20 s (`kStatusPeriodS`).
 
-`on_schedule()` says whether a second carries Traffic: every second airborne, and on the ground the one second of ten the integrator hands it, so the ground population spreads by the integrator's choice of second and a unit that reboots comes back to the same one. `channel_in()` is §C.2.5's alternation from one transmission to the next, counted by the clock, `(utc_s / period) & 1`: counting a device's own transmissions instead would put it out of step with the grid the first time anything refused a burst.
+§G.1.16's ground rate is "0.1 Hz (once every 10 seconds)", and the same clause puts media access above it, so an integrator may space ground reports unevenly as long as they average 0.1 Hz. §C.2.5 asks every payload type to change channel from one transmission to the next, which the stack leaves to the integrator to schedule.
 
-The rest is the integrator's, and skyBlip's choices are in `core/timing/README.md`: which second of ten a unit owns (its serial's last digit), the instant drawn inside the direct slot, where the Status goes (every 10 s, on the channel the airborne position leaves free), and the channel-access route a device declares in place of §D.3's listen-before-talk.
+Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`: the second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status and the name, inside a 20 s cycle per unit with ground positions 9 then 11 s apart, plus the channel-access route a device declares in place of §D.3's listen-before-talk.
 
 ## The Status payload
 

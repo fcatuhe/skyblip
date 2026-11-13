@@ -1,5 +1,5 @@
-// The transmit rules ADS-L sets: G.1.2's flight state, G.1.16's rate, §C.2.5's channel alternation,
-// G.2.11's Status cadence and the instants drawn inside §C.5's direct slot.
+// The transmit rules ADS-L sets: G.1.2's flight state, G.1.16's rate, the two M-band channels and
+// §C.5's slots.
 #include <cstdint>
 #include <initializer_list>
 
@@ -29,28 +29,9 @@ TEST_CASE("adsl flight state: a craft that can hover is never announced landed, 
     }
 }
 
-TEST_CASE("adsl transmit: Traffic goes out every second airborne, and once in ten on the ground") {
-    for (uint32_t ground_second = 0; ground_second < kGroundReportPeriodS; ground_second++) {
-        int airborne = 0;
-        int ground = 0;
-        for (uint32_t utc_s = 1700000000; utc_s < 1700000100; utc_s++) {
-            airborne += on_schedule(utc_s, true, ground_second) ? 1 : 0;
-            if (on_schedule(utc_s, false, ground_second)) {
-                ground++;
-                CHECK(utc_s % kGroundReportPeriodS == ground_second);
-            }
-        }
-        CHECK(airborne == 100);
-        CHECK(ground == 10);
-    }
-}
-
-TEST_CASE("adsl transmit: consecutive Traffic transmissions change channel") {
-    for (const bool airborne : {true, false}) {
-        const uint32_t period = period_s(airborne);
-        for (uint32_t utc_s = 1700000000; utc_s < 1700000100; utc_s += period)
-            CHECK(channel_in(utc_s, airborne) != channel_in(utc_s + period, airborne));
-    }
+TEST_CASE("adsl transmit: the report period is 1 s airborne and 10 s on the ground") {
+    CHECK(period_s(true) == 1u);
+    CHECK(period_s(false) == kGroundReportPeriodS);
     CHECK(channel_hz(0) == kMBand0Hz);
     CHECK(channel_hz(1) == kMBand1Hz);
 }

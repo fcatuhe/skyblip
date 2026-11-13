@@ -88,10 +88,10 @@ TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
     CHECK(scheduler.plan(kSlot0StartMs, anchored()).tx_allowed);
     CHECK(Scheduler::in_own_tx_dwell(kSlot1StartMs));
     CHECK(scheduler.plan(kSlot1StartMs, anchored()).tx_allowed);
-    // Slot 1's tail is the same dwell, and it carries the callsign burst.
-    CHECK(Scheduler::in_own_tx_dwell(0));
-    CHECK(Scheduler::in_own_tx_dwell(kSlot1WrapMs - 1));
-    CHECK(scheduler.plan(100, anchored()).tx_allowed);
+    // Slot 1's tail is the same dwell, and C.5 keeps it receive only.
+    CHECK_FALSE(Scheduler::in_own_tx_dwell(0));
+    CHECK_FALSE(Scheduler::in_own_tx_dwell(kSlot1WrapMs - 1));
+    CHECK_FALSE(scheduler.plan(100, anchored()).tx_allowed);
     // The uplink dwell and both band edges own no direct-slot time at all.
     CHECK_FALSE(Scheduler::in_own_tx_dwell(202));
     CHECK_FALSE(Scheduler::in_own_tx_dwell(300));

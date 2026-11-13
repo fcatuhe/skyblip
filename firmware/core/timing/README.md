@@ -2,7 +2,7 @@
 
 One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
 
-The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates and the schedule for a given ground second, channel alternation and the Status period. `Transmitter` composes them with what skyBlip decided: which second of ten a unit owns, the instant drawn inside each window, where the Status goes, the window each dwell leaves a burst, the radio's completion guard, the callsign, and the hour's air time it declares as its channel-access route.
+The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates, the two channels and the Status period. `Transmitter` composes them with what skyBlip decided: the channel each second carries, the 20 s cycle a unit owns and where in it each burst goes, the instant drawn inside each window, the window each dwell leaves a burst, the radio's completion guard, and the hour's air time it declares as its channel-access route.
 
 ## The burst is placed, and nothing on air moves it
 
@@ -40,55 +40,65 @@ EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what thi
 
 ## What the dwell map is for
 
-`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the window `adsl::instant_between()` draws over, so the burst always completes inside both the slot and the dwell that carries it.
+`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the window each instant is drawn over, so the burst always completes inside both the slot and the dwell that carries it.
 
 `SlotPlan::own_tx_dwell` is a property of the dwell, not of the phase the service happens to tick on. Slot 0's dwell opens at 400 and its burst is placed from 450, so the plan that opens the dwell has to carry it.
 
 ## The seconds each burst owns
 
-Each unit owns one second of ten, its ground second, `g = serial % 10`, which `adsl::on_schedule()` is handed. The serial is the low 16 bits of the address, and skyblip.eu hands serials out densely from 1, so a fleet spreads exactly evenly over the ten seconds and ten consecutive serials never share one. The instant inside the second is still drawn from a hash of the address and the UTC second, so two units that do share a second still do not share an instant. The position goes out in the ground second on the ground, and in every second airborne. The Status (§G.2) takes two seconds of every twenty, and the callsign takes the second half a period from the ground second:
+The second alone picks the channel. A position goes on channel A, 868.2 MHz in slot 0, in an even UTC second, and on B, 868.4 MHz in slot 1's direct part, in an odd one, on the ground as well as airborne (`Transmitter::slot_in()`). The Status (§G.2) and the name go on the other channel from the position of their second, B in an even second and A in an odd one (`extra_slot_in()`). So no extra ever shares a dwell with a position, and no dwell carries more than one burst of ours.
 
-| Second | Position | Extra burst | Where the extra burst goes |
-|---|---|---|---|
-| `utc_s % 20` is `(g + 2) % 20` or `(g + 13) % 20` | airborne only | Status | the direct slot of dwell `1 - (utc_s & 1)`, the channel the airborne position leaves free |
-| `utc_s % 10 == (g + 5) % 10` | airborne only | callsign | slot 1's tail, 1000 to 1193 ms, on 868.4 MHz |
-| `utc_s % 10 == g` | on the ground and airborne | none | |
-| any other | airborne only | none | |
+Each unit owns a 20 s cycle that starts at its ground second, `g = serial % 10`. The serial is the low 16 bits of the address, and skyblip.eu hands serials out densely from 1, so a fleet spreads exactly evenly over the ten starting seconds and ten consecutive serials never share one. On the ground the cycle holds six bursts, at the same offsets from g for every unit (`kPositionOffsetsS`, `kStatusOffsetsS`, `kCallsignOffsetsS`):
 
-A regular minute for g = 0, A being 868.2 MHz and B 868.4 MHz:
+| Offset | Burst | Channel for an even g |
+|---|---|---|
+| +0 | position | A |
+| +2 | Status | B |
+| +7 | name | A |
+| +9 | position | B |
+| +13 | Status | A |
+| +16 | name | B |
+
+An odd g mirrors the channels. Airborne the position goes every second, and the Status and the name go in the same seconds and on the same channels as on the ground, so a takeoff or a landing changes nothing about them.
+
+A minute for g = 0, A being 868.2 MHz at 450 to 793 ms and B 868.4 MHz at 800 to 993 ms. The 20 s cycle repeats at 20 and 40:
 
 | Second | Airborne | On the ground |
 |---|---|---|
-| 0, 20, 40 | position A | position A |
-| 2, 22, 42 | position A, Status B | Status B |
-| 5 to 55 by 10 | position, name B | name B |
-| 10, 30, 50 | position A | position B |
-| 13, 33, 53 | position B, Status A | Status A |
+| 0 | position A | position A |
+| 2 | position A, Status B | Status B |
+| 7 | position B, name A | name A |
+| 9 | position B | position B |
+| 13 | position B, Status A | Status A |
+| 16 | position A, name B | name B |
 | any other | position, A in an even second, B in an odd one | |
 
-§G.2.11 asks for a Status at least every 20 s, and `kStatusPeriodS` is exactly 20. A Status goes out every 10 s overall, so each channel carries one every 20 s and a receiver that listens on one channel only still gets §G.2.11's rate. The gaps alternate 11 and 9 s (`kStatusOffsetsS`). An odd gap flips the parity of the second, so "the other channel from the airborne position" alternates by itself as §C.2.5 asks, one rule for the ground and the air. On the ground every burst has a second of its own, at least 2 s from the next: the position at g, the Status at g + 2 or g + 3, the name at g + 5, counted mod 10. The callsign is outside ADS-L's timing altogether (below), so it keeps its own rate, once every ten seconds. A receiver keeps a ground target it hears every ten seconds for longer than that, or the target would blink, so the name still finds the target it belongs to. The air time is one position a second airborne, a Status and a name every ten seconds, 6 ms a second, 0.6 of the allowance.
+On the ground channel A carries 0, 7, 13, 20, 27, 33, 40, 47 and 53, and channel B 2, 9, 16, 22, 29, 36, 42, 49 and 56.
 
-Airborne the Status never shares a dwell with the position, so its instant is drawn over the whole window from `hash(hash(address ^ hash(utc_s)))`, one more round of the hash the position's own instant is drawn from, with no instants blocked (`Transmitter::status_instant_in()`). No dwell owes more than two bursts, which is what `ports::RfBursts` holds: the name's second is never a Status second, and airborne in an odd name second slot 1 carries the position and then the name. `test/core/test_transmit.cpp` checks the cadence on each channel, the alternation, the two-burst bound and the ground spacing over 1024 addresses.
+Why these offsets:
 
-The alternation is the clock's, as it is for the position, so a Status refused for an hour's air time spent or a dwell not armed leaves a gap of 20 s on that channel and 10 s on the band.
+- The parity rule would put two positions 10 s apart on the same channel, which §C.2.5's alternation forbids, so the ground positions are 9 then 11 s apart. That is exactly §G.1.16's "0.1 Hz (once every 10 seconds)" on average, and the same clause gives media access priority over the rate.
+- Every placement of the six bursts was checked, and this one gives the most even spacing on each channel, which is what a receiver on one channel sees: 7, 6, 7 s on one and 7, 7, 6 s on the other, never more than 7. Across both channels the bursts are 2 to 5 s apart.
+- Every type alternates channel from one transmission to the next: positions, Status (§C.2.5) and names. Each channel carries a Status every 20 s, so a receiver that listens on one channel only still gets §G.2.11's rate, and the Status gaps alternate 11 and 9 s.
+- Two bursts of ours on one frequency are always at least 100 ms apart, which is EN 300 220-1's off-time.
 
-## The tail names us, once every ten seconds
+The instant inside a window is drawn from the address and the UTC second, so two units that do share a second still do not share an instant: the position from `hash(address ^ hash(utc_s))`, the Status from one more round of the hash and the name from two more, so no two bursts share a draw (`Transmitter::extra_instant_in()`). Each is drawn over its whole window, since nothing else of ours is in that dwell. The air time is one position a second airborne plus a Status and a name every ten seconds, 6 ms a second, 0.6 of the allowance, and 0.15% of the hour on the ground. `test/core/test_transmit.cpp` checks the offsets, the per-channel gaps, the alternation of each type, the one burst a dwell and the 100 ms off-time over 1024 serials and a whole minute, airborne and on the ground.
 
-ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, the one §F.2.1 assigns to them and whose definition it leaves to them (`core/protocol/README.md`). Own-ship sends one in slot 1's tail, `kCallsignStartMs` to `kCallsignEndMs`: §C.5 reserves 0..200 and we transmit there anyway, which is a deliberate deviation and the one in this tree that is not forced by physics.
+The alternation is the clock's, so a burst refused for an hour's air time spent or a dwell not armed leaves a gap and puts nothing out of step.
 
-The tail is what it costs least. The dwell is already tuned to §C.2.5's channel 1, so there is no retune; the direct slot keeps every position burst it had; and the 5 ms this spends every ten seconds is 0.05% of the hour. What is on air there is FLARM-generation traffic and OGN trackers, whose own slot 2 runs to 1200 (`oss/nrf52-ogn-tracker/src/ogn-radio.cpp:1140-1142`), so a burst in the tail is neither novel nor quiet.
+## The name rides the direct slot
 
-The instant is drawn by `Transmitter::instant_between()`, the same `hash(address ^ hash(utc_s))` every other burst is drawn by, over the width the window leaves once the air time and the completion guard are taken off it: 1000 to 1190, which is 191 instants, exactly as many as slot 1's own position window offers between 800 and 990.
+ADS-L carries no callsign. What a pilot is called on the radio reaches the glass and the tablet from OGN's payload type 66, a broadcast type §F.2.1 lists and leaves to OGN (`core/protocol/README.md`). It goes out like any other ADS-L payload, in the direct slot of the channel its second's position leaves free. It used to go in slot 1's tail, 1000 to 1193 ms, which §C.5 reserves, and that was the one deliberate deviation from the clause this tree made. With it gone, the tail is receive only again.
 
-The second is five seconds after the address's own ground second (above). A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). Airborne the target is a second old at most. On the ground it is five seconds old, inside the ten seconds any receiver has to keep a ground target to show it at all. Airborne in an odd second the position rides slot 1 as well, so that dwell carries two bursts, position first. They cannot meet: slot 1's last position instant is 993, which completes inside `kCompletionGuardMs`, and the name's first is 1000.
+A name is only worth sending to a receiver that already has a target for us to hang it on, and OGN's `setTargetCall` drops one for an unknown ID (`oss/nrf52-ogn-tracker/src/lookout.h:527-534`). Airborne the target is a second old at most. On the ground the name follows a position by 7 s, inside the ten seconds any receiver has to keep a ground target to show it at all.
 
-What it costs elsewhere is the flash-write window. `core/timing/durable_write.h` places a settings write inside an armed receive dwell that own-ship cannot transmit in, and until the callsign burst existed slot 1's tail was one of the two such stretches. Now there is one, the uplink dwell, which is also the dwell whose traffic we can most afford to be deaf to.
+The tail pays it back to the flash-write window. `core/timing/durable_write.h` places a settings write inside an armed receive dwell that own-ship cannot transmit in, and slot 1's tail is one of the two such stretches again, beside the uplink dwell.
 
 ## The next dwell is armed ahead, the burst when it is due
 
 The service loop sleeps 10 ms between passes, so a dwell armed by the pass that noticed its edge opened up to a pass late, and further behind on a pass that ran long. The two captures of 2026-09-27 had slot 1 opening 3 to 6 ms late at the median and up to 120 ms late at worst, and a slot 1 burst drawn for the milliseconds before the arm was never sent. So `RadioService` hands the executor the next dwell as soon as the current one flies, at the absolute instant the latched PPS edge names for it, and the edge between the two is the executor's to keep on its own thread. `ports::Rf::arm()` queues that plan behind the dwell in flight, and the executor switches into it as soon as the flying one ends, never more than `kSwitchLeadMs` ahead of its start, so each guard is spent retuning and the dwell is listening from its first microsecond. The one guard the map names after the dwell it leads to, 200 to 205, is the executor already retuning into the uplink dwell, and the service arms nothing in it.
 
-A burst cannot always be decided that early. Whether one may go out is decided on the fix, the rate and the slot, and those clear when they clear: a solution that lands after 400 ms would cost the whole second if the dwell were armed ahead and never looked at again. So the next dwell is queued bare when its burst is not decided yet, and queued again carrying it the pass its gates clear. And a second plan for the channel the dwell is already flying, carrying a burst that fits inside the window it is already in, is not the next dwell: it is this dwell's burst, and `arm()` hands it to the dwell in flight instead of queueing it. A dwell carries up to two bursts, `ports::RfBursts`, keyed in the order of their instants whichever was armed first, and a burst armed again at an instant the dwell already carries is that burst, not a second one. A burst armed for the queued dwell joins it rather than replacing it: the name is decided when slot 1 is queued at 400 and the position only once its fix clears, and a replacement would have dropped whichever came first. Every TxDone and every Missed carries the instant its burst was armed for, which is how the tape tells a dwell's two bursts apart. `abort()` cuts the flying dwell short and drops the queued one. A plan that ends inside the flying dwell and cannot join it is refused, never queued: queued, it would have taken the place of the next dwell and then expired. On silicon all of that crosses a thread boundary, published under the scheduler lock; on the host it is the same rule in one thread, which is why the suite can hold it.
+A burst cannot always be decided that early. Whether one may go out is decided on the fix, the rate and the slot, and those clear when they clear: a solution that lands after 400 ms would cost the whole second if the dwell were armed ahead and never looked at again. So the next dwell is queued bare when its burst is not decided yet, and queued again carrying it the pass its gates clear. And a second plan for the channel the dwell is already flying, carrying a burst that fits inside the window it is already in, is not the next dwell: it is this dwell's burst, and `arm()` hands it to the dwell in flight instead of queueing it. A dwell carries up to two bursts, `ports::RfBursts`, keyed in the order of their instants whichever was armed first, and a burst armed again at an instant the dwell already carries is that burst, not a second one. A burst armed for the queued dwell joins it rather than replacing it, so a burst decided early is not dropped by a plan that arrives later. Every TxDone and every Missed carries the instant its burst was armed for, which is how the tape tells a dwell's two bursts apart. `abort()` cuts the flying dwell short and drops the queued one. A plan that ends inside the flying dwell and cannot join it is refused, never queued: queued, it would have taken the place of the next dwell and then expired. On silicon all of that crosses a thread boundary, published under the scheduler lock; on the host it is the same rule in one thread, which is why the suite can hold it.
 
 The two dwells the executor holds each carry their own burst buffer, because the burst queued on the next dwell is built while the flying one may still be waiting to key. The durable-write policy reads only the flying dwell's burst: a burst queued behind it is not in the air yet.
 

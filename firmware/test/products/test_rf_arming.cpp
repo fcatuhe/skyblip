@@ -492,8 +492,8 @@ struct Outcomes {
     uint64_t name_at_us() const {
         for (uint32_t i = 0; i < armings.rf.handed; i++) {
             const ports::RfPlan& plan = armings.rf.plans[i];
-            if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs &&
-                plan.tx_at_us < kSecondOneUs + timing::kSlot1WrapMs * 1000)
+            if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs - 200000 &&
+                plan.tx_at_us < kSecondOneUs)
                 return plan.tx_at_us;
         }
         return 0;
@@ -504,14 +504,17 @@ void fly_ground_second(Armings& armings, Outcomes& outcomes) {
     std::strncpy(armings.settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
     armings.clock.set_microseconds(Armings::kEdgeUs);
     REQUIRE(armings.radio.setup() == Status::Ok);
-    const uint32_t utc_s = 1000 + armings.radio.transmitter().callsign_second();
+    uint32_t utc_s = 1000;
+    while (!armings.radio.transmitter().callsign_second(utc_s) ||
+           timing::Transmitter::extra_slot_in(utc_s) != 1)
+        utc_s++;
     armings.ready_to_transmit(utc_s);
     armings.state.clock.utc_s = utc_s;
     for (int phase = 0; phase < 1000; phase += 10) {
         armings.tick_at(phase);
+        if (outcomes.held_at_us == 0) outcomes.held_at_us = outcomes.name_at_us();
         outcomes.report_flown();
     }
-    outcomes.held_at_us = outcomes.name_at_us();
     REQUIRE(outcomes.held_at_us != 0);
     armings.state.own.utc_s = utc_s + 1;
     armings.state.clock.utc_s = utc_s + 1;
@@ -519,8 +522,8 @@ void fly_ground_second(Armings& armings, Outcomes& outcomes) {
 
 }  // namespace
 
-// The name's dwell closes 5 ms after its latest instant, and its TxDone reaches the policy a pass
-// later: counted missed at the close, it was then credited to the next dwell as a position.
+// A slot-1 name's TxDone can reach the policy after the second turns: counted missed then, it was
+// once credited to the next dwell as a position.
 TEST_CASE("rf: a TxDone that lands after its dwell closed is credited to the burst it names") {
     Armings armings;
     Outcomes outcomes{armings};

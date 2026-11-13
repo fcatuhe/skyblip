@@ -7,8 +7,8 @@
 // there - the PPS latch (hardware/platform/zephyr/pps.h timestamps the edge
 // inside the GPIO callback) and the SX1262's DIO1 among them - on the core that
 // arms PPS-anchored deadlines. The dwell map (core/timing/slot.h) leaves no
-// unarmed phase in the second: 205..395 is the uplink dwell, 400..1200 the two
-// M-band dwells own-ship keys the PA inside, and the only gaps are the two 5 ms
+// unarmed phase in the second: 0..200 is slot 1's tail, 205..395 the uplink
+// dwell, 400..1200 the two M-band dwells, and the only gaps are the two 5 ms
 // retune guards, which are the last place a stall belongs. So this does not look
 // for a phase with no dwell in it. It places the whole stall where the CPU owes
 // the radio nothing: inside an armed RECEIVE dwell, finishing a guard's width
@@ -105,8 +105,11 @@ class DurableWriteWindow {
     // for the other case - a radio that stopped publishing at all.
     static constexpr uint32_t kViewStaleMs = 100;
 
-    // The one stretch the second offers, proved against the map it is cut from
-    // rather than restated: the uplink dwell (core/timing/README.md).
+    // The two stretches the second offers, proved against the map they are cut
+    // from rather than restated: slot 1's tail, and the uplink dwell.
+    static_assert(kWorstWriteMs + static_cast<uint32_t>(kJitterGuardMs) <
+                      static_cast<uint32_t>(kSlot1WrapMs),
+                  "one settings write no longer fits inside slot 1's tail");
     static_assert(kWorstWriteMs + static_cast<uint32_t>(kJitterGuardMs) <
                       static_cast<uint32_t>(kUplinkRxEndMs - kUplinkRxStartMs),
                   "one settings write no longer fits inside the uplink dwell");

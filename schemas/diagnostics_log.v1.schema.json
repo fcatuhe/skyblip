@@ -118,7 +118,7 @@
     "airborne": {"type": "boolean",
                  "description": "burst. Own-ship's flight state when the burst was written. Per record because G.1.16 transmits at 1 Hz in the air and 0.1 Hz on the ground, and a capture outlives a takeoff"},
     "callsign": {"type": "boolean",
-                 "description": "burst. This burst carried a name rather than a position: own-ship's own, in slot 1's tail once every ten seconds (firmware/core/timing/README.md). The text itself is not recorded, because nine characters do not fit a 16-byte payload and the address on this record is the key the name is filed under. A name heard from somebody else is the named verdict instead"},
+                 "description": "burst. This burst carried a name rather than a position: own-ship's own, in the direct slot once every ten seconds (firmware/core/timing/README.md). The text itself is not recorded, because nine characters do not fit a 16-byte payload and the address on this record is the key the name is filed under. A name heard from somebody else is the named verdict instead"},
     "status": {"type": "boolean",
                "description": "burst. This burst carried own-ship's Status payload (ADS-L G.2) rather than a position, once every twenty seconds in the ground second (firmware/core/timing/README.md)"},
 

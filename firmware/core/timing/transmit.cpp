@@ -35,42 +35,50 @@ int Transmitter::last_instant_in(int slot) {
 }
 
 int Transmitter::instant_in(int slot, uint32_t utc_s) const {
-    return instant_between(first_instant_in(slot), last_instant_in(slot), utc_s);
-}
-
-int Transmitter::instant_between(int first, int last, uint32_t utc_s) const {
+    const int first = first_instant_in(slot);
+    const int last = last_instant_in(slot);
     if (last <= first) return first;
     // Inclusive of last: a burst starting there still ends inside the slack.
     return first +
            static_cast<int>(hash(address_ ^ hash(utc_s)) % static_cast<uint32_t>(last - first + 1));
 }
 
-// INFO: fc 13nov26 a hash of its own, since a Status never shares a dwell with a position
-int Transmitter::status_instant_in(int slot, uint32_t utc_s) const {
+// INFO: fc 13nov26 one hash round more for a Status, two for a name, so no two extras share a draw
+int Transmitter::extra_instant_in(int slot, uint32_t utc_s, Payload payload) const {
     const int first = first_instant_in(slot);
     const int last = last_instant_in(slot);
     if (last <= first) return first;
-    return first + static_cast<int>(hash(hash(address_ ^ hash(utc_s))) %
-                                    static_cast<uint32_t>(last - first + 1));
+    uint32_t drawn = hash(hash(address_ ^ hash(utc_s)));
+    if (payload == Payload::Callsign) drawn = hash(drawn);
+    return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
 }
 
 uint32_t Transmitter::ground_second() const {
     return (address_ & settings::kSerialMask) % adsl::kGroundReportPeriodS;
 }
 
+uint32_t Transmitter::cycle_second(uint32_t utc_s) const {
+    return (utc_s % kCycleS + kCycleS - ground_second()) % kCycleS;
+}
+
+bool Transmitter::position_second(uint32_t utc_s, bool airborne) const {
+    const uint32_t second = cycle_second(utc_s);
+    return airborne || second == kPositionOffsetsS[0] || second == kPositionOffsetsS[1];
+}
+
 bool Transmitter::status_second(uint32_t utc_s) const {
-    const uint32_t phase = utc_s % kStatusPeriodS;
-    return phase == (ground_second() + kStatusOffsetsS[0]) % kStatusPeriodS ||
-           phase == (ground_second() + kStatusOffsetsS[1]) % kStatusPeriodS;
+    const uint32_t second = cycle_second(utc_s);
+    return second == kStatusOffsetsS[0] || second == kStatusOffsetsS[1];
+}
+
+bool Transmitter::callsign_second(uint32_t utc_s) const {
+    const uint32_t second = cycle_second(utc_s);
+    return second == kCallsignOffsetsS[0] || second == kCallsignOffsetsS[1];
 }
 
 bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
     const int index = static_cast<int>(payload);
     return ever_sent_[index] && utc_s == last_utc_s_[index];
-}
-
-int Transmitter::last_callsign_instant() {
-    return kCallsignEndMs - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
@@ -101,10 +109,8 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     attempt.frequency_hz = Scheduler::slot_frequency_hz(dwell_slot);
     switch (payload) {
         case Payload::Position: attempt.at_ms = instant_in(dwell_slot, utc_s); break;
-        case Payload::Status: attempt.at_ms = status_instant_in(dwell_slot, utc_s); break;
-        case Payload::Callsign:
-            attempt.at_ms = instant_between(kCallsignStartMs, last_callsign_instant(), utc_s);
-            break;
+        case Payload::Status:
+        case Payload::Callsign: attempt.at_ms = extra_instant_in(dwell_slot, utc_s, payload); break;
     }
     return attempt;
 }
@@ -114,12 +120,10 @@ bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, boo
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
     switch (payload) {
         case Payload::Position:
-            return fix_lag_ms <= kFixMaxAgeMs &&
-                   adsl::on_schedule(utc_s, airborne, ground_second()) &&
-                   dwell_slot == slot_in(utc_s, airborne);
-        case Payload::Status: return status_second(utc_s) && dwell_slot == status_slot_in(utc_s);
-        case Payload::Callsign:
-            return utc_s % kCallsignPeriodS == callsign_second() && dwell_slot == kCallsignSlot;
+            return fix_lag_ms <= kFixMaxAgeMs && position_second(utc_s, airborne) &&
+                   dwell_slot == slot_in(utc_s);
+        case Payload::Status: return status_second(utc_s) && dwell_slot == extra_slot_in(utc_s);
+        case Payload::Callsign: return callsign_second(utc_s) && dwell_slot == extra_slot_in(utc_s);
     }
     return false;
 }

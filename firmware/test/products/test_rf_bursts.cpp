@@ -1,4 +1,4 @@
-// Two bursts in one dwell: the ground second's position and the name in slot 1's tail.
+// Two bursts in one dwell, as the executor flies them, and the name's place in the ground cycle.
 #include <cstring>
 #include <vector>
 
@@ -174,8 +174,8 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);
 }
 
-// The name goes out five seconds after the ground position, alone in slot 1's tail.
-TEST_CASE("rf: on the ground the name follows its own position by five seconds, alone") {
+// The name goes out seven seconds after each ground position, with nothing of ours near it.
+TEST_CASE("rf: on the ground the name follows its own position by seven seconds, alone") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -194,11 +194,11 @@ TEST_CASE("rf: on the ground the name follows its own position by five seconds, 
         if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
             names++;
             CAPTURE(record.at_us);
-            // Five seconds on, from 450 ms into the ground second to 1200 ms into the name's.
-            CHECK(record.at_us - position_at_us >= (5000 + timing::kCallsignStartMs - 1000) * 1000);
-            CHECK(record.at_us - position_at_us <= (5000 + timing::kCallsignEndMs - 450) * 1000);
-            // Nothing else of ours is on air within a second of it.
-            CHECK(record.at_us - last_at_us > 1000000);
+            // Seven seconds on, inside both direct slots: 450 to 993 ms of each second.
+            CHECK(record.at_us - position_at_us >= (7000 + 450 - 993) * 1000);
+            CHECK(record.at_us - position_at_us <= (7000 + 993 - 450) * 1000);
+            // The burst before it is a whole second earlier at least: two seconds less a slot.
+            CHECK(record.at_us - last_at_us > 2000000 - 543000);
         }
         if (payload_type != 0) last_at_us = record.at_us;
     }
@@ -212,7 +212,7 @@ TEST_CASE("rf: on the ground the name follows its own position by five seconds, 
         if (entry.verdict != radio::Verdict::Transmitted) continue;
         rows++;
         CAPTURE(entry.at_s);
-        CHECK(entry.callsign == (entry.into_ms < timing::kSlot1WrapMs));
+        CHECK(timing::Scheduler::in_direct_slot(entry.into_ms));
         // one 5 ms host step late at most, a neighbour's instant would be 10 ms or more off
         CHECK(entry.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
     }

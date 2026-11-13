@@ -289,6 +289,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: the ground track is 512 steps of 0.703125 degr
     CHECK(128 * 360 / 512 == 90);
 }
 
+// The clause gives media access priority over these rates, so an integrator may space them
+// unevenly.
 TEST_CASE("ADS-L.4.SRD860.G.1.16: Traffic goes out at 1 Hz airborne and 0.1 Hz on the ground") {
     CHECK(adsl::period_s(/*airborne=*/true) == 1u);
     CHECK(adsl::period_s(/*airborne=*/false) == 10u);
