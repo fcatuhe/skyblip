@@ -117,7 +117,7 @@ test('what the registry does not hold is refused before anything is sent', () =>
 
 test('a code the registry does not hold stays a number for a person to read', () => {
   assert.deepEqual(decodeFrame(bytes('a300000318c80901')), { command: 'acknowledgement', reason: 200, 9: 1 });
-  assert.deepEqual(decodeFrame(bytes('a100181e')), { command: 30 });
+  assert.deepEqual(decodeFrame(bytes('a10018c8')), { command: 200 });
 });
 
 // One grammar for the three readers of the link: the firmware's, blip.py's and the pages'.

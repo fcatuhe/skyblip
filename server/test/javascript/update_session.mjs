@@ -28,9 +28,9 @@ export const asking = task => state => state.phase === 'confirming' && state.tas
 export const installing = state => state.phase === 'installing';
 export const settled = state => state.phase === 'ready' && state.notice;
 
-export async function connected({ returnEveryMs, returnWithinMs, ...options } = {}) {
+export async function connected({ returnEveryMs, returnWithinMs, browserKey, ...options } = {}) {
   const device = new FakeSkyblip({ bufSize: 300, ...options }).install();
-  const { updater, until } = session({ returnEveryMs, returnWithinMs });
+  const { updater, until } = session({ returnEveryMs, returnWithinMs, browserKey });
   await updater.connect();
   await until(state => state.status && state.running);
   return { device, updater, until };

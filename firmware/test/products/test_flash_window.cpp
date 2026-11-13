@@ -275,7 +275,7 @@ TEST_CASE("flash window: the write counters are readable over the companion link
     CHECK(reply.find("\"forced\":0") != std::string::npos);
     CHECK(reply.find("\"worst_wait_ms\":") != std::string::npos);
     // The policy's own numbers, read back off the device rather than off the source.
-    CHECK(reply.find("\"budget_ms\":86") != std::string::npos);
+    CHECK(reply.find("\"budget_ms\":91") != std::string::npos);
     CHECK(reply.find("\"bound_ms\":3000") != std::string::npos);
 }
 

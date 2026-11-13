@@ -398,15 +398,8 @@ TEST_CASE("comms: power_off refused in flight") {
     CHECK_FALSE(config.power_off_requested());
 }
 
-// D5: the reset reason was read at boot and shown on the self-test page, and a
-// device in a field with a phone next to it has no self-test page in view.
-// G6's plug-in-and-read: the same on_rx dispatch that answers "status"
-// answers "timing" from whatever core/timing::SlotTimingStatistics the device has
-// been accumulating - no second channel, no panel real estate a bucket array
-// would not fit on anyway.
-// Fail closed: takeoff must revoke an authorisation granted on the ground, or a
-// long upload could still be running when the aircraft leaves.
-TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
+// A taxi read as a take-off once aborted a confirmed upload, which now runs on behind the radar.
+TEST_CASE("comms: a take-off leaves an upload window the pilot confirmed open") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
@@ -418,11 +411,8 @@ TEST_CASE("comms: takeoff closes an open upload window and it stays latched") {
     REQUIRE(config.upload_allowed());
 
     config.set_flight_state(flight::FlightState::Airborne);
-    CHECK_FALSE(config.upload_allowed());
-
-    // An "Unknown" reading after takeoff must not read as permission.
-    config.set_flight_state(flight::FlightState::Unknown);
-    CHECK_FALSE(config.upload_allowed());
+    CHECK(config.upload_allowed());
+    CHECK_FALSE(config.receiving_firmware());
 }
 
 TEST_CASE("comms: upload window expires") {

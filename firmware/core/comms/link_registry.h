@@ -39,6 +39,11 @@ enum class Command : uint8_t {
     Health = 27,
     PeerClaim = 28,
     Capture = 29,
+    BrowserChallenge = 30,
+    TrustBrowser = 31,
+    Browsers = 32,
+    Browser = 33,
+    ForgetBrowser = 34,
 };
 
 enum class Reason : uint8_t {
@@ -89,6 +94,10 @@ enum class Reason : uint8_t {
     Capture = 45,
     Capturing = 46,
     NotCapturing = 47,
+    Trusted = 48,
+    Untrusted = 49,
+    Forgotten = 50,
+    UnknownBrowser = 51,
 };
 
 namespace acknowledgement_key {
@@ -441,6 +450,58 @@ enum : uint32_t {
 };
 }
 
+namespace browser_challenge_key {
+enum : uint32_t {
+    kNonce = 1,
+};
+}
+
+namespace browser_challenge_bytes {
+constexpr size_t kNonce = 16;
+}
+
+namespace trust_browser_key {
+enum : uint32_t {
+    kKey = 1,
+    kSignature = 2,
+    kLabel = 3,
+};
+}
+
+namespace trust_browser_bytes {
+constexpr size_t kKey = 32;
+constexpr size_t kSignature = 64;
+}
+
+namespace browsers_key {
+enum : uint32_t {
+    kIndex = 1,
+};
+}
+
+namespace browser_key {
+enum : uint32_t {
+    kIndex = 1,
+    kCount = 2,
+    kId = 3,
+    kLabel = 4,
+};
+}
+
+namespace browser_bytes {
+constexpr size_t kId = 8;
+}
+
+namespace forget_browser_key {
+enum : uint32_t {
+    kId = 1,
+};
+}
+
+namespace forget_browser_bytes {
+constexpr size_t kId = 8;
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -468,17 +529,22 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Chunk:
         case Command::GnssColdStart:
         case Command::Observation:
-        case Command::Health: return 0x1;
+        case Command::Health:
+        case Command::BrowserChallenge:
+        case Command::Browser: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:
-        case Command::Capture: return 0x3;
+        case Command::Capture:
+        case Command::Browsers:
+        case Command::ForgetBrowser: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
         case Command::PeerClaim: return 0x41FFF;
+        case Command::TrustBrowser: return 0xF;
     }
     return 0;
 }

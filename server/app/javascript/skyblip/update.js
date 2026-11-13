@@ -6,6 +6,7 @@ import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
 } from '#skyblip/smp';
+import { BrowserTrust, storedBrowserKey } from '#skyblip/trust';
 
 export { hasWebBluetooth };
 
@@ -110,6 +111,7 @@ export class Updater {
   #returnEveryMs;
   #returnWithinMs;
   #returnTimer = null;
+  #trust;
   #state = {
     phase: 'offline',
     task: null,
@@ -127,10 +129,13 @@ export class Updater {
     settling: false,
     progress: null,
     notice: null,
+    trust: null,
+    browsers: null,
   };
 
-  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS }) {
+  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey }) {
     this.#onChange = onChange;
+    this.#trust = new BrowserTrust({ send: command => this.#device.sendConfig(command), loadKey: browserKey, onChange: patch => this.#set(patch) });
     this.#bluetoothDevice = device;
     this.#returnEveryMs = returnEveryMs;
     this.#returnWithinMs = returnWithinMs;
@@ -186,6 +191,7 @@ export class Updater {
       return this.#set({ phase: 'offline', notice: { key: 'not_skyblip' } });
     }
     this.#device = device;
+    await this.#trust.prove();
     this.#set({ phase: 'ready', device: device.name });
     await this.#learn();
   }
@@ -265,7 +271,7 @@ export class Updater {
   saveSettings(values) {
     const changed = changedSettings(this.#state.settings, values);
     if (Object.keys(changed).length === 0) return;
-    if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'set' } });
+    if (this.inFlight && !this.#trust.trusted) return this.#set({ notice: { key: 'in_flight', during: 'set' } });
     this.#set({ notice: null });
     return this.#ask('set', settingsFrame(changed));
   }
@@ -280,6 +286,26 @@ export class Updater {
     this.#captureProfile = profile;
     this.#set({ notice: null });
     return this.#ask('capture', { profile });
+  }
+
+  // INFO: fc 13nov26 the unit's replies carry no request id, so the list waits for the link to be quiet
+  listBrowsers() {
+    return this.#browsing(() => this.#trust.list());
+  }
+
+  forgetBrowsers(ids) {
+    return this.#browsing(async () => {
+      this.#set({ notice: null });
+      const refusal = await this.#trust.forget(ids);
+      if (typeof refusal === 'string') this.#set({ notice: { key: refusal, during: 'browsers' } });
+    });
+  }
+
+  async #browsing(exchange) {
+    if (this.#state.phase !== 'ready' || !this.#trust.trusted) return;
+    this.#set({ phase: 'asking', task: 'browsers' });
+    await exchange();
+    if (this.#state.task === 'browsers') this.#set({ phase: 'ready', task: null });
   }
 
   #refusal() {
@@ -303,6 +329,7 @@ export class Updater {
       return this.#fail(error);
     }
     this.#set({ running: this.#running && versionText(this.#running) });
+    await this.listBrowsers();
   }
 
   #needsFull({ full, pin }) {
@@ -325,7 +352,7 @@ export class Updater {
   }
 
   #receive(reply) {
-    if (!reply) return;
+    if (!reply || this.#trust.receive(reply)) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
@@ -357,6 +384,7 @@ export class Updater {
       return this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
     }
     if (task === 'dfu') {
+      this.#trust.confirmed();
       this.#windowOpen = true;
       return this.#upload();
     }
@@ -364,9 +392,12 @@ export class Updater {
     return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
   }
 
-  #saved() {
+  async #saved() {
+    const trusting = !this.#trust.trusted;
+    this.#trust.confirmed();
     this.#set({ phase: 'ready', task: null, notice: { key: 'saved', during: 'set' } });
-    return this.#send({ command: 'get' });
+    await this.#send({ command: 'get' });
+    if (trusting) await this.listBrowsers();
   }
 
   async #upload() {
@@ -438,6 +469,7 @@ export class Updater {
     this.#writeBytes = GATT_WRITE_BYTES;
     this.#probed = false;
     this.#smp.close(new LinkLost());
+    this.#trust.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
       this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });

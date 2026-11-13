@@ -87,8 +87,12 @@ inline constexpr Value kReasonValues[] = {
     {"capture", 45},
     {"capturing", 46},
     {"not_capturing", 47},
+    {"trusted", 48},
+    {"untrusted", 49},
+    {"forgotten", 50},
+    {"unknown_browser", 51},
 };
-inline constexpr Enumeration kReason{kReasonValues, 47};
+inline constexpr Enumeration kReason{kReasonValues, 51};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},
@@ -236,8 +240,13 @@ inline constexpr Value kCommandValues[] = {
     {"health", 27},
     {"peer_claim", 28},
     {"capture", 29},
+    {"browser_challenge", 30},
+    {"trust_browser", 31},
+    {"browsers", 32},
+    {"browser", 33},
+    {"forget_browser", 34},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 30};
+inline constexpr Enumeration kCommand{kCommandValues, 35};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -556,6 +565,34 @@ inline constexpr Key kCaptureKeys[] = {
     {"profile", 1, Type::Enum, &kCaptureProfile, 0, true},
 };
 
+inline constexpr Key kBrowserChallengeKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"nonce", 1, Type::Bytes, nullptr, 16, true},
+};
+
+inline constexpr Key kTrustBrowserKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"key", 1, Type::Bytes, nullptr, 32, true},
+    {"signature", 2, Type::Bytes, nullptr, 64, true},
+    {"label", 3, Type::Text, nullptr, 0, false},
+};
+
+inline constexpr Key kBrowsersKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"index", 1, Type::Unsigned, nullptr, 0, true},
+};
+
+inline constexpr Key kBrowserKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false}, {"index", 1, Type::Unsigned, nullptr, 0, true},
+    {"count", 2, Type::Unsigned, nullptr, 0, true},  {"id", 3, Type::Bytes, nullptr, 8, false},
+    {"label", 4, Type::Text, nullptr, 0, false},
+};
+
+inline constexpr Key kForgetBrowserKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"id", 1, Type::Bytes, nullptr, 8, true},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -587,6 +624,11 @@ inline constexpr Frame kFrames[] = {
     {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 14},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
+    {"browser_challenge", 30, events::Endpoint::Config, Sender::Both, kBrowserChallengeKeys, 2},
+    {"trust_browser", 31, events::Endpoint::Config, Sender::Host, kTrustBrowserKeys, 4},
+    {"browsers", 32, events::Endpoint::Config, Sender::Host, kBrowsersKeys, 2},
+    {"browser", 33, events::Endpoint::Config, Sender::Unit, kBrowserKeys, 5},
+    {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
 };
 
 }

@@ -5,18 +5,19 @@ import { say } from "controllers/briefing/words"
 const TICK_MS = 250
 
 export default class extends Controller {
-  static targets = ["glass", "title", "detail", "left", "lamp", "press", "seconds"]
+  static targets = ["glass", "title", "detail", "left", "lamp", "press", "seconds", "remembers"]
 
   disconnect() {
     this.#stop()
   }
 
   // INFO: fc 11nov26 the countdown starts when the device says it asks, as the glass's own does
-  show({ title, detail = "", product, lamp = false }) {
-    const asking = `${title}|${detail}|${product}`
+  show({ title, detail = "", product, lamp = false, remembers = false }) {
+    const asking = `${title}|${detail}|${product}|${remembers}`
     if (this.asking === asking) return
     this.asking = asking
     this.element.hidden = false
+    this.remembersTarget.hidden = !remembers
     this.glassTarget.hidden = lamp
     this.lampTarget.hidden = !lamp
     this.titleTarget.textContent = title
