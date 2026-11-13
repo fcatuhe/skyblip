@@ -25,6 +25,20 @@ enum class ShutdownPhase : uint8_t { Running, Parking, AwaitRelease, Off };
 
 const char* to_string(ShutdownReason reason);
 
+// INFO: fc 13nov26 an install and a rebooting recovery come straight back, so neither signs off
+constexpr bool ends_switched_off(ShutdownReason reason, bool recovery_powers_off) {
+    switch (reason) {
+        case ShutdownReason::None:
+        case ShutdownReason::Install: return false;
+        case ShutdownReason::Recovery: return recovery_powers_off;
+        case ShutdownReason::LongPress:
+        case ShutdownReason::Stow:
+        case ShutdownReason::LowBattery:
+        case ShutdownReason::LinkRequest: return true;
+    }
+    return true;
+}
+
 // What dropping the rails is made of. Every one of these is harmless on its
 // own; most of them are wrong in the wrong place, so the ORDER below is the
 // content of this module and the thing the tests hold.

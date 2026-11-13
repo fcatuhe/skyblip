@@ -43,6 +43,7 @@ class NullLink : public Link {
         return Status::Down;
     }
     bool central_of(const events::Peer&, events::BluetoothAddress&) const override { return false; }
+    int phones() const override { return 0; }
 };
 
 class NullCentral : public Central {

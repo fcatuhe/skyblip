@@ -58,6 +58,14 @@ class LinkSessions {
 
     bool peer_reserved() const { return peer_reserved_; }
 
+    // INFO: fc 12nov26 every central but Bravo's pinned Go, which connects as one and is no phone
+    int phones() const {
+        int phones = 0;
+        for (const Slot& slot : slots_)
+            if (slot.used && !named_peer(slot.central)) phones++;
+        return phones;
+    }
+
     int phone_ceiling() const {
         return static_cast<int>(kMaxSessions) - (peer_reserved_ ? kPeerConnections : 0);
     }
@@ -152,13 +160,6 @@ class LinkSessions {
 
     bool named_peer(const events::BluetoothAddress& central) const {
         return peer_named_ && central == peer_;
-    }
-
-    int phones() const {
-        int phones = 0;
-        for (const Slot& slot : slots_)
-            if (slot.used && !named_peer(slot.central)) phones++;
-        return phones;
     }
 
     bool peer_present() const { return count() > phones(); }

@@ -7,7 +7,10 @@
 // device is going down (a lit LED on a device that is off is the bug, not a
 // cosmetic slip), and a unit with no lamp fitted runs the same table and lights
 // nothing.
+#include <vector>
+
 #include "core/indication/lamp.h"
+#include "core/indication/signature.h"
 #include "core/power/cutoff.h"
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
@@ -80,6 +83,31 @@ TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
     // And it did light: a lamp that is cheap because it never comes on is not an
     // indicator.
     CHECK(lamp_of(rig).lightings() >= 15);
+}
+
+TEST_CASE("product: with a PPS lock the wink falls on the UTC grid, not on when the fix came") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    // Host second 0 is UTC 1 past a multiple of three, so the grid's winks fall at 2 s, 5 s, 8 s.
+    rig.utc_offset_s = 1;
+    std::vector<uint32_t> green_from_ms;
+    bool was_lit = false;
+    for (uint32_t now_ms = 0; now_ms <= 15000; now_ms += 10) {
+        if (now_ms % 1000 == 0) {
+            rig.push_timed_fix(0, 500);
+            rig.utc_offset_s++;
+        }
+        rig.platform.clock().set_milliseconds(now_ms);
+        rig.product.run_pass(now_ms);
+        const bool lit = lamp_of(rig).lit();
+        if (lit && !was_lit && lamp_of(rig).lamp() == indication::Lamp::Green)
+            green_from_ms.push_back(now_ms);
+        was_lit = lit;
+    }
+    REQUIRE(rig.state().clock.utc_s != 0);
+    REQUIRE(green_from_ms.size() >= 4);
+    MESSAGE("the fix's own wink at ", green_from_ms.front(), " ms");
+    for (size_t i = 1; i < green_from_ms.size(); i++) CHECK(green_from_ms[i] % 3000 == 2000);
 }
 
 TEST_CASE("product: a critical cell blinks the lamp red") {
@@ -173,7 +201,8 @@ TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor i
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::NoFix);
 }
 
-TEST_CASE("product: a device on its way down darkens the lamp and lets go of the pins") {
+TEST_CASE(
+    "product: a device on its way down signs off, then darkens the lamp and lets go of the pins") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -185,9 +214,13 @@ TEST_CASE("product: a device on its way down darkens the lamp and lets go of the
     // until the rails drop - and these LEDs are active-low, so "off" is a pin
     // driven high into a rail that is about to collapse.
     rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-    rig.run(now_ms, now_ms + 100);
+    const uint32_t first_pulse_ms = now_ms + indication::kSignOff.lead_ms + 100;
+    rig.run(now_ms, first_pulse_ms);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
+    CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
 
+    const uint32_t signed_off_ms = now_ms + indication::length_ms(indication::kSignOff) + 100;
+    rig.run(first_pulse_ms + 50, signed_off_ms);
     CHECK_FALSE(lamp_of(rig).lit());
     CHECK(lamp_of(rig).parked());
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Off);
@@ -195,9 +228,63 @@ TEST_CASE("product: a device on its way down darkens the lamp and lets go of the
     // And nothing brings it back: the loop is not running, and a cable still in
     // is not a reason to light a device that is going off.
     const uint32_t lightings = lamp_of(rig).lightings();
-    rig.run(now_ms + 100, now_ms + 20000);
+    rig.run(signed_off_ms, signed_off_ms + 20000);
     CHECK(lamp_of(rig).lightings() == lightings);
     CHECK_FALSE(lamp_of(rig).lit());
+}
+
+TEST_CASE("product: a press from off signs on with one green pulse, felt as it is lit") {
+    Rig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run(0, 100, 10);
+    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(rig.platform.annunciator().vibrating());
+
+    rig.run(110, 100 + indication::kSignOnPulseMs, 10);
+    CHECK_FALSE(rig.platform.annunciator().vibrating());
+    CHECK(rig.platform.annunciator().motor_starts() == 1);
+    CHECK(rig.platform.annunciator().silences() == 0);
+}
+
+// The signs say the unit is on or off, which is not an alarm the pilot switched off.
+TEST_CASE("product: alarms or volume switched off still sign off in the hand, and sound nothing") {
+    for (const bool volume_off : {false, true}) {
+        CAPTURE(volume_off);
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        if (volume_off)
+            rig.settings().alarm_volume = go::AlarmVolume::Off;
+        else
+            rig.settings().alarm_enabled = false;
+        uint32_t now_ms = 0;
+        settle(rig, now_ms);
+
+        rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
+        rig.run(now_ms, now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
+        CHECK(rig.platform.annunciator().motor_starts() == 3);
+        CHECK(rig.platform.annunciator().tone_commands() == 0);
+        CHECK(lamp_of(rig).parked());
+    }
+}
+
+TEST_CASE(
+    "product: a restart or a first power-on signs nothing, and an install goes down unsigned") {
+    for (const power::ResetCause causes :
+         {power::ResetCause::PowerOn, power::ResetCause::Software,
+          power::ResetCause::Watchdog | power::ResetCause::LowPowerWake}) {
+        Rig rig;
+        rig.platform.system_power().causes = causes;
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t now_ms = 0;
+        settle(rig, now_ms, 1000);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
+
+        rig.product.shutdown().request(power::ShutdownReason::Install, now_ms);
+        rig.run(now_ms, now_ms + 200, 10);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
+        CHECK(lamp_of(rig).parked());
+    }
 }
 
 TEST_CASE("product: a unit with no status LED flies and lights nothing") {

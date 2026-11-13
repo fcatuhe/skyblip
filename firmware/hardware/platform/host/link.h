@@ -118,6 +118,8 @@ class Link : public ports::Link {
         return sessions_.central(peer, out);
     }
 
+    int phones() const override { return sessions_.phones(); }
+
     // INFO: fc 25sep26 silicon's per-link notify share: past it WouldBlock, until serve()
     void hold_after(int frames) { notification_share_ = frames; }
     // INFO: fc 11nov26 one central's buffers full: what goes to it alone answers WouldBlock

@@ -42,6 +42,35 @@ A connected phone keeps the fix colour and doubles the wink rate: one wink every
 
 An armed capture keeps the fix colour too, and winks twice every 3 s: two 30 ms flashes 150 ms apart, then dark until the cycle ends. That is 2%, the connected rows' spend, and a capture runs for hours, so it is a `Steady` row. A row's `flashes` and `between_ms` say how many flashes a cycle holds and how far apart, and `cycle_ms()` and `duty_permille()` count them all. The capture rows sit above the connected ones: a pilot arms a capture from a page, so a phone is connected at the moment the lamp has to say the capture runs (#247).
 
+## Every flash is on the UTC minute's grid
+
+Every row's flash starts on second 00 of the UTC minute, on every unit, paired or alone. A Go and its Bravo sit side by side in one cockpit, and two lamps winking at unrelated offsets read as two devices disagreeing.
+
+`Policy::update()` takes the `timing::ClockState` with the situation, so no caller can light the lamp without the clock. It reads the UTC millisecond from `timing::utc_ms()`, which answers only while the PPS is locked and the clock holds a UTC second. Its place in the cycle is then the millisecond into the UTC minute, modulo the row's cycle. A `static_assert` holds every row's cycle to a divisor of the minute, so every cycle restarts at second 00 and no flash drifts across the minute. That is why the advisory flicker is 50 ms in every 200 and not 45 in 180: 180 ms does not divide a minute.
+
+Every unit with a lock lights the same flash in the same pass, whichever moment its condition began.
+
+A change still shows itself at once, on the unit's own clock, because the flash a pilot is owed is the one that follows the event. The policy joins the grid at the first pass where its own phase and the grid's are both dark, so neither the change's flash nor the grid's first flash is cut short. A lost lock keeps the phase the grid left, and the lamp runs free on it until the lock comes back.
+
+The buzzer and the motor stay off the grid. They announce an event, and waiting for the next grid line would delay a traffic call by up to a cycle.
+
+## The signs in the hand
+
+The table says whether the device runs. It cannot say that the device has just come on or is going off: the alive row winks once every 3 s, so a unit that has just gone dark looks like one between two winks for up to 3 s. `signature.h` holds the two signs the lamp and the motor make together. Each pulse is lit and felt at once, and neither sign sounds.
+
+| Sign | Lamp and motor | When |
+|---|---|---|
+| on | one green pulse of 400 ms | the loop's first pass, after a press woke the unit from SYSTEM OFF |
+| off | three red pulses of 150 ms, 150 ms apart, after 150 ms dark | the pass after a shutdown that leaves the unit off starts |
+
+One long pulse for on is the cue phones and watches give at power-on. It is easier to catch than three short ones when the thumb has already left the button. The three short pulses for off come under the thumb that holds the button, so they read as "done, let go". Traffic is felt as two calls, and `common::AlarmService` asserts that neither sign has two pulses.
+
+The sign on waits for the loop's first pass, so it costs bring-up nothing, and it says that the device runs, not that the button went down. A restart signs nothing: a watchdog, a software reset or an install can come in flight, where a pulse in a pocket would read as traffic. A first power-on signs nothing either. A refused boot signs nothing, because it runs on a cell too low to spend on it.
+
+The sign off starts on the pass after the shutdown's, because the shutdown's own pass flushes the settings and drains a capture to flash, and a stall there would merge two pulses. It opens with a gap, so a traffic call it cuts short never runs into the first pulse. It plays inside `power::kParkSettleMs`, the wait every shutdown already spends parking, and `signature.h` asserts that it fits, so no switch-off lasts longer. The product parks the lamp, the buzzer and the motor once the sign ends. A sign stays off the UTC grid, as the buzzer does, because it answers a press or a shutdown at once. An install and a recovery that reboots come straight back, so they go down unsigned (`power::ends_switched_off`).
+
+A sign is not an alarm. `settings.alarm_enabled` and a volume of off silence the buzzer and the motor for traffic, but a pilot who turned the noise off still needs to know that the unit came on. A sign is an event that ends by itself, which the section above calls annunciation's kind. It lives here because it makes no sound and answers this lamp's own question, whether the device is on. A traffic call outranks a sign on and cancels it, though a sign on ends long before a first fix can bring traffic.
+
 ## Why charge is not a row
 
 The board already answers it in hardware. The charger IC drives its own LED, documented in LilyGO's T-Echo pin table: lit while charging, blinking with the cell missing or faulty, off when full. It reports while the SoC is asleep, which nothing here can do, and it reads the charger rather than guessing from a terminal voltage.

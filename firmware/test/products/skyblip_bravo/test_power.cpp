@@ -1,4 +1,5 @@
 // The ways a Bravo goes dark, every part parked on each: the X1 items #170 moved to #176.
+#include "core/indication/signature.h"
 #include "doctest/doctest.h"
 #include "test/support/bravo_rig.h"
 
@@ -29,6 +30,83 @@ TEST_CASE("bravo: a long press switches it off with the receiver asleep and ever
     run_until_off(rig);
     REQUIRE(rig.product.ready_to_power_off());
     check_parked(rig);
+}
+
+TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, then parks") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    const uint32_t starts = rig.platform.annunciator().motor_starts();
+
+    rig.platform.set_button_down(true);
+    rig.run_for(power::kLongPressHoldMs + indication::kSignOff.lead_ms + 100);
+    REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
+    CHECK(rig.platform.indicator().lamp() == indication::Lamp::Red);
+    CHECK(rig.platform.annunciator().vibrating());
+
+    rig.run_for(indication::length_ms(indication::kSignOff));
+    CHECK(rig.platform.annunciator().motor_starts() - starts == 3);
+    CHECK(rig.platform.indicator().parked());
+    rig.platform.set_button_down(false);
+    run_until_off(rig);
+    REQUIRE(rig.product.ready_to_power_off());
+    check_parked(rig);
+}
+
+// Reviewer: the shutdown's own pass may block on a capture's flash erases, which merged pulses 1
+// and 2.
+TEST_CASE("bravo: a slow shutdown pass does not merge the off pulses into a traffic call") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
+    rig.step();
+    rig.now_ms += 2 * indication::kSignOffPulseMs + indication::kSignOffGapMs / 2;
+    rig.run_for(indication::length_ms(indication::kSignOff) + 100);
+    CHECK(rig.platform.annunciator().motor_starts() == 3);
+    CHECK(rig.platform.indicator().parked());
+}
+
+TEST_CASE("bravo: an install goes down unsigned, since the unit comes straight back") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.product.shutdown().request(power::ShutdownReason::Install, rig.now_ms);
+    rig.run_for(100);
+    CHECK(rig.platform.indicator().parked());
+    CHECK(rig.platform.annunciator().motor_starts() == 0);
+}
+
+TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp takes its row") {
+    BravoRig rig;
+    rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.run_for(100);
+    CHECK(rig.platform.indicator().lamp() == indication::Lamp::Green);
+    CHECK(rig.platform.annunciator().vibrating());
+
+    rig.run_for(indication::kSignOnPulseMs);
+    CHECK_FALSE(rig.platform.annunciator().vibrating());
+    CHECK(rig.platform.annunciator().motor_starts() == 1);
+    bool winked_blue = false;
+    for (int i = 0; i < 300 && !winked_blue; i++) {
+        rig.run_for(10);
+        winked_blue = rig.platform.indicator().lamp() == indication::Lamp::Blue;
+    }
+    CHECK(winked_blue);
+}
+
+// A restart can come in flight, where a pulse in the pocket would read as traffic.
+TEST_CASE("bravo: a restart or a first power-on signs nothing") {
+    for (const power::ResetCause causes :
+         {power::ResetCause::PowerOn, power::ResetCause::Software,
+          power::ResetCause::Watchdog | power::ResetCause::LowPowerWake}) {
+        BravoRig rig;
+        rig.platform.system_power().causes = causes;
+        REQUIRE(rig.setup() == Status::Ok);
+        rig.run_for(1000);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
+    }
 }
 
 // The X1's bootloader lets a cable wake through, and the nRF52840 reports it as VBUS without OFF.
@@ -100,6 +178,18 @@ TEST_CASE("bravo: a radio whose probe failed is put to sleep on the way down, no
     CHECK(rig.platform.radio().mode == models::Lr2021::Mode::Sleep);
 }
 
+// Reviewer: the refusal's red blink stayed lit through the sign's lead, as a fourth pulse.
+TEST_CASE("bravo: a unit refused to fly goes dark before it signs off") {
+    BravoRig rig([](platform::host::MeshtrackerX1& x1) { x1.radio().version_major = 2; });
+    REQUIRE(rig.setup() == Status::Down);
+    for (int i = 0; i < 100 && !rig.platform.indicator().lit(); i++) rig.run_for(10);
+    REQUIRE(rig.platform.indicator().lamp() == indication::Lamp::Red);
+
+    rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
+    rig.run_for(indication::kSignOff.lead_ms / 2);
+    CHECK_FALSE(rig.platform.indicator().lit());
+}
+
 TEST_CASE(
     "bravo: a radio whose probe failed and whose BUSY sticks is held in reset on the way down") {
     BravoRig rig([](platform::host::MeshtrackerX1& x1) { x1.radio().version_major = 2; });
@@ -158,7 +248,8 @@ struct RefusedBoot {
 
 // Every road power::boot_path() refuses on: the radio's sleep is unknown after any reset, so it is
 // held in reset through GPIO, and no SPI command, probe or haptic enable is spent on a refusal.
-TEST_CASE("bravo: every refused boot holds the radio in reset and talks to no part") {
+TEST_CASE(
+    "bravo: every refused boot holds the radio in reset, talks to no part and signs nothing") {
     const RefusedBoot refusals[] = {
         {"a cable wake from SYSTEM OFF", power::ResetCause::UsbVbus | power::ResetCause::PowerOn,
          4050, true},
@@ -186,5 +277,7 @@ TEST_CASE("bravo: every refused boot holds the radio in reset and talks to no pa
         CHECK_FALSE(rig.platform.haptic().enable_driven);
         CHECK(rig.platform.haptic().enable_raises == 0);
         CHECK(rig.platform.begins == 0);
+        CHECK(rig.platform.indicator().lightings() == 0);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
     }
 }

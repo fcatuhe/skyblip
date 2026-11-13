@@ -106,6 +106,13 @@ constexpr uint16_t longest_call_ms(Tune tune) {
     return longest;
 }
 
+constexpr uint8_t calls(Tune tune) {
+    uint8_t count = tune.count > 0 ? 1 : 0;
+    for (uint8_t i = 0; i + 1 < tune.count; i++)
+        if (tune.notes[i].gap_ms != 0) count++;
+    return count;
+}
+
 // INFO: fc 17oct26 a guard under the loop, never a tune's: an output still on past it is a bug
 constexpr uint16_t kAnnunciatorOnCeilingMs = 2000;
 static_assert(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs &&
