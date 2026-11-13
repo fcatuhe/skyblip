@@ -316,27 +316,30 @@ TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
     CHECK(alptas_encode(frame, observation, kUtcS, 480000000, 87000000) == Status::Invalid);
 }
 
+// core/protocol/README.md argues each row against FTD-012 section 8.2 and ADS-L G.1.3.
+TEST_CASE("alptas: every FLARM aircraft type is read as the ADS-L category it names") {
+    const uint8_t expected[16] = {0, 4, 1, 3, 8, 1, 16, 7, 1, 2, 0, 5, 5, 11, 0, 0};
+    for (uint8_t type = 0; type < 16; type++) {
+        CAPTURE(int(type));
+        CHECK(int(alptas_type_to_adsl_category(type)) == int(expected[type]));
+    }
+    CHECK(int(alptas_type_to_adsl_category(0x20)) == 0);
+}
+
 TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") {
-    // Invertible both ways: unknown, glider, rotorcraft, skydiver, paraglider,
-    // powered, jet, balloon, UAV. The rest of the FLARM taxonomy is many-to-one into
-    // ADS-L (tow plane and drop plane are both "light", gyrocopter is
-    // "rotorcraft", airship is "balloon"), so only one representative survives.
-    static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x7, 0x8, 0x9, 0xB, 0xD};
+    // Invertible both ways: unknown, glider, rotorcraft, skydiver, hang glider,
+    // paraglider, powered, jet, balloon, UAV. The rest of the FLARM taxonomy is
+    // many-to-one into ADS-L (tow plane and drop plane are both "light", airship
+    // is "balloon"), so only one representative survives.
+    static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x6, 0x7, 0x8, 0x9, 0xB, 0xD};
     for (uint8_t type : kInvertible) {
         CAPTURE(type);
         CHECK(int(adsl_category_to_alptas_type(alptas_type_to_adsl_category(type))) == int(type));
     }
-    CHECK(int(alptas_type_to_adsl_category(0x1)) == 4);   // glider
-    CHECK(int(alptas_type_to_adsl_category(0x8)) == 1);   // powered aircraft -> light
-    CHECK(int(alptas_type_to_adsl_category(0x9)) == 2);   // jet -> small-heavy
-    CHECK(int(alptas_type_to_adsl_category(0xD)) == 11);  // UAV
-    CHECK(int(alptas_type_to_adsl_category(0xF)) == 0);   // static object -> no info
-    CHECK(int(alptas_type_to_adsl_category(0xA)) == 0);
-    CHECK(int(alptas_type_to_adsl_category(0x20)) == 0);  // out of range is not a crash
 
     // And the whole way round, through the wire.
-    for (uint8_t category :
-         {uint8_t(1), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(8), uint8_t(11)}) {
+    for (uint8_t category : {uint8_t(1), uint8_t(2), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(7),
+                             uint8_t(8), uint8_t(11), uint8_t(16)}) {
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.aircraft_category = category;
         uint8_t frame[kAlptasFrameBytes];
