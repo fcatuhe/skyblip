@@ -138,6 +138,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
       assert_selector ".glass-remembers", text: "Allowing it also trusts this browser"
+      screen "15-glass-trusts"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
 
@@ -146,7 +147,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
         assert_selector "li", text: "Edge on Windows"
         assert_selector "li", text: "· this browser"
       end
-      screen "12-trusted-browsers"
+      screen "16-trusted-browsers"
 
       select "Soft", from: "Alarm volume"
       click_button "Save 1 change"
@@ -171,6 +172,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-notes", text: "This browser may still change its settings. The rest unlocks once it lands."
+      screen "17-trusted-airborne"
       select "Soft", from: "Alarm volume"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
