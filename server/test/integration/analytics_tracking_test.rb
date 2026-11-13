@@ -16,7 +16,7 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
 
   test "a page served and viewed in a browser becomes a computed visit" do
     perform_enqueued_jobs do
-      get page_path(slug: "features"), headers: { "User-Agent" => SAFARI }
+      get page_path(slug: "go"), headers: { "User-Agent" => SAFARI }
       post "/hoy/events", params: { events: [ { name: "$view", properties: { page: "/features" }, time: Time.current.to_f } ] }.to_json,
                           headers: { "User-Agent" => SAFARI, "Content-Type" => "application/json",
                                      "Ahoy-Visit" => cookies[:ahoy_visit], "Ahoy-Visitor" => cookies[:ahoy_visitor] }
@@ -39,13 +39,13 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
   end
 
   test "a turbo prefetch is not a visit to the page" do
-    get page_path(slug: "features"), headers: { "User-Agent" => SAFARI, "X-Sec-Purpose" => "prefetch" }
+    get page_path(slug: "go"), headers: { "User-Agent" => SAFARI, "X-Sec-Purpose" => "prefetch" }
 
     assert_empty Ahoy::Event.all
   end
 
   test "an event whose page is not a path is dropped" do
-    get page_path(slug: "features"), headers: { "User-Agent" => SAFARI }
+    get page_path(slug: "go"), headers: { "User-Agent" => SAFARI }
     post "/hoy/events", params: { events: [ { name: "$view", properties: { page: [ "/features" ] } }, { name: "$click", properties: "text" } ] }.to_json,
                         headers: { "User-Agent" => SAFARI, "Content-Type" => "application/json",
                                    "Ahoy-Visit" => cookies[:ahoy_visit], "Ahoy-Visitor" => cookies[:ahoy_visitor] }

@@ -23,7 +23,7 @@
     color: var(--ink);
     margin-block-start: var(--space-l);
   }
-  .card-protocols, .card-status {
+  .card-protocols {
     font-family: var(--font-sans);
     font-weight: 700;
     font-size: 1.75rem;
@@ -33,11 +33,6 @@
     margin-block-start: var(--space-m);
   }
   .card-protocols { letter-spacing: 0.06em; }
-  .card-status {
-    padding: var(--space-2xs) var(--space-s);
-    border-radius: var(--space-xs);
-    background: var(--blip-soft);
-  }
   .card-site {
     font-family: var(--font-sans);
     font-size: 1.5rem;

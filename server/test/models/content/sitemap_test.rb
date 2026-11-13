@@ -10,7 +10,7 @@ class Content::SitemapTest < ActiveSupport::TestCase
 
     assert_equal Content::Page.all.map { |page| Content.canonical_url(page.url_path) }.sort, urls
     assert_includes urls, "https://skyblip.eu/fr/a-propos"
-    assert_includes urls, "https://skyblip.eu/ads-l-registry/nmea"
+    assert_includes urls, "https://skyblip.eu/ads-l/nmea"
     assert urls.none? { |url| url.include?("/briefing") }
     assert_empty document.xpath("//xmlns:changefreq | //xmlns:priority")
   end

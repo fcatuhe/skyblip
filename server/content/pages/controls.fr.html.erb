@@ -10,27 +10,27 @@ updated_on: "2026-11-09"
 
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
-  <h1>Deux contacts, et rien à apprendre deux fois.</h1>
+  <h1>Deux commandes, et rien à apprendre deux fois.</h1>
   <p class="lede">
-    Un pavé et un bouton, les menus derrière eux, et les pages que l&rsquo;on cherche à l&rsquo;établi.
+    Un pavé et un bouton pour les menus, avec des pages de diagnostic pour l&rsquo;établi.
   </p>
 </section>
 
 <section>
   <div class="feature">
     <div>
-      <h3 id="two-contacts">Le pavé déplace, <span class="highlight">le bouton agit</span>.</h3>
+      <h3 id="two-contacts">Le pavé navigue, <span class="highlight">le bouton agit</span>.</h3>
       <p>
-        Deux contacts, et le partage entre les deux est tout ce qu&rsquo;il y a
-        à retenir. Le pavé capacitif du bord haut fait défiler les quatre pages,
-        et ne peut rien changer. Le bouton du côté ouvre le menu de la page
-        affichée, et chaque pression suivante fait avancer la ligne.
+        Deux commandes, chacune avec son rôle
+        à retenir. Le pavé tactile capacitif sur le bord supérieur fait défiler les quatre pages,
+        sans changer les réglages. Le bouton sur le côté ouvre le menu de la page
+        affichée. Chaque pression suivante change la valeur de la ligne sélectionnée.
       </p>
       <p>
-        Deux pages ont un menu. Tout ce qu&rsquo;un pouce peut régler tient sous
-        le radar, le premier écran sur lequel on installe un appareil. Rien
-        n&rsquo;est un brouillon à valider&nbsp;: chaque pression est un réglage
-        terminé.
+        Deux pages ont un menu. Tous les réglages accessibles avec ces commandes sont dans le menu du
+        radar, le premier écran utilisé pour configurer l&rsquo;appareil. Aucun
+        réglage ne demande de confirmation&nbsp;: chaque pression applique
+        le changement immédiatement.
       </p>
     </div>
     <figure class="shot">
@@ -40,34 +40,34 @@ updated_on: "2026-11-09"
   </div>
 
   <ul class="points">
-    <li>Une tape sur le pavé&nbsp;: la page suivante</li>
-    <li>Un contact d&rsquo;une seconde&nbsp;: le radar</li>
-    <li>Une pression&nbsp;: le menu, quand la page en a un</li>
-    <li>Les pressions suivantes&nbsp;: la ligne avance</li>
-    <li>Après la dernière ligne&nbsp;: retour à l&rsquo;image</li>
-    <li>Une minute sans rien&nbsp;: elle revient seule</li>
+    <li>Touchez brièvement le pavé pour passer à la page suivante</li>
+    <li>Gardez le doigt sur le pavé une seconde pour revenir au radar</li>
+    <li>Appuyez sur le bouton pour ouvrir le menu, si la page en a un</li>
+    <li>Appuyez à nouveau pour changer la valeur de la ligne sélectionnée</li>
+    <li>Dépassez la dernière ligne pour revenir à la page</li>
+    <li>Ne touchez à rien pendant une minute pour revenir automatiquement à la page</li>
   </ul>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="callsign">Votre indicatif, <span class="highlight">tapé avec deux contacts</span>.</h3>
+      <h3 id="callsign">Votre indicatif, <span class="highlight">saisi avec deux commandes</span>.</h3>
       <p>
-        <span class="mono">CALLSIGN</span> est la seule ligne qui ouvre un champ
-        au lieu de faire avancer une valeur, et les deux gestes s&rsquo;y
-        inversent&nbsp;: le pavé fait défiler le caractère sous la barre, le
-        bouton passe au suivant. Le cycle est un blanc, un tiret,
+        <span class="mono">CALLSIGN</span> est la seule ligne qui ouvre un champ de saisie
+        au lieu de changer une valeur. Les commandes y échangent
+        leurs rôles&nbsp;: le pavé change le caractère au-dessus de la barre, le
+        bouton passe au suivant. Le cycle commence par un espace, puis un tiret,
         <span class="mono">A</span> à <span class="mono">Z</span>,
         <span class="mono">0</span> à <span class="mono">9</span>, puis de
-        nouveau le blanc, si bien qu&rsquo;un pouce qui dépasse une lettre y
-        revient sans second geste.
+        nouveau un espace. Si vous dépassez une lettre, continuez à faire défiler
+        les caractères pour la retrouver avec le même geste.
       </p>
       <p>
-        Le bouton sur le dernier caractère enregistre le nom, et les blancs
-        laissés à la fin sont retirés. Pour effacer un indicatif, ramenez le
-        premier caractère sur un blanc et pressez&nbsp;: l&rsquo;écran dit
-        <span class="mono">BLANK THE FIRST TO CLEAR</span> tant que le nom est
-        là, et <span class="mono">BUTTON CLEARS</span> une fois le blanc sous la
-        barre. Quittez le champ sans le terminer, ou laissez-le une minute, et
+        Appuyez sur le bouton au dernier caractère pour enregistrer l&rsquo;indicatif. Les espaces
+        laissés à la fin sont supprimés. Pour effacer un indicatif, remplacez le
+        premier caractère par un espace et appuyez sur le bouton. L&rsquo;écran affiche
+        <span class="mono">BLANK THE FIRST TO CLEAR</span> tant qu&rsquo;un indicatif est
+        présent, et <span class="mono">BUTTON CLEARS</span> une fois l&rsquo;espace sous la
+        barre. Si vous quittez le champ avant de terminer, ou si vous le laissez une minute sans y toucher,
         rien n&rsquo;est enregistré.
       </p>
     </div>
@@ -79,11 +79,11 @@ updated_on: "2026-11-09"
 
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif, le premier caractère ramené sur un blanc, la barre dessous, et l'aide qui dit maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace à la place du premier caractère, la barre dessous, et l'aide qui affiche maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
       <figcaption>Le premier caractère effacé</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, la ligne CALLSIGN sélectionnée et qui affiche NONE" %>
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
       <figcaption>Une pression plus tard</figcaption>
     </figure>
   </div>
@@ -92,49 +92,49 @@ updated_on: "2026-11-09"
     <div>
       <h3 id="diagnostics">Quatre pages qui défilent, <span class="highlight">le reste par son nom</span>.</h3>
       <p>
-        Une tape passe du radar à la liste, aux instruments, puis au G-mètre, et
-        à rien d&rsquo;autre&nbsp;: un pilote qui fait défiler l&rsquo;écran en
-        vol ne doit pas tomber sur les barres de satellites. Une carte sans
-        capteur inertiel n&rsquo;a pas de G-mètre à dessiner, la tape
-        l&rsquo;enjambe plutôt que d&rsquo;afficher
+        Touchez brièvement le pavé pour passer du radar à la liste, aux instruments, puis au G-mètre, et
+        à aucune autre page. Un pilote qui fait défiler les pages en
+        vol ne doit pas tomber sur les barres des satellites. Sur une carte sans
+        capteur inertiel, il n&rsquo;y a pas de G-mètre à afficher. Le pavé
+        passe donc cette page au lieu d&rsquo;afficher
         <span class="mono">NO SENSOR</span> une fois sur quatre.
       </p>
       <p>
-        Le reste s&rsquo;ouvre par son nom depuis le menu de la liste, et vous
-        rend la page où vous étiez. Les écrans ci-dessous sont ceux de
-        l&rsquo;établi, du parking et du rapport de bug&nbsp;: aucun n&rsquo;est
-        une image sur laquelle tomber avec le pouce. Le dernier enregistre un
-        vol pour ce rapport, tous les sujets pour un bug ou seulement la
-        batterie et les temps d&rsquo;activité pour une décharge, et annonce ce
-        que celui que vous choisissez coûte à la mémoire flash avant qu&rsquo;on
-        le lance.
+        Ouvrez les autres pages par leur nom depuis le menu de la liste. En les fermant, vous
+        retrouvez la page où vous étiez. Les écrans ci-dessous servent à
+        l&rsquo;établi, au parking et aux rapports de bug. Vous ne pouvez pas y
+        accéder en faisant défiler les pages avec le pavé. Le dernier enregistre un
+        vol pour un rapport de bug&nbsp;: toutes les catégories de données pour un bug, ou seulement
+        l&rsquo;alimentation et les temps d&rsquo;activité pour un essai de décharge. Il indique
+        la place que prendra l&rsquo;enregistrement choisi dans la mémoire flash avant de
+        le lancer.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, raw, capture et autotest, les six pages qu'on ouvre par leur nom" %>
+      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, données brutes, capture et autotest, les six pages qu'on ouvre par leur nom" %>
       <figcaption>Le menu de la liste</figcaption>
     </figure>
   </div>
 
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "status.png", alt: "La page état : point et satellites, position, route, trafic, émission, la centrale inertielle, pression, les deux altitudes, vitesse, vario et la batterie en volts et en pourcentage" %>
+      <%= screen_image_tag "status.png", alt: "La page état : état du positionnement et satellites, position, route, nombre de trafics, état de l'émission, la centrale inertielle, pression, les deux altitudes, vitesse, vario et la batterie en volts et en pourcentage" %>
       <figcaption>État</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "satellites.png", alt: "La page satellites : une barre par satellite groupée par constellation, contre une ligne pointillée à 40 dB-Hz" %>
+      <%= screen_image_tag "satellites.png", alt: "La page satellites : une barre par satellite, groupées par constellation, avec une ligne de référence pointillée à 40 dB-Hz" %>
       <figcaption>Satellites</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : sous le point, l'état du PPS et le bruit de fond, une ligne par trame reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, ce qu'elle portait, son adresse et son niveau" %>
+      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : sous l'état du positionnement, l'état du signal de synchronisation à la seconde (PPS) et le bruit de fond, une ligne par brève transmission radio reçue ou émise, la plus récente en haut, avec son heure, son sens, son canal, son contenu, son adresse et son niveau de signal" %>
       <figcaption>Journal radio</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "self-test.png", alt: "La page autotest : une ligne par pièce de la carte, avec la pièce qui a répondu et son verdict" %>
+      <%= screen_image_tag "self-test.png", alt: "La page autotest : une ligne par composant de la carte, avec le composant qui a répondu et le résultat du test" %>
       <figcaption>Autotest</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "La page capture, rien en cours d'enregistrement : l'état à l'arrêt, les deux captures au choix, FULL pour tous les sujets et POWER RUN pour la batterie et les temps d'activité, puis le prix de celle choisie, les secteurs de flash qu'elle prendrait, les vols enregistrés qu'elle effacerait et les heures d'enregistrement qu'elle garderait, et PAD PICKS, PRESS TWICE TO ARM en bas" %>
+      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état à l'arrêt, avec deux types d'enregistrement au choix, FULL pour toutes les catégories de données et POWER RUN pour l'alimentation et les temps d'activité. Elle indique ce qu'occuperait le type choisi : les secteurs de mémoire flash utilisés, les vols enregistrés qui seraient supprimés et les heures d'enregistrement conservées, avec PAD PICKS, PRESS TWICE TO ARM en bas" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>
@@ -146,23 +146,23 @@ updated_on: "2026-11-09"
       </thead>
       <tbody>
         <tr>
-          <th>Une tape sur le pavé</th>
-          <td>la page suivante, et sur la page capture la capture suivante</td>
-          <td>la ligne suivante, et après la dernière, la page à laquelle le menu appartient</td>
+          <th>Un bref contact sur le pavé</th>
+          <td>passe à la page suivante, ou sélectionne le type d&rsquo;enregistrement suivant sur la page capture</td>
+          <td>passe à la ligne suivante, ou revient à la page du menu après la dernière ligne</td>
         </tr>
         <tr>
           <th>Contact d&rsquo;1&nbsp;s sur le pavé</th>
-          <td>fait taire une alarme en cours, et s&rsquo;il n&rsquo;y en a pas, ramène le radar</td>
-          <td>le radar</td>
+          <td>coupe le son d&rsquo;une alarme en cours, ou revient au radar si aucune alarme n&rsquo;est active</td>
+          <td>revient au radar</td>
         </tr>
         <tr>
           <th>Une pression sur le bouton</th>
-          <td>ouvre le menu de cette page, ou refuse une question à l&rsquo;écran</td>
-          <td>agit sur la ligne sélectionnée, et chaque pression suivante la fait avancer</td>
+          <td>ouvre le menu de cette page, ou refuse une demande de confirmation à l&rsquo;écran</td>
+          <td>agit sur la ligne sélectionnée, chaque pression suivante changeant à nouveau sa valeur</td>
         </tr>
         <tr>
-          <th>Deux pressions, à moins de 0,6&nbsp;s</th>
-          <td colspan="2">autorisent la question à l&rsquo;écran, lancent ou arrêtent un enregistrement sur la page capture, et ne veulent rien dire ailleurs</td>
+          <th>Deux pressions, espacées de moins de 0,6&nbsp;s</th>
+          <td colspan="2">acceptent une demande de confirmation à l&rsquo;écran, lancent ou arrêtent un enregistrement sur la page capture, et n&rsquo;ont aucun effet ailleurs</td>
         </tr>
         <tr>
           <th>Appui de 2&nbsp;s sur le bouton</th>

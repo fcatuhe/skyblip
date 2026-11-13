@@ -11,7 +11,7 @@ updated_on: "2026-11-09"
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Six dials, and what the airframe has taken.</h1>
   <p class="lede">
-    The GPS and barometer readings on six dials, for fun, and on the Go+ a
+    Six dials show GPS and barometer readings, for fun. The Go+ also has a
     g-meter.
   </p>
 </section>
@@ -19,23 +19,23 @@ updated_on: "2026-11-09"
 <section>
   <div class="feature feature--reverse">
     <div>
-      <h3 id="six-pack">Six dials, and <span class="highlight">what is left in the cell</span>.</h3>
+      <h3 id="six-pack">Six dials, and <span class="highlight">what is left in the battery</span>.</h3>
       <p>
         Ground speed, horizon, altimeter, turn, track, vertical speed: a playful
-        way to show the GPS and barometer readings. Over the middle dial, the battery in percent: how much flying is left in
-        the device is the one thing the other five cannot say. The time since
-        takeoff, for the logbook, is on the radar.
+        way to show the GPS and barometer readings. Above the middle dial, the battery percentage shows how much flying time is left in
+        the device. The other five cannot tell you that. The time since
+        takeoff is on the radar, for your logbook.
       </p>
       <p>
-        These are not flight instruments. The horizon rolls with the bank a
-        coordinated turn would need at that speed, because nothing on the board
-        measures a bank. Nothing here is certified, and it
-        is not an attitude indicator to fly in cloud.
+        These are not flight instruments. The horizon shows the bank angle a
+        coordinated turn would need at that speed. Nothing in the device
+        measures bank angle. Nothing here is certified. This is not
+        an attitude indicator for flying in cloud.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "sixpack.png", alt: "The six-pack page: ground speed, artificial horizon with the state of charge above it, altimeter, turn coordinator with its ball, track card and vertical speed" %>
-      <figcaption>Six-pack</figcaption>
+      <%= screen_image_tag "sixpack.png", alt: "The six-dial page: ground speed, artificial horizon with the battery percentage above it, altimeter, turn coordinator with its ball, track card and vertical speed" %>
+      <figcaption>Six dials</figcaption>
     </figure>
   </div>
 
@@ -43,19 +43,19 @@ updated_on: "2026-11-09"
     <div>
       <h3 id="g-meter">What the airframe <span class="highlight">has taken</span>.</h3>
       <p>
-        The fourth page reads the accelerometer and infers nothing from it. The
-        marker says where the wing is now, the box around it says where it has
-        been: the most and the least it has pulled, and how far it has been
-        thrown to each hand.
+        The fourth page shows the accelerometer readings without interpreting them. The
+        marker shows the current load on the wing. The box around it shows
+        the highest and lowest loads so far, and the greatest loads to the
+        left and right.
       </p>
       <p>
-        The peaks belong to this flight and go back to zero when the clock
-        starts. Fore and aft has a strip of its own, because braking and a rough
+        The peak readings are for this flight. They reset to zero when the flight timer
+        starts. Forward and backward loads have their own strip, because braking and a rough
         landing are not a wing load.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "gmeter.png", alt: "The g-meter page: the normal and lateral load as a marker in a field with the box of this flight's peaks around it, a fore-and-aft strip beside it, and three rows of figures in tenths of a g" %>
+      <%= screen_image_tag "gmeter.png", alt: "The g-meter page: a marker shows normal (up-and-down) and lateral (side-to-side) loads on a plot, with a box around it showing this flight's peaks, a forward-and-backward strip beside it, and three rows of figures in tenths of a g" %>
       <figcaption>G-meter</figcaption>
     </figure>
   </div>

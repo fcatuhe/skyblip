@@ -83,18 +83,8 @@ class DevRelease
         "",
         "- `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/#{repository}/tree/main/firmware/keys)), older builds included.",
         ("- `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for." if File.exist?(hub_image(images, slug))),
-        uf2_line(slug, repository)
-      ].compact.join("\n")
-    end
-
-    # TODO: fc 11nov26 no Bravo image has run on an X1 yet, so drop the Bravo branch once #169's bench has run one
-    def uf2_line(slug, repository)
-      if slug == "skyblip-bravo"
-        "- `.uf2` installs by drag-and-drop on a MeshTracker X1 only, after backing up its factory flash as " \
-          "[#169](https://github.com/#{repository}/issues/169) describes. No #{product_name(slug)} image has run on an X1 yet."
-      else
         "- `.uf2` installs on any unit by drag-and-drop, and moves it to the development key."
-      end
+      ].compact.join("\n")
     end
 
     def stage(images:, simulator:, source:, into:)

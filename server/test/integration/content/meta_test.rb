@@ -16,16 +16,16 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "a page shares the card it names, in its own language when the card has words" do
+  test "a page shares the card it names" do
     get "/fr/bravo"
-    assert_select "meta[property='og:image'][content*='/share/bravo.fr-']"
+    assert_select "meta[property='og:image'][content*='/share/bravo-']"
     assert_select "meta[property='og:locale'][content=fr_FR]"
     assert_select "meta[property='og:locale:alternate'][content=en_GB]"
 
     get "/radar"
     assert_select "meta[property='og:image'][content*='/share/radar-']"
 
-    get "/ads-l-registry/nmea"
+    get "/ads-l/nmea"
     assert_select "meta[property='og:image'][content*='/share/go-']"
     assert_select "meta[property='og:locale:alternate']", 0
   end
@@ -46,13 +46,17 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
     assert_equal [ 1, 2, 3 ], crumbs.pluck("position")
   end
 
-  test "only the Go is marked up as a product, with the price the page shows" do
-    get "/features"
+  test "the Go and Bravo are marked up as products, with the lowest price each page shows" do
+    get "/go"
     offer = structured_data("Product")["offers"]
     assert_equal [ "AggregateOffer", "68", "EUR" ], offer.values_at("@type", "lowPrice", "priceCurrency")
     assert_equal "https://skyblip.eu/buy", offer["url"]
 
-    %w[/bravo /tango /buy /].each do |path|
+    get "/bravo"
+    offer = structured_data("Product")["offers"]
+    assert_equal [ "AggregateOffer", "44.91", "USD" ], offer.values_at("@type", "lowPrice", "priceCurrency")
+
+    %w[/tango /buy /].each do |path|
       get path
       assert_not_includes structured_data_types, "Product", path
     end

@@ -25,7 +25,7 @@ class DevReleaseTest < Minitest::Test
     Radio protocols: ADS-B 0.1.0.
 
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
-    - `.uf2` installs by drag-and-drop on a MeshTracker X1 only, after backing up its factory flash as [#169](https://github.com/fcatuhe/skyblip/issues/169) describes. No skyBlip Bravo image has run on an X1 yet.
+    - `.uf2` installs on any unit by drag-and-drop, and moves it to the development key.
   NOTES
   SHARED_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
   GO_FILES = %w[skyblip-go-%s.full.signed.bin skyblip-go-%s.signed.bin skyblip-go-%s.uf2].freeze

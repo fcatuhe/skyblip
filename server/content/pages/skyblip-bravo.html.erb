@@ -2,35 +2,40 @@
 title: "skyBlip Bravo, ADS-B receiver for the MeshTracker X1"
 nav_title: Bravo
 slug: bravo
-description: "Firmware in development for the Seeed MeshTracker X1. Bravo will receive 1090 MHz ADS-B traffic for your navigation app or your Go."
+description: "Bravo receives 1090 MHz ADS-B traffic for your navigation app or your Go."
 share_image: bravo
-updated_on: "2026-11-09"
+product:
+  name: skyBlip Bravo
+  low_price: "44.91"
+  currency: USD
+  image: pages/skyblip-bravo/seeed-x1.avif
+updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
   <p class="kicker">ADS-B 1090&nbsp;MHz &middot; receive only</p>
-  <h1>Bravo will send ADS-B traffic to your phone or your Go.</h1>
+  <h1>Bravo sends ADS-B traffic to your phone or your Go.</h1>
   <p class="page-hero-subtitle">
-    skyBlip Bravo will receive ADS-B: airliners, business jets, helicopters
+    skyBlip Bravo receives ADS-B: airliners, business jets, helicopters
     and touring aircraft with ADS-B out. The Seeed SenseCAP MeshTracker X1 is on sale
-    today. The skyBlip Bravo firmware is in development.
+    today. The skyBlip Bravo firmware is on GitHub.
   </p>
 
   <ul class="chooser">
     <li>
       <h2><a href="#buy">ADS-B traffic on your phone: Bravo</a></h2>
-      <p class="status">Firmware in development</p>
-      <p>It will send ADS-B traffic to your navigation app. A Go already shows gliders equipped with FLARM. A Tango will combine ADS-B, ADS-L and FLARM traffic.</p>
+      <p class="status status--available">Available</p>
+      <p>It sends ADS-B traffic to your navigation app. A Go already shows gliders equipped with FLARM. A Tango combines ADS-B, ADS-L and FLARM traffic.</p>
     </li>
     <li>
       <h2><%= link_to_page "features", label: "ADS-L, FLARM or being seen: Go" %></h2>
       <p class="status status--available">Available</p>
-      <p>It shows the ADS&#8209;L and FLARM traffic and broadcasts your position in ADS&#8209;L.</p>
+      <p>It shows ADS&#8209;L and FLARM traffic and broadcasts your position in ADS&#8209;L.</p>
     </li>
     <li>
       <h2><%= link_to_page "skyblip-tango", label: "All three, and being seen: Tango" %></h2>
-      <p class="status">Firmware in development</p>
-      <p>A Go paired with a Bravo, with ADS-B, ADS-L and FLARM on one radar.</p>
+      <p class="status status--available">Available</p>
+      <p>A Go paired with a Bravo shows ADS-B, ADS-L and FLARM on one radar.</p>
     </li>
   </ul>
 
@@ -49,19 +54,19 @@ updated_on: "2026-11-09"
 </header>
 
 <section class="band band--tint">
-  <h2 class="section-title">What it will hear</h2>
+  <h2 class="section-title">What it hears</h2>
   <p class="section-intro">
-    Bravo will listen to 1090&nbsp;MHz all the time and decode the ADS-B
-    position messages, Extended Squitter (DF17).
+    Bravo listens continuously on 1090&nbsp;MHz and decodes ADS-B
+    position messages in Extended Squitter (DF17) format.
   </p>
   <div class="columns">
     <div>
-      <h3>It will receive.</h3>
-      <p>Airliners, business jets, helicopters and the touring aircraft whose transponder has ADS-B out.</p>
+      <h3>It receives.</h3>
+      <p>Airliners, business jets, helicopters and touring aircraft with an ADS-B out transponder.</p>
     </div>
     <div>
-      <h3>It will not receive.</h3>
-      <p>A transponder without ADS-B out, UAT, TIS-B or ADS-R. Nor ADS-L or FLARM, which the Go receives.</p>
+      <h3>It does not receive.</h3>
+      <p>It does not receive signals from transponders without ADS-B out, or UAT, TIS-B or ADS-R signals. It does not receive ADS-L or FLARM either. A Go receives those.</p>
     </div>
   </div>
 </section>
@@ -71,15 +76,15 @@ updated_on: "2026-11-09"
   <div class="columns">
     <div>
       <h3>In your app.</h3>
-      <p>It will send the traffic over Bluetooth in the same format as a Go, for SkyDemon, SDVFR and the other apps that read it.</p>
+      <p>It sends traffic over Bluetooth as FLARM NMEA, the same format as a Go, to one navigation app: SkyDemon, SDVFR or another app that supports that format.</p>
     </div>
     <div>
       <h3>An alarm you feel.</h3>
-      <p>Its buzzer and vibration motor will warn you of ADS-B traffic closing in.</p>
+      <p>Its buzzer and vibration motor warn you of approaching ADS-B traffic.</p>
     </div>
     <div>
       <h3>Not a transmitter.</h3>
-      <p>It will not broadcast your position. To be seen in ADS-L, add a Go.</p>
+      <p>It does not broadcast your position. To be seen in ADS-L, add a Go.</p>
     </div>
   </div>
 </section>
@@ -87,11 +92,11 @@ updated_on: "2026-11-09"
 <section class="band band--tint">
   <h2 class="section-title">Bravo with a Go</h2>
   <p class="section-intro">
-    Paired with a Go, Bravo will pass the ADS-B traffic to it, and the Go will
-    show ADS-B, ADS-L and FLARM on one radar. The Go keeps broadcasting your
+    Paired with a Go, Bravo passes ADS-B traffic to it. The Go
+    shows ADS-B, ADS-L and FLARM on one radar. The Go keeps broadcasting your
     position in ADS-L. Together they make a skyBlip Tango.
   </p>
-  <p class="more"><%= link_to_page "skyblip-tango", label: "What a Tango will do" %></p>
+  <p class="more"><%= link_to_page "skyblip-tango", label: "What a Tango does" %></p>
 </section>
 
 <section id="status" class="band">
@@ -103,17 +108,35 @@ updated_on: "2026-11-09"
     </div>
     <div>
       <h3>The firmware.</h3>
-      <p>In development, open source. You will install it on your X1 when it is released.</p>
+      <p>Open source. The firmware runs on the X1. Install it by USB-C using the steps below.</p>
       <p class="note"><a href="https://github.com/fcatuhe/skyblip/issues/184">Follow it on GitHub</a></p>
     </div>
     <div>
-      <h3>The tests.</h3>
-      <p>The X1 has not yet been tested with skyBlip. Reception, range and altitude handling remain unverified.</p>
+      <h3>Updates.</h3>
+      <p>Later updates come from Briefing over Bluetooth, as for the Go.</p>
     </div>
   </div>
 </section>
 
-<section id="buy" class="band band--tint">
+<section id="install" class="band band--tint">
+  <h2 class="section-title">A Bravo, ready in three steps</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li>
+      <h3>Connect.</h3>
+      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears.</p>
+    </li>
+    <li>
+      <h3>Save Meshtastic.</h3>
+      <p>Copy <span class="mono">CURRENT.UF2</span> from the <span class="mono">X1</span> drive to your computer first. Dragging that file back onto the drive restores Meshtastic.</p>
+    </li>
+    <li>
+      <h3>Install.</h3>
+      <p>Copy the .uf2 file of the latest skyBlip Bravo release from the <a href="https://github.com/fcatuhe/skyblip/releases">releases page</a> to the <span class="mono">X1</span> drive. Bravo needs no activation. In Briefing, set your aircraft&rsquo;s ICAO address to leave your own transponder out of the traffic.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="buy" class="band">
   <h2 class="section-title">Get a Bravo</h2>
   <div class="offers offers--one">
     <article class="offer">
@@ -124,7 +147,7 @@ updated_on: "2026-11-09"
       <ul class="points">
         <li>90 x 57 x 8&nbsp;mm, 45&nbsp;g, IP66</li>
         <li>Buzzer, vibration motor, one button, no screen</li>
-        <li>Dual-band GNSS, barometer, 1100&nbsp;mAh battery</li>
+        <li>Dual-band satellite receiver (GNSS), barometer, 1100&nbsp;mAh battery</li>
         <li>One version: nothing to pick when you order</li>
       </ul>
       <p class="offer-buy">
@@ -135,32 +158,32 @@ updated_on: "2026-11-09"
   <p class="signature">
     Code <%= seeed_promo_code %> gives you 10% off at Seeed&rsquo;s
     checkout. The Seeed link is an affiliate link: skyBlip earns a commission.
-    X1 prices taken on 9 November 2026, as a guide only.
+    X1 prices as of 9 November 2026, for guidance only.
   </p>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">Your questions, answered</h2>
   <div class="faq">
     <details>
       <summary>Does Bravo make me visible?</summary>
-      <p>No. Bravo will not transmit your position. To be seen in ADS-L, you need a Go, alone or paired with your Bravo as a Tango.</p>
+      <p>No. Bravo does not transmit your position. To be seen in ADS-L, you need a Go, alone or paired with your Bravo as a Tango.</p>
     </details>
     <details>
-      <summary>Can I use the X1 before the skyBlip firmware is released?</summary>
-      <p>With Meshtastic only, which receives no ADS-B. Bravo needs the skyBlip firmware. Its install steps will be on this page when it is released.</p>
+      <summary>Does the X1 receive ADS-B with Meshtastic?</summary>
+      <p>No. Meshtastic does not receive ADS-B. Bravo needs the skyBlip firmware. Install it by USB-C using the steps above.</p>
     </details>
     <details>
-      <summary>My aircraft has a transponder. Will its own signal show as traffic?</summary>
-      <p>It will not, once you set your aircraft&rsquo;s ICAO address, on Bravo or on the Go it is paired with. Bravo will then leave your own transponder out.</p>
+      <summary>My aircraft has a transponder. Does its own signal show as traffic?</summary>
+      <p>No, once you enter your aircraft&rsquo;s ICAO address on Bravo or on the Go paired with it. Bravo then leaves your own transponder out of the traffic it sends.</p>
     </details>
     <details>
       <summary>Do I need a Go?</summary>
-      <p>No. Alone, Bravo will feed your navigation app. With a Go, you will also get the ADS-L and FLARM traffic, and the Go broadcasts your position in ADS-L.</p>
+      <p>No. On its own, Bravo sends traffic to your navigation app. With a Go, you also get ADS-L and FLARM traffic, and the Go broadcasts your position in ADS-L.</p>
     </details>
     <details>
       <summary>Do I need a ground station?</summary>
-      <p>No. Bravo will receive ADS-B in the aircraft, wherever the signal reaches it.</p>
+      <p>No. Bravo receives ADS-B in the aircraft, wherever the signal reaches it.</p>
     </details>
   </div>
 </section>
