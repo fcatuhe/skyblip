@@ -2,14 +2,14 @@ require "digest"
 require "fileutils"
 require "open3"
 require "tmpdir"
+require_relative "radio_protocols"
 
 class DevRelease
   KEEP_MAIN = 3
   IMAGE_ENDINGS = %w[.uf2 .signed.bin].freeze
   HUB_IMAGE_ENDING = ".full.signed.bin".freeze
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].freeze
-  PROTOCOLS = { "skyblip-go" => { "ADS-L" => "adsl", "ALP-TAS" => "alptas" }, "skyblip-bravo" => { "ADS-B" => "adsb" } }.freeze
-  PROTOCOL_VERSION = /\A\d+\.\d+\.\d+\z/
+  BUILD_ENDINGS = %w[.version .signed.confirmed.bin].freeze
 
   def self.publish_all(images:, simulator:, source:, ref:, sha:, repository:)
     release = new(**built(images), ref:)
@@ -21,13 +21,14 @@ class DevRelease
     records = Dir.glob(File.join(images, "*.version")).sort.to_h { |record| File.read(record).split.first(2) }
     raise ArgumentError, "No product image in #{images}" if records.empty?
 
-    unknown = records.keys - PROTOCOLS.keys
-    raise ArgumentError, "No radio protocols listed for #{unknown.join(", ")} in DevRelease::PROTOCOLS" if unknown.any?
     if records.values.uniq.size > 1
       raise ArgumentError, "The products disagree on the version: #{records.map { |slug, version| "#{slug} #{version}" }.join(", ")}"
     end
+    expected = records.keys.product(IMAGE_ENDINGS + [ HUB_IMAGE_ENDING ] + BUILD_ENDINGS).map(&:join)
+    unexpected = Dir.children(images) - expected
+    raise ArgumentError, "Unexpected files in #{images}: #{unexpected.sort.join(", ")}" if unexpected.any?
 
-    { slugs: PROTOCOLS.keys & records.keys, version: records.values.first }
+    { slugs: records.keys, version: records.values.first }
   end
   private_class_method :built
 
@@ -78,23 +79,12 @@ class DevRelease
       [
         "## #{product_name(slug)}",
         "",
-        "Radio protocols: #{protocol_versions(slug, source)}.",
+        "Radio protocols: #{RadioProtocols.new(File.join(source, "firmware")).of(slug.tr("-", "_"))}.",
         "",
         "- `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/#{repository}/tree/main/firmware/keys)), older builds included.",
         ("- `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for." if File.exist?(hub_image(images, slug))),
         uf2_line(slug, repository)
       ].compact.join("\n")
-    end
-
-    def protocol_versions(slug, source)
-      PROTOCOLS.fetch(slug).map do |name, file|
-        protocol_version = File.read(File.join(source, "firmware/core/protocol/#{file}.version")).strip
-        if PROTOCOL_VERSION.match?(protocol_version)
-          "#{name} #{protocol_version}"
-        else
-          raise ArgumentError, "Invalid #{name} version in #{file}.version: #{protocol_version.inspect}"
-        end
-      end.join(", ")
     end
 
     # TODO: fc 11nov26 no Bravo image has run on an X1 yet, so drop the Bravo branch once #169's bench has run one

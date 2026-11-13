@@ -1,6 +1,6 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb` and `dev_release.rb`, which are Ruby.
+Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb` and `radio_protocols.rb`, which are Ruby.
 
 | Script | What it does |
 |---|---|
@@ -17,6 +17,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `simulator_scenarios.rb` | bundle `firmware/scenarios/*.json` into the `scenarios.json` each release carries for the simulator, its logic in `lib/simulator_scenarios.rb` |
 | `build_image.sh` | build, sign and check one product's images in a ready workspace, in its own build directory: the slim and full images of a product with a sensor hub, the one image of a product without, and `check_imu_image.py` only for the first. What `build_local.sh`, CI and a release share |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones, its logic in `lib/dev_release.rb`, tested by `.github/test/dev_release_test.rb` |
+| `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: the radio protocol versions each product's `PROTOCOLS` names, its logic in `lib/radio_protocols.rb`, which `dev_release.rb` reads them through too |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py` | generate `docs/` out of the tree |
 | `check_*.py`, `size_check.py` | the structural gates CI runs, and `check_imu_image.py` and `check_image_product.py`, which `build_image.sh` runs on the images it signs; `check_link_registry.py` fails when a file generated from the link registry is not, byte for byte, what `link_registry.py` would write, the C++ ones after clang-format, when a frame or a key of the registry has no description, and when the firmware writes the status frame other than the registry says. `size_check.py` prints each image's flash and RAM headroom against its slot and its board's SRAM, and fails a build with no slot |
 | [`bench/`](bench) | bench-run analysis of two units' diagnostics captures: keying, switches, windows, fetch impact (see `docs/bench/`) |

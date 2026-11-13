@@ -2,8 +2,9 @@ name: release
 
 # A version's tag on main, v<firmware/VERSION>, becomes one draft release: every
 # product's image signed with the production key, the simulator, the notices,
-# their checksums and their provenance. The draft is published by hand, and once
-# published its files cannot change: immutable releases are on for this repo.
+# the radio protocol versions, their checksums and their provenance. The draft
+# is published by hand, and once published its files cannot change: immutable
+# releases are on for this repo.
 #
 # Every action is pinned by commit, and nothing is restored from a cache: the
 # image jobs hold the production key, and a cache or a moved tag is code that
@@ -159,12 +160,15 @@ jobs:
   # Every product's images meet here, on a runner without the key, so the jobs that hold it need no token beyond reading the repository.
   files:
     name: release files
-    needs: [simulator, image]
+    needs: [tag, simulator, image]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       id-token: write
       attestations: write
+    env:
+      PRODUCTS: ${{ needs.tag.outputs.products }}
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -173,27 +177,52 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
+            firmware/core/protocol/*.version
+            firmware/products/*/PROTOCOLS
+            lib/radio_protocols.rb
+            scripts/radio_protocols.rb
           sparse-checkout-cone-mode: false
 
-      # Every product's files start with its own slug, so the images share one directory.
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: image-*
-          path: release
-          merge-multiple: true
+          path: images
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: browser-simulator
           path: simulator
 
-      - name: add the simulator, the notices and the checksums
+      # Only what this run's image jobs named goes into the release: one artifact per product, holding that product's files at this version.
+      - name: every product's images, and nothing else
+        run: |
+          expected=$(jq -r '.[] | "image-" + .' <<< "$PRODUCTS" | sort)
+          found=$(find images -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+          test "$found" = "$expected" \
+            || { echo "FAIL: the artifacts are ${found//$'\n'/ }, where the products ask for ${expected//$'\n'/ }"; exit 1; }
+          mkdir -p release
+          for product in $(jq -r '.[]' <<< "$PRODUCTS"); do
+            slug=${product//_/-} artifact=images/image-$product
+            while IFS= read -r file; do
+              case "$file" in
+                "$slug-$RELEASE_VERSION.uf2"|"$slug-$RELEASE_VERSION.signed.bin"|"$slug-$RELEASE_VERSION.full.signed.bin") ;;
+                *) echo "FAIL: image-$product holds $file"; exit 1 ;;
+              esac
+            done < <(find "$artifact" -mindepth 1 -printf '%P\n')
+            for file in "$slug-$RELEASE_VERSION.uf2" "$slug-$RELEASE_VERSION.signed.bin"; do
+              test -f "$artifact/$file" || { echo "FAIL: image-$product has no $file"; exit 1; }
+            done
+            cp "$artifact"/* release/
+          done
+
+      - name: add the simulator, the notices, the radio protocols and the checksums
         run: |
           cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
           cp simulator/scenarios.json release/
           cp LICENSE NOTICE.md LICENSES/*.txt release/
+          ruby scripts/radio_protocols.rb firmware "$RELEASE_VERSION" "$PRODUCTS" > release/PROTOCOLS.md
           (cd release && sha256sum -- * > SHA256SUMS)
-          cat release/SHA256SUMS
+          cat release/PROTOCOLS.md release/SHA256SUMS
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:

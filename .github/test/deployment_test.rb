@@ -5,9 +5,11 @@ require "json"
 require "open3"
 require "tmpdir"
 require "fileutils"
+require_relative "../../server/app/models/release"
 
 class DeploymentTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
+  RELEASE_ENV = { "PRODUCTS" => '["skyblip_bravo","skyblip_go"]', "RELEASE_VERSION" => "0.2.0" }.freeze
 
   def test_kamal_preserves_the_clean_clone_and_server_directory
     builder = deployment.fetch("builder")
@@ -79,7 +81,8 @@ class DeploymentTest < Minitest::Test
     checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
 
     assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/core/protocol/*.version lib/dev_release.rb scripts/dev_release.rb], checkout.dig("with", "sparse-checkout").split
+    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/core/protocol/*.version firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb scripts/dev_release.rb],
+                 checkout.dig("with", "sparse-checkout").split
     assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
   end
 
@@ -123,10 +126,20 @@ class DeploymentTest < Minitest::Test
 
   # Zephyr reads products/<product>/VERSION, and a copy there would sign one version and report another.
   def test_every_product_carries_the_firmware_version
-    products = Dir.glob(File.join(ROOT, "firmware/products/*/CMakeLists.txt")).select { |cmake| File.read(cmake).match?(/^skyblip_product_board\(/) }.map { |cmake| File.dirname(cmake) }
+    assert_equal %w[skyblip_bravo skyblip_go], declared_products
+    declared_products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(ROOT, "firmware/products", product, "VERSION")), product }
+  end
 
-    assert_equal %w[skyblip_bravo skyblip_go], products.map { |product| File.basename(product) }.sort
-    products.each { |product| assert_equal "../../VERSION", File.readlink(File.join(product, "VERSION")), product }
+  # release.yml builds every product that declares a board, so each must also be built on main, served by the server and named in its release.
+  def test_every_product_is_built_on_main_served_and_lists_its_radio_protocols
+    matrix = workflow("firmware").dig("jobs", "product-image", "strategy", "matrix", "include")
+
+    declared_products.each do |product|
+      slug = product.tr("_", "-")
+      assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
+      assert_equal product, Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
+      assert_includes matrix.map { |leg| [ leg.fetch("product"), leg.fetch("slug") ] }, [ product, slug ]
+    end
   end
 
   # Before one release carried every product, Bravo's were tagged bravo-v*.
@@ -159,17 +172,74 @@ class DeploymentTest < Minitest::Test
     end
   end
 
-  def test_the_release_files_hold_every_products_images_beside_the_simulator_and_the_notices
+  def test_the_release_takes_each_products_images_from_its_own_artifact
+    Dir.mktmpdir do |tree|
+      image_artifacts(tree)
+      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
+
+      assert status.success?, output
+      assert_equal %w[skyblip-bravo-0.2.0.signed.bin skyblip-bravo-0.2.0.uf2 skyblip-go-0.2.0.full.signed.bin skyblip-go-0.2.0.signed.bin skyblip-go-0.2.0.uf2],
+                   Dir.children(File.join(tree, "release")).sort
+      refute workflow("release").dig("jobs", "files", "steps").any? { |step| step.dig("with", "merge-multiple") }
+    end
+  end
+
+  def test_the_release_refuses_an_artifact_no_product_asks_for
+    Dir.mktmpdir do |tree|
+      image_artifacts(tree)
+      FileUtils.mkdir_p(File.join(tree, "images/image-skyblip_tango"))
+      File.write(File.join(tree, "images/image-skyblip_tango/skyblip-tango-0.2.0.signed.bin"), "planted")
+      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
+
+      refute status.success?
+      assert_includes output, "FAIL: the artifacts are image-skyblip_bravo image-skyblip_go image-skyblip_tango, where the products ask for image-skyblip_bravo image-skyblip_go"
+      refute File.exist?(File.join(tree, "release"))
+    end
+  end
+
+  def test_the_release_refuses_a_file_a_product_does_not_build
+    { "embed.js" => "FAIL: image-skyblip_go holds embed.js", "skyblip-go-0.1.0.uf2" => "FAIL: image-skyblip_go holds skyblip-go-0.1.0.uf2" }.each do |planted, failure|
+      Dir.mktmpdir do |tree|
+        image_artifacts(tree)
+        File.write(File.join(tree, "images/image-skyblip_go", planted), "planted")
+        output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
+
+        refute status.success?, planted
+        assert_includes output, failure
+      end
+    end
+  end
+
+  def test_the_release_refuses_a_product_missing_an_image
+    Dir.mktmpdir do |tree|
+      image_artifacts(tree)
+      File.delete(File.join(tree, "images/image-skyblip_bravo/skyblip-bravo-0.2.0.uf2"))
+      output, status = run_step(tree, release_step("files", "every product's images, and nothing else"), RELEASE_ENV)
+
+      refute status.success?
+      assert_includes output, "FAIL: image-skyblip_bravo has no skyblip-bravo-0.2.0.uf2"
+    end
+  end
+
+  def test_the_release_files_hold_every_products_images_beside_the_simulator_the_notices_and_the_radio_protocols
     Dir.mktmpdir do |tree|
       release_tree(tree, slug: "skyblip-go", hub_image: true)
+      %w[lib/radio_protocols.rb scripts/radio_protocols.rb firmware/products/skyblip_go/PROTOCOLS firmware/products/skyblip_bravo/PROTOCOLS
+         firmware/core/protocol/adsl.version firmware/core/protocol/adsb.version firmware/core/protocol/alptas.version].each do |file|
+        FileUtils.mkdir_p(File.join(tree, File.dirname(file)))
+        FileUtils.cp(File.join(ROOT, file), File.join(tree, file))
+      end
       FileUtils.mkdir_p(File.join(tree, "release"))
       %w[skyblip-go-0.2.0.signed.bin skyblip-bravo-0.2.0.signed.bin].each { |file| File.write(File.join(tree, "release", file), file) }
-      assert run_step(tree, release_step("files", "add the simulator, the notices and the checksums"), {}).last.success?
+      output, status = run_step(tree, release_step("files", "add the simulator, the notices, the radio protocols and the checksums"), RELEASE_ENV)
+      assert status.success?, output
 
       listed = File.readlines(File.join(tree, "release/SHA256SUMS"), chomp: true).map { |line| line.split("  ", 2).last }
       assert_equal Dir.children(File.join(tree, "release")).sort - %w[SHA256SUMS], listed.sort
       assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
       assert_includes listed, "scenarios.json"
+      versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/core/protocol/#{stem}.version")).strip ] }
+      assert_includes File.read(File.join(tree, "release/PROTOCOLS.md")), "- `skyblip-bravo`: ADS-B #{versions["adsb"]}\n- `skyblip-go`: ADS-L #{versions["adsl"]}, ALP-TAS #{versions["alptas"]}\n"
       assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
     end
   end
@@ -257,6 +327,18 @@ class DeploymentTest < Minitest::Test
       output, status = run_step(tree, step, env.merge("GITHUB_OUTPUT" => outputs))
       assert status.success?, output
       File.readlines(outputs, chomp: true).to_h { |line| line.split("=", 2) }
+    end
+
+    def declared_products
+      Dir.glob(File.join(ROOT, "firmware/products/*/CMakeLists.txt")).select { |cmake| File.read(cmake).match?(/^skyblip_product_board\(/) }
+        .map { |cmake| File.basename(File.dirname(cmake)) }.sort
+    end
+
+    def image_artifacts(tree)
+      { "skyblip_go" => %w[uf2 signed.bin full.signed.bin], "skyblip_bravo" => %w[uf2 signed.bin] }.each do |product, endings|
+        FileUtils.mkdir_p(File.join(tree, "images/image-#{product}"))
+        endings.each { |ending| File.write(File.join(tree, "images/image-#{product}/#{product.tr("_", "-")}-0.2.0.#{ending}"), ending) }
+      end
     end
 
     def release_tree(tree, slug:, hub_image:)

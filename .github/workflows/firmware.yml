@@ -263,7 +263,7 @@ jobs:
       fail-fast: false
       # `slug` is the product as a human writes it: the board name carries an
       # underscore Zephyr requires, and expressions have no replace().
-      # Bravo's image is kept a week, as the X1 smoke image is, until #204 publishes it as a pre-release.
+      # Bravo's image is kept a week, as the X1 smoke image is, and the pre-release dev-release publishes outlives both.
       matrix:
         include:
           - product: skyblip_go
@@ -402,7 +402,9 @@ jobs:
             NOTICE.md
             LICENSES
             firmware/core/protocol/*.version
+            firmware/products/*/PROTOCOLS
             lib/dev_release.rb
+            lib/radio_protocols.rb
             scripts/dev_release.rb
           sparse-checkout-cone-mode: false
 

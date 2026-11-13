@@ -9,9 +9,8 @@ require_relative "../../lib/dev_release"
 
 class DevReleaseTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
+  NOTES_START = "skyBlip 0.1.0+1010 from main, built from deadbeef and signed with the development key.".freeze
   GO_NOTES = <<~NOTES.chomp
-    skyBlip 0.1.0+1010 from main, built from deadbeef and signed with the development key.
-
     ## skyBlip Go
 
     Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0.
@@ -60,7 +59,7 @@ class DevReleaseTest < Minitest::Test
       assert run.success, run.output
       files = (SHARED_FILES + (GO_FILES + BRAVO_FILES).map { |file| file % "dev-1010" }).sort
       assert_equal [ [ "release", "create", "dev-1010", *files, "--target", "deadbeef", "--prerelease", "--latest=false",
-                       "--title", "skyBlip dev 0.1.0+1010", "--notes", "#{GO_NOTES}\n\n#{BRAVO_NOTES}",
+                       "--title", "skyBlip dev 0.1.0+1010", "--notes", "#{NOTES_START}\n\n#{BRAVO_NOTES}\n\n#{GO_NOTES}",
                        "--generate-notes", "--notes-start-tag", "dev-1005" ] ], run.creates
       assert_equal [ %w[release delete dev-998 --cleanup-tag --yes] ], run.deletes
       assert_checksums File.join(root, "gh/uploads/dev-1010")
@@ -74,7 +73,7 @@ class DevReleaseTest < Minitest::Test
       assert run.success, run.output
       create = run.creates.first
       assert_equal (SHARED_FILES + GO_FILES.map { |file| file % "dev-1010" }).sort, create[3...create.index("--target")]
-      assert_equal GO_NOTES, create[create.index("--notes") + 1]
+      assert_equal "#{NOTES_START}\n\n#{GO_NOTES}", create[create.index("--notes") + 1]
     end
   end
 
@@ -143,13 +142,39 @@ class DevReleaseTest < Minitest::Test
     end
   end
 
-  def test_a_product_with_no_radio_protocols_listed_publishes_nothing
+  def test_a_product_with_no_protocols_file_publishes_nothing
     Dir.mktmpdir do |root|
       run = publish(root, ref: "main", products: %w[skyblip-go skyblip-tango], tags: [])
 
       refute run.success
       assert_empty run.creates
-      assert_includes run.output, "No radio protocols listed for skyblip-tango"
+      assert_includes run.output, "No PROTOCOLS file for skyblip_tango"
+    end
+  end
+
+  def test_a_protocol_with_no_name_publishes_nothing
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |_images, source|
+        File.write(File.join(source, "firmware/products/skyblip_go/PROTOCOLS"), "adsl\nflarm\n")
+      end
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "Unknown radio protocol flarm in"
+    end
+  end
+
+  # Every artifact named skyblip-* lands in one directory, so a file no product build writes is refused rather than ignored.
+  def test_a_file_no_product_build_writes_publishes_nothing
+    Dir.mktmpdir do |root|
+      run = publish(root, ref: "main", products: %w[skyblip-go], tags: []) do |images, _source|
+        File.write(File.join(images, "skyblip-go.signed.bin.orig"), "planted\n")
+      end
+
+      refute run.success
+      assert_empty run.creates
+      assert_includes run.output, "Unexpected files in"
+      assert_includes run.output, "skyblip-go.signed.bin.orig"
     end
   end
 
@@ -200,6 +225,10 @@ class DevReleaseTest < Minitest::Test
       %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt LICENSES/TinyCrypt.txt].each { |file| File.write(File.join(source, file), file) }
       FileUtils.mkdir_p(File.join(source, "firmware/core/protocol"))
       %w[adsl adsb alptas].each { |protocol| File.write(File.join(source, "firmware/core/protocol/#{protocol}.version"), "0.1.0\n") }
+      %w[skyblip_go skyblip_bravo].each do |product|
+        FileUtils.mkdir_p(File.join(source, "firmware/products", product))
+        FileUtils.cp(File.join(ROOT, "firmware/products", product, "PROTOCOLS"), File.join(source, "firmware/products", product))
+      end
       yield images, source if block_given?
       File.write(File.join(state, "tags"), tags.map { |tag| "#{tag}\n" }.join)
       File.write(File.join(state, "branches"), branches.map { |branch| "#{branch}\n" }.join)
