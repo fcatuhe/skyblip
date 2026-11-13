@@ -141,7 +141,20 @@
   .unit-last dd { margin: 0; font-weight: 700; }
 
   .unit-settings,
-  .unit-capture { display: grid; gap: var(--space-m); }
+  .unit-capture,
+  .unit-browsers { display: grid; gap: var(--space-m); }
+
+  .unit-browser-list { margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--card-border); }
+  .unit-browser-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-inline-m);
+    padding-block: var(--space-xs);
+    border-block-end: 1px solid var(--card-border);
+    font-size: var(--text-s);
+  }
+  .unit-browser-list .is-self { color: var(--ink-muted); }
   .unit-capture-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-inline-s); align-items: center; }
 
   .unit-fields {

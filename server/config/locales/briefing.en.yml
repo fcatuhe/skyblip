@@ -58,6 +58,13 @@ en:
       hint: "Full records every subject. Power run records power and duty, and Flight run does too with its flight clock running. We read it with you after a flight."
       arm: Arm
       stop: Stop the capture
+    browsers:
+      title: Trusted browsers
+      hint: "These browsers change its settings and start an update with no press on the device. A browser joins the list when you allow its first save or update with two presses."
+      this_browser: this browser
+      unnamed: A browser with no name
+      forget: Forget
+      forget_others: Forget the other browsers
     firmware:
       title: Firmware
       back: "Back to %{name}"
@@ -133,6 +140,7 @@ en:
       "off": "off"
       none: none
       in_flight_lock: Changes unlock once it lands.
+      in_flight_lock_trusted: Updates unlock once it lands. This browser may still change its settings.
       glass_press: "Press the %{product}'s button twice."
       glass_left: "REFUSED IN %{seconds} S"
       glass_waiting: Waiting for its answer.
@@ -216,6 +224,10 @@ en:
       refused_on_device: Refused on the device, so nothing changed.
       prompt_pending: The device is already asking a question. Answer it, or wait thirty seconds.
       unknown_command: This firmware is too old to capture. Update it first.
+    browsers_notices:
+      unknown_browser: The device no longer trusts that browser.
+      untrusted: The device no longer trusts this browser. Reconnect.
+      timeout: The device stopped answering. Reconnect and try again.
     activation_notices:
       activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
       no_bluetooth: This browser has no Web Bluetooth. Use Chrome or Edge, on Android or a computer.

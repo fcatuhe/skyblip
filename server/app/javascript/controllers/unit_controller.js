@@ -8,6 +8,7 @@ import { say, sayCount, sayNotice } from "controllers/briefing/words"
 
 const SET_NOTICES = ["set_notices", "notices"]
 const CAPTURE_NOTICES = ["capture_notices", "notices"]
+const BROWSER_NOTICES = ["browsers_notices", "notices"]
 const CAPTURE_DONE = new Set(["capture_armed", "capture_stopped"])
 const PROMPTS = { set: "SETTINGS", capture: "CAPTURE" }
 const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "small_mtu", "no_bluetooth", "not_skyblip", "failed", "no_params"])
@@ -19,7 +20,7 @@ export default class extends Controller {
   static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware",
                     "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
-                    "forgetDialog", "forgetQuestion"]
+                    "forgetDialog", "forgetQuestion", "browsers", "browserList", "browsersMessage", "forgetOthers"]
   static values = { slug: String, home: String, activation: String }
   static outlets = ["glass"]
 
@@ -101,6 +102,15 @@ export default class extends Controller {
     this.unit.updater.orderCapture("stop")
   }
 
+  forgetBrowser({ params: { id } }) {
+    this.unit.updater.forgetBrowsers([id])
+  }
+
+  forgetOtherBrowsers() {
+    const others = (this.unit.state.browsers ?? []).filter(browser => !browser.self)
+    this.unit.updater.forgetBrowsers(others.map(browser => browser.id))
+  }
+
   #activated() {
     return new URLSearchParams(location.search).has("activated")
   }
@@ -137,6 +147,7 @@ export default class extends Controller {
     this.#settings(state)
     this.#firmwareRow(state, linked && !asking)
     this.#capture(unit, state)
+    this.#browsers(unit, state)
     this.#glass(unit, asking)
     if (linked) offerNewest(unit, shelfIn(this.element))?.then(() => this.#render())
   }
@@ -184,7 +195,7 @@ export default class extends Controller {
     const notes = []
     if (activated) notes.push([say("words.activated", { name: unit.name }), null, "is-good"])
     if (unit?.needsActivation) notes.push([say("notices.not_activated"), "activate"])
-    if (state?.status?.flight === "airborne") notes.push([say("words.in_flight_lock")])
+    if (state?.status?.flight === "airborne") notes.push([say(state.trust === "trusted" ? "words.in_flight_lock_trusted" : "words.in_flight_lock")])
     if (state?.refusedOnDevice) notes.push([say("words.reconnect_needed")])
     if (state?.image?.settings) notes.push([say(`notices.settings_${state.image.settings}`)])
     const notice = state?.notice
@@ -254,7 +265,7 @@ export default class extends Controller {
     if (settings !== this.shown) this.#fill(settings)
     const edited = this.#edited()
     const changed = Object.keys(edited).filter(key => edited[key] !== settings[key])
-    const airborne = state.status?.flight === "airborne"
+    const airborne = state.status?.flight === "airborne" && state.trust !== "trusted"
     const idle = state.phase === "ready" && !airborne && !state.refusedOnDevice
     this.fieldsTarget.disabled = !idle
     for (const field of this.settingsTarget.querySelectorAll(".field")) {
@@ -293,6 +304,32 @@ export default class extends Controller {
     this.captureArmTarget.textContent = airborne ? say("words.locked") : this.captureArmTarget.dataset.label
     this.captureStopTarget.disabled = !idle
     this.captureStopTarget.hidden = airborne || state.refusedOnDevice
+  }
+
+  // INFO: fc 13nov26 only a browser the unit trusts reads the list, so the section waits for that trust
+  #browsers(unit, state) {
+    const trusted = (unit?.linked ?? false) && state.trust === "trusted"
+    this.browsersTarget.hidden = !trusted || this.#prompting(state)
+    const notice = state?.notice?.during === "browsers" ? sayNotice(state.notice, ...BROWSER_NOTICES) : ""
+    this.browsersMessageTarget.hidden = !notice
+    this.browsersMessageTarget.textContent = notice
+    if (!trusted) return
+    if (!state.browsers) return unit.updater.listBrowsers()
+    const idle = state.phase === "ready"
+    this.browserListTarget.replaceChildren(...state.browsers.map(browser => this.#browser(browser, idle)))
+    this.forgetOthersTarget.hidden = !state.browsers.some(browser => !browser.self)
+    this.forgetOthersTarget.disabled = !idle
+  }
+
+  #browser({ id, label, self }, idle) {
+    const row = document.createElement("li")
+    const name = Object.assign(document.createElement("span"), { textContent: label || say("browsers.unnamed") })
+    if (self) name.append(Object.assign(document.createElement("span"), { className: "is-self", textContent: ` · ${say("browsers.this_browser")}` }))
+    const forget = Object.assign(document.createElement("button"), { type: "button", className: "button-app button-app--small", textContent: say("browsers.forget"), disabled: !idle })
+    forget.dataset.action = "unit#forgetBrowser"
+    forget.dataset.unitIdParam = id
+    row.append(name, forget)
+    return row
   }
 
   #refusedHere({ notice, refusedOnDevice }) {

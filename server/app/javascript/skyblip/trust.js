@@ -1,0 +1,192 @@
+import { hex } from '#skyblip/link';
+
+const DOMAIN = new TextEncoder().encode('skyblip:browser:v1');
+const LABEL_BYTES = 24;
+const ID_BYTES = 8;
+const DATABASE = 'skyblip';
+const STORE = 'keys';
+const ENTRY = 'browser';
+// INFO: fc 13nov26 an answer lost on the link must not hold the page at connecting for good
+const ANSWER_WITHIN_MS = 5_000;
+
+export const idOf = publicKey => hex(publicKey.subarray(0, ID_BYTES));
+
+export function signedMessage(nonce) {
+  const message = new Uint8Array(DOMAIN.length + nonce.length);
+  message.set(DOMAIN);
+  message.set(nonce, DOMAIN.length);
+  return message;
+}
+
+export function labelOf(agent = globalThis.navigator) {
+  const data = agent?.userAgentData;
+  const brand = data?.brands?.map(({ brand }) => brand).find(name => !/not.a.brand|chromium/i.test(name));
+  const name = brand?.replace(/^(Google|Microsoft) /, '') ?? 'Browser';
+  return clip(data?.platform ? `${name} on ${data.platform}` : name);
+}
+
+function clip(text) {
+  const encoder = new TextEncoder();
+  let clipped = text;
+  while (encoder.encode(clipped).length > LABEL_BYTES) clipped = [...clipped].slice(0, -1).join('');
+  return clipped;
+}
+
+export async function browserKeyFrom(keys, label = labelOf()) {
+  const publicKey = new Uint8Array(await crypto.subtle.exportKey('raw', keys.publicKey));
+  return {
+    publicKey,
+    label,
+    sign: async bytes => new Uint8Array(await crypto.subtle.sign({ name: 'Ed25519' }, keys.privateKey, bytes)),
+  };
+}
+
+// INFO: fc 13nov26 a browser with no IndexedDB or no Ed25519 has no key, and asks for presses as before
+export async function storedBrowserKey() {
+  if (!globalThis.indexedDB || !globalThis.crypto?.subtle) return null;
+  const database = await opened();
+  const kept = await request(database.transaction(STORE).objectStore(STORE).get(ENTRY));
+  if (kept) return browserKeyFrom(kept);
+  let keys;
+  try {
+    keys = await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+  } catch (error) {
+    if (error.name === 'NotSupportedError') return null;
+    throw error;
+  }
+  await request(database.transaction(STORE, 'readwrite').objectStore(STORE).put(keys, ENTRY));
+  return browserKeyFrom(keys);
+}
+
+function opened() {
+  const opening = indexedDB.open(DATABASE, 1);
+  opening.onupgradeneeded = () => opening.result.createObjectStore(STORE);
+  return request(opening);
+}
+
+function request(pending) {
+  return new Promise((resolve, reject) => {
+    pending.onsuccess = () => resolve(pending.result);
+    pending.onerror = () => reject(pending.error);
+  });
+}
+
+// INFO: fc 13nov26 the unit answers in order, so the first waiter that a reply matches is the one it answers
+export class BrowserTrust {
+  #send;
+  #loadKey;
+  #onChange;
+  #key = null;
+  #trust = null;
+  #browsers = [];
+  #listing = null;
+  #waiting = [];
+
+  constructor({ send, loadKey, onChange }) {
+    this.#send = send;
+    this.#loadKey = loadKey;
+    this.#onChange = onChange;
+  }
+
+  get trusted() {
+    return this.#trust === 'trusted';
+  }
+
+  // INFO: fc 13nov26 claimed and small_mtu also reach the updater, which tells the pilot about the link
+  receive(reply) {
+    const index = this.#waiting.findIndex(({ matches }) => matches(reply));
+    if (index < 0) return false;
+    const [waiter] = this.#waiting.splice(index, 1);
+    clearTimeout(waiter.timer);
+    waiter.resolve(reply);
+    return !LINK_REASONS.has(reply.reason);
+  }
+
+  close() {
+    for (const waiter of this.#waiting.splice(0)) {
+      clearTimeout(waiter.timer);
+      waiter.resolve(null);
+    }
+    this.#change(null, null);
+  }
+
+  // INFO: fc 13nov26 a key the browser cannot keep is no reason to refuse the unit: the presses still work
+  async prove() {
+    try {
+      this.#key ??= await this.#loadKey();
+    } catch (error) {
+      console.error('no browser key, so every change asks for two presses', error);
+    }
+    if (!this.#key) return;
+    const challenge = await this.#ask({ command: 'browser_challenge' }, reply => reply.command === 'browser_challenge' || refusal(reply, PROOF_REFUSALS));
+    if (challenge?.command !== 'browser_challenge') return;
+    const signature = await this.#key.sign(signedMessage(challenge.nonce));
+    const verdict = await this.#ask(
+      { command: 'trust_browser', key: this.#key.publicKey, signature, label: this.#key.label },
+      reply => refusal(reply, PROOF_VERDICTS),
+    );
+    this.#change({ trusted: 'trusted', untrusted: 'proven' }[verdict?.reason] ?? null, null);
+  }
+
+  // INFO: fc 13nov26 the unit stores a proven key on the set or dfu two presses confirm on this link
+  confirmed() {
+    if (this.#trust === 'proven') this.#change('trusted', this.#browsers);
+  }
+
+  list() {
+    if (!this.trusted) return;
+    this.#listing ??= this.#read().finally(() => (this.#listing = null));
+    return this.#listing;
+  }
+
+  // INFO: fc 13nov26 a list that did not arrive is shown empty, so the page does not ask again on every render
+  async #read() {
+    const browsers = [];
+    for (let index = 0; ; index++) {
+      const entry = await this.#ask({ command: 'browsers', index }, reply => reply.command === 'browser' || refusal(reply, LIST_REFUSALS));
+      if (entry?.reason === 'untrusted') return this.#change(null, null);
+      if (entry?.command !== 'browser') return this.#change(this.#trust, []);
+      if (index >= entry.count) return this.#change(this.#trust, browsers);
+      const id = hex(entry.id);
+      browsers.push({ id, label: entry.label, self: id === idOf(this.#key.publicKey) });
+    }
+  }
+
+  async forget(ids) {
+    if (!this.trusted) return null;
+    for (const id of ids) {
+      const verdict = await this.#ask({ command: 'forget_browser', id }, reply => refusal(reply, FORGET_VERDICTS));
+      if (verdict?.reason !== 'forgotten') return verdict?.reason ?? 'timeout';
+      if (id === idOf(this.#key.publicKey)) return this.#change(null, null);
+    }
+    return this.list();
+  }
+
+  #change(trust, browsers) {
+    this.#trust = trust;
+    this.#browsers = browsers;
+    this.#onChange({ trust, browsers });
+  }
+
+  #ask(command, matches) {
+    const answered = new Promise(resolve => {
+      const waiter = { matches, resolve };
+      waiter.timer = setTimeout(() => {
+        this.#waiting.splice(this.#waiting.indexOf(waiter), 1);
+        resolve(null);
+      }, ANSWER_WITHIN_MS);
+      this.#waiting.push(waiter);
+    });
+    return this.#send(command).then(() => answered);
+  }
+}
+
+const LINK_REASONS = new Set(['claimed', 'small_mtu']);
+const PROOF_REFUSALS = new Set(['keyless', 'unknown_command', 'small_mtu', 'claimed']);
+const PROOF_VERDICTS = new Set(['trusted', 'untrusted', 'no_session', 'bad_signature', 'invalid', 'unknown_command', 'small_mtu', 'claimed']);
+const LIST_REFUSALS = new Set(['untrusted', 'unknown_command', 'small_mtu', 'claimed']);
+const FORGET_VERDICTS = new Set(['forgotten', 'unknown_browser', 'untrusted', 'invalid', 'unknown_command', 'small_mtu', 'claimed']);
+
+function refusal(reply, reasons) {
+  return reply.command === 'acknowledgement' && reasons.has(reply.reason);
+}
