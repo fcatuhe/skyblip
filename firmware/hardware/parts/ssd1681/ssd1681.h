@@ -62,7 +62,7 @@ class Ssd1681 : public ports::Display {
     static constexpr uint32_t kReadyAfterFullMs = 1500;
     // INFO: fc 13sep26 GxEPD2 gives the D67 10 s: the cold waveform is slow, and this bounds a hang
     static constexpr uint32_t kBusyTimeoutMs = 10000;
-    // INFO: fc 13nov26 Good Display wants a full after five partials, a flash a pilot cannot take
+    // TODO: fc 13nov26 a guess until the bench run of #311 measures how fast static ink greys
     static constexpr int kReinkPeriodPartials = 60;
 
    private:

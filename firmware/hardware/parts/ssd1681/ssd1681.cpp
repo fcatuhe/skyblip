@@ -81,13 +81,14 @@ void Ssd1681::present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t no
     set_window(0, 0, kGlassWidth - 1, kGlassHeight - 1);
     command(kBorderWaveform);
     data(full ? kBorderFollowLut1 : kBorderVcom);
+    const bool reink = !full && ++partials_since_reink_ >= kReinkPeriodPartials;
     if (full) {
         // INFO: fc 09mar26 GxEPD2 writes the new frame into both banks before a full refresh
         stage(canvas.data());
         write_bank(kWriteRamPrevious);
         partials_since_reink_ = 0;
-    } else if (++partials_since_reink_ >= kReinkPeriodPartials) {
-        // INFO: fc 13nov26 old set to the inverse of new makes every pixel take its full step again
+    } else if (reink) {
+        // INFO: fc 13nov26 0x26 as the inverse of 0x24 re-drives every pixel, black and white
         stage(canvas.data());
         invert_shadow();
         write_bank(kWriteRamPrevious);
