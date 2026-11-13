@@ -11,17 +11,18 @@ constexpr uint8_t kSetD = 1, kSetC = 2, kSetB = 3, kSetA = 4;
 
 }  // namespace
 
-// A1 is under 15 500 lb, which is the boundary G.1.3 draws between its categories 1 and 2.
+// A1 is under 15 500 lb, G.1.3's line between 1 and 2. A6 and A7 give no weight, so the heavier.
 TEST_CASE("adsb category: set A splits light fixed wing from the rest at G.1.3's own boundary") {
-    const uint8_t expected[8] = {0, 1, 2, 2, 2, 2, 2, 3};
+    const uint8_t expected[8] = {0, 1, 2, 2, 2, 2, 2, 15};
     for (uint8_t emitter = 0; emitter < 8; emitter++) {
         CAPTURE(int(emitter));
         CHECK(int(adsb_emitter_to_adsl_category(kSetA, emitter)) == int(expected[emitter]));
     }
 }
 
+// ADS-B is typical of heavier aircraft: B4 reads as the ultralight, B6 as the specific UAS.
 TEST_CASE("adsb category: set B names the airborne kinds G.1.3 has a value for, and no more") {
-    const uint8_t expected[8] = {0, 4, 5, 8, 6, 0, 11, 0};
+    const uint8_t expected[8] = {0, 4, 5, 8, 6, 0, 12, 0};
     for (uint8_t emitter = 0; emitter < 8; emitter++) {
         CAPTURE(int(emitter));
         CHECK(int(adsb_emitter_to_adsl_category(kSetB, emitter)) == int(expected[emitter]));

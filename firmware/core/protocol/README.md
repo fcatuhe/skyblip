@@ -91,17 +91,19 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 
 `adsb_emitter_to_adsl_category` reads the emitter category of an ADS-B identification message, a type code from 1 to 4 and a 3-bit category, into ADS-L G.1.3, which is the one category the tree holds. `adsl_category_to_alptas_type` takes it on to `$PFLAA` from there. The type code and category pairs are those of The 1090 Megahertz Riddle, table "Wake vortex in ADS-B identification and category message" ([mode-s.org](https://mode-s.org/1090mhz/content/ads-b/2-identification.html)). The rows below use the usual A0 to D7 shorthand, a letter for the type code (A is 4, B is 3, C is 2, D is 1, which is all reserved) and a digit for the category. Neither the Riddle nor the GDL 90 table below prints those letters. The Riddle rounds the type code 4 weights to kilograms. The pounds below are Table 11 of the GDL 90 Data Interface Specification, 560-1058-00 Rev A, which lists the same three groups in order ([faa.gov](https://www.faa.gov/sites/faa.gov/files/air_traffic/technology/adsb/archival/GDL90_Public_ICD_RevA.PDF)).
 
+Where an ADS-B emitter category or a FLARM aircraft type covers more than one G.1.3 category, ADS-B reads as the heavier one and FLARM as the lighter one, because ADS-B equipage is typical of heavier aircraft and FLARM of lighter ones. The rows that rule decides say so.
+
 | ADS-B | Kind | G.1.3 | Why |
 |---|---|---|---|
 | A1 | light, under 15 500 lb | 1 | G.1.3 draws its line between 1 and 2 at the same 7031 kg, 15 500 lb |
 | A2 to A5 | small, large, high vortex large, heavy | 2 | at or above that line |
-| A6 | high performance, over 5 g and 400 kt | 2 | ADS-B gives it no weight. The tree already reads a FLARM jet, type 9, as 2 (`alptas_type_to_adsl_category`) |
-| A7 | rotorcraft | 3 | ADS-B gives it no weight either. Issue 1 named 3 plain rotorcraft before Issue 2 split it into light, 3, and heavy, 15. A FLARM helicopter is read as 3 too |
+| A6 | high performance, over 5 g and 400 kt | 2 | the rule: ADS-B gives it no weight, so the heavier of 1 and 2 |
+| A7 | rotorcraft | 15 | the rule: Issue 2 split rotorcraft into light, 3, and heavy, 15, and ADS-B reads the heavier |
 | B1 | glider, sailplane | 4 | |
 | B2 | lighter-than-air | 5 | |
 | B3 | parachutist, skydiver | 8 | |
-| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight |
-| B6 | unmanned aerial vehicle | 11 | ADS-B carries no EU operational category. A FLARM UAV, type D, is read as 11 too |
+| B4 | ultralight, hang-glider, paraglider | 6 | the rule: it spans G.1.3's 6, 7, 16 and 17, and 6, the ultralight and motorized hang-glider, is the heaviest |
+| B6 | unmanned aerial vehicle | 12 | the rule: ADS-B carries no EU operational category, so the specific category, heavier than FLARM's open 11 |
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
@@ -120,7 +122,7 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 | 6 | ultralight and motorized hang-glider | 8, reciprocating engines | an ultralight, and a trike, fly on a reciprocating engine. AcftType 6 is a hang glider with no engine |
 | 7 | paraglider | 7, paraglider | |
 | 8 | parachutist, skydiver, wingsuit | 4, skydiver | |
-| 9 | eVTOL, UAM | 3, rotorcraft | it carries people, takes off on its rotors and hovers like a helicopter. D would tell the pilot it is a drone |
+| 9 | eVTOL, UAM | 3, rotorcraft | it carries people, takes off on its rotors and hovers like a helicopter. D would tell the pilot it is a drone. An electric aircraft carries little mass, so wherever skyBlip groups categories by weight it goes with light rotorcraft. Today nothing on the glass, the own-ship drawings or the alarm groups them |
 | 10 | gyrocopter | 3 | FTD-012 names the gyrocopter in 3 |
 | 11 to 13 | UAS open, specific and certified | D, UAV | |
 | 14 | model plane | D, UAV | a model plane flies with no one on board, which is what D names |
@@ -135,15 +137,15 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 |---|---|---|---|
 | 0, A, E | reserved, unknown, reserved | 0 | |
 | 1 | glider, motor glider | 4 | |
-| 2, 5 | tow plane, drop plane | 1 | tow and drop planes nearly all weigh under 7031 kg. A turboprop drop plane, such as a Caravan or a Twin Otter, then reaches `$PFLAA` as AcftType 8 |
-| 3 | helicopter, gyrocopter, rotorcraft | 3 | it is sent for 3, 9, 10 and 15. It gives no weight and names no eVTOL, so it is read as light rotorcraft, as Issue 1's plain rotorcraft was |
+| 2, 5 | tow plane, drop plane | 1 | the rule, and the fleet agrees: tow and drop planes nearly all weigh under 7031 kg. A turboprop drop plane, such as a Caravan or a Twin Otter, then reaches `$PFLAA` as AcftType 8 |
+| 3 | helicopter, gyrocopter, rotorcraft | 3 | the rule: it is sent for 3, 9, 10 and 15, gives no weight, and FLARM reads the lighter, light rotorcraft |
 | 4 | skydiver | 8 | |
 | 6 | hang glider | 16 | 16 is the one category sent as 6. Issue 1 put the hang glider with the paraglider in 7 |
-| 7 | paraglider | 7 | it is sent for 7 and 17. A paramotor is the rarer of the two |
-| 8 | reciprocating engines | 1 | it is sent for 1 and 6. An ultralight is a light aircraft too |
+| 7 | paraglider | 7 | the rule: it is sent for 7 and 17, and the paraglider is the lighter |
+| 8 | reciprocating engines | 6 | the rule: it is sent for 1 and 6, and the ultralight is the lighter |
 | 9 | jet or turboprop | 2 | 2 is the one category sent as 9, so a jet reaches `$PFLAA` as a jet again. A light jet or turboprop lands in the heavier weight class |
 | B, C | balloon, airship | 5 | |
-| D | UAV | 11 | it is sent for 11 to 14. FLARM carries no EU operational category, so 11, the open category, is the default |
+| D | UAV | 11 | the rule: it is sent for 11 to 14, and FLARM reads the lighter, the open category |
 | F | static obstacle | 0 | G.1.3 has no value for it |
 | past F | outside FTD-012's table | 0 | |
 

@@ -136,9 +136,9 @@ TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
     CHECK(alptas_encode(frame, observation, kUtcS) == Status::Invalid);
 }
 
-// core/protocol/README.md argues each row against FTD-012 section 8.2 and ADS-L G.1.3.
+// core/protocol/README.md argues each row: where a type covers several, FLARM reads the lighter.
 TEST_CASE("alptas: every FLARM aircraft type is read as the ADS-L category it names") {
-    const uint8_t expected[16] = {0, 4, 1, 3, 8, 1, 16, 7, 1, 2, 0, 5, 5, 11, 0, 0};
+    const uint8_t expected[16] = {0, 4, 1, 3, 8, 1, 16, 7, 6, 2, 0, 5, 5, 11, 0, 0};
     for (uint8_t type = 0; type < 16; type++) {
         CAPTURE(int(type));
         CHECK(int(alptas_type_to_adsl_category(type)) == int(expected[type]));
@@ -158,7 +158,7 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
     }
 
     // And the whole way round, through the wire.
-    for (uint8_t category : {uint8_t(1), uint8_t(2), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(7),
+    for (uint8_t category : {uint8_t(2), uint8_t(3), uint8_t(4), uint8_t(5), uint8_t(6), uint8_t(7),
                              uint8_t(8), uint8_t(11), uint8_t(16)}) {
         model::AircraftObservation observation = make_observation(481234567, 87654321);
         observation.aircraft_category = category;
@@ -169,6 +169,13 @@ TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") 
         CAPTURE(category);
         CHECK(int(got.aircraft_category) == int(category));
     }
+}
+
+// AcftType 8 is sent for a light aircraft and an ultralight alike, and FLARM reads the lighter.
+TEST_CASE("alptas: a light aircraft goes out as a piston and comes back as an ultralight") {
+    CHECK(int(adsl_category_to_alptas_type(1)) == 0x8);
+    CHECK(int(adsl_category_to_alptas_type(6)) == 0x8);
+    CHECK(int(alptas_type_to_adsl_category(0x8)) == 6);
 }
 
 // A codec that agrees with itself can still put a frame on air no other receiver reads.
