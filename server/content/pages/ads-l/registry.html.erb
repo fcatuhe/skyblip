@@ -1,59 +1,35 @@
 ---
 title: "ADS-L registry application and address assignment"
 nav_title: ADS-L registry
-description: "skyBlip's ADS-L registry application and outcome. Manufacturer page 49, AMT entry 58 and prefix 0, assigned on 5 October 2026."
+description: "The ADS-L registry assigned skyBlip AMT entry 58, manufacturer page 49 and prefix 0 on 5 October 2026. The application and exchange are recorded here."
 published_on: "2026-09-18"
-updated_on: "2026-11-09"
+parent: ads-l
+updated_on: "2026-11-13"
 ---
 
 <section>
-  <p class="kicker">For the ADS-L registry</p>
-  <h1>skyBlip applies for AMT entry 58, and for the exception OGN-Tracker has.</h1>
-  <p class="lede">
-    skyBlip builds open-source electronic conspicuity equipment for general
-    aviation. The devices transmit and receive <strong>ADS-L 4 SRD-860</strong>
-    air-to-air, receive the ADS-L traffic uplink from ground stations, and
-    receive FLARM-generation traffic. Under
-    <strong>ADS-L.4.SRD860.F.2.2</strong> we apply for <strong>entry 58 of the
-    Address Mapping Table</strong>, manufacturers page 49, and we ask that it
-    carry the whole 24-bit address with no manufacturer prefix, exactly as
-    entry 7 carries OGN-Tracker addresses. A skyBlip would then mint its address
-    inside a space that is ours, whether it was shipped by us or built by its
-    owner.
-  </p>
-  <p>
-    This page is what accompanies the application to
-    <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a>: who is
-    applying, what the equipment does on the air, why the manufacturer prefix of
-    F.2.2 does not fit this fleet, and one question we would like the
-    registry&rsquo;s view on.
-  </p>
+  <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
+  <h1>skyBlip has an assigned ADS-L address range.</h1>
+  <p class="lede">On 5 October 2026, FLARM assigned skyBlip manufacturer page 49, AMT entry 58 and manufacturer prefix 0. Each unit receives a serial in the 16 bits below that prefix when it is activated on skyblip.eu.</p>
+  <p>We applied on 20 September for entry 58 as a flat 24-bit space, without a manufacturer prefix. The assignment follows the structured scheme of F.2.2 instead. This page records the outcome and preserves the application as sent to <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a>.</p>
 </section>
 
 <section>
   <h2 class="kicker">Where it stands</h2>
-  <h3>Manufacturer page 49, AMT entry 58, prefix 0, assigned on 5 October 2026.</h3>
-
-  <p>
-    The registry gave skyBlip manufacturer page 49, which is AMT entry 58, and
-    manufacturer prefix 0 inside it. The assignment carries a prefix, so it is
-    the structured scheme of F.2.2 rather than the flat 24-bit space we applied
-    for: the 16 bits below the prefix are ours to fill densely, one per unit.
-    The application below is as we sent it on 20 September 2026. It gives the
-    firmware&rsquo;s license as GPL-3.0-only, which it was then. Since November
-    2026 the whole repository, firmware included, is MIT.
-  </p>
+  <h3>AMT entry 58 and prefix 0 identify skyBlip&rsquo;s range.</h3>
+  <p>The registry assigned manufacturer page 49, which is AMT entry 58, with manufacturer prefix 0. The remaining 16 bits identify each unit. skyblip.eu assigns that serial at activation.</p>
+  <p class="note">The application below is the record sent on 20 September 2026, not a description of the current firmware. Its GPL-3.0-only license statement and implementation status belong to that date. Since November 2026, the whole repository, firmware included, is MIT-licensed.</p>
 
   <h3>Who we dealt with</h3>
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Contact</th><th>Role</th></tr>
+        <tr><th>Contact</th><th>Role in the exchange</th></tr>
       </thead>
       <tbody>
-        <tr><th>ADS-L registry, <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a></th><td>receives applications, run by FLARM&rsquo;s helpdesk, ticket #228794</td></tr>
-        <tr><th>FLARM</th><td>answered for the registry, took the application to EASA, issued the assignment</td></tr>
-        <tr><th>EASA</th><td>decided on the application, sets the requirements on manufacturers</td></tr>
+        <tr><th>ADS-L registry, <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a></th><td>Received the application through FLARM&rsquo;s helpdesk, ticket #228794</td></tr>
+        <tr><th>FLARM</th><td>Met with us and EASA on 2 October. Issued the address assignment on 5 October</td></tr>
+        <tr><th>EASA</th><td>Met with us and FLARM on the application. Told us orally that Issue 3 will carry a callsign</td></tr>
       </tbody>
     </table>
   </div>
@@ -68,17 +44,17 @@ updated_on: "2026-11-09"
         <tr>
           <th>20 Sep 2026</th>
           <td>ADS-L registry</td>
-          <td>Application sent: one AMT entry, 58, flat over 24 bits.</td>
+          <td>Applied for AMT entry 58 as a flat 24-bit address space, without a manufacturer prefix.</td>
         </tr>
         <tr>
           <th>2 Oct 2026</th>
           <td>FLARM, EASA</td>
-          <td>Meeting on the application. A manufacturer issues a declaration of conformity for its equipment.</td>
+          <td>Met on the application. The manufacturer issues its equipment&rsquo;s declaration of conformity. skyBlip&rsquo;s draft is on the <%= link_to_page "ads-l/conformity", label: "conformity page" %>. EASA told us orally that Issue 3 will carry a callsign. There is no written source for that statement. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> records the question and the interim implementation.</td>
         </tr>
         <tr>
           <th>5 Oct 2026</th>
           <td>FLARM</td>
-          <td>AMT entry 58 assigned: manufacturer page 49, manufacturer prefix 0.</td>
+          <td>Assigned manufacturer page 49, AMT entry 58 and manufacturer prefix 0.</td>
         </tr>
       </tbody>
     </table>
@@ -282,64 +258,8 @@ updated_on: "2026-11-09"
     A 24-bit space does not make collisions impossible either. It makes them
     rare enough to settle one at a time: about 4,800 derived addresses before
     even odds of a single colliding pair. What settles them is a register, which
-    is the first of the two answers in the question below.
-  </p>
-</section>
-
-<section class="pledge">
-  <h2 class="kicker">One question</h2>
-  <h3 id="callsign">Where does an aircraft&rsquo;s callsign go?</h3>
-  <p>
-    In VFR the identity everyone uses &mdash; the pilot on the radio, the club,
-    the EFB, the field &mdash; is the registration: F-GXXX on a certified
-    aircraft, an <strong>F-J callsign</strong> on a French microlight. It
-    belongs to the aircraft for its life. It is not a per-flight item like an
-    airline flight number, and a receiver that could show it would be showing
-    the traffic the way a pilot already thinks about it.
-  </p>
-  <p>
-    We think this matters in the air rather than on paper. A pilot hears
-    &ldquo;F-JABC, joining downwind for 25&rdquo; on the frequency, and what
-    turns that call into an aircraft he can look for is a display showing the
-    same callsign on the target: the radio tells him who, the screen tells him
-    where, and only the callsign joins the two. Without it he has a call on one
-    side and an anonymous return on the other, and traffic a pilot cannot
-    correlate is traffic he ends up looking for in the wrong part of the sky.
-  </p>
-  <p>
-    Issue 2 carries no field for it. The Traffic payload (G.1) has none, the
-    Status payload (G.2) has none, and the only identity on the air is the
-    30-bit sender address of F.2.2: 6 bits of AMT and 24 bits of address. That
-    address is ours rather than the aircraft&rsquo;s, and nothing in the frame
-    ties it to the registration on the fuselage. The aircraft this equipment
-    addresses are the ones carrying no other identity on the air: a French
-    microlight, a paraglider, a paramotor.
-  </p>
-  <p>
-    So we would like the registry&rsquo;s view on which of the two answers it
-    intends, because we would rather implement the one that becomes the
-    standard:
-  </p>
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr><th>Answer</th><th>What it would take</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>A published address-to-registration database</th>
-          <td>the way the OGN device database resolves FLARM and OGN addresses today. We would publish our assigned range, let owners bind their address to their registration, and expose the mapping under an open license.</td>
-        </tr>
-        <tr>
-          <th>A callsign payload</th>
-          <td>a low-rate broadcast payload carrying the registration, transmitted every few seconds rather than every second. A new payload type has to be approved by the governing body (F.2.5), which is why this is a question to the registry and not a proposal we would ship on our own.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  <p>
-    Either is a small amount of work here. Neither is worth doing twice, and a
-    manufacturer that invents its own answer is how a standard stops being one.
+    is the first of the two answers in
+    <%= link_to_page "ads-l/callsign", label: "the callsign question", anchor: "callsign" %>.
   </p>
 </section>
 
@@ -359,8 +279,8 @@ updated_on: "2026-11-09"
     </li>
   </ul>
   <p>
-    <%= link_to_page "index", label: "skyBlip", class: "cta cta--previous" %>
-    &nbsp;·&nbsp;
-    <%= link_to_page "ads-l-registry/nmea", label: "Food for thought", class: "cta cta--next" %>
+    <%= link_to_page "ads-l", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "ads-l/callsign", class: "cta cta--next" %>
   </p>
 </section>

@@ -25,7 +25,7 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
     get "/radar"
     assert_select "meta[property='og:image'][content*='/share/radar-']"
 
-    get "/ads-l-registry/nmea"
+    get "/ads-l/nmea"
     assert_select "meta[property='og:image'][content*='/share/go-']"
     assert_select "meta[property='og:locale:alternate']", 0
   end

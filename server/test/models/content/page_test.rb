@@ -16,10 +16,10 @@ class Content::PageTest < ActiveSupport::TestCase
   end
 
   test "nested pages retain their URL and source path" do
-    page = Content::Page.find("ads-l-registry/nmea", locale: :en)
+    page = Content::Page.find("ads-l/nmea", locale: :en)
 
-    assert_equal "/ads-l-registry/nmea", page.url_path
-    assert_equal Rails.root.join("content/pages/ads-l-registry/nmea.html.erb"), page.path.expand_path
+    assert_equal "/ads-l/nmea", page.url_path
+    assert_equal Rails.root.join("content/pages/ads-l/nmea.html.erb"), page.path.expand_path
     assert_nil Content::Page.find_by(base_slug: page.base_slug, locale: :fr)
   end
 

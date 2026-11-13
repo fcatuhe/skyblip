@@ -9,12 +9,24 @@
     <lastmod>2026-11-13</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/ads-l-registry</loc>
-    <lastmod>2026-11-09</lastmod>
+    <loc>https://skyblip.eu/ads-l</loc>
+    <lastmod>2026-11-13</lastmod>
   </url>
   <url>
-    <loc>https://skyblip.eu/ads-l-registry/nmea</loc>
-    <lastmod>2026-11-09</lastmod>
+    <loc>https://skyblip.eu/ads-l/callsign</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/ads-l/conformity</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/ads-l/nmea</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/ads-l/registry</loc>
+    <lastmod>2026-11-13</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/bravo</loc>

@@ -41,7 +41,7 @@ Rails.application.routes.draw do
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }
   end
 
-  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go
+  # INFO: fc 11nov26 the glass prints skyblip.eu/activate, and the device pages lived on the public site before the briefing app | 13nov26 the briefing dropped its /fr addresses for a language setting | 13nov26 the Go's page moved from /features to /go | 13nov26 the ADS-L pages moved under /ads-l
   get "activate", to: redirect("/briefing/activate")
   get "fr/activer", to: redirect("/briefing/activate")
   %w[update configure manage].each { |path| get path, to: redirect("/briefing") }
@@ -49,6 +49,8 @@ Rails.application.routes.draw do
   get "fr/briefing(/*path)", format: false, to: redirect { |_params, request| request.fullpath.delete_prefix("/fr") }
   get "features", to: redirect("/go")
   get "fr/fonctionnalites", to: redirect("/fr/go")
+  get "ads-l-registry", to: redirect("/ads-l/registry")
+  get "ads-l-registry/nmea", to: redirect("/ads-l/nmea")
 
   namespace :briefing do
     root "devices#index"
