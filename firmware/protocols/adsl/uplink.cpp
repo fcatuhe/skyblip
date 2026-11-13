@@ -66,7 +66,8 @@ Status Uplink::encode(uint32_t sender_address, uint8_t sender_table, const Packe
     header.set_address_mapping_table(sender_table);
     std::memcpy(covered + 1, header.payload, kUplinkHeaderBytes);
     for (int i = 0; i < count; i++) {
-        uint8_t* record = covered + 1 + kUplinkHeaderBytes + i * kUplinkRecordBytes;
+        uint8_t* record =
+            covered + 1 + kUplinkHeaderBytes + static_cast<size_t>(i) * kUplinkRecordBytes;
         std::memcpy(record, traffic[i].payload + 1, 4);
         record[3] = static_cast<uint8_t>(record[3] & ~kReservedBits);
         std::memcpy(record + 4, traffic[i].payload + kUplinkHeaderBytes,
@@ -112,7 +113,8 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
 
     int kept = 0;
     for (int i = 0; i < count && kept < capacity; i++) {
-        const uint8_t* record = covered + 1 + kUplinkHeaderBytes + i * kUplinkRecordBytes;
+        const uint8_t* record =
+            covered + 1 + kUplinkHeaderBytes + static_cast<size_t>(i) * kUplinkRecordBytes;
         Packet target{};
         target.reset(Packet::kPayloadTypePosition);
         std::memcpy(target.payload + 1, record, 4);

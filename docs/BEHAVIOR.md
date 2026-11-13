@@ -31,7 +31,6 @@ ADS-L 4 SRD-860 issue 2 Subpart E, the network layer: the version own-ship's pac
 **ADS-L.4.SRD860.E.1.1**
 
 - own-ship sends version 0 with all it knows, 1 once it marks a field absent
-  > What own-ship knows decides the codes, and the codes decide the issue a receiver must read.
 
 ### test/adsl/test_overview.cpp
 

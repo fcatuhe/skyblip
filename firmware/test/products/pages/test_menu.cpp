@@ -222,7 +222,8 @@ TEST_CASE("menu page: a category the phone stored but the page does not name is 
     CHECK(next_aircraft_type(13) == 0);
 }
 
-TEST_CASE("menu page: a heavy rotorcraft is a choice a pilot can make, and the list closes after it") {
+TEST_CASE(
+    "menu page: a heavy rotorcraft is a choice a pilot can make, and the list closes after it") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 15;
     const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);

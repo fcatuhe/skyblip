@@ -32,7 +32,9 @@ uint8_t version_sent(const model::Ownship& own, uint8_t category = 4) {
 }  // namespace
 
 // What own-ship knows decides the codes, and the codes decide the issue a receiver must read.
-TEST_CASE("ADS-L.4.SRD860.E.1.1: own-ship sends version 0 with all it knows, 1 once it marks a field absent") {
+TEST_CASE(
+    "ADS-L.4.SRD860.E.1.1: own-ship sends version 0 with all it knows, 1 once it marks a field "
+    "absent") {
     CHECK(version_sent(flying()) == 0);
 
     model::Ownship two_d = flying();
