@@ -11,8 +11,10 @@ export default class extends Controller {
   static targets = ["panel", "tape", "pause"]
   static values = { slug: String, opened: String, closed: String, failed: String, resume: String }
 
+  // INFO: fc 14nov26 Turbo restores the tape as it was left, missing every frame since, so each visit starts on an empty tape
   connect() {
-    this.held = []
+    this.paused = false
+    this.clear()
     this.session = joinFleet(() => this.#listen())
     this.fleet = this.session.fleet
     this.#listen()
@@ -46,7 +48,9 @@ export default class extends Controller {
     this.panelTarget.hidden = !device
   }
 
+  // INFO: fc 14nov26 a hidden endpoint keeps no lines, so NMEA unchecked never pushes the config frames being read past the cap
   #print(line) {
+    if (line.endpoint && !this.#shown(line.endpoint)) return
     const row = document.createElement("span")
     row.className = line.event ? "terminal-line is-event" : `terminal-line is-${line.endpoint} is-${line.direction}`
     if (line.bad) row.classList.add("is-bad")
@@ -59,6 +63,10 @@ export default class extends Controller {
     } else {
       this.#show(row)
     }
+  }
+
+  #shown(endpoint) {
+    return this.element.querySelector(`.terminal-endpoints input[value="${endpoint}"]`).checked
   }
 
   #show(...rows) {

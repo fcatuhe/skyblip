@@ -26,6 +26,12 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
       uncheck "nmea"
       assert_no_selector ".terminal-line.is-nmea"
       assert_selector ".terminal-line.is-config"
+      page.execute_script("#{unit("00012A")}.sentence('$PGRMZ,2000,f,3*19')")
+      page.execute_script("#{unit("00012A")}.status()")
+      assert_selector ".terminal-line.is-config.is-in", count: 2
+      check "nmea"
+      assert_selector ".terminal-line.is-nmea", count: 2
+      assert_no_selector ".terminal-line", text: "$PGRMZ,2000"
 
       find(".unit-menu summary").click
       click_button "Disconnect"
@@ -37,6 +43,28 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
       assert_selector ".terminal-line.is-config.is-in", text: 'config < {"command":"update","image":"confirmed"'
       assert_selector ".terminal-line.is-smp.is-out", text: "smp    > read os params seq"
       assert_selector ".terminal-line.is-smp.is-in", text: /read reply os params seq \d+ \{"buf_size":2475,"buf_count":4\}/
+    end
+  end
+
+  # Turbo shows its snapshot of the tape on the way back, which would hold stale lines and a stale pause.
+  test "coming back to the terminal starts on an empty tape, not paused" do
+    in_range a_go(mtu: 498)
+    on_the_shelf do
+      connect_go
+      click_link "Terminal"
+      page.execute_script("#{unit("00012A")}.status()")
+      assert_selector ".terminal-line.is-config"
+      click_button "Pause"
+      assert_button "Resume (0 new)"
+
+      click_link "Back to skyBlip Go 00012A"
+      assert_current_path "/briefing/devices/go-00012a"
+      page.go_back
+      assert_current_path "/briefing/devices/go-00012a/terminal"
+      assert_button "Pause"
+      assert_no_selector ".terminal-line"
+      page.execute_script("#{unit("00012A")}.status()")
+      assert_selector ".terminal-line.is-config", count: 1
     end
   end
 end

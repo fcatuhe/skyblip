@@ -86,7 +86,7 @@ en:
     terminal:
       title: Terminal
       row: Every Bluetooth frame
-      hint: "Every frame on every Bluetooth endpoint of this device, as it passes. > leaves this browser, < comes from the device."
+      hint: "Every frame this browser exchanges with the device over Bluetooth, as it passes. > leaves this browser, < comes from the device."
       endpoints: Endpoints
       pause: Pause
       resume: "Resume (%{count} new)"
@@ -94,7 +94,7 @@ en:
       tape: Bluetooth frames
       opened: link open
       closed: link closed
-      failed: an endpoint did not open
+      failed: failed
     activation:
       title: Activate a new Go
       hint: Its glass shows ACTIVATE and a code like 3F2A. Pick that code in the list.

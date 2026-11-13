@@ -10,7 +10,7 @@ const SMP_COMMANDS = { 0: { 0: 'os echo', 6: 'os params' }, 1: { 0: 'image state
 const decoder = new TextDecoder();
 
 export function lineOf(entry) {
-  if (entry.event) return { event: entry.event, text: entry.error?.message ?? '' };
+  if (entry.event) return { event: entry.event, bad: entry.event === 'failed', text: [ENDPOINTS[entry.endpoint], entry.error?.message].filter(Boolean).join(': ') };
   return { endpoint: ENDPOINTS[entry.endpoint], direction: entry.direction, bad: false, ...TEXTS[entry.endpoint](entry) };
 }
 
@@ -38,11 +38,13 @@ function smpText(bytes) {
   const command = SMP_COMMANDS[header.group]?.[header.id] ?? `group ${header.group} id ${header.id}`;
   const op = SMP_OPS[header.op] ?? `op ${header.op}`;
   const payload = bytes.subarray(HEADER_BYTES);
+  let body;
   try {
-    return { text: `${op} ${command} seq ${header.seq} ${JSON.stringify(decode(payload), bytesShown)}` };
+    body = decode(payload);
   } catch (error) {
     return { text: `${op} ${command} seq ${header.seq} ${error.message}: ${shown(payload)}`, bad: true };
   }
+  return { text: `${op} ${command} seq ${header.seq} ${JSON.stringify(body, bytesShown)}`, bad: Boolean(body?.rc || body?.err) };
 }
 
 function bytesShown(key, value) {

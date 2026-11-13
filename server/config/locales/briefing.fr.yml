@@ -86,7 +86,7 @@ fr:
     terminal:
       title: "Terminal"
       row: "Chaque trame Bluetooth"
-      hint: "Chaque trame de chaque point d\u2019accès Bluetooth de cet appareil, à son passage. > part de ce navigateur, < vient de l\u2019appareil."
+      hint: "Chaque trame que ce navigateur échange avec l\u2019appareil en Bluetooth, à son passage. > part de ce navigateur, < vient de l\u2019appareil."
       endpoints: "Points d\u2019accès"
       pause: "Pause"
       resume: "Reprendre (%{count} en attente)"
@@ -94,7 +94,7 @@ fr:
       tape: "Trames Bluetooth"
       opened: "liaison ouverte"
       closed: "liaison fermée"
-      failed: "un point d\u2019accès ne s\u2019est pas ouvert"
+      failed: "échec"
     activation:
       title: "Activer un Go neuf"
       hint: "Son écran affiche ACTIVATE et un code comme 3F2A. Choisissez ce code dans la liste."
