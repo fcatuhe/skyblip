@@ -126,9 +126,11 @@ class Product {
                 shutdown_.request(power::ShutdownReason::Recovery, now_ms);
             }
         }
+        // INFO: fc 13nov26 before drive_shutdown, so the sign starts on the pass after the park's
+        // flash work
+        if (shutdown_.going_down()) finish_sign_off(now_ms);
         shutdown_.tick(now_ms, platform_.button_down(), platform_.pad_down());
         drive_shutdown(now_ms);
-        if (shutdown_.going_down()) finish_sign_off(now_ms);
         if (shutdown_.going_down()) screen_.settle_park(now_ms);
         if (shutdown_.going_down()) await_radio_park(now_ms, ready_but_for_radio());
         enter_recovery_once_parked();

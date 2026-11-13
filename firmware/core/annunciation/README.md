@@ -12,7 +12,7 @@ The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole
 
 The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major third, so the call is in tune rather than an arbitrary pair of frequencies. They sit either side of where the transducer is loudest. The part LilyGO fits is not identified in its own material; it is a passive piezo driven straight off one PWM pin, and commodity 9x9 mm SMD piezo sounders resonate at 4000 Hz +/- 500 Hz, so whichever way a given unit's resonance falls, one note of every call is near it. A bench sweep with a sound level meter is what settles the real peak, and the pair moves to the third that straddles it then.
 
-## The motor says the calls, and only the calls
+## The motor says the calls, and the signs on and off
 
 A call is the notes that run together between two silences. The traffic voice runs the motor exactly while a call sounds: 270 ms, then 450 ms, with the 270 ms rest between them, the same `kAdvisory*Ms` figures the buzzer plays. A pilot under a headset feels the rhythm others hear. The motor is driven the way the buzzer is, on until told off, so it stops on the pass the buzzer does, whatever released it. `kAnnunciatorOnCeilingMs` is the guard the adapters hold under both, for a loop that stops running mid-call (`ports/README.md`). The fix tune is never felt. The motor is reserved for traffic and for the signs on and off (`../indication/README.md`), which are one pulse and three, so a pilot who feels two calls knows what they mean without looking.
 
@@ -22,7 +22,7 @@ Bravo never calibrates the X1's LRA, because the calibration drives the motor fo
 
 ## A lost Bravo is one low note
 
-A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `BRAVO LOST` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
+A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `BRAVO LOST` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic and the signs on and off. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
 
 ## Loudness is the port's, the tune is not
 

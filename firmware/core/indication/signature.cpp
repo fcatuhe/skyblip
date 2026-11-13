@@ -14,8 +14,9 @@ Signal SignaturePlayer::update(uint32_t now_ms) {
         signature_ = nullptr;
         return Signal{};
     }
+    if (elapsed < signature_->lead_ms) return Signal{};
     const uint32_t period = static_cast<uint32_t>(signature_->pulse_ms) + signature_->gap_ms;
-    const bool pulsing = elapsed % period < signature_->pulse_ms;
+    const bool pulsing = (elapsed - signature_->lead_ms) % period < signature_->pulse_ms;
     return Signal{pulsing ? signature_->lamp : indication::Lamp::None, pulsing};
 }
 

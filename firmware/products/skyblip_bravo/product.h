@@ -97,9 +97,11 @@ class Product {
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             take_link_requests(now_ms);
         }
+        // INFO: fc 13nov26 before drive_shutdown, so the sign starts on the pass after the park's
+        // flash work
+        if (shutdown_.going_down()) finish_sign_off(now_ms);
         shutdown_.tick(now_ms, platform_.button_down());
         drive_shutdown(now_ms);
-        if (shutdown_.going_down()) finish_sign_off(now_ms);
         if (shutdown_.going_down()) await_receiver_park(now_ms, ready_but_for_receiver());
         enter_recovery_once_parked();
     }

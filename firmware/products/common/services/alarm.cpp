@@ -92,12 +92,17 @@ void AlarmService::sign_off(uint32_t now_ms) {
     situation.running = false;
     const annunciation::Command command = annunciation_.update(situation, now_ms);
     if (command.tone_changed) drive_buzzer(command);
-    signature_.begin(indication::kSignOff, now_ms);
-    advance_signature(now_ms);
+    drive_motor(false);
+    show(indication::Lamp::None);
+    sign_off_pending_ = true;
 }
 
 void AlarmService::advance_signature(uint32_t now_ms) {
     accrue_annunciator(now_ms);
+    if (sign_off_pending_) {
+        sign_off_pending_ = false;
+        signature_.begin(indication::kSignOff, now_ms);
+    }
     const indication::Signal signal = signature_.update(now_ms);
     drive_motor(signal.vibrating);
     show(signal.lamp);
@@ -142,6 +147,7 @@ void AlarmService::park(uint32_t now_ms) {
     accrue_annunciator(now_ms);
     running_ = false;
     signature_.cancel();
+    sign_off_pending_ = false;
     annunciation::Situation situation{};
     situation.running = false;
     const annunciation::Command command = annunciation_.update(situation, now_ms);

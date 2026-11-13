@@ -54,9 +54,10 @@ TEST_CASE("signature: it ends dark and still at its length, across the clock's w
     const uint32_t start_ms = 0xFFFFFFFFu - 200;
     SignaturePlayer player{};
     player.begin(kSignOff, start_ms);
-    CHECK(player.update(start_ms).lamp == Lamp::Red);
-    CHECK(player.update(start_ms + kSignOffPulseMs).lamp == Lamp::None);
-    CHECK(player.update(start_ms + kSignOffPulseMs + kSignOffGapMs).vibrating);
+    CHECK_FALSE(player.update(start_ms).vibrating);
+    CHECK(player.update(start_ms + kSignOff.lead_ms).lamp == Lamp::Red);
+    CHECK(player.update(start_ms + kSignOff.lead_ms + kSignOffPulseMs).lamp == Lamp::None);
+    CHECK(player.update(start_ms + kSignOff.lead_ms + kSignOffPulseMs + kSignOffGapMs).vibrating);
 
     const Signal last = player.update(start_ms + length_ms(kSignOff));
     CHECK(last.lamp == Lamp::None);

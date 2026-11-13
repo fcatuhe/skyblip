@@ -39,7 +39,7 @@ TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, 
     const uint32_t starts = rig.platform.annunciator().motor_starts();
 
     rig.platform.set_button_down(true);
-    rig.run_for(power::kLongPressHoldMs + 100);
+    rig.run_for(power::kLongPressHoldMs + indication::kSignOff.lead_ms + 100);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
     CHECK(rig.platform.indicator().lamp() == indication::Lamp::Red);
     CHECK(rig.platform.annunciator().vibrating());
@@ -51,6 +51,20 @@ TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, 
     run_until_off(rig);
     REQUIRE(rig.product.ready_to_power_off());
     check_parked(rig);
+}
+
+// Reviewer: the shutdown's own pass may block on a capture's flash erases, which merged pulses 1
+// and 2.
+TEST_CASE("bravo: a slow shutdown pass does not merge the off pulses into a traffic call") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(2);
+    rig.product.shutdown().request(power::ShutdownReason::LinkRequest, rig.now_ms);
+    rig.step();
+    rig.now_ms += 2 * indication::kSignOffPulseMs + indication::kSignOffGapMs / 2;
+    rig.run_for(indication::length_ms(indication::kSignOff) + 100);
+    CHECK(rig.platform.annunciator().motor_starts() == 3);
+    CHECK(rig.platform.indicator().parked());
 }
 
 TEST_CASE("bravo: an install goes down unsigned, since the unit comes straight back") {

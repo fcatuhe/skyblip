@@ -61,13 +61,13 @@ The table says whether the device runs. It cannot say that the device has just c
 | Sign | Lamp and motor | When |
 |---|---|---|
 | on | one green pulse of 400 ms | the loop's first pass, after a press woke the unit from SYSTEM OFF |
-| off | three red pulses of 150 ms, 150 ms apart | the first pass of a shutdown that leaves the unit off |
+| off | three red pulses of 150 ms, 150 ms apart, after 150 ms dark | the pass after a shutdown that leaves the unit off starts |
 
 One long pulse for on is the cue phones and watches give at power-on. It is easier to catch than three short ones when the thumb has already left the button. The three short pulses for off come under the thumb that holds the button, so they read as "done, let go". Traffic is felt as two calls, and `common::AlarmService` asserts that neither sign has two pulses.
 
 The sign on waits for the loop's first pass, so it costs bring-up nothing, and it says that the device runs, not that the button went down. A restart signs nothing: a watchdog, a software reset or an install can come in flight, where a pulse in a pocket would read as traffic. A first power-on signs nothing either. A refused boot signs nothing, because it runs on a cell too low to spend on it.
 
-The sign off plays inside `power::kParkSettleMs`, the wait every shutdown already spends parking, and `signature.h` asserts that it fits, so no switch-off lasts longer. The product parks the lamp, the buzzer and the motor once the sign ends. A sign stays off the UTC grid, as the buzzer does, because it answers a press or a shutdown at once. An install and a recovery that reboots come straight back, so they go down unsigned (`power::ends_switched_off`).
+The sign off starts on the pass after the shutdown's, because the shutdown's own pass flushes the settings and drains a capture to flash, and a stall there would merge two pulses. It opens with a gap, so a traffic call it cuts short never runs into the first pulse. It plays inside `power::kParkSettleMs`, the wait every shutdown already spends parking, and `signature.h` asserts that it fits, so no switch-off lasts longer. The product parks the lamp, the buzzer and the motor once the sign ends. A sign stays off the UTC grid, as the buzzer does, because it answers a press or a shutdown at once. An install and a recovery that reboots come straight back, so they go down unsigned (`power::ends_switched_off`).
 
 A sign is not an alarm. `settings.alarm_enabled` and a volume of off silence the buzzer and the motor for traffic, but a pilot who turned the noise off still needs to know that the unit came on. A sign is an event that ends by itself, which the section above calls annunciation's kind. It lives here because it makes no sound and answers this lamp's own question, whether the device is on. A traffic call outranks a sign on and cancels it, though a sign on ends long before a first fix can bring traffic.
 

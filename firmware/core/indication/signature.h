@@ -15,6 +15,7 @@ struct Signature {
     uint8_t pulses;
     uint16_t pulse_ms;
     uint16_t gap_ms;
+    uint16_t lead_ms;
 };
 
 // TODO: fc 13nov26 no hand has felt these through a motor that spins up, until #169 benches one
@@ -22,11 +23,13 @@ constexpr uint16_t kSignOnPulseMs = 400;
 constexpr uint16_t kSignOffPulseMs = 150;
 constexpr uint16_t kSignOffGapMs = 150;
 
-inline constexpr Signature kSignOn{indication::Lamp::Green, 1, kSignOnPulseMs, 0};
-inline constexpr Signature kSignOff{indication::Lamp::Red, 3, kSignOffPulseMs, kSignOffGapMs};
+inline constexpr Signature kSignOn{indication::Lamp::Green, 1, kSignOnPulseMs, 0, 0};
+// INFO: fc 13nov26 the lead is a gap, so a traffic call cut by the shutdown never runs into pulse 1
+inline constexpr Signature kSignOff{indication::Lamp::Red, 3, kSignOffPulseMs, kSignOffGapMs,
+                                    kSignOffGapMs};
 
 constexpr uint32_t length_ms(const Signature& signature) {
-    return static_cast<uint32_t>(signature.pulses) * signature.pulse_ms +
+    return signature.lead_ms + static_cast<uint32_t>(signature.pulses) * signature.pulse_ms +
            static_cast<uint32_t>(signature.pulses - 1) * signature.gap_ms;
 }
 

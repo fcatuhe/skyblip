@@ -33,8 +33,8 @@ struct AlarmSettings {
 
 // The lamp lives here rather than in PowerService, whose state most of it reads,
 // because the highest-priority row in the table is the alarm level and because a
-// device going down has to be silenced and darkened in the same breath - park()
-// is already called at exactly the right point in the shutdown sequence.
+// device going down has to be silenced, signed off and then darkened by the one
+// owner of the lamp, the buzzer and the motor.
 class AlarmService : public runtime::Service {
    public:
     AlarmService(runtime::Context& context, Feature declared, AlarmSettings settings)
@@ -54,8 +54,10 @@ class AlarmService : public runtime::Service {
     // INFO: fc 13nov26 the loop has stopped, so the product advances the signature and parks once
     // it ends
     void sign_off(uint32_t now_ms);
+    // INFO: fc 13nov26 a sign off starts on the next pass, as the shutdown's own pass may block on
+    // flash
     void advance_signature(uint32_t now_ms);
-    bool signing() const { return signature_.playing(); }
+    bool signing() const { return sign_off_pending_ || signature_.playing(); }
 
     void dismiss() { tracker_.dismiss(); }
 
@@ -124,6 +126,7 @@ class AlarmService : public runtime::Service {
     indication::Lamp shown_{indication::Lamp::None};
     bool motor_on_{false};
     bool sign_on_pending_{false};
+    bool sign_off_pending_{false};
     bool dirty_{false};
     bool running_{true};
     bool lamp_shows_link_{false};

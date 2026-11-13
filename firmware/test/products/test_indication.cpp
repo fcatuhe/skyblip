@@ -214,12 +214,13 @@ TEST_CASE(
     // until the rails drop - and these LEDs are active-low, so "off" is a pin
     // driven high into a rail that is about to collapse.
     rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-    rig.run(now_ms, now_ms + 100);
+    const uint32_t first_pulse_ms = now_ms + indication::kSignOff.lead_ms + 100;
+    rig.run(now_ms, first_pulse_ms);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
     CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
 
     const uint32_t signed_off_ms = now_ms + indication::length_ms(indication::kSignOff) + 100;
-    rig.run(now_ms + 100, signed_off_ms);
+    rig.run(first_pulse_ms + 50, signed_off_ms);
     CHECK_FALSE(lamp_of(rig).lit());
     CHECK(lamp_of(rig).parked());
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Off);
@@ -247,18 +248,43 @@ TEST_CASE("product: a press from off signs on with one green pulse, felt as it i
 }
 
 // The signs say the unit is on or off, which is not an alarm the pilot switched off.
-TEST_CASE("product: alarms switched off still sign off in the hand, and sound nothing") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_enabled = false;
-    uint32_t now_ms = 0;
-    settle(rig, now_ms);
+TEST_CASE("product: alarms or volume switched off still sign off in the hand, and sound nothing") {
+    for (const bool volume_off : {false, true}) {
+        CAPTURE(volume_off);
+        Rig rig;
+        REQUIRE(rig.setup() == Status::Ok);
+        if (volume_off)
+            rig.settings().alarm_volume = go::AlarmVolume::Off;
+        else
+            rig.settings().alarm_enabled = false;
+        uint32_t now_ms = 0;
+        settle(rig, now_ms);
 
-    rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
-    rig.run(now_ms, now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
-    CHECK(rig.platform.annunciator().motor_starts() == 3);
-    CHECK(rig.platform.annunciator().tone_commands() == 0);
-    CHECK(lamp_of(rig).parked());
+        rig.product.shutdown().request(power::ShutdownReason::LongPress, now_ms);
+        rig.run(now_ms, now_ms + indication::length_ms(indication::kSignOff) + 100, 10);
+        CHECK(rig.platform.annunciator().motor_starts() == 3);
+        CHECK(rig.platform.annunciator().tone_commands() == 0);
+        CHECK(lamp_of(rig).parked());
+    }
+}
+
+TEST_CASE(
+    "product: a restart or a first power-on signs nothing, and an install goes down unsigned") {
+    for (const power::ResetCause causes :
+         {power::ResetCause::PowerOn, power::ResetCause::Software,
+          power::ResetCause::Watchdog | power::ResetCause::LowPowerWake}) {
+        Rig rig;
+        rig.platform.system_power().causes = causes;
+        REQUIRE(rig.setup() == Status::Ok);
+        uint32_t now_ms = 0;
+        settle(rig, now_ms, 1000);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
+
+        rig.product.shutdown().request(power::ShutdownReason::Install, now_ms);
+        rig.run(now_ms, now_ms + 200, 10);
+        CHECK(rig.platform.annunciator().motor_starts() == 0);
+        CHECK(lamp_of(rig).parked());
+    }
 }
 
 TEST_CASE("product: a unit with no status LED flies and lights nothing") {
