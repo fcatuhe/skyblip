@@ -1,0 +1,3 @@
+# ETSI notice forbids redistribution: fetch with scripts/fetch_etsi.py
+etsi_*.pdf
+etsi_*.md
