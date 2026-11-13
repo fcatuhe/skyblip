@@ -1,0 +1,40 @@
+<% name = device_name(@slug) %>
+<% content_for :title, "#{t("briefing.terminal.title")} · #{name}" %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: @slug) %>
+<%= tag.div class: "unit unit--terminal", data: {
+      controller: "unit terminal",
+      unit_slug_value: @slug,
+      unit_home_value: briefing_root_path,
+      unit_activation_value: briefing_activation_path,
+      terminal_slug_value: @slug,
+      terminal_opened_value: t("briefing.terminal.opened"),
+      terminal_closed_value: t("briefing.terminal.closed"),
+      terminal_failed_value: t("briefing.terminal.failed"),
+      terminal_resume_value: t("briefing.terminal.resume")
+    } do %>
+  <%= link_to t("briefing.firmware.back", name:), briefing_device_path(slug: @slug), class: "unit-back" %>
+  <%= render "briefing/devices/header", name: t("briefing.terminal.title") %>
+
+  <div class="unit-offline" data-unit-target="offline">
+    <div class="app-actions">
+      <button type="button" class="button-app" data-unit-target="connect" data-action="unit#link" data-label="<%= t("briefing.unit.connect") %>"><%= t("briefing.unit.connect") %></button>
+    </div>
+  </div>
+
+  <section class="terminal" data-terminal-target="panel" hidden>
+    <p class="field-hint"><%= t("briefing.terminal.hint") %></p>
+    <div class="terminal-bar">
+      <fieldset class="terminal-endpoints">
+        <legend class="visually-hidden"><%= t("briefing.terminal.endpoints") %></legend>
+        <% %w[nmea config log smp].each do |endpoint| %>
+          <label><input type="checkbox" value="<%= endpoint %>" checked> <%= endpoint %></label>
+        <% end %>
+      </fieldset>
+      <span class="terminal-actions">
+        <button type="button" class="button-app button-app--small button-app--quiet" data-terminal-target="pause" data-action="terminal#pause" data-label="<%= t("briefing.terminal.pause") %>" aria-pressed="false"><%= t("briefing.terminal.pause") %></button>
+        <button type="button" class="button-app button-app--small button-app--quiet" data-action="terminal#clear"><%= t("briefing.terminal.clear") %></button>
+      </span>
+    </div>
+    <div class="terminal-tape" data-terminal-target="tape" role="log" aria-live="off" aria-label="<%= t("briefing.terminal.tape") %>" tabindex="0"></div>
+  </section>
+<% end %>

@@ -134,6 +134,7 @@ export async function permittedDevices() {
 }
 
 const links = new Map();
+const taps = new Map();
 
 // INFO: fc 11nov26 one GATT link per device, shared by every client of it, so a Go and a Bravo stay connected side by side
 function linkOf(device) {
@@ -152,25 +153,62 @@ function linkOf(device) {
 
 async function openLink(device, forget) {
   const server = await device.gatt.connect();
-  const link = { server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, log: null, smp: null };
+  const link = { device, closed: false, server, clients: new Set(), exclusive: gattQueue(), stream: null, config: null, log: null, smp: null };
   device.addEventListener('gattserverdisconnected', () => {
     if (!forget()) return;
     for (const client of link.clients) client.onClose?.(device.name);
     link.clients.clear();
+    overheard(link, { event: 'close' });
+    link.closed = true;
   }, { once: true });
+  overheard(link, { event: 'open' });
   return link;
 }
 
 const CALLBACKS = { stream: 'onLine', config: 'onReply', log: 'onLog', smp: 'onSmp' };
+const HEARD = {
+  stream: line => ({ line }),
+  config: (frame, bytes, error) => ({ frame, bytes, error }),
+  log: (frame, bytes, error) => ({ frame, bytes, error }),
+  smp: bytes => ({ bytes }),
+};
 
 function open(link, endpoint, opener) {
   link[endpoint] ??= opener(link.server, (...args) => {
     for (const client of link.clients) client[CALLBACKS[endpoint]]?.(...args);
+    overheard(link, { endpoint, direction: 'in', ...HEARD[endpoint](...args) });
   }).catch(error => {
     link[endpoint] = null;
     throw error;
   });
   return link[endpoint];
+}
+
+// INFO: fc 14nov26 a characteristic can keep the listener of a link that closed, which must not reach a tap twice
+function overheard(link, entry) {
+  if (link.closed) return;
+  for (const listener of taps.get(link.device) ?? []) listener(entry);
+}
+
+// INFO: fc 14nov26 a tap opens the two endpoints no page client asks for, so it hears every endpoint the device serves
+async function openTapped(link) {
+  try {
+    await open(link, 'stream', openStream);
+    await open(link, 'log', openLog);
+  } catch (error) {
+    overheard(link, { event: 'failed', error });
+  }
+}
+
+// INFO: fc 14nov26 a tap outlives the links of its device, so it hears a reconnect from its first write
+export function tap(device, listener) {
+  if (!taps.has(device)) taps.set(device, new Set());
+  taps.get(device).add(listener);
+  links.get(device)?.then(openTapped, error => listener({ event: 'failed', error }));
+  return () => {
+    taps.get(device)?.delete(listener);
+    if (taps.get(device)?.size === 0) taps.delete(device);
+  };
 }
 
 export async function connect({ device = null, onLine, onReply, onLog, onSmp, onClose }) {
@@ -193,7 +231,9 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
     link.clients.delete(client);
     throw new Error('No serial or config service on this device.');
   }
+  if (taps.has(device)) await openTapped(link);
   const { exclusive } = link;
+  const sent = (endpoint, bytes) => overheard(link, { endpoint, direction: 'out', bytes });
 
   return {
     device,
@@ -206,7 +246,9 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
 
     async sendLine(text) {
       if (!stream) throw new Error('This device has no serial endpoint.');
-      for (const chunk of chunks(encoder.encode(nmeaSentence(text) + '\r\n'))) {
+      const bytes = encoder.encode(nmeaSentence(text) + '\r\n');
+      sent('stream', bytes);
+      for (const chunk of chunks(bytes)) {
         await exclusive(() => stream.write.writeValueWithoutResponse(chunk));
       }
     },
@@ -214,17 +256,24 @@ export async function connect({ device = null, onLine, onReply, onLog, onSmp, on
     async sendConfig(fields) {
       if (!config) throw new Error('This device has no config endpoint.');
       const bytes = encodeFrame(fields);
-      await exclusive(() => config.writeValueWithResponse(bytes));
+      await exclusive(() => {
+        sent('config', bytes);
+        return config.writeValueWithResponse(bytes);
+      });
     },
 
     async sendLog(fields) {
       if (!log) throw new Error('This device has no log endpoint.');
       const bytes = encodeFrame(fields);
-      await exclusive(() => log.writeValueWithResponse(bytes));
+      await exclusive(() => {
+        sent('log', bytes);
+        return log.writeValueWithResponse(bytes);
+      });
     },
 
     async sendSmp(packet, writeBytes = GATT_WRITE_BYTES) {
       if (!smp) throw new Error('This device has no SMP service.');
+      sent('smp', packet);
       for (const chunk of chunks(packet, writeBytes)) {
         await exclusive(() => smp.writeValueWithoutResponse(chunk));
       }

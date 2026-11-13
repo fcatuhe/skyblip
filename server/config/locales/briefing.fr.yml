@@ -83,6 +83,18 @@ fr:
       recover: "Redémarrer en clé USB"
       report_hint: "Envoyez-nous cette ligne, par message ou par mail, avec ce que vous avez fait. Elle nous dit pourquoi la mise à jour n\u2019a pas pris."
       report_copy: "Copier le rapport"
+    terminal:
+      title: "Terminal"
+      row: "Chaque trame Bluetooth"
+      hint: "Chaque trame de chaque point d\u2019accès Bluetooth de cet appareil, à son passage. > part de ce navigateur, < vient de l\u2019appareil."
+      endpoints: "Points d\u2019accès"
+      pause: "Pause"
+      resume: "Reprendre (%{count} en attente)"
+      clear: "Effacer"
+      tape: "Trames Bluetooth"
+      opened: "liaison ouverte"
+      closed: "liaison fermée"
+      failed: "un point d\u2019accès ne s\u2019est pas ouvert"
     activation:
       title: "Activer un Go neuf"
       hint: "Son écran affiche ACTIVATE et un code comme 3F2A. Choisissez ce code dans la liste."

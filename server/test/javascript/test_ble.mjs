@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { GATT_WRITE_BYTES, chunks, connect, nmeaSentence, reassembleLines } from '#skyblip/ble';
+import { GATT_WRITE_BYTES, chunks, connect, nmeaSentence, reassembleLines, tap } from '#skyblip/ble';
 import { nmeaChecksum } from '#skyblip/nmea';
 import { FakeSkyblip } from './fake_skyblip.mjs';
 import { GROUP, ID, OP, packet } from '#skyblip/smp';
+import { encodeFrame } from '#skyblip/link';
 
 const notification = text => ({ target: { value: new TextEncoder().encode(text) } });
 
@@ -149,4 +150,39 @@ test('a client that releases a shared link leaves it up for the others, and the 
   assert.equal(fake.connected, true);
   app.release();
   assert.equal(fake.connected, false);
+});
+
+// The terminal listens beside the update client: it hears what that client writes, what the unit answers, and the next link too.
+test('a tap hears every client write and every notification, across a reconnect, until it lets go', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  const heard = [];
+  const untap = tap(device, ({ event, endpoint, direction, frame }) => heard.push(event ?? [endpoint, direction, frame?.command].filter(Boolean).join(' ')));
+  const updater = await connect({ device, onReply: () => {}, onSmp: () => {}, onClose: () => {} });
+  await updater.sendConfig({ command: 'status' });
+  await updater.sendSmp(packet({ op: OP.read, group: GROUP.os, id: ID.osParams, seq: 0, body: {} }));
+  await new Promise(resolve => setImmediate(resolve));
+  fake.drop();
+  const again = await connect({ device, onReply: () => {}, onClose: () => {} });
+  await again.sendConfig({ command: 'update' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(heard, ['open', 'config out', 'smp out', 'config in status', 'smp in', 'close', 'open', 'config out', 'config in update']);
+  untap();
+  await again.sendConfig({ command: 'status' });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(heard.length, 9);
+  fake.drop();
+});
+
+test('a tap opens the log endpoint no client asked for, on a link already up', async () => {
+  const fake = new FakeSkyblip();
+  const device = fake.device();
+  const updater = await connect({ device, onReply: () => {}, onClose: () => {} });
+  const heard = [];
+  tap(device, entry => heard.push(entry));
+  await new Promise(resolve => setImmediate(resolve));
+  await updater.sendConfig({ command: 'status' });
+  fake.log.notify(encodeFrame({ command: 'log', sessions: 0 }));
+  assert.deepEqual(heard.map(({ endpoint, direction }) => `${endpoint} ${direction}`), ['config out', 'log in']);
+  fake.drop();
 });
