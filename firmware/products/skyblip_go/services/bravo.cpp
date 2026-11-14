@@ -166,10 +166,12 @@ void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
         take_health(bytes, now_ms);
     } else if (command.value() == link::Command::Observation) {
         const Result<comms::PeerObservation> observation = comms::read_observation(bytes);
-        if (observation.ok())
+        if (observation.ok()) {
             fold(observation.value(), now_ms);
-        else
+        } else {
             refused_++;
+            log(BravoVerdict::Refused, nullptr, now_ms);
+        }
     }
 }
 

@@ -216,20 +216,7 @@ class Product {
         }
         if (const std::optional<comms::CaptureProfile> profile = config.capture_requested()) {
             config.clear_capture_request();
-            order_capture(*profile);
-        }
-    }
-
-    void order_capture(comms::CaptureProfile profile) {
-        switch (profile) {
-            case comms::CaptureProfile::Full: diagnostics_.arm(diagnostics::Profile::Full); return;
-            case comms::CaptureProfile::PowerRun:
-                diagnostics_.arm(diagnostics::Profile::PowerRun);
-                return;
-            case comms::CaptureProfile::FlightRun:
-                diagnostics_.arm(diagnostics::Profile::FlightRun);
-                return;
-            case comms::CaptureProfile::Stop: diagnostics_.disarm(); return;
+            common::order_capture(diagnostics_, *profile);
         }
     }
 

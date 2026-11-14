@@ -221,6 +221,13 @@ int TrafficTable::count() const {
     return count;
 }
 
+int TrafficTable::count_of(model::Source source) const {
+    int count = 0;
+    for (int i = 0; i < kMaxTargets; i++)
+        if (slots_[i].used && slots_[i].observation.source == source) count++;
+    return count;
+}
+
 void TrafficTable::clear() {
     for (auto& slot : slots_) release(slot);
 }

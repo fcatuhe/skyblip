@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_RADAR_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/comms/peer.h"
 #include "core/gnss/acquisition.h"
@@ -54,6 +55,8 @@ struct RadarSnapshot {
     uint8_t battery_percent{0};
     bool battery_low{false};
     comms::BravoState bravo{comms::BravoState::Unpaired};
+    bool bravo_battery_low{false};
+    std::optional<uint8_t> bravo_battery_percent{};
 };
 
 const char* bravo_loss_word(comms::BravoState state);

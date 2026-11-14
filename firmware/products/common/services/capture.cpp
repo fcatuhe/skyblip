@@ -4,6 +4,30 @@
 
 namespace skyblip::common {
 
+namespace {
+
+comms::CaptureProfile profile_of(diagnostics::Profile profile) {
+    switch (profile) {
+        case diagnostics::Profile::PowerRun: return comms::CaptureProfile::PowerRun;
+        case diagnostics::Profile::FlightRun: return comms::CaptureProfile::FlightRun;
+        case diagnostics::Profile::Full: break;
+    }
+    return comms::CaptureProfile::Full;
+}
+
+}  // namespace
+
+void order_capture(diagnostics::Recorder& recorder, comms::CaptureProfile profile) {
+    switch (profile) {
+        case comms::CaptureProfile::Full: recorder.arm(diagnostics::Profile::Full); return;
+        case comms::CaptureProfile::PowerRun: recorder.arm(diagnostics::Profile::PowerRun); return;
+        case comms::CaptureProfile::FlightRun:
+            recorder.arm(diagnostics::Profile::FlightRun);
+            return;
+        case comms::CaptureProfile::Stop: recorder.disarm(); return;
+    }
+}
+
 Status CaptureService::setup() {
     store_.open();
     return Status::Ok;
@@ -192,6 +216,22 @@ uint32_t CaptureService::growth_slots() const {
 
 uint32_t CaptureService::keeps_s(diagnostics::Profile profile) const {
     return span_s(growth_slots(), diagnostics::Recorder::records_per_hour(profile));
+}
+
+void CaptureService::describe(comms::Diagnostics& out) const {
+    const bus::CaptureState& state = context_.state.capture;
+    out.capture_available = state.available;
+    out.capture_armed = state.armed;
+    out.capture_profile = profile_of(context_.diagnostics.profile());
+    out.capture_session = state.session_id;
+    out.capture_records = state.records;
+    out.capture_dropped = state.dropped;
+    out.capture_sectors = state.sectors;
+    out.capture_keeps_s = state.keeps_s;
+    out.capture_takes_sectors = state.growth_sectors;
+    out.capture_evicts_flights = state.evicted_flights;
+    out.capture_keeps_full_s = keeps_s(diagnostics::Profile::Full);
+    out.capture_keeps_power_run_s = keeps_s(diagnostics::Profile::PowerRun);
 }
 
 uint32_t CaptureService::span_s(uint32_t slots, uint32_t records_per_hour) {

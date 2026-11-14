@@ -157,6 +157,8 @@
   }
   .unit-browser-list .is-self { color: var(--ink-muted); }
   .unit-capture-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-inline-s); align-items: center; }
+  .unit-capture-state { margin: 0; font-size: var(--text-s); }
+  .unit-capture-send { display: grid; gap: var(--space-s); }
 
   .unit-fields {
     display: grid;

@@ -186,7 +186,7 @@ updated_on: "2026-11-13"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Qui est là, <span class="highlight">du plus proche au plus loin</span>.</h3>
+      <h3 id="nearby">Qui est là, <span class="highlight">à votre hauteur d&rsquo;abord</span>.</h3>
       <p>
         Le radar dit où regarder. Cette page dit qui est là. Une ligne par
         aéronef dont la position est connue&nbsp;: son indicatif s&rsquo;il
@@ -197,6 +197,12 @@ updated_on: "2026-11-13"
         et le nombre de tous les aéronefs reçus.
       </p>
       <p>
+        Un aéronef qui déclenche une alarme vient en premier, puis ceux à moins de
+        300&nbsp;m (environ 1&nbsp;000&nbsp;ft) de votre altitude, puis les autres, du plus
+        proche au plus loin dans chaque groupe. Un avion de ligne à la verticale est
+        proche au sol, mais il passe après un planeur à votre hauteur.
+      </p>
+      <p>
         La lettre en tête de ligne indique d&rsquo;où vient l&rsquo;information.
         <span class="mono">A</span> pour un message ADS-L reçu directement,
         <span class="mono">F</span> pour un trafic compatible FLARM,
@@ -205,7 +211,7 @@ updated_on: "2026-11-13"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "La page nearby : votre indicatif S-BLIP avec votre adresse radio à côté et le nombre de tous les aéronefs reçus sur la ligne du haut, puis cinq aéronefs listés du plus proche au plus loin, chacun avec une lettre indiquant la source de l'information, son indicatif ou son adresse radio, sa distance horizontale et son altitude par rapport à vous" %>
+      <%= screen_image_tag "nearby.png", alt: "La page nearby : votre indicatif S-BLIP avec votre adresse radio à côté et le nombre de tous les aéronefs reçus sur la ligne du haut, puis cinq aéronefs listés à votre hauteur d'abord, chacun avec une lettre indiquant la source de l'information, son indicatif ou son adresse radio, sa distance horizontale et son altitude par rapport à vous" %>
       <figcaption>Nearby</figcaption>
     </figure>
   </div>

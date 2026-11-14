@@ -32,6 +32,7 @@ const std::map<std::string, int64_t> kNarrowerThanTheirType = {
     {"health.protocol_version", 1},
     {"health.own_transponder", 0xFFFFFF},
     {"health.own_transponder_category", 17},
+    {"health.battery_percent", 100},
     {"peer_claim.into_ms", 999},
     {"peer_claim.latitude_1e7", -900000000},
     {"peer_claim.longitude_1e7", -1800000000},
@@ -39,7 +40,9 @@ const std::map<std::string, int64_t> kNarrowerThanTheirType = {
 };
 
 const std::map<std::string, std::string> kWidestText = {
-    {"observation.callsign", "ABCD1234"}, {"health.own_transponder_callsign", "ABCD1234"}};
+    {"observation.callsign", "ABCD1234"},
+    {"health.own_transponder_callsign", "ABCD1234"},
+    {"health.firmware", "9.99.99+99999"}};
 
 const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
     {"observation",
@@ -47,8 +50,8 @@ const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
      "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff10"
      "02113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"},
     {"health",
-     "ad00181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334"
-     "0f11"},
+     "b200181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334"
+     "0f11106d392e39392e39392b393939393911186412f51304141affffffff"},
     {"peer_claim",
      "ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
      "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf512f5"},

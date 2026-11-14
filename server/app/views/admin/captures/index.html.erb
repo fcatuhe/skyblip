@@ -1,0 +1,48 @@
+<% content_for :title, "Captures" %>
+<header class="admin-header">
+  <h1>Captures</h1>
+</header>
+
+<p>
+  Pilots send these from a device page. A full capture is kept
+  <%= distance_of_time_in_words(Rails.configuration.x.tracker_lifetime) %>, because it holds positions
+  and the aircraft heard. A power run or a flight run is kept
+  <%= distance_of_time_in_words(Rails.configuration.x.retention) %>.
+</p>
+
+<% if @captures.empty? %>
+  <p>No capture has been sent.</p>
+<% else %>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Device</th>
+          <th>Profile</th>
+          <th>Session</th>
+          <th>Records</th>
+          <th>Size</th>
+          <th>Firmware</th>
+          <th>Support code</th>
+          <th>Received</th>
+          <th>Kept until</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @captures.each do |capture| %>
+          <tr>
+            <th><%= link_to capture.device, admin_capture_path(capture) %></th>
+            <td><%= capture.profile %></td>
+            <td class="mono"><%= capture.session %></td>
+            <td><%= capture.records %></td>
+            <td><%= number_to_human_size(capture.bytes) %></td>
+            <td class="mono"><%= capture.firmware %></td>
+            <td class="mono"><%= capture.browser %></td>
+            <td><%= event_time(capture.created_at) %></td>
+            <td><%= event_time(capture.kept_until) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

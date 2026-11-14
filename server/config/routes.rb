@@ -41,6 +41,7 @@ Rails.application.routes.draw do
     resources :agents, only: %i[index destroy]
     resources :users
     resources :units, only: %i[index show]
+    resources :captures, only: %i[index show]
     resources :unit_keys, only: [] do
       scope module: :unit_keys do
         resource :promotion, only: :create
@@ -82,6 +83,7 @@ Rails.application.routes.draw do
     resources :devices, only: :show, param: :slug, constraints: { slug: /(go|bravo)-[0-9a-f]+/ } do
       resource :firmware, only: :show, module: :devices
       resource :terminal, only: :show, module: :devices
+      resources :captures, only: :create, module: :devices
     end
     resource :activation, only: :show, path: "activate"
     resource :preferences, only: %i[show update]

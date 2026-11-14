@@ -1,0 +1,8 @@
+<section class="unit-capture" data-unit-target="report" aria-labelledby="unit-report-title" hidden>
+  <h2 class="unit-label" id="unit-report-title"><%= t("briefing.report.title") %></h2>
+  <p class="field-hint"><%= t("briefing.report.hint") %></p>
+  <p class="unit-message" role="status" data-unit-target="reportMessage" hidden></p>
+  <div class="unit-capture-actions">
+    <button type="button" class="button-app button-app--text" data-unit-target="reportSend" data-action="unit#sendReport"><%= t("briefing.report.send") %></button>
+  </div>
+</section>

@@ -88,6 +88,12 @@ device.installed:
   keys: [from, to, lasted_ms]
   says: A device came back from an install on the version the app sent, with the version before and how long the whole install took from the upload's start.
   answers: How many installs succeed, how long they take, and the version pilots move from.
+device.diagnosed:
+  group: Devices
+  from: browser
+  keys: [dump]
+  says: A pilot sent a report from a device page, the device's diagnostics dump by group, each a counter or a state, with no position and no address.
+  answers: What the device's radio, receiver, cell and capture said when its pilot asked for help, without asking the pilot to copy anything.
 device.forgotten:
   group: Devices
   from: browser
@@ -133,6 +139,14 @@ unit_key.revoked:
   group: Units
   says: An admin, `by_id`, revoked the active key of a unit.
   answers: How often a unit's key is withdrawn by hand.
+capture.received:
+  group: Devices
+  says: A pilot sent a diagnostics capture from a device page, `capture_id`, with its profile, session, records, gzipped bytes and the firmware its boot record names.
+  answers: How many pilots help by sending captures, of which profile and from which firmware, and which capture to read after a pilot writes in.
+capture.downloaded:
+  group: Admins
+  says: An admin, `by_id`, downloaded a capture, `capture_id`.
+  answers: Who read the positions a full capture holds, and when.
 user.signed_in:
   group: Admins
   says: A user signed in.

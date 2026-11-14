@@ -72,7 +72,8 @@ TEST_CASE("peer frames: a health frame says whether Bravo holds an own ICAO") {
     const std::string frame = complete_registry_frame(
         "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
         "\"utc_valid\":true,\"own_icao_set\":true,\"alarm_granted\":false,"
-        "\"export_reference\":\"own\",\"paired\":true}");
+        "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+        "\"power_level\":\"normal\"}");
     const ConstByteSpan bytes(reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
     REQUIRE(comms::peer_command(bytes).value() == link::Command::Health);
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
@@ -101,7 +102,8 @@ TEST_CASE("peer frames: a health frame of an unknown or missing protocol version
     const std::string newer = complete_registry_frame(
         "{\"command\":\"health\",\"protocol_version\":99,\"boot_epoch\":9,\"listening\":true,"
         "\"utc_valid\":true,\"own_icao_set\":true,\"alarm_granted\":false,"
-        "\"export_reference\":\"own\",\"paired\":true}");
+        "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+        "\"power_level\":\"normal\"}");
     CHECK(comms::read_health(
               ConstByteSpan(reinterpret_cast<const uint8_t*>(newer.data()), newer.size()))
               .status() == Status::Unsupported);
@@ -196,11 +198,13 @@ TEST_CASE("peer frames: a claim with half a field or a value out of range is ref
               .status() == Status::OutOfRange);
     CHECK(comms::read_peer_claim(bytes_of(claim_frame("\"own_icao\":16777216,"))).status() ==
           Status::OutOfRange);
-    CHECK(comms::read_peer_claim(bytes_of(complete_registry_frame(
-                                     "{\"command\":\"health\",\"protocol_version\":1,"
-                                     "\"boot_epoch\":9,\"listening\":true,\"utc_valid\":true,"
-                                     "\"own_icao_set\":true,\"alarm_granted\":false,"
-                                     "\"export_reference\":\"own\",\"paired\":true}")))
+    CHECK(comms::read_peer_claim(
+              bytes_of(complete_registry_frame(
+                  "{\"command\":\"health\",\"protocol_version\":1,"
+                  "\"boot_epoch\":9,\"listening\":true,\"utc_valid\":true,"
+                  "\"own_icao_set\":true,\"alarm_granted\":false,"
+                  "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+                  "\"power_level\":\"normal\"}")))
               .status() == Status::Invalid);
 
     uint8_t frame[64];
@@ -227,7 +231,8 @@ TEST_CASE("peer frames: Bravo's health carries its state, and no last_sequence b
         link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes))) ==
         "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
         "\"utc_valid\":false,\"own_icao_set\":false,\"alarm_granted\":false,"
-        "\"export_reference\":\"go\",\"paired\":false}");
+        "\"export_reference\":\"go\",\"paired\":false,\"charging\":false,"
+        "\"power_level\":\"unknown\"}");
 
     health.last_sequence_valid = true;
     health.last_sequence = 41;
@@ -280,7 +285,8 @@ TEST_CASE("peer frames: a transponder's callsign or category without its address
         const std::string frame = complete_registry_frame(
             "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
             "\"utc_valid\":true,\"own_icao_set\":false,\"alarm_granted\":false,"
-            "\"export_reference\":\"own\",\"paired\":true," +
+            "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+            "\"power_level\":\"normal\"," +
             fields + "}");
         return comms::read_health(bytes_of(frame)).status();
     };
@@ -377,4 +383,62 @@ TEST_CASE("peer frames: a key a newer Bravo adds is skipped, not a reason to ref
         comms::read_observation(ConstByteSpan(frame, static_cast<size_t>(bytes)));
     REQUIRE(read.ok());
     CHECK(read.value().observation.address == 0x4459A9);
+}
+
+// Bravo has no glass, so the Go is where a pilot reads what it runs, holds and hears.
+TEST_CASE("peer frames: Bravo's health carries its firmware, its cell and its receiver's rate") {
+    comms::PeerHealth health{};
+    health.listening = true;
+    std::strcpy(health.firmware, "0.4.1+1702");
+    health.battery_percent = 37;
+    health.power_level = power::PowerLevel::Low;
+    health.frame_rate_hz = 412;
+    uint8_t frame[comms::kPeerPayloadFloorBytes];
+    const int bytes = comms::write_health(health, frame, sizeof(frame));
+    const Result<comms::PeerHealth> read =
+        comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    CHECK(std::string(read.value().firmware) == "0.4.1+1702");
+    CHECK(read.value().battery_percent == std::optional<uint8_t>(37));
+    CHECK_FALSE(read.value().charging);
+    CHECK(read.value().power_level == power::PowerLevel::Low);
+    CHECK(read.value().frame_rate_hz == std::optional<uint32_t>(412));
+}
+
+TEST_CASE("peer frames: a Bravo from before its status keys reads as no reading, not a refusal") {
+    REQUIRE(health_without(0) == Status::Ok);
+    uint8_t frame[64];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Health);
+    writer.add_unsigned(link::health_key::kProtocolVersion, 1);
+    writer.add_unsigned(link::health_key::kBootEpoch, 9);
+    writer.add_boolean(link::health_key::kListening, true);
+    writer.add_boolean(link::health_key::kUtcValid, true);
+    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAlarmGranted, false);
+    writer.add_unsigned(link::health_key::kExportReference, 2);
+    writer.add_boolean(link::health_key::kPaired, true);
+    const int bytes = writer.finish();
+    const Result<comms::PeerHealth> read =
+        comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    CHECK(read.value().firmware[0] == 0);
+    CHECK_FALSE(read.value().battery_percent.has_value());
+    CHECK(read.value().power_level == power::PowerLevel::Unknown);
+    CHECK_FALSE(read.value().frame_rate_hz.has_value());
+}
+
+TEST_CASE("peer frames: a health frame with a charge past 100 or an unknown level is refused") {
+    const auto health_with = [](const std::string& fields) {
+        const std::string frame = complete_registry_frame(
+            "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
+            "\"utc_valid\":true,\"own_icao_set\":false,\"alarm_granted\":false,"
+            "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+            "\"power_level\":\"normal\"," +
+            fields + "}");
+        return comms::read_health(bytes_of(frame)).status();
+    };
+    CHECK(health_with("\"battery_percent\":100") == Status::Ok);
+    CHECK(health_with("\"battery_percent\":101") == Status::Invalid);
+    CHECK(health_with("\"firmware\":\"9.99.99+999999\"") == Status::Invalid);
 }

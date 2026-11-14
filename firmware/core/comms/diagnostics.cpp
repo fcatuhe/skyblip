@@ -73,6 +73,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
     const bool gnss = only == nullptr || *only == Group::Gnss;
     const bool power = only == nullptr || *only == Group::Power;
     const bool adsb = only == nullptr || *only == Group::Adsb;
+    const bool capture = only == nullptr || *only == Group::Capture;
 
     if (system) {
         add(Group::System, "uptime_s", link::diagnostics_key::kUptimeS, Kind::Unsigned,
@@ -146,6 +147,12 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.tracked);
         add(Group::Traffic, "alarm", link::diagnostics_key::kAlarm, Kind::Unsigned,
             diagnostics.alarm);
+        add(Group::Traffic, "uplink_frames", link::diagnostics_key::kUplinkFrames, Kind::Unsigned,
+            diagnostics.uplink_frames);
+        add(Group::Traffic, "uplink_bad", link::diagnostics_key::kUplinkBad, Kind::Unsigned,
+            diagnostics.uplink_bad);
+        add(Group::Traffic, "uplink_targets", link::diagnostics_key::kUplinkTargets, Kind::Unsigned,
+            diagnostics.uplink_targets);
     }
 
     if (gnss) {
@@ -238,6 +245,41 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Adsb, "aircraft", link::diagnostics_key::kAircraft, Kind::Unsigned,
             diagnostics.adsb_aircraft);
     }
+
+    if (capture && diagnostics.capture_available) add_capture(diagnostics);
+}
+
+void DiagnosticsReport::add_capture(const Diagnostics& diagnostics) {
+    namespace key = link::diagnostics_key;
+    add(Group::Capture, "armed", key::kArmed, Kind::Boolean, diagnostics.capture_armed);
+    if (diagnostics.capture_armed)
+        add(Group::Capture, "profile", key::kProfile, Kind::Code,
+            static_cast<int64_t>(diagnostics.capture_profile),
+            capture_profile_word(diagnostics.capture_profile));
+    add(Group::Capture, "session", key::kSession, Kind::Unsigned, diagnostics.capture_session);
+    add(Group::Capture, "records", key::kRecords, Kind::Unsigned, diagnostics.capture_records);
+    add(Group::Capture, "records_dropped", key::kRecordsDropped, Kind::Unsigned,
+        diagnostics.capture_dropped);
+    add(Group::Capture, "sectors", key::kSectors, Kind::Unsigned, diagnostics.capture_sectors);
+    add(Group::Capture, "keeps_s", key::kKeepsS, Kind::Unsigned, diagnostics.capture_keeps_s);
+    add(Group::Capture, "takes_sectors", key::kTakesSectors, Kind::Unsigned,
+        diagnostics.capture_takes_sectors);
+    add(Group::Capture, "evicts_flights", key::kEvictsFlights, Kind::Unsigned,
+        diagnostics.capture_evicts_flights);
+    add(Group::Capture, "keeps_full_s", key::kKeepsFullS, Kind::Unsigned,
+        diagnostics.capture_keeps_full_s);
+    add(Group::Capture, "keeps_power_run_s", key::kKeepsPowerRunS, Kind::Unsigned,
+        diagnostics.capture_keeps_power_run_s);
+}
+
+const char* capture_profile_word(CaptureProfile profile) {
+    switch (profile) {
+        case CaptureProfile::Full: return "FULL";
+        case CaptureProfile::PowerRun: return "POWER RUN";
+        case CaptureProfile::FlightRun: return "FLIGHT RUN";
+        case CaptureProfile::Stop: break;
+    }
+    return "STOP";
 }
 
 void DiagnosticsReport::add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
@@ -255,6 +297,7 @@ const char* DiagnosticsReport::group_name(Group group) {
         case Group::Gnss: return "gnss";
         case Group::Power: return "power";
         case Group::Adsb: return "adsb";
+        case Group::Capture: return "capture";
     }
     return "?";
 }

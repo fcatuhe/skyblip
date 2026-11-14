@@ -89,6 +89,6 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
 
     get admin_insights_path
 
-    assert_equal %w[Analytics Insights Errors Events Users Units Agents Jobs], css_select(".admin-nav li a").map { it.text.strip }
+    assert_equal %w[Analytics Insights Errors Events Users Units Captures Agents Jobs], css_select(".admin-nav li a").map { it.text.strip }
   end
 end
