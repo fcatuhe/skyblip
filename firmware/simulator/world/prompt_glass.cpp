@@ -1,5 +1,6 @@
 #include "simulator/world/prompt_glass.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include "core/comms/config.h"
@@ -36,6 +37,33 @@ comms::Pending pending_named(const char* name) {
 }
 
 constexpr int kFrameBytes = 512;
+
+struct NamedProfile {
+    const char* name;
+    comms::CaptureProfile profile;
+};
+
+constexpr NamedProfile kProfiles[] = {{"full", comms::CaptureProfile::Full},
+                                      {"power_run", comms::CaptureProfile::PowerRun},
+                                      {"flight_run", comms::CaptureProfile::FlightRun},
+                                      {"stop", comms::CaptureProfile::Stop}};
+
+// INFO: fc 15nov26 the page sends the profile it asked for and the flights the dump said it erases
+bool capture_detail(const char* argument, char* out) {
+    const char* colon = std::strchr(argument, ':');
+    if (colon == nullptr) return false;
+    const size_t named = static_cast<size_t>(colon - argument);
+    for (const NamedProfile& each : kProfiles) {
+        if (std::strlen(each.name) != named || std::strncmp(each.name, argument, named) != 0)
+            continue;
+        char* end = nullptr;
+        const unsigned long evicts = std::strtoul(colon + 1, &end, 10);
+        if (end == colon + 1 || *end != 0) return false;
+        out[comms::format_capture_detail(out, each.profile, static_cast<uint32_t>(evicts))] = 0;
+        return true;
+    }
+    return false;
+}
 
 bool applied(go::Settings& settings, const char* json) {
     uint8_t frame[kFrameBytes];
@@ -98,6 +126,8 @@ bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, con
         ports::ImageVersion version;
         if (!dfu::parse_version(argument, version)) return false;
         (void)comms::format_dfu_detail(detail, sizeof(detail), version);
+    } else if (pending == comms::Pending::Capture && argument[0] != 0) {
+        if (!capture_detail(argument, detail)) return false;
     } else {
         std::strncpy(detail, comms::pending_detail(pending), sizeof(detail) - 1);
     }

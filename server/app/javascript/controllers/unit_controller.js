@@ -302,7 +302,7 @@ export default class extends Controller {
     const { task, asked, settings } = unit.state
     this.glassOutlet.show({
       title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers,
-      argument: task === "set" ? JSON.stringify(asked) : "",
+      argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
     })
   }
