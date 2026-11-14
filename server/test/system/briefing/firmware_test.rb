@@ -126,6 +126,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
+      assert_selector ".firmware-changes", text: "0.1.0+1005"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
       assert_glass "RECOVERY"
