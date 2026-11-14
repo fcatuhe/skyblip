@@ -33,6 +33,14 @@ export default class extends Controller {
     this.session.leave()
   }
 
+  glassOutletConnected(glass) {
+    this.glass = glass
+  }
+
+  glassOutletDisconnected() {
+    this.glass = null
+  }
+
   get unit() {
     return this.fleet.unit(this.slugValue)
   }
@@ -82,7 +90,7 @@ export default class extends Controller {
     const shown = Boolean(state) && (unit.linked || WORKING.has(state.phase) || Boolean(unit.attempted && state.phase !== "offline"))
     this.panelTarget.hidden = !shown
     clearTimeout(this.recheck)
-    if (!shown) return this.glassOutlet?.hide()
+    if (!shown) return this.glass?.hide()
     if (state.phase === "rebooting") unit.restarted = true
     const idle = state.phase === "ready" && state.status?.flight !== "airborne"
     const asks = idle && !state.refusedOnDevice
@@ -199,7 +207,6 @@ export default class extends Controller {
     if (cause) lines.push(say(`notices.install_report.${cause}`, { running: state.running, attempted }))
     else if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
     if (image?.imu === "writing") lines.push(say("notices.imu_writing"))
-    if (image && !image.key) lines.push(say("notices.no_key"))
     if (image && !image.swapPowered) lines.push(say("notices.swap_unpowered"))
     if (status?.wentDarkFlat) lines.push(say("notices.went_dark_flat"))
     this.#report(state, cause)
@@ -216,13 +223,13 @@ export default class extends Controller {
   }
 
   #glass(unit, state) {
-    if (!this.hasGlassOutlet) return
+    if (!this.glass) return
     const { phase, task, file } = state
     const lamp = unit.product === "skyblip_bravo"
     const product = productWord(unit)
-    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
-    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
-    else if (task !== "set") this.glassOutlet.hide()
+    if (phase === "confirming" && task === "dfu") this.glass.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
+    else if (phase === "confirming" && task === "recovery") this.glass.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
+    else if (task !== "set") this.glass.hide()
   }
 
 }

@@ -310,16 +310,16 @@ test('an image signed by another key is refused before the window opens', async 
   assert.equal(device.commands.includes('dfu'), false);
 });
 
-test('a unit that names no product is a skyBlip Go, as every unit before the key was', async () => {
-  const { updater } = await connected({ product: null });
+test('a unit that names no product is a skyBlip Go', async () => {
+  const { updater } = await connected();
   assert.equal(updater.state.image.product, null);
   assert.equal(productOf(updater.state.image), 'skyblip_go');
   assert.equal(productOf(null), 'skyblip_go');
 });
 
-// A Go on firmware before the check takes any image its key signed, and its update frame does not fit this link.
+// A Go's update frame does not fit this link, so the page knows the unit only as a Go.
 test('a Bravo image is refused before the window opens to a unit whose update frame never arrived', async () => {
-  const { device, updater } = await connected({ product: null, mtu: 23 });
+  const { device, updater } = await connected({ mtu: 23 });
   assert.equal(updater.state.image, null);
   await updater.choose(signedImage(NEWER, IMAGE_BYTES, { product: 'skyblip_bravo' }), 'skyblip-bravo-0.2.0+15.signed.bin');
   await updater.install();
@@ -398,7 +398,7 @@ test('a device that does not name its key refuses a foreign one once it lands, i
 
 // A refusal word alone cannot tell a foreign key from a slot the unit could not read back.
 test('an upload refused once it landed asks the unit what it found in slot 1', async () => {
-  const { device, updater, until } = await connected({ installReport: {} });
+  const { device, updater, until } = await connected();
   device.push({ command: 'update', image: 'confirmed', swap_powered: true });
   await until(state => state.image.key === null);
   device.landedCheck = 'damaged';
@@ -412,7 +412,7 @@ test('an upload refused once it landed asks the unit what it found in slot 1', a
 });
 
 test('an upload refused for low power asks nothing more', async () => {
-  const { device, updater, until } = await chosen({ installReport: {} });
+  const { device, updater, until } = await chosen();
   device.refuseInstall = 'low_power';
   updater.install();
   await until(asking('dfu'));

@@ -126,6 +126,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
+      assert_selector ".firmware-changes", text: "0.1.0+1005"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
       assert_glass "RECOVERY"
@@ -137,6 +138,27 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       within(".unit") { click_button "Connect" }
       assert_selector ".unit-facts", text: "Connected"
       assert_equal 1, page.evaluate_script("fakeFleet.asked.length")
+    end
+  end
+
+  # Importmap loads each controller on its own, so in production the glass can register after the pages that ask through it
+  test "the glass asks for an install even when its controller registers last" do
+    in_range a_go
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      assert_button "Install 0.1.0+1005"
+      page.execute_script(<<~JS)
+        window.failures = []
+        addEventListener("stimulus:failed", ({ detail }) => failures.push(detail.error.message))
+        const identifiers = ["unit", "firmware", "glass"]
+        const definitions = identifiers.map(identifier => Stimulus.router.modulesByIdentifier.get(identifier).definition)
+        Stimulus.unload(identifiers)
+        Stimulus.load(definitions)
+      JS
+      click_button "Install 0.1.0+1005"
+      assert_selector ".glass-press", text: "Press the Go's button twice."
+      assert_empty page.evaluate_script("failures")
     end
   end
 

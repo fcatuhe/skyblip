@@ -203,7 +203,7 @@ fr:
       asking_server: "Demande à skyblip.eu"
       registering: "Réception de son numéro de série"
     notices:
-      not_skyblip: "Cet appareil n\u2019a pas le service de mise à jour skyBlip. Ce n\u2019est pas un skyBlip, ou son firmware est trop ancien pour les mises à jour en Bluetooth."
+      not_skyblip: "Cet appareil n\u2019a pas le service de mise à jour skyBlip. Ce n\u2019est pas un skyBlip."
       no_bluetooth: "Ce navigateur n\u2019est pas compatible avec Web Bluetooth. Utilisez Chrome ou Edge sur Android ou sur un ordinateur."
       link_lost: "La connexion a été coupée. Rapprochez l\u2019appareil et reconnectez-le. Un envoi en cours reprend où il s\u2019était arrêté."
       not_back: "L\u2019appareil n\u2019est pas revenu après son redémarrage. Reconnectez-le."
@@ -211,7 +211,7 @@ fr:
       no_params: "L\u2019appareil n\u2019a pas indiqué la quantité de données acceptée par envoi. Reconnectez-le."
       claimed: "Une autre application contrôle les réglages de cet appareil. Fermez-la puis rétablissez la connexion."
       small_mtu: "Ce téléphone ou ce navigateur utilise le plus petit paquet Bluetooth. Ce paquet est trop petit pour la réponse. Rétablissez la connexion. Si cela recommence, mettez à jour le navigateur ou utilisez un autre téléphone ou un ordinateur."
-      in_flight: "Votre aéronef est en vol. Les anciens firmwares attendent aussi une position GPS. Installez après atterrissage."
+      in_flight: "Votre aéronef est en vol. Installez après atterrissage."
       low_power: "La batterie est trop faible pour installer. Chargez-le d\u2019abord."
       expired: "Personne n\u2019a appuyé deux fois en trente secondes. Réessayez."
       cancelled: "Refusé sur l\u2019appareil. Reconnectez-le avant toute nouvelle demande."
@@ -250,7 +250,6 @@ fr:
       swap_unpowered: "La batterie est presque vide. Elle est trop faible pour installer le firmware. Chargez-le d\u2019abord."
       went_dark_flat: "Il s\u2019est éteint la dernière fois parce que sa batterie était vide. Chargez-le avant d\u2019installer."
       imu_writing: "Écriture du firmware de la centrale inertielle. Cela prend jusqu\u2019à une minute. Laissez-le allumé."
-      no_key: "Ce firmware est trop ancien pour nommer la clé à laquelle il se fie. Installez une fois un fichier à la main, le .full.signed.bin d\u2019une version."
       not_activated: "Pas encore activé\u00a0: il n\u2019émet ni ne reçoit."
       recovering: "L\u2019appareil est maintenant une clé USB nommée TECHOBOOT. Si son écran affiche PUSH THE BUTTON TO START IT, appuyez une fois. Déposez-y le fichier .uf2, ou appuyez sur RESET pour revenir à skyBlip. Rien n\u2019est émis entre-temps."
     set_notices:
@@ -275,7 +274,6 @@ fr:
       cancelled: "Refusé sur l\u2019appareil. Rien n\u2019a changé."
       refused_on_device: "Refusé sur l\u2019appareil. Rien n\u2019a changé."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y ou attendez trente secondes."
-      unknown_command: "Ce firmware est trop ancien pour une capture. Mettez-le à jour d\u2019abord."
     browsers_notices:
       invalid: "L\u2019appareil n\u2019a pas compris quel navigateur oublier. Rechargez la page et réessayez."
       unknown_browser: "L\u2019appareil ne fait plus confiance à ce navigateur."
@@ -300,7 +298,6 @@ fr:
       refused_on_device: "Refusé sur le Go. Reconnectez-le puis activez à nouveau."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y ou attendez trente secondes."
       claimed: "Une autre application contrôle les réglages de cet appareil. Fermez-la puis rétablissez la connexion."
-      unknown_command: "Ce firmware est antérieur à l\u2019activation et n\u2019en a pas besoin. Mettez-le d\u2019abord à jour."
       server_unknown_server_key: "Ce firmware fait confiance à une clé que skyblip.eu ne possède pas. Installez d\u2019abord une version publiée."
       server_expired: "Plus de cinq minutes ont passé. Activez à nouveau."
       server_bad_signature: "skyblip.eu n\u2019a pas pu vérifier ce que l\u2019appareil a signé. Activez à nouveau. Si cela arrive deux fois, dites-nous quel firmware il a."

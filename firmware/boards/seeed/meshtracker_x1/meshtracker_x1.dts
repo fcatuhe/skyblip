@@ -298,6 +298,7 @@
 	};
 
 	qspi_default: qspi_default {
+		/* INFO: fc 14nov26 nrfx_qspi.c says the QSPI peripheral expects high drive, and Zephyr's pinctrl leaves that to the board */
 		group1 {
 			psels = <NRF_PSEL(QSPI_SCK, 0, 19)>,
 				<NRF_PSEL(QSPI_IO0, 0, 21)>,
@@ -305,6 +306,7 @@
 				<NRF_PSEL(QSPI_IO2, 0, 23)>,
 				<NRF_PSEL(QSPI_IO3, 1, 0)>,
 				<NRF_PSEL(QSPI_CSN, 0, 20)>;
+			nordic,drive-mode = <NRF_DRIVE_H0H1>;
 		};
 	};
 
@@ -442,7 +444,8 @@ zephyr_udc0: &usbd {
 	ext_flash: flash@0 {
 		compatible = "nordic,qspi-nor";
 		reg = <0>;
-		sck-frequency = <32000000>;
+		/* INFO: fc 14nov26 two OTAs failed on slot1's contents at 32 MHz (#278), so the NOR runs at the Go's 8 MHz */
+		sck-frequency = <8000000>;
 		jedec-id = [c8 40 17];
 		size-in-bytes = <8388608>;
 		quad-enable-requirements = "NONE";

@@ -4,7 +4,6 @@ import { aircraftOf, isNote, ndjson, typeCounts } from "#skyblip/diagnostics"
 
 const PRESS_TWICE = "The unit asks on its glass, or a Bravo on its lamp, which blinks green fast: press its button twice to allow, once to refuse."
 const REFUSALS = {
-  unknown_command: "this firmware serves no capture, so update it first",
   capturing: "a capture already runs, so stop it first",
   not_capturing: "no capture runs",
   no_storage: "this unit has no capture flash",

@@ -1,7 +1,4 @@
 class Unit::Key < ApplicationRecord
-  # TODO: fc 14nov26 the column goes once a deploy runs without reading it, then this line goes too
-  self.ignored_columns += %w[ip_address]
-
   belongs_to :unit
 
   enum :status, %w[active pending revoked].index_by(&:itself)

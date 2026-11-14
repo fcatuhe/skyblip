@@ -204,14 +204,14 @@ en:
       registering: Getting its serial number
     notices:
       no_bluetooth: This browser does not support Web Bluetooth. Use Chrome or Edge on Android or a computer.
-      not_skyblip: This device has no skyBlip update service. It is not a skyBlip, or its firmware is too old for Bluetooth updates.
+      not_skyblip: This device has no skyBlip update service. It is not a skyBlip.
       link_lost: The connection dropped. Bring the device closer and reconnect. An upload in progress resumes where it stopped.
       not_back: The device did not come back after its restart. Connect it again.
       timeout: The device stopped answering. Reconnect and try again.
       no_params: The device did not report how much data it can receive at once. Reconnect.
       claimed: Another app controls this device's settings. Close that app then reconnect.
       small_mtu: This phone or browser is using the smallest Bluetooth packet. It is too small for the reply. Reconnect. If it happens again, update the browser or use another phone or a computer.
-      in_flight: The device is in flight. Older firmware also needs a GPS fix. Install once it has landed.
+      in_flight: The device is in flight. Install once it has landed.
       low_power: The battery is too low to install. Charge it first.
       expired: Nobody pressed twice within thirty seconds. Try again.
       cancelled: Refused on the device. Reconnect before the device can ask again.
@@ -250,7 +250,6 @@ en:
       swap_unpowered: The battery is critically low. It is too low to install the firmware. Charge it first.
       went_dark_flat: The device last shut down because its battery was flat. Charge it before you install.
       imu_writing: The device is writing the sensor hub firmware. This takes up to a minute. Leave it on.
-      no_key: This firmware is too old to name the key it trusts. Install one file by hand once, the .full.signed.bin of a release.
       not_activated: Not activated yet. It neither transmits nor receives.
       recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PUSH THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RESET to go back to skyBlip. Nothing transmits meanwhile."
     set_notices:
@@ -275,7 +274,6 @@ en:
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
-      unknown_command: This firmware is too old to capture. Update it first.
     browsers_notices:
       invalid: The device could not identify which browser to forget. Reload the page and try again.
       unknown_browser: The device no longer trusts that browser.
@@ -300,7 +298,6 @@ en:
       refused_on_device: Refused on the Go. Reconnect, then activate again.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
       claimed: Another app controls this device's settings. Close that app then reconnect.
-      unknown_command: This firmware predates activation and does not need it. Update it first.
       server_unknown_server_key: This firmware trusts a key that skyblip.eu does not have. Install a release first.
       server_expired: More than five minutes passed. Activate again.
       server_bad_signature: skyblip.eu could not verify what the device signed. Activate again. If it happens twice, tell us which firmware it runs.

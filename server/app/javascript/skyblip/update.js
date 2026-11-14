@@ -75,7 +75,7 @@ export function protocolsOf(reply) {
     .map(([stem, name]) => ({ name, version: reply[`${stem}_version`] }));
 }
 
-// INFO: fc 10nov26 a Go leaves product out, as all firmware before the key did, so an unread frame is a Go too
+// INFO: fc 10nov26 a Go leaves product out, so an unread frame is a Go too
 export function productOf(image) {
   return image?.product ?? 'skyblip_go';
 }
@@ -96,7 +96,7 @@ function upgradeOf({ file, running }) {
   return compareVersions(parseVersion(file.version), parseVersion(running)) > 0;
 }
 
-// INFO: fc 15nov26 the dump's capture group, absent on firmware from before it and on a unit with no capture flash
+// INFO: fc 15nov26 the dump's capture group, absent on a unit with no capture flash
 export function captureOf(dump) {
   const group = dump?.capture;
   if (!group) return null;
@@ -124,7 +124,6 @@ export class Updater {
   #packetBytes = null;
   #writeBytes = GATT_WRITE_BYTES;
   #probed = false;
-  #answersReport = false;
   #running = null;
   #image = null;
   #sha = null;
@@ -325,7 +324,6 @@ export class Updater {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
   }
 
-  // INFO: fc 15nov26 firmware from before a Go served capture answers it unknown_command there
   orderCapture(profile) {
     if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'capture' } });
     this.#captureProfile = profile;
@@ -455,7 +453,6 @@ export class Updater {
   }
 
   #reported(reply) {
-    this.#answersReport = true;
     this.#set({ installReport: installReportOf(reply), landing: landingOf(reply) });
   }
 
@@ -471,8 +468,7 @@ export class Updater {
     if (task === 'install') this.#windowOpen = false;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
-    // INFO: fc 14nov26 firmware without the report answers unknown_command, which would read as the refusal of the next ask
-    if (task === 'install' && LANDING_REFUSALS.has(reply.reason) && this.#answersReport) return this.#send({ command: 'install_report' });
+    if (task === 'install' && LANDING_REFUSALS.has(reply.reason)) return this.#send({ command: 'install_report' });
   }
 
   #narrow() {
@@ -572,7 +568,6 @@ export class Updater {
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
     this.#probed = false;
-    this.#answersReport = false;
     this.#log?.close();
     this.#log = null;
     this.#dump = {};
