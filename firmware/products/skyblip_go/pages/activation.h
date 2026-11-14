@@ -8,7 +8,7 @@
 
 namespace skyblip::go {
 
-constexpr const char* kActivationTitle = "ACTIVATE";
+constexpr const char* kActivationTitle = "NOT ACTIVATED";
 constexpr const char* kActivationWhere = "GO TO SKYBLIP.EU";
 constexpr int kActivationTagScale = 4;
 

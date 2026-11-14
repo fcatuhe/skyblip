@@ -51,15 +51,16 @@ TEST_CASE("radar page: a lost Bravo takes the ring's banner, and the line under 
     CHECK_FALSE(reads_in(radar(waiting), "NO BRAVO", 0, 0, 200, 199, 2));
 }
 
-TEST_CASE("radar page: a waiting Bravo takes the loss's place, WAIT FOR over BRAVO as a banner") {
+TEST_CASE("radar page: a waiting Bravo takes the loss's place, WAIT FOR over BRAVO at one size") {
     for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
         RadarSnapshot waiting = flying(0);
         waiting.plot = plot;
         waiting.bravo = BravoState::Waiting;
         const Glass canvas = radar(waiting);
-        CHECK(reads_in(canvas, "WAIT FOR", 20, 110, 180, 165, 2));
-        CHECK(reads_in(canvas, "BRAVO", 20, 130, 180, 175));
-        CHECK_FALSE(reads_in(canvas, "BRAVO", 160, 160, 200, 178));
+        CHECK(reads_in(canvas, "WAIT FOR", 20, 100, 180, 165, 2));
+        // One message on two lines keeps one size: the small line is for a second message.
+        CHECK(reads_in(canvas, "BRAVO", 20, 110, 180, 180, 2));
+        CHECK_FALSE(reads_in(canvas, "BRAVO", 0, 0, 200, 200, 1));
     }
 
     RadarSnapshot blind = flying(0);

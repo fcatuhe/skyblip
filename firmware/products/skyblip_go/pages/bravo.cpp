@@ -14,13 +14,14 @@ constexpr int kTagScale = 4;
 constexpr int kDetailRows = 3;
 constexpr int kDetailBytes = kGlassWidth / ui::kCellWidth + 1;
 
-constexpr BodyLine kOwnIcaoNoticeBody[] = {{"YOUR TRANSPONDER"}, {"SHOWS AS"},  {"TRAFFIC."}, {""},
-                                           {"SET IT IN"},        {"SETTINGS,"}, {"AIRCRAFT."}};
-constexpr BodyLine kForgotNoticeBody[] = {{"BRAVO IS NOT"},    {"PAIRED. THE GO"},
-                                          {"REMOVED IT TOO."}, {""},
-                                          {"PAIR AGAIN IN"},   {"SETTINGS."}};
+constexpr BodyLine kOwnIcaoNoticeBody[] = {{"YOUR TRANSPONDER"}, {"SHOWS AS"},  {"TRAFFIC"}, {""},
+                                           {"SET IT IN"},        {"SETTINGS,"}, {"AIRCRAFT"}};
+// INFO: fc 14nov26 no full stop on the glass: a sentence starts its own paragraph instead
+constexpr BodyLine kForgotNoticeBody[] = {{"BRAVO IS NOT"},   {"PAIRED"},  {""},
+                                          {"THE GO REMOVED"}, {"IT TOO"},  {""},
+                                          {"PAIR AGAIN IN"},  {"SETTINGS"}};
 constexpr BodyLine kEmptyListBody[] = {
-    {"NO BRAVO FOUND"}, {""}, {"START A BRAVO"}, {"NEAR THIS GO."}};
+    {"NO BRAVO FOUND"}, {""}, {"START A BRAVO"}, {"NEAR THIS GO"}};
 
 struct Tag {
     char text[kTagDigits + 1];
@@ -91,7 +92,7 @@ void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
         const BodyLine body[] = {{tag.text, kTagScale}, {""}, {"WAIT"}};
         draw_body(canvas, Heading::Opened, /*keys=*/true, body, 3);
     } else {
-        const BodyLine body[] = {{tag.text, kTagScale}, {""}, {"PUSH THE BUTTON"}, {"ON BRAVO."}};
+        const BodyLine body[] = {{tag.text, kTagScale}, {""}, {"PUSH THE BUTTON"}, {"ON BRAVO"}};
         draw_body(canvas, Heading::Opened, /*keys=*/true, body, 4);
     }
     draw_keys(canvas, {{}, "CANCEL"});
@@ -116,18 +117,18 @@ Reason reason_of(BravoRefusal refusal) {
 
 int reason_detail(char* out, BravoRefusal refusal) {
     switch (refusal) {
-        case BravoRefusal::PhonesConnected: return format_string(out, "DISCONNECT ONE TO PAIR.");
+        case BravoRefusal::PhonesConnected: return format_string(out, "DISCONNECT ONE TO PAIR");
         case BravoRefusal::NarrowLink: {
             int written = format_string(out, "LINK IS LESS THAN ");
             written += format_unsigned(out + written, comms::kPeerPayloadFloorBytes);
-            return written + format_string(out + written, " BYTES.");
+            return written + format_string(out + written, " BYTES");
         }
-        case BravoRefusal::NoAnswer: return format_string(out, "PUSH THE BUTTON ON BRAVO.");
-        case BravoRefusal::UnknownProtocol: return format_string(out, "UPDATE THE GO OR BRAVO.");
+        case BravoRefusal::NoAnswer: return format_string(out, "PUSH THE BUTTON ON BRAVO");
+        case BravoRefusal::UnknownProtocol: return format_string(out, "UPDATE THE GO OR BRAVO");
         case BravoRefusal::LinkLost:
         case BravoRefusal::None: break;
     }
-    return format_string(out, "BRAVO IS OFF OR OUT OF RANGE.");
+    return format_string(out, "BRAVO IS OFF OR OUT OF RANGE");
 }
 
 void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
@@ -188,7 +189,7 @@ void draw_own_icao_notice(ui::Canvas& canvas) {
 // INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere
 void draw_bravo_forgot_notice(ui::Canvas& canvas) {
     draw_heading(canvas, "BRAVO", Heading::Interrupt);
-    draw_body(canvas, Heading::Interrupt, /*keys=*/true, kForgotNoticeBody, 6);
+    draw_body(canvas, Heading::Interrupt, /*keys=*/true, kForgotNoticeBody, 8);
     draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
 }
 

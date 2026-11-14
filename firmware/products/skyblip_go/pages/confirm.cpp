@@ -24,7 +24,7 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
     } else {
         body[count++] = {kConfirmWaitLine};
         int written = format_unsigned(seconds, snapshot.seconds_left);
-        written += format_string(seconds + written, " S.");
+        written += format_string(seconds + written, " S");
         seconds[written] = 0;
         body[count++] = {seconds};
     }

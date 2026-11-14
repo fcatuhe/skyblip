@@ -33,6 +33,7 @@ constexpr int kBannerScale = 2;
 constexpr int kOwnshipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
 constexpr int kNoteScale = 1;
 constexpr int kNoteGap = 5;
+constexpr int kBannerLinePitch = kCharacterHeight * kBannerScale + 4;
 
 struct Layout {
     int outer_radius;
@@ -189,15 +190,18 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     return out;
 }
 
+// INFO: fc 14nov26 a banner too long for a line goes on at its size, a second message goes small
 struct RingWords {
     const char* banner{nullptr};
     const char* note{nullptr};
+    bool continued{false};
 };
 
 // INFO: fc 12nov26 the banner and the note are the first two words standing, in this order
 RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     const char* words[5] = {};
     int count = 0;
+    bool continued = false;
     if (const char* cell = cell_word(snapshot, cell_buffer)) words[count++] = cell;
     if (!snapshot.fix_valid) words[count++] = "NO FIX";
     if (const char* loss = bravo_loss_word(snapshot.bravo)) {
@@ -208,6 +212,7 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
         if (count == 0) {
             words[count++] = "WAIT FOR";
             words[count++] = "BRAVO";
+            continued = true;
         } else {
             words[count++] = "WAIT FOR BRAVO";
         }
@@ -217,7 +222,7 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     } else {
         words[count++] = gnss::stage_name(snapshot.stage);
     }
-    return {words[0], words[1]};
+    return {words[0], words[1], continued};
 }
 
 Box note_box(const char* note, int y) {
@@ -430,11 +435,17 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     const RingWords ring = ring_words(snapshot, cell_buffer);
     const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
     const int note_y = layout.note_y - layout.banner_y + banner_y;
-    if (ring.banner) {
+    if (ring.continued) {
+        const int top = banner_y - kBannerLinePitch / 2;
+        state_banner(canvas, ring.banner, top);
+        readings[reading_count++] = banner_box(ring.banner, top);
+        state_banner(canvas, ring.note, top + kBannerLinePitch);
+        readings[reading_count++] = banner_box(ring.note, top + kBannerLinePitch);
+    } else if (ring.banner) {
         state_banner(canvas, ring.banner, banner_y);
         readings[reading_count++] = banner_box(ring.banner, banner_y);
     }
-    if (ring.note) {
+    if (ring.note && !ring.continued) {
         state_note(canvas, ring.note, note_y);
         readings[reading_count++] = note_box(ring.note, note_y);
     }

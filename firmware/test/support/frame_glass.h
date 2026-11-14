@@ -22,6 +22,11 @@ inline bool fits_a_line(const char* text) { return go::text_cells(text) <= go::k
 inline bool reads_body(const ui::Canvas& canvas, go::Heading heading, bool keys,
                        const go::BodyLine* lines, int count) {
     int y = go::body_top(heading, keys, lines, count);
+    const int rule_y = heading == go::Heading::Interrupt ? go::kInterruptRuleY : go::kOpenedRuleY;
+    const int bottom = keys ? go::kKeyTop : go::kGlassHeight;
+    // INFO: fc 14nov26 a body keeps glass between itself and the rule, and the keys or the foot
+    if (y - rule_y <= go::kParagraphGap / 2 || bottom - (y + go::body_height(lines, count)) <= 2)
+        return false;
     bool started = false;
     for (int i = 0; i < count; i++) {
         if (lines[i].text[0] == 0) {

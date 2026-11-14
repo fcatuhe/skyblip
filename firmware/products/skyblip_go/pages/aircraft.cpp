@@ -31,10 +31,10 @@ const char* state_text(Detection state) {
 
 const char* detail_text(Detection state) {
     switch (state) {
-        case Detection::Unpaired: return "PAIR A BRAVO FIRST.";
+        case Detection::Unpaired: return "PAIR A BRAVO FIRST";
         case Detection::Airborne:
-        case Detection::NoFix: return "BRAVO FINDS IT ON THE GROUND.";
-        case Detection::Listening: return "SET THE TRANSPONDER TO ALT.";
+        case Detection::NoFix: return "BRAVO FINDS IT ON THE GROUND";
+        case Detection::Listening: return "SET THE TRANSPONDER TO ALT";
         case Detection::NotConnected:
         case Detection::Heard: break;
     }

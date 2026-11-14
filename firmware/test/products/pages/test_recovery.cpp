@@ -17,7 +17,11 @@ TEST_CASE("recovery page: it names the drive, the file and the way back, unclipp
         draw_recovery(canvas, path);
         CHECK(reads_heading(canvas, kRecoveryTitle, Heading::Interrupt));
         const bool keys = recovery_button(path)[0] != 0;
-        CHECK(reads_body(canvas, Heading::Interrupt, keys, kRecoveryBody, kRecoveryBodyRows));
+        if (keys)
+            CHECK(reads_body(canvas, Heading::Interrupt, keys, kRecoveryBody, kRecoveryBodyRows));
+        else
+            CHECK(reads_body(canvas, Heading::Interrupt, keys, kRecoveryRunning,
+                             kRecoveryRunningRows));
     }
 }
 

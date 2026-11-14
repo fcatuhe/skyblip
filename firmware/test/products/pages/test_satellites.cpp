@@ -74,7 +74,7 @@ TEST_CASE("satellites page: before the first GSV set the solution stands in for 
     Glass canvas;
     draw_satellites(canvas, snapshot);
 
-    CHECK(reads_in(canvas, "WAIT FOR THE LEVELS.", 0, 176, 200, 196));
+    CHECK(reads_in(canvas, "WAIT FOR THE LEVELS", 0, 176, 200, 196));
     CHECK(reads_in(canvas, "USED 3", 60, 0, 200, 12));
     CHECK(reads_in(canvas, "GPS 3", 0, 18, 120, 32));
     CHECK(ink_in(canvas, 4, 40, 196, 130) == 0);

@@ -212,7 +212,7 @@ TEST_CASE("activation: the glass names the operation two presses authorise") {
     const go::Glass& glass = bench.rig.product.screen().framebuffer();
     CHECK(reads_in(glass, comms::pending_title(comms::Pending::Register), 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2));
-    CHECK(reads_in(glass, "SKYBLIP.EU.", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
+    CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
 }
 
 TEST_CASE("activation: one press cancels the registration, thirty seconds expire it") {

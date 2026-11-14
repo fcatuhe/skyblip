@@ -176,7 +176,7 @@ void draw_satellites(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (!snapshot.levels_live || snapshot.sky == nullptr || snapshot.sky->count() == 0) {
         draw_used_by_system(canvas, snapshot);
         canvas.draw_text(kLeft, kNoteY,
-                         used_count(snapshot) == 0 ? "NO SATELLITE HEARD" : "WAIT FOR THE LEVELS.",
+                         used_count(snapshot) == 0 ? "NO SATELLITE HEARD" : "WAIT FOR THE LEVELS",
                          true, 1);
         return;
     }

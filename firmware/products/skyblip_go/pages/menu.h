@@ -151,7 +151,7 @@ constexpr const char* kFieldKeepVerb = "KEEP";
 const char* field_button_verb(const CallsignSnapshot& snapshot);
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
-constexpr const char* kOwnIcaoClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC."};
+constexpr const char* kOwnIcaoClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
 constexpr int kOwnIcaoClearLineCount = 3;
 
 struct ClearSnapshot {

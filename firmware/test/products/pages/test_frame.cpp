@@ -76,13 +76,13 @@ TEST_CASE("frame: a contact with nothing to do has no key, and the other stays i
 
 TEST_CASE("frame: a line breaks on a space or a line feed, and never inside a word") {
     char line[kFrameColumns + 1];
-    const char* text = "SET THE TRANSPONDER TO ALT.";
+    const char* text = "SET THE TRANSPONDER TO ALT";
     int at = take_line(text, 0, line, kFrameColumns);
     CHECK(std::string(line) == "SET THE");
     at = take_line(text, at, line, kFrameColumns);
     CHECK(std::string(line) == "TRANSPONDER TO");
     at = take_line(text, at, line, kFrameColumns);
-    CHECK(std::string(line) == "ALT.");
+    CHECK(std::string(line) == "ALT");
     take_line("ONE\nTWO", 0, line, kFrameColumns);
     CHECK(std::string(line) == "ONE");
 }

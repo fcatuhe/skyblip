@@ -144,11 +144,11 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
         const char* reads;
         const char* detail;
     } cases[] = {
-        {Detection::Unpaired, "NOT PAIRED", "PAIR A BRAVO FIRST."},
+        {Detection::Unpaired, "NOT PAIRED", "PAIR A BRAVO FIRST"},
         {Detection::NotConnected, "NOT CONNECTED", nullptr},
-        {Detection::Airborne, "IN FLIGHT", "BRAVO FINDS IT ON THE GROUND."},
-        {Detection::NoFix, "NO FIX", "BRAVO FINDS IT ON THE GROUND."},
-        {Detection::Listening, "NOT HEARD", "SET THE TRANSPONDER TO ALT."},
+        {Detection::Airborne, "IN FLIGHT", "BRAVO FINDS IT ON THE GROUND"},
+        {Detection::NoFix, "NO FIX", "BRAVO FINDS IT ON THE GROUND"},
+        {Detection::Listening, "NOT HEARD", "SET THE TRANSPONDER TO ALT"},
     };
     for (const auto& each : cases) {
         CAPTURE(each.reads);

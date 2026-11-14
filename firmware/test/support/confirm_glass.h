@@ -14,7 +14,7 @@ namespace skyblip {
 inline uint32_t seconds_left_on(const ui::Canvas& canvas) {
     // Longest first: "8 S." is inside "28 S.".
     for (uint32_t seconds = comms::kPromptCeilingMs / 1000u; seconds > 0; seconds--) {
-        const std::string text = std::to_string(seconds) + " S.";
+        const std::string text = std::to_string(seconds) + " S";
         if (reads_in(canvas, text.c_str(), 0, go::kInterruptRuleY, go::kGlassWidth, go::kKeyTop,
                      go::kFrameScale))
             return seconds;

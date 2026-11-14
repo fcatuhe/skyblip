@@ -3104,7 +3104,7 @@ What the radar says of a paired Bravo: its mark while live, NO BRAVO and why, or
 - a lost Bravo takes the ring's banner, and the line under it says why
 - a lost Bravo yields the banner to a warned cell and to NO FIX
   > The ring's two slots read top down: the cell, NO FIX, NO BRAVO and its reason, then the rest.
-- a waiting Bravo takes the loss's place, WAIT FOR over BRAVO as a banner
+- a waiting Bravo takes the loss's place, WAIT FOR over BRAVO at one size
 
 ### test/products/pages/test_radar_plot.cpp
 
@@ -4592,7 +4592,7 @@ The cell on the glass: the word the ring wears, the words under the mark, and th
 - a cutoff too hot to park a frame still notes the flat cell
   > The note is the cell's, not the frame's: a panel held off in the heat parks nothing.
 - a press after a cutoff is refused and leaves the flat frame where it is
-  > The cutoff left EMPTY BATTERY on the glass, and the press that follows needs no other answer.
+  > The cutoff left BATTERY EMPTY on the glass, and the press that follows needs no other answer.
 - a press on the cable after a cutoff starts the device and clears the word
   > The lockout spares external power, so the cable and a press are the way out of a flat cell.
 - a refused boot pushes no frame the glass is already wearing

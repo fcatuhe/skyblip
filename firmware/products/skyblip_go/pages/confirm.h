@@ -26,7 +26,7 @@ constexpr int kConfirmDetailRows = 3;
 constexpr const char* kConfirmAllowVerb = "ACCEPT";
 constexpr const char* kConfirmCancelLine = "TO CANCEL, PUSH";
 constexpr const char* kConfirmWaitLine = "ONCE OR WAIT";
-constexpr const char* kConfirmOnceLine = "ONCE.";
+constexpr const char* kConfirmOnceLine = "ONCE";
 
 void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 

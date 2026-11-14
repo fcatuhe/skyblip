@@ -74,8 +74,9 @@ void say(char* out, int capacity, const char* title, const char* detail, uint32_
         written += format_string(text + written, go::kConfirmWaitLine);
         text[written++] = ' ';
         written += format_unsigned(text + written, seconds_left);
-        written += format_string(text + written, " S.");
+        written += format_string(text + written, " S");
     }
+    text[written++] = '.';
     written += format_string(text + written, " PUSH TWICE TO ");
     written += format_string(text + written, go::kConfirmAllowVerb);
     text[written++] = '.';

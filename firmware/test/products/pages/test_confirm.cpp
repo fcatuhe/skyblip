@@ -65,7 +65,7 @@ struct Expected {
             return;
         }
         lines[count++] = {kConfirmWaitLine};
-        std::snprintf(seconds, sizeof(seconds), "%u S.",
+        std::snprintf(seconds, sizeof(seconds), "%u S",
                       static_cast<unsigned>(snapshot.seconds_left));
         lines[count++] = {seconds};
     }
@@ -104,7 +104,7 @@ TEST_CASE("confirm page: the double press allows on the button's key, and one pr
     // The pad does nothing at a prompt, so it shows no key.
     CHECK_FALSE(has_pad_key(canvas));
     CHECK(reads_prompt(canvas, snapshot));
-    CHECK(reads_inside_body(canvas, "30 S."));
+    CHECK(reads_inside_body(canvas, "30 S"));
 }
 
 TEST_CASE("confirm page: the seconds left count down, and none left offers the press alone") {
@@ -113,13 +113,13 @@ TEST_CASE("confirm page: the seconds left count down, and none left offers the p
     Glass seven;
     draw_confirm(seven, snapshot);
     CHECK(reads_prompt(seven, snapshot));
-    CHECK(reads_inside_body(seven, "7 S."));
+    CHECK(reads_inside_body(seven, "7 S"));
 
     snapshot.seconds_left = 0;
     Glass none;
     draw_confirm(none, snapshot);
     CHECK(reads_prompt(none, snapshot));
-    CHECK_FALSE(reads_inside_body(none, "0 S."));
+    CHECK_FALSE(reads_inside_body(none, "0 S"));
 }
 
 // Short or long, the message sits in the middle of the glass between the rule and the key.

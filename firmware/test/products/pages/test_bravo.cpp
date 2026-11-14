@@ -63,7 +63,7 @@ TEST_CASE("bravo page: a scan that heard nothing yet says so, and offers only th
     const Glass canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "NO BRAVO FOUND", kMenuScale));
     CHECK(centred_reads(canvas, "START A BRAVO", kMenuScale));
-    CHECK(centred_reads(canvas, "NEAR THIS GO.", kMenuScale));
+    CHECK(centred_reads(canvas, "NEAR THIS GO", kMenuScale));
     CHECK_FALSE(has_button_key(canvas));
     CHECK(reads_pad_key(canvas, "BACK"));
 }
@@ -84,7 +84,7 @@ TEST_CASE("bravo page: confirm, then the wait for Bravo's button, name the tag")
     canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "3F2A", 4));
     CHECK(centred_reads(canvas, "PUSH THE BUTTON", kMenuScale));
-    CHECK(centred_reads(canvas, "ON BRAVO.", kMenuScale));
+    CHECK(centred_reads(canvas, "ON BRAVO", kMenuScale));
     CHECK_FALSE(has_button_key(canvas));
     CHECK(reads_pad_key(canvas, "CANCEL"));
 }
@@ -96,13 +96,13 @@ TEST_CASE("bravo page: each refusal says why") {
     Glass canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "3 PHONES", kMenuScale));
     CHECK(centred_reads(canvas, "DISCONNECT ONE", kMenuScale));
-    CHECK(centred_reads(canvas, "TO PAIR.", kMenuScale));
+    CHECK(centred_reads(canvas, "TO PAIR", kMenuScale));
     // A retry would meet the same three phones, so the button offers none.
     CHECK_FALSE(has_button_key(canvas));
 
     snapshot.view.refusal = BravoRefusal::NarrowLink;
     canvas = drawn(snapshot);
-    CHECK(centred_reads(canvas, "THAN 126 BYTES.", kMenuScale));
+    CHECK(centred_reads(canvas, "THAN 126 BYTES", kMenuScale));
 
     snapshot.view.refusal = BravoRefusal::NoAnswer;
     canvas = drawn(snapshot);
@@ -142,7 +142,7 @@ TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it")
     draw_own_icao_notice(canvas);
     CHECK(reads_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt));
     CHECK(centred_reads(canvas, "YOUR TRANSPONDER", kMenuScale));
-    CHECK(centred_reads(canvas, "AIRCRAFT.", kMenuScale));
+    CHECK(centred_reads(canvas, "AIRCRAFT", kMenuScale));
     CHECK(reads_button_key(canvas, "CLOSE"));
     CHECK(reads_pad_key(canvas, "CLOSE"));
 }
@@ -152,7 +152,7 @@ TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropp
     draw_bravo_forgot_notice(canvas);
     CHECK(reads_heading(canvas, "BRAVO", Heading::Interrupt));
     CHECK(centred_reads(canvas, "BRAVO IS NOT", kMenuScale));
-    CHECK(centred_reads(canvas, "REMOVED IT TOO.", kMenuScale));
+    CHECK(centred_reads(canvas, "THE GO REMOVED", kMenuScale));
     CHECK(centred_reads(canvas, "PAIR AGAIN IN", kMenuScale));
 }
 
