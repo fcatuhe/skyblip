@@ -53,6 +53,19 @@ module Skyblip
     config.x.oaci_chart.centre = { latitude: 44.8283, longitude: -0.7156 }
     config.x.oaci_chart.radius_km = 100
 
+    # The coding agents an admin may connect to the MCP server, by the URL of their client metadata document.
+    config.x.oauth_client_ids = %w[
+      https://claude.ai/oauth/claude-code-client-metadata https://chatgpt.com/oauth/codex/client.json
+      https://pi.dev/oauth/client.json https://claude.ai/oauth/mcp-oauth-client-metadata
+    ]
+    config.x.oauth_hosted_callbacks = %w[https://claude.ai/api/mcp/auth_callback]
+
+    # The CNIL's terms for audience measurement without consent: a tracker lives 13 months, and what it collects is kept 25 months.
+    config.x.tracker_lifetime = 13.months
+    config.x.retention = 25.months
+    # INFO: fc 14nov26 Kamal names the image it deployed, so an error says which revision raised it
+    config.x.revision = ENV["KAMAL_VERSION"]
+
     config.i18n.available_locales = %i[ en fr ]
     config.i18n.default_locale = :en
 

@@ -16,6 +16,8 @@ fr:
       title: "Paramètres"
       language: "Langue"
       language_name: "Français"
+      support_code: "Code d\u2019assistance"
+      support_code_hint: "Donnez ce code quand vous demandez de l\u2019aide. Il nous permet de lire ce qui s\u2019est passé entre ce navigateur et vos appareils\u00a0: connexions, refus, installations et erreurs. Il ne contient rien de ce que vous avez saisi."
     devices:
       attention: "Demande votre attention"
       no_bluetooth_title: "Ouvrez ceci sur Android ou un ordinateur"
@@ -81,8 +83,7 @@ fr:
       recovery: "Le firmware ne prend pas\u00a0?"
       recovery_hint: "Sans Bluetooth\u00a0: branchez l\u2019appareil sur un ordinateur et appuyez deux fois sur RST en moins d\u2019une demi-seconde. Il apparaît comme une clé USB nommée TECHOBOOT\u00a0: déposez-y le fichier .uf2 d\u2019une version."
       recover: "Redémarrer en clé USB"
-      report_hint: "Envoyez-nous cette ligne par message ou par mail. Précisez ce que vous avez fait. Cette ligne indique pourquoi la mise à jour n\u2019a pas abouti."
-      report_copy: "Copier le rapport"
+      report_received_html: "skyBlip a reçu le détail de cet échec. Si vous nous écrivez, dites ce que vous avez fait et donnez votre code d\u2019assistance %{code}."
     terminal:
       title: "Terminal"
       row: "Chaque trame Bluetooth"

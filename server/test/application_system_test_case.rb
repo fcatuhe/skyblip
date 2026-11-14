@@ -15,6 +15,18 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
       url_blacklist: [ %r{\Ahttps?://(?!127\.0\.0\.1|localhost)} ]
     }
 
+  JOURNAL_FLUSHED = <<~JS.freeze
+    const done = arguments[arguments.length - 1]
+    if (!document.querySelector("[data-controller~=journal]")) done(true)
+    else import("#skyblip/journal").then(({ sharedJournal }) => sharedJournal().flush()).then(done, error => done(error.message))
+  JS
+
+  # INFO: fc 14nov26 a keepalive post outlives the page, so the journal is emptied before Capybara resets it and the database goes
+  def before_teardown
+    super
+    assert_equal true, page.evaluate_async_script(JOURNAL_FLUSHED) if page.current_url.start_with?("http")
+  end
+
   STIMULUS_CONNECTED = <<~JS.freeze
     window.Stimulus !== undefined && [ ...document.querySelectorAll("[data-controller]") ].every(element =>
       element.dataset.controller.split(/\s+/).filter(Boolean).every(identifier =>

@@ -16,13 +16,16 @@ export class ServerRefusal extends Error {
   }
 }
 
-export function httpServer({ challenges, registrations, token = null }) {
+export function httpServer({ challenges, registrations, token = null, browser = null }) {
   async function post(url, body) {
     let response;
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { 'X-CSRF-Token': token } : {}) },
+        headers: {
+          'Content-Type': 'application/json', Accept: 'application/json',
+          ...(token ? { 'X-CSRF-Token': token } : {}), ...(browser ? { 'X-Briefing-Browser': browser } : {}),
+        },
         body: JSON.stringify(body),
       });
     } catch (error) {

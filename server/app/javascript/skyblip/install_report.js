@@ -31,30 +31,3 @@ export function installCause({ image, report, running, attempted }) {
 export function reportShown({ image, cause }) {
   return Boolean(cause) || FAILED_IMAGES.has(image?.state);
 }
-
-export function reportLine({ product, running, attempted, image, report, cause, at, browser }) {
-  const fields = [
-    ['product', product],
-    ['running', running],
-    ['tried', attempted],
-    ['image', image?.state],
-    ['from', image?.from],
-    ['to', image?.to],
-    ['cause', cause],
-  ];
-  if (report) {
-    fields.push(
-      ['check', report.check],
-      ['swap', report.swap],
-      ['request_error', report.requestError],
-      ['boots', report.boots],
-      ['probation_boots', report.probationBoots],
-      ['proof', report.proof],
-      ['reset', report.reset],
-    );
-  } else {
-    fields.push(['report', 'none']);
-  }
-  fields.push(['at', at], ['browser', JSON.stringify(browser ?? '')]);
-  return ['skyblip-install-report v1', ...fields.map(([key, value]) => `${key}=${value ?? '-'}`)].join(' ');
-}

@@ -43,4 +43,6 @@ Rails.application.configure do
   # The briefing draws a phone's prompt with the firmware built next door, once `make -C firmware browser` ran.
   config.x.simulator_build = Rails.root.join("../firmware/build/browser").to_s
   config.x.local_simulator_only = true
+
+  routes.default_url_options = { host: "www.example.com", protocol: "https" }
 end

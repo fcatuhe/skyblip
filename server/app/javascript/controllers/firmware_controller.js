@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
 import { fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
 import { productWord } from "controllers/briefing/facts"
-import { installCause, reportLine, reportShown } from "#skyblip/install_report"
+import { installCause, reportShown } from "#skyblip/install_report"
 import { say, sayNotice } from "controllers/briefing/words"
 
 const RECHECK_MS = 5000
@@ -14,7 +14,7 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 
 export default class extends Controller {
-  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "reportLine", "install", "back", "other", "file", "release", "recovery", "recover"]
+  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "install", "back", "other", "file", "release", "recovery", "recover"]
   static values = { slug: String }
   static outlets = ["glass"]
 
@@ -199,20 +199,9 @@ export default class extends Controller {
     this.messageTarget.replaceChildren(...lines.map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 
-  // TODO: fc 13nov26 the install report's line, retired with #294
+  // INFO: fc 14nov26 the journal sends the install report as device.install_reported, so the page only says it was received
   #report(state, cause) {
-    const shown = reportShown({ image: state.image, cause })
-    this.reportTarget.hidden = !shown
-    if (!shown) return
-    this.reportedAt ??= new Date().toISOString()
-    const line = reportLine({
-      product: this.unit.product, running: state.running, attempted: this.unit.attempted, image: state.image,
-      report: state.installReport, cause, at: this.reportedAt, browser: navigator.userAgent,
-    })
-    if (this.reportLineTarget.textContent === line) return
-    this.reportTarget.classList.remove("is-copied")
-    this.reportLineTarget.textContent = line
-    this.reportTarget.dataset.copyToClipboardContentValue = line
+    this.reportTarget.hidden = !reportShown({ image: state.image, cause })
   }
 
   #glass(unit, state) {

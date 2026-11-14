@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_08_222028) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -20,6 +20,58 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_222028) do
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_activation_challenges_on_created_at"
     t.index ["server_nonce"], name: "index_activation_challenges_on_server_nonce", unique: true
+  end
+
+  create_table "oauth_clients", force: :cascade do |t|
+    t.string "document_url", null: false
+    t.string "name", null: false
+    t.string "client_uri"
+    t.json "redirect_uris", null: false
+    t.datetime "fetched_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["document_url"], name: "index_oauth_clients_on_document_url", unique: true
+  end
+
+  create_table "oauth_codes", force: :cascade do |t|
+    t.integer "grant_id", null: false
+    t.string "digest", null: false
+    t.string "code_challenge", null: false
+    t.string "redirect_uri", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "redeemed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["digest"], name: "index_oauth_codes_on_digest", unique: true
+    t.index ["expires_at"], name: "index_oauth_codes_on_expires_at"
+    t.index ["grant_id"], name: "index_oauth_codes_on_grant_id"
+  end
+
+  create_table "oauth_grants", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "client_id", null: false
+    t.string "scope", null: false
+    t.string "resource", null: false
+    t.datetime "approved_at", null: false
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["approved_at"], name: "index_oauth_grants_on_approved_at"
+    t.index ["client_id"], name: "index_oauth_grants_on_client_id"
+    t.index ["user_id", "client_id"], name: "index_oauth_grants_on_user_id_and_client_id", unique: true
+  end
+
+  create_table "oauth_tokens", force: :cascade do |t|
+    t.integer "grant_id", null: false
+    t.string "kind", null: false
+    t.string "digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "spent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["digest"], name: "index_oauth_tokens_on_digest", unique: true
+    t.index ["expires_at"], name: "index_oauth_tokens_on_expires_at"
+    t.index ["grant_id"], name: "index_oauth_tokens_on_grant_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -69,6 +121,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_08_222028) do
     t.index ["email"], name: "index_users_on_email", unique: true
   end
 
+  add_foreign_key "oauth_codes", "oauth_grants", column: "grant_id", on_delete: :cascade
+  add_foreign_key "oauth_grants", "oauth_clients", column: "client_id"
+  add_foreign_key "oauth_grants", "users"
+  add_foreign_key "oauth_tokens", "oauth_grants", column: "grant_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
   add_foreign_key "unit_keys", "units"
 end
