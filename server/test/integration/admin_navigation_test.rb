@@ -57,4 +57,17 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
     get admin_mission_control_jobs_path
     assert_response :success
   end
+
+  test "the jobs dashboard leaves the site its French, even as the first page to translate" do
+    sign_in_as users(:francois)
+
+    I18n.reload!
+    get admin_mission_control_jobs_path
+    assert_response :success
+
+    reset!
+    get briefing_root_path, headers: { "Accept-Language" => "fr-FR" }
+    assert_select "html[lang=fr]"
+    assert_select "h1", text: "Votre skyBlip"
+  end
 end
