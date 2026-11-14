@@ -6,6 +6,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 |---|---|
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
+| [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries and what each implements |
 | [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a skyBlip Bravo's diagnostics capture and wait for the presses' verdict |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec and the names `schemas/link.v1.json` gives its numbers, which `blip.py` speaks through |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
@@ -49,6 +50,8 @@ macOS goes through CoreBluetooth and asks for Bluetooth permission the first tim
 Subscribes to Nordic UART (`6e400003`), reassembles lines the way the browser client does (a notification is a slice of a byte stream, not a sentence), verifies every NMEA checksum and prints each sentence with a host timestamp. A sentence whose checksum does not match is printed and flagged, never dropped.
 
 `./scripts/blip.py command '{"command":"diagnostics"}'` takes one command as JSON with the registry's full names, writes it to the config endpoint (`69c21302`) as the numbered CBOR the unit reads, and prints every reply frame decoded back to names, with its round trip. An enumerated key takes its value's name (`{"command":"set","units":"metric"}`) and a byte string takes hex. A name the registry does not hold is refused before anything is sent. A multi-frame reply ends when a frame stops saying `"more": true`, so `diagnostics` needs no `--parts` and will not silently truncate when the device grows a sixth group.
+
+`./scripts/blip.py protocols` asks the unit for the radio protocol stacks it carries and prints one line each, its version and the specification it implements, as the device page says it: `ADS-L 0.1.0 (ADS-L 4 SRD-860 Issue 2)`. Firmware from before the `protocols` frame answers `unknown_command`, and `blip.py` says the firmware does not report them.
 
 `./scripts/blip.py --name "skyBlip Bravo" capture power_run` arms a diagnostics capture on a skyBlip Bravo, which has no glass to arm one on, and `capture stop` stops it. The profile is `full`, `power_run` or `flight_run`, the names the registry's `capture_profile` gives. The unit blinks its prompt on the lamp, `blip.py` says to press the button twice, and it waits up to 35 s for the verdict: `capture` once two presses allowed it, or the refusal, which it prints and stops on. A Go answers `unknown_command`, because its captures are armed on its glass only.
 
