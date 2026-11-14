@@ -5,7 +5,7 @@ slug: radio
 description: "Comment skyBlip Go émet en ADS-L et reçoit l'ADS-L et le FLARM sur 868 MHz. Canaux, fenêtres GPS et écoute des futures stations sol."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-14"
 ---
 
 <section>
@@ -32,7 +32,7 @@ updated_on: "2026-11-09"
         <tr><th>Depuis le début de la seconde</th><th>Accordée sur</th><th>Ce qui passe sur le canal</th></tr>
       </thead>
       <tbody>
-        <tr><th>0 à 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fin de la plage commencée à 800&nbsp;ms dans la seconde précédente. Des appareils de génération FLARM émettent encore sur ce canal. L&rsquo;appareil continue donc d&rsquo;écouter. En réception seule</td></tr>
+        <tr><th>0 à 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fin de la plage commencée à 800&nbsp;ms dans la seconde précédente. Des appareils de génération FLARM émettent encore sur ce canal. L&rsquo;appareil continue donc d&rsquo;écouter. Il y émet aussi son indicatif toutes les 10&nbsp;s</td></tr>
         <tr><th>205 à 395&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>la liaison montante skyPost, depuis la station sol&nbsp;: le trafic ADS-B reçu par la station et les données météo dont elle dispose, à 200&nbsp;kbit/s. En réception seule, toujours</td></tr>
         <tr><th>400 à 800&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>le trafic direct sur le canal bas, ADS-L et génération FLARM ensemble</td></tr>
         <tr><th>800 à 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la même chose sur le canal haut, jusqu&rsquo;à 200&nbsp;ms dans la seconde suivante</td></tr>
@@ -60,15 +60,25 @@ updated_on: "2026-11-09"
     200&nbsp;kbit/s GMSK en haut.
   </p>
   <p class="lede">
-    La fenêtre d&rsquo;émission est plus courte. L&rsquo;appareil émet uniquement sur
-    les canaux 868, entre 450 et 1000&nbsp;ms, sur celui des deux canaux qui
-    est attribué à cette seconde. Il émet toujours en ADS-L&nbsp;:
-    le format de génération FLARM est reçu, jamais émis. La station sol émet
-    sur 869,525&nbsp;MHz. Sur cette fréquence, l&rsquo;appareil écoute
-    et n&rsquo;émet jamais. L&rsquo;instant de l&rsquo;émission dans la plage
-    est calculé à partir de l&rsquo;adresse de l&rsquo;appareil et de la
-    seconde en cours, puis recalculé chaque seconde. Cela évite que les émissions de deux aéronefs
-    se chevauchent à nouveau après un premier chevauchement.
+    La fenêtre d&rsquo;émission est plus courte. Les positions et les messages
+    Status, qui indiquent ce que l&rsquo;appareil peut recevoir, partent entre
+    450 et 1000&nbsp;ms après le début de la seconde. Les positions utilisent
+    868,2&nbsp;MHz pendant une seconde UTC paire et 868,4&nbsp;MHz pendant
+    une seconde impaire. Elles sont programmées toutes les secondes en vol,
+    et espacées de 9 puis 11&nbsp;s au sol. Les messages Status partent deux
+    fois par cycle de 20&nbsp;s, sur le canal opposé à celui de la position
+    de cette seconde. L&rsquo;indicatif fait exception&nbsp;: toutes les
+    10&nbsp;s, il part entre 1000 et 1193&nbsp;ms sur 868,4&nbsp;MHz, dans
+    la fin de plage qui déborde sur la seconde suivante.
+    L&rsquo;appareil émet des trames ADS-L, y compris son propre message
+    d&rsquo;indicatif&nbsp;: le format de génération FLARM est reçu, jamais émis.
+    La station sol émet sur 869,525&nbsp;MHz. Sur cette fréquence,
+    l&rsquo;appareil écoute et n&rsquo;émet jamais. L&rsquo;instant prévu
+    de l&rsquo;émission dans chaque plage est calculé à partir de
+    l&rsquo;adresse de l&rsquo;appareil et de la seconde en cours, puis
+    recalculé chaque seconde pour limiter les chevauchements répétés.
+    Avant chaque émission, il écoute le canal et, si celui-ci est occupé,
+    attend puis écoute à nouveau dans la même plage.
   </p>
 
   <ul class="points">
@@ -76,8 +86,8 @@ updated_on: "2026-11-09"
     <li>L&rsquo;appareil utilise 868,200 et 868,400&nbsp;MHz pendant 400&nbsp;ms chacune</li>
     <li>Il écoute la station sol sur 869,525&nbsp;MHz pendant 190&nbsp;ms</li>
     <li>Il décode deux systèmes dans une seule fenêtre de synchronisation</li>
-    <li>Il émet pendant environ 5&nbsp;ms, à un instant que les signaux reçus ne peuvent pas décaler</li>
-    <li>Il est autorisé à émettre pendant 1&nbsp;% de l&rsquo;heure et utilise la moitié de ce temps</li>
+    <li>Chaque émission dure environ 5&nbsp;ms. Un canal occupé peut la retarder</li>
+    <li>Il est autorisé à émettre pendant 1&nbsp;% de toute période d&rsquo;une heure et en utilise environ 0,6&nbsp;% en vol ou 0,15&nbsp;% au sol. Le firmware fait respecter cette limite</li>
   </ul>
 </section>
 
