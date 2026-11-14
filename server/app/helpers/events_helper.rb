@@ -14,7 +14,7 @@ module EventsHelper
         tag.span("none", class: "quiet")
       else
         tag.dl(class: "admin-details admin-details--nested") do
-          safe_join(value.map { |key, inner| tag.dt(key.to_s.humanize) + tag.dd(insight_value(inner)) })
+          safe_join(value.map { |key, inner| tag.dt(insight_label(key)) + tag.dd(insight_value(inner)) })
         end
       end
     when Array
@@ -23,4 +23,7 @@ module EventsHelper
     else value.to_s
     end
   end
+
+  # INFO: fc 14nov26 a symbol names a number the review computes, a string is a value it counted, such as a browser or a notice key
+  def insight_label(key) = key.is_a?(Symbol) ? key.to_s.humanize : key
 end
