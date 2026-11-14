@@ -5,7 +5,6 @@
 
 The unit asks on its glass, or a Bravo on its lamp, and waits for two presses
 on its button, so this waits for that verdict as long as the prompt stands.
-Firmware from before a Go served it answers unknown_command on a Go.
 """
 import blip_frames as frames
 

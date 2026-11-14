@@ -3,13 +3,11 @@
     ./scripts/blip.py protocols
 
 The unit names the version of each radio protocol stack it carries, one line
-each. What each version implements is in the release's PROTOCOLS.md. Firmware
-from before the protocols frame answers unknown_command.
+each. What each version implements is in the release's PROTOCOLS.md.
 """
 import blip_frames as frames
 
 NAMES = {"adsb": "ADS-B", "adsl": "ADS-L", "alptas": "ALP-TAS"}
-TOO_OLD = "this firmware does not report its radio protocols: update it to read them"
 NONE_NAMED = "the unit named no radio protocol"
 
 
@@ -27,8 +25,6 @@ async def answer(link, timeout, decode=frames.decode_frame):
 
 def lines(frame, refuse):
     """One line per stack the unit named, as the device page says it: ADS-L 0.1.0."""
-    if frame.get("reason") == "unknown_command":
-        raise SystemExit(TOO_OLD)
     refuse(frame)
     named = ["%s %s" % (name, frame[stem + "_version"])
              for stem, name in NAMES.items() if isinstance(frame.get(stem + "_version"), str)]

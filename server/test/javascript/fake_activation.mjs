@@ -11,6 +11,7 @@ const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
 export const REGISTRATION_FRAME_BYTES = 138;
 export const ATTESTATION_FRAME_BYTES = 98;
+const UNIT_COMMANDS = ['challenge', 'register', 'unlock', 'attest'];
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
 const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
@@ -129,10 +130,10 @@ export class FakeServer {
 // INFO: fc 18oct26 the activation frames of schemas/link.v1.json, over the fake's config endpoint
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
-    version = VECTORS.version, release = VECTORS.release, keyed = true, attests = true, ...options } = {}) {
+    version = VECTORS.version, release = VECTORS.release, keyed = true, ...options } = {}) {
     super({ address: null, ...options });
     this.unitKey = keyPair(seed);
-    Object.assign(this, { deviceId, trusted, version, release, keyed, attests });
+    Object.assign(this, { deviceId, trusted, version, release, keyed });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
     this.nonce = null;
     this.serverNonce = null;
@@ -140,8 +141,7 @@ export class FakeUnit extends FakeSkyblip {
   }
 
   answer(fields) {
-    const commands = this.attests ? ['challenge', 'register', 'unlock', 'attest'] : ['challenge', 'register', 'unlock'];
-    if (this.claimedBy !== null || !commands.includes(fields.command)) return super.answer(fields);
+    if (this.claimedBy !== null || !UNIT_COMMANDS.includes(fields.command)) return super.answer(fields);
     this.commands.push(fields.command);
     if (fields.command === 'attest') return this.attest(fields);
     if (!this.keyed) return this.acknowledge(false, 'keyless');

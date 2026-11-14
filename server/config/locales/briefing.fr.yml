@@ -203,7 +203,7 @@ fr:
       asking_server: "Demande à skyblip.eu"
       registering: "Réception de son numéro de série"
     notices:
-      not_skyblip: "Cet appareil n\u2019a pas le service de mise à jour skyBlip. Ce n\u2019est pas un skyBlip, ou son firmware est trop ancien pour les mises à jour en Bluetooth."
+      not_skyblip: "Cet appareil n\u2019a pas le service de mise à jour skyBlip. Ce n\u2019est pas un skyBlip."
       no_bluetooth: "Ce navigateur n\u2019est pas compatible avec Web Bluetooth. Utilisez Chrome ou Edge sur Android ou sur un ordinateur."
       link_lost: "La connexion a été coupée. Rapprochez l\u2019appareil et reconnectez-le. Un envoi en cours reprend où il s\u2019était arrêté."
       not_back: "L\u2019appareil n\u2019est pas revenu après son redémarrage. Reconnectez-le."
