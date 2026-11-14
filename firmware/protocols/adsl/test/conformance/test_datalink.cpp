@@ -87,9 +87,9 @@ TEST_CASE("ADS-L.4.SRD860.D.3: a busy channel defers, forces after 3000 ms, then
 
     adsl::ChannelAttempt after = attempt;
     after.clear = true;
-    after.forced_us = forced.at_us;
-    after.at_us = forced.at_us + 1999000;
+    after.forced_end_us = forced.at_us + 5000;
+    after.at_us = forced.at_us + 5000 + 1999000;
     CHECK(adsl::media_access(after, deferral).access == adsl::Access::Silent);
-    after.at_us = forced.at_us + 2000000;
+    after.at_us = forced.at_us + 5000 + 2000000;
     CHECK(adsl::media_access(after, deferral).access == adsl::Access::Transmit);
 }

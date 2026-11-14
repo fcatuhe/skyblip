@@ -17,13 +17,13 @@ struct ChannelAttempt {
     bool clear{false};
     uint64_t at_us{0};
     uint64_t first_us{0};
-    std::optional<uint64_t> forced_us{};
+    std::optional<uint64_t> forced_end_us{};
     uint64_t earliest_us{0};
     uint64_t last_us{0};
     bool may_force{false};
 };
 
-// INFO: fc 14nov26 EN 300 220-1 5.21.1's random interval, a whole number of units
+// INFO: fc 14nov26 EN 300 220-1 5.21.1's random interval: 1 to `units` units after the busy instant
 struct Deferral {
     uint32_t unit_us{0};
     uint32_t units{1};

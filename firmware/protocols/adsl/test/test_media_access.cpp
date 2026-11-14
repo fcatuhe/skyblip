@@ -53,6 +53,19 @@ TEST_CASE("adsl media access: a deferral lands no earlier than the device can li
     CHECK(verdict.at_us == kAtUs + 3 * kUnitUs);
 }
 
+// The device hears late, so the draw keeps to what is left of its units and never waits past them.
+TEST_CASE("adsl media access: a deferral never waits more units than the caller declares") {
+    ChannelAttempt attempt = busy_at(kAtUs);
+    attempt.earliest_us = kAtUs + 36000;
+    for (uint32_t draw = 0; draw < 16; draw++) {
+        const AccessVerdict verdict = media_access(attempt, deferral(draw));
+        REQUIRE(verdict.access == Access::Defer);
+        CHECK(verdict.at_us == kAtUs + 8 * kUnitUs);
+    }
+    attempt.earliest_us = kAtUs + 8 * kUnitUs + 1;
+    CHECK(media_access(attempt, deferral(0)).access == Access::Missed);
+}
+
 TEST_CASE("adsl media access: the draw never reaches past the window the packet must start in") {
     ChannelAttempt attempt = busy_at(kAtUs);
     attempt.last_us = kAtUs + 2 * kUnitUs + 1;
@@ -109,15 +122,15 @@ TEST_CASE("adsl media access: a force with no unit left in the window is missed"
     CHECK(media_access(attempt, deferral(0)).access == Access::Missed);
 }
 
-TEST_CASE("adsl media access: nothing goes out for 2000 ms after a forced transmission") {
+TEST_CASE("adsl media access: nothing goes out for 2000 ms after a forced transmission ends") {
     ChannelAttempt attempt = busy_at(kAtUs);
     attempt.clear = true;
-    attempt.forced_us = kAtUs - kSilenceAfterForceUs + 1;
+    attempt.forced_end_us = kAtUs - kSilenceAfterForceUs + 1;
     CHECK(media_access(attempt, deferral(0)).access == Access::Silent);
     attempt.clear = false;
     attempt.may_force = true;
     attempt.first_us = kAtUs - kForceAfterAttemptUs;
     CHECK(media_access(attempt, deferral(0)).access == Access::Silent);
-    attempt.forced_us = kAtUs - kSilenceAfterForceUs;
+    attempt.forced_end_us = kAtUs - kSilenceAfterForceUs;
     CHECK(media_access(attempt, deferral(0)).access == Access::Force);
 }
