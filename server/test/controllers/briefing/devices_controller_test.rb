@@ -31,6 +31,14 @@ class Briefing::DevicesControllerTest < ActionDispatch::IntegrationTest
     assert_select "link[rel=manifest][href='/briefing/manifest']"
   end
 
+  test "each device explains its own ICAO address in its own terms" do
+    get briefing_device_path(slug: "go-00012a")
+    assert_select "#unit-aircraft-address-hint", text: /The Go then broadcasts your position under that address/
+
+    get briefing_device_path(slug: "bravo-3f2a")
+    assert_select "#unit-aircraft-address-hint", text: /Bravo then keeps your own transponder out of the traffic/
+  end
+
   test "an address that names no skyBlip is not a device page" do
     get "/briefing/devices/softrf-1a2b3c"
 

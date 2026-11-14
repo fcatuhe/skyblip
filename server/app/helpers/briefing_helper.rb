@@ -13,4 +13,8 @@ module BriefingHelper
     kind, tag = slug.split("-", 2)
     "#{DEVICE_NAMES.fetch(kind)} #{tag.upcase}"
   end
+
+  def aircraft_address_hint(slug)
+    t("settings.aircraft_address_hints.#{slug.split("-").first}")
+  end
 end

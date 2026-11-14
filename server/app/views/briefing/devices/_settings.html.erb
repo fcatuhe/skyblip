@@ -22,7 +22,7 @@
       <label for="unit-aircraft-address"><%= t("settings.aircraft_address") %></label>
       <input type="text" id="unit-aircraft-address" name="aircraft_address" maxlength="6" pattern="[0-9A-Fa-f]{6}"
              autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-aircraft-address-hint">
-      <p class="field-hint" id="unit-aircraft-address-hint"><%= t("settings.aircraft_address_hint") %></p>
+      <p class="field-hint" id="unit-aircraft-address-hint"><%= aircraft_address_hint(slug) %></p>
     </div>
 
     <div class="field">

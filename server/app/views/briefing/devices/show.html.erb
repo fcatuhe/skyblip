@@ -27,7 +27,7 @@
     </div>
   </div>
 
-  <%= render "briefing/devices/settings" %>
+  <%= render "briefing/devices/settings", slug: @slug %>
 
   <%= link_to briefing_device_firmware_path(device_slug: @slug), class: "unit-row", data: { unit_target: "firmwareRow" }, hidden: true do %>
     <span><%= t("briefing.unit.firmware") %></span>
