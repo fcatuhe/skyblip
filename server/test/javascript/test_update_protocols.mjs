@@ -7,7 +7,7 @@ import { connected } from './update_session.mjs';
 
 const GO = { adsl_version: '0.1.0', alptas_version: '0.2.0' };
 // INFO: fc 14nov26 every frame of this unit fits 20 bytes, so a notice on connect could only come from protocols
-const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 }, imu: 'none' };
+const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 }, imu: 'none' };
 
 test('connecting asks the radio protocols, and reads each stack the unit names', async () => {
   const { device, until } = await connected({ protocols: GO });

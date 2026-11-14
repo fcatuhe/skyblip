@@ -15,7 +15,7 @@ namespace skyblip::go {
 enum class MenuRow : uint8_t {
     AircraftType,
     Callsign,
-    OwnIcao,
+    AircraftAddress,
     Units,
     Range,
     Plot,
@@ -46,7 +46,7 @@ struct MenuValues {
     go::Settings settings{};
     bool light{false};
     Detected detected{};
-    // INFO: fc 14nov26 bus::State::own_transponder, the one an own ICAO typed must match
+    // INFO: fc 14nov26 bus::State::own_transponder, the one an aircraft address typed must match
     std::optional<uint32_t> own_transponder{};
 };
 
@@ -65,12 +65,13 @@ char next_callsign_character(char character);
 // The stored form: a name is edited nine wide and stored as what a pilot typed.
 int callsign_stored(char* out, const char* edited);
 
-constexpr int kOwnIcaoCharacters = 6;
-static_assert(kOwnIcaoCharacters <= kCallsignCharacters,
+constexpr int kAircraftAddressCharacters = 6;
+static_assert(kAircraftAddressCharacters <= kCallsignCharacters,
               "the field edits in the callsign's buffer");
 char next_hex_character(char character);
-// INFO: fc 11nov26 kOwnIcaoUnset for six digits that are not all typed, or that spell 000000
-uint32_t own_icao_typed(const char* edited);
+// INFO: fc 11nov26 kAircraftAddressUnset for six digits that are not all typed, or that spell
+// 000000
+uint32_t aircraft_address_typed(const char* edited);
 
 struct AircraftType {
     uint8_t code;
@@ -122,7 +123,7 @@ int menu_first_row(const Menu& menu, MenuRow focus);
 Keys menu_keys(const MenuSnapshot& snapshot);
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot);
 
-// The field screen the callsign and the own ICAO share: the characters at a size a thumb
+// The field screen the callsign and the aircraft address share: the characters at a size a thumb
 // can check, and a bar under the one the pad is rolling.
 struct CallsignSnapshot {
     const char* title{"CALLSIGN"};
@@ -157,8 +158,8 @@ constexpr const char* kFieldKeepVerb = "KEEP";
 const char* field_button_verb(const CallsignSnapshot& snapshot);
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
-constexpr const char* kOwnIcaoClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
-constexpr int kOwnIcaoClearLineCount = 3;
+constexpr const char* kAircraftAddressClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
+constexpr int kAircraftAddressClearLineCount = 3;
 
 struct ClearSnapshot {
     const char* title{""};

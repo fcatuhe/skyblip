@@ -48,18 +48,20 @@ TEST_CASE(
     CHECK(described(from, to) == "BATTERY -20 MV\nFREQ +1.5 PPM");
 }
 
-// A phone that clears the own ICAO makes the aircraft's transponder traffic, so the glass says so.
+// A phone that clears the aircraft address makes the aircraft's transponder traffic, so the glass
+// says so.
 TEST_CASE(
-    "settings changes page: an own ICAO set or cleared reads in hex, or NONE, under the name") {
+    "settings changes page: an aircraft address set or cleared reads in hex, or NONE, under the "
+    "name") {
     Settings from = defaults();
     Settings to = from;
-    to.own_icao = 0x3C6586;
-    CHECK(described(from, to) == "OWN ICAO 3C6586");
+    to.aircraft_address = 0x3C6586;
+    CHECK(described(from, to) == "ADS-B 3C6586");
 
     from = to;
-    to.own_icao = kOwnIcaoUnset;
+    to.aircraft_address = kAircraftAddressUnset;
     to.units = Units::Metric;
-    CHECK(described(from, to) == "OWN ICAO NONE\nUNITS METRIC");
+    CHECK(described(from, to) == "ADS-B NONE\nUNITS METRIC");
 }
 
 TEST_CASE("settings changes page: every key a set may change at once still counts on three rows") {
@@ -67,7 +69,7 @@ TEST_CASE("settings changes page: every key a set may change at once still count
     Settings to = from;
     to.aircraft_type = 7;
     std::strcpy(to.callsign, "F-JXYZ");
-    to.own_icao = 0x3C6586;
+    to.aircraft_address = 0x3C6586;
     to.units = Units::Metric;
     to.alarm_enabled = false;
     to.alarm_volume = AlarmVolume::Off;

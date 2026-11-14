@@ -16,11 +16,11 @@
 namespace skyblip::common {
 
 struct TrafficSettings {
-    TrafficSettings(const uint32_t& own_icao_of) : own_icao(own_icao_of) {}
+    TrafficSettings(const uint32_t& aircraft_address_of) : aircraft_address(aircraft_address_of) {}
     TrafficSettings(uint32_t&&) = delete;
     TrafficSettings(const uint32_t&&) = delete;
 
-    const uint32_t& own_icao;
+    const uint32_t& aircraft_address;
 };
 
 // Owns state.traffic: radio events become targets. The dwell that heard a burst

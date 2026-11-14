@@ -126,7 +126,7 @@ enum : uint32_t {
     kCallsign = 8,
     kBatteryOffsetMv = 9,
     kFrequencyTrimE1Ppm = 10,
-    kOwnIcao = 11,
+    kAircraftAddress = 11,
 };
 }
 
@@ -442,7 +442,7 @@ enum : uint32_t {
     kListening = 3,
     kUtcValid = 4,
     kLastSequence = 5,
-    kOwnIcaoSet = 6,
+    kAircraftAddressSet = 6,
     kAlarmGranted = 7,
     kExportReference = 11,
     kPaired = 12,
@@ -469,7 +469,7 @@ enum : uint32_t {
     kAltitudeHaeAgeMs = 8,
     kPressureAltitudeMm = 9,
     kPressureAltitudeAgeMs = 10,
-    kOwnIcao = 11,
+    kAircraftAddress = 11,
     kAlarmRequested = 12,
     kPaired = 18,
 };

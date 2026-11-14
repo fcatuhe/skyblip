@@ -53,11 +53,8 @@ void ScreenService::sync_notice(uint32_t now_ms) {
                     now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
         close_notice();
     if (alarm_takes_glass()) return;
-    // INFO: fc 11nov26 a lost pin outranks the own-ICAO notice, which no longer stands unpaired
     if (bravo_.take_forgotten_notice()) {
         notice_kind_ = Notice::BravoForgot;
-    } else if (!notice_ && bravo_.own_icao_warning().take_notice(settings_.own_icao)) {
-        notice_kind_ = Notice::OwnIcao;
     } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
         notice_kind_ = Notice::NewAircraft;
         noticed_aircraft_ = heard;
@@ -102,7 +99,7 @@ Detected ScreenService::detected_to_store(const Detected& shown) const {
 
 // INFO: fc 13nov26 once a boot, for an address the Go does not hold: a new aircraft or a first one
 bool ScreenService::new_aircraft(const Detected& detected) const {
-    return detected.state == Detection::Heard && detected.address != settings_.own_icao;
+    return detected.state == Detection::Heard && detected.address != settings_.aircraft_address;
 }
 
 void ScreenService::use_noticed_aircraft() {

@@ -17,7 +17,7 @@
   const MAX_RECORDS_PER_CHUNK = 19;
   const MAX_READ_CHUNKS = 8;
   const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
-  const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 };
+  const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
   const later = (fn, ms = 0) => setTimeout(fn, ms);
@@ -57,7 +57,7 @@
         flight: 'ground',
         battery: 82,
         charging: false,
-        stored: { aircraft_type: 3, alarm_enabled: true, alarm_volume: 'soft', units: 'nautical', callsign: 'F-JXYZ', own_icao: 0 },
+        stored: { aircraft_type: 3, alarm_enabled: true, alarm_volume: 'soft', units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0 },
         mtu: 247,
         pressAfterMs: null,
         uploadDelayMs: 0,
@@ -179,7 +179,7 @@
     config() {
       const address = this.address === null ? {} : { address: this.address };
       const stored = this.product === 'skyblip_bravo'
-        ? { alarm_enabled: this.stored.alarm_enabled, alarm_volume: this.stored.alarm_volume, own_icao: this.stored.own_icao }
+        ? { alarm_enabled: this.stored.alarm_enabled, alarm_volume: this.stored.alarm_volume, aircraft_address: this.stored.aircraft_address }
         : this.stored;
       return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored });
     }

@@ -11,10 +11,10 @@ void AdsbService::tick(uint32_t now_ms) {
     bus::State& state = context_.state;
     // INFO: fc 11nov26 placed against the Go's position while paired, so exports are around the Go
     const GateChoice gate = gate_.choose(state.own, now_ms);
-    const uint32_t own_icao = gate_.own_icao(settings_.own_icao);
+    const uint32_t aircraft_address = gate_.aircraft_address(settings_.aircraft_address);
     state.traffic.set_own_reference(gate.own);
-    state.traffic.set_own_icao(own_icao);
-    assembly_.set_own_address(own_icao);
+    state.traffic.set_aircraft_address(aircraft_address);
+    assembly_.set_own_address(aircraft_address);
     const adsb::Reference here = reference(gate.own);
     events::AdsbFrame frame{};
     while (frames_.pop(frame)) hear(frame, here, now_ms);
@@ -52,7 +52,8 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
         refuse(frame, status);
         return;
     }
-    // INFO: fc 13nov26 before the fold drops the own ICAO, so a set address still reads as heard
+    // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as
+    // heard
     own_transponder_.hear(message, now_ms);
     const bus::State& state = context_.state;
     const uint32_t now_s = state.traffic_now_s(now_ms);

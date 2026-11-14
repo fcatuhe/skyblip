@@ -36,7 +36,7 @@ const std::map<std::string, int64_t> kNarrowerThanTheirType = {
     {"peer_claim.into_ms", 999},
     {"peer_claim.latitude_1e7", -900000000},
     {"peer_claim.longitude_1e7", -1800000000},
-    {"peer_claim.own_icao", 0xFFFFFF},
+    {"peer_claim.aircraft_address", 0xFFFFFF},
 };
 
 const std::map<std::string, std::string> kWidestText = {

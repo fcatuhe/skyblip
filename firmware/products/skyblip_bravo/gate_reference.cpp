@@ -17,7 +17,7 @@ void GateReference::hear(const comms::PeerClaim& claim, const diagnostics::Insta
     claim_ = claim;
     heard_ = true;
     heard_ms_ = now_ms;
-    go_own_icao_ = claim.own_icao;
+    go_aircraft_address_ = claim.aircraft_address;
     transit_ms_ = 0;
     if (!claim.utc_valid || !at.utc_dated) return;
     const int64_t written_ms =
@@ -31,7 +31,7 @@ void GateReference::hear(const comms::PeerClaim& claim, const diagnostics::Insta
 
 void GateReference::unpair() {
     heard_ = false;
-    go_own_icao_ = 0;
+    go_aircraft_address_ = 0;
 }
 
 GateChoice GateReference::choose(const model::Ownship& own, uint32_t now_ms) const {
@@ -57,8 +57,8 @@ GateChoice GateReference::choose(const model::Ownship& own, uint32_t now_ms) con
     return choice;
 }
 
-uint32_t GateReference::own_icao(uint32_t bravo_own_icao) const {
-    return go_own_icao_ != 0 ? go_own_icao_ : bravo_own_icao;
+uint32_t GateReference::aircraft_address(uint32_t bravo_aircraft_address) const {
+    return go_aircraft_address_ != 0 ? go_aircraft_address_ : bravo_aircraft_address;
 }
 
 // INFO: fc 11nov26 a claim the Go wrote without UTC cannot be dated, so it is never the reference

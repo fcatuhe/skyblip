@@ -464,7 +464,7 @@ class Product {
         "skyBlip Go", identity::bluetooth_name, dfu::Product::SkyblipGo};
     common::OwnshipService ownship_{context_, settings_.aircraft_type};
     RadioService radio_{context_, settings_};
-    common::TrafficService traffic_{context_, kFeatures, settings_.own_icao};
+    common::TrafficService traffic_{context_, kFeatures, settings_.aircraft_address};
     common::AlarmService alarm_{
         context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};

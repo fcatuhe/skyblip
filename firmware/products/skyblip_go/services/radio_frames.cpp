@@ -22,7 +22,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
                              uint32_t utc_s, uint8_t* chips) {
     // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
     const settings::OnAir sender =
-        settings::on_air(context_.state.activation.address(), settings_.own_icao);
+        settings::on_air(context_.state.activation.address(), settings_.aircraft_address);
     bool built = false;
     switch (attempt.payload) {
         case Payload::Position:

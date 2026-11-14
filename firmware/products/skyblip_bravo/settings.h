@@ -14,7 +14,7 @@ namespace skyblip::bravo {
 
 using common::AlarmVolume;
 
-constexpr uint32_t kOwnIcaoUnset = 0;
+constexpr uint32_t kAircraftAddressUnset = 0;
 constexpr size_t kPeerAddressBytes = 6;
 
 // INFO: fc 12nov26 #192 pins one Go by its whole Bluetooth address and type, and decides the rest
@@ -31,12 +31,13 @@ events::BluetoothAddress address_of(const PeerPin& pin);
 PeerPin pin_of(const events::BluetoothAddress& address);
 
 struct Settings {
-    uint32_t own_icao{kOwnIcaoUnset};
+    uint32_t aircraft_address{kAircraftAddressUnset};
     PeerPin peer{};
     bool alarm_enabled{true};
     AlarmVolume alarm_volume{AlarmVolume::Loud};
-    // INFO: fc 13nov26 own_icao came from the pinned Go, so that Go clearing it clears it here
-    bool own_icao_from_go{false};
+    // INFO: fc 13nov26 aircraft_address came from the pinned Go, so that Go clearing it clears it
+    // here
+    bool aircraft_address_from_go{false};
 };
 
 constexpr uint8_t kBlobVersion = 2;

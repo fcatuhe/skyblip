@@ -70,7 +70,7 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
      "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff"
      "1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"),
     ({"command": "health", "protocol_version": 1, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
-      "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "own_icao_set": True,
+      "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "aircraft_address_set": True,
       "alarm_granted": True, "export_reference": "own", "paired": True,
       "own_transponder": 0xFFFFFF, "own_transponder_callsign": "ABCD1234",
       "own_transponder_category": 17, "firmware": "9.99.99+99999", "battery_percent": 100,
@@ -81,7 +81,7 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
       "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
       "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,
       "altitude_hae_age_ms": WIDEST_UNSIGNED, "pressure_altitude_mm": WIDEST_INTEGER,
-      "pressure_altitude_age_ms": WIDEST_UNSIGNED, "own_icao": 0xFFFFFF, "alarm_requested": True,
+      "pressure_altitude_age_ms": WIDEST_UNSIGNED, "aircraft_address": 0xFFFFFF, "alarm_requested": True,
       "paired": True},
      "ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
      "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf512f5"),

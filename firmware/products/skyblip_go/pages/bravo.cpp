@@ -14,8 +14,6 @@ constexpr int kTagScale = 4;
 constexpr int kDetailRows = 3;
 constexpr int kDetailBytes = kGlassWidth / ui::kCellWidth + 1;
 
-constexpr BodyLine kOwnIcaoNoticeBody[] = {{"YOUR TRANSPONDER"}, {"SHOWS AS"},  {"TRAFFIC"}, {""},
-                                           {"SET IT IN"},        {"SETTINGS,"}, {"AIRCRAFT"}};
 // INFO: fc 14nov26 no full stop on the glass: a sentence starts its own paragraph instead
 constexpr BodyLine kForgotNoticeBody[] = {{"BRAVO IS NOT"},   {"PAIRED"},  {""},
                                           {"THE GO REMOVED"}, {"IT TOO"},  {""},
@@ -178,12 +176,6 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
         case BravoStep::Idle: break;
     }
     draw_list(canvas, snapshot);
-}
-
-void draw_own_icao_notice(ui::Canvas& canvas) {
-    draw_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt);
-    draw_body(canvas, Heading::Interrupt, /*keys=*/true, kOwnIcaoNoticeBody, 7);
-    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
 }
 
 // INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere

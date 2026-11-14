@@ -50,7 +50,7 @@ constexpr int16_t kFrequencyTrimCeilingE1Ppm = 100;
 // INFO: fc 12sep26 ADS-L G.1.3's light aircraft, what a device says until a pilot says otherwise
 constexpr uint8_t kAircraftTypeLight = 1;
 
-constexpr uint32_t kOwnIcaoUnset = 0;
+constexpr uint32_t kAircraftAddressUnset = 0;
 
 // INFO: fc 11nov26 BT_ADDR_LE_RANDOM_ID, the last LE address type (zephyr/bluetooth/addr.h)
 constexpr uint8_t kBluetoothAddressTypeCeiling = 3;
@@ -82,7 +82,7 @@ struct Settings {
     RadarPlot plot{RadarPlot::All};
     char callsign[kCallsignBytes]{0};
     // INFO: fc 11nov26 stored whole, so an F.2.3 table-5 transmitter can read it unchanged
-    uint32_t own_icao{kOwnIcaoUnset};
+    uint32_t aircraft_address{kAircraftAddressUnset};
     // INFO: fc 11nov26 the pinned Bravo, its type with its address, all zero while unpaired
     events::BluetoothAddress bravo{};
 
@@ -101,8 +101,9 @@ inline bool paired(const Settings& settings) {
 
 Status validate(const Settings& settings);
 
-// INFO: fc 14nov26 ADS-L F.2.3 inconsistency: an own ICAO other than the transponder Bravo names
-bool contradicts(uint32_t own_icao, std::optional<uint32_t> own_transponder);
+// INFO: fc 14nov26 ADS-L F.2.3 inconsistency: an aircraft address other than the transponder Bravo
+// names
+bool contradicts(uint32_t aircraft_address, std::optional<uint32_t> own_transponder);
 
 size_t blob_size();
 void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
