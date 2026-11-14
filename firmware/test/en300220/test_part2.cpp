@@ -75,11 +75,11 @@ TEST_CASE("EN 300 220-2 4.6.1.1: a channel found busy is left for another operat
 
 // Table 17 repeats -1 Table 45 over Table 11, which repeats -1 Table 32.
 TEST_CASE("EN 300 220-2 4.6.2.3: the CCA threshold is under Table 17's limit at the antenna") {
-    const int32_t radiated =
-        platform::host::Rf::kCcaThresholdCentiDbm - parts::sx1262::kReceiveGainCentiDbd;
-    CHECK(radiated <= -9399 + 1500);
-    // The 15 dB row applies: the e.r.p. is under 100 mW, 20 dBm.
-    CHECK(parts::sx1262::kResultingErpCentiDb < 2000);
+    const int32_t corrected_for_antenna =
+        platform::host::Rf::kCcaThresholdCentiDbm + parts::sx1262::kReceiveGainCentiDbd;
+    CHECK(corrected_for_antenna <= -9399 + 1500);
+    const int32_t erp_under_100_mw_centi_dbm = 2000;
+    CHECK(parts::sx1262::kResultingErpCentiDb < erp_under_100_mw_centi_dbm);
 }
 
 TEST_CASE("EN 300 220-2 4.6.3.2: the polite access timing stays inside Table 18") {

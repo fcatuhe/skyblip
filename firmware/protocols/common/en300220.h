@@ -57,12 +57,12 @@ constexpr int32_t sensitivity_centi_dbm(uint32_t receiver_bandwidth_hz) {
            kSensitivityOffsetCentiDbm;
 }
 
-// INFO: fc 14nov26 Table 45's note: a front end receive_gain above 0 dBd hears every signal louder
+// INFO: fc 14nov26 Table 45: "With antenna gain of -5 dB, the CCA threshold shall be ... increased"
 constexpr int32_t cca_threshold_centi_dbm(uint32_t receiver_bandwidth_hz, uint32_t erp_mw,
-                                          int32_t receive_gain_centi_dbd) {
+                                          int32_t antenna_gain_centi_dbd) {
     const int32_t margin =
         erp_mw < kCcaHighPowerFloorMw ? kCcaMarginCentiDb : kCcaMarginHighPowerCentiDb;
-    return sensitivity_centi_dbm(receiver_bandwidth_hz) + margin + receive_gain_centi_dbd;
+    return sensitivity_centi_dbm(receiver_bandwidth_hz) + margin - antenna_gain_centi_dbd;
 }
 
 // INFO: fc 14nov26 -1 5.21.1: below the threshold "the device proceeds with the transmission"

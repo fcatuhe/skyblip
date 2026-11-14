@@ -25,14 +25,15 @@ TEST_CASE("en300220: the sensitivity limit of Table 32 matches the clause's exam
     CHECK(en300220::sensitivity_centi_dbm(200000) == -9399);
 }
 
-// Table 45's example: a -5 dB antenna's front-end threshold, raised by 5 dB, is the radiated one.
-TEST_CASE("en300220: the CCA threshold sits 15 dB over sensitivity and follows the antenna gain") {
+// Table 45: "With antenna gain of -5 dB, the CCA threshold shall be ... increased by 5 dB".
+TEST_CASE("en300220: the CCA threshold sits 15 dB over sensitivity, less the antenna gain") {
     constexpr uint32_t kChannelHz = 200000;
     CHECK(en300220::cca_threshold_centi_dbm(kChannelHz, 25, 0) == -7899);
     CHECK(en300220::cca_threshold_centi_dbm(kChannelHz, 100, 0) == -8299);
     const int32_t lossy = en300220::cca_threshold_centi_dbm(kChannelHz, 25, -500);
-    CHECK(lossy == -8399);
-    CHECK(lossy + 500 == en300220::cca_threshold_centi_dbm(kChannelHz, 25, 0));
+    CHECK(lossy == -7399);
+    CHECK(lossy - 500 == en300220::cca_threshold_centi_dbm(kChannelHz, 25, 0));
+    CHECK(en300220::cca_threshold_centi_dbm(kChannelHz, 25, 300) == -8199);
 }
 
 TEST_CASE("en300220: a level at the threshold is busy, one below it is clear") {

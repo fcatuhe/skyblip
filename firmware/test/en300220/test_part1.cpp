@@ -86,17 +86,19 @@ TEST_CASE("EN 300 220-1 5.21.1: a burst goes out below the CCA threshold and def
     CHECK(waits.size() == timing::PoliteAccess::kDeferralUnits);
 }
 
-// Table 45 for under 100 mW e.r.p., over Table 32's S = 10 log 200 kHz - 117 dBm, at 0 dBd.
+// "With antenna gain of -5 dB, the CCA threshold shall be corrected and increased by 5 dB".
 TEST_CASE(
-    "EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, at the "
-    "front end") {
-    CHECK(timing::cca_threshold_centi_dbm(0) == -9399 + 1500);
-    const int32_t gain_centi_dbd = parts::sx1262::kReceiveGainCentiDbd;
+    "EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, less the "
+    "antenna gain") {
+    const int32_t sensitivity_200_khz = -9399;
+    const int32_t limit_at_0_dbd = sensitivity_200_khz + 1500;
+    CHECK(timing::cca_threshold_centi_dbm(0) == limit_at_0_dbd);
+    const int32_t peak_to_dipole = 160 - 215;
+    const int32_t feed = -50;
+    CHECK(parts::sx1262::kReceiveGainCentiDbd == peak_to_dipole + feed);
     const int32_t threshold = platform::host::Rf::kCcaThresholdCentiDbm;
-    CHECK(threshold == -7899 + gain_centi_dbd);
-    // Referred back to a 0 dBd antenna, as Table 45's note asks, the threshold is the limit.
-    CHECK(threshold - gain_centi_dbd <= -7899);
-    CHECK(gain_centi_dbd == 160 - 215 - 50);
+    CHECK(threshold == limit_at_0_dbd + 105);
+    CHECK(threshold == -7794);
 
     const int8_t loudest_clear_dbm = static_cast<int8_t>((threshold - 99) / 100);
     CHECK(Burst(loudest_clear_dbm).keyed());
