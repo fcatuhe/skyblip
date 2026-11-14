@@ -87,11 +87,6 @@ class Witness {
     std::set<const names::Key*> keys_;
 };
 
-struct NoConsole {
-    bool ready() const { return false; }
-    void line(const char*, int) {}
-};
-
 const identity::Nonce kUnitNonce{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 const identity::Nonce kServerNonce{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
@@ -143,7 +138,7 @@ struct GroundedUnitWithLogs {
         flight = rig.product.flight_log().session_id();
         REQUIRE_FALSE(rig.product.capture().capturing());
         REQUIRE_FALSE(rig.product.flight_log().recording());
-        go::DiagnosticsDump<Go, NoConsole>().step(rig.product, now_ms);
+        go::DiagnosticsCollector<Go>().step(rig.product, now_ms);
     }
 
     void say(events::Endpoint endpoint, const std::string& json) {

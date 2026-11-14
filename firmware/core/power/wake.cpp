@@ -2,23 +2,6 @@
 
 namespace skyblip::power {
 
-const char* to_string(BootPath path) {
-    switch (path) {
-        case BootPath::SleepAgain: return "SLEEP AGAIN";
-        case BootPath::Run: break;
-    }
-    return "RUN";
-}
-
-const char* to_string(RefusedFrame frame) {
-    switch (frame) {
-        case RefusedFrame::Wordmark: return "WORDMARK";
-        case RefusedFrame::FlatCell: return "FLAT CELL";
-        case RefusedFrame::Leave: break;
-    }
-    return "LEAVE";
-}
-
 namespace {
 
 bool below(const BootCell& cell, uint16_t floor_mv) {

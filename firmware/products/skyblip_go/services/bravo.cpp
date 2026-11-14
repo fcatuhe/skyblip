@@ -315,7 +315,7 @@ void BravoService::claim(uint32_t now_ms) {
     claim.paired = paired(settings_);
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(claim, frame, sizeof(frame));
-    // INFO: fc 11nov26 the central counts and logs every write it refuses, so the result is its own
+    // INFO: fc 11nov26 a refused claim is dropped, and the next one leaves kClaimPeriodMs later
     if (bytes > 0) (void)central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes)));
 }
 

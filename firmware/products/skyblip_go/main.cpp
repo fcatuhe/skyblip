@@ -1,14 +1,10 @@
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
 
-#include "hardware/platform/zephyr/console.h"
 #include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/t_echo_plus.h"
 #include "products/skyblip_go/product.h"
 #include "products/skyblip_go/services/diagnostics.h"
 #include "runtime/tasks.h"
-
-LOG_MODULE_REGISTER(skyblip, LOG_LEVEL_INF);
 
 using namespace skyblip;
 
@@ -19,28 +15,21 @@ using Go = go::Product<platform::zephyr::TEchoPlus>;
 platform::zephyr::TEchoPlus g_platform;
 Go g_product{g_platform};
 
-// Reads what the services and the board already count, one line per subsystem on
-// the USB console, and holds the snapshot the `diagnostics` command answers from. Not a
-// service: it consumes the product rather than being stepped by it.
-go::DiagnosticsDump<Go, platform::zephyr::Console> g_diagnostics;
+// Reads what the services and the board already count into the snapshot the
+// `diagnostics` command answers from. Not a service: it consumes the product
+// rather than being stepped by it.
+go::DiagnosticsCollector<Go> g_diagnostics;
 
 }  // namespace
 
 int main(void) {
     // INFO: fc 05oct26 before setup, so a refused boot cannot hang awake; SYSTEM OFF stops it
-    if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok)
-        LOG_ERR("watchdog: not armed, the loop is unsupervised");
+    (void)g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
 
-    const Status started = g_product.setup();
-    LOG_INF("reset reason: %s, setup done at %u ms", power::to_string(g_product.reset_reason()),
-            static_cast<unsigned>(k_uptime_get()));
-
+    // INFO: fc 14nov26 a failed setup runs on with the parts that answered
+    (void)g_product.setup();
     // INFO: fc 21sep26 the refusal performed: no service, at most one frame, and it never returns
     if (g_product.boot_path() == power::BootPath::SleepAgain) {
-        const power::BootCell& cell = g_product.boot_cell();
-        LOG_INF("back to sleep at %u mV (lockout %u mV, external power %d), glass: %s",
-                cell.cell_mv, power::kBootLockoutMv, static_cast<int>(cell.external_power),
-                power::to_string(g_product.refused_frame()));
         while (!g_product.park_refusal(static_cast<uint32_t>(k_uptime_get()))) {
             g_platform.watchdog().feed();
             k_sleep(K_MSEC(runtime::kServicePassCeilingMs));
@@ -48,54 +37,15 @@ int main(void) {
         g_platform.system_power().system_off();
     }
 
-    if (!g_platform.pps_armed()) LOG_ERR("PPS: no edge interrupt, so no slot is ever keyed");
-    if (!g_platform.storage_mounted())
-        LOG_ERR("NVS: did not mount, settings live in RAM until the next boot");
-    if (!g_platform.link_up()) LOG_ERR("bluetooth: did not come up, no tablet can connect");
-    if (!g_platform.key_provisioned())
-        LOG_ERR("identity: no unit key, the unit cannot be activated");
-    if (!g_product.state().activation.activated())
-        LOG_INF("identity: not activated, the radio stays off until skyblip.eu/activate");
-
-    // Not fatal and not silent: without the comparator the write rule still
-    // holds, on the divider alone, and a cell that collapses between two samples
-    // can land inside a settings write. See hardware/platform/zephyr/
-    // supply_monitor.h for what arms it.
-    if (!g_platform.system_power().supply_monitor_armed())
-        LOG_ERR("POFCON: not armed, a collapsing rail can land inside a flash write");
-
-    if (started == Status::Ok) {
-        LOG_INF("skyBlip up: capabilities=%u degraded=%u",
-                static_cast<unsigned>(g_product.capabilities()),
-                static_cast<unsigned>(g_product.degraded()));
-    } else {
-        // The self-test page is already on the glass and names the part that
-        // did not answer. Staying up with it beats returning from main.
-        LOG_ERR("self test %s: missing=%u", to_string(started),
-                static_cast<unsigned>(ports::without(go::kRequired, g_product.capabilities())));
-    }
-
-    bool reported_stall = false;
     for (;;) {
         const int64_t began_ticks = k_uptime_ticks();
         const uint32_t now_ms = static_cast<uint32_t>(k_ticks_to_ms_floor64(began_ticks));
         g_product.run_pass(now_ms);
         g_diagnostics.step(g_product, now_ms);
 
-        if (g_product.may_feed_watchdog(now_ms)) {
-            g_platform.watchdog().feed();
-        } else if (!reported_stall) {
-            reported_stall = true;
-            const int stalled = g_product.stalled_service(now_ms);
-            LOG_ERR("watchdog: service '%s' stopped reporting progress; letting it bite",
-                    g_product.service_name(stalled));
-        }
+        if (g_product.may_feed_watchdog(now_ms)) g_platform.watchdog().feed();
 
-        if (g_product.ready_to_power_off()) {
-            const power::ShutdownReason reason = g_product.shutdown().reason();
-            LOG_INF("power off: %s", power::to_string(reason));
-            g_platform.system_power().system_off();
-        }
+        if (g_product.ready_to_power_off()) g_platform.system_power().system_off();
 
         platform::zephyr::g_loop_wake.rest_after(began_ticks);
     }

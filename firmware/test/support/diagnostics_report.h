@@ -1,5 +1,4 @@
-// Harness, not a test: a busy and a widest device snapshot, and the dump read back as console lines
-// and as link frames.
+// Harness, not a test: a busy and a widest device snapshot, and the dump read back as link frames.
 #ifndef SKYBLIP_TEST_SUPPORT_DIAGNOSTICS_REPORT_H
 #define SKYBLIP_TEST_SUPPORT_DIAGNOSTICS_REPORT_H
 
@@ -201,20 +200,6 @@ inline Diagnostics widest_device() {
     diagnostics.capture_keeps_full_s = 0xFFFFFFFFu;
     diagnostics.capture_keeps_power_run_s = 0xFFFFFFFFu;
     return diagnostics;
-}
-
-inline std::string console(const Diagnostics& diagnostics) {
-    DiagnosticsReport report(diagnostics, link::Command::Diagnostics);
-    std::string all;
-    char line[DiagnosticsReport::kLineBytes];
-    for (int i = 0; i < report.line_count(); i++) {
-        const int written = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(written > 0);
-        CHECK(static_cast<int>(std::string(line).size()) == written);
-        all += line;
-        all += "\n";
-    }
-    return all;
 }
 
 // Every frame the report produces at a given payload, joined, plus a count.

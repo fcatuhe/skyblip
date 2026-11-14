@@ -9,39 +9,27 @@ namespace skyblip::go {
 
 // The dump's collector: it reads counters the device already keeps and writes
 // them into the one snapshot the companion link answers from
-// (core/comms/diagnostics.h), then puts the same table on the console every
-// kDiagnosticsDumpPeriodMs. No formatting and no policy live here - that is core's, and
-// host-tested there.
+// (core/comms/diagnostics.h). No formatting and no policy live here - that is
+// core's, and host-tested there.
 //
 // Not a runtime::Service, deliberately. A service is handed roles, the bus and
 // bus::State; six of these numbers belong to sibling services and five to the GNSS
 // part, and neither is reachable through a Context. Reaching for them would mean
 // publishing counters through the bus for one reader, so instead this is driven
-// from the shell with the product in hand, which is also the only place that knows
-// how to write to a console.
-//
-// Sink is whatever can take a line: platform::zephyr::Console on silicon, a
-// capturing sink in the tests. It answers ready() so a device with no host on its
-// USB port formats nothing at all.
-template <class Product, class Sink>
-class DiagnosticsDump {
+// from the shell with the product in hand.
+template <class Product>
+class DiagnosticsCollector {
    public:
     void step(Product& product, uint32_t now_ms) {
         comms::Diagnostics& snapshot = product.config_link().config().diagnostics();
         // Unsigned subtraction throughout, so the 49.7-day wrap of a 32-bit
-        // millisecond counter costs one late dump and nothing else.
+        // millisecond counter costs one late refresh and nothing else.
         if (!started_ || now_ms - refreshed_ms_ >= comms::kDiagnosticsRefreshPeriodMs) {
             refresh(product, snapshot, now_ms);
             refreshed_ms_ = now_ms;
         }
-        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpPeriodMs) {
-            dumped_ms_ = now_ms;
-            emit(snapshot);
-        }
         started_ = true;
     }
-
-    Sink& sink() { return sink_; }
 
    private:
     // Every read here is a const accessor of a counter that lives somewhere else.
@@ -109,8 +97,8 @@ class DiagnosticsDump {
         snapshot.gnss_solution_phase_valid = state.gnss.solution_phase_valid;
 
         // The two counters core/power keeps and acts on nothing for: comparator
-        // firings, and readings the sanity floor threw away. They tell a bench a
-        // supply problem from a divider problem and they had no reader at all.
+        // firings, and readings the sanity floor threw away. They tell a supply
+        // problem from a divider problem and they had no reader at all.
         snapshot.supply_warnings = product.power().supply_warnings();
         snapshot.battery_implausible = product.power().implausible_samples();
         snapshot.charge = product.power().charge_condition();
@@ -121,19 +109,7 @@ class DiagnosticsDump {
         snapshot.refreshes++;
     }
 
-    void emit(const comms::Diagnostics& snapshot) {
-        if (!sink_.ready()) return;
-        comms::DiagnosticsReport report(snapshot, link::Command::Diagnostics);
-        char line[comms::DiagnosticsReport::kLineBytes];
-        for (int i = 0; i < report.line_count(); i++) {
-            const int length = report.line(i, line, static_cast<int>(sizeof(line)));
-            if (length > 0) sink_.line(line, length);
-        }
-    }
-
-    Sink sink_{};
     uint32_t refreshed_ms_{0};
-    uint32_t dumped_ms_{0};
     bool started_{false};
 };
 

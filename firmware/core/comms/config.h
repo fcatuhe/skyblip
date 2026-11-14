@@ -156,8 +156,8 @@ class ConfigService {
 
     // The status dump, held here because this is the one service that can put it
     // on a link (core/comms/diagnostics.h). Everything above writes its own half
-    // of it, so the reply, the unsolicited push and the console dump report one
-    // set of numbers rather than three copies of them; the product's collector
+    // of it, so the reply, the unsolicited push and the dump report one set of
+    // numbers rather than a copy each; the product's collector
     // fills the other half through this door, once a second.
     Diagnostics& diagnostics() { return diagnostics_; }
     const Diagnostics& diagnostics() const { return diagnostics_; }
@@ -319,9 +319,8 @@ class ConfigService {
     bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
-    // And the whole dump, which is the same table as the console's: one frame per
-    // subsystem where the payload allows it, more where it does not, and never a
-    // frame that mixes two subsystems (core/comms/diagnostics.h).
+    // And the whole dump: one frame per subsystem where the payload allows it, more where it does
+    // not, and never a frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
     bool answers(link::Command command) const;
     void challenge();

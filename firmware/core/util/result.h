@@ -23,24 +23,6 @@ enum class [[nodiscard]] Status : uint8_t {
 };
 
 constexpr bool is_ok(Status status) { return status == Status::Ok; }
-constexpr const char* to_string(Status status) {
-    switch (status) {
-        case Status::Ok: return "Ok";
-        case Status::Invalid: return "Invalid";
-        case Status::OutOfRange: return "OutOfRange";
-        case Status::Crc: return "Crc";
-        case Status::Unsupported: return "Unsupported";
-        case Status::WouldBlock: return "WouldBlock";
-        case Status::Down: return "Down";
-        case Status::Timeout: return "Timeout";
-        case Status::Full: return "Full";
-        case Status::Empty: return "Empty";
-        case Status::NotFound: return "NotFound";
-        case Status::Conflict: return "Conflict";
-    }
-    return "?";
-}
-
 constexpr Status status_of(wire::Status status) {
     switch (status) {
         case wire::Status::Ok: return Status::Ok;

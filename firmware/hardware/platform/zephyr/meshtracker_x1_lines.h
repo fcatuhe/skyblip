@@ -6,7 +6,6 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
-#include <zephyr/sys/printk.h>
 
 #include <cstdint>
 
@@ -39,9 +38,7 @@ class MeshtrackerX1Lines {
     // more
     Status begin_inputs() {
         if (!device_is_ready(gpio0_) || !device_is_ready(gpio1_)) return Status::Down;
-        if (!input(button_, "button") || !input(charge_status_, "charge status") ||
-            !input(charge_done_, "charge done"))
-            return Status::Down;
+        if (!input(button_) || !input(charge_status_) || !input(charge_done_)) return Status::Down;
         return Status::Ok;
     }
 
@@ -77,10 +74,8 @@ class MeshtrackerX1Lines {
     }
 
    private:
-    static bool input(const struct gpio_dt_spec& pin, const char* name) {
-        const int error = gpio_pin_configure_dt(&pin, GPIO_INPUT);
-        if (error != 0) printk("meshtracker_x1: %s pin not configured (%d)\n", name, error);
-        return error == 0;
+    static bool input(const struct gpio_dt_spec& pin) {
+        return gpio_pin_configure_dt(&pin, GPIO_INPUT) == 0;
     }
 
     const struct device* gpio0_{DEVICE_DT_GET(DT_NODELABEL(gpio0))};

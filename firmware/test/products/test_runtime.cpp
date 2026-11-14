@@ -230,8 +230,8 @@ TEST_CASE("runtime: a null role accepts every call and reports nothing works") {
 
 TEST_CASE("watchdog: the dog is fed while every task is inside its deadline") {
     runtime::FeedDecision feed;
-    const int radio_id = feed.add("radio", 1000);
-    const int gnss_id = feed.add("gnss", 1000);
+    const int radio_id = feed.add(1000);
+    const int gnss_id = feed.add(1000);
     CHECK(radio_id == 0);
     CHECK(gnss_id == 1);
     CHECK(feed.count() == 2);
@@ -248,10 +248,10 @@ TEST_CASE("watchdog: the dog is fed while every task is inside its deadline") {
     }
 }
 
-TEST_CASE("watchdog: a task that stops checking in stops the feed and is named") {
+TEST_CASE("watchdog: a task that stops checking in stops the feed") {
     runtime::FeedDecision feed;
-    const int radio = feed.add("radio", 1000);
-    const int gnss = feed.add("gnss", 1000);
+    const int radio = feed.add(1000);
+    const int gnss = feed.add(1000);
     feed.begin(0);
 
     // The radio keeps going; the GNSS task went quiet at t=0.
@@ -262,7 +262,6 @@ TEST_CASE("watchdog: a task that stops checking in stops the feed and is named")
     feed.check_in(radio, 1000);
     CHECK_FALSE(feed.may_feed(1000));
     CHECK(feed.stalled_service(1000) == gnss);
-    CHECK(__builtin_strcmp(feed.name(gnss), "gnss") == 0);
     CHECK(feed.silent_ms(gnss, 1000) == 1000);
 
     // It comes back: so does the feed. A stall is a state, not a latch, because
@@ -274,8 +273,8 @@ TEST_CASE("watchdog: a task that stops checking in stops the feed and is named")
 
 TEST_CASE("watchdog: each task carries its own rope") {
     runtime::FeedDecision feed;
-    const int fast = feed.add("fast", 100);
-    const int slow = feed.add("slow", 5000);
+    const int fast = feed.add(100);
+    const int slow = feed.add(5000);
     feed.begin(0);
     feed.check_in(slow, 0);
 
@@ -316,8 +315,7 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     Spy healthy(context, 1, order, Status::Ok);
     Spy wedged(context, 2, order, Status::Ok);
     runtime::Service* services[] = {&healthy, &wedged};
-    static const char* const names[] = {"healthy", "wedged"};
-    runtime::Loop loop(services, 2, names);
+    runtime::Loop loop(services, 2);
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case
     // runs a thousand of them and the ordering is pinned above.
@@ -339,7 +337,6 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     }
     CHECK_FALSE(loop.may_feed_watchdog(now_ms));
     CHECK(loop.stalled_service(now_ms) == 1);
-    CHECK(__builtin_strcmp(loop.feed_decision().name(loop.stalled_service(now_ms)), "wedged") == 0);
     CHECK(wedged.ticks > 0);
 }
 
@@ -350,8 +347,8 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
 // tracker in flight, once every seven weeks, for no reason at all.
 TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
     runtime::FeedDecision feed;
-    const int radio = feed.add("radio", 1000);
-    const int gnss = feed.add("gnss", 1000);
+    const int radio = feed.add(1000);
+    const int gnss = feed.add(1000);
     const uint32_t before = 0xFFFFFF00u;  // 256 ms short of the wrap
     feed.begin(before);
 
@@ -372,6 +369,6 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
     CHECK(feed.may_feed(743u));
     CHECK_FALSE(feed.may_feed(744u));
     CHECK(feed.stalled_service(744u) == gnss);
-    // The one that is still checking in is not the one named.
+    // The one that is still checking in is not the one stalled.
     CHECK(feed.silent_ms(radio, 744u) == 1);
 }

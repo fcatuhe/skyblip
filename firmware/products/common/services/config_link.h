@@ -107,7 +107,7 @@ class ConfigLinkService : public runtime::Service {
     void publish_upload_verdict();
     void publish_link();
 
-    // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
+    // INFO: fc 18oct26 a Bluetooth that never came up is asked once a second, not every pass
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
     static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";

@@ -2,34 +2,6 @@
 
 namespace skyblip::power {
 
-const char* to_string(ShutdownReason reason) {
-    switch (reason) {
-        case ShutdownReason::LongPress: return "BUTTON";
-        case ShutdownReason::Stow: return "STOW";
-        case ShutdownReason::LowBattery: return "LOW BATTERY";
-        case ShutdownReason::LinkRequest: return "LINK";
-        case ShutdownReason::Install: return "INSTALL";
-        case ShutdownReason::Recovery: return "RECOVERY";
-        case ShutdownReason::None: break;
-    }
-    return "NONE";
-}
-
-const char* to_string(PowerDownStep step) {
-    switch (step) {
-        case PowerDownStep::RadioSleep: return "RADIO SLEEP";
-        case PowerDownStep::ExternalFlashDeepPowerDown: return "FLASH DPD";
-        case PowerDownStep::ExternalFlashLinesReleased: return "FLASH LINES";
-        case PowerDownStep::PanelLinesReleased: return "PANEL LINES";
-        case PowerDownStep::SensorBusReleased: return "SENSOR BUS";
-        case PowerDownStep::GnssStandby: return "GNSS STANDBY";
-        case PowerDownStep::GnssLinesReleased: return "GNSS LINES";
-        case PowerDownStep::PeripheralRailOff: return "RAIL OFF";
-        case PowerDownStep::WakePinArmed: return "WAKE ARMED";
-    }
-    return "NONE";
-}
-
 void power_down(PowerDownSink& sink) {
     for (const PowerDownStep step : kPowerDownOrder) sink.perform(step);
 }

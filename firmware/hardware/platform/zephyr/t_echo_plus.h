@@ -70,7 +70,7 @@ class TEchoPlus {
         // The gated rails are raised at board level so MCUboot sees them too;
         // what is still owed here is the SX1262 TCXO settling time.
         k_msleep(50);
-        storage_mounted_ = key_value_.begin() == Status::Ok;
+        (void)key_value_.begin();
         // A log partition that refuses to open is a device that flies and logs
         // nothing, not a device that refuses to fly: the region reports its own
         // readiness and the flight log service reads it.
@@ -79,12 +79,12 @@ class TEchoPlus {
         annunciator_.begin();
         indicator_.begin();
         // INFO: fc 18oct26 the key goes into UICR before Bluetooth starts
-        key_provisioned_ = identity_.begin() == Status::Ok;
-        link_up_ = link_.begin() == Status::Ok;
+        (void)identity_.begin();
+        (void)link_.begin();
         (void)bme280_.begin();
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
         gpio_pin_configure_dt(&pad_, GPIO_INPUT);
-        pps_armed_ = pps_.begin() == Status::Ok;
+        (void)pps_.begin();
         return Status::Ok;
     }
 
@@ -112,10 +112,6 @@ class TEchoPlus {
     zephyr::Indicator& indicator() { return indicator_; }
     zephyr::Dfu& dfu() { return dfu_; }
     zephyr::Pps& pps() { return pps_; }
-    bool pps_armed() const { return pps_armed_; }
-    bool storage_mounted() const { return storage_mounted_; }
-    bool link_up() const { return link_up_; }
-    bool key_provisioned() const { return key_provisioned_; }
     zephyr::Identity& identity() { return identity_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
@@ -236,10 +232,6 @@ class TEchoPlus {
     zephyr::Battery battery_{battery_device_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};
-    bool pps_armed_{false};
-    bool storage_mounted_{false};
-    bool link_up_{false};
-    bool key_provisioned_{false};
     zephyr::Watchdog watchdog_{};
     zephyr::SystemPower system_power_{button_};
 };

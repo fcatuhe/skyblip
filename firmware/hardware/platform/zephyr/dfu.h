@@ -7,7 +7,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/retention/retention.h>
 #include <zephyr/storage/flash_map.h>
-#include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
 #include <cstring>
@@ -65,8 +64,6 @@ class Dfu : public ports::Dfu {
         if (request.check == ports::StagedCheck::Matched)
             request.error = static_cast<int16_t>(boot_request_upgrade(BOOT_UPGRADE_TEST));
         request.swap = swap_type(mcuboot_swap_type());
-        printk("dfu: slot1 %s, swap request %d, swap type %d\n", check_word(request.check),
-               request.error, static_cast<int>(request.swap));
         return request;
     }
 
@@ -166,17 +163,6 @@ class Dfu : public ports::Dfu {
             case kBootSwapTypePanic: return ports::SwapType::Panic;
             default: return ports::SwapType::Unknown;
         }
-    }
-
-    static const char* check_word(ports::StagedCheck check) {
-        switch (check) {
-            case ports::StagedCheck::Unchecked: return "unchecked";
-            case ports::StagedCheck::Matched: return "matches its digest";
-            case ports::StagedCheck::Damaged: return "damaged";
-            case ports::StagedCheck::Unreadable: return "unreadable";
-            case ports::StagedCheck::Undigested: return "has no digest";
-        }
-        return "unknown";
     }
 
     static constexpr int kPrimarySlot = 0;

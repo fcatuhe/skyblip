@@ -15,15 +15,6 @@ uint32_t stored_crc(const uint8_t* data, size_t payload_bytes) {
 
 }  // namespace
 
-const char* to_string(Fallback fallback) {
-    switch (fallback) {
-        case Fallback::Prior: return "prior";
-        case Fallback::Defaults: return "defaults";
-        case Fallback::None: break;
-    }
-    return "none";
-}
-
 void seal(uint8_t version, const void* payload, size_t payload_bytes, uint8_t* out,
           size_t capacity) {
     if (capacity < blob_bytes(payload_bytes)) return;

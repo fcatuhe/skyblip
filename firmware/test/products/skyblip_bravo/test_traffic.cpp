@@ -1,5 +1,4 @@
 // Bravo alone: what 1090 MHz becomes on a phone's map, with and without its own fix.
-#include <algorithm>
 #include <string>
 
 #include "doctest/doctest.h"
@@ -102,7 +101,7 @@ TEST_CASE("bravo: the aircraft's own transponder, named by aircraft address, is 
     CHECK(rig.state().traffic.count() == 1);
 }
 
-TEST_CASE("bravo: a frame that fails its parity is counted as crc and kept for the console") {
+TEST_CASE("bravo: a frame that fails its parity is counted as crc") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(1);
@@ -123,13 +122,6 @@ TEST_CASE("bravo: a frame that fails its parity is counted as crc and kept for t
     CHECK(rig.product.adsb().crc() == 1);
     CHECK(rig.product.adsb().unsupported() == 0);
     CHECK(rig.product.adsb().folded() == 0);
-    bravo::AdsbReject reject{};
-    REQUIRE(rig.product.adsb().take_reject(reject));
-    CHECK(reject.status == Status::Crc);
-    CHECK(reject.rssi_valid);
-    CHECK(reject.rssi_dbm == -87);
-    CHECK(std::equal(reject.chips.begin(), reject.chips.end(), air.chips + 3));
-    CHECK_FALSE(rig.product.adsb().take_reject(reject));
 }
 
 TEST_CASE("bravo: a sound DF17 of a type the decoder skips is counted unsupported, not crc") {
@@ -141,36 +133,6 @@ TEST_CASE("bravo: a sound DF17 of a type the decoder skips is counted unsupporte
 
     CHECK(rig.product.adsb().unsupported() == 1);
     CHECK(rig.product.adsb().crc() == 0);
-    bravo::AdsbReject reject{};
-    REQUIRE(rig.product.adsb().take_reject(reject));
-    CHECK(reject.status == Status::Unsupported);
-}
-
-// The console drains the rejects each pass, so a full ring is a console that stopped reading.
-TEST_CASE(
-    "bravo: the rejects waiting for the console are the first ones, and every one is counted") {
-    BravoRig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.seconds_with_fix(1);
-    const int heard = static_cast<int>(bravo::AdsbService::kRejectsKept) + 8;
-    for (int i = 0; i < heard; i++) {
-        events::AdsbFrame noise{};
-        noise.at_us = rig.platform.clock().microseconds();
-        noise.rssi_dbm = static_cast<int8_t>(-120 + i);
-        noise.rssi_valid = true;
-        noise.chips.fill(0x55);
-        rig.product.adsb_frames().push(noise);
-        rig.step();
-    }
-
-    CHECK(rig.product.adsb().crc() == static_cast<uint32_t>(heard));
-    bravo::AdsbReject reject{};
-    int kept = 0;
-    while (rig.product.adsb().take_reject(reject)) {
-        CHECK(reject.rssi_dbm == -120 + kept);
-        kept++;
-    }
-    CHECK(kept == static_cast<int>(bravo::AdsbService::kRejectsKept));
 }
 
 // Opus's review: a frame the LR2021 gave no level reached the observation as 0 dBm.

@@ -1,6 +1,5 @@
 // The road from running to SYSTEM OFF: what starts a shutdown, and the order the rails go down in.
 #include <initializer_list>
-#include <string>
 
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
@@ -36,7 +35,6 @@ TEST_CASE("shutdown: the pad held through the press asks to be stowed, not switc
         shutdown.tick(now_ms, true, /*pad_down=*/true);
     CHECK(shutdown.phase() == ShutdownPhase::Parking);
     CHECK(shutdown.reason() == ShutdownReason::Stow);
-    CHECK(std::string(to_string(ShutdownReason::Stow)) == "STOW");
 }
 
 TEST_CASE("shutdown: a pad that was not held throughout is an ordinary power-off") {
@@ -137,11 +135,10 @@ TEST_CASE("shutdown: a low-battery shutdown waits for the button it arms") {
 }
 
 // The swap takes the same road out as a power-off: the panel gets its park frame
-// before the bootloader is handed the device, and the reason is spelled for the log.
-TEST_CASE("shutdown: an install parks the panel like a power-off and is named as one") {
+// before the bootloader is handed the device.
+TEST_CASE("shutdown: an install parks the panel like a power-off") {
     ShutdownSequencer shutdown;
     shutdown.request(ShutdownReason::Install, 0);
-    CHECK(std::string(to_string(ShutdownReason::Install)) == "INSTALL");
     CHECK(shutdown.going_down());
     uint32_t now_ms = 0;
     for (; now_ms < kParkSettleMs; now_ms += 10) shutdown.tick(now_ms, /*button_down=*/false);
@@ -155,7 +152,6 @@ TEST_CASE("shutdown: an install parks the panel like a power-off and is named as
 TEST_CASE("shutdown: a recovery leaves the button armed, since a press may be what finishes it") {
     ShutdownSequencer shutdown;
     shutdown.request(ShutdownReason::Recovery, 0);
-    CHECK(std::string(to_string(ShutdownReason::Recovery)) == "RECOVERY");
     uint32_t now_ms = 0;
     for (; now_ms < kParkSettleMs + kReleaseSettleMs + 50; now_ms += 10)
         shutdown.tick(now_ms, false);
@@ -299,7 +295,6 @@ TEST_CASE("power down: every step runs once, in the order the table declares") {
     for (int i = 0; i < kPowerDownStepCount; i++) {
         CHECK(sink.steps[i] == kPowerDownOrder[i]);
         CHECK(sink.at(kPowerDownOrder[i]) == i);
-        CHECK(to_string(kPowerDownOrder[i])[0] != '\0');
     }
 }
 

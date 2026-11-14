@@ -47,7 +47,7 @@ The `update` frame names the product the unit runs, `product` in `schemas/link.v
 
 ## Before the restart
 
-`ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs, as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit then reads MCUboot's swap type back from the slots and prints one console line, `dfu: slot1 <check>, swap request <errno>, swap type <type>`. It restarts whatever the result, because it has already parked its parts, and the old image comes back to say what went wrong. `test/core/test_dfu_check.cpp` holds the check to an image `imgtool sign` made, protected TLVs included.
+`ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs, as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit then reads MCUboot's swap type back from the slots into the install report. It restarts whatever the result, because it has already parked its parts, and the old image comes back to say what went wrong. `test/core/test_dfu_check.cpp` holds the check to an image `imgtool sign` made, protected TLVs included.
 
 ## The install report
 
@@ -78,7 +78,7 @@ The unit keeps the landing's part in memory only, from the refusal until the nex
 
 From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The unit keeps the install's part until its next install, so a page reopened days later still reads it. The page also sends every report to skyblip.eu, the install's part as `device.install_reported` and a refused landing as `device.upload_refused`, so the events alone say which row below applies, with no need to ask the user for anything.
 
-On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`. Keep the USB console running with the loop in #278 to catch the `dfu:` line before the restart.
+On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`.
 
 | What the report says | What happened |
 |---|---|

@@ -1,6 +1,4 @@
-// The charger runs on its own, so knowing, saying and counting is all there is.
-#include <string>
-
+// The charger runs on its own, so knowing and counting is all there is.
 #include "core/power/charging.h"
 #include "doctest/doctest.h"
 
@@ -33,13 +31,4 @@ TEST_CASE("charge: nothing is claimed about a cell nobody is charging or measuri
     CHECK(charge_condition(false, true, -400) == ChargeCondition::Unknown);
     CHECK(charge_condition(true, false, 900) == ChargeCondition::Unknown);
     CHECK(charge_condition(false, false, 0) == ChargeCondition::Unknown);
-}
-
-TEST_CASE("charge: every condition has a word a panel and a dump can print") {
-    CHECK(std::string(to_string(ChargeCondition::Ok)) == "OK");
-    CHECK(std::string(to_string(ChargeCondition::TooCold)) == "COLD");
-    CHECK(std::string(to_string(ChargeCondition::TooHot)) == "HOT");
-    CHECK(std::string(to_string(ChargeCondition::Unknown)) == "UNKNOWN");
-    for (uint8_t i = 0; i <= static_cast<uint8_t>(ChargeCondition::TooHot); i++)
-        CHECK(to_string(static_cast<ChargeCondition>(i))[0] != '\0');
 }

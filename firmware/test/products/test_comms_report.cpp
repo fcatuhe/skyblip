@@ -304,10 +304,8 @@ TEST_CASE("comms: timing carries the dwell evidence, and no clear-channel figure
     }
 }
 
-// L. The whole dump, over the link the phone already has open: the same five
-// subsystems the USB console prints, so a laptop on the bench and a companion page
-// on a wing cannot report a device differently. The formatter itself is proved in
-// test/core/test_diagnostics.cpp; this is the dispatch and the ceiling.
+// L. The whole dump, over the link the phone already has open. The formatter itself
+// is proved in test/core/test_diagnostics.cpp; this is the dispatch and the ceiling.
 TEST_CASE("comms: one question answers every subsystem, in frames the link can carry") {
     platform::host::Link link;
     link.raise_link(1);
