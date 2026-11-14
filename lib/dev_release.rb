@@ -6,10 +6,13 @@ require_relative "radio_protocols"
 
 class DevRelease
   KEEP_MAIN = 3
+  PRODUCT_ORDER = %w[skyblip-go skyblip-bravo].freeze
   IMAGE_ENDINGS = %w[.uf2 .signed.bin].freeze
   HUB_IMAGE_ENDING = ".full.signed.bin".freeze
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].freeze
   BUILD_ENDINGS = %w[.version .signed.confirmed.bin].freeze
+  FIRMWARE_PATHS = %w[firmware/ scripts/build_image.sh scripts/mkuf2.py].freeze
+  CHANGES_HEADING = "## What's Changed".freeze
 
   def self.publish_all(images:, simulator:, source:, ref:, sha:, repository:)
     release = new(**built(images), ref:)
@@ -28,7 +31,7 @@ class DevRelease
     unexpected = Dir.children(images) - expected
     raise ArgumentError, "Unexpected files in #{images}: #{unexpected.sort.join(", ")}" if unexpected.any?
 
-    { slugs: records.keys, version: records.values.first }
+    { slugs: records.keys.sort_by { |slug| [ PRODUCT_ORDER.index(slug) || PRODUCT_ORDER.size, slug ] }, version: records.values.first }
   end
   private_class_method :built
 
@@ -49,10 +52,10 @@ class DevRelease
       Dir.mktmpdir do |release|
         stage(images:, simulator:, source:, into: release)
         previous = previous_main_tag(release_tags) if main?
+        changes = changes_since(previous, sha:, repository:) if previous
         puts gh("release", "create", tag, *Dir.children(release).sort.map { |file| File.join(release, file) },
                 "--target", sha, "--prerelease", "--latest=false", "--title", title,
-                "--notes", notes(images:, sha:, repository:, source:),
-                *([ "--generate-notes", "--notes-start-tag", previous ] if previous))
+                "--notes", notes(images:, sha:, repository:, source:, changes:))
       end
     end
   end
@@ -68,11 +71,12 @@ class DevRelease
     def tag = main? ? "dev-#{build}" : "dev-#{build}-#{self.class.branch_label(ref)}"
     def title = main? ? "skyBlip dev #{version}" : "skyBlip dev #{version} (#{ref})"
 
-    def notes(images:, sha:, repository:, source:)
+    def notes(images:, sha:, repository:, source:, changes:)
       [
         "skyBlip #{version} from #{ref}, built from #{sha} and signed with the development key.",
+        changes,
         *slugs.map { |slug| product_notes(slug, images:, repository:, source:) }
-      ].join("\n\n")
+      ].compact.join("\n\n")
     end
 
     def product_notes(slug, images:, repository:, source:)
@@ -85,6 +89,28 @@ class DevRelease
         ("- `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for." if File.exist?(hub_image(images, slug))),
         "- `.uf2` installs on any unit by drag-and-drop, and moves it to the development key."
       ].compact.join("\n")
+    end
+
+    # INFO: fc 15nov26 gh appends --generate-notes below --notes, so the notes are generated apart to put the changes above the products
+    def changes_since(previous, sha:, repository:)
+      generated = gh("api", "repos/#{repository}/releases/generate-notes", "-f", "tag_name=#{tag}", "-f", "target_commitish=#{sha}",
+                     "-f", "previous_tag_name=#{previous}", "--jq", ".body")
+      firmware = pull_request_lines(generated).select { |line| touches_firmware?(line[%r{/pull/(\d+)\z}, 1], repository:) }
+      [
+        ([ CHANGES_HEADING, *firmware ].join("\n") if firmware.any?),
+        "**Full Changelog**: https://github.com/#{repository}/compare/#{previous}...#{tag}"
+      ].compact.join("\n\n")
+    end
+
+    def pull_request_lines(generated)
+      generated.lines(chomp: true).drop_while { |line| line != CHANGES_HEADING }.drop(1)
+        .take_while { |line| line.empty? || line.start_with?("* ") }
+        .grep(%r{\A\* .+ in https://github\.com/\S+/pull/\d+\z})
+    end
+
+    def touches_firmware?(number, repository:)
+      files = gh("api", "--paginate", "repos/#{repository}/pulls/#{number}/files", "--jq", ".[].filename").lines(chomp: true)
+      files.any? { |file| file.start_with?(*FIRMWARE_PATHS) }
     end
 
     def stage(images:, simulator:, source:, into:)

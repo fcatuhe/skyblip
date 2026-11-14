@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
-import { fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { channelOf, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { changesSince } from "controllers/briefing/changelog"
 import { productWord } from "controllers/briefing/facts"
 import { installCause, reportShown } from "#skyblip/install_report"
 import { say, sayNotice } from "controllers/briefing/words"
@@ -14,7 +15,7 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 
 export default class extends Controller {
-  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "install", "back", "other", "file", "release", "recovery", "recover"]
+  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "changes", "changeList", "install", "back", "other", "file", "release", "recovery", "recover"]
   static values = { slug: String }
   static outlets = ["glass"]
 
@@ -88,6 +89,7 @@ export default class extends Controller {
     if (unit.linked) offerNewest(unit, this.shelf)?.then(() => this.#render())
     this.#upgradeToFull(unit, state)
     this.#offer(unit, state, idle)
+    this.#changes(unit, state)
     this.#install(unit, state, asks)
     this.recoverTarget.disabled = !asks
     const busy = WORKING.has(state.phase) || state.image?.state === "probation" || state.image?.imu === "writing"
@@ -114,6 +116,15 @@ export default class extends Controller {
     if (chosen) shelf.value = chosen.value
     this.releaseTarget.hidden = !chosen
     if (chosen) this.releaseTarget.href = chosen.dataset.release
+  }
+
+  #changes(unit, state) {
+    const changelog = this.element.querySelector("template[data-changes]")
+    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOf(unit), running: state.running, offered: state.file?.version }) : []
+    const shown = sections.map(section => section.dataset.version).join(" ")
+    if (shown !== this.changesShown) this.changeListTarget.replaceChildren(...sections.map(section => document.importNode(section, true)))
+    this.changesShown = shown
+    this.changesTarget.hidden = sections.length === 0
   }
 
   // INFO: fc 11nov26 a slim image for a hub that lacks its blob would install, then revert, so the page swaps in the full one of that release

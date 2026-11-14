@@ -32,6 +32,7 @@ jobs:
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
       glass: ${{ steps.filter.outputs.glass }}
+      release: ${{ steps.filter.outputs.release }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
@@ -42,6 +43,11 @@ jobs:
           filters: |
             firmware:
               - '!(server)/**'
+            # What goes into a published image, so a change elsewhere publishes no build. lib/dev_release.rb lists the same paths.
+            release:
+              - 'firmware/**'
+              - 'scripts/build_image.sh'
+              - 'scripts/mkuf2.py'
             # What bin/screenshots compiles and flies, and the pictures it writes.
             glass:
               - 'firmware/core/**'
@@ -415,7 +421,7 @@ jobs:
   dev-release:
     name: dev pre-release
     needs: [changes, product-image, simulator]
-    if: needs.changes.outputs.signing == 'development'
+    if: needs.changes.outputs.signing == 'development' && needs.changes.outputs.release == 'true'
     runs-on: ubuntu-26.04-arm
     permissions:
       contents: write

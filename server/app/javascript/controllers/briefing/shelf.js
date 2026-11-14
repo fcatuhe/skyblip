@@ -7,11 +7,14 @@ export function shelfIn(element) {
   return element.querySelector("select[data-shelf]")
 }
 
+export function channelOf(unit) {
+  return unit.state?.image?.downgrade ? "development" : "release"
+}
+
 export function fitting(shelf, unit) {
   const image = unit.state?.image
   if (!shelf || !image?.key) return []
-  const channel = image.downgrade ? "development" : "release"
-  return [...shelf.options].filter(option => option.value && option.dataset.channel === channel && option.dataset.product === productOf(image))
+  return [...shelf.options].filter(option => option.value && option.dataset.channel === channelOf(unit) && option.dataset.product === productOf(image))
 }
 
 // INFO: fc 11nov26 once per connection, the newest slim image of the unit's track and product is read, so the page knows whether it is behind

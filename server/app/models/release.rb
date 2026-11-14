@@ -13,14 +13,17 @@ class Release
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
+  DEVELOPMENT_VERSION = /\d+\.\d+\.\d+\+\d+/
+
+  def self.all = shelf(published)
 
   # INFO: fc 11nov26 every device page asks for the list, and GitHub grants 60 unauthenticated requests an hour to the server's address
-  def self.all
+  def self.published
     body = Rails.cache.fetch("github/releases", expires_in: 5.minutes) { request(URI(API_URL)).body }
     entries = JSON.parse(body)
     raise TypeError unless entries.is_a?(Array)
 
-    shelf entries.reject { |entry| entry.fetch("draft") }
+    entries.reject { |entry| entry.fetch("draft") }
       .select { |entry| TAG.match?(entry.fetch("tag_name")) }
       .map { |entry| new(entry) }
   rescue JSON::ParserError, KeyError, TypeError, ArgumentError => error
@@ -34,6 +37,13 @@ class Release
     images = releases.sort_by(&:published_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
     slim, full = images.partition { |_release, file| kind_of(file) == "slim" }
     slim + full
+  end
+
+  def self.changelog(releases, locale)
+    releases.sort_by(&:published_at).reverse.filter_map do |release|
+      changes = release.changes(locale)
+      [ release, changes ] if release.version && changes.any?
+    end
   end
 
   def self.shelf(releases)
@@ -124,7 +134,7 @@ class Release
   end
   private_class_method :local_file
 
-  attr_reader :tag, :name, :assets, :published_at
+  attr_reader :tag, :name, :assets, :published_at, :notes
 
   def initialize(entry)
     @tag = entry.fetch("tag_name")
@@ -132,7 +142,20 @@ class Release
     @assets = entry.fetch("assets").map { |asset| asset.fetch("name") }
     @prerelease = entry.fetch("prerelease")
     @published_at = Time.iso8601(entry.fetch("published_at"))
+    @notes = Notes.new(entry.fetch("body").to_s)
   end
+
+  def changes(locale)
+    if stable?
+      notes.news(locale)
+    elsif main_development?
+      notes.technical
+    else
+      []
+    end
+  end
+
+  def version = stable? ? tag.delete_prefix("v") : name[DEVELOPMENT_VERSION]
 
   def development? = tag.start_with?("dev-")
   def main_development? = /\Adev-\d+\z/.match?(tag)
