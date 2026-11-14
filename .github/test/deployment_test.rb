@@ -240,8 +240,22 @@ class DeploymentTest < Minitest::Test
       assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
       assert_includes listed, "scenarios.json"
       versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/protocols/#{stem}/version.h"))[RadioProtocols::DECLARATION, 1] ] }
-      assert_includes File.read(File.join(tree, "release/PROTOCOLS.md")), "- `skyblip-bravo`: ADS-B #{versions["adsb"]}\n- `skyblip-go`: ADS-L #{versions["adsl"]}, ALP-TAS #{versions["alptas"]}\n"
+      notes = File.read(File.join(tree, "release/PROTOCOLS.md"))
+      assert_includes notes, "- `skyblip-bravo`: ADS-B #{versions["adsb"]} (1090 MHz extended squitter DF17, read only, after RTCA DO-260B (draft 4.2, 1090-WP30-18))\n"
+      assert_includes notes, "- `skyblip-go`: ADS-L #{versions["adsl"]} (ADS-L 4 SRD-860 Issue 2), " \
+                             "ALP-TAS #{versions["alptas"]} (ALP-TAS 2024 FLARM-generation frame, after the community description (no published specification))\n"
       assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
+    end
+  end
+
+  def test_the_radio_protocols_notes_refuse_a_header_without_one_specification
+    Dir.mktmpdir do |firmware|
+      FileUtils.mkdir_p(File.join(firmware, "products/skyblip_bravo"))
+      File.write(File.join(firmware, "products/skyblip_bravo/PROTOCOLS"), "adsb\n")
+      FileUtils.mkdir_p(File.join(firmware, "protocols/adsb"))
+      File.write(File.join(firmware, "protocols/adsb/version.h"), "inline constexpr char kVersion[] = \"0.1.0\";\n")
+      error = assert_raises(ArgumentError) { RadioProtocols.new(firmware).notes(version: "0.2.0", products: %w[skyblip_bravo]) }
+      assert_equal "No single kSpecification in protocols/adsb/version.h", error.message
     end
   end
 
