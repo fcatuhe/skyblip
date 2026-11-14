@@ -8,6 +8,7 @@ namespace {
 constexpr const char* kRegisterLabel = "skyblip:register:v1";
 constexpr const char* kRegistrationLabel = "skyblip:registration:v1";
 constexpr const char* kUnlockLabel = "skyblip:unlock:v1";
+constexpr const char* kAttestationLabel = "skyblip:attestation:v1";
 
 static_assert(sizeof("skyblip:registration:v1") - 1 + kDeviceIdBytes + Ed25519::kPublicKeyBytes +
                       2 * kNonceBytes + kServerKeyIdBytes + 1 + kMaxVersionBytes <=
@@ -17,6 +18,12 @@ static_assert(sizeof("skyblip:registration:v1") - 1 + kDeviceIdBytes + Ed25519::
 template <size_t Bytes>
 ConstByteSpan span_of(const std::array<uint8_t, Bytes>& bytes) {
     return ConstByteSpan(bytes.data(), Bytes);
+}
+
+ConstByteSpan version_of(const char* version) {
+    size_t version_bytes = 0;
+    while (version_bytes < kMaxVersionBytes && version[version_bytes] != 0) version_bytes++;
+    return ConstByteSpan(reinterpret_cast<const uint8_t*>(version), version_bytes);
 }
 }  // namespace
 
@@ -48,8 +55,6 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
                              const Nonce& unit_nonce, const Nonce& server_nonce,
                              const ServerKeyId& server_key_id, bool release, const char* version) {
     const uint8_t release_byte = release ? 1 : 0;
-    size_t version_bytes = 0;
-    while (version_bytes < kMaxVersionBytes && version[version_bytes] != 0) version_bytes++;
     Message message;
     message.append(kRegistrationLabel)
         .append(span_of(device_id))
@@ -58,7 +63,7 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
         .append(span_of(server_nonce))
         .append(span_of(server_key_id))
         .append(ConstByteSpan(&release_byte, 1))
-        .append(ConstByteSpan(reinterpret_cast<const uint8_t*>(version), version_bytes));
+        .append(version_of(version));
     return message;
 }
 
@@ -72,6 +77,19 @@ Message unlock_message(const DeviceId& device_id, const Ed25519::PublicKey& unit
         .append(span_of(unit_key))
         .append(ConstByteSpan(serial_big_endian, 2))
         .append(span_of(unit_nonce));
+    return message;
+}
+
+Message attestation_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
+                            const Nonce& server_nonce, bool release, const char* version) {
+    const uint8_t release_byte = release ? 1 : 0;
+    Message message;
+    message.append(kAttestationLabel)
+        .append(span_of(device_id))
+        .append(span_of(unit_key))
+        .append(span_of(server_nonce))
+        .append(ConstByteSpan(&release_byte, 1))
+        .append(version_of(version));
     return message;
 }
 

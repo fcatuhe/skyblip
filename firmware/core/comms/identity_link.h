@@ -16,6 +16,8 @@ class IdentityLink {
     // INFO: fc 18oct26 the widest registration frame: version 9.99.99+99999
     static constexpr int kRegistrationFrameBytes = 138;
     static constexpr int kChallengeFrameBytes = 27;
+    // INFO: fc 14nov26 the widest attestation frame: version 9.99.99+99999
+    static constexpr int kAttestationFrameBytes = 98;
 
     explicit IdentityLink(identity::Unit& unit) : unit_(unit) {}
 

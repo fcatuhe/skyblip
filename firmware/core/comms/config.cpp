@@ -358,6 +358,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Challenge: challenge(); return;
         case link::Command::Register: register_unit(reader); return;
         case link::Command::Unlock: unlock(reader); return;
+        case link::Command::Attest: attest(reader); return;
         case link::Command::Capture: request_capture(reader); return;
         case link::Command::BrowserChallenge: browser_challenge(); return;
         case link::Command::TrustBrowser: trust_browser(reader); return;
@@ -388,6 +389,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Challenge:
         case link::Command::Register:
         case link::Command::Unlock:
+        case link::Command::Attest:
         case link::Command::BrowserChallenge:
         case link::Command::TrustBrowser:
         case link::Command::Browsers:
@@ -397,6 +399,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:
+        case link::Command::Attestation:
         case link::Command::List:
         case link::Command::Read:
         case link::Command::Erase:

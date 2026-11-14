@@ -45,6 +45,8 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
                              const ServerKeyId& server_key_id, bool release, const char* version);
 Message unlock_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                        uint16_t serial, const Nonce& unit_nonce);
+Message attestation_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
+                            const Nonce& server_nonce, bool release, const char* version);
 
 }  // namespace skyblip::identity
 

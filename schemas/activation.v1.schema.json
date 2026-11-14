@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://skyblip.eu/schemas/activation.v1.schema.json",
   "title": "skyBlip activation (v1)",
-  "description": "How a unit gets its serial from skyblip.eu (issue #126): the JSON the browser posts to the server, and the messages each signature covers. The unit's half travels on the companion link as the challenge, register, registration and unlock frames, which link.v1.json describes and numbers, every byte string a CBOR byte string. The browser relays their fields to the server in two requests, as JSON over HTTPS: POST /activation/challenges and POST /activation/registrations, where every byte string is lowercase hexadecimal. Every signature is plain Ed25519 (RFC 8032), 64 bytes, over a message that starts with an ASCII label naming its purpose and version, followed by fixed-width binary fields in the order given, so no two messages can be read as each other: register is 'skyblip:register:v1' || Nu || Ns. registration is 'skyblip:registration:v1' || DEVICEID || Pd || Nu || Ns || server key id || release (one byte, 1 for a release build, 0 otherwise) || version, the version last because it is the one field of variable length. unlock is 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu. DEVICEID is the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, so its hex reads as the 64-bit value. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. activation.v1.vectors.json holds one exchange signed with the test key, for a release build, and the registration of the same unit on a development build, which the firmware's host suite, the server's tests and the browser's tests all check.",
+  "description": "How a unit gets its serial from skyblip.eu (issue #126): the JSON the browser posts to the server, and the messages each signature covers. The unit's half travels on the companion link as the challenge, register, registration and unlock frames, which link.v1.json describes and numbers, every byte string a CBOR byte string. The browser relays their fields to the server in two requests, as JSON over HTTPS: POST /activation/challenges and POST /activation/registrations, where every byte string is lowercase hexadecimal. Every signature is plain Ed25519 (RFC 8032), 64 bytes, over a message that starts with an ASCII label naming its purpose and version, followed by fixed-width binary fields in the order given, so no two messages can be read as each other: register is 'skyblip:register:v1' || Nu || Ns. registration is 'skyblip:registration:v1' || DEVICEID || Pd || Nu || Ns || server key id || release (one byte, 1 for a release build, 0 otherwise) || version, the version last because it is the one field of variable length. unlock is 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu. attestation is 'skyblip:attestation:v1' || DEVICEID || Pd || Ns || release || version: an activated unit's word on the firmware it runs, which the browser asks for with attest on every connection and relays in two more requests, POST /attestation/challenges and POST /attestation/statements, with no support code, so the server ties the firmware to the unit and to no browser. DEVICEID is the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, so its hex reads as the 64-bit value. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. activation.v1.vectors.json holds one exchange signed with the test key, for a release build, the registration of the same unit on a development build, and its attestation over the same Ns, which the firmware's host suite, the server's tests and the browser's tests all check.",
   "definitions": {
     "nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$", "description": "16 random bytes, used once"},
     "signature": {"type": "string", "pattern": "^[0-9a-f]{128}$"},
@@ -47,6 +47,32 @@
       "properties": {
         "serial": {"$ref": "#/definitions/serial"},
         "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "http_attestation_challenge_response": {
+      "description": "POST /attestation/challenges, browser to server, with an empty JSON body. Answered 201 with Ns, which the server keeps for five minutes and accepts once, and 429 {\"error\":\"rate_limited\"}. The browser sends Ns to the unit as the attest command",
+      "type": "object", "required": ["server_nonce"],
+      "properties": {
+        "server_nonce": {"$ref": "#/definitions/nonce"}
+      }
+    },
+    "http_statement_request": {
+      "description": "POST /attestation/statements, browser to server: the keys of the link's attestation frame (link.v1.json), and the Ns it answers. Answered 201 with http_statement_response. Refusals, each {\"error\":reason}: 422 'expired' (Ns unknown, spent or older than five minutes), 422 'invalid' (a malformed field, or a body that is not JSON), 422 'bad_signature' (the unit's active key did not sign it), 404 'unknown_unit' (no unit holds this DEVICEID), 409 'no_active_key' (the unit's key was revoked, or a new one waits for an admin), 429 'rate_limited'",
+      "type": "object", "required": ["device_id", "version", "release", "server_nonce", "signature"],
+      "properties": {
+        "device_id": {"$ref": "#/definitions/device_id"},
+        "version": {"type": "string", "pattern": "^[0-9A-Za-z.+-]{1,23}$"},
+        "release": {"$ref": "#/definitions/release"},
+        "server_nonce": {"$ref": "#/definitions/nonce"},
+        "signature": {"$ref": "#/definitions/signature"}
+      }
+    },
+    "http_statement_response": {
+      "description": "The firmware the server recorded for the unit",
+      "type": "object", "required": ["version", "release"],
+      "properties": {
+        "version": {"type": "string"},
+        "release": {"$ref": "#/definitions/release"}
       }
     }
   }

@@ -2290,6 +2290,67 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "text"
         }
       ]
+    },
+    {
+      "command": "attest",
+      "code": 37,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "server_nonce",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 16,
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "attestation",
+      "code": 38,
+      "endpoint": "config",
+      "sender": "unit",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "device_id",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        },
+        {
+          "name": "version",
+          "number": 2,
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "release",
+          "number": 3,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "signature",
+          "number": 4,
+          "type": "bytes",
+          "bytes": 64,
+          "required": true
+        }
+      ]
     }
   ],
   "enums": {
@@ -3328,6 +3389,14 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "protocols",
           "code": 36
+        },
+        {
+          "name": "attest",
+          "code": 37
+        },
+        {
+          "name": "attestation",
+          "code": 38
         }
       ]
     }

@@ -445,6 +445,23 @@
         {"name": "adsl_version", "number": 2, "type": "text", "description": "The version of the unit's ADS-L stack, major.minor.patch, kVersion in protocols/adsl/version.h. It moves only when a change alters what the stack puts on air or reads off it (firmware/protocols/README.md, Versions), and it is not the Protocol Version field every ADS-L packet carries. Present on a unit that carries ADS-L, a Go"},
         {"name": "alptas_version", "number": 3, "type": "text", "description": "The version of the unit's ALP-TAS stack, major.minor.patch, kVersion in protocols/alptas/version.h. It moves only when a change alters what the stack puts on air or reads off it (firmware/protocols/README.md, Versions). Present on a unit that carries ALP-TAS, a Go"}
       ]
+    },
+    {
+      "command": "attest", "code": 37, "endpoint": "config", "sender": "host",
+      "description": "Host to unit, 22 bytes: asks the unit to sign the firmware it runs over a nonce from skyblip.eu, which the browser posts to /attestation/statements (schemas/activation.v1.schema.json). The unit answers the attestation frame at once, with no prompt, because it signs only its own version under a label nothing else carries. Refusals, in the order checked: in_flight (an activated unit in flight), keyless (no key of its own, or no running version to report), small_mtu (the link cannot carry the attestation frame in one notification), invalid (no server_nonce of 16 bytes). Firmware from before the frame answers unknown_command. A Bravo has no key of its own, so it answers keyless.",
+      "keys": [
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, 16 random bytes from POST /attestation/challenges, which the server accepts once within five minutes"}
+      ]
+    },
+    {
+      "command": "attestation", "code": 38, "endpoint": "config", "sender": "unit",
+      "description": "Unit to host in answer to attest, at most 98 bytes in one notification. The browser posts its keys to /attestation/statements as they are, byte strings in hexadecimal, beside the server nonce (schemas/activation.v1.schema.json).",
+      "keys": [
+        {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server finds the unit and its active key"},
+        {"name": "version", "number": 2, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
+        {"name": "release", "number": 3, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
+        {"name": "signature", "number": 4, "type": "bytes", "bytes": 64, "required": true, "description": "The unit's Ed25519 signature over the attestation message, 'skyblip:attestation:v1' || DEVICEID || Pd || Ns || release || version (schemas/activation.v1.schema.json)"}
+      ]
     }
   ],
   "enums": {
