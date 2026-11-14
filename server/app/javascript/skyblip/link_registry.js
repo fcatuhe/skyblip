@@ -2259,6 +2259,18 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 7,
           "type": "enum",
           "enum": "reset"
+        },
+        {
+          "name": "landed_check",
+          "number": 8,
+          "type": "enum",
+          "enum": "staged_check"
+        },
+        {
+          "name": "staged_key",
+          "number": 9,
+          "type": "bytes",
+          "bytes": 4
         }
       ]
     },

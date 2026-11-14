@@ -426,7 +426,7 @@
     },
     {
       "command": "install_report", "code": 35, "endpoint": "config", "sender": "both",
-      "description": "Asked with the bare command, answered with what the unit wrote down about its last install, so a page or blip.py can say why an update did not land (#278). Troubleshooting that #294 retires once Bluetooth updates land in the field. The unit keeps the report beside the update record and forgets both together, so a frame with no key but command means no install is on record. 22 bytes at its widest, so a 20-byte link refuses it small_mtu (firmware/core/dfu/README.md, The install report).",
+      "description": "Asked with the bare command, answered with what the unit wrote down about its last install and about an upload it refused once it landed, so a page or blip.py can say why an update did not land, from a distance (#278). The unit keeps the install's keys beside the update record and forgets them together. It keeps the landing's keys in memory from the refusal until the next upload window opens or the unit restarts. A frame with no key but command means neither is on record. 30 bytes at its widest, so a 20-byte link refuses it small_mtu (firmware/core/dfu/README.md, The install report).",
       "keys": [
         {"name": "check", "number": 1, "type": "enum", "enum": "staged_check", "description": "What the image that sent the update found in slot1 before it restarted: matched, damaged (its bytes do not hash to its SHA-256 TLV, or its header is not an image's), unreadable (the flash refused a read), undigested (no SHA-256 TLV) or unchecked. Only matched is marked for a swap"},
         {"name": "swap", "number": 2, "type": "enum", "enum": "swap_type", "description": "The swap MCUboot would run, read back from the slots after the request: test is the one asked for, none means the request did not reach slot1's trailer"},
@@ -434,7 +434,9 @@
         {"name": "boots", "number": 4, "type": "unsigned", "description": "The restarts since the install, counted by whichever image came up, up to 255. One for a swap that landed or was refused, two for a new image that ran and was reverted"},
         {"name": "probation_boots", "number": 5, "type": "unsigned", "description": "How many of those restarts ran the new image on probation, up to 255. 0 means the new image never ran"},
         {"name": "proof", "number": 6, "type": "enum", "enum": "proof", "description": "How far the new image's last run on probation got towards confirming itself: none if it never ran, then booted, started, gnss_heard, hub_bootable and proven in the order it checks them, or confirm_failed when MCUboot refused to mark it confirmed"},
-        {"name": "reset", "number": 7, "type": "enum", "enum": "reset", "description": "Why the latest restart happened, as the diagnostics dump says it. On the old image after a revert, it names what ended the new image's run"}
+        {"name": "reset", "number": 7, "type": "enum", "enum": "reset", "description": "Why the latest restart happened, as the diagnostics dump says it. On the old image after a revert, it names what ended the new image's run"},
+        {"name": "landed_check", "number": 8, "type": "enum", "enum": "staged_check", "description": "What the unit found in slot1 when it refused an upload that had landed, nothing_staged, not_approved or wrong_key: matched, damaged, unreadable or undigested, as check says it. Matched means slot1 holds the whole image its digest names, so a refusal with it is about the image, not the flash"},
+        {"name": "staged_key", "number": 9, "type": "bytes", "bytes": 4, "description": "With landed_check, the first four bytes of the KEYHASH TLV the unit read in slot1, as update's key says the running one. Absent when the unit found none"}
       ]
     },
     {

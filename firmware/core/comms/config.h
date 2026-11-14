@@ -194,7 +194,6 @@ class ConfigService {
     }
     dfu::ImageState image_state() const { return image_state_; }
 
-    // TODO: fc 13nov26 the install report on the link, retired with #294
     void set_install_report(const dfu::InstallReport* report) { install_report_ = report; }
 
     void set_settings_fallback(settings::Fallback fallback) { settings_fallback_ = fallback; }
@@ -352,6 +351,7 @@ class ConfigService {
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void request_capture(const cbor::Reader& frame);
     void install_received_image();
+    void refuse_landing(link::Reason reason);
     void open_upload_window();
     void apply_settings(const cbor::Reader& frame);
     bool signed_by_trusted_key() const;
@@ -419,6 +419,7 @@ class ConfigService {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     const dfu::InstallReport* install_report_{nullptr};
+    std::optional<dfu::Landing> landing_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
     std::optional<dfu::Product> product_{};

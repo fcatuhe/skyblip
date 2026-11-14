@@ -788,7 +788,7 @@ What a unit checks in slot 1 before it asks MCUboot for a swap (#278).
 
 ### test/core/test_dfu_install_report.cpp
 
-The install report's arithmetic and its blob (#278, retired with #294).
+The install report's arithmetic and its blob (#278).
 
 **install report**
 
@@ -4347,7 +4347,7 @@ The status lamp through the whole product: the cell, the fix, real ADS-L frames,
 
 ### test/products/test_install_report.cpp
 
-What a unit wrote about its last install, read over the link (#278, retired with #294).
+What a unit wrote about its last install and a refused landing, read over the link (#278).
 
 **install report**
 

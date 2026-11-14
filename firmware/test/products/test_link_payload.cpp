@@ -318,7 +318,6 @@ TEST_CASE(
 
 namespace {
 
-// TODO: fc 13nov26 the install report's width, retired with #294 once Bluetooth updates land
 std::string widest_install_report_on(uint16_t payload_bytes) {
     dfu::InstallReport widest{};
     widest.request = {ports::StagedCheck::Undigested, -32768, ports::SwapType::Panic};
@@ -329,20 +328,31 @@ std::string widest_install_report_on(uint16_t payload_bytes) {
     platform::host::Link link;
     go::Settings settings = widest_settings();
     go::SettingsStore store{settings, kWidestAddress, kNoOwnTransponder};
-    ConfigService config{link, store, nullptr};
+    platform::host::Watchdog watchdog;
+    platform::host::Dfu dfu{watchdog};
+    dfu.staged_check = ports::StagedCheck::Undigested;
+    dfu.staged_key_valid = true;
+    ConfigService config{link, store, &dfu};
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(payload_bytes);
     config.set_install_report(&widest);
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    dfu.finished_upload = true;
+    config.tick(0);
+    link.declare_payload_bytes(payload_bytes);
     config.on_rx(config_frame("{\"command\":\"install_report\"}"));
     return link.last().bytes;
 }
 
 }  // namespace
 
-TEST_CASE("comms: the install report is 22 bytes at its widest, refused small_mtu a byte short") {
-    CHECK(widest_install_report_on(22).size() == 22);
-    CHECK(link_text(widest_install_report_on(21)) == kSmallMtuRefusal);
+TEST_CASE(
+    "comms: the install report with a refused landing is 30 bytes at its widest, refused "
+    "small_mtu a byte short") {
+    CHECK(link_text(widest_install_report_on(30)).find("\"staged_key\"") != std::string::npos);
+    CHECK(widest_install_report_on(30).size() == 30);
+    CHECK(link_text(widest_install_report_on(29)) == kSmallMtuRefusal);
 }
 
 TEST_CASE("comms: the bench's timing report is one frame on a wide link and several on a narrow") {

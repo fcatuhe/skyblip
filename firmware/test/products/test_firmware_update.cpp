@@ -384,13 +384,6 @@ std::string land(Rig& rig) {
     land_upload(rig, now_ms);
     return rig.last_on(events::Endpoint::Config);
 }
-
-void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
-    rig.platform.dfu().running_key_valid = true;
-    rig.platform.dfu().running_signer.fill(trusted);
-    rig.platform.dfu().staged_key_valid = true;
-    rig.platform.dfu().staged_signer.fill(signer);
-}
 }  // namespace
 
 TEST_CASE(

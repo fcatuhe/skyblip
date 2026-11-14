@@ -396,6 +396,32 @@ test('a device that does not name its key refuses a foreign one once it lands, i
   assert.equal(device.finished, true);
 });
 
+// A refusal word alone cannot tell a foreign key from a slot the unit could not read back.
+test('an upload refused once it landed asks the unit what it found in slot 1', async () => {
+  const { device, updater, until } = await connected({ installReport: {} });
+  device.push({ command: 'update', image: 'confirmed', swap_powered: true });
+  await until(state => state.image.key === null);
+  device.landedCheck = 'damaged';
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  const { landing, notice } = await until(state => state.landing);
+  assert.equal(notice.key, 'wrong_key');
+  assert.deepEqual(landing, { check: 'damaged', stagedKey: 'A1A1A1A1' });
+});
+
+test('an upload refused for low power asks nothing more', async () => {
+  const { device, updater, until } = await chosen({ installReport: {} });
+  device.refuseInstall = 'low_power';
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(settled);
+  assert.equal(device.commands.filter(command => command === 'install_report').length, 1);
+  assert.equal(updater.state.landing, null);
+});
+
 test('the device refusing an older image at the first chunk reads as older', async () => {
   const { device, updater, until } = await chosen();
   device.refuseUpload = IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER;

@@ -20,18 +20,17 @@ class BriefingWordsTest < ActiveSupport::TestCase
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze
   # INFO: fc 13nov26 a forget the unit never answers is a timeout, which trust.js names
   BROWSER_NOTICES = %w[untrusted invalid timeout].freeze
-  # TODO: fc 13nov26 the install report's causes, retired with #294
   INSTALL_CAUSES = Rails.root.join("app/javascript/skyblip/install_report.js").read[/INSTALL_CAUSES = \[(.*?)\]/, 1].scan(/'(\w+)'/).flatten
 
   test "the firmware still refuses with the reasons this test reads" do
-    assert_includes refusals("config.cpp", "acknowledge\\(false, "), "not_approved"
+    assert_includes refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()"), "not_approved"
     assert_includes refusals("capture_request.cpp", "refuse\\("), "not_capturing"
     assert_includes refusals("identity_link.cpp", "refuse\\("), "bad_signature"
   end
 
   I18n.available_locales.each do |locale|
     test "every refusal and notice of an install has words in #{locale}" do
-      keys = refusals("config.cpp", "acknowledge\\(false, ") - NEVER_ASKED + UPDATE_NOTICES
+      keys = refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()") - NEVER_ASKED + UPDATE_NOTICES
       assert_empty keys - words(locale, :notices)
     end
 

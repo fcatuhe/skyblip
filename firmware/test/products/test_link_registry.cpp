@@ -275,6 +275,11 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
     report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);
     config.set_install_report(&report);
+    dfu.staged_key_valid = true;
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    dfu.finished_upload = true;
+    config.tick(0);
     config.set_radio_protocols(bravo::kRadioProtocols);
     for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));

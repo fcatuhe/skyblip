@@ -71,6 +71,32 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_nil Release.simulator([ branch ])
   end
 
+  test "the prompt glass is drawn with the local build when one is complete" do
+    Dir.mktmpdir do |directory|
+      Release::SIMULATOR_FILES.each { |file| FileUtils.touch(File.join(directory, file)) }
+
+      with_config(simulator_build: directory) { assert_equal Release::LOCAL_TAG, Release.prompt_glass_tag }
+    end
+  end
+
+  test "with only the local build allowed, an incomplete one refuses the prompt glass rather than reach GitHub" do
+    Dir.mktmpdir do |directory|
+      FileUtils.touch(File.join(directory, "embed.js"))
+
+      with_config(simulator_build: directory, local_simulator_only: true) do
+        assert_raises(Release::Unavailable) { Release.prompt_glass_tag }
+      end
+    end
+  end
+
+  # This recording holds no release with the simulator files.
+  test "without a local build, the prompt glass looks for a release and says when none holds the simulator" do
+    with_config(simulator_build: nil, local_simulator_only: false) do
+      error = VCR.use_cassette("github/releases") { assert_raises(Release::Unavailable) { Release.prompt_glass_tag } }
+      assert_equal "No release holds the simulator", error.message
+    end
+  end
+
   private
     def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [])
       Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "published_at" => published_at,

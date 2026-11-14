@@ -631,6 +631,8 @@ inline constexpr Key kInstallReportKeys[] = {
     {"probation_boots", 5, Type::Unsigned, nullptr, 0, false},
     {"proof", 6, Type::Enum, &kProof, 0, false},
     {"reset", 7, Type::Enum, &kReset, 0, false},
+    {"landed_check", 8, Type::Enum, &kStagedCheck, 0, false},
+    {"staged_key", 9, Type::Bytes, nullptr, 4, false},
 };
 
 inline constexpr Key kProtocolsKeys[] = {
@@ -689,7 +691,7 @@ inline constexpr Frame kFrames[] = {
     {"browsers", 32, events::Endpoint::Config, Sender::Host, kBrowsersKeys, 2},
     {"browser", 33, events::Endpoint::Config, Sender::Unit, kBrowserKeys, 5},
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
-    {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 8},
+    {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 10},
     {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
     {"attest", 37, events::Endpoint::Config, Sender::Host, kAttestKeys, 2},
     {"attestation", 38, events::Endpoint::Config, Sender::Unit, kAttestationKeys, 5},

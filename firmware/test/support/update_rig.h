@@ -49,6 +49,13 @@ inline void stage_versions(Rig& rig) {
     rig.platform.dfu().staged_image_version = kStaged;
 }
 
+inline void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
+    rig.platform.dfu().running_key_valid = true;
+    rig.platform.dfu().running_signer.fill(trusted);
+    rig.platform.dfu().staged_key_valid = true;
+    rig.platform.dfu().staged_signer.fill(signer);
+}
+
 inline void land_upload(Rig& rig, uint32_t& now_ms) {
     rig.platform.dfu().finished_upload = true;
     pass(rig, now_ms);

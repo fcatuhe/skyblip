@@ -31,6 +31,7 @@ export class DeviceWitness {
       ...this.#link(before, state),
       ...this.#tasks(before, state),
       ...this.#notice(before, state),
+      ...this.#landing(before, state),
       ...this.#learned(state, attempted),
     ];
   }
@@ -72,7 +73,7 @@ export class DeviceWitness {
     if (task !== 'install') return ['device.task_started', { task }];
     this.#install = { since: this.#now(), from: state.running };
     const { file, advice, upgrade } = state;
-    return ['device.task_started', { task, version: file?.version, full: file?.full, advice, upgrade }];
+    return ['device.task_started', { task, version: file?.version, full: file?.full, key: file?.key, sha: file?.sha, advice, upgrade }];
   }
 
   #ended(before, state) {
@@ -89,6 +90,14 @@ export class DeviceWitness {
     if (!state.notice || sameNotice(state.notice, before?.notice)) return [];
     const { key, during, detail } = state.notice;
     return [['device.noticed', { key, during, detail, phase: state.phase, task: taskOf(before?.task ?? state.task) }]];
+  }
+
+  #landing(before, state) {
+    const { landing, notice, file, image } = state;
+    if (!landing || landing === before?.landing) return [];
+    return [['device.upload_refused', {
+      reason: notice?.key, version: file?.version, check: landing.check, staged_key: landing.stagedKey, key: file?.key, unit_key: image?.key,
+    }]];
   }
 
   #learned(state, attempted) {
@@ -112,7 +121,7 @@ export class DeviceWitness {
 function readOf({ image, running, trust, address, status }) {
   const product = productOf(image);
   return {
-    product, running, image: image.state,
+    product, running, image: image.state, key: image.key,
     track: image.key ? (image.downgrade ? 'development' : 'release') : null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,

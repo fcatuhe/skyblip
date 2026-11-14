@@ -523,7 +523,13 @@ enum : uint32_t {
     kProbationBoots = 5,
     kProof = 6,
     kReset = 7,
+    kLandedCheck = 8,
+    kStagedKey = 9,
 };
+}
+
+namespace install_report_bytes {
+constexpr size_t kStagedKey = 4;
 }
 
 namespace protocols_key {
