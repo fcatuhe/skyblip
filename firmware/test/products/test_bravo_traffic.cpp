@@ -102,6 +102,24 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     CHECK(flight.reads("B DLH4AB", go::kNearbyScale));
 }
 
+TEST_CASE("bravo traffic: BRAVO LOG lists each frame Bravo forwards, under what Bravo runs") {
+    Flight flight(named_target_every_second(2, 8));
+    flight.tango.bravo.health.status_fields =
+        "\"firmware\":\"0.4.1+1702\",\"battery_percent\":80,\"charging\":false,"
+        "\"power_level\":\"normal\",\"frame_rate_hz\":412";
+    flight.fly(3);
+    flight.go().show(flight.tango.now_ms, go::Page::BravoLog);
+    flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
+    REQUIRE(flight.go().product.screen().page() == go::Page::BravoLog);
+    CHECK(flight.reads("BRAVO 3F2A"));
+    CHECK(flight.reads("LIVE"));
+    CHECK(flight.reads("FW 0.4.1+1702"));
+    CHECK(flight.reads("BAT 80%"));
+    CHECK(flight.reads("1090 412/S"));
+    CHECK(flight.reads("ADS-B"));
+    CHECK(flight.reads("DLH4AB"));
+}
+
 // An empty sky is a healthy one: Bravo's health, not its traffic, says it is there.
 TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming is no NO BRAVO and no tone") {
     Flight flight;
@@ -163,6 +181,21 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are NO BRAVO, 
                    go::kGlassHeight));
     CHECK(reads_in(flight.glass(), "NO UTC", 0, go::kSelfTestFirstRowY, go::kGlassWidth,
                    go::kGlassHeight));
+}
+
+TEST_CASE("bravo traffic: a live Bravo whose health says its cell is low says so on the radar") {
+    Flight flight;
+    flight.fly(3);
+    REQUIRE(flight.state().bravo == comms::BravoState::Live);
+    CHECK_FALSE(flight.reads("BAT", 2));
+    flight.tango.bravo.health.status_fields =
+        "\"battery_percent\":9,\"charging\":false,\"power_level\":\"low\"";
+    flight.fly(2);
+    CHECK(flight.reads("BAT 9%", 2));
+
+    flight.tango.bravo.health.status_fields = "\"charging\":true,\"power_level\":\"normal\"";
+    flight.fly(2);
+    CHECK_FALSE(flight.reads("BAT 9%", 2));
 }
 
 TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is NO BRAVO, with one tone") {
@@ -288,16 +321,16 @@ TEST_CASE("bravo traffic: a pressure-only target has a height while the baromete
         flight.fly(1);
     }
     traffic::RangeRow rows[4];
-    REQUIRE(traffic::rank_by_range(flight.state().traffic, flight.state().callsigns,
-                                   flight.state().own, rows, 4) == 1);
+    REQUIRE(traffic::rank_by_relevance(flight.state().traffic, flight.state().callsigns,
+                                       flight.state().own, rows, 4) == 1);
     CHECK(rows[0].up_valid);
     // 4500 ft is 1371.6 m of pressure altitude, and own-ship's barometer reads 1000 m.
     CHECK(rows[0].up_m == doctest::Approx(372).epsilon(0.01));
 
     flight.fly(5);
     CHECK_FALSE(flight.state().own.pressure_altitude_valid);
-    REQUIRE(traffic::rank_by_range(flight.state().traffic, flight.state().callsigns,
-                                   flight.state().own, rows, 4) == 1);
+    REQUIRE(traffic::rank_by_relevance(flight.state().traffic, flight.state().callsigns,
+                                       flight.state().own, rows, 4) == 1);
     CHECK_FALSE(rows[0].up_valid);
 }
 

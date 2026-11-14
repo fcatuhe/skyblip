@@ -7,6 +7,7 @@
 #include "core/comms/link_registry.h"
 #include "core/events/stamp.h"
 #include "core/model/aircraft.h"
+#include "core/power/cutoff.h"
 #include "core/util/result.h"
 #include "core/util/span.h"
 
@@ -51,6 +52,8 @@ enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
 // INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
 constexpr int kPeerCallsignBytes = 9;
+// INFO: fc 15nov26 schemas/link.v1.json, health: a version of at most 13 characters, 9.99.99+99999
+constexpr int kPeerFirmwareBytes = 14;
 
 struct OwnTransponderHeard {
     uint32_t address{0};
@@ -69,6 +72,11 @@ struct PeerHealth {
     ExportReference export_reference{ExportReference::None};
     bool paired{false};
     std::optional<OwnTransponderHeard> own_transponder{};
+    char firmware[kPeerFirmwareBytes]{};
+    std::optional<uint8_t> battery_percent{};
+    bool charging{false};
+    power::PowerLevel power_level{power::PowerLevel::Unknown};
+    std::optional<uint32_t> frame_rate_hz{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

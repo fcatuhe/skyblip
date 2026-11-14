@@ -56,6 +56,17 @@ TEST_CASE("prompt glass: a dfu names the version the phone sends, as the Go does
     CHECK(reads_heading(glass, "FIRMWARE", go::Heading::Interrupt));
 }
 
+TEST_CASE(
+    "prompt glass: a capture names the profile asked and the flights it erases, as the Go does") {
+    go::Glass glass;
+    REQUIRE(simulator::draw_prompt(glass, "capture", "power_run:3", "", 30));
+    CHECK(same(glass, confirm(comms::Pending::Capture, "START A POWER RUN, ERASES 3 FLIGHTS", 30)));
+    REQUIRE(simulator::draw_prompt(glass, "capture", "stop:0", "", 30));
+    CHECK(same(glass, confirm(comms::Pending::Capture, "STOP THE CAPTURE", 30)));
+    CHECK_FALSE(simulator::draw_prompt(glass, "capture", "launch:3", "", 30));
+    CHECK_FALSE(simulator::draw_prompt(glass, "capture", "full:many", "", 30));
+}
+
 TEST_CASE("prompt glass: every other prompt is the Go's title and detail for it") {
     const struct {
         const char* name;

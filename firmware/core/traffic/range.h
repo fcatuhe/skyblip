@@ -5,6 +5,7 @@
 
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/traffic/alarm.h"
 #include "core/traffic/callsigns.h"
 #include "core/traffic/table.h"
 
@@ -17,6 +18,8 @@ struct RangeRow {
     int32_t ground_m{0};
     int32_t up_m{0};
     bool up_valid{true};
+    Level alarm_level{Level::None};
+    int slot{-1};
     // INFO: fc 20sep26 into the store the rows were ranked against, nullptr while nothing named it
     const char* callsign{nullptr};
 };
@@ -25,9 +28,12 @@ struct RangeRow {
 bool range_to(const model::Ownship& own, const model::AircraftObservation& observation,
               RangeRow& out);
 
-// Nearest first, at most capacity rows. Returns how many were filled.
-int rank_by_range(const TrafficTable& table, const CallsignTable& callsigns,
-                  const model::Ownship& own, RangeRow* out, int capacity);
+// INFO: fc 15nov26 an alarm first, then the advisory's height window, then the nearest
+bool outranks(const RangeRow& row, const RangeRow& other);
+
+// Most relevant first, at most capacity rows. Returns how many were filled.
+int rank_by_relevance(const TrafficTable& table, const CallsignTable& callsigns,
+                      const model::Ownship& own, RangeRow* out, int capacity);
 
 }  // namespace skyblip::traffic
 

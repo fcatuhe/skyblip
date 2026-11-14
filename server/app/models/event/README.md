@@ -50,6 +50,7 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 - **What was the device like?** `device.read`: firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
 - **What did the pilot read?** `device.noticed`, every notice the page showed, by the key `config/locales/briefing.*.yml` words it with.
 - **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report. `device.upload_refused` for an image the unit refused once it landed, with what it found in slot 1 and the keys on both sides.
+- **What did the device say about itself?** `device.diagnosed`, the diagnostics dump a pilot sent with Send a report: every counter and state of the radio, the receiver, the cell, the 1090 MHz receiver and the capture, by group, and never a position or an address. `capture.received` for a capture the pilot sent, which the Captures page in the admin area downloads.
 - **What broke?** `browser.failed` in the page, and `error.reported` on the server, tied to the browser when it asked.
 
 ## Reading it

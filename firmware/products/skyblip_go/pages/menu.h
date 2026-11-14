@@ -24,13 +24,12 @@ enum class MenuRow : uint8_t {
     Status,
     Satellites,
     RadioLog,
-    Raw,
-    Capture,
     SelfTest,
     Light,
     Bravo,
     Aircraft,
     Detected,
+    BravoLog,
     kCount
 };
 
@@ -95,8 +94,7 @@ uint8_t next_aircraft_type(uint8_t code);
 
 constexpr bool opens_a_page(MenuRow row) {
     return row == MenuRow::RadioLog || row == MenuRow::Satellites || row == MenuRow::Status ||
-           row == MenuRow::Raw || row == MenuRow::Capture || row == MenuRow::SelfTest ||
-           row == MenuRow::Bravo;
+           row == MenuRow::SelfTest || row == MenuRow::Bravo || row == MenuRow::BravoLog;
 }
 
 Page page_behind(MenuRow row);

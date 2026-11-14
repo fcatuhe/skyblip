@@ -15,6 +15,10 @@ development:
     <<: *default
     database: storage/development_events.sqlite3
     migrations_paths: db/events_migrate
+  captures:
+    <<: *default
+    database: storage/development_captures.sqlite3
+    migrations_paths: db/captures_migrate
 
 test:
   primary:
@@ -28,6 +32,10 @@ test:
     <<: *default
     database: storage/test_events.sqlite3
     migrations_paths: db/events_migrate
+  captures:
+    <<: *default
+    database: storage/test_captures.sqlite3
+    migrations_paths: db/captures_migrate
 
 production:
   primary:
@@ -41,6 +49,10 @@ production:
     <<: *default
     database: storage/production_events.sqlite3
     migrations_paths: db/events_migrate
+  captures:
+    <<: *default
+    database: storage/production_captures.sqlite3
+    migrations_paths: db/captures_migrate
   cache:
     <<: *default
     database: storage/production_cache.sqlite3

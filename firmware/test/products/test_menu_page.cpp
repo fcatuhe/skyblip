@@ -440,6 +440,7 @@ TEST_CASE("product: a screen change wipes the glass, and no keypress asks for a 
 TEST_CASE("product: every page the pad does not walk is opened by a row that names it") {
     for (int i = go::kWalkedPages; i < go::kPageCount; i++) {
         const go::Page page = static_cast<go::Page>(i);
+        if (go::page_title(page)[0] == 0) continue;  // a retired code
         CHECK(go::walked(go::menu_owner(page)));
         CHECK(Rig::row_for(page) != go::MenuRow::kCount);
         CHECK(go::page_after(page) == go::menu_owner(page));

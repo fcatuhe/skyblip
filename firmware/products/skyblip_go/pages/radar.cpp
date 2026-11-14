@@ -181,12 +181,32 @@ const char* state_word(const RadarSnapshot& snapshot) {
     return snapshot.taxiing ? "TAXI" : "GROUND";
 }
 
+int format_cell(char* out, std::optional<uint8_t> percent) {
+    int written = format_string(out, "BAT ");
+    if (percent) {
+        written += format_unsigned(out + written, *percent);
+        written += format_string(out + written, "%");
+    } else {
+        written += format_string(out + written, "LOW");
+    }
+    out[written] = 0;
+    return written;
+}
+
 const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     if (!snapshot.battery_low) return nullptr;
-    int written = format_string(out, "BAT ");
-    written += format_unsigned(out + written, snapshot.battery_percent);
-    written += format_string(out + written, "%");
-    out[written] = 0;
+    format_cell(out, snapshot.battery_percent);
+    return out;
+}
+
+constexpr char kBravoPrefix[] = "BRAVO ";
+constexpr int kBravoPrefixLength = sizeof(kBravoPrefix) - 1;
+
+// INFO: fc 15nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
+const char* bravo_cell_word(const RadarSnapshot& snapshot, char* out) {
+    if (!snapshot.bravo_battery_low) return nullptr;
+    const int written = format_string(out, kBravoPrefix);
+    format_cell(out + written, snapshot.bravo_battery_percent);
     return out;
 }
 
@@ -198,7 +218,7 @@ struct RingWords {
 };
 
 // INFO: fc 12nov26 the banner and the note are the first two words standing, in this order
-RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
+RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer, char* bravo_buffer) {
     const char* words[5] = {};
     int count = 0;
     bool continued = false;
@@ -215,6 +235,15 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
             continued = true;
         } else {
             words[count++] = "WAIT FOR BRAVO";
+        }
+    } else if (const char* bravo_cell = bravo_cell_word(snapshot, bravo_buffer)) {
+        // INFO: fc 15nov26 BRAVO BAT 12% overruns the ALL ring as a banner, so the banner splits
+        if (count == 0) {
+            words[count++] = "BRAVO";
+            words[count++] = bravo_cell + kBravoPrefixLength;
+            continued = true;
+        } else {
+            words[count++] = bravo_cell;
         }
     }
     if (snapshot.fix_valid) {
@@ -432,7 +461,8 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int reading_count = 2;
     char cell_buffer[12];
-    const RingWords ring = ring_words(snapshot, cell_buffer);
+    char bravo_buffer[20];
+    const RingWords ring = ring_words(snapshot, cell_buffer, bravo_buffer);
     const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
     const int note_y = layout.note_y - layout.banner_y + banner_y;
     if (ring.continued) {

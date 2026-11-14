@@ -133,10 +133,10 @@ struct GroundedUnitWithLogs {
         rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         REQUIRE(rig.setup() == Status::Ok);
         taxi(rig, now_ms, 5);
-        arm_from_the_page(rig, now_ms);
+        arm_over_the_link(rig, now_ms);
         capture = rig.product.capture().session_id();
         feed(rig, now_ms, 30);
-        rig.double_press(now_ms);
+        stop_over_the_link(rig, now_ms);
         taxi(rig, now_ms, 20);
         fly(rig, now_ms, 80);
         taxi(rig, now_ms, 40);
@@ -261,6 +261,8 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.residual_valid = true;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
+    dump.capture_available = true;
+    dump.capture_armed = true;
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
     config.set_settings_fallback(settings::Fallback::Prior);
@@ -344,9 +346,7 @@ const std::vector<Answer> kAnswers = {
     {"ownship", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
-    {"capture", kConfig,
-     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
-     "unknown_command"},
+    {"capture", kConfig, prompt("confirm_capture"), "invalid"},
     {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
     {"trust_browser", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},

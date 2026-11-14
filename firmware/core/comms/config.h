@@ -43,8 +43,6 @@ enum class Pending : uint8_t {
     Capture = 9
 };
 
-enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
-
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
 // reading the app cannot be looking at two different descriptions of the same
@@ -52,6 +50,7 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
+int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an

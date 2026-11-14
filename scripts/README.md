@@ -7,7 +7,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | [`blip.py`](blip.py) | the bench CLI: talk to a device over BLE, measure the link, offload a capture |
 | [`blip_records.py`](blip_records.py) | the record decoders `blip.py` uses, importable on their own |
 | [`blip_protocols.py`](blip_protocols.py) | `blip.py protocols`: print the radio protocol versions a unit carries |
-| [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a skyBlip Bravo's diagnostics capture and wait for the presses' verdict |
+| [`blip_capture.py`](blip_capture.py) | `blip.py capture`: arm or stop a unit's diagnostics capture and wait for the presses' verdict |
 | [`blip_frames.py`](blip_frames.py) | the companion link's CBOR codec and the names `schemas/link.v1.json` gives its numbers, which `blip.py` speaks through |
 | [`link_registry.py`](link_registry.py) | write the C++, test and JavaScript files generated from `schemas/link.v1.json`, through clang-format (`CLANG_FORMAT` names it) |
 | [`power_budget.py`](power_budget.py) | turn a power run into a power budget: what the cell spent, and on what |
@@ -101,7 +101,7 @@ A board that senses no current cannot report milliamps, and this one senses none
 
 ### One run, end to end
 
-Charge the unit to full and unplug it. Arm `POWER RUN` on the CAPTURE page, which is the row that records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: on an empty partition the page prints `KEEPS 120H25` against the full capture's `0H32`, and 120 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
+Charge the unit to full and unplug it. Arm a power run from the device page in the briefing app, or with `scripts/blip.py capture power_run`, and allow it with two presses on the unit. It records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: on an empty partition the dump's `keeps_power_run_s` reads about 120 hours against the full capture's 32 minutes, and 120 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
 
 `FLIGHT RUN`, the row under it, records the same and keeps the same 120 hours, and runs the glass as in flight for as long as it is armed: the radar's flight clock and `FLIGHT` word, the g-meter's extremes cleared at the double press. Leave it on the page you are measuring: the panel refreshes only when the frame changes, so the page decides the refreshes the `duty` records count. On an empty sky the flying radar changes once a minute, with its clock. It cannot fly the rest, because what else flight changes is what goes on air or into the pilot's log: the unit keeps the ground cadence and the on-ground flag (ADS-L G.1.16), and writes no flight (`firmware/core/diagnostics/README.md`).
 
@@ -146,7 +146,7 @@ Charge both units. Fit the same antenna on each and note its name. Stand them up
 
 The ground reflects, and at these heights the reflection is the largest error in the run. `quiet_distance_m()` is where it arrives half a wave late, so it can only strengthen the path and the e.r.p. ceiling carries no ground term: 16.7 m apart at 1.2 m up, 11.6 m at 1.0 m. The script prints how far the ground can move the path at whatever geometry it is given, so a garden that cannot fit that distance still gives an answer, only a wider one.
 
-Switch both on, wait until each reads `TX ON` on the status page and `PPS LOCK` on the radio log page, then arm `FULL` on the `CAPTURE` page of each. Leave them for 30 minutes. On the ground a unit sends a position every 10 s, and its callsign every 10 s when one is set, so that is 180 to 360 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures with the same double press and fetch each, while still switched on:
+Switch both on, wait until each reads `TX ON` on the status page and `PPS LOCK` on the radio log page, then arm a full capture on each from its device page or with `scripts/blip.py capture full`. Leave them for 30 minutes. On the ground a unit sends a position every 10 s, and its callsign every 10 s when one is set, so that is 180 to 360 bursts each way, and a full capture keeps 68 minutes, so the run fits whole. Stop both captures the same way and fetch each, while still switched on:
 
 ```
 ./scripts/blip.py --address <unit a> fetch --log diagnostics --out a.ndjson

@@ -81,6 +81,9 @@ class DiagnosticsDump {
 
         snapshot.tracked = static_cast<uint32_t>(state.traffic.count());
         snapshot.alarm = traffic::to_number(state.alarm_level);
+        snapshot.uplink_frames = state.air.uplink_frames;
+        snapshot.uplink_bad = state.air.uplink_bad;
+        snapshot.uplink_targets = state.air.uplink_targets;
 
         snapshot.gnss_fixes = state.flight.gnss_solutions;
         snapshot.fix_valid = state.own.fix_valid;
@@ -112,6 +115,8 @@ class DiagnosticsDump {
         snapshot.battery_implausible = product.power().implausible_samples();
         snapshot.charge = product.power().charge_condition();
         snapshot.charge_warnings = product.power().charge_warnings();
+
+        product.capture().describe(snapshot);
 
         snapshot.refreshes++;
     }

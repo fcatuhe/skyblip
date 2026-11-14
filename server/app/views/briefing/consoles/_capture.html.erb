@@ -13,9 +13,8 @@
   </form>
   <p class="state" id="capturemessage" role="status" data-capture-target="message">-</p>
   <progress class="capture-progress" aria-label="Records fetched" data-capture-target="progress" hidden></progress>
-  <div class="hint">Arm and Stop send <code>capture</code> on the config endpoint, and a skyBlip Bravo
-    asks on its lamp: two presses on its button allow it, one refuses it. A Go arms its captures on its
-    glass. Only <code>full</code> records the ADS-B aircraft. The unit writes the capture to its flash and
+  <div class="hint">Arm and Stop send <code>capture</code> on the config endpoint. A Go asks on its glass
+    and a skyBlip Bravo on its lamp: two presses on its button allow it, one refuses it. Only <code>full</code> records the ADS-B aircraft. The unit writes the capture to its flash and
     closes it on Stop or at power off. Fetch reads the last session of the diagnostics store, as
     <code>blip.py fetch --log diagnostics</code> does. Stop before you fetch: a session still open is
     fetched without its last record, which may be a torn write.</div>

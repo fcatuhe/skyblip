@@ -93,7 +93,8 @@ TEST_CASE("paired link: Bravo's recorded observations and its health reach the c
     const std::string epoch = std::to_string(pair.bravo.boot_epoch());
     CHECK(frames[0] == "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":" + epoch +
                            ",\"listening\":true,\"utc_valid\":true,\"own_icao_set\":false,"
-                           "\"alarm_granted\":false,\"export_reference\":\"own\",\"paired\":true}");
+                           "\"alarm_granted\":false,\"export_reference\":\"own\",\"paired\":true,"
+                           "\"charging\":false,\"power_level\":\"normal\"}");
     CHECK(frames[1] == "{\"command\":\"observation\",\"address\":4479337,\"boot_epoch\":" + epoch +
                            ",\"sequence\":0,\"at_s\":1785628800,\"into_ms\":250,"
                            "\"latitude_1e7\":485100000,\"longitude_1e7\":85200000,"

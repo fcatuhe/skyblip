@@ -22,4 +22,20 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
     post events_path, params: { browser: "01AZ018Z" }, as: :json
     assert_response :bad_request
   end
+
+  test "a report keeps the device's dump by group, and drops what is not a counter or a state" do
+    dump = { radio: { rx_ok: 1204, noise_dbm: -105 }, gnss: { valid: true, firmware: "URANUS5,V5.1.0.0" },
+             adsb: { rssi_dbm: [ 0, 120, 900 ] }, "Bad Group": { x: 1 }, power: { position: { lat: 1 } } }
+
+    post events_path, params: { browser: "01AZ018Z", entries: [
+      { id: SecureRandom.uuid, name: "device.diagnosed", at: Time.current.iso8601, seq: 1, page: SecureRandom.uuid, device: "bravo-3f2a",
+        properties: { dump: } }
+    ] }, as: :json
+
+    assert_response :no_content
+    event = Event.find_by!(name: "device.diagnosed")
+    assert_equal({ "radio" => { "rx_ok" => 1204, "noise_dbm" => -105 }, "gnss" => { "valid" => true, "firmware" => "URANUS5,V5.1.0.0" },
+                   "adsb" => { "rssi_dbm" => [ 0, 120, 900 ] }, "power" => {} }, event.payload["dump"])
+    assert_equal "bravo-3f2a", event.device
+  end
 end
