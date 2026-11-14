@@ -21,6 +21,7 @@
 #include "products/skyblip_bravo/flash_window.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/name.h"
+#include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_bravo/services/adsb.h"
 #include "products/skyblip_bravo/services/button.h"
 #include "products/skyblip_bravo/services/peer.h"
@@ -54,6 +55,7 @@ class Product {
     explicit Product(Platform& platform)
         : platform_(platform), board_(platform, bus_, adsb_frames_) {
         config_link_.config().serve_captures();
+        config_link_.config().set_radio_protocols(kRadioProtocols);
     }
 
     Status setup() {

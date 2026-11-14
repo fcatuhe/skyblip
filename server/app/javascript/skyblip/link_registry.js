@@ -2261,6 +2261,50 @@ export const LINK_REGISTRY = Object.freeze({
           "enum": "reset"
         }
       ]
+    },
+    {
+      "command": "protocols",
+      "code": 36,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "adsb_version",
+          "number": 1,
+          "type": "text"
+        },
+        {
+          "name": "adsb_specification",
+          "number": 2,
+          "type": "text"
+        },
+        {
+          "name": "adsl_version",
+          "number": 3,
+          "type": "text"
+        },
+        {
+          "name": "adsl_specification",
+          "number": 4,
+          "type": "text"
+        },
+        {
+          "name": "alptas_version",
+          "number": 5,
+          "type": "text"
+        },
+        {
+          "name": "alptas_specification",
+          "number": 6,
+          "type": "text"
+        }
+      ]
     }
   ],
   "enums": {
@@ -3291,6 +3335,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "install_report",
           "code": 35
+        },
+        {
+          "name": "protocols",
+          "code": 36
         }
       ]
     }

@@ -436,6 +436,18 @@
         {"name": "proof", "number": 6, "type": "enum", "enum": "proof", "description": "How far the new image's last run on probation got towards confirming itself: none if it never ran, then booted, started, gnss_heard, hub_bootable and proven in the order it checks them, or confirm_failed when MCUboot refused to mark it confirmed"},
         {"name": "reset", "number": 7, "type": "enum", "enum": "reset", "description": "Why the latest restart happened, as the diagnostics dump says it. On the old image after a revert, it names what ended the new image's run"}
       ]
+    },
+    {
+      "command": "protocols", "code": 36, "endpoint": "config", "sender": "both",
+      "description": "Asked with the bare command, answered with the version of each radio protocol stack the unit carries and the specification that stack implements, so a pilot, a page or a bench can check a unit in hand against a declaration of conformity. Each pair is read from firmware/protocols/<stack>/version.h, and the product carries the stacks products/<product>/PROTOCOLS lists, which firmware/test/products/test_radio_protocols.cpp holds the product to: a Go answers the adsl and alptas keys, a Bravo the adsb ones. 143 bytes on a Go and 102 on a Bravo at the versions of this release, and each version character past five adds a byte. A narrower link is answered small_mtu. Firmware from before the frame answers unknown_command.",
+      "keys": [
+        {"name": "adsb_version", "number": 1, "type": "text", "description": "The version of the unit's ADS-B stack, major.minor.patch, kVersion in protocols/adsb/version.h. It moves only when a change alters what the stack reads off the air (firmware/protocols/README.md, Versions). Present on a unit that carries ADS-B, a Bravo"},
+        {"name": "adsb_specification", "number": 2, "type": "text", "description": "What the ADS-B stack implements, kSpecification in protocols/adsb/version.h. Present with adsb_version"},
+        {"name": "adsl_version", "number": 3, "type": "text", "description": "The version of the unit's ADS-L stack, major.minor.patch, kVersion in protocols/adsl/version.h. It moves only when a change alters what the stack puts on air or reads off it (firmware/protocols/README.md, Versions), and it is not the Protocol Version field every ADS-L packet carries. Present on a unit that carries ADS-L, a Go"},
+        {"name": "adsl_specification", "number": 4, "type": "text", "description": "What the ADS-L stack implements, kSpecification in protocols/adsl/version.h, such as ADS-L 4 SRD-860 Issue 2. Present with adsl_version"},
+        {"name": "alptas_version", "number": 5, "type": "text", "description": "The version of the unit's ALP-TAS stack, major.minor.patch, kVersion in protocols/alptas/version.h. It moves only when a change alters what the stack puts on air or reads off it (firmware/protocols/README.md, Versions). Present on a unit that carries ALP-TAS, a Go"},
+        {"name": "alptas_specification", "number": 6, "type": "text", "description": "What the ALP-TAS stack implements, kSpecification in protocols/alptas/version.h. Present with alptas_version"}
+      ]
     }
   ],
   "enums": {

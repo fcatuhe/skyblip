@@ -20,6 +20,7 @@
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
 #include "products/skyblip_go/product_name.h"
+#include "products/skyblip_go/radio_protocols.h"
 #include "products/skyblip_go/self_test_parts.h"
 #include "products/skyblip_go/services/bravo.h"
 #include "products/skyblip_go/services/radio.h"
@@ -53,7 +54,9 @@ class Product {
    public:
     using Board = boards::TEchoPlus<Platform>;
 
-    explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {}
+    explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {
+        config_link_.config().set_radio_protocols(kRadioProtocols);
+    }
 
     Status setup() {
         board_.probe();
