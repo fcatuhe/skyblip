@@ -21,19 +21,14 @@ static_assert(link::update_bytes::kKey <= std::tuple_size<ports::SigningKeyHash>
 
 struct StackVersion {
     RadioProtocol protocol;
-    uint32_t version_key;
-    uint32_t specification_key;
+    uint32_t key;
     const char* version;
-    const char* specification;
 };
 
 constexpr StackVersion kStackVersions[] = {
-    {RadioProtocol::Adsb, link::protocols_key::kAdsbVersion,
-     link::protocols_key::kAdsbSpecification, adsb::kVersion, adsb::kSpecification},
-    {RadioProtocol::Adsl, link::protocols_key::kAdslVersion,
-     link::protocols_key::kAdslSpecification, adsl::kVersion, adsl::kSpecification},
-    {RadioProtocol::Alptas, link::protocols_key::kAlptasVersion,
-     link::protocols_key::kAlptasSpecification, alptas::kVersion, alptas::kSpecification},
+    {RadioProtocol::Adsb, link::protocols_key::kAdsbVersion, adsb::kVersion},
+    {RadioProtocol::Adsl, link::protocols_key::kAdslVersion, adsl::kVersion},
+    {RadioProtocol::Alptas, link::protocols_key::kAlptasVersion, alptas::kVersion},
 };
 }  // namespace
 
@@ -174,12 +169,8 @@ void ConfigService::send_protocols() {
     uint8_t frame[kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Protocols);
-    for (const StackVersion& stack : kStackVersions) {
-        if (carries(stack.protocol)) {
-            writer.add_text(stack.version_key, stack.version);
-            writer.add_text(stack.specification_key, stack.specification);
-        }
-    }
+    for (const StackVersion& stack : kStackVersions)
+        if (carries(stack.protocol)) writer.add_text(stack.key, stack.version);
     (void)reply(frame, writer.finish());
 }
 

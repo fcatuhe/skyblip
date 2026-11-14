@@ -526,11 +526,8 @@ enum : uint32_t {
 namespace protocols_key {
 enum : uint32_t {
     kAdsbVersion = 1,
-    kAdsbSpecification = 2,
-    kAdslVersion = 3,
-    kAdslSpecification = 4,
-    kAlptasVersion = 5,
-    kAlptasSpecification = 6,
+    kAdslVersion = 2,
+    kAlptasVersion = 3,
 };
 }
 

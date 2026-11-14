@@ -2280,28 +2280,13 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "text"
         },
         {
-          "name": "adsb_specification",
+          "name": "adsl_version",
           "number": 2,
           "type": "text"
         },
         {
-          "name": "adsl_version",
-          "number": 3,
-          "type": "text"
-        },
-        {
-          "name": "adsl_specification",
-          "number": 4,
-          "type": "text"
-        },
-        {
           "name": "alptas_version",
-          "number": 5,
-          "type": "text"
-        },
-        {
-          "name": "alptas_specification",
-          "number": 6,
+          "number": 3,
           "type": "text"
         }
       ]

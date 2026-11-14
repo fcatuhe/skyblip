@@ -4,10 +4,14 @@
 #include <string>
 #include <vector>
 
+#include "core/comms/config.h"
 #include "core/comms/radio_protocols.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/link.h"
+#include "ports/link.h"
 #include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_go/radio_protocols.h"
+#include "products/skyblip_go/settings_store.h"
 #include "protocols/adsb/version.h"
 #include "protocols/adsl/version.h"
 #include "protocols/alptas/version.h"
@@ -19,8 +23,6 @@ using namespace skyblip;
 namespace {
 
 constexpr const char* kAsk = "{\"command\":\"protocols\"}";
-constexpr const char* kSmallMtu =
-    "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"small_mtu\"}";
 
 const char* stem(comms::RadioProtocol protocol) {
     switch (protocol) {
@@ -50,33 +52,34 @@ std::vector<std::string> listed_in(const char* path) {
     return out;
 }
 
-bool answered(const std::string& frame) {
-    return frame.rfind("{\"command\":\"protocols\"", 0) == 0;
+std::string version(const char* stack, const char* text) {
+    return std::string(",\"") + stack + "_version\":\"" + text + "\"";
 }
 
-std::string pair(const char* stack, const char* version, const char* specification) {
-    return std::string(",\"") + stack + "_version\":\"" + version + "\",\"" + stack +
-           "_specification\":\"" + specification + "\"";
+std::string last_config_frame(const platform::host::Link& link) {
+    for (auto it = link.sent.rbegin(); it != link.sent.rend(); ++it)
+        if (it->endpoint == events::Endpoint::Config) return it->bytes;
+    return std::string();
 }
 
-std::string go_answer_on(uint16_t payload_bytes) {
+std::string go_answer() {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
-    rig.platform.link().declare_payload_bytes(payload_bytes);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.send(kAsk);
     rig.run(0, 200);
-    return rig.last_on(events::Endpoint::Config);
+    return last_config_frame(rig.platform.link());
 }
 
-std::string bravo_answer_on(uint16_t payload_bytes) {
+std::string bravo_answer() {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.raise_link();
-    rig.platform.link().declare_payload_bytes(payload_bytes);
+    rig.platform.link().declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     rig.send(kAsk);
     rig.run_for(200);
-    return rig.last_on(events::Endpoint::Config);
+    return last_config_frame(rig.platform.link());
 }
 
 }  // namespace
@@ -87,21 +90,30 @@ TEST_CASE("radio protocols: each product carries the stacks its PROTOCOLS file l
     CHECK(stems(bravo::kRadioProtocols) == listed_in("products/skyblip_bravo/PROTOCOLS"));
 }
 
-TEST_CASE("radio protocols: a Go names its ADS-L and ALP-TAS versions and what each implements") {
-    CHECK(go_answer_on(244) == "{\"command\":\"protocols\"" +
-                                   pair("adsl", adsl::kVersion, adsl::kSpecification) +
-                                   pair("alptas", alptas::kVersion, alptas::kSpecification) + "}");
+TEST_CASE("radio protocols: a Go names its ADS-L and ALP-TAS versions") {
+    CHECK(link_text(go_answer()) == "{\"command\":\"protocols\"" + version("adsl", adsl::kVersion) +
+                                        version("alptas", alptas::kVersion) + "}");
 }
 
-TEST_CASE("radio protocols: a Bravo names its ADS-B version and what it implements") {
-    CHECK(bravo_answer_on(244) ==
-          "{\"command\":\"protocols\"" + pair("adsb", adsb::kVersion, adsb::kSpecification) + "}");
+TEST_CASE("radio protocols: a Bravo names its ADS-B version") {
+    CHECK(link_text(bravo_answer()) ==
+          "{\"command\":\"protocols\"" + version("adsb", adsb::kVersion) + "}");
 }
 
-// schemas/link.v1.json states these widths, at this release's versions and specifications.
-TEST_CASE("radio protocols: a Go answers in 143 bytes and a Bravo in 102, small_mtu a byte short") {
-    CHECK(answered(go_answer_on(143)));
-    CHECK(go_answer_on(142) == kSmallMtu);
-    CHECK(answered(bravo_answer_on(102)));
-    CHECK(bravo_answer_on(101) == kSmallMtu);
+// schemas/link.v1.json states these widths at this release's versions.
+TEST_CASE("radio protocols: a Go answers in 18 bytes and a Bravo in 11, on the narrowest link") {
+    CHECK(go_answer().size() == 18);
+    CHECK(bravo_answer().size() == 11);
+}
+
+TEST_CASE("radio protocols: a config service handed no stacks answers unknown_command") {
+    platform::host::Link link;
+    go::Settings settings = go::defaults();
+    go::SettingsStore store{settings, identity::Activation{}};
+    comms::ConfigService config{link, store, nullptr};
+    link.raise_link(1);
+    config.on_rx(config_frame(kAsk));
+    CHECK(link_text(link.last().bytes) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":"
+          "\"unknown_command\"}");
 }

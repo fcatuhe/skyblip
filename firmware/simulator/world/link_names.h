@@ -633,11 +633,8 @@ inline constexpr Key kInstallReportKeys[] = {
 inline constexpr Key kProtocolsKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
     {"adsb_version", 1, Type::Text, nullptr, 0, false},
-    {"adsb_specification", 2, Type::Text, nullptr, 0, false},
-    {"adsl_version", 3, Type::Text, nullptr, 0, false},
-    {"adsl_specification", 4, Type::Text, nullptr, 0, false},
-    {"alptas_version", 5, Type::Text, nullptr, 0, false},
-    {"alptas_specification", 6, Type::Text, nullptr, 0, false},
+    {"adsl_version", 2, Type::Text, nullptr, 0, false},
+    {"alptas_version", 3, Type::Text, nullptr, 0, false},
 };
 
 inline constexpr Frame kFrames[] = {
@@ -677,7 +674,7 @@ inline constexpr Frame kFrames[] = {
     {"browser", 33, events::Endpoint::Config, Sender::Unit, kBrowserKeys, 5},
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
     {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 8},
-    {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 7},
+    {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
 };
 
 }
