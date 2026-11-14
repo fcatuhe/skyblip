@@ -329,6 +329,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAheadCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | unverified: two GNSS clocks part by a second at most, and more is no clock |
 | `kFarewellCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | two health periods for Bravo to answer an unpairing Go, then the link drops |
 | `kTxOutcomeMaxAgeMs` | 250 | milliseconds | MaxAge | under the 403 ms between the two M dwells closing, so one retired dwell does |
+| `kAirTimeUs` | `uint64_t{timing::Transmitter::kAirTimeMs} * 1000` | microseconds | - | - |
 | `kRenderPeriodMs` | 1000 (1 s) | milliseconds | Period | - |
 | `kPresentFloorMs` | 1000 (1 s) | milliseconds | Floor | - |
 | `kLockedRedrawWindowStartMs` | 600 | milliseconds | Window | after the fix (330), the drain and slot 0 arming (400); 800+170 ms < 1000 |
@@ -414,4 +415,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-269 constants over 26 folders.
+270 constants over 26 folders.
