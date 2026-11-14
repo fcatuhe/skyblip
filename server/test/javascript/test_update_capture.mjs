@@ -55,14 +55,6 @@ test('in flight the page refuses before it asks, as the unit would', async () =>
   assert.equal(device.commands.includes('capture'), false);
 });
 
-test('a Go from before it served capture answers unknown_command, and the page says so', async () => {
-  const { updater, until } = await connected({ servesCaptures: false });
-  assert.equal(updater.state.capture, null);
-  updater.orderCapture('full');
-  const refused = await until(state => state.notice?.key === 'unknown_command');
-  assert.deepEqual(refused.notice, { key: 'unknown_command', during: 'capture' });
-});
-
 test('a Go asks for a capture on its glass, and the dump then says it records', async () => {
   const { device, updater, until } = await connected();
   const idle = await until(state => state.capture);

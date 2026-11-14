@@ -1,7 +1,6 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
-  GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
   # Three ADS-B records, a traffic record and the end marker, as console_test.rb reads them.
   CAPTURE = %w[
     15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02
@@ -173,7 +172,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a trusted browser changes settings in flight, and the notes say updates wait for the landing" do
-    in_range a_go(browsers: [])
+    in_range a_go
     on_the_shelf do
       connect_go
       select "Loud", from: "Alarm volume"
@@ -241,14 +240,11 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Bravo arms and stops a capture with two presses on its lamp, and a Go from before it served one offers none" do
-    in_range a_go, a_bravo
+  test "a Bravo arms and stops a capture with two presses on its lamp" do
+    in_range a_bravo
     on_the_shelf do
-      connect_go
-      assert_no_select "Profile"
-
-      page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
-      within(".fleet--rail") { click_button "Connect a device" }
+      visit "/briefing"
+      click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Power run", from: "Profile"
       click_button "Arm"
@@ -270,7 +266,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a Go says what a capture costs, asks for it on its glass, and says it records" do
-    in_range a_go(servesCaptures: true)
+    in_range a_go
     on_the_shelf do
       connect_go
       within("[data-unit-target=capture]") do
@@ -288,7 +284,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a stopped capture is fetched off the device and sent to skyBlip, under the browser's support code" do
-    in_range a_go(servesCaptures: true, diagnostics: [ { session: 1_785_628_800, records: CAPTURE, closed: true } ])
+    in_range a_go(diagnostics: [ { session: 1_785_628_800, records: CAPTURE, closed: true } ])
     on_the_shelf do
       connect_go
       assert_text "a full capture 13 months and a power run or a flight run 25 months"
@@ -301,7 +297,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a report sends the device's dump to skyBlip, and says the support code" do
-    in_range a_go(servesCaptures: true)
+    in_range a_go
     on_the_shelf do
       connect_go
       click_button "Send a report"
@@ -394,7 +390,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a connected device names the radio protocol versions it carries" do
-    in_range a_go(protocols: GO_PROTOCOLS)
+    in_range a_go
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
@@ -407,19 +403,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "firmware from before the protocols frame names none, and the page says nothing about it" do
-    in_range a_go
-    on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_field "Callsign", with: "F-JXYZ"
-      assert_no_selector ".unit-protocols"
-      assert_no_selector ".unit-notes p"
-    end
-  end
-
   test "the app speaks French once the pilot chooses it in the settings" do
-    in_range a_go(protocols: GO_PROTOCOLS)
+    in_range a_go
     on_the_shelf do
       visit "/briefing"
       find("summary", text: "Menu").click

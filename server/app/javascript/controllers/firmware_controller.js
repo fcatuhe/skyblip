@@ -199,7 +199,6 @@ export default class extends Controller {
     if (cause) lines.push(say(`notices.install_report.${cause}`, { running: state.running, attempted }))
     else if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
     if (image?.imu === "writing") lines.push(say("notices.imu_writing"))
-    if (image && !image.key) lines.push(say("notices.no_key"))
     if (image && !image.swapPowered) lines.push(say("notices.swap_unpowered"))
     if (status?.wentDarkFlat) lines.push(say("notices.went_dark_flat"))
     this.#report(state, cause)

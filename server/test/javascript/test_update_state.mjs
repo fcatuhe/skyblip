@@ -15,7 +15,7 @@ const DEFAULTS_SHOWN = { ...DEFAULTS, own_icao: '' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
-  await link.until(state => state.settings && (state.defaults || !link.device.knowsDefaults));
+  await link.until(state => state.settings && state.defaults);
   return link;
 }
 
@@ -49,13 +49,6 @@ test('back to defaults sends the defaults the device named, and lands it on them
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
   assert.deepEqual(settings, DEFAULTS_SHOWN);
-});
-
-test('a firmware that does not know its defaults offers no reset', async () => {
-  const { device, updater } = await withSettings({ knowsDefaults: false });
-  assert.equal(updater.state.defaults, null);
-  updater.resetSettings();
-  assert.equal(device.commands.includes('set'), false);
 });
 
 test('a save refused on the glass says so under Save, and the settings stay as stored', async () => {

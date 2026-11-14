@@ -7,7 +7,7 @@ import { connected } from './update_session.mjs';
 
 const GO = { adsl_version: '0.1.0', alptas_version: '0.2.0' };
 // INFO: fc 14nov26 every frame of this unit fits 20 bytes, so a notice on connect could only come from protocols
-const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 }, imu: 'none', knowsBrowsers: false };
+const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 }, imu: 'none' };
 
 test('connecting asks the radio protocols, and reads each stack the unit names', async () => {
   const { device, until } = await connected({ protocols: GO });
@@ -31,14 +31,6 @@ test('the stacks the page names are the registry\'s', () => {
   const frame = LINK_REGISTRY.frames.find(each => each.command === 'protocols');
   const stems = frame.keys.map(key => key.name).filter(name => name.endsWith('_version')).map(name => name.replace(/_version$/, ''));
   assert.deepEqual(stems, Object.keys(PROTOCOL_NAMES));
-});
-
-test('firmware from before the frame answers unknown_command, and the page shows nothing and says nothing', async () => {
-  const { device, updater, until } = await connected();
-  await until(state => state.settings && state.defaults);
-  assert.ok(device.commands.includes('protocols'));
-  assert.equal(updater.state.protocols, null);
-  assert.equal(updater.state.notice, null);
 });
 
 for (const mtu of [23, 104]) {

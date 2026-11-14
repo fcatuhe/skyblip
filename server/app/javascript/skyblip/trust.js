@@ -175,10 +175,10 @@ export class BrowserTrust {
 const LINK_REASONS = new Set(['claimed', 'small_mtu']);
 // INFO: fc 13nov26 only this exchange answers these, so a verdict that arrives after its timeout is still ours
 const TRUST_REASONS = new Set(['trusted', 'untrusted', 'forgotten', 'unknown_browser']);
-const PROOF_REFUSALS = new Set(['keyless', 'unknown_command', 'small_mtu', 'claimed']);
-const PROOF_VERDICTS = new Set(['trusted', 'untrusted', 'no_session', 'bad_signature', 'invalid', 'unknown_command', 'small_mtu', 'claimed']);
-const LIST_REFUSALS = new Set(['untrusted', 'unknown_command', 'small_mtu', 'claimed']);
-const FORGET_VERDICTS = new Set(['forgotten', 'unknown_browser', 'untrusted', 'invalid', 'unknown_command', 'small_mtu', 'claimed']);
+const PROOF_REFUSALS = new Set(['keyless', 'small_mtu', 'claimed']);
+const PROOF_VERDICTS = new Set(['trusted', 'untrusted', 'no_session', 'bad_signature', 'invalid', 'small_mtu', 'claimed']);
+const LIST_REFUSALS = new Set(['untrusted', 'small_mtu', 'claimed']);
+const FORGET_VERDICTS = new Set(['forgotten', 'unknown_browser', 'untrusted', 'invalid', 'small_mtu', 'claimed']);
 
 function refusal(reply, reasons) {
   return reply.command === 'acknowledgement' && reasons.has(reply.reason);

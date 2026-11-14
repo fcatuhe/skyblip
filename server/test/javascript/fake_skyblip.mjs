@@ -93,8 +93,6 @@ export class FakeSkyblip {
     writeCeiling = mtu - ATT_HEADER_BYTES,
     oversize = 'truncate',
     stored = DEFAULTS,
-    knowsDefaults = true,
-    knowsBrowsers = true,
     verdictFirst = false,
     key = PRODUCTION_KEY,
     downgrade = false,
@@ -102,14 +100,13 @@ export class FakeSkyblip {
     product = 'skyblip_go',
     name = 'skyBlip Go 5B5AFE',
     logStore = new FakeLogStore(),
-    installReport = undefined,
-    protocols = undefined,
-    servesCaptures = true,
+    installReport = {},
+    protocols = product === 'skyblip_bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' },
     evictsFlights = 3,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, knowsDefaults, knowsBrowsers, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, servesCaptures, evictsFlights });
+    Object.assign(this, { stored: { ...stored }, key, downgrade, address, product });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -270,15 +267,12 @@ export class FakeSkyblip {
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
-    if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
-    // INFO: fc 15nov26 false is a Go from before it served capture, which answers neither capture nor its dump group
-    if (command === 'capture' && this.servesCaptures) return this.stageCapture(fields);
+    if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
+    if (command === 'capture') return this.stageCapture(fields);
     if (command === 'diagnostics') return this.sendDiagnostics();
-    // INFO: fc 13nov26 undefined is firmware older than the install report, which answers unknown_command
-    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport, ...this.landing });
-    // INFO: fc 14nov26 undefined is firmware older than the protocols frame, which answers unknown_command
-    if (command === 'protocols' && this.protocols !== undefined) return this.reply({ command, ...this.protocols });
-    if (BROWSER_COMMANDS.has(command) && this.knowsBrowsers) return this.answerBrowser(command, fields);
+    if (command === 'install_report') return this.reply({ command, ...this.installReport, ...this.landing });
+    if (command === 'protocols') return this.reply({ command, ...this.protocols });
+    if (BROWSER_COMMANDS.has(command)) return this.answerBrowser(command, fields);
     if (!['set', 'dfu', 'recovery'].includes(command)) return this.acknowledge(false, 'unknown_command');
     if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
     if (this.flight === 'airborne' && !(command === 'set' && this.sessionTrusted)) return this.acknowledge(false, 'in_flight');
@@ -345,14 +339,11 @@ export class FakeSkyblip {
 
   // INFO: fc 15nov26 diagnostics.cpp's next_frame: a group whole when it fits the payload, else one field a frame
   sendDiagnostics() {
-    const groups = [['system', { uptime_s: 120, reset: 'power_on' }]];
-    if (this.servesCaptures) {
-      groups.push(['capture', {
-        armed: this.capturing, ...(this.capturing ? { profile: this.staged ?? 'full' } : {}), session: this.capturing ? 1785628800 : 0,
-        records: this.capturing ? 960 : 0, records_dropped: 0, sectors: 0, keeps_s: 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
-        keeps_full_s: 1926, keeps_power_run_s: 433500,
-      }]);
-    }
+    const groups = [['system', { uptime_s: 120, reset: 'power_on' }], ['capture', {
+      armed: this.capturing, ...(this.capturing ? { profile: this.staged ?? 'full' } : {}), session: this.capturing ? 1785628800 : 0,
+      records: this.capturing ? 960 : 0, records_dropped: 0, sectors: 0, keeps_s: 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
+      keeps_full_s: 1926, keeps_power_run_s: 433500,
+    }]];
     const payload = this.mtu - ATT_HEADER_BYTES;
     const frames = groups.flatMap(([group, fields]) => {
       const whole = { command: 'diagnostics', group, part: 0, more: true, ...fields };
@@ -414,7 +405,7 @@ export class FakeSkyblip {
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
-    if (this.product !== null && this.product !== 'skyblip_go') frame.product = this.product;
+    if (this.product !== 'skyblip_go') frame.product = this.product;
     this.reply(frame, { asked });
   }
 
@@ -536,9 +527,7 @@ export class FakeSkyblip {
     return { off: reached };
   }
 
-  // INFO: fc 10nov26 a null product is firmware before the check, which takes any image its key signed
   refusesProduct(data, off) {
-    if (this.product === null) return false;
     const { classEnd, len } = this.upload;
     if (classEnd === null || classEnd > len) return true;
     if (off >= classEnd || off + data.length < classEnd) return false;
