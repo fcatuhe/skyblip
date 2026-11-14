@@ -287,20 +287,21 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
 }
 
 TEST_CASE(
-    "product: an own ICAO typed on the panel is stored, drawn, and cleared only when confirmed") {
+    "product: an aircraft address typed on the panel is stored, drawn, and cleared only when "
+    "confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
-    REQUIRE(rig.settings().own_icao == go::kOwnIcaoUnset);
+    REQUIRE(rig.settings().aircraft_address == go::kAircraftAddressUnset);
 
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::OwnIcao);
+    focus_on(rig, now_ms, go::MenuRow::AircraftAddress);
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().editing());
-    CHECK(rig.product.screen().editor().field() == go::MenuRow::OwnIcao);
+    CHECK(rig.product.screen().editor().field() == go::MenuRow::AircraftAddress);
 
     const char* wanted = "3C6586";
-    for (int at = 0; at < go::kOwnIcaoCharacters; at++) {
+    for (int at = 0; at < go::kAircraftAddressCharacters; at++) {
         while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
         if (at == 2) {
             go::CallsignSnapshot field;
@@ -315,10 +316,10 @@ TEST_CASE(
     }
     CHECK_FALSE(rig.product.screen().editor().editing());
     run_past_the_write_settle(rig, now_ms);
-    CHECK(rig.settings().own_icao == 0x3C6586u);
+    CHECK(rig.settings().aircraft_address == 0x3C6586u);
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.own_icao == 0x3C6586u);
+    CHECK(stored.aircraft_address == 0x3C6586u);
 
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().editing());
@@ -335,9 +336,9 @@ TEST_CASE(
     change(rig, now_ms);
     CHECK_FALSE(rig.product.screen().editor().editing());
     run_past_the_write_settle(rig, now_ms);
-    CHECK(rig.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(rig.settings().aircraft_address == go::kAircraftAddressUnset);
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.own_icao == go::kOwnIcaoUnset);
+    CHECK(stored.aircraft_address == go::kAircraftAddressUnset);
 }
 
 TEST_CASE("product: walking the rows without changing one writes nothing at all") {

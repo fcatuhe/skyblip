@@ -142,7 +142,7 @@ class Device {
     return this;
   }
 
-  // SETTINGS opens AIRCRAFT, and AIRCRAFT holds the callsign and the own ICAO.
+  // SETTINGS opens AIRCRAFT, and AIRCRAFT holds the callsign and the aircraft address.
   openAircraftRow(row) {
     this.openMenu(PAGE.Radar, RADAR_MENU.Aircraft).press();
     for (let step = 0; step < row; step++) this.tap();

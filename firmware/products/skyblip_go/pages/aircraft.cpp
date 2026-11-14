@@ -45,13 +45,13 @@ bool named_type(uint8_t code) { return code != 0 && named_aircraft_type(code); }
 
 // INFO: fc 13nov26 the address stands in for a transponder that sends no identification
 const char* name_of(const Detected& detected, char* address) {
-    address[format_hex(address, detected.address, kOwnIcaoCharacters)] = 0;
+    address[format_hex(address, detected.address, kAircraftAddressCharacters)] = 0;
     return detected.callsign[0] != 0 ? detected.callsign : address;
 }
 
 void heard_label(char* out, const Detected& detected) {
     int written = format_string(out, "ADS-B ");
-    written += format_hex(out + written, detected.address, kOwnIcaoCharacters);
+    written += format_hex(out + written, detected.address, kAircraftAddressCharacters);
     out[written] = 0;
 }
 
@@ -70,14 +70,14 @@ void wrapped(ui::Canvas& canvas, int y, const char* text, bool ink) {
 bool adopt(const Detected& detected, Settings& settings) {
     if (detected.state != Detection::Heard) return false;
     Settings next = settings;
-    next.own_icao = detected.address;
+    next.aircraft_address = detected.address;
     // INFO: fc 13nov26 another aircraft's name must not stay on the air beside this one's address
     if (detected.callsign[0] != 0)
         callsign_stored(next.callsign, detected.callsign);
-    else if (detected.address != settings.own_icao)
+    else if (detected.address != settings.aircraft_address)
         next.callsign[0] = 0;
     if (named_type(detected.aircraft_type)) next.aircraft_type = detected.aircraft_type;
-    const bool changed = next.own_icao != settings.own_icao ||
+    const bool changed = next.aircraft_address != settings.aircraft_address ||
                          std::strcmp(next.callsign, settings.callsign) != 0 ||
                          next.aircraft_type != settings.aircraft_type;
     if (!changed || validate(next) != Status::Ok) return false;
@@ -111,7 +111,7 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
     char label[kLabelBytes];
     heard_label(label, detected);
     canvas.draw_text(kMenuLeftX, top + kLabelInset, label, ink, kMenuScale);
-    char address[kOwnIcaoCharacters + 1];
+    char address[kAircraftAddressCharacters + 1];
     canvas.draw_text(kMenuLeftX, top + kNameInset, name_of(detected, address), ink, kCallsignScale);
     const char* type = matches(detected, settings) ? "SAME"
                        : named_type(detected.aircraft_type)
@@ -122,7 +122,7 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
 
 void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
     draw_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt);
-    char address[kOwnIcaoCharacters + 1];
+    char address[kAircraftAddressCharacters + 1];
     char label[kLabelBytes];
     heard_label(label, detected);
     BodyLine body[6];

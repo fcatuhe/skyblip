@@ -25,7 +25,7 @@ class GateReference {
     void unpair();
 
     GateChoice choose(const model::Ownship& own, uint32_t now_ms) const;
-    uint32_t own_icao(uint32_t bravo_own_icao) const;
+    uint32_t aircraft_address(uint32_t bravo_aircraft_address) const;
 
    private:
     bool fresh(uint32_t age_ms, uint32_t now_ms) const;
@@ -33,7 +33,7 @@ class GateReference {
     comms::PeerClaim claim_{};
     uint32_t heard_ms_{0};
     uint32_t transit_ms_{0};
-    uint32_t go_own_icao_{0};
+    uint32_t go_aircraft_address_{0};
     bool heard_{false};
 };
 

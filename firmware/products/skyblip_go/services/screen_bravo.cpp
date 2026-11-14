@@ -99,7 +99,7 @@ Detected ScreenService::detected_to_store(const Detected& shown) const {
 
 // INFO: fc 13nov26 once a boot, for an address the Go does not hold: a new aircraft or a first one
 bool ScreenService::new_aircraft(const Detected& detected) const {
-    return detected.state == Detection::Heard && detected.address != settings_.own_icao;
+    return detected.state == Detection::Heard && detected.address != settings_.aircraft_address;
 }
 
 void ScreenService::use_noticed_aircraft() {

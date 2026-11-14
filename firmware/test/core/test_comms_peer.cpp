@@ -50,7 +50,7 @@ TEST_CASE("peer frames: a Go's peer_claim carries each own-ship field with its a
     claim.pressure_altitude_valid = true;
     claim.pressure_altitude_mm = 1100000;
     claim.pressure_altitude_age_ms = 80;
-    claim.own_icao = 0x3C6586;
+    claim.aircraft_address = 0x3C6586;
     claim.alarm_requested = true;
     claim.paired = true;
     CHECK(claim_text(claim) ==
@@ -58,20 +58,20 @@ TEST_CASE("peer frames: a Go's peer_claim carries each own-ship field with its a
           "\"latitude_1e7\":485000000,\"longitude_1e7\":-85000000,\"position_age_ms\":200,"
           "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,"
           "\"pressure_altitude_mm\":1100000,\"pressure_altitude_age_ms\":80,"
-          "\"own_icao\":3958150,\"alarm_requested\":true,\"paired\":true}");
+          "\"aircraft_address\":3958150,\"alarm_requested\":true,\"paired\":true}");
 }
 
 TEST_CASE("peer frames: a claim that will not fit its buffer is refused whole") {
     comms::PeerClaim claim{};
-    claim.own_icao = 0x3C6586;
+    claim.aircraft_address = 0x3C6586;
     uint8_t frame[8];
     CHECK(comms::write_peer_claim(claim, frame, sizeof(frame)) == 0);
 }
 
-TEST_CASE("peer frames: a health frame says whether Bravo holds an own ICAO") {
+TEST_CASE("peer frames: a health frame says whether Bravo holds an aircraft address") {
     const std::string frame = complete_registry_frame(
         "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
-        "\"utc_valid\":true,\"own_icao_set\":true,\"alarm_granted\":false,"
+        "\"utc_valid\":true,\"aircraft_address_set\":true,\"alarm_granted\":false,"
         "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
         "\"power_level\":\"normal\"}");
     const ConstByteSpan bytes(reinterpret_cast<const uint8_t*>(frame.data()), frame.size());
@@ -79,7 +79,7 @@ TEST_CASE("peer frames: a health frame says whether Bravo holds an own ICAO") {
     const Result<comms::PeerHealth> health = comms::read_health(bytes);
     REQUIRE(health.ok());
     CHECK(health.value().boot_epoch == 9);
-    CHECK(health.value().own_icao_set);
+    CHECK(health.value().aircraft_address_set);
     CHECK(health.value().listening);
     CHECK(health.value().utc_valid);
 }
@@ -101,7 +101,7 @@ TEST_CASE("peer frames: an observation or a torn frame is no health") {
 TEST_CASE("peer frames: a health frame of an unknown or missing protocol version is refused") {
     const std::string newer = complete_registry_frame(
         "{\"command\":\"health\",\"protocol_version\":99,\"boot_epoch\":9,\"listening\":true,"
-        "\"utc_valid\":true,\"own_icao_set\":true,\"alarm_granted\":false,"
+        "\"utc_valid\":true,\"aircraft_address_set\":true,\"alarm_granted\":false,"
         "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
         "\"power_level\":\"normal\"}");
     CHECK(comms::read_health(
@@ -112,7 +112,7 @@ TEST_CASE("peer frames: a health frame of an unknown or missing protocol version
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Health);
     writer.add_unsigned(link::health_key::kBootEpoch, 9);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, false);
     const int bytes = writer.finish();
     REQUIRE(bytes > 0);
     CHECK(comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes))).status() ==
@@ -149,7 +149,7 @@ TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes"
     written.pressure_altitude_valid = true;
     written.pressure_altitude_mm = -1100000;
     written.pressure_altitude_age_ms = 80;
-    written.own_icao = 0x3C6586;
+    written.aircraft_address = 0x3C6586;
     written.alarm_requested = true;
     written.paired = true;
     uint8_t frame[comms::kPeerClaimWidestBytes];
@@ -174,7 +174,7 @@ TEST_CASE("peer frames: Bravo reads back every field of the claim the Go writes"
     CHECK(claim.pressure_altitude_valid);
     CHECK(claim.pressure_altitude_mm == -1100000);
     CHECK(claim.pressure_altitude_age_ms == 80);
-    CHECK(claim.own_icao == 0x3C6586u);
+    CHECK(claim.aircraft_address == 0x3C6586u);
     CHECK(claim.alarm_requested);
     CHECK(claim.paired);
 }
@@ -196,13 +196,14 @@ TEST_CASE("peer frames: a claim with half a field or a value out of range is ref
                                    "\"position_age_ms\":200,\"altitude_hae_mm\":0,"
                                    "\"altitude_hae_age_ms\":200,")))
               .status() == Status::OutOfRange);
-    CHECK(comms::read_peer_claim(bytes_of(claim_frame("\"own_icao\":16777216,"))).status() ==
-          Status::OutOfRange);
+    CHECK(
+        comms::read_peer_claim(bytes_of(claim_frame("\"aircraft_address\":16777216,"))).status() ==
+        Status::OutOfRange);
     CHECK(comms::read_peer_claim(
               bytes_of(complete_registry_frame(
                   "{\"command\":\"health\",\"protocol_version\":1,"
                   "\"boot_epoch\":9,\"listening\":true,\"utc_valid\":true,"
-                  "\"own_icao_set\":true,\"alarm_granted\":false,"
+                  "\"aircraft_address_set\":true,\"alarm_granted\":false,"
                   "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
                   "\"power_level\":\"normal\"}")))
               .status() == Status::Invalid);
@@ -230,19 +231,19 @@ TEST_CASE("peer frames: Bravo's health carries its state, and no last_sequence b
     CHECK(
         link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes))) ==
         "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
-        "\"utc_valid\":false,\"own_icao_set\":false,\"alarm_granted\":false,"
+        "\"utc_valid\":false,\"aircraft_address_set\":false,\"alarm_granted\":false,"
         "\"export_reference\":\"go\",\"paired\":false,\"charging\":false,"
         "\"power_level\":\"unknown\"}");
 
     health.last_sequence_valid = true;
     health.last_sequence = 41;
-    health.own_icao_set = true;
+    health.aircraft_address_set = true;
     bytes = comms::write_health(health, frame, sizeof(frame));
     const Result<comms::PeerHealth> read =
         comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
     REQUIRE(read.ok());
     CHECK(read.value().boot_epoch == 9);
-    CHECK(read.value().own_icao_set);
+    CHECK(read.value().aircraft_address_set);
     CHECK_FALSE(read.value().paired);
 }
 
@@ -284,7 +285,7 @@ TEST_CASE("peer frames: a transponder's callsign or category without its address
     const auto health_with = [](const std::string& fields) {
         const std::string frame = complete_registry_frame(
             "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
-            "\"utc_valid\":true,\"own_icao_set\":false,\"alarm_granted\":false,"
+            "\"utc_valid\":true,\"aircraft_address_set\":false,\"alarm_granted\":false,"
             "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
             "\"power_level\":\"normal\"," +
             fields + "}");
@@ -306,7 +307,7 @@ TEST_CASE("peer frames: a health frame without paired is refused") {
     writer.add_unsigned(link::health_key::kBootEpoch, 9);
     writer.add_boolean(link::health_key::kListening, true);
     writer.add_boolean(link::health_key::kUtcValid, true);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, false);
     writer.add_boolean(link::health_key::kAlarmGranted, false);
     writer.add_unsigned(link::health_key::kExportReference, 2);
     const int bytes = writer.finish();
@@ -347,7 +348,7 @@ Status health_without(uint32_t missing_key) {
         writer.add_boolean(link::health_key::kListening, true);
     if (missing_key != link::health_key::kUtcValid)
         writer.add_boolean(link::health_key::kUtcValid, true);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, false);
     writer.add_boolean(link::health_key::kAlarmGranted, false);
     writer.add_unsigned(link::health_key::kExportReference, 2);
     writer.add_boolean(link::health_key::kPaired, true);
@@ -414,7 +415,7 @@ TEST_CASE("peer frames: a Bravo from before its status keys reads as no reading,
     writer.add_unsigned(link::health_key::kBootEpoch, 9);
     writer.add_boolean(link::health_key::kListening, true);
     writer.add_boolean(link::health_key::kUtcValid, true);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, false);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, false);
     writer.add_boolean(link::health_key::kAlarmGranted, false);
     writer.add_unsigned(link::health_key::kExportReference, 2);
     writer.add_boolean(link::health_key::kPaired, true);
@@ -432,7 +433,7 @@ TEST_CASE("peer frames: a health frame with a charge past 100 or an unknown leve
     const auto health_with = [](const std::string& fields) {
         const std::string frame = complete_registry_frame(
             "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":9,\"listening\":true,"
-            "\"utc_valid\":true,\"own_icao_set\":false,\"alarm_granted\":false,"
+            "\"utc_valid\":true,\"aircraft_address_set\":false,\"alarm_granted\":false,"
             "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
             "\"power_level\":\"normal\"," +
             fields + "}");

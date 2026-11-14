@@ -116,7 +116,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -187,7 +187,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -259,7 +259,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -2075,7 +2075,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "own_icao_set",
+          "name": "aircraft_address_set",
           "number": 6,
           "type": "boolean",
           "required": true
@@ -2208,7 +2208,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         },

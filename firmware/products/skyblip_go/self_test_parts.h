@@ -34,10 +34,10 @@ constexpr const char* kImuDetailWithoutImage = "BHI260AP NOBLOB";
 
 constexpr int kSelfTestPartCount =
     static_cast<int>(sizeof(kSelfTestParts) / sizeof(kSelfTestParts[0]));
-// INFO: fc 11nov26 the bus scan and the own-ICAO warning each take a row under the parts
+// INFO: fc 11nov26 the bus scan and the aircraft-address warning each take a row under the parts
 constexpr int kSelfTestRowsBelowParts = 2;
 static_assert(kSelfTestPartCount + kSelfTestRowsBelowParts <= kSelfTestRows,
-              "the self-test page would drop the bus scan or the own-ICAO warning");
+              "the self-test page would drop the bus scan or the aircraft-address warning");
 
 }  // namespace skyblip::go
 

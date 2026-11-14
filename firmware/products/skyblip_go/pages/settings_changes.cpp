@@ -80,7 +80,7 @@ int describe_settings_changes(const Settings& from, const Settings& to, char* ou
     Rows rows;
     if (to.aircraft_type != from.aircraft_type) menu_row(rows, MenuRow::AircraftType, to);
     if (std::strncmp(to.callsign, from.callsign, kCallsignBytes) != 0) callsign_row(rows, to);
-    if (to.own_icao != from.own_icao) menu_row(rows, MenuRow::OwnIcao, to);
+    if (to.aircraft_address != from.aircraft_address) menu_row(rows, MenuRow::AircraftAddress, to);
     if (to.units != from.units) menu_row(rows, MenuRow::Units, to);
     if (to.alarm_enabled != from.alarm_enabled) menu_row(rows, MenuRow::Alarm, to);
     if (to.alarm_volume != from.alarm_volume) menu_row(rows, MenuRow::Volume, to);

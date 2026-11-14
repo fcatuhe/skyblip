@@ -19,7 +19,8 @@ namespace {
 using ui::kCellWidth;
 using ui::kCharacterHeight;
 
-constexpr int kOwnIcaoTextX = (Glass::kWidth - kOwnIcaoCharacters * kCallsignCellWidth) / 2;
+constexpr int kAircraftAddressTextX =
+    (Glass::kWidth - kAircraftAddressCharacters * kCallsignCellWidth) / 2;
 
 // A menu as drawn, with the focus that decided which of its rows are on the glass.
 struct Drawn {
@@ -144,27 +145,27 @@ TEST_CASE("menu page: the button's key names what a press does to the focused ro
 }
 
 // The address a controller reads off the aircraft's papers, six hex digits as they are written.
-TEST_CASE("radar menu: the own ICAO row shows the six hex digits stored, or NONE") {
+TEST_CASE("radar menu: the aircraft address row shows the six hex digits stored, or NONE") {
     MenuValues values = default_menu_values();
     char value[kMenuValueBytes];
-    menu_row_value(value, MenuRow::OwnIcao, values);
+    menu_row_value(value, MenuRow::AircraftAddress, values);
     CHECK(std::string(value) == "NONE");
-    values.settings.own_icao = 0x3C6586;
-    menu_row_value(value, MenuRow::OwnIcao, values);
+    values.settings.aircraft_address = 0x3C6586;
+    menu_row_value(value, MenuRow::AircraftAddress, values);
     CHECK(std::string(value) == "3C6586");
-    values.settings.own_icao = 0x00A0F1;
-    menu_row_value(value, MenuRow::OwnIcao, values);
+    values.settings.aircraft_address = 0x00A0F1;
+    menu_row_value(value, MenuRow::AircraftAddress, values);
     CHECK(std::string(value) == "00A0F1");
 
-    const Drawn drawn = aircraft_of(values, MenuRow::OwnIcao);
-    CHECK(row_label_reads(drawn, MenuRow::OwnIcao, true));
-    CHECK(row_value_reads(drawn, MenuRow::OwnIcao, "00A0F1", true));
+    const Drawn drawn = aircraft_of(values, MenuRow::AircraftAddress);
+    CHECK(row_label_reads(drawn, MenuRow::AircraftAddress, true));
+    CHECK(row_value_reads(drawn, MenuRow::AircraftAddress, "00A0F1", true));
 }
 
 TEST_CASE("menu page: no label and value a row can hold meet at double height") {
     MenuValues values = default_menu_values();
     std::strcpy(values.settings.callsign, "F-JABCDEF");
-    values.settings.own_icao = 0xFFFFFF;
+    values.settings.aircraft_address = 0xFFFFFF;
     for (const Menu& menu : {menu_for(Page::Radar), menu_for(Page::Nearby), aircraft_menu()}) {
         for (int i = 0; i < menu.row_count; i++) {
             if (menu.rows[i] == MenuRow::Detected) continue;
@@ -213,7 +214,7 @@ TEST_CASE("menu page: a page with nothing behind it opens no menu at all") {
 TEST_CASE("menu page: a category the phone stored but the page does not name is still shown") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 13;
-    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
+    const Drawn menu = aircraft_of(values, MenuRow::AircraftAddress);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 13", false));
 
     // The first change moves it into the list the page can name.
@@ -232,7 +233,7 @@ TEST_CASE(
         CAPTURE(int(type.code));
         MenuValues values = default_menu_values();
         values.settings.aircraft_type = type.code;
-        const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
+        const Drawn menu = aircraft_of(values, MenuRow::AircraftAddress);
         CHECK(row_value_reads(menu, MenuRow::AircraftType, type.name, false));
     }
     CHECK(next_aircraft_type(10) == 15);
@@ -244,7 +245,7 @@ TEST_CASE(
 TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 11;
-    const Drawn menu = aircraft_of(values, MenuRow::OwnIcao);
+    const Drawn menu = aircraft_of(values, MenuRow::AircraftAddress);
     CHECK(row_value_reads(menu, MenuRow::AircraftType, "CODE 11", false));
     CHECK(next_aircraft_type(11) == 0);
 }
@@ -303,29 +304,32 @@ TEST_CASE("callsign page: the button's key says it erases when the bar is on a b
 }
 
 // The callsign's field, typing six hex digits: a transponder address is written that way.
-TEST_CASE("own ICAO page: six hex digits stand centred at the callsign's size, under its title") {
+TEST_CASE(
+    "aircraft address page: six hex digits stand centred at the callsign's size, under its title") {
     CallsignSnapshot field;
-    field.title = menu_row_label(MenuRow::OwnIcao);
+    field.title = menu_row_label(MenuRow::AircraftAddress);
     field.text = "3C6586";
     field.cursor = 5;
 
     Glass canvas;
     draw_callsign(canvas, field);
     CHECK(reads_heading(canvas, "ADS-B", Heading::Opened));
-    CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
-    CHECK(kOwnIcaoTextX - (Glass::kWidth - kOwnIcaoTextX - 6 * kCallsignCellWidth) <= 1);
+    CHECK(reads_at(canvas, kAircraftAddressTextX, kCallsignTextY, "3C6586", kCallsignScale));
+    CHECK(kAircraftAddressTextX -
+              (Glass::kWidth - kAircraftAddressTextX - 6 * kCallsignCellWidth) <=
+          1);
 
-    const int at = kOwnIcaoTextX + field.cursor * kCallsignCellWidth;
+    const int at = kAircraftAddressTextX + field.cursor * kCallsignCellWidth;
     CHECK(canvas.get_pixel(at, kCallsignCursorY));
     CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
     CHECK(reads_pad_key(canvas, kFieldChangeVerb));
     CHECK(reads_button_key(canvas, kFieldSaveVerb));
 }
 
-// Without the own ICAO the aircraft's own transponder can alarm, so a clear is asked twice.
-TEST_CASE("own ICAO page: a clear shows the address it throws away and what that costs") {
+// Without the aircraft address the aircraft's own transponder can alarm, so a clear is asked twice.
+TEST_CASE("aircraft address page: a clear shows the address it throws away and what that costs") {
     ClearSnapshot clear;
-    clear.title = menu_row_label(MenuRow::OwnIcao);
+    clear.title = menu_row_label(MenuRow::AircraftAddress);
     clear.text = "3C6586";
 
     Glass canvas;
@@ -335,13 +339,13 @@ TEST_CASE("own ICAO page: a clear shows the address it throws away and what that
     CHECK(reads_button_key(canvas, kFieldEraseVerb));
     const BodyLine body[] = {{"3C6586", kCallsignScale},
                              {""},
-                             {kOwnIcaoClearLines[0]},
-                             {kOwnIcaoClearLines[1]},
-                             {kOwnIcaoClearLines[2]}};
+                             {kAircraftAddressClearLines[0]},
+                             {kAircraftAddressClearLines[1]},
+                             {kAircraftAddressClearLines[2]}};
     CHECK(reads_body(canvas, Heading::Opened, true, body, 5));
 }
 
-TEST_CASE("menu page: the own ICAO ring is blank, 0 to 9, A to F, and back") {
+TEST_CASE("menu page: the aircraft address ring is blank, 0 to 9, A to F, and back") {
     CHECK(next_hex_character(' ') == '0');
     CHECK(next_hex_character('0') == '1');
     CHECK(next_hex_character('9') == 'A');
@@ -351,12 +355,12 @@ TEST_CASE("menu page: the own ICAO ring is blank, 0 to 9, A to F, and back") {
 
 // 000000 is no address, and 0 is what the setting holds while it is unset.
 TEST_CASE("menu page: six typed hex digits are an address, and a blank or 000000 is none") {
-    CHECK(own_icao_typed("3C6586") == 0x3C6586u);
-    CHECK(own_icao_typed("FFFFFF") == 0xFFFFFFu);
-    CHECK(own_icao_typed("00A0F1") == 0x00A0F1u);
-    CHECK(own_icao_typed("3C65 6") == kOwnIcaoUnset);
-    CHECK(own_icao_typed("      ") == kOwnIcaoUnset);
-    CHECK(own_icao_typed("000000") == kOwnIcaoUnset);
+    CHECK(aircraft_address_typed("3C6586") == 0x3C6586u);
+    CHECK(aircraft_address_typed("FFFFFF") == 0xFFFFFFu);
+    CHECK(aircraft_address_typed("00A0F1") == 0x00A0F1u);
+    CHECK(aircraft_address_typed("3C65 6") == kAircraftAddressUnset);
+    CHECK(aircraft_address_typed("      ") == kAircraftAddressUnset);
+    CHECK(aircraft_address_typed("000000") == kAircraftAddressUnset);
 }
 
 // The ring a pad rolls: blank, dash, letters, digits, and round again.

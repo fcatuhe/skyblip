@@ -77,7 +77,7 @@ struct Flight {
 
    private:
     void begin(bool paired) {
-        tango.bravo.health.own_icao_set = true;
+        tango.bravo.health.aircraft_address_set = true;
         if (paired) tango.pair();
         go().long_touch(tango.now_ms);
         REQUIRE(go().product.screen().page() == go::Page::Radar);

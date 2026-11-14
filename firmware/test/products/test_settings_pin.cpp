@@ -24,7 +24,7 @@ TEST_CASE("settings: a blob written by version-12 firmware comes back whole and 
         uint8_t range_step{2};
         RadarPlot plot{RadarPlot::All};
         char callsign[10]{0};
-        uint32_t own_icao{0};
+        uint32_t aircraft_address{0};
     };
 
     V12 old{};
@@ -38,7 +38,7 @@ TEST_CASE("settings: a blob written by version-12 firmware comes back whole and 
     old.range_step = 3;
     old.plot = RadarPlot::ToScale;
     std::memcpy(old.callsign, "F-JABC", 7);
-    old.own_icao = 0x3C6586;
+    old.aircraft_address = 0x3C6586;
 
     uint8_t blob[128] = {0};
     blob[0] = 12;
@@ -58,7 +58,7 @@ TEST_CASE("settings: a blob written by version-12 firmware comes back whole and 
     CHECK(int(out.range_step) == 3);
     CHECK(out.plot == RadarPlot::ToScale);
     CHECK(std::string(out.callsign) == "F-JABC");
-    CHECK(out.own_icao == 0x3C6586u);
+    CHECK(out.aircraft_address == 0x3C6586u);
     CHECK_FALSE(paired(out));
 
     out.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
@@ -70,7 +70,7 @@ TEST_CASE("settings: a blob written by version-12 firmware comes back whole and 
     Settings again;
     REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
     CHECK(again.bravo == out.bravo);
-    CHECK(again.own_icao == 0x3C6586u);
+    CHECK(again.aircraft_address == 0x3C6586u);
     CHECK(std::string(again.callsign) == "F-JABC");
 }
 

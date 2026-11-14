@@ -1,4 +1,5 @@
-// ADS-L F.2.3 as flown: a set own ICAO is the address on air and on glass, not the schedule.
+// ADS-L F.2.3 as flown: a set aircraft address is the address on air and on glass, not the
+// schedule.
 #include <cstdint>
 #include <cstring>
 #include <vector>
@@ -17,7 +18,7 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kOwnIcao = 0x3C6586;
+constexpr uint32_t kAircraftAddress = 0x3C6586;
 constexpr uint32_t kSerialAddress = settings::address_of(platform::host::Identity::kSerial);
 
 struct Sender {
@@ -72,23 +73,24 @@ bool all_from(const std::vector<Sent>& sent, const Sender& sender) {
 
 }  // namespace
 
-TEST_CASE("rf: an own ICAO puts Traffic, Status and name under table 5 and that address") {
+TEST_CASE("rf: an aircraft address puts Traffic, Status and name under table 5 and that address") {
     simulator::Simulator simulator;
     fly(simulator);
-    simulator.product().settings().own_icao = kOwnIcao;
+    simulator.product().settings().aircraft_address = kAircraftAddress;
     run_on(simulator, past_settling(simulator), 21000);
 
     const std::vector<Sent> sent = sent_on(simulator.world().air());
     CHECK(count_of(sent, adsl::Packet::kPayloadTypePosition) >= 19);
     CHECK(count_of(sent, adsl::Packet::kPayloadTypeStatus) >= 2);
     CHECK(count_of(sent, adsl::Packet::kPayloadTypeOgnDiagnostics) >= 2);
-    CHECK(all_from(sent, {adsl::kAddressTableIcao, kOwnIcao}));
+    CHECK(all_from(sent, {adsl::kAddressTableIcao, kAircraftAddress}));
 }
 
-TEST_CASE("rf: with no own ICAO, Traffic, Status and name go under table 58 and the serial") {
+TEST_CASE(
+    "rf: with no aircraft address, Traffic, Status and name go under table 58 and the serial") {
     simulator::Simulator simulator;
     fly(simulator);
-    REQUIRE(simulator.product().settings().own_icao == go::kOwnIcaoUnset);
+    REQUIRE(simulator.product().settings().aircraft_address == go::kAircraftAddressUnset);
     run_on(simulator, past_settling(simulator), 21000);
 
     const std::vector<Sent> sent = sent_on(simulator.world().air());
@@ -99,16 +101,17 @@ TEST_CASE("rf: with no own ICAO, Traffic, Status and name go under table 58 and 
 
 // F.2.3 asks for the setting to be revertible: clearing it is the whole revert, from the next
 // burst.
-TEST_CASE("rf: clearing the own ICAO puts table 58 and the serial back on the next burst") {
+TEST_CASE("rf: clearing the aircraft address puts table 58 and the serial back on the next burst") {
     simulator::Simulator simulator;
     fly(simulator);
-    simulator.product().settings().own_icao = kOwnIcao;
+    simulator.product().settings().aircraft_address = kAircraftAddress;
     const uint32_t from_ms = past_settling(simulator);
     run_on(simulator, from_ms, 10000);
-    REQUIRE(all_from(sent_on(simulator.world().air()), {adsl::kAddressTableIcao, kOwnIcao}));
+    REQUIRE(
+        all_from(sent_on(simulator.world().air()), {adsl::kAddressTableIcao, kAircraftAddress}));
 
     simulator.world().air().clear();
-    simulator.product().settings().own_icao = go::kOwnIcaoUnset;
+    simulator.product().settings().aircraft_address = go::kAircraftAddressUnset;
     run_on(simulator, from_ms + 10000 + simulator::Simulator::kStepMs, 21000);
 
     const std::vector<Sent> sent = sent_on(simulator.world().air());
@@ -118,7 +121,7 @@ TEST_CASE("rf: clearing the own ICAO puts table 58 and the serial back on the ne
 }
 
 // The cycle start and the drawn instants key on the serial, so the address alone changes.
-TEST_CASE("rf: setting an own ICAO mid-flight moves no burst in time or channel") {
+TEST_CASE("rf: setting an aircraft address mid-flight moves no burst in time or channel") {
     simulator::Simulator unset;
     simulator::Simulator set;
     fly(unset);
@@ -127,7 +130,7 @@ TEST_CASE("rf: setting an own ICAO mid-flight moves no burst in time or channel"
     REQUIRE(past_settling(set) == from_ms);
     run_on(unset, from_ms, 10000);
     run_on(set, from_ms, 10000);
-    set.product().settings().own_icao = kOwnIcao;
+    set.product().settings().aircraft_address = kAircraftAddress;
     run_on(unset, from_ms + 10000 + simulator::Simulator::kStepMs, 21000);
     run_on(set, from_ms + 10000 + simulator::Simulator::kStepMs, 21000);
 
@@ -140,31 +143,34 @@ TEST_CASE("rf: setting an own ICAO mid-flight moves no burst in time or channel"
         CHECK(before[i].at_us == after[i].at_us);
         CHECK(before[i].frequency_hz == after[i].frequency_hz);
         CHECK(before[i].payload_type == after[i].payload_type);
-        if (after[i].sender == Sender{adsl::kAddressTableIcao, kOwnIcao}) moved_to_icao++;
+        if (after[i].sender == Sender{adsl::kAddressTableIcao, kAircraftAddress}) moved_to_icao++;
     }
     CHECK(moved_to_icao >= 20);
 }
 
 // F.2.3 overrides the address on air, not the activation behind it: no serial, no burst.
-TEST_CASE("rf: an own ICAO does not stand in for activation, a unit with no serial stays silent") {
+TEST_CASE(
+    "rf: an aircraft address does not stand in for activation, a unit with no serial stays "
+    "silent") {
     Rig rig(platform::host::Platform::kFullyFitted, std::nullopt);
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().own_icao = kOwnIcao;
+    rig.settings().aircraft_address = kAircraftAddress;
     uint32_t now_ms = 0;
     rig.seconds(now_ms, 20, 0, 300);
 
     CHECK_FALSE(rig.state().activation.activated());
-    CHECK_FALSE(settings::on_air(rig.state().activation.address(), kOwnIcao).address);
+    CHECK_FALSE(settings::on_air(rig.state().activation.address(), kAircraftAddress).address);
     CHECK(rig.product.radio().arm_count() == 0);
     CHECK(rig.state().air.tx_ok == 0);
     CHECK(rig.product.radio().transmitter().sent_count() == 0);
 }
 
 // Nearby is the page open when somebody asks who you are, and they now see the ICAO address.
-TEST_CASE("product: nearby and status name the address on air, the own ICAO once it is set") {
+TEST_CASE(
+    "product: nearby and status name the address on air, the aircraft address once it is set") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().own_icao = kOwnIcao;
+    rig.settings().aircraft_address = kAircraftAddress;
     uint32_t now_ms = 100;
     for (const go::Page page : {go::Page::Nearby, go::Page::Status}) {
         rig.show(now_ms, page);

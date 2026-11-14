@@ -55,7 +55,7 @@ bool glass_reads(Rig& rig, const char* text, int scale) {
                     go::kGlassHeight, scale);
 }
 
-// Parked with a fix, and neither the Go nor Bravo holding an own ICAO.
+// Parked with a fix, and neither the Go nor Bravo holding an aircraft address.
 void paired_on_the_radar(Tango& tango, bool fixed = true) {
     tango.pair_and_store();
     if (fixed) {
@@ -83,13 +83,13 @@ TEST_CASE("aircraft detection: a transponder Bravo hears is proposed once, and a
     tango.go.press(tango.now_ms);
     tango.run_for(500);
     CHECK_FALSE(tango.go.product.screen().noticing());
-    CHECK(tango.go.settings().own_icao == kHeardAddress);
+    CHECK(tango.go.settings().aircraft_address == kHeardAddress);
     CHECK(std::string(tango.go.settings().callsign) == "F-JABC");
     CHECK(tango.go.settings().aircraft_type == 4);
 
     tango.run_for(1500);
     REQUIRE_FALSE(tango.bravo.claims.empty());
-    CHECK(field(tango.bravo.claims.back(), "own_icao") == std::to_string(kHeardAddress));
+    CHECK(field(tango.bravo.claims.back(), "aircraft_address") == std::to_string(kHeardAddress));
 
     // Once a boot: another transponder later is the AIRCRAFT menu's to propose, not a notice.
     tango.bravo.health.own_transponder_fields = heard_fields(kOtherAddress);
@@ -105,12 +105,12 @@ TEST_CASE("aircraft detection: a pad on the notice closes it and stores nothing"
     REQUIRE(tango.go.product.screen().noticing());
     tango.go.tap(tango.now_ms);
     CHECK_FALSE(tango.go.product.screen().noticing());
-    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
 TEST_CASE("aircraft detection: the transponder the Go already holds raises no notice") {
     Tango tango;
-    tango.go.settings().own_icao = kHeardAddress;
+    tango.go.settings().aircraft_address = kHeardAddress;
     paired_on_the_radar(tango);
     tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     tango.run_for(3000);
@@ -134,12 +134,12 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
                    go::kGlassHeight, 2, false));
 
     change(tango.go, now_ms);
-    CHECK(tango.go.settings().own_icao == kHeardAddress);
+    CHECK(tango.go.settings().aircraft_address == kHeardAddress);
     CHECK(tango.go.product.screen().editor().focus() == go::MenuRow::Aircraft);
     run_past_the_write_settle(tango.go, now_ms);
     go::Settings stored{};
     REQUIRE(stored_settings(tango.go, stored));
-    CHECK(stored.own_icao == kHeardAddress);
+    CHECK(stored.aircraft_address == kHeardAddress);
     CHECK(std::string(stored.callsign) == "F-JABC");
 }
 
@@ -173,7 +173,7 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
     CHECK(reads_in(flight.glass(), "IN FLIGHT", 0, 0, go::kGlassWidth, go::kGlassHeight,
                    go::kMenuScale, false));
     change(flight.go(), now_ms);
-    CHECK(flight.go().settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(flight.go().settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
 // A Go switched on in the air has no fix yet, and its loudest neighbour may be a wingman.
@@ -193,7 +193,7 @@ TEST_CASE("aircraft detection: a Go with no fix proposes nothing, and the menu s
     CHECK(reads_in(tango.go.product.screen().framebuffer(), "NO FIX", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, go::kMenuScale, false));
     change(tango.go, now_ms);
-    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
 TEST_CASE("aircraft detection: a press before the notice is read stores nothing") {
@@ -203,7 +203,7 @@ TEST_CASE("aircraft detection: a press before the notice is read stores nothing"
     for (int i = 0; i < 60 && !tango.go.product.screen().noticing(); i++) tango.run_for(50);
     REQUIRE(tango.go.product.screen().noticing());
     tango.go.press(tango.now_ms);
-    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
     CHECK(tango.go.product.screen().noticing());
 }
 
@@ -216,7 +216,7 @@ TEST_CASE("aircraft detection: the notice goes when Bravo stops hearing what it 
     tango.bravo.health.own_transponder_fields.clear();
     tango.run_for(1500);
     CHECK_FALSE(tango.go.product.screen().noticing());
-    CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
 // Traffic reads ADS-B A7 as heavy rotorcraft, and a pilot's own aircraft is never assumed heavy.

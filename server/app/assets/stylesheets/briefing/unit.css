@@ -188,7 +188,7 @@
     color: var(--ink);
   }
   .field input[name="callsign"] { text-transform: uppercase; letter-spacing: 0.04em; }
-  .field input[name="own_icao"] { font-family: var(--font-mono); text-transform: uppercase; }
+  .field input[name="aircraft_address"] { font-family: var(--font-mono); text-transform: uppercase; }
   .field.is-edited { box-shadow: inset 3px 0 0 var(--signal); padding-inline-start: var(--space-inline-s); }
   .field :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
   .field :user-invalid { border-color: var(--blip-text); }

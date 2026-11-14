@@ -58,7 +58,7 @@ class TrafficTable {
     }
 
     // INFO: fc 11nov26 a new address releases its slot even under an alarm: that alarm was on us
-    void set_own_icao(uint32_t address);
+    void set_aircraft_address(uint32_t address);
 
     // Where own-ship is, for the range gate below. This is the table's door and
     // three paths come through it - a direct ADS-L frame, an ALP-TAS frame and up
@@ -96,7 +96,7 @@ class TrafficTable {
     model::Ownship own_{};
     uint32_t own_address_{0};
     uint8_t own_address_mapping_table_{0};
-    uint32_t own_icao_{0};
+    uint32_t aircraft_address_{0};
     uint32_t implausible_{0};
     uint32_t adsb_without_position_{0};
     uint32_t revisions_{0};

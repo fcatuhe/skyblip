@@ -88,10 +88,10 @@ TEST_CASE("bravo: a fix that comes back does not make an aircraft heard before i
     CHECK(pflaa_names(rig, kAircraft));
 }
 
-TEST_CASE("bravo: the aircraft's own transponder, named by own ICAO, is never traffic") {
+TEST_CASE("bravo: the aircraft's own transponder, named by aircraft address, is never traffic") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.product.settings().own_icao = kAircraft;
+    rig.product.settings().aircraft_address = kAircraft;
     rig.seconds_with_fix(2);
     rig.hear_aircraft(kAircraft, 500);
     rig.hear_aircraft(0x4CA2B1, 3000);

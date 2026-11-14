@@ -37,15 +37,16 @@ bool TrafficTable::own_aircraft(const model::AircraftObservation& observation) c
     if (own_address_ != 0 && observation.address_mapping_table == own_address_mapping_table_ &&
         address == own_address_)
         return true;
-    return own_icao_ != 0 && observation.address_mapping_table == adsl::kAddressTableIcao &&
-           address == own_icao_;
+    return aircraft_address_ != 0 && observation.address_mapping_table == adsl::kAddressTableIcao &&
+           address == aircraft_address_;
 }
 
-void TrafficTable::set_own_icao(uint32_t address) {
+void TrafficTable::set_aircraft_address(uint32_t address) {
     const uint32_t masked = address & settings::kAddressMask;
-    if (masked == own_icao_) return;
-    own_icao_ = masked;
-    const int index = own_icao_ == 0 ? -1 : find(adsl::kAddressTableIcao, own_icao_);
+    if (masked == aircraft_address_) return;
+    aircraft_address_ = masked;
+    const int index =
+        aircraft_address_ == 0 ? -1 : find(adsl::kAddressTableIcao, aircraft_address_);
     if (index >= 0) release(slots_[index]);
 }
 

@@ -9,9 +9,9 @@ import { noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC', own_icao: 0x3C6586 };
-const FLOWN_SHOWN = { ...FLOWN, own_icao: '3C6586' };
-const DEFAULTS_SHOWN = { ...DEFAULTS, own_icao: '' };
+const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC', aircraft_address: 0x3C6586 };
+const FLOWN_SHOWN = { ...FLOWN, aircraft_address: '3C6586' };
+const DEFAULTS_SHOWN = { ...DEFAULTS, aircraft_address: '' };
 
 async function withSettings(options = {}) {
   const link = await connected({ stored: FLOWN, ...options });
@@ -45,7 +45,7 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 });
+  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 });
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
   assert.deepEqual(settings, DEFAULTS_SHOWN);

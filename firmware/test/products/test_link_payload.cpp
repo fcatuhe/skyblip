@@ -45,7 +45,7 @@ go::Settings widest_settings() {
     settings.alarm_volume = go::AlarmVolume::Loud;
     settings.units = go::Units::Nautical;
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
-    settings.own_icao = 0xFFFFFE;                     // the widest address ICAO assigns
+    settings.aircraft_address = 0xFFFFFE;             // the widest address ICAO assigns
     return settings;
 }
 
@@ -188,7 +188,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     const std::string frame = link.last().bytes;
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     // A ten-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
-    // and the own ICAO 0xFFFFFE behind a 4-byte head.
+    // and the aircraft address 0xFFFFFE behind a 4-byte head.
     const uint8_t golden[] = {0xAA, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF, 0x03,
                               0x18, 0x3A, 0x04, 0x11, 0x05, 0xF4, 0x06, 0x02, 0x07, 0x00,
                               0x08, 0x69, 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',
@@ -205,7 +205,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
-    CHECK(body.find("\"own_icao\":16777214") != std::string::npos);
+    CHECK(body.find("\"aircraft_address\":16777214") != std::string::npos);
 }
 
 // A link that never exchanged its MTU reassembles a write from prj.conf's two Prepare Writes.
@@ -217,7 +217,7 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     const events::RxFrame set = config_frame(
         "{\"command\":\"set\",\"aircraft_type\":17,\"alarm_enabled\":false,"
         "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"ABCDEFGHI\","
-        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"own_icao\":16777214}");
+        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"aircraft_address\":16777214}");
     CHECK(set.bytes == 34);
     CHECK(set.bytes <= kPrepareSegments * kPrepareSegmentBytes);
 
@@ -230,7 +230,7 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     config.on_rx(set);
     REQUIRE(config.pending() == Pending::Set);
     config.confirm();
-    CHECK(settings.own_icao == 0xFFFFFEu);
+    CHECK(settings.aircraft_address == 0xFFFFFEu);
     CHECK(settings.frequency_trim_e1_ppm == -100);
 }
 

@@ -50,7 +50,8 @@ Status validate(const Settings& settings) {
         settings.frequency_trim_e1_ppm < -kFrequencyTrimCeilingE1Ppm)
         return Status::OutOfRange;
     if (!callsign_is_typeable(settings.callsign)) return Status::Invalid;
-    if (settings.own_icao != kOwnIcaoUnset && !settings::icao_assignable(settings.own_icao))
+    if (settings.aircraft_address != kAircraftAddressUnset &&
+        !settings::icao_assignable(settings.aircraft_address))
         return Status::OutOfRange;
     if (settings.bravo.type > kBluetoothAddressTypeCeiling) return Status::OutOfRange;
     return Status::Ok;
@@ -72,7 +73,8 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     // INFO: fc 23sep26 a name an older build took over the link is dropped, not the trims beside it
     if (!callsign_is_typeable(out.callsign)) out.callsign[0] = 0;
     // INFO: fc 14nov26 an older build stored FFFFFF, which no aircraft holds, so it goes alone
-    if (out.own_icao == settings::kAddressMask) out.own_icao = kOwnIcaoUnset;
+    if (out.aircraft_address == settings::kAddressMask)
+        out.aircraft_address = kAircraftAddressUnset;
     if (validate(out) != Status::Ok) return Status::Invalid;
     return Status::Ok;
 }
@@ -92,7 +94,7 @@ void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_code(link::config_key::kAlarmVolume, settings.alarm_volume);
     writer.add_code(link::config_key::kUnits, settings.units);
     writer.add_text(link::config_key::kCallsign, settings.callsign);
-    writer.add_unsigned(link::config_key::kOwnIcao, settings.own_icao);
+    writer.add_unsigned(link::config_key::kAircraftAddress, settings.aircraft_address);
 }
 
 Status apply_settings(Settings& settings, const cbor::Reader& frame,
@@ -138,13 +140,14 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame,
                 return Status::Ok;
             });
     if (status == Status::Ok)
-        status = apply_key(frame.read_unsigned(link::set_key::kOwnIcao), [&](uint32_t value) {
-            if (value != kOwnIcaoUnset && !settings::icao_assignable(value))
-                return Status::OutOfRange;
-            if (contradicts(value, own_transponder)) return Status::Conflict;
-            next.own_icao = value;
-            return Status::Ok;
-        });
+        status =
+            apply_key(frame.read_unsigned(link::set_key::kAircraftAddress), [&](uint32_t value) {
+                if (value != kAircraftAddressUnset && !settings::icao_assignable(value))
+                    return Status::OutOfRange;
+                if (contradicts(value, own_transponder)) return Status::Conflict;
+                next.aircraft_address = value;
+                return Status::Ok;
+            });
     if (status == Status::Ok) {
         char callsign[kCallsignBytes] = {0};
         const Status read = frame.read_text(link::set_key::kCallsign, callsign, sizeof(callsign));
@@ -159,8 +162,9 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame,
     return Status::Ok;
 }
 
-bool contradicts(uint32_t own_icao, std::optional<uint32_t> own_transponder) {
-    return own_icao != kOwnIcaoUnset && own_transponder && own_icao != *own_transponder;
+bool contradicts(uint32_t aircraft_address, std::optional<uint32_t> own_transponder) {
+    return aircraft_address != kAircraftAddressUnset && own_transponder &&
+           aircraft_address != *own_transponder;
 }
 
 }  // namespace skyblip::go

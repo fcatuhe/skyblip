@@ -10,7 +10,7 @@ constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light,  MenuRow::Aircraft, MenuRo
                                       MenuRow::Range,  MenuRow::Plot,     MenuRow::Alarm,
                                       MenuRow::Volume, MenuRow::Bravo};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
-                                         MenuRow::Callsign, MenuRow::OwnIcao};
+                                         MenuRow::Callsign, MenuRow::AircraftAddress};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
                                        MenuRow::BravoLog, MenuRow::SelfTest};
 
@@ -63,8 +63,8 @@ const char* row_verb(MenuRow row, const MenuValues& values) {
 
 // INFO: fc 14nov26 under the digits, at the size the field is read at, the refusal first
 void draw_own_transponder(ui::Canvas& canvas, uint32_t address, bool refused) {
-    char digits[kOwnIcaoCharacters + 1];
-    digits[format_hex(digits, address, kOwnIcaoCharacters)] = 0;
+    char digits[kAircraftAddressCharacters + 1];
+    digits[format_hex(digits, address, kAircraftAddressCharacters)] = 0;
     int y = kOwnTransponderY;
     for (const char* line : {refused ? kOwnTransponderRefusedText : "", kOwnTransponderText,
                              static_cast<const char*>(digits)}) {
@@ -103,7 +103,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Light: return "LIGHT";
         case MenuRow::AircraftType: return "TYPE";
         case MenuRow::Callsign: return "CALLSIGN";
-        case MenuRow::OwnIcao: return "ADS-B";
+        case MenuRow::AircraftAddress: return "ADS-B";
         case MenuRow::Units: return "UNITS";
         case MenuRow::Range: return "RANGE";
         case MenuRow::Plot: return "PLOT";
@@ -167,9 +167,9 @@ char next_hex_character(char character) {
     return kCallsignBlank;
 }
 
-uint32_t own_icao_typed(const char* edited) {
+uint32_t aircraft_address_typed(const char* edited) {
     uint32_t address = 0;
-    for (int i = 0; i < kOwnIcaoCharacters; i++) {
+    for (int i = 0; i < kAircraftAddressCharacters; i++) {
         const char digit = edited[i];
         uint32_t nibble = 0;
         if (digit >= '0' && digit <= '9')
@@ -177,7 +177,7 @@ uint32_t own_icao_typed(const char* edited) {
         else if (digit >= 'A' && digit <= 'F')
             nibble = static_cast<uint32_t>(digit - 'A' + 10);
         else
-            return kOwnIcaoUnset;
+            return kAircraftAddressUnset;
         address = (address << 4) | nibble;
     }
     return address;
@@ -211,10 +211,11 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
         // is identified by and the field itself shows all nine.
         case MenuRow::Aircraft:
         case MenuRow::Callsign: written = callsign_value(out, values.settings.callsign); break;
-        case MenuRow::OwnIcao:
-            written = values.settings.own_icao == kOwnIcaoUnset
-                          ? format_string(out, "NONE")
-                          : format_hex(out, values.settings.own_icao, kOwnIcaoCharacters);
+        case MenuRow::AircraftAddress:
+            written =
+                values.settings.aircraft_address == kAircraftAddressUnset
+                    ? format_string(out, "NONE")
+                    : format_hex(out, values.settings.aircraft_address, kAircraftAddressCharacters);
             break;
         case MenuRow::Units:
             written = format_string(
@@ -311,9 +312,9 @@ void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
     draw_heading(canvas, snapshot.title, Heading::Opened);
     const BodyLine body[] = {{snapshot.text, kCallsignScale},
                              {""},
-                             {kOwnIcaoClearLines[0]},
-                             {kOwnIcaoClearLines[1]},
-                             {kOwnIcaoClearLines[2]}};
+                             {kAircraftAddressClearLines[0]},
+                             {kAircraftAddressClearLines[1]},
+                             {kAircraftAddressClearLines[2]}};
     draw_body(canvas, Heading::Opened, /*keys=*/true, body, 5);
     draw_keys(canvas, {{Press::Once, kFieldEraseVerb}, kFieldKeepVerb});
 }
