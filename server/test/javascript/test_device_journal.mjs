@@ -34,6 +34,32 @@ const settled = (fleet, predicate) => new Promise(resolve => {
   });
 });
 
+test('an upload the unit refused once it landed is told with what it found in slot 1 and both keys', async () => {
+  const fake = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, installReport: {} });
+  airwaves(fake);
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.running);
+  await unit.updater.choose(signedImage({ major: 0, minor: 2, revision: 0, build: 15 }, 6000), 'skyblip-go-0.2.0+15.signed.bin');
+  fake.refuseInstall = 'wrong_key';
+  unit.updater.install();
+  await settled(fleet, () => unit.state.phase === 'confirming');
+  fake.press();
+  await settled(fleet, () => journal.named('device.upload_refused').length);
+  unit.disconnect();
+
+  const [started] = journal.named('device.task_started');
+  assert.equal(started.key, 'B2B2B2B2');
+  assert.match(started.sha, /^[0-9a-f]{16}$/);
+  assert.equal(journal.named('device.read')[0].key, 'B2B2B2B2');
+  const [refused] = journal.named('device.upload_refused');
+  assert.deepEqual(
+    { reason: refused.reason, version: refused.version, check: refused.check, staged_key: refused.staged_key, key: refused.key, unit_key: refused.unit_key },
+    { reason: 'wrong_key', version: '0.2.0+15', check: 'matched', staged_key: 'B2B2B2B2', key: 'B2B2B2B2', unit_key: 'B2B2B2B2' },
+  );
+});
+
 // A pilot who asks for help is read back from the journal, so a connection says what the unit was like.
 test('a connection is told once, with what the device runs and holds', async () => {
   airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, settings: 'prior' }));

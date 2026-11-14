@@ -16,6 +16,9 @@ class CaptureSettings {
     virtual void describe(diagnostics::Config& record) const = 0;
 };
 
+// INFO: fc 15nov26 what two presses on a capture prompt allow, on a glass or on a lamp
+void order_capture(diagnostics::Recorder& recorder, comms::CaptureProfile profile);
+
 class CaptureService : public runtime::Service {
    public:
     // INFO: fc 20sep26 the price walks the whole pool, so it is answered at the render cadence
@@ -48,6 +51,8 @@ class CaptureService : public runtime::Service {
     bus::CaptureStop stopped() const { return stopped_; }
 
     uint32_t keeps_s(diagnostics::Profile profile) const;
+    // INFO: fc 15nov26 the dump's capture group, so a page reads the price before it asks for one
+    void describe(comms::Diagnostics& out) const;
 
    private:
     void open(uint32_t now_ms);

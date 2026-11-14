@@ -18,7 +18,7 @@ What it deliberately does not hold:
 | the CRC over a record | the sector label's, `core/store/sector.h`: this geometry has no room for one, and the torn tail is answered by the `End` marker below |
 | the BLE offload and the chunking | `core/comms/log_link.h`, shared with the flights store |
 | the taps that fill these records | the services in `products/`, one call each, behind `armed()`: the table below says which |
-| where the capture is armed from | the product's diagnostics screen, `products/skyblip_go/pages/capture.cpp` |
+| where the capture is armed from | a page over the link's `capture` command, allowed by two presses on the unit (`core/comms/capture_request.cpp`, `products/common/services/capture.cpp` `order_capture`) |
 | draining this ring to flash | `products/common/services/capture.cpp`, over the store both logs share |
 | whether a capture survives a reboot | nothing: it does not, and that is the design |
 

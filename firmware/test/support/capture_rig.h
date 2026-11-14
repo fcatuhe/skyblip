@@ -1,8 +1,9 @@
-// Harness, not a test: a product rig with its capture armed from the page, and bench records fed.
+// Harness, not a test: a product rig with its capture armed over the link, and bench records fed.
 #ifndef SKYBLIP_TEST_SUPPORT_CAPTURE_RIG_H
 #define SKYBLIP_TEST_SUPPORT_CAPTURE_RIG_H
 
 #include <cstdint>
+#include <string>
 
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
@@ -11,18 +12,27 @@
 
 namespace skyblip {
 
-inline void open_capture_page(Rig& rig, uint32_t& now_ms) {
-    rig.show(now_ms, go::Page::Capture);
-    rig.run(now_ms, now_ms + 2000);
-    now_ms += 2000;
-    REQUIRE(rig.product.screen().page() == go::Page::Capture);
+// A page's ask and the two presses on the glass that allow it, as a pilot orders one in the field.
+inline void order_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile) {
+    const std::string json =
+        std::string("{\"command\":\"capture\",\"profile\":\"") + profile + "\"}";
+    rig.send(json.c_str());
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 1000);
+    now_ms += 1000;
 }
 
-inline void arm_from_the_page(Rig& rig, uint32_t& now_ms) {
-    open_capture_page(rig, now_ms);
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
+inline void arm_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile = "full") {
+    order_over_the_link(rig, now_ms, profile);
+    REQUIRE(rig.product.diagnostics().armed());
+}
+
+inline void stop_over_the_link(Rig& rig, uint32_t& now_ms) {
+    order_over_the_link(rig, now_ms, "stop");
+    REQUIRE_FALSE(rig.product.diagnostics().armed());
 }
 
 inline diagnostics::Record bench_record(uint32_t at_s) {

@@ -846,6 +846,77 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_busy_missed",
           "number": 70,
           "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1214,6 +1285,77 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_busy_missed",
           "number": 70,
+          "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
           "type": "unsigned"
         }
       ]
@@ -1971,6 +2113,34 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "own_transponder_category",
           "number": 15,
           "type": "unsigned"
+        },
+        {
+          "name": "firmware",
+          "number": 16,
+          "type": "text"
+        },
+        {
+          "name": "battery_percent",
+          "number": 17,
+          "type": "unsigned"
+        },
+        {
+          "name": "charging",
+          "number": 18,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "power_level",
+          "number": 19,
+          "type": "enum",
+          "enum": "power_level",
+          "required": true
+        },
+        {
+          "name": "frame_rate_hz",
+          "number": 20,
+          "type": "unsigned"
         }
       ]
     },
@@ -2259,6 +2429,18 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 7,
           "type": "enum",
           "enum": "reset"
+        },
+        {
+          "name": "landed_check",
+          "number": 8,
+          "type": "enum",
+          "enum": "staged_check"
+        },
+        {
+          "name": "staged_key",
+          "number": 9,
+          "type": "bytes",
+          "bytes": 4
         }
       ]
     },
@@ -2698,6 +2880,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "adsb",
           "code": 5,
           "mirrors": "Adsb"
+        },
+        {
+          "name": "capture",
+          "code": 6,
+          "mirrors": "Capture"
         }
       ]
     },
@@ -3096,7 +3283,7 @@ export const LINK_REGISTRY = Object.freeze({
     "capture_profile": {
       "mirrors": {
         "type": "comms::CaptureProfile",
-        "header": "core/comms/config.h"
+        "header": "core/comms/diagnostics.h"
       },
       "values": [
         {

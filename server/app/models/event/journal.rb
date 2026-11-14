@@ -8,13 +8,19 @@ class Event::Journal
   OLDEST = 30.days
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
-             key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language].freeze
+             key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
+             sha reason staged_key unit_key].freeze
   COUNTS = %w[load_ms line column connect_ms linked_ms battery_percent lasted_ms sent_bytes total_bytes request_error boots
               probation_boots browser_major].freeze
   FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report].freeze
   TEXTS = { "message" => 300, "detail" => 200 }.freeze
   PATHS = %w[file].freeze
   LISTS = %w[frames].freeze
+  # INFO: fc 15nov26 the diagnostics dump: groups of counters and states, never a position or an address
+  DUMPS = %w[dump].freeze
+  DUMP_NAME = /\A[a-z][a-z0-9_]{0,39}\z/
+  DUMP_GROUPS = 10
+  DUMP_KEYS = 40
 
   attr_reader :browser
 
@@ -69,6 +75,27 @@ class Event::Journal
       when *TEXTS.keys then value.to_s.truncate(TEXTS[key]) if value.is_a?(String)
       when *PATHS then path_of(value)
       when *LISTS then Array(value).grep(String).first(5).map { it.truncate(200) } if value.is_a?(Array)
+      when *DUMPS then dump_of(value)
+      end
+    end
+
+    def dump_of(value)
+      if value.respond_to?(:to_h)
+        value.to_h.stringify_keys.select { |group, _| group.match?(DUMP_NAME) }.first(DUMP_GROUPS).to_h do |group, fields|
+          [ group, fields.respond_to?(:to_h) ? dump_fields(fields.to_h.stringify_keys) : {} ]
+        end
+      end
+    end
+
+    def dump_fields(fields)
+      fields.select { |key, _| key.match?(DUMP_NAME) }.first(DUMP_KEYS).to_h { |key, field| [ key, dump_value(field) ] }.compact
+    end
+
+    def dump_value(field)
+      case field
+      when Integer, true, false then field
+      when String then field.first(40)
+      when Array then field.grep(Integer).first(16)
       end
     end
 

@@ -173,7 +173,7 @@ updated_on: "2026-11-13"
 
   <div class="feature">
     <div>
-      <h3 id="nearby">Who is out there, <span class="highlight">nearest first</span>.</h3>
+      <h3 id="nearby">Who is out there, <span class="highlight">those at your height first</span>.</h3>
       <p>
         The radar says where to look. This page says who is there. One row per
         aircraft with a known position: its callsign if it broadcasts one and its
@@ -183,6 +183,12 @@ updated_on: "2026-11-13"
         and the count of every aircraft heard.
       </p>
       <p>
+        An aircraft raising an alarm comes first, then those within 300&nbsp;m
+        (about 1,000&nbsp;ft) of your altitude, then the rest, nearest first in
+        each group. An airliner overhead is near on the ground, but it lists below
+        a glider at your height.
+      </p>
+      <p>
         The letter at the start of the row tells you where the information came from.
         <span class="mono">A</span> for an ADS-L message received directly,
         <span class="mono">F</span> for FLARM-compatible traffic,
@@ -190,7 +196,7 @@ updated_on: "2026-11-13"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "The nearby page: your own callsign S-BLIP with its radio address beside it and the count of every aircraft heard on the top line, then five aircraft listed nearest first, each with a letter showing the source of the information, its callsign or radio address, its horizontal distance and its altitude relative to you" %>
+      <%= screen_image_tag "nearby.png", alt: "The nearby page: your own callsign S-BLIP with its radio address beside it and the count of every aircraft heard on the top line, then five aircraft, those at your height first, each with a letter showing the source of the information, its callsign or radio address, its horizontal distance and its altitude relative to you" %>
       <figcaption>Nearby</figcaption>
     </figure>
   </div>

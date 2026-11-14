@@ -37,8 +37,9 @@ uint32_t now_ms() {
         duration_cast<milliseconds>(steady_clock::now() - started).count());
 }
 
-const char* kPages[] = {"radar",     "nearby", "6-pack",  "g meter",   "status", "satellites",
-                        "radio log", "raw",    "capture", "self test", "bravo"};
+// INFO: fc 15nov26 7 and 8 are retired page codes, so their names stay empty to keep the index
+const char* kPages[] = {"radar",     "nearby", "6-pack", "g meter",   "status", "satellites",
+                        "radio log", "",       "",       "self test", "bravo",  "bravo log"};
 static_assert(sizeof(kPages) / sizeof(kPages[0]) == go::kPageCount,
               "a page with no name here prints past the end of the array");
 const char* kAlarms[] = {"none", "ADVISORY"};

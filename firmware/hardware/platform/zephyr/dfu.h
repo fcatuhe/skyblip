@@ -61,14 +61,18 @@ class Dfu : public ports::Dfu {
    public:
     ports::SwapRequest request_swap() override {
         ports::SwapRequest request;
-        StagedSlot slot;
-        request.check = slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
+        request.check = check_staged();
         if (request.check == ports::StagedCheck::Matched)
             request.error = static_cast<int16_t>(boot_request_upgrade(BOOT_UPGRADE_TEST));
         request.swap = swap_type(mcuboot_swap_type());
         printk("dfu: slot1 %s, swap request %d, swap type %d\n", check_word(request.check),
                request.error, static_cast<int>(request.swap));
         return request;
+    }
+
+    ports::StagedCheck check_staged() override {
+        StagedSlot slot;
+        return slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
     }
 
     void trigger() override { sys_reboot(SYS_REBOOT_WARM); }

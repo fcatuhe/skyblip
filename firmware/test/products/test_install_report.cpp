@@ -1,4 +1,4 @@
-// What a unit wrote about its last install, read over the link (#278, retired with #294).
+// What a unit wrote about its last install and a refused landing, read over the link (#278).
 #include <string>
 
 #include "core/dfu/install_report.h"
@@ -13,7 +13,12 @@ namespace {
 std::string report_frame(Rig& rig, uint32_t now_ms = 0) {
     rig.send("{\"command\":\"install_report\"}");
     rig.run(now_ms, now_ms + 200);
-    return rig.last_on(events::Endpoint::Config);
+    const auto& sent = rig.platform.link().sent;
+    for (auto frame = sent.rbegin(); frame != sent.rend(); ++frame) {
+        const std::string text = link_text(frame->bytes);
+        if (text.rfind("{\"command\":\"install_report\"", 0) == 0) return text;
+    }
+    return {};
 }
 
 bool holds_a_report(Rig& rig) {
@@ -24,6 +29,12 @@ bool holds_a_report(Rig& rig) {
 
 bool says(const std::string& frame, const char* pair) {
     return frame.find(pair) != std::string::npos;
+}
+
+std::string land(Rig& rig, uint32_t& now_ms) {
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    return rig.last_on(events::Endpoint::Config);
 }
 
 struct OnProbation {
@@ -124,4 +135,62 @@ TEST_CASE("install report: a report with no update record beside it is erased at
     REQUIRE(rig.setup() == Status::Ok);
     CHECK_FALSE(holds_a_report(rig));
     CHECK(report_frame(rig) == "{\"command\":\"install_report\"}");
+}
+
+TEST_CASE("install report: an upload refused as the wrong key says what slot 1 held and its key") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x42);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    REQUIRE(says(land(rig, now_ms), "\"reason\":\"wrong_key\""));
+    CHECK(report_frame(rig, now_ms) ==
+          "{\"command\":\"install_report\",\"landed_check\":\"matched\",\"staged_key\":"
+          "\"42424242\"}");
+}
+
+TEST_CASE("install report: a landing with no key the unit can read says what the hash found") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x21);
+    rig.platform.dfu().staged_key_valid = false;
+    rig.platform.dfu().staged_check = ports::StagedCheck::Damaged;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    REQUIRE(says(land(rig, now_ms), "\"reason\":\"wrong_key\""));
+    CHECK(report_frame(rig, now_ms) ==
+          "{\"command\":\"install_report\",\"landed_check\":\"damaged\"}");
+}
+
+TEST_CASE("install report: an upload refused as not approved keeps its landing too") {
+    Rig rig;
+    stage_versions(rig);
+    rig.platform.dfu().staged_image_version = kRunning;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    REQUIRE(says(land(rig, now_ms), "\"reason\":\"not_approved\""));
+    CHECK(says(report_frame(rig, now_ms), "\"landed_check\":\"matched\""));
+}
+
+TEST_CASE("install report: the next upload window forgets the landing it refused") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x42);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    land(rig, now_ms);
+    open_upload_window(rig, now_ms);
+    CHECK(report_frame(rig, now_ms) == "{\"command\":\"install_report\"}");
+}
+
+TEST_CASE(
+    "install report: an upload that installs is not hashed when it lands, and leaves no landing") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x21);
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    REQUIRE(says(land(rig, now_ms), "\"reason\":\"install\""));
+    CHECK_FALSE(says(report_frame(rig, now_ms), "landed_check"));
+    CHECK(rig.platform.dfu().staged_checks == 0);
 }

@@ -145,6 +145,21 @@ TEST_CASE("bravo peer: health goes to the pinned Go once a second, whatever the 
     CHECK(field(last, "last_sequence").empty());
 }
 
+// Bravo has no glass, so the Go is where a pilot reads what it runs, holds and hears.
+TEST_CASE("bravo peer: health says the firmware Bravo runs, its cell and its receiver's rate") {
+    Served served;
+    served.rig.platform.dfu().running_version_valid = true;
+    served.rig.platform.dfu().running_image_version = ports::ImageVersion{0, 4, 1, 1702};
+    served.seconds(5, true, nullptr);
+    const std::string last = served.sent("health").back();
+    CHECK(field(last, "firmware") == "0.4.1+1702");
+    CHECK(field(last, "battery_percent") ==
+          std::to_string(served.rig.state().power.battery.percent));
+    CHECK(field(last, "charging") == "false");
+    CHECK(field(last, "power_level") == "normal");
+    CHECK(field(last, "frame_rate_hz") == "0");
+}
+
 TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and is never the reference") {
     Served served(false);
     const GoPosition far{BravoRig::kLatitude1e7 + 5000000};

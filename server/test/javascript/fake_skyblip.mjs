@@ -104,10 +104,12 @@ export class FakeSkyblip {
     logStore = new FakeLogStore(),
     installReport = undefined,
     protocols = undefined,
+    servesCaptures = true,
+    evictsFlights = 3,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, knowsDefaults, knowsBrowsers, key, downgrade, address, product });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, servesCaptures, evictsFlights });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -132,6 +134,8 @@ export class FakeSkyblip {
     this.writing = false;
     this.approved = null;
     this.refuseInstall = null;
+    this.landedCheck = 'matched';
+    this.landing = null;
     this.refuseUpload = null;
     this.refuseAfterPackets = Infinity;
     this.closeWindowAfterPackets = Infinity;
@@ -267,9 +271,11 @@ export class FakeSkyblip {
     if (command === 'status') return this.sendStatus();
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
-    if (command === 'capture' && this.product === 'skyblip_bravo') return this.stageCapture(fields);
+    // INFO: fc 15nov26 false is a Go from before it served capture, which answers neither capture nor its dump group
+    if (command === 'capture' && this.servesCaptures) return this.stageCapture(fields);
+    if (command === 'diagnostics') return this.sendDiagnostics();
     // INFO: fc 13nov26 undefined is firmware older than the install report, which answers unknown_command
-    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport });
+    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport, ...this.landing });
     // INFO: fc 14nov26 undefined is firmware older than the protocols frame, which answers unknown_command
     if (command === 'protocols' && this.protocols !== undefined) return this.reply({ command, ...this.protocols });
     if (BROWSER_COMMANDS.has(command) && this.knowsBrowsers) return this.answerBrowser(command, fields);
@@ -337,6 +343,26 @@ export class FakeSkyblip {
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_capture' });
   }
 
+  // INFO: fc 15nov26 diagnostics.cpp's next_frame: a group whole when it fits the payload, else one field a frame
+  sendDiagnostics() {
+    const groups = [['system', { uptime_s: 120, reset: 'power_on' }]];
+    if (this.servesCaptures) {
+      groups.push(['capture', {
+        armed: this.capturing, ...(this.capturing ? { profile: this.staged ?? 'full' } : {}), session: this.capturing ? 1785628800 : 0,
+        records: this.capturing ? 960 : 0, records_dropped: 0, sectors: 0, keeps_s: 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
+        keeps_full_s: 1926, keeps_power_run_s: 433500,
+      }]);
+    }
+    const payload = this.mtu - ATT_HEADER_BYTES;
+    const frames = groups.flatMap(([group, fields]) => {
+      const whole = { command: 'diagnostics', group, part: 0, more: true, ...fields };
+      if (encodeFrame(whole).length <= payload) return [whole];
+      return Object.entries(fields).map(([key, value]) => ({ command: 'diagnostics', group, part: 0, more: true, [key]: value }));
+    });
+    frames.forEach((frame, part) => Object.assign(frame, { part, more: part < frames.length - 1 }));
+    for (const frame of frames) this.reply(frame);
+  }
+
   addressFields() {
     return { ...(this.address === null ? {} : { address: this.address }), address_mapping_table: 58 };
   }
@@ -359,11 +385,20 @@ export class FakeSkyblip {
   installLanded() {
     this.windowOpen = false;
     const image = readImage(this.slot);
-    if (this.refuseInstall) return this.acknowledge(false, this.refuseInstall);
-    if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
-    if (this.key !== null && image.key !== keyName(this.key)) return this.acknowledge(false, 'wrong_key');
+    const refusal = this.landingRefusal(image);
+    if (refusal) {
+      if (LANDING_REFUSALS.has(refusal)) this.landing = { landed_check: this.landedCheck, ...(image?.key && { staged_key: image.key }) };
+      return this.acknowledge(false, refusal);
+    }
     this.acknowledge(true, 'install');
     setImmediate(() => setImmediate(() => this.drop()));
+  }
+
+  landingRefusal(image) {
+    if (this.refuseInstall) return this.refuseInstall;
+    if (!image || versionText(image.version) !== this.approved) return 'not_approved';
+    if (this.key !== null && image.key !== keyName(this.key)) return 'wrong_key';
+    return null;
   }
 
   older(version) {
@@ -415,6 +450,7 @@ export class FakeSkyblip {
     }
     if (task === 'dfu') {
       this.windowOpen = true;
+      this.landing = null;
       this.finished = false;
       return this.acknowledge(true, 'dfu');
     }
@@ -550,6 +586,7 @@ function classEndOf(header) {
   return protectedBytes === 0 ? null : view.getUint16(8, true) + view.getUint32(12, true) + protectedBytes;
 }
 
+const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 const BROWSER_COMMANDS = new Set(['browser_challenge', 'trust_browser', 'browsers', 'forget_browser']);
 
 function keyName(byte) {

@@ -43,8 +43,6 @@ enum class Pending : uint8_t {
     Capture = 9
 };
 
-enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
-
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
 // reading the app cannot be looking at two different descriptions of the same
@@ -52,6 +50,7 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
+int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an
@@ -194,7 +193,6 @@ class ConfigService {
     }
     dfu::ImageState image_state() const { return image_state_; }
 
-    // TODO: fc 13nov26 the install report on the link, retired with #294
     void set_install_report(const dfu::InstallReport* report) { install_report_ = report; }
 
     void set_settings_fallback(settings::Fallback fallback) { settings_fallback_ = fallback; }
@@ -352,6 +350,7 @@ class ConfigService {
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void request_capture(const cbor::Reader& frame);
     void install_received_image();
+    void refuse_landing(link::Reason reason);
     void open_upload_window();
     void apply_settings(const cbor::Reader& frame);
     bool signed_by_trusted_key() const;
@@ -419,6 +418,7 @@ class ConfigService {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     const dfu::InstallReport* install_report_{nullptr};
+    std::optional<dfu::Landing> landing_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
     std::optional<dfu::Product> product_{};

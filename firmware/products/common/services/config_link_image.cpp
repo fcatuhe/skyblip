@@ -139,7 +139,6 @@ void ConfigLinkService::confirm_image_once_healthy() {
     publish_image_state();
 }
 
-// TODO: fc 13nov26 the install report's storage, retired with #294 once Bluetooth updates land
 void ConfigLinkService::load_report() {
     uint8_t blob[dfu::kInstallReportBytes];
     size_t blob_bytes = 0;

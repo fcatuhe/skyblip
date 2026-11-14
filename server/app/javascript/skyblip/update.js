@@ -1,8 +1,9 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
 import { FirmwareAttestation } from '#skyblip/attestation';
-import { installReportOf } from '#skyblip/install_report';
+import { installReportOf, landingOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
+import { LogReader, fetchDiagnostics } from '#skyblip/log';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
@@ -34,6 +35,7 @@ export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
+const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 
 class LinkLost extends Error {
@@ -94,6 +96,23 @@ function upgradeOf({ file, running }) {
   return compareVersions(parseVersion(file.version), parseVersion(running)) > 0;
 }
 
+// INFO: fc 15nov26 the dump's capture group, absent on firmware from before it and on a unit with no capture flash
+export function captureOf(dump) {
+  const group = dump?.capture;
+  if (!group) return null;
+  return {
+    armed: group.armed === true,
+    profile: group.profile ?? null,
+    session: group.session ?? 0,
+    records: group.records ?? 0,
+    keeps: group.keeps_s ?? 0,
+    takesSectors: group.takes_sectors ?? 0,
+    evictsFlights: group.evicts_flights ?? 0,
+    keepsFull: group.keeps_full_s ?? 0,
+    keepsPowerRun: group.keeps_power_run_s ?? 0,
+  };
+}
+
 function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
@@ -105,6 +124,7 @@ export class Updater {
   #packetBytes = null;
   #writeBytes = GATT_WRITE_BYTES;
   #probed = false;
+  #answersReport = false;
   #running = null;
   #image = null;
   #sha = null;
@@ -112,6 +132,10 @@ export class Updater {
   #key = null;
   #product = null;
   #captureProfile = null;
+  #log = null;
+  #dump = {};
+  #dumpAsked = false;
+  #dumpPending = false;
   #windowOpen = false;
   #leaving = false;
   #choice = 0;
@@ -142,7 +166,11 @@ export class Updater {
     trust: null,
     browsers: null,
     installReport: null,
+    landing: null,
     protocols: null,
+    dump: null,
+    capture: null,
+    fetching: null,
   };
 
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
@@ -192,6 +220,7 @@ export class Updater {
     const device = await connect({
       device: this.#bluetoothDevice,
       onReply: reply => this.#receive(reply),
+      onLog: (frame, bytes, error) => this.#log?.receive(frame, bytes, error),
       onSmp: bytes => this.#smp.receive(bytes),
       onClose: () => this.#closed(),
     });
@@ -206,6 +235,7 @@ export class Updater {
       return this.#set({ phase: 'offline', notice: { key: 'not_skyblip' } });
     }
     this.#device = device;
+    this.#log = device.hasLog ? new LogReader(fields => device.sendLog(fields)) : null;
     await this.#trust.prove();
     this.#set({ phase: 'ready', device: device.name });
     await this.#learn();
@@ -257,7 +287,7 @@ export class Updater {
     this.#image = bytes;
     this.#sha = sha;
     this.#version = image.version;
-    const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
+    const file = { name, version: versionText(image.version), bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
     this.#key = image.key;
     this.#product = image.product;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
@@ -295,12 +325,33 @@ export class Updater {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
   }
 
-  // INFO: fc 12nov26 only a skyBlip Bravo answers capture, and a Go answers it unknown_command
+  // INFO: fc 15nov26 firmware from before a Go served capture answers it unknown_command there
   orderCapture(profile) {
     if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'capture' } });
     this.#captureProfile = profile;
     this.#set({ notice: null });
     return this.#ask('capture', { profile });
+  }
+
+  // INFO: fc 15nov26 a narrow link answers a dump too wide for it small_mtu, which no pilot asked about
+  readDiagnostics() {
+    this.#dumpAsked = true;
+    this.#dumpPending = true;
+    return this.#send({ command: 'diagnostics' });
+  }
+
+  // INFO: fc 15nov26 the last session of the diagnostics store, which is the capture the page armed
+  async fetchCapture() {
+    if (this.#state.phase !== 'ready' || !this.#log) return null;
+    this.#set({ phase: 'asking', task: 'fetch', fetching: { at: 0, total: null }, notice: null });
+    try {
+      const fetched = await fetchDiagnostics(this.#log, { onProgress: (at, total) => this.#set({ fetching: { at, total } }) });
+      if (this.#state.task === 'fetch') this.#set({ phase: 'ready', task: null, fetching: null });
+      return fetched;
+    } catch (error) {
+      if (this.#state.task === 'fetch') this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, fetching: null, notice: { key: error.reason ?? 'failed', detail: error.message, during: 'capture' } });
+      return null;
+    }
   }
 
   // INFO: fc 13nov26 the unit's replies carry no request id, so the list waits for the link to be quiet
@@ -334,7 +385,6 @@ export class Updater {
 
   async #learn() {
     await this.#send({ command: 'update' });
-    // TODO: fc 13nov26 the install report, retired with #294
     await this.#send({ command: 'install_report' });
     await this.#send({ command: 'protocols' });
     await this.#send({ command: 'status' });
@@ -380,16 +430,39 @@ export class Updater {
     if (!reply || this.#trust.receive(reply) || this.#attestation?.receive(reply)) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
+    else if (reply.command === 'config') this.#configured(reply);
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if (reply.command === 'install_report') this.#set({ installReport: installReportOf(reply) });
+    else if (reply.command === 'install_report') this.#reported(reply);
     else if (reply.command === 'protocols') this.#set({ protocols: protocolsOf(reply) });
+    else if (reply.command === 'diagnostics') this.#dumped(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
+  }
+
+  // INFO: fc 15nov26 the dump is asked once the settings are answered, so a small_mtu after it is the dump's own
+  #configured(reply) {
+    this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
+    if (!this.#dumpAsked) this.readDiagnostics();
+  }
+
+  // INFO: fc 15nov26 one frame per group, or more for a group wider than the link, and more false on the last
+  #dumped({ command, group, part, more, ...fields }) {
+    this.#dump = { ...this.#dump, [group]: { ...this.#dump[group], ...fields } };
+    if (more) return;
+    const dump = this.#dump;
+    this.#dump = {};
+    this.#dumpPending = false;
+    this.#set({ dump, capture: captureOf(dump) });
+  }
+
+  #reported(reply) {
+    this.#answersReport = true;
+    this.#set({ installReport: installReportOf(reply), landing: landingOf(reply) });
   }
 
   #acked(reply) {
     const { phase, task } = this.#state;
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
+    if (this.#dumpPending && ['small_mtu', 'no_statistics'].includes(reply.reason)) return (this.#dumpPending = false);
     if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
@@ -398,17 +471,21 @@ export class Updater {
     if (task === 'install') this.#windowOpen = false;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
+    // INFO: fc 14nov26 firmware without the report answers unknown_command, which would read as the refusal of the next ask
+    if (task === 'install' && LANDING_REFUSALS.has(reply.reason) && this.#answersReport) return this.#send({ command: 'install_report' });
   }
 
   #narrow() {
     const asked = this.#state.phase === 'asking' ? { phase: 'ready', task: null } : {};
     this.#set({ ...asked, notice: { key: 'small_mtu' } });
+    if (!this.#dumpAsked) this.readDiagnostics();
   }
 
   #granted(task) {
     if (task === 'capture') {
       const key = this.#captureProfile === 'stop' ? 'capture_stopped' : 'capture_armed';
-      return this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
+      this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
+      return this.readDiagnostics();
     }
     if (task === 'dfu') {
       this.#trust.confirmed();
@@ -495,19 +572,25 @@ export class Updater {
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
     this.#probed = false;
+    this.#answersReport = false;
+    this.#log?.close();
+    this.#log = null;
+    this.#dump = {};
+    this.#dumpAsked = false;
+    this.#dumpPending = false;
     this.#smp.close(new LinkLost());
     this.#trust.close();
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, protocols: null });
+      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
       phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
-      progress: null, installReport: null, protocols: null,
+      progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });
   }

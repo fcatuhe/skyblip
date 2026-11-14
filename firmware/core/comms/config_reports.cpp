@@ -147,7 +147,6 @@ void ConfigService::send_update() {
     (void)reply(frame, bytes);
 }
 
-// TODO: fc 13nov26 the install report's frame, retired with #294
 void ConfigService::send_install_report() {
     uint8_t frame[kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
@@ -161,6 +160,13 @@ void ConfigService::send_install_report() {
         writer.add_unsigned(link::install_report_key::kProbationBoots, report.probation_boots);
         writer.add_code(link::install_report_key::kProof, report.proof);
         writer.add_code(link::install_report_key::kReset, report.reset);
+    }
+    if (landing_) {
+        writer.add_code(link::install_report_key::kLandedCheck, landing_->check);
+        if (landing_->staged_key)
+            writer.add_bytes(link::install_report_key::kStagedKey,
+                             ConstByteSpan(landing_->staged_key->data(),
+                                           link::install_report_bytes::kStagedKey));
     }
     (void)reply(frame, writer.finish());
 }

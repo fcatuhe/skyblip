@@ -1,6 +1,5 @@
 #include <cstdint>
 
-#include "core/comms/config.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
@@ -71,7 +70,8 @@ constexpr bool on_the_wire(comms::DiagnosticsReport::Group value) {
         case comms::DiagnosticsReport::Group::Traffic:
         case comms::DiagnosticsReport::Group::Gnss:
         case comms::DiagnosticsReport::Group::Power:
-        case comms::DiagnosticsReport::Group::Adsb: return true;
+        case comms::DiagnosticsReport::Group::Adsb:
+        case comms::DiagnosticsReport::Group::Capture: return true;
     }
     return false;
 }
@@ -284,6 +284,7 @@ static_assert(code(comms::DiagnosticsReport::Group::Traffic) == 2, "group traffi
 static_assert(code(comms::DiagnosticsReport::Group::Gnss) == 3, "group gnss");
 static_assert(code(comms::DiagnosticsReport::Group::Power) == 4, "group power");
 static_assert(code(comms::DiagnosticsReport::Group::Adsb) == 5, "group adsb");
+static_assert(code(comms::DiagnosticsReport::Group::Capture) == 6, "group capture");
 static_assert(on_the_wire(comms::DiagnosticsReport::Group::System), "group");
 
 static_assert(code(power::ResetReason::Unknown) == 0, "reset unknown");

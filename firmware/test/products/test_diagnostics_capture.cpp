@@ -84,111 +84,52 @@ Capture offload_capture(Rig& rig, uint32_t& now_ms, uint32_t session) {
     return walk;
 }
 
-void arm_the_power_run(Rig& rig, uint32_t& now_ms) {
-    open_capture_page(rig, now_ms);
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
-}
-
 }  // namespace
 
-TEST_CASE("capture: the diagnostics page states the price, and one press does not arm it") {
+// A page reads the price before it asks, so a pilot who helps knows which flights it costs.
+TEST_CASE("capture: the dump's capture group prices every capture, then names the one that runs") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
 
-    open_capture_page(rig, now_ms);
-    const bus::CaptureState& price = rig.state().capture;
-    CHECK(price.available);
-    CHECK(price.pool_sectors == platform::host::FlashRegion::kSectorCount);
-    CHECK(price.growth_sectors == platform::host::FlashRegion::kSectorCount);
-    CHECK(price.keeps_s > 0);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "USES 298 OF 298 SECTORS", 0, 0, 200, 200));
-    CHECK(reads_in(rig.product.screen().framebuffer(), "PUSH TWICE TO START", 0, 0, 200, 200));
+    comms::Diagnostics price{};
+    rig.product.capture().describe(price);
+    CHECK(price.capture_available);
+    CHECK_FALSE(price.capture_armed);
+    CHECK(price.capture_takes_sectors == platform::host::FlashRegion::kSectorCount);
+    CHECK(price.capture_keeps_full_s > 0);
+    // A capture recording two subjects every 30 s outlasts one recording eleven a second.
+    CHECK(price.capture_keeps_power_run_s > 100 * price.capture_keeps_full_s);
+    CHECK(rig.product.capture().keeps_s(diagnostics::Profile::FlightRun) ==
+          price.capture_keeps_power_run_s);
 
+    arm_over_the_link(rig, now_ms, "power_run");
+    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
+    CHECK(rig.product.capture().capturing());
+    taxi(rig, now_ms, 5);
+    comms::Diagnostics running{};
+    rig.product.capture().describe(running);
+    CHECK(running.capture_armed);
+    CHECK(running.capture_profile == comms::CaptureProfile::PowerRun);
+    CHECK(running.capture_session == rig.product.capture().session_id());
+    CHECK(running.capture_records > 0);
+}
+
+TEST_CASE("capture: one press on the glass refuses the capture a page asked for") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    taxi(rig, now_ms, 5);
+    rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;
     CHECK_FALSE(rig.product.diagnostics().armed());
-
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 1200);
-    now_ms += 1200;
-    CHECK(rig.product.diagnostics().armed());
-    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::Full);
-    CHECK(rig.product.capture().capturing());
-    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ON FULL", 0, 0, 200, 200));
-    CHECK(reads_in(rig.product.screen().framebuffer(), "PUSH TWICE TO STOP", 0, 0, 200, 200));
-}
-
-TEST_CASE("capture: the page prices every capture, and the pad picks between them") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    open_capture_page(rig, now_ms);
-
-    const common::CaptureService& capture = rig.product.capture();
-    CHECK(capture.keeps_s(diagnostics::Profile::Full) > 0);
-    CHECK(capture.keeps_s(diagnostics::Profile::PowerRun) >
-          100 * capture.keeps_s(diagnostics::Profile::Full));
-    CHECK(capture.keeps_s(diagnostics::Profile::FlightRun) ==
-          capture.keeps_s(diagnostics::Profile::PowerRun));
-
-    const go::Glass& glass = rig.product.screen().framebuffer();
-    CHECK(reads_in(glass, "FULL", 0, 0, 200, 200, 1, /*ink=*/false));
-    CHECK(reads_in(glass, "POWER RUN", 0, 0, 200, 200));
-
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 1200);
-    now_ms += 1200;
-    CHECK(rig.product.screen().page() == go::Page::Capture);
-    CHECK(reads_in(glass, "POWER RUN", 0, 0, 200, 200, 1, /*ink=*/false));
-    CHECK(reads_in(glass, "FULL", 0, 0, 200, 200));
-
-    rig.tap(now_ms);
-    rig.run(now_ms, now_ms + 1200);
-    now_ms += 1200;
-    CHECK(rig.product.screen().page() == go::Page::Capture);
-    CHECK(reads_in(glass, "FLIGHT RUN", 0, 0, 200, 200, 1, /*ink=*/false));
-}
-
-TEST_CASE("capture: the double press arms the capture in focus, and no other") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    arm_the_power_run(rig, now_ms);
-
-    CHECK(rig.product.diagnostics().armed());
-    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
-    CHECK(rig.product.capture().capturing());
-
-    taxi(rig, now_ms, 5);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ON POWER RUN", 0, 0, 200, 200));
-    // A capture recording two subjects every 30 s outlasts one recording eleven a second.
-    CHECK(rig.state().capture.keeps_s >
-          10 * rig.product.capture().keeps_s(diagnostics::Profile::Full));
-}
-
-// The pad walks off the last capture rather than trapping the thumb on the page.
-TEST_CASE("capture: a tap off the last capture hands the page back to the menu it came from") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    uint32_t now_ms = 100;
-    taxi(rig, now_ms, 5);
-    open_capture_page(rig, now_ms);
-
-    rig.tap(now_ms);
-    rig.tap(now_ms);
-    CHECK(rig.product.screen().page() == go::Page::Capture);
-    rig.tap(now_ms);
-    CHECK(rig.product.screen().page() == go::page_after(go::Page::Capture));
+    CHECK_FALSE(rig.product.capture().capturing());
 }
 
 TEST_CASE("capture: what an armed device recorded comes back through the offload") {
@@ -196,7 +137,7 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     REQUIRE(rig.product.diagnostics().armed());
     const uint32_t session = rig.product.capture().session_id();
     CHECK(session >= Rig::kBaseUtcS);
@@ -207,9 +148,7 @@ TEST_CASE("capture: what an armed device recorded comes back through the offload
           rig.product.capture().records_written());
     CHECK(rig.product.capture().stopped() == bus::CaptureStop::None);
 
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    stop_over_the_link(rig, now_ms);
     CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
     const uint32_t written = rig.product.capture().records_written();
@@ -238,12 +177,10 @@ TEST_CASE(
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     const uint32_t session = rig.product.capture().session_id();
     feed(rig, now_ms, 60);
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    stop_over_the_link(rig, now_ms);
     const uint32_t written = rig.product.capture().records_written();
     REQUIRE(written > 40);
 
@@ -280,7 +217,7 @@ TEST_CASE("capture: both stores are offloaded in one session, each under its own
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     taxi(rig, now_ms, 10);
     fly(rig, now_ms, 60);
     taxi(rig, now_ms, 40);
@@ -316,7 +253,7 @@ TEST_CASE("capture: a boot comes up disarmed even with a capture on the flash") 
     REQUIRE(flight.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(flight, now_ms, 5);
-    arm_the_power_run(flight, now_ms);
+    arm_over_the_link(flight, now_ms, "power_run");
     REQUIRE(flight.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
     taxi(flight, now_ms, 20);
     const uint32_t session = flight.product.capture().session_id();
@@ -348,7 +285,7 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     const uint32_t session = rig.product.capture().session_id();
 
     uint32_t refused = 0;
@@ -360,9 +297,7 @@ TEST_CASE("capture: records the ring had to drop reach the flash as a gap") {
     CHECK(rig.product.capture().records_dropped() == refused);
 
     taxi(rig, now_ms, 5);
-    rig.double_press(now_ms);
-    rig.run(now_ms, now_ms + 1000);
-    now_ms += 1000;
+    stop_over_the_link(rig, now_ms);
 
     const Capture walk = offload_capture(rig, now_ms, session);
     CHECK(walk.decoded);
@@ -375,7 +310,7 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     REQUIRE(rig.product.capture().capturing());
     const uint32_t session = rig.product.capture().session_id();
 
@@ -415,7 +350,7 @@ TEST_CASE("capture: what is still queued reaches the flash on the way to power o
     CHECK(field(listed, "truncated") == "false");
 }
 
-TEST_CASE("capture: a device with no partition offers no capture to arm") {
+TEST_CASE("capture: a device with no partition refuses a capture as no_storage") {
     constexpr ports::Capabilities kNoStorage = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Storage));
@@ -424,13 +359,15 @@ TEST_CASE("capture: a device with no partition offers no capture to arm") {
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
 
-    open_capture_page(rig, now_ms);
-    CHECK_FALSE(rig.state().capture.available);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "NO FLASH INSTALLED", 0, 0, 200, 200));
-
-    rig.double_press(now_ms);
+    rig.send("{\"command\":\"capture\",\"profile\":\"full\"}");
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
+    CHECK_FALSE(rig.state().capture.available);
+    std::string reply;
+    for (const auto& frame : rig.platform.link().sent)
+        if (frame.endpoint == events::Endpoint::Config) reply = link_text(frame.bytes);
+    CHECK(reply ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"no_storage\"}");
     CHECK_FALSE(rig.product.diagnostics().armed());
     CHECK_FALSE(rig.product.capture().capturing());
 }

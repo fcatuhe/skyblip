@@ -6,6 +6,7 @@ require_relative "test_helpers/activation_test_helper"
 require_relative "test_helpers/connecting_agents"
 require_relative "test_helpers/configuring"
 require_relative "test_helpers/caching"
+require_relative "test_helpers/capture_bodies"
 require "webmock/minitest"
 require "vcr"
 
@@ -19,6 +20,7 @@ module ActiveSupport
 
     include Configuring
     include Caching
+    include CaptureBodies
 
     def vcr(cassette, &block) = VCR.use_cassette(cassette, &block)
   end

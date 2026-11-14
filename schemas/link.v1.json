@@ -96,7 +96,7 @@
     },
     {
       "command": "diagnostics", "code": 9, "endpoint": "config", "sender": "both",
-      "description": "One dump, two surfaces, one table behind both (firmware/core/comms/diagnostics.h). Asked with the bare command and answered as one frame per subsystem, or more where the negotiated payload cannot carry a subsystem whole: every frame carries group, part and more, no frame mixes two groups, and no frame exceeds the payload the asking central negotiated. To a USB host that raised DTR the same table is printed every ten seconds, one line per subsystem, '<group> key=value key=\"text value\" ...', with the same group names, keys and values, an enumeration printed as the words the glass uses (reset=\"CPU LOCKUP\" where the link carries lockup). Asking before the device has collected a dump is refused no_statistics, since a device must not report health it has not measured. Nothing here is reset by being read. Each key's description starts with the group it belongs to. The widest group, the radio group, is 162 bytes, and the adsb group's 127. Key 53, the adsb group's invalid, is retired and never reused: crc and unsupported split it.",
+      "description": "One dump, two surfaces, one table behind both (firmware/core/comms/diagnostics.h). Asked with the bare command and answered as one frame per subsystem, or more where the negotiated payload cannot carry a subsystem whole: every frame carries group, part and more, no frame mixes two groups, and no frame exceeds the payload the asking central negotiated. To a USB host that raised DTR the same table is printed every ten seconds, one line per subsystem, '<group> key=value key=\"text value\" ...', with the same group names, keys and values, an enumeration printed as the words the glass uses (reset=\"CPU LOCKUP\" where the link carries lockup). Asking before the device has collected a dump is refused no_statistics, since a device must not report health it has not measured. Nothing here is reset by being read. Each key's description starts with the group it belongs to. The widest group, the radio group, is 162 bytes, the adsb group's 127, and the capture group's 78. A unit whose flash holds a capture ring answers the capture group, so a page reads whether a capture runs and what one costs before it asks for one. Key 53, the adsb group's invalid, is retired and never reused: crc and unsupported split it.",
       "keys": [
         {"name": "group", "number": 1, "type": "enum", "enum": "group", "required": true, "description": "The subsystem every field in this frame belongs to. One console line per group, in this order."},
         {"name": "part", "number": 2, "type": "unsigned", "required": true, "description": "Frame index within one answer, from 0. A group that does not fit the negotiated payload spans consecutive parts"},
@@ -166,7 +166,21 @@
         {"name": "tx_given_up", "number": 67, "type": "unsigned", "description": "radio. Turns of own-ship's schedule, a position, a Status or a name, that never went out: neither in their second nor on a retry 2 s on the same channel before their type's next turn (core/timing/README.md)"},
         {"name": "tx_deferred", "number": 68, "type": "unsigned", "description": "radio. Bursts of own-ship's whose clear channel assessment found the channel busy and that were armed again a random 5 to 40 ms later inside their own window, to listen again (ADS-L D.3, EN 300 220-1 5.21.1, core/timing/README.md)"},
         {"name": "tx_forced", "number": 69, "type": "unsigned", "description": "radio. Bursts keyed on a busy channel on the ground, a Status, a name or a position, because 3000 ms had passed since their first attempt, each followed by 2000 ms from its end with nothing of ours on air. Nothing is forced airborne (ADS-L D.3)"},
-        {"name": "tx_busy_missed", "number": 70, "type": "unsigned", "description": "radio. Bursts found busy that could not be armed again inside their window, so they missed their second and the 2 s retry took them (ADS-L D.3, core/timing/README.md)"}
+        {"name": "tx_busy_missed", "number": 70, "type": "unsigned", "description": "radio. Bursts found busy that could not be armed again inside their window, so they missed their second and the 2 s retry took them (ADS-L D.3, core/timing/README.md)"},
+        {"name": "armed", "number": 71, "type": "boolean", "description": "capture. A diagnostics capture is running (firmware/core/diagnostics/README.md). The capture group is present only on a unit whose flash holds a capture ring"},
+        {"name": "profile", "number": 72, "type": "enum", "enum": "capture_profile", "description": "capture. The profile of the capture that runs, full, power_run or flight_run. Absent while none runs"},
+        {"name": "session", "number": 73, "type": "unsigned", "description": "capture. The log session the running capture writes, or the last one it wrote, which the log endpoint's list and read address. 0 before the first capture since boot"},
+        {"name": "records", "number": 74, "type": "unsigned", "description": "capture. Records the session has written to flash"},
+        {"name": "records_dropped", "number": 75, "type": "unsigned", "description": "capture. Records the RAM ring dropped before the flash took them, each counted in a gap record where it happened"},
+        {"name": "sectors", "number": 76, "type": "unsigned", "description": "capture. Flash sectors the capture owns now"},
+        {"name": "keeps_s", "number": 77, "type": "unsigned", "description": "capture. Seconds of itself the running capture keeps as its ring rotates, at the rate it is producing, which is the span a fetch can bring back"},
+        {"name": "takes_sectors", "number": 78, "type": "unsigned", "description": "capture. Sectors a capture may grow into: every free one, and what the flights hold above their protected hours. Every profile pays the same"},
+        {"name": "evicts_flights", "number": 79, "type": "unsigned", "description": "capture. Whole stored flights a capture that grows into takes_sectors erases, oldest first"},
+        {"name": "keeps_full_s", "number": 80, "type": "unsigned", "description": "capture. Seconds a full capture keeps of itself in takes_sectors, at its nominal rate, before it is armed"},
+        {"name": "keeps_power_run_s", "number": 81, "type": "unsigned", "description": "capture. Seconds a power run or a flight run keeps of itself in takes_sectors, at their nominal rate, before it is armed"},
+        {"name": "uplink_frames", "number": 82, "type": "unsigned", "description": "traffic. Ground station uplink packets that framed, since boot"},
+        {"name": "uplink_bad", "number": 83, "type": "unsigned", "description": "traffic. Uplink packets refused as a whole, since boot"},
+        {"name": "uplink_targets", "number": 84, "type": "unsigned", "description": "traffic. Aircraft the uplink packets carried into the traffic table, since boot"}
       ]
     },
     {
@@ -342,7 +356,7 @@
     },
     {
       "command": "health", "code": 27, "endpoint": "peer", "sender": "unit",
-      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo places its exports against, and whether Bravo keeps its alarm silent for this Go (#179), and the transponder it takes for the aircraft's own. 48 bytes at its widest. Keys 8 to 10 are retired (#179) and never reused.",
+      "description": "Bravo to its paired Go on the peer endpoint, once a second whatever the traffic, so the Go tells an empty sky from a lost link (#193). It says which position Bravo places its exports against, and whether Bravo keeps its alarm silent for this Go (#179), the transponder it takes for the aircraft's own, and what Bravo runs, holds and hears, which a Go shows for a unit that has no glass. 76 bytes at its widest. Keys 8 to 10 are retired (#179) and never reused.",
       "keys": [
         {"name": "protocol_version", "number": 1, "type": "unsigned", "required": true, "description": "The version of the peer frames Bravo speaks: 1, observation, health and peer_claim as this registry gives them. It moves when a peer key changes meaning, not when one is added"},
         {"name": "boot_epoch", "number": 2, "type": "unsigned", "required": true, "description": "Bravo's boot epoch, the one its observations carry"},
@@ -355,7 +369,12 @@
         {"name": "paired", "number": 12, "type": "boolean", "required": true, "description": "Bravo holds this Go's pin, or offers it since its button answered this Go's request (#192). A Go asking to pair pins Bravo only on true. A paired Go that reads false holds a pin Bravo does not, from a pairing cut short or a Bravo that pinned another Go, so it drops its pin and says so"},
         {"name": "own_transponder", "number": 13, "type": "unsigned", "description": "The 24-bit ICAO address of the transponder Bravo takes for the aircraft's own: the loudest DF17 emitter it hears, above a floor and ahead of every other one by a lead, for a hold (products/skyblip_bravo/README.md, Own transponder). Bravo hears it before its own-ICAO filter, so it stays present once the address is set. Never 0, which as own_icao means unset, and a Go refuses a health that carries 0. Absent while no emitter qualifies. The Go proposes it as own_icao only on the ground and only on the pilot's press"},
         {"name": "own_transponder_callsign", "number": 14, "type": "text", "description": "own_transponder's identification, at most eight characters as ADS-B's identification message carries them, trailing blanks removed. Absent without own_transponder, and until its identification is heard"},
-        {"name": "own_transponder_category", "number": 15, "type": "unsigned", "description": "The ADS-L G.1.3 aircraft category protocol::adsb_emitter_to_adsl_category maps own_transponder's emitter category into, as observation's aircraft_category. Absent without own_transponder, and while it is 0, no category"}
+        {"name": "own_transponder_category", "number": 15, "type": "unsigned", "description": "The ADS-L G.1.3 aircraft category protocol::adsb_emitter_to_adsl_category maps own_transponder's emitter category into, as observation's aircraft_category. Absent without own_transponder, and while it is 0, no category"},
+        {"name": "firmware", "number": 16, "type": "text", "description": "The version of the image Bravo runs, as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999. Absent while the image header could not be read. Bravo has no glass, so the Go's BRAVO LOG page is where a pilot reads it"},
+        {"name": "battery_percent", "number": 17, "type": "unsigned", "description": "Bravo's state of charge, 0 to 100, as the status frame's battery_percent: absent until its gauge has a reading of the cell, and while the cable is in"},
+        {"name": "charging", "number": 18, "type": "boolean", "required": true, "description": "Bravo's cable is in, as the status frame's charging"},
+        {"name": "power_level", "number": 19, "type": "enum", "enum": "power_level", "required": true, "description": "What Bravo's cutoff rule made of its cell, as the status frame's power_level. A Go says BRAVO BAT on its radar from low down, the step Bravo's own lamp starts winking red at"},
+        {"name": "frame_rate_hz", "number": 20, "type": "unsigned", "description": "1090 MHz frames Bravo's receiver handed up over the last whole second, as diagnostics' frame_rate_hz. Absent while the receiver is not armed. A receiver that listens and hears nothing reads 0, which a sky with no transponder in range gives too"}
       ]
     },
     {
@@ -379,7 +398,7 @@
     },
     {
       "command": "capture", "code": 29, "endpoint": "config", "sender": "host",
-      "description": "Host to unit: asks to arm a diagnostics capture under profile, or to stop the one running (#247). Only a skyBlip Bravo answers it, because it has no glass to arm one on. A Go answers unknown_command and arms a capture on its glass only (firmware/products/skyblip_go/README.md, Which capture is armed). Refused, in the order checked: prompt_pending while a prompt stands and refused_on_device after one press refused a prompt on this link (firmware/core/comms/README.md, One prompt at a time), in_flight while the unit is airborne, invalid without a profile, out_of_range for a profile past stop, no_storage on a unit whose flash holds no capture ring, capturing for an arm while a capture runs, and not_capturing for a stop while none runs. Otherwise the unit answers confirm_capture and blinks the prompt on its lamp, and two presses answer capture and arm the profile or stop the capture. A take-off cancels the prompt. 6 bytes at its widest.",
+      "description": "Host to unit: asks to arm a diagnostics capture under profile, or to stop the one running (#247). A Go and a Bravo answer it, so a page arms a capture in the field and fetches it later over the log endpoint (firmware/products/skyblip_go/README.md, Which capture is armed). Firmware from before the Go served it answers unknown_command on a Go. Refused, in the order checked: prompt_pending while a prompt stands and refused_on_device after one press refused a prompt on this link (firmware/core/comms/README.md, One prompt at a time), in_flight while the unit is airborne, invalid without a profile, out_of_range for a profile past stop, no_storage on a unit whose flash holds no capture ring, capturing for an arm while a capture runs, and not_capturing for a stop while none runs. Otherwise the unit answers confirm_capture and asks, on a Go's glass with the profile and the flights it erases, on a Bravo's lamp, and two presses answer capture and arm the profile or stop the capture. A take-off cancels the prompt. 6 bytes at its widest.",
       "keys": [
         {"name": "profile", "number": 1, "type": "enum", "enum": "capture_profile", "required": true, "description": "full, power_run or flight_run arms a capture of that profile (firmware/core/diagnostics/README.md), and stop stops the capture that runs"}
       ]
@@ -426,7 +445,7 @@
     },
     {
       "command": "install_report", "code": 35, "endpoint": "config", "sender": "both",
-      "description": "Asked with the bare command, answered with what the unit wrote down about its last install, so a page or blip.py can say why an update did not land (#278). Troubleshooting that #294 retires once Bluetooth updates land in the field. The unit keeps the report beside the update record and forgets both together, so a frame with no key but command means no install is on record. 22 bytes at its widest, so a 20-byte link refuses it small_mtu (firmware/core/dfu/README.md, The install report).",
+      "description": "Asked with the bare command, answered with what the unit wrote down about its last install and about an upload it refused once it landed, so a page or blip.py can say why an update did not land, from a distance (#278). The unit keeps the install's keys beside the update record and forgets them together. It keeps the landing's keys in memory from the refusal until the next upload window opens or the unit restarts. A frame with no key but command means neither is on record. 30 bytes at its widest, so a 20-byte link refuses it small_mtu (firmware/core/dfu/README.md, The install report).",
       "keys": [
         {"name": "check", "number": 1, "type": "enum", "enum": "staged_check", "description": "What the image that sent the update found in slot1 before it restarted: matched, damaged (its bytes do not hash to its SHA-256 TLV, or its header is not an image's), unreadable (the flash refused a read), undigested (no SHA-256 TLV) or unchecked. Only matched is marked for a swap"},
         {"name": "swap", "number": 2, "type": "enum", "enum": "swap_type", "description": "The swap MCUboot would run, read back from the slots after the request: test is the one asked for, none means the request did not reach slot1's trailer"},
@@ -434,7 +453,9 @@
         {"name": "boots", "number": 4, "type": "unsigned", "description": "The restarts since the install, counted by whichever image came up, up to 255. One for a swap that landed or was refused, two for a new image that ran and was reverted"},
         {"name": "probation_boots", "number": 5, "type": "unsigned", "description": "How many of those restarts ran the new image on probation, up to 255. 0 means the new image never ran"},
         {"name": "proof", "number": 6, "type": "enum", "enum": "proof", "description": "How far the new image's last run on probation got towards confirming itself: none if it never ran, then booted, started, gnss_heard, hub_bootable and proven in the order it checks them, or confirm_failed when MCUboot refused to mark it confirmed"},
-        {"name": "reset", "number": 7, "type": "enum", "enum": "reset", "description": "Why the latest restart happened, as the diagnostics dump says it. On the old image after a revert, it names what ended the new image's run"}
+        {"name": "reset", "number": 7, "type": "enum", "enum": "reset", "description": "Why the latest restart happened, as the diagnostics dump says it. On the old image after a revert, it names what ended the new image's run"},
+        {"name": "landed_check", "number": 8, "type": "enum", "enum": "staged_check", "description": "What the unit found in slot1 when it refused an upload that had landed, nothing_staged, not_approved or wrong_key: matched, damaged, unreadable or undigested, as check says it. Matched means slot1 holds the whole image its digest names, so a refusal with it is about the image, not the flash"},
+        {"name": "staged_key", "number": 9, "type": "bytes", "bytes": 4, "description": "With landed_check, the first four bytes of the KEYHASH TLV the unit read in slot1, as update's key says the running one. Absent when the unit found none"}
       ]
     },
     {
@@ -562,7 +583,8 @@
         {"name": "traffic", "code": 2, "mirrors": "Traffic"},
         {"name": "gnss", "code": 3, "mirrors": "Gnss"},
         {"name": "power", "code": 4, "mirrors": "Power"},
-        {"name": "adsb", "code": 5, "mirrors": "Adsb"}
+        {"name": "adsb", "code": 5, "mirrors": "Adsb"},
+        {"name": "capture", "code": 6, "mirrors": "Capture"}
       ]
     },
     "reset": {
@@ -684,7 +706,7 @@
       ]
     },
     "capture_profile": {
-      "mirrors": {"type": "comms::CaptureProfile", "header": "core/comms/config.h"},
+      "mirrors": {"type": "comms::CaptureProfile", "header": "core/comms/diagnostics.h"},
       "values": [
         {"name": "full", "code": 0, "mirrors": "Full"},
         {"name": "power_run", "code": 1, "mirrors": "PowerRun"},

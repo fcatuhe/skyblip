@@ -55,6 +55,7 @@ class Product {
     using Board = boards::TEchoPlus<Platform>;
 
     explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {
+        config_link_.config().serve_captures();
         config_link_.config().set_radio_protocols(kRadioProtocols);
     }
 
@@ -127,6 +128,11 @@ class Product {
             if (config_link_.config().recovery_requested()) {
                 config_link_.config().clear_recovery_request();
                 shutdown_.request(power::ShutdownReason::Recovery, now_ms);
+            }
+            if (const std::optional<comms::CaptureProfile> profile =
+                    config_link_.config().capture_requested()) {
+                config_link_.config().clear_capture_request();
+                common::order_capture(diagnostics_, *profile);
             }
         }
         // INFO: fc 13nov26 before drive_shutdown, so the sign starts on the pass after the park's
@@ -467,8 +473,8 @@ class Product {
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
     BravoService bravo_{context_, settings_, config_link_.config(), board_.central()};
-    ScreenService screen_{
-        context_, settings_, config_link_.config(), alarm_, capture_, self_test_snapshot_, bravo_};
+    ScreenService screen_{context_, settings_,           config_link_.config(),
+                          alarm_,   self_test_snapshot_, bravo_};
 
     // The log ticks after own-ship has published the fix and after the radio has
     // published the slot plan it defers to, and before the screen, which is the

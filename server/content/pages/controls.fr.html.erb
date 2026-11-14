@@ -101,15 +101,16 @@ updated_on: "2026-11-09"
         Ouvrez les autres pages par leur nom depuis le menu de la liste. En les fermant, vous
         retrouvez la page où vous étiez. Les écrans ci-dessous servent à
         l&rsquo;établi, au parking et aux rapports de bug. Vous ne pouvez pas y
-        accéder en faisant défiler les pages avec le pavé. Le dernier enregistre un
-        vol pour un rapport de bug&nbsp;: toutes les catégories de données pour un bug, ou seulement
-        l&rsquo;alimentation et les temps d&rsquo;activité pour un essai de décharge. Il indique
-        la place que prendra l&rsquo;enregistrement choisi dans la mémoire flash avant de
-        le lancer.
+        accéder en faisant défiler les pages avec le pavé. Le journal Bravo montre ce que
+        fait tourner un skyBlip Bravo appairé, sa batterie et ce qu&rsquo;entend son
+        récepteur. Pour enregistrer un vol pour un rapport de bug ou un essai de décharge,
+        lancez l&rsquo;enregistrement depuis la page de l&rsquo;appareil dans l&rsquo;application
+        de briefing. L&rsquo;écran indique ce qu&rsquo;il effacera, et deux appuis sur le bouton
+        le lancent.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, données brutes, capture et autotest, les six pages qu'on ouvre par leur nom" %>
+      <%= screen_image_tag "menu-nearby.png", alt: "Le menu de la liste : état, satellites, journal radio, journal Bravo et autotest, les cinq pages qu'on ouvre par leur nom" %>
       <figcaption>Le menu de la liste</figcaption>
     </figure>
   </div>
@@ -131,10 +132,6 @@ updated_on: "2026-11-09"
       <%= screen_image_tag "self-test.png", alt: "La page autotest : une ligne par composant de la carte, avec le composant qui a répondu et le résultat du test" %>
       <figcaption>Autotest</figcaption>
     </figure>
-    <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état à l'arrêt, avec deux types d'enregistrement au choix, FULL pour toutes les catégories de données et POWER RUN pour l'alimentation et les temps d'activité. Elle indique ce qu'occuperait le type choisi : les secteurs de mémoire flash utilisés, les vols enregistrés qui seraient supprimés et les heures d'enregistrement conservées, avec PAD SELECTS, PUSH TWICE TO START en bas" %>
-      <figcaption>Capture</figcaption>
-    </figure>
   </div>
 
   <div class="table-scroll">
@@ -145,7 +142,7 @@ updated_on: "2026-11-09"
       <tbody>
         <tr>
           <th>Un bref contact sur le pavé</th>
-          <td>passe à la page suivante, ou sélectionne le type d&rsquo;enregistrement suivant sur la page capture</td>
+          <td>passe à la page suivante</td>
           <td>passe à la ligne suivante, ou revient à la page du menu après la dernière ligne</td>
         </tr>
         <tr>
@@ -160,7 +157,7 @@ updated_on: "2026-11-09"
         </tr>
         <tr>
           <th>Deux pressions, espacées de moins de 0,6&nbsp;s</th>
-          <td colspan="2">acceptent une demande de confirmation à l&rsquo;écran, lancent ou arrêtent un enregistrement sur la page capture, et n&rsquo;ont aucun effet ailleurs</td>
+          <td colspan="2">acceptent une demande de confirmation à l&rsquo;écran, et n&rsquo;ont aucun effet ailleurs</td>
         </tr>
         <tr>
           <th>Appui de 2&nbsp;s sur le bouton</th>

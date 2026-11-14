@@ -235,6 +235,7 @@ struct Situation {
     bool prompting{false};
     bool pairing{false};
     bool linked{false};
+    // INFO: fc 15nov26 every product, since a page arms a capture on a Go too
     bool capturing{false};
 };
 

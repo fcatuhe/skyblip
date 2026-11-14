@@ -133,10 +133,10 @@ struct GroundedUnitWithLogs {
         rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         REQUIRE(rig.setup() == Status::Ok);
         taxi(rig, now_ms, 5);
-        arm_from_the_page(rig, now_ms);
+        arm_over_the_link(rig, now_ms);
         capture = rig.product.capture().session_id();
         feed(rig, now_ms, 30);
-        rig.double_press(now_ms);
+        stop_over_the_link(rig, now_ms);
         taxi(rig, now_ms, 20);
         fly(rig, now_ms, 80);
         taxi(rig, now_ms, 40);
@@ -263,6 +263,8 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.residual_valid = true;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
+    dump.capture_available = true;
+    dump.capture_armed = true;
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
     config.set_settings_fallback(settings::Fallback::Prior);
@@ -275,6 +277,11 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
     report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);
     config.set_install_report(&report);
+    dfu.staged_key_valid = true;
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    dfu.finished_upload = true;
+    config.tick(0);
     config.set_radio_protocols(bravo::kRadioProtocols);
     for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
@@ -341,9 +348,7 @@ const std::vector<Answer> kAnswers = {
     {"ownship", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
-    {"capture", kConfig,
-     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
-     "unknown_command"},
+    {"capture", kConfig, prompt("confirm_capture"), "invalid"},
     {"attest", kConfig, reply("attestation"), "invalid"},
     {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
     {"trust_browser", kConfig,

@@ -1,22 +1,23 @@
-"""blip.py's capture subcommand: arm or stop a skyBlip Bravo's diagnostics capture.
+"""blip.py's capture subcommand: arm or stop a unit's diagnostics capture.
 
     ./scripts/blip.py --name "skyBlip Bravo" capture power_run
-    ./scripts/blip.py --name "skyBlip Bravo" capture stop
+    ./scripts/blip.py --name "skyBlip Go" capture stop
 
-The unit blinks its prompt on the lamp and waits for two presses on its button,
-so this waits for that verdict as long as the prompt stands. A Go answers
-unknown_command: its captures are armed on its glass only.
+The unit asks on its glass, or a Bravo on its lamp, and waits for two presses
+on its button, so this waits for that verdict as long as the prompt stands.
+Firmware from before a Go served it answers unknown_command on a Go.
 """
 import blip_frames as frames
 
 PROFILES = tuple(value["name"] for value in frames.REGISTRY["enums"]["capture_profile"]["values"])
 # INFO: fc 12nov26 comms::kPromptCeilingMs is 30 s, and the expired verdict lands in the pass after it
 VERDICT_WAIT_S = 35.0
-PRESS_TWICE = "the lamp blinks green fast: press the button twice to allow it, once to refuse it"
+PRESS_TWICE = ("the unit asks on its glass, or a Bravo blinks its lamp green fast: "
+               "press the button twice to allow it, once to refuse it")
 
 
 def add_parser(sub, run):
-    capture = sub.add_parser("capture", help="arm or stop a Bravo's diagnostics capture, "
+    capture = sub.add_parser("capture", help="arm or stop a unit's diagnostics capture, "
                                              "allowed with two presses on the unit")
     capture.add_argument("profile", choices=PROFILES, help="the capture to arm, or stop")
     capture.add_argument("--timeout", type=float, default=VERDICT_WAIT_S)
