@@ -10,6 +10,7 @@
         <li><%= link_to "Events", admin_events_path, "aria-current": ("page" if controller_path == "admin/events") %></li>
         <li><%= link_to "Users", admin_users_path, "aria-current": ("page" if controller_path == "admin/users") %></li>
         <li><%= link_to "Units", admin_units_path, "aria-current": ("page" if controller_path == "admin/units") %></li>
+        <li><%= link_to "Agents", admin_agents_path, "aria-current": ("page" if controller_path == "admin/agents") %></li>
         <li><%= link_to "Jobs", admin_mission_control_jobs_path, target: "mission_control" %></li>
       </ul>
       <%= button_to "Sign out", session_path, method: :delete, class: "button button--secondary button--small" %>

@@ -83,4 +83,12 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
   ensure
     I18n.backend = loaded_backend
   end
+
+  test "the admin nav leads to every page of the admin area" do
+    sign_in_as users(:francois)
+
+    get admin_insights_path
+
+    assert_equal %w[Analytics Insights Errors Events Users Units Agents Jobs], css_select(".admin-nav li a").map { it.text.strip }
+  end
 end
