@@ -95,6 +95,18 @@ inline Diagnostics busy_device() {
     const uint32_t levels[ports::AdsbReceiverStatistics::kRssiBuckets] = {0,    120, 900, 3000,
                                                                           2500, 800, 90,  3};
     std::copy(std::begin(levels), std::end(levels), std::begin(diagnostics.adsb.rssi));
+
+    diagnostics.capture_available = true;
+    diagnostics.capture_armed = true;
+    diagnostics.capture_profile = comms::CaptureProfile::PowerRun;
+    diagnostics.capture_session = 41;
+    diagnostics.capture_records = 960;
+    diagnostics.capture_sectors = 6;
+    diagnostics.capture_keeps_s = 433500;
+    diagnostics.capture_takes_sectors = 170;
+    diagnostics.capture_evicts_flights = 3;
+    diagnostics.capture_keeps_full_s = 1926;
+    diagnostics.capture_keeps_power_run_s = 433500;
     return diagnostics;
 }
 
@@ -170,6 +182,18 @@ inline Diagnostics widest_device() {
     diagnostics.adsb.command_errors = 0xFFFFFFFFu;
     diagnostics.adsb.device_errors = 0xFFFF;
     std::fill(std::begin(diagnostics.adsb.rssi), std::end(diagnostics.adsb.rssi), 0xFFFFFFFFu);
+    diagnostics.capture_available = true;
+    diagnostics.capture_armed = true;
+    diagnostics.capture_profile = comms::CaptureProfile::FlightRun;  // "FLIGHT RUN"
+    diagnostics.capture_session = 0xFFFFFFFFu;
+    diagnostics.capture_records = 0xFFFFFFFFu;
+    diagnostics.capture_dropped = 0xFFFFFFFFu;
+    diagnostics.capture_sectors = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_s = 0xFFFFFFFFu;
+    diagnostics.capture_takes_sectors = 0xFFFFFFFFu;
+    diagnostics.capture_evicts_flights = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_full_s = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_power_run_s = 0xFFFFFFFFu;
     return diagnostics;
 }
 

@@ -245,6 +245,17 @@ enum : uint32_t {
     kTxDeferred = 68,
     kTxForced = 69,
     kTxBusyMissed = 70,
+    kArmed = 71,
+    kProfile = 72,
+    kSession = 73,
+    kRecords = 74,
+    kRecordsDropped = 75,
+    kSectors = 76,
+    kKeepsS = 77,
+    kTakesSectors = 78,
+    kEvictsFlights = 79,
+    kKeepsFullS = 80,
+    kKeepsPowerRunS = 81,
 };
 }
 

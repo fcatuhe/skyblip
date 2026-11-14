@@ -43,6 +43,10 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "adsb frames=51234 frame_rate_hz=212 dropped=4 rearms=1 resets=0 command_errors=0 "
               "errors=128 rssi_dbm=0,120,900,3000,2500,800,90,3 crc=3021 unsupported=412 "
               "folded=1830 aircraft=7\n"));
+    CHECK(has(text,
+              "capture armed=true profile=\"POWER RUN\" session=41 records=960 "
+              "records_dropped=0 sectors=6 keeps_s=433500 takes_sectors=170 evicts_flights=3 "
+              "keeps_full_s=1926 keeps_power_run_s=433500\n"));
 
     DiagnosticsReport report(busy_device(), link::Command::Diagnostics);
     CHECK(report.line_count() == DiagnosticsReport::kGroupCount);
@@ -221,5 +225,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 66);
+    CHECK(fields == 77);
 }

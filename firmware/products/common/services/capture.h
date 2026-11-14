@@ -48,6 +48,8 @@ class CaptureService : public runtime::Service {
     bus::CaptureStop stopped() const { return stopped_; }
 
     uint32_t keeps_s(diagnostics::Profile profile) const;
+    // INFO: fc 15nov26 the dump's capture group, so a page reads the price before it asks for one
+    void describe(comms::Diagnostics& out) const;
 
    private:
     void open(uint32_t now_ms);

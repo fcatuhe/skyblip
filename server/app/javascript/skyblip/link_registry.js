@@ -846,6 +846,62 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_busy_missed",
           "number": 70,
           "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1214,6 +1270,62 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_busy_missed",
           "number": 70,
+          "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
           "type": "unsigned"
         }
       ]
@@ -2677,6 +2789,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "adsb",
           "code": 5,
           "mirrors": "Adsb"
+        },
+        {
+          "name": "capture",
+          "code": 6,
+          "mirrors": "Capture"
         }
       ]
     },
@@ -3075,7 +3192,7 @@ export const LINK_REGISTRY = Object.freeze({
     "capture_profile": {
       "mirrors": {
         "type": "comms::CaptureProfile",
-        "header": "core/comms/config.h"
+        "header": "core/comms/diagnostics.h"
       },
       "values": [
         {

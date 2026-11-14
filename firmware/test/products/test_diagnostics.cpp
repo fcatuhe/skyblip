@@ -202,7 +202,7 @@ TEST_CASE("diagnostics: one dump every ten seconds, one refresh every second") {
     // reason without waiting ten seconds for it.
     pass(rig, dump, now_ms, 0);
     const size_t first = dump.sink().lines.size();
-    CHECK(first == 5);
+    CHECK(first == 6);
     const uint32_t refreshes = rig.product.config_link().config().diagnostics().refreshes;
     CHECK(refreshes == 1);
 
@@ -283,14 +283,14 @@ TEST_CASE("diagnostics: the cadence and the uptime survive the 49.7-day wrap") {
 
     // The first pass always dumps, and it dumps 49.7 days of uptime.
     pass_across_wrap(rig, dump, now_ms, 0);
-    REQUIRE(dump.sink().lines.size() == 5);
+    REQUIRE(dump.sink().lines.size() == 6);
     CHECK(has(dump.sink().with("system"), "uptime_s=4294967"));
 
     // Twenty seconds of passes, straddling zero: two more dumps, ten seconds
     // apart, exactly as on any other day.
     const uint32_t refreshes_before = rig.product.config_link().config().diagnostics().refreshes;
     pass_across_wrap(rig, dump, now_ms, 20000);
-    CHECK(dump.sink().lines.size() == 15);
+    CHECK(dump.sink().lines.size() == 18);
     CHECK(rig.product.config_link().config().diagnostics().refreshes >= refreshes_before + 20);
 
     // And the uptime is small, positive, and counting again from the wrap.

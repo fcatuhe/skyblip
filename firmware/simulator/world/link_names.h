@@ -121,9 +121,10 @@ inline constexpr Value kPowerLevelValues[] = {
 inline constexpr Enumeration kPowerLevel{kPowerLevelValues, 5};
 
 inline constexpr Value kGroupValues[] = {
-    {"system", 0}, {"radio", 1}, {"traffic", 2}, {"gnss", 3}, {"power", 4}, {"adsb", 5},
+    {"system", 0}, {"radio", 1}, {"traffic", 2}, {"gnss", 3},
+    {"power", 4},  {"adsb", 5},  {"capture", 6},
 };
-inline constexpr Enumeration kGroup{kGroupValues, 6};
+inline constexpr Enumeration kGroup{kGroupValues, 7};
 
 inline constexpr Value kResetValues[] = {
     {"unknown", 0},  {"power_on", 1}, {"pin", 2},          {"brownout", 3},       {"software", 4},
@@ -409,6 +410,17 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"tx_deferred", 68, Type::Unsigned, nullptr, 0, false},
     {"tx_forced", 69, Type::Unsigned, nullptr, 0, false},
     {"tx_busy_missed", 70, Type::Unsigned, nullptr, 0, false},
+    {"armed", 71, Type::Boolean, nullptr, 0, false},
+    {"profile", 72, Type::Enum, &kCaptureProfile, 0, false},
+    {"session", 73, Type::Unsigned, nullptr, 0, false},
+    {"records", 74, Type::Unsigned, nullptr, 0, false},
+    {"records_dropped", 75, Type::Unsigned, nullptr, 0, false},
+    {"sectors", 76, Type::Unsigned, nullptr, 0, false},
+    {"keeps_s", 77, Type::Unsigned, nullptr, 0, false},
+    {"takes_sectors", 78, Type::Unsigned, nullptr, 0, false},
+    {"evicts_flights", 79, Type::Unsigned, nullptr, 0, false},
+    {"keeps_full_s", 80, Type::Unsigned, nullptr, 0, false},
+    {"keeps_power_run_s", 81, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -654,8 +666,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 70},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 70},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 81},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 81},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

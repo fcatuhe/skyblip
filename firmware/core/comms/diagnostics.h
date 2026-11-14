@@ -1,8 +1,8 @@
 // core/comms/diagnostics.h: the one status dump, and the only place its fields
 // are named.
 //
-// INFO: fc 11nov26 six subsystems, the sixth only on a 1090 MHz receiver, and nothing is reset by
-// being read
+// INFO: fc 15nov26 seven subsystems, adsb only on a 1090 MHz receiver, capture only on a capture
+// ring
 #ifndef SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 #define SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 
@@ -19,6 +19,11 @@
 #include "ports/gnss.h"
 
 namespace skyblip::comms {
+
+enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
+
+// INFO: fc 15nov26 the words the console prints, as the capture prompt on the glass names them
+const char* capture_profile_word(CaptureProfile profile);
 
 // What the dump is made of. A plain snapshot with two writers and no logic: the
 // product's collector fills the first half from the services and the board
@@ -95,6 +100,19 @@ struct Diagnostics {
     uint32_t adsb_folded{0};
     uint32_t adsb_aircraft{0};
 
+    bool capture_available{false};
+    bool capture_armed{false};
+    CaptureProfile capture_profile{CaptureProfile::Full};
+    uint32_t capture_session{0};
+    uint32_t capture_records{0};
+    uint32_t capture_dropped{0};
+    uint32_t capture_sectors{0};
+    uint32_t capture_keeps_s{0};
+    uint32_t capture_takes_sectors{0};
+    uint32_t capture_evicts_flights{0};
+    uint32_t capture_keeps_full_s{0};
+    uint32_t capture_keeps_power_run_s{0};
+
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
@@ -116,8 +134,8 @@ int whole_celsius(int16_t temperature_dc);
 // console lines or as link frames, and then thrown away.
 class DiagnosticsReport {
    public:
-    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb };
-    static constexpr int kGroupCount = 6;
+    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb, Capture };
+    static constexpr int kGroupCount = 7;
 
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
@@ -156,9 +174,10 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 66;
+    static constexpr int kMaxFields = 77;
 
     void build(const Diagnostics& diagnostics, const Group* only);
+    void add_capture(const Diagnostics& diagnostics);
     void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
              const char* text = nullptr);
     int field_bytes(const Field& field) const;

@@ -261,6 +261,8 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.residual_valid = true;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
+    dump.capture_available = true;
+    dump.capture_armed = true;
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
     config.set_settings_fallback(settings::Fallback::Prior);

@@ -62,6 +62,8 @@ class DiagnosticsDump {
         snapshot.adsb_folded = product.adsb().folded();
         snapshot.adsb_aircraft = static_cast<uint32_t>(product.adsb().assembly().count());
 
+        product.capture().describe(snapshot);
+
         snapshot.refreshes++;
     }
 

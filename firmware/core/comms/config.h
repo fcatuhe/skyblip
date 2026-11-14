@@ -43,8 +43,6 @@ enum class Pending : uint8_t {
     Capture = 9
 };
 
-enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
-
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
 // reading the app cannot be looking at two different descriptions of the same

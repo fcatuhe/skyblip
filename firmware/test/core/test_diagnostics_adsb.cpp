@@ -50,7 +50,7 @@ bool has(const std::string& haystack, const char* needle) {
 TEST_CASE("diagnostics adsb: a unit with no 1090 MHz receiver prints and sends no adsb group") {
     const Diagnostics go{};
     DiagnosticsReport report(go, link::Command::Diagnostics);
-    CHECK(report.line_count() == DiagnosticsReport::kGroupCount - 1);
+    CHECK(report.line_count() == DiagnosticsReport::kGroupCount - 2);  // nor a capture group
     char line[DiagnosticsReport::kLineBytes];
     for (int i = 0; i < report.line_count(); i++) {
         REQUIRE(report.line(i, line, static_cast<int>(sizeof(line))) > 0);

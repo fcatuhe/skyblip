@@ -113,6 +113,8 @@ class DiagnosticsDump {
         snapshot.charge = product.power().charge_condition();
         snapshot.charge_warnings = product.power().charge_warnings();
 
+        product.capture().describe(snapshot);
+
         snapshot.refreshes++;
     }
 
