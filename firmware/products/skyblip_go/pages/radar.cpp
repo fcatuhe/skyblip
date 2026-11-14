@@ -2,9 +2,9 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
+#include "protocols/common/geometry.h"
 #include "ui/widgets/skyship.h"
 
 namespace skyblip::go {
@@ -62,7 +62,7 @@ constexpr const Layout& layout_of(const RadarSnapshot& snapshot) {
 int half_chord_in_half_pixels(int radius, int row) {
     const int32_t squared = 4 * radius * radius - (2 * row + 1) * (2 * row + 1);
     if (squared < 0) return -1;
-    int root = square_root<int32_t>(squared);
+    int root = wire::square_root<int32_t>(squared);
     while (root * root > squared) root--;
     return (root - 1) / 2;
 }
@@ -291,8 +291,8 @@ void formation_square(ui::Canvas& canvas) {
     canvas.vertical_line(x1, y0 + corner + 1, y1 - y0 - 2 * corner - 1, true);
     for (int step = 0; step <= 90; step++) {
         const int16_t angle = angle16_of_degrees(step);
-        const int delta_x = corner - (corner * cosine(angle)) / kTrigOne,
-                  delta_y = corner - (corner * sine(angle)) / kTrigOne;
+        const int delta_x = corner - (corner * wire::cosine(angle)) / wire::kTrigOne,
+                  delta_y = corner - (corner * wire::sine(angle)) / wire::kTrigOne;
         canvas.set_pixel(x0 + delta_x, y0 + delta_y, true);
         canvas.set_pixel(x1 - delta_x, y0 + delta_y, true);
         canvas.set_pixel(x0 + delta_x, y1 - delta_y, true);

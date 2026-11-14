@@ -19,8 +19,8 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/common/test/channel.h"
 #include "simulator/simulator.h"
-#include "test/support/rf_channel.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -46,9 +46,9 @@ struct Peer {
         config.sync = protocol::kSharedSync;
         config.sync_bits = protocol::kSharedSyncBits;
         config.payload_bytes = protocol::kRxChipBytes;
-        config.bitrate = protocol::kMBandChipRateBps;
-        config.deviation_hz = protocol::kMBandDeviationHz;
-        config.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
+        config.bitrate = adsl::kMBandChipRateBps;
+        config.deviation_hz = adsl::kMBandDeviationHz;
+        config.bandwidth_hz = adsl::kMBandChannelBandwidthHz;
         REQUIRE(radio.configure_radio(config) == Status::Ok);
         REQUIRE(radio.start_receive() == Status::Ok);
     }
@@ -78,7 +78,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
 
     uint8_t burst[protocol::kSyncWindowChipBytes + protocol::kRxChipBytes];
     std::memcpy(burst, protocol::kSharedSync, protocol::kSyncWindowChipBytes);
-    RfChannel noise(0xC0FFEE);
+    wire::RfChannel noise(0xC0FFEE);
     for (size_t i = protocol::kSyncWindowChipBytes; i < sizeof(burst); i++)
         burst[i] = static_cast<uint8_t>(noise.next());
 
@@ -86,9 +86,9 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
     const uint32_t bad_before = simulator.product().state().air.rx_bad;
     const uint32_t at_ms = start + 2000 + timing::kSlot0StartMs + 200;
     simulator.step(at_ms);
-    REQUIRE(
-        simulator.platform().chips().radio.receive_air(burst, sizeof(burst), /*crc_error=*/false,
-                                                       /*rssi=*/-112, protocol::kMBandChipRateBps));
+    REQUIRE(simulator.platform().chips().radio.receive_air(burst, sizeof(burst),
+                                                           /*crc_error=*/false,
+                                                           /*rssi=*/-112, adsl::kMBandChipRateBps));
     run_on(simulator, at_ms, 200);
 
     CHECK(simulator.product().state().air.rx_noise == 1);
@@ -149,8 +149,8 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
         }
         if (!own) continue;
         dated++;
-        CHECK(ended_ms >= timing::kDirectStartMs);
-        CHECK(ended_ms <= timing::kDirectEndMs);
+        CHECK(ended_ms >= adsl::kDirectStartMs);
+        CHECK(ended_ms <= adsl::kDirectEndMs);
         CHECK(entry.tx_span_valid);
         CHECK(entry.tx_span_us > 0);
     }
@@ -175,9 +175,9 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
         protocol::Frame heard{};
         REQUIRE(peer.frames(mine, heard));
         CHECK(heard.system == protocol::System::AdslDirect);
-        protocol::AdslPacket packet{};
+        adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, heard.data, protocol::kAdslFrameBytes);
+        std::memcpy(packet.data, heard.data, adsl::kFrameBytes);
         REQUIRE(packet.check_crc() == 0);
         packet.descramble();
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
@@ -204,9 +204,9 @@ TEST_CASE("rf: a paraglider below the flight speed transmits every second, fligh
             if (mine.event != simulator::AirEvent::Tx) continue;
             protocol::Frame heard{};
             REQUIRE(peer.frames(mine, heard));
-            protocol::AdslPacket packet{};
+            adsl::Packet packet{};
             packet.reset();
-            std::memcpy(packet.data, heard.data, protocol::kAdslFrameBytes);
+            std::memcpy(packet.data, heard.data, adsl::kFrameBytes);
             packet.descramble();
             if (!packet.is_position()) continue;
             positions++;
@@ -327,9 +327,9 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         transmitted++;
         protocol::Frame sent{};
         REQUIRE(simulator::Air::framed(mine, sent));
-        protocol::AdslPacket packet{};
+        adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, sent.data, protocol::kAdslFrameBytes);
+        std::memcpy(packet.data, sent.data, adsl::kFrameBytes);
         REQUIRE(packet.check_crc() == 0);
         packet.descramble();
         // Every burst we put on air is ours, by address: a relayed frame would

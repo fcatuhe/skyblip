@@ -134,12 +134,12 @@ TEST_CASE("address: the prefix, then the serial the server signed") {
     CHECK(address_of(0x0000) == 0x000000u);
     CHECK(address_of(0x012A) == 0x00012Au);
     CHECK(address_of(0xFFFF) == 0x00FFFFu);
-    CHECK(int(kManufacturerPrefix) == 0x00);
+    CHECK(int(kSkyblipManufacturerPrefix) == 0x00);
 }
 
 // Issue 2 F.2.2 numbers manufacturer pages from 9, so page 49 is table entry 58.
 TEST_CASE("address: the table is a constant, not a field anything can hold") {
-    CHECK(int(kAddressMappingTable) == 58);
+    CHECK(int(kSkyblipAddressMappingTable) == 58);
     const std::string json = config_fields(defaults(), address_of(0x0042));
     CHECK(json.find("\"address\":66,") != std::string::npos);
     CHECK(json.find("\"address_mapping_table\":58,") != std::string::npos);

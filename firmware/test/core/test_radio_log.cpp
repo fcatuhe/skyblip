@@ -56,7 +56,9 @@ TEST_CASE("radio log: every outcome a burst can have is one it keeps") {
     for (radio::Verdict verdict :
          {radio::Verdict::Transmitted, radio::Verdict::Lost, radio::Verdict::Held,
           radio::Verdict::Unarmed, radio::Verdict::Received, radio::Verdict::BadCrc,
-          radio::Verdict::Undecoded, radio::Verdict::Unsupported, radio::Verdict::Unattempted}) {
+          radio::Verdict::Undecoded, radio::Verdict::Unsupported, radio::Verdict::Unattempted,
+          radio::Verdict::Declared, radio::Verdict::Deferred, radio::Verdict::Forced,
+          radio::Verdict::Busy}) {
         radio::Entry entry{};
         entry.verdict = verdict;
         log.record(entry);

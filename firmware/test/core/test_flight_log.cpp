@@ -202,7 +202,7 @@ TEST_CASE("log session: a record a second, the rate ADS-L reports an aircraft in
     CHECK(session.update(flying(kBaseUtcS, 50000), false, 999) == flight::LogAction::Idle);
     CHECK(session.update(flying(kBaseUtcS + 1, 50000), false, 1000) ==
           flight::LogAction::AppendRecord);
-    CHECK(flight::kLogRecordPeriodMs == flight::kAirborneReportPeriodS * 1000);
+    CHECK(flight::kLogRecordPeriodMs == adsl::kAirborneReportPeriodS * 1000);
 }
 
 // M. The record cadence across the 49.7-day wrap of

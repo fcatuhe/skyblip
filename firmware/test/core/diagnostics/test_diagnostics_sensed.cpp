@@ -148,8 +148,8 @@ TEST_CASE("diagnostics record: a burst that carried the Status says so, and a po
     CHECK_FALSE(out.status);
 }
 
-TEST_CASE("diagnostics record: every one of the twelve verdicts survives the slot") {
-    for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Unattempted); i++) {
+TEST_CASE("diagnostics record: every one of the sixteen verdicts survives the slot") {
+    for (uint8_t i = 0; i <= static_cast<uint8_t>(radio::Verdict::Busy); i++) {
         radio::Entry in{};
         in.verdict = static_cast<radio::Verdict>(i);
         uint8_t raw[diagnostics::kRecordBytes]{};

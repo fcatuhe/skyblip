@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
-import { factsOf, newsOf, productWord, running, trackOf } from "controllers/briefing/facts"
+import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
 
@@ -17,7 +17,7 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const LAST_READ = ["aircraft_type", "callsign", "own_icao", "units", "alarm_enabled", "alarm_volume"]
 
 export default class extends Controller {
-  static targets = ["name", "facts", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
+  static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "forgetDialog", "forgetQuestion", "browsers", "browserList", "browsersMessage", "forgetOthers"]
@@ -133,6 +133,7 @@ export default class extends Controller {
     const working = WORKING.has(state?.phase)
     if (page) this.nameTarget.textContent = unit?.name ?? nameOf(this.slugValue)
     this.#facts(unit, state)
+    this.#protocols(linked, state)
     const settling = !page && state?.image?.state === "probation"
     this.menuTarget.hidden = !unit || settling || (working && !(page && PROMPTS[state.task]))
     this.disconnectTarget.hidden = !linked
@@ -161,6 +162,12 @@ export default class extends Controller {
       if (fact === airborne) item.className = "is-airborne"
       return index === 0 ? [item] : [" · ", item]
     }))
+  }
+
+  #protocols(linked, state) {
+    const line = linked ? protocolsLine(state.protocols) : null
+    this.protocolsTarget.hidden = !line
+    this.protocolsTarget.textContent = line ?? ""
   }
 
   #offline(unit, away) {

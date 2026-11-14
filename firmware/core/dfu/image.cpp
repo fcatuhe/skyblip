@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "core/util/little_endian.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::dfu {
 
@@ -21,20 +21,20 @@ constexpr size_t kTlvReadBytes = 256;
 constexpr size_t kHashChunkBytes = 256;
 
 size_t past_protected_area(const uint8_t* tlvs, size_t bytes) {
-    if (bytes >= kTlvInfoBytes && get_uint16(tlvs) == kProtectedTlvMagic)
-        return get_uint16(tlvs + 2);
+    if (bytes >= kTlvInfoBytes && wire::get_uint16(tlvs) == kProtectedTlvMagic)
+        return wire::get_uint16(tlvs + 2);
     return 0;
 }
 
 const uint8_t* find_entry(const uint8_t* tlvs, size_t bytes, size_t at, uint16_t magic,
                           uint16_t type, size_t value_bytes) {
-    if (tlvs == nullptr || at + kTlvInfoBytes > bytes || get_uint16(tlvs + at) != magic)
+    if (tlvs == nullptr || at + kTlvInfoBytes > bytes || wire::get_uint16(tlvs + at) != magic)
         return nullptr;
-    const size_t end = at + get_uint16(tlvs + at + 2);
+    const size_t end = at + wire::get_uint16(tlvs + at + 2);
     if (end > bytes) return nullptr;
     for (at += kTlvInfoBytes; at + kTlvEntryBytes <= end;) {
-        const uint16_t entry_type = get_uint16(tlvs + at);
-        const uint16_t entry_bytes = get_uint16(tlvs + at + 2);
+        const uint16_t entry_type = wire::get_uint16(tlvs + at);
+        const uint16_t entry_bytes = wire::get_uint16(tlvs + at + 2);
         at += kTlvEntryBytes;
         if (at + entry_bytes > end) return nullptr;
         if (entry_type == type) return entry_bytes == value_bytes ? tlvs + at : nullptr;
@@ -46,15 +46,15 @@ const uint8_t* find_entry(const uint8_t* tlvs, size_t bytes, size_t at, uint16_t
 }  // namespace
 
 bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out) {
-    if (data == nullptr || bytes < kImageHeaderBytes || get_uint32(data) != kImageMagic)
+    if (data == nullptr || bytes < kImageHeaderBytes || wire::get_uint32(data) != kImageMagic)
         return false;
-    out.header_bytes = get_uint16(data + 8);
-    out.protected_tlv_bytes = get_uint16(data + 10);
-    out.body_bytes = get_uint32(data + 12);
+    out.header_bytes = wire::get_uint16(data + 8);
+    out.protected_tlv_bytes = wire::get_uint16(data + 10);
+    out.body_bytes = wire::get_uint32(data + 12);
     out.version.major = data[20];
     out.version.minor = data[21];
-    out.version.revision = get_uint16(data + 22);
-    out.version.build = get_uint32(data + 24);
+    out.version.revision = wire::get_uint16(data + 22);
+    out.version.build = wire::get_uint32(data + 24);
     return out.header_bytes >= kImageHeaderBytes;
 }
 

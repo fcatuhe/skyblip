@@ -319,14 +319,14 @@ TEST_CASE("radio log page: a failed burst spends no column on the length every b
 }
 
 // A transmission that failed, read as a bad reception, sends a reader after the wrong fault.
-TEST_CASE("radio log page: own-ship's two outcomes read apart, and both read as TX") {
+TEST_CASE("radio log page: own-ship's outcomes read apart, and all read as TX") {
     struct Case {
         radio::Verdict verdict;
         const char* reads;
     };
-    const Case cases[] = {{radio::Verdict::Lost, "LOST"},
-                          {radio::Verdict::Held, "HELD"},
-                          {radio::Verdict::Unarmed, "LOST"}};
+    const Case cases[] = {{radio::Verdict::Lost, "LOST"},    {radio::Verdict::Held, "HELD"},
+                          {radio::Verdict::Unarmed, "LOST"}, {radio::Verdict::Deferred, "DEFER"},
+                          {radio::Verdict::Forced, "FORCE"}, {radio::Verdict::Busy, "BUSY"}};
     for (const Case& example : cases) {
         radio::Log log;
         log.record(entry_of(example.verdict));

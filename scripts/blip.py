@@ -1,9 +1,10 @@
 #!/usr/bin/env -S uv run --script --with bleak
-"""Bench CLI for a skyBlip over BLE: scan, stream, command, capture, bench, fetch, decode.
+"""Bench CLI for a skyBlip over BLE: scan, stream, command, protocols, capture, bench, fetch, decode.
 
     ./scripts/blip.py scan
     ./scripts/blip.py stream --seconds 20
     ./scripts/blip.py command '{"command":"diagnostics"}'
+    ./scripts/blip.py protocols
     ./scripts/blip.py --name "skyBlip Bravo" capture full
     ./scripts/blip.py bench
     ./scripts/blip.py fetch --log diagnostics --all --out capture.ndjson
@@ -24,6 +25,7 @@ import time
 
 import blip_capture
 import blip_frames as frames
+import blip_protocols
 import blip_records as records
 
 NUS_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
@@ -62,6 +64,7 @@ def main():
     one.add_argument("--timeout", type=float, default=4.0)
     one.set_defaults(run=run_command)
 
+    blip_protocols.add_parser(sub, run_protocols)
     blip_capture.add_parser(sub, run_capture)
 
     bench = sub.add_parser("bench", help="connect, round trip, throughput, cadence, jitter")
@@ -140,6 +143,13 @@ async def run_command(args):
             print("%7.1f ms  %s" % (delay * 1000, frames.printable(frame)))
             if refused_as_too_wide(frame):
                 print(SMALL_MTU, file=sys.stderr)
+    return 0
+
+
+async def run_protocols(args):
+    async with await connect(args, config=True) as link:
+        frame = await blip_protocols.answer(link, args.timeout, decoded_or_refused)
+    print("\n".join(blip_protocols.lines(frame, refuse_if_nacked)))
     return 0
 
 

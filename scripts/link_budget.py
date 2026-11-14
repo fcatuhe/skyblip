@@ -45,7 +45,7 @@ RSSI_TRUNCATION_DB = 0.25
 
 Z_SCORE_95 = 1.96
 
-OWN_VERDICTS = ("transmitted", "lost", "held", "unarmed")
+OWN_VERDICTS = ("transmitted", "lost", "held", "unarmed", "deferred", "forced", "busy")
 
 Antenna = collections.namedtuple("Antenna", "gain_dbi source")
 

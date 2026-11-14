@@ -45,6 +45,7 @@ enum class Command : uint8_t {
     Browser = 33,
     ForgetBrowser = 34,
     InstallReport = 35,
+    Protocols = 36,
 };
 
 enum class Reason : uint8_t {
@@ -236,6 +237,13 @@ enum : uint32_t {
     kUnsupported = 61,
     kFolded = 62,
     kAircraft = 63,
+    kTxHeldForB5 = 64,
+    kRxStatus = 65,
+    kUplinkStale = 66,
+    kTxGivenUp = 67,
+    kTxDeferred = 68,
+    kTxForced = 69,
+    kTxBusyMissed = 70,
 };
 }
 
@@ -515,6 +523,14 @@ enum : uint32_t {
 };
 }
 
+namespace protocols_key {
+enum : uint32_t {
+    kAdsbVersion = 1,
+    kAdslVersion = 2,
+    kAlptasVersion = 3,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -545,7 +561,8 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Health:
         case Command::BrowserChallenge:
         case Command::Browser:
-        case Command::InstallReport: return 0x1;
+        case Command::InstallReport:
+        case Command::Protocols: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:

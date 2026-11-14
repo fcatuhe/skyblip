@@ -21,8 +21,26 @@ enum class Verdict : uint8_t {
     Miskeyed = 8,
     Undecoded = 9,
     Unsupported = 10,
-    Unattempted = 11
+    Unattempted = 11,
+    Declared = 12,
+    Deferred = 13,
+    Forced = 14,
+    Busy = 15
 };
+
+// INFO: fc 14nov26 the verdicts of own-ship's bursts, the TX half of the tape
+constexpr bool own_burst(Verdict verdict) {
+    switch (verdict) {
+        case Verdict::Transmitted:
+        case Verdict::Lost:
+        case Verdict::Held:
+        case Verdict::Unarmed:
+        case Verdict::Deferred:
+        case Verdict::Forced:
+        case Verdict::Busy: return true;
+        default: return false;
+    }
+}
 
 struct Entry {
     Verdict verdict{Verdict::Undecoded};

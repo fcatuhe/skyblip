@@ -7,9 +7,6 @@ The unit blinks its prompt on the lamp and waits for two presses on its button,
 so this waits for that verdict as long as the prompt stands. A Go answers
 unknown_command: its captures are armed on its glass only.
 """
-import asyncio
-import time
-
 import blip_frames as frames
 
 PROFILES = tuple(value["name"] for value in frames.REGISTRY["enums"]["capture_profile"]["values"])
@@ -38,16 +35,7 @@ async def run(link, profile, timeout, say=print, decode=frames.decode_frame):
 
 async def next_acknowledgement(link, timeout, decode):
     """The next acknowledgement, past the status and update frames the unit pushes unasked."""
-    deadline = time.monotonic() + timeout
-    while True:
-        left = deadline - time.monotonic()
-        try:
-            _, data = await asyncio.wait_for(link.replies.get(), max(left, 0))
-        except asyncio.TimeoutError:
-            raise SystemExit("no verdict from the unit within %.0f s" % timeout)
-        frame = decode(data)
-        if frame.get("command") == "acknowledgement":
-            return frame
+    return await frames.next_frame(link, ("acknowledgement",), timeout, "verdict", decode)
 
 
 def verdict(frame, profile):

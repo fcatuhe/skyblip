@@ -54,6 +54,7 @@ jobs:
               - 'lib/radio_protocols.rb'
               - 'scripts/radio_protocols.rb'
               - 'firmware/products/*/PROTOCOLS'
+              - 'firmware/protocols/*/version.h'
               - 'firmware/products/*/CMakeLists.txt'
               - 'firmware/products/*/VERSION'
               - '.github/workflows/firmware.yml'

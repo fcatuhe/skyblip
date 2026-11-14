@@ -44,7 +44,7 @@ void log_adsb_rejects() {
     }
     for (int logged = 0; logged < kRejectsLoggedPerPass && g_product.adsb().take_reject(reject);
          logged++) {
-        char chips[2 * protocol::kAdsbChipBytes + 1];
+        char chips[2 * adsb::kChipBytes + 1];
         chips[hex::write(ConstByteSpan(reject.chips.data(), reject.chips.size()), chips)] = 0;
         const char* status = reject.status == Status::Unsupported ? "unsupported" : "crc";
         if (reject.rssi_valid) {

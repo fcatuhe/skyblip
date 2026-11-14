@@ -1,6 +1,6 @@
 #include "core/dfu/install_report.h"
 
-#include "core/util/little_endian.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::dfu {
 
@@ -32,7 +32,7 @@ size_t to_blob(const InstallReport& report, uint8_t* out, size_t capacity) {
     out[0] = kLayout;
     out[1] = static_cast<uint8_t>(report.request.check);
     out[2] = static_cast<uint8_t>(report.request.swap);
-    put_uint16(out + 3, static_cast<uint16_t>(report.request.error));
+    wire::put_uint16(out + 3, static_cast<uint16_t>(report.request.error));
     out[5] = report.boots;
     out[6] = report.probation_boots;
     out[7] = static_cast<uint8_t>(report.proof);
@@ -45,7 +45,7 @@ bool from_blob(const uint8_t* blob, size_t bytes, InstallReport& out) {
     out = InstallReport{};
     out.request.check = static_cast<ports::StagedCheck>(blob[1]);
     out.request.swap = static_cast<ports::SwapType>(blob[2]);
-    out.request.error = get_int16(blob + 3);
+    out.request.error = wire::get_int16(blob + 3);
     out.boots = blob[5];
     out.probation_boots = blob[6];
     out.proof = static_cast<Proof>(blob[7]);

@@ -3,8 +3,10 @@
 #include <string>
 
 #include "doctest/doctest.h"
+#include "products/skyblip_bravo/own_transponder.h"
 #include "products/skyblip_go/pages/aircraft.h"
 #include "products/skyblip_go/pages/menu.h"
+#include "test/support/adsb_frames.h"
 #include "test/support/bravo_flight.h"
 #include "test/support/glass_text.h"
 #include "test/support/log_transfer.h"
@@ -18,9 +20,34 @@ namespace {
 constexpr uint32_t kHeardAddress = 0x3A4B5C;
 constexpr uint32_t kOtherAddress = 0x3A0001;
 
-std::string heard_fields(uint32_t address) {
+std::string heard_fields(uint32_t address, int category = 4) {
     return "\"own_transponder\":" + std::to_string(address) +
-           ",\"own_transponder_callsign\":\"FJABC\",\"own_transponder_category\":4";
+           ",\"own_transponder_callsign\":\"FJABC\",\"own_transponder_category\":" +
+           std::to_string(category);
+}
+
+// What Bravo makes of its own transponder's identification, A7 rotorcraft among them.
+int own_category_heard(uint8_t type_code, uint8_t emitter) {
+    bravo::OwnTransponder own{};
+    adsb::Message identification{};
+    REQUIRE(adsb_hear(adsb_identification(kHeardAddress, 0, type_code, emitter, "FJABC"),
+                      identification) == Status::Ok);
+    identification.reception.rssi_dbm = -12;
+    identification.reception.rssi_valid = true;
+    uint32_t now_ms = 1000;
+    own.hear(identification, now_ms);
+    for (uint32_t spent = 0; spent <= 2 * bravo::OwnTransponder::kLeadHoldMs; spent += 200) {
+        adsb::Message position{};
+        REQUIRE(adsb_hear(adsb_airborne_position(kHeardAddress, 0, 48.5, 8.5, false, 1500),
+                          position) == Status::Ok);
+        position.reception.rssi_dbm = -12;
+        position.reception.rssi_valid = true;
+        own.hear(position, now_ms);
+        own.tick(now_ms);
+        now_ms += 200;
+    }
+    REQUIRE(own.heard().has_value());
+    return own.heard()->aircraft_category;
 }
 
 bool glass_reads(Rig& rig, const char* text, int scale) {
@@ -178,4 +205,21 @@ TEST_CASE("aircraft detection: the notice goes when Bravo stops hearing what it 
     tango.run_for(1500);
     CHECK_FALSE(tango.go.product.screen().noticing());
     CHECK(tango.go.settings().own_icao == go::kOwnIcaoUnset);
+}
+
+// Traffic reads ADS-B A7 as heavy rotorcraft, and a pilot's own aircraft is never assumed heavy.
+TEST_CASE("aircraft detection: an A7 transponder proposes a light rotorcraft, never a heavy one") {
+    const int category = own_category_heard(4, 7);
+    CHECK(category == 3);
+    CHECK(own_category_heard(4, 6) == 1);
+    CHECK(own_category_heard(4, 3) == 2);
+
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress, category);
+    tango.run_for(2500);
+    REQUIRE(tango.go.product.screen().noticing());
+    tango.go.press(tango.now_ms);
+    tango.run_for(500);
+    CHECK(tango.go.settings().aircraft_type == 3);
 }

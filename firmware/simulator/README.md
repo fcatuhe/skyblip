@@ -40,15 +40,15 @@ An aircraft with ADS-B Out sends:
 | airborne velocity, TC 19 subtype 1 | 2 Hz | none | none |
 | identification, with its emitter category | 0.2 Hz | 0.2 Hz | 0.1 Hz |
 
-The rates are The 1090MHz Riddle (Junzi Sun, 2nd edition), Table 1.4, for ADS-B version 2. The capability field is 5 airborne and 4 on the ground, the values `core/protocol/adsb_assembly.cpp` reads as flight state. Each aircraft picks its phase in the period from its address, and a velocity message falls half a period after a position.
+The rates are The 1090MHz Riddle (Junzi Sun, 2nd edition), Table 1.4, for ADS-B version 2. The capability field is 5 airborne and 4 on the ground, the values `protocols/adsb/assembly.cpp` reads as on the ground or airborne. Each aircraft picks its phase in the period from its address, and a velocity message falls half a period after a position.
 
-Airborne, the position carries the pressure altitude the world's airmass gives that height, and the velocity message carries the GNSS-baro difference, so a receiver gets the GNSS height (HAE) too. An aircraft with `pressure_only` leaves that difference at 0, which the decoder reads as none sent (`core/protocol/README.md`, after RTCA 1090-WP-14-09R1, Figures A-6 and A-7). A surface position carries no altitude.
+Airborne, the position carries the pressure altitude the world's airmass gives that height, and the velocity message carries the GNSS-baro difference, so a receiver gets the GNSS height (HAE) too. An aircraft with `pressure_only` leaves that difference at 0, which the decoder reads as none sent (`protocols/adsb/README.md`, after RTCA 1090-WP-14-09R1, Figures A-6 and A-7). A surface position carries no altitude.
 
 The world does not model:
 
 - **path loss at 1090 MHz:** every squitter lands at -70 dBm, the level the host suite hears at;
 - **garbling:** two squitters that overlap are both heard;
-- **DF18:** Bravo receives DF17 only (`core/protocol/README.md`).
+- **DF18:** Bravo receives DF17 only (`protocols/adsb/README.md`).
 - **aircraft status, target state and operational status,** TC 28, 29 and 31: none is sent, so Bravo never learns an aircraft's ADS-B version or GVA.
 
 ## Scenarios
@@ -59,7 +59,7 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
-- `"category"` is the emitter category, `A0` to `C7`, in `core/protocol/README.md`'s shorthand: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
+- `"category"` is the emitter category, `A0` to `C7`, in the shorthand `core/protocol/README.md` uses under The category ADS-B sends: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
 - In a paired file, an event with `"unit": "bravo"` acts on Bravo instead of the Go. Bravo aboard takes `fix` and `companion`. The event `"bravo_link": 0` loses the link between them, and `1` brings it back. A file that uses either outside a pair, or gives Bravo another event, is refused.
 

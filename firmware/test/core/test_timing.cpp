@@ -7,6 +7,7 @@
 #include "doctest/doctest.h"
 #include "test/support/anchored_clock.h"
 
+using namespace skyblip;
 using namespace skyblip::timing;
 
 constexpr uint64_t kLastEdgeUs = 12'000'000;
@@ -49,16 +50,16 @@ TEST_CASE("timing: band and channel per dwell") {
     CHECK(Scheduler::band_at(300) == Band::O);
     // The tail of slot 1: still M-band, still the second channel.
     CHECK(Scheduler::band_at(100) == Band::M);
-    CHECK(Scheduler::frequency_hz_at(100) == kMBand1Hz);
+    CHECK(Scheduler::frequency_hz_at(100) == adsl::kMBand1Hz);
     CHECK(Scheduler::slot_of(100) == 1);
     CHECK(Scheduler::band_at(420) == Band::M);
     CHECK(Scheduler::band_at(500) == Band::M);
     CHECK(Scheduler::band_at(900) == Band::M);
     // §C.2: two M-band channels, one per direct half, so a receiver visits both.
-    CHECK(Scheduler::frequency_hz_at(300) == kOBandHz);
-    CHECK(Scheduler::frequency_hz_at(420) == kMBand0Hz);
-    CHECK(Scheduler::frequency_hz_at(500) == kMBand0Hz);
-    CHECK(Scheduler::frequency_hz_at(900) == kMBand1Hz);
+    CHECK(Scheduler::frequency_hz_at(300) == adsl::kOBandHz);
+    CHECK(Scheduler::frequency_hz_at(420) == adsl::kMBand0Hz);
+    CHECK(Scheduler::frequency_hz_at(500) == adsl::kMBand0Hz);
+    CHECK(Scheduler::frequency_hz_at(900) == adsl::kMBand1Hz);
 }
 
 TEST_CASE("timing: uplink window and direct slot predicates") {

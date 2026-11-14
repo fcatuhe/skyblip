@@ -3,9 +3,11 @@
 
 #include <algorithm>
 #include <iterator>
+#include <optional>
 
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
@@ -13,6 +15,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsl/media_access.h"
 #include "runtime/service.h"
 
 namespace skyblip::go {
@@ -39,10 +42,13 @@ class RadioService : public runtime::Service {
         return transmitter_.air_time().permille(now_ms);
     }
     bool over_budget() const { return over_budget_; }
-    protocol::StatusReport status_report() const;
+    adsl::StatusReport status_report() const;
+    // INFO: fc 14nov26 ADS-L §D.3: the last burst forced on a busy channel, which silences 2000 ms
+    std::optional<uint64_t> forced_at_us() const { return forced_us_; }
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
+    static constexpr uint64_t kAirTimeUs = uint64_t{timing::Transmitter::kAirTimeMs} * 1000;
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
@@ -55,6 +61,7 @@ class RadioService : public runtime::Service {
         uint32_t frequency_hz{0};
         uint64_t from_us{0};
         uint64_t until_us{0};
+        int64_t origin_us{0};
         uint32_t utc_s{0};
         uint8_t chip_buffer{0};
         bool carried[kPayloads]{};
@@ -88,6 +95,13 @@ class RadioService : public runtime::Service {
         int64_t origin_us;
     };
 
+    // INFO: fc 14nov26 §D.3's "initial attempt": the first busy assessment of a turn's burst
+    struct Contention {
+        bool open{false};
+        uint32_t turn_s{0};
+        uint64_t first_us{0};
+    };
+
     // Both from microseconds(), which is 64-bit and does not wrap: nothing about where
     // the radio believes it is inside the second reads the 32-bit millisecond
     // counter (ports/clock.h).
@@ -106,6 +120,8 @@ class RadioService : public runtime::Service {
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms() const;
+    bool full_rate() const;
+    void count_given_up(uint32_t now_ms);
     protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,
                                          uint64_t tx_at_us, uint32_t utc_s) const;
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
@@ -139,6 +155,14 @@ class RadioService : public runtime::Service {
     void collect_outcome(uint32_t now_ms);
     void take_carrier_samples();
     void take_switching(uint32_t now_ms);
+    void collect_busy(uint32_t now_ms);
+    Armed* carrying(uint64_t tx_at_us, Payload& payload);
+    void contend(Armed& dwell, Payload payload, const bus::RfState::Busy& busy, uint32_t now_ms);
+    void log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
+                    const bus::RfState::Busy& busy, uint32_t now_ms);
+    bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
+    bool silenced(uint64_t tx_at_us) const;
+    void silence_after(uint64_t forced_at_us);
     void record_switch(const ports::RfSwitch& change, uint32_t now_ms);
     static diagnostics::SwitchKind kind_of(const ports::RfSwitch& change);
 
@@ -155,7 +179,10 @@ class RadioService : public runtime::Service {
     // nothing transmits from either. Adding the comparison would put work inside a
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
-    protocol::AdslPacket outgoing_{};
+    adsl::Packet outgoing_{};
+    // INFO: fc 13nov26 B.5: the second a position was last held, so each held second counts once
+    uint32_t held_for_b5_s_{0};
+    bool held_for_b5_{false};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};
@@ -169,6 +196,9 @@ class RadioService : public runtime::Service {
     uint32_t seen_tx_ok_{0};
     uint32_t seen_carrier_samples_{0};
     uint32_t seen_switches_{0};
+    uint32_t seen_busy_{0};
+    Contention contention_[kPayloads]{};
+    std::optional<uint64_t> forced_us_{};
     bool over_budget_{false};
     bool held_logged_{false};
     const Settings& settings_;

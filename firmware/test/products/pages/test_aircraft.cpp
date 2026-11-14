@@ -218,3 +218,12 @@ TEST_CASE("aircraft menu: a press with nothing heard changes nothing, unpaired i
     CHECK(bench.editor.opening() == Page::Bravo);
     CHECK_FALSE(bench.editor.active());
 }
+
+// HANG GLIDER is the longest name, and the page prints a type at menu scale from the left margin.
+TEST_CASE("aircraft page: every type name fits the glass where the page prints it") {
+    for (const go::AircraftType& type : go::kAircraftTypes) {
+        CAPTURE(type.name);
+        CHECK(go::kMenuLeftX + static_cast<int>(std::strlen(type.name)) * go::kMenuCellWidth <=
+              go::kGlassWidth);
+    }
+}

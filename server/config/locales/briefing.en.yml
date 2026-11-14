@@ -131,6 +131,7 @@ en:
       firmware: "Firmware"
       activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
       connected: Connected
+      protocols: "Radio protocols: %{protocols}"
       not_connected: Not connected
       connecting: Connecting
       restarting: Restarting

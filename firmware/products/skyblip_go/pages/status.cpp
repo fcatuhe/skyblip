@@ -2,8 +2,8 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/pages/page.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go {
 
@@ -45,7 +45,7 @@ constexpr uint8_t kImuMetaEventInitialised = 16;
 int32_t knots(int32_t speed_mm_s) { return to_knots(MillimetresPerSecond(speed_mm_s)).value; }
 
 int32_t centi_kilometres_per_hour(int32_t speed_mm_s) {
-    return divide_rounded(speed_mm_s * 36, 100);
+    return wire::divide_rounded(speed_mm_s * 36, 100);
 }
 
 // Draw "LABEL  value" on one row.
@@ -103,7 +103,7 @@ void dual_row(ui::Canvas& canvas, int y, const char* label, Quantity aeronautica
 void pressure_row(ui::Canvas& canvas, int y, uint32_t pressure_mpa) {
     char barometer[12];
     const int written =
-        format_unsigned(barometer, divide_rounded<uint32_t>(pressure_mpa, 100), 1, 3);
+        format_unsigned(barometer, wire::divide_rounded<uint32_t>(pressure_mpa, 100), 1, 3);
     barometer[written] = 0;
 
     canvas.draw_text(kLeft, y, "BARO", true, 1);
@@ -273,13 +273,13 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
     y += kLineHeight;
 
     dual_row(canvas, y, "GNSS", {to_feet(Millimetres(snapshot.altitude_mm)).value, 0, " ft"},
-             {divide_rounded(snapshot.altitude_mm, 100), 1, " m"}, false);
+             {wire::divide_rounded(snapshot.altitude_mm, 100), 1, " m"}, false);
     y += kLineHeight;
 
     if (snapshot.barometer_valid)
         dual_row(canvas, y, "STD",
                  {to_feet(Millimetres(snapshot.altitude_standard_mm)).value, 0, " ft"},
-                 {divide_rounded(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
+                 {wire::divide_rounded(snapshot.altitude_standard_mm, 10), 2, " m"}, false);
     y += kLineHeight;
 
     dual_row(canvas, y, "SPD", {knots(snapshot.speed_mm_s), 0, " kt"},

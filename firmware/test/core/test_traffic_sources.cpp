@@ -5,8 +5,7 @@
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
-#include "core/protocol/adsb.h"
-#include "core/protocol/adsb_assembly.h"
+#include "core/protocol/adsb_observation.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/alptas.h"
@@ -17,6 +16,9 @@
 #include "core/traffic/table.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
+#include "protocols/adsb/assembly.h"
+#include "protocols/adsb/message.h"
+#include "protocols/alptas/frame.h"
 #include "test/support/adsb_frames.h"
 
 using namespace skyblip;
@@ -62,7 +64,7 @@ model::AircraftObservation stamped(model::AircraftObservation heard) {
 }
 
 model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     packet.reset();
     packet.set_address(sent.address);
     packet.set_address_mapping_table(sent.address_mapping_table);
@@ -80,7 +82,7 @@ model::AircraftObservation over_adsl(const model::AircraftObservation& sent) {
 
 // G.1.7 lets a position say its altitude is invalid, and the decoder keeps saying so.
 model::AircraftObservation over_adsl_without_altitude(const model::AircraftObservation& sent) {
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     packet.reset();
     packet.set_address(sent.address);
     packet.set_address_mapping_table(sent.address_mapping_table);
@@ -97,19 +99,19 @@ model::AircraftObservation over_adsl_without_altitude(const model::AircraftObser
 
 model::AircraftObservation over_uplink(const model::AircraftObservation& sent) {
     protocol::AdslUplink codec;
-    uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
-    REQUIRE(codec.encode(&sent, 1, 0, frame) == Status::Ok);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(codec.encode(&sent, 1, kUtcS, 300, 0x00FFFE, adsl::kAddressTableManufacturerFirst,
+                         packet) == Status::Ok);
     model::AircraftObservation heard{};
     protocol::AdslUplink::DecodeStatistics statistics{};
-    REQUIRE(codec.decode(frame, &heard, 1, statistics) == Status::Ok);
+    REQUIRE(codec.decode(packet, sizeof(packet), kUtcS, 300, &heard, 1, statistics) == Status::Ok);
     REQUIRE(statistics.targets == 1);
     return stamped(heard);
 }
 
 model::AircraftObservation over_alptas(const model::AircraftObservation& sent) {
-    uint8_t frame[protocol::kAlptasFrameBytes];
-    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS, kOwnLatitude1e7, kOwnLongitude1e7) ==
-            Status::Ok);
+    uint8_t frame[alptas::kFrameBytes];
+    REQUIRE(protocol::alptas_encode(frame, sent, kUtcS) == Status::Ok);
     model::AircraftObservation heard{};
     REQUIRE(protocol::alptas_decode(frame, kUtcS, kOwnLatitude1e7, kOwnLongitude1e7, heard) ==
             Status::Ok);
@@ -132,16 +134,16 @@ model::AircraftObservation over_adsb(const model::AircraftObservation& sent) {
                                             altitude_ft, true);
     if (!parked) frames[count++] = adsb_ground_velocity(sent.address, capability, 0, 0, 0, 0);
 
-    protocol::AdsbAssembly assembly;
-    protocol::AdsbReference reference;
+    adsb::Assembly assembly;
+    adsb::Reference reference;
     reference.position = {kOwnLatitude1e7, kOwnLongitude1e7};
     reference.valid = true;
     model::AircraftObservation heard{};
     for (int i = 0; i < count; i++) {
-        protocol::AdsbMessage message;
+        adsb::Message message;
         REQUIRE(adsb_hear(frames[i], message) == Status::Ok);
-        REQUIRE(assembly.fold(message, static_cast<uint32_t>(500 * i), events::Stamp{}, reference,
-                              heard));
+        REQUIRE(protocol::adsb_fold(assembly, message, static_cast<uint32_t>(500 * i),
+                                    events::Stamp{}, reference, heard));
     }
     REQUIRE(heard.position_valid);
     REQUIRE(heard.aircraft_category == sent.aircraft_category);

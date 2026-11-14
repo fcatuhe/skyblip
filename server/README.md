@@ -30,7 +30,7 @@ The production credentials do not exist yet. To create them, add `RAILS_PRODUCTI
 
 ## Admin and analytics
 
-A user has a first name, a last name, an email and a password, and a role: `user` or `admin`. Nothing links to the sign-in page, `/session/new`, which robots are asked not to index. Once signed in, an admin finds `Admin` in the site nav, which opens the admin area: analytics, the users, and Mission Control's jobs at `/admin/jobs`. Every admin controller inherits `Admin::ApplicationController`, which answers `403` to anyone but an admin, the way Fizzy guards its own, and Mission Control is mounted on it too. There is no sign-up and no password reset: an admin creates the accounts and sets their passwords. The first admin is created in the production console, `mise run kamal console`:
+A user has a first name, a last name, an email and a password, and a role: `user` or `admin`. Nothing links to the sign-in page, `/session/new`, which robots are asked not to index. Once signed in, an admin finds `Admin` in the site nav, which opens the admin area: analytics, the users, and Mission Control's jobs at `/admin/jobs`, which open in a window of their own named `mission_control`. Every admin controller inherits `Admin::ApplicationController`, which answers `403` to anyone but an admin, the way Fizzy guards its own, and Mission Control is mounted on it too. There is no sign-up and no password reset: an admin creates the accounts and sets their passwords. The first admin is created in the production console, `mise run kamal console`:
 
 ```ruby
 User.create!(first_name: "[first name]", last_name: "[last name]", email: "[email]", password: "[password]", role: :admin)

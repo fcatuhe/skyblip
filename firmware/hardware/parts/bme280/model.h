@@ -4,9 +4,9 @@
 #include <cstdint>
 
 #include "core/flight/atmosphere.h"
-#include "core/util/little_endian.h"
 #include "hardware/io/io.h"
 #include "ports/clock.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::models {
 
@@ -177,7 +177,7 @@ class Bme280 : public io::I2c {
                                   static_cast<uint16_t>(kPressureTrim8),
                                   static_cast<uint16_t>(kPressureTrim9)};
         for (size_t i = 0; i < 12; i++)
-            put_uint16(registers + kRegisterCalibration + 2 * i, words[i]);
+            wire::put_uint16(registers + kRegisterCalibration + 2 * i, words[i]);
     }
 
     static double unrounded_fine_temperature(int32_t raw_temperature) {

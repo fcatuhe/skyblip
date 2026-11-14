@@ -10,8 +10,8 @@
 
 #include "core/events/link.h"
 #include "hardware/platform/host/link.h"
+#include "protocols/common/test/channel.h"
 #include "test/support/config_frame.h"
-#include "test/support/random.h"
 #include "test/support/registry_frames.h"
 
 namespace skyblip {
@@ -139,7 +139,7 @@ class BravoStub {
 
     std::vector<Recorded> recording_;
     size_t next_recorded_{0};
-    Random random_;
+    wire::Random random_;
     std::unique_ptr<platform::host::Link> link_{};
     // INFO: fc 10nov26 kept to the next reboot, so a link bound to it counts what it lost
     std::unique_ptr<platform::host::Link> previous_link_{};

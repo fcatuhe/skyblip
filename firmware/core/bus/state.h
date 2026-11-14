@@ -46,6 +46,19 @@ struct RfState {
     uint64_t tx_done_at_us(uint32_t index, uint32_t count) const {
         return count - index <= kTxDonesKept ? tx_done_ring_us[index % kTxDonesKept] : 0;
     }
+    // INFO: fc 14nov26 the bursts a clear channel assessment found busy, for the radio to defer
+    struct Busy {
+        uint64_t tx_at_us{0};
+        int8_t level_dbm{0};
+        bool level_valid{false};
+    };
+    static constexpr uint32_t kBusyKept = 4;
+    Busy busy_ring[kBusyKept]{};
+    uint32_t busy_reports{0};
+    void note_busy(const Busy& busy) { busy_ring[busy_reports++ % kBusyKept] = busy; }
+    const Busy* busy_at(uint32_t index) const {
+        return busy_reports - index <= kBusyKept ? &busy_ring[index % kBusyKept] : nullptr;
+    }
     uint32_t duty_permille{0};
     uint16_t last_tx_keyed_us{0};
     uint16_t last_tx_span_us{0};
@@ -228,6 +241,16 @@ struct State {
         uint32_t rx_miskeyed{0};
         uint32_t rx_noise{0};
         uint32_t rx_named{0};
+        // INFO: fc 13nov26 B.5: Status payloads whose Max. Protocol Version a target now holds
+        uint32_t rx_status{0};
+        // INFO: fc 13nov26 B.5: seconds a position with an unknown field waited for an Issue 1 one
+        uint32_t tx_held_for_b5{0};
+        // INFO: fc 13nov26 turns of ours whose retries ran out before the type's next turn
+        uint32_t tx_given_up{0};
+        // INFO: fc 14nov26 ADS-L §D.3: bursts deferred, forced, and missed with the channel busy
+        uint32_t tx_deferred{0};
+        uint32_t tx_forced{0};
+        uint32_t tx_busy_missed{0};
         uint32_t tx_ok{0};
         uint32_t tx_lost{0};
         uint32_t tx_named{0};
@@ -243,6 +266,7 @@ struct State {
         uint32_t uplink_frames{0};
         uint32_t uplink_bad{0};
         uint32_t uplink_targets{0};
+        uint32_t uplink_stale{0};
     } air{};
 
     bool panel_presented{false};

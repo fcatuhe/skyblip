@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
+  GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
+
   test "a first visit offers one thing, and a Go connected there opens on its settings" do
     in_range a_go
     on_the_shelf do
@@ -340,8 +342,33 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "the app speaks French once the pilot chooses it in the settings" do
+  test "a connected device names the radio protocol versions it carries" do
+    in_range a_go(protocols: GO_PROTOCOLS)
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_selector ".unit-protocols", text: "Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0"
+
+      find(".unit-menu summary").click
+      click_button "Disconnect"
+      assert_selector ".unit-facts", text: "Not connected"
+      assert_no_selector ".unit-protocols"
+    end
+  end
+
+  test "firmware from before the protocols frame names none, and the page says nothing about it" do
     in_range a_go
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_field "Callsign", with: "F-JXYZ"
+      assert_no_selector ".unit-protocols"
+      assert_no_selector ".unit-notes p"
+    end
+  end
+
+  test "the app speaks French once the pilot chooses it in the settings" do
+    in_range a_go(protocols: GO_PROTOCOLS)
     on_the_shelf do
       visit "/briefing"
       find("summary", text: "Menu").click
@@ -355,6 +382,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Connecter un appareil"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
+      assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
       assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"

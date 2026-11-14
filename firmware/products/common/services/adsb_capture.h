@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "core/model/aircraft.h"
-#include "core/protocol/adsb_assembly.h"
+#include "protocols/adsb/assembly.h"
 #include "runtime/service.h"
 
 namespace skyblip::common {
@@ -13,8 +13,8 @@ namespace skyblip::common {
 class AdsbCapture {
    public:
     // INFO: fc 11nov26 a GNSS-baro difference is trusted 10 s, so one record per aircraft in it
-    static constexpr uint32_t kRecordPeriodMs = protocol::kHeightDifferenceMaxAgeMs;
-    static constexpr int kAircraft = protocol::AdsbAssembly::kMaxAircraft;
+    static constexpr uint32_t kRecordPeriodMs = adsb::kHeightDifferenceMaxAgeMs;
+    static constexpr int kAircraft = adsb::Assembly::kMaxAircraft;
     // INFO: fc 11nov26 the ring's writer can be blocked about a second, so its budget is a second's
     static constexpr uint32_t kBudgetWindowMs = 1000;
     // INFO: fc 11nov26 a full assembly spread evenly over the period, so no burst outruns the ring

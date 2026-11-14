@@ -81,6 +81,10 @@ uint8_t wire(radio::Verdict value) {
         case radio::Verdict::Undecoded: return 9;
         case radio::Verdict::Unsupported: return 10;
         case radio::Verdict::Unattempted: return 11;
+        case radio::Verdict::Declared: return 12;
+        case radio::Verdict::Deferred: return 13;
+        case radio::Verdict::Forced: return 14;
+        case radio::Verdict::Busy: return 15;
     }
     return kUnpinned;
 }
@@ -244,7 +248,7 @@ TEST_CASE(
     "diagnostics ordinals: radio::Verdict's codes are the burst verdict byte, and a code changed "
     "here "
     "changes VERDICT in scripts/blip_records.py and the schema's verdict enum with it") {
-    codes_pinned<radio::Verdict>(12);
+    codes_pinned<radio::Verdict>(16);
 }
 
 TEST_CASE(

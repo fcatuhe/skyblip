@@ -1,96 +1,73 @@
-// ADS-L 4 SRD-860 issue 2 Subpart D, the data link layer: packet framing, construction order, media
-// access.
+// ADS-L 4 SRD-860 issue 2 Subpart D, the data link: media access as flown.
 #include <cstdint>
 #include <cstring>
+#include <vector>
 
-#include "core/model/ownship.h"
-#include "core/protocol/adsl.h"
-#include "core/protocol/adsl_uplink.h"
-#include "core/protocol/air.h"
-#include "core/timing/channel.h"
+#include "core/timing/transmit.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/media_access.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
 namespace {
-protocol::AdslPacket traffic_packet() {
-    model::Ownship own{};
-    own.fix_valid = true;
-    own.utc_valid = true;
-    own.climb_valid = true;
-    own.latitude_1e7 = 481234500;
-    own.longitude_1e7 = 81234500;
-    own.altitude_hae_mm = 1234000;
-    own.speed_mm_s = 45000;  // 180 quarter-m/s on the wire
-    own.climb_mm_s = -5500;  // -44 eighths on the wire
-    own.track_cdeg = 18000;
-    own.hdop_e2 = 90;
-    own.vdop_e2 = 150;
-    own.flight_state = 2;
-    protocol::AdslPacket packet{};
-    protocol::from_own(packet, own, 0x123456, 6, 4);
-    return packet;
+
+// Own-ship's bursts with its channel held busy for `held_ms` from the top of a cycle.
+std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t held_ms,
+                                                        uint64_t& held_from_us, uint32_t& forced) {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(speed_kt);
+    uint32_t now_ms = past_settling(simulator);
+    const timing::Transmitter& transmitter = simulator.product().radio().transmitter();
+    const auto cycle_second = [&]() {
+        const uint32_t second = simulator.product().state().traffic_now_s(now_ms);
+        return (second + timing::Transmitter::kCycleS - transmitter.cycle_start()) %
+               timing::Transmitter::kCycleS;
+    };
+    const uint32_t ceiling_ms = now_ms + 30000;
+    while (now_ms < ceiling_ms && !(now_ms % 1000 == 0 && cycle_second() == 0))
+        simulator.step(++now_ms);
+    REQUIRE(now_ms % 1000 == 0);
+
+    held_from_us = static_cast<uint64_t>(now_ms) * 1000;
+    const int8_t held_dbm[1] = {-50};
+    models::Sx1262& chip = simulator.platform().chips().radio;
+    chip.set_rssi_sequence(held_dbm, 1);
+    run_on(simulator, now_ms + 1, held_ms - 1, 1);
+    chip.set_rssi_sequence(held_dbm, 0);
+    forced = simulator.product().state().air.tx_forced;
+
+    std::vector<simulator::AirRecord> sent;
+    const simulator::Air& air = simulator.world().air();
+    for (int i = 0; i < air.record_count(); i++)
+        if (air.record_at(i).event == simulator::AirEvent::Tx &&
+            air.record_at(i).at_us >= held_from_us)
+            sent.push_back(air.record_at(i));
+    return sent;
 }
 
 }  // namespace
 
-// INFO: fc 18sep26 prose: the three duties of the layer, each specified in the clauses below
-TEST_CASE("ADS-L.4.SRD860.D.1: the data link mediates the channel, adds parity, may sign" *
-          doctest::skip()) {
-    FAIL("prose: the layer's remit, specified by D.1.1, D.1.2, D.3 and E.3");
-}
+// Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
+TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms") {
+    uint64_t held_from_us = 0;
+    uint32_t forced = 0;
+    const std::vector<simulator::AirRecord> ground =
+        held_from_cycle_start(0, 12000, held_from_us, forced);
+    CHECK(forced >= 2);
+    REQUIRE(ground.size() >= 2);
+    CHECK(ground.size() <= forced);
+    if (!ground.empty()) CHECK(ground[0].at_us - held_from_us >= 3000000);
+    const uint64_t burst_us = 4640;
+    for (size_t i = 1; i < ground.size(); i++)
+        CHECK(ground[i].at_us - ground[i - 1].at_us >= burst_us + 2000000);
 
-// The length byte rides in the sync word, which is why a burst of any other length never frames.
-TEST_CASE(
-    "ADS-L.4.SRD860.D.1.1: the Packet Length field counts the message behind it, not itself") {
-    const int network_header = 1;
-    const int adsl_data = 20;
-    const int parity = 3;
-    CHECK(int(protocol::AdslPacket::kDataBytes) == network_header + adsl_data + parity);
-    CHECK(sizeof(protocol::AdslPacket) == protocol::AdslPacket::kDataBytes);
-    CHECK(int(protocol::kAdslSyncWord & 0xFFu) == protocol::AdslPacket::kDataBytes);
-    CHECK(protocol::kUplinkSync[2] == protocol::kUplinkFrameBytes);
-}
-
-// TODO: fc 18sep26 no O-band LDR radio here: the dwell map carries M-band and O-band HDR only
-TEST_CASE(
-    "ADS-L.4.SRD860.D.1.2: the O-band LDR packet is a 6-byte header, 24 bytes of data and a "
-    "CRC8" *
-    doctest::skip()) {
-    FAIL("O-band LDR is not implemented: no header, no CRC8, no 38.4 kbps dwell");
-}
-
-// The parity covers the scrambled form, so a receiver checks it before it can read a single field.
-TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the network header too") {
-    protocol::AdslPacket packet = traffic_packet();
-    const protocol::AdslPacket plain = packet;
-    packet.scramble();
-    packet.set_crc();
-    CHECK(std::memcmp(packet.payload, plain.payload, 20) != 0);
-    CHECK(packet.check_crc() == 0);
-
-    protocol::AdslPacket flipped = packet;
-    flipped.version ^= 0x01;
-    CHECK(flipped.check_crc() != 0);
-
-    protocol::AdslPacket descrambled = packet;
-    descrambled.descramble();
-    CHECK(descrambled.check_crc() != 0);
-    CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);
-}
-
-// TODO: fc 18sep26 no listen-before-talk: the hour's duty cycle is the only rule refusing a burst
-TEST_CASE("ADS-L.4.SRD860.D.3: a burst waits on a carrier sense, and forces after 3000 ms" *
-          doctest::skip()) {
-    FAIL("no listen-before-talk, so neither the 3000 ms force nor the 2000 ms silence after it");
-}
-
-// The route taken instead of polite spectrum access, and the only rule that does refuse a burst.
-TEST_CASE("ADS-L.4.SRD860.D.3: nothing refuses a burst here but the hour's duty cycle") {
-    timing::AirTime air;
-    CHECK(timing::AirTime::kLimitPermille == 10u);
-    const uint32_t budget_ms = timing::AirTime::kBudgetMs;
-    air.spend(0, budget_ms);
-    CHECK_FALSE(air.may_spend(0, 1));
-    CHECK(air.may_spend(timing::AirTime::kWindowMs + 1, 1));
+    const std::vector<simulator::AirRecord> airborne_past_3000_ms =
+        held_from_cycle_start(50, 9500, held_from_us, forced);
+    CHECK(airborne_past_3000_ms.empty());
+    CHECK(forced == 0);
 }

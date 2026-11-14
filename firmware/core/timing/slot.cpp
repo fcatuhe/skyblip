@@ -46,11 +46,11 @@ SlotState Scheduler::state_at(int phase_ms) {
 int Scheduler::direct_heard_permille() {
     int heard_ms = 0;
     for (const int slot : {0, 1}) {
-        const int from = std::max(slot_start(slot), kDirectStartMs);
-        const int to = std::min(dwell_end(slot), kDirectEndMs);
+        const int from = std::max(slot_start(slot), adsl::kDirectStartMs);
+        const int to = std::min(dwell_end(slot), adsl::kDirectEndMs);
         heard_ms += std::max(to - from, 0);
     }
-    return heard_ms * 1000 / (2 * (kDirectEndMs - kDirectStartMs));
+    return heard_ms * 1000 / (2 * (adsl::kDirectEndMs - adsl::kDirectStartMs));
 }
 
 Band Scheduler::band_at(int phase_ms) {
@@ -63,9 +63,9 @@ Band Scheduler::band_at(int phase_ms) {
 uint32_t Scheduler::frequency_hz_at(int phase_ms) {
     switch (state_at(phase_ms)) {
         case SlotState::Slot0:
-        case SlotState::Hop: return kMBand0Hz;
-        case SlotState::Slot1: return kMBand1Hz;
-        default: return kOBandHz;
+        case SlotState::Hop: return adsl::kMBand0Hz;
+        case SlotState::Slot1: return adsl::kMBand1Hz;
+        default: return adsl::kOBandHz;
     }
 }
 

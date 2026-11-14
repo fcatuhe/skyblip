@@ -70,8 +70,19 @@ char next_hex_character(char character);
 // INFO: fc 11nov26 kOwnIcaoUnset for six digits that are not all typed, or that spell 000000
 uint32_t own_icao_typed(const char* edited);
 
-// INFO: fc 12sep26 ADS-L G.1.3 codes 11 up are UAV and reserved, nothing a pilot sits in
-constexpr uint8_t kNamedAircraftTypes = 11;
+struct AircraftType {
+    uint8_t code;
+    const char* name;
+};
+
+// INFO: cf 02aug26 ADS-L 4 SRD-860 issue 2 G.1.3 wire values: the code stored is transmitted
+constexpr AircraftType kAircraftTypes[] = {
+    {0, "UNKNOWN"},     {1, "LIGHT"},       {2, "HEAVY"},        {3, "LIGHT HELI"}, {4, "GLIDER"},
+    {5, "BALLOON"},     {6, "MICROLIGHT"},  {7, "PARAGLIDER"},   {8, "SKYDIVER"},   {9, "VTOL"},
+    {10, "GYROCOPTER"}, {15, "HEAVY HELI"}, {16, "HANG GLIDER"}, {17, "PARAMOTOR"}};
+constexpr int kNamedAircraftTypes =
+    static_cast<int>(sizeof(kAircraftTypes) / sizeof(kAircraftTypes[0]));
+bool named_aircraft_type(uint8_t code);
 
 enum class MenuAction : uint8_t { None, Moved, Changed, Open, Leave, Light };
 

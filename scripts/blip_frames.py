@@ -8,9 +8,11 @@ but those arrays. Anything else is refused on the way in, so a frame this decode
 one the unit would read, and every value is checked against its key's type on the
 way out, so a frame this encodes is one the unit could have been sent.
 """
+import asyncio
 import json
 import pathlib
 import re
+import time
 
 REGISTRY_PATH = pathlib.Path(__file__).resolve().parent.parent / "schemas" / "link.v1.json"
 COMMAND_KEY = 0
@@ -146,6 +148,21 @@ def enum_name(enum, code):
         if value["code"] == code:
             return value["name"]
     return code
+
+
+async def next_frame(link, commands, timeout, awaited, decode=None):
+    """The next frame commanded one of commands, past the frames the unit pushes unasked."""
+    decode = decode or decode_frame
+    deadline = time.monotonic() + timeout
+    while True:
+        left = deadline - time.monotonic()
+        try:
+            _, data = await asyncio.wait_for(link.replies.get(), max(left, 0))
+        except asyncio.TimeoutError:
+            raise SystemExit("no %s from the unit within %.1f s" % (awaited, timeout))
+        frame = decode(data)
+        if frame.get("command") in commands:
+            return frame
 
 
 def more_follows(frame):

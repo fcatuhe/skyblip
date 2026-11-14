@@ -32,13 +32,13 @@ inline void run_on(simulator::Simulator& simulator, uint32_t from_ms, uint32_t f
 
 // Own bursts go on air as chips behind the ADS-L sync word, read back the way a receiver frames
 // them.
-inline bool packet_of(const simulator::AirRecord& record, protocol::AdslPacket& packet) {
+inline bool packet_of(const simulator::AirRecord& record, adsl::Packet& packet) {
     protocol::Frame frame{};
     if (record.event != simulator::AirEvent::Tx || !simulator::Air::framed(record, frame) ||
         frame.system != protocol::System::AdslDirect)
         return false;
     packet.reset();
-    std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
     if (packet.check_crc() != 0) return false;
     packet.descramble();
     return true;
@@ -47,7 +47,7 @@ inline bool packet_of(const simulator::AirRecord& record, protocol::AdslPacket& 
 // INFO: fc 13nov26 a burst own-ship sent that does not read back fails the test that counted it
 inline uint8_t payload_type_of(const simulator::AirRecord& record) {
     if (record.event != simulator::AirEvent::Tx) return 0;
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     REQUIRE(packet_of(record, packet));
     return packet.payload_type;
 }
@@ -74,7 +74,7 @@ inline std::vector<simulator::AirRecord> statuses_flown(int speed_kt, uint32_t f
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(speed_kt);
     run_on(simulator, past_settling(simulator), for_s * 1000);
-    return records_of(simulator.world().air(), protocol::AdslPacket::kPayloadTypeStatus);
+    return records_of(simulator.world().air(), adsl::Packet::kPayloadTypeStatus);
 }
 
 inline int count_of(const simulator::Air& air, simulator::AirEvent want) {

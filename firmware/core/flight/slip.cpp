@@ -1,6 +1,6 @@
 #include "core/flight/slip.h"
 
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
 
@@ -29,7 +29,8 @@ bool SlipBall::valid(uint32_t now_ms) const {
 }
 
 int16_t SlipBall::damped_mg() const {
-    return static_cast<int16_t>(divide_rounded(damped_accumulator_, kIndicatedDampingSamples));
+    return static_cast<int16_t>(
+        wire::divide_rounded(damped_accumulator_, kIndicatedDampingSamples));
 }
 
 }  // namespace skyblip::flight

@@ -24,7 +24,7 @@ enum class AirEvent : uint8_t {
 
 // The longest burst the channel carries: an O-band uplink frame, which is not
 // Manchester-coded and is eleven times what an M-band one is.
-constexpr int kMaxBurstBytes = protocol::kUplinkBurstBytes;
+constexpr int kMaxBurstBytes = adsl::kUplinkMaxBurstBytes;
 static_assert(protocol::kTxChipBytes <= kMaxBurstBytes, "an M-band burst would not fit the air");
 
 struct AirRecord {
@@ -33,7 +33,7 @@ struct AirRecord {
     // The chip rate the burst was sent at. It is part of the burst, not of the
     // receiver: the two bands are two modulations and a dwell framing the wrong
     // one is deaf on air, which is a bug the tape has to be able to show.
-    uint32_t chip_rate_bps{protocol::kMBandChipRateBps};
+    uint32_t chip_rate_bps{adsl::kMBandChipRateBps};
     uint16_t phase_ms{0};
     uint16_t bytes{0};
     AirEvent event{AirEvent::Deaf};
@@ -76,7 +76,7 @@ class Air {
     // transmitter used is part of them, which is what decides whether a
     // listening receiver frames it, and so is the rate it clocked them out at.
     void emit(uint64_t at_us, uint32_t frequency_hz, const uint8_t* chips, uint16_t bytes,
-              int8_t rssi_dbm, uint32_t chip_rate_bps = protocol::kMBandChipRateBps);
+              int8_t rssi_dbm, uint32_t chip_rate_bps = adsl::kMBandChipRateBps);
 
     void step(uint64_t now_us, models::Sx1262& radio);
     void take_own_transmission(uint64_t now_us, models::Sx1262& radio);
@@ -88,7 +88,7 @@ class Air {
 
     // The same for the O band, where there is no Manchester and no shared
     // window: strip §C.4.3's sync word and the length byte behind it, and what
-    // is left is the codeword.
+    // is left is the length byte and the uplink packet.
     static bool framed_uplink(const AirRecord& record, uint8_t* frame);
 
     void clear();
@@ -110,7 +110,7 @@ class Air {
         uint64_t at_us{0};
         uint64_t air_time_us{0};
         uint32_t frequency_hz{0};
-        uint32_t chip_rate_bps{protocol::kMBandChipRateBps};
+        uint32_t chip_rate_bps{adsl::kMBandChipRateBps};
         int8_t rssi_dbm{0};
         uint16_t bytes{0};
         uint8_t chips[kMaxBurstBytes]{};

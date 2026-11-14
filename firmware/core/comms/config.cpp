@@ -359,6 +359,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Browsers: send_browser(reader); return;
         case link::Command::ForgetBrowser: forget_browser(reader); return;
         case link::Command::InstallReport: send_install_report(); return;
+        case link::Command::Protocols: send_protocols(); return;
         default: return;
     }
 }
@@ -387,6 +388,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Browsers:
         case link::Command::ForgetBrowser: return identity_ != nullptr;
         case link::Command::Capture: return serves_captures_;
+        case link::Command::Protocols: return !radio_protocols_.empty();
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:

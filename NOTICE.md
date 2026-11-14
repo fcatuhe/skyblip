@@ -13,7 +13,7 @@ skyBlip is MIT, see [`LICENSE`](https://github.com/fcatuhe/skyblip/blob/main/LIC
 | `server/app/assets/fonts/Inter-*.woff2` | Inter | SIL Open Font License 1.1, `OFL-Inter.txt` beside it |
 | `server/app/assets/fonts/B612Mono-Regular.woff2` | B612 Mono | SIL Open Font License 1.1, `OFL-B612.txt` beside it |
 | `docs/reference/ads-l_4_srd860_issue_*` | ADS-L 4 SRD-860, Issues 1 and 2, and their text conversions | Copyright European Union Aviation Safety Agency. Reproduction is authorised provided the source is acknowledged, see `docs/reference/README.md` |
-| `firmware/test/core/test_adsb.cpp` | eight 1090 MHz frames and dump1090's decodes of them, from the [IndoorOutdoor/1090dumpCSV](https://huggingface.co/datasets/IndoorOutdoor/1090dumpCSV) dataset | Apache-2.0 |
+| `firmware/protocols/adsb/test/test_message.cpp` | eight 1090 MHz frames and dump1090's decodes of them, from the [IndoorOutdoor/1090dumpCSV](https://huggingface.co/datasets/IndoorOutdoor/1090dumpCSV) dataset | Apache-2.0 |
 
 The 5x7 font in `firmware/ui/canvas.cpp` is the character set of Hitachi's HD44780U LCD controller, ROM code A00, as Table 4 of the HD44780U datasheet draws it. Hitachi attaches no license to it. It is credited here as the font's origin.
 

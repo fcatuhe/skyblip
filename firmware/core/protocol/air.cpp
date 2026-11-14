@@ -1,7 +1,7 @@
 #include "core/protocol/air.h"
 
-#include "core/fec/manchester.h"
 #include "core/model/band.h"
+#include "protocols/common/manchester.h"
 
 namespace skyblip::protocol {
 
@@ -20,8 +20,8 @@ int tail_errors(const uint8_t* data, uint32_t sync_word) {
 }
 
 System system_of(const uint8_t* data) {
-    if (tail_errors(data, kAdslSyncWord) <= kSyncTailErrorsCeiling) return System::AdslDirect;
-    if (tail_errors(data, kAlptasSyncWord) <= kSyncTailErrorsCeiling) return System::Alptas;
+    if (tail_errors(data, adsl::kSyncWord) <= kSyncTailErrorsCeiling) return System::AdslDirect;
+    if (tail_errors(data, alptas::kSyncWord) <= kSyncTailErrorsCeiling) return System::Alptas;
     return System::Unknown;
 }
 
@@ -36,13 +36,20 @@ void shift_left(uint8_t* data, size_t bytes, uint8_t bits) {
     }
 }
 
+bool uplink_packet(const uint8_t* data, size_t bytes) {
+    if (bytes < 1 || static_cast<size_t>(data[0]) + 1 > bytes) return false;
+    for (int count = 0; count <= adsl::kUplinkMaxTargets; count++)
+        if (data[0] == adsl::uplink_length(count)) return true;
+    return false;
+}
+
 }  // namespace
 
 uint8_t frame_bytes(System system) {
     switch (system) {
-        case System::AdslDirect: return kAdslFrameBytes;
-        case System::Alptas: return kAlptasFrameBytes;
-        case System::AdslUplink: return kUplinkFrameBytes;
+        case System::AdslDirect: return adsl::kFrameBytes;
+        case System::Alptas: return alptas::kFrameBytes;
+        case System::AdslUplink: return static_cast<uint8_t>(1 + adsl::kUplinkMaxLength);
         case System::Unknown: return 0;
     }
     return 0;
@@ -52,18 +59,9 @@ size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, u
     uint8_t tail[kSyncTailBytes] = {0};
     for (int i = 0; i < kSyncTailBytes; i++)
         tail[i] = static_cast<uint8_t>(sync_word >> (8 * (kSyncTailBytes - 1 - i)));
-    fec::manchester_encode(tail, sizeof(tail), chips);
-    fec::manchester_encode(frame, bytes, chips + kSyncTailChipBytes);
+    wire::manchester_encode(tail, sizeof(tail), chips);
+    wire::manchester_encode(frame, bytes, chips + kSyncTailChipBytes);
     return kSyncTailChipBytes + 2u * bytes;
-}
-
-size_t encode_m_band(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips) {
-    uint8_t window[kSyncWindowBytes] = {0};
-    for (int i = 0; i < kSyncWindowBytes; i++)
-        window[i] = static_cast<uint8_t>(sync_word >> (24 - 8 * i));
-    fec::manchester_encode(window, sizeof(window), chips);
-    return kSyncWindowChipBytes +
-           m_band_payload(sync_word, frame, bytes, chips + kSyncWindowChipBytes);
 }
 
 bool framed_noise(const Frame& frame) {
@@ -77,7 +75,7 @@ bool framed_noise(const Frame& frame) {
 bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     out = Frame{};
     if (chip_bytes < kRxChipBytes) return false;
-    fec::manchester_decode(chips, kRxFrameBytes, out.data, out.erasures);
+    wire::manchester_decode(chips, kRxFrameBytes, out.data, out.erasures);
     out.system = system_of(out.data);
     if (out.system == System::Unknown) return false;
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
@@ -91,16 +89,10 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     return true;
 }
 
-size_t encode_o_band(const uint8_t* frame, uint8_t* out) {
-    for (size_t i = 0; i < sizeof(kUplinkSync); i++) out[i] = kUplinkSync[i];
-    for (size_t i = 0; i < kUplinkFrameBytes; i++) out[sizeof(kUplinkSync) + i] = frame[i];
-    return sizeof(kUplinkSync) + kUplinkFrameBytes;
-}
-
 System receive_burst(model::Band band, const uint8_t* data, size_t bytes, Frame& out) {
     if (band == model::Band::O) {
         out = Frame{};
-        return bytes == kUplinkFrameBytes ? System::AdslUplink : System::Unknown;
+        return uplink_packet(data, bytes) ? System::AdslUplink : System::Unknown;
     }
     return receive_m_band(data, bytes, out) ? out.system : System::Unknown;
 }
