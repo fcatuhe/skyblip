@@ -46,6 +46,7 @@
   }
 
   .steps-grid p { color: var(--card-ink); font-size: var(--text-s); margin: 0; }
+  .steps-grid p + p { margin-block-start: var(--space-xs); }
 
   .steps-grid--sequence {
     --step-mark: var(--space-xl);
