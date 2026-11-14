@@ -155,11 +155,19 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kWindowUs` | 160 | microseconds | Window | - |
+| `kCcaWindowUs` | 200 | microseconds | Window | 1) the CCA interval, over Table 48's 160 us floor |
+| `kDeadTimeCeilingUs` | 2000 (2 ms) | microseconds | Ceiling | 2) the dead time, CCA end to burst on air, where Table 48 allows 5 ms |
+| `kDeferralUnitUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | - | 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks |
+| `kDeferralFloorUs` | `kDeferralUnitUs` = 5000 (5 ms) | microseconds | Floor | [README](../firmware/core/timing/README.md) argues it |
+| `kDeferralCeilingUs` | `kDeferralUnits * kDeferralUnitUs` = 40000 (40 ms) | microseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
+| `kTransmissionCeilingUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | Ceiling | 6) Ton max is one burst, under Table 48's 1 s |
+| `kSameFrequencyOffFloorMs` | `en300220::kSameFrequencyOffFloorMs` = 100 | milliseconds | Floor | 7) Toff min on one frequency, which the schedule holds (README) |
+| `kCcaLeadUs` | `kCcaWindowUs + kDeadTimeCeilingUs` = 2200 (2.2 ms) | microseconds | - | a burst starts this long into its dwell, so the CCA listens on its channel |
+| `kWindowUs` | `PoliteAccess::kCcaWindowUs` | microseconds | Window | - |
 | `kSamples` | 9 | samples | Samples | [README](../firmware/core/timing/README.md) argues it |
-| `kSampleSpacingUs` | `kWindowUs / (kSamples - 1)` = 20 | microseconds | - | - |
+| `kSampleSpacingUs` | `kWindowUs / (kSamples - 1)` | microseconds | - | - |
 | `kMaxSamples` | 16 | samples | Samples | - |
-| `kWindowMs` | 3600000 (60 min) | milliseconds | Window | - |
+| `kWindowMs` | `en300220::kDutyCycleWindowMs` = 3600000 (60 min) | milliseconds | Window | - |
 | `kBucketMs` | `kWindowMs / kBuckets` = 514285 (8.57142 min) | milliseconds | - | - |
 | `kBudgetMs` | `kWindowMs / 1000 * kLimitPermille` = 36000 (36 s) | milliseconds | - | - |
 | `kWordWriteUs` | 41 | microseconds | - | nRF52840 PS v1.8, NVMC chapter, "Electrical specification": tWRITE = 41 us to write one 32-bit word, tERASEPAGE = 85 ms to erase one 4 kB page. |
@@ -188,6 +196,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHopGuardUs` | `kHopGuardMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
+| `kCcaLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | - |
 | `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
@@ -350,6 +359,8 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kAirborneReportPeriodS` | 1 | seconds | Period | - |
 | `kGroundReportPeriodS` | 10 | seconds | Period | - |
+| `kForceAfterAttemptUs` | 3000000 (3000 ms) | microseconds | - | §D.3: past this since the initial attempt "the device may force transmission" |
+| `kSilenceAfterForceUs` | 2000000 (2000 ms) | microseconds | - | §D.3: after a forced transmission "the device may not transmit" for 2000 ms |
 | `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
 | `kAltitudeOffsetM` | 320 | metres | - | - |
 | `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
@@ -374,6 +385,20 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAltitudeOffsetM` | 1000 | metres | - | - |
 | `kKeyWindowS` | 18 | seconds | Window | GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by |
 
+## [`firmware/protocols/common`](../firmware/protocols/common/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kDutyCycleWindowMs` | 3600000 (60 min) | milliseconds | Window | -2 4.4.3.2: "Unless otherwise specified, Tobs is 1 hour" |
+| `kCcaIntervalFloorUs` | 160 | microseconds | Floor | -1 Table 48, -2 Table 18: the polite spectrum access timing limits |
+| `kDeferralFloorUs` | `kCcaIntervalFloorUs` = 160 | microseconds | Floor | - |
+| `kDeadTimeCeilingUs` | 5000 (5 ms) | microseconds | Ceiling | - |
+| `kTransmissionCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | - |
+| `kDialogueCeilingMs` | 4000 (4 s) | milliseconds | Ceiling | - |
+| `kCumulativeOnCeilingMs` | 100000 (1.66667 min) | milliseconds | Ceiling | - |
+| `kCumulativeOnWindowMs` | 3600000 (60 min) | milliseconds | Window | - |
+| `kSameFrequencyOffFloorMs` | 100 | milliseconds | Floor | - |
+
 ## `firmware/runtime`
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -389,4 +414,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-249 constants over 25 folders.
+269 constants over 26 folders.
