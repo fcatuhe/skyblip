@@ -2145,7 +2145,7 @@ What the device sensed: a fix, a PPS edge, a burst, the barometer, the hub, the 
 - an ADS-B version never heard reads unknown, apart from version 0
   > Version 0 sends no operational status, so a version not heard yet is not version 0.
 - baro keeps the pressure beside the altitude derived from it
-- every one of the thirteen verdicts survives the slot
+- every one of the sixteen verdicts survives the slot
 - motion keeps the ball and both ends of the g-meter
 - power keeps the cell, the verdict on it and the warnings counted
 - the knee rides inside the level, and the bit it used to ride stays clear
@@ -2163,7 +2163,7 @@ ETSI EN 300 220-1 V3.1.1 clause 5.21, polite spectrum access, read against this 
 
 **EN 300 220-1 5.21.2.2**
 
-- the CCA threshold is 15 dB over the sensitivity limit, at the front end
+- the CCA threshold is 15 dB over the sensitivity limit, less the antenna gain
 
 **EN 300 220-1 5.21.3.1**
 
@@ -3179,7 +3179,7 @@ The page a bench reads: what it draws per burst, and what it refuses to invent.
   > On the ground the Status goes out about a tenth of a second from the position, as a second row.
 - own-ship's callsign burst says so where its schedule is printed
   > A name is on neither schedule, so it says which burst it was where the rate would be.
-- own-ship's two outcomes read apart, and both read as TX
+- own-ship's outcomes read apart, and all read as TX
   > A transmission that failed, read as a bad reception, sends a reader after the wrong fault.
 - the M band's two channels read apart, and the O band has none
   > §C.2.5 alternates the two M-band channels: a receiver on one hears half its neighbours.
@@ -5985,8 +5985,8 @@ A logarithm a tenth of a dB off moves the CCA threshold a device declares under 
 
 - a level at the threshold is busy, one below it is clear
 - ten_log10_centi rounds to the hundredth of a dB the library gives
-- the CCA threshold sits 15 dB over sensitivity and follows the antenna gain
-  > Table 45's example: a -5 dB antenna's front-end threshold, raised by 5 dB, is the radiated one.
+- the CCA threshold sits 15 dB over sensitivity, less the antenna gain
+  > Table 45: "With antenna gain of -5 dB, the CCA threshold shall be ... increased by 5 dB".
 - the sensitivity limit of Table 32 matches the clause's example
   > Table 32's own example: a 16 kHz receiver "corresponds to a receiver sensitivity of -105 dBm".
 
