@@ -6,26 +6,26 @@ using SRD-860 frequency band
                  (ADS-L 4 SRD-860)
 ```
 
-ACCEPTABLE METHODS, TECHNIQUES AND PRACTICES FOR CARRYING OUT ADS-L TRANSMISSIONS USING SRD-
+ACCEPTABLE METHODS, TECHNIQUES AND PRACTICES FOR CARRYING OUT ADS-L TRANSMISSIONS USING SRD-860 FREQUENCY BAND AS PERMITTED PURSUANT TO AMC1 SERA.6005(c) POINT (a)(3)(i)
 
 ```
-860 FREQUENCY BAND AS PERMITTED PURSUANT TO AMC1 SERA.6005(c) POINT (a)(3)(i)
-
-                                                   Issue 2
-                                            1 DECEMBER 20251
+       Issue 2
+1 DECEMBER 20251
 ```
 
-_____________________
-
-```
-1   For the date of entry into force of this Issue, please refer to Decision 2022/024/R at the Official Publication of EASA.
-```
+1 For the date of entry into force of this Issue, please refer to Decision 2022/024/R at the Official Publication of EASA.
 
 ## TABLE OF CONTENTS
+
+Note: To support the identification of improvements to ADS-L 4 SRD-860, as well as its future evolution, EASA would appreciate stakeholders’ voluntary feedback through the EASA website2.
+
+2 https://www.easa.europa.eu/easa-and-you/general-aviation
 
 ## PREAMBLE
 
 ```
+                              ED Decision 2022/024/R
+
 ADS-L 4 SRD-860 Issue 1
 ```
 
@@ -33,6 +33,8 @@ The following is a list of paragraphs affected by this Issue: Whole document
 
 ```
 Issue 1                                                           New (NPA 2021-14)
+
+                                                                      ED Decision 2022/024/R
 ```
 
 ## DEFINITIONS AND ABBREVIATIONS
@@ -289,11 +291,9 @@ Backoff Interval (see Subpart D)                   15 ms .. 250 ms
 
 Manchester encoding is applied to the Sync Word and the entire ADS-L packet for better clock synchronization (lower error rate and more reliable transmission), halving the effective bit rate to 50kbps. Manchester encoding is not applied to the Preamble, see below. The encoding is such that a ‘1’ is transmitted as ‘01’ and a ‘0’ as ‘10’.
 
-_____________________
+If the (optional) secure signature is used, Manchester encoding is disabled for transmitting it to enable a shorter on-air time. This means the transmitter shall switch to non-Manchester mode after transmitting the ADS-L packet. See the next section on the ADS-L packet structure.
 
 3 See ETSI EN 300 220-2 for a definition of both bands. The band designations (“M-band”, “O-band”) were derived from the ETSI norm, but have changed in since this specification was started. For the sake of consistency, we keep the designation in line with previous versions of the ADS-L 4 SRD 860 specification.
-
-If the (optional) secure signature is used, Manchester encoding is disabled for transmitting it to enable a shorter on-air time. This means the transmitter shall switch to non-Manchester mode after transmitting the ADS-L packet. See the next section on the ADS-L packet structure.
 
 #### ADS-L.4.SRD860.C.2.3 Preamble
 
@@ -323,7 +323,7 @@ The two frequencies of the M-band are used: 868.2 and 868.4 MHz. An ADS-L sender
 
 ### ADS-L.4.SRD860.C.3 O-Band Low Data Rate (LDR)
 
-A digital modulation scheme (2-GFSK) is employed to transmit data. The key parameters are given in the table below. Important Notice: Issue 2 of the specification corrects the modulation characteristics for ADS-L in the O- Band (low data rate transmission). The O-Band specification in Issue 1 should not be used, as it will not be compatible with future standards.
+A digital modulation scheme (2-GFSK) is employed to transmit data. The key parameters are given in the table below. Important Notice: Issue 2 of the specification corrects the modulation characteristics for ADS-L in the O-Band (low data rate transmission). The O-Band specification in Issue 1 should not be used, as it will not be compatible with future standards.
 
 ```
 Frequency                                             869.525 MHz
@@ -445,7 +445,7 @@ The Packet Length field contains the number of bytes of the full message includi
 
 #### ADS-L.4.SRD860.D.1.2 O-band LDR
 
-This channel uses a custom data link layer for compatibility with legacy hardware, replacing Subpart D. The secure signature (see ADS-L.4.SRD860.E.4) and the forward error correction (see ADS- L.4.SRD860.E.3.2) shall not be used with this channel. The maximum payload length is 15 bytes (excluding headers and checksums). Smaller payloads may be transmitted by padding with arbitrary data. The structure of the data link packet (ADS-L packet) for O-band LDR is given as:
+This channel uses a custom data link layer for compatibility with legacy hardware, replacing Subpart D. The secure signature (see ADS-L.4.SRD860.E.4) and the forward error correction (see ADS-L.4.SRD860.E.3.2) shall not be used with this channel. The maximum payload length is 15 bytes (excluding headers and checksums). Smaller payloads may be transmitted by padding with arbitrary data. The structure of the data link packet (ADS-L packet) for O-band LDR is given as:
 
 ```
 Offset                      Description        Width (bits)       Encoding
@@ -489,17 +489,7 @@ Datalink Header
                                                       Section D.1.3
 ```
 
-Description: 1. The ADS-L Data content is first formed according to Subpart F 2. Scrambling, if enabled, is applied per Section ADS-L.4.SRD860.E.2 3. Error control / parity according to Section ADS-L.4.SRD860.E.3 is appended 4. The network header is formed according to Subpart E and prepended to the (previously
-
-```
-scrambled) content
-```
-
-5. Optionally, a secure signature is appended. The signature is built by completely digesting and signing
-
-```
-the previously formed ADS-L packet, i.e. including headers and parity
-```
+Description: 1. The ADS-L Data content is first formed according to Subpart F 2. Scrambling, if enabled, is applied per Section ADS-L.4.SRD860.E.2 3. Error control / parity according to Section ADS-L.4.SRD860.E.3 is appended 4. The network header is formed according to Subpart E and prepended to the (previously scrambled) content 5. Optionally, a secure signature is appended. The signature is built by completely digesting and signing the previously formed ADS-L packet, i.e. including headers and parity
 
 ### ADS-L.4.SRD860.D.3 Media Access
 
@@ -511,11 +501,7 @@ If no packet can be transmitted 3000 ms after the initial attempt, the device ma
 
 ### ADS-L.4.SRD860.E.1 Network Packet Structure
 
-The network layer governs the following aspects of the ADS-L protocol: • Protocol versioning, such that newer versions of the protocol can be safely deployed • The optional secure signature for sender authentication • Data scrambling, improving the resilience to transmission errors and improving the radio channel
-
-```
-characteristics.
-```
+The network layer governs the following aspects of the ADS-L protocol: • Protocol versioning, such that newer versions of the protocol can be safely deployed • The optional secure signature for sender authentication • Data scrambling, improving the resilience to transmission errors and improving the radio channel characteristics.
 
 The network packet structure is given as:
 
@@ -641,7 +627,7 @@ A sample implementation is given below: static uint32_t _crc24_polypass(uint32_t
 
 uint32_t crc24(const uint8_t *data, size_t len_data) { uint32_t crc = 0; for (size_t idx = 0; idx < len_data; idx++) { crc = _crc24_polypass(crc, data[idx]); } crc = _crc24_polypass(crc, 0); crc = _crc24_polypass(crc, 0); crc = _crc24_polypass(crc, 0); return crc >> 8; }
 
-Note that only the 3 lower bytes of the result are relevant and to be transmitted on the RF in Big endian, i.e. most significant byte first. This byte order allows certain discrete radio chips to use hardware- accelerated CRC generation and verification, reducing power consumption for these platforms.
+Note that only the 3 lower bytes of the result are relevant and to be transmitted on the RF in Big endian, i.e. most significant byte first. This byte order allows certain discrete radio chips to use hardware-accelerated CRC generation and verification, reducing power consumption for these platforms.
 
 #### ADS-L.4.SRD860.E.3.2 FEC
 
@@ -798,30 +784,24 @@ Value           Transmission Type            Payload
 #### ADS-L.4.SRD860.F.2.2 Sender Address
 
 ```
-Offset       Description                               Width (bits)
+   Offset       Description                               Width (bits)
 
-0            Address Mapping Table                     6
+   0            Address Mapping Table                     6
 
-6            Address                                   24
+   6            Address                                   24
 
-Address Mapping Table (AMT)                                           Value
+   Address Mapping Table (AMT)                                           Value
 
-Random / Privacy                                                      0
+   Random / Privacy                                                      0
 
-Reserved                                                              1..3
+   Reserved                                                              1..3
 
-Reserved                                                              4
+   Reserved                                                              4
 
-ICAO                                                                  5
+   ICAO                                                                  5
 
-FLARM (including OEMs)                                                6
-```
+   FLARM (including OEMs)                                                6
 
-_____________________
-
-4 Payload definition is outside the scope of this document.
-
-```
 Address Mapping Table (AMT)                                       Value
 
 OGN-Tracker                                                       7
@@ -848,6 +828,8 @@ Offset       Description                          Width (bits)
 ```
 
 Manufacturers intending to implement ADS-L shall apply for a unique manufacturer prefix, associated to one of the manufacturer pages of the AMT. The combination AMT page + manufacturer prefix shall be uniquely assigned to only one manufacturer. The manufacturer shall use the remaining 16-bit base address space as densely as possible. Once the range is used up, the manufacturer shall apply for a new AMT page + manufacturer prefix combination to use. To obtain an AMT entry, contact registry@ads-l.aero.
+
+4 Payload definition is outside the scope of this document.
 
 #### ADS-L.4.SRD860.F.2.3 ICAO Address
 
@@ -919,7 +901,7 @@ The individual fields are further explained in the following Sections. Where no 
 
 #### ADS-L.4.SRD860.G.1.1 Timestamp
 
-The Timestamp field indicates the number of quarter seconds since the full hour, modulo 60. The values 60..63 shall not be used. The timestamp refers to the time of the navigation solution (PVT fix) obtained by the GNSS receiver (e.g. on the full second) and included in the Traffic payload. It shall be accurate to ± 10 ms. This is distinct from the time of transmission: Calculation of the navigation solution, processing on the host controller, and spectrum access management all introduce small delays. Also see Section ADS- L.4.SRD860.G.1.16.
+The Timestamp field indicates the number of quarter seconds since the full hour, modulo 60. The values 60..63 shall not be used. The timestamp refers to the time of the navigation solution (PVT fix) obtained by the GNSS receiver (e.g. on the full second) and included in the Traffic payload. It shall be accurate to ± 10 ms. This is distinct from the time of transmission: Calculation of the navigation solution, processing on the host controller, and spectrum access management all introduce small delays. Also see Section ADS-L.4.SRD860.G.1.16.
 
 #### ADS-L.4.SRD860.G.1.2 Flight State
 
@@ -1232,11 +1214,8 @@ The vertical position accuracy or Vertical Figure of Merit (VFOM) is defined as 
 
 ```
 95% Geometric Altitude Accuracy Bound                           Value
-```
-
 (VFOM)
 
-```
 Unknown / no fix or VFOM ≥ 150 m                                0
 
 45 m ≤ VFOM < 150 m                                             1
@@ -1252,11 +1231,8 @@ The velocity accuracy is based on 95% bounds on the errors in the measured horiz
 
 ```
 95% Horizontal Velocity Accuracy Bound                          Value
-```
-
 (AccVel)
 
-```
 Unknown / no fix or AccVel ≥ 10 m/s                             0
 
 3 m/s ≤ AccVel < 10 m/s                                         1
@@ -1315,7 +1291,7 @@ This field indicates the maximum protocol version the sender can support both as
 
 #### ADS-L.4.SRD860.G.2.2 M-Band Receive
 
-This field declares the receive capabilities of the sender for ADS-L 4 SRD860 on the M-band for direct transmissions (air-to-air). The capability is defined in terms of average dwell time, corresponding to the average likelihood of receiving an arbitrary ADS-L message on M-band in the “Direct” time slot. Since M- Band comprises two channels for direct communication, a “Full (>80%)” capability is only achieved if the receiver is listening on both channels concurrently. A receiver listening on one of the two channels can only achieve “Partial” capability.
+This field declares the receive capabilities of the sender for ADS-L 4 SRD860 on the M-band for direct transmissions (air-to-air). The capability is defined in terms of average dwell time, corresponding to the average likelihood of receiving an arbitrary ADS-L message on M-band in the “Direct” time slot. Since M-Band comprises two channels for direct communication, a “Full (>80%)” capability is only achieved if the receiver is listening on both channels concurrently. A receiver listening on one of the two channels can only achieve “Partial” capability.
 
 ```
 Receive Capabilities                                               Value
@@ -1648,18 +1624,13 @@ in accordance with ED Decision 2022/024/R and the attached Technical Specificati
 The undersigned, representing the manufacturer:
 
 ```
-[Manufacturer Name and Address]
-```
-
+        [Manufacturer Name and Address]
 declares under sole responsibility that the following product:
-
-```
-Product Name: [Product Name]
-Device P/N: [Part Number]
-Firmware Version: [Firmware Version]
-```
-
+        Product Name: [Product Name]
+        Device P/N: [Part Number]
+        Firmware Version: [Firmware Version]
 is in conformity with the ADS-L 4 SRD860 Standard Issue 2
+```
 
 The device operates on the following transmission parameters:
 
