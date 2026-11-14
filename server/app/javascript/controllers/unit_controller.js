@@ -42,6 +42,14 @@ export default class extends Controller {
     this.session.leave()
   }
 
+  glassOutletConnected(glass) {
+    this.glass = glass
+  }
+
+  glassOutletDisconnected() {
+    this.glass = null
+  }
+
   get unit() {
     return this.fleet.unit(this.slugValue)
   }
@@ -296,11 +304,11 @@ export default class extends Controller {
   }
 
   #glass(unit, asking) {
-    if (!this.hasGlassOutlet) return
+    if (!this.glass) return
     const remembers = unit?.state?.task === "set" && unit.state.trust === "proven"
-    if (!asking) return this.glassOutlet.hide()
+    if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
-    this.glassOutlet.show({
+    this.glass.show({
       title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers,
       argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""

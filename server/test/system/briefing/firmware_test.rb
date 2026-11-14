@@ -141,6 +141,27 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  # Importmap loads each controller on its own, so in production the glass can register after the pages that ask through it
+  test "the glass asks for an install even when its controller registers last" do
+    in_range a_go
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      assert_button "Install 0.1.0+1005"
+      page.execute_script(<<~JS)
+        window.failures = []
+        addEventListener("stimulus:failed", ({ detail }) => failures.push(detail.error.message))
+        const identifiers = ["unit", "firmware", "glass"]
+        const definitions = identifiers.map(identifier => Stimulus.router.modulesByIdentifier.get(identifier).definition)
+        Stimulus.unload(identifiers)
+        Stimulus.load(definitions)
+      JS
+      click_button "Install 0.1.0+1005"
+      assert_selector ".glass-press", text: "Press the Go's button twice."
+      assert_empty page.evaluate_script("failures")
+    end
+  end
+
   test "the firmware page keeps the file picker when the published list is unavailable" do
     in_range a_go
     VCR.use_cassette("github/unavailable", allow_playback_repeats: true) do
