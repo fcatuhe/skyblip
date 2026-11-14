@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_182354) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_202120) do
   create_table "activation_caps", force: :cascade do |t|
     t.integer "new_units_per_day", default: 50, null: false
     t.datetime "created_at", null: false
@@ -22,7 +22,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_182354) do
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
     t.string "server_key_id", null: false
-    t.string "ip_address"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_activation_challenges_on_created_at"
@@ -111,7 +110,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_182354) do
     t.integer "unit_id", null: false
     t.string "public_key", null: false
     t.string "status", null: false
-    t.string "ip_address"
     t.string "version"
     t.string "server_key_id"
     t.datetime "created_at", null: false
@@ -127,9 +125,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_182354) do
     t.integer "serial", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "enrolled_from"
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
-    t.index ["enrolled_from", "created_at"], name: "index_units_on_enrolled_from_and_created_at"
     t.index ["serial"], name: "index_units_on_serial", unique: true
     t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end
