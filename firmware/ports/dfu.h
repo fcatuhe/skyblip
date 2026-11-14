@@ -71,6 +71,7 @@ class Dfu {
 
     // INFO: fc 13nov26 marks slot 1 for a test swap only once its whole image matches its digest
     virtual SwapRequest request_swap() { return {}; }
+    virtual StagedCheck check_staged() { return StagedCheck::Unchecked; }
     // INFO: fc 07sep26 one-shot swap: an image that never calls confirm() is reverted next boot
     virtual void trigger() = 0;
 

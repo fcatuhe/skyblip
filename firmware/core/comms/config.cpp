@@ -295,17 +295,25 @@ void ConfigService::install_received_image() {
     install_held_ = false;
     ports::ImageVersion staged;
     if (!dfu_->staged_version(staged)) {
-        acknowledge(false, link::Reason::NothingStaged);
+        refuse_landing(link::Reason::NothingStaged);
     } else if (staged != approved_version_) {
-        acknowledge(false, link::Reason::NotApproved);
+        refuse_landing(link::Reason::NotApproved);
     } else if (!signed_by_trusted_key()) {
-        acknowledge(false, link::Reason::WrongKey);
+        refuse_landing(link::Reason::WrongKey);
     } else if (!swap_powered()) {
         acknowledge(false, link::Reason::LowPower);
     } else {
         install_requested_ = true;
         acknowledge(true, link::Reason::Install);
     }
+}
+
+void ConfigService::refuse_landing(link::Reason reason) {
+    dfu::Landing landing{dfu_->check_staged()};
+    ports::SigningKeyHash key;
+    if (dfu_->staged_key(key)) landing.staged_key = key;
+    landing_ = landing;
+    refuse(reason);
 }
 
 // INFO: fc 03oct26 the bootloader verifies against this key, so a foreign image stops before the
@@ -564,6 +572,7 @@ void ConfigService::apply_settings(const cbor::Reader& frame) {
 void ConfigService::open_upload_window() {
     upload_window_open_ = true;
     upload_window_opened_ms_ = now_ms_;
+    landing_.reset();
     if (dfu_) dfu_->forget_upload();
 }
 

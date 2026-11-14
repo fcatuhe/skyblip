@@ -36,6 +36,10 @@ class Dfu : public ports::Dfu {
         swap_requests++;
         return swap_request;
     }
+    ports::StagedCheck check_staged() override {
+        staged_checks++;
+        return staged_check;
+    }
     void trigger() override { triggered++; }
     bool confirm() override {
         confirms++;
@@ -90,6 +94,8 @@ class Dfu : public ports::Dfu {
 
     ports::SwapRequest swap_request{ports::StagedCheck::Matched, 0, ports::SwapType::Test};
     int swap_requests{0};
+    ports::StagedCheck staged_check{ports::StagedCheck::Matched};
+    int staged_checks{0};
     int triggered{0};
     int confirms{0};
     int recoveries{0};

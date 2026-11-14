@@ -51,7 +51,9 @@ The `update` frame names the product the unit runs, `product` in `schemas/link.v
 
 ## The install report
 
-The install report is troubleshooting for #278. #294 retires it once Bluetooth updates install and confirm in the field. It is one entry of 9 bytes in NVS, under the key `install.report`, beside the update record:
+The install report says why an update did not land, so the events the briefing app sends are enough to diagnose a unit far away (#278). It has two parts.
+
+The install's part is one entry of 9 bytes in NVS, under the key `install.report`, beside the update record:
 
 | Field | Written by | What it says |
 |---|---|---|
@@ -61,24 +63,28 @@ The install report is troubleshooting for #278. #294 retires it once Bluetooth u
 | `probation_boots`, `proof` | the new image, on probation | how many times it ran, and how far its last run got: `booted`, `started`, `gnss_heard`, `hub_bootable`, `proven` or `confirm_failed` |
 | `reset` | every image that boots | the reason for the latest restart. After a revert, it names what ended the new image's run |
 
-The report lives exactly as long as the update record. `install()` writes a new one, and an image that confirms itself, or that finds an image the record does not name, erases both. A boot that finds no record erases the report too, so an entry an older image left behind does not outlive the next boot of an image that knows the key. The new image writes at most six times during its probation, unplaced, because only the first minute after an install pays for them. A host asks for it with the bare `install_report` command, and the answer is 22 bytes at its widest.
+The install's part lives exactly as long as the update record. `install()` writes a new one, and an image that confirms itself, or that finds an image the record does not name, erases both. A boot that finds no record erases the report too, so an entry an older image left behind does not outlive the next boot of an image that knows the key. The new image writes at most six times during its probation, unplaced, because only the first minute after an install pays for them.
 
-### What it leaves behind
+The landing's part is what `ConfigService::refuse_landing()` finds when it refuses an upload that landed, `nothing_staged`, `not_approved` or `wrong_key`. Those three words name what failed, not why, and a `wrong_key` from a key that does not match reads the same as one from a slot the unit could not read back:
 
-- On each unit: the `install.report` entry, 9 bytes, erased with the update record. A unit that went back to firmware without the report keeps it until a firmware that knows the key boots.
-- On the link: the `install_report` command, 35, and the `staged_check`, `swap_type` and `proof` enums in `schemas/link.v1.json`. `proof` stays, because `ConfigLinkService::proof()` decides when an image confirms itself.
-- In the firmware: `install_report.{h,cpp}` here; in `ConfigLinkService`, `report_`, `reported_`, `kReportKey`, `load_report()`, `write_report()`, `note_proof()` and `forget_report()`, called from `load_image_state()`, `record_update()`, `forget_update()`, `publish_image_state()` and `confirm_image_once_healthy()`; `ConfigService::set_install_report()` and `send_install_report()`; their tests in `test/core/test_dfu_install_report.cpp`, `test/products/test_install_report.cpp` and `test/products/test_link_payload.cpp`. `request_swap()` and its check stay: they keep a damaged image from reaching MCUboot.
-- On the page: `server/app/javascript/skyblip/install_report.js`, the `install_report` ask in `update.js`, the report line in `firmware_controller.js`, `briefing/devices/firmwares/show.html.erb` and the `.firmware-report` rules of `briefing/unit.css`, and the `install_report` and `report_*` words in `config/locales/briefing.*.yml`. Their tests are `test/javascript/test_install_report.mjs`, the `installReport` option of both fakes, two tests in `test/system/briefing/firmware_test.rb` and one in `test/i18n/briefing_words_test.rb`.
-- `rg '#294'` finds a `TODO:` beside each part. The firmware that retires the report keeps one `erase("install.report")` at boot, so no unit keeps the entry.
+| Field | What it says |
+|---|---|
+| `landed_check` | what `check_image()` found in slot1 at the refusal. `matched` means slot1 holds the whole image its digest names, so the refusal is about the image. Anything else means the flash does not hold what was sent, or would not read |
+| `staged_key` | the first four bytes of the KEYHASH the unit read in slot1, beside the running key the `update` frame names. Absent when the unit found none |
+
+The unit keeps the landing's part in memory only, from the refusal until the next upload window opens or the unit restarts, and hashes slot1 only on a refusal: an upload that installs is hashed once, before the restart. The page asks for the report as soon as the refusal arrives. A host asks for it with the bare `install_report` command, and the answer is 30 bytes at its widest.
 
 ### When an update does not land
 
-From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The user sends that line. The unit keeps the report until its next install, so a page reopened days later still reads it.
+From a distance: the user opens the unit's firmware page in the briefing app and connects. The page asks for the report on every connect. When the unit says its image reverted or was refused, the page names the cause in plain words and shows one line with a Copy the report button. It does the same when the unit comes back from the install's restart on its old version with no record. The unit keeps the install's part until its next install, so a page reopened days later still reads it. The page also sends every report to skyblip.eu, the install's part as `device.install_reported` and a refused landing as `device.upload_refused`, so the events alone say which row below applies, with no need to ask the user for anything.
 
 On the bench, before anything else touches the unit: `./scripts/blip.py --name "skyBlip Bravo" command '{"command":"update"}'`, then `command '{"command":"install_report"}'`. Keep the USB console running with the loop in #278 to catch the `dfu:` line before the restart.
 
 | What the report says | What happened |
 |---|---|
+| `wrong_key`, `landed_check` `matched`, `staged_key` other than `update`'s `key` | the image is signed by another key than the one the unit runs. Install an image signed by the unit's key |
+| a landing refusal, `landed_check` other than `matched` | slot1 does not hold the image that was sent, or the flash would not read it back. The upload or the flash is at fault, not the image |
+| `wrong_key`, `landed_check` `matched`, no `staged_key` | slot1 holds the whole image, but the unit could not find its KEYHASH: a bug in how the unit reads slot1's TLVs |
 | no report, and `update` says `confirmed` on the old version | the unit never wrote its update record: the store was not ready, or the write failed |
 | `check` other than `matched` | slot1 does not hold the image that was sent, or the flash refused to read it. Send the image again |
 | `matched`, then `swap` other than `test` or a `request_error` | the swap flag never reached slot1's trailer, so MCUboot booted the old image |
