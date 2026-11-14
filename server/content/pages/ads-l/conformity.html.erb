@@ -23,8 +23,10 @@ updated_on: "2026-11-14"
     the facts allow, and links each of the four documents. It will be signed
     in November or December 2026. Two of the four statements the manufacturer
     must make do not hold yet, and the tables below say which. The firmware
-    also does not yet meet F.2.3, the mandatory clause on transmitting a
-    configured ICAO address.
+    now transmits the configured ICAO address under F.2.3. Our reading that
+    this overrides the manufacturer&rsquo;s address on every payload remains
+    subject to confirmation by EASA, as recorded on the
+    <%= link_to_page "ads-l/questions", label: "open questions page" %>.
   </p>
 </section>
 
@@ -120,6 +122,10 @@ updated_on: "2026-11-14"
     and signs it, and a unit that holds no serial neither transmits nor
     receives. The application, the log of the exchange and the reasons behind
     it are on <%= link_to_page "ads-l/registry", label: "the ADS-L registry page" %>.
+    When the pilot enters the aircraft&rsquo;s ICAO address, Go transmits
+    under AMT entry 5 with that address on every payload it sends: Traffic,
+    Status and the payload 66 callsign record. Clearing the setting restores
+    AMT entry 58 and the unit&rsquo;s serial from the next burst.
   </p>
 </section>
 
@@ -153,7 +159,7 @@ updated_on: "2026-11-14"
       <tbody>
         <tr>
           <th>Transmission bands and power levels</th>
-          <td>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the address and UTC second. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
+          <td>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the unit&rsquo;s own address and UTC second, not from the configured ICAO address. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
         </tr>
         <tr>
           <th>Optional parameters transmitted</th>
@@ -169,7 +175,7 @@ updated_on: "2026-11-14"
 
   <p>Channel access uses EN 300 220-2 band M&rsquo;s 1&nbsp;% duty-cycle limit over any hour. The firmware refuses a burst past that budget. D.3 also requires listen-before-talk. Before an unforced burst, Go assesses its channel for 200&nbsp;&micro;s, ending at most 2&nbsp;ms before transmission. The -78.99&nbsp;dBm limit for a 0&nbsp;dBd antenna becomes -78.44&nbsp;dBm at the antenna connector after correction for the antenna&rsquo;s datasheet gain of -0.55&nbsp;dBd. The 0.5&nbsp;dB feed loss allowance between connector and chip puts the chip&rsquo;s busy threshold at -78.94&nbsp;dBm. Neither gain nor loss has been measured on a unit. The SX1262&rsquo;s RSSI is uncalibrated, with no margin for its error. This is a known limit of the declaration. A busy channel defers the burst by a random 1 to 8 units of 5&nbsp;ms within its window. Only on the ground may Go force it after 3000&nbsp;ms, followed by 2000&nbsp;ms without its own transmissions.</p>
 
-  <p>The Status payload, type 3, is scheduled twice per 20&nbsp;s cycle, airborne and on the ground in the same seconds. The cycle starts at the even second <code>c = 2 * (serial mod 10)</code>, where the serial is the address&rsquo;s low 16 bits. Status goes at c+2 on 868.4&nbsp;MHz and c+11 on 868.2&nbsp;MHz. The intervals are 9 then 11&nbsp;s. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum for a receiver listening on one channel. These are nominal rates. An unsent burst retries at 2&nbsp;s intervals on the same channel when its dwell is free, until sent or its type&rsquo;s next turn is due.</p>
+  <p>The Status payload, type 3, is scheduled twice per 20&nbsp;s cycle, airborne and on the ground in the same seconds. The cycle starts at the even second <code>c = 2 * (serial mod 10)</code>, where the serial is the low 16 bits of the unit&rsquo;s own address, not the configured ICAO address. Status goes at c+2 on 868.4&nbsp;MHz and c+11 on 868.2&nbsp;MHz. The intervals are 9 then 11&nbsp;s. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum for a receiver listening on one channel. These are nominal rates. An unsent burst retries at 2&nbsp;s intervals on the same channel when its dwell is free, until sent or its type&rsquo;s next turn is due.</p>
   <div class="table-scroll">
     <table>
       <thead>
@@ -201,7 +207,7 @@ updated_on: "2026-11-14"
         <tr>
           <th>Design processes and production controls</th>
           <td>to write</td>
-          <td>LilyGO builds the hardware. skyBlip builds the firmware. CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Twenty cases are skipped: one not implemented, nine prose, two paperwork and eight optional. The unmet mandatory clause is F.2.3. Go stores a configured ICAO address only to exclude its own transponder from the traffic table. It still transmits AMT entry 58 and its serial instead of that ICAO address. These software checks do not replace measurements on a unit. The statement still has to say how hardware and firmware design and production are controlled.</td>
+          <td>LilyGO builds the hardware. skyBlip builds the firmware. CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. These software checks do not replace measurements on a unit. The statement still has to say how hardware and firmware design and production are controlled.</td>
         </tr>
         <tr>
           <th>CE marked and documented</th>
@@ -211,7 +217,7 @@ updated_on: "2026-11-14"
         <tr>
           <th>Approved address range, F.2.2</th>
           <td>yes</td>
-          <td>AMT entry 58, manufacturer page 49, prefix 0, assigned by the registry.</td>
+          <td>AMT entry 58, manufacturer page 49, prefix 0, assigned by the registry. The unit retains that assignment while transmitting under AMT entry 5 with the aircraft&rsquo;s configured ICAO address under F.2.3.</td>
         </tr>
         <tr>
           <th>Traffic and Status payloads, Subpart G</th>
