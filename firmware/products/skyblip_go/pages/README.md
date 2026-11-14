@@ -380,7 +380,7 @@ The panel half of "a pilot with no phone can change the things that matter". The
 |---|---|
 | `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `VOLUME`, `BRAVO` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `OWN ICAO` |
-| `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `RAW`, `CAPTURE`, `SELF TEST` |
+| `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `SELF TEST` |
 
 Neither is titled after the page behind it. A heading reading `RADAR` over five settings, or `NEARBY` over four diagnostic pages, names where a thumb came from rather than what it is looking at, and a pilot who pressed the button knows which page they pressed it on. So the headings are `SETTINGS` and `DIAGNOSTICS`, which is what the rows under them are. Eleven characters at double height leave a third of the glass over, so nothing had to shrink to say it.
 
@@ -486,34 +486,14 @@ Under the two DOPs it carries the two figures the receiver's own wire decides: `
 
 The levels run for as long as the page is up, fix or no fix. A pilot watching the sky while the device transmits is watching a picture that is still being measured, which is the only kind worth drawing: bars nobody is measuring any more are the sky as it was, and on an instrument that is a lie with a timestamp nobody reads. In the second before the first set lands the page has no bars to draw and says `WAIT FOR THE LEVELS`, standing on what GSA and GGA carry anyway - how many satellites solved, how they split across the constellations, and the two DOPs - and a receiver that has heard nothing at all says `NO SATELLITE HEARD` instead.
 
-## raw
+## raw and capture, retired
 
-The page nobody flies with. `satellites` and `radio_log` each answer a question a pilot has; this one answers "a burst went missing and I need to know which of the twenty things it was", and it is the `diagnostics` dump over USB put on the glass so a bench with no cable can read it.
-
-Two blocks, the order the second runs in. The receiver first: the port's rate, how far the configuration got, bytes the port dropped, the phase the solution landed at and the wire time behind it, the sentence and solution counts, the fix with its satellites and DOPs, the model residual, the last refusal and how many there have been, whether the transmit settle has cleared, the PPS state and the UTC second. The radio second: the dwell it is in with its channel and whether own-ship may transmit there, the noise floor, every receive verdict apart (CRC, sync, key, decode, type, wait), the uplink's three counts, every transmit outcome apart (sent, lost, missed, held), the duty against its thousand, the last burst's keyed and span microseconds, and the worst slot and PPS error the bench has accumulated.
-
-Nothing here is rounded, nothing is a word where the counter is a number, and nothing on this page is computed for it: every figure is a plain read of something a service already keeps, which is what makes it evidence rather than a second opinion.
-
-## capture
-
-The diagnostics capture's one screen, and the only place a capture is ever armed: the recorder is never armed over Bluetooth, so this page is the switch (`../../../core/diagnostics/README.md`). It is opened from the `DIAGNOSTICS` menu like every other bench page, and it is the only page off the walk where the button does something.
-
-Disarmed, it offers the three captures and states the price of the one in focus. `FULL EVERY SUBJECT`, `POWER RUN POWER AND DUTY` and `FLIGHT RUN POWER AND DUTY` are the three rows, the bar marks the one a double press would arm, and the pad moves the bar; off the last capture the pad hands the page back to the `DIAGNOSTICS` menu, the way it leaves a menu's rows. What each one records is `../../../core/diagnostics/README.md`.
-
-`USES n OF m SECTORS` is what the capture may grow into: every free sector, plus whatever flights holds above the six protected hours (`../../../core/store/README.md`). `REMOVES k FLIGHTS` turns the second half of that into the thing a pilot owns, the whole stored flights that go, counted oldest first out of the flights index. Every capture pays that same price, because each buys the same slots. `KEEPS hHmm` is where they part, and it is why the page offers a choice at all: the ring rotates, so a capture does not stop after that long, it keeps that much of itself, and how much is those slots over `diagnostics::Recorder::records_per_hour(profile)`. On an empty partition a capture may grow into 170 sectors, 28,900 slots: a full capture at 54,000 records an hour keeps 32 minutes of itself, `KEEPS 0H32`, and the power run at 240 keeps 120 hours, `KEEPS 120H25`, enough for a discharge to cutoff with its start intact. Moving the bar swaps one figure for the other, two orders of magnitude apart, which is the comparison a pilot is being asked to make.
-
-The flight run records what the power run records and keeps the same 120 hours, so its row reads the same on the right. What differs is the device: while it runs, the radar wears `FLIGHT` over a flight clock counting from the double press, the way it does airborne, and that clock goes back to `-:--` when the capture stops, leaving no flight time behind. On air the unit is still a parked one, at the ground cadence and flagged on ground (`../../../core/diagnostics/README.md`), and the status page, which says what the sensors say, still reads the ground.
-
-Armed, it names the capture that is running in the state row, `STATE ON POWER RUN`, read back from the recorder rather than from a second copy the page keeps, and it shows the three numbers that say whether the capture is healthy: the session, the records this session wrote against the records the ring had to drop, and the sectors owned with the span they keep. That span is the rate the capture is producing, measured from the session's opening to the last recurring record the flash took (`diagnostics::recurs`): the `Boot` and `Config` a session opens with and the `Gap` and `End` markers are events and not a rate, and counted as one they cut a power run's first figure sixfold. Until the first recurring record lands the span is the nominal one. A capture that stopped says so in place of `ON` - `STOPPED NO SECTORS` when the allocator refused one - because a capture that quietly stopped is a corpus with an invisible end. `FLASH ERRORS n UNREAD m` appears only when there is something to say: writes the part refused, and sectors the boot scan could not read and therefore quarantined.
-
-The pad picks and the button arms, which is the division of labour the menus already have. The arming gesture is the one the product already has for anything a thumb must mean: a double press inside `ConfirmGesture::kDoublePressWindowMs`, the same one that authorises a firmware upload, and it arms the capture in focus or stops the one running. A single press does nothing but refuse, and nothing counts until the page has actually reached the glass, which is the same rule a prompt is answered under (`../input/README.md`). A device with no partition offers neither: no rows to pick from and no gesture.
+`raw` printed the diagnostics dump on the glass for a bench with no cable, and `capture` armed a capture and priced it. Both went once a page could do either over Bluetooth: the dump answers every counter `raw` printed, with the uplink counts added to its traffic group, and its capture group carries the price and the running capture `capture` showed (`../../../core/comms/README.md`, The capture group). A page arms a capture with the `capture` command and the confirm page asks for it (`../README.md`, Which capture is armed). Their codes, 7 and 8, are retired and never reused, because a capture records the page on the glass by its code.
 
 ## The others
 
 | Page | What it answers |
 |---|---|
-| `capture` | what a diagnostics capture costs, and what it has written so far |
-| `raw` | every counter and phase behind a burst that did not happen |
 | `sixpack` | what own-ship is doing: speed, altitude, vertical speed, track, turn, and what the cell has left, or the charge rail on the cable |
 | `status` | what the sensors say: fix, position, pressure, battery, UTC, and whether we transmit |
 | `satellites` | what is above the antenna, how loud, and which satellites solved |

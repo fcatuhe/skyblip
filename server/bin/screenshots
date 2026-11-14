@@ -485,12 +485,6 @@ const scenes = [
     shot: device =>
       device.fly(CRUISE).run(20_000).openMenu(PAGE.Nearby, NEARBY_MENU.SelfTest).press()
   },
-  // INFO: fc 21sep26 disarmed is the shot: armed reads as a counter mid-run, the price is the page
-  {
-    name: "capture",
-    page: PAGE.Capture,
-    shot: device => flying(device).openMenu(PAGE.Nearby, NEARBY_MENU.Capture).press()
-  },
   {
     name: "no-fix",
     page: PAGE.Radar,

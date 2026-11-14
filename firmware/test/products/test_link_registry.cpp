@@ -133,10 +133,10 @@ struct GroundedUnitWithLogs {
         rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         REQUIRE(rig.setup() == Status::Ok);
         taxi(rig, now_ms, 5);
-        arm_from_the_page(rig, now_ms);
+        arm_over_the_link(rig, now_ms);
         capture = rig.product.capture().session_id();
         feed(rig, now_ms, 30);
-        rig.double_press(now_ms);
+        stop_over_the_link(rig, now_ms);
         taxi(rig, now_ms, 20);
         fly(rig, now_ms, 80);
         taxi(rig, now_ms, 40);

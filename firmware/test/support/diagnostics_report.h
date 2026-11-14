@@ -56,6 +56,9 @@ inline Diagnostics busy_device() {
 
     diagnostics.tracked = 4;
     diagnostics.alarm = 2;
+    diagnostics.uplink_frames = 30;
+    diagnostics.uplink_bad = 1;
+    diagnostics.uplink_targets = 52;
 
     diagnostics.gnss_fixes = 5210;
     diagnostics.fix_valid = true;
@@ -145,6 +148,9 @@ inline Diagnostics widest_device() {
     diagnostics.dio1_missed = 0xFFFFFFFFu;
     diagnostics.tracked = 0xFFFFFFFFu;
     diagnostics.alarm = 255;
+    diagnostics.uplink_frames = 0xFFFFFFFFu;
+    diagnostics.uplink_bad = 0xFFFFFFFFu;
+    diagnostics.uplink_targets = 0xFFFFFFFFu;
     diagnostics.gnss_fixes = 0xFFFFFFFFu;
     diagnostics.gnss_baud = 921600;
     diagnostics.gnss_config = ports::GnssConfigStage::Degraded;  // "DEGRADED"

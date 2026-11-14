@@ -51,7 +51,7 @@ TEST_CASE("capture: a flights session claims a diagnostics sector, and the captu
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 5);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     taxi(rig, now_ms, 5);
     const uint32_t captured = rig.product.capture().records_written();
     REQUIRE(captured > 0);
@@ -77,7 +77,7 @@ TEST_CASE("capture: the capture takes flights sectors down to the floor and no f
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 2);
-    arm_from_the_page(rig, now_ms);
+    arm_over_the_link(rig, now_ms);
     CHECK(rig.state().capture.evicted_flights > 0);
 
     feed(rig, now_ms, flight::kLogSlotsPerSector * 6);

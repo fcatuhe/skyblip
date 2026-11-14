@@ -97,13 +97,14 @@ updated_on: "2026-11-09"
         Open the other pages by name from the list&rsquo;s menu. When you close them,
         you return to the page you were on. The screens below are for the workbench,
         the apron and bug reports. You cannot reach them by cycling through
-        pages with the pad. The last one records a flight for a bug report:
-        all data categories for a bug, or only power and duty for a discharge test. It
-        shows how much flash memory the selected recording will use before you start.
+        pages with the pad. The Bravo log shows what a paired skyBlip Bravo runs, its
+        battery and what its receiver hears. To record a flight for a bug report or a
+        discharge test, start the recording from the device page in the briefing app.
+        The screen shows what it will erase, and two presses on the button start it.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-nearby.png", alt: "The nearby menu: status, satellites, radio log, raw data, capture and self test, the six pages opened by name" %>
+      <%= screen_image_tag "menu-nearby.png", alt: "The nearby menu: status, satellites, radio log, Bravo log and self test, the five pages opened by name" %>
       <figcaption>The list&rsquo;s menu</figcaption>
     </figure>
   </div>
@@ -125,10 +126,6 @@ updated_on: "2026-11-09"
       <%= screen_image_tag "self-test.png", alt: "The self test page: one row per part of the board, each showing which part responded and its test result" %>
       <figcaption>Self test</figcaption>
     </figure>
-    <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "The capture page with no recording in progress: the state is off, with two recording types to choose from, FULL for all data categories and POWER RUN for power and duty. It shows the cost of the selected type: the sectors of flash memory it would use, the stored flights it would delete and the hours of recording it would retain, with PAD SELECTS, PUSH TWICE TO START along the bottom" %>
-      <figcaption>Capture</figcaption>
-    </figure>
   </div>
 
   <div class="table-scroll">
@@ -139,7 +136,7 @@ updated_on: "2026-11-09"
       <tbody>
         <tr>
           <th>Tap the pad</th>
-          <td>goes to the next page, or selects the next recording type on the capture page</td>
+          <td>goes to the next page</td>
           <td>moves to the next row, or returns to the menu&rsquo;s page after the last row</td>
         </tr>
         <tr>
@@ -154,7 +151,7 @@ updated_on: "2026-11-09"
         </tr>
         <tr>
           <th>Two presses, under 0.6&nbsp;s apart</th>
-          <td colspan="2">accept a confirmation request on the screen, start or stop a recording on the capture page, and have no effect elsewhere</td>
+          <td colspan="2">accept a confirmation request on the screen, and have no effect elsewhere</td>
         </tr>
         <tr>
           <th>Hold the button, 2&nbsp;s</th>

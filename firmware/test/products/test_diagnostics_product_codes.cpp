@@ -33,8 +33,6 @@ uint8_t wire(go::Page value) {
         case go::Page::Status: return 4;
         case go::Page::Satellites: return 5;
         case go::Page::RadioLog: return 6;
-        case go::Page::Raw: return 7;
-        case go::Page::Capture: return 8;
         case go::Page::SelfTest: return 9;
         case go::Page::Bravo: return 10;
         case go::Page::BravoLog: return 11;
@@ -91,7 +89,7 @@ TEST_CASE(
     "diagnostics product codes: go::Page's codes are the screen record's page byte, and a page "
     "given "
     "a code here renames that page in every corpus already written unless the schema moves") {
-    codes_pinned<go::Page>(12);
+    codes_pinned<go::Page>(12, /*retired=*/2);
     CHECK(go::kPageCount == 12);
 }
 

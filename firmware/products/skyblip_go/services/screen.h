@@ -13,12 +13,10 @@
 #include "products/common/confirm_gesture.h"
 #include "products/common/prompt_answer.h"
 #include "products/common/services/alarm.h"
-#include "products/common/services/capture.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/input/controls.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/pages/bravo.h"
-#include "products/skyblip_go/pages/capture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/gmeter.h"
 #include "products/skyblip_go/pages/menu.h"
@@ -26,7 +24,6 @@
 #include "products/skyblip_go/pages/page.h"
 #include "products/skyblip_go/pages/radar.h"
 #include "products/skyblip_go/pages/radio_log.h"
-#include "products/skyblip_go/pages/raw.h"
 #include "products/skyblip_go/pages/satellites.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "products/skyblip_go/pages/sixpack.h"
@@ -56,13 +53,12 @@ class ScreenService : public runtime::Service {
     static constexpr traffic::Level kAlarmTakesGlass = traffic::Level::Advisory;
 
     ScreenService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                  common::AlarmService& alarm, const common::CaptureService& capture,
-                  const SelfTestSnapshot& self_test, BravoService& bravo)
+                  common::AlarmService& alarm, const SelfTestSnapshot& self_test,
+                  BravoService& bravo)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           alarm_(alarm),
-          capture_(capture),
           self_test_(self_test),
           bravo_(bravo) {}
 
@@ -108,9 +104,6 @@ class ScreenService : public runtime::Service {
 
    private:
     void render(uint32_t now_ms);
-    RawSnapshot raw_snapshot(uint32_t now_ms) const;
-    CaptureSnapshot capture_snapshot(uint32_t now_ms) const;
-    bool on_capture_page() const { return mode_ == Mode::Page && page_ == Page::Capture; }
     bool on_bravo_page() const { return mode_ == Mode::Page && page_ == Page::Bravo; }
     BravoView bravo_view() const;
     void act_on_bravo(BravoAction action, uint32_t now_ms);
@@ -122,10 +115,6 @@ class ScreenService : public runtime::Service {
     bool new_aircraft(const Detected& detected) const;
     bool notice_read(uint32_t now_ms) const;
     void use_noticed_aircraft();
-    bool picking_a_capture() const;
-    bool step_capture_focus();
-    void sync_arming(uint32_t now_ms);
-    void toggle_capture();
     void change_screen();
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page();
@@ -214,7 +203,6 @@ class ScreenService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     common::AlarmService& alarm_;
-    const common::CaptureService& capture_;
     const SelfTestSnapshot& self_test_;
     BravoService& bravo_;
     BravoPage bravo_page_{};
@@ -226,17 +214,14 @@ class ScreenService : public runtime::Service {
     bool aircraft_noticed_{false};
     bool notice_on_glass_{false};
     uint32_t notice_on_glass_since_ms_{0};
-    diagnostics::Profile capture_in_focus_{kFirstCapture};
     comms::Pending prompt_{comms::Pending::None};
     uint32_t prompts_staged_{0};
     Controls controls_{};
     common::PromptAnswer answer_{};
-    common::ConfirmGesture arming_{};
     MenuEditor editor_{};
 
     // INFO: cf 02aug26 a prompt is answered once read and once the thumb has stopped, never sooner
     bool prompt_on_glass_{false};
-    bool capture_on_glass_{false};
     bool receiving_{false};
     std::optional<bool> activated_{};
     uint32_t receiving_since_ms_{0};

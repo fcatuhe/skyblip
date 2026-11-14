@@ -902,6 +902,21 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "keeps_power_run_s",
           "number": 81,
           "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1326,6 +1341,21 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "keeps_power_run_s",
           "number": 81,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
           "type": "unsigned"
         }
       ]

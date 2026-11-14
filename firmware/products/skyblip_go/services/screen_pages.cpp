@@ -68,79 +68,6 @@ void ScreenService::draw_menu_page() {
     draw_menu(framebuffer_, snapshot);
 }
 
-RawSnapshot ScreenService::raw_snapshot(uint32_t now_ms) const {
-    const bus::State& state = context_.state;
-    const model::Ownship& own = state.own;
-    const timing::SlotTimingStatistics& statistics = state.rf.timing_statistics;
-
-    RawSnapshot snapshot;
-    snapshot.uptime_s = now_ms / 1000;
-
-    snapshot.gnss.health = context_.roles.gnss.health();
-    snapshot.gnss.stage = state.gnss.stage;
-    snapshot.gnss.pps = pps_state(state.clock);
-    snapshot.gnss.pps_age_ms = state.clock.since_edge_ms;
-    snapshot.gnss.solutions = state.flight.gnss_solutions;
-    snapshot.gnss.utc_s = own.utc_s;
-    snapshot.gnss.solution_phase_ms = state.gnss.solution_phase_ms;
-    snapshot.gnss.solution_phase_valid = state.gnss.solution_phase_valid;
-    snapshot.gnss.hdop_e2 = own.hdop_e2;
-    snapshot.gnss.vdop_e2 = own.vdop_e2;
-    snapshot.gnss.residual_m = own.prediction_residual_m;
-    snapshot.gnss.residual_valid = own.prediction_residual_valid;
-    snapshot.gnss.satellites = own.satellites;
-    snapshot.gnss.in_use = static_cast<uint8_t>(state.gnss.sky.in_use());
-    snapshot.gnss.fix_mode = state.gnss.fix_mode;
-    snapshot.gnss.fix_valid = own.fix_valid;
-    snapshot.gnss.utc_valid = own.utc_valid;
-    snapshot.gnss.settled = own.tx_settled;
-    snapshot.gnss.levels_live = state.gnss.levels_live;
-
-    snapshot.radio.rx_ok = state.air.rx_ok;
-    snapshot.radio.rx_bad = state.air.rx_bad;
-    snapshot.radio.rx_wait = state.air.rx_wait;
-    snapshot.radio.rx_type = state.air.rx_type;
-    snapshot.radio.rx_unframed = state.air.rx_unframed;
-    snapshot.radio.rx_miskeyed = state.air.rx_miskeyed;
-    snapshot.radio.rx_noise = state.air.rx_noise;
-    snapshot.radio.rx_named = state.air.rx_named;
-    snapshot.radio.uplink_frames = state.air.uplink_frames;
-    snapshot.radio.uplink_bad = state.air.uplink_bad;
-    snapshot.radio.uplink_targets = state.air.uplink_targets;
-    snapshot.radio.tx_ok = state.air.tx_ok;
-    snapshot.radio.tx_lost = state.air.tx_lost;
-    snapshot.radio.tx_named = state.air.tx_named;
-    snapshot.radio.tx_held_for_b5 = state.air.tx_held_for_b5;
-    snapshot.radio.rx_status = state.air.rx_status;
-    snapshot.radio.uplink_stale = state.air.uplink_stale;
-    snapshot.radio.missed = statistics.missed();
-    snapshot.radio.refused = statistics.refused();
-    snapshot.radio.duty_permille = state.rf.duty_permille;
-    snapshot.radio.holdover = statistics.holdover_events();
-    snapshot.radio.dwell_worst_us = statistics.dwell_worst_us();
-    snapshot.radio.pps_worst_us = statistics.pps_worst_us();
-    snapshot.radio.tx_keyed_us = state.rf.last_tx_keyed_us;
-    snapshot.radio.tx_span_us = state.rf.last_tx_span_us;
-    snapshot.radio.tracked = static_cast<uint16_t>(state.traffic.count());
-    snapshot.radio.alarm = traffic::to_number(state.alarm_level);
-    snapshot.radio.noise_dbm = state.rf.noise_dbm;
-    snapshot.radio.slot = state.rf.plan.state;
-    snapshot.radio.frequency_hz = state.rf.plan.frequency_hz;
-    snapshot.radio.tx_allowed = state.rf.plan.tx_allowed;
-    return snapshot;
-}
-
-CaptureSnapshot ScreenService::capture_snapshot(uint32_t now_ms) const {
-    CaptureSnapshot snapshot;
-    snapshot.uptime_s = now_ms / 1000;
-    snapshot.capture = context_.state.capture;
-    snapshot.focus = capture_in_focus_;
-    snapshot.running = context_.diagnostics.profile();
-    snapshot.focus_keeps_s = capture_.keeps_s(capture_in_focus_);
-    snapshot.arming = arming_.pressed();
-    return snapshot;
-}
-
 // INFO: fc 18oct26 the unlock swaps the activation page for the radar, through a wipe like any page
 bool ScreenService::unit_activated() {
     const bool activated = context_.state.activation.activated();
@@ -346,14 +273,6 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.tracked = context_.state.traffic.count_of(model::Source::Adsb);
             snapshot.log = &bravo_.log();
             draw_bravo_log(framebuffer_, snapshot);
-            break;
-        }
-        case Page::Raw: {
-            draw_raw(framebuffer_, raw_snapshot(now_ms));
-            break;
-        }
-        case Page::Capture: {
-            draw_capture(framebuffer_, capture_snapshot(now_ms));
             break;
         }
         case Page::Bravo: {

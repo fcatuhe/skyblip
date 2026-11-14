@@ -177,7 +177,10 @@
         {"name": "takes_sectors", "number": 78, "type": "unsigned", "description": "capture. Sectors a capture may grow into: every free one, and what the flights hold above their protected hours. Every profile pays the same"},
         {"name": "evicts_flights", "number": 79, "type": "unsigned", "description": "capture. Whole stored flights a capture that grows into takes_sectors erases, oldest first"},
         {"name": "keeps_full_s", "number": 80, "type": "unsigned", "description": "capture. Seconds a full capture keeps of itself in takes_sectors, at its nominal rate, before it is armed"},
-        {"name": "keeps_power_run_s", "number": 81, "type": "unsigned", "description": "capture. Seconds a power run or a flight run keeps of itself in takes_sectors, at their nominal rate, before it is armed"}
+        {"name": "keeps_power_run_s", "number": 81, "type": "unsigned", "description": "capture. Seconds a power run or a flight run keeps of itself in takes_sectors, at their nominal rate, before it is armed"},
+        {"name": "uplink_frames", "number": 82, "type": "unsigned", "description": "traffic. Ground station uplink packets that framed, since boot"},
+        {"name": "uplink_bad", "number": 83, "type": "unsigned", "description": "traffic. Uplink packets refused as a whole, since boot"},
+        {"name": "uplink_targets", "number": 84, "type": "unsigned", "description": "traffic. Aircraft the uplink packets carried into the traffic table, since boot"}
       ]
     },
     {

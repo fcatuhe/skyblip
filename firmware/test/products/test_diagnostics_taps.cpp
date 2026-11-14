@@ -450,7 +450,7 @@ TEST_CASE(
 }
 
 // The page turns this into the hours a partition lasts, so it is a claim about the taps.
-TEST_CASE("diagnostics: the rate the capture page quotes covers a quiet airborne second") {
+TEST_CASE("diagnostics: the rate a capture is priced at covers a quiet airborne second") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;

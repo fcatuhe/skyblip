@@ -6,10 +6,10 @@ The board pushes one `events::ContactEvent` per settled edge, stamped when the l
 
 | What the thumb does | `go::Gesture` | On a page | In a menu |
 |---|---|---|---|
-| pad touched and released under `Controls::kLongTouchHoldMs` | `Tap` | the next page, or on `capture` the next capture offered, and off the last one the page it was opened from | the next row, and off the last row the page it belongs to |
+| pad touched and released under `Controls::kLongTouchHoldMs` | `Tap` | the next page, and off a page opened from a menu the page it was opened from | the next row, and off the last row the page it belongs to |
 | pad held past `Controls::kLongTouchHoldMs` (1 s) | `LongTouch` | a standing alarm is dismissed, and with none standing, the radar, through black even when the radar is already on the glass | the radar |
 | button pressed | `Press` | opens this page's menu | changes the focused row, or opens the page it names |
-| button pressed twice inside `ConfirmGesture::kDoublePressWindowMs` | `Press`, twice | nothing, unless a prompt stands: then it authorises, or on `capture`, where it arms and stops the diagnostics capture | the same |
+| button pressed twice inside `ConfirmGesture::kDoublePressWindowMs` | `Press`, twice | nothing, unless a prompt stands: then it authorises | the same |
 | button held past `power::kLongPressHoldMs` (2 s) | none | off | off |
 | pad held through that press | none | off, with a blank panel: the stow | the stow |
 
@@ -39,4 +39,4 @@ What a dismissal costs if it was an accident is one flight's worth of nothing: t
 
 It authorises nothing unless a prompt the pilot can read is on the glass, and a lone press at a prompt refuses the operation rather than leaving it standing. `common::PromptAnswer` (`../../common/prompt_answer.h`) arms it only once the button is up and has been up for one double-press window since its last release and since the prompt arrived, and it spends no press whose button went down before it armed. A button held when the phone asks cannot answer with its release and one more press, and a prompt replaced by another of the same kind disarms the gesture as a new prompt does (#245). Fail closed, which is what makes "press twice to allow, once to refuse" true on the panel.
 
-The `capture` page borrows the same gesture rather than inventing a fourth thing the button can say, and under the same two conditions: the page has reached the glass, so the price it states has been readable, and one press refuses. Arming a capture spends the pilot's partition and cannot be a gesture a thumb makes on the way past (`../pages/README.md`). What it arms is the capture the pad has the bar on, and the pad walks off the last one to the menu, so neither contact dead-ends on that page.
+A capture a page asks for is answered on the confirm page like every other prompt: the page names the profile and the flights it erases, so the price has been readable before the two presses spend the pilot's partition (`../README.md`, Which capture is armed).

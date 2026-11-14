@@ -19,8 +19,8 @@ enum class Page : uint8_t {
     Status = 4,
     Satellites = 5,
     RadioLog = 6,
-    Raw = 7,
-    Capture = 8,
+    // INFO: fc 15nov26 7 was raw and 8 capture, retired: captures keep both numbers in screen
+    // records
     SelfTest = 9,
     Bravo = 10,
     BravoLog = 11,
@@ -104,8 +104,6 @@ constexpr const char* page_title(Page page) {
         case Page::Status: return "STATUS";
         case Page::Satellites: return "SATELLITES";
         case Page::RadioLog: return "RADIO LOG";
-        case Page::Raw: return "RAW";
-        case Page::Capture: return "CAPTURE";
         case Page::SelfTest: return "SELF TEST";
         case Page::GMeter: return "G METER";
         case Page::Bravo: return "BRAVO";

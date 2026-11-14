@@ -66,6 +66,9 @@ struct Diagnostics {
 
     uint32_t tracked{0};
     uint8_t alarm{0};
+    uint32_t uplink_frames{0};
+    uint32_t uplink_bad{0};
+    uint32_t uplink_targets{0};
 
     uint32_t gnss_fixes{0};
     bool fix_valid{false};
@@ -174,7 +177,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 77;
+    static constexpr int kMaxFields = 80;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);

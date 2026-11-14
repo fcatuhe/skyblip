@@ -30,7 +30,7 @@ TEST_CASE("diagnostics: one line per subsystem, each carrying the counters that 
               "tx_named=41 tx_keyed_us=609 tx_span_us=5919 range_refused=5 dio1_armed=true "
               "dio1_edges=1500 dio1_missed=4 tx_held_for_b5=6 rx_status=9 uplink_stale=2 "
               "tx_given_up=1 tx_deferred=14 tx_forced=1 tx_busy_missed=2\n"));
-    CHECK(has(text, "traffic tracked=4 alarm=2\n"));
+    CHECK(has(text, "traffic tracked=4 alarm=2 uplink_frames=30 uplink_bad=1 uplink_targets=52\n"));
     CHECK(has(text,
               "gnss fixes=5210 valid=true baud=38400 config=\"READY\" raises=1 raise_fallbacks=0 "
               "solution_phase_ms=98 overruns=0 identified=true "
@@ -225,5 +225,5 @@ TEST_CASE("diagnostics: the console and the link name every field alike") {
         fields++;
         at++;
     }
-    CHECK(fields == 77);
+    CHECK(fields == 80);
 }

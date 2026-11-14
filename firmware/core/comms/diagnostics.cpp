@@ -147,6 +147,12 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.tracked);
         add(Group::Traffic, "alarm", link::diagnostics_key::kAlarm, Kind::Unsigned,
             diagnostics.alarm);
+        add(Group::Traffic, "uplink_frames", link::diagnostics_key::kUplinkFrames, Kind::Unsigned,
+            diagnostics.uplink_frames);
+        add(Group::Traffic, "uplink_bad", link::diagnostics_key::kUplinkBad, Kind::Unsigned,
+            diagnostics.uplink_bad);
+        add(Group::Traffic, "uplink_targets", link::diagnostics_key::kUplinkTargets, Kind::Unsigned,
+            diagnostics.uplink_targets);
     }
 
     if (gnss) {

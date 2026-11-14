@@ -473,8 +473,8 @@ class Product {
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
     BravoService bravo_{context_, settings_, config_link_.config(), board_.central()};
-    ScreenService screen_{
-        context_, settings_, config_link_.config(), alarm_, capture_, self_test_snapshot_, bravo_};
+    ScreenService screen_{context_, settings_,           config_link_.config(),
+                          alarm_,   self_test_snapshot_, bravo_};
 
     // The log ticks after own-ship has published the fix and after the radio has
     // published the slot plan it defers to, and before the screen, which is the

@@ -256,6 +256,9 @@ enum : uint32_t {
     kEvictsFlights = 79,
     kKeepsFullS = 80,
     kKeepsPowerRunS = 81,
+    kUplinkFrames = 82,
+    kUplinkBad = 83,
+    kUplinkTargets = 84,
 };
 }
 
