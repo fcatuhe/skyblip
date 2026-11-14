@@ -21,7 +21,7 @@ class UnitTest < ActiveSupport::TestCase
 
   # The admin page reads a key's updated_at as when it was last seen.
   test "a known device registering again with nothing new is seen again" do
-    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release, :ip_address).symbolize_keys
+    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release).symbolize_keys
 
     travel 1.hour do
       key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, **seen)
@@ -30,11 +30,10 @@ class UnitTest < ActiveSupport::TestCase
   end
 
   test "a known device with another key is recorded as pending and bound to nothing" do
-    key = Unit.register(device_id: units(:bound).device_id, public_key: "e5" * 32, ip_address: "203.0.113.4")
+    key = Unit.register(device_id: units(:bound).device_id, public_key: "e5" * 32)
 
     assert key.pending?
     assert key.persisted?
-    assert_equal "203.0.113.4", key.ip_address
     assert_equal unit_keys(:bound_active), units(:bound).active_key
   end
 
@@ -63,11 +62,10 @@ class UnitTest < ActiveSupport::TestCase
     unit_keys(:contested_pending).promote
 
     revoked = [ units(:bound), units(:contested) ].map do |unit|
-      Unit.register(device_id: unit.device_id, public_key: unit.keys.revoked.first.public_key, ip_address: "203.0.113.5")
+      Unit.register(device_id: unit.device_id, public_key: unit.keys.revoked.first.public_key)
     end
 
     assert revoked.all?(&:revoked?)
-    assert_equal [ "203.0.113.5" ] * 2, revoked.map(&:ip_address)
     assert_nil units(:bound).reload.active_key
   end
 
@@ -89,40 +87,29 @@ class UnitTest < ActiveSupport::TestCase
 
   test "refuses a new device past the cap of its network, an IPv6 /56 counting as one, and serves other networks" do
     Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
-      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "2001:db8:1:2::#{index + 1}")
+      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, network_pseudonym: Network.pseudonym_of("2001:db8:1:2::#{index + 1}"))
     end
 
-    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:ff:ffff::9") }
+    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], network_pseudonym: Network.pseudonym_of("2001:db8:1:ff:ffff::9")) }
     assert_equal :network_cap, refusal.reason
-    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:100::1").active?
-    assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, ip_address: "2001:db8:1:2::1").active?
-  end
-
-  test "names a network by its IPv4 address or its IPv6 /56, a mapped IPv4 address as itself" do
-    assert_equal "203.0.113.8", Unit.network_of("203.0.113.8")
-    assert_equal "203.0.113.8", Unit.network_of("::ffff:203.0.113.8")
-    assert_equal "2001:db8:1::", Unit.network_of("2001:db8:1:2:aaaa:bbbb:cccc:dddd")
-    assert_equal "2001:db8:1:100::", Unit.network_of("2001:db8:1:1ff::1")
+    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], network_pseudonym: Network.pseudonym_of("2001:db8:1:100::1")).active?
+    assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, network_pseudonym: Network.pseudonym_of("2001:db8:1:2::1")).active?
   end
 
   # Docker on crooz hands Rails its gateway, 172.18.0.1, for every IPv6 client (#205).
   test "counts a private address toward no network, so the clients behind it do not share one cap" do
-    assert_nil Unit.network_of("172.18.0.1")
-    assert_nil Unit.network_of("::1")
-    assert_nil Unit.network_of("fe80::1")
-
     (Unit::NEW_PER_NETWORK_PER_DAY + 1).times do |index|
-      assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, ip_address: "172.18.0.1").active?
+      assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, network_pseudonym: Network.pseudonym_of("172.18.0.1")).active?
     end
   end
 
   test "counts a network's new devices for today only" do
     Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
-      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8")
+      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, network_pseudonym: Network.pseudonym_of("203.0.113.8"))
     end
 
     travel 1.day do
-      assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "203.0.113.8").active?
+      assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], network_pseudonym: Network.pseudonym_of("203.0.113.8")).active?
     end
   end
 

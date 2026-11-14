@@ -1,5 +1,5 @@
 class Attestation::StatementsController < Attestation::ApplicationController
-  rate_limit to: 20, within: 1.minute, by: -> { Unit.network_of(request.remote_ip) || request.remote_ip }, with: :rate_limited
+  rate_limit to: 20, within: 1.minute, by: :network_pseudonym, with: :rate_limited
   wrap_parameters :statement, include: %i[device_id version release server_nonce signature]
 
   def create

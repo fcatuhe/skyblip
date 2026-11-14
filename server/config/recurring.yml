@@ -11,6 +11,10 @@ production:
     command: "Attestation::Challenge.expired.delete_all"
     schedule: every hour at minute 26
 
+  forget_past_network_salts:
+    command: "Network::Salt.expired.delete_all"
+    schedule: every hour at minute 2
+
   prune_expired_events:
     command: "Event.prune"
     schedule: every day at 2:30am

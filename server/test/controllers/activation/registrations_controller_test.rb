@@ -15,11 +15,12 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert server_verifies?(signature, message)
   end
 
-  test "records the unit's firmware, whether it is a release, and the address it came from" do
+  test "records the unit's firmware and whether it is a release, and of where it came from only a pseudonym of its network" do
     post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
 
-    key = Unit.find_by!(device_id: vectors["device_id"]).active_key
-    assert_equal [ vectors["version"], "890026b1", false, "203.0.113.8" ], [ key.version, key.server_key_id, key.release, key.ip_address ]
+    unit = Unit.find_by!(device_id: vectors["device_id"])
+    assert_equal [ vectors["version"], "890026b1", false ], [ unit.active_key.version, unit.active_key.server_key_id, unit.active_key.release ]
+    assert_equal Network.pseudonym_of("203.0.113.8"), unit.enrollment_network_pseudonym
   end
 
   test "records the firmware an active key signed, and none for a key it refuses" do
@@ -145,7 +146,7 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "refuses a new unit past the cap of the network it comes from" do
-    Unit.insert_all(Array.new(Unit::NEW_PER_NETWORK_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, enrolled_from: "203.0.113.8" } })
+    Unit.insert_all(Array.new(Unit::NEW_PER_NETWORK_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, enrollment_network_pseudonym: Network.pseudonym_of("203.0.113.8") } })
 
     post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
 

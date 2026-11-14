@@ -21,7 +21,6 @@
         <th>Registered on</th>
         <th>Build</th>
         <th>Server key id</th>
-        <th>IP</th>
         <th>First seen</th>
         <th>Last seen</th>
         <th></th>
@@ -36,7 +35,6 @@
           <td class="mono"><%= key.version %></td>
           <td><%= unit_build(key) %></td>
           <td class="mono"><%= key.server_key_id %></td>
-          <td class="mono"><%= key.ip_address %></td>
           <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
           <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
           <td>

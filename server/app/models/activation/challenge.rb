@@ -1,4 +1,7 @@
 class Activation::Challenge < ApplicationRecord
+  # TODO: fc 14nov26 the column goes once a deploy runs without reading it, then this line goes too
+  self.ignored_columns += %w[ip_address]
+
   include SingleUse
 
   validates :unit_nonce, format: { with: Activation::NONCE }

@@ -1,7 +1,8 @@
 class OAuth::RevocationsController < ActionController::API
+  include NetworkPseudonym
   include Tracing
 
-  rate_limit to: 30, within: 1.minute
+  rate_limit to: 30, within: 1.minute, by: :network_pseudonym
 
   def create
     OAuth::Token.revoke form[:token], client_id: form[:client_id]

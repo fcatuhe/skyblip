@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_153805) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_161715) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -28,6 +28,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_153805) do
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_attestation_challenges_on_created_at"
     t.index ["server_nonce"], name: "index_attestation_challenges_on_server_nonce", unique: true
+  end
+
+  create_table "network_salts", force: :cascade do |t|
+    t.date "day", null: false
+    t.binary "secret", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["day"], name: "index_network_salts_on_day", unique: true
   end
 
   create_table "oauth_clients", force: :cascade do |t|
@@ -121,8 +129,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_153805) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "enrolled_from"
+    t.string "enrollment_network_pseudonym"
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
     t.index ["enrolled_from", "created_at"], name: "index_units_on_enrolled_from_and_created_at"
+    t.index ["enrollment_network_pseudonym", "created_at"], name: "index_units_on_enrollment_network_pseudonym_and_created_at"
     t.index ["serial"], name: "index_units_on_serial", unique: true
     t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end

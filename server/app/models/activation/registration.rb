@@ -9,7 +9,7 @@ class Activation::Registration
   attribute :release
   attribute :server_nonce, :string
   attribute :signature, :string
-  attribute :ip_address, :string
+  attribute :network_pseudonym, :string
 
   validates :device_id, format: { with: Activation::DEVICE_ID }
   validates :public_key, format: { with: Activation::PUBLIC_KEY }
@@ -30,7 +30,7 @@ class Activation::Registration
     key = nil
     # INFO: fc 18oct26 signed inside the transaction that bound the key, so an admin's revocation lands before or after, never between
     code = Unit.transaction do
-      key = Unit.register(device_id:, public_key:, version:, server_key_id:, release:, ip_address:)
+      key = Unit.register(device_id:, public_key:, version:, server_key_id:, release:, network_pseudonym:)
       if key.active?
         key.unit.attest_firmware(version:, release:)
         unlock_code_for(key.unit.serial, challenge.unit_nonce)
