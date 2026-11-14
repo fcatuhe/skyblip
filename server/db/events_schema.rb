@@ -10,7 +10,15 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_121300) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_213315) do
+  create_table "event_error_resolutions", force: :cascade do |t|
+    t.string "fingerprint", null: false
+    t.datetime "resolved_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fingerprint"], name: "index_event_error_resolutions_on_fingerprint", unique: true
+  end
+
   create_table "events", force: :cascade do |t|
     t.string "name", null: false
     t.json "payload", default: {}, null: false

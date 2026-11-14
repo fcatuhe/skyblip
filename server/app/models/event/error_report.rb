@@ -20,7 +20,7 @@ class Event::ErrorReport
       job: @context[:job]&.class&.name, revision: Rails.configuration.x.revision }.compact
   end
 
-  # INFO: fc 14nov26 the line number moves with every edit above it, so a problem is its class and the method it was raised in
+  # INFO: fc 14nov26 the line number moves with every edit above it, so an error is its class and the method it was raised in
   def fingerprint = OpenSSL::Digest::SHA256.hexdigest([ error.class.name, frames.first.to_s.sub(LINE_NUMBER, "") ].join("|")).first(16)
 
   private

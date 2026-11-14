@@ -195,6 +195,14 @@ error.reported:
   group: Errors
   says: An error reported to `Rails.error`, raised in a request or a job or handled on purpose, with its class, message, cause, first frames, the controller or job, the revision and a fingerprint that groups it with the same error from the same method.
   answers: What breaks on the server, how often and since which revision, the server half of what an error tracker would hold.
+error.resolved:
+  group: Errors
+  says: An admin, `by_id`, resolved an error, `fingerprint`, on the Errors page or through an agent, so it leaves the list until it happens again.
+  answers: Which fixes were believed to land, and when, to compare with the occurrences that follow.
+error.reopened:
+  group: Errors
+  says: An admin, `by_id`, reopened an error, `fingerprint`, resolved before.
+  answers: Which resolutions were taken back by hand.
 action_controller.request_completed:
   group: Traces
   says: A request answered, with its controller, action, status and duration. A post of a browser's journal is kept only when it was refused.

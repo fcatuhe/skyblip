@@ -20,7 +20,7 @@
           <td class="mono admin-events-facts">
             <%= event_facts(event) %>
             <% if event.fingerprint %>
-              <%= link_to "problem", admin_error_path(event.fingerprint) %>
+              <%= link_to "error", admin_error_path(event.fingerprint) %>
             <% end %>
             <% if event.request_id %>
               <%= link_to "request", admin_events_path(request_id: event.request_id) %>
