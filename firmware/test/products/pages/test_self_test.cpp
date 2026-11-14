@@ -299,12 +299,13 @@ TEST_CASE(
     Glass without;
     draw_self_test(without, snapshot);
     CHECK_FALSE(
-        reads_at(without, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressText));
+        reads_at(without, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressName));
 
     snapshot.aircraft_address_warning = true;
     Glass with;
     draw_self_test(with, snapshot);
-    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressText));
+    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressName));
+    CHECK(row_reads(with, 3, kSelfTestUnsetVerdict));
     CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(2), "I2C BARO"));
 }
 
@@ -358,7 +359,8 @@ TEST_CASE(
     snapshot.bravo = skyblip::comms::BravoState::Live;
     Glass live;
     draw_self_test(live, snapshot);
-    CHECK(reads_at(live, kSelfTestLeftX, self_test_row_y(last), kSelfTestAircraftAddressText));
+    CHECK(reads_at(live, kSelfTestLeftX, self_test_row_y(last), kSelfTestAircraftAddressName));
+    CHECK(row_reads(live, last, kSelfTestUnsetVerdict));
 
     snapshot.bravo = skyblip::comms::BravoState::NoUtc;
     Glass lost;

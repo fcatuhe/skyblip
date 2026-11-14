@@ -78,9 +78,8 @@ constexpr int kSelfTestFooterHeight =
 static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterHeight <= kGlassHeight,
               "the last row would fall off the glass");
 
-constexpr const char kSelfTestAircraftAddressText[] = "ADS-B UNSET: OWN XPDR IS TRAFFIC";
-static_assert(sizeof(kSelfTestAircraftAddressText) - 1 <= kSelfTestRowCells,
-              "the warning fits its row");
+constexpr const char* kSelfTestAircraftAddressName = "ADS-B";
+constexpr const char* kSelfTestUnsetVerdict = "UNSET";
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);
 

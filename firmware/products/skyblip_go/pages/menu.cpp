@@ -53,7 +53,7 @@ int callsign_value(char* out, const char* callsign) {
 
 const char* detected_verb(const Detected& detected, const Settings& settings) {
     if (detected.state == Detection::Unpaired) return "OPEN";
-    return detected.state == Detection::Heard && !matches(detected, settings) ? "USE" : "";
+    return detected.state == Detection::Heard && !matches(detected, settings) ? "SET" : "";
 }
 
 const char* row_verb(MenuRow row, const MenuValues& values) {

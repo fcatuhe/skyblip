@@ -125,16 +125,14 @@ void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
     char address[kAircraftAddressCharacters + 1];
     char label[kLabelBytes];
     heard_label(label, detected);
-    BodyLine body[6];
+    BodyLine body[3];
     int count = 0;
     body[count++] = {name_of(detected, address), kCallsignScale};
     body[count++] = {label};
     if (named_type(detected.aircraft_type))
         body[count++] = {aircraft_type_name(detected.aircraft_type)};
-    body[count++] = {""};
-    for (int i = 0; i < kAircraftNoticeLineCount; i++) body[count++] = {kAircraftNoticeLines[i]};
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, body, count);
-    draw_keys(canvas, {{Press::Once, "USE"}, "CLOSE"});
+    draw_keys(canvas, {{Press::Once, "SET"}, "CLOSE"});
 }
 
 }  // namespace skyblip::go
