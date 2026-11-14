@@ -80,7 +80,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Save 2 changes"
       assert_selector ".glass-prompt .glass-title", text: "SETTINGS"
       assert_selector ".glass-press", text: "Press the Go's button twice."
-      assert_selector ".glass-left", text: /IT CANCELS IN (30|29) S/
+      assert_selector ".glass-left", text: /\A(30|29) S\.\z/
       assert_no_field "Callsign"
       screen "07-glass-asking"
 

@@ -103,9 +103,8 @@ en:
       kept_summary: What skyblip.eu keeps
       kept: skyblip.eu keeps the device's chip identifier, key, serial number and firmware, along with the internet address used for activation. No account.
     glass:
-      header: AUTHORIZE
-      allow: PUSH TWICE TO ACCEPT
-      refuse: PUSH ONCE TO CANCEL
+      allow: ACCEPT
+      cancel: TO CANCEL, PUSH ONCE OR WAIT
       lamp: The LED blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
     tools:
@@ -163,7 +162,7 @@ en:
       in_flight_lock: Changes are available again after landing.
       in_flight_lock_trusted: This browser can still change the device's settings. Other actions are available again after landing.
       glass_press: "Press the %{product}'s button twice."
-      glass_left: "IT CANCELS IN %{seconds} S"
+      glass_left: "%{seconds} S."
       glass_waiting: Waiting for its answer.
       install_version: "Install %{version}"
       install_full: "Install %{version}, with the sensor hub firmware"
