@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "core/events/central.h"
 #include "core/settings/address.h"
@@ -100,6 +101,9 @@ inline bool paired(const Settings& settings) {
 
 Status validate(const Settings& settings);
 
+// INFO: fc 14nov26 ADS-L F.2.3 inconsistency: an own ICAO other than the transponder Bravo names
+bool contradicts(uint32_t own_icao, std::optional<uint32_t> own_transponder);
+
 size_t blob_size();
 void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
@@ -111,7 +115,8 @@ void write_config_fields(cbor::Writer& writer, const Settings& settings,
 // INFO: fc 03oct26 the pilot's keys only, so a "defaults" reply is a "set" as it stands
 void write_settings_fields(cbor::Writer& writer, const Settings& settings);
 
-Status apply_settings(Settings& settings, const cbor::Reader& frame);
+Status apply_settings(Settings& settings, const cbor::Reader& frame,
+                      std::optional<uint32_t> own_transponder = std::nullopt);
 
 }  // namespace skyblip::go
 

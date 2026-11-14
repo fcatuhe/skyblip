@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_MENU_H
 
 #include <cstdint>
+#include <optional>
 
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/aircraft.h"
@@ -45,6 +46,8 @@ struct MenuValues {
     go::Settings settings{};
     bool light{false};
     Detected detected{};
+    // INFO: fc 14nov26 bus::State::own_transponder, the one an own ICAO typed must match
+    std::optional<uint32_t> own_transponder{};
 };
 
 struct MenuSnapshot {
@@ -135,6 +138,8 @@ struct CallsignSnapshot {
     const char* text{""};
     int cursor{0};
     bool clears{false};
+    std::optional<uint32_t> own_transponder{};
+    bool refused{false};
 };
 
 bool callsign_press_clears(const char* text, int cursor);
@@ -146,6 +151,9 @@ constexpr int field_text_x(int characters) {
 }
 constexpr int kCallsignTextX = field_text_x(kCallsignCharacters);
 constexpr int kCallsignTextY = 80;
+constexpr int kOwnTransponderY = 52;
+constexpr const char* kOwnTransponderText = "BRAVO HEARS ";
+constexpr const char* kOwnTransponderRefusedText = "REFUSED: BRAVO HEARS ";
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorHeight = 3;
 constexpr int kCallsignHintScale = 2;
@@ -197,6 +205,7 @@ class MenuEditor {
 
     bool editing() const { return editing_; }
     bool clearing() const { return clearing_; }
+    bool refused() const { return refused_; }
     MenuRow field() const { return field_; }
     const char* text() const { return text_; }
     int cursor() const { return cursor_; }
@@ -229,6 +238,7 @@ class MenuEditor {
     bool aircraft_{false};
     bool editing_{false};
     bool clearing_{false};
+    bool refused_{false};
     MenuRow field_{MenuRow::Callsign};
     int cursor_{0};
     char text_[kCallsignBytes]{0};

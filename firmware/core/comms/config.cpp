@@ -16,8 +16,13 @@ static_assert(
     kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
+// INFO: fc 14nov26 Conflict is the Go's own ICAO against its Bravo's transponder, ADS-L F.2.3
 link::Reason settings_refusal(Status status) {
-    return status == Status::OutOfRange ? link::Reason::OutOfRange : link::Reason::Invalid;
+    switch (status) {
+        case Status::OutOfRange: return link::Reason::OutOfRange;
+        case Status::Conflict: return link::Reason::NotOwnTransponder;
+        default: return link::Reason::Invalid;
+    }
 }
 
 bool stages_prompt(link::Command command) {

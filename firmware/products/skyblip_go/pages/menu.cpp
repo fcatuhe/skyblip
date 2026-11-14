@@ -58,6 +58,14 @@ void field_header(ui::Canvas& canvas, const char* title) {
     canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
 }
 
+void draw_own_transponder(ui::Canvas& canvas, uint32_t address, bool refused) {
+    char line[32];
+    int written = format_string(line, refused ? kOwnTransponderRefusedText : kOwnTransponderText);
+    written += format_hex(line + written, address, kOwnIcaoCharacters);
+    line[written] = 0;
+    canvas.draw_text(centred_x(line, 1), kOwnTransponderY, line, true, 1);
+}
+
 }  // namespace
 
 Menu menu_for(Page page) {
@@ -287,6 +295,8 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
     if (!snapshot.clears)
         canvas.draw_text(centred_x(kCallsignClearHelpText, 1), kCallsignHelpY,
                          kCallsignClearHelpText, true, 1);
+    if (snapshot.own_transponder)
+        draw_own_transponder(canvas, *snapshot.own_transponder, snapshot.refused);
 }
 
 void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {

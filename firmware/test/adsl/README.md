@@ -15,7 +15,7 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 | `test_physical.cpp` | C.1 to C.5 | the radio's preamble and power, channel alternation as flown, the time multiplexing the dwell map does | bands, modulation, Manchester coding, sync words |
 | `test_datalink.cpp` | D.1 to D.3 | listen-before-talk as flown: the deferral, the 3000 ms force on the ground and the 2000 ms after it, and no force airborne | the whole subpart, `media_access()` among it |
 | `test_network.cpp` | E.1 to E.4.2 | the version own-ship's Traffic goes out in | the whole subpart |
-| `test_presentation.cpp` | F.1 to F.2.5 | payload 66, skyBlip's address table and the configuration that sets it | the header and the payload types |
+| `test_presentation.cpp` | F.1 to F.2.5 | payload 66, skyBlip's address table, the ICAO address F.2.3 puts in its place, and the configurations it refuses | the header and the payload types |
 | `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the instant, the flight state, the category | every field's offset and code |
 | `test_quality.cpp` | G.1.11 to G.1.17 | the integrity and accuracy own-ship claims | the code tables |
 | `test_payloads.cpp` | G.2 to G.5 | the Status a Go flies and the uplink it hears | the Status payload's layout and cadence, and the payloads not implemented |
@@ -24,7 +24,7 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 
 Where the firmware does not satisfy a clause, the case is still written as the clause requires, marked `doctest::skip()` over a one-line `TODO:` naming why. `build/skyblip_tests --no-skip --test-case="ADS-L*"` runs them all and prints what is not conformant, which is the list of what this device would have to do to claim the clause. Four kinds of skip live in the two halves, told apart by how the message opens, and `scripts/check_adsl_clauses.py` refuses a skip that opens on none of them:
 
-- `not implemented:` a mandatory clause the firmware does not meet. Today that is F.2.3's configured ICAO address.
+- `not implemented:` a mandatory clause the firmware does not meet. There is none today. F.2.3's configured ICAO address was the last, and its cases now pass. They test our reading, that every payload goes under table 5 while an ICAO address is set, which EASA is being asked to confirm (`core/settings/README.md`, The ICAO address).
 - `prose:` the clause has nothing executable, such as the block diagram or the OSI table. G.5 is one too: it reserves a payload for drones and leaves its format to a later issue.
 - `paperwork:` a duty of the manufacturer rather than of the device, such as the declaration of conformity.
 - `optional:` a clause the specification leaves optional, because its wording says "may", "optionally" or "should", or because the Status payload lets a device declare the capability absent. These are the ones this device does not take:

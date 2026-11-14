@@ -45,7 +45,7 @@ go::Settings widest_settings() {
     settings.alarm_volume = go::AlarmVolume::Loud;
     settings.units = go::Units::Nautical;
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
-    settings.own_icao = 0xFFFFFF;
+    settings.own_icao = 0xFFFFFE;                     // the widest address ICAO assigns
     return settings;
 }
 
@@ -155,7 +155,7 @@ TEST_CASE("comms: the status a phone is pushed fits the narrowest payload we sup
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = widest_settings();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     make_worst_case(config);
 
@@ -180,7 +180,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = widest_settings();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
 
     config.on_rx(config_frame("{\"command\":\"get\"}"));
@@ -188,11 +188,11 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     const std::string frame = link.last().bytes;
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     // A ten-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
-    // and the own ICAO 0xFFFFFF behind a 4-byte head.
+    // and the own ICAO 0xFFFFFE behind a 4-byte head.
     const uint8_t golden[] = {0xAA, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF, 0x03,
                               0x18, 0x3A, 0x04, 0x11, 0x05, 0xF4, 0x06, 0x02, 0x07, 0x00,
                               0x08, 0x69, 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',
-                              'I',  0x0B, 0x1A, 0x00, 0xFF, 0xFF, 0xFF};
+                              'I',  0x0B, 0x1A, 0x00, 0xFF, 0xFF, 0xFE};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
     CHECK(frame.size() == 37);
     CHECK(config.link_drops() == 0);
@@ -205,7 +205,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
-    CHECK(body.find("\"own_icao\":16777215") != std::string::npos);
+    CHECK(body.find("\"own_icao\":16777214") != std::string::npos);
 }
 
 // A link that never exchanged its MTU reassembles a write from prj.conf's two Prepare Writes.
@@ -217,20 +217,20 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     const events::RxFrame set = config_frame(
         "{\"command\":\"set\",\"aircraft_type\":17,\"alarm_enabled\":false,"
         "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"ABCDEFGHI\","
-        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"own_icao\":16777215}");
+        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"own_icao\":16777214}");
     CHECK(set.bytes == 34);
     CHECK(set.bytes <= kPrepareSegments * kPrepareSegmentBytes);
 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(set);
     REQUIRE(config.pending() == Pending::Set);
     config.confirm();
-    CHECK(settings.own_icao == 0xFFFFFFu);
+    CHECK(settings.own_icao == 0xFFFFFEu);
     CHECK(settings.frequency_trim_e1_ppm == -100);
 }
 
@@ -247,7 +247,7 @@ namespace {
 struct UpdateBench {
     platform::host::Link link;
     go::Settings settings = widest_settings();
-    go::SettingsStore store{settings, kWidestAddress};
+    go::SettingsStore store{settings, kWidestAddress, kNoOwnTransponder};
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     ConfigService config{link, store, &dfu};
@@ -328,7 +328,7 @@ std::string widest_install_report_on(uint16_t payload_bytes) {
     widest.reset = power::ResetReason::ChargerWake;
     platform::host::Link link;
     go::Settings settings = widest_settings();
-    go::SettingsStore store{settings, kWidestAddress};
+    go::SettingsStore store{settings, kWidestAddress, kNoOwnTransponder};
     ConfigService config{link, store, nullptr};
     link.raise_link(1);
     link.raise_link(1);
@@ -354,7 +354,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link wide;
     wide.raise_link(1);
     wide.declare_payload_bytes(495);
-    go::SettingsStore store_on_wide(settings, kWidestAddress);
+    go::SettingsStore store_on_wide(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_wide(wide, store_on_wide, nullptr, &statistics);
     on_wide.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(wide.sent.size() == 1);
@@ -368,7 +368,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link narrow;
     narrow.raise_link(1);
     narrow.declare_payload_bytes(kNarrowBytes);
-    go::SettingsStore store_on_narrow(settings, kWidestAddress);
+    go::SettingsStore store_on_narrow(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_narrow(narrow, store_on_narrow, nullptr, &statistics);
     on_narrow.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(narrow.sent.size() > 1);
@@ -397,7 +397,7 @@ TEST_CASE("comms: the bench's timing report is one frame on a wide link and seve
     platform::host::Link hopeless;
     hopeless.raise_link(1);
     hopeless.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
-    go::SettingsStore store_on_hopeless(settings, kWidestAddress);
+    go::SettingsStore store_on_hopeless(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_hopeless(hopeless, store_on_hopeless, nullptr, &statistics);
     on_hopeless.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(hopeless.sent.size() == 1);
@@ -421,7 +421,7 @@ TEST_CASE("comms: the widest timing report is 147 bytes, one frame on an iPhone'
     platform::host::Link iphone;
     iphone.raise_link(1);
     iphone.declare_payload_bytes(kSmallestSupportedPayloadBytes);
-    go::SettingsStore store_on_iphone(settings, kWidestAddress);
+    go::SettingsStore store_on_iphone(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_iphone(iphone, store_on_iphone, nullptr, &statistics);
     on_iphone.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(iphone.sent.size() == 1);
@@ -431,7 +431,7 @@ TEST_CASE("comms: the widest timing report is 147 bytes, one frame on an iPhone'
     platform::host::Link one_short;
     one_short.raise_link(1);
     one_short.declare_payload_bytes(146);
-    go::SettingsStore store_on_one_short(settings, kWidestAddress);
+    go::SettingsStore store_on_one_short(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_one_short(one_short, store_on_one_short, nullptr, &statistics);
     on_one_short.on_rx(config_frame("{\"command\":\"timing\"}"));
     CHECK(one_short.sent.size() == 2);
@@ -442,7 +442,7 @@ TEST_CASE("comms: a status push the controller could not take is retried, not lo
     link.raise_link(1);
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
@@ -473,7 +473,7 @@ TEST_CASE("comms: the widest status push of an unpaired unit fits the twenty byt
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
     config.set_die_temperature(INT16_MIN, true);
@@ -491,7 +491,7 @@ TEST_CASE("comms: a paired unit's widest status push is dropped and counted on a
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, link.payload_bytes(), link.connection(1)});
     config.set_die_temperature(INT16_MIN, true);
@@ -517,7 +517,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     platform::host::Link free_link;
     free_link.raise_link(1);
     free_link.declare_payload_bytes(64);
-    go::SettingsStore store_free(settings, kWidestAddress);
+    go::SettingsStore store_free(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_free(free_link, store_free, nullptr, &statistics);
     on_free.on_rx(config_frame("{\"command\":\"timing\"}"));
     REQUIRE(free_link.sent.size() > 1);
@@ -526,7 +526,7 @@ TEST_CASE("comms: a report the link takes one frame at a time arrives whole and 
     busy.raise_link(1);
     busy.declare_payload_bytes(64);
     busy.hold_after(1);
-    go::SettingsStore store_busy(settings, kWidestAddress);
+    go::SettingsStore store_busy(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService on_busy(busy, store_busy, nullptr, &statistics);
     on_busy.on_rx(config_frame("{\"command\":\"timing\"}"));
     CHECK(busy.sent.size() == 1);
@@ -545,7 +545,7 @@ TEST_CASE("comms: a reply the link refused goes out once the central is served, 
     link.raise_link(1);
     link.hold_after(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
@@ -568,7 +568,7 @@ TEST_CASE("comms: a central that never takes its reply loses it, counted, and fr
     link.raise_link(1);
     link.hold_after(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kWidestAddress);
+    go::SettingsStore store(settings, kWidestAddress, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"get\"}"));

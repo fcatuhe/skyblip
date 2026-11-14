@@ -24,6 +24,7 @@ void MenuEditor::leave() {
 void MenuEditor::close_field() {
     editing_ = false;
     clearing_ = false;
+    refused_ = false;
     cursor_ = 0;
 }
 
@@ -102,6 +103,7 @@ void MenuEditor::edit(MenuRow field, const MenuValues& current) {
     field_ = field;
     editing_ = true;
     clearing_ = false;
+    refused_ = false;
     cursor_ = 0;
     int written = 0;
     if (field == MenuRow::OwnIcao) {
@@ -122,6 +124,7 @@ int MenuEditor::characters() const {
 }
 
 MenuAction MenuEditor::roll() {
+    refused_ = false;
     text_[cursor_] = field_ == MenuRow::OwnIcao ? next_hex_character(text_[cursor_])
                                                 : next_callsign_character(text_[cursor_]);
     return MenuAction::Moved;
@@ -144,6 +147,13 @@ MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
     if (field_ == MenuRow::OwnIcao) {
         next.settings.own_icao = own_icao_typed(text_);
         typed = next.settings.own_icao != kOwnIcaoUnset;
+        // INFO: fc 14nov26 ADS-L F.2.3: refused in the open field, under what Bravo names instead
+        if (contradicts(next.settings.own_icao, current.own_transponder)) {
+            next = current;
+            refused_ = true;
+            cursor_ = 0;
+            return MenuAction::Moved;
+        }
     } else {
         callsign_stored(next.settings.callsign, text_);
     }

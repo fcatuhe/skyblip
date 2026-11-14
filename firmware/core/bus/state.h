@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_CORE_BUS_STATE_H
 #define SKYBLIP_CORE_BUS_STATE_H
 
+#include <optional>
+
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/events/rf.h"
@@ -229,6 +231,8 @@ struct State {
     traffic::Level alarm_undismissed{traffic::Level::None};
     // INFO: fc 12nov26 written by a paired Go's Bravo service alone, Unpaired everywhere else
     comms::BravoState bravo{comms::BravoState::Unpaired};
+    // INFO: fc 14nov26 the same service's: the transponder a live Bravo names, on the ground only
+    std::optional<uint32_t> own_transponder{};
     // INFO: fc 12nov26 written by Bravo's peer service alone, true while its Go+ sounds for both
     bool alarm_granted{false};
 

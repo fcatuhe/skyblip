@@ -2498,6 +2498,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "unknown_browser",
           "code": 51
+        },
+        {
+          "name": "not_own_transponder",
+          "code": 52
         }
       ]
     },

@@ -91,8 +91,9 @@ inline constexpr Value kReasonValues[] = {
     {"untrusted", 49},
     {"forgotten", 50},
     {"unknown_browser", 51},
+    {"not_own_transponder", 52},
 };
-inline constexpr Enumeration kReason{kReasonValues, 51};
+inline constexpr Enumeration kReason{kReasonValues, 52};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},

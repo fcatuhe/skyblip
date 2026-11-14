@@ -106,8 +106,8 @@ The table merges two reports only when both the address mapping table and the ad
 
 The table refuses two addresses, before any other check:
 
-- our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`);
-- our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it.
+- our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`). It is set even while we transmit an own ICAO instead, so a ground station still relaying what it heard before the switch is refused too;
+- our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it. Since F.2.3 a Go with an own ICAO transmits under it too, so this entry is also what refuses a ground station relaying us back.
 
 Zero sets an entry to filter nothing. `common::TrafficService` passes the product's own-ICAO setting on every pass, through `common::TrafficSettings`, so an address typed on the glass or set over the link filters from the next pass. A new address also releases the slot it names, if the table holds one, so our transponder leaves the radar on that pass rather than when its lease runs out. It is released even under an alarm, unlike a slot a full table would evict: the address names our own aircraft, so that alarm grades our own transponder against us, and it is the false alarm the pilot set the address to stop. The Go's setting is `own_icao`, 0 while unset (`products/skyblip_go/README.md`, Own ICAO).
 
@@ -139,9 +139,9 @@ The sanity check and the slant both measure from the table's reference, `set_own
 
 **Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO). A paired Bravo also proposes the address on the ground, from the transponder it hears loudest by a clear lead, and the pilot takes it with one press (`products/skyblip_go/pages/README.md`, aircraft). It is a proposal and never a filter of its own: geometry cannot tell our own transponder from a wingman a few metres off, and an address set in error drops a real aircraft from the plot, which formation never does.
 
-### Not accepted: an aircraft that shows twice
+### An aircraft that carries a Go and a transponder
 
-**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58, even when its `own_icao` holds the aircraft's ICAO address. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. This is not accepted: #234 holds whether and how the Go transmits the ICAO address, and the owner reviews it before any work starts.
+**It shows once** on another paired Go when its Go has `own_icao` set: the Go transmits that address under table 5 (ADS-L F.2.3, `core/settings/README.md`, The ICAO address), the address its ADS-B and Mode-S carry, so the table merges the two on the address pair. A Go whose `own_icao` is unset still shows twice, once under table 58 and once under table 5, and the table does not guess that the two are one aircraft. The Go proposes the address while a paired Bravo hears its transponder, and refuses any other (`products/skyblip_go/README.md`, Own ICAO).
 
 ## Dismissal
 
