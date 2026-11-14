@@ -18,6 +18,9 @@ namespace skyblip::platform::host {
 // deadlines are therefore testable to the microsecond with no hardware.
 class Rf : public ports::Rf {
    public:
+    static constexpr int32_t kCcaThresholdCentiDbm =
+        timing::cca_threshold_centi_dbm(parts::sx1262::kReceiveGainCentiDbd);
+
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
@@ -56,6 +59,18 @@ class Rf : public ports::Rf {
     void abort() override {
         armed_ = false;
         queued_ = false;
+    }
+
+    Status withdraw(uint64_t tx_at_us) override {
+        const int flying = armed_ ? flying_bursts_.index_of(tx_at_us) : -1;
+        if (flying >= keyed_) {
+            flying_bursts_.remove(static_cast<uint8_t>(flying));
+            return Status::Ok;
+        }
+        const int queued = queued_ ? queued_bursts_.index_of(tx_at_us) : -1;
+        if (queued < 0) return Status::WouldBlock;
+        queued_bursts_.remove(static_cast<uint8_t>(queued));
+        return Status::Ok;
     }
 
     void sleep() override {
@@ -111,7 +126,7 @@ class Rf : public ports::Rf {
 
    private:
     static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us};
+        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
@@ -139,9 +154,32 @@ class Rf : public ports::Rf {
         const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
         if (armed_ && !started_ && now_us + lead_us >= flying_plan_.start_us && !start(now_us))
             abandon(now_us);
-        if (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count &&
-            now_us >= flying_bursts_.burst[keyed_].at_us)
-            transmit(flying_bursts_.burst[keyed_]);
+        while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count &&
+               now_us >= flying_bursts_.burst[keyed_].at_us) {
+            const ports::RfBurst burst = flying_bursts_.burst[keyed_];
+            if (burst.forced || assess_clear(burst)) {
+                transmit(burst);
+                return;
+            }
+            flying_bursts_.remove(keyed_);
+        }
+    }
+
+    // INFO: fc 14nov26 virtual time stands still in a pass, so the reads before keying are the CCA
+    bool assess_clear(const ports::RfBurst& burst) {
+        events::RfEvent busy{};
+        busy.rssi_valid = radio_.mode() == parts::RadioMode::Rx;
+        if (busy.rssi_valid) {
+            busy.rssi_dbm = read_level();
+            if (timing::channel_clear(busy.rssi_dbm, kCcaThresholdCentiDbm)) return true;
+        }
+        busy.type = events::RfEventType::Busy;
+        busy.band = band_;
+        busy.frequency_hz = frequency_hz_;
+        busy.at_us = clock_.microseconds();
+        busy.tx_at_us = burst.at_us;
+        out_.push(busy);
+        return false;
     }
 
     void take_queued(uint64_t now_us) {
@@ -235,12 +273,16 @@ class Rf : public ports::Rf {
     // INFO: fc 15sep26 virtual time stands still in a pass, so the run of reads is the window
     int8_t sample_carrier() {
         if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
+        carrier_.level_dbm = read_level();
+        carrier_.samples++;
+        return carrier_.level_dbm;
+    }
+
+    int8_t read_level() {
         int8_t window[timing::ChannelLevel::kSamples];
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++)
             window[i] = radio_.instant_rssi_dbm();
-        carrier_.level_dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
-        carrier_.samples++;
-        return carrier_.level_dbm;
+        return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
     }
 
     void drain(uint64_t now_us) {

@@ -108,8 +108,8 @@ struct Pass {
 
 }  // namespace
 
-// The draw chooses the instant and nothing on air moves it: core/timing/README.md has the argument.
-TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a quiet one") {
+// EN 300 220-1 5.21.1: the executor listens before every burst, and a held channel keys nothing.
+TEST_CASE("rf: a held channel reports the burst busy at its level, a quiet one keys it on time") {
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     platform::host::Clock clock;
@@ -129,24 +129,30 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
 
     chip.rssi_dbm = -50;  // a neighbour holding the channel, 55 dB over the floor
     REQUIRE(rf.arm(plan) == Status::Ok);
-    uint32_t keyed_at_ms = 0;
     for (uint32_t now_ms = 450; now_ms <= 800; now_ms += 5) {
         clock.set_milliseconds(now_ms);
         rf.service(now_ms);
-        if (chip.tx_pending && keyed_at_ms == 0) keyed_at_ms = now_ms;
     }
-    CHECK(keyed_at_ms == 600);
+    CHECK_FALSE(chip.saw_command(parts::sx1262::kSetTx));
+    events::RfEvent event{};
+    int busy = 0;
+    while (events.pop(event)) {
+        CHECK(event.type != events::RfEventType::Missed);
+        if (event.type != events::RfEventType::Busy) continue;
+        busy++;
+        CHECK(event.tx_at_us == 600000);
+        CHECK(event.rssi_valid);
+        CHECK(event.rssi_dbm == -50);
+    }
+    CHECK(busy == 1);
 
-    // The same dwell one second later on a quiet channel keys at the same instant.
-    uint8_t sent[protocol::kTxPayloadChipBytes];
-    uint8_t sent_bytes = 0;
-    REQUIRE(chip.take_tx(sent, sent_bytes));
+    // The same dwell one second later on a quiet channel keys at its instant.
     chip.rssi_dbm = simulator::Air::kNoiseFloorDbm;
     plan.start_us += 1000000;
     plan.end_us += 1000000;
     plan.tx_at_us += 1000000;
     REQUIRE(rf.arm(plan) == Status::Ok);
-    keyed_at_ms = 0;
+    uint32_t keyed_at_ms = 0;
     for (uint32_t now_ms = 1450; now_ms <= 1800; now_ms += 5) {
         clock.set_milliseconds(now_ms);
         rf.service(now_ms);
@@ -158,6 +164,76 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
     // Two hundred milliseconds in Tx with no TxDone, and no firmware timer
     // anywhere: see the case below for why that is the right answer.
     CHECK(chip.tx_timeout_ticks != 0);
+}
+
+namespace {
+
+struct Executor {
+    models::Sx1262 chip;
+    parts::Sx1262 radio{chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin};
+    platform::host::Clock clock;
+    bus::Queue<events::RfEvent, 8> events;
+    platform::host::Rf rf{radio, clock, events};
+    uint8_t frame[adsl::Packet::kTxBytes] = {0x72, 0x4B};
+
+    ports::RfPlan plan(uint64_t start_us, uint64_t tx_at_us, bool forced = false) {
+        ports::RfPlan dwell{};
+        dwell.mode = ports::RfMode::RxMBand;
+        dwell.frequency_hz = adsl::kMBand0Hz;
+        dwell.start_us = start_us;
+        dwell.end_us = start_us + 345000;
+        dwell.tx = frame;
+        dwell.tx_bytes = sizeof(frame);
+        dwell.tx_at_us = tx_at_us;
+        dwell.tx_forced = forced;
+        return dwell;
+    }
+
+    void run(uint32_t from_ms, uint32_t to_ms) {
+        for (uint32_t now_ms = from_ms; now_ms <= to_ms; now_ms += 5) {
+            clock.set_milliseconds(now_ms);
+            rf.service(now_ms);
+        }
+    }
+};
+
+}  // namespace
+
+// ADS-L §D.3: "the device may force transmission irrespective of carrier detect".
+TEST_CASE("rf: a forced burst keys on a held channel at its instant") {
+    Executor executor;
+    REQUIRE(executor.rf.begin() == Status::Ok);
+    executor.chip.rssi_dbm = -50;
+    REQUIRE(executor.rf.arm(executor.plan(450000, 600000, /*forced=*/true)) == Status::Ok);
+    executor.run(450, 600);
+    CHECK(executor.chip.tx_pending);
+    events::RfEvent event{};
+    while (executor.events.pop(event)) CHECK(event.type != events::RfEventType::Busy);
+}
+
+// The silence after a forced burst reaches a burst the service already handed over.
+TEST_CASE("rf: a burst withdrawn before its instant never keys, one already keyed stays") {
+    Executor executor;
+    REQUIRE(executor.rf.begin() == Status::Ok);
+    REQUIRE(executor.rf.arm(executor.plan(450000, 600000)) == Status::Ok);
+    REQUIRE(executor.rf.arm(executor.plan(1450000, 1600000)) == Status::Ok);
+    executor.run(450, 500);
+    CHECK(executor.rf.withdraw(1600000) == Status::Ok);
+    CHECK(executor.rf.withdraw(1600000) == Status::WouldBlock);
+    executor.run(505, 600);
+    CHECK(executor.chip.tx_pending);
+    CHECK(executor.rf.withdraw(600000) == Status::WouldBlock);
+    uint8_t sent[protocol::kTxPayloadChipBytes];
+    uint8_t sent_bytes = 0;
+    REQUIRE(executor.chip.take_tx(sent, sent_bytes));
+    executor.run(605, 1800);
+    CHECK_FALSE(executor.chip.tx_pending);
+
+    REQUIRE(executor.rf.arm(executor.plan(2450000, 2600000)) == Status::Ok);
+    executor.run(2450, 2500);
+    CHECK(executor.rf.withdraw(2600000) == Status::Ok);
+    executor.run(2505, 2800);
+    CHECK_FALSE(executor.chip.tx_pending);
 }
 
 // A7, decided and written down: there is no second, firmware-side transmit
@@ -295,24 +371,19 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     CHECK(row.rssi_dbm == -101);
 }
 
-// E1. A site where the carrier never read clear used to be a device that went silent.
-TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it measured") {
+// E1. A jammed site keys no airborne position: each is deferred, then missed, never forced.
+TEST_CASE("rf: a jammed site defers every airborne position, and reports the floor it measured") {
     Pass pass;
     REQUIRE(pass.begin() == Status::Ok);
     CHECK(pass.radio_service.noise_floor().level_dbm() == timing::NoiseFloor::kSeedDbm);
 
     pass.chip.rssi_dbm = -50;  // a neighbour sitting on the channel, 55 dB over the floor
-    int keyed_at_ms = 0;
-    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
-        pass.whole_pass(now_us);
-        if (pass.chip.tx_pending && keyed_at_ms == 0)
-            keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
-    }
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) pass.whole_pass(now_us);
 
-    // The PA keyed inside the direct slot. Nothing here completes the burst: the
-    // world that takes it off the antenna is simulator::Air, and this harness has none.
-    CHECK(pass.chip.saw_command(parts::sx1262::kSetTx));
-    CHECK(timing::Scheduler::in_direct_slot(keyed_at_ms));
+    CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+    CHECK(pass.state.air.tx_deferred > 0);
+    CHECK(pass.state.air.tx_busy_missed > 0);
+    CHECK(pass.state.air.tx_forced == 0);
     CHECK(pass.state.rf.timing_statistics.refused() == 0);
     // The floor is a measurement, and a site this loud has walked it off the seed.
     CHECK(pass.radio_service.noise_floor().samples() > 3);
@@ -320,7 +391,7 @@ TEST_CASE("rf: a jammed site transmits at its instant, and reports the floor it 
 }
 
 // A read at one instant used to license a burst on top of a neighbour it did not land on.
-TEST_CASE("rf: the floor the service publishes is a window of reads, and moves no instant") {
+TEST_CASE("rf: the floor and the clear channel assessment are each a window of reads") {
     Pass pass;
     REQUIRE(pass.begin() == Status::Ok);
 
@@ -328,30 +399,23 @@ TEST_CASE("rf: the floor the service publishes is a window of reads, and moves n
     const int8_t window[timing::ChannelLevel::kSamples] = {-115, -115, -115, -115, -45,
                                                            -115, -115, -115, -115};
     pass.chip.set_rssi_sequence(window, timing::ChannelLevel::kSamples);
-
-    int keyed_at_ms = 0;
-    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
-        pass.whole_pass(now_us);
-        if (pass.chip.tx_pending && keyed_at_ms == 0)
-            keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
-    }
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) pass.whole_pass(now_us);
     // The floor the service averages is the window's figure, not the quiet read.
     CHECK(pass.radio_service.noise_floor().level_dbm() > window[0] + 20);
 
-    // The same channel read only at its quiet instant keys the PA at the same instant.
+    // The same channel read only at its quiet instant keys the PA.
     Pass single;
     REQUIRE(single.begin() == Status::Ok);
     single.chip.rssi_dbm = window[0];
-    int single_keyed_at_ms = 0;
-    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) {
-        single.whole_pass(now_us);
-        if (single.chip.tx_pending && single_keyed_at_ms == 0)
-            single_keyed_at_ms = static_cast<int>(now_us / 1000 % 1000);
-    }
+    for (uint64_t now_us = 0; now_us <= 2900000; now_us += 10000) single.whole_pass(now_us);
     CHECK(single.radio_service.noise_floor().level_dbm() < timing::NoiseFloor::kSeedDbm);
     CHECK(pass.radio_service.noise_floor().level_dbm() >
           single.radio_service.noise_floor().level_dbm() + 10);
-    CHECK(single_keyed_at_ms == keyed_at_ms);
+    CHECK(single.chip.saw_command(parts::sx1262::kSetTx));
+    CHECK(single.state.air.tx_deferred == 0);
+    // The windowed assessment heard the neighbour the quiet read missed, so it never keyed.
+    CHECK_FALSE(pass.chip.saw_command(parts::sx1262::kSetTx));
+    CHECK(pass.state.air.tx_deferred > 0);
 }
 
 // The 30 s no-RX reinitialisation lived in parts::Sx1262::service(), which only

@@ -325,6 +325,9 @@ constexpr int16_t kResultingErpCentiDb = static_cast<int16_t>(
     kConductedDbm * 100 - kFeedLossCentiDb + kAntennaPeakGainDbiCentiDb - kDbiToDbdCentiDb);
 static_assert(kResultingErpCentiDb <= kSrd868ErpLimitDbm * 100,
               "the programmed conducted power exceeds 25 mW e.r.p. with the declared antenna");
+// INFO: fc 14nov26 what a signal gains from a 0 dBd antenna to the front end, feed loss included
+constexpr int16_t kReceiveGainCentiDbd =
+    static_cast<int16_t>(kAntennaPeakGainDbiCentiDb - kDbiToDbdCentiDb - kFeedLossCentiDb);
 
 // DS 13.1.12 CalibrateImage, the 863-870 MHz band pair.
 constexpr uint8_t kImageBand863to870[2] = {0xD7, 0xDB};

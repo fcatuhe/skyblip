@@ -73,9 +73,8 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
 
-// The upper channel's dwell opens at 800 already tuned - the hop guard before it
-// is what paid for the retune - so 800 is its first legal instant.
-TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
+// The upper channel's dwell opens at 800 already tuned, and the CCA before a burst listens on it.
+TEST_CASE("transmit: the first instant of a dwell leaves the clear channel assessment its lead") {
     Transmitter transmitter = airborne_transmitter();
     int earliest = 2000, latest = 0;
     for (uint32_t utc_s = 1; utc_s < 5000; utc_s += 2) {
@@ -85,7 +84,7 @@ TEST_CASE("transmit: the first instant of a dwell is the moment it opens") {
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
         if (attempt.at_ms > latest) latest = attempt.at_ms;
     }
-    CHECK(earliest == kSlot1StartMs);
+    CHECK(earliest == kSlot1StartMs + static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000));
     CHECK(latest == adsl::kDirectEndMs - Transmitter::kCompletionGuardMs -
                         static_cast<int>(Transmitter::kAirTimeMs));
 }
@@ -105,10 +104,10 @@ TEST_CASE("transmit: two devices do not pick the same instant every second") {
 // Two addresses differ by a fixed XOR delta forever: a mixer that carried it would marry the pair.
 TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next") {
     constexpr uint32_t kOwnAddress = 0x5B7E57;
-    constexpr uint32_t kPeerAddress = 0x5B01A0;
+    constexpr uint32_t kPeerAddress = 0x5B0554;
     CHECK(instant_at(kOwnAddress, 1) == instant_at(kPeerAddress, 1));
-    // 532 and 573, 8 burst lengths apart, from the pair that shared 977 ms a second earlier.
-    CHECK(instant_at(kOwnAddress, 2) - instant_at(kPeerAddress, 2) == -41);
+    // 532 and 565, over six burst lengths apart, from the pair that shared 906 ms a second earlier.
+    CHECK(instant_at(kOwnAddress, 2) - instant_at(kPeerAddress, 2) == -33);
 
     const int shared_ms = instant_at(kOwnAddress, 1);
     const int own_next_ms = instant_at(kOwnAddress, 2);
@@ -119,7 +118,7 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
         if (bursts_overlap(own_next_ms, instant_at(address, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
-    // 4 of 376, the odds of two 5 ms bursts meeting in a 342 ms slot. A carried delta keeps 376.
+    // 9 of 329, the odds of two 5 ms bursts meeting in a 342 ms slot. A carried delta keeps 329.
     CHECK(still_overlapping * 10 < shared);
 }
 

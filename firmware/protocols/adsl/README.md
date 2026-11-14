@@ -12,6 +12,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
 | `versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
 | `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the airborne and ground report periods, the 500 ms nav age and the Status period |
+| `media_access.{h,cpp}` | D.3 | `media_access()`, the media access rule: a clear channel transmits, a busy one defers by a random whole number of units inside the packet's window, is missed past it, may be forced 3000 ms after the initial attempt, and silences the device for 2000 ms after a forced transmission. The deferral floor is EN 300 220-1's, from `protocols/common/en300220.h` |
 | `version.h` | | `kVersion` and `kSpecification` |
 
 ## What is out, and where it is
@@ -19,7 +20,8 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 These are skyBlip's choices, built on this stack:
 
 - own-ship as a Traffic payload: the extrapolation to the instant the timestamp names, which fields claim invalid without a fix, the VFOM taken from VDOP by G.1.14's model, and the NACv read off NACp as SoftRF does (`core/protocol/adsl.*`)
-- which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route in place of §D.3's listen-before-talk (`core/timing/transmit.*`, `core/timing/channel.*`)
+- which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route (`core/timing/transmit.*`, `core/timing/channel.*`)
+- the listen-before-talk §D.3 asks for, built on `media_access()`: the EN 300 220-1 parameters skyBlip declares, the deferral unit and its draw, the CCA threshold at this antenna (`core/timing/channel.*`), which packets it forces, what counts as the initial attempt, and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the assessment in the executor (`hardware/platform/zephyr/rf.h`)
 - the address table 58 and the manufacturer prefix (`core/settings/address.h`), and airborne detection (`core/flight/state.*`)
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
 - the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record, its place in slot 1's tail and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
@@ -31,7 +33,7 @@ These are skyBlip's choices, built on this stack:
 
 Each clause this directory does not meet is a skipped case in the conformance suite, written as the clause requires, and the message says which kind of gap it is (`firmware/test/adsl/README.md`). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
 
-Two mandatory clauses are not met. §D.3 says listen-before-talk "must be implemented", and the hour's air time is the only rule that refuses a burst (`core/timing/README.md`). §F.2.3 says a configured ICAO address "shall" go on air, and the stored one does not yet (#191). Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
+One mandatory clause is not met. §F.2.3 says a configured ICAO address "shall" go on air, and the stored one does not yet (#191). Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
 
 The rest are optional, and this device does not take them:
 
@@ -58,6 +60,7 @@ Everything is in namespace `skyblip::adsl`.
 - `status_max_version()`, `traffic_max_version()`, `close_client()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
 - `FlightState`, `state_from()`, `announced_state()`, `reduced_rate()`, `report_period_s()`, `flies_at_no_ground_speed()`
 - `period_s()`, `kUplinkSlotStartMs`, `kUplinkSlotEndMs`, `kDirectStartMs`, `kDirectEndMs`, `kAirTimeMs`, `kFixMaxAgeMs`, `kStatusPeriodS`
+- `media_access()`, `ChannelAttempt`, `Deferral`, `AccessVerdict`, `Access`, `kForceAfterAttemptUs`, `kSilenceAfterForceUs`
 - `kVersion`, `kSpecification`
 
 ## The transmit rules
@@ -66,7 +69,13 @@ Everything is in namespace `skyblip::adsl`.
 
 §G.1.16's ground rate is "0.1 Hz (once every 10 seconds)". skyBlip reads that as an average: its ground positions go 9 then 11 s apart, exactly 0.1 Hz on average, because §C.2.5's alternation with a channel picked by the second's parity cannot put two positions 10 s apart. §C.2.5 asks consecutive Traffic transmissions, and consecutive Status transmissions, to change channel, which the stack leaves to the integrator to schedule.
 
-Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`. The second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status, inside a 20 s cycle per unit that starts on an even second, with ground positions 9 then 11 s apart. The name, skyBlip's own payload, goes in slot 1's tail on B, where ADS-L transmits nothing today. A burst that did not go out in its second, for any reason, a §B.5 hold among them, is retried 2 s later on the same channel, or at the next same-parity second whose dwell on that channel is free of ours, until it goes out or its type's next turn is due. skyBlip reads §C.2.5 so: every transmission the schedule makes alternates, and a burst that never went out does not move the next one's channel. The channel-access route a device declares in place of §D.3's listen-before-talk is skyBlip's too.
+Which seconds carry which burst, on which channel and at which instant is the integrator's, and skyBlip's choices are in `core/timing/README.md`. The second alone picks the channel, A in an even UTC second and B in an odd one for a position and the other way round for the Status, inside a 20 s cycle per unit that starts on an even second, with ground positions 9 then 11 s apart. The name, skyBlip's own payload, goes in slot 1's tail on B, where ADS-L transmits nothing today. A burst that did not go out in its second, for any reason, a §B.5 hold among them, is retried 2 s later on the same channel, or at the next same-parity second whose dwell on that channel is free of ours, until it goes out or its type's next turn is due. skyBlip reads §C.2.5 so: every transmission the schedule makes alternates, and a burst that never went out does not move the next one's channel.
+
+## Media access
+
+§D.3 makes the MAC CSMA, with listen-before-talk "according to the Polite Spectrum Access rules laid out in ETSI EN 300 220-1", and adds two numbers of its own. `media_access()` is the clause as a pure function of one assessment: whether the channel was clear, when, when the packet was first attempted, when the device last forced one, the earliest it can listen again and the last instant the packet may start. A clear channel transmits. A busy one defers by a random whole number of units, at least EN 300 220-1's minimum deferral period, drawn over the units the caller declares and never past the window, or misses the packet when no unit is left. "If no packet can be transmitted 3000 ms after the initial attempt, the device may force transmission irrespective of carrier detect" is `kForceAfterAttemptUs`, applied only where the caller allows a force, since the clause says "may". "After a forced transmission, the device may not transmit for at least 2000 ms" is `kSilenceAfterForceUs`: an assessment inside it answers `Silent`, clear channel or not.
+
+What the stack leaves to the integrator: the CCA interval, the dead time, the threshold at its own antenna, the deferral unit and how many of them a draw spans, the random draw itself, which packets may be forced, and what to do with a missed one. skyBlip's answers are in `core/timing/README.md`.
 
 ## The Status payload
 
@@ -129,4 +138,4 @@ The specification is read clause by clause in two halves. `test/conformance/` ho
 
 Where the specification prints code or a worked example, the test carries it rather than restating our answer: E.2's XXTEA and E.3.1's CRC-24 are transcribed from the clause and compared against `protocols/common/`, G.1.6's exponential encoder is implemented from the algorithm as written, and G.1.7 to G.1.9 assert the exact codes of the clauses' example tables. The G.1 case reads every field at the bit offsets of the payload table, so a field that moves by one bit fails there first.
 
-The unit tests beside it take the packet over a bit-error channel and count detected failures apart from silent miscorrections (`test/test_packet.cpp`), pin a frame byte for byte, and check the uplink's code, the transmit rules and the hour's air time.
+The unit tests beside it take the packet over a bit-error channel and count detected failures apart from silent miscorrections (`test/test_packet.cpp`), pin a frame byte for byte, and check the uplink's code, the transmit rules, §D.3's media access branch by branch, and the hour's air time.

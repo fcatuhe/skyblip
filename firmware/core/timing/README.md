@@ -1,24 +1,52 @@
 # core/timing
 
-One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
+One radio, one second. `slot.h` cuts the second into dwells, `transmit.h` decides whether own-ship speaks in one of them and at which instant, `channel.h` holds what the channel sounds like and how own-ship shares it. Nothing here touches hardware: `ports::Rf` flies the plan against absolute deadlines.
 
-The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates, the two channels and the Status period. `Transmitter` composes them with what skyBlip decided: the channel each second carries, the 20 s cycle a unit owns and where in it each burst goes, the retry 2 s later, the instant drawn inside each window, the window each dwell leaves a burst, the radio's completion guard, the name in slot 1's tail, and the hour's air time it declares as its channel-access route.
+The rules ADS-L sets for a transmitter live in its stack (`protocols/adsl/README.md`): the slots, the rates, the two channels and the Status period. `Transmitter` composes them with what skyBlip decided: the channel each second carries, the 20 s cycle a unit owns and where in it each burst goes, the retry 2 s later, the instant drawn inside each window, the window each dwell leaves a burst, the radio's completion guard, the name in slot 1's tail, the hour's air time it declares as its channel-access route, and the draw that randomises a deferral. `RadioService` applies §D.3's listen-before-talk on top of them.
 
-## The burst is placed, and nothing on air moves it
+## The burst is drawn, then listened for
 
-`Transmitter::instant_in()` draws the instant from `hash(address ^ hash(utc_s))`, uniform over the direct slot clipped to the dwell that carries the burst, re-keyed every second. The executor keys the PA there. It does not listen first, it does not back off, it does not defer to anything it receives: `RfPlan::tx_at_us` is the whole contract, and the only rule that can still refuse a burst is the hour's air time (`AirTime`, below).
+`Transmitter::instant_in()` draws the instant from `hash(address ^ hash(utc_s))`, uniform over the direct slot clipped to the dwell that carries the burst, re-keyed every second. The executor listens before it keys there. ADS-L 4 SRD-860 issue 2 §D.3 asks for listen-before-talk "according to the Polite Spectrum Access rules laid out in ETSI EN 300 220-1", and that standard's clause 5.21 is what follows. The figures the standard prints are in `protocols/common/en300220.h`, ADS-L's own rule is `adsl::media_access()` (`protocols/adsl/media_access.h`), and what skyBlip declares under both is `PoliteAccess` in `channel.h`.
 
-This is a deliberate deviation from a plain reading of ADS-L 4 SRD-860 issue 2 §D.3, which describes CSMA with listen-before-talk. Carrier sense cannot do the job the clause implies here, for four reasons.
+The executor reads the channel over the CCA interval, a window of nine instant reads 200 µs wide averaged as power (`ChannelLevel`), and the window ends at most the declared dead time, 2 ms, before the burst starts. It reads the channel and band of the burst, which the radio is already receiving on in the dwell, so nothing retunes. Slot 1's window opens 3 ms after its dwell (`PoliteAccess::kCcaLeadUs`), so the reading never falls in the hop before it. Below the threshold the burst keys at its instant. At or above it nothing keys, and the executor reports `RfEventType::Busy` with the level it read. A radio found out of receive at that moment cannot say the channel is clear, so it reports busy with no level. The nRF52 executor starts reading 1.2 ms before the instant: 0.7 ms of staging, the 200 µs window and 0.3 ms for reads that overrun it, an allowance no bench capture has measured yet.
+
+The threshold is EN 300 220-1 Table 45's for a device under 100 mW e.r.p.: 15 dB above Table 32's sensitivity limit S = 10 log RB - 117 dBm. RB is ADS-L's 200 kHz channel, so S is -93.99 dBm and the threshold -78.99 dBm at a 0 dBd antenna. Table 45's note moves the limit with the antenna gain. The front end hears every signal by as much as the antenna gains over a dipole, so the threshold the front end compares against moves by the same amount: the T-Echo's antenna peaks at 1.6 dBi, which is -0.55 dBd, and the feed costs 0.5 dB more (`parts::sx1262::kReceiveGainCentiDbd`), so the front end calls the channel busy from -80.04 dBm (`timing::cca_threshold_centi_dbm()`). The clause's example says the same from the measured side: a -5 dB antenna's threshold measured at the front end, raised by 5 dB, is the radiated threshold the limit is set for. 200 kHz is the conservative RB. The SX1262 filter this dwell programs is 234.3 kHz wide, which would put the limit 0.7 dB higher. The antenna gain and the feed loss are the datasheet's and an allowance, not measured on a unit.
+
+`RadioService` applies §D.3 to every busy report (`radio_access.cpp`). A busy burst is deferred by a random whole number of 5 ms units, one ADS-L burst, as 5.21.1's note asks the interval to match the device's own transmissions. The draw picks 1 to 8 units from the address and the busy instant (`Transmitter::deferral_draw()`), counted from the instant the channel was busy, and never earlier than the executor can listen again. The burst is then assessed again, inside its own window: the direct-slot window of its dwell, or slot 1's tail for the name. A burst never moves into another dwell or onto the other channel: §C.2.5's alternation gives the second its channel, so the device takes none of EN 300 220-1 5.21.4's frequency agility. A position is encoded again for its new instant, from the newest fix: its TimeStamp names the instant it goes out at, its position is carried forward to it, and G.1.16's 500 ms nav age still bounds it.
+
+When the window runs out with the channel still busy, the burst counts as missed and the retry rule takes it, 2 s later on the same channel (below). An airborne position is never retried: the next second's covers it.
+
+§D.3 lets a device force a packet that could not go out 3000 ms after its initial attempt. skyBlip forces only a Status, a name or a ground position, whose next turn is 9 to 11 s away, and never an airborne position. The initial attempt is the first busy assessment of the turn's burst, kept across its retries (`RadioService::Contention`). The forced burst goes back to the executor with `RfPlan::tx_forced`, which keys it without listening. For the 2000 ms after it nothing of ours goes on air: a burst already handed to the executor inside that span is withdrawn (`ports::Rf::withdraw()`), and none is armed there, so the schedule sees missed bursts and the retry rule applies.
+
+Deferrals, forced bursts and bursts missed with the channel busy are counted in `air.tx_deferred`, `air.tx_forced` and `air.tx_busy_missed`, and leave the device in the diagnostics dump's radio group (`core/radio/README.md`).
+
+### The declarations
+
+EN 300 220-1 5.21.3.2 asks the manufacturer to declare seven parameters. They are `PoliteAccess`'s, each held to Table 48 by a `static_assert`, and `test/en300220/` reads them clause by clause.
+
+| 5.21.3.2 | Declared | Table 48 | In the code |
+|---|---|---|---|
+| 1) the minimum CCA interval | 200 µs | at least 160 µs | `kCcaWindowUs`, the `ChannelLevel` window |
+| 2) the maximum dead time | 2 ms | at most 5 ms | `kDeadTimeCeilingUs`. The nRF52 executor's reading ends 0.7 to 1 ms before the instant and the bench measured 0.33 ms of keying (`transmit.h`), so 1 to 1.4 ms, not measured on a unit |
+| 3) the method that randomises a retransmission | a hash of the device address and the busy instant | | `Transmitter::deferral_draw()` |
+| 4) the unit of the deferral period | 5 ms, one ADS-L burst | at least the CCA interval | `kDeferralUnitUs` |
+| 5) the minimum and maximum of the random deferral | 5 ms and 40 ms, 1 to 8 units, longer when the radio hears of the busy channel late | | `kDeferralFloorUs`, `kDeferralCeilingUs` |
+| 6) Ton max | 5 ms, one 4.64 ms burst | at most 1 s | `kTransmissionCeilingUs` |
+| 7) Toff min on the same frequency | 100 ms | at least 100 ms | `kSameFrequencyOffFloorMs`, which the schedule holds (below) |
+
+### What listen-before-talk cannot fix
+
+Carrier sense is what §D.3 asks for, and it does little for the collision it is meant to prevent here. It stays a requirement met, not a protection counted on, for four reasons.
 
 It cannot see the burst it would collide with. A burst is 5 ms and the direct slot 550 ms wide, so two aircraft collide when their drawn instants land within 5 ms of each other: about 1.8% per target in range. Half of those we drew the earlier instant for, and an assessment only ever detects a burst *already* on air. The theoretical ceiling against our own kind is around 0.9% of bursts saved per neighbour.
 
 It listens in the wrong place. The collision happens at the receiver's antenna and the assessment is made at ours. A third aircraft the other side of us hears both bursts collide while we heard nothing, and we defer to a station the intended receiver cannot hear at all. At these ranges the hidden terminal is the normal case, not the corner one.
 
-It is weighted backwards. A burst has to clear the floor by a good margin to register at all, so the traffic we would successfully defer to is the near, loud traffic whose position we already have, while the distant aircraft near the noise floor, the one whose update matters, is never heard and never deferred to.
+It is weighted backwards. A burst has to clear -80 dBm to register at all, so the traffic we defer to is the near, loud traffic whose position we already have, while the distant aircraft near the noise floor, the one whose update matters, is never heard and never deferred to.
 
-And it costs the one thing this device exists for. An aircraft that goes quiet is invisible. What protects the band is the randomised instant, decorrelated by device address and redrawn every second so a collision is not repeated, and the 1% duty cycle this product declares as its channel-access route (below).
+And it costs the one thing this device exists for. An aircraft that goes quiet is invisible, and a position deferred out of its window is a second without one. What protects the band is the randomised instant, decorrelated by device address and redrawn every second so a collision is not repeated, and the 1% duty cycle this product still declares (below).
 
-None of the references cancel a burst either. `pjalocha/nrf52-ogn-tracker` (`src/ogn-radio.cpp:840-851`) backs off and escalates, then falls through and transmits when the slot runs out; its loop has no path that drops the packet. `pjalocha/esp32-ogn-tracker` has the code but both `TimeSlot()` call sites pass `MaxWait=0`, which skips it entirely. Neither SoftRF fork has listen-before-talk at all. This device is the same on air as those, with one fewer moving part.
+The references do it differently. `pjalocha/nrf52-ogn-tracker` (`src/ogn-radio.cpp:840-851`) backs off and escalates, then falls through and transmits when the slot runs out, so its loop has no path that drops the packet. `pjalocha/esp32-ogn-tracker` has the code but both `TimeSlot()` call sites pass `MaxWait=0`, which skips it entirely. Neither SoftRF fork has listen-before-talk at all. This device misses the burst instead, retries it 2 s later, and forces only what §D.3 lets it force.
 
 ## The second a burst is dated by
 
@@ -26,21 +54,21 @@ None of the references cancel a burst either. `pjalocha/nrf52-ogn-tracker` (`src
 
 The receiver names a second in a sentence that lands hundreds of milliseconds inside it, so between the edge and that sentence `own.utc_s` is a second behind the edge. Everything that dates a burst against the edge - `radio::stamp_of`, the traffic table's now, the ADS-L and ALP-TAS decoders - read `utc_s` through `bus::State::traffic_now_s()` instead, and a burst drained in that window keeps its own second. Two skyBlips on a bench found this the hard way: one burst read `42:52.954` on the sender and `42:53.956` on the receiver, the same instant, a second apart.
 
-## What the channel measurement is still for
+## What the channel measurement is for
 
-`NoiseFloor` and `ChannelLevel` survive as instruments, not as gates. Each executor reads the tuned channel once per dwell, as a window of `ChannelLevel::kSamples` instantaneous reads averaged in the linear domain, because the SX1262 has no averaging block and GetRssiInst is an instant by definition (DS 13.5.2). One read lands between two targets' bursts and calls a loud site quiet; a window does not. `NoiseFloor` walks that figure into a running average, seeded at OGN's -105 dBm so a cold start reads as quiet rather than as broken, and it leaves the device as `noise_dbm` in the status dump.
+`ChannelLevel` is a window of `ChannelLevel::kSamples` instantaneous reads averaged in the linear domain, because the SX1262 has no averaging block and GetRssiInst is an instant by definition (DS 13.5.2). One read lands between two targets' bursts and calls a loud site quiet; a window does not. The same window is the clear channel assessment before a burst (above), and an instrument once per dwell: each executor reads the tuned channel near the dwell's end, and `NoiseFloor` walks that figure into a running average, seeded at OGN's -105 dBm so a cold start reads as quiet rather than as broken. It leaves the device as `noise_dbm` in the status dump.
 
-That number answers a question the counters cannot: a device hearing nothing at a site reading -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons. Nothing waits on it.
+That number answers a question the counters cannot: a device hearing nothing at a site reading -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons. Nothing waits on the floor: only the assessment before a burst gates it.
 
 ## The duty cycle is the channel-access route
 
-EN 300 220-2 V3.3.1 Table 4 band M is 1% of any hour, and that limit is what this product declares in place of §D.3's listen-before-talk. `AirTime` is the evidence: sixty one-minute buckets on a ring that turns by elapsed time, so the hour that straddles `milliseconds()`'s 49.7-day wrap is an hour like any other.
+EN 300 220-2 V3.3.1 Table 4 band M allows "≤ 1 % duty cycle or polite spectrum access", and this product declares the 1% of any hour (`en300220::kBandMDutyCyclePermille`). It listens before talking as well, because ADS-L §D.3 requires it, and does not take the exemption from the duty cycle 4.4.3.1 gives polite access in band M. `AirTime` is the evidence: sixty one-minute buckets on a ring that turns by elapsed time, so the hour that straddles `milliseconds()`'s 49.7-day wrap is an hour like any other.
 
 `Transmitter` asks `AirTime` before every burst and spends it after. At the design rate of one 5 ms position burst per second, a Status and a name every ten seconds (below), we spend 6 ms a second and sit at 0.6 of the allowance, so an empty budget can only be a fault. It blocks: a faulted transmitter that will not stop is worse for everyone on the band than a quiet one. `Attempt::over_budget` says so, and `SlotTimingStatistics::refused()` counts it.
 
 ## What the dwell map is for
 
-`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the window each instant is drawn over, so the burst always completes inside both the slot and the dwell that carries it.
+`kSlot1EndMs` is 1200 ms, 200 ms past the second it opened in, because FLARM-generation traffic is still transmitting there. The position burst stops at 1000 where §C.5 ends the direct slot, and `Transmitter::last_instant_in()` bounds the window each instant is drawn over, so the burst always completes inside both the slot and the dwell that carries it. `first_instant_in()` starts slot 1's window 3 ms into its dwell, so the assessment before a burst listens on the burst's channel and not in the hop.
 
 `SlotPlan::own_tx_dwell` is a property of the dwell, not of the phase the service happens to tick on. Slot 0's dwell opens at 400 and its burst is placed from 450, so the plan that opens the dwell has to carry it.
 
@@ -61,7 +89,7 @@ Each unit owns a 20 s cycle that starts on an even second, `c = 2 * (serial % 10
 
 Airborne the position goes every second, and the Status and the name go in the same seconds and on the same channels as on the ground, so a takeoff or a landing changes nothing about them.
 
-A minute for c = 0, A being 868.2 MHz at 450 to 793 ms and B 868.4 MHz at 800 to 993 ms and its tail. The 20 s cycle repeats at 20 and 40:
+A minute for c = 0, A being 868.2 MHz at 450 to 793 ms and B 868.4 MHz at 803 to 993 ms and its tail. The 20 s cycle repeats at 20 and 40:
 
 | Second | Airborne | On the ground |
 |---|---|---|
@@ -86,7 +114,7 @@ The instant inside a window is drawn from the address and the UTC second, so two
 
 ## A burst that did not go out tries again 2 s later
 
-A burst that did not go out in its second, for any reason (a fix too old, the hour's air time spent, a dwell not armed, a §B.5 hold, and listen-before-talk if it ever comes), is retried 2 s later on the same channel (`Transmitter::retry()`, `kRetryStepS`). Two seconds later is the same parity, so the same channel, and §C.2.5's alternation still holds, because the burst that missed was never transmitted. If that second's dwell on the channel already carries a burst of ours, the retry goes to the next same-parity second whose dwell is free, which keeps every dwell to one burst and every frequency's bursts 100 ms apart: the Status at c + 2, whose retry would land on the name's c + 4, goes at c + 6. It keeps trying every 2 s until it goes out or its type's next turn is due, and then that turn is given up and counted in `air.tx_given_up` (`give_up()`). On the ground the position at +0 is retried at +2, +4, +6 and +8, and the one at +9 at +11 to +19. Airborne positions need nothing extra, since their next turn on the same channel is 2 s later anyway.
+A burst that did not go out in its second, for any reason (a fix too old, the hour's air time spent, a dwell not armed, a §B.5 hold, a channel busy to the end of the window, the 2000 ms after a forced burst), is retried 2 s later on the same channel (`Transmitter::retry()`, `kRetryStepS`). Two seconds later is the same parity, so the same channel, and §C.2.5's alternation still holds, because the burst that missed was never transmitted. If that second's dwell on the channel already carries a burst of ours, the retry goes to the next same-parity second whose dwell is free, which keeps every dwell to one burst and every frequency's bursts 100 ms apart: the Status at c + 2, whose retry would land on the name's c + 4, goes at c + 6. It keeps trying every 2 s until it goes out or its type's next turn is due, and then that turn is given up and counted in `air.tx_given_up` (`give_up()`). On the ground the position at +0 is retried at +2, +4, +6 and +8, and the one at +9 at +11 to +19. Airborne positions need nothing extra, since their next turn on the same channel is 2 s later anyway.
 
 The suite reads §C.2.5 this way: every transmission the schedule makes alternates channel, and a burst that never went out does not move the next one's channel.
 

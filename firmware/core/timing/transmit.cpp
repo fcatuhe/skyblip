@@ -24,7 +24,8 @@ uint32_t hash(uint32_t value) {
 // because the standard says so, and the dwell, because hopping channels mid-burst
 // would truncate it on air.
 int Transmitter::first_instant_in(int slot) {
-    const int opens = Scheduler::slot_start(slot);
+    constexpr int kCcaLeadMs = static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000);
+    const int opens = Scheduler::slot_start(slot) + kCcaLeadMs;
     return opens > adsl::kDirectStartMs ? opens : adsl::kDirectStartMs;
 }
 
@@ -63,6 +64,14 @@ int Transmitter::last_callsign_instant() {
     return kCallsignEndMs - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
 }
 
+int Transmitter::last_instant(Payload payload, int slot) {
+    return payload == Payload::Callsign ? last_callsign_instant() : last_instant_in(slot);
+}
+
+uint32_t Transmitter::deferral_draw(uint64_t busy_at_us) const {
+    return hash(address_ ^ hash(static_cast<uint32_t>(busy_at_us ^ (busy_at_us >> 32))));
+}
+
 uint32_t Transmitter::cycle_start() const {
     return 2 * ((address_ & settings::kSerialMask) % adsl::kGroundReportPeriodS);
 }
@@ -93,7 +102,7 @@ bool Transmitter::turn(Payload payload, uint32_t utc_s, bool airborne) const {
     return second == offsets[0] || second == offsets[1];
 }
 
-uint32_t Transmitter::latest_turn(Payload payload, uint32_t utc_s, bool airborne) const {
+uint32_t Transmitter::turn_of(Payload payload, uint32_t utc_s, bool airborne) const {
     for (uint32_t back = 0; back < kCycleS; back++)
         if (turn(payload, utc_s - back, airborne)) return utc_s - back;
     return utc_s;
@@ -108,7 +117,7 @@ bool Transmitter::scheduled_on(int slot, uint32_t utc_s, bool airborne) const {
 
 // INFO: fc 13nov26 a retry takes a dwell no turn of ours holds, and yields to a retry listed first
 bool Transmitter::retry(Payload payload, uint32_t utc_s, bool airborne) const {
-    const uint32_t missed = latest_turn(payload, utc_s, airborne);
+    const uint32_t missed = turn_of(payload, utc_s, airborne);
     if (!started_ || missed < first_s_ || missed == utc_s || (utc_s - missed) % kRetryStepS != 0 ||
         sent_since(payload, missed))
         return false;
@@ -117,7 +126,7 @@ bool Transmitter::retry(Payload payload, uint32_t utc_s, bool airborne) const {
     for (const Payload earlier : {Payload::Position, Payload::Status}) {
         if (earlier == payload) break;
         if (retry(earlier, utc_s, airborne) &&
-            channel_of(earlier, latest_turn(earlier, utc_s, airborne)) == slot)
+            channel_of(earlier, turn_of(earlier, utc_s, airborne)) == slot)
             return false;
     }
     return true;
@@ -139,7 +148,7 @@ uint32_t Transmitter::give_up(uint32_t utc_s, bool airborne, bool named) {
     for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
         if (payload == Payload::Callsign && !named) continue;
         if (!turn(payload, utc_s, airborne)) continue;
-        const uint32_t previous = latest_turn(payload, utc_s - 1, airborne);
+        const uint32_t previous = turn_of(payload, utc_s - 1, airborne);
         if (previous >= first_s_ && !sent_since(payload, previous)) given_up++;
     }
     return given_up;

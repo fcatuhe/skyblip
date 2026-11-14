@@ -56,6 +56,9 @@ void TrafficService::tick(uint32_t now_ms) {
                     static_cast<int64_t>(event.keyed_at_us) - static_cast<int64_t>(event.tx_at_us));
                 log(event, stamp_for(event, now_ms), radio::Verdict::Transmitted);
                 break;
+            case events::RfEventType::Busy:
+                context_.state.rf.note_busy({event.tx_at_us, event.rssi_dbm, event.rssi_valid});
+                break;
         }
     }
     const uint32_t now_s = context_.state.traffic_now_s(now_ms);

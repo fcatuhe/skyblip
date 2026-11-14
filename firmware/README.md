@@ -64,6 +64,7 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_c7`, `_c10` | ADS-B's 7-bit and 10-bit angles, 360 degrees over 128 and 1024 counts | `track_c7`, `heading_c10` |
 | `_cpr` | a CPR-encoded coordinate, a 17-bit fraction of its zone | `latitude_cpr` |
 | `_dbm`, `_mv`, `_mpa`, `_pa` | dBm, millivolts, millipascals, pascals | `rssi_dbm`, `battery_offset_mv`, `pressure_mpa` |
+| `_centi_dbm`, `_centi_db`, `_centi_dbd` | hundredths of a dBm, of a dB, of a dB over a half-wave dipole | `threshold_centi_dbm`, `receive_gain_centi_dbd` |
 | `_deg`, `_cdeg` | degrees, hundredths of a degree | `track_deg`, `track_cdeg` |
 | `_dps`, `_cdps` | degrees per second, hundredths of a degree per second | `turn_dps`, `turn_cdps` |
 | `_mg` | thousandths of a g | `lateral_mg` |

@@ -44,6 +44,16 @@ class Rf : public ports::Rf {
     static constexpr uint64_t kTxTailUs = 1000;
     // INFO: fc 03oct26 two RTC ticks: at most 17 status reads a burst, none outside its tail
     static constexpr uint64_t kTxTailPollUs = 60;
+    // TODO: fc 14nov26 a guess at the CCA reads' overrun, until a bench capture times them on nRF52
+    static constexpr uint64_t kCcaOverrunUs = 300;
+    static constexpr uint64_t kCcaLeadUs =
+        kTxStageLeadUs + timing::PoliteAccess::kCcaWindowUs + kCcaOverrunUs;
+    static_assert(kCcaLeadUs <= timing::PoliteAccess::kCcaLeadUs &&
+                      kCcaLeadUs - timing::PoliteAccess::kCcaWindowUs <
+                          timing::PoliteAccess::kDeadTimeCeilingUs,
+                  "the assessment starts inside the dwell and ends inside the declared dead time");
+    static constexpr int32_t kCcaThresholdCentiDbm =
+        timing::cca_threshold_centi_dbm(parts::sx1262::kReceiveGainCentiDbd);
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {
@@ -104,6 +114,24 @@ class Rf : public ports::Rf {
         k_sched_unlock();
         abort_ = true;
         k_sem_give(&wake_);
+    }
+
+    // INFO: fc 14nov26 under the scheduler lock: the thread stages the burst it keys under the same
+    Status withdraw(uint64_t tx_at_us) override {
+        Status verdict = Status::WouldBlock;
+        k_sched_lock();
+        const int flying = flying_ ? flying_bursts_.index_of(tx_at_us) : -1;
+        const int queued = queued_ ? queued_bursts_.index_of(tx_at_us) : -1;
+        if (flying >= flying_keyed_) {
+            flying_bursts_.remove(static_cast<uint8_t>(flying));
+            verdict = Status::Ok;
+        } else if (queued >= 0) {
+            queued_bursts_.remove(static_cast<uint8_t>(queued));
+            verdict = Status::Ok;
+        }
+        k_sched_unlock();
+        if (verdict == Status::Ok) k_sem_give(&wake_);
+        return verdict;
     }
 
     // The shutdown path runs on the service thread and the radio belongs to this
@@ -175,7 +203,7 @@ class Rf : public ports::Rf {
     }
 
     static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us};
+        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
@@ -188,6 +216,12 @@ class Rf : public ports::Rf {
         const ports::RfBursts bursts = flying_bursts_;
         k_sched_unlock();
         return bursts;
+    }
+
+    void publish_keyed(uint8_t keyed) {
+        k_sched_lock();
+        flying_keyed_ = keyed;
+        k_sched_unlock();
     }
 
     void miss_unfinished(const ports::RfBursts& bursts, uint8_t done, uint8_t keyed) {
@@ -251,6 +285,7 @@ class Rf : public ports::Rf {
             armed_at_us = queued_armed_at_us_;
             queued_ = false;
             flying_bursts_ = queued_bursts_;
+            flying_keyed_ = 0;
             flying_mode_ = plan.mode;
             flying_frequency_hz_ = plan.frequency_hz;
             flying_end_us_ = plan.end_us;
@@ -336,9 +371,15 @@ class Rf : public ports::Rf {
         return config;
     }
 
-    // INFO: fc 15sep26 the last read is kWindowUs after the first whatever a read costs on the bus
     int8_t sample_carrier() {
         if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
+        carrier_.level_dbm = read_level();
+        carrier_.samples++;
+        return carrier_.level_dbm;
+    }
+
+    // INFO: fc 15sep26 the last read is kWindowUs after the first whatever a read costs on the bus
+    int8_t read_level() {
         int8_t window[timing::ChannelLevel::kSamples];
         const uint64_t opened_us = clock_.microseconds();
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++) {
@@ -347,9 +388,29 @@ class Rf : public ports::Rf {
             while (clock_.microseconds() < due_us) k_busy_wait(1);
             window[i] = radio_.instant_rssi_dbm();
         }
-        carrier_.level_dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
-        carrier_.samples++;
-        return carrier_.level_dbm;
+        return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
+    }
+
+    // INFO: fc 14nov26 EN 300 220-1 5.21.1 before each burst not forced: a radio not in RX is busy
+    bool assess_clear(const ports::RfBurst& burst) {
+        if (burst.forced) return true;
+        events::RfEvent busy{};
+        busy.rssi_valid = radio_.mode() == parts::RadioMode::Rx;
+        if (busy.rssi_valid) {
+            busy.rssi_dbm = read_level();
+            if (timing::channel_clear(busy.rssi_dbm, kCcaThresholdCentiDbm)) return true;
+        }
+        busy.type = events::RfEventType::Busy;
+        busy.band = band_;
+        busy.frequency_hz = frequency_hz_;
+        busy.at_us = clock_.microseconds();
+        busy.tx_at_us = burst.at_us;
+        k_sched_lock();
+        const int index = flying_bursts_.index_of(burst.at_us);
+        if (index >= 0) flying_bursts_.remove(static_cast<uint8_t>(index));
+        k_sched_unlock();
+        out_.push(busy);
+        return false;
     }
 
     // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx and not the whole buffer write
@@ -406,9 +467,11 @@ class Rf : public ports::Rf {
         uint64_t poll_due_us = 0;
         while (!abort_ && clock_.microseconds() < plan.end_us) {
             bursts = flying_bursts();
-            if (clock_.microseconds() >= bursts.stage_at_us(keyed, done, kTxStageLeadUs)) {
+            if (clock_.microseconds() >= bursts.stage_at_us(keyed, done, kCcaLeadUs)) {
+                if (!assess_clear(bursts.burst[keyed])) continue;
                 key(bursts.burst[keyed]);
                 keyed++;
+                publish_keyed(keyed);
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.microseconds();
             if (irq_at_us_ != 0 || clock_.microseconds() >= poll_due_us) {
@@ -428,8 +491,8 @@ class Rf : public ports::Rf {
             }
             if (keyed > done)
                 poll_due_us = std::min(poll_due_us, tail_poll_at(clock_.microseconds()));
-            uint64_t wake_us = std::min(
-                {plan.end_us, poll_due_us, bursts.stage_at_us(keyed, done, kTxStageLeadUs)});
+            uint64_t wake_us =
+                std::min({plan.end_us, poll_due_us, bursts.stage_at_us(keyed, done, kCcaLeadUs)});
             if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.microseconds() + kSpinUs);
             if (!sampled && sent_all) wake_us = std::min(wake_us, plan.end_us - kCarrierLeadUs);
             // INFO: fc 29sep26 an absolute uptime wake: k_usleep lands a tick past the stage point
@@ -497,6 +560,7 @@ class Rf : public ports::Rf {
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);
     ports::RfBursts flying_bursts_{};
+    int flying_keyed_{0};
     ports::RfBursts queued_bursts_{};
     uint64_t keyed_at_us_{0};
     uint64_t staged_at_us_{0};

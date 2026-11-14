@@ -1,4 +1,4 @@
-// INFO: fc 15sep26 own-ship transmit policy, ADS-L 4 SRD-860 issue 2 §C.5 and §G.1.16, never LBT
+// INFO: fc 14nov26 own-ship transmit policy, ADS-L 4 SRD-860 issue 2 §C.5, §D.3 and §G.1.16
 #ifndef SKYBLIP_CORE_TIMING_TRANSMIT_H
 #define SKYBLIP_CORE_TIMING_TRANSMIT_H
 
@@ -72,13 +72,18 @@ class Transmitter {
     // INFO: fc 13nov26 turns that ended unsent as utc_s opens, each counted once
     uint32_t give_up(uint32_t utc_s, bool airborne, bool named);
     static int last_callsign_instant();
+    // INFO: fc 14nov26 the last start in a burst's window, which for the name is slot 1's tail
+    static int last_instant(Payload payload, int slot);
+    // INFO: fc 13nov26 the turn utc_s acts for: its own, or the one a retry in it is for
+    uint32_t turn_of(Payload payload, uint32_t utc_s, bool airborne) const;
+    // INFO: fc 14nov26 EN 300 220-1 5.21.3.2 3): a deferral's draw, hashed from address and instant
+    uint32_t deferral_draw(uint64_t busy_at_us) const;
 
    private:
     bool sent_in(uint32_t utc_s, Payload payload) const;
     bool sent_since(Payload payload, uint32_t utc_s) const;
     void start(uint32_t utc_s);
     uint32_t cycle_second(uint32_t utc_s) const;
-    uint32_t latest_turn(Payload payload, uint32_t utc_s, bool airborne) const;
     bool scheduled_on(int slot, uint32_t utc_s, bool airborne) const;
     bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
              int32_t fix_lag_ms) const;

@@ -30,6 +30,7 @@ void RadioService::tick(uint32_t now_ms) {
     take_carrier_samples();
     take_switching(now_ms);
     collect_outcome(now_ms);
+    collect_busy();
 
     if (next_armed_ && pass_us_ >= next_dwell_.from_us) promote();
     // INFO: fc 27sep26 200..205 is the one guard the map already names after the dwell it leads to
@@ -204,8 +205,9 @@ bool RadioService::owes(const Armed& dwell, const timing::SlotPlan& plan, int64_
     return std::any_of(std::begin(kEveryPayload), std::end(kEveryPayload), [&](Payload payload) {
         if (dwell.carries(payload)) return false;
         const timing::Transmitter::Attempt payload_attempt = attempt(plan, now_ms, payload);
-        return payload_attempt.go &&
-               instant_us(payload_attempt, origin_us) > context_.roles.clock.microseconds();
+        const uint64_t tx_at_us = instant_us(payload_attempt, origin_us);
+        return payload_attempt.go && tx_at_us > context_.roles.clock.microseconds() &&
+               !silenced(tx_at_us);
     });
 }
 
@@ -235,26 +237,30 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     // says the solution behind it has settled.
     if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return timing::Transmitter::Attempt{};
-    const bool full_rate =
-        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
+    return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(),
+                                payload);
+}
+
+bool RadioService::full_rate() const {
+    const model::Ownship& own = context_.state.own;
+    return !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
 }
 
 void RadioService::count_given_up(uint32_t now_ms) {
     const model::Ownship& own = context_.state.own;
     if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return;
-    const bool full_rate =
-        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
     context_.state.air.tx_given_up +=
-        transmitter_.give_up(slot_utc_s(now_ms), full_rate, settings_.callsign[0] != 0);
+        transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
 }
 
+int32_t RadioService::fix_lag_ms() const { return fix_lag_ms(dwell_origin_us()); }
+
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
-int32_t RadioService::fix_lag_ms() const {
-    const uint32_t second_ms = static_cast<uint32_t>(at_us(dwell_origin_us(), 0) / 1000);
+int32_t RadioService::fix_lag_ms(int64_t origin_us) const {
+    const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
     return static_cast<int32_t>(second_ms - context_.state.own.fix_at_ms);
 }
 
@@ -303,6 +309,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         armed.frequency_hz = plan.frequency_hz;
         armed.from_us = plan.start_us;
         armed.until_us = plan.end_us;
+        armed.origin_us = origin_us;
         armed.utc_s = slot_utc_s(now_ms);
         armed.chip_buffer = role == Role::Next
                                 ? static_cast<uint8_t>(current_dwell_.chip_buffer ^ 1u)
@@ -316,7 +323,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
         const timing::Transmitter::Attempt payload_attempt = attempt(slot, now_ms, payload);
         const uint64_t tx_at_us = instant_us(payload_attempt, origin_us);
         if (!payload_attempt.go || tx_at_us < std::max(plan.start_us, now_us) ||
-            tx_at_us >= plan.end_us)
+            tx_at_us >= plan.end_us || silenced(tx_at_us))
             continue;
         uint8_t* chips = outgoing_chips_[armed.chip_buffer][static_cast<int>(payload)];
         const uint8_t tx_bytes = encode(payload_attempt, tx_at_us, armed.utc_s, chips);
@@ -410,6 +417,7 @@ void RadioService::credit(uint64_t tx_at_us, uint32_t now_ms) {
 
 void RadioService::spend(Armed& dwell, Payload payload, uint32_t now_ms) {
     transmitter_.sent(dwell.utc_s, now_ms, payload);
+    contention_[static_cast<int>(payload)].open = false;
     if (payload == Payload::Callsign) context_.state.air.tx_named++;
     dwell.drop(payload);
 }
