@@ -209,8 +209,8 @@ export default class extends Controller {
     const { phase, task, file } = state
     const lamp = unit.product === "skyblip_bravo"
     const product = productWord(unit)
-    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", detail: `INSTALL ${file?.version ?? ""} FROM THE PHONE`, product, lamp, remembers: state.trust === "proven" })
-    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", detail: "REBOOT INTO THE USB BOOTLOADER", product, lamp })
+    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
+    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
     else if (task !== "set") this.glassOutlet.hide()
   }
 

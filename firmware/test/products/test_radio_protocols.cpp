@@ -16,6 +16,7 @@
 #include "protocols/adsl/version.h"
 #include "protocols/alptas/version.h"
 #include "test/support/bravo_rig.h"
+#include "test/support/config_frame.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -109,7 +110,7 @@ TEST_CASE("radio protocols: a Go answers in 18 bytes and a Bravo in 11, on the n
 TEST_CASE("radio protocols: a config service handed no stacks answers unknown_command") {
     platform::host::Link link;
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, identity::Activation{}};
+    go::SettingsStore store{settings, identity::Activation{}, kNoOwnTransponder};
     comms::ConfigService config{link, store, nullptr};
     link.raise_link(1);
     config.on_rx(config_frame(kAsk));

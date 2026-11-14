@@ -118,7 +118,7 @@ TEST_CASE("product: every row on the self-test page names its part, inside the w
         CHECK(std::string(row.detail).size() > 0);
         // name, space, part, space, then the longest verdict there is.
         const size_t cells = std::string(row.name).size() + std::string(row.detail).size() +
-                             std::string("NOT FITTED").size() + 2;
+                             std::string("NOT FOUND").size() + 2;
         CHECK(cells <= kRowCells);
     }
 }
@@ -147,7 +147,7 @@ TEST_CASE("product: every capability the product flies on or without has a row")
 }
 
 // A footprint with nothing behind it is a real answer, and the row names what was looked for.
-TEST_CASE("product: an optional part nothing answered reads NOT FITTED and names the part") {
+TEST_CASE("product: an optional part nothing answered reads NOT FOUND and names the part") {
     constexpr ports::Capabilities kNoHaptic = static_cast<ports::Capabilities>(
         static_cast<uint32_t>(platform::host::Platform::kFullyFitted) &
         ~static_cast<uint32_t>(ports::Capability::Haptic));

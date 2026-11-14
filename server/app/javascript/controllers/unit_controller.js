@@ -1,7 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
-import { readSetting, showSetting } from "#skyblip/settings"
+import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
@@ -258,8 +258,13 @@ export default class extends Controller {
   #glass(unit, asking) {
     if (!this.hasGlassOutlet) return
     const remembers = unit?.state?.task === "set" && unit.state.trust === "proven"
-    if (asking) this.glassOutlet.show({ title: PROMPTS[unit.state.task], product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers })
-    else this.glassOutlet.hide()
+    if (!asking) return this.glassOutlet.hide()
+    const { task, asked, settings } = unit.state
+    this.glassOutlet.show({
+      title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers,
+      argument: task === "set" ? JSON.stringify(asked) : "",
+      settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
+    })
   }
 
   #settings(state) {

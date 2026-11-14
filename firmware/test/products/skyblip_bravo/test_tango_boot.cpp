@@ -45,9 +45,9 @@ TEST_CASE("tango boot: Bravo's first health without UTC reads waiting, with no t
     REQUIRE(booted.tango.service().link() == go::BravoLink::Up);
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
-    CHECK(booted.reads("BRAVO WAITING"));
-    CHECK_FALSE(booted.reads("BRAVO LOST", 2));
-    CHECK_FALSE(booted.reads("BRAVO LOST"));
+    CHECK(booted.reads("WAIT FOR BRAVO"));
+    CHECK_FALSE(booted.reads("NO BRAVO", 2));
+    CHECK_FALSE(booted.reads("NO BRAVO"));
 }
 
 TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar and the self-test") {
@@ -55,10 +55,10 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
     booted.tango.run_for(3 * go::BravoService::kBootSettleMs);
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
-    CHECK(booted.reads("BRAVO WAITING"));
+    CHECK(booted.reads("WAIT FOR BRAVO"));
 
     booted.tango.go.show(booted.tango.now_ms, go::Page::SelfTest);
     booted.tango.run_for(1100);
-    CHECK(reads_in(booted.tango.go.product.screen().framebuffer(), "WAITING", 0,
+    CHECK(reads_in(booted.tango.go.product.screen().framebuffer(), "WAIT", 0,
                    go::kSelfTestFirstRowY, go::kGlassWidth, go::kGlassHeight));
 }

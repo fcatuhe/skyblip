@@ -34,7 +34,7 @@ updated_on: "2026-11-09"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d'aéronef, indicatif, unités, portée, tracé, alarme et volume, avec l'aide PAD MOVES - BUTTON CHANGES en bas" %>
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu des réglages : éclairage, aéronef, unités, portée, tracé, alarme et volume, avec la touche du bouton CHANGE et celle du pavé NEXT en bas" %>
       <figcaption>Le menu du radar</figcaption>
     </figure>
   </div>
@@ -64,26 +64,24 @@ updated_on: "2026-11-09"
       <p>
         Appuyez sur le bouton au dernier caractère pour enregistrer l&rsquo;indicatif. Les espaces
         laissés à la fin sont supprimés. Pour effacer un indicatif, remplacez le
-        premier caractère par un espace et appuyez sur le bouton. L&rsquo;écran affiche
-        <span class="mono">BLANK THE FIRST TO CLEAR</span> tant qu&rsquo;un indicatif est
-        présent, et <span class="mono">BUTTON CLEARS</span> une fois l&rsquo;espace sous la
-        barre. Si vous quittez le champ avant de terminer, ou si vous le laissez une minute sans y toucher,
+        premier caractère par un espace et appuyez sur le bouton. La touche du bouton
+        affiche <span class="mono">ERASE</span> une fois l&rsquo;espace sous la barre. Si vous quittez le champ avant de terminer, ou si vous le laissez une minute sans y toucher,
         rien n&rsquo;est enregistré.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, PAD ROLLS au-dessus de BUTTON NEXT, et BLANK THE FIRST TO CLEAR en bas" %>
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, et les touches NEXT pour le bouton et CHANGE pour le pavé" %>
       <figcaption>Le champ indicatif</figcaption>
     </figure>
   </div>
 
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace à la place du premier caractère, la barre dessous, et l'aide qui affiche maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace comme premier caractère, la barre dessous, et la touche du bouton qui affiche maintenant ERASE" %>
       <figcaption>Le premier caractère effacé</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après la pression, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu aéronef après l'appui, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
       <figcaption>Une pression plus tard</figcaption>
     </figure>
   </div>
@@ -134,7 +132,7 @@ updated_on: "2026-11-09"
       <figcaption>Autotest</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état à l'arrêt, avec deux types d'enregistrement au choix, FULL pour toutes les catégories de données et POWER RUN pour l'alimentation et les temps d'activité. Elle indique ce qu'occuperait le type choisi : les secteurs de mémoire flash utilisés, les vols enregistrés qui seraient supprimés et les heures d'enregistrement conservées, avec PAD PICKS, PRESS TWICE TO ARM en bas" %>
+      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état à l'arrêt, avec deux types d'enregistrement au choix, FULL pour toutes les catégories de données et POWER RUN pour l'alimentation et les temps d'activité. Elle indique ce qu'occuperait le type choisi : les secteurs de mémoire flash utilisés, les vols enregistrés qui seraient supprimés et les heures d'enregistrement conservées, avec PAD SELECTS, PUSH TWICE TO START en bas" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>

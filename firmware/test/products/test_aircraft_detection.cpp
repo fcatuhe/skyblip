@@ -131,8 +131,8 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     focus_on(tango.go, now_ms, go::MenuRow::Detected);
     tango.go.run(now_ms, now_ms + 4000);
     now_ms += 4000;
-    CHECK(reads_in(tango.go.product.screen().framebuffer(), "BRAVO HEARS 3A4B5C", 0, 0,
-                   go::kGlassWidth, go::kGlassHeight, 1, false));
+    CHECK(reads_in(tango.go.product.screen().framebuffer(), "ICAO 3A4B5C", 0, 0, go::kGlassWidth,
+                   go::kGlassHeight, 2, false));
 
     change(tango.go, now_ms);
     CHECK(tango.go.settings().own_icao == kHeardAddress);
@@ -152,6 +152,7 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
     flight.tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     flight.fly(3);
     CHECK_FALSE(flight.go().product.screen().noticing());
+    CHECK_FALSE(flight.state().own_transponder);
 
     uint32_t& now_ms = flight.tango.now_ms;
     open_menu(flight.go(), now_ms);

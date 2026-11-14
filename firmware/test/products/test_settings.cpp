@@ -411,14 +411,14 @@ TEST_CASE(
           Status::OutOfRange);
     CHECK(settings.own_icao == 0x3C6586u);
     CHECK(int(settings.aircraft_type) == int(kAircraftTypeLight));
-    CHECK(apply_patch(settings, "{\"own_icao\":16777215}") == Status::Ok);
-    CHECK(settings.own_icao == 0xFFFFFFu);
+    CHECK(apply_patch(settings, "{\"own_icao\":16777214}") == Status::Ok);
+    CHECK(settings.own_icao == 0xFFFFFEu);
 
     uint8_t blob[64];
     to_blob(settings, blob, sizeof(blob));
     Settings loaded;
     REQUIRE(from_blob(blob, blob_size(), loaded) == Status::Ok);
-    CHECK(loaded.own_icao == 0xFFFFFFu);
+    CHECK(loaded.own_icao == 0xFFFFFEu);
 
     CHECK(apply_patch(settings, "{\"own_icao\":0}") == Status::Ok);
     CHECK(settings.own_icao == kOwnIcaoUnset);

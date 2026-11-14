@@ -61,7 +61,7 @@ TEST_CASE("comms: dfu opens an upload window only after on-screen confirmation")
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -81,7 +81,7 @@ TEST_CASE("comms: the firmware prompt names the version the phone is about to se
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame(kDfu));
@@ -99,7 +99,7 @@ TEST_CASE("comms: a dfu that does not name its version is refused at the door") 
         platform::host::Link link;
         link.raise_link(1);
         go::Settings settings = go::defaults();
-        go::SettingsStore store(settings, kTestActivation);
+        go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
         ConfigService config(link, store);
         config.set_flight_state(flight::FlightState::Ground);
         config.on_rx(config_frame(json));
@@ -115,7 +115,7 @@ TEST_CASE("comms: an upload that lands whole latches the install with no second 
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame(kDfu));
@@ -143,7 +143,7 @@ TEST_CASE("comms: an image other than the one the press named is refused, not in
     go::Settings settings = go::defaults();
     SpyDfu dfu;
     dfu.version = ports::ImageVersion{0, 3, 0, 1};
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     upload_opened(config, dfu).tick(100);
     CHECK_FALSE(config.install_requested());
@@ -157,7 +157,7 @@ TEST_CASE("comms: a landed upload whose slot cannot be read is refused, not rebo
     go::Settings settings = go::defaults();
     SpyDfu dfu;
     dfu.staged = false;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     upload_opened(config, dfu).tick(100);
     CHECK_FALSE(config.install_requested());
@@ -169,7 +169,7 @@ TEST_CASE("comms: opening an upload window forgets the upload an earlier one fin
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     dfu.finished = true;
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
@@ -188,7 +188,7 @@ TEST_CASE("comms: a command code the registry does not hold is refused as unknow
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":99}"));
@@ -202,7 +202,7 @@ TEST_CASE("comms: an ownship drawing is refused as unknown_command, nothing stor
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(
@@ -218,7 +218,7 @@ TEST_CASE("comms: dfu is refused at the door on a critical cell") {
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
     power::BatteryState low{};
@@ -239,7 +239,7 @@ TEST_CASE("comms: a cell that turns critical during the upload refuses the swap"
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     power::BatteryState healthy{};
     healthy.valid = true;
@@ -264,7 +264,7 @@ TEST_CASE("comms: the update question names the image state and the versions of 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.on_rx(config_frame("{\"command\":\"update\"}"));
     CHECK(link_text(link.last().bytes).find("\"image\":\"confirmed\"") != std::string::npos);
@@ -289,7 +289,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
     CHECK(link.sent.empty());
@@ -306,7 +306,7 @@ TEST_CASE("comms: a link that comes up on settings that fell back is told, on a 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_settings_fallback(settings::Fallback::Defaults);
     config.on_link_up(events::LinkUp{1, 244, link.connection(1)});
@@ -323,7 +323,7 @@ TEST_CASE("comms: recovery routed through confirmation, latched and never entere
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"recovery\"}"));
@@ -344,7 +344,7 @@ TEST_CASE("comms: recovery refused in flight") {
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Airborne);
     config.on_rx(config_frame("{\"command\":\"recovery\"}"));
@@ -359,7 +359,7 @@ TEST_CASE("comms: power_off is confirmed on the device, then latched for the seq
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -381,7 +381,7 @@ TEST_CASE("comms: power_off refused in flight") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Airborne);
     config.on_rx(config_frame("{\"command\":\"power_off\"}"));
@@ -403,7 +403,7 @@ TEST_CASE("comms: a take-off leaves an upload window the pilot confirmed open") 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
@@ -419,7 +419,7 @@ TEST_CASE("comms: upload window expires") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(1000);
@@ -445,7 +445,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
 
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(before);
@@ -462,7 +462,7 @@ TEST_CASE("comms: the upload and confirmation windows span the 49.7-day wrap") {
     // it, and expired thirty seconds after it was raised.
     platform::host::Link second_link;
     second_link.raise_link(1);
-    go::SettingsStore store_prompt(settings, kTestActivation);
+    go::SettingsStore store_prompt(settings, kTestActivation, kNoOwnTransponder);
     ConfigService prompt(second_link, store_prompt);
     prompt.set_flight_state(flight::FlightState::Ground);
     prompt.tick(before);
@@ -479,7 +479,7 @@ TEST_CASE("comms: disconnect closes the upload window") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
@@ -496,7 +496,7 @@ TEST_CASE("comms: DFU refused in flight") {
     link.raise_link(1);
     go::Settings settings = go::defaults();
     SpyDfu dfu;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store, &dfu);
     config.set_flight_state(flight::FlightState::Airborne);
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));

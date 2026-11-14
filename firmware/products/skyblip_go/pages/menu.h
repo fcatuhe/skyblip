@@ -2,9 +2,11 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_MENU_H
 
 #include <cstdint>
+#include <optional>
 
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/aircraft.h"
+#include "products/skyblip_go/pages/frame.h"
 #include "products/skyblip_go/pages/page.h"
 #include "products/skyblip_go/settings.h"
 
@@ -45,6 +47,8 @@ struct MenuValues {
     go::Settings settings{};
     bool light{false};
     Detected detected{};
+    // INFO: fc 14nov26 bus::State::own_transponder, the one an own ICAO typed must match
+    std::optional<uint32_t> own_transponder{};
 };
 
 struct MenuSnapshot {
@@ -100,25 +104,16 @@ Page page_behind(MenuRow row);
 constexpr int kMenuValueBytes = 16;
 int menu_row_value(char* out, MenuRow row, const MenuValues& values);
 
-constexpr int kMenuScale = 2;
-constexpr int kMenuLeftX = 6;
-constexpr int kMenuCellWidth = ui::kCellWidth * kMenuScale;
-constexpr int kMenuRightX = 194;
-constexpr int kMenuRowsTop = 23;
-constexpr int kMenuRowHeight = 23;
-constexpr int kMenuBarHeight = kMenuRowHeight - 1;
-constexpr int kMenuTextInset = (kMenuBarHeight - 7 * kMenuScale) / 2;
-constexpr int kMenuHintY = 188;
-constexpr const char* kMenuHintText = "PAD MOVES    BUTTON CHANGES";
-
-constexpr int text_cells(const char* text) {
-    int count = 0;
-    while (text[count]) count++;
-    return count;
-}
-
-constexpr int kMenuHintX = (kGlassWidth - text_cells(kMenuHintText) * ui::kCellWidth) / 2;
-constexpr int kMenuLines = (kMenuHintY - kMenuRowsTop) / kMenuRowHeight;
+constexpr int kMenuScale = kFrameScale;
+constexpr int kMenuLeftX = kFrameLeftX;
+constexpr int kMenuCellWidth = kFrameCellWidth;
+constexpr int kMenuRightX = kGlassWidth - kFrameLeftX;
+constexpr int kMenuRowsTop = kOpenedRuleY + kBodyBelowRule;
+constexpr int kMenuRowHeight = 20;
+constexpr int kMenuBarHeight = kMenuRowHeight - 2;
+constexpr int kMenuBarRadius = 3;
+constexpr int kMenuTextInset = (kMenuBarHeight - ui::kCharacterHeight * kMenuScale) / 2;
+constexpr int kMenuLines = (kBodyBottom - kMenuRowsTop) / kMenuRowHeight;
 
 constexpr int menu_line_top(int line) { return kMenuRowsTop + line * kMenuRowHeight; }
 constexpr int menu_line_text_y(int line) { return menu_line_top(line) + kMenuTextInset; }
@@ -126,6 +121,7 @@ constexpr int menu_line_text_y(int line) { return menu_line_top(line) + kMenuTex
 int menu_row_index(const Menu& menu, MenuRow row);
 int menu_first_row(const Menu& menu, MenuRow focus);
 
+Keys menu_keys(const MenuSnapshot& snapshot);
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot);
 
 // The field screen the callsign and the own ICAO share: the characters at a size a thumb
@@ -135,6 +131,8 @@ struct CallsignSnapshot {
     const char* text{""};
     int cursor{0};
     bool clears{false};
+    std::optional<uint32_t> own_transponder{};
+    bool refused{false};
 };
 
 bool callsign_press_clears(const char* text, int cursor);
@@ -148,24 +146,21 @@ constexpr int kCallsignTextX = field_text_x(kCallsignCharacters);
 constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorHeight = 3;
-constexpr int kCallsignHintScale = 2;
-constexpr const char* kCallsignPadHintText = "PAD ROLLS";
-constexpr const char* kCallsignNextHintText = "BUTTON NEXT";
-constexpr const char* kCallsignClearHintText = "BUTTON CLEARS";
-constexpr const char* kCallsignClearHelpText = "BLANK THE FIRST TO CLEAR";
+constexpr int kOwnTransponderY = kCallsignCursorY + kCallsignCursorHeight + 8;
+constexpr const char* kOwnTransponderText = "BRAVO HEARS";
+constexpr const char* kOwnTransponderRefusedText = "NOT ACCEPTED";
 
-constexpr int centred_x(const char* text, int scale) {
-    return (kGlassWidth - text_cells(text) * ui::kCellWidth * scale) / 2;
-}
+constexpr const char* kFieldChangeVerb = "CHANGE";
+constexpr const char* kFieldNextVerb = "NEXT";
+constexpr const char* kFieldSaveVerb = "SAVE";
+constexpr const char* kFieldEraseVerb = "ERASE";
+constexpr const char* kFieldKeepVerb = "KEEP";
 
-constexpr int kCallsignPadHintY = 138;
-constexpr int kCallsignButtonHintY = kCallsignPadHintY + 7 * kCallsignHintScale + 6;
-constexpr int kCallsignHelpY = kMenuHintY;
-
+const char* field_button_verb(const CallsignSnapshot& snapshot);
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
-constexpr const char* kClearKeepsHintText = "PAD KEEPS";
-constexpr const char* kOwnIcaoClearHelpText = "OWN TRANSPONDER SHOWS AS TRAFFIC";
+constexpr const char* kOwnIcaoClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
+constexpr int kOwnIcaoClearLineCount = 3;
 
 struct ClearSnapshot {
     const char* title{""};
@@ -197,6 +192,7 @@ class MenuEditor {
 
     bool editing() const { return editing_; }
     bool clearing() const { return clearing_; }
+    bool refused() const { return refused_; }
     MenuRow field() const { return field_; }
     const char* text() const { return text_; }
     int cursor() const { return cursor_; }
@@ -229,6 +225,7 @@ class MenuEditor {
     bool aircraft_{false};
     bool editing_{false};
     bool clearing_{false};
+    bool refused_{false};
     MenuRow field_{MenuRow::Callsign};
     int cursor_{0};
     char text_[kCallsignBytes]{0};

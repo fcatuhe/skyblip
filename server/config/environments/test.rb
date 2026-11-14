@@ -40,5 +40,9 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
 
+  # The briefing draws a phone's prompt with the firmware built next door, once `make -C firmware browser` ran.
+  config.x.simulator_build = Rails.root.join("../firmware/build/browser").to_s
+  config.x.local_simulator_only = true
+
   routes.default_url_options = { host: "www.example.com", protocol: "https" }
 end

@@ -6,12 +6,12 @@ namespace skyblip::gnss {
 
 const char* stage_name(Stage stage) {
     switch (stage) {
-        case Stage::Silent: return "SILENT";
-        case Stage::Blind: return "BLIND";
-        case Stage::Solving: return "SOLVING";
+        case Stage::Silent: return "NO DATA";
+        case Stage::Blind: return "OUTDOORS";
+        case Stage::Solving: return "WAIT";
         case Stage::Fixed: return "";
     }
-    return "SILENT";
+    return "NO DATA";
 }
 
 Stage stage_of(const GnssSolution& solution) {

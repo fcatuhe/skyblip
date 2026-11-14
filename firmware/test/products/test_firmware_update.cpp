@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
+#include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"
@@ -95,8 +96,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     open_upload_window(rig, now_ms);
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                   go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
+                        go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 0);
 
     land_upload(rig, now_ms);
@@ -114,8 +115,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK_FALSE(attempt_recorded(rig));
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
-    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                   go::kInstallingTitleY, go::kInstallingTitle, 2));
+    CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kInstallingTitle,
+                        go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(attempt_recorded(rig));
@@ -149,8 +150,8 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning, 1));
+    CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
+    CHECK_FALSE(has_button_key(glass));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
 }
@@ -174,9 +175,8 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryAwaitsPress,
-                   1));
+    CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
+    CHECK(reads_button_key(glass, go::kRecoveryStartVerb));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK(rig.product.ready_to_power_off());
     CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
@@ -222,8 +222,8 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     now_ms += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());
     CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
-    CHECK_FALSE(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                         go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK_FALSE(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
+                              go::Heading::Interrupt));
 
     land_upload(rig, now_ms);
     rig.run(now_ms, now_ms + 200);

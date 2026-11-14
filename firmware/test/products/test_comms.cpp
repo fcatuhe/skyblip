@@ -28,7 +28,7 @@ TEST_CASE("comms: get returns current config on the Config endpoint") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"get\"}"));
@@ -45,7 +45,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     settings.alarm_volume = go::AlarmVolume::Soft;
     std::memcpy(settings.callsign, "D-KXYZ", 7);
     settings.own_icao = 0x3C6586;
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -69,7 +69,7 @@ TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -90,7 +90,7 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -109,7 +109,7 @@ TEST_CASE("comms: a set out of range or invalid is refused at the door, never st
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -129,7 +129,7 @@ TEST_CASE("comms: a set that fills the whole frame is staged to its last byte") 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -156,7 +156,7 @@ TEST_CASE("comms: only the ADS-L airborne code closes the gate, every other valu
         platform::host::Link link;
         link.raise_link(1);
         go::Settings settings = go::defaults();
-        go::SettingsStore store(settings, kTestActivation);
+        go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
         ConfigService config(link, store);
         config.set_flight_state(flight::state_from(code));
         config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
@@ -168,7 +168,7 @@ TEST_CASE("comms: a prompt nobody answers expires, and a later confirm grants no
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.tick(1000);
@@ -192,7 +192,7 @@ TEST_CASE("comms: taking off takes a standing prompt away with it") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"recovery\"}"));
@@ -225,7 +225,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
@@ -248,7 +248,7 @@ TEST_CASE("comms: a set is refused on a critical cell, with the reason") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
@@ -288,7 +288,7 @@ TEST_CASE("comms: a cell that falls while the prompt stands cancels the change")
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));
@@ -312,7 +312,7 @@ TEST_CASE("comms: a fired power-failure comparator closes the door on its own") 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
     power::BatteryState healthy{};
@@ -338,7 +338,7 @@ TEST_CASE("comms: the status reply carries the die temperature, in whole degrees
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
 
     // Nothing has read the sensor yet: the key is absent, not zero.
@@ -357,7 +357,7 @@ TEST_CASE("comms: no reading is no key, never a zero") {
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
 
     config.set_die_temperature(0, /*valid=*/true);
@@ -373,7 +373,7 @@ TEST_CASE("comms: tenths are rounded away from zero on both sides of freezing") 
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
 
     // A cold morning must not read one degree warmer than it is, and a hot
@@ -398,7 +398,7 @@ TEST_CASE("comms: the range gate's refusals read out with the radio's own counte
     link.raise_link(1);
     link.declare_payload_bytes(kSmallestSupportedPayloadBytes);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
 
     Diagnostics& dump = config.diagnostics();

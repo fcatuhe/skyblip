@@ -1,6 +1,7 @@
 #include "simulator/bravo_simulator.h"
 #include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
+#include "simulator/world/prompt_glass.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -12,6 +13,7 @@
 using namespace skyblip;
 
 namespace {
+char g_prompt_words[simulator::kPromptWordsBytes];
 simulator::Simulator g_simulator;
 simulator::BravoSimulator g_bravo;
 simulator::PairedSimulator g_paired;
@@ -208,6 +210,15 @@ KEEPALIVE int simulator_aircraft_count() {
 
 // Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
 KEEPALIVE const unsigned char* simulator_panel() { return go_unit().panel().data(); }
+KEEPALIVE const unsigned char* simulator_draw_prompt(const char* prompt, const char* argument,
+                                                     const char* settings, unsigned seconds_left) {
+    static go::Glass glass;
+    return simulator::draw_prompt(glass, prompt, argument, settings, seconds_left, g_prompt_words,
+                                  simulator::kPromptWordsBytes)
+               ? glass.data()
+               : nullptr;
+}
+KEEPALIVE const char* simulator_prompt_words() { return g_prompt_words; }
 KEEPALIVE int simulator_panel_width() { return go_unit().panel().width(); }
 KEEPALIVE int simulator_panel_height() { return go_unit().panel().height(); }
 KEEPALIVE int simulator_panel_stride() { return go::Glass::kStride; }

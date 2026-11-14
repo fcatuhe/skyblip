@@ -204,7 +204,7 @@ TEST_CASE("product: a flat cell takes the front light down with the panel") {
     rig.run(now_ms, now_ms + 20000);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LowBattery);
     CHECK(rig.product.ready_to_power_off());
-    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 10, 130, 190, 199, 2));
+    CHECK(reads_in(rig.platform.chips().epd.framebuffer(), "BATTERY EMPTY", 10, 130, 190, 199, 2));
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK_FALSE(rig.platform.chips().epd.backlight);
     CHECK_FALSE(rig.product.screen().backlight());
@@ -226,7 +226,7 @@ TEST_CASE("product: a park with no frame to push still puts the front light out"
     REQUIRE(rig.product.power().cutoff_monitor().supply_warned());
     CHECK(rig.product.ready_to_power_off());
     CHECK_FALSE(
-        reads_in(rig.platform.chips().epd.framebuffer(), "FLAT BATTERY", 0, 0, 200, 199, 2));
+        reads_in(rig.platform.chips().epd.framebuffer(), "BATTERY EMPTY", 0, 0, 200, 199, 2));
     CHECK_FALSE(rig.platform.chips().epd.powered);
     CHECK_FALSE(rig.platform.chips().epd.backlight);
 }

@@ -39,7 +39,7 @@ struct ScreenRig {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
-    go::SettingsStore store{settings, state.activation};
+    go::SettingsStore store{settings, state.activation, state.own_transponder};
     comms::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
     common::AlarmService alarm_service{

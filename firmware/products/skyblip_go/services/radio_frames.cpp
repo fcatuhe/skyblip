@@ -21,12 +21,13 @@ protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::At
 uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us,
                              uint32_t utc_s, uint8_t* chips) {
     // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
-    const settings::AirAddress address = context_.state.activation.address();
+    const settings::OnAir sender =
+        settings::on_air(context_.state.activation.address(), settings_.own_icao);
     bool built = false;
     switch (attempt.payload) {
         case Payload::Position:
             built = protocol::from_own(
-                outgoing_, context_.state.own, address, settings::kSkyblipAddressMappingTable,
+                outgoing_, context_.state.own, sender.address, sender.address_mapping_table,
                 context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
             if (built &&
                 outgoing_.protocol_version() >
@@ -40,12 +41,12 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
             }
             break;
         case Payload::Status:
-            built = protocol::from_own_status(
-                outgoing_, address, settings::kSkyblipAddressMappingTable, status_report());
+            built = protocol::from_own_status(outgoing_, sender.address,
+                                              sender.address_mapping_table, status_report());
             break;
         case Payload::Callsign:
-            built = protocol::from_own_callsign(
-                outgoing_, address, settings::kSkyblipAddressMappingTable, settings_.callsign);
+            built = protocol::from_own_callsign(outgoing_, sender.address,
+                                                sender.address_mapping_table, settings_.callsign);
             break;
     }
     if (!built) return 0;

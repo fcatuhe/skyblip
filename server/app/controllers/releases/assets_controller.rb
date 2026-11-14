@@ -8,7 +8,11 @@ class Releases::AssetsController < ApplicationController
 
   def show
     bytes = Release.download(params[:release_tag], params[:file])
-    expires_in 1.year, public: true, immutable: true
+    if params[:release_tag] == Release::LOCAL_TAG
+      expires_now
+    else
+      expires_in 1.year, public: true, immutable: true
+    end
     send_data bytes, type: content_type, disposition: "inline"
   rescue Release::NotFound
     head :not_found

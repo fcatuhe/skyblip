@@ -1,0 +1,53 @@
+---
+title: "Open questions on ADS-L"
+nav_title: ADS-L questions
+description: "skyBlip's open questions to EASA on ADS-L Issue 2, grouped by theme, with the source clauses, current firmware behaviour and answer status."
+published_on: "2026-11-14"
+parent: ads-l
+updated_on: "2026-11-14"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
+  <h1>Our open questions on ADS-L Issue 2.</h1>
+  <p class="lede">These are the questions skyBlip has put to EASA on ADS-L 4 SRD-860 Issue 2. Each theme quotes the clause, records what our firmware does today and says whether EASA has answered.</p>
+  <p>skyBlip is open-source electronic conspicuity equipment for general aviation. skyBlip Go transmits and receives ADS-L. skyBlip Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. Paired with a Go, on the ground, Bravo can name the transponder it takes for the aircraft&rsquo;s own.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The ICAO address</h2>
+  <h3>Which address should Go send, and which settings must it refuse?</h3>
+  <p>Clause <strong>ADS-L.4.SRD860.F.2.3, &ldquo;ICAO Address&rdquo;</strong>, in <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860, ED Decision 2022/024/R, Issue 2</a>, says:</p>
+  <blockquote>
+    <p>For this setting, the ICAO address shall be configurable and entered by the user of the ADS-L system, thereby overriding the address given by the manufacturer. This is the preferred mode for aircraft that have an ICAO address (Mode-S transponder code). This setting shall be revertible by user configuration. For aircraft that concurrently transmit using other e-conspicuity systems such as ADS-B, or aircraft that use a Mode-S transponder, it shall use this type of address to allow for disambiguation and attribution of the different radio transmissions on the receiver side. The ADS-L system shall enforce this by disallowing inconsistent user configurations.</p>
+  </blockquote>
+  <p>Today Go uses the pilot&rsquo;s configured ICAO address on every payload and refuses an address no aircraft holds (<code>FFFFFF</code>) or an entered address that conflicts with the transponder Bravo identifies on the ground.</p>
+  <ol>
+    <li>
+      <p><strong>Should every payload use the ICAO address?</strong> When the pilot enters the aircraft&rsquo;s ICAO address, Go sends every payload under Address Mapping Table (AMT) entry 5, ICAO, with that address. This includes Traffic, Status and payload type 66, which carries the aircraft&rsquo;s registration.</p>
+      <p>Go no longer transmits under skyBlip&rsquo;s manufacturer address: AMT entry 58, manufacturer page 49, prefix 0, with the unit&rsquo;s serial in the remaining 16 bits. The ADS-L registry assigned that range to skyBlip. Clearing the ICAO setting restores AMT entry 58 and the unit&rsquo;s address from the next burst. Is this the intent of F.2.3, or should some payloads stay under the manufacturer&rsquo;s address?</p>
+    </li>
+    <li>
+      <p><strong>What must &ldquo;disallowing inconsistent user configurations&rdquo; cover?</strong> Go refuses <code>FFFFFF</code>, an address no aircraft holds. On the ground, while a paired Bravo names the transponder it takes for the aircraft&rsquo;s own, Go also refuses an entered address that differs from it.</p>
+      <p>Go does not refuse an unset ICAO address when Bravo identifies a Mode-S transponder on the aircraft. It proposes the address Bravo hears and lets the pilot accept it. Does F.2.3 require Go to refuse that configuration, or to enforce the address itself? Are there other configurations EASA intends the device to disallow?</p>
+    </li>
+  </ol>
+  <p class="note">Asked: [asked on date]. No answer from EASA yet.</p>
+</section>
+
+<section>
+  <h2 class="kicker">References</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2.
+      <span class="support">F.2.3, ICAO Address, quoted above.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/settings/README.md"><code>core/settings/README.md</code></a>.
+      <span class="support">The ICAO address section records the setting, the configurations Go refuses and the rules considered but not imposed.</span>
+    </li>
+  </ul>
+  <p><%= link_to_page "ads-l/nmea", class: "cta cta--previous" %></p>
+</section>

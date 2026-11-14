@@ -27,6 +27,8 @@ struct BravoSnapshot {
 };
 
 void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot);
+constexpr const char* kOwnIcaoNoticeTitle = "NO OWN ICAO";
+
 void draw_own_icao_notice(ui::Canvas& canvas);
 void draw_bravo_forgot_notice(ui::Canvas& canvas);
 

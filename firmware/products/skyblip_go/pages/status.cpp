@@ -220,7 +220,7 @@ void draw_status(ui::Canvas& canvas, const StatusSnapshot& snapshot) {
         text_row(canvas, y, "GNSS", satellites, " SAT", "UTC", text);
         canvas.draw_text(kValueX, y, solution_dimensions(snapshot), true, 1);
     } else {
-        char stage[16];
+        char stage[24];
         written = format_string(stage, gnss::stage_name(snapshot.stage));
         stage[written++] = ' ';
         written += format_elapsed(stage + written, snapshot.stage_s);

@@ -82,9 +82,9 @@ TEST_CASE("acquisition: a receiver that stops talking goes silent, whatever it l
 // A solved receiver already reads GROUND, TAXI or FLIGHT: a second word for it would be one too
 // many.
 TEST_CASE("acquisition: every rung has a word the row fits, and the fix has none") {
-    CHECK(std::string(stage_name(Stage::Silent)) == "SILENT");
-    CHECK(std::string(stage_name(Stage::Blind)) == "BLIND");
-    CHECK(std::string(stage_name(Stage::Solving)) == "SOLVING");
+    CHECK(std::string(stage_name(Stage::Silent)) == "NO DATA");
+    CHECK(std::string(stage_name(Stage::Blind)) == "OUTDOORS");
+    CHECK(std::string(stage_name(Stage::Solving)) == "WAIT");
     CHECK(std::string(stage_name(Stage::Fixed)).empty());
     // status draws the word at cell 5 and UTC starts at cell 19: 14 cells, less " 99:59"
     for (uint8_t i = 0; i <= static_cast<uint8_t>(Stage::Fixed); i++)

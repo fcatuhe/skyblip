@@ -53,14 +53,13 @@ updated_on: "2026-11-11"
     new firmware, a restart into the USB bootloader, a settings write, erasing
     your flights, switching it off, the device does not take the phone at its
     word. It puts the question on its own glass, names it, and waits thirty
-    seconds:
-    <span class="mono">PRESS TWICE TO ALLOW</span>,
-    <span class="mono">ONE PRESS REFUSES</span>. No answer within that time
-    counts as a refusal.
+    seconds. Two presses on the <span class="mono">ACCEPT</span> key allow it, and
+    <span class="mono">TO CANCEL, PUSH ONCE OR WAIT</span>. No answer within
+    that time counts as a refusal.
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "confirm.png", alt: "The authorisation prompt: AUTHORISE, SETTINGS, apply the settings the phone sent, PRESS TWICE TO ALLOW over ONE PRESS REFUSES, refused after 30 s" %>
+    <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, TO CANCEL, PUSH ONCE OR WAIT with the seconds left, and the button's key ACCEPT for two presses" %>
     <figcaption>The screen asks before saving settings</figcaption>
   </figure>
 
@@ -105,7 +104,7 @@ updated_on: "2026-11-11"
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, then a drive named TECHOBOOT on USB. Copy a .uf2 file there to install new firmware. RST returns to skyBlip. Nothing transmits during recovery" %>
+    <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY under the large mark, the USB drive name TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET, and the button's key START" %>
     <figcaption>The device is ready for USB recovery</figcaption>
   </figure>
 </section>

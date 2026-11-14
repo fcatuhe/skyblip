@@ -136,10 +136,10 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
     bench.boot();
     CHECK(bench.rig.platform.link().advertised == "activate 3F2A skyBlip");
     const go::Glass& glass = bench.rig.product.screen().framebuffer();
-    CHECK(reads_in(glass, go::kActivationWhere, 0, 0, go::kGlassWidth, go::kGlassHeight));
-    CHECK(reads_in(glass, "3F2A", 0, go::kActivationTagY - 1, go::kGlassWidth, go::kGlassHeight,
+    CHECK(reads_in(glass, go::kActivationWhere, 0, 0, go::kGlassWidth, go::kGlassHeight,
+                   go::kFrameScale));
+    CHECK(reads_in(glass, "3F2A", 0, go::kInterruptRuleY, go::kGlassWidth, go::kGlassHeight,
                    go::kActivationTagScale));
-    CHECK(reads_in(glass, "ACTIVATE 3F2A SKYBLIP", 0, 0, go::kGlassWidth, go::kGlassHeight));
 }
 
 // The server's update page reads 'address' in the reply as activated.
@@ -199,7 +199,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     CHECK(bench.say("{\"command\":\"get\"}").find("\"address\":298") != std::string::npos);
     CHECK(bench.rig.product.radio().arm_count() > 0);
     CHECK_FALSE(reads_in(bench.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
-                         go::kGlassWidth, go::kGlassHeight));
+                         go::kGlassWidth, go::kGlassHeight, go::kFrameScale));
 }
 
 TEST_CASE("activation: the glass names the operation two presses authorise") {
@@ -212,7 +212,7 @@ TEST_CASE("activation: the glass names the operation two presses authorise") {
     const go::Glass& glass = bench.rig.product.screen().framebuffer();
     CHECK(reads_in(glass, comms::pending_title(comms::Pending::Register), 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2));
-    CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight));
+    CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
 }
 
 TEST_CASE("activation: one press cancels the registration, thirty seconds expire it") {
@@ -442,7 +442,7 @@ TEST_CASE(
     CHECK(bench.rig.product.screen().page() == go::Page::Radar);
     CHECK(std::memcmp(&bench.rig.settings(), &before, sizeof(go::Settings)) == 0);
     CHECK(reads_in(bench.rig.product.screen().framebuffer(), go::kActivationWhere, 0, 0,
-                   go::kGlassWidth, go::kGlassHeight));
+                   go::kGlassWidth, go::kGlassHeight, go::kFrameScale));
 
     bench.rig.platform.board_gpio().button_down = true;
     bench.pass(power::kLongPressHoldMs + 1000);
@@ -607,7 +607,7 @@ struct Desk {
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port;
     identity::Unit unit{port};

@@ -31,6 +31,7 @@ jobs:
       pull-requests: read
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      glass: ${{ steps.filter.outputs.glass }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
@@ -41,6 +42,20 @@ jobs:
           filters: |
             firmware:
               - '!(server)/**'
+            # What bin/screenshots compiles and flies, and the pictures it writes.
+            glass:
+              - 'firmware/core/**'
+              - 'firmware/ui/**'
+              - 'firmware/ports/**'
+              - 'firmware/runtime/**'
+              - 'firmware/hardware/parts/**'
+              - 'firmware/products/**'
+              - 'firmware/simulator/**'
+              - 'firmware/vendor/**'
+              - 'firmware/Makefile'
+              - 'server/bin/screenshots'
+              - 'server/bin/blips.cpp'
+              - 'server/content_images/pages/skyblip-go/**'
 
   host-tests:
     # arm64 on purpose: plain `char` is unsigned there, as on the Cortex-M target.
@@ -54,8 +69,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # A PR recompiles the few files it touched, not all 155 translation units.
-      - name: install ccache and cmake
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
+      - name: install ccache, cmake and pdftotext
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -81,6 +96,11 @@ jobs:
         run: python3 scripts/check_adsl_clauses.py
       - name: the clause check refuses a skipped case of no kind
         run: python3 scripts/test_check_adsl_clauses.py
+      # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
+      - name: the ADS-L markdown carries every word of its PDF, in order
+        run: python3 scripts/check_spec_markdown.py
+      - name: the markdown check refuses a word lost, cut or misplaced
+        run: python3 scripts/test_check_spec_markdown.py
       # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
       - name: every listed EN 300 220 clause has a case
         run: python3 scripts/check_en300220_clauses.py
@@ -358,7 +378,7 @@ jobs:
   simulator:
     name: browser simulator
     needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || needs.changes.outputs.glass == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -368,6 +388,12 @@ jobs:
           actions-cache-folder: emsdk-cache
       - name: Build WASM
         run: make -C firmware browser
+      # The site shows the glass as the firmware draws it, so a change to the glass carries its pictures.
+      - name: The device screenshots are the firmware's own
+        if: needs.changes.outputs.glass == 'true'
+        run: |
+          server/bin/screenshots
+          git diff --exit-code server/content_images
       - name: Bundle simulator scenarios
         run: ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
       - uses: actions/upload-artifact@v7

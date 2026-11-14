@@ -56,6 +56,7 @@ void BravoService::tick(uint32_t now_ms) {
     if (health_heard_ && now_ms - health_heard_ms_ > kHealthMaxAgeMs) health_heard_ = false;
     if (health_heard_ || now_ms - started_ms_ >= kBootSettleMs) settled_ = true;
     context_.state.bravo = state_now();
+    context_.state.own_transponder = own_transponder_on_ground();
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
@@ -202,6 +203,14 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;
     health_heard_ms_ = now_ms;
+}
+
+// INFO: fc 14nov26 on the ground only, as the AIRCRAFT menu proposes it: aloft a wingman is as loud
+std::optional<uint32_t> BravoService::own_transponder_on_ground() const {
+    const std::optional<comms::OwnTransponderHeard> heard = own_transponder();
+    const bool on_ground = context_.state.bravo == comms::BravoState::Live &&
+                           context_.state.flight.confirmed_state == flight::FlightState::Ground;
+    return heard && on_ground ? std::optional<uint32_t>(heard->address) : std::nullopt;
 }
 
 // INFO: fc 12nov26 health alone says lost, never quiet traffic: an empty sky is a healthy one
