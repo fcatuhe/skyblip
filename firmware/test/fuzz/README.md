@@ -4,7 +4,7 @@ Five libFuzzer harnesses, one per door a stranger's bytes come in through. Each 
 
 | Harness | Door | Input |
 |---|---|---|
-| `fuzz_air` | the radio: ADS-L, ALP-TAS and the O-band uplink | a receiver (UTC, position), a transmitter's frame, then chip noise |
+| `fuzz_air` | the radio: ADS-L, ALP-TAS and the G.3 uplink on the O band, its record count read off the D.1.1 length and each record judged for age | a receiver (UTC, position, phase in the second), a transmitter's frame or uplink packet, raw, sealed by its parity or encoded from fields, then noise |
 | `fuzz_adsb` | the 1090 MHz radio: DF17 | a transmitter's frame, then chip noise |
 | `fuzz_adsb_assembly` | the 1090 MHz radio: one aircraft's messages after another | a receiver's reference and own address, then frames, each after a gap of time |
 | `fuzz_nmea` | the L76K's UART | the byte stream, as the parser's `feed()` sees it |

@@ -16,7 +16,9 @@
 #include "core/protocol/alptas.h"
 #include "core/protocol/callsign.h"
 #include "core/traffic/callsigns.h"
+#include "protocols/adsl/packet.h"
 #include "protocols/adsl/reed_solomon.h"
+#include "protocols/adsl/uplink.h"
 
 using namespace skyblip;
 
@@ -83,12 +85,35 @@ size_t transmit_m_band(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
     return protocol::kRxChipBytes;
 }
 
-size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, uint8_t* codeword) {
-    static const adsl::ReedSolomon255 parity;
-    in.ConsumeData(codeword, adsl::ReedSolomon255::kDataBytes);
-    if (sealing != Sealing::Raw)
-        parity.encode(codeword, codeword + adsl::ReedSolomon255::kDataBytes);
-    return adsl::kUplinkFrameBytes;
+// A G.3 packet behind its D.1.1 length: raw, sealed by E.3.2's parity, or encoded by adsl::Uplink.
+size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& receiver,
+                       uint8_t* packet) {
+    const int count = in.ConsumeIntegralInRange<int>(0, adsl::kUplinkMaxTargets);
+    const int length = adsl::uplink_length(count);
+    if (sealing == Sealing::Encoded) {
+        adsl::Packet records[adsl::kUplinkMaxTargets];
+        for (int i = 0; i < count; i++) {
+            records[i].reset(adsl::Packet::kPayloadTypePosition);
+            in.ConsumeData(records[i].payload + 1, adsl::Packet::kPayloadBytes - 1);
+            const int32_t age_quarters = in.ConsumeIntegralInRange<int32_t>(-8, 60);
+            records[i].timestamp = adsl::timestamp_code(receiver.utc_s, -250 * age_quarters);
+        }
+        static const adsl::Uplink uplink;
+        (void)uplink.encode(in.ConsumeIntegral<uint32_t>() & 0xFFFFFFu,
+                            in.ConsumeIntegralInRange<uint8_t>(0, 63), records, count, packet);
+        return 1u + static_cast<size_t>(length);
+    }
+    packet[0] = in.ConsumeBool() ? static_cast<uint8_t>(length) : in.ConsumeIntegral<uint8_t>();
+    in.ConsumeData(packet + 1, adsl::kUplinkMaxLength);
+    if (sealing == Sealing::Sealed) {
+        static const adsl::ReedSolomon255 parity;
+        const int covered = length - adsl::ReedSolomon255::kParityBytes;
+        uint8_t block[adsl::ReedSolomon255::kDataBytes]{};
+        std::memcpy(block + adsl::ReedSolomon255::kDataBytes - covered, packet + 1,
+                    static_cast<size_t>(covered));
+        parity.encode(block, packet + 1 + covered);
+    }
+    return 1u + adsl::kUplinkMaxLength;
 }
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
@@ -121,11 +146,12 @@ void hear_alptas(protocol::Frame& frame, const Receiver& receiver) {
     (void)alptas::keyed_second(frame.data, receiver.utc_s, keyed);
 }
 
-void hear_uplink(const uint8_t* codeword) {
+void hear_uplink(const uint8_t* packet, size_t bytes, const Receiver& receiver, int32_t into_ms) {
     static const protocol::AdslUplink uplink;
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStatistics statistics{};
-    (void)uplink.decode(codeword, relayed, protocol::AdslUplink::kMaxTargets, statistics);
+    (void)uplink.decode(packet, bytes, receiver.utc_s, into_ms, relayed,
+                        protocol::AdslUplink::kMaxTargets, statistics);
 }
 
 }  // namespace
@@ -141,7 +167,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     const model::Band band = in.ConsumeBool() ? model::Band::O : model::Band::M;
 
     uint8_t burst[events::kRfEventBytes]{};
-    const size_t bytes = band == model::Band::O ? transmit_uplink(in, sealing, burst)
+    const int32_t into_ms = in.ConsumeIntegralInRange<int32_t>(0, 999);
+    const size_t bytes = band == model::Band::O ? transmit_uplink(in, sealing, receiver, burst)
                                                 : transmit_m_band(in, sealing, receiver, burst);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
     for (size_t i = 0; i < noise.size() && i < sizeof(burst); i++) burst[i] ^= noise[i];
@@ -150,7 +177,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     switch (protocol::receive_burst(band, burst, bytes, frame)) {
         case protocol::System::AdslDirect: hear_adsl(frame, receiver); break;
         case protocol::System::Alptas: hear_alptas(frame, receiver); break;
-        case protocol::System::AdslUplink: hear_uplink(burst); break;
+        case protocol::System::AdslUplink: hear_uplink(burst, bytes, receiver, into_ms); break;
         case protocol::System::Unknown: protocol::framed_noise(frame); break;
     }
     return 0;
