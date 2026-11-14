@@ -29,8 +29,7 @@ export function running(version, track) {
 
 export function protocolsLine(protocols) {
   if (!protocols?.length) return null
-  const named = protocols.map(({ name, version, specification }) => `${name} ${version} (${specification})`)
-  return say("words.protocols", { protocols: named.join(", ") })
+  return say("words.protocols", { protocols: protocols.map(({ name, version }) => `${name} ${version}`).join(", ") })
 }
 
 export function trackOf(image) {

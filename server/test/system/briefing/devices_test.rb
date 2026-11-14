@@ -1,10 +1,7 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
-  GO_PROTOCOLS = {
-    adsl_version: "0.1.0", adsl_specification: "ADS-L 4 SRD-860 Issue 2",
-    alptas_version: "0.1.0", alptas_specification: "ALP-TAS 2024 FLARM-generation frame"
-  }.freeze
+  GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
 
   test "a first visit offers one thing, and a Go connected there opens on its settings" do
     in_range a_go
@@ -349,7 +346,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-protocols", text: "Radio protocols: ADS-L 0.1.0 (ADS-L 4 SRD-860 Issue 2), ALP-TAS 0.1.0 (ALP-TAS 2024 FLARM-generation frame)"
+      assert_selector ".unit-protocols", text: "Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0"
 
       find(".unit-menu summary").click
       click_button "Disconnect"
@@ -365,7 +362,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Connect a device"
       assert_field "Callsign", with: "F-JXYZ"
       assert_no_selector ".unit-protocols"
-      assert_no_text "too old"
+      assert_no_selector ".unit-notes p"
     end
   end
 
@@ -384,7 +381,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Connecter un appareil"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
-      assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0 (ADS-L 4 SRD-860 Issue 2)"
+      assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
       assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"

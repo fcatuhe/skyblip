@@ -33,7 +33,7 @@ export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
-const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
+export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 
 class LinkLost extends Error {
   constructor() {
@@ -66,10 +66,10 @@ function imageOf(reply) {
   };
 }
 
-function protocolsOf(reply) {
+export function protocolsOf(reply) {
   return Object.entries(PROTOCOL_NAMES)
-    .filter(([stem]) => reply[`${stem}_version`])
-    .map(([stem, name]) => ({ name, version: reply[`${stem}_version`], specification: reply[`${stem}_specification`] }));
+    .filter(([stem]) => typeof reply[`${stem}_version`] === 'string')
+    .map(([stem, name]) => ({ name, version: reply[`${stem}_version`] }));
 }
 
 // INFO: fc 10nov26 a Go leaves product out, as all firmware before the key did, so an unread frame is a Go too
