@@ -1,4 +1,6 @@
 #include "core/comms/config.h"
+#include "core/dfu/update.h"
+#include "core/util/format.h"
 
 namespace skyblip::comms {
 
@@ -30,6 +32,14 @@ const char* pending_detail(Pending pending) {
         case Pending::None: break;
     }
     return "";
+}
+
+int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version) {
+    int written = format_string(out, "INSTALL ");
+    written += dfu::format_version(version, out + written, capacity - static_cast<size_t>(written));
+    written += format_string(out + written, " FROM THE PHONE");
+    out[written] = 0;
+    return written;
 }
 
 bool ConfigService::prompt_allowed_in(flight::FlightState state) const {

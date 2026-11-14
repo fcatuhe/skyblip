@@ -49,6 +49,7 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 // authorisation.
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
+int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an
