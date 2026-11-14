@@ -51,7 +51,7 @@ TEST_CASE("canvas: text advances and draws glyph pixels") {
 
 // A character with no glyph prints as a space, and only the glass ever notices.
 TEST_CASE("canvas: every character the pages print has a glyph of its own") {
-    for (const char* character = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.:/+%"; *character != 0;
+    for (const char* character = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,:/+%"; *character != 0;
          character++) {
         Glass canvas;
         canvas.clear(true);
