@@ -1,7 +1,4 @@
 class Unit < ApplicationRecord
-  # TODO: fc 14nov26 the column goes once a deploy runs without reading it, then this line goes too
-  self.ignored_columns += %w[enrolled_from]
-
   MANUFACTURER_PREFIX = 0x00
   # INFO: fc 18oct26 serial 0 would put 0x000000 on the air, which decoders read as no address
   SERIALS = 1..0xFFFF

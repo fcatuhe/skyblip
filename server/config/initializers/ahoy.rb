@@ -24,7 +24,7 @@ class Ahoy::Store < Ahoy::DatabaseStore
       location = Geocoder.search(ip).first if ip && File.exist?(Geocoder.config.geoip2[:file])
       if location&.country.present?
         { country: location.country, country_code: location.country_code.presence, region: location.state.presence,
-          city: location.city.presence, latitude: location.latitude, longitude: location.longitude }
+          city: location.city.presence }
       else
         {}
       end
