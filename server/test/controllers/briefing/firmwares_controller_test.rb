@@ -25,6 +25,16 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     assert_equal "/releases/dev-1005/skyblip-go-dev-1005.signed.bin", images.first["value"]
   end
 
+  test "the shelf carries each main build's technical changes, newest first, for the page to pick from" do
+    VCR.use_cassette("github/releases") do
+      get "/briefing/firmwares"
+    end
+
+    sections = css_select("template[data-changes] section[data-channel=development]")
+    assert_equal %w[0.1.0+1005 0.1.0+1002 0.1.0+998], sections.map { |section| section["data-version"] }
+    assert_select sections.first, "li a[href='https://github.com/fcatuhe/skyblip/pull/127']", text: "ui(radar): draw traffic over the readings and count it as TFC"
+  end
+
   # The cassette records GitHub rejecting an invalid token with HTTP 401.
   test "a GitHub failure leaves an explicit message instead of an empty shelf" do
     VCR.use_cassette("github/unavailable") do

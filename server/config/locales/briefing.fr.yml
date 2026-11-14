@@ -102,6 +102,7 @@ fr:
       other: "Une autre image"
       file: "Ou un fichier en .signed.bin"
       release: "Notes de version et le .uf2"
+      changes: "Ce qui a changé depuis votre version"
       recovery: "Le firmware ne prend pas\u00a0?"
       recovery_hint: "Sans Bluetooth\u00a0: branchez l\u2019appareil sur un ordinateur et appuyez deux fois sur RST en moins d\u2019une demi-seconde. Il apparaît comme une clé USB nommée TECHOBOOT\u00a0: déposez-y le fichier .uf2 d\u2019une version."
       recover: "Redémarrer en clé USB"

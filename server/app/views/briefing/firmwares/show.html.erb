@@ -15,4 +15,18 @@
       </select>
     </div>
   <% end %>
+  <% unless @unavailable %>
+    <template data-changes>
+      <% @changelog.each do |release, changes| %>
+        <section class="firmware-change" data-version="<%= release.version %>" data-channel="<%= release.channel %>">
+          <h3><%= release.version %></h3>
+          <ul>
+            <% changes.each do |change| %>
+              <li><%= change.url ? link_to(change.text, change.url, target: "_blank", rel: "noopener") : change.text %></li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </template>
+  <% end %>
 <% end %>

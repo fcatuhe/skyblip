@@ -247,7 +247,7 @@ jobs:
           name: release
           path: release
 
-      # The notes start at the last published release.
+      # The notes start at the last published release. The briefing shows pilots the two news sections, under these exact headings, and its technical list is what GitHub generates.
       - name: create the draft
         env:
           GH_TOKEN: ${{ github.token }}
@@ -255,5 +255,8 @@ jobs:
           tags=$(gh release list --repo "$GITHUB_REPOSITORY" -L 100 --exclude-drafts --exclude-pre-releases \
                    --json tagName --jq '.[].tagName')
           previous=$(grep -m1 -E '^v[0-9]' <<< "$tags") || previous=""
+          news=$(printf '%s\n' \
+            "## What's new" "" "<!-- For pilots, in English: one \"- \" line per change they will notice. -->" "" \
+            "## Nouveautés" "" "<!-- Pour les pilotes, en français : une ligne « - » par changement qu'ils remarqueront. -->")
           gh release create "$GITHUB_REF_NAME" release/* \
-            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes ${previous:+--notes-start-tag "$previous"}
+            --repo "$GITHUB_REPOSITORY" --verify-tag --draft --notes "$news" --generate-notes ${previous:+--notes-start-tag "$previous"}
