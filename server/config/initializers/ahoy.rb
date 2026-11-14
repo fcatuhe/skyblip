@@ -36,4 +36,4 @@ Ahoy.geocode = true
 Ahoy::GeocodeV2Job.queue_with_priority 10
 
 # INFO: fc 17oct26 renewed on each visit and capped at 13 months, the lifetime of an exempt analytics cookie
-Ahoy.visitor_duration = 13.months
+Ahoy.visitor_duration = Rails.configuration.x.tracker_lifetime

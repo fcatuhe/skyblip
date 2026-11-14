@@ -15,6 +15,10 @@ production:
     command: "OAuth.sweep"
     schedule: every day at 4am
 
+  prune_expired_visits:
+    command: "Ahoy::Visit.prune"
+    schedule: every day at 2:15am
+
   purge_non_browser_visits:
     class: Analytics::Visit::PurgeNonBrowserVisitsJob
     schedule: every day at 2am

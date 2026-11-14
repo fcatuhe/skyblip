@@ -7,6 +7,16 @@ class Ahoy::Visit < AnalyticsRecord
   has_one :analytics_visit, class_name: "Analytics::Visit", foreign_key: :ahoy_visit_id, dependent: :destroy
   belongs_to :user, optional: true
 
+  scope :expired, -> { where(started_at: ...Rails.configuration.x.retention.ago) }
+
+  def self.prune
+    expired.in_batches do |visits|
+      Ahoy::Event.where(visit_id: visits.select(:id)).delete_all
+      Analytics::Visit.where(ahoy_visit_id: visits.select(:id)).delete_all
+      visits.delete_all
+    end
+  end
+
   scope :filter_by_start_on, ->(value) { where(started_at: value.to_date.beginning_of_day..) }
   scope :filter_by_end_on,   ->(value) { where(started_at: ..value.to_date.end_of_day) }
 

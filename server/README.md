@@ -38,6 +38,8 @@ User.create!(first_name: "[first name]", last_name: "[last name]", email: "[emai
 
 Ahoy records visits and events in their own database, `analytics`, from the server (every controller action) and from the browser (`app/javascript/ahoy-module.js`, posting to `/hoy`). Each visit is then computed into an `Analytics::Visit`, which knows its pages, duration, channel, section (`public`, `briefing` or `admin`) and segment. The segment is how your own browsing stays out of the numbers: a visit is `internal` when it belongs to an admin, or comes from a browser an admin once signed in from, `user` for any other account, `non_user` otherwise. The `Admin` link opens the overview on `non_user`. Development and test track nothing, `Ahoy.api_only` is on there. Firmware downloads are not tracked, so their year-long public cache never carries a cookie.
 
+The site follows the CNIL's terms for audience measurement without consent ([Cookies : solutions pour les outils de mesure d'audience](https://www.cnil.fr/fr/cookies-solutions-pour-les-outils-de-mesure-daudience)): a tracker lives 13 months, and what it collects is kept 25 months at most. The two periods are `config.x.tracker_lifetime` and `config.x.retention`, and every tracker and every log in the app keeps to them. `Ahoy::Visit.prune` deletes visits older than 25 months every night, with their events and what was computed of them.
+
 Visits are placed by IP with the MaxMind GeoLite City database, `storage/GeoLite2-City.mmdb`, which `Maxmind::UpdateGeoliteCityDatabaseJob` downloads and keeps current. The job is scheduled in `config/recurring.yml` only once the production credentials hold the MaxMind account, so until then visits keep no place and nothing fails:
 
 ```yaml

@@ -63,4 +63,16 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
     assert_includes response.headers["Cache-Control"], "public"
     assert_nil response.headers["Set-Cookie"]
   end
+
+  test "the visitor cookie lives 13 months from the latest visit" do
+    get page_path(slug: "go"), headers: { "User-Agent" => SAFARI }
+    visitor = cookies[:ahoy_visitor]
+    assert_match(/ahoy_visitor=#{visitor};.*expires=#{13.months.from_now.utc.strftime("%a, %d %b %Y")}/i, response.headers["Set-Cookie"].to_s)
+
+    travel 1.month do
+      cookies.delete(:ahoy_visit)
+      get page_path(slug: "about"), headers: { "User-Agent" => SAFARI }
+      assert_match(/ahoy_visitor=#{visitor};.*expires=#{13.months.from_now.utc.strftime("%a, %d %b %Y")}/i, response.headers["Set-Cookie"].to_s)
+    end
+  end
 end
