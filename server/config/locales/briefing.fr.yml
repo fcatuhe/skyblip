@@ -104,9 +104,9 @@ fr:
       kept: "skyblip.eu garde l\u2019identifiant de la puce, la clé, le numéro de série et le firmware de votre appareil, ainsi que l\u2019adresse internet utilisée lors de l\u2019activation. Aucun compte."
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
-      header: "AUTHORISE"
-      allow: "PRESS TWICE TO ALLOW"
-      refuse: "ONE PRESS REFUSES"
+      header: "AUTHORIZE"
+      allow: "PUSH TWICE TO ACCEPT"
+      refuse: "PUSH ONCE TO CANCEL"
       lamp: "Le voyant clignote vite en vert."
     tools:
       back: "Retour à vos appareils"
@@ -163,7 +163,7 @@ fr:
       in_flight_lock: "Les modifications sont de nouveau possibles après atterrissage."
       in_flight_lock_trusted: "Ce navigateur peut encore changer ses réglages. Les autres actions sont de nouveau possibles après atterrissage."
       glass_press: "Appuyez deux fois sur le bouton du %{product}."
-      glass_left: "REFUSED IN %{seconds} S"
+      glass_left: "IT CANCELS IN %{seconds} S"
       glass_waiting: "En attente de sa réponse."
       install_version: "Installer %{version}"
       install_full: "Installer %{version}, avec le firmware de la centrale"
@@ -231,7 +231,7 @@ fr:
       imu_writing: "Écriture du firmware de la centrale inertielle. Cela prend jusqu\u2019à une minute. Laissez-le allumé."
       no_key: "Ce firmware est trop ancien pour nommer la clé à laquelle il se fie. Installez une fois un fichier à la main, le .full.signed.bin d\u2019une version."
       not_activated: "Pas encore activé\u00a0: il n\u2019émet ni ne reçoit."
-      recovering: "L\u2019appareil est maintenant une clé USB nommée TECHOBOOT. Si son écran affiche PRESS THE BUTTON TO START IT, appuyez une fois. Déposez-y le fichier .uf2, ou appuyez sur RST pour revenir à skyBlip. Rien n\u2019est émis entre-temps."
+      recovering: "L\u2019appareil est maintenant une clé USB nommée TECHOBOOT. Si son écran affiche PUSH THE BUTTON TO START IT, appuyez une fois. Déposez-y le fichier .uf2, ou appuyez sur RESET pour revenir à skyBlip. Rien n\u2019est émis entre-temps."
     set_notices:
       saved: "Enregistré sur l\u2019appareil."
       in_flight: "Votre aéronef est en vol. Rien n\u2019a changé. Enregistrez après atterrissage."

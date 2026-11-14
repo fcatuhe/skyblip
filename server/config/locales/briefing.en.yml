@@ -103,9 +103,9 @@ en:
       kept_summary: What skyblip.eu keeps
       kept: skyblip.eu keeps the device's chip identifier, key, serial number and firmware, along with the internet address used for activation. No account.
     glass:
-      header: AUTHORISE
-      allow: PRESS TWICE TO ALLOW
-      refuse: ONE PRESS REFUSES
+      header: AUTHORIZE
+      allow: PUSH TWICE TO ACCEPT
+      refuse: PUSH ONCE TO CANCEL
       lamp: The LED blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
     tools:
@@ -163,7 +163,7 @@ en:
       in_flight_lock: Changes are available again after landing.
       in_flight_lock_trusted: This browser can still change the device's settings. Other actions are available again after landing.
       glass_press: "Press the %{product}'s button twice."
-      glass_left: "REFUSED IN %{seconds} S"
+      glass_left: "IT CANCELS IN %{seconds} S"
       glass_waiting: Waiting for its answer.
       install_version: "Install %{version}"
       install_full: "Install %{version}, with the sensor hub firmware"
@@ -231,7 +231,7 @@ en:
       imu_writing: The device is writing the sensor hub firmware. This takes up to a minute. Leave it on.
       no_key: This firmware is too old to name the key it trusts. Install one file by hand once, the .full.signed.bin of a release.
       not_activated: Not activated yet. It neither transmits nor receives.
-      recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PRESS THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RST to go back to skyBlip. Nothing transmits meanwhile."
+      recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PUSH THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RESET to go back to skyBlip. Nothing transmits meanwhile."
     set_notices:
       saved: Saved on the device.
       in_flight: The device is in flight. Nothing changed. Save once it has landed.

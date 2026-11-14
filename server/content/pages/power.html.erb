@@ -1,7 +1,7 @@
 ---
 title: "Go battery, USB-C charging and power states"
 nav_title: Power
-description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, FLAT BATTERY, shutdown and why the e-paper screen keeps its image when off."
+description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, EMPTY BATTERY, shutdown and why the e-paper screen keeps its image when off."
 parent: guides
 share_image: radar
 updated_on: "2026-11-09"
@@ -80,7 +80,7 @@ updated_on: "2026-11-09"
       </p>
       <p>
         The device remembers this the next time it starts. Its self test reads
-        <span class="mono">WAS FLAT</span> beside the voltage. A phone that
+        <span class="mono">WAS EMPTY</span> beside the voltage. A phone that
         connects during that startup is told the same, so a device
         that went dark does not come back as if nothing happened.
       </p>
@@ -97,10 +97,10 @@ updated_on: "2026-11-09"
         <tr><th>From off</th><th>What happens</th></tr>
       </thead>
       <tbody>
-        <tr><th>Press the button</th><td>starts, unless the battery is under 3.4&nbsp;V with no charger connected. In that case, the screen says <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Press the button</th><td>starts, unless the battery is under 3.4&nbsp;V with no charger connected. In that case, the screen says <span class="mono">EMPTY BATTERY</span></td></tr>
         <tr><th>Press after a flat-battery shutdown</th><td>does nothing. The screen already says why it stopped. Connect the cable to use the device again</td></tr>
         <tr><th>Plug the charger in</th><td>charges and stays off. Connecting a cable in a flight bag does not tell it to transmit</td></tr>
-        <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. The logo replaces <span class="mono">FLAT BATTERY</span></td></tr>
+        <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. The logo replaces <span class="mono">EMPTY BATTERY</span></td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>starts and charges</td></tr>
         <tr><th>Press <span class="mono">RST</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
       </tbody>
@@ -155,7 +155,7 @@ updated_on: "2026-11-09"
         <tr><th>3.60&nbsp;V</th><td>the battery is low, about 12%: the light blinks red, the radar says BAT and the percentage, and switching off leaves CHARGE BATTERY on the screen</td></tr>
         <tr><th>3.50&nbsp;V</th><td>the battery is critical, about 5%: the light blinks every 600&nbsp;ms. From here, the device saves nothing to permanent memory except the flight record, which provides evidence of the flight that is ending</td></tr>
         <tr><th>3.40&nbsp;V</th><td>the device refuses to start on a battery this flat. The button stays disabled so pressure inside a bag cannot trigger repeated attempts</td></tr>
-        <tr><th>3.20&nbsp;V</th><td>the battery is flat: the device switches itself off and leaves FLAT BATTERY on the screen. Each threshold takes three consecutive readings to enter and three to leave. A brief voltage drop during transmission cannot trigger a change, and a battery near a threshold cannot keep switching between states</td></tr>
+        <tr><th>3.20&nbsp;V</th><td>the battery is flat: the device switches itself off and leaves EMPTY BATTERY on the screen. Each threshold takes three consecutive readings to enter and three to leave. A brief voltage drop during transmission cannot trigger a change, and a battery near a threshold cannot keep switching between states</td></tr>
         <tr><th>1.80&nbsp;V</th><td>below this, the reading comes from a floating voltage divider, not a flat battery. The device does not act on it</td></tr>
       </tbody>
     </table>
