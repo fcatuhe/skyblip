@@ -102,7 +102,7 @@ fr:
       find: "Trouver le Go neuf"
       activate: "Activer"
       kept_summary: "Ce que skyblip.eu garde"
-      kept: "skyblip.eu garde l\u2019identifiant de la puce, la clé, le numéro de série et le firmware de votre appareil. Il ne garde pas votre adresse IP et ne nécessite aucun compte."
+      kept: "skyblip.eu garde l\u2019identifiant d\u2019usine, la clé publique, le numéro de série et le firmware de votre appareil. Aucun compte nécessaire."
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
       lamp: "Le voyant clignote vite en vert."
