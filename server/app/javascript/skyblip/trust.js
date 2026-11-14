@@ -1,4 +1,5 @@
 import { hex } from '#skyblip/link';
+import { Replies } from '#skyblip/replies';
 
 const DOMAIN = new TextEncoder().encode('skyblip:browser:v1');
 const LABEL_BYTES = 24;
@@ -81,21 +82,17 @@ function request(pending) {
   });
 }
 
-// INFO: fc 13nov26 the unit answers in order, so the first waiter that a reply matches is the one it answers
 export class BrowserTrust {
-  #send;
+  #replies;
   #loadKey;
   #onChange;
   #key = null;
   #trust = null;
   #browsers = [];
   #listing = null;
-  #waiting = [];
-  #generation = 0;
-  #opened = 0;
 
   constructor({ send, loadKey, onChange }) {
-    this.#send = send;
+    this.#replies = new Replies({ send, withinMs: ANSWER_WITHIN_MS });
     this.#loadKey = loadKey;
     this.#onChange = onChange;
   }
@@ -106,36 +103,28 @@ export class BrowserTrust {
 
   // INFO: fc 13nov26 claimed and small_mtu also reach the updater, which tells the pilot about the link
   receive(reply) {
-    const index = this.#waiting.findIndex(({ matches }) => matches(reply));
-    if (index < 0) return reply.command === 'acknowledgement' && TRUST_REASONS.has(reply.reason);
-    const [waiter] = this.#waiting.splice(index, 1);
-    clearTimeout(waiter.timer);
-    waiter.resolve(reply);
+    if (!this.#replies.take(reply)) return reply.command === 'acknowledgement' && TRUST_REASONS.has(reply.reason);
     return !LINK_REASONS.has(reply.reason);
   }
 
   close() {
-    this.#generation++;
-    for (const waiter of this.#waiting.splice(0)) {
-      clearTimeout(waiter.timer);
-      waiter.resolve(null);
-    }
+    this.#replies.close();
     this.#change(null, null);
   }
 
   // INFO: fc 13nov26 a key the browser cannot keep is no reason to refuse the unit: the presses still work
   async prove() {
-    this.#opened = this.#generation;
+    this.#replies.open();
     try {
       this.#key ??= await this.#loadKey();
     } catch (error) {
       console.error('no browser key, so every change asks for two presses', error);
     }
     if (!this.#key) return;
-    const challenge = await this.#ask({ command: 'browser_challenge' }, reply => reply.command === 'browser_challenge' || refusal(reply, PROOF_REFUSALS));
+    const challenge = await this.#replies.ask({ command: 'browser_challenge' }, reply => reply.command === 'browser_challenge' || refusal(reply, PROOF_REFUSALS));
     if (challenge?.command !== 'browser_challenge') return;
     const signature = await this.#key.sign(signedMessage(challenge.nonce));
-    const verdict = await this.#ask(
+    const verdict = await this.#replies.ask(
       { command: 'trust_browser', key: this.#key.publicKey, signature, label: this.#key.label },
       reply => refusal(reply, PROOF_VERDICTS),
     );
@@ -157,7 +146,7 @@ export class BrowserTrust {
   async #read() {
     const browsers = [];
     for (let index = 0; ; index++) {
-      const entry = await this.#ask({ command: 'browsers', index }, reply => reply.command === 'browser' || refusal(reply, LIST_REFUSALS));
+      const entry = await this.#replies.ask({ command: 'browsers', index }, reply => reply.command === 'browser' || refusal(reply, LIST_REFUSALS));
       if (entry?.reason === 'untrusted') return this.#change(null, null);
       if (entry?.command !== 'browser') return this.#change(this.#trust, []);
       if (index >= entry.count) return this.#change(this.#trust, browsers);
@@ -169,7 +158,7 @@ export class BrowserTrust {
   async forget(ids) {
     if (!this.trusted) return null;
     for (const id of ids) {
-      const verdict = await this.#ask({ command: 'forget_browser', id }, reply => refusal(reply, FORGET_VERDICTS));
+      const verdict = await this.#replies.ask({ command: 'forget_browser', id }, reply => refusal(reply, FORGET_VERDICTS));
       if (verdict?.reason !== 'forgotten') return verdict?.reason ?? 'timeout';
       if (id === idOf(this.#key.publicKey)) return this.#change(null, null);
     }
@@ -180,31 +169,6 @@ export class BrowserTrust {
     this.#trust = trust;
     this.#browsers = browsers;
     this.#onChange({ trust, browsers });
-  }
-
-  // INFO: fc 13nov26 a request from before a reconnect is never sent, so no stale waiter takes a new reply
-  async #ask(command, matches) {
-    if (this.#generation !== this.#opened) return null;
-    let waiter;
-    const answered = new Promise(resolve => {
-      waiter = { matches, resolve };
-      waiter.timer = setTimeout(() => this.#drop(waiter, null), ANSWER_WITHIN_MS);
-      this.#waiting.push(waiter);
-    });
-    try {
-      await this.#send(command);
-    } catch (error) {
-      this.#drop(waiter, null);
-      throw error;
-    }
-    return answered;
-  }
-
-  #drop(waiter, reply) {
-    const index = this.#waiting.indexOf(waiter);
-    if (index >= 0) this.#waiting.splice(index, 1);
-    clearTimeout(waiter.timer);
-    waiter.resolve(reply);
   }
 }
 
