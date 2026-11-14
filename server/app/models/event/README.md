@@ -4,7 +4,7 @@ Everything skyBlip does that someone may later want to understand lands as a row
 
 ## What is recorded
 
-- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a key bound, promoted or revoked, an activation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
+- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a key bound, promoted or revoked, a firmware a unit signed, an activation or an attestation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
 - **Traces** from the framework: every request (`action_controller.request_completed`, with controller, action, status and duration), every job run, and a `rescue_from` that answered. The framework's other events, SQL and renders among them, are not kept. A post of a browser's journal is kept only when it was refused, since every open briefing posts every few seconds.
 - **Errors** reported to `Rails.error`, which Rails does for every exception a request or a job raises: `error.reported`, below.
 - **The browser's journal**: what only the page sees, below.

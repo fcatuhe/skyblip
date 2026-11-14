@@ -1,5 +1,6 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
+import { FirmwareAttestation } from '#skyblip/attestation';
 import { installReportOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
@@ -120,6 +121,7 @@ export class Updater {
   #returnWithinMs;
   #returnTimer = null;
   #trust;
+  #attestation;
   #state = {
     phase: 'offline',
     task: null,
@@ -143,9 +145,10 @@ export class Updater {
     protocols: null,
   };
 
-  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey }) {
+  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
     this.#onChange = onChange;
     this.#trust = new BrowserTrust({ send: command => this.#device.sendConfig(command), loadKey: browserKey, onChange: patch => this.#set(patch) });
+    this.#attestation = attestations && new FirmwareAttestation({ send: command => this.#device.sendConfig(command), server: attestations });
     this.#bluetoothDevice = device;
     this.#returnEveryMs = returnEveryMs;
     this.#returnWithinMs = returnWithinMs;
@@ -343,6 +346,12 @@ export class Updater {
     }
     this.#set({ running: this.#running && versionText(this.#running) });
     await this.listBrowsers();
+    if (this.#state.address) this.#attest();
+  }
+
+  // INFO: fc 14nov26 the server's answer can take as long as the network, so the page does not wait for it
+  #attest() {
+    this.#attestation?.attest().catch(error => console.error('The unit could not state its firmware:', error));
   }
 
   #needsFull({ full, pin }) {
@@ -366,7 +375,7 @@ export class Updater {
   }
 
   #receive(reply) {
-    if (!reply || this.#trust.receive(reply)) return;
+    if (!reply || this.#trust.receive(reply) || this.#attestation?.receive(reply)) return;
     if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
@@ -486,6 +495,7 @@ export class Updater {
     this.#probed = false;
     this.#smp.close(new LinkLost());
     this.#trust.close();
+    this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
       this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, protocols: null });

@@ -12,6 +12,12 @@ module ActivationTestHelper
     fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
   end
 
+  def signed_statement(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"], release: true)
+    fields = { device_id:, version:, release:, server_nonce: challenge.server_nonce }
+    message = Identity::Message.attestation(**fields, public_key: unit_key.raw_public_key.unpack1("H*"))
+    fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
+  end
+
   def server_verifies?(signature, message)
     server_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ vectors["server_public_key"] ].pack("H*"))
     server_key.verify(nil, [ signature ].pack("H*"), message)

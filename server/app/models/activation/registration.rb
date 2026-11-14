@@ -31,7 +31,10 @@ class Activation::Registration
     # INFO: fc 18oct26 signed inside the transaction that bound the key, so an admin's revocation lands before or after, never between
     code = Unit.transaction do
       key = Unit.register(device_id:, public_key:, version:, server_key_id:, release:, ip_address:)
-      unlock_code_for(key.unit.serial, challenge.unit_nonce) if key.active?
+      if key.active?
+        key.unit.attest_firmware(version:, release:)
+        unlock_code_for(key.unit.serial, challenge.unit_nonce)
+      end
     end
     code || raise(Activation::Refusal.new(key.revoked? ? :revoked_key : :other_key))
   end

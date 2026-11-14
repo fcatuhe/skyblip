@@ -1,0 +1,6 @@
+bound_release:
+  unit: bound
+  version: 0.3.0+1300
+  release: true
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 1.day.ago %>

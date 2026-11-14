@@ -10,6 +10,7 @@ export const VECTORS = JSON.parse(readFileSync(new URL('../../../schemas/activat
 const PKCS8_ED25519 = Buffer.from('302e020100300506032b657004220420', 'hex');
 const SPKI_ED25519 = Buffer.from('302a300506032b6570032100', 'hex');
 export const REGISTRATION_FRAME_BYTES = 138;
+export const ATTESTATION_FRAME_BYTES = 98;
 
 const bytes = (...hex) => Buffer.from(hex.join(''), 'hex');
 const label = purpose => Buffer.from(`skyblip:${purpose}:v1`);
@@ -24,6 +25,8 @@ export const messages = {
     serialBytes.writeUInt16BE(serial);
     return Buffer.concat([label('unlock'), bytes(deviceId, publicKey), serialBytes, bytes(unitNonce)]);
   },
+  attestation: ({ deviceId, publicKey, serverNonce, release, version }) =>
+    Buffer.concat([label('attestation'), bytes(deviceId, publicKey, serverNonce), Buffer.of(release ? 1 : 0), Buffer.from(version)]),
 };
 
 export function keyPair(seed) {
@@ -50,6 +53,33 @@ export class FakeServer {
     this.refuseNext = null;
     this.requests = [];
     this.held = null;
+    this.attestationNonces = new Set();
+    this.firmwares = [];
+  }
+
+  // INFO: fc 14nov26 a reading of Attestation::Statement, which checks the unit's active key
+  get attestations() {
+    return {
+      challenge: async () => {
+        this.requests.push('attestation_challenge');
+        this.#refuse();
+        const serverNonce = hex(randomBytes(16));
+        this.attestationNonces.add(serverNonce);
+        return { server_nonce: serverNonce };
+      },
+      attest: async ({ device_id, version, release, server_nonce, signature }) => {
+        this.requests.push('attestation');
+        this.#refuse();
+        if (!this.attestationNonces.has(server_nonce)) throw new ServerRefusal('expired');
+        const known = this.units.get(device_id);
+        if (!known) throw new ServerRefusal('unknown_unit');
+        const message = messages.attestation({ deviceId: device_id, publicKey: known.publicKey, serverNonce: server_nonce, release, version });
+        if (!verifies(known.publicKey, signature, message)) throw new ServerRefusal('bad_signature');
+        this.attestationNonces.delete(server_nonce);
+        this.firmwares.push({ device_id, version, release });
+        return { version, release };
+      },
+    };
   }
 
   hold() {
@@ -98,10 +128,10 @@ export class FakeServer {
 // INFO: fc 18oct26 the activation frames of schemas/link.v1.json, over the fake's config endpoint
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
-    version = VECTORS.version, release = VECTORS.release, keyed = true, ...options } = {}) {
+    version = VECTORS.version, release = VECTORS.release, keyed = true, attests = true, ...options } = {}) {
     super({ address: null, ...options });
     this.unitKey = keyPair(seed);
-    Object.assign(this, { deviceId, trusted, version, release, keyed });
+    Object.assign(this, { deviceId, trusted, version, release, keyed, attests });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
     this.nonce = null;
     this.serverNonce = null;
@@ -109,8 +139,10 @@ export class FakeUnit extends FakeSkyblip {
   }
 
   answer(fields) {
-    if (this.claimedBy !== null || !['challenge', 'register', 'unlock'].includes(fields.command)) return super.answer(fields);
+    const commands = this.attests ? ['challenge', 'register', 'unlock', 'attest'] : ['challenge', 'register', 'unlock'];
+    if (this.claimedBy !== null || !commands.includes(fields.command)) return super.answer(fields);
     this.commands.push(fields.command);
+    if (fields.command === 'attest') return this.attest(fields);
     if (!this.keyed) return this.acknowledge(false, 'keyless');
     if (fields.command === 'challenge') return this.challenge();
     if (!this.nonce) return this.acknowledge(false, 'no_session');
@@ -142,6 +174,19 @@ export class FakeUnit extends FakeSkyblip {
     this.reply({
       command: 'registration', device_id: this.deviceId, public_key: this.unitKey.publicKey, version: this.version,
       server_key_id: this.trustedId, release: this.release, signature: this.unitKey.sign(messages.registration(fields)),
+    });
+  }
+
+  // INFO: fc 14nov26 identity_link.cpp's order: the flight gate, the key, the link's width, the nonce
+  attest({ server_nonce }) {
+    if (this.address !== null && this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+    if (!this.keyed) return this.acknowledge(false, 'keyless');
+    if (this.mtu - ATT_HEADER_BYTES < ATTESTATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
+    if (!server_nonce) return this.acknowledge(false, 'invalid');
+    const fields = { deviceId: this.deviceId, publicKey: this.unitKey.publicKey, serverNonce: hex(server_nonce), release: this.release, version: this.version };
+    this.reply({
+      command: 'attestation', device_id: this.deviceId, version: this.version, release: this.release,
+      signature: this.unitKey.sign(messages.attestation(fields)),
     });
   }
 

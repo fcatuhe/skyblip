@@ -13,6 +13,10 @@ module Identity::Message
     label("unlock") + bytes(device_id, public_key) + [ serial ].pack("n") + bytes(unit_nonce)
   end
 
+  def attestation(device_id:, public_key:, server_nonce:, release:, version:)
+    label("attestation") + bytes(device_id, public_key, server_nonce) + [ release ? 1 : 0 ].pack("C") + version.b
+  end
+
   private
     def label(purpose) = "skyblip:#{purpose}:v1".b
 

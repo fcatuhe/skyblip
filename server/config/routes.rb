@@ -55,6 +55,11 @@ Rails.application.routes.draw do
     resources :registrations, only: :create
   end
 
+  namespace :attestation do
+    resources :challenges, only: :create
+    resources :statements, only: :create
+  end
+
   resources :releases, only: [], param: :tag do
     resources :assets, only: :show, module: :releases, path: "", param: :file,
       format: false, constraints: { release_tag: /[^\/]+/, file: /[^\/]+/ }

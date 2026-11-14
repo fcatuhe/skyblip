@@ -12,7 +12,7 @@ The briefing app keeps a journal of everything a browser does with a device, and
 Ask for the support code, under Settings in the app, or the address on the device's glass. Then, from skyBlip's MCP server:
 
 1. `list_events` with `support_code` (or `device`) and a `limit` of 500: the whole story, oldest first.
-2. `get_unit` with the device, for a Go: its serial, when it was activated and the keys it registered.
+2. `get_unit` with the device, for a Go: its serial, when it was activated, the keys it registered, the firmware it signed and the firmware browsers reported.
 3. `list_errors`, if the story holds a `browser.failed` or the server answered an error at the same time: its `fingerprint` leads to every pilot it hit.
 
 ## Read it

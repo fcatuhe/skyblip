@@ -18,7 +18,7 @@
         <th>Public key</th>
         <th>Status</th>
         <th>Also on</th>
-        <th>Firmware</th>
+        <th>Registered on</th>
         <th>Build</th>
         <th>Server key id</th>
         <th>IP</th>
@@ -34,7 +34,7 @@
           <td><%= key.status %></td>
           <td><%= unit_links(key.other_units) %></td>
           <td class="mono"><%= key.version %></td>
-          <td><%= unit_key_build(key) %></td>
+          <td><%= unit_build(key) %></td>
           <td class="mono"><%= key.server_key_id %></td>
           <td class="mono"><%= key.ip_address %></td>
           <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
@@ -53,5 +53,61 @@
     </tbody>
   </table>
 </div>
+
+<h2>Firmware the unit signed</h2>
+<% if @unit.firmwares.any? %>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Build</th>
+          <th>First signed</th>
+          <th>Last signed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @unit.firmwares.newest_first.each do |firmware| %>
+          <tr>
+            <th class="mono"><%= firmware.version %></th>
+            <td><%= unit_build(firmware) %></td>
+            <td><%= l firmware.created_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td><%= l firmware.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p>None yet: the unit signs its firmware at activation, and on every connection to the briefing app once it runs firmware that knows how.</p>
+<% end %>
+
+<h2>Firmware browsers reported</h2>
+<% if (stretches = @unit.reported_firmware).any? %>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Version</th>
+          <th>Track</th>
+          <th>First seen</th>
+          <th>Last seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% stretches.each do |stretch| %>
+          <tr>
+            <th class="mono"><%= stretch.version %></th>
+            <td><%= stretch.track %></td>
+            <td><%= l stretch.first_seen_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td><%= l stretch.last_seen_at, format: "%b %-d, %Y, %H:%M" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p>None in the events kept: a browser reports what a unit runs each time it connects, and nobody vouches for what it says.</p>
+<% end %>
 
 <p><%= link_to "Timeline", admin_events_path(device: @unit.slug) %> · <%= link_to "All units", admin_units_path %></p>

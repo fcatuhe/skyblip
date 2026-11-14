@@ -1,8 +1,8 @@
 module UnitsHelper
   UNITS_LISTED = 10
 
-  def unit_key_build(key)
-    case key&.release
+  def unit_build(record)
+    case record&.release
     when true then "release"
     when false then "development"
     end

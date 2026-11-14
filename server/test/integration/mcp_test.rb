@@ -58,6 +58,8 @@ class McpTest < ActionDispatch::IntegrationTest
     unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:))
     assert_equal [ 1, "000001" ], unit.values_at("serial", "address")
     assert_equal [ "active" ], unit["keys"].pluck("status")
+    assert_equal [ [ "0.3.0+1300", true ] ], unit["signed_firmware"].map { it.values_at("version", "release") }
+    assert_equal [], unit["reported_firmware"]
 
     call_tool("get_unit", { device: "go-00ffff" }, token:)
     assert response.parsed_body.dig("result", "isError")
