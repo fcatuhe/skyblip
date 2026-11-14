@@ -1,4 +1,4 @@
-// What the page makes of a unit's install report (#278, retired with #294).
+// What the page makes of a unit's install report (#278).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installCause, installReportOf, reportShown } from '#skyblip/install_report';

@@ -47,9 +47,9 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 - **Could the browser reach a device at all?** `browser.opened`: `bluetooth` false is a browser without Web Bluetooth, such as any browser on an iPhone.
 - **Did the chooser show the device?** `bluetooth.chooser_closed`: its `detail` tells a pilot who cancelled from a Bluetooth adapter that is off.
 - **Did it connect, and stay connected?** `device.connected` and how long it took, `device.disconnected` and the phase it dropped in.
-- **What was the device like?** `device.read`: firmware, track, image state, sensor hub blob, settings fallback, trust, activation, flight state and battery.
+- **What was the device like?** `device.read`: firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
 - **What did the pilot read?** `device.noticed`, every notice the page showed, by the key `config/locales/briefing.*.yml` words it with.
-- **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report.
+- **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report. `device.upload_refused` for an image the unit refused once it landed, with what it found in slot 1 and the keys on both sides.
 - **What broke?** `browser.failed` in the page, and `error.reported` on the server, tied to the browser when it asked.
 
 ## Reading it

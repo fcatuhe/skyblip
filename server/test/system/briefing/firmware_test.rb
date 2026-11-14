@@ -59,7 +59,6 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
-  # TODO: fc 13nov26 the install report, retired with #294
   test "a Bravo that reverted names how far the new firmware got, whenever the page connects" do
     report = { check: "matched", swap: "test", request_error: 0, boots: 2, probation_boots: 1, proof: "started", reset: "watchdog" }
     in_range a_bravo(image: "reverted", from: "0.1.0+40", to: "0.1.0+44", installReport: report)

@@ -1,6 +1,6 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
-import { installReportOf } from '#skyblip/install_report';
+import { installReportOf, landingOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
@@ -33,6 +33,7 @@ export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
+const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 
 class LinkLost extends Error {
@@ -104,6 +105,7 @@ export class Updater {
   #packetBytes = null;
   #writeBytes = GATT_WRITE_BYTES;
   #probed = false;
+  #answersReport = false;
   #running = null;
   #image = null;
   #sha = null;
@@ -140,6 +142,7 @@ export class Updater {
     trust: null,
     browsers: null,
     installReport: null,
+    landing: null,
     protocols: null,
   };
 
@@ -252,7 +255,7 @@ export class Updater {
     this.#image = bytes;
     this.#sha = sha;
     this.#version = image.version;
-    const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
+    const file = { name, version: versionText(image.version), bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
     this.#key = image.key;
     this.#product = image.product;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
@@ -329,7 +332,6 @@ export class Updater {
 
   async #learn() {
     await this.#send({ command: 'update' });
-    // TODO: fc 13nov26 the install report, retired with #294
     await this.#send({ command: 'install_report' });
     await this.#send({ command: 'protocols' });
     await this.#send({ command: 'status' });
@@ -371,9 +373,14 @@ export class Updater {
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if (reply.command === 'install_report') this.#set({ installReport: installReportOf(reply) });
+    else if (reply.command === 'install_report') this.#reported(reply);
     else if (reply.command === 'protocols') this.#set({ protocols: protocolsOf(reply) });
     else if (reply.command === 'acknowledgement') this.#acked(reply);
+  }
+
+  #reported(reply) {
+    this.#answersReport = true;
+    this.#set({ installReport: installReportOf(reply), landing: landingOf(reply) });
   }
 
   #acked(reply) {
@@ -387,6 +394,8 @@ export class Updater {
     if (task === 'install') this.#windowOpen = false;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
+    // INFO: fc 14nov26 firmware without the report answers unknown_command, which would read as the refusal of the next ask
+    if (task === 'install' && LANDING_REFUSALS.has(reply.reason) && this.#answersReport) return this.#send({ command: 'install_report' });
   }
 
   #narrow() {
@@ -484,18 +493,19 @@ export class Updater {
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
     this.#probed = false;
+    this.#answersReport = false;
     this.#smp.close(new LinkLost());
     this.#trust.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, protocols: null });
+      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
       phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
-      progress: null, installReport: null, protocols: null,
+      progress: null, installReport: null, landing: null, protocols: null,
       notice,
     });
   }

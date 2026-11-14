@@ -132,6 +132,8 @@ export class FakeSkyblip {
     this.writing = false;
     this.approved = null;
     this.refuseInstall = null;
+    this.landedCheck = 'matched';
+    this.landing = null;
     this.refuseUpload = null;
     this.refuseAfterPackets = Infinity;
     this.closeWindowAfterPackets = Infinity;
@@ -269,7 +271,7 @@ export class FakeSkyblip {
     if (command === 'defaults' && this.knowsDefaults) return this.reply({ command: 'defaults', ...DEFAULTS });
     if (command === 'capture' && this.product === 'skyblip_bravo') return this.stageCapture(fields);
     // INFO: fc 13nov26 undefined is firmware older than the install report, which answers unknown_command
-    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport });
+    if (command === 'install_report' && this.installReport !== undefined) return this.reply({ command, ...this.installReport, ...this.landing });
     // INFO: fc 14nov26 undefined is firmware older than the protocols frame, which answers unknown_command
     if (command === 'protocols' && this.protocols !== undefined) return this.reply({ command, ...this.protocols });
     if (BROWSER_COMMANDS.has(command) && this.knowsBrowsers) return this.answerBrowser(command, fields);
@@ -359,11 +361,20 @@ export class FakeSkyblip {
   installLanded() {
     this.windowOpen = false;
     const image = readImage(this.slot);
-    if (this.refuseInstall) return this.acknowledge(false, this.refuseInstall);
-    if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
-    if (this.key !== null && image.key !== keyName(this.key)) return this.acknowledge(false, 'wrong_key');
+    const refusal = this.landingRefusal(image);
+    if (refusal) {
+      if (LANDING_REFUSALS.has(refusal)) this.landing = { landed_check: this.landedCheck, ...(image?.key && { staged_key: image.key }) };
+      return this.acknowledge(false, refusal);
+    }
     this.acknowledge(true, 'install');
     setImmediate(() => setImmediate(() => this.drop()));
+  }
+
+  landingRefusal(image) {
+    if (this.refuseInstall) return this.refuseInstall;
+    if (!image || versionText(image.version) !== this.approved) return 'not_approved';
+    if (this.key !== null && image.key !== keyName(this.key)) return 'wrong_key';
+    return null;
   }
 
   older(version) {
@@ -415,6 +426,7 @@ export class FakeSkyblip {
     }
     if (task === 'dfu') {
       this.windowOpen = true;
+      this.landing = null;
       this.finished = false;
       return this.acknowledge(true, 'dfu');
     }
@@ -550,6 +562,7 @@ function classEndOf(header) {
   return protectedBytes === 0 ? null : view.getUint16(8, true) + view.getUint32(12, true) + protectedBytes;
 }
 
+const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 const BROWSER_COMMANDS = new Set(['browser_challenge', 'trust_browser', 'browsers', 'forget_browser']);
 
 function keyName(byte) {
