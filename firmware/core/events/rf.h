@@ -7,7 +7,8 @@
 #include "core/model/band.h"
 
 namespace skyblip::events {
-enum class RfEventType : uint8_t { RxDone, CrcError, TxDone, Missed };
+// INFO: fc 14nov26 Busy: the assessment before a burst found the channel taken, and nothing keyed
+enum class RfEventType : uint8_t { RxDone, CrcError, TxDone, Missed, Busy };
 
 // INFO: fc 05aug26 The longest burst any dwell reads is the O-band uplink frame,
 // an RS(255,223) codeword (§C.4, core/protocol/adsl_uplink.h), and this event is

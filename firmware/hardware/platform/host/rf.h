@@ -7,6 +7,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "hardware/platform/clear_channel.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
 #include "runtime/tasks.h"
@@ -56,6 +57,19 @@ class Rf : public ports::Rf {
     void abort() override {
         armed_ = false;
         queued_ = false;
+    }
+
+    // INFO: fc 14nov26 a burst whose assessment has begun is claimed, and keys or is reported Busy
+    Status withdraw(uint64_t tx_at_us) override {
+        const int flying = armed_ ? flying_bursts_.index_of(tx_at_us) : -1;
+        if (flying > keyed_ || (flying == keyed_ && !assessed_)) {
+            flying_bursts_.remove(static_cast<uint8_t>(flying));
+            return Status::Ok;
+        }
+        const int queued = queued_ ? queued_bursts_.index_of(tx_at_us) : -1;
+        if (queued < 0) return Status::WouldBlock;
+        queued_bursts_.remove(static_cast<uint8_t>(queued));
+        return Status::Ok;
     }
 
     void sleep() override {
@@ -111,7 +125,7 @@ class Rf : public ports::Rf {
 
    private:
     static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us};
+        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
     }
 
     static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
@@ -139,9 +153,29 @@ class Rf : public ports::Rf {
         const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
         if (armed_ && !started_ && now_us + lead_us >= flying_plan_.start_us && !start(now_us))
             abandon(now_us);
-        if (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count &&
-            now_us >= flying_bursts_.burst[keyed_].at_us)
-            transmit(flying_bursts_.burst[keyed_]);
+        while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count) {
+            const ports::RfBurst burst = flying_bursts_.burst[keyed_];
+            if (!burst.forced && !assessed_) {
+                if (now_us + kCcaLeadUs < burst.at_us) return;
+                if (!listen(burst)) continue;
+            }
+            if (now_us < burst.at_us) return;
+            // INFO: fc 14nov26 a pass stalled past the dead time listens again rather than key late
+            if (!burst.forced && !within_dead_time(assessment_, now_us) && !listen(burst)) continue;
+            transmit(burst);
+            return;
+        }
+    }
+
+    // INFO: fc 14nov26 virtual time stands still in a pass, so the nine reads are one instant
+    bool listen(const ports::RfBurst& burst) {
+        assessment_ =
+            assess(radio_.mode() == parts::RadioMode::Rx, [this] { return read_level(); }, clock_);
+        assessed_ = assessment_.clear;
+        if (assessed_) return true;
+        out_.push(busy_report(burst, assessment_, band_, frequency_hz_, clock_.microseconds()));
+        flying_bursts_.remove(keyed_);
+        return false;
     }
 
     void take_queued(uint64_t now_us) {
@@ -160,6 +194,7 @@ class Rf : public ports::Rf {
         armed_ = true;
         started_ = false;
         keyed_ = 0;
+        assessed_ = false;
         done_ = 0;
         keyed_at_us_ = 0;
     }
@@ -226,6 +261,7 @@ class Rf : public ports::Rf {
 
     void transmit(const ports::RfBurst& burst) {
         keyed_++;
+        assessed_ = false;
         tx_at_us_ = burst.at_us;
         staged_at_us_ = clock_.microseconds();
         (void)radio_.transmit(burst.chips, burst.bytes);
@@ -235,12 +271,16 @@ class Rf : public ports::Rf {
     // INFO: fc 15sep26 virtual time stands still in a pass, so the run of reads is the window
     int8_t sample_carrier() {
         if (radio_.mode() != parts::RadioMode::Rx) return carrier_.level_dbm;
+        carrier_.level_dbm = read_level();
+        carrier_.samples++;
+        return carrier_.level_dbm;
+    }
+
+    int8_t read_level() {
         int8_t window[timing::ChannelLevel::kSamples];
         for (uint8_t i = 0; i < timing::ChannelLevel::kSamples; i++)
             window[i] = radio_.instant_rssi_dbm();
-        carrier_.level_dbm = timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
-        carrier_.samples++;
-        return carrier_.level_dbm;
+        return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
     }
 
     void drain(uint64_t now_us) {
@@ -322,6 +362,8 @@ class Rf : public ports::Rf {
     bool queued_{false};
     bool started_{false};
     uint8_t keyed_{0};
+    bool assessed_{false};
+    Assessment assessment_{};
     uint8_t done_{0};
 };
 

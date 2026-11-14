@@ -1,0 +1,12 @@
+# The EN 300 220 clauses test/en300220/ reads, each by number and heading. scripts/check_en300220_clauses.py holds the suite to this list, and the list to the fetched standards' headings when they are present.
+EN 300 220-1 5.21.1 Description
+EN 300 220-1 5.21.2.2 Reference CCA limits
+EN 300 220-1 5.21.3.1 Reference limits for polite spectrum access timing parameters
+EN 300 220-1 5.21.3.2 Conformance
+EN 300 220-1 5.21.4.1 Description
+EN 300 220-2 4.2.4 Operating frequency bands and limits for all equipment
+EN 300 220-2 4.4.3.3 Limits
+EN 300 220-2 4.6.1.0 General
+EN 300 220-2 4.6.1.1 Adaptive Frequency Agility
+EN 300 220-2 4.6.2.3 Limits
+EN 300 220-2 4.6.3.2 Limits for polite spectrum access timing parameters

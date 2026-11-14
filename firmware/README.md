@@ -16,7 +16,7 @@ A service that more than one product runs lives in `products/common/`, in namesp
 
 Four versions move apart. [`VERSION`](VERSION) is the firmware version, one for every product: it moves with anything a product does, such as a page, an alarm or a power saving, and a `v<version>` tag releases every product at it (`.github/workflows/release.yml`). Each `products/<product>/VERSION` is a link to it, because Zephyr reads the version from the application's own directory.
 
-The other three are the radio protocols' versions, one per stack under `protocols/`: `protocols/adsl/version.h` for ADS-L, `protocols/adsb/version.h` for ADS-B and `protocols/alptas/version.h` for ALP-TAS, each a `kVersion` string beside the `kSpecification` it implements. A protocol version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. Each product lists the protocols it carries in `products/<product>/PROTOCOLS`, one stack name per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
+The other three are the radio protocols' versions, one per stack under `protocols/`: `protocols/adsl/version.h` for ADS-L, `protocols/adsb/version.h` for ADS-B and `protocols/alptas/version.h` for ALP-TAS, each a `kVersion` string beside the `kSpecification` it implements. Each stays at 0.1.0 until its protocol is ready for production, whatever changes before then. From then on a protocol version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. Each product lists the protocols it carries in `products/<product>/PROTOCOLS`, one stack name per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md` (`lib/radio_protocols.rb`). `protocols/README.md` says what hangs on them and which skyBlip files outside a stack still change what it puts on air.
 
 ## Before you ship a copy
 
@@ -64,6 +64,7 @@ A number carries its unit in its suffix, for the same reason a boolean carries i
 | `_c7`, `_c10` | ADS-B's 7-bit and 10-bit angles, 360 degrees over 128 and 1024 counts | `track_c7`, `heading_c10` |
 | `_cpr` | a CPR-encoded coordinate, a 17-bit fraction of its zone | `latitude_cpr` |
 | `_dbm`, `_mv`, `_mpa`, `_pa` | dBm, millivolts, millipascals, pascals | `rssi_dbm`, `battery_offset_mv`, `pressure_mpa` |
+| `_centi_dbm`, `_centi_db`, `_centi_dbd` | hundredths of a dBm, of a dB, of a dB over a half-wave dipole | `threshold_centi_dbm`, `receive_gain_centi_dbd` |
 | `_deg`, `_cdeg` | degrees, hundredths of a degree | `track_deg`, `track_cdeg` |
 | `_dps`, `_cdps` | degrees per second, hundredths of a degree per second | `turn_dps`, `turn_cdps` |
 | `_mg` | thousandths of a g | `lateral_mg` |

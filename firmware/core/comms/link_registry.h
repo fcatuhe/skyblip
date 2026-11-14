@@ -240,6 +240,9 @@ enum : uint32_t {
     kRxStatus = 65,
     kUplinkStale = 66,
     kTxGivenUp = 67,
+    kTxDeferred = 68,
+    kTxForced = 69,
+    kTxBusyMissed = 70,
 };
 }
 

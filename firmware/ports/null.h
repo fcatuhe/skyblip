@@ -85,6 +85,7 @@ class NullRf : public Rf {
     Status begin() override { return Status::Down; }
     Status arm(const RfPlan&) override { return Status::Down; }
     void abort() override {}
+    Status withdraw(uint64_t) override { return Status::Down; }
 };
 
 // INFO: fc 12nov26 a unit that is never activated: the FICR tag names it, and it holds no key

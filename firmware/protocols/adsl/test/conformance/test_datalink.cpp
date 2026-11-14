@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include "doctest/doctest.h"
+#include "protocols/adsl/media_access.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/test/conformance/reference.h"
@@ -61,10 +62,34 @@ TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the netwo
     CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);
 }
 
-// TODO: fc 18sep26 D.3 makes LBT a must, and it waits on a carrier-sense hold inside the slot map
-TEST_CASE("ADS-L.4.SRD860.D.3: a burst waits on a carrier sense, and forces after 3000 ms" *
-          doctest::skip()) {
-    FAIL(
-        "not implemented: no listen-before-talk, so neither the 3000 ms force nor the 2000 ms "
-        "silence after it");
+// The clause's two numbers, each read from the side a device could get wrong.
+TEST_CASE("ADS-L.4.SRD860.D.3: a busy channel defers, forces after 3000 ms, then 2000 ms quiet") {
+    adsl::ChannelAttempt attempt{};
+    attempt.at_us = 20000000;
+    attempt.first_us = attempt.at_us;
+    attempt.earliest_us = attempt.at_us;
+    attempt.last_us = attempt.at_us + 300000;
+    attempt.may_force = true;
+    const adsl::Deferral deferral{5000, 8, 3};
+
+    attempt.clear = true;
+    CHECK(adsl::media_access(attempt, deferral).access == adsl::Access::Transmit);
+    attempt.clear = false;
+    const adsl::AccessVerdict deferred = adsl::media_access(attempt, deferral);
+    CHECK(deferred.access == adsl::Access::Defer);
+    CHECK(deferred.at_us > attempt.at_us);
+
+    attempt.first_us = attempt.at_us - 2999000;
+    CHECK(adsl::media_access(attempt, deferral).access == adsl::Access::Defer);
+    attempt.first_us = attempt.at_us - 3000000;
+    const adsl::AccessVerdict forced = adsl::media_access(attempt, deferral);
+    CHECK(forced.access == adsl::Access::Force);
+
+    adsl::ChannelAttempt after = attempt;
+    after.clear = true;
+    after.forced_end_us = forced.at_us + 5000;
+    after.at_us = forced.at_us + 5000 + 1999000;
+    CHECK(adsl::media_access(after, deferral).access == adsl::Access::Silent);
+    after.at_us = forced.at_us + 5000 + 2000000;
+    CHECK(adsl::media_access(after, deferral).access == adsl::Access::Transmit);
 }

@@ -35,7 +35,8 @@ TEST_CASE("channel: one loud sample barely moves the average, a site full of the
 
 // The chip has no averaging block and no non-LoRa activity mode, so a level is a run of reads.
 TEST_CASE("channel: one level is a window of readings, not the instant one landed on") {
-    CHECK(ChannelLevel::kWindowUs == 160);
+    CHECK(ChannelLevel::kWindowUs == PoliteAccess::kCcaWindowUs);
+    CHECK(ChannelLevel::kWindowUs >= en300220::kCcaIntervalFloorUs);
     CHECK(ChannelLevel::kSamples >= 2);
     CHECK(ChannelLevel::kSampleSpacingUs * (ChannelLevel::kSamples - 1) >= ChannelLevel::kWindowUs);
     CHECK(ChannelLevel::kSamples <= ChannelLevel::kMaxSamples);

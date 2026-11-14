@@ -81,13 +81,13 @@ TEST_CASE("diagnostics: a link too narrow for one field is refused, not answered
 }
 
 // The radio group, alone in the radio reply and in its frame of the whole dump.
-TEST_CASE("diagnostics: the widest radio frame is 141 bytes, one frame on an iPhone's link") {
+TEST_CASE("diagnostics: the widest radio frame is 162 bytes, one frame on an iPhone's link") {
     for (link::Command command : {link::Command::Diagnostics, link::Command::Radio}) {
         DiagnosticsReport report(widest_device(), command, DiagnosticsReport::Group::Radio);
         uint8_t buffer[DiagnosticsReport::kFrameBytes];
         // A 2-byte map head past 23 entries + four 2-byte heads + noise 3 + duty 4 + twelve
-        // counters of 6 + two of 4 + 2 + six of 7, four of them keyed past 23.
-        CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 141);
+        // counters of 6 + two of 4 + 2 + nine of 7, seven of them keyed past 23.
+        CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 162);
         CHECK(report.exhausted());
     }
 }

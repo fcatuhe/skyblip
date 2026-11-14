@@ -46,14 +46,17 @@ struct RfPlan {
     int16_t frequency_correction_e1_ppm{0};
     const uint8_t* tx{nullptr};
     uint8_t tx_bytes{0};
-    // INFO: fc 15sep26 the burst keys here, full stop: nothing the receiver hears moves it
+    // INFO: fc 14nov26 the burst keys here on a channel assessed clear, else it is reported Busy
     uint64_t tx_at_us{0};
+    // INFO: fc 14nov26 ADS-L §D.3's forced transmission: keyed irrespective of carrier detect
+    bool tx_forced{false};
 };
 
 struct RfBurst {
     const uint8_t* chips{nullptr};
     uint8_t bytes{0};
     uint64_t at_us{0};
+    bool forced{false};
 };
 
 struct RfBursts {
@@ -71,10 +74,18 @@ struct RfBursts {
         return at_us > lead_us ? at_us - lead_us : 0;
     }
 
-    bool holds(uint64_t at_us) const {
+    int index_of(uint64_t at_us) const {
         for (uint8_t i = 0; i < count; i++)
-            if (burst[i].at_us == at_us) return true;
-        return false;
+            if (burst[i].at_us == at_us) return i;
+        return -1;
+    }
+
+    bool holds(uint64_t at_us) const { return index_of(at_us) >= 0; }
+
+    void remove(uint8_t index) {
+        if (index >= count) return;
+        for (uint8_t i = index; i + 1 < count; i++) burst[i] = burst[i + 1];
+        count--;
     }
 
     bool add(const RfBurst& added) {
@@ -88,7 +99,8 @@ struct RfBursts {
 
     static RfBursts of(const RfPlan& plan) {
         RfBursts bursts{};
-        if (plan.tx != nullptr) bursts.add(RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us});
+        if (plan.tx != nullptr)
+            bursts.add(RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced});
         return bursts;
     }
 };
@@ -167,6 +179,8 @@ class Rf {
     // INFO: fc 27sep26 the join, queue and refusal rules are core/timing/README.md's
     virtual Status arm(const RfPlan& plan) = 0;
     virtual void abort() = 0;
+    // INFO: fc 14nov26 drops a burst not yet keyed, from the flying or the queued dwell
+    virtual Status withdraw(uint64_t tx_at_us) = 0;
 
     virtual RfCarrier carrier() const { return RfCarrier{}; }
 

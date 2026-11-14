@@ -52,6 +52,11 @@ struct Armings {
             return refuse ? Status::OutOfRange : Status::Ok;
         }
         void abort() override { aborts++; }
+        Status withdraw(uint64_t tx_at_us) override {
+            withdrawn++;
+            withdrawn_at_us = tx_at_us;
+            return Status::Ok;
+        }
         static constexpr uint32_t kKept = 32;
         platform::host::Clock* clock{nullptr};
         ports::RfPlan last{};
@@ -61,6 +66,8 @@ struct Armings {
         uint32_t arms{0};
         uint32_t with_tx{0};
         uint32_t aborts{0};
+        uint32_t withdrawn{0};
+        uint64_t withdrawn_at_us{0};
         bool refuse{false};
     } rf{};
     bus::Bus bus{};
