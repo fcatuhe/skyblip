@@ -57,4 +57,38 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
     get admin_mission_control_jobs_path
     assert_response :success
   end
+
+  # A window opened with noopener leaves the app's browsing context group, so the next link would open yet another window.
+  test "the jobs dashboard opens in its own window, which every link reuses" do
+    sign_in_as users(:francois)
+
+    get admin_users_path
+
+    assert_select "a[href^=?]", admin_mission_control_jobs_path, minimum: 1
+    assert_select "a[href^=?]:not([target=mission_control])", admin_mission_control_jobs_path, count: 0
+    assert_select "a[href^=?][rel~=noopener]", admin_mission_control_jobs_path, count: 0
+  end
+
+  test "the jobs dashboard leaves the site its French, even as the first page to translate" do
+    sign_in_as users(:francois)
+    loaded_backend, I18n.backend = I18n.backend, I18n::Backend::Simple.new
+
+    get admin_mission_control_jobs_path
+    assert_response :success
+
+    reset!
+    get briefing_root_path, headers: { "Accept-Language" => "fr-FR" }
+    assert_select "html[lang=fr]"
+    assert_select "h1", text: "Votre skyBlip"
+  ensure
+    I18n.backend = loaded_backend
+  end
+
+  test "the admin nav leads to every page of the admin area" do
+    sign_in_as users(:francois)
+
+    get admin_insights_path
+
+    assert_equal %w[Analytics Insights Errors Events Users Units Agents Jobs], css_select(".admin-nav li a").map { it.text.strip }
+  end
 end

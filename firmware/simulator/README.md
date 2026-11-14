@@ -24,7 +24,7 @@ Each aircraft is placed north and east of where own-ship was when it was added, 
 
 The paired Go is a Go+: its host platform fits a buzzer and a motor (`platform::host::Platform::kFullyFitted`). Once it has a fix and reads Bravo `Live`, its claims take the alarm, and Bravo keeps its buzzer and motor silent while it holds such a claim from its connected Go (#179, `products/skyblip_bravo/README.md`). `paired.json` flies a converging ADS-B aircraft that both units hear: they both sound for at most one claim period after the Go reads Bravo `Live`, then only the Go+ sounds. A second ADS-B aircraft reaches advisory after that, and only the Go+ sounds for it. `paired_link_lost.json` keeps an ADS-B aircraft in advisory, so Bravo sounds again from its own settings on the pass the link drops, and keeps silent once the link is back and the next claim arrives. A second ADS-B aircraft reaches advisory after the link is back, and only the Go+ sounds for it.
 
-From boot until Bravo's first `health` with UTC, the Go reads Bravo `Waiting` and its radar says `BRAVO WAITING`, with no `BRAVO LOST` tone (`../products/skyblip_go/pages/README.md`). `paired_bravo_without_fix.json` takes Bravo's fix alone. The AG3335 model still sends the time and date without a fix, so Bravo keeps UTC and the Go keeps reading it `Live` and showing its targets under `B`, with no `BRAVO WAITING` or `BRAVO LOST`. Bravo places its traffic against the position in the Go's claims, and its own phone gets no `$PFLAA` and a `$PFLAU` with GPS 0.
+From boot until Bravo's first `health` with UTC, the Go reads Bravo `Waiting` and its radar says `WAIT FOR BRAVO`, with no `NO BRAVO` tone (`../products/skyblip_go/pages/README.md`). `paired_bravo_without_fix.json` takes Bravo's fix alone. The AG3335 model still sends the time and date without a fix, so Bravo keeps UTC and the Go keeps reading it `Live` and showing its targets under `B`, with no `WAIT FOR BRAVO` or `NO BRAVO`. Bravo places its traffic against the position in the Go's claims, and its own phone gets no `$PFLAA` and a `$PFLAU` with GPS 0.
 
 Bravo's phone, when a scenario connects one, takes the session after the Go's. `BravoAboard::set_link(false)` drops the connection at once, as a supervision timeout ends it, and no reconnect comes up until `set_link(true)`.
 
@@ -40,15 +40,15 @@ An aircraft with ADS-B Out sends:
 | airborne velocity, TC 19 subtype 1 | 2 Hz | none | none |
 | identification, with its emitter category | 0.2 Hz | 0.2 Hz | 0.1 Hz |
 
-The rates are The 1090MHz Riddle (Junzi Sun, 2nd edition), Table 1.4, for ADS-B version 2. The capability field is 5 airborne and 4 on the ground, the values `core/protocol/adsb_assembly.cpp` reads as flight state. Each aircraft picks its phase in the period from its address, and a velocity message falls half a period after a position.
+The rates are The 1090MHz Riddle (Junzi Sun, 2nd edition), Table 1.4, for ADS-B version 2. The capability field is 5 airborne and 4 on the ground, the values `protocols/adsb/assembly.cpp` reads as on the ground or airborne. Each aircraft picks its phase in the period from its address, and a velocity message falls half a period after a position.
 
-Airborne, the position carries the pressure altitude the world's airmass gives that height, and the velocity message carries the GNSS-baro difference, so a receiver gets the GNSS height (HAE) too. An aircraft with `pressure_only` leaves that difference at 0, which the decoder reads as none sent (`core/protocol/README.md`, after RTCA 1090-WP-14-09R1, Figures A-6 and A-7). A surface position carries no altitude.
+Airborne, the position carries the pressure altitude the world's airmass gives that height, and the velocity message carries the GNSS-baro difference, so a receiver gets the GNSS height (HAE) too. An aircraft with `pressure_only` leaves that difference at 0, which the decoder reads as none sent (`protocols/adsb/README.md`, after RTCA 1090-WP-14-09R1, Figures A-6 and A-7). A surface position carries no altitude.
 
 The world does not model:
 
 - **path loss at 1090 MHz:** every squitter lands at -70 dBm, the level the host suite hears at;
 - **garbling:** two squitters that overlap are both heard;
-- **DF18:** Bravo receives DF17 only (`core/protocol/README.md`).
+- **DF18:** Bravo receives DF17 only (`protocols/adsb/README.md`).
 - **aircraft status, target state and operational status,** TC 28, 29 and 31: none is sent, so Bravo never learns an aircraft's ADS-B version or GVA.
 
 ## Scenarios
@@ -59,10 +59,13 @@ A scenario in `../scenarios` is one JSON file, read by `world/scenario.cpp`, tha
 - An aircraft's `"system"` is `adsl_direct`, `alptas`, `adsl_uplink`, or `adsb` for ADS-B Out alone.
 - `"adsb": 1` adds ADS-B Out to an 868 MHz system. Such an aircraft sends its ICAO address under table 5 on ADS-L too, as ADS-L F.2.3 asks of a unit beside a transponder.
 - `"on_ground": 1` sends surface positions, and `"pressure_only": 1` sends no GNSS-baro difference.
-- `"category"` is the emitter category, `A0` to `C7`, in `core/protocol/README.md`'s shorthand: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
+- `"category"` is the emitter category, `A0` to `C7`, in the shorthand `core/protocol/README.md` uses under The category ADS-B sends: the letter is the identification message's type code, A for 4, B for 3 and C for 2, and the digit is the category. The type code and category pairs are The 1090MHz Riddle's wake vortex table, which prints no letters. Any other value refuses the file.
 - The event `"companion": 1` connects a phone, and `0` drops it. Bravo sends its FLARM NMEA only to a connected phone.
 - In a paired file, an event with `"unit": "bravo"` acts on Bravo instead of the Go. Bravo aboard takes `fix` and `companion`. The event `"bravo_link": 0` loses the link between them, and `1` brings it back. A file that uses either outside a pair, or gives Bravo another event, is refused.
 
 ## The browser
 
 `frontends/browser.cpp` builds one WASM module with a Go, a Bravo and a pair. Loading a scenario picks the unit it names, and every export that the units share reads that one. The Go's glass, its 868 MHz tape and its radio counters read the Go alone or the paired Go. `simulator_product`, `simulator_nmea_count`, `simulator_nmea_line`, `simulator_adsb_heard`, `simulator_adsb_aircraft` and `simulator_bravo_lamp` give the workbench what Bravo has instead of a glass: its lamp, and the stream a phone EFB reads. Paired, the page shows the Go's glass with Bravo's lamp and stream beside it, `simulator_bravo_state` says what the Go makes of Bravo, `simulator_bravo_silent` whether Bravo keeps silent for the Go+, and `simulator_set_bravo_link` loses the link or brings it back. An aircraft added while a pair flies may carry ADS-B Out alone, heard by Bravo only. `scripts/check_simulator_exports.py` checks that `web/embed.js` binds only exported names.
+
+
+`simulator_draw_prompt` is the one export no unit runs: it draws the Go's confirm page for the prompt a phone raised, so the briefing shows the question on its page as the glass shows it, with no copy of the page in HTML. `world/prompt_glass.cpp` names each prompt the way the briefing names its task: `set`, `dfu`, `recovery`, `power_off`, `erase_log`, `gnss_cold_start`, `register` or `capture`. A `dfu` reads the version the phone sends and words it with `comms::format_dfu_detail`, the function the Go words its own prompt with. A `set` reads the unit's settings and the frame the phone sends, both as link-registry JSON, applies them with `go::apply_settings` and lists the changes with `describe_settings_changes`, as the Go does on staging the write. Every other prompt takes the Go's own title and detail. `embed.js` paints it with `paintPrompt`, which returns what the page says in reading order, title, detail, how to cancel and the key last, for the canvas's label, since a screen reader cannot read pixels. It returns null when the prompt is not one the Go raises.

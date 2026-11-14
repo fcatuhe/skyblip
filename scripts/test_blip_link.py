@@ -18,6 +18,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import blip  # noqa: E402
 import blip_capture  # noqa: E402
 import blip_frames as frames  # noqa: E402
+import blip_protocols  # noqa: E402
 import blip_records as records  # noqa: E402
 
 
@@ -253,6 +254,51 @@ class Capture(unittest.TestCase):
     def test_the_profiles_offered_are_the_registry_s(self):
         self.assertEqual(blip_capture.PROFILES, ("full", "power_run", "flight_run", "stop"))
 
+
+GO_PROTOCOLS = {"command": "protocols", "adsl_version": "0.1.0", "alptas_version": "0.2.0"}
+
+
+def protocol_lines(*answers):
+    unit = FakeBravo(*answers)
+    frame = asyncio.run(blip_protocols.answer(unit, 1.0))
+    return unit.sent, blip_protocols.lines(frame, blip.refuse_if_nacked)
+
+
+class Protocols(unittest.TestCase):
+    def test_a_go_names_each_stack_and_its_version(self):
+        sent, lines = protocol_lines(GO_PROTOCOLS)
+        self.assertEqual(sent, [{"command": "protocols"}])
+        self.assertEqual(lines, ["ADS-L 0.1.0", "ALP-TAS 0.2.0"])
+
+    def test_a_status_pushed_before_the_answer_is_passed_over(self):
+        bravo = {"command": "protocols", "adsb_version": "0.1.0"}
+        self.assertEqual(protocol_lines(PUSHED, bravo)[1], ["ADS-B 0.1.0"])
+
+    def test_an_answer_naming_no_stack_says_so(self):
+        self.assertEqual(protocol_lines({"command": "protocols"})[1], [blip_protocols.NONE_NAMED])
+
+    def test_a_version_that_is_not_text_is_passed_over(self):
+        unit = FakeBravo()
+        unit.replies.put_nowait((0.0, frames.encode({0: 36, 2: 1, 3: "0.2.0"})))
+        frame = asyncio.run(blip_protocols.answer(unit, 1.0))
+        self.assertEqual(blip_protocols.lines(frame, blip.refuse_if_nacked), ["ALP-TAS 0.2.0"])
+
+    def test_firmware_before_the_frame_says_it_does_not_report_them(self):
+        unknown = {"command": "acknowledgement", "acknowledge": False, "reason": "unknown_command"}
+        with self.assertRaises(SystemExit) as caught:
+            protocol_lines(unknown)
+        self.assertEqual(str(caught.exception), blip_protocols.TOO_OLD)
+
+    def test_no_answer_in_time_says_so(self):
+        with self.assertRaises(SystemExit) as caught:
+            asyncio.run(blip_protocols.answer(FakeBravo(), 0.01))
+        self.assertIn("no answer from the unit", str(caught.exception))
+
+    def test_the_stacks_named_are_the_registry_s(self):
+        protocols = frames.frame_named("protocols", frames.REGISTRY)
+        stems = [key["name"][:-len("_version")] for key in protocols["keys"]
+                 if key["name"].endswith("_version")]
+        self.assertEqual(stems, list(blip_protocols.NAMES))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

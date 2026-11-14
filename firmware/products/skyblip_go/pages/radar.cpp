@@ -2,9 +2,9 @@
 
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
 #include "products/skyblip_go/pages/radar_traffic.h"
+#include "protocols/common/geometry.h"
 #include "ui/widgets/skyship.h"
 
 namespace skyblip::go {
@@ -33,6 +33,7 @@ constexpr int kBannerScale = 2;
 constexpr int kOwnshipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
 constexpr int kNoteScale = 1;
 constexpr int kNoteGap = 5;
+constexpr int kBannerLinePitch = kCharacterHeight * kBannerScale + 4;
 
 struct Layout {
     int outer_radius;
@@ -62,7 +63,7 @@ constexpr const Layout& layout_of(const RadarSnapshot& snapshot) {
 int half_chord_in_half_pixels(int radius, int row) {
     const int32_t squared = 4 * radius * radius - (2 * row + 1) * (2 * row + 1);
     if (squared < 0) return -1;
-    int root = square_root<int32_t>(squared);
+    int root = wire::square_root<int32_t>(squared);
     while (root * root > squared) root--;
     return (root - 1) / 2;
 }
@@ -189,27 +190,31 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     return out;
 }
 
+// INFO: fc 14nov26 a banner too long for a line goes on at its size, a second message goes small
 struct RingWords {
     const char* banner{nullptr};
     const char* note{nullptr};
+    bool continued{false};
 };
 
 // INFO: fc 12nov26 the banner and the note are the first two words standing, in this order
 RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     const char* words[5] = {};
     int count = 0;
+    bool continued = false;
     if (const char* cell = cell_word(snapshot, cell_buffer)) words[count++] = cell;
     if (!snapshot.fix_valid) words[count++] = "NO FIX";
     if (const char* loss = bravo_loss_word(snapshot.bravo)) {
-        words[count++] = "BRAVO LOST";
+        words[count++] = "NO BRAVO";
         if (count == 1) words[count++] = loss;
     } else if (snapshot.bravo == comms::BravoState::Waiting) {
-        // INFO: fc 12nov26 BRAVO WAITING overruns the ALL ring at banner height, so a banner splits
+        // INFO: fc 12nov26 WAIT FOR BRAVO overruns the ALL ring as a banner, so the banner splits
         if (count == 0) {
+            words[count++] = "WAIT FOR";
             words[count++] = "BRAVO";
-            words[count++] = "WAITING";
+            continued = true;
         } else {
-            words[count++] = "BRAVO WAITING";
+            words[count++] = "WAIT FOR BRAVO";
         }
     }
     if (snapshot.fix_valid) {
@@ -217,7 +222,7 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     } else {
         words[count++] = gnss::stage_name(snapshot.stage);
     }
-    return {words[0], words[1]};
+    return {words[0], words[1], continued};
 }
 
 Box note_box(const char* note, int y) {
@@ -291,8 +296,8 @@ void formation_square(ui::Canvas& canvas) {
     canvas.vertical_line(x1, y0 + corner + 1, y1 - y0 - 2 * corner - 1, true);
     for (int step = 0; step <= 90; step++) {
         const int16_t angle = angle16_of_degrees(step);
-        const int delta_x = corner - (corner * cosine(angle)) / kTrigOne,
-                  delta_y = corner - (corner * sine(angle)) / kTrigOne;
+        const int delta_x = corner - (corner * wire::cosine(angle)) / wire::kTrigOne,
+                  delta_y = corner - (corner * wire::sine(angle)) / wire::kTrigOne;
         canvas.set_pixel(x0 + delta_x, y0 + delta_y, true);
         canvas.set_pixel(x1 - delta_x, y0 + delta_y, true);
         canvas.set_pixel(x0 + delta_x, y1 - delta_y, true);
@@ -430,11 +435,17 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     const RingWords ring = ring_words(snapshot, cell_buffer);
     const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
     const int note_y = layout.note_y - layout.banner_y + banner_y;
-    if (ring.banner) {
+    if (ring.continued) {
+        const int top = banner_y - kBannerLinePitch / 2;
+        state_banner(canvas, ring.banner, top);
+        readings[reading_count++] = banner_box(ring.banner, top);
+        state_banner(canvas, ring.note, top + kBannerLinePitch);
+        readings[reading_count++] = banner_box(ring.note, top + kBannerLinePitch);
+    } else if (ring.banner) {
         state_banner(canvas, ring.banner, banner_y);
         readings[reading_count++] = banner_box(ring.banner, banner_y);
     }
-    if (ring.note) {
+    if (ring.note && !ring.continued) {
         state_note(canvas, ring.note, note_y);
         readings[reading_count++] = note_box(ring.note, note_y);
     }

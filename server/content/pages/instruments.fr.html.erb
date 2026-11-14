@@ -12,8 +12,8 @@ updated_on: "2026-11-09"
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Six cadrans, et ce que la cellule a encaissé.</h1>
   <p class="lede">
-    Les mesures du GPS et du baromètre en six cadrans, pour le plaisir, et sur
-    le Go+ un g-mètre.
+    Six cadrans affichent les mesures du GPS et du baromètre, pour le plaisir.
+    Le Go+ a aussi un g-mètre.
   </p>
 </section>
 
@@ -23,21 +23,21 @@ updated_on: "2026-11-09"
       <h3 id="six-pack">Six cadrans, et <span class="highlight">ce qu&rsquo;il reste dans la batterie</span>.</h3>
       <p>
         Vitesse sol, horizon, altimètre, virage, route, vario&nbsp;: une façon
-        ludique d&rsquo;afficher les mesures du GPS et du baromètre. Au-dessus du cadran central, la batterie en pourcentage&nbsp;: combien de
-        vol il reste dans l&rsquo;appareil est la seule chose que les cinq autres
-        ne peuvent pas dire. Le temps depuis le décollage, pour le carnet, est
-        sur le radar.
+        ludique d&rsquo;afficher les mesures du GPS et du baromètre. Au-dessus du cadran central, le pourcentage de batterie indique le temps de
+        vol restant à l&rsquo;appareil. Les cinq autres ne peuvent pas le
+        dire. Le temps écoulé depuis le décollage est sur le radar, pour le
+        carnet de vol.
       </p>
       <p>
-        Ce ne sont pas des instruments de vol. L&rsquo;horizon s&rsquo;incline
-        de ce qu&rsquo;un virage symétrique demanderait à cette vitesse, parce
-        que rien à bord ne mesure une inclinaison. Rien ici n&rsquo;est certifié, et ce n&rsquo;est pas un horizon
+        Ce ne sont pas des instruments de vol. L&rsquo;horizon affiche
+        l&rsquo;inclinaison nécessaire à un virage symétrique à cette vitesse. Aucun
+        capteur de l&rsquo;appareil ne mesure l&rsquo;inclinaison. Rien ici n&rsquo;est certifié. Cet affichage n&rsquo;est pas un horizon
         artificiel pour voler en nuage.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "sixpack.png", alt: "La page six-pack : vitesse sol, horizon artificiel avec le niveau de batterie au-dessus, altimètre, coordinateur de virage avec sa bille, cap et vario" %>
-      <figcaption>Six-pack</figcaption>
+      <%= screen_image_tag "sixpack.png", alt: "La page à six cadrans : vitesse sol, horizon artificiel avec le pourcentage de batterie au-dessus, altimètre, coordinateur de virage avec sa bille, rose indiquant la route et vario" %>
+      <figcaption>Six cadrans</figcaption>
     </figure>
   </div>
 
@@ -45,20 +45,20 @@ updated_on: "2026-11-09"
     <div>
       <h3 id="g-meter">Ce que la cellule <span class="highlight">a encaissé</span>.</h3>
       <p>
-        La quatrième page lit l&rsquo;accéléromètre sans rien en déduire. Le
-        marqueur dit où en est l&rsquo;aile maintenant, le cadre autour dit où
-        elle est passée&nbsp;: le plus et le moins encaissés, et jusqu&rsquo;où
-        elle a été jetée de chaque côté.
+        La quatrième page affiche les mesures de l&rsquo;accéléromètre sans les interpréter. Le
+        repère montre la charge que subit l&rsquo;aile à cet instant. Le cadre indique
+        les charges maximale et minimale du vol, ainsi que les charges maximales
+        vers la gauche et la droite.
       </p>
       <p>
-        Les extrêmes appartiennent à ce vol et repartent de zéro quand le
-        chronomètre démarre. L&rsquo;axe avant-arrière a sa propre bande, parce
+        Les valeurs extrêmes sont celles du vol en cours. Elles sont remises à zéro quand le
+        chronomètre de vol démarre. Les charges vers l&rsquo;avant et l&rsquo;arrière ont leur propre bande, parce
         qu&rsquo;un freinage ou un atterrissage dur n&rsquo;est pas une charge
-        d&rsquo;aile.
+        sur l&rsquo;aile.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "gmeter.png", alt: "La page G-mètre : la charge verticale et latérale en marqueur dans un champ, avec le cadre des extrêmes de ce vol autour, la bande avant-arrière à côté et trois lignes de chiffres en dixièmes de g" %>
+      <%= screen_image_tag "gmeter.png", alt: "La page G-mètre : un repère indique les charges normale (haut-bas) et latérale (gauche-droite) sur un graphique, avec un cadre autour pour les extrêmes du vol, une bande avant-arrière à côté et trois lignes de chiffres en dixièmes de g" %>
       <figcaption>G-mètre</figcaption>
     </figure>
   </div>

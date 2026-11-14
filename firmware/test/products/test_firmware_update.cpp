@@ -9,6 +9,7 @@
 #include "products/skyblip_go/pages/recovery.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "runtime/tasks.h"
+#include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"
@@ -16,22 +17,6 @@
 using namespace skyblip;
 
 namespace {
-
-constexpr ports::ImageVersion kRunning{0, 1, 0, 12};
-constexpr ports::ImageVersion kStaged{0, 2, 0, 15};
-
-void pass(Rig& rig, uint32_t& now_ms) {
-    now_ms += 50;
-    rig.run(now_ms, now_ms);
-}
-
-void open_upload_window(Rig& rig, uint32_t& now_ms) {
-    on_ground(rig, now_ms);
-    rig.send("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}");
-    rig.run(now_ms, now_ms + 200);
-    now_ms += 200;
-    config(rig).confirm();
-}
 
 void climb_until_the_link_sees_it(Rig& rig, uint32_t& now_ms) {
     for (int second = 0; second < 20; second++) {
@@ -48,25 +33,6 @@ void climb_until_the_link_sees_it(Rig& rig, uint32_t& now_ms) {
     }
 }
 
-void stage_versions(Rig& rig) {
-    rig.platform.dfu().running_version_valid = true;
-    rig.platform.dfu().running_image_version = kRunning;
-    rig.platform.dfu().staged_version_valid = true;
-    rig.platform.dfu().staged_image_version = kStaged;
-}
-
-void land_upload(Rig& rig, uint32_t& now_ms) {
-    rig.platform.dfu().finished_upload = true;
-    pass(rig, now_ms);
-}
-
-void install_and_swap(Rig& rig) {
-    uint32_t now_ms = 0;
-    open_upload_window(rig, now_ms);
-    land_upload(rig, now_ms);
-    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 500);
-}
-
 // The unsolicited frame a phone gets on connecting, wherever the status push landed.
 std::string update_frame(Rig& rig) {
     for (const auto& frame : rig.platform.link().sent) {
@@ -81,20 +47,6 @@ bool attempt_recorded(Rig& rig) {
     size_t count = 0;
     return rig.platform.key_value().read("update", blob, sizeof(blob), count) == Status::Ok;
 }
-
-// The device after the bootloader has run: same flash, a fresh boot, and what slot 1 kept.
-struct Rebooted {
-    Rig rig;
-    Rebooted(Rig& before, ports::ImageVersion running, bool confirmed,
-             std::optional<ports::ImageVersion> slot1 = std::nullopt) {
-        rig.platform.key_value() = before.platform.key_value();
-        rig.platform.dfu().running_version_valid = true;
-        rig.platform.dfu().running_image_version = running;
-        rig.platform.dfu().image_confirmed = confirmed;
-        rig.platform.dfu().staged_version_valid = slot1.has_value();
-        if (slot1) rig.platform.dfu().staged_image_version = *slot1;
-    }
-};
 
 const go::SelfTestPart& storage_row(Rig& rig) {
     for (int i = 0; i < go::kSelfTestPartCount; i++)
@@ -144,8 +96,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     open_upload_window(rig, now_ms);
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                   go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
+                        go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 0);
 
     land_upload(rig, now_ms);
@@ -163,8 +115,8 @@ TEST_CASE("product: an upload that lands parks the device and paints the glass b
     CHECK_FALSE(attempt_recorded(rig));
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
-    CHECK(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                   go::kInstallingTitleY, go::kInstallingTitle, 2));
+    CHECK(reads_heading(rig.platform.chips().epd.framebuffer(), go::kInstallingTitle,
+                        go::Heading::Interrupt));
     CHECK(rig.platform.dfu().triggered == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
     CHECK(attempt_recorded(rig));
@@ -198,8 +150,8 @@ TEST_CASE("product: with no watchdog running a recovery paints the bootloader pa
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryRunning, 1));
+    CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
+    CHECK_FALSE(has_button_key(glass));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK_FALSE(rig.product.ready_to_power_off());
 }
@@ -223,9 +175,8 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
 
     rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
     const ui::Canvas& glass = rig.platform.chips().epd.framebuffer();
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::kInstallingTitleY, go::kRecoveryTitle, 2));
-    CHECK(reads_at(glass, go::kInstallingLeftX, go::installing_body_y(0), go::kRecoveryAwaitsPress,
-                   1));
+    CHECK(reads_heading(glass, go::kRecoveryTitle, go::Heading::Interrupt));
+    CHECK(reads_button_key(glass, go::kRecoveryStartVerb));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK(rig.product.ready_to_power_off());
     CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
@@ -271,8 +222,8 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     now_ms += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());
     CHECK(rig.last_on(events::Endpoint::Config).find("cancelled") != std::string::npos);
-    CHECK_FALSE(reads_at(rig.platform.chips().epd.framebuffer(), go::kInstallingLeftX,
-                         go::kInstallingTitleY, go::kReceivingTitle, 2));
+    CHECK_FALSE(reads_heading(rig.platform.chips().epd.framebuffer(), go::kReceivingTitle,
+                              go::Heading::Interrupt));
 
     land_upload(rig, now_ms);
     rig.run(now_ms, now_ms + 200);

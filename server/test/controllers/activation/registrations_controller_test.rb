@@ -142,4 +142,17 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :too_many_requests
     assert_equal({ "error" => "network_cap" }, response.parsed_body)
   end
+
+  # A pilot stuck at activation is answered from these, beside what the page showed them.
+  test "a new unit is an event with its serial and device, and a refusal is one with its reason" do
+    assert_event_reported "unit.enrolled", payload: { serial: 3, device: "go-000003" } do
+      assert_event_reported "unit_key.bound", payload: { device: "go-000003", status: "active", renewed: false } do
+        post activation_registrations_path, params: signed_registration(@challenge), as: :json
+      end
+    end
+
+    assert_event_reported "activation.refused", payload: { reason: :expired, step: "registration" } do
+      post activation_registrations_path, params: signed_registration(@challenge), as: :json
+    end
+  end
 end

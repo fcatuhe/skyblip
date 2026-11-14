@@ -1,0 +1,193 @@
+browser.opened:
+  group: Browser
+  from: browser
+  keys: [bluetooth, standalone, online, storage, mobile, browser_name, browser_major, os_name, language]
+  says: A page of the briefing app loaded, with what the browser can do there, whether it has Web Bluetooth, runs as the installed app, is online and keeps site data, and which browser, version, system and language it is.
+  answers: How many pilots reach the app on a browser that cannot reach a device at all, such as Safari on an iPhone, and on which browsers the app runs.
+browser.viewed:
+  group: Browser
+  from: browser
+  keys: [navigation, load_ms]
+  says: A page of the briefing app was shown, by a load, a Turbo visit or a restoration, with how long it took.
+  answers: Where pilots go in the app, in which order, and which pages are slow.
+browser.clicked:
+  group: Browser
+  from: browser
+  keys: [control]
+  says: A button, link or summary was pressed, named by its Stimulus action, its id or the path it leads to, never by its words.
+  answers: Which controls pilots use, which they press again and again, and what they pressed just before something went wrong.
+browser.failed:
+  group: Errors
+  from: browser
+  keys: [kind, error, message, file, line, column, controller, frames]
+  says: A script error, an unhandled rejection or an error Stimulus caught in a controller, on any page of the site, with its class, message, file, line and first frames, once per page view and kind of failure.
+  answers: Which scripts break in which browsers, the browser half of the errors an error tracker would hold.
+bluetooth.chooser_closed:
+  group: Bluetooth
+  from: browser
+  keys: [filter, error, detail]
+  says: The browser's device chooser closed with no device picked, `filter` `new` for Connect a device, `activation` for a unit to activate and `named` for a device the app already knows, with the browser's message, which tells a pilot who cancelled from a Bluetooth adapter that is off.
+  answers: How often a pilot opens the chooser and does not find the device, the first sign of a unit asleep, out of range, held by another phone, or of Bluetooth turned off.
+bluetooth.chooser_failed:
+  group: Bluetooth
+  from: browser
+  keys: [filter, error, detail]
+  says: The browser refused to open the device chooser, with the error's name and message, such as a permission policy or a missing user gesture.
+  answers: Which browsers cannot even ask for a device, and why.
+device.connected:
+  group: Devices
+  from: browser
+  keys: [connect_ms, returned]
+  says: The app linked to a device and proved its browser, with how long it took, and `returned` when it was the device coming back after an install restarted it.
+  answers: How many devices connect, how long it takes, and how often a device comes back after an install.
+device.disconnected:
+  group: Devices
+  from: browser
+  keys: [phase, expected, linked_ms]
+  says: The link to a device closed, in which phase, whether the app expected it, as for an install or a recovery, and how long the link lasted.
+  answers: How often links drop in the middle of something, which is where Bluetooth hurts pilots most.
+device.read:
+  group: Devices
+  from: browser
+  keys: [product, running, track, image, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
+  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
+  answers: Which firmware the fleet runs, how many units fell back on their settings or hold a reverted image, and what a unit was like when its pilot asked for help.
+device.noticed:
+  group: Devices
+  from: browser
+  keys: [key, during, detail, phase, task]
+  says: The app showed the pilot a notice about a device, the refusal of the device or the server, a Bluetooth error, or a result, by the key `config/locales/briefing.*.yml` words it with, the task it came during, and for a failure the browser's message as `detail`.
+  answers: What the pilot read on the screen, every refusal and failure the app words, and how often each one happens, the list to work down to keep pilots from being stranded.
+device.task_started:
+  group: Devices
+  from: browser
+  keys: [task, version, full, advice, upgrade]
+  says: The app asked a device to do something that needs its approval, an install, a recovery, a settings save or a capture, with for an install the version, whether the file is the full image, the image the device needs and whether it is newer.
+  answers: How often pilots install, save settings or arm a capture, and with which files.
+device.task_ended:
+  group: Devices
+  from: browser
+  keys: [task, outcome, lasted_ms, confirmed, sent_bytes, total_bytes]
+  says: A task ended, with its outcome, `granted` or the notice that ended it, how long it took, whether the pilot was asked on the glass, and for an upload the bytes sent of the total.
+  answers: Where installs and saves fail, how far an upload got before it stopped and how long pilots wait.
+device.install_reported:
+  group: Devices
+  from: browser
+  keys: [cause, product, running, tried, image, from, to, check, swap, request_error, boots, probation_boots, proof, reset, report]
+  says: The install report a unit gave after an install that did not take, the cause the page worded and every field of the line pilots used to copy and send.
+  answers: Why installs fail in the field, without asking the pilot to copy anything.
+device.installed:
+  group: Devices
+  from: browser
+  keys: [from, to, lasted_ms]
+  says: A device came back from an install on the version the app sent, with the version before and how long the whole install took from the upload's start.
+  answers: How many installs succeed, how long they take, and the version pilots move from.
+device.forgotten:
+  group: Devices
+  from: browser
+  says: The pilot told the app to forget a device.
+  answers: How often pilots give up on a device in this browser, a sign that it would not connect.
+activation.stepped:
+  group: Activation
+  from: browser
+  keys: [phase, previous, lasted_ms]
+  says: The activation of a unit moved from one step to the next, asking the server, waiting on the glass, registering, unlocking, with how long the step before lasted.
+  answers: How far activations get and where pilots wait.
+activation.noticed:
+  group: Activation
+  from: browser
+  keys: [key, detail, phase]
+  says: The activation page showed a notice, the unit's refusal, the server's as `server_` and its error, or a Bluetooth failure, with the step it came at.
+  answers: Why activations fail, from the pilot's side, beside `activation.refused` from the server's.
+activation.refused:
+  group: Activation
+  says: The server refused a challenge or a registration, with the reason the page words, such as `bad_signature`, `other_key`, `revoked_key`, `daily_cap` or `network_cap`, and the `step`.
+  answers: Why activations fail on the server, and whether a cap is turning pilots away.
+unit.enrolled:
+  group: Units
+  says: A new DEVICEID got the next serial, with its unit, serial and device slug.
+  answers: How many units are activated each day and how close the day comes to the cap.
+unit_key.bound:
+  group: Units
+  says: A registration bound a key to a unit, `active`, `pending` for another key than the one it holds, or `revoked`, with the firmware version and whether it is a release build, and `renewed` when the key was already known.
+  answers: How many registrations bring a new key to a known unit, which an owner then writes in about.
+unit_key.promoted:
+  group: Units
+  says: An admin, `by_id`, made a pending key the active one of a unit.
+  answers: How often owners need an admin to recover a unit.
+unit_key.revoked:
+  group: Units
+  says: An admin, `by_id`, revoked the active key of a unit.
+  answers: How often a unit's key is withdrawn by hand.
+user.signed_in:
+  group: Admins
+  says: A user signed in.
+  answers: Who uses the admin area and when.
+user.sign_in_refused:
+  group: Admins
+  says: A sign-in was refused, never with the address it tried.
+  answers: Whether somebody is guessing passwords.
+user.created:
+  group: Admins
+  says: An admin, `by_id`, created a user, `person_id`, with its role.
+  answers: Who was given access and by whom.
+user.role_changed:
+  group: Admins
+  says: A user's role changed from `was` to `role`, by an admin, `by_id`, or in a console.
+  answers: Who was made an admin, and so who may read everybody's events.
+user.destroyed:
+  group: Admins
+  says: An admin, `by_id`, deleted a user, `person_id`.
+  answers: Who lost access and by whom.
+oauth_grant.approved:
+  group: Agents
+  says: An admin connected a coding agent to the MCP server, or connected it again, `renewed`.
+  answers: Which agents read the events, and how often their connections are renewed.
+oauth_grant.ended:
+  group: Agents
+  says: A connection of a coding agent ended, by a disconnection, a reuse that revoked it or the sweep, with its age and whether it was ever used.
+  answers: How long agents stay connected and how many connections were never used.
+oauth_token.refused:
+  group: Agents
+  says: The token endpoint refused a request, by OAuth error code and grant type.
+  answers: Whether agents fail to connect, and why.
+mcp.answered:
+  group: Agents
+  says: The MCP server answered a call, by method and tool, with its duration and error.
+  answers: Which tools agents call, how long they take and which fail.
+event.listed:
+  group: Agents
+  says: An admin, `by_id`, read everybody's events through an agent, with the filters and the limit.
+  answers: Who read the log, and what for.
+error.reported:
+  group: Errors
+  says: An error reported to `Rails.error`, raised in a request or a job or handled on purpose, with its class, message, cause, first frames, the controller or job, the revision and a fingerprint that groups it with the same error from the same method.
+  answers: What breaks on the server, how often and since which revision, the server half of what an error tracker would hold.
+action_controller.request_completed:
+  group: Traces
+  says: A request answered, with its controller, action, status and duration. A post of a browser's journal is kept only when it was refused.
+  answers: Which pages are slow and which answer errors.
+action_controller.rescue_from_handled:
+  group: Traces
+  says: A `rescue_from` answered an exception, by its class.
+  answers: How often a refusal is answered, such as an activation refused.
+active_job.started:
+  group: Traces
+  says: A job started.
+  answers: How busy the queue is.
+active_job.completed:
+  group: Traces
+  says: A job ended, with its duration and its exception class when it failed.
+  answers: Which jobs fail and how long they run.
+active_job.retry_scheduled:
+  group: Traces
+  says: A failed job was scheduled to run again.
+  answers: Which jobs fail and recover.
+active_job.retry_stopped:
+  group: Traces
+  says: A job ran out of retries.
+  answers: Which jobs fail for good.
+active_job.discarded:
+  group: Traces
+  says: A job was discarded on an error it is set to discard on.
+  answers: Which jobs give up on purpose.

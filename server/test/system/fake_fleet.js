@@ -1,5 +1,8 @@
 (() => {
   const UUID = {
+    nus: '6e400001-b5a3-f393-e0a9-e50e24dcca9e',
+    nusRx: '6e400002-b5a3-f393-e0a9-e50e24dcca9e',
+    nusTx: '6e400003-b5a3-f393-e0a9-e50e24dcca9e',
     skyblip: '69c21301-0187-4204-a91d-02eb8858b440',
     config: '69c21302-0187-4204-a91d-02eb8858b440',
     log: '69c21303-0187-4204-a91d-02eb8858b440',
@@ -63,13 +66,16 @@
         vectors: null,
         diagnostics: [],
         browsers: null,
+        installReport: null,
+        protocols: null,
+        failure: null,
       }, options);
       this.connected = false;
       this.rebooting = false;
       this.pending = null;
       this.refused = false;
       this.windowOpen = false;
-      this.listeners = { config: [], log: [], smp: [] };
+      this.listeners = { nmea: [], config: [], log: [], smp: [] };
       this.closed = [];
       this.held = new Uint8Array(0);
       this.device = this.#device();
@@ -79,11 +85,17 @@
       const unit = this;
       const characteristic = (kind, write) => ({
         startNotifications: async () => {},
+        stopNotifications: async () => {},
         addEventListener: (type, listener) => unit.listeners[kind].push(listener),
+        removeEventListener: (type, listener) => {
+          unit.listeners[kind] = unit.listeners[kind].filter(each => each !== listener);
+        },
         writeValueWithResponse: write,
         writeValueWithoutResponse: write,
       });
+      // INFO: fc 14nov26 the unit discards what a central writes to its UART, as on_stream_write does
       const services = {
+        [UUID.nus]: { [UUID.nusTx]: characteristic('nmea', null), [UUID.nusRx]: characteristic('nmea', async () => {}) },
         [UUID.skyblip]: { [UUID.config]: characteristic('config', raw => unit.onConfig(raw)), [UUID.log]: characteristic('log', raw => unit.onLog(raw)) },
         [UUID.smp]: { [UUID.smpChr]: characteristic('smp', raw => unit.onSmp(raw)) },
       };
@@ -124,7 +136,7 @@
       this.browserNonce = null;
       this.proven = null;
       this.trusted = false;
-      this.listeners = { config: [], log: [], smp: [] };
+      this.listeners = { nmea: [], config: [], log: [], smp: [] };
       const closed = this.closed.splice(0);
       later(() => closed.forEach(listener => listener()));
     }
@@ -135,6 +147,11 @@
       const frame = whole.length <= this.mtu - 3 ? whole : encodeFrame({ command: 'acknowledgement', acknowledge: false, reason: 'small_mtu' });
       const value = new DataView(frame.buffer);
       later(() => this.connected && this.listeners.config.forEach(listener => listener({ target: { value } })));
+    }
+
+    sentence(line) {
+      const value = new DataView(encoder.encode(`${line}\r\n`).buffer);
+      later(() => this.connected && this.listeners.nmea.forEach(listener => listener({ target: { value } })));
     }
 
     acknowledge(acknowledge, reason, pending = undefined) {
@@ -183,6 +200,8 @@
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
       if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
+      if (command === 'install_report') return this.reply({ command, ...this.installReport });
+      if (command === 'protocols' && this.protocols) return this.reply({ command, ...this.protocols });
       if (command === 'set') {
         this.staged = fields;
         return this.ask('set', 'confirm');
@@ -414,6 +433,8 @@
         this.rebooting = false;
         this.from = this.running;
         this.to = version;
+        // INFO: fc 13nov26 an install that does not land comes back on the version it had, as failure says
+        if (this.failure) return Object.assign(this, this.failure);
         this.running = version;
         this.image = 'probation';
         later(() => {

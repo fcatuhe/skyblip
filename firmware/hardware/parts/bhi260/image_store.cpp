@@ -4,7 +4,7 @@
 #include <cstring>
 
 #include "core/store/sector.h"
-#include "core/util/little_endian.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::parts {
 
@@ -84,18 +84,18 @@ bool Bhi260ImageStore::read(uint32_t offset, uint8_t* out, uint16_t bytes) {
 }
 
 void Bhi260ImageStore::encode(const Header& header, uint8_t* out) {
-    put_uint32(out, header.magic);
-    put_uint16(out + 4, header.layout_version);
-    put_uint16(out + 6, 0);
-    put_uint32(out + 8, header.image_bytes);
+    wire::put_uint32(out, header.magic);
+    wire::put_uint16(out + 4, header.layout_version);
+    wire::put_uint16(out + 6, 0);
+    wire::put_uint32(out + 8, header.image_bytes);
     std::memcpy(out + 12, header.digest.data(), Sha256::kDigestBytes);
 }
 
 Bhi260ImageStore::Header Bhi260ImageStore::decode(const uint8_t* raw) {
     Header header;
-    header.magic = get_uint32(raw);
-    header.layout_version = get_uint16(raw + 4);
-    header.image_bytes = get_uint32(raw + 8);
+    header.magic = wire::get_uint32(raw);
+    header.layout_version = wire::get_uint16(raw + 4);
+    header.image_bytes = wire::get_uint32(raw + 8);
     std::memcpy(header.digest.data(), raw + 12, Sha256::kDigestBytes);
     return header;
 }

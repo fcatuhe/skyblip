@@ -5,7 +5,8 @@ One parse, two readers. `check_tuning_names.py` holds the vocabulary to it and
 `tuning_index.py` writes docs/TUNING.md out of it, so a constant cannot be
 documented under one name and checked under another.
 
-A tuning constant is a `constexpr` in the logic layers whose name ends in a unit:
+A tuning constant is a `constexpr` in the logic layers, the protocol stacks
+among them and their tests not, whose name ends in a unit:
 a duration, a speed, a distance, a force or a count of samples. `hardware/`,
 `boards/` and `ports/` are out of scope on purpose - a datasheet's 2.6 s busy
 time is the part's figure under the part's name, and renaming it would hide
@@ -20,7 +21,7 @@ import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIRMWARE = os.path.join(ROOT, "firmware")
-LAYERS = ("core", "runtime", "ui", "products")
+LAYERS = ("protocols", "core", "runtime", "ui", "products")
 
 OTHER_UNITS = (
     "Mv",
@@ -161,6 +162,8 @@ class Constant:
 def sources():
     for layer in LAYERS:
         for folder, _, names in sorted(os.walk(os.path.join(FIRMWARE, layer))):
+            if "test" in os.path.relpath(folder, FIRMWARE).split(os.sep):
+                continue
             for name in sorted(names):
                 if name.endswith((".h", ".cpp")):
                     yield os.path.join(folder, name)

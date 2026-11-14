@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip {
 
@@ -62,7 +62,7 @@ int format_degrees_minutes(char* out, int32_t coordinate_1e7, int degree_digits)
     uint32_t degrees = magnitude / 10000000u;
     uint64_t remainder =
         static_cast<uint64_t>(magnitude) - static_cast<uint64_t>(degrees) * 10000000u;
-    uint64_t minutes_e4 = divide_rounded<uint64_t>(remainder * 60u * 10000u, 10000000u);
+    uint64_t minutes_e4 = wire::divide_rounded<uint64_t>(remainder * 60u * 10000u, 10000000u);
     uint32_t minutes = static_cast<uint32_t>(minutes_e4 / 10000u);
     uint32_t fraction = static_cast<uint32_t>(minutes_e4 % 10000u);
     int written = 0;

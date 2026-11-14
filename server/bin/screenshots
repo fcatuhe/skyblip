@@ -142,6 +142,13 @@ class Device {
     return this;
   }
 
+  // SETTINGS opens AIRCRAFT, and AIRCRAFT holds the callsign and the own ICAO.
+  openAircraftRow(row) {
+    this.openMenu(PAGE.Radar, RADAR_MENU.Aircraft).press();
+    for (let step = 0; step < row; step++) this.tap();
+    return this;
+  }
+
   plotToScale() {
     return this.openMenu(PAGE.Radar, RADAR_MENU.Plot).press().closeMenu();
   }
@@ -288,6 +295,7 @@ const menuSource = firmwareSource("products", "skyblip_go", "pages", "menu.cpp")
 const PAGE = pagesOf(pageHeader);
 const RADAR_MENU = menuRowsOf(menuSource, "kRadarMenuRows");
 const NEARBY_MENU = menuRowsOf(menuSource, "kNearbyMenuRows");
+const AIRCRAFT_MENU = menuRowsOf(menuSource, "kAircraftMenuRows");
 const WALKED_PAGES = Number(
   inside(pageHeader, /constexpr int kWalkedPages = (\d+);/, "kWalkedPages")
 );
@@ -410,7 +418,7 @@ const scenes = [
     menu: true,
     shot(device) {
       setCallsign(device, OWN_CALLSIGN);
-      device.openMenu(PAGE.Radar, RADAR_MENU.Callsign).press();
+      device.openAircraftRow(AIRCRAFT_MENU.Callsign).press();
       // Two characters in, so the bar is under a character and not at either end.
       return device.press().press();
     }
@@ -421,7 +429,7 @@ const scenes = [
     menu: true,
     shot(device) {
       setCallsign(device, OWN_CALLSIGN);
-      device.openMenu(PAGE.Radar, RADAR_MENU.Callsign).press();
+      device.openAircraftRow(AIRCRAFT_MENU.Callsign).press();
       // S through the letters and the digits, round to the blank the clear is armed on.
       for (let roll = 0; roll < 18; roll++) device.tap();
       return device;
@@ -433,7 +441,7 @@ const scenes = [
     menu: true,
     shot(device) {
       setCallsign(device, OWN_CALLSIGN);
-      device.openMenu(PAGE.Radar, RADAR_MENU.Callsign).press();
+      device.openAircraftRow(AIRCRAFT_MENU.Callsign).press();
       for (let roll = 0; roll < 18; roll++) device.tap();
       return device.press();
     }
@@ -457,10 +465,10 @@ const scenes = [
   },
   {
     name: "satellites",
-    page: PAGE.Sats,
+    page: PAGE.Satellites,
     shot(device) {
       device.sim.setFix(0);
-      device.run(20_000).openMenu(PAGE.Nearby, NEARBY_MENU.Sats).press().run(6000);
+      device.run(20_000).openMenu(PAGE.Nearby, NEARBY_MENU.Satellites).press().run(6000);
     }
   },
   {

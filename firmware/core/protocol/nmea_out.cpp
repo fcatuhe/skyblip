@@ -9,7 +9,8 @@
 #include "core/model/ownship.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
+#include "protocols/adsl/packet.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
 
@@ -85,14 +86,14 @@ int nmea_finish(char* sentence, int body_bytes) {
 }
 
 uint8_t adsl_category_to_alptas_type(uint8_t adsl_category) {
-    static const uint8_t kMap[18] = {0x0, 0x8, 0x8, 0x3, 0x1, 0xB, 0xC, 0x7, 0x4,
-                                     0x8, 0x3, 0xD, 0xD, 0xD, 0x0, 0x0, 0x0, 0x0};
-    return adsl_category < 18 ? kMap[adsl_category] : 0;
+    static const uint8_t kTypeOfCategory[18] = {0x0, 0x8, 0x9, 0x3, 0x1, 0xB, 0x8, 0x7, 0x4,
+                                                0x3, 0x3, 0xD, 0xD, 0xD, 0xD, 0x3, 0x6, 0x7};
+    return adsl_category < 18 ? kTypeOfCategory[adsl_category] : 0;
 }
 
 // INFO: fc 03aug26 SkyDemon draws nothing at IDType 0, so ICAO is 1 and all else 2 (README.md)
 uint8_t address_mapping_table_to_id_type(uint8_t address_mapping_table) {
-    return address_mapping_table == 0x05 ? 1 : 2;
+    return address_mapping_table == adsl::kAddressTableIcao ? 1 : 2;
 }
 
 int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
@@ -279,7 +280,7 @@ int format_gprmc(char* out, size_t capacity, const model::Ownship& own) {
     sentence[written++] = ',';
     // Ground speed is knots on this sentence, kept to one decimal.
     const uint32_t knots_e1 = static_cast<uint32_t>(
-        divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
+        wire::divide_rounded<int64_t>(static_cast<int64_t>(own.speed_mm_s) * 194384, 10000000));
     written += format_unsigned(sentence + written, knots_e1, 1, 1);
     sentence[written++] = ',';
     written +=

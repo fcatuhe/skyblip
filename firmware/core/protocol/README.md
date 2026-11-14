@@ -1,24 +1,65 @@
 # core/protocol
 
-The wire formats, in both directions and with no I/O: `adsl.{h,cpp}` and `adsl_uplink.{h,cpp}` are the ADS-L 4 SRD-860 packet the radio carries, `air.{h,cpp}` the shared air-frame plumbing, `alptas.{h,cpp}` and `nmea_out.{h,cpp}` what a tablet reads over the companion link, `adsb_category.{h,cpp}` what an ADS-B emitter category is in ADS-L's terms, `adsb_registration.{h,cpp}` the registration an ADS-B flight ID spells once its dash is put back. `adsb.{h,cpp}` reads the 1090 MHz extended squitter skyBlip Bravo receives, in one direction only, `adsb_cpr.{h,cpp}` turns its compact positions into coordinates, and `adsb_assembly.{h,cpp}` folds each aircraft's messages into one `AircraftObservation`.
+skyBlip's side of the radio protocols. The stacks in `protocols/` decide what the specifications decide, in their own plain types (`protocols/README.md`). This directory holds the adapters that turn those types into skyBlip's model and back, the choices skyBlip made around them, and what a tablet reads over the companion link.
 
-Both air frames are read and written field by field. A field is a `BitField`: an offset and a width counted from bit 0 of the first byte. ADS-L B.3 numbers bits in that order, and the ALP-TAS frame shares it. So `adsl.h` and `alptas.cpp` hold tables of offsets rather than shift sequences, and the ADS-L offsets are the ones G.1 prints. The variable-resolution fields are an `Exponential`: the encoding of ADS-L G.1.6, which the ALP-TAS frame also uses with other widths. An ADS-L field reads back the middle of the step its code names, and an ALP-TAS field the bottom of it.
+| File | What it is |
+|---|---|
+| `adsl.{h,cpp}` | own-ship as an ADS-L Traffic payload, extrapolated to the instant the timestamp names, with the accuracy claimed from the receiver's DOP. A received Traffic payload as an `AircraftObservation`. The Status values this device declares |
+| `callsign.{h,cpp}` | OGN's payload 66, the name ADS-L has no field for (below) |
+| `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's G.3 uplink over observations. `decode` counts a record older than 10 s, or dated ahead of the second it was heard in, as stale and does not draw it. `encode` re-encodes each target and dates it the instant the station sends, which G.3 allows only for traffic from systems other than ADS-L: an ADS-L payload must be forwarded verbatim. It serves the simulated skyPost and the tests, and a real ground station forwarding ADS-L would call `adsl::Uplink` with the payloads as heard |
+| `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window, names the system from the sync tail, and lays out the M-band buffer the SX1262 sends |
+| `alptas.{h,cpp}` | an ALP-TAS position as an observation and back: the ADS-L category, address table and flight state its fields map to |
+| `adsb_observation.{h,cpp}` | an ADS-B track as an observation, in ADS-L units |
+| `adsb_category.{h,cpp}` | what an ADS-B emitter category is in ADS-L's terms (below) |
+| `nmea_out.{h,cpp}` | the `$PFLAU` and `$PFLAA` sentences a tablet reads |
 
-`from_own` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`).
+`from_own`, `from_own_status` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`). They write whatever table and address they are handed. `RadioService` hands all three the same pair, `settings::on_air()`: the aircraft's ICAO address under table 5 while the pilot has set one, which F.2.3 asks for, and table 58 with the serial otherwise, so a receiver files the Traffic, the Status and the name under one target (`core/settings/README.md`, The ICAO address). The Issue 1 form B.5 asks for keeps the pair, since Issue 1's F.2.2 has table 5 for ICAO too.
+
+## The Status payload
+
+`from_own_status` hands `adsl::encode_status` what this device declares in §G.2's payload type 3, and builds nothing without an address. The payload's layout and its version are the stack's (`protocols/adsl/README.md`). The values are skyBlip's:
+
+| Field | Value | Why |
+|---|---|---|
+| Max. Protocol Version | 1 | this device reads Issue 2 payloads (`protocols/adsl/README.md`, Which issue a payload is) |
+| M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
+| O-band LDR receive | 0 | not received |
+| O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
+| ADS-L 4 Mobile | 0 | none |
+| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the FLARM-generation wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
+| E-conspicuity transmit | 0 | nothing but ADS-L goes out |
+| XPDR | 0 | no transponder is known |
+| Traffic Uplink client | 1 | the uplink is decoded and drawn |
+| FIS-B client | 0 | not decoded |
+
+## Writing for an Issue 1 neighbour
+
+§B.5 asks own Traffic to go out in a version every close neighbour reads, and `core/traffic/README.md` says how the lowest one is found. With no close Issue 1 client, a position goes out in the lowest version whose encoding is the same (§E.1.1), so a payload carrying category 14 to 17 or an unknown field goes as version 1, exactly as it is.
+
+Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`, which re-codes it as version 0 only where Issue 1 has a truthful code for every field. This device never claims a value it does not have:
+
+| Issue 2 code | Beside an Issue 1 client | Why |
+|---|---|---|
+| category 14, model plane | 0, no category information | Issue 1 has no code for it |
+| category 15, heavy rotorcraft | 3, rotorcraft | Issue 1's rotorcraft covers every weight |
+| category 16, hang-glider | 7, hang-glider or paraglider | Issue 2 split that class |
+| category 17, paramotor | 7, hang-glider or paraglider | a powered paraglider, and Issue 1's closest wing |
+| position 0x800000, no fix | 0xFFFFFF | Issue 1's own marker for no fix |
+| a real position at 0xFFFFFF, one step south or west of zero | 0xFFFFFE | one step on, well inside any accuracy we claim, so Issue 1 does not read it as no fix |
+| GVA 2 for a VFOM from 10 to 15 m | 3 | Issue 1 G.1.15 draws code 3 at 15 m, Issue 2 at 10 m |
+| altitude, ground speed or vertical rate unknown | the position is held for that second | Issue 1 has no code for unknown, and 0x3FFF, 0xFF or 0x1FF would read as 61112 m, 238 m/s or a 119 m/s descent |
+
+A held position is counted once a second in `air.tx_held_for_b5`, and like any burst that did not go out it is retried 2 s later on the same channel, until it goes out or the next position is due (`core/timing/README.md`). Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.
 
 ## The name ADS-L has no field for
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
 
-`from_own_callsign` writes the one record of it we speak. Type 66, the same 6+24 sender address our position frames carry, then a header byte of telemetry type 1 and info type 5 (OGN's `TelemType` and `InfoType`), then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
+`from_own_callsign` in `callsign.{h,cpp}` writes the one record of it we speak, on the frame layer `adsl::Packet` exposes. Type 66, the same 6+24 sender address our position frames carry, then a header byte of telemetry type 1 and info type 5 (OGN's `TelemType` and `InfoType`), then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
 
 `callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_character` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObservation` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
 
 An OGN tracker reads what we send: `ProcessRxADSL` takes any telemetry frame, pulls `getInfo(Call, 5)` out of it and hangs the name on the target of that address (`oss/nrf52-ogn-tracker/src/proc.cpp:715-733`), with no opinion about our AMT 58. It transmits the same record itself every 40 to 60 seconds, hopping between four channels, so we hear one of theirs perhaps once in four.
-
-## Where the ALP-TAS frame comes from
-
-ALP-TAS has no published specification. Its field layout, the two cipher stages, their keys and the longitude step table follow the community's description of the 2024 protocol, [pastebin.com/YB1ppAbt](https://pastebin.com/raw/YB1ppAbt). The frames `test/core/test_alptas.cpp` pins guard the encoder against regressions.
 
 ## What ALP-TAS costs us
 
@@ -26,7 +67,7 @@ ALP-TAS has no published specification. Its field layout, the two cipher stages,
 
 SkyDemon refuses the sentence for anything but 1 or 2 (`oss/SoftRF-moshe-braner/.../libraries/OGN/ads-l.h:657-658`: "if (AddrType==5) AddrType=1; else AddrType=2; // SkyDemon only accepts 1 or 2"). Leaving an address at IDType 0 draws nothing on that app at all, which is the one failure worth never causing again. Between the two values left, 1 (ICAO) claims a permanent, registry-issued identity; 2 (FLARM) claims a device-class kinship that is at least true of the mechanism, self-assigned and transient. So ICAO is reported as ICAO and everything else becomes FLARM.
 
-What that costs: this device's own table, 58 (`settings::kAddressMappingTable`), and an OGN-Tracker address (7) both draw on the tablet as if they were FLARM. That is a lie about provenance too, and a cheaper one than claiming ICAO, because nothing downstream correlates a FLARM ID against an aircraft register the way it might an ICAO one.
+What that costs: this device's own table, 58 (`settings::kSkyblipAddressMappingTable`), and an OGN-Tracker address (7) both draw on the tablet as if they were FLARM. A Go that transmits an ICAO address under table 5 draws as ICAO, which is what it is. That is a lie about provenance too, and a cheaper one than claiming ICAO, because nothing downstream correlates a FLARM ID against an aircraft register the way it might an ICAO one.
 
 ## A target with no altitude
 
@@ -52,119 +93,69 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 
 `adsb_emitter_to_adsl_category` reads the emitter category of an ADS-B identification message, a type code from 1 to 4 and a 3-bit category, into ADS-L G.1.3, which is the one category the tree holds. `adsl_category_to_alptas_type` takes it on to `$PFLAA` from there. The type code and category pairs are those of The 1090 Megahertz Riddle, table "Wake vortex in ADS-B identification and category message" ([mode-s.org](https://mode-s.org/1090mhz/content/ads-b/2-identification.html)). The rows below use the usual A0 to D7 shorthand, a letter for the type code (A is 4, B is 3, C is 2, D is 1, which is all reserved) and a digit for the category. Neither the Riddle nor the GDL 90 table below prints those letters. The Riddle rounds the type code 4 weights to kilograms. The pounds below are Table 11 of the GDL 90 Data Interface Specification, 560-1058-00 Rev A, which lists the same three groups in order ([faa.gov](https://www.faa.gov/sites/faa.gov/files/air_traffic/technology/adsb/archival/GDL90_Public_ICD_RevA.PDF)).
 
+Where an ADS-B emitter category or a FLARM aircraft type covers G.1.3 categories that split one kind of aircraft by weight, ADS-B reads as the heavier one and FLARM as the lighter one, because ADS-B equipage is typical of heavier aircraft and FLARM of lighter ones. That rule decides only between the rotorcraft, 3 and 15, and the UAS, 11, 12 and 13, and the rows it decides say so. Every other row has its own reason.
+
 | ADS-B | Kind | G.1.3 | Why |
 |---|---|---|---|
 | A1 | light, under 15 500 lb | 1 | G.1.3 draws its line between 1 and 2 at the same 7031 kg, 15 500 lb |
 | A2 to A5 | small, large, high vortex large, heavy | 2 | at or above that line |
-| A6 | high performance, over 5 g and 400 kt | 2 | ADS-B gives it no weight. The tree already reads a FLARM jet, type 9, as 2 (`alptas_type_to_adsl_category`) |
-| A7 | rotorcraft | 3 | ADS-B gives it no weight either. Issue 1 named 3 plain rotorcraft before Issue 2 split it into light, 3, and heavy, 15. A FLARM helicopter is read as 3 too, and 15 would reach `$PFLAA` as type 0 |
+| A6 | high performance, over 5 g and 400 kt | 2 | ADS-B gives it no weight, and an aircraft pulling 5 g at 400 kt is nearly always a jet of 7031 kg or more |
+| A7 | rotorcraft | 15 | the rule: Issue 2 split rotorcraft into light, 3, and heavy, 15, and ADS-B reads the heavier |
 | B1 | glider, sailplane | 4 | |
 | B2 | lighter-than-air | 5 | |
 | B3 | parachutist, skydiver | 8 | |
-| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight. `adsl_category_to_alptas_type` sends 6 to `$PFLAA` as C, an airship, until #216 is fixed |
-| B6 | unmanned aerial vehicle | 11 | ADS-B carries no EU operational category. A FLARM UAV, type D, is read as 11 too |
+| B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight, the first kind the category lists and the one most likely to carry a transponder |
+| B6 | unmanned aerial vehicle | 12 | the rule: ADS-B carries no EU operational category, so the specific category, heavier than FLARM's open 11 |
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
-## The registration an ADS-B flight ID spells
+Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the panel.
 
-ADS-B's identification charset is A to Z, 0 to 9 and blank, so a transponder set to F-JABC sends `FJABC`. `adsb_registration` puts the dash back so a Go stores what a pilot would type. It reads the nationality mark from the address block the address falls in, ICAO Annex 10 Volume III Part I Chapter 9, for eighteen European states, and inserts the dash only when the callsign starts with that mark and the rest is three to five letters, or three to five digits, as a German, Swiss or Dutch glider number is. Anything else is copied as heard: an airline's `DLH4AB` from a German address, a mark of another state, and every address outside the table. The United States is left out on purpose, because `N905NA` is written without a dash. Luxembourg and Slovenia are left out until their block bounds are checked against the Annex, because two published tables disagree on them.
+## The type a tablet draws
+
+`adsl_category_to_alptas_type` turns the G.1.3 category of a target, from any source, into the AcftType field of `$PFLAA`. FTD-012 §8.2 lists that field from 0 to F, and the tablet draws the target with the icon of its type. G.1.3 is the table in `docs/reference/ads-l_4_srd860_issue_2.md`. G.1.3 splits fixed wing by weight at 7031 kg, and AcftType splits it by engine, so a light jet or turboprop reaches the tablet as a piston aircraft and a heavy piston aircraft as a jet. Before #216 the table sent category 2 as a piston aircraft, so every airliner Bravo heard was drawn as one, and it sent category 6 as an airship and 14 to 17 as no type.
+
+| G.1.3 | Kind | AcftType | Why |
+|---|---|---|---|
+| 0 | no information | 0 | FTD-012 reserves 0 and names A unknown. XCSoar reads 0 as unknown and A as a flying saucer (`AircraftType` in `src/FLARM/Traffic.hpp` at XCSoar `71cd8bca`). The tree has always sent 0 |
+| 1 | light fixed wing, under 7031 kg | 8, reciprocating engines | most aircraft under 7031 kg have piston engines, though light turboprops and jets fly there too. Tow planes, AcftType 2, and drop planes, AcftType 5, fall here as well, but G.1.3 does not mark them |
+| 2 | small to heavy fixed wing, 7031 kg and over | 9, jet or turboprop | nearly every aircraft that heavy is a jet or a turboprop |
+| 3 | light rotorcraft | 3, helicopter, gyrocopter, rotorcraft | |
+| 4 | glider, sailplane | 1, glider, motor glider | |
+| 5 | lighter-than-air | B, balloon | G.1.3 does not tell a balloon from an airship, AcftType C, and balloons are the more common |
+| 6 | ultralight and motorized hang-glider | 8, reciprocating engines | an ultralight, and a trike, fly on a reciprocating engine. AcftType 6 is a hang glider with no engine |
+| 7 | paraglider | 7, paraglider | |
+| 8 | parachutist, skydiver, wingsuit | 4, skydiver | |
+| 9 | eVTOL, UAM | 3, rotorcraft | it carries people, takes off on its rotors and hovers like a helicopter. D would tell the pilot it is a drone. An electric aircraft carries little mass, so wherever skyBlip groups categories by weight it goes with light rotorcraft. Today nothing on the glass, the own-ship drawings or the alarm groups them |
+| 10 | gyrocopter | 3 | FTD-012 names the gyrocopter in 3 |
+| 11 to 13 | UAS open, specific and certified | D, UAV | |
+| 14 | model plane | D, UAV | a model plane flies with no one on board, which is what D names |
+| 15 | heavy rotorcraft | 3 | |
+| 16 | hang-glider | 6, hang glider | |
+| 17 | paramotor | 7, paraglider | it flies a paraglider wing, and FTD-012 has no powered paraglider |
+| 18 and over | outside G.1.3 | 0 | |
+
+`alptas_type_to_adsl_category` goes the other way, from the AcftType of an ALP-TAS frame to G.1.3. An AcftType names an engine or a kind of wing and gives no weight. Where the table above sends one category to a type, that category is the one read back. Where it sends several, the rows below say which one is read.
+
+| AcftType | Kind | G.1.3 | Why |
+|---|---|---|---|
+| 0, A, E | reserved, unknown, reserved | 0 | |
+| 1 | glider, motor glider | 4 | |
+| 2, 5 | tow plane, drop plane | 1 | tow and drop planes nearly all weigh under 7031 kg. A turboprop drop plane, such as a Caravan or a Twin Otter, then reaches `$PFLAA` as AcftType 8 |
+| 3 | helicopter, gyrocopter, rotorcraft | 3 | the rule decides between 3 and 15, the light and heavy rotorcraft: FLARM reads the lighter. It is also sent for 9 and 10, and light rotorcraft is the commonest of the four |
+| 4 | skydiver | 8 | |
+| 6 | hang glider | 16 | 16 is the one category sent as 6. Issue 1 put the hang glider with the paraglider in 7 |
+| 7 | paraglider | 7 | it is sent for 7 and 17, and a paramotor is the rarer of the two |
+| 8 | reciprocating engines | 1 | it is sent for 1 and 6, and most piston aircraft are light fixed wing. An ultralight is a light aircraft too |
+| 9 | jet or turboprop | 2 | 2 is the one category sent as 9, so a jet reaches `$PFLAA` as a jet again. A light jet or turboprop lands in the heavier weight class |
+| B, C | balloon, airship | 5 | |
+| D | UAV | 11 | the rule: it is sent for 11 to 14, and FLARM reads the lighter, the open category |
+| F | static obstacle | 0 | G.1.3 has no value for it |
+| past F | outside FTD-012's table | 0 | |
 
 ## The flight state every decoder owes
 
-Every decoder here writes `AircraftObservation::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself.
+Every adapter here writes `AircraftObservation::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself, and an ADS-B track's `AirGround` maps onto it in `adsb_observation.cpp`.
 
-ALP-TAS carries a two-bit state of its own, with no public specification and one reference: SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) sends 1 on the ground, 2 airborne, 3 airborne and circling, and never 0. `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
+ALP-TAS carries a two-bit state of its own, with no public specification and one reference: SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) sends 1 on the ground, 2 airborne, 3 airborne and circling, and never 0 (`protocols/alptas/frame.h`). `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
 
-## Two things an ALP-TAS frame is given before it is refused
-
-`alptas_correct` runs the erasure correction the ADS-L path has always had. §C.2.1 is Manchester, so a chip pair that decoded to neither symbol is an error whose position the receiver already knows: `fec::manchester_decode` marks it, `protocol::Frame` carries the map, and the frame CRC says which combination of those flips was transmitted. Both frames hand that search to `fec::repair` (`core/fec/README.md`), which leaves a frame no combination repairs exactly as it arrived. Up to six marked bits, which is 64 combinations. Beyond that the burst is refused as damaged. The syndromes come out of the CRC's own linearity: flipping a data bit moves the check by `crc16_ccitt(that bit alone, init 0)`, and flipping a carried CRC bit moves it by the bit itself.
-
-Until 2026-09-19 the ALP-TAS path checked the CRC and threw the frame away, so every burst with one dead chip pair was a `CRC` row while the same damage on an ADS-L frame was corrected and drawn. On a bench that difference is invisible, because nothing at -15 dBm has dead chips. At range it is receptions.
-
-`alptas_keyed_second` answers the question a `DEC` row could not. The key stage is `utc_s >> 4`, so the decrypt is correct for every second inside the sender's own 16-second block, and the 4 time bits inside the frame then pin the second to ±1. Both sides of that are cheap to exploit: decrypt once per block the search window reaches, check the two fields every frame carries as constants (the trailing byte is 0, the low nibble of the pattern at bit 56 is 3), and the time bits name the sender's second exactly. The window is `kAlptasKeyWindowS`, 18 seconds, which is GPS-UTC: a receiver reporting GPS time instead of UTC is the one clock fault a device holding a valid fix can plausibly have, and a disagreement wider than that is not a clock, it is noise that framed.
-
-The frame is refused either way. What the search buys is the tape saying `KEY+18` instead of `DEC`, which is the difference between a support case about a radio and one about a receiver's time.
-
-## ADS-B: from chips to typed messages
-
-`adsb_receive` takes the 27 chip bytes the LR2021 reports after its 0x95 sync and returns one `AdsbMessage`, stamped with the time and RSSI the radio gave it. The LR2021 gives a level only to the newest frame of a FIFO read (`hardware/parts/lr2021/README.md`), so the reception carries `rssi_valid` beside it, and the assembly hands it on with the position's level as `AircraftObservation::rssi_valid`, which every other source leaves true. It parses DF17 and stops there. `adsb_assembly` decodes the positions and owes the flight state, below.
-
-**Chips.** 0x95 is the chip pattern of the bits `1000`, the first four bits of DF16 and DF17, which is why the radio hears those two formats and no other. DF18 starts `1001`, so TIS-B, ADS-R and non-transponder ADS-B never reach this file. 1090 MHz sends a 1 as a pulse then a gap, the chips `10`, and `fec::manchester_decode` reads `01` as a 1 because ADS-L C.2.1 does. So the decoder prepends 0x95, inverts every chip and hands the result to the same function. Inverting maps `00` to `11`, so a chip pair that is neither symbol is still marked as doubtful. SoftRF does the same in `radiolib.cpp:2808-2823`, read for the fact only.
-
-**Parity.** The Mode S generator is 0x1FFF409. Shifted left by 7 it is 0xFFFA0480, the polynomial `fec::adsl_crc_pass` already divides by (`core/fec/crc.h`), so `fec::adsl_crc_check` over the 14 bytes leaves 0 for a sound DF17 frame. There is no second CRC. A frame that fails gets one repair: when exactly one chip pair is doubtful and flipping its bit clears the parity, `fec::repair` flips it. Two doubtful pairs, or a wrong bit no chip marked, are refused as `Crc`. dump1090 and readsb flip one bit anywhere in a DF17 frame. Limiting the flip to the one bit the chips already doubt costs the frames with two damaged pairs, and saves the ghost aircraft a false repair can draw on the glass.
-
-**Messages.** Each one carries the 24-bit address, the capability field and the type code. Units follow `firmware/README.md`:
-
-| TYPE | Kind | What it reads |
-|---|---|---|
-| 1 to 4 | `Identification` | category set D down to A, category 0 to 7, the callsign with trailing blanks cut. A callsign holding a code outside the character set is refused whole, as `callsign_of` refuses one on ADS-L |
-| 5 to 8 | `SurfacePosition` | the movement code as the floor of its band in thousandths of a knot (Doc 9871 A.2.3.3.1), the 7-bit track and its status, T, and the CPR pair |
-| 9 to 18 | `AirbornePosition` | pressure altitude, T, and the CPR pair |
-| 20 to 22 | `AirbornePosition` | GNSS height above the ellipsoid in the same field, T, and the CPR pair |
-| 19 | `Velocity` | subtypes 1 and 2: east and north ground speed. Subtypes 3 and 4: airspeed, its type and the magnetic heading. All four: the vertical rate with its source, and GNSS height minus pressure altitude |
-| 31 | `OperationalStatus` | subtype, version, and GVA when the status is airborne and version 2 |
-
-Every other type code, a velocity subtype outside 1 to 4 and a status subtype outside 0 and 1 come back `Unsupported` with the header filled. TYPE 0 carries a pressure altitude with no position and is not parsed yet.
-
-**Zeros and top codes.** In a velocity field, all zeros means the sender has nothing, and the value is (code - 1) steps. The top code, all ones, means that much or more, so `AdsbQuantity` marks it `saturated` (RTCA 1090-WP-14-09R1, the DO-260A draft of Appendix A, Figures A-6 and A-7). The movement code saturates at 124, 175 kt or more, and 125 to 127 are reserved. A version 0 status has no version field. Its bits there are reserved, so it reads as version 0, and GVA exists only from version 2. The value of each GVA code is not checked against DO-260B yet, so the code is passed on raw.
-
-**Altitude.** A 12-bit field with Q = 1 counts 25 ft steps from -1000 ft. With Q = 0 it is a Gillham code in 100 ft steps, laid out C1 A1 C2 A2 C4 A4 B1 Q B2 D2 B4 D4 (DO-260B draft 4.2, Figure 2-4): D2 D4 A1 A2 A4 B1 B2 B4 are a Gray-coded count of 500 ft, C1 C2 C4 a Gray-coded count of 100 ft that runs backwards when the 500 ft count is odd, and C1 C2 C4 of 000, 101 or 111 is no altitude. These steps were derived from the Gillham table the test pins (Wikipedia's "Gillham code", after the Bendix/King KMH 880 installation manual). pyModeS and dump1090 follow the same steps because the code dictates them. All zeros is no altitude. RadioLib (`ADSB.cpp:193-199`) reads Q = 0 as linear 100 ft steps, and libmodes (`mode-s.c:391-403`) returns 0 for it. Both are wrong for an encoder that sends Gillham.
-
-**GNSS height, TYPE 20 to 22, is coded as pressure altitude is, in feet.** ICAO Doc 9871 (2nd ed., 2012) §A.2.3.2.4 says what the field holds, the height above the WGS-84 ellipsoid, and not how it is coded. The RTCA DO-260B draft, version 4.2 (working paper [1090-WP30-18](https://www.anteni.net/adsb/Doc/1090-WP30-18-DRAFT_DO-260B-V42.pdf), DO-260A with Changes 1 and 2 and the agreed changes merged in), says how. Its §2.2.3.2.3.4.2 reports GNSS HAE in the field of TYPE 20 to 22 and codes it "in accordance with §2.2.3.2.3.4.3", the same clause §2.2.3.2.3.4.1 sends pressure altitude to. §2.2.3.2.3.4.3 "Altitude Encoding" then gives Q = 0 in 100 ft increments, Q = 1 in 25 ft increments, and all zeros when no altitude is available. It is a draft, not the published DO-260B, which was not available. The published RTCA DO-260 (2000) has the same structure: §2.2.5.1.5 a fills the field with pressure altitude "as provided in subparagraphs 2.2.3.2.3.4 through 2.2.3.2.3.4.3", §2.2.5.1.5 b(1) with GNSS height "as provided in subparagraphs 2.2.3.2.3.4.2 through 2.2.3.2.3.4.3", and §2.4.3.2.3.4.3 verifies the one coding through the pressure and the GNSS test procedures alike. On the receiving side, §2.2.8.1.4 reports a geometric altitude in the same two's complement format as §2.2.8.1.12 reports a pressure one, MSB 65,536 and LSB 0.015625. readsb, dump1090-fa and rs1090 decode the field this way, and so does adsbee (GPL-3.0, commit d20205a), which corroborates the reading. pyModeS and RadioLib (`ADSB.cpp:200-205`) read it as whole metres, and The 1090MHz Riddle states metres without a source. No real TYPE 20 to 22 frame was found to settle it on the air. The 1090dumpCSV set below holds four. Each passed only after dump1090's one-bit repair, and one decodes to 103000 ft. The test builds its own TYPE 20 frame with Q = 1 and N = 1440, which reads 35000 ft and would read 2896 m as metres.
-
-**Test vectors.** `test/core/test_adsb.cpp` pins frames to decodes their sources publish, and builds the rest. The hex frames and their values are facts, and no code was copied from any source:
-- The 1090MHz Riddle (Junzi Sun), worked examples: identification, the airborne pair, the surface frame and both velocity subtypes.
-- [IndoorOutdoor/1090dumpCSV](https://huggingface.co/datasets/IndoorOutdoor/1090dumpCSV) (Apache-2.0, listed in `NOTICE.md`), frames recorded with dump1090 and its decode beside each: callsigns and categories, a Q-bit and a Gillham altitude, two velocities and two version 2 statuses. That dump1090 prints the vertical rate source inverted against Figure A-6, so only the rates are pinned from it.
-- The Gillham rows come from Wikipedia's "Gillham code" table, which cites the Bendix/King KMH 880 installation manual.
-- The GNSS height frames, the empty one included, are built in the test, not copied.
-
-## ADS-B: from messages to an aircraft
-
-ADS-B sends an aircraft in pieces: two halves of a compact position, a velocity, an identity and a status, each in its own message at its own rate. `AdsbAssembly::fold` takes one message `adsb_receive` returned `Ok`, with the instant it was true on `ports::Clock`, the stamp it was heard with and where the receiver is, and hands back the aircraft's observation so far. It is the receiving half of the specification, its "report assembly", and the one place ADS-B becomes an `AircraftObservation`, as `to_observation` and `alptas_decode` are for the other wires. That is why it lives here and not in `core/traffic`: it decides what an aircraft's messages say together, and nothing about which aircraft matter to the pilot. The caller exports an observation when `position_valid` is true.
-
-**Sources.** ICAO Doc 9871 (2nd ed., 2012) §2.3.2 moves its CPR text to Appendix C §C.2.6. The copy this tree was checked against is a 50-page extract that holds Appendix A only, so no Doc 9871 clause below is verified. Every clause is the RTCA DO-260B draft version 4.2 (working paper 1090-WP30-18) that the decoder above cites: Appendix A §A.1.7 for CPR, and §2.2.10 for the receiver. The worked examples in the tests are The 1090MHz Riddle's.
-
-| Rule | Figure | Clause |
-|---|---|---|
-| An airborne pair's halves are at most this far apart | `kAirbornePairMaxAgeMs`, 10 s | A.1.7.7, §2.2.10.3.1 |
-| A surface pair's halves | `kSlowSurfacePairMaxAgeMs`, 50 s. `kSurfacePairMaxAgeMs`, 25 s, when either half's ground speed may be over 25 kt or is unknown | A.1.7.8, §2.2.10.3.2 |
-| A pair whose halves fall in different numbers of longitude zones does not decode | NL(even) == NL(odd) | A.1.7.7 d, A.1.7.8 d |
-| A single frame decodes against a reference within | 180 NM airborne, 45 NM surface | A.1.7.4 |
-| A global decode is refused further than the receiver can hear | `kAdsbRangeCeilingM`, 180 NM, ours | A.1.7.10.2, §2.2.10.3.1 a |
-| A position not refreshed for this long is cleared, and only a new pair founds the next | `kTrackPositionMaxAgeMs`, 120 s | §2.2.10.3.1 f, §2.2.10.3.2 f |
-| A single frame moves a track only within `kTrackJumpWindowMs`, 30 s, of its last position, and no further than | `kAirborneJumpCeilingM`, 6 NM airborne, `kSurfaceJumpCeilingM`, 0.75 NM surface, `kTransitionJumpCeilingM`, 2.5 NM between the two | §2.2.10.6.3 |
-| A new track holds until a second, independent pair lands where it says | within `kAirborneAgreementCeilingMm`, 5 m airborne, `kSurfaceAgreementCeilingMm`, 1.25 m surface | A.1.7.10.2, §2.2.10.6.2 |
-| A record nobody has heard for this long is forgotten | `kAdsbAircraftForgetMs`, 250 s | §2.2.10.1.3 b |
-
-The 180 NM and 45 NM local limits are met by construction rather than tested. A frame is decoded on its own only against the aircraft's own track, never against the receiver, and only within 30 s of the track's last position. In 30 s an aircraft at 600 kt flies 5 NM, inside both limits. A surface frame after an airborne track, which is how a landing continues, is held to the 45 NM the same way. Past 30 s §2.2.10.6.3 b cannot validate a single frame, so it moves nothing and is not counted: the track waits for a fresh pair, which founds it again wherever the aircraft has gone.
-
-**The receiver's reference.** `AdsbReference` is where the receiver is: Bravo's own fix when it is alone, the Go's position from `peer_claim` when it is paired (#177, #192). The caller passes it with `valid` only while its source is current, and the assembly does not age it. It does three things and no more. It picks the quadrant of a surface pair, whose solutions are 90 degrees apart, so a surface aircraft is never placed without one. It refuses a global decode past `kAdsbRangeCeilingM`. It ranks the cache, below. An airborne pair decodes without it, as A.1.7.7 allows, and then nothing checks its range.
-
-**The reception ceiling.** Bravo's range at 1090 MHz is not measured yet (#172). 180 NM is half the 360 NM between two airborne CPR solutions (A.1.7.1 Note 4), the range inside which a single frame decodes right against the receiver, which is what the cache ranks newcomers by. The traffic table has no ADS-B gate, so with a reference no aircraft enters it from further than this (`core/traffic/README.md`, No gate). #172's bench figure may lower it.
-
-**Confirmation.** A track founded on one pair is exported at once, as §2.2.10.3.1 d does, and confirmed by the first pair whose two halves both arrive after it. Its global decode must land within 5 m airborne and 1.25 m surface of the track's own decode of the newest frame (A.1.7.10.2, §2.2.10.6.2). A track that fails is dropped without exporting that frame, and the next frame founds a new one from the pair that refused it. The two decodes of one frame run the same integer arithmetic and round half up, never away from zero, so a zone shifted by a whole turn rounds the same way and an honest frame decodes identically both ways. Rounding away from zero once put them 1e-7 degree apart on a tie, which exact equality read as a bad track. The largest product, twice a turn times a zone count times 2^17, stays under 6e16, far inside a 64-bit integer on every ABI. Every decode, global or local, is refused when its latitude lies past a pole, and every longitude is wrapped into ±180 degrees: a single frame decoded against a track at the pole once landed at 90.0025 N, and moved the track by 280 m, inside every jump bound.
-
-**Freshness.** Every time is compared as a signed difference on `ports::Clock`, and a duration below zero counts as none, so a message heard a millisecond out of order changes nothing. A signed difference stays right for 24.8 days. `age_out` drops every aircraft silent for 250 s, and expires each time an aircraft still heard holds, each by its own rule: a half of a pair past its pair window, a position past 120 s, a GNSS-baro difference past 10 s, and every other field past 250 s, as §2.2.10.1.3 keeps a message 200 s and drops a silent record at 250 s. `fold` applies the same rules to the aircraft it folds. Bravo's `AdsbService` calls `age_out` every pass, as the Go calls `TrafficTable::age_out`, so no time the cache holds is ever that old, across the clock's wrap or not. A time is compared only when the field it dates is held, and a track remembers which halves founded it by a flag, not a time. Each field keeps the instant it was true, and `core/model/README.md` says what refreshes each one. `at_ms` is the position's instant, or the newest message's while there is no position, and a callsign, a velocity or a status never moves it. A position not refreshed for 120 s is cleared, and `position_valid` turns false.
-
-**GNSS height.** It comes straight from a position with type code 20 to 22, or as the pressure altitude plus the difference a velocity message carries. A derived height is valid while its two halves were true within `kHeightDifferenceMaxAgeMs`, 10 s, of each other, and is as old as the older one. Of the two, the newer wins. The difference grows with height in air that is not at the standard temperature: a pressure layer is thicker by T over T(ISA), so 20 K off standard moves it by 7 to 8% of the height climbed below FL180. A 2000 ft/min climb covers 333 ft in 10 s, which moves the difference by 23 to 26 ft, about one step of its 25 ft field (DO-260B Table 2-36). Past that a stale difference is a guess. DO-260B §2.2.3.2.6.1.15 lets a type code 11 to 18 transmitter report the difference from GNSS MSL. This tree reads every ADS-B GNSS height as HAE (#161), and #183 settles the datum with flight data. A saturated difference, more than 3137.5 ft, derives nothing. The observation also carries the difference itself, with its age, for the capture's ADS-B record (`../model/README.md`).
-
-**Velocity.** Subtypes 1 and 2 give the ground speed and the true track, from their east and north components. Subtypes 3 and 4 give an airspeed and a magnetic heading, which are neither, so they refresh only the climb and leave the ground speed to age. Every subtype's vertical rate keeps its source, GNSS or barometric. A surface position gives a ground speed with its track, or a stop with none.
-
-**Flight state.** A surface position says on the ground, whatever its capability field. An airborne position says airborne, and so does a velocity, which DO-260B Table 2-77 broadcasts only in the air. Any other message says so only through a capability of 4 (on the ground) or 5 (airborne), and otherwise leaves the state and its age as they were. Unknown means nothing has said.
-
-**Version and GVA.** A type code 31 message names the version, and the GVA when the decoder read one: an airborne status from version 2. Version 0's layout has no version field, so it reads 0.
-
-**Own aircraft.** `set_own_address` names the aircraft's own ICAO address, and its messages are dropped before they reach the cache. While paired it is the Go's `own_icao` from `peer_claim` when that is set, else Bravo's own setting (#192). Zero drops nothing.
-
-## The ADS-B cache
-
-`AdsbAssembly` holds `kMaxAircraft`, 100 aircraft, apart from the 48 slots of `traffic::TrafficTable`. A pair must accumulate for an aircraft the table does not hold yet, so the cache is sized for the receiver and not for the display. 100 is the number of track files DO-260B Table 2-105 (§2.2.10.5) asks of an equipage class A0 receiver, the least sensitive of the interactive classes (Table 2-1) and the nearest to a receiver with one internal antenna. An aircraft takes 156 bytes and the cache 15,628, as `arm-zephyr-eabi-g++ -mcpu=cortex-m4` lays it out. A 64-bit host build gives the same figures.
-
-A newcomer takes a free place first, then the place of an aircraft silent for 250 s. Otherwise it takes the place of the aircraft furthest from the receiver if it is nearer than that one, and is refused if it is not. Every range is taken from where the receiver is now, so a receiver that moved does not rank the cache from where it used to be. Each aircraft keeps its range with the position of the receiver it was taken from, and recomputes it only when the receiver or the aircraft has moved since, which with a moving receiver is once a fix. A newcomer with no range of its own scans nothing but silence, because only an aircraft silent for 250 s or with no range either can give way to it. An aircraft with a track is placed by the track. One with only half a pair is placed by decoding that half against the receiver, which is right within 180 NM airborne and 45 NM surface (A.1.7.4, A.1.7.8 Note 2). A newcomer whose message is no position has no range yet, and waits for its next message. With no reference nothing has a range, and the newcomer takes the place of the aircraft heard longest ago. Evicting the aircraft heard longest ago in every case would fail in a crowd larger than the cache: each aircraft would be pushed out before its second half arrived, and none would decode.
-
-A refused message costs a search of the 100 places either way. Built with `g++ -O2` on the aarch64 development host, it took 1.1 µs while the receiver stood still, 0.9 µs for a newcomer with no range, and 10 µs for the first newcomer after the receiver moved, with 100 aircraft each holding half a pair. The nRF52840 has no 64-bit divider, so its figures are larger and are not measured yet (#188).
-
-Three counters say what the cache could not keep. `evictions()` counts aircraft that lost their place, `refusals()` newcomers that found none, and `implausible()` positions refused: a global decode past the ceiling, a frame that jumps or decodes past a pole, or a second pair that disagrees with the track.
-
-`test/core/test_adsb_assembly.cpp` pins these rules, and `test/core/test_traffic_sources.cpp` flies one aircraft through ADS-B as it does through every other source. `test/fuzz/fuzz_adsb_assembly.cpp` folds a crowd of sealed frames from 256 addresses into one cache, and stops if the cache grows past `kMaxAircraft`, a counter falls or a position leaves the globe.

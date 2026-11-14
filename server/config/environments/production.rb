@@ -64,4 +64,7 @@ Rails.application.configure do
   #
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+
+  # The MCP server and its OAuth metadata name the site by its public address, also from jobs and the console.
+  routes.default_url_options = { host: URI(config.x.public_url).host, protocol: "https" }
 end

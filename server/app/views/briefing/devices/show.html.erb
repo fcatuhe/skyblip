@@ -34,6 +34,11 @@
     <span class="unit-row-value" data-unit-target="firmware"></span>
   <% end %>
 
+  <%= link_to briefing_device_terminal_path(device_slug: @slug), class: "unit-row", data: { unit_target: "terminalRow" }, hidden: true do %>
+    <span><%= t("briefing.terminal.title") %></span>
+    <span class="unit-row-value"><%= t("briefing.terminal.row") %></span>
+  <% end %>
+
   <%= render "briefing/devices/capture" %>
 
   <%= render "briefing/devices/browsers" %>

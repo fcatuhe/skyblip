@@ -1,17 +1,17 @@
 name: release
 
-# A product's tag on main becomes a draft release: the image signed with the production
-# key, its checksums and its provenance. `v*` is the Go's, as it was before a second
-# product, and every other product puts its name in front: `bravo-v*` is Bravo's.
-# The draft is published by hand, and once published its files cannot change:
-# immutable releases are on for this repo.
+# A version's tag on main, v<firmware/VERSION>, becomes one draft release: every
+# product's image signed with the production key, the simulator, the notices,
+# the radio protocol versions, their checksums and their provenance. The draft
+# is published by hand, and once published its files cannot change: immutable
+# releases are on for this repo.
 #
 # Every action is pinned by commit, and nothing is restored from a cache: the
-# image job holds the production key, and a cache or a moved tag is code that
+# image jobs hold the production key, and a cache or a moved tag is code that
 # would run beside it.
 on:
   push:
-    tags: ["v*", "bravo-v*"]
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -22,45 +22,35 @@ jobs:
     name: tag names a release of main
     runs-on: ubuntu-24.04
     outputs:
-      product: ${{ steps.product.outputs.product }}
-      prefix: ${{ steps.product.outputs.prefix }}
-      slug: ${{ steps.product.outputs.slug }}
-      version: ${{ steps.product.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
+      products: ${{ steps.products.outputs.products }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: the tag names a product
-        id: product
+      - name: the tag is firmware/VERSION
+        id: version
         run: |
-          case "$GITHUB_REF_NAME" in
-            v*) name=go prefix='' version=${GITHUB_REF_NAME#v} ;;
-            *-v*) name=${GITHUB_REF_NAME%%-v*} prefix=${GITHUB_REF_NAME%%-v*}- version=${GITHUB_REF_NAME#*-v} ;;
-            *) echo "FAIL: $GITHUB_REF_NAME is neither v<version> nor <product>-v<version>"; exit 1 ;;
-          esac
-          test -d "firmware/products/skyblip_$name" \
-            || { echo "FAIL: $GITHUB_REF_NAME names skyblip_$name, which is not in firmware/products/"; exit 1; }
-          {
-            echo "product=skyblip_$name"
-            echo "prefix=$prefix"
-            echo "slug=skyblip-$name"
-            echo "version=$version"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: the tag is the product's VERSION
-        env:
-          PRODUCT: ${{ steps.product.outputs.product }}
-          RELEASE_VERSION: ${{ steps.product.outputs.version }}
-        run: |
-          file=firmware/products/$PRODUCT/VERSION
+          file=firmware/VERSION
           triple=$(sed -n \
             -e 's/^VERSION_MAJOR *= *\([0-9]*\).*/\1/p' \
             -e 's/^VERSION_MINOR *= *\([0-9]*\).*/\1/p' \
             -e 's/^PATCHLEVEL *= *\([0-9]*\).*/\1/p' "$file" | paste -sd. -)
-          test "$triple" = "$RELEASE_VERSION" \
+          test "$GITHUB_REF_NAME" = "v$triple" \
             || { echo "FAIL: tag $GITHUB_REF_NAME, but $file says $triple"; exit 1; }
+          echo "version=$triple" >> "$GITHUB_OUTPUT"
+
+      # A product is a directory whose CMakeLists declares its board, so products/common is none.
+      - name: every product in the tree
+        id: products
+        run: |
+          products=$(for cmake in firmware/products/*/CMakeLists.txt; do
+                       if grep -q '^skyblip_product_board(' "$cmake"; then basename "$(dirname "$cmake")"; fi
+                     done | jq -Rnc '[inputs]')
+          test "$products" != "[]" || { echo "FAIL: no directory in firmware/products/ declares a board"; exit 1; }
+          echo "products=$products" >> "$GITHUB_OUTPUT"
 
       - name: the tag is on main
         run: |
@@ -107,19 +97,18 @@ jobs:
 
   # scripts/build_local.sh on a clean runner, the way anyone can rebuild a release:
   # it fetches the pinned workspace and checks the SDK against its own sha256.sum.
+  # One job per product, after the simulator, so the approval is asked once the rest has built.
   image:
-    name: signed image
+    name: signed image (${{ matrix.product }})
     needs: [tag, simulator]
+    strategy:
+      matrix:
+        product: ${{ fromJSON(needs.tag.outputs.products) }}
     environment: firmware_production
     runs-on: ubuntu-24.04
     env:
-      PRODUCT: ${{ needs.tag.outputs.product }}
-      SLUG: ${{ needs.tag.outputs.slug }}
+      PRODUCT: ${{ matrix.product }}
       RELEASE_VERSION: ${{ needs.tag.outputs.version }}
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
     steps:
       # The build number is the commit count, which a shallow clone gets wrong.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -149,25 +138,91 @@ jobs:
           SKYBLIP_CHANNEL: production
         run: scripts/build_local.sh "$PRODUCT"
 
+      # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
+      - name: name the files after the release
+        run: |
+          slug=${PRODUCT//_/-}
+          mkdir release
+          cp "builds/$slug.uf2" "release/$slug-$RELEASE_VERSION.uf2"
+          cp "builds/$slug.signed.bin" "release/$slug-$RELEASE_VERSION.signed.bin"
+          if [ -f "builds/$slug.full.signed.bin" ]; then
+            cp "builds/$slug.full.signed.bin" "release/$slug-$RELEASE_VERSION.full.signed.bin"
+          fi
+          cat "builds/$slug.version"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.product }}
+          path: release/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Every product's images meet here, on a runner without the key, so the jobs that hold it need no token beyond reading the repository.
+  files:
+    name: release files
+    needs: [tag, simulator, image]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      PRODUCTS: ${{ needs.tag.outputs.products }}
+      RELEASE_VERSION: ${{ needs.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            LICENSE
+            NOTICE.md
+            LICENSES
+            firmware/protocols/*/version.h
+            firmware/products/*/PROTOCOLS
+            lib/radio_protocols.rb
+            scripts/radio_protocols.rb
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: image-*
+          path: images
+
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: browser-simulator
           path: simulator
 
-      # .signed.confirmed.bin stays behind: the .uf2 carries it, and only a factory line reads it alone.
-      - name: name the files after the release
+      # Only what this run's image jobs named goes into the release: one artifact per product, holding that product's files at this version.
+      - name: every product's images, and nothing else
         run: |
-          mkdir release
-          cp "builds/$SLUG.uf2" "release/$SLUG-$RELEASE_VERSION.uf2"
-          cp "builds/$SLUG.signed.bin" "release/$SLUG-$RELEASE_VERSION.signed.bin"
-          if [ -f "builds/$SLUG.full.signed.bin" ]; then
-            cp "builds/$SLUG.full.signed.bin" "release/$SLUG-$RELEASE_VERSION.full.signed.bin"
-          fi
+          expected=$(jq -r '.[] | "image-" + .' <<< "$PRODUCTS" | sort)
+          found=$(find images -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
+          test "$found" = "$expected" \
+            || { echo "FAIL: the artifacts are ${found//$'\n'/ }, where the products ask for ${expected//$'\n'/ }"; exit 1; }
+          mkdir -p release
+          for product in $(jq -r '.[]' <<< "$PRODUCTS"); do
+            slug=${product//_/-} artifact=images/image-$product
+            while IFS= read -r file; do
+              case "$file" in
+                "$slug-$RELEASE_VERSION.uf2"|"$slug-$RELEASE_VERSION.signed.bin"|"$slug-$RELEASE_VERSION.full.signed.bin") ;;
+                *) echo "FAIL: image-$product holds $file"; exit 1 ;;
+              esac
+            done < <(find "$artifact" -mindepth 1 -printf '%P\n')
+            for file in "$slug-$RELEASE_VERSION.uf2" "$slug-$RELEASE_VERSION.signed.bin"; do
+              test -f "$artifact/$file" || { echo "FAIL: image-$product has no $file"; exit 1; }
+            done
+            cp "$artifact"/* release/
+          done
+
+      - name: add the simulator, the notices, the radio protocols and the checksums
+        run: |
           cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
           cp simulator/scenarios.json release/
           cp LICENSE NOTICE.md LICENSES/*.txt release/
+          ruby scripts/radio_protocols.rb firmware "$RELEASE_VERSION" "$PRODUCTS" > release/PROTOCOLS.md
           (cd release && sha256sum -- * > SHA256SUMS)
-          cat "builds/$SLUG.version" release/SHA256SUMS
+          cat release/PROTOCOLS.md release/SHA256SUMS
 
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
@@ -182,7 +237,7 @@ jobs:
   # Its own job, so the token that can write a release never shares a runner with the key.
   draft:
     name: draft release
-    needs: [tag, image]
+    needs: files
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -192,14 +247,13 @@ jobs:
           name: release
           path: release
 
-      # The notes start at the same product's last published release, never at another product's.
+      # The notes start at the last published release.
       - name: create the draft
         env:
           GH_TOKEN: ${{ github.token }}
-          PREFIX: ${{ needs.tag.outputs.prefix }}
         run: |
           tags=$(gh release list --repo "$GITHUB_REPOSITORY" -L 100 --exclude-drafts --exclude-pre-releases \
                    --json tagName --jq '.[].tagName')
-          previous=$(grep -m1 -E "^${PREFIX}v[0-9]" <<< "$tags") || previous=""
+          previous=$(grep -m1 -E '^v[0-9]' <<< "$tags") || previous=""
           gh release create "$GITHUB_REF_NAME" release/* \
             --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes ${previous:+--notes-start-tag "$previous"}

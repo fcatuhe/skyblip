@@ -31,6 +31,7 @@ jobs:
       pull-requests: read
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      glass: ${{ steps.filter.outputs.glass }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
@@ -41,6 +42,20 @@ jobs:
           filters: |
             firmware:
               - '!(server)/**'
+            # What bin/screenshots compiles and flies, and the pictures it writes.
+            glass:
+              - 'firmware/core/**'
+              - 'firmware/ui/**'
+              - 'firmware/ports/**'
+              - 'firmware/runtime/**'
+              - 'firmware/hardware/parts/**'
+              - 'firmware/products/**'
+              - 'firmware/simulator/**'
+              - 'firmware/vendor/**'
+              - 'firmware/Makefile'
+              - 'server/bin/screenshots'
+              - 'server/bin/blips.cpp'
+              - 'server/content_images/pages/skyblip-go/**'
 
   host-tests:
     # arm64 on purpose: plain `char` is unsigned there, as on the Cortex-M target.
@@ -54,8 +69,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # A PR recompiles the few files it touched, not all 155 translation units.
-      - name: install ccache and cmake
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
+      - name: install ccache, cmake and pdftotext
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -65,12 +80,32 @@ jobs:
       - name: build & run host tests
         working-directory: firmware
         run: make test CXX="ccache g++"
+      # Another project takes a stack with its tests, so each must build from a copy holding nothing of skyBlip's.
+      - name: each radio protocol stack builds and passes alone
+        working-directory: firmware
+        run: make test-protocols CXX="ccache g++"
+      - name: the protocol stacks include nothing from skyBlip
+        run: python3 scripts/check_protocol_boundary.py
+      - name: the boundary check refuses an include that crosses it
+        run: python3 scripts/test_check_protocol_boundary.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # firmware/test/adsl/ reads the published specification clause by clause, and a
+      # The conformance suite reads the published specification clause by clause, and a
       # clause nobody read is the one a product is found non-conformant on.
       - name: every ADS-L clause has a case
         run: python3 scripts/check_adsl_clauses.py
+      - name: the clause check refuses a skipped case of no kind
+        run: python3 scripts/test_check_adsl_clauses.py
+      # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
+      - name: the ADS-L markdown carries every word of its PDF, in order
+        run: python3 scripts/check_spec_markdown.py
+      - name: the markdown check refuses a word lost, cut or misplaced
+        run: python3 scripts/test_check_spec_markdown.py
+      # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
+      - name: every listed EN 300 220 clause has a case
+        run: python3 scripts/check_en300220_clauses.py
+      - name: the EN 300 220 clause check refuses a case off the list
+        run: python3 scripts/test_check_en300220_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
@@ -121,6 +156,9 @@ jobs:
       # The bench reads Bravo's refused frames through it, so it is held to the firmware's sync, generator, log line and example.
       - name: the reader of Bravo's refused 1090 MHz frames
         run: python3 scripts/test_adsb_rejects.py
+      # The ETSI standards are fetched, not committed, so the fetcher's refusals are held offline.
+      - name: the fetcher of the ETSI standards
+        run: python3 scripts/test_fetch_etsi.py
       # The reception trial of #293 compares receiver profiles through it, and goes with it.
       - name: the reader of Bravo's reception trial
         run: python3 scripts/test_adsb_trial.py
@@ -249,8 +287,8 @@ jobs:
         run: pip install --disable-pip-version-check -r .github/lint/requirements.txt
       - name: check formatting
         run: |
-          find firmware/core firmware/ui firmware/ports firmware/hardware firmware/boards \
-               firmware/runtime firmware/products firmware/simulator firmware/test \
+          find firmware/protocols firmware/core firmware/ui firmware/ports firmware/hardware \
+               firmware/boards firmware/runtime firmware/products firmware/simulator firmware/test \
             -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
 
       # The tree is clean, so the config fails the job on any finding at all.
@@ -266,7 +304,7 @@ jobs:
       fail-fast: false
       # `slug` is the product as a human writes it: the board name carries an
       # underscore Zephyr requires, and expressions have no replace().
-      # Bravo's image is kept a week, as the X1 smoke image is, until #204 publishes it as a pre-release.
+      # Bravo's image is kept a week, as the X1 smoke image is, and the pre-release dev-release publishes outlives both.
       matrix:
         include:
           - product: skyblip_go
@@ -343,7 +381,7 @@ jobs:
   simulator:
     name: browser simulator
     needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || needs.changes.outputs.glass == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -353,6 +391,12 @@ jobs:
           actions-cache-folder: emsdk-cache
       - name: Build WASM
         run: make -C firmware browser
+      # The site shows the glass as the firmware draws it, so a change to the glass carries its pictures.
+      - name: The device screenshots are the firmware's own
+        if: needs.changes.outputs.glass == 'true'
+        run: |
+          server/bin/screenshots
+          git diff --exit-code server/content_images
       - name: Bundle simulator scenarios
         run: ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
       - uses: actions/upload-artifact@v7
@@ -366,12 +410,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Each product's development image becomes its own pre-release, one click from the
+  # Every product's development image goes into one pre-release, one click from the
   # Releases page: dev-<build> for main, the newest three kept, dev-<build>-<branch> for
-  # a branch run by hand, the newest kept until its pull request closes. Every product
-  # but the Go puts its name in front, as in bravo-dev-<build>. A new tag per build,
-  # because immutable releases lock a published one, and a deleted name is never reused.
-  # The rules are lib/dev_release.rb's, tested in .github/test/dev_release_test.rb.
+  # a branch run by hand, the newest kept until its pull request closes. A new tag per
+  # build, because immutable releases lock a published one, and a deleted name is never
+  # reused. The rules are lib/dev_release.rb's, tested in .github/test/dev_release_test.rb.
   dev-release:
     name: dev pre-release
     needs: [changes, product-image, simulator]
@@ -396,7 +439,7 @@ jobs:
           name: browser-simulator
           path: simulator
 
-      # The third-party notices travel with every image, so they come from the commit it was built from, as does the publisher.
+      # The third-party notices and the protocol versions travel with every image, so they come from the commit it was built from, as does the publisher.
       - uses: actions/checkout@v7
         with:
           path: source
@@ -405,12 +448,15 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
+            firmware/protocols/*/version.h
+            firmware/products/*/PROTOCOLS
             lib/dev_release.rb
+            lib/radio_protocols.rb
             scripts/dev_release.rb
           sparse-checkout-cone-mode: false
 
       # A rerun of one commit stamps the same number, which a unit would refuse anyway.
-      - name: create and prune each product's pre-releases
+      - name: create the pre-release and prune the old ones
         run: ruby source/scripts/dev_release.rb image simulator source
 
   platform-adapters:

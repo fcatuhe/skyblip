@@ -62,4 +62,7 @@ Rails.application.configure do
   ]
 
   routes.default_url_options = { host: config.hosts.first, port: ENV.fetch("PORT", 8119) }
+
+  # The briefing draws a phone's prompt with the firmware built next door, once `make -C firmware browser` ran.
+  config.x.simulator_build = Rails.root.join("../firmware/build/browser").to_s
 end

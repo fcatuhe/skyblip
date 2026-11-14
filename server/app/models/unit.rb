@@ -21,6 +21,12 @@ class Unit < ApplicationRecord
     end
   end
 
+  def self.find_by_slug(slug)
+    if (serial = slug.to_s[/\Ago-#{format("%02x", MANUFACTURER_PREFIX)}(\h{4})\z/, 1])
+      find_by(serial: serial.hex)
+    end
+  end
+
   def self.daily_cap_reached? = enrolled_today.count >= NEW_PER_DAY
 
   def self.enroll(device_id, network)
@@ -28,6 +34,7 @@ class Unit < ApplicationRecord
     raise Activation::Refusal.new(:network_cap) if network_cap_reached?(network)
 
     unit = create!(device_id:, serial: next_serial, enrolled_from: network)
+    Rails.event.notify "unit.enrolled", unit_id: unit.id, serial: unit.serial, device: unit.slug
     Rails.logger.error "Activation: #{NEW_PER_DAY} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
     unit
   end
@@ -60,6 +67,7 @@ class Unit < ApplicationRecord
 
   def bind(public_key, **seen)
     key = keys.find_or_initialize_by(public_key:)
+    renewed = key.persisted?
     if key.revoked?
       key.update!(seen)
     else
@@ -67,10 +75,13 @@ class Unit < ApplicationRecord
     end
     key.touch unless key.saved_changes?
     forget_old_pending_keys if key.pending?
+    Rails.event.notify("unit_key.bound", unit_id: id, device: slug, status: key.status, release: key.release, version: key.version, renewed:)
     key
   end
 
   def address = format("%02X%04X", MANUFACTURER_PREFIX, serial)
+
+  def slug = "go-#{address.downcase}"
 
   private
     def bound_to?(key)

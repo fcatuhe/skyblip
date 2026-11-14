@@ -16,6 +16,7 @@ class ProbedRf : public ports::Rf {
     Status begin() override { return part_->begin(); }
     Status arm(const ports::RfPlan& plan) override { return part_->arm(plan); }
     void abort() override { part_->abort(); }
+    Status withdraw(uint64_t tx_at_us) override { return part_->withdraw(tx_at_us); }
     ports::RfCarrier carrier() const override { return part_->carrier(); }
     ports::RfSwitching switching() const override { return part_->switching(); }
     ports::RfTransmitter transmitter() const override { return part_->transmitter(); }

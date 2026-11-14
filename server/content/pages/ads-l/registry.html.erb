@@ -1,0 +1,286 @@
+---
+title: "ADS-L registry application and address assignment"
+nav_title: ADS-L registry
+description: "The ADS-L registry assigned skyBlip AMT entry 58, manufacturer page 49 and prefix 0 on 5 October 2026. The application and exchange are recorded here."
+published_on: "2026-09-18"
+parent: ads-l
+updated_on: "2026-11-13"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
+  <h1>skyBlip has an assigned ADS-L address range.</h1>
+  <p class="lede">On 5 October 2026, FLARM assigned skyBlip manufacturer page 49, AMT entry 58 and manufacturer prefix 0. Each unit receives a serial in the 16 bits below that prefix when it is activated on skyblip.eu.</p>
+  <p>We applied on 20 September for entry 58 as a flat 24-bit space, without a manufacturer prefix. The assignment follows the structured scheme of F.2.2 instead. This page records the outcome and preserves the application as sent to <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Where it stands</h2>
+  <h3>AMT entry 58 and prefix 0 identify skyBlip&rsquo;s range.</h3>
+  <p>The registry assigned manufacturer page 49, which is AMT entry 58, with manufacturer prefix 0. The remaining 16 bits identify each unit. skyblip.eu assigns that serial at activation.</p>
+  <p class="note">The application below is the record sent on 20 September 2026, not a description of the current firmware. Its GPL-3.0-only license statement and implementation status belong to that date. Since November 2026, the whole repository, firmware included, is MIT-licensed.</p>
+
+  <h3>Who we dealt with</h3>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Contact</th><th>Role in the exchange</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>ADS-L registry, <a href="mailto:registry@ads-l.aero">registry@ads-l.aero</a></th><td>Received the application through FLARM&rsquo;s helpdesk, ticket #228794</td></tr>
+        <tr><th>FLARM</th><td>Met with us and EASA on 2 October. Issued the address assignment on 5 October</td></tr>
+        <tr><th>EASA</th><td>Met with us and FLARM on the application. Told us orally that Issue 3 will carry a callsign</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Log</h3>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>With</th><th>Event</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>20 Sep 2026</th>
+          <td>ADS-L registry</td>
+          <td>Applied for AMT entry 58 as a flat 24-bit address space, without a manufacturer prefix.</td>
+        </tr>
+        <tr>
+          <th>2 Oct 2026</th>
+          <td>FLARM, EASA</td>
+          <td>Met on the application. The manufacturer issues its equipment&rsquo;s declaration of conformity. skyBlip&rsquo;s draft is on the <%= link_to_page "ads-l/conformity", label: "conformity page" %>. EASA told us orally that Issue 3 will carry a callsign. There is no written source for that statement. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> records the question and the interim implementation.</td>
+        </tr>
+        <tr>
+          <th>5 Oct 2026</th>
+          <td>FLARM</td>
+          <td>Assigned manufacturer page 49, AMT entry 58 and manufacturer prefix 0.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Who is applying</h2>
+  <h3>An open-source project, built against the published specification.</h3>
+
+  <div class="table-scroll">
+    <table>
+      <tbody>
+        <tr><th>Applicant</th><td>François Catuhe, France &mdash; skyBlip</td></tr>
+        <tr><th>Site</th><td><a href="https://skyblip.eu">skyblip.eu</a></td></tr>
+        <tr><th>Sources</th><td><a href="https://github.com/fcatuhe/skyblip">github.com/fcatuhe/skyblip</a> &mdash; firmware GPL-3.0-only</td></tr>
+        <tr><th>Specification implemented</th><td>ADS-L 4 SRD-860 Issue 2, ED Decision 2022/024/R</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The firmware is public, so every claim below can be read rather than
+    trusted: the address logic is one file, <code>core/settings/address.cpp</code>,
+    and the wire format another, <code>core/protocol/adsl.cpp</code>. The host
+    test suite generates a behavior index,
+    <a href="https://github.com/fcatuhe/skyblip/blob/main/docs/BEHAVIOR.md"><code>docs/BEHAVIOR.md</code></a>,
+    which lists what the firmware is checked to do and is regenerated from the
+    tests themselves. Conformance has a suite of its own, below.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">The equipment</h2>
+  <h3>Two airborne devices, two ground stations, one radio design.</h3>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Device</th><th>Transmits</th><th>Receives</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>skyBlip Go</th>
+          <td>ADS-L Traffic, M-band</td>
+          <td>ADS-L Traffic, ADS-L Traffic Uplink, FLARM-generation traffic</td>
+          <td>flying, firmware published</td>
+        </tr>
+        <tr>
+          <th>skyBlip Panel</th>
+          <td>ADS-L Traffic, M-band</td>
+          <td>as above, output to the panel display over RS-232, Bluetooth and WiFi</td>
+          <td>in development</td>
+        </tr>
+        <tr>
+          <th>skyPost Helio</th>
+          <td>ADS-L Traffic Uplink, O-band HDR</td>
+          <td>ADS-L, FLARM-generation traffic, ADS-B 1090</td>
+          <td>in development</td>
+        </tr>
+        <tr>
+          <th>skyPost Bridge</th>
+          <td>ADS-L Traffic Uplink, O-band HDR</td>
+          <td>from an existing receiving station (OGN, PiAware)</td>
+          <td>in development</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    FLARM-generation traffic is decoded and shown to the pilot. It is never
+    re-transmitted: an airborne skyBlip transmits its own position and nothing
+    else, and the uplink is a ground station function.
+  </p>
+
+  <h3>On the air</h3>
+  <div class="table-scroll">
+    <table>
+      <tbody>
+        <tr><th>M-band channels</th><td>868.2 and 868.4&nbsp;MHz, alternating by UTC second (&sect;C.2, &sect;C.2.5)</td></tr>
+        <tr><th>O-band HDR</th><td>869.525&nbsp;MHz, uplink slot (&sect;C.4, &sect;C.5)</td></tr>
+        <tr><th>Transmit power</th><td>+14&nbsp;dBm e.r.p., the ERC 70-03 band h1.4 and EN 300 220 ceiling</td></tr>
+        <tr><th>Duty cycle</th><td>1&nbsp;% of any hour, metered on the device; one 5&nbsp;ms burst per second is about half of it</td></tr>
+        <tr><th>Transmitted payload</th><td>Traffic (type 2), 1&nbsp;Hz airborne, 0.1&nbsp;Hz on the ground (&sect;G.1.16)</td></tr>
+        <tr><th>Receive dwells</th><td>400&nbsp;ms on each M-band channel and 190&nbsp;ms on the uplink slot, one SX1262; M-band receive is declared Partial under &sect;G.2.2, a single radio cannot hold both channels at once</td></tr>
+        <tr><th>Design assurance</th><td>none claimed: the payload carries DAL 0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section>
+  <h2 class="kicker">Conformance</h2>
+  <h3>The specification is a test suite here, read clause by clause.</h3>
+
+  <p>
+    Issue 2 has 80 numbered clauses.
+    <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/adsl"><code>firmware/test/adsl/</code></a>
+    holds at least one case for each of them, named after the clause it reads,
+    and <code>scripts/check_adsl_clauses.py</code> fails the build if a clause
+    has no case or if a case names a clause the document does not contain.
+    Where the specification prints an algorithm or a worked example, the case
+    carries the document&rsquo;s own version of it rather than restating ours:
+    E.2&rsquo;s XXTEA, E.3.1&rsquo;s CRC-24, G.1.6&rsquo;s exponential encoder
+    and the example tables of G.1.7 to G.1.9.
+  </p>
+  <p>
+    104 cases, of which <strong>64 run and pass</strong> and 40 are skipped. A
+    skipped case is written as the clause requires it and skipped over a
+    one-line note saying why, so what this device does not do is a list rather
+    than a silence. Fourteen of the skips are clauses with nothing executable in
+    them, such as the block diagram and the OSI table, and two are duties of the
+    manufacturer rather than of the device. The rest is the honest part:
+  </p>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Clause</th><th>What is missing, and why</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>G.2, G.2.1 to G.2.11 &mdash; Status payload</th>
+          <td>not transmitted. It is the next protocol work, and soft versioning (B.5) waits on it.</td>
+        </tr>
+        <tr>
+          <th>C.3 to C.3.2 &mdash; O-band LDR</th>
+          <td>not received. One radio, and the second is already spent on the two M-band channels and the O-band HDR uplink slot.</td>
+        </tr>
+        <tr>
+          <th>E.4 to E.4.2 &mdash; secure signature</th>
+          <td>no Ed25519 key is held, generated or transmitted.</td>
+        </tr>
+        <tr>
+          <th>G.4, G.5 &mdash; FIS-B and Remote Identification</th>
+          <td>neither received nor sent. RID is a UAV payload this aircraft device has no use for.</td>
+        </tr>
+        <tr>
+          <th>D.3 &mdash; media access</th>
+          <td>a deliberate deviation, not an omission: no listen-before-talk. The burst instant is drawn at random inside the slot and re-keyed every second, and the 1&nbsp;% hourly duty cycle is the channel-access route. The argument is written out in <code>core/timing/README.md</code>, and none of the reference implementations cancels a burst either.</td>
+        </tr>
+        <tr>
+          <th>G.1.17 &mdash; quality indicators</th>
+          <td>this firmware transmits SIL 1 and a DOP-derived NIC, which was the Issue 1 reading. Issue 2 asks an uncertified device with no protection bound for 0 in both. Being aligned.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note">
+    The whole list, with the note on every skip, is the suite&rsquo;s own output:
+    <code>build/skyblip_tests --no-skip --test-case=&quot;ADS-L*&quot;</code>.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">The address</h2>
+  <h3>What we do today, and what an entry would change.</h3>
+
+  <p>
+    Today a skyBlip has no range to draw from, so it mints its own: the 24-bit
+    address is derived from the MCU serial number and transmitted under an AMT
+    entry in the self-minted group, 0 to 4. Because that space is shared with
+    every other tracker that derives its identity the same way, the device moves
+    off the prefixes known to be crowded &mdash; 0xD0, 0xDD to 0xDF and 0x11
+    &mdash; and refuses the two addresses that mean &ldquo;none&rdquo; and
+    &ldquo;dead SPI read&rdquo;, 0x000000 and 0xFFFFFF.
+  </p>
+  <p>
+    F.2.2 offers a manufacturer a page of the AMT and an 8-bit prefix inside it,
+    and asks that the remaining 16 bits be filled densely. That shape assumes a
+    production line: someone issues address n+1 to the next unit and writes it
+    down. This firmware is GPL-3.0 and builds from source, so a share of the
+    fleet is assembled by its owner, flashed at a kitchen table, and passes
+    through no counter we could run. Such a device mints its address the only
+    way an offline device can, from the MCU serial number, and 16 bits are too
+    few to absorb that: derived addresses collide at even odds by about 300
+    devices.
+  </p>
+  <p>
+    So the application is for one AMT entry with the structuring of F.2.2
+    waived: 6 bits of AMT and 24 bits of address, no 8-bit prefix in between. We
+    are asking for a deviation and say so plainly, but it is one the table
+    already grants three times over. Entries 6, 7 and 8 are flat 24-bit spaces,
+    and <strong>OGN-Tracker at entry 7</strong> is a fleet of exactly this
+    shape: devices built rather than bought, each deriving its identity locally,
+    with a public database resolving who is who. Assigned that way, the entry
+    costs the table one page out of 55 and ends the guesswork for every skyBlip
+    ever built, not only for the ones we ship.
+  </p>
+  <p>
+    The entry we ask for is <strong>58</strong>, manufacturers page 49, for one
+    reason only: 58 reads as SB. It is the single piece of vanity in this
+    application and the registry should overrule it without hesitation, since a
+    page issued out of order is a favour and the exception above is the part
+    that matters. Any entry in 9 to 63 works for us.
+  </p>
+  <p class="note">
+    A 24-bit space does not make collisions impossible either. It makes them
+    rare enough to settle one at a time: about 4,800 derived addresses before
+    even odds of a single colliding pair. What settles them is a register, which
+    is the first of the two answers in
+    <%= link_to_page "ads-l/callsign", label: "the callsign question", anchor: "callsign" %>.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">References</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &mdash;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>,
+      ED Decision 2022/024/R, Issue 2.
+      <span class="support">F.2.2 sender address and the AMT, G.1 Traffic, G.2 Status.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &mdash;
+      <a href="https://github.com/fcatuhe/skyblip">github.com/fcatuhe/skyblip</a>.
+      <span class="support">The implementation, its host test suite, and the generated behavior index.</span>
+    </li>
+  </ul>
+  <p>
+    <%= link_to_page "ads-l", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "ads-l/callsign", class: "cta cta--next" %>
+  </p>
+</section>

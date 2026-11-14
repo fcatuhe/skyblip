@@ -1,0 +1,29 @@
+<% content_for :title, "#{@problem.error} · Errors" %>
+<header class="admin-header">
+  <h1><%= @problem.error %></h1>
+</header>
+
+<dl class="admin-details">
+  <dt>Message</dt>
+  <dd><%= @problem.message %></dd>
+  <dt>Side</dt>
+  <dd><%= @problem.side %></dd>
+  <dt>Times</dt>
+  <dd><%= @problem.count %>, on <%= pluralize(@problem.devices, "device") %> and <%= pluralize(@problem.browsers, "browser") %></dd>
+  <dt>First seen</dt>
+  <dd><%= event_time(@problem.first_at) %></dd>
+  <dt>Last seen</dt>
+  <dd><%= event_time(@problem.last_at) %><%= ", revision #{@problem.latest.payload["revision"]}" if @problem.latest.payload["revision"] %></dd>
+  <dt>Fingerprint</dt>
+  <dd class="mono"><%= @problem.fingerprint %></dd>
+</dl>
+
+<% if (frames = @problem.latest.payload["frames"]).present? %>
+  <h2>Where</h2>
+  <pre class="admin-frames"><%= frames.join("\n") %></pre>
+<% end %>
+
+<h2>Latest occurrences</h2>
+<%= render "admin/events/list", events: @problem.occurrences %>
+
+<p><%= link_to "All errors", admin_errors_path %></p>

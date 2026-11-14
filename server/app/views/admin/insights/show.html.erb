@@ -1,0 +1,38 @@
+<% content_for :title, "Insights" %>
+<header class="admin-header">
+  <h1>Insights</h1>
+  <nav class="admin-tabs" aria-label="Period">
+    <% Event::Review::PERIODS.each do |days| %>
+      <%= link_to "#{days} days", admin_insights_path(days:), "aria-current": ("page" if days == @days) %>
+    <% end %>
+  </nav>
+</header>
+
+<% headline, before = @review.headline, @review.previous.headline %>
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th></th>
+        <th>Last <%= @days %> days</th>
+        <th>The <%= @days %> before</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% headline.each do |key, value| %>
+        <tr>
+          <th><%= key.to_s.humanize %></th>
+          <td><%= value %></td>
+          <td><%= before[key] %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% @review.to_h.except(:window, :headline).each do |section, value| %>
+  <section class="admin-insight">
+    <h2><%= section.to_s.humanize %></h2>
+    <%= insight_value(value) %>
+  </section>
+<% end %>

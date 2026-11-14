@@ -1,0 +1,131 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://chatgpt.com/oauth/codex/client.json
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+      Host:
+      - chatgpt.com
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 13 Oct 2026 09:47:29 GMT
+      Content-Type:
+      - application/json; charset=utf-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      X-Content-Type-Options:
+      - nosniff
+      Cache-Control:
+      - public, max-age=300
+      Server:
+      - cloudflare
+      Cf-Cache-Status:
+      - DYNAMIC
+      Cross-Origin-Opener-Policy:
+      - same-origin-allow-popups
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Nel:
+      - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+      Report-To:
+      - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=mcOXEpNFTxlQAglCEuaGHNZv2xXsb6AO15oRLUM4pBCFmgm4QtB3oqAZefoiptyjhEZMylcMojR5w04vXy%2BgZCzcII6KyYWhzPfTVeY4EcWl8DmMwMAF7%2B%2FSulba"}]}'
+      Set-Cookie:
+      - __Host-next-auth.csrf-token=bfbaccfe0519219b6f7d9e26973ee5af5da55d2b9059c09747e7d88818b29977%7C0de269109d448449ec6e1138eed4648f3070cf3e589dcd00965a08d9c311922d;
+        Path=/; HttpOnly; Secure; SameSite=Lax
+      - __Secure-next-auth.callback-url=https%3A%2F%2Fchatgpt.com%2Cchat.edge.unified-173.api.openai.com%2Cchat.gateway.unified-161.api.openai.com;
+        Path=/; HttpOnly; Secure; SameSite=Lax
+      - __cf_bm=eBDsqp2Ytu7QGgrQR4FY6mr4u5OYiqD2KuWfA0pz.ns-1791884849.8105137-1.0.1.1-y52AcLtmk49ZxhuALuUfivDPEX2Z2Bm_lHp8WJH5sIKPMcP3X2M_1v2WmLBzJbH2xMDjrswlzkskJSVNWnzsyV7ijqPkkX9UAScAGjD4npElRs_PwO6ylk9DfS4TEOpc;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=chatgpt.com; Expires=Tue,
+        13 Oct 2026 10:17:29 GMT
+      - __cflb=0H28vzvP5FJafnkHxiswSQLprao39ccCpw3T9wkKjqM; HttpOnly; SameSite=None;
+        Secure; Path=/; Expires=Tue, 13 Oct 2026 10:47:29 GMT
+      - oai-did=d3c59243-9b97-473a-be55-625664337c8a; Path=/; Domain=chatgpt.com;
+        Max-Age=31104000; SameSite=Lax
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Cf-Ray:
+      - a49d6c5749dc0f1e-CDG
+    body:
+      encoding: ASCII-8BIT
+      string: '{"client_id":"https://chatgpt.com/oauth/codex/client.json","client_uri":"https://chatgpt.com/codex","application_type":"native","redirect_uris":["http://127.0.0.1/callback","http://localhost/callback"],"token_endpoint_auth_method":"none","token_endpoint_auth_methods_supported":["none"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],"client_name":"Codex","logo_uri":"https://persistent.oaistatic.com/sonic/misc/openai-logo.png"}'
+  recorded_at: Tue, 13 Oct 2026 09:47:29 GMT
+- request:
+    method: get
+    uri: https://chatgpt.com/oauth/client.json
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+      Host:
+      - chatgpt.com
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 13 Oct 2026 12:47:10 GMT
+      Content-Type:
+      - application/json; charset=utf-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      X-Content-Type-Options:
+      - nosniff
+      Cache-Control:
+      - public, max-age=300
+      Server:
+      - cloudflare
+      Cf-Cache-Status:
+      - DYNAMIC
+      Cross-Origin-Opener-Policy:
+      - same-origin-allow-popups
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Nel:
+      - '{"report_to":"cf-nel","success_fraction":0.01,"max_age":604800}'
+      Report-To:
+      - '{"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=mHJgcdzI%2Ff37IFnoNmJPCGQQoISEjF5tfAmjfXe9I8TIv626eJUgWz5lw1VGcO4q3yU2jv%2FvJrH5pMnGxjIkdil4ee%2BbdohoFhrY4Nw552Kkj2VFhhel98uf32OO"}]}'
+      Set-Cookie:
+      - __Host-next-auth.csrf-token=a8a36f04216a4938075f72cdb47036cdd7a59a7089e144d7399dba2ceb61fce2%7Ca89e4dd570d6ac346a1de12c8d3e3df23b61e921e17523baba9343172002e6c8;
+        Path=/; HttpOnly; Secure; SameSite=Lax
+      - __Secure-next-auth.callback-url=https%3A%2F%2Fchatgpt.com%2Cchat.edge.unified-173.api.openai.com%2Cchat.gateway.unified-80.api.openai.com;
+        Path=/; HttpOnly; Secure; SameSite=Lax
+      - __cf_bm=loZ.6_OglZseNsA6bmEcyEepRKazeXcAwNGRULyejOc-1791895630.7004972-1.0.1.1-5e0gP6wVMXqTYtEhqrLB832MMgJoWt2Uat3Os4HFFdzW42sUMrc5pL2a8bFChYQi.vXKp2caaFtATPOetssPWoYaWgoYFe_Qv5Y1WFEc2D9FBOqd95HTVu9SWtIXc318;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=chatgpt.com; Expires=Tue,
+        13 Oct 2026 13:17:10 GMT
+      - __cflb=0H28vzvP5FJafnkHxiswSQLprao39ccCuqZavTo2MUf; HttpOnly; SameSite=None;
+        Secure; Path=/; Expires=Tue, 13 Oct 2026 13:47:10 GMT
+      - oai-did=9e9fde36-b429-435c-88d5-73c20eaf81b1; Path=/; Domain=chatgpt.com;
+        Max-Age=31104000; SameSite=Lax
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Cf-Ray:
+      - a49e738bddc9c46a-CDG
+    body:
+      encoding: ASCII-8BIT
+      string: '{"client_id":"https://chatgpt.com/oauth/client.json","client_uri":"https://chatgpt.com/","redirect_uris":["https://chatgpt.com/connector_platform_oauth_redirect"],"token_endpoint_auth_method":"private_key_jwt","token_endpoint_auth_methods_supported":["none","private_key_jwt"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],"client_name":"ChatGPT","logo_uri":"https://persistent.oaistatic.com/sonic/misc/openai-logo.png","token_endpoint_auth_signing_alg":"RS256","jwks_uri":"https://chatgpt.com/oauth/jwks.json"}'
+  recorded_at: Tue, 13 Oct 2026 12:47:10 GMT
+recorded_with: VCR 6.4.0

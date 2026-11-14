@@ -12,7 +12,8 @@
     gap: var(--space-2xs) var(--space-inline-s);
   }
 
-  .unit-facts {
+  .unit-facts,
+  .unit-protocols {
     grid-column: 1;
     margin: 0;
     font-size: var(--text-s);
@@ -244,12 +245,17 @@
   .firmware-recovery summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
   .firmware-recovery .note { margin: 0; }
   .firmware-release { font-size: var(--text-s); text-decoration: underline; text-decoration-color: var(--quiet); }
+  .firmware-report { margin: 0; }
+  .support-code { font-family: var(--font-mono); letter-spacing: 0.05em; user-select: all; }
   .firmware .field { grid-template-columns: minmax(0, 1fr); border: 0; padding: 0; }
   .firmware .field :is(select, input) { inline-size: 100%; }
 
   .tools,
   .preferences { display: grid; gap: var(--space-m); }
   .preferences legend { padding: 0; margin-block-end: var(--space-xs); font-weight: 700; }
+  .preferences-support { display: grid; gap: var(--space-xs); }
+  .preferences-support :is(h2, p) { margin: 0; }
+  .preferences-support h2 { font-size: inherit; }
   .preferences .field--check { grid-template-columns: minmax(0, 1fr) auto; }
   .tools-list { display: grid; margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--card-border); }
   .tools-link {

@@ -157,9 +157,7 @@ class ScreenService : public runtime::Service {
     void park(ParkFrame frame);
     static bool worn_powered_off(ParkFrame frame);
     void draw_park_frame(ParkFrame frame);
-    void draw_parked_cell(const char* said);
-    void centred_text(int y, const char* text, int scale);
-    static constexpr int kParkedSaidScale = 2;
+    void draw_parked_cell(const BodyLine* said, int count);
     void note_presented(uint32_t now_ms);
     void count_refresh(ports::Refresh mode);
     void accrue_backlight(uint32_t now_ms);

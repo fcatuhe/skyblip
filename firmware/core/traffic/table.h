@@ -21,8 +21,16 @@ struct TargetTurn {
     uint16_t reference_track_c9{0};
 };
 
+// INFO: fc 13nov26 B.5: a Status's version outranks a packet's until the slot is freed
+struct PeerVersion {
+    uint8_t max{0};
+    bool adsl{false};
+    bool declared{false};
+};
+
 struct Target {
     model::AircraftObservation observation;
+    PeerVersion version;
     // INFO: fc 11nov26 moves each time the table takes an observation, so a reader tells news apart
     uint32_t revision{0};
     TargetTurn turn;
@@ -54,7 +62,7 @@ class TrafficTable {
 
     // Where own-ship is, for the range gate below. This is the table's door and
     // three paths come through it - a direct ADS-L frame, an ALP-TAS frame and up
-    // to thirteen aircraft relayed inside one uplink frame - so the gate lives
+    // to ten aircraft relayed inside one uplink frame - so the gate lives
     // here rather than on any one of them: a path added later is gated by
     // construction instead of by remembering. Whoever drains the radio bus
     // refreshes this each pass; a table nobody told has no reference and gates
@@ -68,6 +76,10 @@ class TrafficTable {
     uint32_t adsb_without_position() const { return adsb_without_position_; }
 
     int update(const model::AircraftObservation& observation, uint32_t now_s);
+
+    bool declare_max_version(uint8_t address_mapping_table, uint32_t address, uint8_t version);
+    // INFO: fc 13nov26 now_ms is the instant both sides are carried to, on ports::Clock
+    uint8_t readable_version(const model::Ownship& own, uint32_t now_ms) const;
 
     void age_out(uint32_t now_s);
 
@@ -99,6 +111,7 @@ class TrafficTable {
     static bool prefer_new(const model::AircraftObservation& incoming,
                            const model::AircraftObservation& existing);
     static void sample_turn(TargetTurn& turn, const model::AircraftObservation& observation);
+    static void note_version(PeerVersion& version, const model::AircraftObservation& observation);
     static void release(Target& target);
     static void watch_liftoff(Target& target, const model::AircraftObservation& incoming);
     static bool matters_less(const Weight& weight, const Weight& other);

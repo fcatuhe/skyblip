@@ -164,6 +164,20 @@ TEST_CASE("radio log page: own-ship's callsign burst says so where its schedule 
     CHECK_FALSE(reads_at(canvas, 4 + 16 * 6, kFirstRowY, "CALLSIGN"));
 }
 
+// On the ground the Status goes out about a tenth of a second from the position, as a second row.
+TEST_CASE("radio log page: own-ship's Status burst says so where its schedule is printed") {
+    radio::Log log;
+    radio::Entry status = entry_of(radio::Verdict::Transmitted);
+    status.status = true;
+    log.record(status);
+
+    Glass canvas;
+    draw_radio_log(canvas, with(log));
+    CHECK(reads_at(canvas, 4 + 10 * 6, kFirstRowY, "TX"));
+    CHECK(reads_at(canvas, 4 + 22 * 6, kFirstRowY, "STATUS"));
+    CHECK_FALSE(reads_at(canvas, 4 + 22 * 6, kFirstRowY, "GROUND"));
+}
+
 // A name carries no position, so the row has to say what it was or it reads as a target.
 TEST_CASE("radio log page: a received registration says it named its sender, and who") {
     radio::Log log;
@@ -305,14 +319,14 @@ TEST_CASE("radio log page: a failed burst spends no column on the length every b
 }
 
 // A transmission that failed, read as a bad reception, sends a reader after the wrong fault.
-TEST_CASE("radio log page: own-ship's two outcomes read apart, and both read as TX") {
+TEST_CASE("radio log page: own-ship's outcomes read apart, and all read as TX") {
     struct Case {
         radio::Verdict verdict;
         const char* reads;
     };
-    const Case cases[] = {{radio::Verdict::Lost, "LOST"},
-                          {radio::Verdict::Held, "HELD"},
-                          {radio::Verdict::Unarmed, "LOST"}};
+    const Case cases[] = {{radio::Verdict::Lost, "LOST"},    {radio::Verdict::Held, "HELD"},
+                          {radio::Verdict::Unarmed, "LOST"}, {radio::Verdict::Deferred, "DEFER"},
+                          {radio::Verdict::Forced, "FORCE"}, {radio::Verdict::Busy, "BUSY"}};
     for (const Case& example : cases) {
         radio::Log log;
         log.record(entry_of(example.verdict));
@@ -414,5 +428,5 @@ TEST_CASE("radio log page: a silent band says so rather than showing an empty gr
     radio::Log log;
     Glass canvas;
     draw_radio_log(canvas, with(log));
-    CHECK(reads_at(canvas, 4, kFirstRowY + kLineHeight, "NOTHING ON AIR YET"));
+    CHECK(reads_at(canvas, 4, kFirstRowY + kLineHeight, "NO RADIO DATA"));
 }

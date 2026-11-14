@@ -1,0 +1,47 @@
+@layer components {
+  .admin-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs) var(--space-inline-s);
+    margin-block-end: var(--space-l);
+  }
+
+  .admin-filters label { font-size: var(--text-s); color: var(--ink-soft); }
+
+  .admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-inline-s);
+  }
+
+  .admin-events-facts { overflow-wrap: anywhere; min-inline-size: 20rem; }
+
+  .admin-unseen { color: var(--quiet-text); }
+
+  .admin-badge {
+    margin-inline-start: var(--space-inline-xs);
+    padding-inline: var(--space-inline-xs);
+    background: var(--blip-soft);
+    color: var(--blip-text);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+  }
+
+  .admin .quiet { color: var(--quiet-text); font-weight: 400; }
+
+  .admin-frames {
+    padding: var(--space-s) var(--space-inline-m);
+    background: var(--card-bg);
+    font-family: var(--font-mono);
+    font-size: var(--text-s);
+    overflow-x: auto;
+  }
+
+  .admin-insight { margin-block-end: var(--space-l); }
+
+  .admin-details--nested {
+    margin-block: 0;
+    font-size: var(--text-s);
+  }
+}

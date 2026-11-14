@@ -91,9 +91,10 @@ inline constexpr Value kReasonValues[] = {
     {"untrusted", 49},
     {"forgotten", 50},
     {"unknown_browser", 51},
-    {"adsb_trial", 52},
+    {"not_own_transponder", 52},
+    {"adsb_trial", 53},
 };
-inline constexpr Enumeration kReason{kReasonValues, 52};
+inline constexpr Enumeration kReason{kReasonValues, 53};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},
@@ -210,6 +211,23 @@ inline constexpr Value kCaptureProfileValues[] = {
 };
 inline constexpr Enumeration kCaptureProfile{kCaptureProfileValues, 4};
 
+inline constexpr Value kStagedCheckValues[] = {
+    {"unchecked", 0}, {"matched", 1}, {"damaged", 2}, {"unreadable", 3}, {"undigested", 4},
+};
+inline constexpr Enumeration kStagedCheck{kStagedCheckValues, 5};
+
+inline constexpr Value kSwapTypeValues[] = {
+    {"unknown", 0}, {"none", 1}, {"test", 2},  {"permanent", 3},
+    {"revert", 4},  {"fail", 5}, {"panic", 6},
+};
+inline constexpr Enumeration kSwapType{kSwapTypeValues, 7};
+
+inline constexpr Value kProofValues[] = {
+    {"none", 0},         {"booted", 1}, {"started", 2},        {"gnss_heard", 3},
+    {"hub_bootable", 4}, {"proven", 5}, {"confirm_failed", 6},
+};
+inline constexpr Enumeration kProof{kProofValues, 7};
+
 inline constexpr Value kCommandValues[] = {
     {"acknowledgement", 0},
     {"get", 1},
@@ -246,9 +264,11 @@ inline constexpr Value kCommandValues[] = {
     {"browsers", 32},
     {"browser", 33},
     {"forget_browser", 34},
-    {"adsb_trial", 35},
+    {"install_report", 35},
+    {"protocols", 36},
+    {"adsb_trial", 37},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 36};
+inline constexpr Enumeration kCommand{kCommandValues, 38};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -384,6 +404,13 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"unsupported", 61, Type::Unsigned, nullptr, 0, false},
     {"folded", 62, Type::Unsigned, nullptr, 0, false},
     {"aircraft", 63, Type::Unsigned, nullptr, 0, false},
+    {"tx_held_for_b5", 64, Type::Unsigned, nullptr, 0, false},
+    {"rx_status", 65, Type::Unsigned, nullptr, 0, false},
+    {"uplink_stale", 66, Type::Unsigned, nullptr, 0, false},
+    {"tx_given_up", 67, Type::Unsigned, nullptr, 0, false},
+    {"tx_deferred", 68, Type::Unsigned, nullptr, 0, false},
+    {"tx_forced", 69, Type::Unsigned, nullptr, 0, false},
+    {"tx_busy_missed", 70, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -595,6 +622,24 @@ inline constexpr Key kForgetBrowserKeys[] = {
     {"id", 1, Type::Bytes, nullptr, 8, true},
 };
 
+inline constexpr Key kInstallReportKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"check", 1, Type::Enum, &kStagedCheck, 0, false},
+    {"swap", 2, Type::Enum, &kSwapType, 0, false},
+    {"request_error", 3, Type::Integer, nullptr, 0, false},
+    {"boots", 4, Type::Unsigned, nullptr, 0, false},
+    {"probation_boots", 5, Type::Unsigned, nullptr, 0, false},
+    {"proof", 6, Type::Enum, &kProof, 0, false},
+    {"reset", 7, Type::Enum, &kReset, 0, false},
+};
+
+inline constexpr Key kProtocolsKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"adsb_version", 1, Type::Text, nullptr, 0, false},
+    {"adsl_version", 2, Type::Text, nullptr, 0, false},
+    {"alptas_version", 3, Type::Text, nullptr, 0, false},
+};
+
 inline constexpr Key kAdsbTrialKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
     {"slot_s", 1, Type::Unsigned, nullptr, 0, false},
@@ -614,8 +659,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 70},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 70},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},
@@ -641,7 +686,9 @@ inline constexpr Frame kFrames[] = {
     {"browsers", 32, events::Endpoint::Config, Sender::Host, kBrowsersKeys, 2},
     {"browser", 33, events::Endpoint::Config, Sender::Unit, kBrowserKeys, 5},
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
-    {"adsb_trial", 35, events::Endpoint::Config, Sender::Host, kAdsbTrialKeys, 7},
+    {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 8},
+    {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
+    {"adsb_trial", 37, events::Endpoint::Config, Sender::Host, kAdsbTrialKeys, 7},
 };
 
 }

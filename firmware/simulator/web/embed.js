@@ -61,6 +61,9 @@ export async function load(options = {}) {
     prompt: call('simulator_prompt', 'number', noArgs),
     txNamed: call('simulator_tx_named', 'number', noArgs),
     rxNamed: call('simulator_rx_named', 'number', noArgs),
+    txHeldForB5: call('simulator_tx_held_for_b5', 'number', noArgs),
+    rxStatus: call('simulator_rx_status', 'number', noArgs),
+    uplinkStale: call('simulator_uplink_stale', 'number', noArgs),
     nameAircraft: call('simulator_name_aircraft', null, ['number', 'string']),
     addThreat: call('simulator_add_threat', null, oneNumber),
     clearTraffic: call('simulator_clear_aircraft', null, noArgs),
@@ -138,10 +141,9 @@ export async function load(options = {}) {
     return simMs;
   };
 
-  sim.paint = (canvas) => {
+  const paintFrom = (canvas, base) => {
     const context = canvas.getContext('2d');
     if (image === null) image = context.createImageData(sim.width, sim.height);
-    const base = sim.panel();
     const heap = module.HEAPU8;
     for (let y = 0; y < sim.height; y++) {
       for (let x = 0; x < sim.width; x++) {
@@ -155,6 +157,19 @@ export async function load(options = {}) {
       }
     }
     context.putImageData(image, 0, 0);
+  };
+
+  sim.paint = (canvas) => paintFrom(canvas, sim.panel());
+
+  // INFO: fc 14nov26 the briefing draws a phone's prompt with the Go's own page, not a copy of it
+  const drawPrompt = call('simulator_draw_prompt', 'number', ['string', 'string', 'string', 'number']);
+  const promptWords = call('simulator_prompt_words', 'string', noArgs);
+  // INFO: fc 14nov26 null when the Go raises no such prompt, else what the page says in reading order
+  sim.paintPrompt = (canvas, { prompt, argument = '', settings = '', seconds = 0 }) => {
+    const base = drawPrompt(prompt, argument, settings, seconds);
+    if (base === 0) return null;
+    paintFrom(canvas, base);
+    return promptWords();
   };
 
   sim.sleepAgain = () => {

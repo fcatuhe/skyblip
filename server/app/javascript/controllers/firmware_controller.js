@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
 import { fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
 import { productWord } from "controllers/briefing/facts"
+import { installCause, reportShown } from "#skyblip/install_report"
 import { say, sayNotice } from "controllers/briefing/words"
 
 const RECHECK_MS = 5000
@@ -13,7 +14,7 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 
 export default class extends Controller {
-  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "install", "back", "other", "file", "release", "recovery", "recover"]
+  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "install", "back", "other", "file", "release", "recovery", "recover"]
   static values = { slug: String }
   static outlets = ["glass"]
 
@@ -59,6 +60,7 @@ export default class extends Controller {
     if (taken(this.unit)) return
     this.estimate = null
     this.unit.attempted = this.unit.state.file?.version
+    this.unit.restarted = false
     this.unit.updater.install()
   }
 
@@ -80,6 +82,7 @@ export default class extends Controller {
     this.panelTarget.hidden = !shown
     clearTimeout(this.recheck)
     if (!shown) return this.glassOutlet?.hide()
+    if (state.phase === "rebooting") unit.restarted = true
     const idle = state.phase === "ready" && state.status?.flight !== "airborne"
     const asks = idle && !state.refusedOnDevice
     if (unit.linked) offerNewest(unit, this.shelf)?.then(() => this.#render())
@@ -117,7 +120,7 @@ export default class extends Controller {
   #upgradeToFull(unit, state) {
     if (state.notice?.key !== "needs_full" || taken(unit)) return
     const slim = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
-    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.kind === "full")
+    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.product === slim.dataset.product && option.dataset.kind === "full")
     if (full) this.#taking(take(unit, full))
   }
 
@@ -180,11 +183,15 @@ export default class extends Controller {
     const refusedHere = state.refusedOnDevice && REFUSALS.has(notice?.key)
     if (notice && !notice.during && notice.key !== "needs_full" && !refusedHere) lines.push(sayNotice(notice, "notices"))
     if (this.shelfFailed) lines.push(say("notices.shelf_failed"))
-    if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
+    const attempted = this.unit.restarted ? this.unit.attempted : null
+    const cause = installCause({ image, report: state.installReport, running: state.running, attempted })
+    if (cause) lines.push(say(`notices.install_report.${cause}`, { running: state.running, attempted }))
+    else if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
     if (image?.imu === "writing") lines.push(say("notices.imu_writing"))
     if (image && !image.key) lines.push(say("notices.no_key"))
     if (image && !image.swapPowered) lines.push(say("notices.swap_unpowered"))
     if (status?.wentDarkFlat) lines.push(say("notices.went_dark_flat"))
+    this.#report(state, cause)
     this.messageTarget.hidden = lines.length === 0
     const drawn = lines.join("\n")
     if (drawn === this.drawnMessage) return
@@ -192,13 +199,18 @@ export default class extends Controller {
     this.messageTarget.replaceChildren(...lines.map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 
+  // INFO: fc 14nov26 the journal sends the install report as device.install_reported, so the page only says it was received
+  #report(state, cause) {
+    this.reportTarget.hidden = !reportShown({ image: state.image, cause })
+  }
+
   #glass(unit, state) {
     if (!this.hasGlassOutlet) return
     const { phase, task, file } = state
     const lamp = unit.product === "skyblip_bravo"
     const product = productWord(unit)
-    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", detail: `INSTALL ${file?.version ?? ""} FROM THE PHONE`, product, lamp, remembers: state.trust === "proven" })
-    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", detail: "REBOOT INTO THE USB BOOTLOADER", product, lamp })
+    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
+    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
     else if (task !== "set") this.glassOutlet.hide()
   }
 

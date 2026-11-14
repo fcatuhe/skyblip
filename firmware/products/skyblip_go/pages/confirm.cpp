@@ -1,83 +1,36 @@
 #include "products/skyblip_go/pages/confirm.h"
 
-#include <cstring>
-
 #include "core/util/format.h"
 
 namespace skyblip::go {
 
-namespace {
-
-constexpr int kLeft = kConfirmLeftX;
-using ui::kCellWidth;
-
-int break_within(const char* text, int from, int to) {
-    for (int i = from; i < to; i++)
-        if (text[i] == '\n') return i;
-    return -1;
-}
-
-// One line of at most kConfirmDetailColumns characters, broken on a space so a
-// sentence a pilot has to read in a hurry does not split a word, or where the
-// detail breaks it with '\n', one setting to a row.
-int take_line(const char* text, int from, char* out) {
-    const int length = static_cast<int>(std::strlen(text));
-    if (from >= length) {
-        out[0] = 0;
-        return from;
-    }
-    int end = from + kConfirmDetailColumns;
-    const int newline = break_within(text, from, end < length ? end + 1 : length);
-    if (newline >= 0) {
-        end = newline;
-    } else if (end >= length) {
-        end = length;
-    } else {
-        int space = end;
-        while (space > from && text[space] != ' ') space--;
-        if (space > from) end = space;
-    }
-    int written = 0;
-    for (int i = from; i < end; i++) out[written++] = text[i];
-    out[written] = 0;
-    return text[end] == ' ' || text[end] == '\n' ? end + 1 : end;
-}
-
-}  // namespace
-
 void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
-    canvas.clear(true);
+    draw_heading(canvas, snapshot.title, Heading::Interrupt);
 
-    // Reversed out across the full width: whatever page was up, this cannot be
-    // mistaken for one of them at arm's length.
-    canvas.rectangle(0, 0, kGlassWidth, 26, true, /*fill=*/true);
-    canvas.draw_text(kLeft + kCellWidth, kConfirmHeaderY, "AUTHORISE", false, 2);
-
-    canvas.draw_text(kLeft, kConfirmTitleY, snapshot.title, true, 2);
-    canvas.horizontal_line(kLeft, kConfirmTitleY + 22, kGlassWidth - 2 * kLeft, true);
-
-    char line[kConfirmDetailColumns + 1];
+    char detail[kConfirmDetailRows][kConfirmDetailColumns + 1];
+    char seconds[16];
+    BodyLine body[kConfirmDetailRows + 4];
+    int count = 0;
     int at = 0;
     for (int row = 0; row < kConfirmDetailRows; row++) {
-        at = take_line(snapshot.detail, at, line);
-        if (line[0] == 0) break;
-        canvas.draw_text(kLeft, confirm_detail_y(row), line, true, 1);
+        at = take_line(snapshot.detail, at, detail[row], kConfirmDetailColumns);
+        if (detail[row][0] == 0) break;
+        body[count++] = {detail[row]};
     }
+    body[count++] = {""};
+    body[count++] = {kConfirmCancelLine};
+    if (snapshot.seconds_left == 0) {
+        body[count++] = {kConfirmOnceLine};
+    } else {
+        body[count++] = {kConfirmWaitLine};
+        int written = format_unsigned(seconds, snapshot.seconds_left);
+        written += format_string(seconds + written, " S");
+        seconds[written] = 0;
+        body[count++] = {seconds};
+    }
+    draw_body(canvas, Heading::Interrupt, /*keys=*/true, body, count);
 
-    // The allowing gesture is reversed out and the refusing one is not, so the
-    // two are told apart by shape before either is read.
-    const int width = (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellWidth;
-    canvas.rectangle(kLeft, kConfirmAllowY - 4, width, 15, true, /*fill=*/true);
-    canvas.draw_text(kLeft + kCellWidth, kConfirmAllowY, kConfirmAllowText, false, 1);
-    canvas.draw_text(kLeft + kCellWidth, kConfirmRefuseY, kConfirmRefuseText, true, 1);
-
-    if (snapshot.seconds_left == 0) return;
-    char text[32];
-    int written = format_string(text, "REFUSED IN ");
-    written += format_unsigned(text + written, snapshot.seconds_left);
-    written += format_string(text + written, " S");
-    text[written] = 0;
-    canvas.draw_text(kLeft, kConfirmExpiryY, text, true, 1);
+    draw_keys(canvas, {{Press::Twice, kConfirmAllowVerb}, ""});
 }
 
 }  // namespace skyblip::go

@@ -5,7 +5,9 @@ Structural gate, not line coverage. Tests live in firmware/test/, one folder per
 layer, and never beside the code they test: every core/ and ui/ module must be
 included by some test there, and every part with a driver must have
 test/hardware/test_<part>.cpp that includes both the driver and its model. A part
-with no test is a datasheet transcription nothing checks.
+with no test is a datasheet transcription nothing checks. A radio protocol stack
+under protocols/ is the one exception: it travels with its tests, so they live in
+its own test/ folder.
 """
 import os
 import sys
@@ -14,6 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware")
 
 REQUIRED_MODULES = [
+    "protocols/common", "protocols/adsl", "protocols/adsb", "protocols/alptas",
     "core/util", "core/fec", "core/protocol", "core/gnss", "core/timing",
     "core/traffic", "core/settings", "core/comms", "core/flight", "core/bus",
     "core/power", "core/annunciation", "core/indication", "core/dfu", "core/radio",
@@ -25,7 +28,9 @@ REQUIRED_MODULES = [
 ]
 
 TEST_DIRS = ("test", "test/adsl", "test/core", "test/ui", "test/products", "test/products/pages",
-             "test/products/skyblip_bravo", "test/hardware", "test/boards")
+             "test/products/skyblip_bravo", "test/hardware", "test/boards",
+             "protocols/common/test", "protocols/adsl/test", "protocols/adsl/test/conformance",
+             "protocols/adsb/test", "protocols/alptas/test")
 
 PART_TEST_DIR = "test/hardware"
 
@@ -56,9 +61,11 @@ def has_driver(part):
 def strays():
     """Test files that crept back in beside the code they test."""
     found = []
-    for layer in ("core", "ui", "ports", "hardware", "boards", "runtime", "products",
+    for layer in ("protocols", "core", "ui", "ports", "hardware", "boards", "runtime", "products",
                   "simulator"):
         for dirpath, _, files in os.walk(os.path.join(FW, layer)):
+            if layer == "protocols" and f"{os.sep}test" in os.path.relpath(dirpath, FW):
+                continue
             for f in files:
                 if f.startswith("test_") and f.endswith(".cpp"):
                     found.append(os.path.relpath(os.path.join(dirpath, f), FW))
@@ -99,7 +106,7 @@ def main():
             for m in misplaced:
                 print("  -", m)
         return 1
-    print("OK: every module and part is reached by a host test in firmware/test/.")
+    print("OK: every module and part is reached by a host test.")
     return 0
 
 

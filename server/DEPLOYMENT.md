@@ -14,13 +14,13 @@ On the crooz server, beside crooz itself: the same Debian host, user `debian`, a
 
 The image is arm64, because crooz is. The registry is a container Kamal runs on the machine deploying and tunnels to the server over SSH, so there is no hub and no registry password, but Docker has to be running locally. An arm64 machine builds locally, and any other builds over SSH on crooz itself, which `config/deploy.yml` switches on by reading `RUBY_PLATFORM`. Kamal builds `server/` from a clean clone of the commit, so commit before deploying by hand.
 
-Thruster serves on port 80 inside the container and Puma runs Solid Queue in its own process (`SOLID_QUEUE_IN_PUMA`). The five SQLite databases, primary, analytics, cache, queue and cable, live in the `skyblip_storage` volume with the MaxMind city database, and `bin/docker-entrypoint` runs `db:prepare` before the server starts. There is no backup yet: #131 adds Litestream and kamal-backup before the first registration that matters.
+Thruster serves on port 80 inside the container and Puma runs Solid Queue in its own process (`SOLID_QUEUE_IN_PUMA`). The six SQLite databases, primary, analytics, events, cache, queue and cable, live in the `skyblip_storage` volume with the MaxMind city database, and `bin/docker-entrypoint` runs `db:prepare` before the server starts. There is no backup yet: #131 adds Litestream and kamal-backup before the first registration that matters.
 
 ## Secrets
 
 `.kamal/secrets` reads `RAILS_MASTER_KEY` from the environment only, and the `pre-build` hook stops a deploy that has none, so a plain `bin/kamal deploy` fails before it builds. Commands that only read from the server, such as `bin/kamal app details`, run as they are. `mise run kamal` hands it the production key, see [Credentials](README.md#credentials).
 
-The GitHub `server_production` environment holds `SSH_PRIVATE_KEY`, the private half of the Bitwarden SSH key `skyblip-github-actions`, authorized for `debian` on crooz through the vps-ansible inventory, `SKYBLIP_SERVER_IP`, the crooz server's address, and `RAILS_MASTER_KEY`, the production key. Its deployment branch policy allows `main` only, so no other branch's workflow can read them. The firmware signing keys live apart, in `firmware_development` (`MCUBOOT_DEVELOPMENT_SIGNING_KEY`) and `firmware_production` (`MCUBOOT_PRODUCTION_SIGNING_KEY`, a required reviewer, `v*` and `bravo-v*` tags only), so no server job runs where a signing key is.
+The GitHub `server_production` environment holds `SSH_PRIVATE_KEY`, the private half of the Bitwarden SSH key `skyblip-github-actions`, authorized for `debian` on crooz through the vps-ansible inventory, `SKYBLIP_SERVER_IP`, the crooz server's address, and `RAILS_MASTER_KEY`, the production key. Its deployment branch policy allows `main` only, so no other branch's workflow can read them. The firmware signing keys live apart, in `firmware_development` (`MCUBOOT_DEVELOPMENT_SIGNING_KEY`) and `firmware_production` (`MCUBOOT_PRODUCTION_SIGNING_KEY`, a required reviewer, `v*` tags only), so no server job runs where a signing key is.
 
 ## First deployment
 

@@ -5,9 +5,9 @@
 
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/lr2021/model.h"
+#include "protocols/adsb/message.h"
 #include "simulator/world/adsb_out.h"
 #include "test/support/adsb_frames.h"
 

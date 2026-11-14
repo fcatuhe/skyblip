@@ -1,9 +1,14 @@
+#include <algorithm>
+
 #include "core/comms/config.h"
 #include "core/comms/timing_report.h"
 #include "core/dfu/image.h"
 #include "core/util/cbor.h"
 #include "core/util/span.h"
 #include "ports/link.h"
+#include "protocols/adsb/version.h"
+#include "protocols/adsl/version.h"
+#include "protocols/alptas/version.h"
 
 namespace skyblip::comms {
 
@@ -13,6 +18,18 @@ static_assert(dfu::HubImageReport::kDigestBytes == link::update_bytes::kImuDiges
               "the update frame carries the whole digest the hub image report holds");
 static_assert(link::update_bytes::kKey <= std::tuple_size<ports::SigningKeyHash>::value,
               "the update frame's key is a prefix of the signing key's hash");
+
+struct StackVersion {
+    RadioProtocol protocol;
+    uint32_t key;
+    const char* version;
+};
+
+constexpr StackVersion kStackVersions[] = {
+    {RadioProtocol::Adsb, link::protocols_key::kAdsbVersion, adsb::kVersion},
+    {RadioProtocol::Adsl, link::protocols_key::kAdslVersion, adsl::kVersion},
+    {RadioProtocol::Alptas, link::protocols_key::kAlptasVersion, alptas::kVersion},
+};
 }  // namespace
 
 // INFO: fc 04aug26 pushed unsolicited, so it carries state only and fits at its worst: README.md
@@ -128,6 +145,38 @@ void ConfigService::send_update() {
         return;
     }
     (void)reply(frame, bytes);
+}
+
+// TODO: fc 13nov26 the install report's frame, retired with #294
+void ConfigService::send_install_report() {
+    uint8_t frame[kSmallestSupportedPayloadBytes];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::InstallReport);
+    if (install_report_ != nullptr) {
+        const dfu::InstallReport& report = *install_report_;
+        writer.add_code(link::install_report_key::kCheck, report.request.check);
+        writer.add_code(link::install_report_key::kSwap, report.request.swap);
+        writer.add_integer(link::install_report_key::kRequestError, report.request.error);
+        writer.add_unsigned(link::install_report_key::kBoots, report.boots);
+        writer.add_unsigned(link::install_report_key::kProbationBoots, report.probation_boots);
+        writer.add_code(link::install_report_key::kProof, report.proof);
+        writer.add_code(link::install_report_key::kReset, report.reset);
+    }
+    (void)reply(frame, writer.finish());
+}
+
+void ConfigService::send_protocols() {
+    uint8_t frame[kSmallestSupportedPayloadBytes];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Protocols);
+    for (const StackVersion& stack : kStackVersions)
+        if (carries(stack.protocol)) writer.add_text(stack.key, stack.version);
+    (void)reply(frame, writer.finish());
+}
+
+bool ConfigService::carries(RadioProtocol protocol) const {
+    return std::any_of(radio_protocols_.begin(), radio_protocols_.end(),
+                       [protocol](RadioProtocol carried) { return carried == protocol; });
 }
 
 void ConfigService::push_update(const events::Peer& peer) {

@@ -9,10 +9,10 @@
 #include "core/diagnostics/adsb_trial.h"
 #include "core/events/adsb.h"
 #include "core/model/aircraft.h"
-#include "core/protocol/adsb_assembly.h"
 #include "core/util/result.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "ports/adsb_receiver.h"
+#include "protocols/adsb/assembly.h"
 #include "runtime/service.h"
 
 namespace skyblip::bravo {
@@ -26,7 +26,7 @@ class AdsbTrial {
     static constexpr uint32_t kRetuneSettleMs = 1000;
     // INFO: fc 13nov26 two records a frame, so four frames keep the chips to a quarter of the ring
     static constexpr uint32_t kChipsFramesPerSecond = 4;
-    static constexpr int kAircraftCounted = protocol::AdsbAssembly::kMaxAircraft;
+    static constexpr int kAircraftCounted = adsb::Assembly::kMaxAircraft;
 
     explicit AdsbTrial(runtime::Context& context) : context_(context) {}
 

@@ -12,7 +12,9 @@
 #include "core/comms/link_registry.h"
 #include "core/comms/link_sessions.h"
 #include "core/comms/peer.h"
+#include "core/comms/radio_protocols.h"
 #include "core/comms/timing_report.h"
+#include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
 #include "core/events/link.h"
 #include "core/flight/state.h"
@@ -23,6 +25,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot_timing_statistics.h"
 #include "core/util/cbor.h"
+#include "core/util/span.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
 
@@ -49,6 +52,7 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 // authorisation.
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
+int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an
@@ -191,11 +195,16 @@ class ConfigService {
     }
     dfu::ImageState image_state() const { return image_state_; }
 
+    // TODO: fc 13nov26 the install report on the link, retired with #294
+    void set_install_report(const dfu::InstallReport* report) { install_report_ = report; }
+
     void set_settings_fallback(settings::Fallback fallback) { settings_fallback_ = fallback; }
 
     void set_hub_image(const dfu::HubImageReport& report) { hub_image_ = report; }
 
     void set_product(dfu::Product product) { product_ = product; }
+
+    void set_radio_protocols(Span<const RadioProtocol> protocols) { radio_protocols_ = protocols; }
 
     // INFO: cf 02aug26 BLE pairing is off on this product (encrypted GATT
     // characteristics break Web Bluetooth on Windows), so physical presence is
@@ -313,6 +322,9 @@ class ConfigService {
     // unsolicited, and it carries state a pilot's screen reacts to, not counters.
     void send_radio();
     void send_update();
+    void send_install_report();
+    void send_protocols();
+    bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
     // And the whole dump, which is the same table as the console's: one frame per
@@ -414,9 +426,11 @@ class ConfigService {
     int pending_set_bytes_{0};
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
+    const dfu::InstallReport* install_report_{nullptr};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
     std::optional<dfu::Product> product_{};
+    Span<const RadioProtocol> radio_protocols_{};
 
     // Long enough to upload ~730 KB over BLE on a slow phone, short enough that
     // a device left on a bench does not stay writable all afternoon.

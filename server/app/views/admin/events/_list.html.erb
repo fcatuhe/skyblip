@@ -1,0 +1,33 @@
+<%# locals: (events:) %>
+<div class="table-scroll">
+  <table class="admin-events">
+    <thead>
+      <tr>
+        <th>At</th>
+        <th>Event</th>
+        <th>Device</th>
+        <th>Support code</th>
+        <th>Facts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% events.each do |event| %>
+        <tr>
+          <td class="mono"><%= event_time(event.occurred_at) %></td>
+          <th><%= link_to event.name, admin_events_path(name: event.name) %></th>
+          <td><%= link_to event.device, admin_events_path(device: event.device), class: "mono" if event.device %></td>
+          <td><%= link_to support_code(event.browser), admin_events_path(browser: event.browser), class: "mono" if event.browser %></td>
+          <td class="mono admin-events-facts">
+            <%= event_facts(event) %>
+            <% if event.fingerprint %>
+              <%= link_to "problem", admin_error_path(event.fingerprint) %>
+            <% end %>
+            <% if event.request_id %>
+              <%= link_to "request", admin_events_path(request_id: event.request_id) %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

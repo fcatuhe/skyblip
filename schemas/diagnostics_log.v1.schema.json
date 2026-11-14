@@ -94,8 +94,9 @@
 
     "verdict": {"type": "string",
                 "enum": ["transmitted", "lost", "held", "unarmed", "received", "named", "bad_crc",
-                         "unframed", "miskeyed", "undecoded", "unsupported", "unattempted"],
-                "description": "burst. What happened to this burst, as firmware/core/radio/README.md spells the verdicts. Codes: 0 transmitted, 1 lost, 2 held, 3 unarmed, 4 received, 5 named, 6 bad_crc, 7 unframed, 8 miskeyed, 9 undecoded, 10 unsupported, 11 unattempted. named took code 5 on 2026-09-20 and pushed the six behind it up one: it is an ADS-L OGN diagnostics payload (type 66) carrying a registration, so a target on the table now has a name. A capture taken before that day has bad_crc at 5, which this table spells named, and nothing in the record says which of the two wrote it apart from the boot record's version. That is the renumbering the explicit codes exist to stop happening twice, and they are pinned on both sides (firmware/test/core/diagnostics/test_diagnostics_ordinals.cpp, scripts/test_blip.py)"},
+                         "unframed", "miskeyed", "undecoded", "unsupported", "unattempted",
+                         "declared", "deferred", "forced", "busy"],
+                "description": "burst. What happened to this burst, as firmware/core/radio/README.md spells the verdicts. Codes: 0 transmitted, 1 lost, 2 held, 3 unarmed, 4 received, 5 named, 6 bad_crc, 7 unframed, 8 miskeyed, 9 undecoded, 10 unsupported, 11 unattempted, 12 declared, 13 deferred, 14 forced, 15 busy. deferred, forced and busy took codes 13 to 15 on 2026-11-14, appended, for own-ship's bursts a clear channel assessment found busy: deferred inside their window, forced 3000 ms after their first attempt, or missed with the window run out (ADS-L D.3). declared took code 12 on 2026-11-13, appended, for an ADS-L Status whose Max. Protocol Version a target now holds (ADS-L B.5). named took code 5 on 2026-09-20 and pushed the six behind it up one: it is an ADS-L OGN diagnostics payload (type 66) carrying a registration, so a target on the table now has a name. A capture taken before that day has bad_crc at 5, which this table spells named, and nothing in the record says which of the two wrote it apart from the boot record's version. That is the renumbering the explicit codes exist to stop happening twice, and they are pinned on both sides (firmware/test/core/diagnostics/test_diagnostics_ordinals.cpp, scripts/test_blip.py)"},
     "band": {"type": "string", "enum": ["M", "O"],
              "description": "burst, dwell. Which half of the second the single radio was in: M is the two 200 kHz traffic channels, O the ground station's HDR uplink. Codes: 0 M, 1 O"},
     "channel": {"type": "integer", "minimum": 0, "maximum": 1,
@@ -118,6 +119,8 @@
                  "description": "burst. Own-ship's flight state when the burst was written. Per record because G.1.16 transmits at 1 Hz in the air and 0.1 Hz on the ground, and a capture outlives a takeoff"},
     "callsign": {"type": "boolean",
                  "description": "burst. This burst carried a name rather than a position: own-ship's own, in slot 1's tail once every ten seconds (firmware/core/timing/README.md). The text itself is not recorded, because nine characters do not fit a 16-byte payload and the address on this record is the key the name is filed under. A name heard from somebody else is the named verdict instead"},
+    "status": {"type": "boolean",
+               "description": "burst. This burst carried own-ship's Status payload (ADS-L G.2) rather than a position, once every twenty seconds in the ground second (firmware/core/timing/README.md)"},
 
     "state": {"type": "string", "enum": ["uplink_rx_o_band", "switch_o_band_to_m_band", "slot0", "hop", "slot1", "switch_m_band_to_o_band"],
                    "description": "dwell. Which stretch of the second the radio believed it was in (core/timing/slot.h). Codes: 0 uplink_rx_o_band, 1 switch_o_band_to_m_band, 2 slot0, 3 hop, 4 slot1, 5 switch_m_band_to_o_band."},

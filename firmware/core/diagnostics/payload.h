@@ -102,6 +102,7 @@ constexpr uint8_t kBurstFlagRssiValid = 1u << 3;
 constexpr uint8_t kBurstFlagAirborne = 1u << 4;
 constexpr uint8_t kBurstFlagTxSpanValid = 1u << 5;
 constexpr uint8_t kBurstFlagCallsign = 1u << 6;
+constexpr uint8_t kBurstFlagStatus = 1u << 7;
 
 enum class Refusal : uint8_t {
     None = 0,

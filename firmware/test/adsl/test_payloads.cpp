@@ -1,14 +1,28 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status, Traffic Uplink, FIS-B and Remote ID payloads.
 #include <cstdint>
+#include <vector>
 
+#include "core/comms/peer.h"
+#include "core/gnss/first_fix.h"
 #include "core/model/aircraft.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "core/timing/transmit.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
+#include "protocols/common/bit_field.h"
+#include "simulator/paired_simulator.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
 namespace {
+constexpr uint32_t kUplinkUtcS = 1785628800;
+constexpr uint32_t kStation = 0x00FFFE;
+
 model::AircraftObservation target(uint32_t address) {
     model::AircraftObservation observation{};
     observation.address = address;
@@ -21,91 +35,145 @@ model::AircraftObservation target(uint32_t address) {
     observation.speed_q = 160;
     observation.speed_valid = true;
     observation.position_valid = true;
+    observation.altitude_valid = true;
+    observation.emergency = adsl::kEmergencyNone;
     return observation;
 }
+const adsl::Packet& status_heard() {
+    static const adsl::Packet packet = [] {
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(50, 21);
+        REQUIRE_FALSE(statuses.empty());
+        adsl::Packet heard{};
+        REQUIRE(packet_of(statuses.front(), heard));
+        return heard;
+    }();
+    return packet;
+}
+
+// A Go and its Bravo in one aircraft, the link left up or dropped, and the Go's next Status.
+adsl::Packet status_beside_bravo(bool link_up, comms::BravoState& bravo) {
+    simulator::PairedSimulator paired;
+    REQUIRE(paired.setup() == Status::Ok);
+    paired.world().set_fix(true);
+    paired.world().set_speed_kt(50);
+    paired.aboard().set_fix(true);
+    paired.aboard().set_link(link_up);
+    paired.run(gnss::kFirstFixSettleMs);
+    paired.world().air().clear();
+    const uint32_t until_ms =
+        gnss::kFirstFixSettleMs + (timing::Transmitter::kStatusPeriodS + 1) * 1000;
+    for (uint32_t now_ms = gnss::kFirstFixSettleMs; now_ms <= until_ms;
+         now_ms += simulator::PairedSimulator::kStepMs)
+        paired.step(now_ms);
+    bravo = paired.product().state().bravo;
+    const std::vector<simulator::AirRecord> statuses =
+        records_of(paired.world().air(), adsl::Packet::kPayloadTypeStatus);
+    REQUIRE_FALSE(statuses.empty());
+    adsl::Packet heard{};
+    REQUIRE(packet_of(statuses.back(), heard));
+    return heard;
+}
+
+uint32_t status_field(wire::BitField where) { return status_heard().field(where); }
+
 }  // namespace
 
-// TODO: fc 18sep26 no Status payload is transmitted, so G.2.1 to G.2.11 have nothing to encode
-TEST_CASE("ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version" *
-          doctest::skip()) {
-    FAIL("the Status payload is not implemented: no type 3 is ever transmitted");
+TEST_CASE(
+    "ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version") {
+    const adsl::Packet& packet = status_heard();
+    CHECK(packet.payload_type == 3);
+    CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
+    // E.1.1: the Status payload is Issue 2's, so its network header says version 1.
+    CHECK((packet.version & 0x0F) == 1);
+    // 24 reserved bits close the 56 the payload table lists.
+    CHECK(wire::read_bits(packet.payload, wire::BitField{72, 24}) == 0);
 }
 
-// TODO: fc 18sep26 no Status payload, so none of its fields is encoded: G.2.1 to G.2.11 below
-TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version this device reads" *
-          doctest::skip()) {
-    FAIL("no Status payload: the Max. Protocol Version field is never transmitted");
+TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version this device reads") {
+    CHECK(status_field(wire::BitField{40, 4}) == 1);
 }
 
-// TODO: fc 18sep26 the M-band dwell is one channel at a time, which is a Partial claim to declare
-TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the M-band receive capability is never declared");
+// The dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, of the direct slot's
+// 550.
+TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class") {
+    CHECK(timing::Scheduler::direct_heard_permille() == (348 + 200) * 1000 / 1100);
+    CHECK(status_field(wire::BitField{44, 2}) == 2);
 }
 
-// TODO: fc 18sep26 nothing receives O-band LDR, which is the None class, still undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.3: the Status payload declares the O-band LDR receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the O-band LDR receive capability is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.3: the Status payload declares the O-band LDR receive class") {
+    CHECK(status_field(wire::BitField{46, 2}) == 0);
 }
 
-// TODO: fc 18sep26 the O-band HDR dwell is 190 ms of the second, and nothing says so on air
-TEST_CASE("ADS-L.4.SRD860.G.2.4: the Status payload declares the O-band HDR receive class" *
-          doctest::skip()) {
-    FAIL("no Status payload: the O-band HDR receive capability is never declared");
+// The O-band dwell sits in the uplink slot, which the clause says does not count.
+TEST_CASE("ADS-L.4.SRD860.G.2.4: the Status payload declares the O-band HDR receive class") {
+    CHECK(timing::kUplinkRxEndMs <= adsl::kDirectStartMs);
+    CHECK(status_field(wire::BitField{48, 2}) == 0);
 }
 
-// TODO: fc 18sep26 no ADS-L 4 Mobile client on this device, which is the None value, undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile state" *
-          doctest::skip()) {
-    FAIL("no Status payload: the ADS-L 4 Mobile state is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile state") {
+    CHECK(status_field(wire::BitField{50, 2}) == 0);
 }
 
-// TODO: fc 18sep26 this device receives the FLARM-generation wire, which is bit 0 of the bitmap
-TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received" *
-          doctest::skip()) {
-    FAIL("no Status payload: the e-conspicuity receive bitmap is never declared");
+// Bit 0 is the FLARM-generation wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
+TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
+    CHECK(status_field(wire::BitField{52, 8}) == 0x01);
+
+    comms::BravoState bravo = comms::BravoState::Unpaired;
+    CHECK(status_beside_bravo(true, bravo).field(wire::BitField{52, 8}) == 0x11);
+    CHECK(bravo == comms::BravoState::Live);
 }
 
-// TODO: fc 18sep26 nothing but ADS-L is transmitted here, so the bitmap would be empty and honest
-TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted" *
-          doctest::skip()) {
-    FAIL("no Status payload: the e-conspicuity transmit bitmap is never declared");
+// G.2.6 leaves an unknown capability unset, and a Bravo the Go cannot reach hears nothing for it.
+TEST_CASE("ADS-L.4.SRD860.G.2.6: a paired Bravo the Go cannot reach is not declared") {
+    comms::BravoState bravo = comms::BravoState::Unpaired;
+    CHECK(status_beside_bravo(false, bravo).field(wire::BitField{52, 8}) == 0x01);
+    CHECK(bravo != comms::BravoState::Live);
+    CHECK(bravo != comms::BravoState::Unpaired);
 }
 
-// TODO: fc 18sep26 no transponder is wired to this device, and no setting records one
-TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status payload declares the transponder fitted" *
-          doctest::skip()) {
-    FAIL("no Status payload: the XPDR capability is never declared");
+TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted") {
+    CHECK(status_field(wire::BitField{60, 8}) == 0);
 }
 
-// TODO: fc 18sep26 this device does process Traffic Uplink, and no peer is told
-TEST_CASE("ADS-L.4.SRD860.G.2.9: the Status payload declares that Traffic Uplink is processed" *
-          doctest::skip()) {
-    FAIL("no Status payload: the Traffic Uplink client flag is never set");
+TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status payload declares the transponder fitted") {
+    CHECK(status_field(wire::BitField{68, 2}) == 0);
 }
 
-// TODO: fc 18sep26 no FIS-B is processed, which is the zero flag, still undeclared
-TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is processed" *
-          doctest::skip()) {
-    FAIL("no Status payload: the FIS-B client flag is never set");
+TEST_CASE("ADS-L.4.SRD860.G.2.9: the Status payload declares that Traffic Uplink is processed") {
+    CHECK(status_field(wire::BitField{70, 1}) == 1);
 }
 
-// TODO: fc 18sep26 a Status payload every 20 s is a slot in the transmit schedule, unbuilt
-TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds" *
-          doctest::skip()) {
-    FAIL("no Status payload: nothing schedules one");
+TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is processed") {
+    CHECK(status_field(wire::BitField{71, 1}) == 0);
+}
+
+// Twenty seconds from second to second, and the instant inside each one is the direct slot's own
+// draw.
+// Gaps alternate 11 and 9 s, so a receiver parked on one channel still hears one every 20 s.
+TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
+    constexpr uint64_t kSlotUs = (adsl::kDirectEndMs - adsl::kDirectStartMs) * 1000;
+    for (const int speed_kt : {0, 50}) {
+        CAPTURE(speed_kt);
+        const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
+        CHECK(statuses.size() >= 6);
+        for (size_t i = 1; i < statuses.size(); i++)
+            CHECK(statuses[i].at_us - statuses[i - 1].at_us <= 11000000 + kSlotUs);
+        for (size_t i = 2; i < statuses.size(); i++) {
+            CHECK(statuses[i].frequency_hz == statuses[i - 2].frequency_hz);
+            CHECK(statuses[i].at_us - statuses[i - 2].at_us <= 20000000 + kSlotUs);
+        }
+    }
 }
 
 // The uplink carried here is the ground station's own, on the channel and in the slot G.3 names.
 TEST_CASE(
     "ADS-L.4.SRD860.G.3: the Traffic Uplink rides the O-band HDR channel in the Uplink slot") {
-    CHECK(timing::kOBandHz == 869525000u);
-    CHECK(protocol::kUplinkChipRateBps == 200000u);
+    CHECK(adsl::kOBandHz == 869525000u);
+    CHECK(adsl::kUplinkChipRateBps == 200000u);
     CHECK(timing::kUplinkRxStartMs >= 200);
     CHECK(timing::kUplinkRxEndMs <= 450);
     // A whole burst fits the slot it is transmitted in, with the dwell's guard either side.
-    CHECK(timing::kGroundEmitStartMs + static_cast<int>(protocol::kUplinkBurstUs / 1000) <=
+    CHECK(timing::kGroundEmitStartMs + static_cast<int>(adsl::kUplinkBurstUs / 1000) <=
           timing::kGroundEmitEndMs);
 }
 
@@ -114,44 +182,61 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[4] = {target(0x300001), target(0), target(0x300003),
                                              target(0x300004)};
-    targets[3].latitude_1e7 = 1800000000;
+    targets[3].position_valid = false;
 
-    uint8_t frame[protocol::AdslUplink::kFrameBytes] = {0};
-    REQUIRE(uplink.encode(targets, 4, 0, frame) == Status::Ok);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 4, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
 
     model::AircraftObservation out[4]{};
     protocol::AdslUplink::DecodeStatistics statistics{};
-    REQUIRE(uplink.decode(frame, out, 4, statistics) == Status::Ok);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS, 300, out, 4, statistics) ==
+            Status::Ok);
     CHECK(statistics.targets == 2);
     CHECK(statistics.rejected == 2);
     for (int i = 0; i < statistics.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
 }
 
-// TODO: fc 18sep26 the uplink frame is a house format: 16-byte records, no verbatim payload
-TEST_CASE(
-    "ADS-L.4.SRD860.G.3: an uplink record is a 30-bit address and the Traffic payload, "
-    "verbatim" *
-    doctest::skip()) {
-    const int record_bits = 30 + 2 + 120;
-    CHECK(record_bits == 152);
-    CHECK(protocol::AdslUplink::kRecordBytes * 8 == record_bits);
-    CHECK(protocol::AdslUplink::kMaxTargets == 10);
+// The device dates each relayed record by the second it heard the packet in.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn") {
+    protocol::AdslUplink uplink;
+    model::AircraftObservation targets[2] = {target(0x300001), target(0x300002)};
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 2, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+
+    model::AircraftObservation out[2]{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 10, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.targets == 2);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 11, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.targets == 0);
+    CHECK(statistics.stale == 2);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS - 1, 300, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.stale == 2);
 }
 
-// TODO: fc 18sep26 an uplink record carries no timestamp, so its age cannot be checked at all
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed Traffic payload older than 10 seconds is not forwarded" *
-          doctest::skip()) {
-    FAIL("no timestamp travels with a relayed target, so nothing here can refuse a stale one");
-}
-
-// TODO: fc 18sep26 no FIS-B: DO-358B ground uplink messages are neither received nor decoded
-TEST_CASE("ADS-L.4.SRD860.G.4: a FIS-B Uplink payload carries a DO-358B ground uplink message" *
-          doctest::skip()) {
-    FAIL("the FIS-B payload is not implemented: type 5 is dropped with every other unknown type");
-}
-
-// TODO: fc 18sep26 no Remote Identification: a drone payload this aircraft device never sends
-TEST_CASE("ADS-L.4.SRD860.G.5: a Remote Identification payload carries an EN 4709-002 block" *
-          doctest::skip()) {
-    FAIL("the Remote Identification payload is not implemented: type 6 is dropped as unknown");
+// What the ground station sends is the aircraft's own payload, so the climb and track a relay once
+// lost now arrive.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload") {
+    protocol::AdslUplink uplink;
+    model::AircraftObservation targets[1] = {target(0x300001)};
+    targets[0].climb_valid = true;
+    targets[0].climb_e8 = -20;
+    targets[0].track_c9 = 300;
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    REQUIRE(uplink.encode(targets, 1, kUplinkUtcS, 300, kStation,
+                          adsl::kAddressTableManufacturerFirst, packet) == Status::Ok);
+    model::AircraftObservation out[1]{};
+    protocol::AdslUplink::DecodeStatistics statistics{};
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS, 300, out, 1, statistics) ==
+            Status::Ok);
+    REQUIRE(statistics.targets == 1);
+    CHECK(out[0].address == 0x300001u);
+    CHECK(out[0].climb_valid);
+    CHECK(out[0].climb_e8 == -20);
+    CHECK(out[0].track_c9 == 300);
 }

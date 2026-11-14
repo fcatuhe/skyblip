@@ -28,15 +28,11 @@ void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int l
     canvas.draw_text(x_end - length * kCellWidth, y, text, true, 1);
 }
 
-bool own_burst(radio::Verdict verdict) {
-    return verdict == radio::Verdict::Transmitted || verdict == radio::Verdict::Lost ||
-           verdict == radio::Verdict::Held || verdict == radio::Verdict::Unarmed;
-}
-
 // What own-ship put on air, in the column a reception spends on its sender: the
 // schedule the burst went out on, or the name that is on neither schedule.
 const char* own_burst_word(const radio::Entry& entry) {
     if (entry.callsign) return "CALLSIGN";
+    if (entry.status) return "STATUS";
     return entry.airborne ? "AIR" : "GROUND";
 }
 
@@ -53,6 +49,10 @@ const char* verdict_of(const radio::Entry& entry) {
         case radio::Verdict::Unsupported: return "TYPE";
         case radio::Verdict::Unattempted: return "WAIT";
         case radio::Verdict::Named: return "NAMED";
+        case radio::Verdict::Declared: return "STAT";
+        case radio::Verdict::Deferred: return "DEFER";
+        case radio::Verdict::Forced: return "FORCE";
+        case radio::Verdict::Busy: return "BUSY";
         case radio::Verdict::Transmitted:
         case radio::Verdict::Received:
         default: return nullptr;
@@ -145,7 +145,7 @@ void draw_row(ui::Canvas& canvas, int y, const radio::Entry& entry) {
     text[written] = 0;
     canvas.draw_text(kClockX, y, text, true, 1);
 
-    const bool ours = own_burst(entry.verdict);
+    const bool ours = radio::own_burst(entry.verdict);
     canvas.draw_text(kWayX, y, ours ? "TX" : "RX", true, 1);
 
     written = format_dwell(text, entry);
@@ -185,7 +185,7 @@ void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     canvas.horizontal_line(kLeft, kRuleY, kRightEnd - kLeft, true);
 
     if (snapshot.log == nullptr || snapshot.row_count == 0) {
-        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NOTHING ON AIR YET", true, 1);
+        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NO RADIO DATA", true, 1);
         return;
     }
 

@@ -4,8 +4,8 @@
 
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
 #include "core/util/result.h"
+#include "protocols/adsb/message.h"
 #include "simulator/world/adsb_out.h"
 #include "test/support/adsb_chips.h"
 
@@ -26,11 +26,11 @@ using simulator::adsb_signed_field;
 using simulator::adsb_surface_position;
 using simulator::AdsbFrame;
 
-inline Status adsb_hear(AdsbFrame frame, protocol::AdsbMessage& message) {
+inline Status adsb_hear(AdsbFrame frame, adsb::Message& message) {
     adsb_seal(frame.bytes);
-    uint8_t chips[protocol::kAdsbChipBytes];
+    uint8_t chips[adsb::kChipBytes];
     adsb_chips(frame.bytes, chips);
-    return protocol::adsb_receive(chips, sizeof(chips), protocol::AdsbReception{0, -70}, message);
+    return status_of(adsb::receive(chips, sizeof(chips), adsb::Reception{0, -70}, message));
 }
 
 }

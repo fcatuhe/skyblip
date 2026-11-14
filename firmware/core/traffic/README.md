@@ -6,7 +6,7 @@ What the sky around this aircraft contains, how dangerous it is, and who in it i
 |---|---|
 | `sanity` | whether a decoded position is close enough to have been heard at all |
 | `lease` | how long one reception is believed, for every layer that holds a slot |
-| `table` | which aircraft the finite table holds, and each one's turn rate |
+| `table` | which aircraft the finite table holds, each one's turn rate, and the ADS-L version each one reads |
 | `alarm` | whether a target is an advisory, and what the annunciator is allowed to say |
 | `formation` | which targets are flying with us, on geometry alone |
 | `range` | how far a target is and how far above, and the order the nearby page lists them in |
@@ -42,7 +42,7 @@ What the radar and the list draw for it is in `products/skyblip_go/pages/README.
 
 Two questions, and they have nothing to do with each other. Have we lost this aircraft, which is about the link. Is this position fresh enough to grade, which is about metres a second. `lease.h` answers the first, `kAlertMaxAgeMs` the second.
 
-`kTargetForgetReports` is 6: a target is dropped when six of its own transmissions have gone missing. The interval those are counted in is the target's, from `flight::report_period_s`, so one multiple gives `kAirborneTargetForgetS` = 6 s and `kGroundTargetForgetS` = 60 s. Every layer that holds a slot takes its window from the observation itself - the table, the alarm tracker's dismissal, the formation membership - so a takeoff shortens the lease on the burst that announces it, and a slot cannot outlive the target it was opened for.
+`kTargetForgetReports` is 6: a target is dropped when six of its own transmissions have gone missing. The interval those are counted in is the target's, from `adsl::report_period_s`, so one multiple gives `kAirborneTargetForgetS` = 6 s and `kGroundTargetForgetS` = 60 s. Every layer that holds a slot takes its window from the observation itself - the table, the alarm tracker's dismissal, the formation membership - so a takeoff shortens the lease on the burst that announces it, and a slot cannot outlive the target it was opened for.
 
 One multiple, and not two numbers, because the error it buys is the same at both ends. A target is drawn where it was last reported and nothing extrapolates it, so the lie on the glass at drop time is the period times the speed times the multiple. Airborne that is 6 s at 60 m/s, 360 m. On the ground it is 60 s at the 5 to 8 m/s nothing taxis faster than, 300 to 480 m. The ground interval is ten times longer and ground speed about ten times slower, which is why the same six reports cost about the same distance.
 
@@ -100,14 +100,14 @@ The rule reads the validity flags only. Whether a field is still fresh enough to
 
 `source_rank` puts a direct ADS-L or FLARM reception at 3, ADS-B at 2 and the uplink at 1, the order epic #184 decided. A lower-ranked copy never displaces a higher-ranked one younger than `direct_preferred_max_age_s`, however much newer it is. Past that age it takes over, and the higher-ranked copy takes the target back on its next reception. ADS-B ranks below a direct reception because it sends each field in a message of its own, with its own age, while ADS-L and FLARM carry them all in one burst. On a paired Go it also crosses a second link, from the Bravo. It ranks above the uplink, which relays what a ground station heard.
 
-The table merges two reports only when both the address mapping table and the address match. An ADS-B address is an ICAO address, table 5 in ADS-L F.2.2 (`settings::kIcaoAddressMappingTable`), and the ADS-B assembler (#190) must write that table on every observation. So an ADS-L or FLARM unit merges with its ADS-B copy only when it sends the aircraft's ICAO address, which F.2.3 asks of an aircraft that also carries a transponder. Under any other table it is a second identity, and the table does not guess that the two are one aircraft.
+The table merges two reports only when both the address mapping table and the address match. An ADS-B address is an ICAO address, table 5 in ADS-L F.2.2 (`adsl::kAddressTableIcao`), and the ADS-B assembler (#190) must write that table on every observation. So an ADS-L or FLARM unit merges with its ADS-B copy only when it sends the aircraft's ICAO address, which F.2.3 asks of an aircraft that also carries a transponder. Under any other table it is a second identity, and the table does not guess that the two are one aircraft.
 
 ### Our own aircraft
 
 The table refuses two addresses, before any other check:
 
-- our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`);
-- our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it.
+- our own ADS-L address, under our table 58, which `common::TrafficService` sets on every pass from the activation (`set_own_address`). It is set even while we transmit an own ICAO instead, so a ground station still relaying what it heard before the switch is refused too;
+- our aircraft's ICAO address, under table 5 (`set_own_icao`). That is the transponder of the aircraft we fly in. A Bravo in the same cockpit hears it louder than anything, a FLARM set to that address sends it, and a ground station relays it. Since F.2.3 a Go with an own ICAO transmits under it too, so this entry is also what refuses a ground station relaying us back.
 
 Zero sets an entry to filter nothing. `common::TrafficService` passes the product's own-ICAO setting on every pass, through `common::TrafficSettings`, so an address typed on the glass or set over the link filters from the next pass. A new address also releases the slot it names, if the table holds one, so our transponder leaves the radar on that pass rather than when its lease runs out. It is released even under an alarm, unlike a slot a full table would evict: the address names our own aircraft, so that alarm grades our own transponder against us, and it is the false alarm the pilot set the address to stop. The Go's setting is `own_icao`, 0 while unset (`products/skyblip_go/README.md`, Own ICAO).
 
@@ -127,7 +127,7 @@ Both aircraft are put at FL600, 18288 m, the top of the class A airspace airline
 
 The table holds every ADS-B target it can place, at any distance and any height. The owner decided it on 12 November 2026: all traffic, and nothing to configure for now. PowerFLARM does the same by default: its `ADSBRANGE` and `ADSBVRANGE` are unlimited (FLARM FTD-014, version 1.18 of 2024-12-19, 3.2.10 and 3.2.11).
 
-Three rules still bound what the table holds. A position past `traffic::kAdsbRangeCeilingM`, the 1115 km radio horizon above, is a bad decode, and the table refuses it and counts it in `implausible()`. Before the table, `protocol::AdsbAssembly` refuses a global decode past 180 NM of the receiver's reference while it has one (`core/protocol/README.md`). A full table evicts the ground first, then the farthest slant, so a far airborne aircraft never takes a slot from a nearer airborne one, and it never evicts a slot under an alarm. The alarm keeps its own bands, and grades a far aircraft `None`.
+Three rules still bound what the table holds. A position past `traffic::kAdsbRangeCeilingM`, the 1115 km radio horizon above, is a bad decode, and the table refuses it and counts it in `implausible()`. Before the table, `adsb::Assembly` refuses a global decode past 180 NM of the receiver's reference while it has one (`core/protocol/README.md`). A full table evicts the ground first, then the farthest slant, so a far airborne aircraft never takes a slot from a nearer airborne one, and it never evicts a slot under an alarm. The alarm keeps its own bands, and grades a far aircraft `None`.
 
 The cost is NMEA time. `common::NmeaService` sends at most `kTargetsPerPass`, 10 `$PFLAA` a second, in rotation over every held slot, so a full table of 48 sends each target about every fifth second. On a busy sky far aircraft fill the slots near ones leave empty, and each target is refreshed less often. Nearest-first eviction decides which aircraft hold a slot, and so which are sent at all.
 
@@ -139,9 +139,9 @@ The sanity check and the slant both measure from the table's reference, `set_own
 
 **Own ICAO not set.** Without it, the aircraft's own transponder may cause persistent or repeated advisories. The formation layer is not an own-aircraft filter and does not guarantee silence: it needs the target within `kVerticalM` (100 m) of us, holds eight targets (`formation.h` `kMaxTrackedTargets`), and never takes a target whose altitude is unknown (#161). Accepted for v1. A paired Go whose own ICAO and Bravo's are both unset warns about it: `go::OwnIcaoWarning` decides when, and #178 drives it and shows the notice (`products/skyblip_go/README.md`, Own ICAO). A paired Bravo also proposes the address on the ground, from the transponder it hears loudest by a clear lead, and the pilot takes it with one press (`products/skyblip_go/pages/README.md`, aircraft). It is a proposal and never a filter of its own: geometry cannot tell our own transponder from a wingman a few metres off, and an address set in error drops a real aircraft from the plot, which formation never does.
 
-### Not accepted: an aircraft that shows twice
+### An aircraft that carries a Go and a transponder
 
-**An aircraft carrying both a Go and a transponder** shows twice on another paired Go: once as its Go's ADS-L address under table 58, and once as its ICAO address under table 5. The cause is the Go: it always transmits under table 58, even when its `own_icao` holds the aircraft's ICAO address. ADS-L F.2.3 says that an aircraft that also uses a Mode-S transponder "shall use" its ICAO address, and that the ADS-L system "shall enforce this" (`docs/reference/ads-l_4_srd860_issue_2.md`, F.2.3). The table merges on the address pair and does not guess that the two are one aircraft. This is not accepted: #234 holds whether and how the Go transmits the ICAO address, and the owner reviews it before any work starts.
+**It shows once** on another paired Go when its Go has `own_icao` set: the Go transmits that address under table 5 (ADS-L F.2.3, `core/settings/README.md`, The ICAO address), the address its ADS-B and Mode-S carry, so the table merges the two on the address pair. A Go whose `own_icao` is unset still shows twice, once under table 58 and once under table 5, and the table does not guess that the two are one aircraft. The Go proposes the address while a paired Bravo hears its transponder, and refuses any other (`products/skyblip_go/README.md`, Own ICAO).
 
 ## Dismissal
 
@@ -156,6 +156,10 @@ A ground roll is not leaving. While either side is on the ground the level falls
 An advisory is announced once and never repeats itself. A ring can stand for a whole climb, and a tone that came back every two seconds for as long as a glider shared the thermal is the device switched off.
 
 What is deliberately absent: there is no co-circling test, no gaggle range gate, no steady-range timer, and no constant anywhere in this directory that assumes a glider.
+
+## Which ADS-L version a target reads
+
+§B.5 asks a transmitter to keep track of the highest ADS-L version each neighbour reads, and `Target::version` holds it. An ADS-L Traffic reception sets it to the version the packet came in, which §B.5 tells a receiver to assume. A Status from the same address replaces it with the Max. Protocol Version the Status declares, and from then on the Status wins until the slot is freed (`declare_max_version`). A Status from an address the table does not hold is dropped: the next one, at most 20 s later, finds the target. `readable_version` returns the lowest version among the ADS-L targets `adsl::close_client()` calls close, assessed as the alarm assesses them (`assess`), with a target that sends no altitude counted as level with us. A relayed target is left out, because the uplink record does not carry the version its sender used.
 
 ## Turn rate
 

@@ -16,6 +16,7 @@
 #include "products/common/settings_store.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
+#include "test/support/config_frame.h"
 
 using namespace skyblip;
 
@@ -116,15 +117,15 @@ TEST_CASE("config link: an update records itself but no revert copy wider than t
     rig.roles.capabilities = ports::Capability::Storage | ports::Capability::Dfu;
     rig.dfu.running_version_valid = true;
     rig.dfu.staged_version_valid = true;
-    rig.link.record_update();
+    rig.link.install();
 
-    CHECK(rig.key_value.written_keys == std::vector<std::string>{"update"});
+    CHECK(rig.key_value.written_keys == std::vector<std::string>{"update", "install.report"});
     CHECK(rig.link.failed_writes() == 1);
 }
 
 TEST_CASE("config link: the Go's store writes no blob into a buffer narrower than the blob") {
     go::Settings settings = go::defaults();
-    const go::SettingsStore store{settings, identity::Activation{}};
+    const go::SettingsStore store{settings, identity::Activation{}, kNoOwnTransponder};
     uint8_t blob[64]{};
 
     CHECK(store.to_blob(blob, go::blob_size() - 1) == 0);

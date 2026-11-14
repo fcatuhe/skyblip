@@ -16,6 +16,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_go/services/diagnostics.h"
 #include "products/skyblip_go/settings_store.h"
 #include "simulator/world/link_names.h"
@@ -184,8 +185,8 @@ struct GroundedUnitWithLogs {
 
 void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.rig.raise_link(1);
-    for (const char* command :
-         {"get", "defaults", "status", "timing", "flash", "radio", "diagnostics", "update"})
+    for (const char* command : {"get", "defaults", "status", "timing", "flash", "radio",
+                                "diagnostics", "update", "install_report", "protocols"})
         unit.say(std::string("{\"command\":\"") + command + "\"}");
     unit.say("{\"command\":\"set\",\"units\":\"metric\",\"callsign\":\"D-KXYZ\"}");
     unit.confirm();
@@ -248,7 +249,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu.running_key_valid = true;
     dfu.allows_downgrade = true;
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     comms::ConfigService config(link, store, &dfu);
     link.raise_link(1);
     link.declare_payload_bytes(495);
@@ -268,7 +269,12 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     config.set_hub_image(held);
     config.set_product(dfu::Product::SkyblipBravo);
     config.set_bravo_state(comms::BravoState::NoUtc);
-    for (const char* command : {"status", "diagnostics", "update"})
+    dfu::InstallReport report{};
+    report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
+    report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);
+    config.set_install_report(&report);
+    config.set_radio_protocols(bravo::kRadioProtocols);
+    for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
 }
 
@@ -317,6 +323,8 @@ const std::vector<Answer> kAnswers = {
     {"radio", kConfig, reply("radio"), "invalid"},
     {"diagnostics", kConfig, reply("diagnostics"), "invalid"},
     {"update", kConfig, reply("update"), "invalid"},
+    {"install_report", kConfig, reply("install_report"), "invalid"},
+    {"protocols", kConfig, reply("protocols"), "invalid"},
     {"dfu", kConfig, prompt("confirm_dfu"), "invalid"},
     {"recovery", kConfig, prompt("confirm_recovery"), "invalid"},
     {"power_off", kConfig, prompt("confirm_power_off"), "invalid"},

@@ -12,7 +12,7 @@ fr:
     unavailable: Le simulateur n'a pas pu être chargé depuis GitHub. Rechargez la page pour réessayer.
     empty: Aucune version du simulateur n'a encore été publiée.
     controls:
-      wake: Maintenez la touche du bas pour le rallumer.
+      wake: Maintenez le bouton du bas enfoncé pour le rallumer.
       traffic: Ajouter un trafic dans le ciel
       keys: "Pilotez au clavier, les flèches comme un manche : bas pour monter."
       glass: L'écran e-paper simulé d'un skyBlip Go

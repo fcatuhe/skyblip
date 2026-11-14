@@ -32,7 +32,7 @@ std::string refusal(const char* word) {
 struct Desk {
     platform::host::Link link;
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     ConfigService config{link, store};
     uint16_t session_id{1};
 

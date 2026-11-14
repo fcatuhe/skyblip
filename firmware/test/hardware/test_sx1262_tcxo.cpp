@@ -30,7 +30,7 @@ void command(models::Sx1262& chip, uint8_t opcode, uint8_t parameter) {
 }
 
 void burst(Sx1262& radio, models::Sx1262& chip) {
-    uint8_t frame[protocol::kAdslFrameBytes] = {0};
+    uint8_t frame[adsl::kFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     chip.signal_tx_done();
     uint8_t rx[protocol::kRxChipBytes];
@@ -64,7 +64,7 @@ TEST_CASE("sx1262: a retune keeps the TCXO running, so the next dwell listens wi
     REQUIRE(chip.tcxo_starts == 1);
 
     RadioConfig uplink = dwell(869525000);
-    uplink.bitrate = protocol::kUplinkChipRateBps;
+    uplink.bitrate = adsl::kUplinkChipRateBps;
     REQUIRE(radio.configure_radio(uplink) == Status::Ok);
     CHECK(chip.receiving);
     CHECK((chip.frequency_hz + 500) / 1000 == 869525);
@@ -151,11 +151,11 @@ TEST_CASE("sx1262: another sync word on the same channel is another dwell, and i
     REQUIRE(radio.start_receive() == Status::Ok);
 
     RadioConfig uplink = dwell(868200000);
-    uplink.sync = protocol::kUplinkSync;
-    uplink.sync_bits = protocol::kUplinkSyncBits;
+    uplink.sync = adsl::kUplinkSync;
+    uplink.sync_bits = adsl::kUplinkSyncBits;
     REQUIRE(radio.configure_radio(uplink) == Status::Ok);
-    CHECK(chip.sync_bits == protocol::kUplinkSyncBits);
-    CHECK(std::equal(chip.sync, chip.sync + protocol::kUplinkSyncBits / 8, protocol::kUplinkSync));
+    CHECK(chip.sync_bits == adsl::kUplinkSyncBits);
+    CHECK(std::equal(chip.sync, chip.sync + adsl::kUplinkSyncBits / 8, adsl::kUplinkSync));
     CHECK(chip.tcxo_starts == 1);
 }
 

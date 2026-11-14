@@ -1,0 +1,107 @@
+---
+title: "Where an aircraft's callsign goes in ADS-L"
+nav_title: ADS-L callsign
+description: "Issue 2 has no callsign field. EASA says Issue 3 will carry one. skyBlip records its question and the interim callsign record it sends every 10 seconds."
+published_on: "2026-09-18"
+parent: ads-l
+updated_on: "2026-11-14"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
+  <h1>Issue 2 has no field for an aircraft&rsquo;s callsign.</h1>
+  <p class="lede">skyBlip asked the ADS-L registry where the callsign belongs on 20 September 2026. Neither the Traffic payload, G.1, nor the Status payload, G.2, carries it. At our meeting with FLARM and EASA on 2 October, EASA told us orally that Issue 3 will carry a callsign.</p>
+  <p>There is no written source for that answer. skyBlip will implement the callsign as Issue 3 defines it and stop sending its interim record then. This page explains that record and preserves the question sent with our <%= link_to_page "ads-l/registry", label: "registry application" %>.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Until Issue 3</h2>
+  <h3>Go sends the callsign in OGN-Tracker&rsquo;s record format.</h3>
+  <p>F.2.1 assigns payload type 66 to &ldquo;OGN Diagnostics&rdquo; and leaves its definition outside the specification. skyBlip Go uses OGN-Tracker&rsquo;s layout: the same 6+24-bit sender address as its position, a header byte, then 14 characters. The pilot enters up to 9 characters through Go&rsquo;s menu.</p>
+  <p>Go schedules one record every 10&nbsp;s, airborne and on the ground in the same seconds. Each unit owns a 20&nbsp;s cycle starting on the even UTC second <code>c = 2 * (serial mod 10)</code>. The record goes in slot 1&rsquo;s tail in seconds c+4 and c+14, from 1000 to 1193&nbsp;ms after each second starts, on 868.4&nbsp;MHz. On the ground those seconds follow the scheduled positions by 4 and 5&nbsp;s respectively. The tail is 0 to 193&nbsp;ms into the next UTC second, within the 0 to 200&nbsp;ms interval C.5 reserves for future extensions and forbids ADS-L transmissions to use. skyBlip treats the name as its own payload, not ADS-L&rsquo;s, sent where ADS-L transmits nothing today until the standard says where it belongs. It travels in the same frame as an ADS-L packet, with the same sync word, scrambling and CRC-24. Transmitting there is a deliberate deviation from C.5, not a requirement of the radio hardware.</p>
+  <p>Go also reads this record from other aircraft. It refuses the whole record if any character is outside blank, dash, A to Z and 0 to 9.</p>
+  <p>Today the callsign reaches a display inside the ID field of FLARM&rsquo;s <code>$PFLAA</code>. It is cut when space runs out. The <%= link_to_page "ads-l/nmea", label: "ADS-L NMEA proposal" %> gives it field 10 of <code>$PDSLI</code>, separate from the address and ready to follow Issue 3&rsquo;s length and character set.</p>
+</section>
+
+<section class="pledge">
+  <h2 class="kicker">The question, as we asked it</h2>
+  <h3 id="callsign">Where does an aircraft&rsquo;s callsign go?</h3>
+  <p>
+    In VFR the identity everyone uses &mdash; the pilot on the radio, the club,
+    the EFB, the field &mdash; is the registration: F-GXXX on a certified
+    aircraft, an <strong>F-J callsign</strong> on a French microlight. It belongs to the
+    aircraft for its life. It is not a per-flight item like an airline flight
+    number, and a receiver that could show it would be showing the traffic the
+    way a pilot already thinks about it.
+  </p>
+  <p>
+    We think this matters in the air rather than on paper. A pilot hears
+    &ldquo;F-JABC, joining downwind for 25&rdquo; on the frequency, and what
+    turns that call into an aircraft he can look for is a display showing the
+    same callsign on the target: the radio tells him who, the screen tells him
+    where, and only the callsign joins the two. Without it he has a call on one
+    side and an anonymous return on the other, and traffic a pilot cannot
+    correlate is traffic he ends up looking for in the wrong part of the sky.
+  </p>
+  <p>
+    Issue 2 carries no field for it. The Traffic payload (G.1) has none, the
+    Status payload (G.2) has none, and the only identity on the air is the
+    30-bit sender address of F.2.2: 6 bits of AMT and 24 bits of address. That
+    address is ours rather than the aircraft&rsquo;s, and nothing in the frame
+    ties it to the registration on the fuselage. The aircraft this equipment
+    addresses are the ones carrying no other identity on the air: a French
+    microlight, a paraglider, a paramotor.
+  </p>
+  <p>
+    So we would like the registry&rsquo;s view on which of the two answers it
+    intends, because we would rather implement the one that becomes the
+    standard:
+  </p>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Answer</th><th>What it would take</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>A published address-to-registration database</th>
+          <td>the way the OGN device database resolves FLARM and OGN addresses today. We would publish our assigned range, let owners bind their address to their registration, and expose the mapping under an open license.</td>
+        </tr>
+        <tr>
+          <th>A callsign payload</th>
+          <td>a low-rate broadcast payload carrying the registration, transmitted every few seconds rather than every second. A new payload type has to be approved by the governing body (F.2.5), which is why this is a question to the registry and not a proposal we would ship on our own.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Either is a small amount of work here. Neither is worth doing twice, and a
+    manufacturer that invents its own answer is how a standard stops being one.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">References</h2>
+  <ul class="sources">
+    <li>
+      <strong>EASA</strong> &middot;
+      <a href="https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r">ADS-L 4 SRD-860</a>, ED Decision 2022/024/R, Issue 2.
+      <span class="support">C.5 reserves the timing interval. F.2.1 assigns payload 66 to OGN Diagnostics. G.1 and G.2 contain no callsign field.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/protocol/README.md"><code>core/protocol/README.md</code></a>.
+      <span class="support">The OGN-Tracker record layout and the accepted callsign characters.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &middot;
+      <a href="https://github.com/fcatuhe/skyblip/blob/main/firmware/core/timing/README.md"><code>core/timing/README.md</code></a>.
+      <span class="support">The ten-second schedule and the reserved slot tail used for transmission.</span>
+    </li>
+  </ul>
+  <p>
+    <%= link_to_page "ads-l/registry", class: "cta cta--previous" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "ads-l/conformity", class: "cta cta--next" %>
+  </p>
+</section>

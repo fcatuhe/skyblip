@@ -16,8 +16,13 @@ static_assert(
     kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
+// INFO: fc 14nov26 Conflict is the Go's own ICAO against its Bravo's transponder, ADS-L F.2.3
 link::Reason settings_refusal(Status status) {
-    return status == Status::OutOfRange ? link::Reason::OutOfRange : link::Reason::Invalid;
+    switch (status) {
+        case Status::OutOfRange: return link::Reason::OutOfRange;
+        case Status::Conflict: return link::Reason::NotOwnTransponder;
+        default: return link::Reason::Invalid;
+    }
 }
 
 bool stages_prompt(link::Command command) {
@@ -281,11 +286,7 @@ void ConfigService::request_firmware(const cbor::Reader& frame) {
         return;
     }
     stage(Pending::Dfu, link::Reason::ConfirmDfu);
-    int written = format_string(prompt_detail_, "INSTALL ");
-    written +=
-        dfu::format_version(version, prompt_detail_ + written, sizeof(prompt_detail_) - written);
-    written += format_string(prompt_detail_ + written, " FROM THE PHONE");
-    prompt_detail_[written] = 0;
+    (void)format_dfu_detail(prompt_detail_, sizeof(prompt_detail_), version);
 }
 
 // INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked
@@ -362,6 +363,8 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::TrustBrowser: trust_browser(reader); return;
         case link::Command::Browsers: send_browser(reader); return;
         case link::Command::ForgetBrowser: forget_browser(reader); return;
+        case link::Command::InstallReport: send_install_report(); return;
+        case link::Command::Protocols: send_protocols(); return;
         case link::Command::AdsbTrial: request_adsb_trial(reader); return;
         default: return;
     }
@@ -376,6 +379,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Flash:
         case link::Command::Radio:
         case link::Command::Update:
+        case link::Command::InstallReport:
         case link::Command::Diagnostics:
         case link::Command::Set:
         case link::Command::Dfu:
@@ -390,6 +394,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Browsers:
         case link::Command::ForgetBrowser: return identity_ != nullptr;
         case link::Command::Capture: return serves_captures_;
+        case link::Command::Protocols: return !radio_protocols_.empty();
         case link::Command::AdsbTrial: return serves_adsb_trial_;
         case link::Command::Acknowledgement:
         case link::Command::Config:

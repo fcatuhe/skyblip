@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/retention/retention.h>
 #include <zephyr/storage/flash_map.h>
+#include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
 #include <cstring>
@@ -58,10 +59,19 @@ inline bool write_boot_magic(uint8_t magic) {
 
 class Dfu : public ports::Dfu {
    public:
-    void trigger() override {
-        boot_request_upgrade(BOOT_UPGRADE_TEST);
-        sys_reboot(SYS_REBOOT_WARM);
+    ports::SwapRequest request_swap() override {
+        ports::SwapRequest request;
+        StagedSlot slot;
+        request.check = slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
+        if (request.check == ports::StagedCheck::Matched)
+            request.error = static_cast<int16_t>(boot_request_upgrade(BOOT_UPGRADE_TEST));
+        request.swap = swap_type(mcuboot_swap_type());
+        printk("dfu: slot1 %s, swap request %d, swap type %d\n", check_word(request.check),
+               request.error, static_cast<int>(request.swap));
+        return request;
     }
+
+    void trigger() override { sys_reboot(SYS_REBOOT_WARM); }
 
     bool confirm() override { return boot_write_img_confirmed() == 0; }
     bool confirmed() override { return boot_is_img_confirmed(); }
@@ -116,6 +126,55 @@ class Dfu : public ports::Dfu {
     }
 
    private:
+    class StagedSlot : public dfu::ImageReader {
+       public:
+        StagedSlot()
+            : opened_(flash_area_open(PARTITION_ID(slot1_partition), &area_) == 0),
+              start_(boot_get_image_start_offset(PARTITION_ID(slot1_partition))) {}
+        ~StagedSlot() override {
+            if (opened_) flash_area_close(area_);
+        }
+
+        bool opened() const { return opened_; }
+        uint32_t bytes() const override {
+            return opened_ && area_->fa_size > start_ ? area_->fa_size - start_ : 0;
+        }
+        bool read(uint32_t offset, uint8_t* out, size_t bytes) override {
+            return flash_area_read(area_, start_ + offset, out, bytes) == 0;
+        }
+
+       private:
+        const struct flash_area* area_{nullptr};
+        bool opened_;
+        size_t start_;
+    };
+
+    // INFO: fc 13nov26 bootutil_public.h's BOOT_SWAP_TYPE_PANIC, a header off the app include path
+    static constexpr int kBootSwapTypePanic = 0xff;
+
+    static ports::SwapType swap_type(int type) {
+        switch (type) {
+            case BOOT_SWAP_TYPE_NONE: return ports::SwapType::None;
+            case BOOT_SWAP_TYPE_TEST: return ports::SwapType::Test;
+            case BOOT_SWAP_TYPE_PERM: return ports::SwapType::Permanent;
+            case BOOT_SWAP_TYPE_REVERT: return ports::SwapType::Revert;
+            case BOOT_SWAP_TYPE_FAIL: return ports::SwapType::Fail;
+            case kBootSwapTypePanic: return ports::SwapType::Panic;
+            default: return ports::SwapType::Unknown;
+        }
+    }
+
+    static const char* check_word(ports::StagedCheck check) {
+        switch (check) {
+            case ports::StagedCheck::Unchecked: return "unchecked";
+            case ports::StagedCheck::Matched: return "matches its digest";
+            case ports::StagedCheck::Damaged: return "damaged";
+            case ports::StagedCheck::Unreadable: return "unreadable";
+            case ports::StagedCheck::Undigested: return "has no digest";
+        }
+        return "unknown";
+    }
+
     static constexpr int kPrimarySlot = 0;
     static constexpr int kSecondarySlot = 1;
     static constexpr size_t kWidestImageHashBytes = 64;

@@ -55,7 +55,7 @@ class Briefing::OwnshipsControllerTest < ActionDispatch::IntegrationTest
     get briefing_ownship_path(type: "balloon")
 
     assert_response :success
-    assert_select ".ownship-note", text: /type Ballon : l.appareil affiche celui du type Avion léger/
+    assert_select ".ownship-note", text: /type Ballon\. L.appareil utilise celui du type Avion léger/
   end
 
   test "every type opens in both languages" do

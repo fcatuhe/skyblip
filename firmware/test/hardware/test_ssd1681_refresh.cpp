@@ -1,6 +1,9 @@
 // The two-bank differential contract (previous image in 0x26, new in 0x24), the
 // non-blocking present/ready cycle, the rails down after every refresh but the wipe,
-// and the hung-BUSY recovery.
+// the periodic re-ink, and the hung-BUSY recovery.
+#include <cstring>
+#include <vector>
+
 #include "doctest/doctest.h"
 #include "hardware/parts/ssd1681/model.h"
 #include "hardware/parts/ssd1681/ssd1681.h"
@@ -368,4 +371,101 @@ TEST_CASE("ssd1681: power_off() parks a sleeping panel without touching it twice
     driver.power_off();
     CHECK(chip.deep_sleeps == sleeps_before);
     CHECK_FALSE(chip.powered);
+}
+
+namespace {
+constexpr int kPeriod = parts::Ssd1681::kReinkPeriodPartials;
+
+// The radar that greyed in flight: a ring that never changes, and a blip that moves every frame.
+parts::Ssd1681Glass radar_frame(int frame) {
+    parts::Ssd1681Glass canvas;
+    canvas.clear(true);
+    for (int x = 50; x < 150; x++) canvas.set_pixel(x, 100, true);
+    canvas.set_pixel(frame % 200, 10, true);
+    return canvas;
+}
+
+bool previous_is_the_inverse_of_new(const models::Ssd1681& chip) {
+    for (size_t i = 0; i < parts::Ssd1681Glass::kBytes; i++)
+        if (chip.ram_previous[i] != static_cast<uint8_t>(~chip.ram[i])) return false;
+    return true;
+}
+
+uint32_t present_without_reink(parts::Ssd1681& driver, const models::Ssd1681& chip, int first_frame,
+                               int count, uint32_t now_ms) {
+    for (int frame = first_frame; frame < first_frame + count; frame++) {
+        driver.present(radar_frame(frame), ports::Refresh::Partial, now_ms);
+        CHECK_FALSE(previous_is_the_inverse_of_new(chip));
+        now_ms += 1000;
+        CHECK(driver.ready(now_ms));
+    }
+    return now_ms;
+}
+
+uint32_t start_on_a_full(parts::Ssd1681& driver) {
+    driver.begin();
+    driver.present(radar_frame(0), ports::Refresh::Full, 0);
+    refresh_to_ready(driver, 0);
+    return 5000;
+}
+}  // namespace
+
+// Pixels a partial leaves unchanged get no drive and grey a little on every refresh.
+TEST_CASE("ssd1681: one partial in kReinkPeriodPartials drives every pixel to its colour again") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    uint32_t now_ms = start_on_a_full(driver);
+
+    now_ms = present_without_reink(driver, chip, 1, kPeriod - 1, now_ms);
+    driver.present(radar_frame(kPeriod), ports::Refresh::Partial, now_ms);
+    CHECK_FALSE(chip.last_full);
+    CHECK(previous_is_the_inverse_of_new(chip));
+    CHECK(std::memcmp(chip.framebuffer().data(), radar_frame(kPeriod).data(),
+                      parts::Ssd1681Glass::kBytes) == 0);
+    CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterPartialMs));
+
+    now_ms = present_without_reink(driver, chip, kPeriod + 1, kPeriod - 1, now_ms + 1000);
+    driver.present(radar_frame(2 * kPeriod), ports::Refresh::Partial, now_ms);
+    CHECK(previous_is_the_inverse_of_new(chip));
+}
+
+// The re-ink frame is the glass the next partial diffs against, not its inverse.
+TEST_CASE("ssd1681: the partial after a re-ink diffs against the frame the re-ink showed") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    uint32_t now_ms = start_on_a_full(driver);
+
+    now_ms = present_without_reink(driver, chip, 1, kPeriod - 1, now_ms);
+    driver.present(radar_frame(kPeriod), ports::Refresh::Partial, now_ms);
+    const std::vector<uint8_t> reinked = chip.ram;
+    CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterPartialMs));
+
+    present_without_reink(driver, chip, kPeriod + 1, 1, now_ms + 1000);
+    CHECK(chip.ram_previous == reinked);
+}
+
+// A full refresh drives every pixel, so the count starts over.
+TEST_CASE("ssd1681: a full refresh restarts the count to the next re-ink") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    uint32_t now_ms = start_on_a_full(driver);
+
+    now_ms = present_without_reink(driver, chip, 1, kPeriod - 1, now_ms);
+    driver.present(radar_frame(kPeriod), ports::Refresh::Full, now_ms);
+    refresh_to_ready(driver, now_ms);
+
+    present_without_reink(driver, chip, kPeriod + 1, kPeriod - 1, now_ms + 5000);
+}
+
+// A wipe drives every pixel black and the page behind it drives every white, a re-ink in two.
+TEST_CASE("ssd1681: a wipe restarts the count to the next re-ink") {
+    models::Ssd1681 chip;
+    parts::Ssd1681 driver = driver_for(chip);
+    uint32_t now_ms = start_on_a_full(driver);
+
+    now_ms = present_without_reink(driver, chip, 1, kPeriod - 1, now_ms);
+    driver.paint_black(now_ms);
+    CHECK(driver.ready(now_ms + parts::Ssd1681::kReadyAfterPartialMs));
+
+    present_without_reink(driver, chip, kPeriod, kPeriod - 1, now_ms + 1000);
 }

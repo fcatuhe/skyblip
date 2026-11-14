@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
 
 #include "core/comms/config.h"
+#include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
 #include "core/diagnostics/payload.h"
 #include "core/identity/activation.h"
@@ -86,8 +87,7 @@ class ConfigLinkService : public runtime::Service {
     // all.
     void flush_settings(uint32_t now_ms);
 
-    // INFO: fc 07sep26 written in the same pass as trigger(), so no reboot can fall between them
-    void record_update();
+    void install();
 
    private:
     void publish_identity(uint32_t now_ms);
@@ -112,6 +112,8 @@ class ConfigLinkService : public runtime::Service {
     static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kPriorSettingsKey = "settings.prior";
+    // TODO: fc 13nov26 the install report's key, which the image that retires it erases (#294)
+    static constexpr const char* kReportKey = "install.report";
 
     void drain_link_events(uint32_t now_ms);
     void take_request(uint32_t now_ms);
@@ -128,10 +130,15 @@ class ConfigLinkService : public runtime::Service {
     void keep_settings_for_a_revert();
     const char* settings_key() const { return newer_kept_ ? kPriorSettingsKey : kSettingsKey; }
     void load_image_state();
+    void record_update(const ports::SwapRequest& request);
     void forget_update();
     void confirm_image_once_healthy();
-    bool hardware_proven() const;
+    dfu::Proof proof() const;
     void publish_image_state();
+    void load_report();
+    void write_report();
+    void note_proof(dfu::Proof reached);
+    void forget_report();
 
     bool storable() const {
         return ports::has(context_.roles.capabilities, ports::Capability::Storage) &&
@@ -183,6 +190,9 @@ class ConfigLinkService : public runtime::Service {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     bool update_recorded_{false};
+    // TODO: fc 13nov26 the install report, retired with #294 with the four methods that keep it
+    dfu::InstallReport report_{};
+    bool reported_{false};
 };
 
 }  // namespace skyblip::common

@@ -35,7 +35,7 @@ static struct bt_uuid_128 nus_service_uuid = BT_UUID_INIT_128(NUS_UUID(0x0001));
 static struct bt_uuid_128 nus_rx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0002));
 static struct bt_uuid_128 nus_tx_uuid = BT_UUID_INIT_128(NUS_UUID(0x0003));
 
-// INFO: fc 18sep26 HM-10, what PowerFLARM Flex ships and LK8000 only speaks: one characteristic.
+// INFO: fc 13nov26 HM-10, what PowerFLARM Fusion and Flex ship: one characteristic.
 static struct bt_uuid_16 hm10_service_uuid = BT_UUID_INIT_16(0xFFE0);
 static struct bt_uuid_16 hm10_characteristic_uuid = BT_UUID_INIT_16(0xFFE1);
 

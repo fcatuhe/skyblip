@@ -48,6 +48,9 @@ RawSnapshot bench_device() {
     snapshot.radio.uplink_frames = 4;
     snapshot.radio.uplink_bad = 0;
     snapshot.radio.uplink_targets = 3;
+    snapshot.radio.uplink_stale = 2;
+    snapshot.radio.rx_status = 5;
+    snapshot.radio.tx_held_for_b5 = 8;
     snapshot.radio.tx_ok = 19;
     snapshot.radio.tx_lost = 1;
     snapshot.radio.missed = 2;
@@ -62,7 +65,7 @@ RawSnapshot bench_device() {
     snapshot.radio.alarm = 1;
     snapshot.radio.noise_dbm = -104;
     snapshot.radio.slot = skyblip::timing::SlotState::Slot0;
-    snapshot.radio.frequency_hz = skyblip::timing::kMBand0Hz;
+    snapshot.radio.frequency_hz = skyblip::adsl::kMBand0Hz;
     snapshot.radio.tx_allowed = true;
     return snapshot;
 }
@@ -93,9 +96,10 @@ TEST_CASE("raw page: the radio block names the dwell it is in and every verdict 
     CHECK(reads_in(canvas, "-104DBM", 100, 82, 200, 100));
     CHECK(reads_in(canvas, "RX 30 CRC 2 SYNC 1 KEY 0", 0, 93, 200, 111));
     CHECK(reads_in(canvas, "DEC 16 TYPE 4 WAIT 7", 0, 104, 200, 122));
-    CHECK(reads_in(canvas, "UPLINK 4/0/3 TRK 4 ALM 1", 0, 115, 200, 133));
+    CHECK(reads_in(canvas, "ST 5", 0, 104, 200, 122));
+    CHECK(reads_in(canvas, "UPLINK 4/0/3/2 TRK 4 ALM 1", 0, 115, 200, 133));
     CHECK(reads_in(canvas, "TX 19 LOST 1 MISS 2 HELD 0", 0, 126, 200, 144));
-    CHECK(reads_in(canvas, "DUTY 5/1000 KEYED 609US", 0, 137, 200, 155));
+    CHECK(reads_in(canvas, "DUTY 5/1000 KEYED 609US B5 8", 0, 137, 200, 155));
     CHECK(reads_in(canvas, "SPAN 5919US SLOT 120US", 0, 148, 200, 166));
     CHECK(reads_in(canvas, "PPS -12US HOLDOVER 0", 0, 159, 200, 177));
 }
@@ -114,7 +118,7 @@ TEST_CASE("raw page: a solution nothing has dated reports no phase at all") {
     draw_raw(canvas, snapshot);
 
     CHECK(reads_in(canvas, "NAV ---", 0, 24, 200, 41));
-    CHECK(reads_in(canvas, "FIX BLIND", 0, 35, 200, 52));
+    CHECK(reads_in(canvas, "FIX OUTDOORS", 0, 35, 200, 52));
     CHECK(reads_in(canvas, "HDOP --- VDOP 1.50 RES ---", 0, 46, 200, 63));
     CHECK(reads_in(canvas, "PPS NONE", 0, 68, 200, 85));
     CHECK(reads_in(canvas, "UTC --:--:--", 0, 68, 200, 85));

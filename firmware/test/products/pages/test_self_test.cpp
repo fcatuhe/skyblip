@@ -14,6 +14,7 @@ using namespace skyblip::go;
 namespace {
 
 using skyblip::reads_at;
+using skyblip::reads_in;
 using skyblip::ui::kCellWidth;
 
 bool reads_right_aligned(const Glass& canvas, int y, const char* text) {
@@ -48,7 +49,7 @@ TEST_CASE("self-test page: every part on the page carries its own verdict") {
 
     CHECK(row_reads(canvas, 0, "PASS"));
     CHECK(row_reads(canvas, 1, "FAIL"));
-    CHECK(row_reads(canvas, 2, "NOT FITTED"));
+    CHECK(row_reads(canvas, 2, "NOT FOUND"));
 
     // An absent part is not a failed one. A unit built without a barometer must
     // not read as a broken unit on a bench.
@@ -65,9 +66,10 @@ TEST_CASE("self-test page: the page says whether the device may fly, in one word
     Glass grounded;
     draw_self_test(grounded, page(bad, 1, /*flyable=*/false));
 
-    // The verdict is reversed out of a filled block, so the two pages differ by
-    // far more than the four characters of the badge.
-    CHECK(ready.count_black() != grounded.count_black());
+    // The verdict is reversed out of a filled block, so it reads as white ink.
+    CHECK(reads_in(ready, "PASS", 100, 36, 200, 200, 1, /*ink=*/false));
+    CHECK(reads_in(grounded, "FAIL", 100, 36, 200, 200, 1, /*ink=*/false));
+    CHECK_FALSE(reads_in(ready, "FAIL", 100, 36, 200, 200, 1, /*ink=*/false));
     CHECK(grounded.count_black() > 200);
     CHECK(ready.count_black() > 200);
 }
@@ -190,7 +192,7 @@ TEST_CASE("self-test page: the bus scan is a row of its own, addresses and no ve
     // No verdict: nothing on this row is a pass or a failure.
     CHECK_FALSE(row_reads(canvas, 2, "PASS"));
     CHECK_FALSE(row_reads(canvas, 2, "FAIL"));
-    CHECK_FALSE(row_reads(canvas, 2, "NOT FITTED"));
+    CHECK_FALSE(row_reads(canvas, 2, "NOT FOUND"));
 }
 
 // A part nobody expected is the reason to scan at all, and there is no name for it.
@@ -267,13 +269,19 @@ TEST_CASE(
     snapshot.went_dark_flat = true;
     Glass canvas;
     draw_self_test(canvas, snapshot);
-    CHECK(reads_at(canvas, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+    CHECK(reads_at(canvas, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS EMPTY"));
 
+    snapshot.flyable = false;
+    Glass grounded;
+    draw_self_test(grounded, snapshot);
+    CHECK(reads_at(grounded, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS EMPTY"));
+
+    snapshot.flyable = true;
     snapshot.went_dark_flat = false;
     Glass ordinary;
     draw_self_test(ordinary, snapshot);
     CHECK(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V"));
-    CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS FLAT"));
+    CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS EMPTY"));
 }
 
 // #191's contract: the warning is listed here for as long as go::OwnIcaoWarning stands.
@@ -316,8 +324,8 @@ TEST_CASE("self-test page: a paired Go lists its Bravo by tag under the bus, and
         skyblip::comms::BravoState state;
         const char* verdict;
     };
-    for (const Row row : {Row{skyblip::comms::BravoState::Waiting, "WAITING"},
-                          Row{skyblip::comms::BravoState::Live, "LIVE"},
+    for (const Row row : {Row{skyblip::comms::BravoState::Waiting, "WAIT"},
+                          Row{skyblip::comms::BravoState::Live, "ON"},
                           Row{skyblip::comms::BravoState::LinkDown, "LINK DOWN"},
                           Row{skyblip::comms::BravoState::ReceiverDown, "RECEIVER DOWN"},
                           Row{skyblip::comms::BravoState::NoUtc, "NO UTC"}}) {
@@ -358,5 +366,5 @@ TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless it is
     Glass waiting;
     draw_self_test(waiting, snapshot);
     CHECK(reads_at(waiting, kSelfTestLeftX, self_test_row_y(last), "BRAVO 3F2A"));
-    CHECK(row_reads(waiting, last, "WAITING"));
+    CHECK(row_reads(waiting, last, "WAIT"));
 }

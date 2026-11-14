@@ -9,16 +9,12 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr int kHeaderY = 3;
-constexpr int kHeaderRuleY = 21;
+constexpr int kStateInset = 4;
+constexpr int kDetailInset = 22;
+constexpr int kDetailRows = 3;
 constexpr int kLabelInset = 6;
-constexpr int kNameInset = 20;
-constexpr int kTypeInset = 52;
-constexpr int kStateInset = 30;
-constexpr int kDetailInset = 56;
-constexpr int kNoticeHeardY = 40;
-constexpr int kNoticeNameY = 66;
-constexpr int kNoticeDetailY = 100;
+constexpr int kNameInset = 24;
+constexpr int kTypeInset = 50;
 constexpr int kLabelBytes = 24;
 
 const char* state_text(Detection state) {
@@ -27,7 +23,7 @@ const char* state_text(Detection state) {
         case Detection::NotConnected: return "NOT CONNECTED";
         case Detection::Airborne: return "IN FLIGHT";
         case Detection::NoFix: return "NO FIX";
-        case Detection::Listening: return "LISTENING";
+        case Detection::Listening: return "NOT HEARD";
         case Detection::Heard: break;
     }
     return "";
@@ -35,17 +31,17 @@ const char* state_text(Detection state) {
 
 const char* detail_text(Detection state) {
     switch (state) {
-        case Detection::Unpaired: return "PAIR ONE TO DETECT THE AIRCRAFT";
+        case Detection::Unpaired: return "PAIR A BRAVO FIRST";
         case Detection::Airborne:
-        case Detection::NoFix: return "IT DETECTS ON THE GROUND";
-        case Detection::Listening: return "TRANSPONDER TO ON OR ALT";
+        case Detection::NoFix: return "BRAVO FINDS IT ON THE GROUND";
+        case Detection::Listening: return "SET THE TRANSPONDER TO ALT";
         case Detection::NotConnected:
         case Detection::Heard: break;
     }
     return "";
 }
 
-bool named_type(uint8_t code) { return code != 0 && code < kNamedAircraftTypes; }
+bool named_type(uint8_t code) { return code != 0 && named_aircraft_type(code); }
 
 // INFO: fc 13nov26 the address stands in for a transponder that sends no identification
 const char* name_of(const Detected& detected, char* address) {
@@ -54,9 +50,19 @@ const char* name_of(const Detected& detected, char* address) {
 }
 
 void heard_label(char* out, const Detected& detected) {
-    int written = format_string(out, "BRAVO HEARS ");
+    int written = format_string(out, "ICAO ");
     written += format_hex(out + written, detected.address, kOwnIcaoCharacters);
     out[written] = 0;
+}
+
+void wrapped(ui::Canvas& canvas, int y, const char* text, bool ink) {
+    char line[kFrameColumns + 1];
+    int at = 0;
+    for (int row = 0; row < kDetailRows; row++) {
+        at = take_line(text, at, line, kFrameColumns);
+        if (line[0] == 0) return;
+        canvas.draw_text(kMenuLeftX, y + row * line_pitch(kMenuScale), line, ink, kMenuScale);
+    }
 }
 
 }  // namespace
@@ -93,22 +99,21 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
                    bool focused) {
     const int top = menu_line_top(0);
     if (focused)
-        canvas.rectangle(2, top, kGlassWidth - 4, kDetectedLines * kMenuRowHeight - 1, true,
-                         /*fill=*/true);
+        canvas.rounded_rectangle(2, top, kGlassWidth - 4, kDetectedLines * kMenuRowHeight - 1,
+                                 kMenuBarRadius, true, /*fill=*/true);
     const bool ink = !focused;
     if (detected.state != Detection::Heard) {
-        canvas.draw_text(kMenuLeftX, top + kLabelInset, "BRAVO", ink, 1);
         canvas.draw_text(kMenuLeftX, top + kStateInset, state_text(detected.state), ink,
                          kMenuScale);
-        canvas.draw_text(kMenuLeftX, top + kDetailInset, detail_text(detected.state), ink, 1);
+        wrapped(canvas, top + kDetailInset, detail_text(detected.state), ink);
         return;
     }
     char label[kLabelBytes];
     heard_label(label, detected);
-    canvas.draw_text(kMenuLeftX, top + kLabelInset, label, ink, 1);
+    canvas.draw_text(kMenuLeftX, top + kLabelInset, label, ink, kMenuScale);
     char address[kOwnIcaoCharacters + 1];
     canvas.draw_text(kMenuLeftX, top + kNameInset, name_of(detected, address), ink, kCallsignScale);
-    const char* type = matches(detected, settings) ? "MATCHES"
+    const char* type = matches(detected, settings) ? "SAME"
                        : named_type(detected.aircraft_type)
                            ? aircraft_type_name(detected.aircraft_type)
                            : "";
@@ -116,28 +121,20 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
 }
 
 void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
-    canvas.clear(true);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, "AIRCRAFT", true, kMenuScale);
-    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
-    canvas.draw_text(centred_x("BRAVO HEARS", kMenuScale), kNoticeHeardY, "BRAVO HEARS", true,
-                     kMenuScale);
+    draw_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt);
     char address[kOwnIcaoCharacters + 1];
-    const char* name = name_of(detected, address);
-    canvas.draw_text(centred_x(name, kCallsignScale), kNoticeNameY, name, true, kCallsignScale);
-    char detail[kLabelBytes];
-    int written = format_hex(detail, detected.address, kOwnIcaoCharacters);
-    if (named_type(detected.aircraft_type)) {
-        written += format_string(detail + written, " ");
-        written += format_string(detail + written, aircraft_type_name(detected.aircraft_type));
-    }
-    detail[written] = 0;
-    canvas.draw_text(centred_x(detail, 1), kNoticeDetailY, detail, true, 1);
-    canvas.draw_text(centred_x(kAircraftNoticePadText, kCallsignHintScale), kCallsignPadHintY,
-                     kAircraftNoticePadText, true, kCallsignHintScale);
-    canvas.draw_text(centred_x(kAircraftNoticeButtonText, kCallsignHintScale), kCallsignButtonHintY,
-                     kAircraftNoticeButtonText, true, kCallsignHintScale);
-    canvas.draw_text(centred_x(kAircraftNoticeHelpText, 1), kMenuHintY, kAircraftNoticeHelpText,
-                     true, 1);
+    char label[kLabelBytes];
+    heard_label(label, detected);
+    BodyLine body[6];
+    int count = 0;
+    body[count++] = {name_of(detected, address), kCallsignScale};
+    body[count++] = {label};
+    if (named_type(detected.aircraft_type))
+        body[count++] = {aircraft_type_name(detected.aircraft_type)};
+    body[count++] = {""};
+    for (int i = 0; i < kAircraftNoticeLineCount; i++) body[count++] = {kAircraftNoticeLines[i]};
+    draw_body(canvas, Heading::Interrupt, /*keys=*/true, body, count);
+    draw_keys(canvas, {{Press::Once, "USE"}, "CLOSE"});
 }
 
 }  // namespace skyblip::go

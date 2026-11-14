@@ -30,7 +30,7 @@
         <ul>
           <li><%= link_to_page "about", label_type: :nav %></li>
           <li><%= link_to "GitHub", Rails.configuration.x.repository_url %></li>
-          <% %w[roadmap see-and-avoid ads-l-registry legal-notice].each do |slug| %>
+          <% %w[roadmap see-and-avoid ads-l legal-notice].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
         </ul>

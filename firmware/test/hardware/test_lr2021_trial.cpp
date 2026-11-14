@@ -1,10 +1,10 @@
 // What a retune sends the LR2021, and the frames its Manchester layout hands up.
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/lr2021/model.h"
+#include "protocols/adsb/message.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/lr2021_rig.h"
 
@@ -29,9 +29,9 @@ parts::Lr2021Tuning cb_tfc() {
 }
 
 uint32_t address_in(const uint8_t* chips) {
-    protocol::AdsbMessage message{};
-    if (protocol::adsb_receive(chips, protocol::kAdsbChipBytes, protocol::AdsbReception{0, -70},
-                               message) != Status::Ok)
+    adsb::Message message{};
+    if (adsb::receive(chips, adsb::kChipBytes, adsb::Reception{0, -70}, message) !=
+        wire::Status::Ok)
         return 0;
     return message.address;
 }
@@ -62,7 +62,7 @@ TEST_CASE("lr2021 trial: the Manchester layout hands up the chips the decoder re
     const AdsbAir air = adsb_air(adsb_frame(kAddress, 5, 4));
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -64));
 
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     const parts::Lr2021Event event = radio.poll(chips, sizeof(chips));
     REQUIRE(event.type == Lr2021EventType::Frame);
     CHECK(event.rssi_dbm == -64);
@@ -81,7 +81,7 @@ TEST_CASE("lr2021 trial: a frame of another downlink format is counted and not h
     REQUIRE(part.receive_air(reply.chips, sizeof(reply.chips)));
     REQUIRE(part.receive_air(squitter.chips, sizeof(squitter.chips)));
 
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     REQUIRE(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
     CHECK(address_in(chips) == kAddress);
     CHECK(radio.foreign_frames() == 1);

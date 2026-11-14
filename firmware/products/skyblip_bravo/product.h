@@ -21,6 +21,7 @@
 #include "products/skyblip_bravo/flash_window.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/name.h"
+#include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_bravo/services/adsb.h"
 #include "products/skyblip_bravo/services/adsb_trial.h"
 #include "products/skyblip_bravo/services/button.h"
@@ -55,6 +56,7 @@ class Product {
     explicit Product(Platform& platform)
         : platform_(platform), board_(platform, bus_, adsb_frames_) {
         config_link_.config().serve_captures();
+        config_link_.config().set_radio_protocols(kRadioProtocols);
         // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
         adsb_.attach_trial(adsb_trial_);
     }
@@ -255,8 +257,7 @@ class Product {
         if (phase == acted_phase_) return;
         acted_phase_ = phase;
         if (phase == power::ShutdownPhase::Off && installing()) {
-            config_link_.record_update();
-            roles_.dfu.trigger();
+            config_link_.install();
             return;
         }
         if (phase != power::ShutdownPhase::Parking) return;

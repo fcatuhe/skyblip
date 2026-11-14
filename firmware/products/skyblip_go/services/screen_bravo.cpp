@@ -1,5 +1,5 @@
-#include "core/protocol/adsb_registration.h"
 #include "products/skyblip_go/services/screen.h"
+#include "protocols/adsb/registration.h"
 
 namespace skyblip::go {
 
@@ -85,8 +85,7 @@ Detected ScreenService::detected() const {
     if (!heard) return out;
     out.state = Detection::Heard;
     out.address = heard->address;
-    protocol::adsb_registration(out.callsign, sizeof(out.callsign), heard->callsign,
-                                heard->address);
+    adsb::registration(out.callsign, sizeof(out.callsign), heard->callsign, heard->address);
     out.aircraft_type = heard->aircraft_category;
     return out;
 }

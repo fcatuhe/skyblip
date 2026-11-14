@@ -2,7 +2,7 @@
 title: "T-Echo 868 MHz, Go prices and firmware install"
 nav_title: Buy
 description: "Compare Go and Go+, from €68 and €84. Choose a T-Echo 868 MHz with BME280, find sellers, then install and activate the free firmware."
-updated_on: "2026-11-11"
+updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
@@ -10,15 +10,15 @@ updated_on: "2026-11-11"
   <p class="page-hero-subtitle">
     skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, skyBlip Bravo a
     Seeed SenseCAP MeshTracker X1.<br>
-    You buy the device and install the skyBlip firmware on a Go today. The X1
-    ships with Meshtastic, and the skyBlip Bravo firmware is in development.
+    You buy the device and install the skyBlip firmware by USB. The X1
+    ships with Meshtastic.
   </p>
 </header>
 
 <section>
   <div class="offers offers--three">
     <article class="offer">
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo with the traffic radar on screen" %>
       <h2>skyBlip Go</h2>
       <p class="offer-price"><small>from</small> €68</p>
       <p class="offer-tagline">LilyGO T-Echo</p>
@@ -33,7 +33,7 @@ updated_on: "2026-11-11"
     </article>
 
     <article class="offer">
-      <%= pages_image_tag "skyblip-go-plus.avif", alt: "skyBlip Go+: a white LilyGO T-Echo Plus with its antenna, the traffic radar on the screen" %>
+      <%= pages_image_tag "skyblip-go-plus.avif", alt: "skyBlip Go+: a white LilyGO T-Echo Plus with its antenna and the traffic radar on screen" %>
       <h2>skyBlip Go+</h2>
       <p class="offer-price"><small>from</small> €84</p>
       <p class="offer-tagline">LilyGO T-Echo Plus</p>
@@ -52,9 +52,9 @@ updated_on: "2026-11-11"
       <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "photo-x1" %>
       <h2>skyBlip Bravo</h2>
       <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
-      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status">Firmware in development</span></p>
+      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status status--available">Available</span></p>
       <ul class="points">
-        <li>Will receive ADS-B, for your app or your Go</li>
+        <li>Receives ADS-B, for your app or your Go</li>
         <li>Buzzer and vibration motor</li>
         <li>1100&nbsp;mAh battery</li>
       </ul>
@@ -67,7 +67,7 @@ updated_on: "2026-11-11"
   <p class="more"><%= link_to_page "skyblip-tango", label: "A Go and a Bravo make a skyBlip Tango", anchor: "buy" %></p>
 
   <p class="offer-warning">
-    <strong>For a Go, take the 868&nbsp;MHz version with the BME280 barometer.</strong>
+    <strong>For a Go, choose the 868&nbsp;MHz version with the BME280 barometer.</strong>
     868&nbsp;MHz is the ADS-L band in Europe. The 433 and 915&nbsp;MHz versions
     do not transmit on the right frequency. The BME280 is required for skyBlip
     conformity.
@@ -85,11 +85,11 @@ updated_on: "2026-11-11"
         <tbody>
           <tr><th>Device</th><td>LilyGO T-Echo</td><td>LilyGO T-Echo Plus</td></tr>
           <tr><th>Price</th><td>from €68</td><td>from €84</td></tr>
-          <tr><th>ADS-L transmit and receive, FLARM receive</th><td>yes</td><td>yes</td></tr>
+          <tr><th>Transmits and receives ADS-L, receives FLARM</th><td>yes</td><td>yes</td></tr>
           <tr><th>Radar and traffic list</th><td>yes</td><td>yes</td></tr>
-          <tr><th>Traffic in your app, 3 devices</th><td>yes</td><td>yes</td></tr>
+          <tr><th>Traffic in your app on 3 devices</th><td>yes</td><td>yes</td></tr>
           <tr><th>Alarm</th><td>on screen</td><td>on screen, buzzer and vibration motor</td></tr>
-          <tr><th>Inertial unit</th><td>no</td><td>Bosch BHI260AP</td></tr>
+          <tr><th>Motion sensors (inertial unit)</th><td>no</td><td>Bosch BHI260AP</td></tr>
           <tr><th>G-meter</th><td>no</td><td>yes</td></tr>
           <tr><th>Battery</th><td>850&nbsp;mAh</td><td>2400&nbsp;mAh</td></tr>
           <tr><th>Barometer</th><td>BME280, pick it when ordering</td><td>BME280, pick it when ordering</td></tr>
@@ -111,7 +111,7 @@ updated_on: "2026-11-11"
         </thead>
         <tbody>
           <tr>
-            <th>Amazon<span>The simplest order, with Amazon&rsquo;s returns</span></th>
+            <th>Amazon<span>The easiest way to order, with returns through Amazon</span></th>
             <td><a href="https://link.amazon/B00EaKI0W" target="_blank" rel="sponsored">T-Echo, €68</a></td>
             <td><a href="https://link.amazon/B05es09aX" target="_blank" rel="sponsored">T-Echo Plus, €84</a></td>
             <td>&mdash;</td>
@@ -123,7 +123,7 @@ updated_on: "2026-11-11"
             <td>&mdash;</td>
           </tr>
           <tr>
-            <th>AliExpress<span>Sometimes cheaper, for those who know their way around it</span></th>
+            <th>AliExpress<span>Sometimes cheaper, if you know the site</span></th>
             <td><a href="https://s.click.aliexpress.com/e/_c4nyUpy1" target="_blank" rel="sponsored">T-Echo</a></td>
             <td>&mdash;</td>
             <td>&mdash;</td>
@@ -139,13 +139,13 @@ updated_on: "2026-11-11"
     </div>
   </div>
   <p class="signature">
-    Prices taken on 8 October 2026, as a guide only: they change, and LilyGO&rsquo;s
-    shipping is a typical cost. The Amazon, AliExpress and LilyGO links are
-    affiliate links: skyBlip earns a commission, and your price does not change. As an
+    Prices recorded on 8 October 2026 are a guide: they change. LilyGO&rsquo;s
+    shipping costs shown are typical. The Amazon, AliExpress and LilyGO links are
+    affiliate links: skyBlip earns a commission. Your price does not change. As an
     Amazon Associate, skyBlip earns from qualifying purchases. The Seeed link is
-    an affiliate link too: skyBlip earns a commission, and the code
+    an affiliate link too: skyBlip earns a commission. The code
     <%= seeed_promo_code %> gives you 10% off at Seeed&rsquo;s
-    checkout. The X1 price was taken on 9 November 2026, with the code and
+    checkout. The X1 price was recorded on 9 November 2026, with the code and
     shipping to France.
   </p>
 </section>
@@ -155,27 +155,44 @@ updated_on: "2026-11-11"
   <ol class="steps-grid steps-grid--sequence">
     <li>
       <h3>Order.</h3>
-      <p>A LilyGO T-Echo or T-Echo Plus, in 868&nbsp;MHz with the BME280 barometer.</p>
+      <p>Order a LilyGO T-Echo or T-Echo Plus, in 868&nbsp;MHz with the BME280 barometer.</p>
     </li>
     <li>
       <h3>Install.</h3>
-      <p>Plug the device in over USB-C and press <span class="mono">RST</span> twice. Drop the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> on the <span class="mono">TECHOBOOT</span> drive that opens.</p>
+      <p>Connect the device by USB-C and press <span class="mono">RST</span> twice. Copy the .uf2 file from the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> to the <span class="mono">TECHOBOOT</span> drive that appears.</p>
     </li>
     <li>
       <h3>Activate.</h3>
-      <p><%= link_to "Activate it", briefing_activation_path %> over Bluetooth from Chrome or Edge, then allow it with two presses on the device. Until then, a new Go neither transmits nor receives. Briefing then offers your <a href="#type">aircraft type</a> and callsign. Both are optional. A unit that wants a GPS fix before it saves them says so. Both stay changeable later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
+      <p><%= link_to "Activate it", briefing_activation_path %> over Bluetooth in Chrome or Edge, then confirm activation with two presses on the device. Until then, a new Go neither transmits nor receives. Briefing then lets you set your <a href="#type">aircraft type</a> and callsign. Both are optional. If the device needs a GPS position before saving them, it tells you. You can change both later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
+    </li>
+  </ol>
+</section>
+
+<section id="install-bravo" class="band">
+  <h2 class="section-title">A Bravo, ready in three steps</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li>
+      <h3>Order.</h3>
+      <p>Order a Seeed SenseCAP MeshTracker X1.</p>
+    </li>
+    <li>
+      <h3>Install.</h3>
+      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears. First, copy <span class="mono">CURRENT.UF2</span> from it to your computer. Dragging that file back onto the drive restores Meshtastic. Then copy the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest skyBlip Bravo release</a> onto the <span class="mono">X1</span> drive.</p>
+    </li>
+    <li>
+      <h3>Set up.</h3>
+      <p>Bravo needs no activation. In <%= link_to "Briefing", briefing_root_path %>, set your aircraft&rsquo;s ICAO address so your own transponder is left out.</p>
     </li>
   </ol>
   <p class="signature">
-    Updates come later, from <%= link_to "Briefing", briefing_root_path %>
-    over Bluetooth, each one approved on the device&rsquo;s screen. The same
-    file works on the T&#8209;Echo and the T&#8209;Echo Plus. For now,
-    only development builds are published. Bravo&rsquo;s steps will be here
-    when its firmware is released.
+    Later updates for both devices come from <%= link_to "Briefing", briefing_root_path %>
+    over Bluetooth. Each one is approved on the device: on the Go&rsquo;s screen, or with two presses on Bravo.
+    The same file works on the T&#8209;Echo and the T&#8209;Echo Plus. For now,
+    only development versions are published for both devices.
   </p>
 </section>
 
-<section id="type" class="band">
+<section id="type" class="band band--tint">
   <h2 class="section-title">Which aircraft type to pick?</h2>
   <div class="faq">
     <div class="table-scroll">
@@ -189,8 +206,11 @@ updated_on: "2026-11-11"
           <tr><th class="mono">MICROLIGHT</th><td>a microlight</td></tr>
           <tr><th class="mono">GLIDER</th><td>a glider</td></tr>
           <tr><th class="mono">GYROCOPTER</th><td>a gyroplane</td></tr>
-          <tr><th class="mono">HELICOPTER</th><td>a light helicopter</td></tr>
+          <tr><th class="mono">LIGHT HELI</th><td>a light helicopter</td></tr>
+          <tr><th class="mono">HEAVY HELI</th><td>a heavy helicopter</td></tr>
           <tr><th class="mono">PARAGLIDER</th><td>a paraglider</td></tr>
+          <tr><th class="mono">HANG GLIDER</th><td>a hang glider</td></tr>
+          <tr><th class="mono">PARAMOTOR</th><td>a paramotor</td></tr>
           <tr><th class="mono">BALLOON</th><td>a balloon</td></tr>
         </tbody>
       </table>
@@ -198,7 +218,7 @@ updated_on: "2026-11-11"
   </div>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Your questions, answered</h2>
   <div class="faq">
     <details>
@@ -206,8 +226,8 @@ updated_on: "2026-11-11"
       <p>It is required for skyBlip conformity. Some T-Echo units are sold without it: pick the version that lists it.</p>
     </details>
     <details>
-      <summary>Does the X1 work with skyBlip today?</summary>
-      <p>Not yet. It ships with Meshtastic, which receives no ADS-B. The skyBlip Bravo firmware is in development, and you will install it when it is released. <%= link_to_page "skyblip-bravo", label: "Where it stands", anchor: "status" %>.</p>
+      <summary>Does the X1 work with skyBlip?</summary>
+      <p>Yes, with the skyBlip Bravo firmware. It ships with Meshtastic, which receives no ADS-B. <%= link_to_page "skyblip-bravo", label: "About Bravo", anchor: "status" %>.</p>
     </details>
     <details>
       <summary>Do I need to open or solder the device?</summary>
@@ -215,21 +235,21 @@ updated_on: "2026-11-11"
     </details>
     <details>
       <summary>Do updates cost anything?</summary>
-      <p>No. The firmware and its updates are free, and will stay free.</p>
+      <p>No. For private flying and air sports, the firmware and its updates are free, and always will be.</p>
     </details>
     <details>
       <summary>Can I update from an iPhone?</summary>
       <p>
-        No: the update page needs Web Bluetooth, which Safari does not have.
-        Use Chrome or Edge, on a computer or on Android. Installing over a USB
-        cable, from a computer, needs no browser.
+        No. The update page needs Web Bluetooth, the browser&rsquo;s Bluetooth feature, which Safari does not support.
+        Use Chrome or Edge on a computer or on Android. Installing over a USB
+        cable from a computer needs no browser.
       </p>
     </details>
     <details>
       <summary>What if I want to go back?</summary>
       <p>
-        The skyBlip firmware leaves the T-Echo&rsquo;s factory bootloader
-        alone. The other software available for the device installs again as
+        The skyBlip firmware leaves the T-Echo&rsquo;s factory startup program (bootloader)
+        unchanged. You can reinstall the other software available for the device as
         before.
       </p>
     </details>

@@ -11,40 +11,40 @@ updated_on: "2026-11-11"
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>With your phone, and without trusting it.</h1>
   <p class="lede">
-    What an app can see, what it can ask for, and the glass that has the last word.
+    What an app can see, what it can ask for, and the device screen that has the last word.
   </p>
 </section>
 
 <section>
   <div class="feature">
     <div>
-      <h3 id="by-name">It appears by name, and <span class="highlight">three screens</span> read it at once.</h3>
+      <h3 id="by-name">It appears by name, and <span class="highlight">three screens</span> see its traffic at once.</h3>
       <p>
         <span class="mono">skyBlip Go+ 00012A</span>: the product, then the
         24-bit address it got when it was <%= link_to "activated", briefing_activation_path %>.
-        Nothing to pair, no code to type. It carries the FLARM
-        NMEA stream on both of the Bluetooth serial profiles navigation software
+        Nothing to pair, no code to type. It sends traffic as a FLARM
+        NMEA data stream over both Bluetooth serial connection types that navigation software
         looks for, so the app you already fly with finds it.
       </p>
       <p>
         The tablet on the yoke, the phone in a pocket and the passenger&rsquo;s
-        iPad all see the same traffic. Configuration is the one thing that is
-        not shared: the first app to write keeps that right until it
-        disconnects, and the second is told who holds it.
+        iPad all see the same traffic. Only one app at a time can change
+        settings: the first app to save settings keeps that right until it
+        disconnects. The second app is told which app holds it.
       </p>
     </div>
     <figure class="shot shot--photo">
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "A skyBlip Go, white case with its antenna, the traffic radar on the e-paper screen" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "A skyBlip Go in a white case with its antenna and the traffic radar on its e-paper screen" %>
     </figure>
   </div>
 
   <ul class="points">
-    <li>No pairing, no code, no account</li>
-    <li>Three connections at once</li>
-    <li>Nordic UART and FLARM-style profiles</li>
-    <li>SDVFR Next, SkyDemon, ForeFlight and the rest</li>
-    <li>The last flights kept on the device</li>
-    <li>Collected over the same link on the ground</li>
+    <li>Connect without pairing, a code or an account</li>
+    <li>Use three connections at once</li>
+    <li>Connect through Nordic UART or FLARM-style profiles</li>
+    <li>Use SDVFR Next, SkyDemon, ForeFlight and the rest</li>
+    <li>The device keeps your latest flights</li>
+    <li>Download them over the same link on the ground</li>
   </ul>
 
   <h3 id="asked">Two presses allow, <span class="highlight">one press refuses</span>.</h3>
@@ -53,60 +53,59 @@ updated_on: "2026-11-11"
     new firmware, a restart into the USB bootloader, a settings write, erasing
     your flights, switching it off, the device does not take the phone at its
     word. It puts the question on its own glass, names it, and waits thirty
-    seconds:
-    <span class="mono">PRESS TWICE TO ALLOW</span>,
-    <span class="mono">ONE PRESS REFUSES</span>. No answer inside the window
-    counts as a refusal.
+    seconds. Two presses on the <span class="mono">ACCEPT</span> key allow it, and
+    <span class="mono">TO CANCEL, PUSH ONCE OR WAIT</span>. No answer within
+    that time counts as a refusal.
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "confirm.png", alt: "The authorisation prompt: AUTHORISE, SETTINGS, apply the settings the phone sent, PRESS TWICE TO ALLOW over ONE PRESS REFUSES, refused after 30 s" %>
-    <figcaption>A settings write, asked on the glass</figcaption>
+    <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, TO CANCEL, PUSH ONCE OR WAIT with the seconds left, and the button's key ACCEPT for two presses" %>
+    <figcaption>The screen asks before saving settings</figcaption>
   </figure>
 
   <p class="lede">
-    Your callsign is one of those writes. The app sends it, the glass asks, and
-    from then on it is on the status screen, on the air once every ten seconds,
-    and on the screens of the aircraft around you. You can also type it on the
+    Your callsign is one of those settings. The app sends it. The screen asks
+    for permission. Once approved, it is shown on the status screen, broadcast
+    once every ten seconds and shown on nearby aircraft&rsquo;s screens. You can also type it on the
     device itself, in <%= link_to_page "controls", label: "the callsign field", anchor: "callsign" %>,
     or set it from a browser in <%= link_to "Briefing", briefing_root_path %>, beside
     the aircraft type, the units and the alarm.
   </p>
   <p class="lede">
-    Presses only count once the question has reached the glass and your thumb
-    has stopped: a run of presses that was stepping a setting cannot be spent on
-    an authorisation. The pad is inert while a question stands.
+    Presses only count once the question is on screen and you have stopped
+    pressing: a series of presses used to change a setting cannot also
+    authorise a request. The pad does nothing while a question is on screen.
   </p>
 
   <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
   <p class="lede">
     <%= link_to "Briefing", briefing_root_path %> sends a signed
-    image over the same Bluetooth, from Chrome or Edge, and the glass asks
-    once, naming the version, before it takes the image and installs it. The new
-    firmware then has to bring its radio up, hear its receiver and draw its
-    screen before it keeps itself. If it does not, the device goes back to the
-    firmware it had, and to the settings you had when the update began.
+    firmware file over the same Bluetooth link, from Chrome or Edge. The screen asks for permission
+    once and names the version before the device accepts the file and installs it. The new
+    firmware must then start its radio, receive data from its receiver and update its
+    screen before it is kept. If it cannot, the device returns to the
+    previous firmware and the settings you had when the update began.
   </p>
   <p class="lede">
-    Settings the device cannot read are never passed off as yours. It runs on
-    its defaults, the self test&rsquo;s <span class="mono">STORAGE</span> row
-    reads <span class="mono">NVS+NOR DEFAULTS</span>, and the phone is told:
+    If the device cannot read your settings, it tells you. It uses
+    its defaults. The self test&rsquo;s <span class="mono">STORAGE</span> row
+    reads <span class="mono">NVS+NOR DEFAULTS</span>. The phone is told:
     check the callsign and the aircraft type before you fly.
   </p>
   <p class="lede">
     When the firmware will not take at all, the same page hands the device to
     its USB bootloader, after the same two presses. The device switches itself
-    off on the page below, and the next press starts the bootloader: on a USB
-    cable the device is a drive named <span class="mono">TECHOBOOT</span>.
-    A <span class="mono">.uf2</span> dropped on it is new firmware,
-    <span class="mono">RST</span> goes back to skyBlip, and nothing transmits
-    meanwhile. Two presses of <span class="mono">RST</span> reach the same
+    off with the screen shown below. The next press starts the bootloader: connected by a USB
+    cable, the device appears as a drive named <span class="mono">TECHOBOOT</span>.
+    Copy a <span class="mono">.uf2</span> file onto it to install new firmware.
+    <span class="mono">RST</span> returns to skyBlip. Nothing transmits
+    during recovery. Two presses of <span class="mono">RST</span> open the same
     drive without a phone.
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, then a drive named TECHOBOOT on USB, a .uf2 dropped there is new firmware, RST goes back to skyBlip, and nothing transmits meanwhile" %>
-    <figcaption>Handed to the USB bootloader</figcaption>
+    <%= screen_image_tag "recovery.png", alt: "The recovery page: RECOVERY under the large mark, the USB drive name TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET, and the button's key START" %>
+    <figcaption>The device is ready for USB recovery</figcaption>
   </figure>
 </section>
 
@@ -115,19 +114,19 @@ updated_on: "2026-11-11"
 
   <h3 id="no-pairing">Why there is no pairing.</h3>
   <p class="lede">
-    Turning Bluetooth pairing on encrypts the GATT characteristics, which is a
-    known Web Bluetooth failure on Windows and would break
+    Bluetooth pairing encrypts the data fields known as GATT characteristics. This
+    causes a known Web Bluetooth failure on Windows and would break
     <%= link_to "the browser page that installs firmware", briefing_root_path %>.
-    So the boundary is the image and not the link.
+    Security therefore relies on checking the firmware file, not on securing the link.
   </p>
 
   <ul class="points">
-    <li>The bootloader verifies a signature over our key</li>
-    <li>An older version than the installed one is refused</li>
+    <li>The bootloader checks the firmware signature against our key</li>
+    <li>It refuses firmware older than the installed version</li>
     <li>An open transport cannot install firmware</li>
-    <li>Anything else it could ask for is ground-only</li>
-    <li>Refused unless it is confirmed on the glass</li>
-    <li>Physical presence, where a pairing code would be</li>
+    <li>All other requests can only run on the ground</li>
+    <li>The device refuses them unless you confirm on its screen</li>
+    <li>Your presence at the device replaces a pairing code</li>
   </ul>
 </section>
 

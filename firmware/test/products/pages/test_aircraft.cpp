@@ -7,6 +7,7 @@
 #include "products/skyblip_go/pages/aircraft.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/menu_bench.h"
 
@@ -98,8 +99,9 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
     MenuValues values = default_menu_values();
     values.detected = heard_glider();
     const Glass focused = aircraft_menu_of(values, MenuRow::Detected);
-    CHECK(reads_at(focused, kMenuLeftX - 2, 3, "AIRCRAFT", kMenuScale));
-    CHECK(reads(focused, "BRAVO HEARS 3A4B5C", 1, false));
+    CHECK(reads_heading(focused, "AIRCRAFT", Heading::Opened));
+    CHECK(reads(focused, "ICAO 3A4B5C", kMenuScale, false));
+    CHECK(reads_button_key(focused, "USE"));
     CHECK(reads(focused, "F-JABC", kCallsignScale, false));
     CHECK(reads(focused, "GLIDER", kMenuScale, false));
     for (int line = kDetectedLines; line < kMenuLines; line++)
@@ -114,13 +116,13 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
 }
 
 TEST_CASE(
-    "aircraft menu: a transponder already stored reads MATCHES, and the press is spent on "
+    "aircraft menu: a transponder already stored reads SAME, and the press is spent on "
     "nothing") {
     MenuValues values = default_menu_values();
     values.detected = heard_glider();
     REQUIRE(adopt(values.detected, values.settings));
     const Glass canvas = aircraft_menu_of(values, MenuRow::OwnIcao);
-    CHECK(reads(canvas, "MATCHES", kMenuScale));
+    CHECK(reads(canvas, "SAME", kMenuScale));
 
     Bench bench;
     bench.values = values;
@@ -142,32 +144,35 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
         const char* reads;
         const char* detail;
     } cases[] = {
-        {Detection::Unpaired, "NOT PAIRED", "PAIR ONE TO DETECT THE AIRCRAFT"},
+        {Detection::Unpaired, "NOT PAIRED", "PAIR A BRAVO FIRST"},
         {Detection::NotConnected, "NOT CONNECTED", nullptr},
-        {Detection::Airborne, "IN FLIGHT", "IT DETECTS ON THE GROUND"},
-        {Detection::NoFix, "NO FIX", "IT DETECTS ON THE GROUND"},
-        {Detection::Listening, "LISTENING", "TRANSPONDER TO ON OR ALT"},
+        {Detection::Airborne, "IN FLIGHT", "BRAVO FINDS IT ON THE GROUND"},
+        {Detection::NoFix, "NO FIX", "BRAVO FINDS IT ON THE GROUND"},
+        {Detection::Listening, "NOT HEARD", "SET THE TRANSPONDER TO ALT"},
     };
     for (const auto& each : cases) {
         CAPTURE(each.reads);
         MenuValues values = default_menu_values();
         values.detected.state = each.state;
         const Glass canvas = aircraft_menu_of(values, MenuRow::OwnIcao);
-        CHECK(reads(canvas, "BRAVO", 1));
         CHECK(reads(canvas, each.reads, kMenuScale));
-        if (each.detail != nullptr) CHECK(reads(canvas, each.detail, 1));
+        if (each.detail == nullptr) continue;
+        char line[kFrameColumns + 1];
+        for (int at = take_line(each.detail, 0, line, kFrameColumns); line[0] != 0;
+             at = take_line(each.detail, at, line, kFrameColumns))
+            CHECK(reads(canvas, line, kMenuScale));
     }
 }
 
 TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contact does") {
     Glass canvas;
     draw_aircraft_notice(canvas, heard_glider());
-    CHECK(reads(canvas, "BRAVO HEARS", kMenuScale));
+    CHECK(reads_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt));
     CHECK(reads(canvas, "F-JABC", kCallsignScale));
-    CHECK(reads(canvas, "3A4B5C GLIDER", 1));
-    CHECK(reads(canvas, kAircraftNoticePadText, kCallsignHintScale));
-    CHECK(reads(canvas, kAircraftNoticeButtonText, kCallsignHintScale));
-    CHECK(reads(canvas, kAircraftNoticeHelpText, 1));
+    CHECK(reads(canvas, "ICAO 3A4B5C", kMenuScale));
+    CHECK(reads(canvas, "GLIDER", kMenuScale));
+    CHECK(reads_button_key(canvas, "USE"));
+    CHECK(reads_pad_key(canvas, "CLOSE"));
 }
 
 TEST_CASE("aircraft menu: the settings row opens it, and the pad past its last row comes back") {
@@ -212,4 +217,13 @@ TEST_CASE("aircraft menu: a press with nothing heard changes nothing, unpaired i
     CHECK(bench.change() == MenuAction::Open);
     CHECK(bench.editor.opening() == Page::Bravo);
     CHECK_FALSE(bench.editor.active());
+}
+
+// HANG GLIDER is the longest name, and the page prints a type at menu scale from the left margin.
+TEST_CASE("aircraft page: every type name fits the glass where the page prints it") {
+    for (const go::AircraftType& type : go::kAircraftTypes) {
+        CAPTURE(type.name);
+        CHECK(go::kMenuLeftX + static_cast<int>(std::strlen(type.name)) * go::kMenuCellWidth <=
+              go::kGlassWidth);
+    }
 }

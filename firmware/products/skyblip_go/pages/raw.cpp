@@ -193,6 +193,7 @@ void draw_rx_verdicts(ui::Canvas& canvas, int y, const RawRadio& radio) {
     written += format_keyed(text + written, "TYPE", radio.rx_type);
     written += format_keyed(text + written, "WAIT", radio.rx_wait);
     written += format_keyed(text + written, "CALL", radio.rx_named);
+    written += format_keyed(text + written, "ST", radio.rx_status);
     row(canvas, y, text, written);
 }
 
@@ -204,6 +205,8 @@ void draw_uplink(ui::Canvas& canvas, int y, const RawRadio& radio) {
     written += format_unsigned(text + written, radio.uplink_bad);
     text[written++] = '/';
     written += format_unsigned(text + written, radio.uplink_targets);
+    text[written++] = '/';
+    written += format_unsigned(text + written, radio.uplink_stale);
     text[written++] = ' ';
     written += format_keyed(text + written, "TRK", radio.tracked);
     written += format_keyed(text + written, "ALM", radio.alarm);
@@ -227,7 +230,9 @@ void draw_burst(ui::Canvas& canvas, int y, const RawRadio& radio) {
     written += format_string(text + written, "/1000 ");
     written += format_word(text + written, "KEYED");
     written += format_unsigned(text + written, radio.tx_keyed_us);
-    written += format_string(text + written, "US");
+    written += format_string(text + written, "US ");
+    written += format_word(text + written, "B5");
+    written += format_unsigned(text + written, radio.tx_held_for_b5);
     row(canvas, y, text, written);
 }
 

@@ -118,16 +118,16 @@ class Summary(unittest.TestCase):
 
 class Firmware(unittest.TestCase):
     def test_the_sync_and_the_generator_are_the_firmware_s(self):
-        adsb = (FIRMWARE / "core" / "protocol" / "adsb.h").read_text()
-        crc = (FIRMWARE / "core" / "fec" / "crc.h").read_text()
-        self.assertIn("kAdsbSyncChips = 0x%02X;" % adsb_rejects.SYNC_CHIPS, adsb)
+        adsb = (FIRMWARE / "protocols" / "adsb" / "message.h").read_text()
+        crc = (FIRMWARE / "protocols" / "common" / "crc.h").read_text()
+        self.assertIn("kSyncChips = 0x%02X;" % adsb_rejects.SYNC_CHIPS, adsb)
         self.assertIn("kPolynomial = 0x%08Xu;" % (adsb_rejects.GENERATOR << 7), crc)
 
     def test_the_example_in_bravo_s_readme_reads_as_it_says(self):
         readme = (FIRMWARE / "products" / "skyblip_bravo" / "README.md").read_text()
         logged, printed = re.search(r"\n(adsb reject [^\n]*)\n([^\n]*)\n", readme).groups()
         self.assertEqual(adsb_rejects.describe(reading_of(logged)), printed)
-        decoder_test = (FIRMWARE / "test" / "core" / "test_adsb.cpp").read_text()
+        decoder_test = (FIRMWARE / "protocols" / "adsb" / "test" / "test_message.cpp").read_text()
         self.assertIn('"%s"' % adsb_rejects.LINE.search(logged)["chips"], decoder_test)
 
     def test_every_line_main_cpp_logs_is_a_line_it_reads(self):

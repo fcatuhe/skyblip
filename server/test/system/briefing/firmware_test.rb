@@ -11,8 +11,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       screen "20-firmware-ready"
 
       click_button "Install 0.1.0+1005"
-      assert_selector ".glass-title", text: "FIRMWARE"
-      assert_selector ".glass-detail", text: "INSTALL 0.1.0+1005 FROM THE PHONE"
+      assert_glass "FIRMWARE"
       screen "21-firmware-asking"
 
       page.execute_script("#{unit("00012A")}.press()")
@@ -22,7 +21,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".firmware-progress-text", text: /\d+ %, \d+ of 394 kB/
       screen "22-firmware-uploading"
 
-      assert_selector ".firmware-status", text: "The device installs and restarts, about thirty seconds. It connects again by itself.", wait: 30
+      assert_selector ".firmware-status", text: "The device is installing the firmware and restarting. This takes about thirty seconds. It connects again by itself.", wait: 30
       screen "23-firmware-restarting"
 
       assert_selector ".firmware-status", text: "0.1.0+1005 is starting.", wait: 10
@@ -38,6 +37,46 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  # The silence of #278: back on its old firmware, confirmed, and nothing on record.
+  test "an install that comes back on the old firmware says so, and the report reaches skyBlip by itself" do
+    in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      click_button "Install 0.1.0+1005"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
+      assert_no_selector ".firmware-report"
+      assert_selector ".firmware-status", text: "The device is installing the firmware and restarting", wait: 30
+      assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1005. It kept no record of the installation.", wait: 10
+      assert_no_selector ".firmware-progress"
+      assert_selector ".firmware-report", text: /skyBlip received the details of this failure\. .* give your support code [0-9A-Z]{4}-[0-9A-Z]{4}\./
+      screen "28-firmware-no-record"
+
+      reported = journaled("device.install_reported")
+      assert_equal [ "no_record", "0.1.0+1000", "0.1.0+1005", false ], reported.payload.values_at("cause", "running", "tried", "report")
+      assert_equal "go-00012a", reported.device
+    end
+  end
+
+  # TODO: fc 13nov26 the install report, retired with #294
+  test "a Bravo that reverted names how far the new firmware got, whenever the page connects" do
+    report = { check: "matched", swap: "test", request_error: 0, boots: 2, probation_boots: 1, proof: "started", reset: "watchdog" }
+    in_range a_bravo(image: "reverted", from: "0.1.0+40", to: "0.1.0+44", installReport: report)
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      click_link "Firmware"
+      assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
+      assert_selector ".firmware-report", text: "skyBlip received the details of this failure."
+      screen "29-firmware-reverted-report"
+
+      reported = journaled("device.install_reported")
+      assert_equal [ "probation_failed", "reverted", "0.1.0+40", "0.1.0+44", "matched", 1, "watchdog" ],
+        reported.payload.values_at("cause", "image", "from", "to", "check", "probation_boots", "reset")
+    end
+  end
+
   test "a device on the newest image is told so, and can still install a file of its own" do
     in_range a_go(running: "0.1.0+1005")
     on_the_shelf do
@@ -45,7 +84,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".unit-row", text: "up to date"
       assert_no_selector ".unit-banner"
       click_link "Firmware"
-      assert_selector ".firmware-status", text: "You run the newest image, 0.1.0+1005."
+      assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1005."
       find(".firmware-other summary").click
       assert_field "Or a file ending in .signed.bin"
       screen "26-firmware-current"
@@ -58,9 +97,9 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       connect_go
       click_link "Firmware"
       click_button "Install 0.1.0+1005"
-      assert_selector ".glass-title", text: "FIRMWARE"
+      assert_glass "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
-      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
+      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
       assert_no_button "Install 0.1.0+1005"
       assert_button "Reconnect"
       screen "27-firmware-refused"
@@ -74,7 +113,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       click_link "Firmware"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
-      assert_selector ".glass-title", text: "RECOVERY"
+      assert_glass "RECOVERY"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".firmware-status", text: "The device is now a USB drive named TECHOBOOT"
       assert_no_button "Restart into the USB drive"

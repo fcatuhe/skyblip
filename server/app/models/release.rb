@@ -5,12 +5,12 @@ class Release
   NotFound = Class.new(StandardError)
   REPOSITORY = "fcatuhe/skyblip".freeze
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
-  PRODUCT_PREFIX = /\A(?:(bravo)-)?/
-  TAG = /#{PRODUCT_PREFIX}(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
+  TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
   FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
+  LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
 
@@ -38,15 +38,22 @@ class Release
 
   def self.shelf(releases)
     newest_first = releases.sort_by(&:published_at).reverse
-    [ *newest_first.select(&:stable?).uniq(&:product), *newest_first.select(&:development?) ]
+    [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
   end
 
   def self.simulator(releases = all)
-    available = releases.select { |release| release.simulator? && release.product == "skyblip_go" }.sort_by(&:published_at).reverse
+    available = releases.select(&:simulator?).sort_by(&:published_at).reverse
     available.find(&:stable?) || available.find(&:main_development?)
   end
 
+  # INFO: fc 14nov26 development and test serve the WASM `make -C firmware browser` built, which no release holds yet
+  def self.local_simulator
+    directory = Rails.configuration.x.simulator_build
+    directory if directory && SIMULATOR_FILES.all? { File.file?(File.join(directory, it)) }
+  end
+
   def self.download(tag, file)
+    return local_file(file) if tag == LOCAL_TAG
     raise NotFound unless TAG.match?(tag) && FILE.match?(file)
 
     uri = URI("https://github.com/#{REPOSITORY}/releases/download/#{tag}/#{file}")
@@ -97,6 +104,14 @@ class Release
   end
   private_class_method :request
 
+  def self.local_file(file)
+    directory = local_simulator
+    raise NotFound unless directory && SIMULATOR_FILES.include?(file)
+
+    File.binread(File.join(directory, file))
+  end
+  private_class_method :local_file
+
   attr_reader :tag, :name, :assets, :published_at
 
   def initialize(entry)
@@ -107,15 +122,11 @@ class Release
     @published_at = Time.iso8601(entry.fetch("published_at"))
   end
 
-  def product = "skyblip_#{tag[PRODUCT_PREFIX, 1] || "go"}"
-  def development? = unprefixed_tag.start_with?("dev-")
-  def main_development? = /\Adev-\d+\z/.match?(unprefixed_tag)
-  def stable? = unprefixed_tag.start_with?("v") && !@prerelease
+  def development? = tag.start_with?("dev-")
+  def main_development? = /\Adev-\d+\z/.match?(tag)
+  def stable? = tag.start_with?("v") && !@prerelease
   def channel = development? ? "development" : "release"
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
-  def firmware_files = assets.grep(FIRMWARE).select { |file| self.class.product_of(file) == product }
-
-  private
-    def unprefixed_tag = tag.sub(PRODUCT_PREFIX, "")
+  def firmware_files = assets.grep(FIRMWARE)
 end

@@ -1,4 +1,4 @@
-// Two bursts in one dwell: the ground second's position and the name in slot 1's tail.
+// Two bursts in one dwell, as the executor flies them, and the name in slot 1's tail.
 #include <cstring>
 #include <vector>
 
@@ -33,14 +33,14 @@ struct Executor {
     platform::host::Clock clock{};
     bus::Queue<events::RfEvent, 8> events{};
     platform::host::Rf rf{radio, clock, events};
-    uint8_t position[protocol::AdslPacket::kTxBytes] = {kPositionMarker};
-    uint8_t name[protocol::AdslPacket::kTxBytes] = {kNameMarker};
+    uint8_t position[adsl::Packet::kTxBytes] = {kPositionMarker};
+    uint8_t name[adsl::Packet::kTxBytes] = {kNameMarker};
     bool completes{true};
 
     static ports::RfPlan slot1() {
         ports::RfPlan plan{};
         plan.mode = ports::RfMode::RxMBand;
-        plan.frequency_hz = timing::kMBand1Hz;
+        plan.frequency_hz = adsl::kMBand1Hz;
         plan.start_us = 800000;
         plan.end_us = 1200000;
         return plan;
@@ -49,7 +49,7 @@ struct Executor {
     ports::RfPlan carrying(const uint8_t* frame, uint64_t at_us) const {
         ports::RfPlan plan = slot1();
         plan.tx = frame;
-        plan.tx_bytes = protocol::AdslPacket::kTxBytes;
+        plan.tx_bytes = adsl::Packet::kTxBytes;
         plan.tx_at_us = at_us;
         return plan;
     }
@@ -62,7 +62,7 @@ struct Executor {
             uint8_t sent[protocol::kTxPayloadChipBytes];
             uint8_t bytes = 0;
             if (!completes || !chip.take_tx(sent, bytes)) continue;
-            keyed.push_back({sent[bytes - protocol::AdslPacket::kTxBytes], now_ms});
+            keyed.push_back({sent[bytes - adsl::Packet::kTxBytes], now_ms});
             chip.signal_tx_done();
         }
         return keyed;
@@ -105,7 +105,7 @@ TEST_CASE("rf: a burst armed for the queued dwell joins it instead of replacing 
     Executor executor;
     REQUIRE(executor.rf.begin() == Status::Ok);
     ports::RfPlan slot0 = Executor::slot1();
-    slot0.frequency_hz = timing::kMBand0Hz;
+    slot0.frequency_hz = adsl::kMBand0Hz;
     slot0.start_us = 400000;
     slot0.end_us = 797000;
     executor.clock.set_milliseconds(400);
@@ -174,8 +174,8 @@ TEST_CASE("rf: a dwell carries two bursts and refuses a third") {
     CHECK(executor.rf.arm(executor.carrying(executor.name, 1150000)) == Status::WouldBlock);
 }
 
-// Every other ground second puts the position in slot 1, the dwell the name's tail is part of.
-TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 when they must") {
+// The name goes out in the tail of +4 and +14, after the position at +0 and the Status at +2.
+TEST_CASE("rf: on the ground the name goes out in slot 1's tail, two seconds clear of ours") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     std::strncpy(simulator.product().settings().callsign, "D-KXYZ", go::kCallsignBytes - 1);
@@ -184,31 +184,24 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
     run_on(simulator, past_settling(simulator), 40000);
 
     const simulator::Air& air = simulator.world().air();
-    int positions = 0, names = 0, shared_dwell = 0;
+    int names = 0;
     uint64_t position_at_us = 0;
-    bool position_on_channel1 = false;
+    uint64_t last_at_us = 0;
     for (int i = 0; i < air.record_count(); i++) {
         const simulator::AirRecord& record = air.record_at(i);
-        if (record.event != simulator::AirEvent::Tx) continue;
-        if (timing::Scheduler::in_direct_slot(record.phase_ms)) {
-            positions++;
-            position_at_us = record.at_us;
-            position_on_channel1 = simulator::Air::tuned_to(record.frequency_hz, timing::kMBand1Hz);
-            continue;
+        const uint8_t payload_type = payload_type_of(record);
+        if (payload_type == adsl::Packet::kPayloadTypePosition) position_at_us = record.at_us;
+        if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
+            names++;
+            CAPTURE(record.at_us);
+            CHECK(record.phase_ms < timing::kSlot1WrapMs);
+            CHECK(record.at_us - last_at_us > 2000000);
         }
-        names++;
-        CAPTURE(record.at_us);
-        // Its own ground second's position: 450 ms at the earliest, the name 1200 ms at the latest.
-        CHECK(position_at_us != 0);
-        CHECK(record.at_us - position_at_us <
-              (timing::kCallsignEndMs - timing::kDirectStartMs) * 1000);
-        if (position_on_channel1) shared_dwell++;
+        if (payload_type != 0) last_at_us = record.at_us;
     }
     CHECK(names >= 3);
-    CHECK(positions == names);
-    CHECK(shared_dwell >= 1);
 
-    // Two bursts closing in one dwell go on the tape as what they were, each at its own instant.
+    // The tape names the row that carried the name, and dates each row by its own report.
     const radio::Log& log = simulator.product().state().radio_log;
     int rows = 0;
     for (int i = 0; i < log.count(); i++) {
@@ -216,7 +209,13 @@ TEST_CASE("rf: on the ground the name follows its own position, sharing slot 1 w
         if (entry.verdict != radio::Verdict::Transmitted) continue;
         rows++;
         CAPTURE(entry.at_s);
-        CHECK(entry.callsign == (entry.into_ms < timing::kSlot1WrapMs));
+        const int step_ms = static_cast<int>(simulator::Simulator::kStepMs);
+        if (entry.callsign) {
+            CHECK(entry.channel == 1);
+            CHECK(entry.into_ms <= timing::kSlot1WrapMs + step_ms);
+        } else {
+            CHECK((entry.into_ms >= adsl::kDirectStartMs || entry.into_ms <= step_ms));
+        }
         // one 5 ms host step late at most, a neighbour's instant would be 10 ms or more off
         CHECK(entry.tx_keyed_us < simulator::Simulator::kStepMs * 1000);
     }

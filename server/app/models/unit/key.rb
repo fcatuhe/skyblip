@@ -15,14 +15,16 @@ class Unit::Key < ApplicationRecord
     with_lock do
       if pending?
         unit.keys.active.each(&:revoked!)
-        active!
+        active!.tap { Rails.event.notify "unit_key.promoted", unit_id:, device: unit.slug, by_id: Current.user&.id }
       end
     end
   end
 
   def revoke
     with_lock do
-      revoked! if active?
+      if active?
+        revoked!.tap { Rails.event.notify "unit_key.revoked", unit_id:, device: unit.slug, by_id: Current.user&.id }
+      end
     end
   end
 end

@@ -2,7 +2,7 @@
 // to be an aircraft.
 //
 // Every frame the table sees has already passed a CRC. That is not the same as
-// being right: test/core/test_adsl.cpp counts silent miscorrections at the edge
+// being right: protocols/adsl/test/test_packet.cpp counts silent miscorrections at the edge
 // of the link budget and the count is not zero, and the O-band uplink adds
 // Reed-Solomon miscorrection on top of it. A miscorrected position field decodes
 // to a perfectly well-formed aircraft in the wrong place, and a ghost on the

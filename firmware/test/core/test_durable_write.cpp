@@ -118,8 +118,9 @@ TEST_CASE("durable write: the retune guards between dwells are not free time") {
 // would still be holding the core at 450, which is an instant core/timing's
 // Transmitter is allowed to have chosen to key the PA at.
 TEST_CASE("durable write: slot 0's head is refused because the direct slot follows it") {
-    for (int phase = kSlot0StartMs; phase < kDirectStartMs; phase++) CHECK_FALSE(free_at(phase));
-    for (int phase = kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = kSlot0StartMs; phase < adsl::kDirectStartMs; phase++)
+        CHECK_FALSE(free_at(phase));
+    for (int phase = adsl::kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
 }
 
 // With no lock there is no transmission, so slot 1's body is genuinely free -

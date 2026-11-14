@@ -44,7 +44,9 @@ enum class Command : uint8_t {
     Browsers = 32,
     Browser = 33,
     ForgetBrowser = 34,
-    AdsbTrial = 35,
+    InstallReport = 35,
+    Protocols = 36,
+    AdsbTrial = 37,
 };
 
 enum class Reason : uint8_t {
@@ -99,7 +101,8 @@ enum class Reason : uint8_t {
     Untrusted = 49,
     Forgotten = 50,
     UnknownBrowser = 51,
-    AdsbTrial = 52,
+    NotOwnTransponder = 52,
+    AdsbTrial = 53,
 };
 
 namespace acknowledgement_key {
@@ -237,6 +240,13 @@ enum : uint32_t {
     kUnsupported = 61,
     kFolded = 62,
     kAircraft = 63,
+    kTxHeldForB5 = 64,
+    kRxStatus = 65,
+    kUplinkStale = 66,
+    kTxGivenUp = 67,
+    kTxDeferred = 68,
+    kTxForced = 69,
+    kTxBusyMissed = 70,
 };
 }
 
@@ -504,6 +514,26 @@ namespace forget_browser_bytes {
 constexpr size_t kId = 8;
 }
 
+namespace install_report_key {
+enum : uint32_t {
+    kCheck = 1,
+    kSwap = 2,
+    kRequestError = 3,
+    kBoots = 4,
+    kProbationBoots = 5,
+    kProof = 6,
+    kReset = 7,
+};
+}
+
+namespace protocols_key {
+enum : uint32_t {
+    kAdsbVersion = 1,
+    kAdslVersion = 2,
+    kAlptasVersion = 3,
+};
+}
+
 namespace adsb_trial_key {
 enum : uint32_t {
     kSlotS = 1,
@@ -544,7 +574,9 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Observation:
         case Command::Health:
         case Command::BrowserChallenge:
-        case Command::Browser: return 0x1;
+        case Command::Browser:
+        case Command::InstallReport:
+        case Command::Protocols: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:

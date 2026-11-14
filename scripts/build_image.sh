@@ -87,9 +87,12 @@ main() {
 # The build number orders two images of one release and is NOT in the VERSION
 # file: Zephyr rejects a tweak above 255 (cmake/modules/version.cmake:79-81).
 # Commit count: it only ever goes up on a branch that only moves forward.
+# Every product carries firmware/VERSION, and Zephyr reads it through the product's link to it.
 image_version() {
-  local file=$firmware/products/$product/VERSION triple build major minor patch
-  test -f "$file" || { echo "FAIL: no such product: $product" >&2; exit 1; }
+  local file=$firmware/VERSION link=$firmware/products/$product/VERSION triple build major minor patch
+  test -f "$firmware/products/$product/CMakeLists.txt" || { echo "FAIL: no such product: $product" >&2; exit 1; }
+  test "$(realpath "$link" 2>/dev/null)" = "$(realpath "$file")" \
+    || { echo "FAIL: $link is not a link to firmware/VERSION" >&2; exit 1; }
   if [ "$(git -C "$tree" rev-parse --is-shallow-repository)" = true ]; then
     echo "FAIL: shallow clone, the commit count would be wrong (checkout with fetch-depth: 0)" >&2
     exit 1

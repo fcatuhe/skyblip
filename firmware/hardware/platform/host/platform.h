@@ -32,6 +32,10 @@ class Dfu : public ports::Dfu {
    public:
     explicit Dfu(const ports::Watchdog& watchdog) : watchdog_(watchdog) {}
 
+    ports::SwapRequest request_swap() override {
+        swap_requests++;
+        return swap_request;
+    }
     void trigger() override { triggered++; }
     bool confirm() override {
         confirms++;
@@ -84,6 +88,8 @@ class Dfu : public ports::Dfu {
     bool upload_finished() override { return finished_upload; }
     void forget_upload() override { finished_upload = false; }
 
+    ports::SwapRequest swap_request{ports::StagedCheck::Matched, 0, ports::SwapType::Test};
+    int swap_requests{0};
     int triggered{0};
     int confirms{0};
     int recoveries{0};

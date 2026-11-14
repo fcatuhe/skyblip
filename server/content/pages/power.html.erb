@@ -1,7 +1,7 @@
 ---
 title: "Go battery, USB-C charging and power states"
 nav_title: Power
-description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, FLAT BATTERY, shutdown and why the e-paper screen keeps its image when off."
+description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, BATTERY EMPTY, shutdown and why the e-paper screen keeps its image when off."
 parent: guides
 share_image: radar
 updated_on: "2026-11-09"
@@ -11,7 +11,7 @@ updated_on: "2026-11-09"
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>It says what it is doing, even off.</h1>
   <p class="lede">
-    What the device says before it has a position, when it is off, and when its cell runs out.
+    What the device says before it has a position, when it is off, and when its battery runs out.
   </p>
 </section>
 
@@ -22,71 +22,71 @@ updated_on: "2026-11-09"
     <div>
       <h3 id="waiting">It says <span class="highlight">what it is waiting for</span>.</h3>
       <p>
-        One press and it is on, straight to the traffic picture. Until it has a
-        position the ring tells you so, and the word under it gives you how far
-        the receiver has got: gone quiet, solutions arriving with no date on
-        them yet, or a date read off a satellite.
+        One press turns it on and opens the traffic display. Until it has a
+        position, the ring says so. The word below it tells you how far
+        the receiver has got: silent, sending position solutions with no date
+        yet, or reading a date from a satellite.
       </p>
       <p>
-        That is the difference between a device to wait for and a device to
-        carry into the open. The first fix announces itself, and the picture
-        becomes a picture of the sky.
+        That tells you whether to wait or carry the device into the open.
+        It announces its first position, and the display
+        starts showing the sky around you.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring carries the words NO FIX and, under them, how far the receiver has got" %>
+      <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring shows NO FIX and, below it, the receiver's progress" %>
       <figcaption>Waiting for the sky</figcaption>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="off">The wordmark on the glass <span class="highlight">means off</span>.</h3>
+      <h3 id="off">The logo on the screen <span class="highlight">means off</span>.</h3>
       <p>
-        A hold of two seconds switches it off: the radio is parked, the panel
-        gets three seconds to draw the wordmark, and the rails drop when you let
-        go. E-paper keeps its image with no power at all, so that is what an off
-        device wears.
+        Hold the button for two seconds to switch it off. The radio stops, the screen
+        gets three seconds to draw the logo, and power is cut when you let
+        go. E-paper keeps its image with no power at all, so the logo stays
+        on the screen while the device is off.
       </p>
       <p>
-        The same hold, a finger resting on the pad, leaves the glass blank
-        instead. An image left on e-paper for a winter leaves a shadow the panel
-        never loses again, and a device going into a cupboard should carry
-        nothing.
+        Use the same hold with a finger resting on the pad to leave the screen blank
+        instead. An image left on e-paper for a winter leaves a permanent shadow.
+        Leave the screen blank when you put the device
+        away for storage.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "off.png", alt: "The parked screen of a device that has been switched off: the skyBlip wordmark, held by the e-paper with no power" %>
+      <%= screen_image_tag "off.png", alt: "The screen of a device that has been switched off: the skyBlip logo, kept on the e-paper screen with no power" %>
       <figcaption>Off</figcaption>
     </figure>
   </div>
 
   <div class="feature">
     <div>
-      <h3 id="flat-battery">A cell that runs out <span class="highlight">says so as it goes</span>.</h3>
+      <h3 id="flat-battery">When the battery runs out, <span class="highlight">the screen says so</span>.</h3>
       <p>
-        At 3.2&nbsp;V the device switches itself off, and the last thing it
-        writes is why. You pressed nothing, so the glass is the only thing that
-        can tell you: without it, a device that stopped on its own is a device
-        that crashed or died. The button stops working at the same moment,
-        because a press could only reach the same cutoff again.
+        At 3.2&nbsp;V the device switches itself off. Its last message tells you why.
+        You pressed nothing, so only the screen can explain the shutdown.
+        Without that message, it would look as though the device had crashed or
+        failed. The button stops working at the same moment, because a press
+        would only bring the battery back to the same cutoff voltage.
       </p>
       <p>
-        The cable is the way out, and it is one act. Plugging it in wakes the
-        electronics, which refuse to become a device and put the wordmark back:
-        an ordinary switched-off unit again, charging, and the next press starts
-        it. A cell that emptied itself on a shelf wrote nothing, so there the
-        press is what gets answered, with the same line.
+        Plug in the cable to use the device again. That single action
+        wakes the electronics without starting the device and puts the logo back:
+        the device is off again and charging. The next press starts
+        it. If the battery ran out on a shelf, the device left no message.
+        In that case, pressing the button displays the same flat-battery message.
       </p>
       <p>
-        The boot that follows remembers it. Its self test reads
-        <span class="mono">WAS FLAT</span> beside the voltage, and a phone that
-        connects during that boot is told the same, so a unit that went dark
-        does not come back as if nothing happened.
+        The device remembers this the next time it starts. Its self test reads
+        <span class="mono">WAS EMPTY</span> beside the voltage. A phone that
+        connects during that startup is told the same, so a device
+        that went dark does not come back as if nothing happened.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that switched itself off on an empty cell: the skyBlip wordmark with the words FLAT BATTERY under it" %>
+      <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that switched itself off on an empty battery: the skyBlip logo with the words BATTERY EMPTY under it" %>
       <figcaption>Out of battery</figcaption>
     </figure>
   </div>
@@ -97,12 +97,12 @@ updated_on: "2026-11-09"
         <tr><th>From off</th><th>What happens</th></tr>
       </thead>
       <tbody>
-        <tr><th>Press the button</th><td>boots, unless the cell is under 3.4&nbsp;V with no charger, and then the glass says <span class="mono">FLAT BATTERY</span></td></tr>
-        <tr><th>Press after a flat-battery shutdown</th><td>nothing, by design: the glass already says it, and the cable is the way back</td></tr>
-        <tr><th>Plug the charger in</th><td>charges, stays off: a cable in a flight bag is not a request to transmit</td></tr>
-        <tr><th>Plug the charger into a flat device</th><td>charges, stays off, and the wordmark replaces <span class="mono">FLAT BATTERY</span></td></tr>
-        <tr><th>Hold the button, plug the charger in</th><td>boots and charges</td></tr>
-        <tr><th>Press <span class="mono">RST</span></th><td>reboots, and twice inside half a second, the USB bootloader</td></tr>
+        <tr><th>Press the button</th><td>starts, unless the battery is under 3.4&nbsp;V with no charger connected. In that case, the screen says <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Press after a flat-battery shutdown</th><td>does nothing. The screen already says why it stopped. Connect the cable to use the device again</td></tr>
+        <tr><th>Plug the charger in</th><td>charges and stays off. Connecting a cable in a flight bag does not tell it to transmit</td></tr>
+        <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. The logo replaces <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Hold the button and plug the charger in</th><td>starts and charges</td></tr>
+        <tr><th>Press <span class="mono">RST</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
       </tbody>
     </table>
   </div>
@@ -111,39 +111,39 @@ updated_on: "2026-11-09"
 <section>
   <h2 class="kicker">Technical notes</h2>
 
-  <h3 id="cell">Why the cell lasts the day.</h3>
+  <h3 id="cell">Why the battery lasts the day.</h3>
   <p class="lede">
-    Switching off is a sequence, not a rail drop, and the order is the content
-    of it. The external flash is told to sleep while it still has a supply to
-    hear the command: after the rail that command does nothing, and the part
-    draws its full standby current for the whole night the device spends in a
-    bag looking switched off.
+    Switching off takes a sequence of steps, not a sudden power cut. Their order
+    matters. The external flash memory is told to sleep while it still has
+    power to receive the command. After the power cut, that command does
+    nothing. The memory would then draw its full standby current all night
+    while the device sits in a bag looking switched off.
   </p>
   <p class="lede">
-    The rest is the radio and the sensors. Airborne the device speaks once a
-    second, parked once every ten, and which of the ten seconds is its own comes
-    from its address, so a field full of aircraft spreads itself out.
+    The radio and sensors account for the rest of the power use. In the air, the device transmits once a
+    second. On the ground, it transmits once every ten seconds. Its address determines which of the ten
+    seconds it uses, so aircraft on the same airfield spread their transmissions out.
   </p>
 
   <ul class="points">
     <li>Radio asleep before its reset line</li>
-    <li>Flash, receiver, rails, pins, in that order</li>
-    <li>1&nbsp;Hz in the air, 0.1&nbsp;Hz on the ground</li>
-    <li>The hub&rsquo;s gyroscope is never read: it costs a milliamp</li>
-    <li>Charging refused outside 5 to 60&nbsp;&deg;C</li>
-    <li>The lamp winks, and is never held solid</li>
+    <li>Shutdown follows this order: flash memory, receiver, power supplies, pins</li>
+    <li>The device transmits at 1&nbsp;Hz in the air, 0.1&nbsp;Hz on the ground</li>
+    <li>The sensor hub&rsquo;s gyroscope is never read: it draws a milliamp</li>
+    <li>Charging is refused outside 5 to 60&nbsp;&deg;C</li>
+    <li>The light blinks and never stays on continuously</li>
   </ul>
 
   <h3 id="gauge">What the gauge will not do.</h3>
   <p class="lede">
-    It reads two curves, not one. On a charger the terminal sits above the
-    cell&rsquo;s own voltage, so the same reading means a far emptier cell, and
-    the percentage says which curve it read.
+    It uses two voltage curves, not one. During charging, the terminal voltage is above the
+    battery&rsquo;s own voltage. The same reading then means a much emptier battery,
+    and the percentage says which curve it read.
   </p>
   <p class="lede">
-    It never walks backwards, and a 22&nbsp;dBm burst sagging the rail does not
-    move it. A gauge that jumps when the radio keys is a gauge a pilot stops
-    believing.
+    It never walks backwards, and a 22&nbsp;dBm transmission that briefly lowers the voltage does not
+    move it. A pilot stops trusting a gauge that jumps
+    whenever the radio transmits.
   </p>
 
   <div class="table-scroll">
@@ -152,11 +152,11 @@ updated_on: "2026-11-09"
         <tr><th>Threshold</th><th>What it does</th></tr>
       </thead>
       <tbody>
-        <tr><th>3.60&nbsp;V</th><td>low, about 12%: the lamp winks red, the radar says BAT and the percentage, and a switch-off leaves CHARGE BATTERY on the glass</td></tr>
-        <tr><th>3.50&nbsp;V</th><td>critical, about 5%: the lamp blinks every 600&nbsp;ms, and from here nothing durable is written except the flight record, which is the evidence of the flight that is ending</td></tr>
-        <tr><th>3.40&nbsp;V</th><td>a boot on a cell this flat is refused, and the button is left unarmed so a bag cannot keep asking</td></tr>
-        <tr><th>3.20&nbsp;V</th><td>flat, the cutoff: the device switches itself off and leaves FLAT BATTERY on the glass. Every step takes three consecutive samples to reach and three to leave, so a transmit sag cannot act and a cell resting on a line cannot flicker across it</td></tr>
-        <tr><th>1.80&nbsp;V</th><td>below this the reading is a floating divider, not a flat cell, and nothing acts on it</td></tr>
+        <tr><th>3.60&nbsp;V</th><td>the battery is low, about 12%: the light blinks red, the radar says BAT and the percentage, and switching off leaves CHARGE THE BATTERY on the screen</td></tr>
+        <tr><th>3.50&nbsp;V</th><td>the battery is critical, about 5%: the light blinks every 600&nbsp;ms. From here, the device saves nothing to permanent memory except the flight record, which provides evidence of the flight that is ending</td></tr>
+        <tr><th>3.40&nbsp;V</th><td>the device refuses to start on a battery this flat. The button stays disabled so pressure inside a bag cannot trigger repeated attempts</td></tr>
+        <tr><th>3.20&nbsp;V</th><td>the battery is flat: the device switches itself off and leaves BATTERY EMPTY on the screen. Each threshold takes three consecutive readings to enter and three to leave. A brief voltage drop during transmission cannot trigger a change, and a battery near a threshold cannot keep switching between states</td></tr>
+        <tr><th>1.80&nbsp;V</th><td>below this, the reading comes from a floating voltage divider, not a flat battery. The device does not act on it</td></tr>
       </tbody>
     </table>
   </div>

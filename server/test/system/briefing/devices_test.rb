@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
+  GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
+
   test "a first visit offers one thing, and a Go connected there opens on its settings" do
     in_range a_go
     on_the_shelf do
@@ -15,7 +17,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_field "Callsign", with: "F-JXYZ"
       assert_select "Alarm volume", selected: "Soft"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. You run 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
     end
   end
@@ -30,7 +32,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       visit "/briefing"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-last", text: /Callsign\s*F-JXYZ/
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. You run 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
       assert_no_link "Update"
       screen "04-device-not-connected"
 
@@ -78,9 +80,10 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       screen "06-settings-edited"
 
       click_button "Save 2 changes"
-      assert_selector ".glass-prompt .glass-title", text: "SETTINGS"
+      assert_glass "SETTINGS"
+      assert_selector ".glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 30 S. PUSH TWICE TO ACCEPT.'], .glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 29 S. PUSH TWICE TO ACCEPT.']"
       assert_selector ".glass-press", text: "Press the Go's button twice."
-      assert_selector ".glass-left", text: /REFUSED IN (30|29) S/
+      assert_selector ".glass-seconds", text: /\A(30|29)\z/
       assert_no_field "Callsign"
       screen "07-glass-asking"
 
@@ -117,7 +120,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Save 1 change"
       assert_selector ".glass-prompt"
       page.execute_script("#{unit("00012A")}.refuse()")
-      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
+      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
       assert_no_selector ".unit-message"
       assert_no_button "Save 1 change"
       assert_no_selector ".unit-banner"
@@ -137,7 +140,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_no_selector "[data-unit-target=browsers]"
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
-      assert_selector ".glass-remembers", text: "Allowing it also trusts this browser"
+      assert_selector ".glass-remembers", text: "Allowing it also adds this browser to the trusted list"
       screen "15-glass-trusts"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
@@ -171,7 +174,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_selector "[data-unit-target=browsers] li", text: "this browser"
 
       page.execute_script("#{unit("00012A")}.takeOff()")
-      assert_selector ".unit-notes", text: "This browser may still change its settings. The rest unlocks once it lands."
+      assert_selector ".unit-notes", text: "This browser can still change the device's settings. Other actions are available again after landing."
       screen "17-trusted-airborne"
       select "Soft", from: "Alarm volume"
       click_button "Save 1 change"
@@ -186,7 +189,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       connect_go
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-facts", text: "Airborne"
-      assert_selector ".unit-notes", text: "Changes unlock once it lands."
+      assert_selector ".unit-notes", text: "Changes are available again after landing."
       assert_selector "fieldset[disabled]"
       assert_button "Locked in flight", disabled: true
       screen "10-airborne"
@@ -222,7 +225,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
-      assert_selector ".glass-lamp", text: "The lamp blinks green fast. One press refuses."
+      assert_selector ".glass-lamp", text: "The LED blinks green fast. One press refuses."
       assert_selector ".glass-press", text: "Press the Bravo's button twice."
       assert_no_selector ".glass"
       assert_no_text "Not activated"
@@ -241,19 +244,19 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Power run", from: "Profile"
       click_button "Arm"
-      assert_selector ".glass-lamp", text: "The lamp blinks green fast."
+      assert_selector ".glass-lamp", text: "The LED blinks green fast."
       assert_selector ".glass-press", text: "Press the Bravo's button twice."
       assert_no_select "Profile"
       assert_equal "power_run", page.evaluate_script("#{unit("3F2A")}.capture")
 
       page.execute_script("#{unit("3F2A")}.press()")
-      assert_selector ".unit-message.is-good", text: "Armed. The lamp winks twice every 3 s"
+      assert_selector ".unit-message.is-good", text: "Armed. The LED blinks twice every 3 s"
       click_button "Arm"
-      assert_selector ".unit-message", text: "A capture already runs. Stop it first."
+      assert_selector ".unit-message", text: "A capture is already running. Stop it first."
 
       click_button "Stop the capture"
       page.execute_script("#{unit("3F2A")}.press()")
-      assert_selector ".unit-message.is-good", text: "Stopped. The lamp is back to its single wink."
+      assert_selector ".unit-message.is-good", text: "Stopped. The LED is back to its single blink."
       assert_equal false, page.evaluate_script("#{unit("3F2A")}.capturing")
     end
   end
@@ -266,7 +269,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Arm"
       assert_selector ".glass-lamp"
       page.execute_script("#{unit("3F2A")}.refuse()")
-      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed, and it asks nothing more until you reconnect."
+      assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
       assert_no_button "Arm"
       assert_equal false, page.evaluate_script("Boolean(#{unit("3F2A")}.capturing)")
     end
@@ -305,7 +308,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-notes", text: "kept Bluetooth's smallest packet"
+      assert_selector ".unit-notes", text: "is using the smallest Bluetooth packet"
     end
   end
 
@@ -339,8 +342,33 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "the app speaks French once the pilot chooses it in the settings" do
+  test "a connected device names the radio protocol versions it carries" do
+    in_range a_go(protocols: GO_PROTOCOLS)
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_selector ".unit-protocols", text: "Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0"
+
+      find(".unit-menu summary").click
+      click_button "Disconnect"
+      assert_selector ".unit-facts", text: "Not connected"
+      assert_no_selector ".unit-protocols"
+    end
+  end
+
+  test "firmware from before the protocols frame names none, and the page says nothing about it" do
     in_range a_go
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_field "Callsign", with: "F-JXYZ"
+      assert_no_selector ".unit-protocols"
+      assert_no_selector ".unit-notes p"
+    end
+  end
+
+  test "the app speaks French once the pilot chooses it in the settings" do
+    in_range a_go(protocols: GO_PROTOCOLS)
     on_the_shelf do
       visit "/briefing"
       find("summary", text: "Menu").click
@@ -354,6 +382,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Connecter un appareil"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
+      assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
       assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"

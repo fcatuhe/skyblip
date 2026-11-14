@@ -25,6 +25,17 @@ module BriefingTestHelper
 
     def unit(name) = "fakeFleet.unit(#{name.to_json})"
 
+    # INFO: fc 14nov26 the journal posts a couple of seconds after an entry, so the test waits for the row as Capybara waits for a selector
+    def journaled(name)
+      page.document.synchronize { Event.find_by(name:) || raise(Capybara::ExpectationNotMet, "no #{name} reached the server") }
+    end
+
+    # INFO: fc 14nov26 the Go's own page draws the prompt, so the glass is read by the title it is labelled with
+    def assert_glass(title)
+      flunk "The prompt is drawn by the firmware: run make -C firmware browser first" unless Release.local_simulator
+      assert_selector ".glass-prompt canvas.glass[aria-label^='#{title}. ']"
+    end
+
     # INFO: fc 12nov26 the page moves once it has read the newest image, so a test waits for that before it clicks anything
     def connect_go
       visit "/briefing"

@@ -1,5 +1,6 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
+import { installReportOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
@@ -32,6 +33,7 @@ export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
+export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 
 class LinkLost extends Error {
   constructor() {
@@ -62,6 +64,12 @@ function imageOf(reply) {
     key: reply.key ? hex(reply.key).toUpperCase() : null,
     product: reply.product ?? null,
   };
+}
+
+export function protocolsOf(reply) {
+  return Object.entries(PROTOCOL_NAMES)
+    .filter(([stem]) => typeof reply[`${stem}_version`] === 'string')
+    .map(([stem, name]) => ({ name, version: reply[`${stem}_version`] }));
 }
 
 // INFO: fc 10nov26 a Go leaves product out, as all firmware before the key did, so an unread frame is a Go too
@@ -131,6 +139,8 @@ export class Updater {
     notice: null,
     trust: null,
     browsers: null,
+    installReport: null,
+    protocols: null,
   };
 
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey }) {
@@ -319,6 +329,9 @@ export class Updater {
 
   async #learn() {
     await this.#send({ command: 'update' });
+    // TODO: fc 13nov26 the install report, retired with #294
+    await this.#send({ command: 'install_report' });
+    await this.#send({ command: 'protocols' });
     await this.#send({ command: 'status' });
     await this.#send({ command: 'get' });
     await this.#send({ command: 'defaults' });
@@ -347,8 +360,9 @@ export class Updater {
   }
 
   #ask(task, fields = {}) {
-    this.#set({ phase: 'asking', task });
-    return this.#send({ command: task, ...fields });
+    const asked = { command: task, ...fields };
+    this.#set({ phase: 'asking', task, asked });
+    return this.#send(asked);
   }
 
   #receive(reply) {
@@ -357,6 +371,8 @@ export class Updater {
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
+    else if (reply.command === 'install_report') this.#set({ installReport: installReportOf(reply) });
+    else if (reply.command === 'protocols') this.#set({ protocols: protocolsOf(reply) });
     else if (reply.command === 'acknowledgement') this.#acked(reply);
   }
 
@@ -472,14 +488,14 @@ export class Updater {
     this.#trust.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null });
+      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, protocols: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
       phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
-      progress: null,
+      progress: null, installReport: null, protocols: null,
       notice,
     });
   }
