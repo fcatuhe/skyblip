@@ -101,7 +101,7 @@ A board that senses no current cannot report milliamps, and this one senses none
 
 ### One run, end to end
 
-Charge the unit to full and unplug it. Arm `POWER RUN` on the CAPTURE page, which is the row that records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: on an empty partition the page prints `KEEPS 120H25 ROLLING` against the full capture's `0H32`, and 120 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
+Charge the unit to full and unplug it. Arm `POWER RUN` on the CAPTURE page, which is the row that records `boot`, `config`, `power` and `duty` and nothing else, every 30 s: on an empty partition the page prints `KEEPS 120H25` against the full capture's `0H32`, and 120 hours is what makes an unattended run to cutoff survive in the ring. Then leave it alone in the posture you are measuring until it takes itself down.
 
 `FLIGHT RUN`, the row under it, records the same and keeps the same 120 hours, and runs the glass as in flight for as long as it is armed: the radar's flight clock and `FLIGHT` word, the g-meter's extremes cleared at the double press. Leave it on the page you are measuring: the panel refreshes only when the frame changes, so the page decides the refreshes the `duty` records count. On an empty sky the flying radar changes once a minute, with its clock. It cannot fly the rest, because what else flight changes is what goes on air or into the pilot's log: the unit keeps the ground cadence and the on-ground flag (ADS-L G.1.16), and writes no flight (`firmware/core/diagnostics/README.md`).
 

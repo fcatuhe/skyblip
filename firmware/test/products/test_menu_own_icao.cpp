@@ -27,7 +27,7 @@ bool glass_reads(Rig& rig, uint32_t& now_ms, const char* text) {
     rig.run(now_ms, now_ms + 4000);
     now_ms += 4000;
     return reads_in(rig.product.screen().framebuffer(), text, 0, 0, go::kGlassWidth,
-                    go::kGlassHeight, 1, true);
+                    go::kGlassHeight, go::kMenuScale, true);
 }
 
 bool glass_shows(Rig& rig, uint32_t& now_ms, const go::Glass& expected) {
@@ -57,13 +57,16 @@ TEST_CASE("menu: an own ICAO typed against the transponder Bravo names stays in 
     focus_on(tango.go, now_ms, go::MenuRow::OwnIcao);
     change(tango.go, now_ms);
     REQUIRE(tango.go.product.screen().editor().editing());
-    CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS 3A4B5C"));
+    CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS"));
+    CHECK(glass_reads(tango.go, now_ms, "3A4B5C"));
+    CHECK_FALSE(glass_reads(tango.go, now_ms, go::kOwnTransponderRefusedText));
 
     type_own_icao(tango.go, now_ms, "3A0001");
     CHECK(tango.go.product.screen().editor().editing());
     CHECK(tango.go.product.screen().editor().refused());
     CHECK(tango.go.product.screen().editor().cursor() == 0);
-    CHECK(glass_reads(tango.go, now_ms, "REFUSED: BRAVO HEARS 3A4B5C"));
+    CHECK(glass_reads(tango.go, now_ms, go::kOwnTransponderRefusedText));
+    CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS"));
     go::CallsignSnapshot field;
     field.title = "OWN ICAO";
     field.text = "3A0001";

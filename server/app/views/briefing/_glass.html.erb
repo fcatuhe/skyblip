@@ -1,12 +1,6 @@
-<div class="glass-prompt" data-controller="glass" hidden>
-  <div class="glass" data-glass-target="glass" aria-hidden="true">
-    <p class="glass-header"><%= t("briefing.glass.header") %></p>
-    <p class="glass-title" data-glass-target="title"></p>
-    <p class="glass-detail" data-glass-target="detail"></p>
-    <p class="glass-allow"><%= t("briefing.glass.allow") %></p>
-    <p class="glass-refuse"><%= t("briefing.glass.refuse") %></p>
-    <p class="glass-left" data-glass-target="left"></p>
-  </div>
+<div class="glass-prompt" data-controller="glass" data-glass-module-value="<%= briefing_prompt_glass_path %>" hidden>
+  <canvas class="glass" data-glass-target="glass" width="200" height="200" role="img"></canvas>
+  <p class="glass glass-words" data-glass-target="words" hidden></p>
   <div class="glass-lamp" data-glass-target="lamp" hidden>
     <span class="lamp" aria-hidden="true"></span>
     <p><%= t("briefing.glass.lamp") %> <%= t("briefing.words.glass_refuse") %></p>

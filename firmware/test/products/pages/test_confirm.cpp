@@ -2,6 +2,7 @@
 // page is the only thing standing between a stranger's phone and the secondary
 // slot, so "there is ink on the panel" is not the claim: "the panel says POWER
 // OFF, and says which press allows it" is.
+#include <cstdio>
 #include <cstring>
 #include <initializer_list>
 
@@ -9,14 +10,12 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/confirm.h"
-#include "test/support/glass_text.h"
+#include "test/support/frame_glass.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
 
 namespace {
-
-using ui::kCellWidth;
 
 ConfirmSnapshot prompt(comms::Pending pending) {
     ConfirmSnapshot snapshot;
@@ -26,42 +25,65 @@ ConfirmSnapshot prompt(comms::Pending pending) {
     return snapshot;
 }
 
+constexpr comms::Pending kEveryPrompt[] = {comms::Pending::Set,      comms::Pending::Dfu,
+                                           comms::Pending::Recovery, comms::Pending::PowerOff,
+                                           comms::Pending::EraseLog, comms::Pending::GnssColdStart,
+                                           comms::Pending::Register, comms::Pending::Capture};
+
 }  // namespace
 
-TEST_CASE("confirm page: the pilot is told which operation they are authorising") {
+TEST_CASE("confirm page: the pilot is told which operation they are authorizing") {
     Glass dfu;
     draw_confirm(dfu, prompt(comms::Pending::Dfu));
-    CHECK(
-        reads_at(dfu, kConfirmLeftX, kConfirmTitleY, comms::pending_title(comms::Pending::Dfu), 2));
+    CHECK(reads_heading(dfu, comms::pending_title(comms::Pending::Dfu), Heading::Interrupt));
 
     // Confirming a firmware upload must not look like confirming a shutdown.
     Glass off;
     draw_confirm(off, prompt(comms::Pending::PowerOff));
-    CHECK(reads_at(off, kConfirmLeftX, kConfirmTitleY,
-                   comms::pending_title(comms::Pending::PowerOff), 2));
-    CHECK_FALSE(
-        reads_at(off, kConfirmLeftX, kConfirmTitleY, comms::pending_title(comms::Pending::Dfu), 2));
+    CHECK(reads_heading(off, comms::pending_title(comms::Pending::PowerOff), Heading::Interrupt));
+    CHECK_FALSE(reads_heading(off, comms::pending_title(comms::Pending::Dfu), Heading::Interrupt));
+}
+
+// The page as the frame lays it out: the detail's lines, a gap, then how to cancel.
+struct Expected {
+    char detail[kConfirmDetailRows][kConfirmDetailColumns + 1]{};
+    char seconds[16]{};
+    BodyLine lines[kConfirmDetailRows + 4]{};
+    int count{0};
+    int consumed{0};
+
+    explicit Expected(const ConfirmSnapshot& snapshot) {
+        for (int row = 0; row < kConfirmDetailRows; row++) {
+            consumed = take_line(snapshot.detail, consumed, detail[row], kConfirmDetailColumns);
+            if (detail[row][0] == 0) break;
+            lines[count++] = {detail[row]};
+        }
+        lines[count++] = {""};
+        lines[count++] = {kConfirmCancelLine};
+        if (snapshot.seconds_left == 0) {
+            lines[count++] = {kConfirmOnceLine};
+            return;
+        }
+        lines[count++] = {kConfirmWaitLine};
+        std::snprintf(seconds, sizeof(seconds), "%u S",
+                      static_cast<unsigned>(snapshot.seconds_left));
+        lines[count++] = {seconds};
+    }
+};
+
+bool reads_prompt(const Glass& canvas, const ConfirmSnapshot& snapshot) {
+    const Expected expected(snapshot);
+    return reads_body(canvas, Heading::Interrupt, true, expected.lines, expected.count);
 }
 
 TEST_CASE("confirm page: what it will do is on the page, in words, and not clipped") {
-    for (comms::Pending pending : {comms::Pending::Set, comms::Pending::Dfu,
-                                   comms::Pending::Recovery, comms::Pending::PowerOff}) {
+    for (comms::Pending pending : kEveryPrompt) {
         Glass canvas;
-        draw_confirm(canvas, prompt(pending));
-
-        // Every word of the detail reaches the glass: the sentence wraps rather
-        // than running off the right-hand edge or off the bottom.
-        const char* detail = comms::pending_detail(pending);
-        int drawn = 0;
-        for (int row = 0; row < kConfirmDetailRows; row++) {
-            const int y = confirm_detail_y(row);
-            for (int x = kConfirmLeftX; x < Glass::kWidth; x++)
-                for (int delta_y = 0; delta_y < 7; delta_y++)
-                    drawn += canvas.get_pixel(x, y + delta_y) ? 1 : 0;
-        }
-        CHECK(drawn > 0);
-        CHECK(static_cast<int>(std::strlen(detail)) <= kConfirmDetailColumns * kConfirmDetailRows);
-        CHECK(confirm_detail_y(kConfirmDetailRows - 1) + 7 < kConfirmAllowY);
+        const ConfirmSnapshot snapshot = prompt(pending);
+        draw_confirm(canvas, snapshot);
+        CAPTURE(snapshot.detail);
+        CHECK(reads_prompt(canvas, snapshot));
+        CHECK(Expected(snapshot).consumed == static_cast<int>(std::strlen(snapshot.detail)));
     }
 }
 
@@ -70,61 +92,61 @@ TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a ro
     snapshot.detail = "CALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE";
     Glass canvas;
     draw_confirm(canvas, snapshot);
-    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(0), "CALLSIGN F-JXYZ", 1));
-    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(1), "UNITS METRIC", 1));
-    CHECK(reads_at(canvas, kConfirmLeftX, confirm_detail_y(2), "AND 2 MORE", 1));
+    CHECK(reads_prompt(canvas, snapshot));
+    CHECK(reads_inside_body(canvas, "UNITS METRIC"));
 }
 
-TEST_CASE("confirm page: the allowing gesture and the refusing one are both spelled out") {
+TEST_CASE("confirm page: the double press allows on the button's key, and one press cancels") {
     Glass canvas;
-    draw_confirm(canvas, prompt(comms::Pending::Dfu));
-
-    // The allowing line is reversed out of a filled block, so it is white ink.
-    CHECK_FALSE(reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmAllowY, kConfirmAllowText, 1));
-    Glass inverted;
-    inverted.clear(true);
-    inverted.rectangle(kConfirmLeftX, kConfirmAllowY - 4,
-                       (static_cast<int>(std::strlen(kConfirmAllowText)) + 2) * kCellWidth, 15,
-                       true,
-                       /*fill=*/true);
-    inverted.draw_text(kConfirmLeftX + kCellWidth, kConfirmAllowY, kConfirmAllowText, false, 1);
-    bool same = true;
-    for (int y = kConfirmAllowY - 4; y < kConfirmAllowY + 11; y++)
-        for (int x = kConfirmLeftX; x < kConfirmLeftX + 130; x++)
-            if (canvas.get_pixel(x, y) != inverted.get_pixel(x, y)) same = false;
-    CHECK(same);
-
-    CHECK(reads_at(canvas, kConfirmLeftX + kCellWidth, kConfirmRefuseY, kConfirmRefuseText, 1));
-
-    // And the page says it will refuse on its own, so a prompt left standing is
-    // not read as one waiting indefinitely.
-    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 30 S", 1));
+    const ConfirmSnapshot snapshot = prompt(comms::Pending::Dfu);
+    draw_confirm(canvas, snapshot);
+    CHECK(reads_button_key(canvas, kConfirmAllowVerb));
+    // The pad does nothing at a prompt, so it shows no key.
+    CHECK_FALSE(has_pad_key(canvas));
+    CHECK(reads_prompt(canvas, snapshot));
+    CHECK(reads_inside_body(canvas, "30 S"));
 }
 
-TEST_CASE("confirm page: the seconds left count down, and none left draws no line") {
+TEST_CASE("confirm page: the seconds left count down, and none left offers the press alone") {
     ConfirmSnapshot snapshot = prompt(comms::Pending::Register);
     snapshot.seconds_left = 7;
     Glass seven;
     draw_confirm(seven, snapshot);
-    CHECK(reads_at(seven, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 7 S", 1));
+    CHECK(reads_prompt(seven, snapshot));
+    CHECK(reads_inside_body(seven, "7 S"));
 
     snapshot.seconds_left = 0;
     Glass none;
     draw_confirm(none, snapshot);
-    int ink = 0;
-    for (int y = kConfirmExpiryY; y < kConfirmExpiryY + 7; y++)
-        for (int x = 0; x < Glass::kWidth; x++) ink += none.get_pixel(x, y) ? 1 : 0;
-    CHECK(ink == 0);
+    CHECK(reads_prompt(none, snapshot));
+    CHECK_FALSE(reads_inside_body(none, "0 S"));
+}
+
+// Short or long, the message sits in the middle of the glass between the rule and the key.
+TEST_CASE("confirm page: the body's ink is centred between the heading's rule and the key") {
+    for (comms::Pending pending : {comms::Pending::PowerOff, comms::Pending::Set}) {
+        Glass canvas;
+        draw_confirm(canvas, prompt(pending));
+        int top = -1, bottom = -1;
+        for (int y = kInterruptRuleY + 1; y < kKeyTop; y++)
+            for (int x = 0; x < Glass::kWidth; x++)
+                if (canvas.get_pixel(x, y)) {
+                    if (top < 0) top = y;
+                    bottom = y;
+                }
+        const int above = top - (kInterruptRuleY + 1);
+        const int below = kKeyTop - 1 - bottom;
+        CHECK(above - below >= -1);
+        CHECK(above - below <= 1);
+    }
 }
 
 TEST_CASE("confirm page: it cannot be mistaken for a page a pilot was already on") {
     Glass canvas;
     draw_confirm(canvas, prompt(comms::Pending::Recovery));
-
-    // A full-width reversed header: at arm's length the shape alone says the
-    // device is asking something rather than showing something.
-    int header_ink = 0;
-    for (int y = 0; y < 26; y++)
-        for (int x = 0; x < Glass::kWidth; x++) header_ink += canvas.get_pixel(x, y) ? 1 : 0;
-    CHECK(header_ink > 26 * Glass::kWidth / 2);
+    // The large mark is what a page the device pushed wears, and no page a pilot opens does.
+    CHECK(
+        reads_heading(canvas, comms::pending_title(comms::Pending::Recovery), Heading::Interrupt));
+    CHECK_FALSE(
+        reads_heading(canvas, comms::pending_title(comms::Pending::Recovery), Heading::Opened));
 }

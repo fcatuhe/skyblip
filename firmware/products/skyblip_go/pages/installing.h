@@ -2,28 +2,21 @@
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_PAGES_INSTALLING_H
 
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/frame.h"
 
 namespace skyblip::go {
 
-constexpr int kInstallingLeftX = 4;
-constexpr int kInstallingTitleY = 40;
-constexpr int kInstallingLineHeight = 14;
-constexpr int kInstallingBodyY = 90;
+constexpr const char* kInstallingTitle = "INSTALLATION";
+constexpr BodyLine kInstallingBody[] = {
+    {"KEEP THE GO ON"}, {""}, {"IT STARTS AGAIN"}, {"IN APPROXIMATELY"}, {"30 S"}};
+constexpr int kInstallingBodyRows = 5;
 
-constexpr const char* kInstallingHeader = "FIRMWARE";
-constexpr const char* kInstallingTitle = "INSTALLING";
-constexpr const char* kInstallingBody[] = {"LEAVE THE DEVICE ON", "IT RESTARTS BY ITSELF",
-                                           "IN ABOUT 30 S", "THE SCREEN STAYS STILL"};
-constexpr int kInstallingBodyRows = 4;
+constexpr const char* kReceivingTitle = "DOWNLOAD";
+constexpr BodyLine kReceivingBody[] = {{"KEEP THE PHONE"}, {"NEAR THE GO"},      {""},
+                                       {"AFTER THE"},      {"DOWNLOAD, THE GO"}, {"INSTALLS IT"}};
+constexpr int kReceivingBodyRows = 6;
+constexpr const char* kReceivingCancelVerb = "CANCEL";
 
-constexpr const char* kReceivingTitle = "RECEIVING";
-constexpr const char* kReceivingBody[] = {"KEEP THE PHONE NEAR", "IT INSTALLS BY ITSELF",
-                                          "ONCE THE IMAGE IS IN", "ONE PRESS CANCELS"};
-constexpr int kReceivingBodyRows = 4;
-
-constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineHeight; }
-
-void draw_notice_heading(ui::Canvas& canvas, const char* header, const char* title);
 void draw_installing(ui::Canvas& canvas);
 void draw_receiving(ui::Canvas& canvas);
 

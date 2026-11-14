@@ -6,7 +6,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/activate"
       assert_current_path "/briefing/activate"
-      assert_text "Its screen shows ACTIVATE and a code like 3F2A."
+      assert_text "Its screen shows NOT ACTIVATED and a code like 3F2A."
       screen "30-activate-find"
 
       click_button "Find the new Go"
@@ -15,8 +15,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
       screen "31-activate-ready"
 
       click_button "Activate"
-      assert_selector ".glass-title", text: "ACTIVATE"
-      assert_selector ".glass-detail", text: "SEND THE KEY OF THIS UNIT TO SKYBLIP.EU"
+      assert_glass "ACTIVATE"
       screen "32-activate-asking"
 
       page.execute_script("#{unit("3F2A skyBlip")}.press()")
@@ -51,7 +50,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
       visit "/briefing/activate"
       click_button "Find the new Go"
       click_button "Activate"
-      assert_selector ".glass-title", text: "ACTIVATE"
+      assert_glass "ACTIVATE"
       page.execute_script("#{unit("3F2A skyBlip")}.refuse()")
       assert_selector ".unit-message", text: "Refused on the Go. Reconnect, then activate again."
       assert_no_button "Activate"

@@ -28,7 +28,7 @@ const char* verdict(PartState state) {
         case PartState::Fail: return "FAIL";
         case PartState::Absent: break;
     }
-    return "NOT FITTED";
+    return "NOT FOUND";
 }
 
 // A leader of dots between the name and its verdict, so an eye running down the
@@ -39,8 +39,8 @@ void leaders(ui::Canvas& canvas, int from_x, int to_x, int y) {
 
 const char* bravo_verdict(comms::BravoState state) {
     switch (state) {
-        case comms::BravoState::Live: return "LIVE";
-        case comms::BravoState::Waiting: return "WAITING";
+        case comms::BravoState::Live: return "ON";
+        case comms::BravoState::Waiting: return "WAIT";
         case comms::BravoState::LinkDown: return "LINK DOWN";
         case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
         case comms::BravoState::NoUtc: return "NO UTC";
@@ -138,12 +138,12 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         written += format_string(text + written, " V");
     }
     if (snapshot.went_dark_flat)
-        written += format_string(text + written, written > 0 ? " WAS FLAT" : "WAS FLAT");
+        written += format_string(text + written, written > 0 ? " WAS EMPTY" : "WAS EMPTY");
     text[written] = 0;
     canvas.draw_text(kLeft, y, text, true, 1);
 
     // The verdict, inverted so it cannot be read as one more row.
-    const char* status = snapshot.flyable ? "READY" : "GROUNDED";
+    const char* status = snapshot.flyable ? "PASS" : "FAIL";
     const int width = (length(status) + 2) * kCellWidth;
     canvas.rectangle(kRight - width, y - kSelfTestVerdictRise, width, kSelfTestVerdictHeight, true,
                      /*fill=*/true);

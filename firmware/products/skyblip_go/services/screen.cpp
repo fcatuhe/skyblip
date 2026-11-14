@@ -5,6 +5,7 @@
 #include "core/events/input.h"
 #include "core/power/cutoff.h"
 #include "products/skyblip_go/pages/installing.h"
+#include "products/skyblip_go/pages/parked.h"
 #include "products/skyblip_go/pages/recovery.h"
 #include "ui/widgets/wordmark.h"
 
@@ -531,8 +532,8 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
         case ParkFrame::Recovery: draw_recovery(framebuffer_, recovery_path_); return;
         // INFO: fc 12sep26 months of one image is the ghosting an e-paper never fully loses
         case ParkFrame::Blank: framebuffer_.clear(/*white=*/true); return;
-        case ParkFrame::FlatCell: draw_parked_cell("FLAT BATTERY"); return;
-        case ParkFrame::LowCell: draw_parked_cell("CHARGE BATTERY"); return;
+        case ParkFrame::FlatCell: draw_parked_cell(kParkedFlatCell, kParkedFlatCellLines); return;
+        case ParkFrame::LowCell: draw_parked_cell(kParkedLowCell, kParkedLowCellLines); return;
         case ParkFrame::Wordmark:
         default:
             framebuffer_.clear(/*white=*/true);
@@ -541,20 +542,17 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
     }
 }
 
-void ScreenService::draw_parked_cell(const char* said) {
+// INFO: fc 14nov26 the words are centred in the glass under the mark, at the size every page reads
+void ScreenService::draw_parked_cell(const BodyLine* said, int count) {
     framebuffer_.clear(/*white=*/true);
     ui::draw_wordmark(framebuffer_, kGlassWidth / 2, kGlassHeight / 2);
     const int wordmark_bottom = kGlassHeight / 2 + ui::wordmark_height() / 2;
-    const int y =
-        (wordmark_bottom + kGlassHeight) / 2 - ui::kCharacterHeight * kParkedSaidScale / 2;
-    centred_text(y, said, kParkedSaidScale);
-}
-
-void ScreenService::centred_text(int y, const char* text, int scale) {
-    int count = 0;
-    while (text[count] != 0) count++;
-    const int width = count * ui::kCellWidth * scale;
-    framebuffer_.draw_text((kGlassWidth - width) / 2, y, text, true, scale);
+    int y = wordmark_bottom + (kGlassHeight - wordmark_bottom - body_height(said, count)) / 2;
+    for (int i = 0; i < count; i++) {
+        framebuffer_.draw_text(centred_x(said[i].text, said[i].scale), y, said[i].text, true,
+                               said[i].scale);
+        y += line_pitch(said[i].scale);
+    }
 }
 
 bool ScreenService::may_present_park_frame() const {

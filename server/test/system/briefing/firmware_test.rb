@@ -11,8 +11,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       screen "20-firmware-ready"
 
       click_button "Install 0.1.0+1005"
-      assert_selector ".glass-title", text: "FIRMWARE"
-      assert_selector ".glass-detail", text: "INSTALL 0.1.0+1005 FROM THE PHONE"
+      assert_glass "FIRMWARE"
       screen "21-firmware-asking"
 
       page.execute_script("#{unit("00012A")}.press()")
@@ -95,7 +94,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       connect_go
       click_link "Firmware"
       click_button "Install 0.1.0+1005"
-      assert_selector ".glass-title", text: "FIRMWARE"
+      assert_glass "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
       assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
       assert_no_button "Install 0.1.0+1005"
@@ -111,7 +110,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       click_link "Firmware"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
-      assert_selector ".glass-title", text: "RECOVERY"
+      assert_glass "RECOVERY"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".firmware-status", text: "The device is now a USB drive named TECHOBOOT"
       assert_no_button "Restart into the USB drive"

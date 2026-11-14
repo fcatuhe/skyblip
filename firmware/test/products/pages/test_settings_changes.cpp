@@ -40,7 +40,12 @@ TEST_CASE(
     to.alarm_enabled = false;
     to.battery_offset_mv = -20;
     to.frequency_trim_e1_ppm = 15;
-    CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nBATTERY -20 MV\nFREQ TRIM +1.5 PPM");
+    CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nAND 2 MORE");
+
+    to = from;
+    to.battery_offset_mv = -20;
+    to.frequency_trim_e1_ppm = 15;
+    CHECK(described(from, to) == "BATTERY -20 MV\nFREQ +1.5 PPM");
 }
 
 // A phone that clears the own ICAO makes the aircraft's transponder traffic, so the glass says so.
@@ -57,7 +62,7 @@ TEST_CASE(
     CHECK(described(from, to) == "OWN ICAO NONE\nUNITS METRIC");
 }
 
-TEST_CASE("settings changes page: every key a set may change at once still counts on four rows") {
+TEST_CASE("settings changes page: every key a set may change at once still counts on three rows") {
     Settings from = defaults();
     Settings to = from;
     to.aircraft_type = 7;
@@ -68,10 +73,10 @@ TEST_CASE("settings changes page: every key a set may change at once still count
     to.alarm_volume = AlarmVolume::Off;
     to.battery_offset_mv = -20;
     to.frequency_trim_e1_ppm = 15;
-    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nOWN ICAO 3C6586\nAND 5 MORE");
+    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nAND 6 MORE");
 }
 
-TEST_CASE("settings changes page: past four rows the last one counts the rest") {
+TEST_CASE("settings changes page: past three rows the last one counts the rest") {
     const Settings from = defaults();
     Settings to = from;
     to.aircraft_type = 7;
@@ -79,7 +84,18 @@ TEST_CASE("settings changes page: past four rows the last one counts the rest") 
     to.units = Units::Metric;
     to.alarm_enabled = false;
     to.alarm_volume = AlarmVolume::Off;
-    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nUNITS METRIC\nAND 2 MORE");
+    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nAND 3 MORE");
+}
+
+// CALLSIGN and nine characters run past a line, so the row takes two and the count says so.
+TEST_CASE("settings changes page: a callsign too long for one line takes two, and still fits") {
+    const Settings from = defaults();
+    Settings to = from;
+    std::strcpy(to.callsign, "F-JXYZ123");
+    to.units = Units::Metric;
+    CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nUNITS METRIC");
+    to.alarm_enabled = false;
+    CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nAND 2 MORE");
 }
 
 TEST_CASE(

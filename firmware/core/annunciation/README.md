@@ -22,7 +22,7 @@ Bravo never calibrates the X1's LRA, because the calibration drives the motor fo
 
 ## A lost Bravo is one low note
 
-A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `BRAVO LOST` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic and the signs on and off. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
+A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `NO BRAVO` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic and the signs on and off. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
 
 ## Loudness is the port's, the tune is not
 

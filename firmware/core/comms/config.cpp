@@ -286,11 +286,7 @@ void ConfigService::request_firmware(const cbor::Reader& frame) {
         return;
     }
     stage(Pending::Dfu, link::Reason::ConfirmDfu);
-    int written = format_string(prompt_detail_, "INSTALL ");
-    written +=
-        dfu::format_version(version, prompt_detail_ + written, sizeof(prompt_detail_) - written);
-    written += format_string(prompt_detail_ + written, " FROM THE PHONE");
-    prompt_detail_[written] = 0;
+    (void)format_dfu_detail(prompt_detail_, sizeof(prompt_detail_), version);
 }
 
 // INFO: fc 03oct26 the one press authorised the whole update, so a finished upload installs unasked

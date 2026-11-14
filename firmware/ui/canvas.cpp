@@ -48,6 +48,7 @@ const Glyph kFont[] = {
     {'Z', {"#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"}},
     {'-', {".....", ".....", ".....", "#####", ".....", ".....", "....."}},
     {'.', {".....", ".....", ".....", ".....", ".....", ".##..", ".##.."}},
+    {',', {".....", ".....", ".....", ".....", ".##..", "..#..", ".#..."}},
     {':', {".....", ".##..", ".##..", ".....", ".##..", ".##..", "....."}},
     {'/', {".....", "....#", "...#.", "..#..", ".#...", "#....", "....."}},
     {'+', {".....", "..#..", "..#..", "#####", "..#..", "..#..", "....."}},
@@ -117,6 +118,34 @@ void Canvas::rectangle(int x, int y, int width, int height, bool black, bool fil
         horizontal_line(x, y + height - 1, width, black);
         vertical_line(x, y, height, black);
         vertical_line(x + width - 1, y, height, black);
+    }
+}
+
+// INFO: fc 14nov26 worked in half pixels, so a corner's arc is centred where its pixels' centres
+// are
+void Canvas::rounded_rectangle(int x, int y, int width, int height, int radius, bool black,
+                               bool fill, int stroke) {
+    const int outer = 2 * radius;
+    const int inner = 2 * (radius - stroke);
+    for (int py = y; py < y + height; py++) {
+        for (int px = x; px < x + width; px++) {
+            const int half_x = 2 * px + 1;
+            const int half_y = 2 * py + 1;
+            const int corner_x = half_x < 2 * (x + radius)           ? 2 * (x + radius)
+                                 : half_x > 2 * (x + width - radius) ? 2 * (x + width - radius)
+                                                                     : half_x;
+            const int corner_y = half_y < 2 * (y + radius)            ? 2 * (y + radius)
+                                 : half_y > 2 * (y + height - radius) ? 2 * (y + height - radius)
+                                                                      : half_y;
+            const int dx = half_x - corner_x;
+            const int dy = half_y - corner_y;
+            const int distance = dx * dx + dy * dy;
+            if (distance > outer * outer) continue;
+            const bool rim = px < x + stroke || px >= x + width - stroke || py < y + stroke ||
+                             py >= y + height - stroke ||
+                             ((dx != 0 && dy != 0) && distance > inner * inner);
+            if (fill || rim) set_pixel(px, py, black);
+        }
     }
 }
 

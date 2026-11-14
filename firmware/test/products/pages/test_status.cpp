@@ -247,7 +247,7 @@ TEST_CASE("status page: a receiver with no fix says how far it has got, and for 
     Glass searching;
     draw_status(searching, snapshot);
 
-    CHECK(reads_in(searching, "BLIND 0:48", 0, 24, 140, 40));
+    CHECK(reads_in(searching, "OUTDOORS 0:48", 0, 24, 140, 40));
     CHECK_FALSE(reads_in(searching, "SAT", 0, 24, 140, 40));
     CHECK_FALSE(reads_in(searching, "3D", 0, 24, 140, 40));
 
@@ -257,14 +257,14 @@ TEST_CASE("status page: a receiver with no fix says how far it has got, and for 
     timed.stage_s = 80;
     Glass reading;
     draw_status(reading, timed);
-    CHECK(reads_in(reading, "SOLVING 1:20", 0, 24, 140, 40));
+    CHECK(reads_in(reading, "WAIT 1:20", 0, 24, 140, 40));
 
     StatusSnapshot silent = snapshot;
     silent.stage = skyblip::gnss::Stage::Silent;
     silent.stage_s = 5;
     Glass quiet;
     draw_status(quiet, silent);
-    CHECK(reads_in(quiet, "SILENT 0:05", 0, 24, 140, 40));
+    CHECK(reads_in(quiet, "NO DATA 0:05", 0, 24, 140, 40));
 
     StatusSnapshot fixed = snapshot;
     fixed.fix_valid = true;
@@ -273,7 +273,7 @@ TEST_CASE("status page: a receiver with no fix says how far it has got, and for 
     draw_status(solved, fixed);
     CHECK(reads_in(solved, "3D", 0, 24, 140, 40));
     CHECK(reads_in(solved, "9 SAT", 0, 24, 140, 40));
-    CHECK_FALSE(reads_in(solved, "BLIND", 0, 24, 140, 40));
+    CHECK_FALSE(reads_in(solved, "OUTDOORS", 0, 24, 140, 40));
 }
 
 // The receiver's own GSA answer where it gave one, the satellite count where it did not.

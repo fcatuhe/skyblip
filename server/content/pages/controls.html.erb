@@ -32,7 +32,7 @@ updated_on: "2026-11-09"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "The radar menu: aircraft type, callsign, units, range, plot, alarm and volume, with the hint PAD MOVES - BUTTON CHANGES at the bottom" %>
+      <%= screen_image_tag "menu-radar.png", alt: "The settings menu: light, aircraft, units, range, plot, alarm and volume, with the button's key CHANGE and the pad's key NEXT at the foot" %>
       <figcaption>The radar menu</figcaption>
     </figure>
   </div>
@@ -61,26 +61,24 @@ updated_on: "2026-11-09"
       <p>
         Press the button on the last character to save the callsign. Any blanks
         at the end are removed. To clear a callsign, change the first
-        character to a blank and press the button. The screen says
-        <span class="mono">BLANK THE FIRST TO CLEAR</span> while a callsign is
-        present, and <span class="mono">BUTTON CLEARS</span> once the blank is
-        under the bar. If you leave the field before finishing, or leave it untouched for a
+        character to a blank and press the button. The button's key
+        reads <span class="mono">ERASE</span> once the blank is under the bar. If you leave the field before finishing, or leave it untouched for a
         minute, nothing is saved.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field: S-BLIP at triple height, a bar under the third character, PAD ROLLS above BUTTON NEXT, and BLANK THE FIRST TO CLEAR along the bottom" %>
+      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field: S-BLIP at triple height, a bar under the third character, and the keys NEXT for the button and CHANGE for the pad" %>
       <figcaption>The callsign field</figcaption>
     </figure>
   </div>
 
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-blank.png", alt: "The callsign field with the first character changed to a blank, the bar under it, and the hint now reading PAD ROLLS above BUTTON CLEARS" %>
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "The callsign field with a blank as the first character, the bar under it, and the button's key now reading ERASE" %>
       <figcaption>The first character blanked</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-none.png", alt: "The radar menu after the press, with the CALLSIGN row selected and reading NONE" %>
+      <%= screen_image_tag "menu-callsign-none.png", alt: "The aircraft menu after the press, with the CALLSIGN row selected and reading NONE" %>
       <figcaption>One press later</figcaption>
     </figure>
   </div>
@@ -128,7 +126,7 @@ updated_on: "2026-11-09"
       <figcaption>Self test</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "The capture page with no recording in progress: the state is off, with two recording types to choose from, FULL for all data categories and POWER RUN for power and duty. It shows the cost of the selected type: the sectors of flash memory it would use, the stored flights it would delete and the hours of recording it would retain, with PAD PICKS, PRESS TWICE TO ARM along the bottom" %>
+      <%= screen_image_tag "capture.png", alt: "The capture page with no recording in progress: the state is off, with two recording types to choose from, FULL for all data categories and POWER RUN for power and duty. It shows the cost of the selected type: the sectors of flash memory it would use, the stored flights it would delete and the hours of recording it would retain, with PAD SELECTS, PUSH TWICE TO START along the bottom" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>

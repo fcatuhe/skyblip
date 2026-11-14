@@ -428,5 +428,5 @@ TEST_CASE("radio log page: a silent band says so rather than showing an empty gr
     radio::Log log;
     Glass canvas;
     draw_radio_log(canvas, with(log));
-    CHECK(reads_at(canvas, 4, kFirstRowY + kLineHeight, "NOTHING ON AIR YET"));
+    CHECK(reads_at(canvas, 4, kFirstRowY + kLineHeight, "NO RADIO DATA"));
 }
