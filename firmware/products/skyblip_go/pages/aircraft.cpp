@@ -15,7 +15,6 @@ constexpr int kDetailRows = 3;
 constexpr int kLabelInset = 6;
 constexpr int kNameInset = 24;
 constexpr int kTypeInset = 50;
-constexpr int kNoticeNameY = 50;
 constexpr int kLabelBytes = 24;
 
 const char* state_text(Detection state) {
@@ -124,16 +123,17 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
 void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
     draw_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt);
     char address[kOwnIcaoCharacters + 1];
-    const char* name = name_of(detected, address);
-    int y = draw_centred_line(canvas, kNoticeNameY, name, kCallsignScale);
     char label[kLabelBytes];
     heard_label(label, detected);
-    y = draw_centred_line(canvas, y, label);
+    BodyLine body[6];
+    int count = 0;
+    body[count++] = {name_of(detected, address), kCallsignScale};
+    body[count++] = {label};
     if (named_type(detected.aircraft_type))
-        y = draw_centred_line(canvas, y, aircraft_type_name(detected.aircraft_type));
-    else
-        y += line_pitch(kFrameScale);
-    draw_centred_lines(canvas, y + kParagraphGap, kAircraftNoticeLines, kAircraftNoticeLineCount);
+        body[count++] = {aircraft_type_name(detected.aircraft_type)};
+    body[count++] = {""};
+    for (int i = 0; i < kAircraftNoticeLineCount; i++) body[count++] = {kAircraftNoticeLines[i]};
+    draw_body(canvas, Heading::Interrupt, /*keys=*/true, body, count);
     draw_keys(canvas, {{Press::Once, "USE"}, "CLOSE"});
 }
 

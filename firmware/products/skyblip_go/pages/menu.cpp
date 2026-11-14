@@ -296,9 +296,12 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
 
 void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
     draw_heading(canvas, snapshot.title, Heading::Opened);
-    canvas.draw_text(field_text_x(text_cells(snapshot.text)), kClearTextY, snapshot.text, true,
-                     kCallsignScale);
-    draw_centred_lines(canvas, kClearLinesY, kOwnIcaoClearLines, kOwnIcaoClearLineCount);
+    const BodyLine body[] = {{snapshot.text, kCallsignScale},
+                             {""},
+                             {kOwnIcaoClearLines[0]},
+                             {kOwnIcaoClearLines[1]},
+                             {kOwnIcaoClearLines[2]}};
+    draw_body(canvas, Heading::Opened, /*keys=*/true, body, 5);
     draw_keys(canvas, {{Press::Once, kFieldEraseVerb}, kFieldKeepVerb});
 }
 

@@ -310,10 +310,14 @@ TEST_CASE("own ICAO page: a clear shows the address it throws away and what that
     Glass canvas;
     draw_clear(canvas, clear);
     CHECK(reads_heading(canvas, "OWN ICAO", Heading::Opened));
-    CHECK(reads_at(canvas, kOwnIcaoTextX, kClearTextY, "3C6586", kCallsignScale));
     CHECK(reads_pad_key(canvas, kFieldKeepVerb));
     CHECK(reads_button_key(canvas, kFieldEraseVerb));
-    CHECK(reads_centred_lines(canvas, kClearLinesY, kOwnIcaoClearLines, kOwnIcaoClearLineCount));
+    const BodyLine body[] = {{"3C6586", kCallsignScale},
+                             {""},
+                             {kOwnIcaoClearLines[0]},
+                             {kOwnIcaoClearLines[1]},
+                             {kOwnIcaoClearLines[2]}};
+    CHECK(reads_body(canvas, Heading::Opened, true, body, 5));
 }
 
 TEST_CASE("menu page: the own ICAO ring is blank, 0 to 9, A to F, and back") {

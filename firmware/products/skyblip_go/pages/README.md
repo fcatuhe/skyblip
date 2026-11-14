@@ -344,6 +344,8 @@ The heading is the mark, the blip dot and its two arcs from the logo (`ui/widget
 
 The keys say what each contact does on this page, on this row. The button's key is always on the left and filled black, the pad's always on the right and white, so the contact reads by shape and place before the word is read: a dot for a press, two dots for the double press, a touch strip for the pad. A contact that does nothing here has no key, and its half of the foot stays empty rather than the other key moving into it, so a thumb never has to find the button's key somewhere new. A page with no key at all asks for nothing.
 
+The body between them is centred: its ink stands as far under the heading's rule as it stands over the keys, or over the foot of the glass on a page with no key. A short prompt and a long one put their words in the middle, and the lines keep their 18 px pitch and their 10 px paragraph gap whatever the body holds (`draw_body`). A list is the exception: menu rows start under the rule, because a list is read from its top.
+
 Words are at double height everywhere in the frame, sixteen to a line, and the value a pilot checks is larger: a callsign or a name at triple height, a Bravo tag or an activation tag at four times. Nothing in the frame is at the small size: a line too small to read at arm's length is a line nobody reads, so what it said is either on a key or gone. The words follow ASD-STE100 Simplified Technical English: one instruction to a sentence, approved verbs only, PUSH and not press, and a comma after a condition.
 
 ## activation
@@ -354,7 +356,7 @@ The question the server's register raises is the confirm page's, titled `ACTIVAT
 
 ## confirm
 
-The prompt a phone raises is titled with the operation under the large mark, `POWER OFF` or `FIRMWARE`, with what it will do under it in at most three lines, then `TO CANCEL, PUSH ONCE OR WAIT 27 S.`, the seconds counting down. The button's key reads `ACCEPT` beside two dots, the double press that allows it. The pad has no key, because a tap answers nothing here. The cancel line stands at the same height on every prompt, whatever the detail above it takes, so the seconds are always found in the same place.
+The prompt a phone raises is titled with the operation under the large mark, `POWER OFF` or `FIRMWARE`, with what it will do under it in at most three lines, then `TO CANCEL, PUSH ONCE OR WAIT 27 S.`, the seconds counting down. The button's key reads `ACCEPT` beside two dots, the double press that allows it. The pad has no key, because a tap answers nothing here. The detail and the cancel lines are one body, centred like every other, so a one-line question does not leave a gap above the seconds.
 
 ## menu
 

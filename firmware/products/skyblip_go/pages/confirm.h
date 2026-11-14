@@ -20,22 +20,13 @@ struct ConfirmSnapshot {
     uint32_t seconds_left{0};
 };
 
-// The grid, exported so a test reads a line back off the glass instead of
-// counting ink: "the page says POWER OFF" is the claim that matters.
-constexpr int kConfirmDetailY = kInterruptRuleY + kBodyBelowRule;
 constexpr int kConfirmDetailColumns = kFrameColumns;
 constexpr int kConfirmDetailRows = 3;
-constexpr int kConfirmCancelRows = 3;
-
-constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * line_pitch(kFrameScale); }
-constexpr int kConfirmCancelY = confirm_detail_y(kConfirmDetailRows) + kParagraphGap;
-constexpr int confirm_cancel_y(int row) { return kConfirmCancelY + row * line_pitch(kFrameScale); }
-
-static_assert(confirm_cancel_y(kConfirmCancelRows) - 4 <= kBodyBottom,
-              "the cancel lines stand clear of the keys");
 
 constexpr const char* kConfirmAllowVerb = "ACCEPT";
 constexpr const char* kConfirmCancelLine = "TO CANCEL, PUSH";
+constexpr const char* kConfirmWaitLine = "ONCE OR WAIT";
+constexpr const char* kConfirmOnceLine = "ONCE.";
 
 void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 

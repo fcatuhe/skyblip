@@ -12,10 +12,11 @@
 namespace skyblip {
 
 inline uint32_t seconds_left_on(const ui::Canvas& canvas) {
-    for (uint32_t seconds = 1; seconds <= comms::kPromptCeilingMs / 1000u; seconds++) {
+    // Longest first: "8 S." is inside "28 S.".
+    for (uint32_t seconds = comms::kPromptCeilingMs / 1000u; seconds > 0; seconds--) {
         const std::string text = std::to_string(seconds) + " S.";
-        if (reads_at(canvas, go::centred_x(text.c_str(), go::kFrameScale), go::confirm_cancel_y(2),
-                     text.c_str(), go::kFrameScale))
+        if (reads_in(canvas, text.c_str(), 0, go::kInterruptRuleY, go::kGlassWidth, go::kKeyTop,
+                     go::kFrameScale))
             return seconds;
     }
     return 0;

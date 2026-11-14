@@ -10,9 +10,6 @@ namespace skyblip::go {
 
 constexpr const char* kActivationTitle = "ACTIVATE";
 constexpr const char* kActivationWhere = "GO TO SKYBLIP.EU";
-constexpr const char* kActivationBody[] = {kActivationWhere, "/ACTIVATE.", "", "THEN SELECT:"};
-constexpr int kActivationBodyRows = 4;
-constexpr int kActivationTagY = 120;
 constexpr int kActivationTagScale = 4;
 
 void draw_activation(ui::Canvas& canvas, uint16_t bluetooth_tag);

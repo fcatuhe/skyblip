@@ -7,10 +7,10 @@
 namespace skyblip::go {
 
 constexpr const char* kRecoveryTitle = "RECOVERY";
-constexpr const char* kRecoveryBody[] = {
-    "THE USB DRIVE IS", "TECHOBOOT.", "COPY A .UF2 FILE", "TO IT.", "",
-    "TO GO BACK, PUSH", "RESET."};
-constexpr int kRecoveryBodyRows = 7;
+constexpr BodyLine kRecoveryBody[] = {{"THE USB DRIVE IS"}, {"TECHOBOOT."}, {""},
+                                      {"COPY A .UF2 FILE"}, {"TO IT."},     {""},
+                                      {"TO GO BACK, PUSH"}, {"RESET."}};
+constexpr int kRecoveryBodyRows = 8;
 constexpr const char* kRecoveryStartVerb = "START";
 
 constexpr const char* recovery_button(ports::RecoveryPath path) {

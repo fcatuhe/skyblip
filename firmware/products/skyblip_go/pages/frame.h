@@ -62,11 +62,18 @@ constexpr int heading_title_y(Heading heading) {
 int draw_heading(ui::Canvas& canvas, const char* title, Heading heading);
 void draw_keys(ui::Canvas& canvas, const Keys& keys);
 
-int draw_centred_lines(ui::Canvas& canvas, int y, const char* const* lines, int count,
-                       int scale = kFrameScale);
-int draw_centred_line(ui::Canvas& canvas, int y, const char* line, int scale = kFrameScale);
-
 int take_line(const char* text, int from, char* out, int columns);
+
+struct BodyLine {
+    const char* text{""};
+    int scale{kFrameScale};
+};
+
+constexpr int kMaxBodyLines = 12;
+
+int body_height(const BodyLine* lines, int count);
+int body_top(Heading heading, bool keys, const BodyLine* lines, int count);
+void draw_body(ui::Canvas& canvas, Heading heading, bool keys, const BodyLine* lines, int count);
 
 }  // namespace skyblip::go
 

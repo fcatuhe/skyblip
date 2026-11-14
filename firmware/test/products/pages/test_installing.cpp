@@ -12,7 +12,7 @@ TEST_CASE("installing page: it says what is happening and what not to do, unclip
     Glass canvas;
     draw_installing(canvas);
     CHECK(reads_heading(canvas, kInstallingTitle, Heading::Interrupt));
-    CHECK(reads_centred_lines(canvas, kNoticeBodyY, kInstallingBody, kInstallingBodyRows));
+    CHECK(reads_body(canvas, Heading::Interrupt, false, kInstallingBody, kInstallingBodyRows));
 }
 
 // Nothing to press: the keys stay off the glass, so the page asks for nothing it would ignore.
@@ -27,7 +27,7 @@ TEST_CASE("receiving page: it says the install follows on its own, and the butto
     Glass canvas;
     draw_receiving(canvas);
     CHECK(reads_heading(canvas, kReceivingTitle, Heading::Interrupt));
-    CHECK(reads_centred_lines(canvas, kNoticeBodyY, kReceivingBody, kReceivingBodyRows));
+    CHECK(reads_body(canvas, Heading::Interrupt, true, kReceivingBody, kReceivingBodyRows));
     CHECK(reads_button_key(canvas, kReceivingCancelVerb));
     CHECK_FALSE(has_pad_key(canvas));
     CHECK_FALSE(reads_heading(canvas, kInstallingTitle, Heading::Interrupt));

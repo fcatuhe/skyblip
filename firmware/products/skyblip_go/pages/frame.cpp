@@ -110,16 +110,43 @@ void draw_keys(ui::Canvas& canvas, const Keys& keys) {
     if (keys.pad[0] != 0) draw_key(canvas, kPadKeyX, Icon::Pad, keys.pad);
 }
 
-int draw_centred_line(ui::Canvas& canvas, int y, const char* line, int scale) {
-    canvas.draw_text(centred_x(line, scale), y, line, true, scale);
-    return y + line_pitch(scale);
+// INFO: fc 14nov26 the body's ink is centred between the heading's rule and the keys, or the foot
+int body_height(const BodyLine* lines, int count) {
+    int height = 0;
+    int trailing = 0;
+    for (int i = 0; i < count; i++) {
+        if (lines[i].text[0] == 0) {
+            if (height > 0) trailing += kParagraphGap;
+            continue;
+        }
+        height += trailing + (height > 0 ? 2 * lines[i].scale : 0);
+        trailing = 0;
+        height += ui::kCharacterHeight * lines[i].scale;
+    }
+    return height;
 }
 
-// INFO: fc 14nov26 an empty line is a paragraph break, the gap between two sentences
-int draw_centred_lines(ui::Canvas& canvas, int y, const char* const* lines, int count, int scale) {
-    for (int i = 0; i < count; i++)
-        y = lines[i][0] == 0 ? y + kParagraphGap : draw_centred_line(canvas, y, lines[i], scale);
-    return y + kParagraphGap;
+int body_top(Heading heading, bool keys, const BodyLine* lines, int count) {
+    const int rule_y = heading == Heading::Interrupt ? kInterruptRuleY : kOpenedRuleY;
+    const int top = rule_y + 1;
+    const int bottom = keys ? kKeyTop : kGlassHeight;
+    return top + (bottom - top - body_height(lines, count)) / 2;
+}
+
+void draw_body(ui::Canvas& canvas, Heading heading, bool keys, const BodyLine* lines, int count) {
+    int y = body_top(heading, keys, lines, count);
+    bool started = false;
+    for (int i = 0; i < count; i++) {
+        if (lines[i].text[0] == 0) {
+            if (started) y += kParagraphGap;
+            continue;
+        }
+        if (started) y += 2 * lines[i].scale;
+        canvas.draw_text(centred_x(lines[i].text, lines[i].scale), y, lines[i].text, true,
+                         lines[i].scale);
+        y += ui::kCharacterHeight * lines[i].scale;
+        started = true;
+    }
 }
 
 int take_line(const char* text, int from, char* out, int columns) {

@@ -138,7 +138,7 @@ TEST_CASE("activation: a unit with no serial advertises activate and its tag, an
     const go::Glass& glass = bench.rig.product.screen().framebuffer();
     CHECK(reads_in(glass, go::kActivationWhere, 0, 0, go::kGlassWidth, go::kGlassHeight,
                    go::kFrameScale));
-    CHECK(reads_in(glass, "3F2A", 0, go::kActivationTagY - 1, go::kGlassWidth, go::kGlassHeight,
+    CHECK(reads_in(glass, "3F2A", 0, go::kInterruptRuleY, go::kGlassWidth, go::kGlassHeight,
                    go::kActivationTagScale));
 }
 
