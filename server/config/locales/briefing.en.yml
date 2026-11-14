@@ -97,7 +97,7 @@ en:
       failed: failed
     activation:
       title: Activate a new Go
-      hint: Its screen shows ACTIVATE and a code like 3F2A. Choose that code in the list.
+      hint: Its screen shows NOT ACTIVATED and a code like 3F2A. Choose that code in the list.
       find: Find the new Go
       activate: Activate
       kept_summary: What skyblip.eu keeps

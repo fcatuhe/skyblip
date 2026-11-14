@@ -97,7 +97,7 @@ fr:
       failed: "échec"
     activation:
       title: "Activer un Go neuf"
-      hint: "Son écran affiche ACTIVATE et un code comme 3F2A. Choisissez ce code dans la liste."
+      hint: "Son écran affiche NOT ACTIVATED et un code comme 3F2A. Choisissez ce code dans la liste."
       find: "Trouver le Go neuf"
       activate: "Activer"
       kept_summary: "Ce que skyblip.eu garde"

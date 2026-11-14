@@ -2,7 +2,7 @@
 title: "Batterie du Go, charge USB-C et arrêt"
 nav_title: Alimentation
 slug: alimentation
-description: "Rechargez skyBlip Go en USB-C. Comprenez les alertes de batterie, le message EMPTY BATTERY, l'arrêt et l'écran e-paper qui garde son image."
+description: "Rechargez skyBlip Go en USB-C. Comprenez les alertes de batterie, le message BATTERY EMPTY, l'arrêt et l'écran e-paper qui garde son image."
 parent: guides
 share_image: radar
 updated_on: "2026-11-09"
@@ -92,7 +92,7 @@ updated_on: "2026-11-09"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint seul, batterie vide : le logo skyBlip avec les mots EMPTY BATTERY dessous" %>
+      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint seul, batterie vide : le logo skyBlip avec les mots BATTERY EMPTY dessous" %>
       <figcaption>Batterie vide</figcaption>
     </figure>
   </div>
@@ -103,10 +103,10 @@ updated_on: "2026-11-09"
         <tr><th>Appareil éteint</th><th>Ce qui se passe</th></tr>
       </thead>
       <tbody>
-        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">EMPTY BATTERY</span></td></tr>
+        <tr><th>Pression sur le bouton</th><td>démarre, sauf batterie sous 3,4&nbsp;V sans chargeur, et l&rsquo;écran dit alors <span class="mono">BATTERY EMPTY</span></td></tr>
         <tr><th>Pression après une coupure batterie vide</th><td>rien, à dessein&nbsp;: l&rsquo;écran le dit déjà, et le câble est le chemin du retour</td></tr>
         <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
-        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">EMPTY BATTERY</span></td></tr>
+        <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">BATTERY EMPTY</span></td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
         <tr><th>Pression sur <span class="mono">RST</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
       </tbody>
@@ -160,10 +160,10 @@ updated_on: "2026-11-09"
         <tr><th>Seuil</th><th>Ce qui se passe</th></tr>
       </thead>
       <tbody>
-        <tr><th>3,60&nbsp;V</th><td>la batterie est faible, environ 12&nbsp;%&nbsp;: le voyant clignote en rouge, le radar affiche BAT et le pourcentage, et un arrêt laisse CHARGE BATTERY sur l&rsquo;écran</td></tr>
+        <tr><th>3,60&nbsp;V</th><td>la batterie est faible, environ 12&nbsp;%&nbsp;: le voyant clignote en rouge, le radar affiche BAT et le pourcentage, et un arrêt laisse CHARGE THE BATTERY sur l&rsquo;écran</td></tr>
         <tr><th>3,50&nbsp;V</th><td>la batterie est critique, environ 5&nbsp;%&nbsp;: le voyant clignote toutes les 600&nbsp;ms. Dès ce seuil, l&rsquo;appareil ne sauvegarde plus rien en mémoire permanente sauf l&rsquo;enregistrement du vol, qui fournit la preuve du vol en train de se terminer</td></tr>
         <tr><th>3,40&nbsp;V</th><td>l&rsquo;appareil refuse de démarrer sur une batterie aussi vide. Le bouton reste désactivé pour que des pressions dans un sac ne puissent pas relancer sans cesse le démarrage</td></tr>
-        <tr><th>3,20&nbsp;V</th><td>la batterie est vide&nbsp;: l&rsquo;appareil s&rsquo;éteint et laisse EMPTY BATTERY sur l&rsquo;écran. Chaque seuil demande trois mesures consécutives pour être franchi dans un sens comme dans l&rsquo;autre. Une brève baisse de tension pendant une émission ne peut donc pas déclencher de changement, et une batterie proche d&rsquo;un seuil ne peut pas faire alterner les états</td></tr>
+        <tr><th>3,20&nbsp;V</th><td>la batterie est vide&nbsp;: l&rsquo;appareil s&rsquo;éteint et laisse BATTERY EMPTY sur l&rsquo;écran. Chaque seuil demande trois mesures consécutives pour être franchi dans un sens comme dans l&rsquo;autre. Une brève baisse de tension pendant une émission ne peut donc pas déclencher de changement, et une batterie proche d&rsquo;un seuil ne peut pas faire alterner les états</td></tr>
         <tr><th>1,80&nbsp;V</th><td>en dessous, la mesure vient d&rsquo;un pont diviseur en l&rsquo;air, pas d&rsquo;une batterie vide. L&rsquo;appareil n&rsquo;en tient pas compte</td></tr>
       </tbody>
     </table>

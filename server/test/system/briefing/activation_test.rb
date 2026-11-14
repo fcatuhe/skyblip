@@ -6,7 +6,7 @@ class Briefing::ActivationTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/activate"
       assert_current_path "/briefing/activate"
-      assert_text "Its screen shows ACTIVATE and a code like 3F2A."
+      assert_text "Its screen shows NOT ACTIVATED and a code like 3F2A."
       screen "30-activate-find"
 
       click_button "Find the new Go"
