@@ -4,7 +4,7 @@ class ForgetVisitAddresses < ActiveRecord::Migration[8.1]
   end
 
   def up
-    Visit.where.not(ip: nil).or(Visit.where.not(user_agent: nil)).update_all(ip: nil, user_agent: nil)
+    Visit.where.not(ip: nil).update_all(ip: nil)
   end
 
   def down

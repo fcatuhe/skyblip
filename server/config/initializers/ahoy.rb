@@ -1,7 +1,7 @@
 class Ahoy::Store < Ahoy::DatabaseStore
-  # INFO: fc 14nov26 the address is placed in memory and the agent was already read into browser, os and device, so a visit keeps neither
+  # INFO: fc 14nov26 the address is placed in memory while the request runs, so a visit keeps its city and not its address
   def track_visit(data)
-    super(data.except(:ip, :user_agent).merge(place_of(data[:ip])))
+    super(data.except(:ip).merge(place_of(data[:ip])))
     ahoy.send(:set_cookie, "ahoy_visitor", ahoy.visitor_token, Ahoy.visitor_duration)
   end
 

@@ -40,7 +40,7 @@ Ahoy records visits and events in their own database, `analytics`, from the serv
 
 The site follows the CNIL's terms for audience measurement without consent ([Cookies : solutions pour les outils de mesure d'audience](https://www.cnil.fr/fr/cookies-solutions-pour-les-outils-de-mesure-daudience)): a tracker lives 13 months, and what it collects is kept 25 months at most. The two periods are `config.x.tracker_lifetime` and `config.x.retention`, and every tracker and every log in the app keeps to them. `Ahoy::Visit.prune` deletes visits older than 25 months every night, with their events and what was computed of them.
 
-A visit keeps no IP and no user agent. Ahoy reads the agent into the browser, the system and the device type, and `Ahoy::Store#track_visit` places the IP in memory, while the request runs, with the MaxMind GeoLite City database, `storage/GeoLite2-City.mmdb`, then drops both. No job carries the IP to a queue. The database comes from `Maxmind::UpdateGeoliteCityDatabaseJob` downloads and keeps current. The job is scheduled in `config/recurring.yml` only once the production credentials hold the MaxMind account, so until then visits keep no place and nothing fails:
+A visit keeps no IP. `Ahoy::Store#track_visit` places it in memory, while the request runs, with the MaxMind GeoLite City database, `storage/GeoLite2-City.mmdb`, then drops it, and keeps the user agent Ahoy reads the browser, the system and the device type from. No job carries the IP to a queue. The database comes from `Maxmind::UpdateGeoliteCityDatabaseJob` downloads and keeps current. The job is scheduled in `config/recurring.yml` only once the production credentials hold the MaxMind account, so until then visits keep no place and nothing fails:
 
 ```yaml
 maxmind:

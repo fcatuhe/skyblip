@@ -29,12 +29,12 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
     assert_equal "content/pages", visit.ahoy_visit.events.find_by!(name: "pages#show").properties["controller"]
   end
 
-  test "a visit keeps the browser, system and device the agent names, and neither the agent nor the address" do
+  test "a visit keeps its agent and what it names, and not its address" do
     get page_path(slug: "go"), headers: { "User-Agent" => SAFARI, "REMOTE_ADDR" => "203.0.113.8" }
 
     visit = Ahoy::Visit.sole
     assert_equal [ "Safari", "Mac", "Desktop" ], [ visit.browser, visit.os, visit.device_type ]
-    assert_equal [ nil, nil ], [ visit.ip, visit.user_agent ]
+    assert_equal [ SAFARI, nil ], [ visit.user_agent, visit.ip ]
   end
 
   test "the tracking script loads only where tracking is on" do
