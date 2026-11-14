@@ -10,7 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_161516) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_182354) do
+  create_table "activation_caps", force: :cascade do |t|
+    t.integer "new_units_per_day", default: 50, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "new_units_per_day > 0", name: "activation_caps_new_units_positive"
+  end
+
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false

@@ -77,8 +77,9 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal unit_keys(:contested_pending), units(:contested).reload.active_key
   end
 
-  test "refuses new devices past the daily cap, and still serves known ones" do
-    Unit.insert_all(Array.new(Unit::NEW_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
+  test "refuses new devices past the daily cap an admin set, and still serves known ones" do
+    Activation::Cap.current.update!(new_units_per_day: 3)
+    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
 
     refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]) }
     assert_equal :daily_cap, refusal.reason

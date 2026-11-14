@@ -41,6 +41,21 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ "Safari on iOS" => 1 }, browsers[:without_bluetooth_on])
   end
 
+  test "the daily cap is compared with the busiest day, and a cap under twice it is advised up to three times it" do
+    freeze_time
+    3.times { Event.create!(name: "unit.enrolled", occurred_at: 2.days.ago) }
+    Event.create!(name: "unit.enrolled", occurred_at: 1.day.ago)
+
+    assert_equal({ cap: 50, busiest_day: 3, covers: 16.7 }, Event::Review.new.daily_cap)
+
+    Activation::Cap.current.update!(new_units_per_day: 5)
+    assert_equal "raise it to 9: it covers less than 2 times the busiest day", Event::Review.new.daily_cap[:advice]
+  end
+
+  test "a period with no new unit gives no advice on the daily cap" do
+    assert_equal({ cap: 50, busiest_day: 0 }, Event::Review.new.daily_cap)
+  end
+
   private
     def journey(browser, name, at, **payload)
       Event.create! name:, payload:, context: { browser:, device: "go-00012a" }, occurred_at: at

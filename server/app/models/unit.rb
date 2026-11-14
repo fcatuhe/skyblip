@@ -5,7 +5,6 @@ class Unit < ApplicationRecord
   MANUFACTURER_PREFIX = 0x00
   # INFO: fc 18oct26 serial 0 would put 0x000000 on the air, which decoders read as no address
   SERIALS = 1..0xFFFF
-  NEW_PER_DAY = 50
   NEW_PER_NETWORK_PER_DAY = 5
   PENDING_KEYS_KEPT = 5
 
@@ -32,7 +31,9 @@ class Unit < ApplicationRecord
     end
   end
 
-  def self.daily_cap_reached? = enrolled_today.count >= NEW_PER_DAY
+  def self.daily_cap = Activation::Cap.current.new_units_per_day
+
+  def self.daily_cap_reached? = enrolled_today.count >= daily_cap
 
   def self.enroll(device_id, network)
     raise Activation::Refusal.new(:daily_cap) if daily_cap_reached?
@@ -40,7 +41,7 @@ class Unit < ApplicationRecord
 
     unit = create!(device_id:, serial: next_serial)
     Rails.event.notify "unit.enrolled", unit_id: unit.id, serial: unit.serial, device: unit.slug
-    Rails.logger.error "Activation: #{NEW_PER_DAY} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
+    Rails.logger.error "Activation: #{daily_cap} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
     unit
   end
 

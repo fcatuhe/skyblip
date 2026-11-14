@@ -131,7 +131,7 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "refuses a new unit past the daily cap" do
-    Unit.insert_all(Array.new(Unit::NEW_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
+    Unit.insert_all(Array.new(Unit.daily_cap) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
 
     post activation_registrations_path, params: signed_registration(@challenge), as: :json
 
