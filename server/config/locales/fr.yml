@@ -53,8 +53,8 @@ fr:
     own_icao: "Adresse OACI"
     own_icao_hint: "Saisissez l\u2019adresse de votre transpondeur, comme 3C6586. Le Go émet alors sous cette adresse, comme l\u2019ADS-L le demande à un aéronef équipé d\u2019un transpondeur, et votre aéronef ne s\u2019affiche jamais comme un trafic. Laissez vide si vous n\u2019avez pas de transpondeur."
   footer:
-    description: "Visibilité électronique pour l'aviation légère. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."
-    open_source: "Pour l'aviation privée et les sports aériens : open source, sans abonnement, sans compte."
+    description: "Visibilité électronique pour l'aviation de loisir et les sports aériens. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."
+    open_source: "Open source, sans abonnement, sans compte."
     product: "Appareils"
     guides: "Guides"
     project: "skyBlip"
