@@ -2,17 +2,15 @@
 
     ./scripts/blip.py protocols
 
-The unit names each radio protocol stack it carries, its version and the
-specification it implements, one line each. Firmware from before the protocols
-frame answers unknown_command.
+The unit names the version of each radio protocol stack it carries, one line
+each. What each version implements is in the release's PROTOCOLS.md. Firmware
+from before the protocols frame answers unknown_command.
 """
-import asyncio
-import time
-
 import blip_frames as frames
 
 NAMES = {"adsb": "ADS-B", "adsl": "ADS-L", "alptas": "ALP-TAS"}
 TOO_OLD = "this firmware does not report its radio protocols: update it to read them"
+NONE_NAMED = "the unit named no radio protocol"
 
 
 def add_parser(sub, run):
@@ -22,24 +20,16 @@ def add_parser(sub, run):
 
 
 async def answer(link, timeout, decode=frames.decode_frame):
-    """The unit's protocols frame or its refusal, past the frames it pushes unasked."""
+    """The unit's protocols frame or its refusal."""
     await link.write_config({"command": "protocols"})
-    deadline = time.monotonic() + timeout
-    while True:
-        left = deadline - time.monotonic()
-        try:
-            _, data = await asyncio.wait_for(link.replies.get(), max(left, 0))
-        except asyncio.TimeoutError:
-            raise SystemExit("no answer from the unit within %.1f s" % timeout)
-        frame = decode(data)
-        if frame.get("command") in ("protocols", "acknowledgement"):
-            return frame
+    return await frames.next_frame(link, ("protocols", "acknowledgement"), timeout, "answer", decode)
 
 
 def lines(frame, refuse):
-    """One line per stack, as the device page says it: ADS-L 0.1.0 (ADS-L 4 SRD-860 Issue 2)."""
+    """One line per stack the unit named, as the device page says it: ADS-L 0.1.0."""
     if frame.get("reason") == "unknown_command":
         raise SystemExit(TOO_OLD)
     refuse(frame)
-    return ["%s %s (%s)" % (name, frame[stem + "_version"], frame[stem + "_specification"])
-            for stem, name in NAMES.items() if stem + "_version" in frame]
+    named = ["%s %s" % (name, frame[stem + "_version"])
+             for stem, name in NAMES.items() if isinstance(frame.get(stem + "_version"), str)]
+    return named or [NONE_NAMED]
