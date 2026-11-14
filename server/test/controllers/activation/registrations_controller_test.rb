@@ -15,12 +15,13 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert server_verifies?(signature, message)
   end
 
-  test "records the unit's firmware and whether it is a release, and of where it came from only a pseudonym of its network" do
+  test "records the unit's firmware and whether it is a release, and not the address it came from" do
     post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
 
     unit = Unit.find_by!(device_id: vectors["device_id"])
     assert_equal [ vectors["version"], "890026b1", false ], [ unit.active_key.version, unit.active_key.server_key_id, unit.active_key.release ]
-    assert_equal Network.pseudonym_of("203.0.113.8"), unit.enrollment_network_pseudonym
+    assert_not unit.has_attribute?(:enrolled_from)
+    assert_not unit.active_key.has_attribute?(:ip_address)
   end
 
   test "records the firmware an active key signed, and none for a key it refuses" do
@@ -146,9 +147,11 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "refuses a new unit past the cap of the network it comes from" do
-    Unit.insert_all(Array.new(Unit::NEW_PER_NETWORK_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, enrollment_network_pseudonym: Network.pseudonym_of("203.0.113.8") } })
+    with_memory_cache do
+      Unit::NEW_PER_NETWORK_PER_DAY.times { |index| Unit.register(device_id: format("%016x", 0xa000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8") }
 
-    post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
+      post activation_registrations_path, params: signed_registration(@challenge), as: :json, headers: { "REMOTE_ADDR" => "203.0.113.8" }
+    end
 
     assert_response :too_many_requests
     assert_equal({ "error" => "network_cap" }, response.parsed_body)

@@ -19,9 +19,9 @@ class Unit < ApplicationRecord
 
   scope :enrolled_today, -> { where(created_at: Time.current.all_day) }
 
-  def self.register(device_id:, public_key:, network_pseudonym: nil, **seen)
+  def self.register(device_id:, public_key:, ip_address: nil, **seen)
     transaction do
-      unit = find_by(device_id:) || enroll(device_id, network_pseudonym)
+      unit = find_by(device_id:) || enroll(device_id, network_of(ip_address))
       unit.bind(public_key, **seen)
     end
   end
@@ -34,19 +34,33 @@ class Unit < ApplicationRecord
 
   def self.daily_cap_reached? = enrolled_today.count >= NEW_PER_DAY
 
-  def self.enroll(device_id, network_pseudonym)
+  def self.enroll(device_id, network)
     raise Activation::Refusal.new(:daily_cap) if daily_cap_reached?
-    raise Activation::Refusal.new(:network_cap) if network_cap_reached?(network_pseudonym)
+    raise Activation::Refusal.new(:network_cap) if over_network_cap?(network)
 
-    unit = create!(device_id:, serial: next_serial, enrollment_network_pseudonym: network_pseudonym)
+    unit = create!(device_id:, serial: next_serial)
     Rails.event.notify "unit.enrolled", unit_id: unit.id, serial: unit.serial, device: unit.slug
-    Rails.logger.error "Activation: a new unit from a private address counts toward no network (#205)" unless network_pseudonym
     Rails.logger.error "Activation: #{NEW_PER_DAY} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
     unit
   end
 
-  def self.network_cap_reached?(network_pseudonym)
-    network_pseudonym.present? && enrolled_today.where(enrollment_network_pseudonym: network_pseudonym).count >= NEW_PER_NETWORK_PER_DAY
+  def self.over_network_cap?(network) = network.present? && enrollments_from(network) > NEW_PER_NETWORK_PER_DAY
+
+  # INFO: fc 14nov26 counted as Rails' rate_limit counts, in the cache for 24 hours from the network's first new unit, never in the database
+  def self.enrollments_from(network) = Rails.cache.increment("unit-enrollments:#{network}", 1, expires_in: 24.hours).to_i
+
+  # INFO: fc 08nov26 a home IPv6 line holds a whole /56, so a network is that /56, or one IPv4 address
+  def self.network_of(ip_address)
+    if ip_address.present?
+      address = IPAddr.new(ip_address)
+      address = address.native if address.ipv4_mapped?
+      if address.private? || address.loopback? || address.link_local?
+        Rails.logger.error "Activation: request from a private address #{address}, so it counts toward no network (#205)"
+        nil
+      else
+        (address.ipv6? ? address.mask(56) : address).to_s
+      end
+    end
   end
 
   # INFO: fc 18oct26 SQLite transactions begin IMMEDIATE, so maximum and insert run under one write lock: serials stay dense

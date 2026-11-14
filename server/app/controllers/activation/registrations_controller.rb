@@ -1,9 +1,9 @@
 class Activation::RegistrationsController < Activation::ApplicationController
-  rate_limit to: 10, within: 1.minute, by: :network_pseudonym, with: :rate_limited
+  rate_limit to: 10, within: 1.minute, by: -> { Unit.network_of(request.remote_ip) || request.remote_ip }, with: :rate_limited
   wrap_parameters :registration, include: %i[device_id public_key version server_key_id release server_nonce signature]
 
   def create
-    registration = Activation::Registration.new(registration_params.merge(network_pseudonym: Network.pseudonym_of(request.remote_ip)))
+    registration = Activation::Registration.new(registration_params.merge(ip_address: request.remote_ip))
     render json: registration.unlock_code, status: :created
   end
 

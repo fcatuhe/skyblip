@@ -4,7 +4,7 @@ class EventsController < ApplicationController
   allow_unauthenticated_access
   skip_around_action :switch_locale
   skip_after_action :track_action
-  rate_limit to: 60, within: 1.minute, by: :network_pseudonym, with: -> { head :too_many_requests }
+  rate_limit to: 60, within: 1.minute, with: -> { head :too_many_requests }
 
   def create
     journal = Event::Journal.new(browser: params[:browser], entries: params.expect(entries: [ ENTRY ]),

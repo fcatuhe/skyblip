@@ -1,10 +1,9 @@
 class OAuth::TokensController < ActionController::API
-  include NetworkPseudonym
   include Tracing
 
   GRANT_TYPES = %w[authorization_code refresh_token].freeze
 
-  rate_limit to: 30, within: 1.minute, by: :network_pseudonym, with: -> { head :too_many_requests, retry_after: 1.minute.to_i }
+  rate_limit to: 30, within: 1.minute, with: -> { head :too_many_requests, retry_after: 1.minute.to_i }
 
   rescue_from OAuth::Error do |error|
     Rails.event.notify "oauth_token.refused", error: error.code, grant_type: form[:grant_type].presence_in(GRANT_TYPES) || "other"
