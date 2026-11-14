@@ -222,16 +222,12 @@ TEST_CASE("bravo pairing: leaving the page stops the scan and frees the phone sl
     CHECK(tango.go.platform.link().links() == 3);
 }
 
-// #191's contract: the notice once a boot, the self-test row while it stands.
-TEST_CASE("bravo pairing: with no own ICAO on either side the Go says so once a boot") {
+// The self-test row stands while neither side has one. Only a transponder heard is a notice.
+TEST_CASE("bravo pairing: no own ICAO on either side and nothing heard shows no notice") {
     Tango tango;
     tango.pair();
     CHECK(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
-    CHECK(tango.go.product.screen().noticing());
-
-    tango.go.tap(tango.now_ms);
     CHECK_FALSE(tango.go.product.screen().noticing());
-    CHECK(tango.go.product.screen().mode() == go::Mode::Page);
 
     tango.air.set_in_range(false);
     tango.air.drop();
@@ -242,21 +238,6 @@ TEST_CASE("bravo pairing: with no own ICAO on either side the Go says so once a 
     REQUIRE(tango.service().link() == go::BravoLink::Up);
     CHECK(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
     CHECK_FALSE(tango.go.product.screen().noticing());
-}
-
-TEST_CASE("bravo pairing: the button on the own-ICAO notice opens the AIRCRAFT menu") {
-    Tango tango;
-    tango.pair();
-    REQUIRE(tango.go.product.screen().noticing());
-
-    tango.go.press(tango.now_ms);
-    tango.run_for(500);
-    const go::ScreenService& screen = tango.go.product.screen();
-    CHECK_FALSE(screen.noticing());
-    CHECK(screen.mode() == go::Mode::Menu);
-    CHECK(screen.editor().page() == go::Page::Radar);
-    CHECK(screen.editor().aircraft());
-    CHECK(screen.editor().focus() == go::MenuRow::Detected);
 }
 
 TEST_CASE("bravo pairing: Bravo's own ICAO, or the Go's, keeps the warning down") {

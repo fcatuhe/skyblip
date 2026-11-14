@@ -137,16 +137,6 @@ TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is conne
     CHECK(reads_pad_key(canvas, "KEEP"));
 }
 
-TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it") {
-    Glass canvas;
-    draw_own_icao_notice(canvas);
-    CHECK(reads_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt));
-    CHECK(centred_reads(canvas, "YOUR TRANSPONDER", kMenuScale));
-    CHECK(centred_reads(canvas, "AIRCRAFT", kMenuScale));
-    CHECK(reads_button_key(canvas, "SET"));
-    CHECK(reads_pad_key(canvas, "CLOSE"));
-}
-
 TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropped it too") {
     Glass canvas;
     draw_bravo_forgot_notice(canvas);

@@ -80,11 +80,6 @@ MenuAction MenuEditor::advance() {
     return MenuAction::Leave;
 }
 
-void MenuEditor::open_aircraft() {
-    aircraft_ = true;
-    focus_ = 0;
-}
-
 // INFO: fc 13nov26 the thumb comes back to the row it left from, which now reads what was stored
 void MenuEditor::back_to_settings() {
     aircraft_ = false;
@@ -212,7 +207,10 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             next.light = !current.light;
             leave();
             return MenuAction::Light;
-        case MenuRow::Aircraft: open_aircraft(); return MenuAction::Moved;
+        case MenuRow::Aircraft:
+            aircraft_ = true;
+            focus_ = 0;
+            return MenuAction::Moved;
         case MenuRow::Detected: return use_detected(current, next);
         case MenuRow::Callsign:
         case MenuRow::OwnIcao: edit(row, current); return MenuAction::Moved;

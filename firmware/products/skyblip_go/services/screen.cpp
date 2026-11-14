@@ -165,11 +165,6 @@ void ScreenService::press(uint32_t now_ms) {
         if (!notice_read(now_ms)) return;
         use_noticed_aircraft();
     }
-    if (notice_ && notice_kind_ == Notice::OwnIcao) {
-        close_notice();
-        open_aircraft_menu(now_ms);
-        return;
-    }
     if (close_notice()) return;
     if (on_bravo_page()) {
         act_on_bravo(bravo_page_.button(bravo_view(), now_ms), now_ms);
@@ -204,12 +199,6 @@ void ScreenService::enter_menu(uint32_t now_ms) {
     mode_ = Mode::Menu;
     sync_editor(now_ms);
     change_screen();
-}
-
-void ScreenService::open_aircraft_menu(uint32_t now_ms) {
-    show_radar();
-    enter_menu(now_ms);
-    editor_.open_aircraft();
 }
 
 void ScreenService::page_forward(uint32_t now_ms) {

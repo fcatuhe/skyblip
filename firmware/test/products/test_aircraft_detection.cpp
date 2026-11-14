@@ -55,9 +55,8 @@ bool glass_reads(Rig& rig, const char* text, int scale) {
                     go::kGlassHeight, scale);
 }
 
-// Parked with a fix, and Bravo holding an own ICAO so the own-ICAO notice stands aside.
+// Parked with a fix, and neither the Go nor Bravo holding an own ICAO.
 void paired_on_the_radar(Tango& tango, bool fixed = true) {
-    tango.bravo.health.own_icao_set = true;
     tango.pair_and_store();
     if (fixed) {
         tango.go.seconds(tango.now_ms, 5, 0, 500);
@@ -142,6 +141,18 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     REQUIRE(stored_settings(tango.go, stored));
     CHECK(stored.own_icao == kHeardAddress);
     CHECK(std::string(stored.callsign) == "F-JABC");
+}
+
+// A pilot who switches the transponder to ALT at the holding point still has time to take it.
+TEST_CASE("aircraft detection: a transponder first heard while taxiing is proposed") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.go.seconds(tango.now_ms, 3, 6000, 500);
+    REQUIRE(tango.go.state().flight.rolling);
+    REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
+    CHECK(tango.go.product.screen().noticing());
+    CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::NewAircraft);
 }
 
 // A wingman 10 m off in the air is as loud as our own transponder, so the air proposes nothing.

@@ -24,16 +24,9 @@ class OwnIcaoWarning {
         return paired_ && !bravo_own_icao_set_ && own_icao == kOwnIcaoUnset;
     }
 
-    bool take_notice(uint32_t own_icao) {
-        if (noticed_ || !stands(own_icao)) return false;
-        noticed_ = true;
-        return true;
-    }
-
    private:
     bool paired_{false};
     bool bravo_own_icao_set_{false};
-    bool noticed_{false};
 };
 
 }  // namespace skyblip::go

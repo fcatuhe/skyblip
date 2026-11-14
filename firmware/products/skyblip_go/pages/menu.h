@@ -174,7 +174,6 @@ class MenuEditor {
 
     void enter(Page page, uint32_t now_ms);
     void leave();
-    void open_aircraft();
 
     bool active() const { return active_; }
     Page page() const { return page_; }

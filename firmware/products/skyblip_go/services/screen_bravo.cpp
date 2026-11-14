@@ -53,11 +53,8 @@ void ScreenService::sync_notice(uint32_t now_ms) {
                     now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
         close_notice();
     if (alarm_takes_glass()) return;
-    // INFO: fc 11nov26 a lost pin outranks the own-ICAO notice, which no longer stands unpaired
     if (bravo_.take_forgotten_notice()) {
         notice_kind_ = Notice::BravoForgot;
-    } else if (!notice_ && bravo_.own_icao_warning().take_notice(settings_.own_icao)) {
-        notice_kind_ = Notice::OwnIcao;
     } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
         notice_kind_ = Notice::NewAircraft;
         noticed_aircraft_ = heard;

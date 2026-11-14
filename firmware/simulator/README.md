@@ -13,7 +13,7 @@ Each aircraft is placed north and east of where own-ship was when it was added, 
 
 ## A Go paired with a Bravo
 
-`PairedSimulator` holds a `Simulator`, whose world is the one sky, and a Bravo with `world/bravo_aboard.h` beside it. Both boot already paired, as a Tango leaves the hangar: before `setup()`, each settings blob on flash pins the other, at `PairedLink`'s two addresses. The Go's blob also sets `PairedSimulator::kOwnIcao`, because a pilot flying a Tango sets one, and without it the Go shows the own-ICAO notice once a boot (#191).
+`PairedSimulator` holds a `Simulator`, whose world is the one sky, and a Bravo with `world/bravo_aboard.h` beside it. Both boot already paired, as a Tango leaves the hangar: before `setup()`, each settings blob on flash pins the other, at `PairedLink`'s two addresses. The Go's blob also sets `PairedSimulator::kOwnIcao`, because a pilot flying a Tango sets one.
 
 `BravoAboard` puts Bravo in the Go's aircraft. Each step, after the Go's world:
 

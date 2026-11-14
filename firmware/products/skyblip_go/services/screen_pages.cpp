@@ -93,7 +93,6 @@ void ScreenService::render(uint32_t now_ms) {
         switch (notice_kind_) {
             case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
             case Notice::NewAircraft: draw_aircraft_notice(framebuffer_, noticed_aircraft_); break;
-            case Notice::OwnIcao: draw_own_icao_notice(framebuffer_); break;
         }
         return;
     }

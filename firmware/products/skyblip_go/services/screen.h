@@ -95,7 +95,7 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
-    enum class Notice : uint8_t { OwnIcao, BravoForgot, NewAircraft };
+    enum class Notice : uint8_t { BravoForgot, NewAircraft };
 
     bool noticing() const { return notice_; }
     Notice notice() const { return notice_kind_; }
@@ -119,7 +119,6 @@ class ScreenService : public runtime::Service {
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page();
     void enter_menu(uint32_t now_ms);
-    void open_aircraft_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
     void show_radar();
@@ -208,7 +207,7 @@ class ScreenService : public runtime::Service {
     BravoService& bravo_;
     BravoPage bravo_page_{};
     uint32_t notice_since_ms_{0};
-    Notice notice_kind_{Notice::OwnIcao};
+    Notice notice_kind_{Notice::BravoForgot};
     bool notice_{false};
     Detected noticed_aircraft_{};
     Detected detected_on_glass_{};
