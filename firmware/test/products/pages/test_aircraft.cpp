@@ -100,7 +100,7 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
     values.detected = heard_glider();
     const Glass focused = aircraft_menu_of(values, MenuRow::Detected);
     CHECK(reads_heading(focused, "AIRCRAFT", Heading::Opened));
-    CHECK(reads(focused, "ICAO 3A4B5C", kMenuScale, false));
+    CHECK(reads(focused, "ADS-B 3A4B5C", kMenuScale, false));
     CHECK(reads_button_key(focused, "USE"));
     CHECK(reads(focused, "F-JABC", kCallsignScale, false));
     CHECK(reads(focused, "GLIDER", kMenuScale, false));
@@ -111,7 +111,7 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
 
     const Glass on_a_row = aircraft_menu_of(values, MenuRow::OwnIcao);
     CHECK(reads(on_a_row, "F-JABC", kCallsignScale));
-    CHECK(reads_at(on_a_row, kMenuLeftX, menu_line_text_y(kMenuLines - 1), "OWN ICAO", kMenuScale,
+    CHECK(reads_at(on_a_row, kMenuLeftX, menu_line_text_y(kMenuLines - 1), "ADS-B", kMenuScale,
                    false));
 }
 
@@ -169,7 +169,7 @@ TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contac
     draw_aircraft_notice(canvas, heard_glider());
     CHECK(reads_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt));
     CHECK(reads(canvas, "F-JABC", kCallsignScale));
-    CHECK(reads(canvas, "ICAO 3A4B5C", kMenuScale));
+    CHECK(reads(canvas, "ADS-B 3A4B5C", kMenuScale));
     CHECK(reads(canvas, "GLIDER", kMenuScale));
     CHECK(reads_button_key(canvas, "USE"));
     CHECK(reads_pad_key(canvas, "CLOSE"));

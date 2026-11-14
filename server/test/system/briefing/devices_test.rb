@@ -326,19 +326,19 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "the own ICAO is typed in hex, and half an address is never sent" do
+  test "the ADS-B address is typed in hex, and half an address is never sent" do
     in_range a_go
     on_the_shelf do
       connect_go
-      fill_in "Own ICAO address", with: "3C65"
+      fill_in "ADS-B address", with: "3C65"
       click_button "Save 1 change"
       assert_selector "#unit-own-icao:invalid"
       assert_nil page.evaluate_script("#{unit("00012A")}.staged ?? null")
 
-      fill_in "Own ICAO address", with: "3c6586"
+      fill_in "ADS-B address", with: "3c6586"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
-      assert_field "Own ICAO address", with: "3C6586"
+      assert_field "ADS-B address", with: "3C6586"
       assert_equal({ "own_icao" => 0x3C6586 }, page.evaluate_script("#{unit("00012A")}.staged"))
     end
   end

@@ -50,7 +50,7 @@ const char* name_of(const Detected& detected, char* address) {
 }
 
 void heard_label(char* out, const Detected& detected) {
-    int written = format_string(out, "ICAO ");
+    int written = format_string(out, "ADS-B ");
     written += format_hex(out + written, detected.address, kOwnIcaoCharacters);
     out[written] = 0;
 }

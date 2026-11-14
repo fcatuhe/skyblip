@@ -130,7 +130,7 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     focus_on(tango.go, now_ms, go::MenuRow::Detected);
     tango.go.run(now_ms, now_ms + 4000);
     now_ms += 4000;
-    CHECK(reads_in(tango.go.product.screen().framebuffer(), "ICAO 3A4B5C", 0, 0, go::kGlassWidth,
+    CHECK(reads_in(tango.go.product.screen().framebuffer(), "ADS-B 3A4B5C", 0, 0, go::kGlassWidth,
                    go::kGlassHeight, 2, false));
 
     change(tango.go, now_ms);

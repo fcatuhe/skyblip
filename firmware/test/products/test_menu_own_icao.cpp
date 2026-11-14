@@ -68,7 +68,7 @@ TEST_CASE("menu: an own ICAO typed against the transponder Bravo names stays in 
     CHECK(glass_reads(tango.go, now_ms, go::kOwnTransponderRefusedText));
     CHECK(glass_reads(tango.go, now_ms, "BRAVO HEARS"));
     go::CallsignSnapshot field;
-    field.title = "OWN ICAO";
+    field.title = "ADS-B";
     field.text = "3A0001";
     field.own_transponder = kHeardAddress;
     field.refused = true;

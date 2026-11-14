@@ -77,7 +77,7 @@ constexpr int kSelfTestFooterHeight =
 static_assert(self_test_row_y(kSelfTestRows) + kSelfTestFooterHeight <= kGlassHeight,
               "the last row would fall off the glass");
 
-constexpr const char kSelfTestOwnIcaoText[] = "NO OWN ICAO: OWN XPDR IS TRAFFIC";
+constexpr const char kSelfTestOwnIcaoText[] = "ADS-B UNSET: OWN XPDR IS TRAFFIC";
 static_assert(sizeof(kSelfTestOwnIcaoText) - 1 <= kSelfTestRowCells, "the warning fits its row");
 
 void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot);

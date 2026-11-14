@@ -304,7 +304,7 @@ TEST_CASE(
         while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
         if (at == 2) {
             go::CallsignSnapshot field;
-            field.title = "OWN ICAO";
+            field.title = "ADS-B";
             field.text = "3C6   ";
             field.cursor = 2;
             go::Glass expected;
@@ -326,7 +326,7 @@ TEST_CASE(
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().clearing());
     go::ClearSnapshot clear;
-    clear.title = "OWN ICAO";
+    clear.title = "ADS-B";
     clear.text = "3C6586";
     go::Glass asked;
     go::draw_clear(asked, clear);

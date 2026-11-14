@@ -103,7 +103,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Light: return "LIGHT";
         case MenuRow::AircraftType: return "TYPE";
         case MenuRow::Callsign: return "CALLSIGN";
-        case MenuRow::OwnIcao: return "OWN ICAO";
+        case MenuRow::OwnIcao: return "ADS-B";
         case MenuRow::Units: return "UNITS";
         case MenuRow::Range: return "RANGE";
         case MenuRow::Plot: return "PLOT";

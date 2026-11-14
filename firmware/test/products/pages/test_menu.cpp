@@ -311,7 +311,7 @@ TEST_CASE("own ICAO page: six hex digits stand centred at the callsign's size, u
 
     Glass canvas;
     draw_callsign(canvas, field);
-    CHECK(reads_heading(canvas, "OWN ICAO", Heading::Opened));
+    CHECK(reads_heading(canvas, "ADS-B", Heading::Opened));
     CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
     CHECK(kOwnIcaoTextX - (Glass::kWidth - kOwnIcaoTextX - 6 * kCallsignCellWidth) <= 1);
 
@@ -330,7 +330,7 @@ TEST_CASE("own ICAO page: a clear shows the address it throws away and what that
 
     Glass canvas;
     draw_clear(canvas, clear);
-    CHECK(reads_heading(canvas, "OWN ICAO", Heading::Opened));
+    CHECK(reads_heading(canvas, "ADS-B", Heading::Opened));
     CHECK(reads_pad_key(canvas, kFieldKeepVerb));
     CHECK(reads_button_key(canvas, kFieldEraseVerb));
     const BodyLine body[] = {{"3C6586", kCallsignScale},

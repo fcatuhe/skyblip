@@ -54,12 +54,12 @@ TEST_CASE(
     Settings from = defaults();
     Settings to = from;
     to.own_icao = 0x3C6586;
-    CHECK(described(from, to) == "OWN ICAO 3C6586");
+    CHECK(described(from, to) == "ADS-B 3C6586");
 
     from = to;
     to.own_icao = kOwnIcaoUnset;
     to.units = Units::Metric;
-    CHECK(described(from, to) == "OWN ICAO NONE\nUNITS METRIC");
+    CHECK(described(from, to) == "ADS-B NONE\nUNITS METRIC");
 }
 
 TEST_CASE("settings changes page: every key a set may change at once still counts on three rows") {
