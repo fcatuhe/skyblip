@@ -2,6 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { Turbo } from "@hotwired/turbo-rails"
 import { Activator, httpServer } from "#skyblip/activation"
 import { hasWebBluetooth, joinFleet } from "#skyblip/fleet"
+import { sharedJournal } from "#skyblip/journal"
 import { factsOf, shortName } from "controllers/briefing/facts"
 import { say, sayNotice } from "controllers/briefing/words"
 
@@ -53,7 +54,7 @@ export default class extends Controller {
 
   get #activator() {
     const token = document.querySelector('meta[name="csrf-token"]')?.content
-    const server = httpServer({ challenges: this.challengesValue, registrations: this.registrationsValue, token })
+    const server = httpServer({ challenges: this.challengesValue, registrations: this.registrationsValue, token, browser: sharedJournal().browser })
     return this.candidate.activator(({ device, onChange }) => new Activator({ server, device, onChange }))
   }
 

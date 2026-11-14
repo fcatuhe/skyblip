@@ -1,0 +1,120 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://claude.ai/oauth/claude-code-client-metadata
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+      Host:
+      - claude.ai
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 13 Oct 2026 09:45:32 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cache-Control:
+      - public, max-age=300
+      Request-Id:
+      - req_011Cfz2Er6K9q7wbgXztxzoX
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      Server-Timing:
+      - x-originResponse;dur=32
+      Cf-Cache-Status:
+      - DYNAMIC
+      Set-Cookie:
+      - __cf_bm=BfRAQuyeUICoCjOIu8.Y8z2g20SeIKxtCDm8IL9Io24-1791884731.976134-1.0.1.1-rhiqEuuTQoSkfojQzRMMLQMfDBEwZyRA3RJU7TpAV1OqIgatPhFLmwTuk5MgeADEc.eGqdnTaZywD3Mfsn0xTGXP7DUxgb8DjFSuTVN7AWiiMn404O4nAPzhvwvnqTEP;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=claude.ai; Expires=Tue, 13
+        Oct 2026 10:15:32 GMT
+      - _cfuvid=FJnFGg1opDHClBmRp6pzuTm7OMhdAglCGal_CIGOt6k-1791884731.976134-1.0.1.1-sQWcKX33YQw.Pm295QHZ4gjfj1ZaGMJVytqb2PWu0Zc;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=claude.ai
+      X-Robots-Tag:
+      - none
+      Cf-Ray:
+      - a49d6976d8a0f8c9-CDG
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: '{"client_id":"https://claude.ai/oauth/claude-code-client-metadata","client_name":"Claude
+        Code","client_uri":"https://claude.ai","redirect_uris":["http://localhost/callback","http://127.0.0.1/callback"],"grant_types":["authorization_code","refresh_token"],"response_types":["code"],"token_endpoint_auth_method":"none"}'
+  recorded_at: Tue, 13 Oct 2026 09:45:32 GMT
+- request:
+    method: get
+    uri: https://claude.ai/oauth/mcp-oauth-client-metadata
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      User-Agent:
+      - Ruby
+      Host:
+      - claude.ai
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Date:
+      - Tue, 13 Oct 2026 12:47:10 GMT
+      Content-Type:
+      - application/json
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Cache-Control:
+      - public, max-age=300
+      Request-Id:
+      - req_011CfzG6D5kU91qbkSvykKpp
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Server:
+      - cloudflare
+      Vary:
+      - Accept-Encoding
+      Server-Timing:
+      - x-originResponse;dur=21
+      Cf-Cache-Status:
+      - DYNAMIC
+      Set-Cookie:
+      - __cf_bm=G2C9DQuiW4tqSccv3rzNQPdbsd6o6qwa_rp9tlOncWU-1791895630.3043032-1.0.1.1-qjGxWiVP2PgemSbt7rnlqLh7KD.G2bbxxNBnaem_6E0MsT5cyc7wU9nGeD1owgaSuyvUsG.clrRko7thPUX3vRP._MlCaUO6a2j0b35g9rwCmk5DjjK9hLmfyuXXKQrw;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=claude.ai; Expires=Tue, 13
+        Oct 2026 13:17:10 GMT
+      - _cfuvid=aMvFRz8jw1DfEePrJQHFkMq5c9_.UPgPxeKt9ffcoiI-1791895630.3043032-1.0.1.1-O6G87Kzzj7Jx8Opooe.QQwYqMwjpmjDNlG9dAoULCYA;
+        HttpOnly; SameSite=None; Secure; Path=/; Domain=claude.ai
+      X-Robots-Tag:
+      - none
+      Cf-Ray:
+      - a49e73896a1a999e-CDG
+      Alt-Svc:
+      - h3=":443"; ma=86400
+    body:
+      encoding: ASCII-8BIT
+      string: '{"client_id":"https://claude.ai/oauth/mcp-oauth-client-metadata","client_name":"Claude","client_uri":"https://claude.ai","redirect_uris":["https://claude.ai/api/mcp/auth_callback"],"grant_types":["authorization_code","refresh_token","urn:ietf:params:oauth:grant-type:jwt-bearer"],"response_types":["code"],"token_endpoint_auth_method":"none"}'
+  recorded_at: Tue, 13 Oct 2026 12:47:10 GMT
+recorded_with: VCR 6.4.0

@@ -1,4 +1,6 @@
 import { hasWebBluetooth, permittedDevices, requestDevice } from '#skyblip/ble';
+import { ActivationWitness, DeviceWitness } from '#skyblip/device_journal';
+import { journalOrNull } from '#skyblip/journal';
 import { LINKED_PHASES, RETURN_EVERY_MS, Updater, productOf } from '#skyblip/update';
 
 export { hasWebBluetooth };
@@ -53,6 +55,7 @@ function recordOf(slug, state, before = {}) {
 
 export class Unit {
   attempted = null;
+  witness = new DeviceWitness();
   #fleet;
   #updater = null;
   #activator = null;
@@ -103,7 +106,10 @@ export class Unit {
   }
 
   activator(build) {
-    this.#activator ??= build({ device: this.handle, onChange: () => this.#fleet.changed() });
+    if (!this.#activator) {
+      const witness = new ActivationWitness();
+      this.#activator = build({ device: this.handle, onChange: state => this.#fleet.activationChanged(this, witness, state) });
+    }
     return this.#activator;
   }
 
@@ -128,10 +134,12 @@ export class Fleet {
   #returnEveryMs;
   #restored = null;
   #seenThisSession = new WeakSet();
+  #journal;
 
-  constructor({ storage = null, returnEveryMs = RETURN_EVERY_MS } = {}) {
+  constructor({ storage = null, returnEveryMs = RETURN_EVERY_MS, journal = journalOrNull() } = {}) {
     this.#storage = storage;
     this.#returnEveryMs = returnEveryMs;
+    this.#journal = journal;
     for (const record of this.#recall()) this.#units.set(record.slug, new Unit(this, record.slug, record));
   }
 
@@ -156,9 +164,14 @@ export class Fleet {
     for (const listener of this.#listeners) listener(this);
   }
 
+  activationChanged(unit, witness, state) {
+    this.#record(unit, witness.witness(state));
+    this.changed();
+  }
+
   // INFO: fc 11nov26 the browser's chooser is the only way to a device it never granted, so a new one always passes through it
   async connectNew({ activation = false } = {}) {
-    const device = await this.#choose(activation ? { namePrefix: 'activate' } : {});
+    const device = await this.#choose(activation ? { namePrefix: 'activate' } : {}, activation ? 'activation' : 'new');
     if (!device) return null;
     const unit = this.#unitFor(device);
     if (!unit.linked) await unit.connect();
@@ -168,7 +181,7 @@ export class Fleet {
   async connect(slug) {
     const unit = this.unit(slug) ?? this.#add(new Unit(this, slug));
     if (!unit.handle) {
-      const device = await this.#choose({ names: namesOf(slug) });
+      const device = await this.#choose({ names: namesOf(slug) }, 'named', slug);
       if (!device) return unit;
       unit.attach(device);
     }
@@ -194,6 +207,7 @@ export class Fleet {
     if (!unit) return;
     unit.disconnect();
     unit.handle?.forget?.().catch(error => console.warn('The browser kept its permission for this device:', error.message));
+    this.#journal?.record('device.forgotten', {}, { device: slug });
     this.#units.delete(slug);
     this.#remember();
     this.changed();
@@ -203,11 +217,14 @@ export class Fleet {
     return new Updater({ device, returnEveryMs: this.#returnEveryMs, onChange: state => this.#heard(unit, state) });
   }
 
-  async #choose(options) {
+  // INFO: fc 14nov26 Chrome closes the chooser as NotFoundError both when the pilot cancels and when Bluetooth is off, and only the message tells them apart
+  async #choose(options, filter, slug = null) {
     try {
       return await requestDevice(options);
     } catch (error) {
-      if (error.name === 'NotFoundError') return null;
+      const closed = error.name === 'NotFoundError';
+      this.#journal?.record(closed ? 'bluetooth.chooser_closed' : 'bluetooth.chooser_failed', { filter, error: error.name, detail: error.message }, { device: slug });
+      if (closed) return null;
       throw error;
     }
   }
@@ -227,6 +244,7 @@ export class Fleet {
 
   #heard(unit, state) {
     if (unit.slug.startsWith('activate-') && state.address) this.#rename(unit, `go-${state.address.toLowerCase()}`);
+    this.#record(unit, unit.witness.witness(state, { attempted: unit.attempted }));
     if (unit.remembered && LINKED_PHASES.has(state.phase)) {
       const record = recordOf(unit.slug, state, unit.record);
       const changed = JSON.stringify(record) !== JSON.stringify(unit.record);
@@ -238,6 +256,10 @@ export class Fleet {
       }
     }
     this.changed();
+  }
+
+  #record(unit, entries) {
+    for (const [name, properties] of entries) this.#journal?.record(name, properties, { device: unit.slug });
   }
 
   #rename(unit, slug) {

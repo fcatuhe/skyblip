@@ -54,4 +54,4 @@
   </table>
 </div>
 
-<p><%= link_to "All units", admin_units_path %></p>
+<p><%= link_to "Timeline", admin_events_path(device: @unit.slug) %> · <%= link_to "All units", admin_units_path %></p>

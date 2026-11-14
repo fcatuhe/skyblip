@@ -7,7 +7,7 @@
     <%= render "layouts/head" %>
   </head>
 
-  <body class="app" data-briefing-words="<%= briefing_words.to_json %>">
+  <body class="app" data-briefing-words="<%= briefing_words.to_json %>" data-controller="journal" data-journal-chatter-value="true" data-action="click->journal#clicked">
     <header class="app-bar">
       <%= link_to briefing_root_path, class: "app-bar-brand" do %>
         <%= render "layouts/wordmark", css: "wordmark-app" %>

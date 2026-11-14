@@ -16,6 +16,8 @@ en:
       title: Settings
       language: Language
       language_name: English
+      support_code: Support code
+      support_code_hint: "When you ask for help, give this code. It lets us read what happened between this browser and your devices: connections, refusals, installs and errors. It holds nothing you typed."
     devices:
       attention: Needs attention
       no_bluetooth_title: Open this on Android or a computer
@@ -81,8 +83,7 @@ en:
       recovery: Firmware will not take?
       recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
       recover: Restart into the USB drive
-      report_hint: "Send us this line by message or email. Tell us what you did. The line tells us why the update failed."
-      report_copy: Copy the report
+      report_received_html: "skyBlip received the details of this failure. If you write to us, tell us what you did and give your support code %{code}."
     terminal:
       title: Terminal
       row: Every Bluetooth frame

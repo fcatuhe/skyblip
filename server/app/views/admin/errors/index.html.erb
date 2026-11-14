@@ -1,0 +1,47 @@
+<% content_for :title, "Errors" %>
+<header class="admin-header">
+  <h1>Errors</h1>
+  <nav class="admin-tabs" aria-label="Period">
+    <% Event::Review::PERIODS.each do |days| %>
+      <%= link_to "#{days} days", admin_errors_path(days:), "aria-current": ("page" if days == @days) %>
+    <% end %>
+  </nav>
+</header>
+
+<% if @problems.empty? %>
+  <p>Nothing broke in the last <%= @days %> days.</p>
+<% else %>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Problem</th>
+          <th>Side</th>
+          <th>Times</th>
+          <th>Devices</th>
+          <th>Browsers</th>
+          <th>First seen</th>
+          <th>Last seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @problems.each do |problem| %>
+          <tr>
+            <th>
+              <%= link_to problem.error, admin_error_path(problem.fingerprint) %>
+              <% if problem.new_since?(@since) %><span class="admin-badge">new</span><% end %>
+              <div class="quiet"><%= problem.message.to_s.truncate(120) %></div>
+              <div class="mono quiet"><%= problem.place %></div>
+            </th>
+            <td><%= problem.side %></td>
+            <td><%= problem.count %></td>
+            <td><%= problem.devices %></td>
+            <td><%= problem.browsers %></td>
+            <td><%= event_time(problem.first_at) %></td>
+            <td><%= event_time(problem.last_at) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

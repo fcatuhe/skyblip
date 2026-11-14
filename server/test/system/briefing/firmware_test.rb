@@ -39,8 +39,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   end
 
   # The silence of #278: back on its old firmware, confirmed, and nothing on record.
-  test "an install that comes back on the old firmware says so, and offers a report to copy" do
-    page.driver.browser.command("Browser.grantPermissions", permissions: %w[clipboardReadWrite clipboardSanitizedWrite])
+  test "an install that comes back on the old firmware says so, and the report reaches skyBlip by itself" do
     in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
     on_the_shelf do
       connect_go
@@ -52,11 +51,12 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_selector ".firmware-status", text: "The device is installing the firmware and restarting", wait: 30
       assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1005. It kept no record of the installation.", wait: 10
       assert_no_selector ".firmware-progress"
-      assert_selector ".firmware-report-line", text: /\Askyblip-install-report v1 product=skyblip_go running=0\.1\.0\+1000 tried=0\.1\.0\+1005 image=confirmed .* cause=no_record report=none /
+      assert_selector ".firmware-report", text: /skyBlip received the details of this failure\. .* give your support code [0-9A-Z]{4}-[0-9A-Z]{4}\./
       screen "28-firmware-no-record"
 
-      click_button "Copy the report"
-      assert_selector ".firmware-report.is-copied", text: "Copied"
+      reported = journaled("device.install_reported")
+      assert_equal [ "no_record", "0.1.0+1000", "0.1.0+1005", false ], reported.payload.values_at("cause", "running", "tried", "report")
+      assert_equal "go-00012a", reported.device
     end
   end
 
@@ -69,9 +69,12 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       click_button "Connect a device"
       click_link "Firmware"
       assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
-      assert_selector ".firmware-report-line", text: "image=reverted from=0.1.0+40 to=0.1.0+44 cause=probation_failed check=matched swap=test"
-      assert_selector ".firmware-report-line", text: "probation_boots=1 proof=started reset=watchdog"
+      assert_selector ".firmware-report", text: "skyBlip received the details of this failure."
       screen "29-firmware-reverted-report"
+
+      reported = journaled("device.install_reported")
+      assert_equal [ "probation_failed", "reverted", "0.1.0+40", "0.1.0+44", "matched", 1, "watchdog" ],
+        reported.payload.values_at("cause", "image", "from", "to", "check", "probation_boots", "reset")
     end
   end
 

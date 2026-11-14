@@ -8,11 +8,26 @@ Rails.application.routes.draw do
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
+
+  resource :mcp, only: %i[show create destroy]
+
+  namespace :oauth do
+    resource :authorization, only: %i[new create destroy]
+    resource :token, only: :create
+    resource :revocation, only: :create
+  end
+
+  scope ".well-known", module: :oauth do
+    resource :authorization_server, only: :show, path: "oauth-authorization-server"
+    resource :protected_resource, only: :show, path: "oauth-protected-resource/mcp"
+  end
+
   get "/.well-known/*", to: ->(_env) { [ 204, {}, [] ] }
 
   mount Ahoy::Engine, at: :hoy
 
   resource :session, only: %i[new create destroy]
+  resources :events, only: :create
 
   namespace :admin do
     resource :analytics, only: :show do
@@ -20,6 +35,10 @@ Rails.application.routes.draw do
         resources :visitors, only: %i[index show], param: :visitor_token
       end
     end
+    resource :insights, only: :show
+    resources :events, only: :index
+    resources :errors, only: %i[index show], param: :fingerprint
+    resources :agents, only: %i[index destroy]
     resources :users
     resources :units, only: %i[index show]
     resources :unit_keys, only: [] do

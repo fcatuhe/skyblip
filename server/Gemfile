@@ -28,6 +28,7 @@ gem "ahoy_matey"
 gem "geocoder"
 gem "maxminddb"
 gem "mission_control-jobs"
+gem "mcp", "~> 1.9"
 
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"

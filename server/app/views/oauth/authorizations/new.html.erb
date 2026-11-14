@@ -1,0 +1,35 @@
+<%# locals: (authorization:) %>
+<% content_for :title, "Connect #{authorization.client.name} to skyBlip" %>
+
+<header class="admin-header">
+  <h1>Connect <%= authorization.client.name %></h1>
+</header>
+
+<p>
+  <%= authorization.client.name %> will read, as <strong><%= Current.user.email %></strong>, everybody's events,
+  the insights computed from them, the errors and the units, and send them to the AI provider it uses. It cannot change
+  anything, and you can disconnect it under <%= link_to "Agents", admin_agents_path %> at any time.
+</p>
+
+<dl class="admin-details">
+  <dt>Client</dt>
+  <dd class="mono"><%= authorization.client.document_url %></dd>
+  <dt>Returns to</dt>
+  <dd><%= authorization.redirect_host %></dd>
+</dl>
+
+<div class="admin-actions">
+  <%= form_with url: oauth_authorization_path, method: :post, data: { turbo: false } do |form| %>
+    <% authorization.fields.each do |name, value| %>
+      <%= hidden_field_tag name, value, id: nil %>
+    <% end %>
+    <%= form.button "Connect #{authorization.client.name}", class: "button" %>
+  <% end %>
+
+  <%= form_with url: oauth_authorization_path, method: :delete, data: { turbo: false } do |form| %>
+    <% authorization.fields.each do |name, value| %>
+      <%= hidden_field_tag name, value, id: nil %>
+    <% end %>
+    <%= form.button "Cancel", class: "button button--secondary" %>
+  <% end %>
+</div>

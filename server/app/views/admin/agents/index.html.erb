@@ -1,0 +1,39 @@
+<% content_for :title, "Agents" %>
+<header class="admin-header">
+  <h1>Agents</h1>
+</header>
+
+<p>
+  A coding agent reads skyBlip's insights, errors, events and units through the MCP server at
+  <span class="mono"><%= mcp_url %></span>, as the admin who connected it. It connects with OAuth, and asks for your approval
+  once a month. In Claude Code: <span class="mono">claude mcp add --transport http skyblip <%= mcp_url %></span>.
+</p>
+
+<% if @grants.empty? %>
+  <p>No agent is connected.</p>
+<% else %>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>Admin</th>
+          <th>Approved</th>
+          <th>Last used</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @grants.each do |grant| %>
+          <tr>
+            <th><%= grant.client.name %></th>
+            <td><%= grant.user.name %></td>
+            <td><%= l grant.approved_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td><%= grant.last_used_at ? l(grant.last_used_at, format: "%b %-d, %Y, %H:%M") : "never" %></td>
+            <td><%= button_to "Disconnect", admin_agent_path(grant), method: :delete, class: "button button--danger button--small" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

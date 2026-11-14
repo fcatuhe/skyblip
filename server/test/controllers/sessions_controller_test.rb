@@ -46,4 +46,9 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert_empty cookies[:session_id]
   end
+
+  test "a sign-in is an event, and a refused one says nothing of the address it tried" do
+    assert_event_reported("user.signed_in") { post session_path, params: { email: "francois@skyblip.test", password: "secret-password" } }
+    assert_event_reported("user.sign_in_refused", payload: {}) { post session_path, params: { email: "francois@skyblip.test", password: "wrong" } }
+  end
 end

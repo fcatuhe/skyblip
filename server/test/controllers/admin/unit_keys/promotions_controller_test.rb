@@ -30,4 +30,12 @@ class Admin::UnitKeys::PromotionsControllerTest < ActionDispatch::IntegrationTes
     assert_redirected_to admin_unit_path(units(:bound))
     assert unit_keys(:bound_active).reload.revoked?
   end
+
+  test "a promotion is an event, by the admin who made it" do
+    sign_in_as users(:francois)
+
+    assert_event_reported "unit_key.promoted", payload: { unit_id: units(:contested).id, device: "go-000002", by_id: users(:francois).id } do
+      post admin_unit_key_promotion_path(unit_keys(:contested_pending))
+    end
+  end
 end

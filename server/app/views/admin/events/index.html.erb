@@ -1,0 +1,51 @@
+<% content_for :title, "Events" %>
+<header class="admin-header">
+  <h1>Events</h1>
+</header>
+
+<%= form_with url: admin_events_path, method: :get, class: "admin-filters" do |form| %>
+  <%= form.label :name, "Event or prefix" %>
+  <%= form.text_field :name, value: @filters[:name], placeholder: "device." %>
+  <%= form.label :device, "Device" %>
+  <%= form.text_field :device, value: @filters[:device], placeholder: "go-00012a" %>
+  <%= form.label :browser, "Support code" %>
+  <%= form.text_field :browser, value: support_code(@filters[:browser]), placeholder: "ABCD-EFGH" %>
+  <%= form.submit "Show", class: "button button--small" %>
+  <% if @filters.any? %>
+    <%= link_to "All events", admin_events_path %>
+  <% end %>
+<% end %>
+
+<% if @filters.any? %>
+  <p><%= pluralize(@events.size, "event") %>, oldest first.</p>
+  <%= render "admin/events/list", events: @events %>
+<% else %>
+  <% Event::Catalog.groups.each do |group, entries| %>
+    <h2><%= group %></h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>30 days</th>
+            <th>Last seen</th>
+            <th>Says</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% entries.each do |entry| %>
+            <tr class="<%= "admin-unseen" unless @last_seen[entry.name] %>">
+              <th><%= link_to entry.name, admin_events_path(name: entry.name) %></th>
+              <td><%= @counts[entry.name].to_i %></td>
+              <td><%= @last_seen[entry.name] ? event_time(@last_seen[entry.name]) : "never" %></td>
+              <td><%= entry.says %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <h2>Latest</h2>
+  <%= render "admin/events/list", events: @events.last(100).reverse %>
+<% end %>
