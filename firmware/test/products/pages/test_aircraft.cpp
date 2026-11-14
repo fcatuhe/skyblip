@@ -102,7 +102,7 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
     const Glass focused = aircraft_menu_of(values, MenuRow::Detected);
     CHECK(reads_heading(focused, "AIRCRAFT", Heading::Opened));
     CHECK(reads(focused, "ADS-B 3A4B5C", kMenuScale, false));
-    CHECK(reads_button_key(focused, "USE"));
+    CHECK(reads_button_key(focused, "SET"));
     CHECK(reads(focused, "F-JABC", kCallsignScale, false));
     CHECK(reads(focused, "GLIDER", kMenuScale, false));
     for (int line = kDetectedLines; line < kMenuLines; line++)
@@ -172,7 +172,8 @@ TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contac
     CHECK(reads(canvas, "F-JABC", kCallsignScale));
     CHECK(reads(canvas, "ADS-B 3A4B5C", kMenuScale));
     CHECK(reads(canvas, "GLIDER", kMenuScale));
-    CHECK(reads_button_key(canvas, "USE"));
+    CHECK_FALSE(reads(canvas, "YOUR AIRCRAFT", kMenuScale));
+    CHECK(reads_button_key(canvas, "SET"));
     CHECK(reads_pad_key(canvas, "CLOSE"));
 }
 
