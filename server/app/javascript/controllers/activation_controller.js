@@ -25,6 +25,14 @@ export default class extends Controller {
     this.session.leave()
   }
 
+  glassOutletConnected(glass) {
+    this.glass = glass
+  }
+
+  glassOutletDisconnected() {
+    this.glass = null
+  }
+
   async find() {
     this.failure = null
     try {
@@ -95,7 +103,8 @@ export default class extends Controller {
   }
 
   #glass(unit, state) {
-    if (state?.phase === "confirming") this.glassOutlet.show({ title: "ACTIVATE", prompt: "register", product: "Go" })
-    else this.glassOutlet.hide()
+    if (!this.glass) return
+    if (state?.phase === "confirming") this.glass.show({ title: "ACTIVATE", prompt: "register", product: "Go" })
+    else this.glass.hide()
   }
 }
