@@ -9,14 +9,11 @@
 #include "core/events/sensor.h"
 #include "core/input/contact.h"
 #include "core/timing/slot.h"
-#include "hardware/io/i2c_scan.h"
 #include "hardware/parts/ag3335/ag3335.h"
 #include "hardware/parts/drv2605/drv2605.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/spa06/spa06.h"
-#include "hardware/parts/ysn8900/ysn8900.h"
 #include "ports/adsb_receiver.h"
-#include "ports/inventory.h"
 #include "ports/null.h"
 #include "ports/roles.h"
 #include "runtime/tasks.h"
@@ -40,7 +37,6 @@ class MeshtrackerX1 {
           barometer_(platform.i2c(io::BusId::Sensor)),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), platform.delay(),
                   meshtracker_x1::kHapticEnable, meshtracker_x1::kHapticActuator),
-          rtc_(platform.i2c(io::BusId::Rtc)),
           capabilities_(platform.capabilities()) {}
 
     // INFO: fc 12nov26 not in the constructor: a global's runs before the watchdog and the wake
@@ -49,7 +45,6 @@ class MeshtrackerX1 {
         probed_ = true;
         // INFO: fc 12nov26 a version read back proves the part, BUSY falling only a pull-down
         if (radio_.probe() == Status::Ok) capabilities_ |= ports::Capability::AdsbReceiver;
-        take_bus_inventory();
         establish_haptic();
         establish_barometer();
     }
@@ -63,7 +58,6 @@ class MeshtrackerX1 {
     Status begin() {
         const Status status = platform_.begin();
         if (status != Status::Ok) return status;
-        inventory_.rtc_fitted = rtc_.answers();
         if (ports::has(capabilities_, ports::Capability::Barometer)) (void)barometer_.begin();
         if (!ports::has(capabilities_, ports::Capability::AdsbReceiver)) return Status::Ok;
         return receiver_.begin();
@@ -74,7 +68,6 @@ class MeshtrackerX1 {
     void park() { haptic_.park(); }
 
     ports::Capabilities capabilities() const { return capabilities_; }
-    const ports::Inventory& inventory() const { return inventory_; }
     uint32_t barometer_faults() const { return barometer_faults_; }
 
     ports::Roles roles() {
@@ -208,18 +201,10 @@ class MeshtrackerX1 {
             events::Contact::Button, edge == input::Contact::Edge::Down, button_.edge_ms()});
     }
 
-    void take_bus_inventory() {
-        haptic_.power_up();
-        io::scan_i2c(platform_.i2c(io::BusId::Sensor), inventory_);
-    }
-
     void establish_haptic() {
         capabilities_ = ports::without(capabilities_, ports::Capability::Haptic);
-        inventory_.haptic = ports::HapticKind::None;
-        if (!inventory_.has_i2c_address(parts::Drv2605::kAddress)) return;
         if (haptic_.begin() != Status::Ok) return;
         platform_.annunciator().attach_haptic(haptic_);
-        inventory_.haptic = ports::HapticKind::WaveformDriver;
         capabilities_ |= ports::Capability::Haptic | ports::Capability::HapticDriver;
     }
 
@@ -227,9 +212,6 @@ class MeshtrackerX1 {
         capabilities_ = ports::without(capabilities_, ports::Capability::Barometer);
         if (!barometer_.answers()) return;
         capabilities_ |= ports::Capability::Barometer;
-        inventory_.barometer_address = inventory_.has_i2c_address(parts::Spa06::kAddressPrimary)
-                                           ? parts::Spa06::kAddressPrimary
-                                           : parts::Spa06::kAddressAlternate;
     }
 
     Platform& platform_;
@@ -239,8 +221,6 @@ class MeshtrackerX1 {
     parts::Ag3335 gnss_;
     parts::Spa06 barometer_;
     parts::Drv2605 haptic_;
-    parts::Ysn8900 rtc_;
-    ports::Inventory inventory_{};
     input::Contact button_{meshtracker_x1::kButtonHoldMs};
     ports::NullRoles null_{};
     ports::Capabilities capabilities_;

@@ -49,10 +49,7 @@ class MeshtrackerX1 {
 
     io::Spi& spi(io::BusId) { return radio_spi_; }
     io::Uart& uart(io::BusId) { return gnss_.uart(); }
-    io::I2c& i2c(io::BusId bus) {
-        if (bus == io::BusId::Rtc) return rtc_i2c_;
-        return lines_.i2c(bus);
-    }
+    io::I2c& i2c(io::BusId bus) { return lines_.i2c(bus); }
     io::Gpio& gpio() { return lines_.gpio(); }
     io::Delay& delay() { return lines_.delay(); }
     const struct gpio_dt_spec& radio_irq() const { return radio_irq_; }
@@ -100,7 +97,6 @@ class MeshtrackerX1 {
     struct gpio_dt_spec radio_irq_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
     struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(rtc_enable), gpios);
     Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
-    I2c rtc_i2c_{DEVICE_DT_GET(DT_ALIAS(rtc_i2c))};
     Ag3335Wiring gnss_{};
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     Dfu dfu_{};
