@@ -4,7 +4,7 @@
 
 <% if Unit.daily_cap_reached? %>
   <p class="admin-flash admin-flash--alert" role="alert">
-    The daily cap of <%= Unit::NEW_PER_DAY %> new units is reached: new units are refused until midnight UTC.
+    The daily cap of <%= Unit.daily_cap %> new units is reached: new units are refused until midnight UTC.
   </p>
 <% end %>
 
@@ -15,12 +15,16 @@
   </p>
 <% end %>
 
-<% if @server_key %>
-  <dl class="admin-details">
+<dl class="admin-details">
+  <dt>Daily cap</dt>
+  <dd><%= pluralize(Unit.daily_cap, "new unit") %> a day · <%= link_to "Change", edit_admin_activation_cap_path %></dd>
+  <% if @server_key %>
     <dt>Server key</dt>
     <dd><span class="mono"><%= @server_key.id %></span>, public key <span class="mono"><%= @server_key.public_key %></span></dd>
-  </dl>
-<% else %>
+  <% end %>
+</dl>
+
+<% unless @server_key %>
   <p class="admin-flash admin-flash--alert" role="alert">
     No server key in the credentials: every activation fails. The README's Activation section says how to add it.
   </p>

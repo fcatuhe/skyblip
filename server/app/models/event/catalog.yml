@@ -119,6 +119,10 @@ attestation.refused:
   group: Units
   says: The server refused a challenge or a statement of the firmware a unit signed, with the reason, such as `bad_signature`, `unknown_unit`, `no_active_key` or `expired`, and the `step`.
   answers: Why a unit's firmware goes unrecorded, and whether someone posts statements no unit signed.
+activation_cap.changed:
+  group: Units
+  says: An admin, `by_id`, changed the daily cap of new units `from` one number `to` another.
+  answers: When and by whom the cap moved, beside the busiest days Insights compares it with.
 unit.enrolled:
   group: Units
   says: A new DEVICEID got the next serial, with its unit, serial and device slug.

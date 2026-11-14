@@ -1,0 +1,22 @@
+<header class="admin-header">
+  <h1>Daily cap of new units</h1>
+</header>
+
+<p>Past this many new units in a UTC day, a new unit is refused until midnight. Insights compares it with the busiest day.</p>
+
+<%= form_with model: @cap, url: admin_activation_cap_path, class: "admin-form" do |form| %>
+  <% if @cap.errors.any? %>
+    <ul class="admin-flash admin-flash--alert" role="alert">
+      <% @cap.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <%= form.label :new_units_per_day, "New units a day" %>
+  <%= form.number_field :new_units_per_day, required: true, min: 1, step: 1 %>
+
+  <%= form.submit "Save", class: "button button--primary button--small" %>
+<% end %>
+
+<p><%= link_to "All units", admin_units_path %></p>

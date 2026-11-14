@@ -124,7 +124,7 @@ en:
       find: Find the new Go
       activate: Activate
       kept_summary: What skyblip.eu keeps
-      kept: skyblip.eu keeps the device's chip identifier, key, serial number and firmware, along with the internet address used for activation. No account.
+      kept: skyblip.eu keeps the device's factory identifier, public key, serial number and firmware. No account needed.
     glass:
       lamp: The LED blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."

@@ -1,8 +1,10 @@
 class Unit < ApplicationRecord
+  # TODO: fc 14nov26 the column goes once a deploy runs without reading it, then this line goes too
+  self.ignored_columns += %w[enrolled_from]
+
   MANUFACTURER_PREFIX = 0x00
   # INFO: fc 18oct26 serial 0 would put 0x000000 on the air, which decoders read as no address
   SERIALS = 1..0xFFFF
-  NEW_PER_DAY = 50
   NEW_PER_NETWORK_PER_DAY = 5
   PENDING_KEYS_KEPT = 5
 
@@ -16,9 +18,9 @@ class Unit < ApplicationRecord
 
   scope :enrolled_today, -> { where(created_at: Time.current.all_day) }
 
-  def self.register(device_id:, public_key:, **seen)
+  def self.register(device_id:, public_key:, ip_address: nil, **seen)
     transaction do
-      unit = find_by(device_id:) || enroll(device_id, network_of(seen[:ip_address]))
+      unit = find_by(device_id:) || enroll(device_id, network_of(ip_address))
       unit.bind(public_key, **seen)
     end
   end
@@ -29,19 +31,24 @@ class Unit < ApplicationRecord
     end
   end
 
-  def self.daily_cap_reached? = enrolled_today.count >= NEW_PER_DAY
+  def self.daily_cap = Activation::Cap.current.new_units_per_day
+
+  def self.daily_cap_reached? = enrolled_today.count >= daily_cap
 
   def self.enroll(device_id, network)
     raise Activation::Refusal.new(:daily_cap) if daily_cap_reached?
-    raise Activation::Refusal.new(:network_cap) if network_cap_reached?(network)
+    raise Activation::Refusal.new(:network_cap) if over_network_cap?(network)
 
-    unit = create!(device_id:, serial: next_serial, enrolled_from: network)
+    unit = create!(device_id:, serial: next_serial)
     Rails.event.notify "unit.enrolled", unit_id: unit.id, serial: unit.serial, device: unit.slug
-    Rails.logger.error "Activation: #{NEW_PER_DAY} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
+    Rails.logger.error "Activation: #{daily_cap} new units today, the daily cap, so new ones wait for midnight UTC" if daily_cap_reached?
     unit
   end
 
-  def self.network_cap_reached?(network) = network.present? && enrolled_today.where(enrolled_from: network).count >= NEW_PER_NETWORK_PER_DAY
+  def self.over_network_cap?(network) = network.present? && enrollments_from(network) > NEW_PER_NETWORK_PER_DAY
+
+  # INFO: fc 14nov26 counted as Rails' rate_limit counts, in the cache for 24 hours from the network's first new unit, never in the database
+  def self.enrollments_from(network) = Rails.cache.increment("unit-enrollments:#{network}", 1, expires_in: 24.hours).to_i
 
   # INFO: fc 08nov26 a home IPv6 line holds a whole /56, so a network is that /56, or one IPv4 address
   def self.network_of(ip_address)

@@ -3,7 +3,7 @@ class Activation::ChallengesController < Activation::ApplicationController
   wrap_parameters :challenge, include: %i[unit_nonce server_key_id]
 
   def create
-    challenge = Activation::Challenge.issue(challenge_params.merge(ip_address: request.remote_ip))
+    challenge = Activation::Challenge.issue(challenge_params)
     render json: { server_nonce: challenge.server_nonce, signature: challenge.signature }, status: :created
   end
 

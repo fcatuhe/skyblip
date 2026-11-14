@@ -41,6 +41,7 @@ Rails.application.routes.draw do
     resources :agents, only: %i[index destroy]
     resources :users
     resources :units, only: %i[index show]
+    resource :activation_cap, only: %i[edit update]
     resources :captures, only: %i[index show]
     resources :unit_keys, only: [] do
       scope module: :unit_keys do
