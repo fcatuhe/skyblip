@@ -46,9 +46,7 @@ inline const radio::Entry* heard_entry(Rig& rig) {
     const radio::Log& log = rig.state().radio_log;
     for (int i = 0; i < log.count(); i++) {
         const radio::Entry& entry = log.newest(i);
-        if (entry.verdict != radio::Verdict::Transmitted && entry.verdict != radio::Verdict::Lost &&
-            entry.verdict != radio::Verdict::Held && entry.verdict != radio::Verdict::Unarmed)
-            return &entry;
+        if (!radio::own_burst(entry.verdict)) return &entry;
     }
     return nullptr;
 }
@@ -58,9 +56,7 @@ inline radio::Verdict heard_verdict(Rig& rig) {
     const radio::Log& log = rig.state().radio_log;
     for (int i = 0; i < log.count(); i++) {
         const radio::Verdict verdict = log.newest(i).verdict;
-        if (verdict != radio::Verdict::Transmitted && verdict != radio::Verdict::Lost &&
-            verdict != radio::Verdict::Held && verdict != radio::Verdict::Unarmed)
-            return verdict;
+        if (!radio::own_burst(verdict)) return verdict;
     }
     return radio::Verdict::Transmitted;
 }

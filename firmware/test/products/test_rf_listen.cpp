@@ -63,6 +63,12 @@ struct Listening {
         while (now_ms < until_ms && !(phase() == 0 && cycle_second() == offset)) step();
         REQUIRE(phase() == 0);
     }
+    bool logged(radio::Verdict verdict) {
+        const radio::Log& log = state().radio_log;
+        for (int i = 0; i < log.count(); i++)
+            if (log.newest(i).verdict == verdict) return true;
+        return false;
+    }
     std::vector<simulator::AirRecord> sent() {
         std::vector<simulator::AirRecord> records;
         const simulator::Air& air = simulator.world().air();
@@ -113,6 +119,11 @@ TEST_CASE("rf: a busy channel defers the burst, which keys later inside its own 
     run.hold(false);
     REQUIRE(run.state().air.tx_deferred == 1);
     const uint64_t busy_at_us = run.state().rf.busy_at(run.state().rf.busy_reports - 1)->tx_at_us;
+    const radio::Entry& row = run.state().radio_log.newest(0);
+    CHECK(row.verdict == radio::Verdict::Deferred);
+    CHECK(row.rssi_valid);
+    CHECK(row.rssi_dbm == kHeldDbm[0]);
+    CHECK(row.into_ms == busy_at_us / 1000 % 1000);
     run.run_for(1500);
 
     const simulator::AirRecord* deferred = nullptr;
@@ -147,6 +158,8 @@ TEST_CASE("rf: a ground burst busy its whole window is missed, and goes 2 s on, 
     run.hold(false);
     CHECK(run.state().air.tx_deferred > 0);
     CHECK(run.state().air.tx_busy_missed == 1);
+    CHECK(run.state().radio_log.newest(0).verdict == radio::Verdict::Busy);
+    CHECK(run.logged(radio::Verdict::Deferred));
     run.run_for(3000);
 
     int missed_second = 0, retried = 0;
@@ -193,9 +206,14 @@ TEST_CASE("rf: on the ground a burst busy for 3000 ms is forced, then 2000 ms of
     run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
     const uint64_t held_from_us = ms_to_us(run.now_ms);
     run.hold(true);
-    run.run_for(12000);
+    bool forced_logged = false;
+    for (uint32_t step = 0; step < 12000; step++) {
+        run.step();
+        forced_logged = forced_logged || run.logged(radio::Verdict::Forced);
+    }
     run.hold(false);
 
+    CHECK(forced_logged);
     CHECK(run.state().air.tx_forced >= 2);
     CHECK(run.state().air.tx_deferred > 0);
     CHECK(run.state().air.tx_busy_missed > 0);

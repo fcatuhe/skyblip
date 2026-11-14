@@ -3,14 +3,14 @@
 namespace skyblip::go {
 
 // INFO: fc 14nov26 the executor drops a busy burst unkeyed, and ADS-L §D.3 decides what follows
-void RadioService::collect_busy() {
+void RadioService::collect_busy(uint32_t now_ms) {
     const bus::RfState& rf = context_.state.rf;
     for (; seen_busy_ != rf.busy_reports; seen_busy_++) {
         const bus::RfState::Busy* busy = rf.busy_at(seen_busy_);
         if (busy == nullptr) continue;
         Payload payload = Payload::Position;
         Armed* dwell = carrying(busy->tx_at_us, payload);
-        if (dwell != nullptr) contend(*dwell, payload, busy->tx_at_us);
+        if (dwell != nullptr) contend(*dwell, payload, *busy, now_ms);
     }
 }
 
@@ -30,7 +30,9 @@ RadioService::Armed* RadioService::carrying(uint64_t tx_at_us, Payload& payload)
 }
 
 // INFO: fc 14nov26 an airborne position is never forced: the next second's covers it
-void RadioService::contend(Armed& dwell, Payload payload, uint64_t busy_at_us) {
+void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Busy& busy,
+                           uint32_t now_ms) {
+    const uint64_t busy_at_us = busy.tx_at_us;
     dwell.drop(payload);
     const bool airborne = full_rate();
     Contention& contention = contention_[static_cast<int>(payload)];
@@ -55,15 +57,20 @@ void RadioService::contend(Armed& dwell, Payload payload, uint64_t busy_at_us) {
     switch (verdict.access) {
         case adsl::Access::Defer:
             air.tx_deferred++;
+            log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
             rearm(dwell, payload, verdict.at_us, /*forced=*/false);
             break;
         case adsl::Access::Force:
             if (!rearm(dwell, payload, verdict.at_us, /*forced=*/true)) break;
             air.tx_forced++;
+            log_access(radio::Verdict::Forced, dwell, payload, busy, now_ms);
             forced_us_ = verdict.at_us;
             silence_after(verdict.at_us);
             break;
-        case adsl::Access::Missed: air.tx_busy_missed++; break;
+        case adsl::Access::Missed:
+            air.tx_busy_missed++;
+            log_access(radio::Verdict::Busy, dwell, payload, busy, now_ms);
+            break;
         case adsl::Access::Transmit:
         case adsl::Access::Silent: break;
     }
@@ -104,6 +111,30 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     if (payload == Payload::Callsign) context_.state.rf.callsign_at_us = tx_at_us;
     if (payload == Payload::Status) context_.state.rf.status_at_us = tx_at_us;
     return true;
+}
+
+// INFO: fc 14nov26 dated at the busy assessment, with the level it read, as a reception's row is
+void RadioService::log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
+                              const bus::RfState::Busy& busy, uint32_t now_ms) {
+    const bus::State& state = context_.state;
+    const events::Stamp stamp =
+        events::stamp_of(busy.tx_at_us, state.clock.pps_edge_us, state.clock.pps_locked,
+                         state.traffic_now_s(now_ms));
+    radio::Entry entry{};
+    entry.verdict = verdict;
+    entry.band = timing::Band::M;
+    entry.channel = dwell.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
+    entry.at_s = stamp.at_s;
+    entry.into_ms = stamp.into_ms;
+    entry.phase_valid = stamp.phase_valid;
+    entry.utc_dated = context_.instant(now_ms).utc_dated;
+    entry.airborne = flight::airborne(state.own.flight_state);
+    entry.rssi_dbm = busy.level_dbm;
+    entry.rssi_valid = busy.level_valid;
+    entry.callsign = payload == Payload::Callsign;
+    entry.status = payload == Payload::Status;
+    context_.state.radio_log.record(entry);
+    context_.diagnostics.record(entry);
 }
 
 bool RadioService::silenced(uint64_t tx_at_us) const {

@@ -155,9 +155,11 @@ class RadioService : public runtime::Service {
     void collect_outcome(uint32_t now_ms);
     void take_carrier_samples();
     void take_switching(uint32_t now_ms);
-    void collect_busy();
+    void collect_busy(uint32_t now_ms);
     Armed* carrying(uint64_t tx_at_us, Payload& payload);
-    void contend(Armed& dwell, Payload payload, uint64_t busy_at_us);
+    void contend(Armed& dwell, Payload payload, const bus::RfState::Busy& busy, uint32_t now_ms);
+    void log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
+                    const bus::RfState::Busy& busy, uint32_t now_ms);
     bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
     bool silenced(uint64_t tx_at_us) const;
     void silence_after(uint64_t forced_at_us);

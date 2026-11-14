@@ -30,7 +30,7 @@ void RadioService::tick(uint32_t now_ms) {
     take_carrier_samples();
     take_switching(now_ms);
     collect_outcome(now_ms);
-    collect_busy();
+    collect_busy(now_ms);
 
     if (next_armed_ && pass_us_ >= next_dwell_.from_us) promote();
     // INFO: fc 27sep26 200..205 is the one guard the map already names after the dwell it leads to

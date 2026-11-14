@@ -139,6 +139,12 @@ class DiagnosticsPayloads(unittest.TestCase):
         payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, 12, 0, 0, 0, 24, -70, 0)
         self.assertEqual(decoded(5, payload)["verdict"], "declared")
 
+    # radio::Verdict gained Deferred, Forced and Busy at 13 to 15, appended, for ADS-L D.3's assessments.
+    def test_the_verdicts_after_declared_are_a_busy_channel_s(self):
+        for code, name in ((13, "deferred"), (14, "forced"), (15, "busy")):
+            payload = struct.pack("<I2H5B2b", 0x0102AB, 0, 0, code, 0, 0, 0, 24, -70, 0)
+            self.assertEqual(decoded(5, payload)["verdict"], name)
+
     def test_dwell_reads_the_slot_map_and_a_refusal(self):
         payload = struct.pack("<I4H3Bb", 868_200_000, 450, 1200, 612, 7, 4, 0, 1, -105)
         self.assertEqual(decoded(6, payload, 0b0100_0100), whole(
