@@ -32,7 +32,7 @@ Sixteen actions at most, back to back. A frame is binary CBOR, so no byte can ma
 |---|---|
 | `C`, `c` | a Config write from the first or the second app |
 | `L`, `l` | a Log write from the first or the second app |
-| `P` | the pilot confirms whatever prompt is standing: wait for the gesture to arm, press twice. No length, no write |
+| `P` | the pilot confirms whatever prompt is standing: wait for the answer to arm, press once. No length, no write |
 
 Any other byte is skipped, and a length past the end of the input takes what is left. A write longer than an `events::RxFrame` is dropped, because the ATT layer refuses it on silicon. The logged flight's session id is `1785628800`, which is in the dictionary as the CBOR integer it travels as. The seeds were written with `scripts/blip_frames.py`, one per conversation: reads, a confirmed `set`, the prompts, the log offload, and an activation signed with the test key of `schemas/activation.v1.vectors.json`.
 

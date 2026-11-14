@@ -157,7 +157,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
         Stimulus.load(definitions)
       JS
       click_button "Install 0.1.0+1005"
-      assert_selector ".glass-press", text: "Press the Go's button twice."
+      assert_selector ".glass-press", text: "Press the Go's button."
       assert_empty page.evaluate_script("failures")
     end
   end

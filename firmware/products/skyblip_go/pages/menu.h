@@ -163,6 +163,7 @@ constexpr int kOwnIcaoClearLineCount = 3;
 struct ClearSnapshot {
     const char* title{""};
     const char* text{""};
+    uint32_t seconds_left{0};
 };
 
 void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot);
@@ -190,6 +191,7 @@ class MenuEditor {
 
     bool editing() const { return editing_; }
     bool clearing() const { return clearing_; }
+    uint32_t clear_seconds_left(uint32_t now_ms) const;
     bool refused() const { return refused_; }
     MenuRow field() const { return field_; }
     const char* text() const { return text_; }

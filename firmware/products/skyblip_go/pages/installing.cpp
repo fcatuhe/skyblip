@@ -10,7 +10,7 @@ void draw_installing(ui::Canvas& canvas) {
 void draw_receiving(ui::Canvas& canvas) {
     draw_heading(canvas, kReceivingTitle, Heading::Interrupt);
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, kReceivingBody, kReceivingBodyRows);
-    draw_keys(canvas, {{Press::Once, kReceivingCancelVerb}, ""});
+    draw_keys(canvas, {"", kReceivingCancelVerb});
 }
 
 }  // namespace skyblip::go

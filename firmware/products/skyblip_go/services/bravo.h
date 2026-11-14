@@ -23,8 +23,8 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kClaimPeriodMs = 1000;
     // INFO: fc 11nov26 unverified: a Bravo in range answers a connection in a few scan windows
     static constexpr uint32_t kConnectCeilingMs = 10000;
-    // INFO: fc 11nov26 unverified: #192's proposed 30 s press window, a health period, a margin
-    static constexpr uint32_t kAnswerCeilingMs = 35000;
+    // INFO: fc 14nov26 Bravo's 30 s press window, so the glass counts down the time Bravo allows
+    static constexpr uint32_t kAnswerCeilingMs = 30000;
     // INFO: fc 11nov26 GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting
     static constexpr uint32_t kPairingScanWindowUs = 30000;
     static constexpr uint32_t kPairingScanPeriodUs = 60000;
@@ -55,6 +55,7 @@ class BravoService : public runtime::Service {
     void unpair();
 
     BravoStep step() const { return step_; }
+    uint32_t step_since_ms() const { return step_since_ms_; }
     BravoRefusal refusal() const { return refusal_; }
     BravoLink link() const { return link_; }
     int found_count() const { return found_count_; }

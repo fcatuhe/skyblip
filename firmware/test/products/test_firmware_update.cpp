@@ -207,7 +207,9 @@ TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window i
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
-TEST_CASE("product: a single press on the receiving page closes the window, and nothing installs") {
+TEST_CASE(
+    "product: a press leaves the receiving page open, a tap of the pad closes it, nothing "
+    "installs") {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
@@ -218,6 +220,11 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     REQUIRE(config(rig).receiving_firmware());
 
     rig.press(now_ms);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(config(rig).receiving_firmware());
+
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());

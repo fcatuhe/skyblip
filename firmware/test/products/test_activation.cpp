@@ -100,10 +100,10 @@ struct Bench {
     // INFO: fc 18oct26 a press counts once the prompt is on the glass and the thumb has stopped
     void read_the_prompt() { pass(3000); }
 
-    std::string press_twice() {
+    std::string accept() {
         read_the_prompt();
         const size_t before = rig.platform.link().sent.size();
-        rig.double_press(now_ms);
+        rig.press(now_ms);
         pass(500);
         return answer_since(before);
     }
@@ -167,7 +167,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
           "\"confirm_register\"}");
     REQUIRE(bench.pending() == comms::Pending::Register);
 
-    const std::string registration = bench.press_twice();
+    const std::string registration = bench.accept();
     CHECK(registration ==
           "{\"command\":\"registration\",\"device_id\":\"" + bench.vectors.text("device_id") +
               "\",\"public_key\":\"" + bench.vectors.text("unit_public_key") + "\",\"version\":\"" +
@@ -190,7 +190,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
@@ -202,7 +202,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
                          go::kGlassWidth, go::kGlassHeight, go::kFrameScale));
 }
 
-TEST_CASE("activation: the glass names the operation two presses authorise") {
+TEST_CASE("activation: the glass names the operation one press authorises") {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
@@ -215,19 +215,19 @@ TEST_CASE("activation: the glass names the operation two presses authorise") {
     CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
 }
 
-TEST_CASE("activation: one press cancels the registration, thirty seconds expire it") {
-    SUBCASE("one press") {
+TEST_CASE("activation: a tap of the pad cancels the registration, thirty seconds expire it") {
+    SUBCASE("a tap of the pad") {
         Bench bench;
         bench.boot();
         bench.challenge_with_vectors_nonce();
         bench.register_with_vectors();
         bench.read_the_prompt();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.rig.press(bench.now_ms);
+        bench.rig.tap(bench.now_ms);
         bench.pass(1000);
         CHECK(bench.answer_since(before) == refusal("cancelled"));
     }
-    SUBCASE("no press") {
+    SUBCASE("no answer") {
         Bench bench;
         bench.boot();
         bench.challenge_with_vectors_nonce();
@@ -252,8 +252,7 @@ TEST_CASE(
               register_command(std::string(32, '0'), bench.vectors.text("register_signature"))) ==
           refusal("prompt_pending"));
     CHECK(bench.pending() == comms::Pending::Register);
-    CHECK(bench.press_twice().find(bench.vectors.text("registration_signature")) !=
-          std::string::npos);
+    CHECK(bench.accept().find(bench.vectors.text("registration_signature")) != std::string::npos);
 }
 
 // The activation page's run on one link: each answer opens the next question, none is re-sent.
@@ -262,7 +261,7 @@ TEST_CASE("activation: the page activates, then stores the settings it offers, o
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     REQUIRE(bench.rig.product.config_link().config().flight_state() ==
@@ -270,7 +269,7 @@ TEST_CASE("activation: the page activates, then stores the settings it offers, o
 
     CHECK(bench.say("{\"command\":\"set\",\"aircraft_type\":4,\"callsign\":\"F-JABC\"}")
               .find("\"pending\":true") != std::string::npos);
-    CHECK(bench.press_twice() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
+    CHECK(bench.accept() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
     CHECK(int(bench.rig.settings().aircraft_type) == 4);
     CHECK(std::string(bench.rig.settings().callsign) == "F-JABC");
 }
@@ -455,7 +454,7 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);

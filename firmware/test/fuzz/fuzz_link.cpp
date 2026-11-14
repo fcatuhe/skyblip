@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "core/events/link.h"
-#include "products/common/confirm_gesture.h"
+#include "products/common/prompt_answer.h"
 #include "test/support/product_rig.h"
 
 using namespace skyblip;
@@ -58,11 +58,11 @@ void write(Rig& rig, uint16_t session_id, events::Endpoint endpoint, const uint8
     rig.platform.link().push_rx(frame);
 }
 
-// The gesture arms once the prompt has stood as long as a double press takes.
+// The answer arms once the prompt has stood for the settle a press needs.
 void confirm_on_device(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + common::ConfirmGesture::kDoublePressWindowMs);
-    now_ms += common::ConfirmGesture::kDoublePressWindowMs;
-    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + common::PromptAnswer::kAnswerSettleMs);
+    now_ms += common::PromptAnswer::kAnswerSettleMs;
+    rig.press(now_ms);
 }
 
 size_t act(Rig& rig, uint32_t& now_ms, const uint8_t* input, size_t left) {

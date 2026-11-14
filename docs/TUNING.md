@@ -237,7 +237,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kDoublePressWindowMs` | 600 | milliseconds | Window | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
+| `kAnswerSettleMs` | 600 | milliseconds | Settle | wider than the gap inside a quick run of presses, far narrower than kLongPressHoldMs |
 
 ## `firmware/products/common/services`
 
@@ -272,7 +272,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLevelDampingSamples` | 4 | samples | Damping | a frame moves the level a quarter of the way, so one fade decides nothing |
 | `kLeadHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/products/skyblip_bravo/README.md) argues it |
 | `kEmitterMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | a transponder squitters about six times a second, so 5 s quiet is gone |
-| `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s, inside the Go's 35 s kAnswerCeilingMs |
+| `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs waits as long |
 | `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
 
@@ -300,6 +300,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kAskCeilingMs` | `comms::kPromptCeilingMs` = 30000 (30 s) | milliseconds | Ceiling | a question the Go asks of itself stands as long as a phone's prompt does |
 | `kLevelFlightMg` | `flight::kLevelFlightMg` = 1000 | thousandths of g | - | - |
 | `kIdleReturnHoldMs` | 60000 (1 min) | milliseconds | Hold | a menu left open is the traffic picture taken away, and nobody dismissed it |
 | `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
@@ -318,7 +319,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kClaimPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: the Go writes peer_claim once a second while paired |
 | `kConnectCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | unverified: a Bravo in range answers a connection in a few scan windows |
-| `kAnswerCeilingMs` | 35000 (35 s) | milliseconds | Ceiling | unverified: #192's proposed 30 s press window, a health period, a margin |
+| `kAnswerCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | Bravo's 30 s press window, so the glass counts down the time Bravo allows |
 | `kPairingScanWindowUs` | 30000 (30 ms) | microseconds | Window | GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting |
 | `kPairingScanPeriodUs` | 60000 (60 ms) | microseconds | Period | - |
 | `kReconnectScanWindowUs` | 11250 (11.25 ms) | microseconds | Window | GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost |
@@ -415,4 +416,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-270 constants over 26 folders.
+271 constants over 26 folders.

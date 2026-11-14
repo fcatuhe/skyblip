@@ -14,7 +14,8 @@ enum class Heard : uint8_t { Pinned, Committed, Unpinned, Asking, Stranger, Awai
 // INFO: fc 11nov26 Bravo stores the pin only once its Go says it holds Bravo's (README.md)
 class Pairing {
    public:
-    // INFO: fc 11nov26 #192's proposal, a press within 30 s, inside the Go's 35 s kAnswerCeilingMs
+    // INFO: fc 11nov26 #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs
+    // waits as long
     static constexpr uint32_t kRequestWindowMs = 30000;
     // INFO: fc 11nov26 room for a Go that pinned on the health and lost the link to reconnect
     static constexpr uint32_t kOfferWindowMs = 30000;

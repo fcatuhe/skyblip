@@ -5,6 +5,7 @@
 
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/menu_bench.h"
@@ -257,6 +258,25 @@ TEST_CASE("menu editor: a clear nobody confirms, or of no address, changes nothi
     REQUIRE(bench.editor.clearing());
     CHECK(bench.run(MenuEditor::kIdleReturnHoldMs + 100) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.clearing());
+    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+}
+
+TEST_CASE("menu editor: a clear nobody answers is kept after thirty seconds, and counts down") {
+    Bench bench;
+    bench.values.settings.own_icao = 0x3C6586;
+    bench.focus_on(MenuRow::OwnIcao);
+    REQUIRE(bench.change() == MenuAction::Moved);
+    type(bench, " ");
+    REQUIRE(bench.change() == MenuAction::Moved);
+    REQUIRE(bench.editor.clearing());
+    CHECK(bench.editor.clear_seconds_left(bench.now_ms) == 30);
+
+    CHECK(bench.run(kAskCeilingMs - 1000) == MenuAction::None);
+    CHECK(bench.editor.clearing());
+    CHECK(bench.editor.clear_seconds_left(bench.now_ms) == 1);
+    CHECK(bench.run(1000) == MenuAction::Moved);
+    CHECK_FALSE(bench.editor.clearing());
+    CHECK(bench.editor.active());
     CHECK(bench.values.settings.own_icao == 0x3C6586u);
 }
 

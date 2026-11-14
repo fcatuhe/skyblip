@@ -1,4 +1,4 @@
-// Bravo has no screen: a phone's prompt is a lamp pattern, and two presses answer it.
+// Bravo has no screen: a phone's prompt is a lamp pattern, and one press accepts it.
 #include <string>
 
 #include "doctest/doctest.h"
@@ -35,7 +35,7 @@ uint32_t arming_pass_ms() {
 
 }  // namespace
 
-TEST_CASE("bravo: a set from a phone blinks the prompt and two presses store it") {
+TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -45,24 +45,20 @@ TEST_CASE("bravo: a set from a phone blinks the prompt and two presses store it"
     CHECK(rig.lamp() == indication::Condition::Prompt);
     CHECK(rig.product.settings().alarm_enabled);
 
-    rig.double_press();
+    rig.press();
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == kAccepted);
     CHECK_FALSE(rig.product.settings().alarm_enabled);
     CHECK(rig.lamp() == indication::Condition::AliveLinked);
 }
 
-TEST_CASE("bravo: one press refuses a prompt, and nothing changes") {
+TEST_CASE("bravo: a prompt nobody answers expires, and nothing changes") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
     rig.send("{\"command\":\"set\",\"own_icao\":3958150}");
-    rig.run_for(1000);
-    REQUIRE(rig.product.button().armed());
-
-    rig.press();
-    rig.run_for(1000);
-    CHECK(refused_with(rig.last_on(events::Endpoint::Config), "cancelled"));
+    rig.run_for(comms::kPromptCeilingMs + 1000);
+    CHECK(refused_with(rig.last_on(events::Endpoint::Config), "expired"));
     CHECK(rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
     CHECK(rig.product.button().prompt() == comms::Pending::None);
 }
@@ -73,13 +69,13 @@ TEST_CASE("bravo: presses made before the prompt stood are never spent on it") {
     rig.seconds_with_fix(2);
     rig.send("{\"command\":\"power_off\"}");
     rig.step();
-    rig.double_press();
+    rig.press();
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
 }
 
 // The Go refuses a prompt in flight only, so a Bravo with no fix since boot can still be updated.
-TEST_CASE("bravo: with no fix since boot a power-off from the phone stands, and two presses obey") {
+TEST_CASE("bravo: with no fix since boot a power-off from the phone stands, and one press obeys") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_blind(2);
@@ -88,7 +84,7 @@ TEST_CASE("bravo: with no fix since boot a power-off from the phone stands, and 
     rig.run_for(1000);
     REQUIRE(rig.lamp() == indication::Condition::Prompt);
 
-    rig.double_press();
+    rig.press();
     CHECK(rig.product.shutdown().going_down());
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
 }
@@ -172,7 +168,7 @@ TEST_CASE("bravo: the gesture stays disarmed while the button is down, and arms 
     rig.run_for(500);
     REQUIRE(rig.product.button().armed());
 
-    rig.double_press();
+    rig.press();
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
 }
 
@@ -218,8 +214,9 @@ TEST_CASE("bravo: a press that began before the gesture armed is never spent on 
     CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
 }
 
-// GPT's re-review of #245: the button was never up a whole window before the double press.
-TEST_CASE("bravo: after a press that began before arming, a double press waits a quiet window") {
+// GPT's re-review of #245: the button was never up a whole window before the accepting press.
+TEST_CASE(
+    "bravo: after a press that began before arming, the accepting press waits a quiet window") {
     const uint32_t armed_ms = arming_pass_ms();
 
     BravoRig rig;
@@ -229,11 +226,11 @@ TEST_CASE("bravo: after a press that began before arming, a double press waits a
     rig.run_for(100);
     rig.platform.set_button_down(false);
     rig.run_for(50);
-    rig.double_press();
+    rig.press();
     CHECK_FALSE(rig.product.shutdown().going_down());
     CHECK(rig.product.button().prompt() == comms::Pending::PowerOff);
 
     rig.run_for(700);
-    rig.double_press();
+    rig.press();
     CHECK(rig.product.shutdown().reason() == power::ShutdownReason::LinkRequest);
 }

@@ -9,7 +9,7 @@ void draw_recovery(ui::Canvas& canvas, ports::RecoveryPath path) {
         draw_body(canvas, Heading::Interrupt, keys, kRecoveryBody, kRecoveryBodyRows);
     else
         draw_body(canvas, Heading::Interrupt, keys, kRecoveryRunning, kRecoveryRunningRows);
-    draw_keys(canvas, {{Press::Once, recovery_button(path)}, ""});
+    draw_keys(canvas, {recovery_button(path), ""});
 }
 
 }  // namespace skyblip::go

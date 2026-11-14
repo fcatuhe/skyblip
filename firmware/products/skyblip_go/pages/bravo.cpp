@@ -3,6 +3,7 @@
 #include "core/comms/link_sessions.h"
 #include "core/comms/peer.h"
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 
 namespace skyblip::go {
@@ -54,14 +55,14 @@ void draw_paired(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     if (snapshot.unpairing) {
         draw_heading(canvas, "UNPAIR BRAVO", Heading::Opened);
         const BodyLine body[] = {{tag.text, kTagScale}};
-        draw_body(canvas, Heading::Opened, /*keys=*/true, body, 1);
-        draw_keys(canvas, {{Press::Once, "UNPAIR"}, "KEEP"});
+        draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 1);
+        draw_keys(canvas, {"UNPAIR", "KEEP"});
         return;
     }
     draw_heading(canvas, "BRAVO", Heading::Opened);
     const BodyLine body[] = {{tag.text, kTagScale}, {""}, {link_state(snapshot.view.link)}};
     draw_body(canvas, Heading::Opened, /*keys=*/true, body, 3);
-    draw_keys(canvas, {{Press::Once, "UNPAIR"}, "BACK"});
+    draw_keys(canvas, {"UNPAIR", "BACK"});
 }
 
 void draw_list(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
@@ -69,20 +70,20 @@ void draw_list(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
         draw_heading(canvas, "PAIR BRAVO", Heading::Opened);
         const Tag tag(snapshot.view.found_tags[snapshot.focus]);
         const BodyLine body[] = {{tag.text, kTagScale}};
-        draw_body(canvas, Heading::Opened, /*keys=*/true, body, 1);
-        draw_keys(canvas, {{Press::Once, "PAIR"}, "CANCEL"});
+        draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 1);
+        draw_keys(canvas, {"PAIR", "CANCEL"});
         return;
     }
     draw_heading(canvas, "BRAVO", Heading::Opened);
     const int found = snapshot.view.found_count;
     if (found == 0) {
         draw_body(canvas, Heading::Opened, /*keys=*/true, kEmptyListBody, 4);
-        draw_keys(canvas, {{}, "BACK"});
+        draw_keys(canvas, {"", "BACK"});
         return;
     }
     for (int i = 0; i < found && i < kMenuLines; i++)
         row(canvas, i, snapshot.view.found_tags[i], i == snapshot.focus);
-    draw_keys(canvas, {{Press::Once, "PAIR"}, snapshot.focus + 1 >= found ? "BACK" : "NEXT"});
+    draw_keys(canvas, {"PAIR", snapshot.focus + 1 >= found ? "BACK" : "NEXT"});
 }
 
 void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
@@ -93,9 +94,9 @@ void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
         draw_body(canvas, Heading::Opened, /*keys=*/true, body, 3);
     } else {
         const BodyLine body[] = {{tag.text, kTagScale}, {""}, {"PUSH THE BUTTON"}, {"ON BRAVO"}};
-        draw_body(canvas, Heading::Opened, /*keys=*/true, body, 4);
+        draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 4);
     }
-    draw_keys(canvas, {{}, "CANCEL"});
+    draw_keys(canvas, {"", "CANCEL"});
 }
 
 struct Reason {
@@ -160,7 +161,7 @@ void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     }
     draw_body(canvas, Heading::Opened, /*keys=*/true, body, count);
     const bool retries = refusal != BravoRefusal::PhonesConnected;
-    draw_keys(canvas, {{Press::Once, retries ? "PAIR" : ""}, "BACK"});
+    draw_keys(canvas, {retries ? "PAIR" : "", "BACK"});
 }
 
 }  // namespace
@@ -183,14 +184,14 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
 void draw_own_icao_notice(ui::Canvas& canvas) {
     draw_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt);
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, kOwnIcaoNoticeBody, 7);
-    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
+    draw_keys(canvas, {"CLOSE", "CLOSE"});
 }
 
 // INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere
 void draw_bravo_forgot_notice(ui::Canvas& canvas) {
     draw_heading(canvas, "BRAVO", Heading::Interrupt);
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, kForgotNoticeBody, 8);
-    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
+    draw_keys(canvas, {"CLOSE", "CLOSE"});
 }
 
 void BravoPage::open(uint32_t now_ms) {
@@ -229,12 +230,22 @@ BravoAction BravoPage::button(const BravoView& view, uint32_t now_ms) {
 }
 
 // INFO: fc 11nov26 a pairing under way has its own ceilings, so only a page a pilot reads idles out
-BravoAction BravoPage::idle(const BravoView& view, uint32_t now_ms) const {
+BravoAction BravoPage::idle(const BravoView& view, uint32_t now_ms) {
+    if ((confirming_ || unpairing_) && now_ms - idle_since_ms_ >= kAskCeilingMs) {
+        confirming_ = false;
+        unpairing_ = false;
+        return BravoAction::Redraw;
+    }
     const bool waiting =
         !view.paired && (view.step == BravoStep::Connecting || view.step == BravoStep::Waiting);
     if (waiting || now_ms - idle_since_ms_ < MenuEditor::kIdleReturnHoldMs)
         return BravoAction::None;
     return BravoAction::Leave;
+}
+
+// INFO: fc 14nov26 the press that opened the question is the page's last contact, so it dates it
+uint32_t BravoPage::seconds_left(uint32_t now_ms) const {
+    return go::seconds_left(idle_since_ms_, now_ms, kAskCeilingMs);
 }
 
 BravoAction BravoPage::pad_paired() {

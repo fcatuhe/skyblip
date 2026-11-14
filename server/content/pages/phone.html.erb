@@ -47,19 +47,20 @@ updated_on: "2026-11-11"
     <li>Download them over the same link on the ground</li>
   </ul>
 
-  <h3 id="asked">Two presses allow, <span class="highlight">one press refuses</span>.</h3>
+  <h3 id="asked">A press allows, <span class="highlight">a tap refuses</span>.</h3>
   <p class="lede">
     When an app asks for something that touches the device you have on board,
     new firmware, a restart into the USB bootloader, a settings write, erasing
     your flights, switching it off, the device does not take the phone at its
     word. It puts the question on its own glass, names it, and waits thirty
-    seconds. Two presses on the <span class="mono">ACCEPT</span> key allow it, and
-    <span class="mono">TO CANCEL, PUSH ONCE OR WAIT</span>. No answer within
-    that time counts as a refusal.
+    seconds. A press on the <span class="mono">ACCEPT</span> key allows it,
+    and a tap on the pad&rsquo;s <span class="mono">CANCEL</span> key refuses it. The
+    glass counts down, <span class="mono">CANCELS IN 30 S</span>, and no answer
+    within that time counts as a refusal.
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, TO CANCEL, PUSH ONCE OR WAIT with the seconds left, and the button's key ACCEPT for two presses" %>
+    <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, CANCELS IN with the seconds left, the button's key ACCEPT and the pad's key CANCEL" %>
     <figcaption>The screen asks before saving settings</figcaption>
   </figure>
 
@@ -72,9 +73,9 @@ updated_on: "2026-11-11"
     the aircraft type, the units and the alarm.
   </p>
   <p class="lede">
-    Presses only count once the question is on screen and you have stopped
+    A press only counts once the question is on screen and you have stopped
     pressing: a series of presses used to change a setting cannot also
-    authorise a request. The pad does nothing while a question is on screen.
+    authorise a request.
   </p>
 
   <h3 id="firmware">New firmware comes <span class="highlight">from a web page</span>.</h3>
@@ -94,7 +95,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     When the firmware will not take at all, the same page hands the device to
-    its USB bootloader, after the same two presses. The device switches itself
+    its USB bootloader, after the same press. The device switches itself
     off with the screen shown below. The next press starts the bootloader: connected by a USB
     cable, the device appears as a drive named <span class="mono">TECHOBOOT</span>.
     Copy a <span class="mono">.uf2</span> file onto it to install new firmware.

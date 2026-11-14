@@ -6,12 +6,6 @@
 
 namespace skyblip::bravo {
 
-namespace {
-bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= common::ConfirmGesture::kDoublePressWindowMs;
-}
-}  // namespace
-
 void ButtonService::tick(uint32_t now_ms) {
     sync_prompt(now_ms);
     pairing_.sync(peer_.requested(), pairing_readable(), now_ms);
@@ -27,10 +21,7 @@ void ButtonService::tick(uint32_t now_ms) {
         if (pressed) press(now_ms);
     }
     pairing_.arm_once_quiet(answer_, pairing_readable(), now_ms);
-    if (answering()) {
-        answer_.arm_once_quiet(prompt_readable(), now_ms);
-        resolve(answer_.tick(now_ms));
-    }
+    if (answering()) answer_.arm_once_quiet(prompt_readable(), now_ms);
 }
 
 void ButtonService::sync_prompt(uint32_t now_ms) {
@@ -63,8 +54,8 @@ void ButtonService::sync_receiving(uint32_t now_ms) {
 }
 
 void ButtonService::press(uint32_t now_ms) {
-    if (answer_.armed()) {
-        resolve(answer_.press(now_ms));
+    if (answer_.press()) {
+        accept_prompt();
         return;
     }
     if (alarm_stands()) {
@@ -77,15 +68,12 @@ void ButtonService::press(uint32_t now_ms) {
     }
     if (answering()) return;
     // INFO: fc 12nov26 the press that confirmed the upload must not be the one that cancels it
-    if (receiving_ && settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
+    if (receiving_ && common::PromptAnswer::settled_since(now_ms, receiving_since_ms_))
+        config_.cancel();
 }
 
-void ButtonService::resolve(common::Answer answer) {
-    if (answer == common::Answer::None) return;
-    if (answer == common::Answer::Confirm)
-        config_.confirm();
-    else
-        config_.cancel();
+void ButtonService::accept_prompt() {
+    config_.confirm();
     prompt_ = comms::Pending::None;
     answer_.disarm();
 }

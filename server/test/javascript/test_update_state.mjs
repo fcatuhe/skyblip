@@ -60,7 +60,7 @@ test('a save refused on the glass says so under Save, and the settings stay as s
   assert.deepEqual(device.stored, FLOWN);
 });
 
-test('one press on a question marks the connection refused on the device until the link drops', async () => {
+test('a refused question marks the connection refused on the device until the link drops', async () => {
   const { device, updater, until } = await chosen();
   updater.install();
   await until(asking('dfu'));
@@ -72,7 +72,7 @@ test('one press on a question marks the connection refused on the device until t
   assert.equal((await until(state => state.phase === 'offline')).refusedOnDevice, false);
 });
 
-test('one press that stops an upload refuses no question, so the connection may ask again', async () => {
+test('a cancel that stops an upload refuses no question, so the connection may ask again', async () => {
   const { device, updater, until } = await chosen();
   device.refuseAfterPackets = 3;
   updater.install();

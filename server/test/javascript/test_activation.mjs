@@ -91,7 +91,7 @@ test('a unit activated again keeps its serial', async () => {
   }
 });
 
-test('one press on the glass refuses, and the page names it', async () => {
+test('a refusal on the glass is named on the page', async () => {
   const { unit, server, activator, until } = await connected();
   activator.activate();
   await until(confirming);

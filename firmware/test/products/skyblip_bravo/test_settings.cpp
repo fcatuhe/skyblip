@@ -14,7 +14,7 @@ namespace {
 void confirm_set(BravoRig& rig, const char* json) {
     rig.send(json);
     rig.run_for(1000);
-    rig.double_press();
+    rig.press();
     rig.run_for(1000);
 }
 

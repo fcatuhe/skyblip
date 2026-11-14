@@ -38,11 +38,12 @@ void ScreenService::draw_prompt(uint32_t now_ms) {
     draw_confirm(framebuffer_, snapshot);
 }
 
-void ScreenService::draw_menu_page() {
+void ScreenService::draw_menu_page(uint32_t now_ms) {
     if (editor_.clearing()) {
         ClearSnapshot clear;
         clear.title = menu_row_label(editor_.field());
         clear.text = editor_.text();
+        clear.seconds_left = editor_.clear_seconds_left(now_ms);
         draw_clear(framebuffer_, clear);
         return;
     }
@@ -92,13 +93,16 @@ void ScreenService::render(uint32_t now_ms) {
     if (notice_) {
         switch (notice_kind_) {
             case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
-            case Notice::NewAircraft: draw_aircraft_notice(framebuffer_, noticed_aircraft_); break;
+            case Notice::NewAircraft:
+                draw_aircraft_notice(framebuffer_, noticed_aircraft_,
+                                     seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));
+                break;
             case Notice::OwnIcao: draw_own_icao_notice(framebuffer_); break;
         }
         return;
     }
     if (mode_ == Mode::Menu) {
-        draw_menu_page();
+        draw_menu_page(now_ms);
         return;
     }
 
@@ -281,6 +285,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.focus = bravo_page_.focus();
             snapshot.confirming = bravo_page_.confirming();
             snapshot.unpairing = bravo_page_.unpairing();
+            snapshot.seconds_left = bravo_seconds_left(snapshot.view, now_ms);
             draw_bravo(framebuffer_, snapshot);
             break;
         }

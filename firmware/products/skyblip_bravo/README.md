@@ -43,9 +43,9 @@ Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps A
 
 ## Prompts without a screen
 
-A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and two presses inside `common::ConfirmGesture::kDoublePressWindowMs` allow it. One press refuses it, and thirty seconds expire it.
+A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds.
 
-`common::PromptAnswer` (`../common/prompt_answer.h`) arms the gesture only once the lamp shows the prompt, the button is up, and it has been up for one double-press window since its last release and since the prompt arrived. A contact that began before the gesture armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release and one more press. A prompt replaced by another of the same kind disarms the gesture as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the gesture stays disarmed and a press dismisses the advisory.
+`common::PromptAnswer` (`../common/prompt_answer.h`) arms the answer only once the lamp shows the prompt, the button is up, and it has been up for `kAnswerSettleMs` since its last release and since the prompt arrived. A contact that began before it armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release. A prompt replaced by another of the same kind disarms it as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the answer stays disarmed and a press dismisses the advisory.
 
 A prompt is refused only while the flight state is `Airborne`, as on the Go (`core/comms/config.h`, `prompt_allowed_in`), and a take-off cancels a standing one. A Bravo with no fix since boot is `Unknown`, not `Airborne`, so a Bravo indoors can be updated over Bluetooth.
 
@@ -76,8 +76,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 |---|---|
 | a press from off | on: the button is the wake pin |
 | a press with an advisory standing | dismiss, as the Go's long touch does |
-| two presses with a prompt on the lamp | allow the prompt |
-| one press with a prompt on the lamp | refuse the prompt |
+| a press with a prompt on the lamp | allow the prompt |
 | one press with a Go's pairing request on the lamp | pair with that Go |
 | one press while an upload window is open | close it, once the press that opened it has settled |
 | a hold past `power::kLongPressHoldMs` | off, signed with three pulses under the thumb |
@@ -90,9 +89,9 @@ A Go paired with a Bravo is a Tango. The Go's half is `products/skyblip_go/servi
 
 ### The gesture
 
-A Go asks to pair with `peer_claim` frames whose `paired` is false. The first one on a connection stands as a pairing request for `Pairing::kRequestWindowMs`, 30 s, inside the Go's `kAnswerCeilingMs` of 35 s. One request stands at a time, and a connection asks once, so a Go left connected cannot hold the lamp. The request goes when its Go's connection goes. The lamp shows it as a fast blue blink, below an advisory and a phone's prompt and above the cell.
+A Go asks to pair with `peer_claim` frames whose `paired` is false. The first one on a connection stands as a pairing request for `Pairing::kRequestWindowMs`, 30 s, as long as the Go's `kAnswerCeilingMs` waits for it. A Go that gives up drops the link, and the request goes with it. One request stands at a time, and a connection asks once, so a Go left connected cannot hold the lamp. The request goes when its Go's connection goes. The lamp shows it as a fast blue blink, below an advisory and a phone's prompt and above the cell.
 
-One press pairs. The press arms by the prompt's rule, read off the same `common::PromptAnswer` (`../common/README.md`): only once the lamp shows the request, with the button up for one double-press window since its last release and since the request arrived. A down that began at or before the instant it armed, dated by the debounce, disarms it. So a press begun before the request never pairs, an advisory takes the press to dismiss it, and a hold is the shutdown's. The gesture differs from the others by what stands on the lamp: dismiss needs an advisory, confirmation a prompt and two presses, and off a hold.
+One press pairs. The press arms by the prompt's rule, read off the same `common::PromptAnswer` (`../common/README.md`): only once the lamp shows the request, with the button up for `kAnswerSettleMs` since its last release and since the request arrived. A down that began at or before the instant it armed, dated by the debounce, disarms it. So a press begun before the request never pairs, an advisory takes the press to dismiss it, and a hold is the shutdown's. The gesture differs from the others by what stands on the lamp: dismiss needs an advisory, confirmation a prompt, and off a hold.
 
 ### The pin
 
@@ -197,7 +196,7 @@ Bravo keys no transmitter, so flash waits for nothing on air. It waits for the 1
 
 `AdsbService` calls `AdsbCapture::record` on every folded observation, so a capture armed on Bravo carries the ADS-B record #203 defined.
 
-Bravo has no glass, so a page or `scripts/blip.py capture` arms one over the link (#247). The `capture` command names the profile, `full`, `power_run` or `flight_run`, or `stop`, and stands as a prompt like every other: two presses allow it, one refuses it, thirty seconds expire it, and it is refused while airborne. `ConfigService` refuses it at the door with `no_storage` when the flash holds no capture ring, `capturing` for an arm while a capture runs and `not_capturing` for a stop while none does, reading what `ConfigLinkService` hands it each pass from `state.capture` and the recorder. Two presses answer `capture` and latch the order. `Product::take_link_requests()` then arms `diagnostics::Recorder` with the profile, or disarms it, as the Go's glass does, and `CaptureService` drains the recorder as on the Go. While a capture is armed the lamp winks twice every 3 s in the fix colour, above the connected rows, so a pilot who armed it from a page sees it run.
+Bravo has no glass, so a page or `scripts/blip.py capture` arms one over the link (#247). The `capture` command names the profile, `full`, `power_run` or `flight_run`, or `stop`, and stands as a prompt like every other: one press allows it, thirty seconds expire it, and it is refused while airborne. `ConfigService` refuses it at the door with `no_storage` when the flash holds no capture ring, `capturing` for an arm while a capture runs and `not_capturing` for a stop while none does, reading what `ConfigLinkService` hands it each pass from `state.capture` and the recorder. The press answers `capture` and latches the order. `Product::take_link_requests()` then arms `diagnostics::Recorder` with the profile, or disarms it, as the Go's glass does, and `CaptureService` drains the recorder as on the Go. While a capture is armed the lamp winks twice every 3 s in the fix colour, above the connected rows, so a pilot who armed it from a page sees it run.
 
 A capture keeps running through a flight, and stopping it is refused in the air like every prompt. The power-off parks it as on the Go. The Go answers the same command, asking on its glass (`../skyblip_go/README.md`, Which capture is armed), and both call `ConfigService::serve_captures()` and `common::order_capture()`.
 
@@ -266,7 +265,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - the refused frames a development image prints, read with `scripts/adsb_rejects.py`, say whether the chip clock slips inside a frame (Reading the rejects);
 - XCSoar shows ADS-B traffic from Bravo with Bravo's own position;
 - an advisory sounds the buzzer and the motor, and one press dismisses it;
-- a `set` and a `dfu` from the manage page stand on the lamp and two presses allow them, and a Bluetooth update installs and confirms;
+- a `set` and a `dfu` from the manage page stand on the lamp and one press allows them, and a Bluetooth update installs and confirms;
 - a capture armed from its Briefing device page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
 - a switch-off reaches SYSTEM OFF with the off current measured, and a cable plugged in leaves it off;
 - after a switch-off, the button held while the cable goes in opens the `X1` drive with the LED white, and released within 3 s it boots the unit, which depends on what the reset circuit makes of the cable;

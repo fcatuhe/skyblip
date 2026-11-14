@@ -1,4 +1,4 @@
-// A browser that signs the unit's nonce with a key two presses once approved needs no prompt.
+// A browser that signs the unit's nonce with a key a press once approved needs no prompt.
 #include <cstring>
 #include <string>
 
@@ -107,7 +107,7 @@ struct Desk {
 
 }  // namespace
 
-TEST_CASE("trusted browsers: a set two presses confirm trusts the browser that proved its key") {
+TEST_CASE("trusted browsers: a set a press confirms trusts the browser that proved its key") {
     Desk desk;
     CHECK(desk.connect_as(kBrowserSeed) == kUntrusted);
     desk.say(kSet);
@@ -126,7 +126,7 @@ TEST_CASE("trusted browsers: a set two presses confirm trusts the browser that p
 }
 
 TEST_CASE(
-    "trusted browsers: a dfu two presses confirm trusts its browser, and a trusted one opens "
+    "trusted browsers: a dfu a press confirms trusts its browser, and a trusted one opens "
     "the window at once") {
     Desk desk;
     REQUIRE(desk.connect_as(kBrowserSeed) == kUntrusted);

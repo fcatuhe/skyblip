@@ -1,6 +1,7 @@
 #include "products/skyblip_go/pages/menu.h"
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/confirm.h"
 
 namespace skyblip::go {
 
@@ -264,7 +265,7 @@ void draw_aircraft_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
 Keys menu_keys(const MenuSnapshot& snapshot) {
     const Menu menu = snapshot.aircraft ? aircraft_menu() : menu_for(snapshot.page);
     const bool last = menu_row_index(menu, snapshot.focus) == menu.row_count - 1;
-    return {{Press::Once, row_verb(snapshot.focus, snapshot.values)}, last ? "BACK" : "NEXT"};
+    return {row_verb(snapshot.focus, snapshot.values), last ? "BACK" : "NEXT"};
 }
 
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
@@ -304,7 +305,7 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
 
     if (snapshot.own_transponder)
         draw_own_transponder(canvas, *snapshot.own_transponder, snapshot.refused);
-    draw_keys(canvas, {{Press::Once, field_button_verb(snapshot)}, kFieldChangeVerb});
+    draw_keys(canvas, {field_button_verb(snapshot), kFieldChangeVerb});
 }
 
 void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
@@ -314,8 +315,8 @@ void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
                              {kOwnIcaoClearLines[0]},
                              {kOwnIcaoClearLines[1]},
                              {kOwnIcaoClearLines[2]}};
-    draw_body(canvas, Heading::Opened, /*keys=*/true, body, 5);
-    draw_keys(canvas, {{Press::Once, kFieldEraseVerb}, kFieldKeepVerb});
+    draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 5);
+    draw_keys(canvas, {kFieldEraseVerb, kFieldKeepVerb});
 }
 
 }  // namespace skyblip::go

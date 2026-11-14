@@ -47,7 +47,7 @@ void prove(Rig& rig, uint32_t& now_ms) {
 
 }  // namespace
 
-TEST_CASE("product: a browser two presses trusted is still trusted after a restart") {
+TEST_CASE("product: a browser a press trusted is still trusted after a restart") {
     Rig before;
     REQUIRE(before.setup() == Status::Ok);
     uint32_t now_ms = 0;

@@ -10,7 +10,6 @@
 #include "core/power/wake.h"
 #include "core/units/units.h"
 #include "ports/dfu.h"
-#include "products/common/confirm_gesture.h"
 #include "products/common/prompt_answer.h"
 #include "products/common/services/alarm.h"
 #include "products/skyblip_go/glass.h"
@@ -106,6 +105,12 @@ class ScreenService : public runtime::Service {
     void render(uint32_t now_ms);
     bool on_bravo_page() const { return mode_ == Mode::Page && page_ == Page::Bravo; }
     BravoView bravo_view() const;
+    uint32_t bravo_seconds_left(const BravoView& view, uint32_t now_ms) const;
+    // INFO: fc 14nov26 a notice that asks stands as long as any question, one that only tells, a
+    // menu's
+    uint32_t notice_ceiling_ms() const {
+        return notice_kind_ == Notice::NewAircraft ? kAskCeilingMs : MenuEditor::kIdleReturnHoldMs;
+    }
     void act_on_bravo(BravoAction action, uint32_t now_ms);
     void step_bravo(uint32_t now_ms);
     void sync_notice(uint32_t now_ms);
@@ -117,14 +122,14 @@ class ScreenService : public runtime::Service {
     void use_noticed_aircraft();
     void change_screen();
     void draw_prompt(uint32_t now_ms);
-    void draw_menu_page();
+    void draw_menu_page(uint32_t now_ms);
     void enter_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
     void show_radar();
     void show_page(Page page);
     void handle_input(uint32_t now_ms);
-    void sync_receiving(uint32_t now_ms);
+    void sync_receiving();
     void record_contact(const events::ContactEvent& event, Gesture gesture, uint32_t now_ms);
     void record_screen(uint32_t now_ms);
     uint32_t microseconds_since(uint64_t began_us) const;
@@ -135,7 +140,7 @@ class ScreenService : public runtime::Service {
     void sync_editor(uint32_t now_ms);
     void step_editor(uint32_t now_ms);
     MenuValues menu_values() const;
-    void resolve(common::Answer answer);
+    void close_prompt(bool accepted);
     enum class Change : uint8_t { None, Asked, Wiped };
     bool refresh_allowed() const;
     void wipe_glass(uint32_t now_ms);
@@ -224,7 +229,6 @@ class ScreenService : public runtime::Service {
     bool prompt_on_glass_{false};
     bool receiving_{false};
     std::optional<bool> activated_{};
-    uint32_t receiving_since_ms_{0};
 
     Glass framebuffer_{};
     Glass presented_{};

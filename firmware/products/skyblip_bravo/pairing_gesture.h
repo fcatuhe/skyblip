@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-#include "products/common/confirm_gesture.h"
 #include "products/common/prompt_answer.h"
 
 namespace skyblip::bravo {
@@ -28,7 +27,7 @@ class PairingGesture {
 
     void arm_once_quiet(const common::PromptAnswer& answer, bool lamp_shows_it, uint32_t now_ms) {
         if (!requested_ || armed_ || !lamp_shows_it || !answer.settled(now_ms)) return;
-        if (now_ms - since_ms_ < common::ConfirmGesture::kDoublePressWindowMs) return;
+        if (now_ms - since_ms_ < common::PromptAnswer::kAnswerSettleMs) return;
         armed_ = true;
         armed_ms_ = now_ms;
     }

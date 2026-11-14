@@ -62,7 +62,7 @@ en:
         full: Full
         power_run: Power run
         flight_run: Flight run
-      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. The device asks for two presses before it starts, and records on its own until you stop it."
+      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. The device asks for a press before it starts, and records on its own until you stop it."
       arm: Arm
       stop: Stop the capture
       idle: Nothing is recording.
@@ -89,7 +89,7 @@ en:
       not_sent: "The report waits in this browser and leaves once it is online. Your support code is %{code}."
     browsers:
       title: Trusted browsers
-      hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press twice to allow its first save or update."
+      hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press to allow its first save or update."
       this_browser: this browser
       unnamed: A browser with no name
       forget: Forget
@@ -145,7 +145,7 @@ en:
       forget_question: "Forget %{name}?"
       sending_short: "Sending, %{percent} %"
       activate_now: Activate
-      glass_refuse: One press refuses.
+      glass_refuse: With no press, it refuses after thirty seconds.
       locked: Locked in flight
       reconnect_needed: Refused on the device. Nothing changed. Reconnect before the device can ask again.
       reset_count: "Back to defaults (%{count})"
@@ -184,7 +184,7 @@ en:
       none: none
       in_flight_lock: Changes are available again after landing.
       in_flight_lock_trusted: This browser can still change the device's settings. Other actions are available again after landing.
-      glass_press: "Press the %{product}'s button twice."
+      glass_press: "Press the %{product}'s button."
       glass_waiting: Waiting for its answer.
       install_version: "Install %{version}"
       install_full: "Install %{version}, with the sensor hub firmware"
@@ -196,6 +196,7 @@ en:
       estimating: working out the time left
       keep_close: "Keep this screen open and the %{product} close."
       stops: "One press on the %{product} stops the upload."
+      stops_with_pad: "A tap on the %{product}'s pad stops the upload."
       installing: The device is installing the firmware and restarting. This takes about thirty seconds.
       reconnecting: It connects again by itself.
       probation: "%{version} is starting. It checks its radio, GPS and screen."
@@ -213,7 +214,7 @@ en:
       small_mtu: This phone or browser is using the smallest Bluetooth packet. It is too small for the reply. Reconnect. If it happens again, update the browser or use another phone or a computer.
       in_flight: The device is in flight. Install once it has landed.
       low_power: The battery is too low to install. Charge it first.
-      expired: Nobody pressed twice within thirty seconds. Try again.
+      expired: Nobody pressed within thirty seconds. Try again.
       cancelled: Refused on the device. Reconnect before the device can ask again.
       refused_on_device: Refused on the device. Reconnect before the device can ask again.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -256,7 +257,7 @@ en:
       saved: Saved on the device.
       in_flight: The device is in flight. Nothing changed. Save once it has landed.
       low_power: The battery is too low to store settings. Charge it first.
-      expired: Nobody pressed twice within thirty seconds. Nothing changed.
+      expired: Nobody pressed within thirty seconds. Nothing changed.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -270,7 +271,7 @@ en:
       not_capturing: No capture is running. There is nothing to stop.
       no_storage: This device has no memory for a capture. Tell us its firmware version.
       in_flight: The device is in flight. Nothing changed. Try again once it has landed.
-      expired: Nobody pressed twice within thirty seconds. Nothing changed.
+      expired: Nobody pressed within thirty seconds. Nothing changed.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -293,7 +294,7 @@ en:
       in_flight: This device is already activated. It is in flight. Activate it again once it has landed.
       low_power: The battery is too low to store the serial number. Charge it then activate.
       flash: The device could not store its serial number. Activate again. If it happens again, tell us.
-      expired: Nobody pressed twice within thirty seconds. Activate again.
+      expired: Nobody pressed within thirty seconds. Activate again.
       cancelled: Refused on the Go. Reconnect, then activate again.
       refused_on_device: Refused on the Go. Reconnect, then activate again.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.

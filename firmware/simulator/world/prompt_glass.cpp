@@ -81,32 +81,27 @@ bool settings_detail(const char* set, const char* settings, char* out, int capac
     return go::describe_settings_changes(from, to, out, capacity) > 0;
 }
 
-// INFO: fc 14nov26 a screen reader hears the page's words in reading order, the key last
+// INFO: fc 14nov26 a screen reader hears the page's words in reading order, the keys last
 void say(char* out, int capacity, const char* title, const char* detail, uint32_t seconds_left) {
     char text[kPromptWordsBytes];
     int written = format_string(text, title);
     written += format_string(text + written, ". ");
-    for (const char* at = detail; *at != 0 && written < kPromptWordsBytes - 64; at++) {
+    for (const char* at = detail; *at != 0 && written < kPromptWordsBytes - 80; at++) {
         if (*at == '\n')
             written += format_string(text + written, ", ");
         else
             text[written++] = *at;
     }
     if (written > 0 && text[written - 1] != '.') text[written++] = '.';
-    text[written++] = ' ';
-    written += format_string(text + written, go::kConfirmCancelLine);
-    text[written++] = ' ';
-    if (seconds_left == 0) {
-        written += format_string(text + written, go::kConfirmOnceLine);
-    } else {
-        written += format_string(text + written, go::kConfirmWaitLine);
+    if (seconds_left != 0) {
         text[written++] = ' ';
-        written += format_unsigned(text + written, seconds_left);
-        written += format_string(text + written, " S");
+        written += go::format_confirm_countdown(text + written, seconds_left);
+        text[written++] = '.';
     }
-    text[written++] = '.';
-    written += format_string(text + written, " PUSH TWICE TO ");
+    written += format_string(text + written, " PUSH TO ");
     written += format_string(text + written, go::kConfirmAllowVerb);
+    written += format_string(text + written, ". TOUCH THE PAD TO ");
+    written += format_string(text + written, go::kConfirmCancelVerb);
     text[written++] = '.';
     text[written] = 0;
     std::strncpy(out, text, static_cast<size_t>(capacity) - 1);

@@ -258,7 +258,7 @@ void ConfigLinkService::write_settings(uint32_t now_ms, bool forced) {
     }
 }
 
-// INFO: fc 13nov26 a list that will not load is empty, so each browser asks for two presses again
+// INFO: fc 13nov26 a list that will not load is empty, so each browser asks for the press again
 void ConfigLinkService::load_browsers() {
     if (!storable()) return;
     uint8_t blob[comms::TrustedBrowsers::kBlobBytes];

@@ -77,7 +77,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a change is saved after two presses on the glass, and the page shows what the device stored" do
+  test "a change is saved after a press on the glass, and the page shows what the device stored" do
     in_range a_go
     on_the_shelf do
       connect_go
@@ -88,8 +88,9 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
       click_button "Save 2 changes"
       assert_glass "SETTINGS"
-      assert_selector ".glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 30 S. PUSH TWICE TO ACCEPT.'], .glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 29 S. PUSH TWICE TO ACCEPT.']"
-      assert_selector ".glass-press", text: "Press the Go's button twice."
+      assert_selector ".glass-prompt canvas.glass[aria-label*='CANCELS IN 30 S.'], .glass-prompt canvas.glass[aria-label*='CANCELS IN 29 S.']"
+      assert_selector ".glass-prompt canvas.glass[aria-label$='PUSH TO ACCEPT. TOUCH THE PAD TO CANCEL.']"
+      assert_selector ".glass-press", text: "Press the Go's button."
       assert_selector ".glass-seconds", text: /\A(30|29)\z/
       assert_no_field "Callsign"
       screen "07-glass-asking"
@@ -140,7 +141,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a save two presses allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
+  test "a save a press allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
     in_range a_go(browsers: [ { id: "0102030405060708", label: "Edge on Windows" } ])
     on_the_shelf do
       connect_go
@@ -232,15 +233,15 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
-      assert_selector ".glass-lamp", text: "The LED blinks green fast. One press refuses."
-      assert_selector ".glass-press", text: "Press the Bravo's button twice."
+      assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
+      assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_selector ".glass"
       assert_no_text "Not activated"
       screen "11-bravo-lamp"
     end
   end
 
-  test "a Bravo arms and stops a capture with two presses on its lamp" do
+  test "a Bravo arms and stops a capture with a press on its lamp" do
     in_range a_bravo
     on_the_shelf do
       visit "/briefing"
@@ -249,7 +250,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       select "Power run", from: "Profile"
       click_button "Arm"
       assert_selector ".glass-lamp", text: "The LED blinks green fast."
-      assert_selector ".glass-press", text: "Press the Bravo's button twice."
+      assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_select "Profile"
       assert_equal "power_run", page.evaluate_script("#{unit("3F2A")}.capture")
 

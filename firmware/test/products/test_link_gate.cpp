@@ -59,28 +59,19 @@ TEST_CASE("product: paging does not authorise a firmware upload") {
     now_ms += 3000;
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
 
-    // The prompt owns the glass: the pad neither turns the page nor answers it.
+    // The prompt owns the glass: the pad does not turn the page, it refuses.
     rig.tap(now_ms);
-    rig.run(now_ms, now_ms + common::ConfirmGesture::kDoublePressWindowMs + 200);
-    now_ms += common::ConfirmGesture::kDoublePressWindowMs + 200;
-    CHECK_FALSE(rig.config().upload_allowed());
-    CHECK(rig.config().pending() == comms::Pending::Dfu);
-    CHECK(rig.product.screen().page() == go::Page::Nearby);
-
-    // The button at a prompt is the answer, and one press alone refuses.
-    rig.press(now_ms);
-    rig.run(now_ms, now_ms + common::ConfirmGesture::kDoublePressWindowMs + 200);
-    now_ms += common::ConfirmGesture::kDoublePressWindowMs + 200;
     CHECK_FALSE(rig.config().upload_allowed());
     CHECK(rig.config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().mode() == go::Mode::Page);
+    CHECK(rig.product.screen().page() == go::Page::Nearby);
 
     // With the prompt gone, the same tap pages again.
     rig.tap(now_ms);
     CHECK(rig.product.screen().page() == go::Page::SixPack);
 }
 
-TEST_CASE("product: two presses on the ground are what open the upload window") {
+TEST_CASE("product: a press on the ground is what opens the upload window") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -92,7 +83,7 @@ TEST_CASE("product: two presses on the ground are what open the upload window") 
     REQUIRE(rig.config().pending() == comms::Pending::Dfu);
     REQUIRE_FALSE(rig.config().upload_allowed());
 
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     CHECK(rig.config().upload_allowed());
@@ -198,7 +189,7 @@ TEST_CASE(
     REQUIRE(rig.config().pending() == comms::Pending::GnssColdStart);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
 
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;
     CHECK(rig.config().pending() == comms::Pending::None);
@@ -223,13 +214,13 @@ TEST_CASE("product: gnss_cold_start is refused in flight") {
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK(rig.config().pending() == comms::Pending::None);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     CHECK(rig.platform.chips().gnss.restarts == restarts_before);
 }
 
 // A unit with no fix since boot is Unknown, and the radar menu changes the same values without one.
-TEST_CASE("product: a set with no fix since boot is confirmed by two presses and stored") {
+TEST_CASE("product: a set with no fix since boot is confirmed by a press and stored") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -241,7 +232,7 @@ TEST_CASE("product: a set with no fix since boot is confirmed by two presses and
     REQUIRE(rig.config().pending() == comms::Pending::Set);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
 
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
     CHECK(rig.config().pending() == comms::Pending::None);
     CHECK(std::strcmp(rig.product.settings().callsign, "F-JXYZ") == 0);
@@ -333,10 +324,6 @@ TEST_CASE("product: the pass the first fix says airborne takes a staged set off 
     const auto button = [&](bool down, uint32_t at_ms) {
         rig.product.bus().input.push(events::ContactEvent{events::Contact::Button, down, at_ms});
     };
-    button(true, 3010);
-    pass(3010);
-    button(false, 3110);
-    pass(3110);
     button(true, 3160);
     pass(3160);
     REQUIRE(rig.config().pending() == comms::Pending::Set);

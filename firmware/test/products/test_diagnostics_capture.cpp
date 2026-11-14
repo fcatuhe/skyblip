@@ -116,7 +116,7 @@ TEST_CASE("capture: the dump's capture group prices every capture, then names th
     CHECK(running.capture_records > 0);
 }
 
-TEST_CASE("capture: one press on the glass refuses the capture a page asked for") {
+TEST_CASE("capture: a tap of the pad refuses the capture a page asked for") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -125,7 +125,7 @@ TEST_CASE("capture: one press on the glass refuses the capture a page asked for"
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
-    rig.press(now_ms);
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;
     CHECK_FALSE(rig.product.diagnostics().armed());

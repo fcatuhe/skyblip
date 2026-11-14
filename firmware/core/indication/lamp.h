@@ -79,7 +79,7 @@ inline constexpr Row kTable[kRowCount] = {
     {Condition::Prompt,
      {indication::Lamp::Green, 60, 190},
      Budget::Transient,
-     "green, fast blink: a phone asks, two presses allow and one refuses"},
+     "green, fast blink: a phone asks, one press allows"},
     {Condition::Pairing,
      {indication::Lamp::Blue, 60, 190},
      Budget::Transient,

@@ -132,11 +132,6 @@ struct BravoRig {
         run_for(100);
     }
 
-    void double_press() {
-        press();
-        press();
-    }
-
     void hold_button(uint32_t held_ms) {
         platform.set_button_down(true);
         run_for(held_ms);

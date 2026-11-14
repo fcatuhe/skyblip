@@ -166,11 +166,12 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
 
 TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contact does") {
     Glass canvas;
-    draw_aircraft_notice(canvas, heard_glider());
+    draw_aircraft_notice(canvas, heard_glider(), 30);
     CHECK(reads_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt));
-    CHECK(reads(canvas, "F-JABC", kCallsignScale));
-    CHECK(reads(canvas, "ICAO 3A4B5C", kMenuScale));
-    CHECK(reads(canvas, "GLIDER", kMenuScale));
+    CHECK(reads_foot_line(canvas, "CANCELS IN 30 S"));
+    // The USE key says what the press does, so the body stops at the type, clear of the countdown.
+    const BodyLine body[] = {{"F-JABC", kCallsignScale}, {"ICAO 3A4B5C"}, {"GLIDER"}};
+    CHECK(reads_body_above(canvas, Heading::Interrupt, kFootLineY, body, 3));
     CHECK(reads_button_key(canvas, "USE"));
     CHECK(reads_pad_key(canvas, "CLOSE"));
 }

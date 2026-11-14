@@ -183,7 +183,7 @@ export default class extends Controller {
     const minutes = this.#minutesLeft(progress)
     const left = minutes ? say("words.left", { minutes }) : say("words.estimating")
     const product = productWord(unit)
-    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say("words.stops", { product })]
+    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "skyblip_bravo" ? "words.stops" : "words.stops_with_pad", { product })]
       .map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 

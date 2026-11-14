@@ -419,7 +419,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
 
     // Long enough for the question to have reached the glass: a press only
     // counts towards an answer once the prompt is on the panel and the thumb
-    // has stopped (products/common/confirm_gesture.h), which is what makes a pilot stepping a
+    // has stopped (products/common/prompt_answer.h), which is what makes a pilot stepping a
     // value on the settings page unable to authorise anything by accident.
     rig.send_log("{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
@@ -430,8 +430,8 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     CHECK(rig.product.screen().prompt() == comms::Pending::EraseLog);
     CHECK(rig.product.flight_log().sessions_on_flash() >= 1);
 
-    // A single press at a prompt refuses, which is what fail-closed means here.
-    rig.press(now_ms);
+    // A tap of the pad at a prompt refuses.
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 1200);
     now_ms += 1200;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
@@ -450,7 +450,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
     CHECK(rig.product.flight_log().erasing());
@@ -563,7 +563,7 @@ TEST_CASE("flight log: the erase verdict for a phone that left never reaches the
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::EraseLog);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
     REQUIRE(rig.product.flight_log().erasing());
@@ -596,7 +596,7 @@ TEST_CASE("flight log: the erase verdict answers the phone that asked, whoever a
     rig.send_log_from(1, "{\"command\":\"erase\"}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 100;
     REQUIRE(rig.product.flight_log().erasing());

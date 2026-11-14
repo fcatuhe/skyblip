@@ -50,20 +50,21 @@ updated_on: "2026-11-11"
     <li>Récupérez-les au sol par la même liaison</li>
   </ul>
 
-  <h3 id="asked">Deux pressions autorisent, <span class="highlight">une pression refuse</span>.</h3>
+  <h3 id="asked">Une pression autorise, <span class="highlight">un contact refuse</span>.</h3>
   <p class="lede">
     Quand une application demande quelque chose qui touche à l&rsquo;appareil
     que vous avez à bord, un nouveau firmware, un redémarrage dans le
     bootloader USB, une écriture de réglages, l&rsquo;effacement de vos vols,
     une extinction, l&rsquo;appareil ne croit pas le téléphone sur parole. Il
     pose la question sur son propre écran, la nomme, et attend trente
-    secondes. Deux pressions sur la touche <span class="mono">ACCEPT</span>
-    autorisent, et <span class="mono">TO CANCEL, PUSH ONCE OR WAIT</span>.
-    Sans réponse dans ce délai, la demande est refusée.
+    secondes. Une pression sur la touche <span class="mono">ACCEPT</span>
+    autorise, un bref contact sur la touche <span class="mono">CANCEL</span>
+    du pavé refuse. L&rsquo;écran décompte, <span class="mono">CANCELS IN 30 S</span>,
+    et sans réponse dans ce délai, la demande est refusée.
   </p>
 
   <figure class="shot">
-    <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour des réglages envoyés par le téléphone : SETTINGS sous le grand logo, le changement demandé, TO CANCEL, PUSH ONCE OR WAIT avec les secondes restantes, et la touche du bouton ACCEPT pour deux pressions" %>
+    <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour des réglages envoyés par le téléphone : SETTINGS sous le grand logo, le changement demandé, CANCELS IN avec les secondes restantes, la touche du bouton ACCEPT et la touche du pavé CANCEL" %>
     <figcaption>L&rsquo;écran demande votre accord avant d&rsquo;enregistrer les réglages</figcaption>
   </figure>
 
@@ -77,10 +78,9 @@ updated_on: "2026-11-11"
     à côté du type d&rsquo;aéronef, des unités et de l&rsquo;alarme.
   </p>
   <p class="lede">
-    Les pressions ne comptent qu&rsquo;une fois la question affichée à
+    Une pression ne compte qu&rsquo;une fois la question affichée à
     l&rsquo;écran et les pressions précédentes terminées&nbsp;: une série de pressions pour
-    modifier un réglage ne peut pas aussi autoriser une demande. Le
-    pavé ne réagit pas tant qu&rsquo;une question est affichée.
+    modifier un réglage ne peut pas aussi autoriser une demande.
   </p>
 
   <h3 id="firmware">Le nouveau firmware vient <span class="highlight">d&rsquo;une page web</span>.</h3>
@@ -103,7 +103,7 @@ updated_on: "2026-11-11"
   </p>
   <p class="lede">
     Quand le firmware ne prend pas du tout, la même page confie
-    l&rsquo;appareil à son bootloader USB, après les mêmes deux pressions.
+    l&rsquo;appareil à son bootloader USB, après la même pression.
     L&rsquo;appareil s&rsquo;éteint en affichant la page ci-dessous. La pression
     suivante démarre le bootloader&nbsp;: relié par un câble USB, l&rsquo;appareil apparaît comme
     un lecteur nommé <span class="mono">TECHOBOOT</span>. Copiez un fichier
