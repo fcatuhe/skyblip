@@ -85,6 +85,10 @@ GetErrors is read at the end of the bring-up. HF_XOSC_START_ERR means the TCXO n
 
 DS 22.1 says the part computes its OOK threshold from the receiver bandwidth, that a host may override it, and that the override is applied after SetOokModulationParams. It names no register and no formula. Semtech's driver supplies both: it writes the threshold in dB plus 74 into bits 26:20 of register 0xF30E14 (`lr20xx_workarounds.c`, `lr20xx_workarounds_ook_set_detection_threshold_level`), and computes -106 dBm as the default at 3076 kHz. RadioLib writes the threshold plus 64. SoftRF asks RadioLib for -80 dBm, so the field it writes reads -90 dBm by Semtech's formula. `lr2021::kDetectionThresholdDbm` is -90, which writes the same field SoftRF wrote. SoftRF marks its own figure `/* TODO */`, so the threshold is a parameter of `begin()` and the bench settles it.
 
+## The reception trial
+
+Temporary, #293. `Lr2021Tuning` holds the threshold, the gain step, the LF boost, the write into 0xF30150 and the frame layout, and `begin()` starts on SoftRF's values, which a `static_assert` holds to the constants above. `retune()` changes them on a running part: STDBY_RC, the OOK configuration again, ClearRxFifo, and receive again if the part was receiving. A reset after a retune brings the part up on the tuning it was given. In the Manchester layout the part decodes 14 bytes with no sync word (SetOokPacketParams 0x09, SetOokSyncword of 0 bits), and `read_frame()` turns the bits back into the 27 chip bytes the decoder reads. Only frames that open on `1000`, DF16 and DF17, go up, and `foreign_frames()` counts the others. `products/skyblip_bravo/services/adsb_trial.md` says why each knob is on trial and what cb-tfc found on the same board.
+
 ## Unverified until #169 benches a unit
 
 Every value below comes from SoftRF, RadioLib or the datasheet, and none has run on an X1 under this driver. Each carries a `TODO` beside it in `lr2021.h`.

@@ -32,6 +32,19 @@ int8_t rssi_high_dbm(const uint8_t* status) {
     return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
 }
 
+// TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+// INFO: fc 13nov26 the part decoded the bits, so they go back to the chips the decoder reads
+bool chips_of_bits(const uint8_t* bits, uint8_t* chips) {
+    if ((bits[0] & 0xF0) != 0x80) return false;
+    std::memset(chips, 0, lr2021::kChipBytes);
+    for (int bit = 4; bit < 8 * lr2021::kManchesterFrameBytes; bit++) {
+        const bool one = ((bits[bit >> 3] >> (7 - (bit & 7))) & 1u) != 0;
+        const int chip = 2 * (bit - 4) + (one ? 0 : 1);
+        chips[chip >> 3] = static_cast<uint8_t>(chips[chip >> 3] | (0x80u >> (chip & 7)));
+    }
+    return true;
+}
+
 }  // namespace
 
 Status Lr2021::probe() {
@@ -41,7 +54,7 @@ Status Lr2021::probe() {
 }
 
 Status Lr2021::begin(int16_t detection_threshold_dbm) {
-    detection_threshold_dbm_ = detection_threshold_dbm;
+    tuning_.detection_threshold_dbm = detection_threshold_dbm;
     reset_owed_ = false;
     const Status status = bring_up();
     if (status != Status::Ok) mode_ = Lr2021Mode::Reset;
@@ -50,7 +63,7 @@ Status Lr2021::begin(int16_t detection_threshold_dbm) {
 
 Status Lr2021::start_receive() {
     if (mode_ != Lr2021Mode::Standby) return Status::Invalid;
-    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, lr2021::kRxBoostOff};
+    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, tuning_.boost};
     uint8_t irq_config[5] = {irq_dio_};
     put_be32(irq_config + 1, lr2021::kIrqRxDone);
     uint8_t clear[4];
@@ -67,6 +80,19 @@ Status Lr2021::start_receive() {
     return Status::Ok;
 }
 
+// TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+Status Lr2021::retune(const Lr2021Tuning& tuning) {
+    tuning_ = tuning;
+    const bool receiving = mode_ == Lr2021Mode::Receive;
+    if (!receiving && mode_ != Lr2021Mode::Standby) return Status::Ok;
+    frames_waiting_ = 0;
+    Status status = enter_standby();
+    if (status == Status::Ok) status = configure_ook();
+    if (status == Status::Ok) status = command(lr2021::kClearRxFifo, nullptr, 0);
+    if (status == Status::Ok && receiving) status = start_receive();
+    return status;
+}
+
 // INFO: fc 11nov26 RxDone can fire twice before a read, so whole frames are drained by FIFO level
 Lr2021Event Lr2021::poll(uint8_t* chips, size_t capacity) {
     Lr2021Event event{};
@@ -75,15 +101,21 @@ Lr2021Event Lr2021::poll(uint8_t* chips, size_t capacity) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    if (frames_waiting_ == 0) return event;
-    if (read_frame(chips, event) != Status::Ok) {
-        event.type = Lr2021EventType::Fault;
-        return event;
+    while (frames_waiting_ != 0) {
+        const Status read = read_frame(chips, event);
+        if (read != Status::Ok && read != Status::Unsupported) {
+            event.type = Lr2021EventType::Fault;
+            return event;
+        }
+        frames_waiting_--;
+        since_frame_ms_ = 0;
+        if (read == Status::Ok) {
+            event.type = Lr2021EventType::Frame;
+            return event;
+        }
+        foreign_frames_++;
     }
-    frames_waiting_--;
-    since_frame_ms_ = 0;
-    event.type = Lr2021EventType::Frame;
-    return event;
+    return Lr2021Event{};
 }
 
 // INFO: fc 11nov26 the packet status is read on both sides of the level, and only agreement gives a
@@ -103,11 +135,11 @@ Status Lr2021::take_snapshot() {
     if (status == Status::Ok) status = read(lr2021::kGetOokPacketStatus, after, sizeof(after));
     if (status != Status::Ok) return status;
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
-        const uint32_t lost = (be16(level) + lr2021::kChipBytes - 1u) / lr2021::kChipBytes;
+        const uint32_t lost = (be16(level) + frame_bytes() - 1u) / frame_bytes();
         fifo_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
-    frames_waiting_ = static_cast<uint8_t>(be16(level) / lr2021::kChipBytes);
+    frames_waiting_ = static_cast<uint8_t>(be16(level) / frame_bytes());
     newest_rssi_valid_ = std::memcmp(before, after, sizeof(before)) == 0;
     newest_rssi_dbm_ = rssi_high_dbm(after);
     return Status::Ok;
@@ -206,7 +238,7 @@ Status Lr2021::bring_up() {
     const uint8_t dio[2] = {irq_dio_, lr2021::kDioFunctionIrqPullDown};
     const uint8_t blocks = lr2021::kCalibrateAllBlocks;
     const uint8_t packet_type = lr2021::kPacketTypeOok;
-    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, lr2021::kRxBoostOff};
+    const uint8_t path[2] = {lr2021::kRxPathLowFrequency, tuning_.boost};
     uint8_t calibration[6] = {};
     put_be16(calibration, lr2021::kCalibFe1090Word);
     uint8_t frequency[4];
@@ -241,20 +273,29 @@ Status Lr2021::configure_ook() {
     modulation[4] = lr2021::kPulseShapeNone;
     modulation[5] = lr2021::kRxBandwidth3076kHz;
     modulation[6] = lr2021::kDepthFull;
+    // TODO: fc 13nov26 adsb trial #293, back to SoftRF's layout once the trial picks the settings
+    const bool manchester = tuning_.layout == Lr2021Layout::Manchester;
     uint8_t packet[6] = {};
     put_be16(packet, lr2021::kPreambleChips);
     packet[2] = lr2021::kFixedLength;
-    put_be16(packet + 3, lr2021::kChipBytes);
-    packet[5] = lr2021::kCrcOffManchesterOff;
+    put_be16(packet + 3, frame_bytes());
+    packet[5] = manchester ? lr2021::kCrcOffManchesterInverted : lr2021::kCrcOffManchesterOff;
     const uint8_t whitening_off[4] = {};
-    const uint8_t syncword[5] = {0, 0, 0, lr2021::kSyncword, lr2021::kSyncwordMsbFirstBits};
+    uint8_t syncword[5] = {0, 0, 0, lr2021::kSyncword, lr2021::kSyncwordMsbFirstBits};
+    if (manchester) {
+        syncword[3] = 0;
+        syncword[4] = lr2021::kSyncwordNoneMsbFirst;
+    }
     uint8_t detector[5] = {};
     put_be16(detector, lr2021::kAdsbPreamblePattern);
     detector[2] = lr2021::kAdsbPreambleChips - 1;
-    const uint8_t gain = lr2021::kAgcAutomatic;
+    const uint8_t gain = tuning_.gain_step;
     const uint32_t threshold =
-        (static_cast<uint32_t>(detection_threshold_dbm_ + lr2021::kOokThresholdOffsetDb) << 20) &
+        (static_cast<uint32_t>(tuning_.detection_threshold_dbm + lr2021::kOokThresholdOffsetDb)
+         << 20) &
         lr2021::kOokThresholdMask;
+    const uint32_t front_end =
+        tuning_.front_end_raw ? lr2021::kOokQuirkData : lr2021::kOokQuirkChipDefault;
 
     Status status = command(lr2021::kSetOokModulationParams, modulation, sizeof(modulation));
     if (status == Status::Ok) status = command(lr2021::kSetOokPacketParams, packet, sizeof(packet));
@@ -266,8 +307,7 @@ Status Lr2021::configure_ook() {
     if (status == Status::Ok)
         status = write_mask(lr2021::kOokThresholdRegister, lr2021::kOokThresholdMask, threshold);
     if (status == Status::Ok)
-        status =
-            write_mask(lr2021::kOokQuirkRegister, lr2021::kOokQuirkMask, lr2021::kOokQuirkData);
+        status = write_mask(lr2021::kOokQuirkRegister, lr2021::kOokQuirkMask, front_end);
     return status;
 }
 
@@ -289,7 +329,7 @@ Status Lr2021::restart_receive() {
 
 Status Lr2021::reinitialise() {
     resets_++;
-    Status status = begin(detection_threshold_dbm_);
+    Status status = begin(tuning_.detection_threshold_dbm);
     if (status == Status::Ok) status = start_receive();
     reset_owed_ = status != Status::Ok;
     return status;
@@ -376,14 +416,23 @@ Status Lr2021::read_frame(uint8_t* chips, Lr2021Event& event) {
     uint8_t rx[2 + lr2021::kChipBytes] = {};
     put_be16(tx, lr2021::kReadRadioRxFifo);
     spi_.select(true);
-    spi_.transfer(tx, rx, sizeof(tx));
+    spi_.transfer(tx, rx, 2u + frame_bytes());
     spi_.select(false);
     note_status(rx);
     last_opcode_ = lr2021::kReadRadioRxFifo;
-    std::memcpy(chips, rx + 2, lr2021::kChipBytes);
     event.rssi_valid = frames_waiting_ == 1 && newest_rssi_valid_;
     event.rssi_dbm = event.rssi_valid ? newest_rssi_dbm_ : 0;
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    if (tuning_.layout == Lr2021Layout::Manchester)
+        return chips_of_bits(rx + 2, chips) ? Status::Ok : Status::Unsupported;
+    std::memcpy(chips, rx + 2, lr2021::kChipBytes);
     return Status::Ok;
+}
+
+// TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+uint8_t Lr2021::frame_bytes() const {
+    return tuning_.layout == Lr2021Layout::Manchester ? lr2021::kManchesterFrameBytes
+                                                      : lr2021::kChipBytes;
 }
 
 }  // namespace skyblip::parts

@@ -2138,6 +2138,50 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "adsb_trial",
+      "code": 35,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "slot_s",
+          "number": 1,
+          "type": "unsigned"
+        },
+        {
+          "name": "thresholds_dbm",
+          "number": 2,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "gain_steps",
+          "number": 3,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "boosts",
+          "number": 4,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "front_ends",
+          "number": 5,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "layouts",
+          "number": 6,
+          "type": "unsigned_array"
+        }
+      ]
     }
   ],
   "enums": {
@@ -2346,6 +2390,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "unknown_browser",
           "code": 51
+        },
+        {
+          "name": "adsb_trial",
+          "code": 52
         }
       ]
     },
@@ -3045,6 +3093,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "forget_browser",
           "code": 34
+        },
+        {
+          "name": "adsb_trial",
+          "code": 35
         }
       ]
     }

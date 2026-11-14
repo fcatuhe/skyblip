@@ -38,6 +38,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kAdsbTrialSlotFloorS` | 5 | seconds | Floor | - |
+| `kAdsbTrialSlotCeilingS` | 255 | seconds | Ceiling | - |
 | `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
 | `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
 | `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
@@ -293,6 +295,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kCountedCeilingS` | `UINT8_MAX` | seconds | Ceiling | - |
+| `kRetuneSettleMs` | 1000 (1 s) | milliseconds | Settle | frames queued under the last profile drain within a pass, so a second is spare |
 | `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json health: once a second whatever the traffic |
 | `kAlarmRequestMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | unverified: three claim periods, so one lost claim keeps Bravo silent (#194) |
 
@@ -363,4 +367,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-238 constants over 22 folders.
+242 constants over 22 folders.

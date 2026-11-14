@@ -45,6 +45,11 @@ class AdsbReceiver : public ports::AdsbReceiver {
         serviced_ms_ = now_ms;
     }
 
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    void retune(const parts::Lr2021Tuning& tuning) {
+        if (!stopped_) (void)radio_.retune(tuning);
+    }
+
     ports::AdsbReceiverStatistics statistics() const override {
         ports::AdsbReceiverStatistics statistics = statistics_;
         statistics.roll(clock_.microseconds());

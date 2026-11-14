@@ -100,6 +100,27 @@ bool Reader::read_boolean(const char* key, bool& out) const {
     return false;
 }
 
+bool Reader::read_unsigned_array(const char* key, uint32_t* out, int capacity, int& count) const {
+    int offset = value_offset(key);
+    if (offset < 0 || data_[offset] != '[') return false;
+    count = 0;
+    offset++;
+    for (;;) {
+        while (offset < bytes_ && is_whitespace(data_[offset])) offset++;
+        if (offset >= bytes_) return false;
+        if (data_[offset] == ']') return true;
+        if (count == capacity || data_[offset] < '0' || data_[offset] > '9') return false;
+        uint64_t value = 0;
+        while (offset < bytes_ && data_[offset] >= '0' && data_[offset] <= '9') {
+            value = value * 10 + static_cast<uint64_t>(data_[offset++] - '0');
+            if (value > UINT32_MAX) return false;
+        }
+        out[count++] = static_cast<uint32_t>(value);
+        while (offset < bytes_ && is_whitespace(data_[offset])) offset++;
+        if (offset < bytes_ && data_[offset] == ',') offset++;
+    }
+}
+
 bool Reader::read_string(const char* key, char* out, int capacity) const {
     int offset = value_offset(key);
     if (offset < 0 || data_[offset] != '"') return false;

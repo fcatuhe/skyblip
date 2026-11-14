@@ -416,6 +416,18 @@
       "keys": [
         {"name": "id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "The browser to forget, as browser names it"}
       ]
+    },
+    {
+      "command": "adsb_trial", "code": 35, "endpoint": "config", "sender": "host",
+      "description": "Temporary: #293 removes it once the trial picks the LR2021's settings. Host to unit, 64 bytes at its widest: runs a reception trial on a skyBlip Bravo's 1090 MHz receiver, or stops the one running (firmware/products/skyblip_bravo/services/adsb_trial.md). Only a development Bravo answers it, and every other image answers unknown_command. thresholds_dbm holds one entry per profile, and each other array, when present, holds one entry per profile too. A frame with no key but the command stops the trial and puts the receiver back on its default tuning. Refused invalid for a key of the wrong type, an empty thresholds_dbm, an array whose length differs from thresholds_dbm's, thresholds_dbm without slot_s, or another key without thresholds_dbm, and out_of_range for more than eight profiles or a value past its range. Otherwise answered acknowledgement true with reason adsb_trial, at once and with no prompt, in flight as on the ground. The trial lives in RAM, so a restart ends it.",
+      "keys": [
+        {"name": "slot_s", "number": 1, "type": "unsigned", "description": "How long each profile listens before the next takes over, 5 to 255 s. Required with thresholds_dbm"},
+        {"name": "thresholds_dbm", "number": 2, "type": "unsigned_array", "description": "Each profile's OOK detection threshold in dBm below zero, 90 for -90 dBm, 11 to 128. The unit writes the threshold plus 74 into register 0xF30E14, as Semtech's driver does (firmware/hardware/parts/lr2021/README.md)"},
+        {"name": "gain_steps", "number": 3, "type": "unsigned_array", "description": "Each profile's SetAgcGainManual step: 0 runs the AGC, and 1 to 13 fix the gain. All 0 when absent"},
+        {"name": "boosts", "number": 4, "type": "unsigned_array", "description": "Each profile's LF path boost in SetRxPath, 0 to 7. All 0 when absent"},
+        {"name": "front_ends", "number": 5, "type": "unsigned_array", "description": "Each profile's write into register 0xF30150: 1 writes 0x18, SoftRF's, which stops the AGC and the blanking of a saturated ADC, and 0 writes 0x75, the part's own. All 1 when absent"},
+        {"name": "layouts", "number": 6, "type": "unsigned_array", "description": "Each profile's frame layout: 0 is 27 bytes of raw chips behind the 0x95 sync word, SoftRF's, and 1 is the part's inverted Manchester decoding of 14 bytes with no sync word, cb-tfc's. All 0 when absent"}
+      ]
     }
   ],
   "enums": {
@@ -471,7 +483,8 @@
         {"name": "trusted", "code": 48},
         {"name": "untrusted", "code": 49},
         {"name": "forgotten", "code": 50},
-        {"name": "unknown_browser", "code": 51}
+        {"name": "unknown_browser", "code": 51},
+        {"name": "adsb_trial", "code": 52}
       ]
     },
     "alarm_volume": {

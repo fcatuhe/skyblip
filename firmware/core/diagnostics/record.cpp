@@ -28,6 +28,8 @@ const char* type_name(Type type) {
         case Type::Switch: return "switch";
         case Type::Loop: return "loop";
         case Type::Adsb: return "adsb";
+        case Type::AdsbSlot: return "adsb_slot";
+        case Type::AdsbChips: return "adsb_chips";
     }
     return "?";
 }

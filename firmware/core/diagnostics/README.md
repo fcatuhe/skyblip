@@ -79,6 +79,8 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Switch` 19 | the change (hop, M to O, O to M, retune, wake), the frequency tuned to, how long the retune took, the gap from the previous dwell's end, the margin to the dwell's start, armed ahead, late | whether `kHopGuardMs` and `kJitterGuardMs` can shrink, from every change rather than the worst since boot, and when a slow one happened |
 | `Loop` 20 | over the second before it: service passes, milliseconds spent in them, the longest pass and its phase, the longest start-to-start gap and its phase, the slowest service and its longest tick | whether the loop is late because one pass is long or because nothing ran it, and which service holds it |
 | `Adsb` 21 | ICAO address, ADS-B version, GVA, pressure altitude, the GNSS-baro difference and its age, the relative altitude on GNSS height and on pressure altitude, each with its own validity | the ADS-B altitude questions of #183: which datum each installation's difference is on, how far the two relative altitudes disagree, and which versions and GVA values are heard |
+| `AdsbSlot` 22, temporary | one slot of the reception trial: the receiver profile, frames, CRC refusals, unsupported frames, folds, positions, distinct aircraft, seconds counted, a FIFO drop | which LR2021 setting decodes the most, compared slot by slot on the same air (#293, `products/skyblip_bravo/services/adsb_trial.md`) |
+| `AdsbChips` 23, temporary | half of one sampled 1090 MHz frame's 27 chip bytes, its level and the decoder's verdict | how much a repair policy would gain or accept wrongly, replayed offline by `scripts/adsb_trial.py` |
 
 ### The burst that carried a name, and why the name is not in it
 
@@ -183,6 +185,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
 | `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, at most once per aircraft each `AdsbCapture::kRecordPeriodMs` and ten in any second. Bravo's `AdsbService` calls it after each `protocol::AdsbAssembly::fold`, and a paired Go's `BravoService` after each `observation` frame it folds. Nothing arms a capture on Bravo yet (#247) |
+| `AdsbSlot`, `AdsbChips` | `products/skyblip_bravo/services/adsb_trial.cpp` `AdsbTrial::close` and `AdsbTrial::sample` | while a reception trial runs on a development Bravo: one `AdsbSlot` as each slot ends, and a head and a tail of chips for at most four frames a second |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |
 | `Gap` | `recorder.cpp` `flush_gap`, `products/common/services/capture.cpp` `write_gap`, `announce_rotation` | where the ring refused a record, where the partition refused a sector, and where the sector ring recycled one of this session's own |

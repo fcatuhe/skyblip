@@ -121,6 +121,9 @@ jobs:
       # The bench reads Bravo's refused frames through it, so it is held to the firmware's sync, generator, log line and example.
       - name: the reader of Bravo's refused 1090 MHz frames
         run: python3 scripts/test_adsb_rejects.py
+      # The reception trial of #293 compares receiver profiles through it, and goes with it.
+      - name: the reader of Bravo's reception trial
+        run: python3 scripts/test_adsb_trial.py
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite

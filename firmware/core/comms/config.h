@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "core/comms/adsb_trial.h"
 #include "core/comms/browser_link.h"
 #include "core/comms/config_store.h"
 #include "core/comms/diagnostics.h"
@@ -235,6 +236,11 @@ class ConfigService {
     std::optional<CaptureProfile> capture_requested() const { return capture_requested_; }
     void clear_capture_request() { capture_requested_.reset(); }
 
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    void serve_adsb_trial() { serves_adsb_trial_ = true; }
+    std::optional<AdsbTrialPlan> adsb_trial_requested() const { return adsb_trial_requested_; }
+    void clear_adsb_trial_request() { adsb_trial_requested_.reset(); }
+
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
     // flight log service asks, the panel shows the prompt, and only the
@@ -338,6 +344,7 @@ class ConfigService {
     void stage_settings(const events::RxFrame& frame);
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void request_capture(const cbor::Reader& frame);
+    void request_adsb_trial(const cbor::Reader& frame);
     void install_received_image();
     void open_upload_window();
     void apply_settings(const cbor::Reader& frame);
@@ -376,6 +383,8 @@ class ConfigService {
     bool capture_armed_{false};
     CaptureProfile staged_capture_{CaptureProfile::Stop};
     std::optional<CaptureProfile> capture_requested_{};
+    bool serves_adsb_trial_{false};
+    std::optional<AdsbTrialPlan> adsb_trial_requested_{};
     Pending pending_{Pending::None};
     bool refused_on_device_{false};
     bool settings_dirty_{false};

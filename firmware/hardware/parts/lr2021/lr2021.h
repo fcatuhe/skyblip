@@ -19,6 +19,16 @@ struct Lr2021Event {
     bool rssi_valid{false};
 };
 
+// TODO: fc 13nov26 adsb trial #293, back to the constants below once the trial picks the settings
+enum class Lr2021Layout : uint8_t { Chips = 0, Manchester = 1 };
+struct Lr2021Tuning {
+    int16_t detection_threshold_dbm{-90};
+    uint8_t gain_step{0};
+    uint8_t boost{0};
+    bool front_end_raw{true};
+    Lr2021Layout layout{Lr2021Layout::Chips};
+};
+
 class Lr2021 {
    public:
     Lr2021(io::Spi& spi, io::Gpio& gpio, io::Delay& delay, int busy_pin, int reset_pin, int irq_pin,
@@ -34,6 +44,8 @@ class Lr2021 {
     Status probe();
     Status begin(int16_t detection_threshold_dbm);
     Status start_receive();
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    Status retune(const Lr2021Tuning& tuning);
     Lr2021Event poll(uint8_t* chips, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sleep();
@@ -47,6 +59,7 @@ class Lr2021 {
     uint32_t command_errors() const { return command_errors_; }
     uint16_t device_errors() const { return device_errors_; }
     uint32_t fifo_drops() const { return fifo_drops_; }
+    uint32_t foreign_frames() const { return foreign_frames_; }
 
    private:
     Status wait_busy_low(uint32_t ceiling_us);
@@ -65,6 +78,7 @@ class Lr2021 {
     void note_status(const uint8_t* status);
     Status read_errors();
     Status read_frame(uint8_t* chips, Lr2021Event& event);
+    uint8_t frame_bytes() const;
 
     static constexpr size_t kFrameBytes = 16;
 
@@ -74,7 +88,7 @@ class Lr2021 {
     int busy_pin_, reset_pin_, irq_pin_;
     uint8_t irq_dio_;
     Lr2021Mode mode_{Lr2021Mode::Reset};
-    int16_t detection_threshold_dbm_{0};
+    Lr2021Tuning tuning_{};
     uint16_t last_opcode_{0};
     uint8_t frames_waiting_{0};
     int8_t newest_rssi_dbm_{0};
@@ -86,6 +100,7 @@ class Lr2021 {
     uint32_t command_errors_{0};
     uint16_t device_errors_{0};
     uint32_t fifo_drops_{0};
+    uint32_t foreign_frames_{0};
 };
 
 // INFO: fc 11nov26 DS is Semtech's LR2021/LR2022/LR2012 Datasheet, Final Rev. 2.1, 13 April 2026,
@@ -180,6 +195,14 @@ constexpr uint8_t kSyncwordMsbFirstBits = 0x80 | 8;
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;
 constexpr uint8_t kAgcAutomatic = 0x00;
+// TODO: fc 13nov26 adsb trial #293, keep only the values the trial picks
+// INFO: fc 13nov26 RadioLib setGain() and setRxPath(): gain steps 1 to 13 and boosts 0 to 7
+constexpr uint8_t kGainStepCeiling = 13;
+constexpr uint8_t kRxBoostCeiling = 7;
+// INFO: fc 13nov26 RadioLib LR2021_commands.h: Manchester on, inverted, the layout cb-tfc receives
+constexpr uint8_t kCrcOffManchesterInverted = 0x09;
+constexpr uint8_t kSyncwordNoneMsbFirst = 0x80;
+constexpr uint8_t kManchesterFrameBytes = 14;
 
 // INFO: fc 11nov26 Semtech's lr20xx_workarounds.c, not the DS: register 0xF30E14 holds the
 // threshold in dB plus 74
@@ -194,8 +217,18 @@ constexpr int16_t kDetectionThresholdDbm = -90;
 constexpr uint32_t kOokQuirkRegister = 0xF30150;
 constexpr uint32_t kOokQuirkMask = 0x000000FF;
 constexpr uint32_t kOokQuirkData = 0x18;
+// TODO: fc 13nov26 adsb trial #293, keep only the value the trial picks
+// INFO: fc 13nov26 cb-tfc radio.cpp: the part's default, which runs the AGC and blanks a saturated
+// ADC
+constexpr uint32_t kOokQuirkChipDefault = 0x75;
 
 constexpr uint8_t kChipBytes = 27;
+
+// TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+static_assert(Lr2021Tuning{}.detection_threshold_dbm == kDetectionThresholdDbm &&
+                  Lr2021Tuning{}.gain_step == kAgcAutomatic &&
+                  Lr2021Tuning{}.boost == kRxBoostOff && Lr2021Tuning{}.front_end_raw,
+              "a default tuning is SoftRF's, which the bring-up sent before the trial");
 
 // INFO: fc 11nov26 DS 4.2 asks NRESET low for 100 us at least
 constexpr uint32_t kResetLowUs = 100;
