@@ -21,9 +21,9 @@ The station log: every burst this radio sent or heard, in the order it happened,
 | `Unsupported` | the frame framed and carried a message type this firmware does not implement: ALP-TAS reads its 2024 position frame and nothing else, so Air V6 (type 0) and text messages (type 3) land here, and ADS-L reads §F.2.1's Traffic and the registration inside payload 66, so Status (3), Remote Identification (6) and any other telemetry carried in 66 land here too |
 | `Unattempted` | nothing was tried, because own-ship had no fix or no UTC to decode an ALP-TAS frame against |
 | `Declared` | an ADS-L Status from an aircraft in the table, whose Max. Protocol Version B.5 now holds for it, printed `STAT` |
-| `Deferred` | the clear channel assessment before own-ship's burst found the channel busy, and the burst waits a random multiple of 5 ms inside its window (ADS-L D.3), printed `DEFER` with the level it read |
-| `Forced` | the channel was still busy 3000 ms after the burst's first attempt, so it goes irrespective of carrier detect and nothing of ours follows for 2000 ms, printed `FORCE` |
-| `Busy` | the burst's window ran out with the channel still busy, so it missed its second and the 2 s retry takes it, printed `BUSY` |
+| `Deferred` | the clear channel assessment before own-ship's burst found the channel busy, and the burst is armed again a random 5 to 40 ms later inside its window (ADS-L D.3), printed `DEFER`. The row is dated at the instant the burst was planned for and carries the level the assessment read |
+| `Forced` | on the ground, the channel was still busy 3000 ms after the burst's first attempt, so it goes irrespective of carrier detect and nothing of ours follows for 2000 ms after it ends, printed `FORCE` |
+| `Busy` | the burst was found busy and could not be armed again inside its window, so it missed its second and the 2 s retry takes it, printed `BUSY` |
 
 `BadCrc` and `Undecoded` were one verdict until the bench had two devices on it, and the pair of them is the reading that separates a marginal link from a protocol disagreement. Bits the air corrupted are a radio problem, and bits nothing here knew what to do with are ours: one is answered by moving the antenna and the other by reading `core/protocol/`.
 
@@ -102,9 +102,9 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `uplink_stale` | records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or ahead of the second they were heard in (G.3) |
 | `tx_given_up` | turns of own-ship's schedule that never went out, neither in their second nor on a retry 2 s on, before their type's next turn (`core/timing/README.md`) |
 | `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
-| `tx_deferred` | bursts of ours the clear channel assessment found busy, deferred by a random multiple of 5 ms inside their own window (D.3, `core/timing/README.md`) |
-| `tx_forced` | Status, name and ground position bursts keyed on a busy channel 3000 ms after their first attempt, each followed by 2000 ms with nothing of ours on air (D.3) |
-| `tx_busy_missed` | bursts whose window ran out with the channel still busy, which the 2 s retry then takes (D.3) |
+| `tx_deferred` | bursts of ours the clear channel assessment found busy, armed again a random 5 to 40 ms later inside their own window (D.3, `core/timing/README.md`) |
+| `tx_forced` | bursts keyed on a busy channel on the ground 3000 ms after their first attempt, each followed by 2000 ms from its end with nothing of ours on air (D.3) |
+| `tx_busy_missed` | bursts found busy that could not be armed again inside their window, which the 2 s retry then takes (D.3) |
 
 `rx_status`, `uplink_stale`, `tx_held_for_b5`, `tx_given_up`, `tx_deferred`, `tx_forced` and `tx_busy_missed` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row. The other four are the dump's only.
 

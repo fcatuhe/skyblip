@@ -14,6 +14,8 @@
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "hardware/platform/clear_channel.h"
+#include "hardware/platform/zephyr/rf_mailbox.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
 #include "runtime/tasks.h"
@@ -38,28 +40,13 @@ class Rf : public ports::Rf {
     static constexpr int kHealthTickMs = 250;
     // INFO: fc 28sep26 read inside the dwell, where nine reads after its end ate into every guard
     static constexpr uint64_t kCarrierLeadUs = 2000;
-    // INFO: fc 03oct26 build 892 staged 0.42-0.66 ms past the stage point: 700 left 40 us spare
-    static constexpr uint64_t kTxStageLeadUs = 700;
     // INFO: fc 03oct26 builds 875 and 892 dated TxDone 0.3-0.7 ms past the air time
     static constexpr uint64_t kTxTailUs = 1000;
     // INFO: fc 03oct26 two RTC ticks: at most 17 status reads a burst, none outside its tail
     static constexpr uint64_t kTxTailPollUs = 60;
-    // TODO: fc 14nov26 a guess at the CCA reads' overrun, until a bench capture times them on nRF52
-    static constexpr uint64_t kCcaOverrunUs = 300;
-    static constexpr uint64_t kCcaLeadUs =
-        kTxStageLeadUs + timing::PoliteAccess::kCcaWindowUs + kCcaOverrunUs;
-    static_assert(kCcaLeadUs <= timing::PoliteAccess::kCcaLeadUs &&
-                      kCcaLeadUs - timing::PoliteAccess::kCcaWindowUs <
-                          timing::PoliteAccess::kDeadTimeCeilingUs,
-                  "the assessment starts inside the dwell and ends inside the declared dead time");
-    static constexpr int32_t kCcaThresholdCentiDbm =
-        timing::cca_threshold_centi_dbm(parts::sx1262::kReceiveGainCentiDbd);
 
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
-        : radio_(radio), clock_(clock), out_(out) {
-        k_sem_init(&armed_, 0, 1);
-        k_sem_init(&wake_, 0, 1);
-    }
+        : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
         Status status = radio_.begin();
@@ -84,68 +71,27 @@ class Rf : public ports::Rf {
         // A dwell that cannot start before its own end is refused here rather
         // than truncated on air.
         if (clock_.microseconds() >= plan.end_us) return Status::WouldBlock;
-        Status verdict = Status::Ok;
-        k_sched_lock();
-        if (joins_flying_dwell(plan)) {
-            if (flying_bursts_.add(burst_of(plan)))
-                k_sem_give(&wake_);
-            else
-                verdict = Status::WouldBlock;
-        } else if (flying_ && plan.end_us <= flying_end_us_) {
-            verdict = Status::WouldBlock;
-        } else if (queued_ && same_dwell(plan, queued_plan_)) {
-            if (plan.tx != nullptr && !queued_bursts_.add(burst_of(plan)))
-                verdict = Status::WouldBlock;
-        } else {
-            queued_plan_ = plan;
-            queued_bursts_ = ports::RfBursts::of(plan);
-            queued_armed_at_us_ = clock_.microseconds();
-            queued_ = true;
-            k_sem_give(&armed_);
-        }
-        k_sched_unlock();
-        return verdict;
+        return mailbox_.arm(plan, clock_.microseconds());
     }
 
     void abort() override {
-        k_sched_lock();
-        queued_ = false;
-        flying_ = false;
-        k_sched_unlock();
+        mailbox_.abort();
         abort_ = true;
-        k_sem_give(&wake_);
+        mailbox_.wake();
     }
 
-    // INFO: fc 14nov26 under the scheduler lock: the thread stages the burst it keys under the same
-    Status withdraw(uint64_t tx_at_us) override {
-        Status verdict = Status::WouldBlock;
-        k_sched_lock();
-        const int flying = flying_ ? flying_bursts_.index_of(tx_at_us) : -1;
-        const int queued = queued_ ? queued_bursts_.index_of(tx_at_us) : -1;
-        if (flying >= flying_keyed_) {
-            flying_bursts_.remove(static_cast<uint8_t>(flying));
-            verdict = Status::Ok;
-        } else if (queued >= 0) {
-            queued_bursts_.remove(static_cast<uint8_t>(queued));
-            verdict = Status::Ok;
-        }
-        k_sched_unlock();
-        if (verdict == Status::Ok) k_sem_give(&wake_);
-        return verdict;
-    }
+    Status withdraw(uint64_t tx_at_us) override { return mailbox_.withdraw(tx_at_us); }
 
     // The shutdown path runs on the service thread and the radio belongs to this
     // one, so what crosses the boundary is a request: abort the dwell, wake the
     // thread, and let it issue SetSleep itself. Nothing else may touch the SPI
     // until parked() says the thread has let go of it for good.
     void sleep() override {
-        k_sched_lock();
-        queued_ = false;
-        k_sched_unlock();
+        mailbox_.drop_queued();
         sleep_requested_ = true;
         abort_ = true;
-        k_sem_give(&wake_);
-        k_sem_give(&armed_);
+        mailbox_.wake();
+        mailbox_.give_armed();
     }
 
     // INFO: fc 08nov26 no thread means nothing ever owned the bus, so there is nothing to wait for
@@ -190,39 +136,10 @@ class Rf : public ports::Rf {
 
     static void on_dio1(const struct device*, struct gpio_callback*, gpio_port_pins_t) {
         self_->dio1_edges_++;
-        k_sem_give(&self_->wake_);
+        self_->mailbox_.wake();
     }
 
     bool arm_dio1() { return gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_EDGE_RISING) == 0; }
-
-    // INFO: fc 23sep26 runs under arm()'s scheduler lock: no dwell ends between check and publish
-    bool joins_flying_dwell(const ports::RfPlan& plan) {
-        if (!flying_ || plan.tx == nullptr) return false;
-        if (plan.mode != flying_mode_ || plan.frequency_hz != flying_frequency_hz_) return false;
-        return plan.tx_at_us >= clock_.microseconds() && plan.tx_at_us < flying_end_us_;
-    }
-
-    static ports::RfBurst burst_of(const ports::RfPlan& plan) {
-        return ports::RfBurst{plan.tx, plan.tx_bytes, plan.tx_at_us, plan.tx_forced};
-    }
-
-    static bool same_dwell(const ports::RfPlan& one, const ports::RfPlan& other) {
-        return one.mode == other.mode && one.frequency_hz == other.frequency_hz &&
-               one.end_us == other.end_us;
-    }
-
-    ports::RfBursts flying_bursts() {
-        k_sched_lock();
-        const ports::RfBursts bursts = flying_bursts_;
-        k_sched_unlock();
-        return bursts;
-    }
-
-    void publish_keyed(uint8_t keyed) {
-        k_sched_lock();
-        flying_keyed_ = keyed;
-        k_sched_unlock();
-    }
 
     void miss_unfinished(const ports::RfBursts& bursts, uint8_t done, uint8_t keyed) {
         for (uint8_t i = done; i < bursts.count; i++) {
@@ -235,35 +152,35 @@ class Rf : public ports::Rf {
     void run() {
         health_checked_us_ = clock_.microseconds();
         for (;;) {
-            const int armed = k_sem_take(&armed_, K_MSEC(kHealthTickMs));
+            const int armed = mailbox_.wait_armed(K_MSEC(kHealthTickMs));
             if (sleep_requested_) {
                 park();
                 return;
             }
-            health(reinitialisation_affordable());
+            health(mailbox_.reinitialisation_affordable());
             if (armed != 0) continue;
             abort_ = false;
             ports::RfPlan plan{};
             uint64_t armed_at_us = 0;
-            if (!take(plan, armed_at_us)) continue;
+            if (!mailbox_.take(plan, armed_at_us)) continue;
             if (clock_.microseconds() >= plan.end_us) {
-                miss_unfinished(flying_bursts(), 0, 0);
-                flying_ = false;
+                miss_unfinished(mailbox_.flying_bursts(), 0, 0);
+                mailbox_.land();
                 continue;
             }
             const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
             if (plan.start_us > lead_us) sleep_until(plan.start_us - lead_us);
             if (abort_) {
-                flying_ = false;
+                mailbox_.land();
                 continue;
             }
             if (start(plan, armed_at_us))
                 dwell(plan);
             else
-                miss_unfinished(flying_bursts(), 0, 0);
+                miss_unfinished(mailbox_.flying_bursts(), 0, 0);
             last_end_us_ = plan.end_us;
-            flying_ = false;
-            health(reinitialisation_affordable());
+            mailbox_.land();
+            health(mailbox_.reinitialisation_affordable());
         }
     }
 
@@ -273,26 +190,6 @@ class Rf : public ports::Rf {
         (void)gpio_pin_interrupt_configure_dt(&dio1_, GPIO_INT_DISABLE);
         radio_.sleep();
         parked_ = true;
-    }
-
-    // INFO: fc 27sep26 flying from the moment it is taken, so a burst armed during the retune joins
-    // it
-    bool take(ports::RfPlan& plan, uint64_t& armed_at_us) {
-        k_sched_lock();
-        const bool taken = queued_;
-        if (taken) {
-            plan = queued_plan_;
-            armed_at_us = queued_armed_at_us_;
-            queued_ = false;
-            flying_bursts_ = queued_bursts_;
-            flying_keyed_ = 0;
-            flying_mode_ = plan.mode;
-            flying_frequency_hz_ = plan.frequency_hz;
-            flying_end_us_ = plan.end_us;
-            flying_ = true;
-        }
-        k_sched_unlock();
-        return taken;
     }
 
     // A receiver that has heard nothing for 30 s is deaf, not lucky, and the
@@ -309,14 +206,6 @@ class Rf : public ports::Rf {
                                                              : std::numeric_limits<uint32_t>::max();
         // INFO: fc 03oct26 a reinitialisation reconfigures DIO1, and nrfx GPIO drops its trigger
         if (radio_.service(elapsed_ms, silence_ceiling_ms)) dio1_wakes_ = dio1_wakes_ && arm_dio1();
-    }
-
-    // INFO: fc 28sep26 reinitialising fits the 23 ms bench stall: only the uplink dwell spares it
-    bool reinitialisation_affordable() {
-        k_sched_lock();
-        const bool affordable = !queued_ || queued_plan_.mode == ports::RfMode::RxOBand;
-        k_sched_unlock();
-        return affordable;
     }
 
     void sleep_until(uint64_t deadline_us) {
@@ -391,37 +280,40 @@ class Rf : public ports::Rf {
         return timing::ChannelLevel::mean_dbm(window, timing::ChannelLevel::kSamples);
     }
 
-    // INFO: fc 14nov26 EN 300 220-1 5.21.1 before each burst not forced: a radio not in RX is busy
-    bool assess_clear(const ports::RfBurst& burst) {
-        if (burst.forced) return true;
-        events::RfEvent busy{};
-        busy.rssi_valid = radio_.mode() == parts::RadioMode::Rx;
-        if (busy.rssi_valid) {
-            busy.rssi_dbm = read_level();
-            if (timing::channel_clear(busy.rssi_dbm, kCcaThresholdCentiDbm)) return true;
+    // INFO: fc 14nov26 EN 300 220-1 5.21.1 before each burst not forced, kept to the dead time
+    bool listen_and_key(const ports::RfBurst& burst, uint8_t index) {
+        if (!mailbox_.claim(burst, index)) return false;
+        Assessment assessment{};
+        if (!burst.forced) {
+            assessment = assess(
+                radio_.mode() == parts::RadioMode::Rx, [this] { return read_level(); }, clock_);
+            if (!assessment.clear) return refuse(burst, index, assessment);
         }
-        busy.type = events::RfEventType::Busy;
-        busy.band = band_;
-        busy.frequency_hz = frequency_hz_;
-        busy.at_us = clock_.microseconds();
-        busy.tx_at_us = burst.at_us;
-        k_sched_lock();
-        const int index = flying_bursts_.index_of(burst.at_us);
-        if (index >= 0) flying_bursts_.remove(static_cast<uint8_t>(index));
-        k_sched_unlock();
-        out_.push(busy);
+        if (key(burst, assessment)) return true;
+        return refuse(burst, index, Assessment{});
+    }
+
+    bool refuse(const ports::RfBurst& burst, uint8_t index, const Assessment& assessment) {
+        mailbox_.release(index);
+        out_.push(busy_report(burst, assessment, band_, frequency_hz_, clock_.microseconds()));
         return false;
     }
 
-    // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx and not the whole buffer write
-    void key(const ports::RfBurst& burst) {
+    // INFO: fc 28sep26 staged ahead, so the instant costs one SetTx | 14nov26 none past the dead
+    // time
+    bool key(const ports::RfBurst& burst, const Assessment& assessment) {
         tx_at_us_ = burst.at_us;
         (void)radio_.stage_tx(burst.chips, burst.bytes);
         staged_at_us_ = clock_.microseconds();
         while (clock_.microseconds() < burst.at_us) k_busy_wait(1);
+        if (!burst.forced && !within_dead_time(assessment, clock_.microseconds())) {
+            (void)radio_.start_receive();
+            return false;
+        }
         (void)radio_.key_tx();
         keyed_at_us_ = clock_.microseconds();
         tail_from_us_ = keyed_at_us_ + radio_.air_us(burst.bytes);
+        return true;
     }
 
     // INFO: fc 03oct26 build 892's TxDone edge woke 0.3 ms after the status bit, RxDone's on time
@@ -466,12 +358,10 @@ class Rf : public ports::Rf {
         irq_at_us_ = 0;
         uint64_t poll_due_us = 0;
         while (!abort_ && clock_.microseconds() < plan.end_us) {
-            bursts = flying_bursts();
+            bursts = mailbox_.flying_bursts();
             if (clock_.microseconds() >= bursts.stage_at_us(keyed, done, kCcaLeadUs)) {
-                if (!assess_clear(bursts.burst[keyed])) continue;
-                key(bursts.burst[keyed]);
+                if (!listen_and_key(bursts.burst[keyed], keyed)) continue;
                 keyed++;
-                publish_keyed(keyed);
             }
             if (irq_at_us_ == 0 && radio_.irq_asserted()) irq_at_us_ = clock_.microseconds();
             if (irq_at_us_ != 0 || clock_.microseconds() >= poll_due_us) {
@@ -496,13 +386,13 @@ class Rf : public ports::Rf {
             if (!dio1_wakes_) wake_us = std::min(wake_us, clock_.microseconds() + kSpinUs);
             if (!sampled && sent_all) wake_us = std::min(wake_us, plan.end_us - kCarrierLeadUs);
             // INFO: fc 29sep26 an absolute uptime wake: k_usleep lands a tick past the stage point
-            (void)k_sem_take(
-                &wake_, K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(wake_us))));
+            mailbox_.wait_wake(
+                K_TIMEOUT_ABS_TICKS(static_cast<k_ticks_t>(k_us_to_ticks_ceil64(wake_us))));
         }
         for (completed = false; collect(completed, fault); completed = false)
             if (completed) done++;
         if (fault) return;
-        miss_unfinished(flying_bursts(), done, keyed);
+        miss_unfinished(mailbox_.flying_bursts(), done, keyed);
     }
 
     // The frame is already in the event that will carry it. An O-band uplink
@@ -538,19 +428,16 @@ class Rf : public ports::Rf {
     parts::Sx1262& radio_;
     ports::Clock& clock_;
     bus::Queue<events::RfEvent, 8>& out_;
-    ports::RfPlan queued_plan_{};
+    RfMailbox mailbox_{};
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};
     ports::RfMode last_mode_{ports::RfMode::Idle};
     uint32_t last_frequency_hz_{0};
     uint64_t last_end_us_{0};
-    uint64_t queued_armed_at_us_{0};
     events::RfEvent rx_{};
     model::Band band_{model::Band::M};
     uint32_t frequency_hz_{0};
     uint64_t health_checked_us_{0};
-    struct k_sem armed_{};
-    struct k_sem wake_{};
     struct gpio_dt_spec dio1_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_dio1_gpio), gpios);
     struct gpio_callback dio1_callback_{};
     volatile bool dio1_wakes_{false};
@@ -559,19 +446,11 @@ class Rf : public ports::Rf {
     struct k_thread thread_{};
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);
-    ports::RfBursts flying_bursts_{};
-    int flying_keyed_{0};
-    ports::RfBursts queued_bursts_{};
     uint64_t keyed_at_us_{0};
     uint64_t staged_at_us_{0};
     uint64_t tx_at_us_{0};
     uint64_t irq_at_us_{0};
     uint64_t tail_from_us_{0};
-    uint64_t flying_end_us_{0};
-    uint32_t flying_frequency_hz_{0};
-    ports::RfMode flying_mode_{ports::RfMode::Idle};
-    volatile bool flying_{false};
-    bool queued_{false};
     volatile bool abort_{false};
     volatile bool sleep_requested_{false};
     volatile bool parked_{false};

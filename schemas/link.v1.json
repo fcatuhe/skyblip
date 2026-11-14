@@ -164,9 +164,9 @@
         {"name": "rx_status", "number": 65, "type": "unsigned", "description": "radio. ADS-L Status payloads heard from an aircraft in the traffic table, whose Max. Protocol Version B.5 now holds for it (radio::Verdict::Declared)"},
         {"name": "uplink_stale", "number": 66, "type": "unsigned", "description": "radio. Records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or in the future (ADS-L G.3)"},
         {"name": "tx_given_up", "number": 67, "type": "unsigned", "description": "radio. Turns of own-ship's schedule, a position, a Status or a name, that never went out: neither in their second nor on a retry 2 s on the same channel before their type's next turn (core/timing/README.md)"},
-        {"name": "tx_deferred", "number": 68, "type": "unsigned", "description": "radio. Bursts of own-ship's whose clear channel assessment found the channel busy and that waited a random multiple of 5 ms inside their own window to listen again (ADS-L D.3, EN 300 220-1 5.21.1, core/timing/README.md)"},
-        {"name": "tx_forced", "number": 69, "type": "unsigned", "description": "radio. Status, name and ground position bursts keyed on a busy channel because 3000 ms had passed since their first attempt, each followed by 2000 ms with nothing of ours on air (ADS-L D.3)"},
-        {"name": "tx_busy_missed", "number": 70, "type": "unsigned", "description": "radio. Bursts whose window ran out with the channel still busy, so they missed their second and the 2 s retry took them (ADS-L D.3, core/timing/README.md)"}
+        {"name": "tx_deferred", "number": 68, "type": "unsigned", "description": "radio. Bursts of own-ship's whose clear channel assessment found the channel busy and that were armed again a random 5 to 40 ms later inside their own window, to listen again (ADS-L D.3, EN 300 220-1 5.21.1, core/timing/README.md)"},
+        {"name": "tx_forced", "number": 69, "type": "unsigned", "description": "radio. Bursts keyed on a busy channel on the ground, a Status, a name or a position, because 3000 ms had passed since their first attempt, each followed by 2000 ms from its end with nothing of ours on air. Nothing is forced airborne (ADS-L D.3)"},
+        {"name": "tx_busy_missed", "number": 70, "type": "unsigned", "description": "radio. Bursts found busy that could not be armed again inside their window, so they missed their second and the 2 s retry took them (ADS-L D.3, core/timing/README.md)"}
       ]
     },
     {

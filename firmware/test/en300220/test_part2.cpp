@@ -74,10 +74,11 @@ TEST_CASE("EN 300 220-2 4.6.1.1: a channel found busy is left for another operat
 }
 
 // Table 17 repeats -1 Table 45 over Table 11, which repeats -1 Table 32.
-TEST_CASE("EN 300 220-2 4.6.2.3: the CCA threshold is under Table 17's limit at the antenna") {
-    const int32_t corrected_for_antenna =
-        platform::host::Rf::kCcaThresholdCentiDbm + parts::sx1262::kReceiveGainCentiDbd;
-    CHECK(corrected_for_antenna <= -9399 + 1500);
+TEST_CASE(
+    "EN 300 220-2 4.6.2.3: the CCA threshold at the connector is Table 17's, for this antenna") {
+    const int32_t at_connector = platform::kCcaThresholdCentiDbm + parts::sx1262::kFeedLossCentiDb;
+    const int32_t antenna_dbd = 160 - 215;
+    CHECK(at_connector == -9399 + 1500 - antenna_dbd);
     const int32_t erp_under_100_mw_centi_dbm = 2000;
     CHECK(parts::sx1262::kResultingErpCentiDb < erp_under_100_mw_centi_dbm);
 }

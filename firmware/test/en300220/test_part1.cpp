@@ -88,17 +88,20 @@ TEST_CASE("EN 300 220-1 5.21.1: a burst goes out below the CCA threshold and def
 
 // "With antenna gain of -5 dB, the CCA threshold shall be corrected and increased by 5 dB".
 TEST_CASE(
-    "EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, less the "
-    "antenna gain") {
+    "EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, corrected by "
+    "the antenna gain, at the chip behind the feed") {
     const int32_t sensitivity_200_khz = -9399;
     const int32_t limit_at_0_dbd = sensitivity_200_khz + 1500;
-    CHECK(timing::cca_threshold_centi_dbm(0) == limit_at_0_dbd);
-    const int32_t peak_to_dipole = 160 - 215;
-    const int32_t feed = -50;
-    CHECK(parts::sx1262::kReceiveGainCentiDbd == peak_to_dipole + feed);
-    const int32_t threshold = platform::host::Rf::kCcaThresholdCentiDbm;
-    CHECK(threshold == limit_at_0_dbd + 105);
-    CHECK(threshold == -7794);
+    CHECK(timing::cca_threshold_centi_dbm(0, 0) == limit_at_0_dbd);
+    const int32_t peak_dbi_to_dbd = 160 - 215;
+    CHECK(parts::sx1262::kAntennaGainCentiDbd == peak_dbi_to_dbd);
+    const int32_t at_connector = limit_at_0_dbd - peak_dbi_to_dbd;
+    CHECK(at_connector == -7844);
+    const int32_t feed_loss = 50;
+    CHECK(parts::sx1262::kFeedLossCentiDb == feed_loss);
+    const int32_t threshold = platform::kCcaThresholdCentiDbm;
+    CHECK(threshold == at_connector - feed_loss);
+    CHECK(threshold == -7894);
 
     const int8_t loudest_clear_dbm = static_cast<int8_t>((threshold - 99) / 100);
     CHECK(Burst(loudest_clear_dbm).keyed());

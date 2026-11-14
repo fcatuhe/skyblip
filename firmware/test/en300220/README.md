@@ -15,7 +15,7 @@ A gap is a skipped case, written as the clause requires, as in the ADS-L suite. 
 | Clause | What the case checks |
 |---|---|
 | -1 5.21.1 | the executor keys below the CCA threshold and reports the burst busy above it, and a deferral is a random whole number of 5 ms units |
-| -1 5.21.2.2 | the threshold is 15 dB over Table 32's limit for a 200 kHz receiver, moved by the antenna's gain, and the executor keys 1 dB under it and holds at it |
+| -1 5.21.2.2 | the threshold is 15 dB over Table 32's limit for a 200 kHz receiver, corrected by the antenna's gain as Table 45's example says, then less the feed's loss to the chip, and the executor keys 1 dB under it and holds at it |
 | -1 5.21.3.1 | the CCA interval, the dead time, Ton, the hour's cumulative on-time, the deferral floor, and 100 ms between two of our bursts on one frequency over 21 s of flight |
 | -1 5.21.3.2 | the seven declarations `core/timing/README.md` tabulates, at their values |
 | -1 5.21.4.1 | skipped, `optional:` |
@@ -23,7 +23,7 @@ A gap is a skipped case, written as the clause requires, as in the ADS-L suite. 
 | -2 4.4.3.3 | the hour's air time stops at 1 %, and the transmitter refuses a burst past it |
 | -2 4.6.1.0 | a held channel defers a burst in the simulator, and the burst goes once the channel clears |
 | -2 4.6.1.1 | skipped, `optional:` |
-| -2 4.6.2.3 | the threshold referred to the antenna is under Table 17's limit |
+| -2 4.6.2.3 | the threshold at the antenna connector is Table 17's limit corrected by this antenna's gain |
 | -2 4.6.3.2 | the timing parameters are inside Table 18 |
 
 The cases compare against the standard's numbers written as literals, never against `protocols/common/en300220.h`, so a wrong figure there fails here.

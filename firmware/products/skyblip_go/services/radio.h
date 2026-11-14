@@ -48,6 +48,7 @@ class RadioService : public runtime::Service {
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
+    static constexpr uint64_t kAirTimeUs = uint64_t{timing::Transmitter::kAirTimeMs} * 1000;
 
     enum class Role : uint8_t { Current, Next };
     using Payload = timing::Transmitter::Payload;
@@ -119,7 +120,6 @@ class RadioService : public runtime::Service {
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms() const;
-    int32_t fix_lag_ms(int64_t origin_us) const;
     bool full_rate() const;
     void count_given_up(uint32_t now_ms);
     protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,

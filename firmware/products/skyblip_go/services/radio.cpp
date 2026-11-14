@@ -256,11 +256,9 @@ void RadioService::count_given_up(uint32_t now_ms) {
         transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
 }
 
-int32_t RadioService::fix_lag_ms() const { return fix_lag_ms(dwell_origin_us()); }
-
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
-int32_t RadioService::fix_lag_ms(int64_t origin_us) const {
-    const uint32_t second_ms = static_cast<uint32_t>(at_us(origin_us, 0) / 1000);
+int32_t RadioService::fix_lag_ms() const {
+    const uint32_t second_ms = static_cast<uint32_t>(at_us(dwell_origin_us(), 0) / 1000);
     return static_cast<int32_t>(second_ms - context_.state.own.fix_at_ms);
 }
 

@@ -21,6 +21,7 @@ namespace {
 using Payload = timing::Transmitter::Payload;
 
 constexpr uint32_t kStepMs = 1;
+constexpr uint64_t kAirTimeUs = timing::Transmitter::kAirTimeMs * 1000;
 constexpr uint32_t kWaitCeilingMs = 30000;
 const int8_t kHeldDbm[1] = {-50};
 
@@ -224,9 +225,48 @@ TEST_CASE("rf: on the ground a burst busy for 3000 ms is forced, then 2000 ms of
         if (record.at_us >= held_from_us) forced.push_back(record);
     REQUIRE(forced.size() >= 2);
     // Nothing clears, so the first burst on air waited out 3000 ms since an initial attempt.
-    CHECK(forced[0].at_us >= held_from_us + adsl::kForceAfterAttemptUs);
+    if (!forced.empty()) CHECK(forced[0].at_us >= held_from_us + adsl::kForceAfterAttemptUs);
     for (size_t i = 1; i < forced.size(); i++)
-        CHECK(forced[i].at_us - forced[i - 1].at_us >= adsl::kSilenceAfterForceUs);
+        CHECK(forced[i].at_us - forced[i - 1].at_us >= kAirTimeUs + adsl::kSilenceAfterForceUs);
+}
+
+// The channel clears the moment the force is decided, so only the silence keeps ours off the air.
+TEST_CASE("rf: after a forced burst ends nothing of ours goes on air for 2000 ms, clear or not") {
+    Listening run(0, "D-KXYZ");
+    run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
+    const uint64_t held_from_us = ms_to_us(run.now_ms);
+    run.hold(true);
+    const uint32_t until_ms = run.now_ms + 12000;
+    while (run.state().air.tx_forced == 0 && run.now_ms < until_ms) run.step();
+    run.hold(false);
+    REQUIRE(run.state().air.tx_forced == 1);
+    run.run_for(6000);
+
+    std::vector<simulator::AirRecord> sent;
+    for (const simulator::AirRecord& record : run.sent())
+        if (record.at_us >= held_from_us) sent.push_back(record);
+    REQUIRE(sent.size() >= 2);
+    if (sent.size() < 2) return;
+    CHECK(sent[0].at_us == *run.simulator.product().radio().forced_at_us());
+    CHECK(sent[1].at_us >= sent[0].at_us + kAirTimeUs + adsl::kSilenceAfterForceUs);
+}
+
+// Without a name to force, the turn that waits longest on the ground is a position.
+TEST_CASE("rf: on the ground with no name set, a position busy for 3000 ms is forced") {
+    Listening run(0);
+    run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
+    const uint64_t held_from_us = ms_to_us(run.now_ms);
+    run.hold(true);
+    run.run_for(6000);
+    run.hold(false);
+    CHECK(run.state().air.tx_forced >= 1);
+    std::vector<simulator::AirRecord> sent;
+    for (const simulator::AirRecord& record : run.sent())
+        if (record.at_us >= held_from_us) sent.push_back(record);
+    REQUIRE_FALSE(sent.empty());
+    if (sent.empty()) return;
+    CHECK(payload_type_of(sent[0]) == adsl::Packet::kPayloadTypePosition);
+    CHECK(sent[0].at_us >= held_from_us + adsl::kForceAfterAttemptUs);
 }
 
 // EN 300 220-1 Table 48's off-time and the dwell map's one burst a dwell, with deferrals in play.

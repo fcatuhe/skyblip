@@ -7,6 +7,7 @@
 #include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
+#include "hardware/platform/clear_channel.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
 #include "runtime/tasks.h"
@@ -18,9 +19,6 @@ namespace skyblip::platform::host {
 // deadlines are therefore testable to the microsecond with no hardware.
 class Rf : public ports::Rf {
    public:
-    static constexpr int32_t kCcaThresholdCentiDbm =
-        timing::cca_threshold_centi_dbm(parts::sx1262::kReceiveGainCentiDbd);
-
     Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
@@ -61,9 +59,10 @@ class Rf : public ports::Rf {
         queued_ = false;
     }
 
+    // INFO: fc 14nov26 a burst whose assessment has begun is claimed, and keys or is reported Busy
     Status withdraw(uint64_t tx_at_us) override {
         const int flying = armed_ ? flying_bursts_.index_of(tx_at_us) : -1;
-        if (flying >= keyed_) {
+        if (flying > keyed_ || (flying == keyed_ && !assessed_)) {
             flying_bursts_.remove(static_cast<uint8_t>(flying));
             return Status::Ok;
         }
@@ -154,31 +153,28 @@ class Rf : public ports::Rf {
         const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
         if (armed_ && !started_ && now_us + lead_us >= flying_plan_.start_us && !start(now_us))
             abandon(now_us);
-        while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count &&
-               now_us >= flying_bursts_.burst[keyed_].at_us) {
+        while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count) {
             const ports::RfBurst burst = flying_bursts_.burst[keyed_];
-            if (burst.forced || assess_clear(burst)) {
-                transmit(burst);
-                return;
+            if (!burst.forced && !assessed_) {
+                if (now_us + kCcaLeadUs < burst.at_us) return;
+                if (!listen(burst)) continue;
             }
-            flying_bursts_.remove(keyed_);
+            if (now_us < burst.at_us) return;
+            // INFO: fc 14nov26 a pass stalled past the dead time listens again rather than key late
+            if (!burst.forced && !within_dead_time(assessment_, now_us) && !listen(burst)) continue;
+            transmit(burst);
+            return;
         }
     }
 
-    // INFO: fc 14nov26 virtual time stands still in a pass, so the reads before keying are the CCA
-    bool assess_clear(const ports::RfBurst& burst) {
-        events::RfEvent busy{};
-        busy.rssi_valid = radio_.mode() == parts::RadioMode::Rx;
-        if (busy.rssi_valid) {
-            busy.rssi_dbm = read_level();
-            if (timing::channel_clear(busy.rssi_dbm, kCcaThresholdCentiDbm)) return true;
-        }
-        busy.type = events::RfEventType::Busy;
-        busy.band = band_;
-        busy.frequency_hz = frequency_hz_;
-        busy.at_us = clock_.microseconds();
-        busy.tx_at_us = burst.at_us;
-        out_.push(busy);
+    // INFO: fc 14nov26 virtual time stands still in a pass, so the nine reads are one instant
+    bool listen(const ports::RfBurst& burst) {
+        assessment_ =
+            assess(radio_.mode() == parts::RadioMode::Rx, [this] { return read_level(); }, clock_);
+        assessed_ = assessment_.clear;
+        if (assessed_) return true;
+        out_.push(busy_report(burst, assessment_, band_, frequency_hz_, clock_.microseconds()));
+        flying_bursts_.remove(keyed_);
         return false;
     }
 
@@ -198,6 +194,7 @@ class Rf : public ports::Rf {
         armed_ = true;
         started_ = false;
         keyed_ = 0;
+        assessed_ = false;
         done_ = 0;
         keyed_at_us_ = 0;
     }
@@ -264,6 +261,7 @@ class Rf : public ports::Rf {
 
     void transmit(const ports::RfBurst& burst) {
         keyed_++;
+        assessed_ = false;
         tx_at_us_ = burst.at_us;
         staged_at_us_ = clock_.microseconds();
         (void)radio_.transmit(burst.chips, burst.bytes);
@@ -364,6 +362,8 @@ class Rf : public ports::Rf {
     bool queued_{false};
     bool started_{false};
     uint8_t keyed_{0};
+    bool assessed_{false};
+    Assessment assessment_{};
     uint8_t done_{0};
 };
 

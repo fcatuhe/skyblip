@@ -37,10 +37,12 @@ static_assert(PoliteAccess::kCcaWindowUs >= en300220::kCcaIntervalFloorUs &&
                   PoliteAccess::kTransmissionCeilingUs <= en300220::kTransmissionCeilingMs * 1000,
               "EN 300 220-1 Table 48 bounds every declared parameter");
 
-// INFO: fc 14nov26 EN 300 220-1 Table 45 on ADS-L's 200 kHz channel, corrected for the antenna
-constexpr int32_t cca_threshold_centi_dbm(int32_t antenna_gain_centi_dbd) {
+// INFO: fc 14nov26 Table 45 at the antenna connector, less the feed's loss down to the chip
+constexpr int32_t cca_threshold_centi_dbm(int32_t antenna_gain_centi_dbd,
+                                          int32_t feed_loss_centi_db) {
     return en300220::cca_threshold_centi_dbm(adsl::kMBandChannelBandwidthHz,
-                                             en300220::kBandMErpCeilingMw, antenna_gain_centi_dbd);
+                                             en300220::kBandMErpCeilingMw, antenna_gain_centi_dbd) -
+           feed_loss_centi_db;
 }
 
 inline bool channel_clear(int8_t level_dbm, int32_t threshold_centi_dbm) {

@@ -29,7 +29,7 @@ RadioService::Armed* RadioService::carrying(uint64_t tx_at_us, Payload& payload)
     return nullptr;
 }
 
-// INFO: fc 14nov26 an airborne position is never forced: the next second's covers it
+// INFO: fc 14nov26 nothing is forced airborne, where a 2 s silence would cost two positions
 void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Busy& busy,
                            uint32_t now_ms) {
     const uint64_t busy_at_us = busy.tx_at_us;
@@ -44,45 +44,37 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     adsl::ChannelAttempt attempt{};
     attempt.at_us = busy_at_us;
     attempt.first_us = contention.first_us;
-    attempt.forced_us = forced_us_;
+    if (forced_us_) attempt.forced_end_us = *forced_us_ + kAirTimeUs;
     attempt.earliest_us = context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs;
     attempt.last_us = at_us(dwell.origin_us, timing::Transmitter::last_instant(payload, slot));
-    attempt.may_force = payload != Payload::Position || !airborne;
+    attempt.may_force = !airborne;
     const adsl::Deferral deferral{timing::PoliteAccess::kDeferralUnitUs,
                                   timing::PoliteAccess::kDeferralUnits,
                                   transmitter_.deferral_draw(busy_at_us)};
     const adsl::AccessVerdict verdict = adsl::media_access(attempt, deferral);
 
     bus::State::AirCounts& air = context_.state.air;
-    switch (verdict.access) {
-        case adsl::Access::Defer:
-            air.tx_deferred++;
-            log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
-            rearm(dwell, payload, verdict.at_us, /*forced=*/false);
-            break;
-        case adsl::Access::Force:
-            if (!rearm(dwell, payload, verdict.at_us, /*forced=*/true)) break;
-            air.tx_forced++;
-            log_access(radio::Verdict::Forced, dwell, payload, busy, now_ms);
-            forced_us_ = verdict.at_us;
-            silence_after(verdict.at_us);
-            break;
-        case adsl::Access::Missed:
-            air.tx_busy_missed++;
-            log_access(radio::Verdict::Busy, dwell, payload, busy, now_ms);
-            break;
-        case adsl::Access::Transmit:
-        case adsl::Access::Silent: break;
+    const bool forced = verdict.access == adsl::Access::Force;
+    const bool rearmed = (forced || verdict.access == adsl::Access::Defer) &&
+                         rearm(dwell, payload, verdict.at_us, forced);
+    if (!rearmed) {
+        air.tx_busy_missed++;
+        log_access(radio::Verdict::Busy, dwell, payload, busy, now_ms);
+    } else if (forced) {
+        air.tx_forced++;
+        log_access(radio::Verdict::Forced, dwell, payload, busy, now_ms);
+        forced_us_ = verdict.at_us;
+        silence_after(verdict.at_us);
+    } else {
+        air.tx_deferred++;
+        log_access(radio::Verdict::Deferred, dwell, payload, busy, now_ms);
     }
 }
 
-// INFO: fc 14nov26 G.1.16: a position is encoded again for its new instant, from the newest fix
+// INFO: fc 14nov26 G.1.1: a position is encoded again for its new instant, from the newest fix
 bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced) {
     if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
                                    context_.state.activation.address()))
-        return false;
-    if (payload == Payload::Position &&
-        fix_lag_ms(dwell.origin_us) > timing::Transmitter::kFixMaxAgeMs)
         return false;
     if (silenced(tx_at_us)) return false;
 
@@ -113,7 +105,7 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     return true;
 }
 
-// INFO: fc 14nov26 dated at the busy assessment, with the level it read, as a reception's row is
+// INFO: fc 14nov26 dated at the burst's planned instant, with the level its assessment read
 void RadioService::log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
                               const bus::RfState::Busy& busy, uint32_t now_ms) {
     const bus::State& state = context_.state;
@@ -139,7 +131,7 @@ void RadioService::log_access(radio::Verdict verdict, const Armed& dwell, Payloa
 
 bool RadioService::silenced(uint64_t tx_at_us) const {
     return forced_us_ && tx_at_us > *forced_us_ &&
-           tx_at_us < *forced_us_ + adsl::kSilenceAfterForceUs;
+           tx_at_us < *forced_us_ + kAirTimeUs + adsl::kSilenceAfterForceUs;
 }
 
 // INFO: fc 14nov26 §D.3's silence after a force reaches bursts already handed to the executor

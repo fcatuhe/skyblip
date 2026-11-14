@@ -52,7 +52,7 @@ std::vector<simulator::AirRecord> held_from_cycle_start(int speed_kt, uint32_t h
 
 }  // namespace
 
-// LBT itself is EN 300 220-1's (test/en300220/): this reads the clause's own two numbers.
+// Forced on the ground only: airborne the Status and the name are still busy at +8, past 3000 ms.
 TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then keeps 2000 ms") {
     uint64_t held_from_us = 0;
     uint32_t forced = 0;
@@ -61,13 +61,13 @@ TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then
     CHECK(forced >= 2);
     REQUIRE(ground.size() >= 2);
     CHECK(ground.size() <= forced);
-    CHECK(ground[0].at_us - held_from_us >= 3000000);
+    if (!ground.empty()) CHECK(ground[0].at_us - held_from_us >= 3000000);
+    const uint64_t burst_us = 4640;
     for (size_t i = 1; i < ground.size(); i++)
-        CHECK(ground[i].at_us - ground[i - 1].at_us >= 2000000);
+        CHECK(ground[i].at_us - ground[i - 1].at_us >= burst_us + 2000000);
 
-    // Airborne a position is never forced: the next second's covers it.
-    const std::vector<simulator::AirRecord> airborne =
-        held_from_cycle_start(50, 2000, held_from_us, forced);
-    CHECK(airborne.empty());
+    const std::vector<simulator::AirRecord> airborne_past_3000_ms =
+        held_from_cycle_start(50, 9500, held_from_us, forced);
+    CHECK(airborne_past_3000_ms.empty());
     CHECK(forced == 0);
 }
