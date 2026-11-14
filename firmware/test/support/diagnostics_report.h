@@ -44,6 +44,9 @@ inline Diagnostics busy_device() {
     diagnostics.rx_status = 9;
     diagnostics.uplink_stale = 2;
     diagnostics.tx_given_up = 1;
+    diagnostics.tx_deferred = 14;
+    diagnostics.tx_forced = 1;
+    diagnostics.tx_busy_missed = 2;
     diagnostics.tx_keyed_us = 609;
     diagnostics.tx_span_us = 5919;
     diagnostics.range_refused = 5;
@@ -119,6 +122,9 @@ inline Diagnostics widest_device() {
     diagnostics.rx_status = 0xFFFFFFFFu;
     diagnostics.uplink_stale = 0xFFFFFFFFu;
     diagnostics.tx_given_up = 0xFFFFFFFFu;
+    diagnostics.tx_deferred = 0xFFFFFFFFu;
+    diagnostics.tx_forced = 0xFFFFFFFFu;
+    diagnostics.tx_busy_missed = 0xFFFFFFFFu;
     diagnostics.tx_keyed_us = 65535;
     diagnostics.tx_span_us = 65535;
     diagnostics.range_refused = 0xFFFFFFFFu;

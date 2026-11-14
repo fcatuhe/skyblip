@@ -133,6 +133,12 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.uplink_stale);
         add(Group::Radio, "tx_given_up", link::diagnostics_key::kTxGivenUp, Kind::Unsigned,
             diagnostics.tx_given_up);
+        add(Group::Radio, "tx_deferred", link::diagnostics_key::kTxDeferred, Kind::Unsigned,
+            diagnostics.tx_deferred);
+        add(Group::Radio, "tx_forced", link::diagnostics_key::kTxForced, Kind::Unsigned,
+            diagnostics.tx_forced);
+        add(Group::Radio, "tx_busy_missed", link::diagnostics_key::kTxBusyMissed, Kind::Unsigned,
+            diagnostics.tx_busy_missed);
     }
 
     if (traffic) {

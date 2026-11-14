@@ -831,6 +831,21 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_given_up",
           "number": 67,
           "type": "unsigned"
+        },
+        {
+          "name": "tx_deferred",
+          "number": 68,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_forced",
+          "number": 69,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_busy_missed",
+          "number": 70,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1184,6 +1199,21 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_given_up",
           "number": 67,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_deferred",
+          "number": 68,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_forced",
+          "number": 69,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_busy_missed",
+          "number": 70,
           "type": "unsigned"
         }
       ]

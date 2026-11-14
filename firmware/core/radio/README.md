@@ -99,8 +99,11 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `uplink_stale` | records of decoded uplink packets refused because their G.1.1 timestamp was more than 10 s old or ahead of the second they were heard in (G.3) |
 | `tx_given_up` | turns of own-ship's schedule that never went out, neither in their second nor on a retry 2 s on, before their type's next turn (`core/timing/README.md`) |
 | `tx_held_for_b5` | seconds own-ship held a position because a close neighbour reads only Issue 1 and the position carried an unknown field Issue 1 has no code for (B.5) |
+| `tx_deferred` | bursts of ours the clear channel assessment found busy, deferred by a random multiple of 5 ms inside their own window (D.3, `core/timing/README.md`) |
+| `tx_forced` | Status, name and ground position bursts keyed on a busy channel 3000 ms after their first attempt, each followed by 2000 ms with nothing of ours on air (D.3) |
+| `tx_busy_missed` | bursts whose window ran out with the channel still busy, which the 2 s retry then takes (D.3) |
 
-`rx_status`, `uplink_stale`, `tx_held_for_b5` and `tx_given_up` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row.
+`rx_status`, `uplink_stale`, `tx_held_for_b5`, `tx_given_up`, `tx_deferred`, `tx_forced` and `tx_busy_missed` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row. The other four are the dump's only.
 
 `BadCrc` is counted in `rx_bad` beside `Undecoded` rather than apart from it, even though the two are answered differently. What a counter is read for is whether anything is wrong, and both say yes: a burst the air damaged and a burst nothing here could read are each a reason to go and look. Which of the two it was is the tape's column, one row per burst, and a number that only ever climbs cannot carry that distinction anyway.
 
