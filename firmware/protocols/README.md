@@ -20,7 +20,7 @@ Copy `protocols/common/` and `protocols/<stack>/` under one include root, keepin
 
 ## Versions
 
-Each stack's `version.h` is the one source of its version. `kVersion` is a `major.minor.patch` string and `kSpecification` names what the stack implements. A version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. `firmware/README.md` says how the protocol versions relate to the firmware version. All three stay below 1.0.0 until the protocol is ready for production.
+Each stack's `version.h` is the one source of its version. `kVersion` is a `major.minor.patch` string and `kSpecification` names what the stack implements. A version moves only when a change alters what that protocol puts on air or reads off it: its frames, its encoding, its channels, its timing or its transmit schedule. `firmware/README.md` says how the protocol versions relate to the firmware version. A stack stays at 0.1.0 until it is ready for production, whatever changes in it before then. From then on its version moves by the rule above.
 
 Each product lists the protocols it carries in `products/<product>/PROTOCOLS`, one stack name per line. Every release names the protocol versions each product carries, in a pre-release's notes and in a production release's `PROTOCOLS.md`, read out of `version.h` by `lib/radio_protocols.rb`. A product that reports them over a link includes `protocols/<stack>/version.h` for both constants.
 
