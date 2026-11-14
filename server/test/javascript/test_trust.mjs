@@ -95,15 +95,6 @@ test('a refused save trusts no browser', async () => {
   assert.deepEqual(device.trustedBrowsers, []);
 });
 
-test('firmware that knows no trusted browsers is asked with presses, as before', async () => {
-  const { load } = await browserKey();
-  const { device, updater, until } = await connected({ browserKey: load, knowsBrowsers: false });
-  assert.equal(updater.state.trust, null);
-  updater.saveSettings({ ...updater.state.settings, units: 'metric' });
-  await until(asking('set'));
-  assert.equal(device.pending, 'set');
-});
-
 test('a trusted browser lists the browsers, finds itself, and forgets the others', async () => {
   const { key, device, updater, until } = await trustedSession();
   device.trustedBrowsers.unshift({ id: '0102030405060708', label: 'Edge on Windows' }, { id: '1112131415161718', label: '' });

@@ -35,7 +35,7 @@ const settled = (fleet, predicate) => new Promise(resolve => {
 });
 
 test('an upload the unit refused once it landed is told with what it found in slot 1 and both keys', async () => {
-  const fake = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, installReport: {} });
+  const fake = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 });
   airwaves(fake);
   const journal = recorder();
   const fleet = new Fleet({ journal });

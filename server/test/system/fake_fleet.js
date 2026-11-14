@@ -65,9 +65,8 @@
         probationMs: 1500,
         vectors: null,
         diagnostics: [],
-        servesCaptures: null,
         evictsFlights: 3,
-        browsers: null,
+        browsers: [],
         installReport: null,
         protocols: null,
         failure: null,
@@ -203,7 +202,7 @@
       if (command === 'get') return this.config();
       if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
-      if (command === 'protocols' && this.protocols) return this.reply({ command, ...this.protocols });
+      if (command === 'protocols') return this.reply({ command, ...(this.protocols ?? this.stacks()) });
       if (command === 'set') {
         this.staged = fields;
         return this.ask('set', 'confirm');
@@ -213,7 +212,7 @@
         return this.ask('dfu', 'confirm_dfu');
       }
       if (command === 'recovery') return this.ask('recovery', 'confirm_recovery');
-      if (command === 'capture' && this.captures()) return this.orderCapture(fields.profile);
+      if (command === 'capture') return this.orderCapture(fields.profile);
       if (command === 'diagnostics') return this.dump();
       if (command === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
@@ -226,7 +225,7 @@
       }
       if (command === 'unlock') return this.unlock(fields);
       if (command === 'attest' && this.vectors) return this.attest(fields);
-      if (this.browsers && BROWSER_COMMANDS.includes(command)) return this.answerBrowser(command, fields);
+      if (BROWSER_COMMANDS.includes(command)) return this.answerBrowser(command, fields);
       return this.acknowledge(false, 'unknown_command');
     }
 
@@ -261,14 +260,12 @@
       return replies;
     }
 
-    // INFO: fc 15nov26 a Bravo always served capture, and a Go from the firmware that answers its dump group
-    captures() {
-      return this.servesCaptures ?? this.product === 'skyblip_bravo';
+    stacks() {
+      return this.product === 'skyblip_bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' };
     }
 
     async dump() {
-      await this.reply({ command: 'diagnostics', group: 'system', part: 0, more: this.captures(), uptime_s: 120, reset: 'power_on' });
-      if (!this.captures()) return;
+      await this.reply({ command: 'diagnostics', group: 'system', part: 0, more: true, uptime_s: 120, reset: 'power_on' });
       return this.reply({
         command: 'diagnostics', group: 'capture', part: 1, more: false, armed: Boolean(this.capturing),
         ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 1785628800 : 0, records: this.capturing ? 960 : 0,
@@ -285,7 +282,7 @@
       return this.ask('capture', 'confirm_capture');
     }
 
-    // INFO: fc 13nov26 browser_link.cpp's answers, for a unit made with a browsers list
+    // INFO: fc 13nov26 browser_link.cpp's answers
     async answerBrowser(command, fields) {
       if (command === 'browser_challenge') {
         this.proven = null;
