@@ -10,7 +10,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/ads-l</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-14</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/ads-l/callsign</loc>
@@ -23,6 +23,10 @@
   <url>
     <loc>https://skyblip.eu/ads-l/nmea</loc>
     <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/ads-l/questions</loc>
+    <lastmod>2026-11-14</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/ads-l/registry</loc>
