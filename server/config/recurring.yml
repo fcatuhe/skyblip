@@ -11,6 +11,10 @@ production:
     command: "Event.prune"
     schedule: every day at 2:30am
 
+  prune_expired_captures:
+    command: "Capture.prune"
+    schedule: every day at 2:45am
+
   sweep_expired_oauth_tokens:
     command: "OAuth.sweep"
     schedule: every day at 4am
