@@ -67,6 +67,7 @@
         diagnostics: [],
         browsers: null,
         installReport: null,
+        protocols: null,
         failure: null,
       }, options);
       this.connected = false;
@@ -200,6 +201,7 @@
       if (command === 'get') return this.config();
       if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
+      if (command === 'protocols' && this.protocols) return this.reply({ command, ...this.protocols });
       if (command === 'set') {
         this.staged = fields;
         return this.ask('set', 'confirm');
