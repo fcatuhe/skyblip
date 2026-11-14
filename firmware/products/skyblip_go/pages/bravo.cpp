@@ -9,48 +9,49 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr int kHeaderY = 3;
-constexpr int kHeaderRuleY = 21;
 constexpr int kTagDigits = 4;
-constexpr int kPairedTagY = 46;
-constexpr int kPairedStateY = 92;
-constexpr int kReasonY = 52;
-constexpr int kReasonLineGap = 22;
-constexpr int kDetailY = 104;
-constexpr int kNoticeDetailGap = 14;
-constexpr int kEmptyListY = 76;
-constexpr int kEmptyListDetailY = 104;
+constexpr int kTagScale = 4;
+constexpr int kTagY = 70;
+constexpr int kPairedTagY = 56;
+constexpr int kStepY = 104;
+constexpr int kReasonY = 46;
+constexpr int kEmptyListY = 70;
+constexpr int kDetailRows = 3;
 constexpr int kDetailBytes = kGlassWidth / ui::kCellWidth + 1;
 
-void header(ui::Canvas& canvas, const char* title) {
-    canvas.clear(true);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, title, true, kMenuScale);
-    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
-}
-
-void centred(ui::Canvas& canvas, int y, const char* text, int scale) {
-    canvas.draw_text(centred_x(text, scale), y, text, true, scale);
-}
+constexpr const char* kOwnIcaoNoticeLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC."};
+constexpr const char* kOwnIcaoNoticeFix[] = {"SET IT IN", "SETTINGS,", "AIRCRAFT."};
+constexpr const char* kForgotNoticeLines[] = {"BRAVO IS NOT", "PAIRED. THE GO", "REMOVED IT TOO."};
+constexpr const char* kForgotNoticeFix[] = {"PAIR AGAIN IN", "SETTINGS."};
+constexpr const char* kEmptyListLines[] = {"START A BRAVO", "NEAR THIS GO."};
+constexpr const char* kPushBravoLines[] = {"PUSH THE BUTTON", "ON BRAVO."};
 
 void tag(ui::Canvas& canvas, int y, uint16_t value) {
     char text[kTagDigits + 1];
     text[format_hex(text, value, kTagDigits)] = 0;
-    centred(canvas, y, text, kCallsignScale);
-}
-
-void hints(ui::Canvas& canvas, const char* pad, const char* button) {
-    centred(canvas, kCallsignPadHintY, pad, kCallsignHintScale);
-    centred(canvas, kCallsignButtonHintY, button, kCallsignHintScale);
+    draw_centred_line(canvas, y, text, kTagScale);
 }
 
 void row(ui::Canvas& canvas, int line, uint16_t value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
-    if (focused) canvas.rectangle(2, top, kGlassWidth - 4, kMenuBarHeight, true, /*fill=*/true);
+    if (focused)
+        canvas.rounded_rectangle(2, top, kGlassWidth - 4, kMenuBarHeight, kMenuBarRadius, true,
+                                 /*fill=*/true);
     char text[kTagDigits + 1];
     text[format_hex(text, value, kTagDigits)] = 0;
     canvas.draw_text(kMenuLeftX, y, "BRAVO", !focused, kMenuScale);
     canvas.draw_text(kMenuRightX - kTagDigits * kMenuCellWidth, y, text, !focused, kMenuScale);
+}
+
+void wrapped(ui::Canvas& canvas, int y, const char* text) {
+    char line[kFrameColumns + 1];
+    int at = 0;
+    for (int i = 0; i < kDetailRows; i++) {
+        at = take_line(text, at, line, kFrameColumns);
+        if (line[0] == 0) return;
+        y = draw_centred_line(canvas, y, line);
+    }
 }
 
 const char* link_state(BravoLink link) {
@@ -65,44 +66,45 @@ const char* link_state(BravoLink link) {
 
 void draw_paired(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     if (snapshot.unpairing) {
-        header(canvas, "UNPAIR BRAVO");
-        tag(canvas, kCallsignTextY, snapshot.view.paired_tag);
-        hints(canvas, "PAD KEEPS", "BUTTON UNPAIRS");
+        draw_heading(canvas, "UNPAIR BRAVO", Heading::Opened);
+        tag(canvas, kTagY, snapshot.view.paired_tag);
+        draw_keys(canvas, {{Press::Once, "UNPAIR"}, "KEEP"});
         return;
     }
-    header(canvas, "BRAVO");
+    draw_heading(canvas, "BRAVO", Heading::Opened);
     tag(canvas, kPairedTagY, snapshot.view.paired_tag);
-    centred(canvas, kPairedStateY, link_state(snapshot.view.link), kMenuScale);
-    hints(canvas, "PAD BACK", "BUTTON UNPAIRS");
+    draw_centred_line(canvas, kStepY, link_state(snapshot.view.link));
+    draw_keys(canvas, {{Press::Once, "UNPAIR"}, "BACK"});
 }
 
 void draw_list(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     if (snapshot.confirming) {
-        header(canvas, "PAIR BRAVO");
-        tag(canvas, kCallsignTextY, snapshot.view.found_tags[snapshot.focus]);
-        hints(canvas, "PAD CANCELS", "BUTTON PAIRS");
+        draw_heading(canvas, "PAIR BRAVO", Heading::Opened);
+        tag(canvas, kTagY, snapshot.view.found_tags[snapshot.focus]);
+        draw_keys(canvas, {{Press::Once, "PAIR"}, "CANCEL"});
         return;
     }
-    header(canvas, "BRAVO");
-    if (snapshot.view.found_count == 0) {
-        centred(canvas, kEmptyListY, "NO BRAVO FOUND", kMenuScale);
-        centred(canvas, kEmptyListDetailY, "START A BRAVO NEAR THIS GO.", 1);
+    draw_heading(canvas, "BRAVO", Heading::Opened);
+    const int found = snapshot.view.found_count;
+    if (found == 0) {
+        const int y = draw_centred_line(canvas, kEmptyListY, "NO BRAVO FOUND") + kParagraphGap;
+        draw_centred_lines(canvas, y, kEmptyListLines, 2);
+        draw_keys(canvas, {{}, "BACK"});
+        return;
     }
-    for (int i = 0; i < snapshot.view.found_count && i < kMenuLines; i++)
+    for (int i = 0; i < found && i < kMenuLines; i++)
         row(canvas, i, snapshot.view.found_tags[i], i == snapshot.focus);
-    centred(canvas, kMenuHintY, "PAD MOVES    BUTTON PAIRS", 1);
+    draw_keys(canvas, {{Press::Once, "PAIR"}, snapshot.focus + 1 >= found ? "BACK" : "NEXT"});
 }
 
 void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
-    header(canvas, "PAIRING");
-    tag(canvas, kCallsignTextY, snapshot.view.pairing_tag);
-    if (snapshot.view.step == BravoStep::Connecting) {
-        centred(canvas, kCallsignPadHintY, "WAIT", kCallsignHintScale);
-    } else {
-        centred(canvas, kCallsignPadHintY, "PUSH THE", kCallsignHintScale);
-        centred(canvas, kCallsignButtonHintY, "BUTTON ON BRAVO.", kCallsignHintScale);
-    }
-    centred(canvas, kMenuHintY, "PAD CANCELS", 1);
+    draw_heading(canvas, "PAIRING", Heading::Opened);
+    tag(canvas, kPairedTagY, snapshot.view.pairing_tag);
+    if (snapshot.view.step == BravoStep::Connecting)
+        draw_centred_line(canvas, kStepY, "WAIT");
+    else
+        draw_centred_lines(canvas, kStepY, kPushBravoLines, 2);
+    draw_keys(canvas, {{}, "CANCEL"});
 }
 
 struct Reason {
@@ -139,7 +141,7 @@ int reason_detail(char* out, BravoRefusal refusal) {
 }
 
 void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
-    header(canvas, "NOT PAIRED");
+    draw_heading(canvas, "NOT PAIRED", Heading::Opened);
     const BravoRefusal refusal = snapshot.view.refusal;
     const Reason reason = reason_of(refusal);
     char first[kMenuValueBytes];
@@ -150,15 +152,13 @@ void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     }
     written += format_string(first + written, reason.first);
     first[written] = 0;
-    centred(canvas, kReasonY, first, kMenuScale);
-    centred(canvas, kReasonY + kReasonLineGap, reason.second, kMenuScale);
+    int y = draw_centred_line(canvas, kReasonY, first);
+    if (reason.second[0] != 0) y = draw_centred_line(canvas, y, reason.second);
     char detail[kDetailBytes];
     detail[reason_detail(detail, refusal)] = 0;
-    centred(canvas, kDetailY, detail, 1);
-    centred(
-        canvas, kMenuHintY,
-        refusal == BravoRefusal::PhonesConnected ? "PAD BACK" : "PAD BACK    BUTTON TRIES AGAIN",
-        1);
+    wrapped(canvas, y + kParagraphGap, detail);
+    const bool retries = refusal != BravoRefusal::PhonesConnected;
+    draw_keys(canvas, {{Press::Once, retries ? "PAIR" : ""}, "BACK"});
 }
 
 }  // namespace
@@ -179,22 +179,18 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
 }
 
 void draw_own_icao_notice(ui::Canvas& canvas) {
-    header(canvas, "OWN ICAO");
-    centred(canvas, kReasonY, "NOT SET ON", kMenuScale);
-    centred(canvas, kReasonY + kReasonLineGap, "GO OR BRAVO", kMenuScale);
-    centred(canvas, kDetailY, "OWN TRANSPONDER SHOWS AS TRAFFIC", 1);
-    centred(canvas, kDetailY + kNoticeDetailGap, "SET IT IN SETTINGS, AIRCRAFT.", 1);
-    centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
+    const int top = draw_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt);
+    const int y = draw_centred_lines(canvas, top, kOwnIcaoNoticeLines, 3);
+    draw_centred_lines(canvas, y, kOwnIcaoNoticeFix, 3);
+    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
 }
 
 // INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere
 void draw_bravo_forgot_notice(ui::Canvas& canvas) {
-    header(canvas, "BRAVO");
-    centred(canvas, kReasonY, "NOT PAIRED", kMenuScale);
-    centred(canvas, kReasonY + kReasonLineGap, "ON BRAVO", kMenuScale);
-    centred(canvas, kDetailY, "THE GO REMOVED IT TOO.", 1);
-    centred(canvas, kDetailY + kNoticeDetailGap, "PAIR AGAIN IN SETTINGS.", 1);
-    centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
+    const int top = draw_heading(canvas, "BRAVO", Heading::Interrupt);
+    const int y = draw_centred_lines(canvas, top, kForgotNoticeLines, 3);
+    draw_centred_lines(canvas, y, kForgotNoticeFix, 2);
+    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
 }
 
 void BravoPage::open(uint32_t now_ms) {

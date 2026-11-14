@@ -23,9 +23,9 @@ bool matches(const Detected& detected, const Settings& settings);
 bool same_aircraft(const Detected& a, const Detected& b);
 
 constexpr int kDetectedLines = 4;
-constexpr const char* kAircraftNoticePadText = "PAD CLOSES";
-constexpr const char* kAircraftNoticeButtonText = "BUTTON USES IT";
-constexpr const char* kAircraftNoticeHelpText = "AS OWN ICAO, CALLSIGN AND TYPE";
+constexpr const char* kAircraftNoticeTitle = "BRAVO HEARS";
+constexpr const char* kAircraftNoticeLines[] = {"USE SETS IT AS", "YOUR AIRCRAFT."};
+constexpr int kAircraftNoticeLineCount = 2;
 
 void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings& settings,
                    bool focused);

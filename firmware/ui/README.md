@@ -14,6 +14,7 @@ A page is a pure function from a snapshot to pixels and belongs to the product w
 |---|---|
 | `canvas.h`, `canvas.cpp` | the surface, the primitives, the font |
 | `widgets/wordmark.*` | the skyBlip wordmark, the brand mark |
+| `widgets/mark.*` | the mark alone, the blip dot and its two arcs, at two sizes, worked out in integers from `server/public/icon.svg` |
 | `widgets/skyship.*` | the ownship symbol, hot spot on the point given |
 | `widgets/blip.*` | the traffic blip: a diamond, or the same mark pointing up or down, at two sizes, or a ring for no altitude, with its caret |
 

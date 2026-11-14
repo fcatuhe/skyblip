@@ -7,6 +7,7 @@
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
+#include "test/support/frame_glass.h"
 #include "test/support/glass_text.h"
 #include "test/support/menu_bench.h"
 
@@ -19,10 +20,6 @@ using ui::kCellWidth;
 using ui::kCharacterHeight;
 
 constexpr int kOwnIcaoTextX = (Glass::kWidth - kOwnIcaoCharacters * kCallsignCellWidth) / 2;
-
-bool hint_reads(const Glass& canvas, int y, const char* text, int scale) {
-    return reads_at(canvas, centred_x(text, scale), y, text, scale);
-}
 
 // A menu as drawn, with the focus that decided which of its rows are on the glass.
 struct Drawn {
@@ -95,21 +92,17 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(row_value_reads(drawn, MenuRow::Alarm, "ON", true));
     CHECK_FALSE(row_label_reads(drawn, MenuRow::Alarm, false));
 
-    // Exactly one bar, and the page says how the two contacts work.
+    // Exactly one bar, and the keys say what each contact does to it.
     int bars = 0;
     for (int line = 0; line < kMenuLines; line++)
         if (row_label_reads(drawn, menu_for(Page::Radar).rows[line], true)) bars++;
     CHECK(bars == 1);
-    CHECK(reads_at(drawn.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
+    CHECK(reads_heading(drawn.canvas, "SETTINGS", Heading::Opened));
+    CHECK(reads_button_key(drawn.canvas, "CHANGE"));
+    CHECK(reads_pad_key(drawn.canvas, "NEXT"));
 
-    // And nothing falls off a 200 pixel panel, on either axis.
-    CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kMenuHintY);
-    CHECK(kMenuHintY + kCharacterHeight < Glass::kHeight);
-
-    // The hint is centred: the same air either side of it.
-    const int hint_width = static_cast<int>(std::strlen(kMenuHintText)) * kCellWidth;
-    CHECK(kMenuHintX > 0);
-    CHECK(kMenuHintX - (Glass::kWidth - kMenuHintX - hint_width) <= 1);
+    // And the rows stand clear of the keys.
+    CHECK(menu_line_top(kMenuLines - 1) + kMenuRowHeight <= kKeyTop);
 
     // And a row's words stand in the middle of its bar, the same air above and below.
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
@@ -127,7 +120,7 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(line_of(top, MenuRow::Volume) == kMenuLines - 1);
     CHECK(line_of(top, MenuRow::Bravo) == kMenuLines);
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
-    CHECK(reads_at(top.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
+    CHECK(reads_pad_key(top.canvas, "NEXT"));
 
     const Drawn last = page_of(Page::Radar, values, MenuRow::Bravo);
     CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
@@ -136,7 +129,18 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(row_value_reads(last, MenuRow::Volume, "SOFT", false));
     CHECK(row_label_reads(last, MenuRow::Aircraft, false));
     CHECK(line_of(last, MenuRow::Aircraft) == 0);
-    CHECK(reads_at(last.canvas, kMenuHintX, kMenuHintY, kMenuHintText));
+    // Off the last row the pad hands the glass back, and the key says so.
+    CHECK(reads_pad_key(last.canvas, "BACK"));
+}
+
+TEST_CASE("menu page: the button's key names what a press does to the focused row") {
+    const MenuValues values = default_menu_values();
+    CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Units).canvas, "CHANGE"));
+    CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Bravo).canvas, "OPEN"));
+    CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Aircraft).canvas, "OPEN"));
+    CHECK(reads_button_key(page_of(Page::Nearby, values, MenuRow::Status).canvas, "OPEN"));
+    CHECK(reads_heading(page_of(Page::Nearby, values, MenuRow::Status).canvas, "DIAGNOSTICS",
+                        Heading::Opened));
 }
 
 // The address a controller reads off the aircraft's papers, six hex digits as they are written.
@@ -191,14 +195,8 @@ TEST_CASE("menu page: a menu is titled what it holds, not the page a thumb came 
     const MenuValues values = default_menu_values();
     for (Page page : {Page::Radar, Page::Nearby}) {
         const Drawn drawn = page_of(page, values, menu_for(page).rows[0]);
-        CHECK(kMenuLeftX - 2 + static_cast<int>(std::strlen(menu_title(page))) * kMenuCellWidth <=
-              Glass::kWidth);
-        Glass expected;
-        expected.clear(true);
-        expected.draw_text(kMenuLeftX - 2, 3, menu_title(page), true, 2);
-        for (int y = 3; y < 3 + kCharacterHeight * kMenuScale; y++)
-            for (int x = 0; x < Glass::kWidth; x++)
-                CHECK(drawn.canvas.get_pixel(x, y) == expected.get_pixel(x, y));
+        CHECK(fits_a_line(menu_title(page)));
+        CHECK(reads_heading(drawn.canvas, menu_title(page), Heading::Opened));
     }
 }
 
@@ -238,7 +236,7 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
 
     Glass canvas;
     draw_callsign(canvas, field);
-    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "CALLSIGN", kMenuScale));
+    CHECK(reads_heading(canvas, "CALLSIGN", Heading::Opened));
     CHECK(reads_at(canvas, kCallsignTextX, kCallsignTextY, "F-JABC", kCallsignScale));
 
     // The bar is under the character the pad is rolling and under no other.
@@ -248,15 +246,23 @@ TEST_CASE("callsign page: the characters stand at a size a thumb can check, with
     CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
     CHECK_FALSE(canvas.get_pixel(at + kCallsignCellWidth, kCallsignCursorY));
 
-    // The two gestures at double height, and under them the one way out nothing else says.
-    CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
-    CHECK(kCallsignHelpY + kCharacterHeight < Glass::kHeight);
+    // The gestures swap over here, and the keys say so: the pad changes, the button moves on.
+    CHECK(reads_pad_key(canvas, kFieldChangeVerb));
+    CHECK(reads_button_key(canvas, kFieldNextVerb));
+}
+
+TEST_CASE("callsign page: on the last character the button's key says it saves") {
+    CallsignSnapshot field;
+    field.text = "F-JABC   ";
+    field.cursor = 8;
+    Glass canvas;
+    draw_callsign(canvas, field);
+    CHECK(reads_button_key(canvas, kFieldSaveVerb));
+    CHECK_FALSE(reads_button_key(canvas, kFieldNextVerb));
 }
 
 // A gesture nothing says is a gesture nobody finds, and this one throws the name away.
-TEST_CASE("callsign page: the foot says the button clears when the bar is on a blank first one") {
+TEST_CASE("callsign page: the button's key says it erases when the bar is on a blank first one") {
     CallsignSnapshot field;
     field.text = "  JABC   ";
     field.cursor = 0;
@@ -265,16 +271,14 @@ TEST_CASE("callsign page: the foot says the button clears when the bar is on a b
 
     Glass canvas;
     draw_callsign(canvas, field);
-    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
-    // The line that taught the gesture goes once the gesture is armed.
-    CHECK_FALSE(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK(reads_button_key(canvas, kFieldEraseVerb));
 
     field.cursor = 1;
     field.clears = callsign_press_clears(field.text, field.cursor);
     CHECK_FALSE(field.clears);
     draw_callsign(canvas, field);
-    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK(reads_button_key(canvas, kFieldNextVerb));
+    CHECK_FALSE(reads_button_key(canvas, kFieldEraseVerb));
 }
 
 // The callsign's field, typing six hex digits: a transponder address is written that way.
@@ -286,16 +290,15 @@ TEST_CASE("own ICAO page: six hex digits stand centred at the callsign's size, u
 
     Glass canvas;
     draw_callsign(canvas, field);
-    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "OWN ICAO", kMenuScale));
+    CHECK(reads_heading(canvas, "OWN ICAO", Heading::Opened));
     CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
     CHECK(kOwnIcaoTextX - (Glass::kWidth - kOwnIcaoTextX - 6 * kCallsignCellWidth) <= 1);
 
     const int at = kOwnIcaoTextX + field.cursor * kCallsignCellWidth;
     CHECK(canvas.get_pixel(at, kCallsignCursorY));
     CHECK_FALSE(canvas.get_pixel(at - 2, kCallsignCursorY));
-    CHECK(hint_reads(canvas, kCallsignPadHintY, kCallsignPadHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignNextHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignHelpY, kCallsignClearHelpText, 1));
+    CHECK(reads_pad_key(canvas, kFieldChangeVerb));
+    CHECK(reads_button_key(canvas, kFieldSaveVerb));
 }
 
 // Without the own ICAO the aircraft's own transponder can alarm, so a clear is asked twice.
@@ -306,12 +309,11 @@ TEST_CASE("own ICAO page: a clear shows the address it throws away and what that
 
     Glass canvas;
     draw_clear(canvas, clear);
-    CHECK(reads_at(canvas, kMenuLeftX - 2, 3, "OWN ICAO", kMenuScale));
-    CHECK(reads_at(canvas, kOwnIcaoTextX, kCallsignTextY, "3C6586", kCallsignScale));
-    CHECK(hint_reads(canvas, kCallsignPadHintY, kClearKeepsHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignButtonHintY, kCallsignClearHintText, kCallsignHintScale));
-    CHECK(hint_reads(canvas, kCallsignHelpY, kOwnIcaoClearHelpText, 1));
-    CHECK(centred_x(kOwnIcaoClearHelpText, 1) >= 0);
+    CHECK(reads_heading(canvas, "OWN ICAO", Heading::Opened));
+    CHECK(reads_at(canvas, kOwnIcaoTextX, kClearTextY, "3C6586", kCallsignScale));
+    CHECK(reads_pad_key(canvas, kFieldKeepVerb));
+    CHECK(reads_button_key(canvas, kFieldEraseVerb));
+    CHECK(reads_centred_lines(canvas, kClearLinesY, kOwnIcaoClearLines, kOwnIcaoClearLineCount));
 }
 
 TEST_CASE("menu page: the own ICAO ring is blank, 0 to 9, A to F, and back") {

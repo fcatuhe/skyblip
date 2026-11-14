@@ -24,7 +24,7 @@ const char* pending_detail(Pending pending) {
         case Pending::Recovery: return "START THE USB BOOTLOADER.";
         case Pending::PowerOff: return "STOP THE DEVICE.";
         case Pending::EraseLog: return "ERASE ALL FLIGHT DATA ON THE DEVICE.";
-        case Pending::GnssColdStart: return "ERASE THE SATELLITE DATA THAT THE RECEIVER KEEPS.";
+        case Pending::GnssColdStart: return "ERASE THE SATELLITE DATA IN THE RECEIVER.";
         case Pending::Register: return "SEND THE KEY OF THIS UNIT TO SKYBLIP.EU.";
         case Pending::Capture: return "START OR STOP THE DIAGNOSTIC CAPTURE.";
         case Pending::None: break;

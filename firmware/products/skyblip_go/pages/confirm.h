@@ -9,6 +9,7 @@
 #include <cstdint>
 
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/frame.h"
 
 namespace skyblip::go {
 
@@ -21,23 +22,20 @@ struct ConfirmSnapshot {
 
 // The grid, exported so a test reads a line back off the glass instead of
 // counting ink: "the page says POWER OFF" is the claim that matters.
-constexpr int kConfirmLeftX = 4;
-constexpr int kConfirmHeaderY = 6;
-constexpr int kConfirmTitleY = 40;
-constexpr int kConfirmDetailY = 74;
-constexpr int kConfirmLineHeight = 11;
-constexpr int kConfirmDetailColumns = 30;
-constexpr int kConfirmDetailRows = 4;
-constexpr int kConfirmAllowY = 130;
-constexpr int kConfirmRefuseY = 148;
-constexpr int kConfirmExpiryY = 172;
+constexpr int kConfirmDetailY = kInterruptRuleY + kBodyBelowRule;
+constexpr int kConfirmDetailColumns = kFrameColumns;
+constexpr int kConfirmDetailRows = 3;
+constexpr int kConfirmCancelRows = 3;
 
-constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfirmLineHeight; }
+constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * line_pitch(kFrameScale); }
+constexpr int kConfirmCancelY = confirm_detail_y(kConfirmDetailRows) + kParagraphGap;
+constexpr int confirm_cancel_y(int row) { return kConfirmCancelY + row * line_pitch(kFrameScale); }
 
-// The two halves of the gesture, spelled out. They are constants because the
-// page and its test must not be able to disagree about what the device accepts.
-constexpr const char* kConfirmAllowText = "PUSH TWICE TO ACCEPT";
-constexpr const char* kConfirmRefuseText = "PUSH ONCE TO CANCEL";
+static_assert(confirm_cancel_y(kConfirmCancelRows) - 4 <= kBodyBottom,
+              "the cancel lines stand clear of the keys");
+
+constexpr const char* kConfirmAllowVerb = "ACCEPT";
+constexpr const char* kConfirmCancelLine = "TO CANCEL, PUSH";
 
 void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 

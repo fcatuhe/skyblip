@@ -4,15 +4,16 @@
 #include <cstdint>
 
 #include "products/skyblip_go/glass.h"
+#include "products/skyblip_go/pages/frame.h"
 
 namespace skyblip::go {
 
-constexpr const char* kActivationHeader = "ACTIVATE";
-constexpr const char* kActivationTitle = "NOT ACTIVATED";
-constexpr const char* kActivationWhere = "GO TO SKYBLIP.EU/ACTIVATE.";
-constexpr int kActivationTagY = 136;
+constexpr const char* kActivationTitle = "ACTIVATE";
+constexpr const char* kActivationWhere = "GO TO SKYBLIP.EU";
+constexpr const char* kActivationBody[] = {kActivationWhere, "/ACTIVATE.", "", "THEN SELECT:"};
+constexpr int kActivationBodyRows = 4;
+constexpr int kActivationTagY = 120;
 constexpr int kActivationTagScale = 4;
-constexpr int kActivationNameY = 180;
 
 void draw_activation(ui::Canvas& canvas, uint16_t bluetooth_tag);
 

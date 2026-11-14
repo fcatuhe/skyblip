@@ -12,8 +12,11 @@ namespace {
 
 constexpr int kMaxChanges = 8;
 
+// INFO: fc 14nov26 a row may run to two lines on the glass, which join() counts
+constexpr int kRowBytes = 2 * kConfirmDetailColumns + 2;
+
 struct Rows {
-    char text[kMaxChanges][kConfirmDetailColumns + 1]{};
+    char text[kMaxChanges][kRowBytes]{};
     int count{0};
 
     char* next() { return text[count++]; }
@@ -46,15 +49,23 @@ void signed_row(Rows& rows, const char* label, int value, uint8_t fraction_digit
     out[written] = 0;
 }
 
+int lines_of(const char* row) { return text_cells(row) > kConfirmDetailColumns ? 2 : 1; }
+
 int join(const Rows& rows, char* out) {
-    const int shown = rows.count > kConfirmDetailRows ? kConfirmDetailRows - 1 : rows.count;
+    int needed = 0;
+    for (int i = 0; i < rows.count; i++) needed += lines_of(rows.text[i]);
+    const int room = needed > kConfirmDetailRows ? kConfirmDetailRows - 1 : kConfirmDetailRows;
+    int shown = 0;
+    for (int used = 0; shown < rows.count && used + lines_of(rows.text[shown]) <= room; shown++)
+        used += lines_of(rows.text[shown]);
     int written = 0;
     for (int i = 0; i < shown; i++) {
         if (i > 0) out[written++] = '\n';
         written += format_string(out + written, rows.text[i]);
     }
     if (shown < rows.count) {
-        written += format_string(out + written, "\nAND ");
+        if (shown > 0) out[written++] = '\n';
+        written += format_string(out + written, "AND ");
         written += format_unsigned(out + written, static_cast<uint32_t>(rows.count - shown));
         written += format_string(out + written, " MORE");
     }
@@ -76,7 +87,7 @@ int describe_settings_changes(const Settings& from, const Settings& to, char* ou
     if (to.battery_offset_mv != from.battery_offset_mv)
         signed_row(rows, "BATTERY", to.battery_offset_mv, 0, " MV");
     if (to.frequency_trim_e1_ppm != from.frequency_trim_e1_ppm)
-        signed_row(rows, "FREQ TRIM", to.frequency_trim_e1_ppm, 1, " PPM");
+        signed_row(rows, "FREQ", to.frequency_trim_e1_ppm, 1, " PPM");
     if (rows.count == 0) return 0;
     return join(rows, out);
 }

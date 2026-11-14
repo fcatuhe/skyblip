@@ -29,6 +29,8 @@ class Canvas {
     void line(int x0, int y0, int x1, int y1, bool black);
     void rectangle(int x, int y, int width, int height, bool black, bool fill = false);
     void circle(int centre_x, int centre_y, int radius, bool black, bool fill = false);
+    void rounded_rectangle(int x, int y, int width, int height, int radius, bool black,
+                           bool fill = false, int stroke = 1);
 
     int draw_character(int x, int y, char character, bool black, int scale = 1);
     int draw_text(int x, int y, const char* text, bool black, int scale = 1);

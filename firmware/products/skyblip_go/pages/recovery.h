@@ -6,17 +6,15 @@
 
 namespace skyblip::go {
 
-constexpr const char* kRecoveryHeader = "RECOVERY";
-constexpr const char* kRecoveryTitle = "USB BOOTLOADER";
-constexpr const char* kRecoveryRunning = "THE BOOTLOADER OPERATES NOW.";
-constexpr const char* kRecoveryAwaitsPress = "PUSH THE BUTTON TO START IT.";
+constexpr const char* kRecoveryTitle = "RECOVERY";
 constexpr const char* kRecoveryBody[] = {
-    "THE USB DRIVE NAME IS TECHOBOOT.", "COPY A .UF2 FIRMWARE FILE TO IT.",
-    "TO GO BACK TO SKYBLIP,", "PUSH THE RESET BUTTON.", "THE RADIO DOES NOT TRANSMIT."};
-constexpr int kRecoveryBodyRows = 5;
+    "THE USB DRIVE IS", "TECHOBOOT.", "COPY A .UF2 FILE", "TO IT.", "",
+    "TO GO BACK, PUSH", "RESET."};
+constexpr int kRecoveryBodyRows = 7;
+constexpr const char* kRecoveryStartVerb = "START";
 
-constexpr const char* recovery_entry(ports::RecoveryPath path) {
-    return path == ports::RecoveryPath::PowerOffToFinish ? kRecoveryAwaitsPress : kRecoveryRunning;
+constexpr const char* recovery_button(ports::RecoveryPath path) {
+    return path == ports::RecoveryPath::PowerOffToFinish ? kRecoveryStartVerb : "";
 }
 
 void draw_recovery(ui::Canvas& canvas, ports::RecoveryPath path);

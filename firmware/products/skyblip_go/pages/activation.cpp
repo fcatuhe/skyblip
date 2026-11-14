@@ -6,20 +6,11 @@
 namespace skyblip::go {
 
 void draw_activation(ui::Canvas& canvas, uint16_t bluetooth_tag) {
-    draw_notice_heading(canvas, kActivationHeader, kActivationTitle);
-    canvas.draw_text(kInstallingLeftX, installing_body_y(0), kActivationWhere, true, 1);
-    canvas.draw_text(kInstallingLeftX, installing_body_y(1), "SELECT THIS UNIT:", true, 1);
-
+    draw_heading(canvas, kActivationTitle, Heading::Interrupt);
+    draw_centred_lines(canvas, kNoticeBodyY, kActivationBody, kActivationBodyRows);
     char tag[5];
     tag[format_hex(tag, bluetooth_tag, 4)] = 0;
-    canvas.draw_text(kInstallingLeftX, kActivationTagY, tag, true, kActivationTagScale);
-
-    char name[32];
-    int written = format_string(name, "ACTIVATE ");
-    written += format_string(name + written, tag);
-    written += format_string(name + written, " SKYBLIP");
-    name[written] = 0;
-    canvas.draw_text(kInstallingLeftX, kActivationNameY, name, true, 1);
+    draw_centred_line(canvas, kActivationTagY, tag, kActivationTagScale);
 }
 
 }  // namespace skyblip::go

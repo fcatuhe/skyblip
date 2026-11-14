@@ -6,9 +6,6 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr int kHeaderY = 3;
-constexpr int kHeaderRuleY = 21;
-
 constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light,  MenuRow::Aircraft, MenuRow::Units,
                                       MenuRow::Range,  MenuRow::Plot,     MenuRow::Alarm,
                                       MenuRow::Volume, MenuRow::Bravo};
@@ -41,7 +38,9 @@ const char* alarm_volume_name(go::AlarmVolume volume) {
 void row_text(ui::Canvas& canvas, int line, const char* label, const char* value, bool focused) {
     const int top = menu_line_top(line);
     const int y = menu_line_text_y(line);
-    if (focused) canvas.rectangle(2, top, kGlassWidth - 4, kMenuBarHeight, true, /*fill=*/true);
+    if (focused)
+        canvas.rounded_rectangle(2, top, kGlassWidth - 4, kMenuBarHeight, kMenuBarRadius, true,
+                                 /*fill=*/true);
     const bool ink = !focused;
     canvas.draw_text(kMenuLeftX, y, label, ink, kMenuScale);
     canvas.draw_text(kMenuRightX - text_cells(value) * kMenuCellWidth, y, value, ink, kMenuScale);
@@ -57,10 +56,14 @@ int callsign_value(char* out, const char* callsign) {
     return written;
 }
 
-void field_header(ui::Canvas& canvas, const char* title) {
-    canvas.clear(true);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, title, true, kMenuScale);
-    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
+const char* detected_verb(const Detected& detected, const Settings& settings) {
+    if (detected.state == Detection::Unpaired) return "OPEN";
+    return detected.state == Detection::Heard && !matches(detected, settings) ? "USE" : "";
+}
+
+const char* row_verb(MenuRow row, const MenuValues& values) {
+    if (row == MenuRow::Detected) return detected_verb(values.detected, values.settings);
+    return opens_a_page(row) || row == MenuRow::Aircraft ? "OPEN" : "CHANGE";
 }
 
 }  // namespace
@@ -247,12 +250,16 @@ void draw_aircraft_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
     }
 }
 
+Keys menu_keys(const MenuSnapshot& snapshot) {
+    const Menu menu = snapshot.aircraft ? aircraft_menu() : menu_for(snapshot.page);
+    const bool last = menu_row_index(menu, snapshot.focus) == menu.row_count - 1;
+    return {{Press::Once, row_verb(snapshot.focus, snapshot.values)}, last ? "BACK" : "NEXT"};
+}
+
 void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
-    canvas.clear(true);
     const char* title =
         snapshot.aircraft ? menu_row_label(MenuRow::Aircraft) : menu_title(snapshot.page);
-    canvas.draw_text(kMenuLeftX - 2, kHeaderY, title, true, kMenuScale);
-    canvas.horizontal_line(kMenuLeftX - 2, kHeaderRuleY, kGlassWidth - 2 * (kMenuLeftX - 2), true);
+    draw_heading(canvas, title, Heading::Opened);
 
     if (snapshot.aircraft) {
         draw_aircraft_menu(canvas, snapshot);
@@ -267,11 +274,16 @@ void draw_menu(ui::Canvas& canvas, const MenuSnapshot& snapshot) {
         }
     }
 
-    canvas.draw_text(kMenuHintX, kMenuHintY, kMenuHintText, true, 1);
+    draw_keys(canvas, menu_keys(snapshot));
+}
+
+const char* field_button_verb(const CallsignSnapshot& snapshot) {
+    if (snapshot.clears) return kFieldEraseVerb;
+    return snapshot.cursor + 1 >= text_cells(snapshot.text) ? kFieldSaveVerb : kFieldNextVerb;
 }
 
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
-    field_header(canvas, snapshot.title);
+    draw_heading(canvas, snapshot.title, Heading::Opened);
 
     const int text_x = field_text_x(text_cells(snapshot.text));
     canvas.draw_text(text_x, kCallsignTextY, snapshot.text, true, kCallsignScale);
@@ -279,26 +291,15 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
     canvas.rectangle(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorHeight, true,
                      /*fill=*/true);
 
-    const char* button = snapshot.clears ? kCallsignClearHintText : kCallsignNextHintText;
-    canvas.draw_text(centred_x(kCallsignPadHintText, kCallsignHintScale), kCallsignPadHintY,
-                     kCallsignPadHintText, true, kCallsignHintScale);
-    canvas.draw_text(centred_x(button, kCallsignHintScale), kCallsignButtonHintY, button, true,
-                     kCallsignHintScale);
-    if (!snapshot.clears)
-        canvas.draw_text(centred_x(kCallsignClearHelpText, 1), kCallsignHelpY,
-                         kCallsignClearHelpText, true, 1);
+    draw_keys(canvas, {{Press::Once, field_button_verb(snapshot)}, kFieldChangeVerb});
 }
 
 void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
-    field_header(canvas, snapshot.title);
-    canvas.draw_text(field_text_x(text_cells(snapshot.text)), kCallsignTextY, snapshot.text, true,
+    draw_heading(canvas, snapshot.title, Heading::Opened);
+    canvas.draw_text(field_text_x(text_cells(snapshot.text)), kClearTextY, snapshot.text, true,
                      kCallsignScale);
-    canvas.draw_text(centred_x(kClearKeepsHintText, kCallsignHintScale), kCallsignPadHintY,
-                     kClearKeepsHintText, true, kCallsignHintScale);
-    canvas.draw_text(centred_x(kCallsignClearHintText, kCallsignHintScale), kCallsignButtonHintY,
-                     kCallsignClearHintText, true, kCallsignHintScale);
-    canvas.draw_text(centred_x(kOwnIcaoClearHelpText, 1), kCallsignHelpY, kOwnIcaoClearHelpText,
-                     true, 1);
+    draw_centred_lines(canvas, kClearLinesY, kOwnIcaoClearLines, kOwnIcaoClearLineCount);
+    draw_keys(canvas, {{Press::Once, kFieldEraseVerb}, kFieldKeepVerb});
 }
 
 }  // namespace skyblip::go
