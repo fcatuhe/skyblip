@@ -7,11 +7,7 @@ updated_on: "2026-11-13"
 <header class="page-hero">
   <p class="kicker">ADS-L &middot; ouvert, léger, interopérable</p>
   <h1>Le trafic alentour, dans votre poche.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip Go émet votre position en ADS-L et affiche le trafic ADS-L et
-    FLARM. skyBlip Bravo y ajoute l&rsquo;ADS-B.
-    Ensemble, ils forment un skyBlip Tango.
-  </p>
+  <p class="page-hero-subtitle">skyBlip Go émet votre position en ADS-L et affiche le trafic ADS-L et FLARM. Bravo transmet le trafic des autres aéronefs équipés ADS-B à votre application lorsqu&rsquo;il est utilisé seul, ou à votre Go lorsqu&rsquo;ils sont associés pour former un Tango.</p>
 
   <%= render "shared/cta", prompt: false %>
 
@@ -30,7 +26,7 @@ updated_on: "2026-11-13"
       </figure>
       <h2><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></h2>
       <p class="status status--available">Disponible</p>
-      <p>Reçoit l&rsquo;ADS&#8209;B, avions de ligne compris. N&rsquo;émet rien.</p>
+      <p>Reçoit les positions des aéronefs équipés ADS&#8209;B. Transmet le trafic à votre application de navigation en Bluetooth, sans Go. N&rsquo;émet pas votre position.</p>
     </li>
     <li>
       <figure class="pair">
@@ -118,24 +114,15 @@ updated_on: "2026-11-13"
 </section>
 
 <section class="band">
-  <h2 class="section-title">Ajoutez les <span class="highlight">avions de ligne</span></h2>
+  <h2 class="section-title">Ajoutez le <span class="highlight">trafic ADS&#8209;B</span></h2>
   <div class="feature">
     <div>
-      <p class="eyebrow">skyBlip Bravo et Tango</p>
-      <h3>ADS-B, ADS-L et FLARM, <span class="highlight">sur un seul radar</span>.</h3>
-      <p>
-        skyBlip Bravo reçoit l&rsquo;ADS-B sur 1090&nbsp;MHz. Seul, il envoie
-        ce trafic à votre application de navigation. Il n&rsquo;émet rien.
-      </p>
-      <p>
-        Associé à un Go pour former un skyBlip Tango, il affiche les avions de
-        ligne sur le radar du Go, avec le trafic ADS-L et FLARM. Le Go continue
-        d&rsquo;émettre votre position en ADS-L.
-      </p>
-      <p class="note">
-        Le Seeed SenseCAP MeshTracker X1 est en vente. Le firmware
-        skyBlip Bravo est publié sur GitHub, comme celui du Go.
-      </p>
+      <p class="eyebrow">Un Go associé à Bravo forme un Tango</p>
+      <h3>Les autres aéronefs équipés ADS&#8209;B, <span class="highlight">aux mêmes altitudes que vous</span>.</h3>
+      <p>Associez votre Go à un Bravo pour afficher les autres aéronefs équipés ADS-B sur le même radar que le trafic ADS-L et FLARM. Ces aéronefs volent aux mêmes altitudes que vous, dans le même espace aérien. Il s&rsquo;agit notamment d&rsquo;aéronefs récents, mais aussi d&rsquo;appareils plus anciens dont les propriétaires ont installé un glass cockpit ou un nouveau transpondeur ADS-B. Le Go continue d&rsquo;émettre votre position en ADS-L.</p>
+      <p>Bravo reçoit l&rsquo;ADS-B sur 1090&nbsp;MHz. Il fonctionne aussi seul et envoie le trafic en Bluetooth à votre application de navigation. Bravo n&rsquo;émet pas votre position.</p>
+      <p>Bravo reçoit également les positions des avions de ligne, des jets d&rsquo;affaires et des hélicoptères équipés ADS-B. Vous pouvez les croiser dans les espaces aériens contrôlés autour des aérodromes et des aéroports.</p>
+      <p class="note">Le Seeed SenseCAP MeshTracker X1 est en vente. Le firmware skyBlip Bravo est publié sur GitHub, comme celui du Go.</p>
       <p class="feature-guide">
         <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> &middot;
         <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>
@@ -146,7 +133,7 @@ updated_on: "2026-11-13"
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title">Un Go <span class="highlight">à partir de 68&nbsp;€</span>, et c&rsquo;est tout</h2>
+  <h2 class="section-title">Achetez le matériel. <span class="highlight">Le firmware est gratuit.</span></h2>
   <div class="columns">
     <div>
       <h3>Un matériel grand public.</h3>
@@ -172,13 +159,8 @@ updated_on: "2026-11-13"
       <p>Les aéronefs équipés ADS-L. skyBlip Go reçoit aussi le FLARM, mais n&rsquo;émet qu&rsquo;en ADS-L.</p>
     </details>
     <details>
-      <summary>Est-ce que je vois les avions de ligne&nbsp;?</summary>
-      <p>
-        Pas avec un Go seul. Les avions de ligne émettent en ADS-B sur
-        1090&nbsp;MHz, qu&rsquo;un Go ne reçoit pas. skyBlip Bravo le reçoit.
-        Utilisez-le avec votre téléphone ou associez-le à votre Go pour former un Tango&nbsp;:
-        <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %>.
-      </p>
+      <summary>Est-ce que je vois les aéronefs équipés ADS-B&nbsp;?</summary>
+      <p>Pas avec un Go seul. Le Go reçoit l&rsquo;ADS-L et le FLARM, mais pas l&rsquo;ADS-B sur 1090&nbsp;MHz. Associez-lui un <%= link_to_page "skyblip-bravo", label: "Bravo" %> pour former un Tango et afficher ces aéronefs sur son radar. Vous pouvez aussi utiliser Bravo seul avec votre application de navigation. L&rsquo;aéronef doit émettre en ADS-B. Un transpondeur Mode S sans cette fonction reste invisible pour Bravo.</p>
     </details>
     <details>
       <summary>Bravo voit-il tous les aéronefs équipés d&rsquo;un transpondeur&nbsp;?</summary>
@@ -207,7 +189,7 @@ updated_on: "2026-11-13"
     </details>
     <details>
       <summary>Faut-il un abonnement&nbsp;?</summary>
-      <p>Non. Une fois un Go acheté, tout fonctionne&nbsp;: émission, réception, alarme, mises à jour. Le firmware est gratuit, y compris celui de Bravo.</p>
+      <p>Non. Pour le Go comme pour Bravo, le firmware et les mises à jour sont gratuits et open source. Vous payez le matériel. La réception du trafic, l&rsquo;alarme et l&rsquo;émission de votre position par le Go ne coûtent rien.</p>
     </details>
     <details>
       <summary>Est-ce certifié&nbsp;?</summary>

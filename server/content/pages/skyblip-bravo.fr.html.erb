@@ -2,7 +2,7 @@
 title: "skyBlip Bravo, récepteur ADS-B pour MeshTracker X1"
 nav_title: Bravo
 slug: bravo
-description: "Bravo reçoit l'ADS-B 1090 MHz pour votre téléphone ou votre Go."
+description: "Voyez les autres aéronefs équipés ADS-B dans votre application de navigation. Bravo fonctionne seul sur un Seeed SenseCAP MeshTracker X1."
 share_image: bravo
 product:
   name: skyBlip Bravo
@@ -13,33 +13,9 @@ updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
-  <p class="kicker">ADS-B 1090&nbsp;MHz &middot; réception seule</p>
-  <h1>Bravo envoie le trafic ADS-B à votre téléphone ou à votre Go.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip Bravo reçoit l&rsquo;ADS-B&nbsp;: avions de ligne, jets
-    d&rsquo;affaires, hélicoptères et avions de voyage équipés de
-    l&rsquo;ADS-B out. Le Seeed SenseCAP MeshTracker X1 est en
-    vente aujourd&rsquo;hui. Le firmware skyBlip Bravo est disponible
-    sur GitHub.
-  </p>
-
-  <ul class="chooser">
-    <li>
-      <h2><a href="#buy">Voir l&rsquo;ADS-B sur votre téléphone&nbsp;: Bravo</a></h2>
-      <p class="status status--available">Disponible</p>
-      <p>Il transmet le trafic ADS-B à votre application de navigation. Un Go affiche déjà les planeurs équipés de FLARM. Un Tango réunit le trafic ADS-B, ADS-L et FLARM.</p>
-    </li>
-    <li>
-      <h2><%= link_to_page "features", label: "Voir l\u2019ADS-L et le FLARM, ou être vu\u00a0: Go" %></h2>
-      <p class="status status--available">Disponible</p>
-      <p>Il affiche le trafic ADS&#8209;L et FLARM et émet votre position en ADS&#8209;L.</p>
-    </li>
-    <li>
-      <h2><%= link_to_page "skyblip-tango", label: "Les trois trafics, et être vu\u00a0: Tango" %></h2>
-      <p class="status status--available">Disponible</p>
-      <p>Un Go associé à un Bravo affiche l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM sur un seul radar.</p>
-    </li>
-  </ul>
+  <p class="kicker">L&rsquo;ADS-B pour le vol de loisir &middot; 1090&nbsp;MHz</p>
+  <h1>Voyez le trafic ADS-B autour de vous dans votre application de navigation.</h1>
+  <p class="page-hero-subtitle">skyBlip Bravo reçoit les positions des autres aéronefs équipés ADS-B qui volent aux mêmes altitudes que vous, dans le même espace aérien. Installez son firmware sur un Seeed SenseCAP MeshTracker X1 pour transmettre ce trafic en Bluetooth à SkyDemon, SDVFR ou une autre application de navigation compatible. Bravo fonctionne seul.</p>
 
   <figure class="hero-figure hero-figure--wide">
     <%= pages_image_tag "seeed-x1.avif", alt: "Le Seeed SenseCAP MeshTracker X1\u00a0: un boîtier noir au format carte, avec un bouton vert" %>
@@ -64,7 +40,8 @@ updated_on: "2026-11-13"
   <div class="columns">
     <div>
       <h3>Il reçoit.</h3>
-      <p>Les avions de ligne, les jets d&rsquo;affaires, les hélicoptères et les avions de voyage dont le transpondeur émet en ADS-B.</p>
+      <p>Les autres aéronefs équipés ADS-B qui volent aux mêmes altitudes que vous, dans le même espace aérien. Il s&rsquo;agit notamment d&rsquo;aéronefs récents, mais aussi d&rsquo;appareils plus anciens dont les propriétaires ont installé un glass cockpit ou un nouveau transpondeur ADS-B.</p>
+      <p>Bravo reçoit également les positions des avions de ligne, des jets d&rsquo;affaires et des hélicoptères équipés ADS-B. Vous pouvez les croiser dans les espaces aériens contrôlés autour des aérodromes et des aéroports.</p>
     </div>
     <div>
       <h3>Il ne reçoit pas.</h3>
@@ -78,7 +55,7 @@ updated_on: "2026-11-13"
   <div class="columns">
     <div>
       <h3>Dans votre application.</h3>
-      <p>Il envoie le trafic en Bluetooth au format FLARM NMEA, comme un Go, à une seule application de navigation&nbsp;: SkyDemon, SDVFR ou toute autre application compatible avec ce format.</p>
+      <p>Il transmet le trafic en Bluetooth, au format FLARM NMEA, à une seule application de navigation&nbsp;: SkyDemon, SDVFR ou une autre application compatible avec ce format.</p>
     </div>
     <div>
       <h3>L&rsquo;alarme se fait sentir.</h3>
@@ -91,18 +68,7 @@ updated_on: "2026-11-13"
   </div>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">Bravo avec un Go</h2>
-  <p class="section-intro">
-    Associé à un Go, Bravo lui transmet le trafic ADS-B. Le Go affiche
-    l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM sur un seul radar. Le Go continue
-    d&rsquo;émettre votre position en ADS-L. Ensemble, ils forment un skyBlip
-    Tango.
-  </p>
-  <p class="more"><%= link_to_page "skyblip-tango", label: "Ce que fait un Tango" %></p>
-</section>
-
-<section id="status" class="band">
+<section id="status" class="band band--tint">
   <h2 class="section-title">Où en est-il&nbsp;?</h2>
   <div class="columns">
     <div>
@@ -116,12 +82,12 @@ updated_on: "2026-11-13"
     </div>
     <div>
       <h3>Les mises à jour.</h3>
-      <p>Les mises à jour se font ensuite depuis le Briefing en Bluetooth, comme pour le Go.</p>
+      <p>Pour mettre Bravo à jour en Bluetooth, utilisez <%= link_to "le Briefing", briefing_root_path %>, l&rsquo;application web de skyblip.eu, puis validez chaque mise à jour par une pression sur Bravo.</p>
     </div>
   </div>
 </section>
 
-<section id="install" class="band band--tint">
+<section id="install" class="band">
   <h2 class="section-title">Un Bravo, prêt en trois étapes</h2>
   <ol class="steps-grid steps-grid--sequence">
     <li>
@@ -134,12 +100,14 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Installez.</h3>
-      <p>Copiez le fichier .uf2 de la dernière version de skyBlip Bravo depuis la <a href="https://github.com/fcatuhe/skyblip/releases">page des versions</a> sur le lecteur <span class="mono">X1</span>. Bravo ne demande aucune activation. Dans le Briefing, renseignez l&rsquo;adresse OACI de votre aéronef pour exclure votre propre transpondeur du trafic.</p>
+      <p>Copiez le fichier .uf2 de la dernière version de skyBlip Bravo depuis la <a href="https://github.com/fcatuhe/skyblip/releases">page des versions</a> sur le lecteur <span class="mono">X1</span>.</p>
+      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans <%= link_to "le Briefing", briefing_root_path %>. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Validez la modification par une pression sur Bravo. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
+      <p>Le Briefing communique avec Bravo en Bluetooth. Utilisez Chrome ou Edge sur un ordinateur ou sur Android. Safari sur iPhone ne permet pas cette connexion.</p>
     </li>
   </ol>
 </section>
 
-<section id="buy" class="band">
+<section id="buy" class="band band--tint">
   <h2 class="section-title">Obtenir un Bravo</h2>
   <div class="offers offers--one">
     <article class="offer">
@@ -166,6 +134,12 @@ updated_on: "2026-11-13"
   </p>
 </section>
 
+<section class="band">
+  <h2 class="section-title">Bravo avec un Go</h2>
+  <p class="section-intro">Associé à un Go, Bravo lui transmet le trafic ADS-B. Le Go réunit alors le trafic ADS-B, ADS-L et FLARM sur un seul radar et continue d&rsquo;émettre votre position en ADS-L. Ensemble, ils forment un skyBlip Tango.</p>
+  <p class="more"><%= link_to_page "skyblip-tango", label: "Ce que fait un Tango" %></p>
+</section>
+
 <section class="band band--tint">
   <h2 class="section-title">On répond à vos questions</h2>
   <div class="faq">
@@ -182,8 +156,12 @@ updated_on: "2026-11-13"
       <p>Non, une fois l&rsquo;adresse OACI de votre aéronef renseignée sur Bravo ou sur le Go auquel il est associé. Bravo exclut alors votre propre transpondeur du trafic transmis.</p>
     </details>
     <details>
+      <summary>Pourquoi Bravo ne demande-t-il ni activation ni compte&nbsp;?</summary>
+      <p>Seul un appareil qui émet en ADS-L a besoin d&rsquo;une adresse individuelle issue de la plage attribuée à skyBlip par le registre ADS-L. Le Go reçoit la sienne à l&rsquo;activation. Bravo n&rsquo;émet rien et n&rsquo;a donc besoin ni d&rsquo;activation ni de compte.</p>
+    </details>
+    <details>
       <summary>Ai-je besoin d&rsquo;un Go&nbsp;?</summary>
-      <p>Non. Seul, Bravo transmet le trafic à votre application de navigation. Avec un Go, vous recevez aussi le trafic ADS-L et FLARM, et le Go émet votre position en ADS-L.</p>
+      <p>Non. Bravo transmet directement le trafic ADS-B à votre application de navigation en Bluetooth. Son avertisseur sonore et son vibreur vous préviennent lorsqu&rsquo;un trafic se rapproche. Vous pouvez ajouter un Go pour recevoir aussi le trafic ADS-L et FLARM et émettre votre position en ADS-L. Associé à Bravo, il forme un <%= link_to_page "skyblip-tango", label: "Tango" %> et réunit les trois types de trafic sur son radar.</p>
     </details>
     <details>
       <summary>Faut-il une station sol&nbsp;?</summary>

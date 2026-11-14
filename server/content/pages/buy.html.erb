@@ -1,18 +1,13 @@
 ---
 title: "T-Echo 868 MHz, Go prices and firmware install"
 nav_title: Buy
-description: "Compare Go and Go+, from €68 and €84. Choose a T-Echo 868 MHz with BME280, find sellers, then install and activate the free firmware."
+description: "Compare Go and Go+, from €68 and €84, or standalone Bravo for ADS-B traffic. Find hardware sellers and install the free firmware."
 updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
   <h1>Three devices, open firmware, no subscription.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip Go is a LilyGO T-Echo, skyBlip Go+ a T-Echo Plus, skyBlip Bravo a
-    Seeed SenseCAP MeshTracker X1.<br>
-    You buy the device and install the skyBlip firmware by USB. The X1
-    ships with Meshtastic.
-  </p>
+  <p class="page-hero-subtitle">Choose a Go on a LilyGO T-Echo, or a Go+ on a T-Echo Plus, to broadcast your position in ADS-L and receive ADS-L and FLARM traffic. Bravo runs on a Seeed SenseCAP MeshTracker X1 and receives other aircraft fitted with ADS-B. It works with your Go or on its own with your navigation app. Buy the hardware and install the free skyBlip firmware by USB. The X1 ships with Meshtastic, which receives no ADS-B.</p>
 </header>
 
 <section>
@@ -54,8 +49,9 @@ updated_on: "2026-11-13"
       <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
       <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status status--available">Available</span></p>
       <ul class="points">
-        <li>Receives ADS-B, for your app or your Go</li>
-        <li>Buzzer and vibration motor</li>
+        <li>Receives aircraft fitted with ADS-B</li>
+        <li>Traffic in your navigation app over Bluetooth, without a Go</li>
+        <li>Buzzer and vibration motor warn of approaching traffic</li>
         <li>1100&nbsp;mAh battery</li>
       </ul>
       <p class="offer-buy">
@@ -163,7 +159,7 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Activate.</h3>
-      <p><%= link_to "Activate it", briefing_activation_path %> over Bluetooth in Chrome or Edge, then confirm activation with a press on the device. Until then, a new Go neither transmits nor receives. Briefing then lets you set your <a href="#type">aircraft type</a> and callsign. Both are optional. If the device needs a GPS position before saving them, it tells you. You can change both later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
+      <p>The Go transmits in ADS-L, so activation assigns it an address from skyBlip&rsquo;s range in the ADS-L registry. No account is needed. <%= link_to "Activate it", briefing_activation_path %> over Bluetooth in Chrome or Edge, then confirm activation with a press on the device. Until then, a new Go neither transmits nor receives. Briefing then lets you set your <a href="#type">aircraft type</a> and callsign. Both are optional. If the device needs a GPS position before saving them, it tells you. You can change both later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
     </li>
   </ol>
 </section>
@@ -180,8 +176,9 @@ updated_on: "2026-11-13"
       <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears. First, copy <span class="mono">CURRENT.UF2</span> from it to your computer. Dragging that file back onto the drive restores Meshtastic. Then copy the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest skyBlip Bravo release</a> onto the <span class="mono">X1</span> drive.</p>
     </li>
     <li>
-      <h3>Set up.</h3>
-      <p>Bravo needs no activation. In <%= link_to "Briefing", briefing_root_path %>, set your aircraft&rsquo;s ICAO address so your own transponder is left out.</p>
+      <h3>Set your transponder address.</h3>
+      <p>Only a device that transmits in ADS-L needs its own address from skyBlip&rsquo;s range in the ADS-L registry. The Go gets it at activation, while Bravo transmits nothing and needs neither activation nor an account.</p>
+      <p>If your aircraft has a Mode S or ADS-B out transponder, enter its ICAO address in <%= link_to "Briefing", briefing_root_path %>, the skyblip.eu web app for device settings and updates. This is the transponder&rsquo;s 24-bit aircraft address, written as six characters such as <span class="mono">3C6586</span>. Briefing calls it the ADS-B address. Use Chrome or Edge on a computer or Android, then approve the change with a press on Bravo. This keeps your own transponder out of the traffic and stops it setting off alarms. Without a transponder, leave the address blank.</p>
     </li>
   </ol>
   <p class="signature">
