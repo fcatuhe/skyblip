@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstring>
 #include <initializer_list>
+#include <string>
 
 #include "core/comms/config.h"
 #include "doctest/doctest.h"
@@ -85,6 +86,29 @@ TEST_CASE("confirm page: what it will do is on the page, in words, and not clipp
         CHECK(reads_prompt(canvas, snapshot));
         CHECK(Expected(snapshot).consumed == static_cast<int>(std::strlen(snapshot.detail)));
     }
+}
+
+// Arming spends the pilot's partition, so the glass names the profile and the flights it erases.
+TEST_CASE("confirm page: a capture names its profile and the flights it erases, not clipped") {
+    char detail[comms::kPromptDetailBytes];
+    for (const comms::CaptureProfile profile :
+         {comms::CaptureProfile::Full, comms::CaptureProfile::PowerRun,
+          comms::CaptureProfile::FlightRun, comms::CaptureProfile::Stop}) {
+        for (const uint32_t evicts : {0u, 1u, 99u}) {
+            detail[comms::format_capture_detail(detail, profile, evicts)] = 0;
+            ConfirmSnapshot snapshot = prompt(comms::Pending::Capture);
+            snapshot.detail = detail;
+            Glass canvas;
+            draw_confirm(canvas, snapshot);
+            CAPTURE(snapshot.detail);
+            CHECK(reads_prompt(canvas, snapshot));
+            CHECK(Expected(snapshot).consumed == static_cast<int>(std::strlen(snapshot.detail)));
+        }
+    }
+    detail[comms::format_capture_detail(detail, comms::CaptureProfile::Full, 3)] = 0;
+    CHECK(std::string(detail) == "START A FULL CAPTURE, ERASES 3 FLIGHTS");
+    detail[comms::format_capture_detail(detail, comms::CaptureProfile::PowerRun, 1)] = 0;
+    CHECK(std::string(detail) == "START A POWER RUN, ERASES 1 FLIGHT");
 }
 
 TEST_CASE("confirm page: a detail broken by line feeds keeps one setting to a row") {

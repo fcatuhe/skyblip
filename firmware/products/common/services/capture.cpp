@@ -17,6 +17,17 @@ comms::CaptureProfile profile_of(diagnostics::Profile profile) {
 
 }  // namespace
 
+void order_capture(diagnostics::Recorder& recorder, comms::CaptureProfile profile) {
+    switch (profile) {
+        case comms::CaptureProfile::Full: recorder.arm(diagnostics::Profile::Full); return;
+        case comms::CaptureProfile::PowerRun: recorder.arm(diagnostics::Profile::PowerRun); return;
+        case comms::CaptureProfile::FlightRun:
+            recorder.arm(diagnostics::Profile::FlightRun);
+            return;
+        case comms::CaptureProfile::Stop: recorder.disarm(); return;
+    }
+}
+
 Status CaptureService::setup() {
     store_.open();
     return Status::Ok;

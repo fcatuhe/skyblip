@@ -16,6 +16,9 @@ class CaptureSettings {
     virtual void describe(diagnostics::Config& record) const = 0;
 };
 
+// INFO: fc 15nov26 what two presses on a capture prompt allow, on a glass or on a lamp
+void order_capture(diagnostics::Recorder& recorder, comms::CaptureProfile profile);
+
 class CaptureService : public runtime::Service {
    public:
     // INFO: fc 20sep26 the price walks the whole pool, so it is answered at the render cadence

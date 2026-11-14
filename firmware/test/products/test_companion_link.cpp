@@ -151,21 +151,35 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
 }
 
-// The Go arms a capture on its glass only, so the command Bravo answers is not one it knows.
-TEST_CASE("companion link: a Go answers a capture command unknown_command and arms nothing") {
+// A pilot who wants to help measures a unit in the field: a page arms it, two presses on the glass
+// allow it.
+TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is answered twice") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     taxi(rig, now_ms, 3);
     rig.raise_link(1);
-    rig.platform.link().push_rx(
-        link_frame(events::Endpoint::Config, 1, "{\"command\":\"capture\",\"profile\":\"full\"}"));
+    rig.platform.link().push_rx(link_frame(events::Endpoint::Config, 1,
+                                           "{\"command\":\"capture\",\"profile\":\"power_run\"}"));
     taxi(rig, now_ms, 1);
     CHECK(last_frame_on(rig, events::Endpoint::Config) ==
-          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":"
-          "\"unknown_command\"}");
-    CHECK(rig.product.screen().prompt() == comms::Pending::None);
+          "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"pending\":true,"
+          "\"reason\":\"confirm_capture\"}");
+    REQUIRE(rig.product.screen().prompt() == comms::Pending::Capture);
+    CHECK(std::string(rig.product.config_link().config().prompt_detail()) == "START A POWER RUN");
     CHECK_FALSE(rig.product.capture().capturing());
+
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    rig.double_press(now_ms);
+    rig.run(now_ms, now_ms + 1000);
+    now_ms += 1000;
+    CHECK(last_frame_on(rig, events::Endpoint::Config) ==
+          "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"capture\"}");
+    CHECK(rig.product.diagnostics().armed());
+    CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::PowerRun);
+    rig.run(now_ms, now_ms + 2000);
+    CHECK(rig.product.alarm().indicator_condition() == indication::Condition::AliveCapturing);
 }
 
 // A write is refused in the air, so a name is set before the aircraft moves.
