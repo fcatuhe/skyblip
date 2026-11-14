@@ -1,8 +1,7 @@
-// What a contact means on a skyBlip Go: the pad moves, the button acts, and the double press
-// authorises.
+// What a contact means on a skyBlip Go: the pad moves, and the button acts and authorises.
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
-#include "products/common/confirm_gesture.h"
+#include "products/common/prompt_answer.h"
 #include "products/skyblip_go/input/controls.h"
 
 using namespace skyblip;
@@ -96,55 +95,56 @@ TEST_CASE("controls: a touch the button joins says nothing, in either direction"
     CHECK(touch(joined, 9000, kLongTouchHoldMs + 100) == go::Gesture::LongTouch);
 }
 
-TEST_CASE("gesture: two presses inside the window authorise, one press refuses") {
-    common::ConfirmGesture gesture;
-    gesture.arm(1000);
-    CHECK(gesture.press(1100) == common::Answer::None);  // one press decides nothing yet
-    CHECK(gesture.press(1250) == common::Answer::Confirm);
-    CHECK_FALSE(gesture.armed());  // spent: the same pair cannot confirm twice
-    CHECK(gesture.press(1300) == common::Answer::None);
-
-    // The page press, made at a prompt. It is not ignored - it refuses.
-    common::ConfirmGesture lone;
-    lone.arm(1000);
-    CHECK(lone.press(1100) == common::Answer::None);
-    CHECK(lone.tick(1100 + common::ConfirmGesture::kDoublePressWindowMs - 1) ==
-          common::Answer::None);
-    CHECK(lone.tick(1100 + common::ConfirmGesture::kDoublePressWindowMs) == common::Answer::Cancel);
-    CHECK_FALSE(lone.armed());
+TEST_CASE("prompt answer: one press accepts once armed, and only once") {
+    common::PromptAnswer answer;
+    answer.ask(1000);
+    answer.arm_once_quiet(/*readable=*/true, 1000 + common::PromptAnswer::kAnswerSettleMs);
+    REQUIRE(answer.armed());
+    answer.contact(down(events::Contact::Button, 1700), 1700);
+    answer.contact(up(events::Contact::Button, 1800), 1800);
+    CHECK(answer.press());
+    CHECK_FALSE(answer.armed());
+    CHECK_FALSE(answer.press());
 }
 
-// A pilot cycling pages produces exactly this, and it must not add up to a firmware upload.
-TEST_CASE("gesture: presses made before the prompt, and slow presses, authorise nothing") {
-    common::ConfirmGesture gesture;
-    CHECK(gesture.press(500) == common::Answer::None);  // disarmed: paging, not answering
-    CHECK(gesture.press(600) == common::Answer::None);
-    CHECK(gesture.tick(2000) == common::Answer::None);
+// A pilot cycling pages or stepping a value produces exactly this, and it must not authorise.
+TEST_CASE("prompt answer: an unread prompt, a press already made, or a busy button arms nothing") {
+    constexpr uint32_t kSettleMs = common::PromptAnswer::kAnswerSettleMs;
 
-    // The prompt arrives between the two halves of a page double-tap. The half
-    // that came first belongs to the pages, and cannot be counted here.
-    gesture.arm(650);
-    CHECK(gesture.press(700) == common::Answer::None);
-    CHECK(gesture.tick(700 + common::ConfirmGesture::kDoublePressWindowMs) ==
-          common::Answer::Cancel);
+    common::PromptAnswer unread;
+    unread.ask(0);
+    unread.arm_once_quiet(/*readable=*/false, 5000);
+    CHECK_FALSE(unread.press());
 
-    common::ConfirmGesture slow;
-    slow.arm(0);
-    CHECK(slow.press(100) == common::Answer::None);
-    CHECK(slow.press(100 + common::ConfirmGesture::kDoublePressWindowMs + 1) ==
-          common::Answer::None);
+    common::PromptAnswer early;
+    early.ask(0);
+    early.arm_once_quiet(true, kSettleMs - 1);
+    CHECK_FALSE(early.press());
+
+    // The down began before the arm and was published after it: it belongs to the pages.
+    common::PromptAnswer held;
+    held.ask(0);
+    held.arm_once_quiet(true, kSettleMs);
+    REQUIRE(held.armed());
+    held.contact(down(events::Contact::Button, kSettleMs - 10), kSettleMs + 20);
+    CHECK_FALSE(held.press());
+
+    common::PromptAnswer busy;
+    busy.ask(0);
+    busy.contact(down(events::Contact::Button, 100), 100);
+    busy.contact(up(events::Contact::Button, 200), 200);
+    busy.arm_once_quiet(true, 200 + kSettleMs - 1);
+    CHECK_FALSE(busy.armed());
+    busy.arm_once_quiet(true, 200 + kSettleMs);
+    CHECK(busy.armed());
 }
 
 // Three meanings on one button stay disjoint, or a pilot has two of them at once.
-TEST_CASE("gesture: the authorising window sits between a press and the power-off hold") {
-    CHECK(common::ConfirmGesture::kDoublePressWindowMs < power::kLongPressHoldMs);
+TEST_CASE("prompt answer: the settle sits between a press and the power-off hold") {
+    CHECK(common::PromptAnswer::kAnswerSettleMs < power::kLongPressHoldMs);
 
     go::Controls controls;
-    common::ConfirmGesture gesture;
-    gesture.arm(0);
     controls.read(down(events::Contact::Button, 0));
     CHECK(controls.read(up(events::Contact::Button, power::kLongPressHoldMs + 200)) ==
           go::Gesture::None);
-    CHECK(gesture.tick(power::kLongPressHoldMs) == common::Answer::None);
-    CHECK(gesture.armed());
 }

@@ -118,7 +118,7 @@ export class BrowserTrust {
     try {
       this.#key ??= await this.#loadKey();
     } catch (error) {
-      console.error('no browser key, so every change asks for two presses', error);
+      console.error('no browser key, so every change asks for a press', error);
     }
     if (!this.#key) return;
     const challenge = await this.#replies.ask({ command: 'browser_challenge' }, reply => reply.command === 'browser_challenge' || refusal(reply, PROOF_REFUSALS));
@@ -131,7 +131,7 @@ export class BrowserTrust {
     this.#change({ trusted: 'trusted', untrusted: 'proven' }[verdict?.reason] ?? null, null);
   }
 
-  // INFO: fc 13nov26 the unit stores a proven key on the set or dfu two presses confirm on this link
+  // INFO: fc 13nov26 the unit stores a proven key on the set or dfu a press confirms on this link
   confirmed() {
     if (this.#trust === 'proven') this.#change('trusted', this.#browsers);
   }

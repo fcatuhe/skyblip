@@ -21,7 +21,7 @@ namespace {
 constexpr uint32_t kHeard = 0x3C6586;
 constexpr uint32_t kOther = 0x3C0A11;
 
-// The set a page sends, answered as the page reads it, with the glass's two presses in between.
+// The set a page sends, answered as the page reads it, with the glass's press in between.
 std::string answer_to_set(Settings& settings, const std::optional<uint32_t>& own_transponder,
                           const char* json) {
     platform::host::Link link;

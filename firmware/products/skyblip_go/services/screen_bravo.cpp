@@ -43,14 +43,22 @@ void ScreenService::step_bravo(uint32_t now_ms) {
     if (on_bravo_page()) act_on_bravo(bravo_page_.idle(bravo_view(), now_ms), now_ms);
 }
 
+uint32_t ScreenService::bravo_seconds_left(const BravoView& view, uint32_t now_ms) const {
+    if (bravo_page_.confirming() || bravo_page_.unpairing())
+        return bravo_page_.seconds_left(now_ms);
+    if (!view.paired && view.step == BravoStep::Waiting)
+        return seconds_left(bravo_.step_since_ms(), now_ms, BravoService::kAnswerCeilingMs);
+    return 0;
+}
+
 // INFO: fc 11nov26 once a boot, never over an alarm, and gone after the menu's idle hold
 void ScreenService::sync_notice(uint32_t now_ms) {
     const Detected heard = detected();
     // INFO: fc 13nov26 an aircraft no longer heard on the ground, takeoff included, is no proposal
     const bool proposal_gone =
         notice_kind_ == Notice::NewAircraft && !same_aircraft(heard, noticed_aircraft_);
-    if (notice_ && (alarm_takes_glass() || proposal_gone ||
-                    now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
+    if (notice_ &&
+        (alarm_takes_glass() || proposal_gone || now_ms - notice_since_ms_ >= notice_ceiling_ms()))
         close_notice();
     if (alarm_takes_glass()) return;
     if (bravo_.take_forgotten_notice()) {

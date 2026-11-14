@@ -24,6 +24,7 @@ struct BravoSnapshot {
     int focus{0};
     bool confirming{false};
     bool unpairing{false};
+    uint32_t seconds_left{0};
 };
 
 void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot);
@@ -36,7 +37,8 @@ class BravoPage {
     void open(uint32_t now_ms);
     BravoAction pad(const BravoView& view, uint32_t now_ms);
     BravoAction button(const BravoView& view, uint32_t now_ms);
-    BravoAction idle(const BravoView& view, uint32_t now_ms) const;
+    BravoAction idle(const BravoView& view, uint32_t now_ms);
+    uint32_t seconds_left(uint32_t now_ms) const;
 
     int focus() const { return focus_; }
     bool confirming() const { return confirming_; }

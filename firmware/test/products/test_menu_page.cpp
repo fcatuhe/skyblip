@@ -12,7 +12,6 @@
 
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
@@ -326,12 +325,21 @@ TEST_CASE(
     while (rig.product.screen().editor().text()[0] != ' ') move(rig, now_ms);
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().clearing());
-    go::ClearSnapshot clear;
-    clear.title = "ADS-B";
-    clear.text = "3C6586";
-    go::Glass asked;
-    go::draw_clear(asked, clear);
-    CHECK(glass_shows(rig, now_ms, asked));
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
+    // The countdown on the glass is whichever second the last redraw fell in.
+    bool shown = false;
+    for (uint32_t seconds = 1; seconds <= go::kAskCeilingMs / 1000 && !shown; seconds++) {
+        go::ClearSnapshot clear;
+        clear.title = "ADS-B";
+        clear.text = "3C6586";
+        clear.seconds_left = seconds;
+        go::Glass asked;
+        go::draw_clear(asked, clear);
+        shown = std::memcmp(rig.product.screen().framebuffer().data(), asked.data(),
+                            go::Glass::kBytes) == 0;
+    }
+    CHECK(shown);
 
     change(rig, now_ms);
     CHECK_FALSE(rig.product.screen().editor().editing());

@@ -2,14 +2,14 @@ import { Controller } from "@hotwired/stimulus"
 import { LogReader, fetchDiagnostics } from "#skyblip/log"
 import { aircraftOf, isNote, ndjson, typeCounts } from "#skyblip/diagnostics"
 
-const PRESS_TWICE = "The unit asks on its glass, or a Bravo on its lamp, which blinks green fast: press its button twice to allow, once to refuse."
+const PRESS_TO_ALLOW = "The unit asks on its glass, or a Bravo on its lamp, which blinks green fast: press its button to allow."
 const REFUSALS = {
   capturing: "a capture already runs, so stop it first",
   not_capturing: "no capture runs",
   no_storage: "this unit has no capture flash",
   no_diagnostics: "this build writes no diagnostics",
   no_session: "the unit no longer holds that session",
-  cancelled: "one press refused it on the unit",
+  cancelled: "it was refused on the unit",
   expired: "nobody answered the unit within 30 seconds",
   in_flight: "the unit refuses it in flight",
   prompt_pending: "the unit is already asking another question",
@@ -101,7 +101,7 @@ export default class extends Controller {
     if (frame.pending) {
       this.ordered.prompted = true
       this.awaitVerdict()
-      return this.say(PRESS_TWICE, "warn")
+      return this.say(PRESS_TO_ALLOW, "warn")
     }
     const { profile } = this.ordered
     this.settle()

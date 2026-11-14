@@ -12,10 +12,6 @@
 namespace skyblip::go {
 
 namespace {
-bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= common::ConfirmGesture::kDoublePressWindowMs;
-}
-
 bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_ms,
                 uint32_t period_ms) {
     if (!at.phase_valid) return now_ms - last_ms >= period_ms;
@@ -52,7 +48,7 @@ void ScreenService::handle_input(uint32_t now_ms) {
         answer_.arm_once_quiet(readable, now_ms);
     }
 
-    sync_receiving(now_ms);
+    sync_receiving();
     sync_editor(now_ms);
 
     events::ContactEvent event{};
@@ -64,20 +60,16 @@ void ScreenService::handle_input(uint32_t now_ms) {
     }
     obey(controls_.tick(now_ms), now_ms);
 
-    if (answering()) {
-        resolve(answer_.tick(now_ms));
-        return;
-    }
+    if (answering()) return;
     step_editor(now_ms);
     step_bravo(now_ms);
     sync_notice(now_ms);
 }
 
-void ScreenService::sync_receiving(uint32_t now_ms) {
+void ScreenService::sync_receiving() {
     const bool receiving = config_.receiving_firmware();
     if (receiving == receiving_) return;
     receiving_ = receiving;
-    receiving_since_ms_ = now_ms;
     change_screen();
 }
 
@@ -129,7 +121,15 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 }
 
 void ScreenService::tap(uint32_t now_ms) {
-    if (answering() || receiving_ || !context_.state.activation.activated()) return;
+    if (answering()) {
+        if (answer_.armed()) close_prompt(/*accepted=*/false);
+        return;
+    }
+    if (receiving_) {
+        config_.cancel();
+        return;
+    }
+    if (!context_.state.activation.activated()) return;
     if (close_notice()) return;
     if (on_bravo_page()) {
         act_on_bravo(bravo_page_.pad(bravo_view(), now_ms), now_ms);
@@ -150,14 +150,10 @@ void ScreenService::long_touch() {
 
 void ScreenService::press(uint32_t now_ms) {
     if (answering()) {
-        resolve(answer_.press(now_ms));
+        if (answer_.press()) close_prompt(/*accepted=*/true);
         return;
     }
-    if (receiving_) {
-        // INFO: fc 03oct26 the press that confirmed the upload must not be the one that cancels it
-        if (settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
-        return;
-    }
+    if (receiving_) return;
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
     if (notice_ && notice_kind_ == Notice::NewAircraft) {
@@ -284,9 +280,8 @@ void ScreenService::step_editor(uint32_t now_ms) {
     }
 }
 
-void ScreenService::resolve(common::Answer answer) {
-    if (answer == common::Answer::None) return;
-    if (answer == common::Answer::Confirm)
+void ScreenService::close_prompt(bool accepted) {
+    if (accepted)
         config_.confirm();
     else
         config_.cancel();
@@ -363,7 +358,8 @@ void ScreenService::flash_alarm() {
 }
 
 bool ScreenService::notice_read(uint32_t now_ms) const {
-    return notice_on_glass_ && settled_for_a_double_press(now_ms, notice_on_glass_since_ms_);
+    return notice_on_glass_ &&
+           common::PromptAnswer::settled_since(now_ms, notice_on_glass_since_ms_);
 }
 
 bool ScreenService::refresh_allowed() const {

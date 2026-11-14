@@ -27,7 +27,7 @@ constexpr const char* kAircraftNoticeTitle = "BRAVO HEARS";
 
 void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings& settings,
                    bool focused);
-void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected);
+void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t seconds_left);
 
 }  // namespace skyblip::go
 

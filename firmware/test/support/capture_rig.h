@@ -12,7 +12,7 @@
 
 namespace skyblip {
 
-// A page's ask and the two presses on the glass that allow it, as a pilot orders one in the field.
+// A page's ask and the press on the glass that allows it, as a pilot orders one in the field.
 inline void order_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile) {
     const std::string json =
         std::string("{\"command\":\"capture\",\"profile\":\"") + profile + "\"}";
@@ -20,7 +20,7 @@ inline void order_over_the_link(Rig& rig, uint32_t& now_ms, const char* profile)
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Capture);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
 }

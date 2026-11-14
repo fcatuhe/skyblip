@@ -32,7 +32,7 @@ class ButtonService : public runtime::Service {
     bool prompt_readable() const;
     bool pairing_readable() const;
     void press(uint32_t now_ms);
-    void resolve(common::Answer answer);
+    void accept_prompt();
     bool alarm_stands() const { return context_.state.alarm_undismissed != traffic::Level::None; }
 
     comms::ConfigService& config_;

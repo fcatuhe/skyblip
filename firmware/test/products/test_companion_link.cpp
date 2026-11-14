@@ -121,7 +121,7 @@ TEST_CASE(
     CHECK(config_frames(rig) == pushed);
 }
 
-// A name typed on a phone, end to end: the glass names it, and two presses store it.
+// A name typed on a phone, end to end: the glass names it, and one press stores it.
 TEST_CASE("companion link: a callsign is written by an app and authorised on the glass") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -145,15 +145,15 @@ TEST_CASE("companion link: a callsign is written by an app and authorised on the
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), prompt_page.data(),
                       go::Glass::kBytes) == 0);
 
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     CHECK(std::string(rig.settings().callsign) == "F-JABC");
 }
 
-// A pilot who wants to help measures a unit in the field: a page arms it, two presses on the glass
-// allow it.
-TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is answered twice") {
+// A pilot who wants to help measures a unit in the field: a page arms it, one press on the glass
+// allows it.
+TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is answered") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -171,7 +171,7 @@ TEST_CASE("companion link: a Go arms a capture a page asks for once the glass is
 
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     CHECK(last_frame_on(rig, events::Endpoint::Config) ==
@@ -193,7 +193,7 @@ TEST_CASE("companion link: a callsign written in flight is refused, not staged")
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     CHECK(rig.settings().callsign[0] == 0);
@@ -234,7 +234,7 @@ TEST_CASE("companion link: a dropped connection closes the upload window it open
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.config_link().config().pending() == comms::Pending::Dfu);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 200);
     now_ms += 200;
     REQUIRE(rig.product.config_link().config().upload_allowed());
@@ -429,7 +429,7 @@ TEST_CASE("companion link: a set queued before its connection dropped claims not
     rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    rig.press(now_ms);
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     REQUIRE(last_frame_on(rig, events::Endpoint::Config).find("cancelled") != std::string::npos);
@@ -510,7 +510,7 @@ TEST_CASE("companion link: a second central leaving does not end the holder's re
     rig.send_from(1, "{\"command\":\"set\",\"aircraft_type\":4}");
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
-    rig.press(now_ms);
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     REQUIRE(last_frame_on(rig, events::Endpoint::Config).find("cancelled") != std::string::npos);

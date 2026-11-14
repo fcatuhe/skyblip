@@ -1,4 +1,4 @@
-// Bravo has no glass, so a page arms its diagnostics capture over the link and two presses allow
+// Bravo has no glass, so a page arms its diagnostics capture over the link and one press allows
 // it.
 #include <string>
 
@@ -25,14 +25,13 @@ void allow(BravoRig& rig, const char* profile) {
     rig.send(capture(profile).c_str());
     rig.run_for(1000);
     REQUIRE(rig.product.button().armed());
-    rig.double_press();
+    rig.press();
     rig.run_for(200);
 }
 
 }  // namespace
 
-TEST_CASE(
-    "bravo capture: the command blinks the prompt, and two presses arm the profile it names") {
+TEST_CASE("bravo capture: the command blinks the prompt, and one press arms the profile it names") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -45,7 +44,7 @@ TEST_CASE(
     CHECK(rig.lamp() == indication::Condition::Prompt);
     CHECK_FALSE(rig.product.capture().capturing());
 
-    rig.double_press();
+    rig.press();
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == kArmed);
     CHECK(rig.product.capture().capturing());
@@ -54,7 +53,7 @@ TEST_CASE(
     CHECK(rig.lamp() == indication::Condition::AliveCapturing);
 }
 
-TEST_CASE("bravo capture: two presses on a stop end the capture, and the lamp winks once again") {
+TEST_CASE("bravo capture: one press on a stop ends the capture, and the lamp winks once again") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
@@ -70,21 +69,6 @@ TEST_CASE("bravo capture: two presses on a stop end the capture, and the lamp wi
     CHECK(rig.state().capture.stopped == bus::CaptureStop::Pilot);
     CHECK(rig.product.capture().session_id() == session);
     CHECK(rig.lamp() == indication::Condition::AliveLinked);
-}
-
-TEST_CASE("bravo capture: one press refuses it, and nothing is armed") {
-    BravoRig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    rig.seconds_with_fix(2);
-    rig.send(capture("flight_run").c_str());
-    rig.run_for(1000);
-    REQUIRE(rig.product.button().armed());
-
-    rig.press();
-    rig.run_for(1000);
-    CHECK(rig.last_on(events::Endpoint::Config) == refusal("cancelled"));
-    CHECK_FALSE(rig.product.capture().capturing());
-    CHECK_FALSE(rig.product.diagnostics().armed());
 }
 
 TEST_CASE("bravo capture: an unanswered prompt expires, and nothing is armed") {

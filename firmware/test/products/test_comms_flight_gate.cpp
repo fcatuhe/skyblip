@@ -57,7 +57,7 @@ struct FinishedUpload : ports::Dfu {
 
 }  // namespace
 
-// Two presses on the device stand in for pairing, and Unknown is a unit with no fix since boot.
+// A press on the device stands in for pairing, and Unknown is a unit with no fix since boot.
 TEST_CASE("comms flight gate: a set with no fix since boot is staged, confirmed and stored") {
     Bench bench(flight::FlightState::Unknown);
     bench.config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_type\":4}"));

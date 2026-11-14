@@ -7,7 +7,7 @@
 
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/common/confirm_gesture.h"
+#include "products/common/prompt_answer.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/product_rig.h"
@@ -16,13 +16,13 @@ using namespace skyblip;
 
 namespace {
 
-constexpr uint32_t kDoublePressWindowMs = common::ConfirmGesture::kDoublePressWindowMs;
+constexpr uint32_t kAnswerSettleMs = common::PromptAnswer::kAnswerSettleMs;
 
 // Long enough for a press to have finished meaning one thing before the next
 // one is made: the pairing window, and a little.
 inline void settle(Rig& rig, uint32_t& now_ms) {
-    rig.run(now_ms, now_ms + kDoublePressWindowMs + 200);
-    now_ms += kDoublePressWindowMs + 200;
+    rig.run(now_ms, now_ms + kAnswerSettleMs + 200);
+    now_ms += kAnswerSettleMs + 200;
 }
 
 inline void push_fix(Rig& rig, int32_t speed_mm_s, int32_t altitude_msl_m) {

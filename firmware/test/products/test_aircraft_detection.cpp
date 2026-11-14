@@ -108,6 +108,19 @@ TEST_CASE("aircraft detection: a pad on the notice closes it and stores nothing"
     CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
 }
 
+TEST_CASE("aircraft detection: a notice nobody answers closes after thirty seconds") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.run_for(2500);
+    REQUIRE(tango.go.product.screen().noticing());
+    tango.run_for(go::kAskCeilingMs - 3000);
+    CHECK(tango.go.product.screen().noticing());
+    tango.run_for(3000);
+    CHECK_FALSE(tango.go.product.screen().noticing());
+    CHECK(tango.go.settings().aircraft_address == go::kAircraftAddressUnset);
+}
+
 TEST_CASE("aircraft detection: the transponder the Go already holds raises no notice") {
     Tango tango;
     tango.go.settings().aircraft_address = kHeardAddress;

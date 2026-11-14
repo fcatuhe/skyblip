@@ -5,7 +5,7 @@ import { asking, connected } from './update_session.mjs';
 
 const bravo = (options = {}) => connected({ product: 'skyblip_bravo', ...options });
 
-test('a capture is asked on Bravo and armed by its two presses', async () => {
+test('a capture is asked on Bravo and armed by its press', async () => {
   const { device, updater, until } = await bravo();
   updater.orderCapture('power_run');
   await until(asking('capture'));
@@ -27,7 +27,7 @@ test('a stop allowed on Bravo says the capture stopped', async () => {
   assert.equal(device.capturing, false);
 });
 
-test('one press on Bravo reads as cancelled, under the capture control', async () => {
+test('a refusal on the unit reads as cancelled, under the capture control', async () => {
   const { device, updater, until } = await bravo();
   updater.orderCapture('full');
   await until(asking('capture'));

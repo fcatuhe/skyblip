@@ -197,7 +197,7 @@ test('a question nobody answered reads as expired, and the next install asks aga
   await until(asking('dfu'));
 });
 
-test('one press on the glass reads as cancelled', async () => {
+test('a refusal on the glass reads as cancelled', async () => {
   const { device, updater, until } = await chosen();
   updater.install();
   await until(asking('dfu'));
@@ -230,7 +230,7 @@ test('an image other than the one the glass named is not installed', async () =>
   assert.equal((await until(settled)).notice.key, 'not_approved');
 });
 
-test('one press on the glass during the upload reads as cancelled, not as a closed window', async () => {
+test('a cancel on the device during the upload reads as cancelled, not as a closed window', async () => {
   const { device, updater, until } = await chosen();
   device.refuseAfterPackets = 3;
   updater.install();

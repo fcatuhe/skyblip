@@ -155,7 +155,7 @@ struct GroundedUnitWithLogs {
 
     void confirm() {
         taxi(rig, now_ms, 3);
-        rig.double_press(now_ms);
+        rig.press(now_ms);
         taxi(rig, now_ms, 2);
     }
 

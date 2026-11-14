@@ -193,12 +193,6 @@ struct Rig {
         }
     }
 
-    // The authorising gesture: two presses inside common::ConfirmGesture's window.
-    void double_press(uint32_t& now_ms) {
-        press(now_ms);
-        press(now_ms);
-    }
-
     // The three gestures the device answers, as go::ScreenService names them.
     void tap(uint32_t& now_ms) { touch_pad(now_ms, 200); }
 

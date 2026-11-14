@@ -20,18 +20,10 @@ constexpr int kPadIconHeight = 9;
 constexpr int kPadIconRadius = 3;
 constexpr int kButtonIconRadius = 4;
 constexpr int kButtonIconWidth = 2 * kButtonIconRadius + 1;
-constexpr int kSecondPressOffset = 10;
 
-enum class Icon : uint8_t { Pad, Once, Twice };
+enum class Icon : uint8_t { Pad, Button };
 
-int icon_width(Icon icon) {
-    switch (icon) {
-        case Icon::Pad: return kPadIconWidth;
-        case Icon::Twice: return kSecondPressOffset + kButtonIconWidth;
-        case Icon::Once: break;
-    }
-    return kButtonIconWidth;
-}
+int icon_width(Icon icon) { return icon == Icon::Pad ? kPadIconWidth : kButtonIconWidth; }
 
 void draw_icon(ui::Canvas& canvas, Icon icon, int x, int centre_y, bool ink) {
     if (icon == Icon::Pad) {
@@ -40,9 +32,6 @@ void draw_icon(ui::Canvas& canvas, Icon icon, int x, int centre_y, bool ink) {
         return;
     }
     canvas.circle(x + kButtonIconRadius, centre_y, kButtonIconRadius, ink, /*fill=*/true);
-    if (icon == Icon::Twice)
-        canvas.circle(x + kSecondPressOffset + kButtonIconRadius, centre_y, kButtonIconRadius, ink,
-                      /*fill=*/true);
 }
 
 // INFO: fc 14nov26 the button's key is filled and the pad's is not, so the contact reads first
@@ -104,9 +93,7 @@ int draw_heading(ui::Canvas& canvas, const char* title, Heading heading) {
 }
 
 void draw_keys(ui::Canvas& canvas, const Keys& keys) {
-    if (keys.button.verb[0] != 0)
-        draw_key(canvas, kButtonKeyX, keys.button.press == Press::Twice ? Icon::Twice : Icon::Once,
-                 keys.button.verb);
+    if (keys.button[0] != 0) draw_key(canvas, kButtonKeyX, Icon::Button, keys.button);
     if (keys.pad[0] != 0) draw_key(canvas, kPadKeyX, Icon::Pad, keys.pad);
 }
 
@@ -127,14 +114,22 @@ int body_height(const BodyLine* lines, int count) {
 }
 
 int body_top(Heading heading, bool keys, const BodyLine* lines, int count) {
+    return body_top_above(heading, keys ? kKeyTop : kGlassHeight, lines, count);
+}
+
+int body_top_above(Heading heading, int bottom, const BodyLine* lines, int count) {
     const int rule_y = heading == Heading::Interrupt ? kInterruptRuleY : kOpenedRuleY;
     const int top = rule_y + 1;
-    const int bottom = keys ? kKeyTop : kGlassHeight;
     return top + (bottom - top - body_height(lines, count)) / 2;
 }
 
 void draw_body(ui::Canvas& canvas, Heading heading, bool keys, const BodyLine* lines, int count) {
-    int y = body_top(heading, keys, lines, count);
+    draw_body_above(canvas, heading, keys ? kKeyTop : kGlassHeight, lines, count);
+}
+
+void draw_body_above(ui::Canvas& canvas, Heading heading, int bottom, const BodyLine* lines,
+                     int count) {
+    int y = body_top_above(heading, bottom, lines, count);
     bool started = false;
     for (int i = 0; i < count; i++) {
         if (lines[i].text[0] == 0) {
@@ -147,6 +142,10 @@ void draw_body(ui::Canvas& canvas, Heading heading, bool keys, const BodyLine* l
         y += ui::kCharacterHeight * lines[i].scale;
         started = true;
     }
+}
+
+void draw_foot_line(ui::Canvas& canvas, const char* text) {
+    canvas.draw_text(centred_x(text, kFrameScale), kFootLineY, text, true, kFrameScale);
 }
 
 int take_line(const char* text, int from, char* out, int columns) {

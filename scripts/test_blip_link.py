@@ -205,12 +205,12 @@ PUSHED = {"command": "status", "flight": "ground", "upload": False, "charging": 
 
 
 class Capture(unittest.TestCase):
-    def test_two_presses_on_the_unit_arm_the_profile_asked_for(self):
+    def test_a_press_on_the_unit_arms_the_profile_asked_for(self):
         unit = FakeBravo(PENDING, GRANTED)
         said = []
         outcome = asyncio.run(blip_capture.run(unit, "power_run", 1.0, said.append))
         self.assertEqual(unit.sent, [{"command": "capture", "profile": "power_run"}])
-        self.assertEqual(said, [blip_capture.PRESS_TWICE])
+        self.assertEqual(said, [blip_capture.PRESS_TO_ALLOW])
         self.assertEqual(outcome, "power_run capture armed")
 
     # The unit pushes status on a flight, battery or Bravo change, which is no verdict.
@@ -218,7 +218,7 @@ class Capture(unittest.TestCase):
         unit = FakeBravo(PUSHED, PENDING, PUSHED, GRANTED)
         said = []
         outcome = asyncio.run(blip_capture.run(unit, "full", 1.0, said.append))
-        self.assertEqual(said, [blip_capture.PRESS_TWICE])
+        self.assertEqual(said, [blip_capture.PRESS_TO_ALLOW])
         self.assertEqual(outcome, "full capture armed")
 
     def test_a_frame_outside_the_registry_stops_by_name_rather_than_hanging(self):
@@ -232,7 +232,7 @@ class Capture(unittest.TestCase):
         outcome = asyncio.run(blip_capture.run(FakeBravo(PENDING, GRANTED), "stop", 1.0, list().append))
         self.assertEqual(outcome, "capture stopped")
 
-    def test_one_press_on_the_unit_stops_with_the_reason(self):
+    def test_a_refusal_on_the_unit_stops_with_the_reason(self):
         cancelled = {"command": "acknowledgement", "acknowledge": False, "reason": "cancelled"}
         with self.assertRaises(SystemExit) as caught:
             asyncio.run(blip_capture.run(FakeBravo(PENDING, cancelled), "full", 1.0, list().append))

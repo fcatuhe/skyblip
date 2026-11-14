@@ -48,14 +48,6 @@ struct HousekeepingRig {
         hold_button(now_ms, 80, /*down=*/false);
     }
 
-    // The authorising gesture: two presses well inside common::ConfirmGesture's
-    // window. Each press() above advances the clock by ~200 ms, so the pair
-    // lands at a gap a thumb actually produces.
-    void double_press(uint32_t& now_ms) {
-        press(now_ms);
-        press(now_ms);
-    }
-
     // The pad the pilot pages with. The page lands on the release.
     void tap(uint32_t& now_ms) {
         platform.board_gpio().pad_down = true;

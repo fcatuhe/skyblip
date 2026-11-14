@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 
 namespace skyblip::go {
@@ -120,7 +121,7 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
     canvas.draw_text(kMenuLeftX, top + kTypeInset, type, ink, kMenuScale);
 }
 
-void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
+void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t seconds_left) {
     draw_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt);
     char address[kAircraftAddressCharacters + 1];
     char label[kLabelBytes];
@@ -131,8 +132,8 @@ void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected) {
     body[count++] = {label};
     if (named_type(detected.aircraft_type))
         body[count++] = {aircraft_type_name(detected.aircraft_type)};
-    draw_body(canvas, Heading::Interrupt, /*keys=*/true, body, count);
-    draw_keys(canvas, {{Press::Once, "SET"}, "CLOSE"});
+    draw_question_body(canvas, Heading::Interrupt, seconds_left, body, count);
+    draw_keys(canvas, {"SET", "CLOSE"});
 }
 
 }  // namespace skyblip::go

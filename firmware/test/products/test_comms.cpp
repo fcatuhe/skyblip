@@ -105,7 +105,7 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
-// A set the store refuses used to stand on the glass and fail only after two presses.
+// A set the store refuses used to stand on the glass and fail only after the press.
 TEST_CASE("comms: a set out of range or invalid is refused at the door, never staged") {
     platform::host::Link link;
     link.raise_link(1);

@@ -19,10 +19,9 @@ const INK = [0x14, 0x14, 0x14];
 const PAPER = [0xc9, 0xc9, 0xc4];
 const STEP_MS = 5;
 const CONTACT_MS = 120;
-// Two presses inside the gesture's 600 ms window are one double press, not two steps.
+// Past the prompt answer's 600 ms settle, so the next press can answer a prompt.
 const PRESS_GAP_MS = 800;
 const TAP_GAP_MS = 500;
-const ALLOW_GAP_MS = 200;
 const PROMPT_MS = 2500;
 const GROUND_MS = 20_000;
 const SETTLE_MS = 2500;
@@ -78,10 +77,8 @@ class Device {
     return this.run(TAP_GAP_MS);
   }
 
-  // Two presses inside ConfirmGesture::kDoublePressWindowMs, which is what authorises.
+  // One press, once the prompt has settled, is what authorises.
   allow() {
-    this.sim.button();
-    this.run(ALLOW_GAP_MS);
     this.sim.button();
     return this.run(PRESS_GAP_MS);
   }
@@ -215,7 +212,7 @@ function panel(device) {
 const OWN_CALLSIGN = "S-BLIP";
 
 // The only way a callsign reaches the device: an app writes it on the config
-// endpoint, the glass asks, and two presses allow it. A write is refused unless
+// endpoint, the glass asks, and one press allows it. A write is refused unless
 // the device knows it is on the ground, so the aircraft is parked first.
 function asks(device, callsign) {
   return asksFor(device, { command: "set", callsign });
@@ -231,7 +228,7 @@ function asksFor(device, command) {
 
 function setCallsign(device, callsign) {
   asks(device, callsign).allow();
-  if (device.sim.prompt()) throw new Error("two presses did not answer the prompt");
+  if (device.sim.prompt()) throw new Error("the press did not answer the prompt");
   return device;
 }
 

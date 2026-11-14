@@ -1,4 +1,5 @@
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 
 namespace skyblip::go {
@@ -60,11 +61,17 @@ MenuAction MenuEditor::tick(uint32_t now_ms, const MenuValues& current, MenuValu
         if (clearing_) return keep();
         return editing_ ? roll() : advance();
     }
+    if (clearing_ && now_ms - idle_since_ms_ >= kAskCeilingMs) return keep();
     if (now_ms - idle_since_ms_ >= kIdleReturnHoldMs) {
         leave();
         return MenuAction::Leave;
     }
     return MenuAction::None;
+}
+
+// INFO: fc 14nov26 the press that opened the question is the editor's last contact, so it dates it
+uint32_t MenuEditor::clear_seconds_left(uint32_t now_ms) const {
+    return seconds_left(idle_since_ms_, now_ms, kAskCeilingMs);
 }
 
 MenuAction MenuEditor::advance() {
