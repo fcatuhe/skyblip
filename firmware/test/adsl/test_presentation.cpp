@@ -1,4 +1,5 @@
 // ADS-L 4 SRD-860 issue 2 Subpart F: the ADS-L header, who a packet is from and what it carries.
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
@@ -11,12 +12,29 @@
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
+#include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
+#include "simulator/simulator.h"
 #include "test/support/config_frame.h"
+#include "test/support/settings_link.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
 namespace {
+int fewest_of_each_payload_from(const simulator::Air& air, uint8_t table, uint32_t address) {
+    int traffic = 0, status = 0, named = 0;
+    for (int i = 0; i < air.record_count(); i++) {
+        adsl::Packet packet{};
+        if (!packet_of(air.record_at(i), packet)) continue;
+        if (packet.address_mapping_table() != table || packet.address() != address) return 0;
+        if (packet.payload_type == adsl::Packet::kPayloadTypePosition) traffic++;
+        if (packet.payload_type == adsl::Packet::kPayloadTypeStatus) status++;
+        if (packet.payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics) named++;
+    }
+    return std::min(traffic, std::min(status, named));
+}
+
 adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     model::Ownship own{};
     own.fix_valid = true;
@@ -106,13 +124,46 @@ TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits
     CHECK((ours.address() & 0xFFFFu) == 0x1234u);
 }
 
-// TODO: fc 19sep26 own_icao is stored (#191), not transmitted, until the owner decides F.2.3
-TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured" *
-          doctest::skip()) {
-    CHECK(traffic_packet(0x3C0A11u, 5).address() == 0x3C0A11u);
-    FAIL(
-        "not implemented: the packet carries any table it is handed, and no configuration path "
-        "hands it table 5");
+// Our reading, which EASA is asked to confirm: every payload goes under table 5 while one is set.
+TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it was configured") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    go::Settings& settings = simulator.product().settings();
+    std::strncpy(settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    REQUIRE(apply_patch(settings, "{\"own_icao\":3934737}") == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), 21000);
+    CHECK(fewest_of_each_payload_from(simulator.world().air(), 5, 0x3C0A11u) >= 2);
+}
+
+// "This setting shall be revertible by user configuration": 0 clears it, from the next burst on.
+TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's back on the air") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    go::Settings& settings = simulator.product().settings();
+    std::strncpy(settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
+    REQUIRE(apply_patch(settings, "{\"own_icao\":3934737}") == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    const uint32_t from_ms = past_settling(simulator);
+    run_on(simulator, from_ms, 10000);
+    simulator.world().air().clear();
+    REQUIRE(apply_patch(settings, "{\"own_icao\":0}") == Status::Ok);
+    run_on(simulator, from_ms + 10000 + simulator::Simulator::kStepMs, 21000);
+    CHECK(
+        fewest_of_each_payload_from(simulator.world().air(), settings::kSkyblipAddressMappingTable,
+                                    settings::address_of(platform::host::Identity::kSerial)) >= 2);
+}
+
+// "The ADS-L system shall enforce this by disallowing inconsistent user configurations."
+TEST_CASE("ADS-L.4.SRD860.F.2.3: an address no aircraft holds, or not the one aboard, is refused") {
+    go::Settings settings = go::defaults();
+    CHECK(apply_patch(settings, "{\"own_icao\":16777215}") == Status::OutOfRange);
+    CHECK(apply_patch(settings, "{\"own_icao\":3934737}", 0x3C6586u) == Status::Conflict);
+    CHECK(settings.own_icao == go::kOwnIcaoUnset);
+    CHECK(apply_patch(settings, "{\"own_icao\":3958150}", 0x3C6586u) == Status::Ok);
+    CHECK(apply_patch(settings, "{\"own_icao\":0}", 0x3C6586u) == Status::Ok);
 }
 
 // INFO: fc 13nov26 optional: F.2.4 says a device "may be operated in privacy mode", ours is not
@@ -120,7 +171,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
     FAIL("optional: no privacy mode, so the table is the one configured and nothing switches it");
 }
 
-// The clause asks a device to disallow an inconsistent configuration: this one cannot make any.
+// A host cannot name the address or the table: own_icao is how an ICAO address gets on air.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
     go::Settings settings = go::defaults();
     // 0x3C0A11 under ICAO

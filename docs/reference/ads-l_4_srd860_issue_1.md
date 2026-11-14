@@ -6,23 +6,26 @@ using SRD-860 frequency band
                  (ADS-L 4 SRD-860)
 ```
 
-ACCEPTABLE METHODS, TECHNIQUES AND PRACTICES FOR CARRYING OUT ADS-L TRANSMISSIONS USING SRD-
+ACCEPTABLE METHODS, TECHNIQUES AND PRACTICES FOR CARRYING OUT ADS-L TRANSMISSIONS USING SRD-860 FREQUENCY BAND AS PERMITTED PURSUANT TO AMC1 SERA.6005(c) POINT (a)(3)(i)
 
 ```
-         860 FREQUENCY BAND AS PERMITTED PURSUANT TO AMC1 SERA.6005(c) POINT (a)(3)(i)
-
-                                                            Issue 1
-                                                    20 December 20221
-
-_____________________
-1   For the date of entry into force of this Issue, please refer to Decision 2022/024/R at the Official Publication of EASA.
+        Issue 1
+20 December 20221
 ```
+
+1 For the date of entry into force of this Issue, please refer to Decision 2022/024/R at the Official Publication of EASA.
 
 ## TABLE OF CONTENTS
+
+Note: To support the identification of improvements to ADS-L 4 SRD-860, as well as its future evolution, EASA would appreciate stakeholders’ voluntary feedback through the EASA website2.
+
+2 https://www.easa.europa.eu/easa-and-you/general-aviation
 
 ## PREAMBLE
 
 ```
+                              ED Decision 2022/024/R
+
 ADS-L 4 SRD-860 Issue 1
 ```
 
@@ -30,6 +33,8 @@ The following is a list of paragraphs affected by this Issue: Whole document
 
 ```
 Issue 1                                                           New (NPA 2021-14)
+
+                                                                      ED Decision 2022/024/R
 ```
 
 ## DEFINITIONS AND ABBREVIATIONS
@@ -188,7 +193,7 @@ The following principles apply unless noted otherwise.
    Bit order: Individual bytes are transmitted most significant bit first.
 ```
 
-Example: The integer 1328922 (0x14471A) is transmitted as 0x1A, 0x47, 0x14 on the radio (from left to right). The exact bit sequence on the RF is: 00011010, 01000111, 00010100 (again left to right).Note: SC- CS005() refers to the installation of ADS-B OUT equipment.
+Example: The integer 1328922 (0x14471A) is transmitted as 0x1A, 0x47, 0x14 on the radio (from left to right). The exact bit sequence on the RF is: 00011010, 01000111, 00010100 (again left to right).Note: SC-CS005() refers to the installation of ADS-B OUT equipment.
 
 ### ADS-L.4.SRD860.B.4 Transmission Sequence
 
@@ -242,9 +247,9 @@ The frequencies of the M-band are used: 868.2 and 868.4 MHz. An ADS-L sender sha
 
 Manchester encoding is applied to the Sync Word, Payload, and CRC for better clock synchronization (lower error rate and more reliable transmission), halving the effective bit rate to 50kbps. Manchester encoding is not applied to the Preamble, see below. The encoding is such that a ‘1’ is encoded as ‘01’ and a ‘0’ as ‘10’.
 
-_____________________ 3 See EN 300 220-2 for a definition of both bands
-
 If the (optional) secure signature is used, Manchester encoding is disabled for transmitting it to enable a shorter on-air time. This means the transmitter shall switch to non-Manchester mode after transmitting the CRC. See the next section on the ADS-L packet structure.
+
+3 See EN 300 220-2 for a definition of both bands
 
 #### ADS-L.4.SRD860.C.2.3 Preamble
 
@@ -369,7 +374,7 @@ Note that only the 3 lower bytes of the result are relevant and to be transmitte
 
 Implementing devices may optionally digitally sign the transmitted data packets using a secure public-key digital signature algorithm to improve the trustworthiness of their transmission. The private key shall be stored securely on the device and be protected against all reading. Only the associated public key may ever be exposed. A device may implement automatic creation of a new public key, e.g. by means of a true random number generator. The digital signature links a physical device, represented by its secret private key, to a real entity (legal or natural). This relationship is typically stored in a certificate authority (CA), operated e.g. by the competent authority. CA and other infrastructure are outside the scope of this document. The secure signature is optionally appended to the payloads after the message checksum (CRC). Simple receivers may thus only receive messages while ignoring the signature. The signature is optional. If used, it shall be appended at most every 10 seconds, at least every 30 seconds. The algorithm is the Edwards-curve Digital Signature Algorithm (EdDSA), specifically the Ed25519 variant as described in IRTF/IETF RFC 8032. The public key is 256 bits, the signature is 512bits in compressed form 4 . The algorithm takes the ADS-L Messages including header and payload as input, but excluding the CRC. If message scrambling / encryption is used, then the input shall be used after encryption.
 
-_____________________ 4 IRTF RFC 8032, https://datatracker.ietf.org/doc/html/rfc8032
+4 IRTF RFC 8032, https://datatracker.ietf.org/doc/html/rfc8032
 
 ### ADS-L.4.SRD860.D.3 Transmit Rate and Transmit Timing
 
@@ -383,13 +388,7 @@ The MAC protocol to be used is 1-persistent Carrier-Sense Multiple Access (CSMA)
 
 ### ADS-L.4.SRD860.E.1 Network Packet Structure
 
-The network layer governs the following aspects of the ADS-L protocol:  A payload length field is included for easy interoperability with inexpensive, discrete FSK transceiver
-
-```
-systems
-```
-
- Protocol versioning, such that newer versions of the protocol can be safely deployed  The addition of the secure signature is indicated here  Data scrambling, improving the resilience to transmission errors.
+The network layer governs the following aspects of the ADS-L protocol:  A payload length field is included for easy interoperability with inexpensive, discrete FSK transceiver systems  Protocol versioning, such that newer versions of the protocol can be safely deployed  The addition of the secure signature is indicated here  Data scrambling, improving the resilience to transmission errors.
 
 The network packet structure is given as:
 
@@ -510,16 +509,12 @@ Offset           Description              Width (bits)                 Encoding
 This field defines the structure of the payload field. The upper half of the available range is reserved for unicast payloads, implying a specific structure of the payload, see below.
 
 ```
-Value        Transmission Type                Payload
+   Value        Transmission Type                Payload
 
-0            Broadcast                        Reserved
+   0            Broadcast                        Reserved
 
-1            Broadcast                        Reserved
-```
+   1            Broadcast                        Reserved
 
-_____________________ 5 EASA safety concept described as: ‘In-flight capability’ to transmit position and/or to receive, process and display information about other aircraft, airspace, weather or support to navigation in a real time with the objective to enhance pilots’ situational awareness
-
-```
 2               Broadcast                  iConspicuity
 
 3               Broadcast                  Reserved
@@ -536,6 +531,8 @@ _____________________ 5 EASA safety concept described as: ‘In-flight capabilit
 
 255             Unicast                    Reserved
 ```
+
+5 EASA safety concept described as: ‘In-flight capability’ to transmit position and/or to receive, process and display information about other aircraft, airspace, weather or support to navigation in a real time with the objective to enhance pilots’ situational awareness
 
 #### ADS-L.4.SRD860.F.2.2 Address
 
@@ -595,7 +592,7 @@ The payload structure and semantics are defined by the Payload Type Identifier. 
 
 ### ADS-L.4.SRD860.G.1 iConspicuity Payload
 
-The iConspicuity payload is designed to comply with AMC1 SERA.6005(c) as proposed in EASA NPA 2021- 14. For easier readability, related data are grouped together in line with the “Data Type” column in the NPA. The bit offset in the following tables always refer to the start of the payload. The structure of the payload is given by:
+The iConspicuity payload is designed to comply with AMC1 SERA.6005(c) as proposed in EASA NPA 2021-14. For easier readability, related data are grouped together in line with the “Data Type” column in the NPA. The bit offset in the following tables always refer to the start of the payload. The structure of the payload is given by:
 
 ```
 Offset              Description                   Width (bits)    Encoding

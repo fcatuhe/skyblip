@@ -238,6 +238,8 @@ fr:
       refused_on_device: "Refusé sur l\u2019appareil. Rien n\u2019a changé."
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y ou attendez trente secondes."
       unknown_command: "Ce firmware est trop ancien pour changer ses réglages. Mettez-le à jour d\u2019abord."
+      out_of_range: "L\u2019appareil a refusé une valeur qu\u2019il ne peut pas enregistrer. FFFFFF n\u2019est l\u2019adresse OACI d\u2019aucun aéronef. Rien n\u2019a changé."
+      not_own_transponder: "Votre Bravo entend un autre transpondeur comme celui de cet aéronef. Vérifiez l\u2019adresse, ou prenez celle que montre le menu AIRCRAFT du Go. Rien n\u2019a changé."
     capture_notices:
       capture_armed: "Armée. Le voyant clignote deux fois toutes les 3\u00a0s jusqu\u2019à l\u2019arrêt de la capture. Ce clignotement continue en vol."
       capture_stopped: "Arrêtée. Le voyant reprend son clignotement simple."

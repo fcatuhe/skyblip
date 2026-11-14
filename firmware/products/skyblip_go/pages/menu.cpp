@@ -61,6 +61,19 @@ const char* row_verb(MenuRow row, const MenuValues& values) {
     return opens_a_page(row) || row == MenuRow::Aircraft ? "OPEN" : "CHANGE";
 }
 
+// INFO: fc 14nov26 under the digits, at the size the field is read at, the refusal first
+void draw_own_transponder(ui::Canvas& canvas, uint32_t address, bool refused) {
+    char digits[kOwnIcaoCharacters + 1];
+    digits[format_hex(digits, address, kOwnIcaoCharacters)] = 0;
+    int y = kOwnTransponderY;
+    for (const char* line : {refused ? kOwnTransponderRefusedText : "", kOwnTransponderText,
+                             static_cast<const char*>(digits)}) {
+        if (line[0] == 0) continue;
+        canvas.draw_text(centred_x(line, kMenuScale), y, line, true, kMenuScale);
+        y += line_pitch(kMenuScale);
+    }
+}
+
 }  // namespace
 
 Menu menu_for(Page page) {
@@ -291,6 +304,8 @@ void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot) {
     canvas.rectangle(at, kCallsignCursorY, 5 * kCallsignScale, kCallsignCursorHeight, true,
                      /*fill=*/true);
 
+    if (snapshot.own_transponder)
+        draw_own_transponder(canvas, *snapshot.own_transponder, snapshot.refused);
     draw_keys(canvas, {{Press::Once, field_button_verb(snapshot)}, kFieldChangeVerb});
 }
 

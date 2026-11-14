@@ -63,14 +63,20 @@ pdftotext -layout docs/reference/ads-l_4_srd860_issue_2.pdf /tmp/spec.txt
 python3 scripts/spec_to_md.py /tmp/spec.txt docs/reference/ads-l_4_srd860_issue_2.md
 ```
 
-The ETSI documents use `scripts/etsi_to_md.py` instead (`scripts/fetch_etsi.py` runs it), which does the same for ETSI's layout: it drops the running header and the lone `ETSI` footer, drops the table of contents, promotes numbered clauses and `Annex` titles to headings by depth, and fences tables verbatim.
+The ETSI documents use `scripts/etsi_to_md.py` instead (`scripts/fetch_etsi.py` runs it), which does the same for ETSI's layout: it drops the running header and the lone `ETSI` footer, and promotes numbered clauses and `Annex` titles to headings by depth.
 
 ```
 pdftotext -layout docs/reference/etsi_en_300_220-1_v3.1.1.pdf /tmp/etsi.txt
 python3 scripts/etsi_to_md.py /tmp/etsi.txt docs/reference/etsi_en_300_220-1_v3.1.1.md
 ```
 
-`scripts/spec_to_md.py` drops page furniture and the table of contents, promotes `SUBPART` and `ADS-L.4.SRD860.x.y` lines to headings, joins wrapped paragraphs, and fences every column-aligned block verbatim. Tables keep the PDF's spacing inside those fences rather than becoming markdown tables: the field-offset tables lose their alignment otherwise. Figures and block diagrams are not carried over.
+`scripts/spec_to_md.py` drops the ADS-L running header and footer and promotes `SUBPART` and `ADS-L.4.SRD860.x.y` lines to headings. The rest is `scripts/layout_to_md.py`, which both converters share. It drops a header or footer only at a page's top or bottom edge, so a line of the body that reads the same stays. It runs the pages on into each other, so a sentence or a table that crosses a page break stays whole. It moves each footnote from the foot of its page to the end of the clause in which that page ends, as a paragraph. It drops the table of contents from its first dotted entry to its last, keeping the text after it. It joins wrapped lines into paragraphs, and a word hyphenated over a line break, as `ADS-` and `L.4.SRD860.E.3.2`, back into one word. It fences every column-aligned block verbatim. Tables keep the PDF's spacing inside those fences rather than becoming markdown tables: the field-offset tables lose their alignment otherwise. Figures and block diagrams are not carried over.
+
+`scripts/check_spec_markdown.py` checks every conversion against its PDF, and CI runs it on the two ADS-L issues. It reads each PDF again with `pdftotext -raw`, the PDF's own reading order, and requires every page to hold the same characters as the layout extraction, so the layout extraction lost nothing. It then compares the layout extraction with the markdown word for word, in order, and reports every run of words found in one and not the other, with the clause it falls in. It also reports a wrapped line or a table split into two markdown blocks, and a footnote that is missing or does not close the clause in which its page ends. Before comparing, it drops the header and footer at each page's edges, the footnote separator and the table of contents, ignores heading marks and code fences, and reads every dash as `-`. The ETSI documents are not committed, so CI cannot check them: the script checks them when `scripts/fetch_etsi.py` has fetched them, and says it skipped them otherwise.
+
+```
+python3 scripts/check_spec_markdown.py
+```
 
 The PDF is the normative text. Where the two disagree, the PDF wins.
 

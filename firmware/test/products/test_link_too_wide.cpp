@@ -30,7 +30,7 @@ TEST_CASE("comms: an update pushed at link-up that does not fit is counted, neve
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     link.raise_link(1);
     go::Settings settings = callsigned_settings();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
@@ -47,7 +47,7 @@ TEST_CASE(
     link.raise_link(1);
     link.declare_payload_bytes(ports::kMinimumLinkPayloadBytes);
     go::Settings settings = callsigned_settings();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 

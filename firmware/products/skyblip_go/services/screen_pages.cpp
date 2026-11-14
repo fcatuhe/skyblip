@@ -2,6 +2,7 @@
 #include "core/flight/extrapolate.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/settings/address.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "core/traffic/range.h"
@@ -50,6 +51,10 @@ void ScreenService::draw_menu_page() {
         field.text = editor_.text();
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);
+        if (editor_.field() == MenuRow::OwnIcao) {
+            field.own_transponder = context_.state.own_transponder;
+            field.refused = editor_.refused();
+        }
         draw_callsign(framebuffer_, field);
         return;
     }
@@ -274,7 +279,8 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Nearby: {
             NearbySnapshot snapshot;
-            snapshot.own_address = context_.state.activation.address();
+            snapshot.own_address =
+                settings::on_air(context_.state.activation.address(), settings.own_icao).address;
             snapshot.own_callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
@@ -342,7 +348,8 @@ void ScreenService::render(uint32_t now_ms) {
         case Page::Status:
         default: {
             StatusSnapshot snapshot;
-            snapshot.address = context_.state.activation.address();
+            snapshot.address =
+                settings::on_air(context_.state.activation.address(), settings.own_icao).address;
             snapshot.callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.utc_valid = own.utc_valid;

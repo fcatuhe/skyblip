@@ -607,7 +607,7 @@ struct Desk {
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port;
     identity::Unit unit{port};

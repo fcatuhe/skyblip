@@ -100,6 +100,7 @@ enum class Reason : uint8_t {
     Untrusted = 49,
     Forgotten = 50,
     UnknownBrowser = 51,
+    NotOwnTransponder = 52,
 };
 
 namespace acknowledgement_key {

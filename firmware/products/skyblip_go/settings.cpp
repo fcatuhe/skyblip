@@ -50,7 +50,8 @@ Status validate(const Settings& settings) {
         settings.frequency_trim_e1_ppm < -kFrequencyTrimCeilingE1Ppm)
         return Status::OutOfRange;
     if (!callsign_is_typeable(settings.callsign)) return Status::Invalid;
-    if (settings.own_icao > settings::kAddressMask) return Status::OutOfRange;
+    if (settings.own_icao != kOwnIcaoUnset && !settings::icao_assignable(settings.own_icao))
+        return Status::OutOfRange;
     if (settings.bravo.type > kBluetoothAddressTypeCeiling) return Status::OutOfRange;
     return Status::Ok;
 }
@@ -70,6 +71,8 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     if (status != Status::Ok) return status;
     // INFO: fc 23sep26 a name an older build took over the link is dropped, not the trims beside it
     if (!callsign_is_typeable(out.callsign)) out.callsign[0] = 0;
+    // INFO: fc 14nov26 an older build stored FFFFFF, which no aircraft holds, so it goes alone
+    if (out.own_icao == settings::kAddressMask) out.own_icao = kOwnIcaoUnset;
     if (validate(out) != Status::Ok) return Status::Invalid;
     return Status::Ok;
 }
@@ -92,7 +95,8 @@ void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_unsigned(link::config_key::kOwnIcao, settings.own_icao);
 }
 
-Status apply_settings(Settings& settings, const cbor::Reader& frame) {
+Status apply_settings(Settings& settings, const cbor::Reader& frame,
+                      std::optional<uint32_t> own_transponder) {
     Settings next = settings;
     Status status =
         apply_key(frame.read_unsigned(link::set_key::kAircraftType), [&](uint32_t value) {
@@ -135,7 +139,9 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame) {
             });
     if (status == Status::Ok)
         status = apply_key(frame.read_unsigned(link::set_key::kOwnIcao), [&](uint32_t value) {
-            if (value > settings::kAddressMask) return Status::OutOfRange;
+            if (value != kOwnIcaoUnset && !settings::icao_assignable(value))
+                return Status::OutOfRange;
+            if (contradicts(value, own_transponder)) return Status::Conflict;
             next.own_icao = value;
             return Status::Ok;
         });
@@ -151,6 +157,10 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame) {
     if (status != Status::Ok) return status;
     settings = next;
     return Status::Ok;
+}
+
+bool contradicts(uint32_t own_icao, std::optional<uint32_t> own_transponder) {
+    return own_icao != kOwnIcaoUnset && own_transponder && own_icao != *own_transponder;
 }
 
 }  // namespace skyblip::go

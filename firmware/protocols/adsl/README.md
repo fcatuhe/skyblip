@@ -22,7 +22,7 @@ These are skyBlip's choices, built on this stack:
 - own-ship as a Traffic payload: the extrapolation to the instant the timestamp names, which fields claim invalid without a fix, the VFOM taken from VDOP by G.1.14's model, and the NACv read off NACp as SoftRF does (`core/protocol/adsl.*`)
 - which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route (`core/timing/transmit.*`, `core/timing/channel.*`)
 - the listen-before-talk §D.3 asks for, built on `media_access()`: the EN 300 220-1 parameters skyBlip declares, the deferral unit and its draw, the CCA threshold at this antenna (`core/timing/channel.*`), which packets it forces, what counts as the initial attempt, and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the assessment in the executor (`hardware/platform/zephyr/rf.h`)
-- the address table 58 and the manufacturer prefix (`core/settings/address.h`), and airborne detection (`core/flight/state.*`)
+- the address table 58 and the manufacturer prefix, and F.2.3's ICAO address under table 5 in their place while the pilot has set one (`core/settings/address.h`, `on_air()`), what the Go refuses as an inconsistent configuration (`products/skyblip_go/settings.*`), and airborne detection (`core/flight/state.*`)
 - the single-radio dwell map, which decides when each channel is heard and so the M-band receive class the Status declares (`core/timing/slot.*`)
 - the callsign, OGN's payload 66 that F.2.1 leaves to OGN: its record, its place in slot 1's tail and the seconds it goes in (`core/protocol/callsign.*`, `core/timing/transmit.*`)
 - the dual-system receiver that names ADS-L or ALP-TAS from one shared sync window (`core/protocol/air.*`)
@@ -33,7 +33,7 @@ These are skyBlip's choices, built on this stack:
 
 Each clause this directory does not meet is a skipped case in the conformance suite, written as the clause requires, and the message says which kind of gap it is (`firmware/test/adsl/README.md`). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
 
-One mandatory clause is not met. §F.2.3 says a configured ICAO address "shall" go on air, and the stored one does not yet (#191). Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
+Every mandatory clause is met. §F.2.3 was the last: a configured ICAO address goes on air under table 5, for every payload the unit sends, and the Go refuses the configurations it can know to be inconsistent (`core/settings/README.md`, The ICAO address). That every payload changes table, and none stays on the manufacturer's page, is our reading of "thereby overriding the address given by the manufacturer", and EASA is being asked to confirm it. Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
 
 The rest are optional, and this device does not take them:
 
@@ -46,7 +46,7 @@ The rest are optional, and this device does not take them:
 
 ## Before you ship a copy
 
-Nothing in this directory names skyBlip, and nothing in it picks an address table for you. `encode_traffic()`, `encode_status()` and `Uplink::encode()` take the F.2.2 table as an argument with no default, because it is a registry assignment and not a constant of the specification. skyBlip transmits under table 58 with manufacturer prefix 0, which the ADS-L registry assigned to skyBlip (ticket #228794), and keeps both in `core/settings/address.h`. A product built from this code applies to the registry (`registry@ads-l.aero`) for its own. The other identities a copy has to replace are listed in `firmware/README.md`.
+Nothing in this directory names skyBlip, and nothing in it picks an address table for you. `encode_traffic()`, `encode_status()` and `Uplink::encode()` take the F.2.2 table as an argument with no default, because it is a registry assignment and not a constant of the specification. skyBlip transmits under table 58 with manufacturer prefix 0, which the ADS-L registry assigned to skyBlip (ticket #228794), or under table 5 with the aircraft's ICAO address once a pilot sets one (F.2.3), and keeps both in `core/settings/address.h`. A product built from this code applies to the registry (`registry@ads-l.aero`) for its own. The other identities a copy has to replace are listed in `firmware/README.md`.
 
 ## Public API
 

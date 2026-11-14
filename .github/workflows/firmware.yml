@@ -69,8 +69,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       # A PR recompiles the few files it touched, not all 155 translation units.
-      - name: install ccache and cmake
-        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake
+      - name: install ccache, cmake and pdftotext
+        run: sudo apt-get update -q && sudo apt-get install -yq --no-install-recommends ccache cmake poppler-utils
       - name: cache the compiled objects
         uses: actions/cache@v6
         with:
@@ -96,6 +96,11 @@ jobs:
         run: python3 scripts/check_adsl_clauses.py
       - name: the clause check refuses a skipped case of no kind
         run: python3 scripts/test_check_adsl_clauses.py
+      # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
+      - name: the ADS-L markdown carries every word of its PDF, in order
+        run: python3 scripts/check_spec_markdown.py
+      - name: the markdown check refuses a word lost, cut or misplaced
+        run: python3 scripts/test_check_spec_markdown.py
       # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
       - name: every listed EN 300 220 clause has a case
         run: python3 scripts/check_en300220_clauses.py

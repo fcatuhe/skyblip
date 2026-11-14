@@ -287,6 +287,7 @@ MenuValues ScreenService::menu_values() const {
     values.settings = settings_;
     values.light = backlight_;
     values.detected = detected();
+    values.own_transponder = context_.state.own_transponder;
     return values;
 }
 

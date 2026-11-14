@@ -31,6 +31,7 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `link` | `config`: a central is connected, and a prompt stands that the flight state allows |
 | `alarm_level` | `alarm` |
 | `bravo` | `bravo` |
+| `own_transponder` | `bravo` on a paired Go: the transponder a live Bravo names on the ground, which an own ICAO typed or `set` must match (`../settings/README.md`, The ICAO address) |
 | `alarm_granted` | `peer` on Bravo, never written on the Go |
 | `panel_presented` | `screen` |
 | `started` | the product |
