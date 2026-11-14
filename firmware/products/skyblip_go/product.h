@@ -106,15 +106,21 @@ class Product {
     void run_pass(uint32_t now_ms) {
         if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
         if (flyable_ && !shutdown_.going_down()) {
-            meter_.begin_pass(context_.instant(now_ms).into_ms);
-            meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            const bool metered = diagnostics_.armed();
+            if (metered) {
+                meter_.begin_pass(context_.instant(now_ms).into_ms);
+                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            } else {
+                meter_.rest();
+                board_.poll(state_, now_ms);
+            }
             // Polled before the services run, so the pass that may write flash is
             // the pass that already knows the rail is going. One atomic read on
             // the silicon side; nothing here is allowed to be slower than that,
             // because the warning's whole value is the milliseconds it is early.
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.run_pass(now_ms, &meter_);
-            meter_.end_pass();
+            loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
+            if (metered) meter_.end_pass();
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             if (config_link_.config().power_off_requested()) {

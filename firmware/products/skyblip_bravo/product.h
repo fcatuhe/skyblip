@@ -90,11 +90,17 @@ class Product {
             show_refusal(now_ms);
         }
         if (flyable_ && !shutdown_.going_down()) {
-            meter_.begin_pass(context_.instant(now_ms).into_ms);
-            meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            const bool metered = diagnostics_.armed();
+            if (metered) {
+                meter_.begin_pass(context_.instant(now_ms).into_ms);
+                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            } else {
+                meter_.rest();
+                board_.poll(state_, now_ms);
+            }
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.run_pass(now_ms, &meter_);
-            meter_.end_pass();
+            loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
+            if (metered) meter_.end_pass();
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             take_link_requests(now_ms);

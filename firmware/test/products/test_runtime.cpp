@@ -164,6 +164,25 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     CHECK(meter.take().passes == 0);
 }
 
+// The products meter only while a capture records, so the passes before an arm are no wait.
+TEST_CASE("runtime: a meter that rested measures no gap across the rest") {
+    SteppedClock clock;
+    runtime::LoopMeter meter(clock);
+    meter.begin_pass(0);
+    meter.end_pass();
+    clock.now_us += 60000000;
+    meter.rest();
+    meter.begin_pass(0);
+    meter.end_pass();
+    clock.now_us += 10000;
+    meter.begin_pass(10);
+    meter.end_pass();
+
+    const diagnostics::Loop window = meter.take();
+    CHECK(window.passes == 3);
+    CHECK(window.worst_gap_ms == 10);
+}
+
 // A capture names its slowest service by code, and the eleventh service came after the board
 // poll's.
 TEST_CASE("runtime: a service placed past the board poll's code takes the next, none renumbered") {
