@@ -52,6 +52,8 @@ Issue 2 is read clause by clause by [`firmware/protocols/adsl/test/conformance/`
 
 `scripts/check_adsl_clauses.py` is what keeps the two lists equal: it reads the clause headings out of the markdown beside this file and the case subjects out of the suite, and fails on either a clause nobody read or a case naming a clause that does not exist. The suite's own README says how a gap is written.
 
+The EN 300 220 clauses the device answers to have a suite of their own, [`firmware/test/en300220/`](../../firmware/test/en300220), named `EN 300 220-1 5.21.1: what holds`. Since the standards are not committed, `firmware/test/en300220/clauses.txt` lists the clauses it reads by number and heading, and `scripts/check_en300220_clauses.py` holds the suite to that list, and the list to the fetched documents' headings when they are here.
+
 ## The conversions
 
 Each `.md` is generated, for grepping and quoting, never edited by hand:

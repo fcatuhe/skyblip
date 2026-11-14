@@ -81,6 +81,11 @@ jobs:
         run: python3 scripts/check_adsl_clauses.py
       - name: the clause check refuses a skipped case of no kind
         run: python3 scripts/test_check_adsl_clauses.py
+      # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
+      - name: every listed EN 300 220 clause has a case
+        run: python3 scripts/check_en300220_clauses.py
+      - name: the EN 300 220 clause check refuses a case off the list
+        run: python3 scripts/test_check_en300220_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
