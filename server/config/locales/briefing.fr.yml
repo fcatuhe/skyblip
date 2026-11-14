@@ -104,8 +104,6 @@ fr:
       kept: "skyblip.eu garde l\u2019identifiant de la puce, la clé, le numéro de série et le firmware de votre appareil, ainsi que l\u2019adresse internet utilisée lors de l\u2019activation. Aucun compte."
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
-      allow: "ACCEPT"
-      cancel: "TO CANCEL, PUSH ONCE OR WAIT"
       lamp: "Le voyant clignote vite en vert."
     tools:
       back: "Retour à vos appareils"
@@ -162,7 +160,6 @@ fr:
       in_flight_lock: "Les modifications sont de nouveau possibles après atterrissage."
       in_flight_lock_trusted: "Ce navigateur peut encore changer ses réglages. Les autres actions sont de nouveau possibles après atterrissage."
       glass_press: "Appuyez deux fois sur le bouton du %{product}."
-      glass_left: "%{seconds} S."
       glass_waiting: "En attente de sa réponse."
       install_version: "Installer %{version}"
       install_full: "Installer %{version}, avec le firmware de la centrale"

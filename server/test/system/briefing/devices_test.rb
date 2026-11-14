@@ -78,9 +78,10 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       screen "06-settings-edited"
 
       click_button "Save 2 changes"
-      assert_selector ".glass-prompt .glass-title", text: "SETTINGS"
+      assert_glass "SETTINGS"
+      assert_selector ".glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 30 S. PUSH TWICE TO ACCEPT.'], .glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 29 S. PUSH TWICE TO ACCEPT.']"
       assert_selector ".glass-press", text: "Press the Go's button twice."
-      assert_selector ".glass-left", text: /\A(30|29) S\.\z/
+      assert_selector ".glass-seconds", text: /\A(30|29)\z/
       assert_no_field "Callsign"
       screen "07-glass-asking"
 

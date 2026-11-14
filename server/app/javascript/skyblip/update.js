@@ -351,8 +351,9 @@ export class Updater {
   }
 
   #ask(task, fields = {}) {
-    this.#set({ phase: 'asking', task });
-    return this.#send({ command: task, ...fields });
+    const asked = { command: task, ...fields };
+    this.#set({ phase: 'asking', task, asked });
+    return this.#send(asked);
   }
 
   #receive(reply) {

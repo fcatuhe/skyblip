@@ -10,6 +10,7 @@ class Release
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
+  LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
 
@@ -45,7 +46,14 @@ class Release
     available.find(&:stable?) || available.find(&:main_development?)
   end
 
+  # INFO: fc 14nov26 development and test serve the WASM `make -C firmware browser` built, which no release holds yet
+  def self.local_simulator
+    directory = Rails.configuration.x.simulator_build
+    directory if directory && SIMULATOR_FILES.all? { File.file?(File.join(directory, it)) }
+  end
+
   def self.download(tag, file)
+    return local_file(file) if tag == LOCAL_TAG
     raise NotFound unless TAG.match?(tag) && FILE.match?(file)
 
     uri = URI("https://github.com/#{REPOSITORY}/releases/download/#{tag}/#{file}")
@@ -95,6 +103,14 @@ class Release
     raise Unavailable, "GitHub request failed: #{error.class}"
   end
   private_class_method :request
+
+  def self.local_file(file)
+    directory = local_simulator
+    raise NotFound unless directory && SIMULATOR_FILES.include?(file)
+
+    File.binread(File.join(directory, file))
+  end
+  private_class_method :local_file
 
   attr_reader :tag, :name, :assets, :published_at
 

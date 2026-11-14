@@ -1,13 +1,6 @@
-<div class="glass-prompt" data-controller="glass" hidden>
-  <div class="glass" data-glass-target="glass" aria-hidden="true">
-    <p class="glass-heading">
-      <svg class="glass-mark" viewBox="14 6 36 31"><circle cx="32" cy="30" r="6"/><path d="m22.65 20.97a13 13 0 0 1 18.7 0"/><path d="m17.25 15.76a20.5 20.5 0 0 1 29.5 0"/></svg>
-      <span class="glass-title" data-glass-target="title"></span>
-    </p>
-    <p class="glass-detail" data-glass-target="detail"></p>
-    <p class="glass-cancel"><%= t("briefing.glass.cancel") %> <span class="glass-left" data-glass-target="left"></span></p>
-    <p class="glass-key"><span class="glass-presses"></span><%= t("briefing.glass.allow") %></p>
-  </div>
+<div class="glass-prompt" data-controller="glass" data-glass-module-value="<%= briefing_prompt_glass_path %>" hidden>
+  <canvas class="glass" data-glass-target="glass" width="200" height="200" role="img"></canvas>
+  <p class="glass glass-words" data-glass-target="words" hidden></p>
   <div class="glass-lamp" data-glass-target="lamp" hidden>
     <span class="lamp" aria-hidden="true"></span>
     <p><%= t("briefing.glass.lamp") %> <%= t("briefing.words.glass_refuse") %></p>

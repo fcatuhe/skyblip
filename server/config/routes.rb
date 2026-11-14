@@ -64,6 +64,7 @@ Rails.application.routes.draw do
     resource :tools, only: :show
     resource :firmwares, only: :show
     resource :simulator_build, only: :show
+    resource :prompt_glass, only: :show
     resource :simulator, only: :show
     resource :console, only: :show
     resource :comparison, only: :show

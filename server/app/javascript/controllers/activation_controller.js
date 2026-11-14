@@ -94,7 +94,7 @@ export default class extends Controller {
   }
 
   #glass(unit, state) {
-    if (state?.phase === "confirming") this.glassOutlet.show({ title: "ACTIVATE", detail: "SEND THE KEY OF THIS UNIT TO SKYBLIP.EU", product: "Go" })
+    if (state?.phase === "confirming") this.glassOutlet.show({ title: "ACTIVATE", prompt: "register", product: "Go" })
     else this.glassOutlet.hide()
   }
 }
