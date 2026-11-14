@@ -41,6 +41,18 @@ class Release
     [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
   end
 
+  def self.prompt_glass_tag
+    if local_simulator
+      LOCAL_TAG
+    elsif Rails.configuration.x.local_simulator_only
+      raise Unavailable, "No local simulator build"
+    elsif (release = simulator)
+      release.tag
+    else
+      raise Unavailable, "No release holds the simulator"
+    end
+  end
+
   def self.simulator(releases = all)
     available = releases.select(&:simulator?).sort_by(&:published_at).reverse
     available.find(&:stable?) || available.find(&:main_development?)
