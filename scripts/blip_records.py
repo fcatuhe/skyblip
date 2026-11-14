@@ -52,6 +52,10 @@ def int32(at):
     return lambda raw, flags: int.from_bytes(raw[at:at + 4], "little", signed=True)
 
 
+def hex_bytes(at, length):
+    return lambda raw, flags: bytes(raw[at:at + length]).hex()
+
+
 def enum8(at, names):
     # INFO: fc 20sep26 the ordinal is the wire, and enum_fields() reads .names back off the closure
     def read(raw, flags):
@@ -159,6 +163,7 @@ ENDPOINT = ("config", "nmea", "log", "peer")
 PLACEMENT = ("idle", "hold", "place", "forced")
 WRITE_KIND = ("settings", "flight_record")
 CHANGE = ("retune", "hop", "to_o_band", "to_m_band", "wake")
+CHIPS_VERDICT = ("decoded", "crc", "unsupported")
 SERVICE = ("config", "ownship", "power", "radio", "traffic", "alarm", "nmea", "flight_log",
            "capture", "screen", "board_poll", "bravo")
 
@@ -263,6 +268,15 @@ DIAGNOSTICS_TYPES = {
         ("pressure_relative_altitude_m", valid_only(int16(14), 7)), ("adsb_version_valid", flag(2)),
         ("gva_valid", flag(3)), ("pressure_altitude_valid", flag(4)), ("height_difference_valid", flag(5)),
         ("gnss_relative_altitude_valid", flag(6)), ("pressure_relative_altitude_valid", flag(7)))),
+    # TODO: fc 13nov26 adsb trial #293, retire 22 and 23 once the trial picks the LR2021 settings
+    22: ("adsb_slot", (
+        ("trial_profile", uint8(0)), ("threshold_dbm", int8(1)), ("gain_step", uint8(2)), ("boost", uint8(3)),
+        ("frames", uint16(4)), ("crc", uint16(6)), ("unsupported", uint16(8)), ("folded", uint16(10)),
+        ("positions", uint16(12)), ("aircraft", uint8(14)), ("counted_s", uint8(15)),
+        ("front_end_raw", flag(2)), ("manchester", flag(3)), ("fifo_dropped", flag(4)))),
+    23: ("adsb_chips", (
+        ("seq", uint8(0)), ("rssi_dbm", int8(1)), ("chips", hex_bytes(2, 14)), ("tail", flag(2)),
+        ("rssi_valid", flag(3)), ("chips_verdict", flag_field(4, 0x03, CHIPS_VERDICT)))),
 }
 
 FLIGHT_FIELDS = (

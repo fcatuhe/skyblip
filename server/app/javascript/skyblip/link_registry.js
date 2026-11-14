@@ -2290,6 +2290,50 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "text"
         }
       ]
+    },
+    {
+      "command": "adsb_trial",
+      "code": 37,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "slot_s",
+          "number": 1,
+          "type": "unsigned"
+        },
+        {
+          "name": "thresholds_dbm",
+          "number": 2,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "gain_steps",
+          "number": 3,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "boosts",
+          "number": 4,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "front_ends",
+          "number": 5,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "layouts",
+          "number": 6,
+          "type": "unsigned_array"
+        }
+      ]
     }
   ],
   "enums": {
@@ -2502,6 +2546,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "not_own_transponder",
           "code": 52
+        },
+        {
+          "name": "adsb_trial",
+          "code": 53
         }
       ]
     },
@@ -3328,6 +3376,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "protocols",
           "code": 36
+        },
+        {
+          "name": "adsb_trial",
+          "code": 37
         }
       ]
     }

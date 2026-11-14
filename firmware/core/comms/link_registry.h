@@ -46,6 +46,7 @@ enum class Command : uint8_t {
     ForgetBrowser = 34,
     InstallReport = 35,
     Protocols = 36,
+    AdsbTrial = 37,
 };
 
 enum class Reason : uint8_t {
@@ -101,6 +102,7 @@ enum class Reason : uint8_t {
     Forgotten = 50,
     UnknownBrowser = 51,
     NotOwnTransponder = 52,
+    AdsbTrial = 53,
 };
 
 namespace acknowledgement_key {
@@ -532,6 +534,17 @@ enum : uint32_t {
 };
 }
 
+namespace adsb_trial_key {
+enum : uint32_t {
+    kSlotS = 1,
+    kThresholdsDbm = 2,
+    kGainSteps = 3,
+    kBoosts = 4,
+    kFrontEnds = 5,
+    kLayouts = 6,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -577,6 +590,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Ownship: return 0x1F;
         case Command::PeerClaim: return 0x41FFF;
         case Command::TrustBrowser: return 0xF;
+        case Command::AdsbTrial: return 0x7F;
     }
     return 0;
 }

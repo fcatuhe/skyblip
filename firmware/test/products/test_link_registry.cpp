@@ -349,6 +349,9 @@ const std::vector<Answer> kAnswers = {
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
     {"forget_browser", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
+    {"adsb_trial", kConfig,
+     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
+     "unknown_command"},
 };
 
 const Answer* answer_to(const names::Frame& frame) {
@@ -393,6 +396,12 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"trust_browser.label", "\"Chrome on Android\""},
         {"browsers.index", "0"},
         {"forget_browser.id", "\"" + browser_key().substr(0, 16) + "\""},
+        {"adsb_trial.slot_s", "30"},
+        {"adsb_trial.thresholds_dbm", "[90, 98]"},
+        {"adsb_trial.gain_steps", "[0, 13]"},
+        {"adsb_trial.boosts", "[0, 7]"},
+        {"adsb_trial.front_ends", "[1, 0]"},
+        {"adsb_trial.layouts", "[0, 1]"},
     };
 }
 

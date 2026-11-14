@@ -23,6 +23,7 @@
 #include "products/skyblip_bravo/name.h"
 #include "products/skyblip_bravo/radio_protocols.h"
 #include "products/skyblip_bravo/services/adsb.h"
+#include "products/skyblip_bravo/services/adsb_trial.h"
 #include "products/skyblip_bravo/services/button.h"
 #include "products/skyblip_bravo/services/peer.h"
 #include "products/skyblip_bravo/settings.h"
@@ -56,6 +57,8 @@ class Product {
         : platform_(platform), board_(platform, bus_, adsb_frames_) {
         config_link_.config().serve_captures();
         config_link_.config().set_radio_protocols(kRadioProtocols);
+        // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+        adsb_.attach_trial(adsb_trial_);
     }
 
     Status setup() {
@@ -98,6 +101,7 @@ class Product {
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             take_link_requests(now_ms);
+            run_adsb_trial(now_ms);
         }
         // INFO: fc 13nov26 before drive_shutdown, so the sign starts on the pass after the park's
         // flash work
@@ -164,6 +168,8 @@ class Product {
     common::OwnshipService& ownship() { return ownship_; }
     common::PowerService& power() { return power_; }
     AdsbService& adsb() { return adsb_; }
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    const AdsbTrial& adsb_trial() const { return adsb_trial_; }
     common::AlarmService& alarm() { return alarm_; }
     ButtonService& button() { return button_; }
     PeerService& peer() { return peer_; }
@@ -218,6 +224,19 @@ class Product {
             config.clear_capture_request();
             order_capture(*profile);
         }
+        // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+        if (const std::optional<comms::AdsbTrialPlan> plan = config.adsb_trial_requested()) {
+            config.clear_adsb_trial_request();
+            adsb_trial_.start(*plan, now_ms, board_.receiver().statistics());
+        }
+    }
+
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    void run_adsb_trial(uint32_t now_ms) {
+        if (!adsb_trial_.active()) return;
+        if (const std::optional<parts::Lr2021Tuning> tuning =
+                adsb_trial_.tick(now_ms, board_.receiver().statistics()))
+            board_.receiver().retune(*tuning);
     }
 
     void order_capture(comms::CaptureProfile profile) {
@@ -329,6 +348,8 @@ class Product {
         context_,     settings_store_,       power_.cutoff_monitor(),
         kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    AdsbTrial adsb_trial_{context_};
     GateReference gate_{};
     AdsbService adsb_{context_, adsb_frames_, settings_.own_icao, gate_};
     common::AlarmService alarm_{

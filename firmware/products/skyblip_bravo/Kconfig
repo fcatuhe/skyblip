@@ -3,4 +3,12 @@ module = SKYBLIP_BRAVO
 module-str = skyBlip Bravo
 source "subsys/logging/Kconfig.template.log_config"
 
+# TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+config SKYBLIP_BRAVO_ADSB_TRIAL
+	bool "Answer adsb_trial, the temporary reception trial of #293"
+	help
+	  A development image compares the LR2021's 1090 MHz settings slot by
+	  slot (services/adsb_trial.md). A release image answers the command
+	  unknown_command.
+
 source "Kconfig.zephyr"

@@ -92,8 +92,9 @@ inline constexpr Value kReasonValues[] = {
     {"forgotten", 50},
     {"unknown_browser", 51},
     {"not_own_transponder", 52},
+    {"adsb_trial", 53},
 };
-inline constexpr Enumeration kReason{kReasonValues, 52};
+inline constexpr Enumeration kReason{kReasonValues, 53};
 
 inline constexpr Value kAlarmVolumeValues[] = {
     {"off", 0},
@@ -265,8 +266,9 @@ inline constexpr Value kCommandValues[] = {
     {"forget_browser", 34},
     {"install_report", 35},
     {"protocols", 36},
+    {"adsb_trial", 37},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 37};
+inline constexpr Enumeration kCommand{kCommandValues, 38};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -638,6 +640,16 @@ inline constexpr Key kProtocolsKeys[] = {
     {"alptas_version", 3, Type::Text, nullptr, 0, false},
 };
 
+inline constexpr Key kAdsbTrialKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"slot_s", 1, Type::Unsigned, nullptr, 0, false},
+    {"thresholds_dbm", 2, Type::UnsignedArray, nullptr, 0, false},
+    {"gain_steps", 3, Type::UnsignedArray, nullptr, 0, false},
+    {"boosts", 4, Type::UnsignedArray, nullptr, 0, false},
+    {"front_ends", 5, Type::UnsignedArray, nullptr, 0, false},
+    {"layouts", 6, Type::UnsignedArray, nullptr, 0, false},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -676,6 +688,7 @@ inline constexpr Frame kFrames[] = {
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
     {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 8},
     {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
+    {"adsb_trial", 37, events::Endpoint::Config, Sender::Host, kAdsbTrialKeys, 7},
 };
 
 }

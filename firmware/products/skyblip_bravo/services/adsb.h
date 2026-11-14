@@ -13,6 +13,7 @@
 #include "products/common/services/traffic.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/own_transponder.h"
+#include "products/skyblip_bravo/services/adsb_trial.h"
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
 #include "runtime/service.h"
@@ -48,6 +49,8 @@ class AdsbService : public runtime::Service {
     const adsb::Assembly& assembly() const { return assembly_; }
     const common::AdsbCapture& capture() const { return capture_; }
     const OwnTransponder& own_transponder() const { return own_transponder_; }
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    void attach_trial(AdsbTrial& trial) { trial_ = &trial; }
 
    private:
     static adsb::Reference reference(const model::Ownship& own);
@@ -65,6 +68,7 @@ class AdsbService : public runtime::Service {
     uint32_t unsupported_{0};
     uint32_t folded_{0};
     Fifo<AdsbReject, kRejectsKept + 1> rejects_{};
+    AdsbTrial* trial_{nullptr};
 };
 
 }  // namespace skyblip::bravo

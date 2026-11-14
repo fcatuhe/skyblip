@@ -63,6 +63,10 @@ int main(void) {
     if (g_platform.watchdog().arm(runtime::kHardwareWatchdogCeilingMs) != Status::Ok)
         LOG_ERR("watchdog: not armed, the loop is unsupervised");
 
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    if (IS_ENABLED(CONFIG_SKYBLIP_BRAVO_ADSB_TRIAL))
+        g_product.config_link().config().serve_adsb_trial();
+
     const Status started = g_product.setup();
     LOG_INF("reset reason: %s, setup done at %u ms", power::to_string(g_product.reset_reason()),
             static_cast<unsigned>(k_uptime_get()));

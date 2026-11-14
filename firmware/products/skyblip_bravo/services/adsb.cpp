@@ -48,6 +48,8 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     const adsb::Reception reception{frame.at_us, frame.rssi_dbm, frame.rssi_valid};
     const Status status =
         status_of(adsb::receive(frame.chips.data(), frame.chips.size(), reception, message));
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    if (trial_ != nullptr) trial_->heard(frame, status, now_ms);
     if (status != Status::Ok) {
         refuse(frame, status);
         return;
@@ -61,6 +63,8 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     const uint32_t at_ms = static_cast<uint32_t>(frame.at_us / 1000);
     if (!protocol::adsb_fold(assembly_, message, at_ms, received, here, observation_)) return;
     folded_++;
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    if (trial_ != nullptr) trial_->folded(observation_);
     if (message.kind == adsb::Kind::Identification && message.identification.callsign_valid)
         context_.state.callsigns.learn(adsl::kAddressTableIcao, message.address,
                                        message.identification.callsign, now_s);

@@ -97,10 +97,14 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
                 match = bit_at(chips, start + i) == wanted[i];
             if (!match) continue;
             const size_t first = start + wanted.size();
+            // INFO: fc 13nov26 a Manchester payload is a bit per chip pair, a one where the pair
+            // reads 10
+            const size_t chips_per_bit = manchester() ? 2u : 1u;
             for (uint16_t i = 0; i < payload_bytes; i++) {
                 uint8_t byte = 0;
                 for (size_t bit = 0; bit < 8; bit++) {
-                    const size_t index = first + static_cast<size_t>(i) * 8u + bit;
+                    const size_t index =
+                        first + (static_cast<size_t>(i) * 8u + bit) * chips_per_bit;
                     const bool set_bit = index < total && bit_at(chips, index);
                     byte = static_cast<uint8_t>((byte << 1) | (set_bit ? 1u : 0u));
                 }
@@ -125,11 +129,14 @@ class Lr2021 : public io::Spi, public io::Gpio, public io::Delay {
     }
 
     bool listening_for_adsb() const {
+        const bool framed = manchester() ? sync_bits == 0 : sync_bits == 8 && sync_msb_first;
         return !in_reset && mode == Mode::Receive && packet_type == parts::lr2021::kPacketTypeOok &&
                bitrate_bps == 2000000 && frequency_hz == 1090000000 && pattern == 0x0285 &&
-               pattern_length == 16 && sync_bits == 8 && sync_msb_first && payload_bytes != 0 &&
-               packet_format == 0;
+               pattern_length == 16 && framed && payload_bytes != 0 && packet_format == 0;
     }
+
+    // INFO: fc 13nov26 RadioLib LR2021_commands.h: 0x09 in the low nibble is Manchester, inverted
+    bool manchester() const { return (crc_manchester & 0x0F) == 0x09; }
 
     int command_order(uint16_t opcode) const {
         for (size_t i = 0; i < commands_seen.size(); i++)

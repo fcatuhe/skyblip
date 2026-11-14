@@ -293,7 +293,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
         named = [name for name, _ in
                  (records.DIAGNOSTICS_TYPES[key] for key in sorted(records.DIAGNOSTICS_TYPES))]
         self.assertEqual(named, self.schema["properties"]["type"]["enum"])
-        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 22)))
+        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 24)))
 
     def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
         for field, names in records.enum_fields():

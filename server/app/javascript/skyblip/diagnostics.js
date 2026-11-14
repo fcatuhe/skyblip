@@ -24,6 +24,8 @@ const validOnly = (inner, bit) => (raw, flags) => (set(flags, bit) ? inner(raw, 
 const vouchedFlag = (recorded, bit) => (raw, flags) => (set(flags, recorded) ? set(flags, bit) : undefined);
 const unlessUnknown = (inner, recorded, valid) => (raw, flags) => (set(flags, recorded) && !set(flags, valid) ? undefined : inner(raw, flags));
 const scaled = (inner, factor) => (raw, flags) => inner(raw, flags) * factor;
+const hexBytes = (at, length) => raw => Array.from(raw.subarray(at, at + length), byte => byte.toString(16).padStart(2, '0')).join('');
+const flagField = (shift, mask, names) => (raw, flags) => names[(flags >> shift) & mask] ?? (flags >> shift) & mask;
 
 const RESET = ['UNKNOWN', 'POWER ON', 'RESET PIN', 'BROWNOUT', 'SOFT RESET', 'WATCHDOG', 'CPU LOCKUP', 'CHARGER WAKE', 'BUTTON WAKE', 'DEBUGGER'];
 const IMAGE_STATE = ['confirmed', 'probation', 'reverted', 'refused'];
@@ -45,6 +47,7 @@ const ENDPOINT = ['config', 'nmea', 'log', 'peer'];
 const PLACEMENT = ['idle', 'hold', 'place', 'forced'];
 const WRITE_KIND = ['settings', 'flight_record'];
 const CHANGE = ['retune', 'hop', 'to_o_band', 'to_m_band', 'wake'];
+const CHIPS_VERDICT = ['decoded', 'crc', 'unsupported'];
 const SERVICE = ['config', 'ownship', 'power', 'radio', 'traffic', 'alarm', 'nmea', 'flight_log', 'capture', 'screen', 'board_poll', 'bravo'];
 
 const TYPES = {
@@ -147,6 +150,15 @@ const TYPES = {
     ['pressure_relative_altitude_m', validOnly(int16(14), 7)], ['adsb_version_valid', flag(2)],
     ['gva_valid', flag(3)], ['pressure_altitude_valid', flag(4)], ['height_difference_valid', flag(5)],
     ['gnss_relative_altitude_valid', flag(6)], ['pressure_relative_altitude_valid', flag(7)]]],
+  // TODO: fc 13nov26 adsb trial #293, retire 22 and 23 once the trial picks the LR2021 settings
+  22: ['adsb_slot', [
+    ['trial_profile', uint8(0)], ['threshold_dbm', int8(1)], ['gain_step', uint8(2)], ['boost', uint8(3)],
+    ['frames', uint16(4)], ['crc', uint16(6)], ['unsupported', uint16(8)], ['folded', uint16(10)],
+    ['positions', uint16(12)], ['aircraft', uint8(14)], ['counted_s', uint8(15)],
+    ['front_end_raw', flag(2)], ['manchester', flag(3)], ['fifo_dropped', flag(4)]]],
+  23: ['adsb_chips', [
+    ['seq', uint8(0)], ['rssi_dbm', int8(1)], ['chips', hexBytes(2, 14)], ['tail', flag(2)],
+    ['rssi_valid', flag(3)], ['chips_verdict', flagField(4, 0x03, CHIPS_VERDICT)]]],
 };
 
 export function decodeDiagnosticsRecord(raw) {

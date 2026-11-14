@@ -67,6 +67,16 @@ class AdsbReceiver : public ports::AdsbReceiver {
         return statistics;
     }
 
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    // INFO: fc 13nov26 the thread owns the SPI, so it applies the tuning on its next wake
+    void retune(const parts::Lr2021Tuning& tuning) {
+        k_sched_lock();
+        owed_tuning_ = tuning;
+        retune_owed_ = true;
+        k_sched_unlock();
+        k_sem_give(&wake_);
+    }
+
     // INFO: fc 12nov26 a part no thread runs, never probed or never started, is parked from here
     void sleep() override {
         if (thread_id_ == nullptr) {
@@ -110,11 +120,22 @@ class AdsbReceiver : public ports::AdsbReceiver {
                 park();
                 return;
             }
+            take_retune();
             drain();
             health();
             publish();
             listening_ = radio_.mode() == parts::Lr2021Mode::Receive;
         }
+    }
+
+    // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
+    void take_retune() {
+        k_sched_lock();
+        const bool owed = retune_owed_;
+        const parts::Lr2021Tuning tuning = owed_tuning_;
+        retune_owed_ = false;
+        k_sched_unlock();
+        if (owed) (void)radio_.retune(tuning);
     }
 
     // INFO: fc 11nov26 every frame of one wake is dated when the thread woke, the newest carries
@@ -178,6 +199,8 @@ class AdsbReceiver : public ports::AdsbReceiver {
     volatile bool parked_{false};
     volatile bool stopped_{false};
     volatile bool listening_{false};
+    parts::Lr2021Tuning owed_tuning_{};
+    bool retune_owed_{false};
     struct k_thread thread_{};
     k_tid_t thread_id_{nullptr};
     K_KERNEL_STACK_MEMBER(stack_, kStackBytes);

@@ -19,6 +19,8 @@ using link_names::Type;
 using link_names::Value;
 
 constexpr int kTextBytes = 2 * sizeof(events::RxFrame::data) + 2;
+// INFO: fc 13nov26 more than a frame's bytes can hold, so a host's array is never cut here
+constexpr int kArrayValues = sizeof(events::RxFrame::data);
 
 const Frame* frame_named(const char* command) {
     for (const Frame& frame : link_names::kFrames)
@@ -73,6 +75,13 @@ bool add_text_value(cbor::Writer& writer, const Key& key, const char* text) {
 
 bool add_key(cbor::Writer& writer, const json::Reader& reader, const Key& key) {
     if (!reader.has(key.name)) return true;
+    if (key.type == Type::UnsignedArray) {
+        uint32_t values[kArrayValues];
+        int count = 0;
+        if (!reader.read_unsigned_array(key.name, values, kArrayValues, count)) return false;
+        writer.add_unsigned_array(key.number, values, count);
+        return true;
+    }
     long number = 0;
     uint32_t large = 0;
     bool flag = false;

@@ -62,7 +62,7 @@ test('a slot that is no record decodes as unreadable, and says why', () => {
 // Two tools read one capture, so the console's download must be the file blip.py writes, byte for byte.
 test('every record type decodes to the NDJSON blip.py writes for it', () => {
   const records = [];
-  for (let type = 1; type <= 22; type++) {
+  for (let type = 1; type <= 24; type++) {
     for (const flags of [0x00, 0x55, 0xaa, 0xff]) {
       records.push(Uint8Array.from({ length: 24 }, (_, at) => (at === 0 ? type : at === 1 ? flags : (type * 37 + flags + at * 59) & 0xff)));
     }

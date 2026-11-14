@@ -159,6 +159,9 @@ jobs:
       # The ETSI standards are fetched, not committed, so the fetcher's refusals are held offline.
       - name: the fetcher of the ETSI standards
         run: python3 scripts/test_fetch_etsi.py
+      # The reception trial of #293 compares receiver profiles through it, and goes with it.
+      - name: the reader of Bravo's reception trial
+        run: python3 scripts/test_adsb_trial.py
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite

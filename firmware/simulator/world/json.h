@@ -14,6 +14,7 @@ class Reader {
     bool read_unsigned(const char* key, uint32_t& out) const;
     bool read_boolean(const char* key, bool& out) const;
     bool read_string(const char* key, char* out, int capacity) const;
+    bool read_unsigned_array(const char* key, uint32_t* out, int capacity, int& count) const;
     bool has(const char* key) const;
     int key_count() const;
 
