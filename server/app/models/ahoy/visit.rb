@@ -2,6 +2,8 @@ class Ahoy::Visit < AnalyticsRecord
   include Filterable
 
   self.table_name = "ahoy_visits"
+  # TODO: fc 14nov26 the columns go in #331 once a deploy runs without writing them, then this line goes too
+  self.ignored_columns += %w[latitude longitude]
 
   has_many :events, class_name: "Ahoy::Event", dependent: :delete_all
   has_one :analytics_visit, class_name: "Analytics::Visit", foreign_key: :ahoy_visit_id, dependent: :destroy
