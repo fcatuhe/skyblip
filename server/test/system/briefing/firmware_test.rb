@@ -37,6 +37,21 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  test "a device behind is told what changed in every build since its own, up to the one offered" do
+    in_range a_go(running: "0.1.0+1000")
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      assert_button "Install 0.1.0+1005"
+      within(".firmware-changes") do
+        assert_equal %w[0.1.0+1005 0.1.0+1002], all("h3").map(&:text)
+        assert_link "ui(radar): draw traffic over the readings and count it as TFC", href: "https://github.com/fcatuhe/skyblip/pull/127"
+        assert_no_text "warble the advisory"
+      end
+      screen "20a-firmware-changes"
+    end
+  end
+
   # The silence of #278: back on its old firmware, confirmed, and nothing on record.
   test "an install that comes back on the old firmware says so, and the report reaches skyBlip by itself" do
     in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
@@ -84,6 +99,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       assert_no_selector ".unit-banner"
       click_link "Firmware"
       assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1005."
+      assert_no_selector ".firmware-changes"
       find(".firmware-other summary").click
       assert_field "Or a file ending in .signed.bin"
       screen "26-firmware-current"

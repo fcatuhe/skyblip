@@ -97,10 +97,23 @@ class ReleaseTest < ActiveSupport::TestCase
     end
   end
 
+  test "the changelog holds a stable release's news and a main build's technical changes, newest first" do
+    stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", body: "## What's new\n\n- The alarm warbles.\n\n## What's Changed\n* feat: warble by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/130\n")
+    main = release("dev-1005", name: "skyBlip dev 0.1.0+1005", prerelease: true, published_at: "2026-10-14T00:00:00Z",
+                               body: "## What's Changed\n* ui: draw traffic by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/127\n")
+    branch = release("dev-1010-feat-x", name: "skyBlip dev 0.1.0+1010 (feat-x)", prerelease: true, body: "## What's Changed\n* feat: x\n")
+    silent = release("dev-1002", name: "skyBlip dev 0.1.0+1002", prerelease: true, body: nil)
+
+    changelog = Release.changelog([ stable, branch, silent, main ], :en)
+
+    assert_equal [ [ "0.1.0+1005", "development" ], [ "0.2.0", "release" ] ], changelog.map { |release, _| [ release.version, release.channel ] }
+    assert_equal [ [ "ui: draw traffic" ], [ "The alarm warbles." ] ], changelog.map { |_, changes| changes.map(&:text) }
+  end
+
   private
-    def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [])
+    def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [], body: nil)
       Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "published_at" => published_at,
-                  "assets" => assets.map { |asset| { "name" => asset } })
+                  "assets" => assets.map { |asset| { "name" => asset } }, "body" => body)
     end
 
   # Every device page asks for the list, so a burst of pilots must not spend the hourly GitHub allowance.
