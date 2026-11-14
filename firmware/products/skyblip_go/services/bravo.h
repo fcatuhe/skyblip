@@ -70,6 +70,8 @@ class BravoService : public runtime::Service {
     std::optional<comms::OwnTransponderHeard> own_transponder() const {
         return health_heard_ ? health_.own_transponder : std::nullopt;
     }
+    // INFO: fc 15nov26 the last health from the pinned Bravo while fresh, nullptr once it ages out
+    const comms::PeerHealth* health() const { return health_heard_ ? &health_ : nullptr; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
 

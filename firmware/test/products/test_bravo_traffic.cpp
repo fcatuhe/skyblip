@@ -165,6 +165,21 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are NO BRAVO, 
                    go::kGlassHeight));
 }
 
+TEST_CASE("bravo traffic: a live Bravo whose health says its cell is low says so on the radar") {
+    Flight flight;
+    flight.fly(3);
+    REQUIRE(flight.state().bravo == comms::BravoState::Live);
+    CHECK_FALSE(flight.reads("BAT", 2));
+    flight.tango.bravo.health.status_fields =
+        "\"battery_percent\":9,\"charging\":false,\"power_level\":\"low\"";
+    flight.fly(2);
+    CHECK(flight.reads("BAT 9%", 2));
+
+    flight.tango.bravo.health.status_fields = "\"charging\":true,\"power_level\":\"normal\"";
+    flight.fly(2);
+    CHECK_FALSE(flight.reads("BAT 9%", 2));
+}
+
 TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is NO BRAVO, with one tone") {
     Flight flight;
     flight.fly(3);

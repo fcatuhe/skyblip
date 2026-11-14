@@ -207,6 +207,9 @@ class ScreenService : public runtime::Service {
 
     // INFO: fc 20sep26 core/power debounced it, dropped a charged cell and a floating sense
     bool battery_low() const { return power::needs_charge(context_.state.power.level); }
+    const comms::PeerHealth* bravo_health_live() const {
+        return context_.state.bravo == comms::BravoState::Live ? bravo_.health() : nullptr;
+    }
 
     Settings& settings_;
     comms::ConfigService& config_;
