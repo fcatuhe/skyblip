@@ -7,6 +7,7 @@
 #include "core/timing/transmit.h"
 #include "core/traffic/range.h"
 #include "core/units/units.h"
+#include "products/skyblip_go/pages/bravo_log.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/services/screen.h"
 #include "protocols/common/geometry.h"
@@ -332,6 +333,19 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.row_count = context_.state.radio_log.count();
             snapshot.log = &context_.state.radio_log;
             draw_radio_log(framebuffer_, snapshot);
+            break;
+        }
+        case Page::BravoLog: {
+            BravoLogSnapshot snapshot;
+            snapshot.state = context_.state.bravo;
+            snapshot.tag = events::bluetooth_tag(settings.bravo);
+            snapshot.health = bravo_.health();
+            snapshot.folded = bravo_.folded();
+            snapshot.refused = bravo_.refused();
+            snapshot.unplaced = bravo_.unplaced();
+            snapshot.tracked = context_.state.traffic.count_of(model::Source::Adsb);
+            snapshot.log = &bravo_.log();
+            draw_bravo_log(framebuffer_, snapshot);
             break;
         }
         case Page::Raw: {

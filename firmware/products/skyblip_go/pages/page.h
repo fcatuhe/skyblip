@@ -23,7 +23,8 @@ enum class Page : uint8_t {
     Capture = 8,
     SelfTest = 9,
     Bravo = 10,
-    kCount = 11
+    BravoLog = 11,
+    kCount = 12
 };
 
 constexpr int kPageCount = static_cast<int>(Page::kCount);
@@ -108,6 +109,7 @@ constexpr const char* page_title(Page page) {
         case Page::SelfTest: return "SELF TEST";
         case Page::GMeter: return "G METER";
         case Page::Bravo: return "BRAVO";
+        case Page::BravoLog: return "BRAVO LOG";
         default: return "";
     }
 }

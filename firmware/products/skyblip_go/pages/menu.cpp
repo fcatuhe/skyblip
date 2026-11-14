@@ -11,8 +11,9 @@ constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light,  MenuRow::Aircraft, MenuRo
                                       MenuRow::Volume, MenuRow::Bravo};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
                                          MenuRow::Callsign, MenuRow::OwnIcao};
-constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
-                                       MenuRow::Raw,    MenuRow::Capture,    MenuRow::SelfTest};
+constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status,   MenuRow::Satellites, MenuRow::RadioLog,
+                                       MenuRow::BravoLog, MenuRow::Raw,        MenuRow::Capture,
+                                       MenuRow::SelfTest};
 
 template <int Count>
 constexpr Menu menu_of(const MenuRow (&rows)[Count]) {
@@ -112,6 +113,7 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Status: return "STATUS";
         case MenuRow::Satellites: return "SATELLITES";
         case MenuRow::RadioLog: return "RADIO LOG";
+        case MenuRow::BravoLog: return "BRAVO LOG";
         case MenuRow::Raw: return "RAW";
         case MenuRow::Capture: return "CAPTURE";
         case MenuRow::SelfTest: return "SELF TEST";
@@ -124,6 +126,7 @@ const char* menu_row_label(MenuRow row) {
 Page page_behind(MenuRow row) {
     switch (row) {
         case MenuRow::RadioLog: return Page::RadioLog;
+        case MenuRow::BravoLog: return Page::BravoLog;
         case MenuRow::Raw: return Page::Raw;
         case MenuRow::Capture: return Page::Capture;
         case MenuRow::Satellites: return Page::Satellites;

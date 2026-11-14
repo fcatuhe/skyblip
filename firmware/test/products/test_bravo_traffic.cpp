@@ -102,6 +102,24 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     CHECK(flight.reads("B DLH4AB", go::kNearbyScale));
 }
 
+TEST_CASE("bravo traffic: BRAVO LOG lists each frame Bravo forwards, under what Bravo runs") {
+    Flight flight(named_target_every_second(2, 8));
+    flight.tango.bravo.health.status_fields =
+        "\"firmware\":\"0.4.1+1702\",\"battery_percent\":80,\"charging\":false,"
+        "\"power_level\":\"normal\",\"frame_rate_hz\":412";
+    flight.fly(3);
+    flight.go().show(flight.tango.now_ms, go::Page::BravoLog);
+    flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
+    REQUIRE(flight.go().product.screen().page() == go::Page::BravoLog);
+    CHECK(flight.reads("BRAVO 3F2A"));
+    CHECK(flight.reads("LIVE"));
+    CHECK(flight.reads("FW 0.4.1+1702"));
+    CHECK(flight.reads("BAT 80%"));
+    CHECK(flight.reads("1090 412/S"));
+    CHECK(flight.reads("ADS-B"));
+    CHECK(flight.reads("DLH4AB"));
+}
+
 // An empty sky is a healthy one: Bravo's health, not its traffic, says it is there.
 TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming is no NO BRAVO and no tone") {
     Flight flight;

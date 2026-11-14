@@ -9,6 +9,7 @@
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
+#include "products/skyblip_go/bravo_log.h"
 #include "products/skyblip_go/own_icao_warning.h"
 #include "products/skyblip_go/pairing.h"
 #include "products/skyblip_go/settings.h"
@@ -65,6 +66,8 @@ class BravoService : public runtime::Service {
     uint32_t unplaced() const { return unplaced_; }
     // INFO: fc 12nov26 observation frames comms::read_observation() refused
     uint32_t refused() const { return refused_; }
+    uint32_t folded() const { return folded_; }
+    const BravoLog& log() const { return log_; }
     bool leaving() const { return leaving_; }
     // INFO: fc 13nov26 the transponder the last fresh health named, for AIRCRAFT to propose
     std::optional<comms::OwnTransponderHeard> own_transponder() const {
@@ -80,6 +83,7 @@ class BravoService : public runtime::Service {
     void take_frame(const events::RxFrame& frame, uint32_t now_ms);
     void take_health(ConstByteSpan bytes, uint32_t now_ms);
     void fold(const comms::PeerObservation& peer, uint32_t now_ms);
+    void log(BravoVerdict verdict, const comms::PeerObservation* peer, uint32_t now_ms);
     std::optional<uint32_t> second_edge_ms(uint32_t at_s) const;
     comms::BravoState state_now() const;
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
@@ -119,6 +123,8 @@ class BravoService : public runtime::Service {
     uint32_t started_ms_{0};
     uint32_t unplaced_{0};
     uint32_t refused_{0};
+    uint32_t folded_{0};
+    BravoLog log_{};
     bool health_heard_{false};
     // INFO: fc 12nov26 the pinned Bravo sent UTC since the Go booted, so no UTC from now is lost
     bool utc_heard_{false};

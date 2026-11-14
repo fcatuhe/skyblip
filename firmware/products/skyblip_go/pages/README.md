@@ -193,6 +193,14 @@ The stamp is UTC as `hh:mm:ss` once the receiver has given us a second, and `T+<
 
 The second line is the radio's half of the receiver, and it explains the tape under it. Without a latched PPS edge nothing may transmit at all (`timing::ownship_transmits`) and no row carries a phase, so `PPS LOCK`, `PPS HOLD 12` and `PPS NONE` answer a column of stamps that suddenly lost its milliseconds before the reader has to wonder. `HOLD` is `timing::in_pps_holdover`, the same test the slot map flies on: the edge is gone, the dwells keep their places receive only, and `NONE` comes once `kPpsHoldoverMs` has run out. `BAND` is the noise floor the dwells measured, above the column of levels it is the floor under: a device hearing nothing at -85 dBm is deaf because the band is full, and one hearing nothing at -110 dBm is deaf for its own reasons.
 
+## bravo_log
+
+A paired Bravo has no glass, so this page is where a pilot reads it, from the `BRAVO LOG` row of the `DIAGNOSTICS` menu. It is `radio_log` for the frames Bravo forwards, under a head that says what Bravo runs, holds and hears.
+
+The head is three lines. The first is the tag, `BRAVO 3F2A`, and what the Go makes of it on the right: `LIVE`, `WAIT`, `LINK DOWN`, `RECEIVER DOWN`, `NO UTC`, or `NOT PAIRED` on a Go that holds no pin. The second is the image Bravo runs, `FW 0.4.1+1702`, and its cell, `BAT 80%`, `BAT CHG` on the cable or `BAT --` with no reading. The third is its 1090 MHz receiver, `1090 412/S` for the frames it handed up in the last second or `1090 OFF` while it is not listening, and on the right `B 14 IN 1234 OUT 2`: the ADS-B aircraft the table holds, the frames folded into it since boot, and the frames refused or left unplaced, once there are any. All of it comes off Bravo's last fresh `health` (`../../skyblip_bravo/README.md`), so a Bravo that is lost keeps its state word and loses the readings, rather than showing figures that stopped moving.
+
+Each row of the tape is one observation frame, newest at the top, `BravoLog::kMaxEntries` of them. The stamp is when it reached the Go, UTC as `hh:mm:ss` or `T+` seconds since boot, as on `radio_log`. The verdict is `ADS-B` for a frame folded into the table, `BAD` for one `comms::read_observation()` refused, and `TIME` for one the Go could not place in time: no UTC of its own, or dated past `BravoService::kAheadCeilingMs`. The address follows, and then the callsign when the frame named one, else the flight level its pressure altitude gives. A refused frame has no address to print, because it was never read.
+
 ## sixpack
 
 Six dials over the GNSS-derived own-ship state, each with its own number: ground speed, the cell, altimeter, turn coordinator, track, vertical speed. The snapshot arrives in knots, feet and feet per minute, because the bank and flight-path geometry is worked in them.
@@ -372,7 +380,7 @@ The panel half of "a pilot with no phone can change the things that matter". The
 |---|---|
 | `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `VOLUME`, `BRAVO` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `OWN ICAO` |
-| `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `SELF TEST` |
+| `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `RAW`, `CAPTURE`, `SELF TEST` |
 
 Neither is titled after the page behind it. A heading reading `RADAR` over five settings, or `NEARBY` over four diagnostic pages, names where a thumb came from rather than what it is looking at, and a pilot who pressed the button knows which page they pressed it on. So the headings are `SETTINGS` and `DIAGNOSTICS`, which is what the rows under them are. Eleven characters at double height leave a third of the glass over, so nothing had to shrink to say it.
 
@@ -514,5 +522,6 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `confirm`, `installing`, `recovery` | the moments that are not pages: being asked, receiving an image and being written, being handed to the USB bootloader |
 | `activation` | what a unit with no serial says instead of every page: where to activate it, and the tag that names it in the phone's chooser |
 | `bravo` | which Bravo this Go is paired with, and the pairing itself |
+| `bravo_log` | what a paired Bravo runs, holds and hears, and the frames it forwards |
 
 `go::Page` lists the four the pad walks first - `Radar`, `Nearby`, `SixPack`, `GMeter` - and `go::kWalkedPages` is where the walk ends and the pages opened by name begin. All four always stand: there was a `page_mask` that could hide pages from the rotation, and with six of them on one walk it was worth having. Four is already the short list it was meant to produce, and two of them are doors - the radar is home, the nearby menu is how every page off the walk is opened - so a mask could only have made the device harder to get around. It left the settings, the link and the schema together (`../README.md`). A long touch of the pad goes back to `Radar` from anywhere, once no alarm is standing to be silenced first. Every page arrives the same way, through one call that takes the page by name, and that call draws what it is given: a page asked for while it is already on the glass still goes through the wipe, because the pilot holding the pad at home is asking for exactly that black (`../input/README.md`). The one place that must not spend it is the alarm taking the glass, which asks for the radar only when the radar is not already there.

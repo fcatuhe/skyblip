@@ -14,9 +14,10 @@ using namespace skyblip::go;
 
 TEST_CASE("nearby menu: every row opens a page rather than changing a value") {
     const Menu menu = menu_for(Page::Nearby);
-    REQUIRE(menu.row_count == 6);
+    REQUIRE(menu.row_count == 7);
     for (int i = 0; i < menu.row_count; i++) CHECK(opens_a_page(menu.rows[i]));
     CHECK(page_behind(MenuRow::RadioLog) == Page::RadioLog);
+    CHECK(page_behind(MenuRow::BravoLog) == Page::BravoLog);
     CHECK(page_behind(MenuRow::Raw) == Page::Raw);
     CHECK(page_behind(MenuRow::Capture) == Page::Capture);
     CHECK(page_behind(MenuRow::Satellites) == Page::Satellites);

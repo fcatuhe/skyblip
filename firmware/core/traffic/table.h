@@ -84,6 +84,7 @@ class TrafficTable {
     void age_out(uint32_t now_s);
 
     int count() const;
+    int count_of(model::Source source) const;
     const Target* at(int i) const { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
     Target* at(int i) { return (i >= 0 && i < kMaxTargets) ? &slots_[i] : nullptr; }
     void clear();
