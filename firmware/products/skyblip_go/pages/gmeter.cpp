@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "core/util/format.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go {
 
@@ -44,7 +44,7 @@ constexpr int32_t kMilliPerG = 1000;
 constexpr int32_t kMilliPerTenth = 100;
 constexpr int16_t kLevelFlightMg = flight::kLevelFlightMg;
 
-int32_t tenths(int32_t load_mg) { return divide_rounded(load_mg, kMilliPerTenth); }
+int32_t tenths(int32_t load_mg) { return wire::divide_rounded(load_mg, kMilliPerTenth); }
 
 int format_g(char* out, int32_t load_mg) {
     const int32_t value = tenths(load_mg);

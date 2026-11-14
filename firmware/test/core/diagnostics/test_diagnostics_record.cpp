@@ -4,6 +4,7 @@
 #include "core/flight/log_record.h"
 #include "core/store/sector.h"
 #include "doctest/doctest.h"
+#include "protocols/common/little_endian.h"
 #include "test/support/diagnostics_round_trip.h"
 
 using namespace skyblip;
@@ -51,8 +52,8 @@ TEST_CASE("diagnostics record: the header is written where a host decoder reads 
     CHECK((raw[1] & diagnostics::kFlagUtcDated) != 0);
     CHECK(raw[2] == 0xCE);
     CHECK(raw[3] == 0x01);
-    CHECK(get_uint32(raw + 4) == kDiagnosticsTestUtcS);
-    CHECK(get_uint16(raw + diagnostics::kPayloadOffset) == 287);
+    CHECK(wire::get_uint32(raw + 4) == kDiagnosticsTestUtcS);
+    CHECK(wire::get_uint16(raw + diagnostics::kPayloadOffset) == 287);
 }
 
 TEST_CASE("diagnostics record: an erased slot is empty rather than a record of zeroes") {

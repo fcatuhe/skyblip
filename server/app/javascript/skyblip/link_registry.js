@@ -811,6 +811,41 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "aircraft",
           "number": 63,
           "type": "unsigned"
+        },
+        {
+          "name": "tx_held_for_b5",
+          "number": 64,
+          "type": "unsigned"
+        },
+        {
+          "name": "rx_status",
+          "number": 65,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_stale",
+          "number": 66,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_given_up",
+          "number": 67,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_deferred",
+          "number": 68,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_forced",
+          "number": 69,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_busy_missed",
+          "number": 70,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1144,6 +1179,41 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "aircraft",
           "number": 63,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_held_for_b5",
+          "number": 64,
+          "type": "unsigned"
+        },
+        {
+          "name": "rx_status",
+          "number": 65,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_stale",
+          "number": 66,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_given_up",
+          "number": 67,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_deferred",
+          "number": 68,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_forced",
+          "number": 69,
+          "type": "unsigned"
+        },
+        {
+          "name": "tx_busy_missed",
+          "number": 70,
           "type": "unsigned"
         }
       ]
@@ -2191,6 +2261,35 @@ export const LINK_REGISTRY = Object.freeze({
           "enum": "reset"
         }
       ]
+    },
+    {
+      "command": "protocols",
+      "code": 36,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "adsb_version",
+          "number": 1,
+          "type": "text"
+        },
+        {
+          "name": "adsl_version",
+          "number": 2,
+          "type": "text"
+        },
+        {
+          "name": "alptas_version",
+          "number": 3,
+          "type": "text"
+        }
+      ]
     }
   ],
   "enums": {
@@ -3221,6 +3320,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "install_report",
           "code": 35
+        },
+        {
+          "name": "protocols",
+          "code": 36
         }
       ]
     }

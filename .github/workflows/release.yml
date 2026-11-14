@@ -177,7 +177,7 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
-            firmware/core/protocol/*.version
+            firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/radio_protocols.rb
             scripts/radio_protocols.rb

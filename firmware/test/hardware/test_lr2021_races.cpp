@@ -1,10 +1,10 @@
 // Frames that land between the driver's SPI commands, a full FIFO, and a BUSY fault at shutdown.
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/lr2021/model.h"
+#include "protocols/adsb/message.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/lr2021_rig.h"
 
@@ -21,9 +21,9 @@ constexpr uint32_t kSecond = 0x3C6586;
 constexpr uint32_t kThird = 0x40621D;
 
 uint32_t address_in(const uint8_t* chips) {
-    protocol::AdsbMessage message{};
-    if (protocol::adsb_receive(chips, protocol::kAdsbChipBytes, protocol::AdsbReception{0, -70},
-                               message) != Status::Ok)
+    adsb::Message message{};
+    if (adsb::receive(chips, adsb::kChipBytes, adsb::Reception{0, -70}, message) !=
+        wire::Status::Ok)
         return 0;
     return message.address;
 }
@@ -39,7 +39,7 @@ struct Read {
 };
 
 Read read(Lr2021& radio) {
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     const parts::Lr2021Event event = radio.poll(chips, sizeof(chips));
     return {event, event.type == Lr2021EventType::Frame ? address_in(chips) : 0};
 }

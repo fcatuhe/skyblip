@@ -65,12 +65,27 @@ jobs:
       - name: build & run host tests
         working-directory: firmware
         run: make test CXX="ccache g++"
+      # Another project takes a stack with its tests, so each must build from a copy holding nothing of skyBlip's.
+      - name: each radio protocol stack builds and passes alone
+        working-directory: firmware
+        run: make test-protocols CXX="ccache g++"
+      - name: the protocol stacks include nothing from skyBlip
+        run: python3 scripts/check_protocol_boundary.py
+      - name: the boundary check refuses an include that crosses it
+        run: python3 scripts/test_check_protocol_boundary.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # firmware/test/adsl/ reads the published specification clause by clause, and a
+      # The conformance suite reads the published specification clause by clause, and a
       # clause nobody read is the one a product is found non-conformant on.
       - name: every ADS-L clause has a case
         run: python3 scripts/check_adsl_clauses.py
+      - name: the clause check refuses a skipped case of no kind
+        run: python3 scripts/test_check_adsl_clauses.py
+      # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
+      - name: every listed EN 300 220 clause has a case
+        run: python3 scripts/check_en300220_clauses.py
+      - name: the EN 300 220 clause check refuses a case off the list
+        run: python3 scripts/test_check_en300220_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
@@ -121,6 +136,9 @@ jobs:
       # The bench reads Bravo's refused frames through it, so it is held to the firmware's sync, generator, log line and example.
       - name: the reader of Bravo's refused 1090 MHz frames
         run: python3 scripts/test_adsb_rejects.py
+      # The ETSI standards are fetched, not committed, so the fetcher's refusals are held offline.
+      - name: the fetcher of the ETSI standards
+        run: python3 scripts/test_fetch_etsi.py
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite
@@ -246,8 +264,8 @@ jobs:
         run: pip install --disable-pip-version-check -r .github/lint/requirements.txt
       - name: check formatting
         run: |
-          find firmware/core firmware/ui firmware/ports firmware/hardware firmware/boards \
-               firmware/runtime firmware/products firmware/simulator firmware/test \
+          find firmware/protocols firmware/core firmware/ui firmware/ports firmware/hardware \
+               firmware/boards firmware/runtime firmware/products firmware/simulator firmware/test \
             -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
 
       # The tree is clean, so the config fails the job on any finding at all.
@@ -401,7 +419,7 @@ jobs:
             LICENSE
             NOTICE.md
             LICENSES
-            firmware/core/protocol/*.version
+            firmware/protocols/*/version.h
             firmware/products/*/PROTOCOLS
             lib/dev_release.rb
             lib/radio_protocols.rb

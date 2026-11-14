@@ -98,7 +98,7 @@ TEST_CASE("bravo: the aircraft's own transponder, named by own ICAO, is never tr
     rig.seconds_with_fix(2);
 
     CHECK(rig.product.adsb().assembly().count() == 1);
-    CHECK(rig.state().traffic.find(protocol::kIcaoAddressMappingTable, kAircraft) < 0);
+    CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, kAircraft) < 0);
     CHECK(rig.state().traffic.count() == 1);
 }
 
@@ -113,7 +113,7 @@ TEST_CASE("bravo: a frame that fails its parity is counted as crc and kept for t
         AdsbAir out;
         out.chips[0] = kAdsbPreambleAir[0];
         out.chips[1] = kAdsbPreambleAir[1];
-        out.chips[2] = protocol::kAdsbSyncChips;
+        out.chips[2] = adsb::kSyncChips;
         adsb_chips(frame.bytes, out.chips + 3);
         return out;
     }();
@@ -190,13 +190,13 @@ TEST_CASE(
         rig.step();
     }
     rig.seconds_with_fix(1);
-    const int slot = rig.state().traffic.find(protocol::kIcaoAddressMappingTable, kAircraft);
+    const int slot = rig.state().traffic.find(adsl::kAddressTableIcao, kAircraft);
     REQUIRE(slot >= 0);
     CHECK_FALSE(rig.state().traffic.at(slot)->observation.rssi_valid);
 
     rig.hear_aircraft(0x4CA2B1, 2000);
     rig.seconds_with_fix(1);
-    const int other = rig.state().traffic.find(protocol::kIcaoAddressMappingTable, 0x4CA2B1);
+    const int other = rig.state().traffic.find(adsl::kAddressTableIcao, 0x4CA2B1);
     REQUIRE(other >= 0);
     CHECK(rig.state().traffic.at(other)->observation.rssi_valid);
     CHECK(rig.state().traffic.at(other)->observation.rssi_dbm == -70);

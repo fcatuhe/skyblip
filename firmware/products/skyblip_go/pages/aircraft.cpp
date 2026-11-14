@@ -45,7 +45,7 @@ const char* detail_text(Detection state) {
     return "";
 }
 
-bool named_type(uint8_t code) { return code != 0 && code < kNamedAircraftTypes; }
+bool named_type(uint8_t code) { return code != 0 && named_aircraft_type(code); }
 
 // INFO: fc 13nov26 the address stands in for a transponder that sends no identification
 const char* name_of(const Detected& detected, char* address) {

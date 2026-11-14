@@ -11,6 +11,7 @@
 #include "core/comms/link_registry.h"
 #include "core/comms/link_sessions.h"
 #include "core/comms/peer.h"
+#include "core/comms/radio_protocols.h"
 #include "core/comms/timing_report.h"
 #include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
@@ -23,6 +24,7 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot_timing_statistics.h"
 #include "core/util/cbor.h"
+#include "core/util/span.h"
 #include "ports/dfu.h"
 #include "ports/link.h"
 
@@ -200,6 +202,8 @@ class ConfigService {
 
     void set_product(dfu::Product product) { product_ = product; }
 
+    void set_radio_protocols(Span<const RadioProtocol> protocols) { radio_protocols_ = protocols; }
+
     // INFO: cf 02aug26 BLE pairing is off on this product (encrypted GATT
     // characteristics break Web Bluetooth on Windows), so physical presence is
     // what stands in for it: nothing sensitive happens without a gesture made
@@ -312,6 +316,8 @@ class ConfigService {
     void send_radio();
     void send_update();
     void send_install_report();
+    void send_protocols();
+    bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
     // And the whole dump, which is the same table as the console's: one frame per
@@ -414,6 +420,7 @@ class ConfigService {
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
     std::optional<dfu::Product> product_{};
+    Span<const RadioProtocol> radio_protocols_{};
 
     // Long enough to upload ~730 KB over BLE on a slow phone, short enough that
     // a device left on a bench does not stay writable all afternoon.

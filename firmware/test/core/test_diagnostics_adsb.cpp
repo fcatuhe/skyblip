@@ -90,9 +90,9 @@ TEST_CASE("diagnostics adsb: the histogram is copied when the dump is built") {
     CHECK(has(only_adsb_frame(report), "\"rssi_dbm\":[0,1,2,3,4,5,6,7]"));
 }
 
-// 1 + four 2-byte heads + ten counters of 7 + errors 5 + the array's 2 + 1 + 8 x 5, over the
-// radio's 112 and under the 182 every link carries.
-TEST_CASE("diagnostics adsb: the widest adsb frame is 127 bytes, the widest group of the dump") {
+// 1 + four 2-byte heads + ten counters of 7 + errors 5 + the array's 2 + 1 + 8 x 5, under the
+// radio's 162 and the 182 every link carries.
+TEST_CASE("diagnostics adsb: the widest adsb frame is 127 bytes, one frame on any link") {
     Diagnostics diagnostics = receiving();
     diagnostics.adsb.frames = diagnostics.adsb.frame_rate_hz = 0xFFFFFFFFu;
     diagnostics.adsb_crc = diagnostics.adsb_unsupported = 0xFFFFFFFFu;

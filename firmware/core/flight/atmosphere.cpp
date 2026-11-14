@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
 
@@ -62,11 +62,11 @@ int32_t pressure_to_altitude_mm(uint32_t pressure_mpa) {
     // Table descends with pressure, so the step is negative. Interpolate on it.
     const int64_t span = altitude_mm_at(i + 1) - altitude_mm_at(i);
     return altitude_mm_at(i) +
-           static_cast<int32_t>(divide_rounded<int64_t>(span * fraction, kStepMpa));
+           static_cast<int32_t>(wire::divide_rounded<int64_t>(span * fraction, kStepMpa));
 }
 
 int16_t isa_temperature_dc(int32_t altitude_mm) {
-    const int64_t drop = divide_rounded<int64_t>(
+    const int64_t drop = wire::divide_rounded<int64_t>(
         static_cast<int64_t>(altitude_mm) * kIsaLapseDeciCelsiusPerKilometre,
         kMillimetresPerKilometre);
     return static_cast<int16_t>(kIsaSeaLevelDeciCelsius - drop);
@@ -74,7 +74,7 @@ int16_t isa_temperature_dc(int32_t altitude_mm) {
 
 int32_t pressure_to_altitude_cm(uint32_t pressure_pa) {
     if (pressure_pa >= kTableHighestPa) return kAltitudeCm[kTableEntries - 1];
-    return divide_rounded(pressure_to_altitude_mm(pressure_pa * kMillipascalsPerPascal), 10);
+    return wire::divide_rounded(pressure_to_altitude_mm(pressure_pa * kMillipascalsPerPascal), 10);
 }
 
 uint32_t altitude_mm_to_pressure_mpa(int32_t altitude_mm) {
@@ -103,7 +103,7 @@ bool climb_mm_s_from_altitude(int32_t altitude_mm_now, int32_t altitude_mm_then,
 
     const int64_t climbed_mm = static_cast<int64_t>(altitude_mm_now) - altitude_mm_then;
     out_mm_s = static_cast<int32_t>(
-        divide_rounded<int64_t>(climbed_mm * 1000, static_cast<int64_t>(elapsed_ms)));
+        wire::divide_rounded<int64_t>(climbed_mm * 1000, static_cast<int64_t>(elapsed_ms)));
     return true;
 }
 

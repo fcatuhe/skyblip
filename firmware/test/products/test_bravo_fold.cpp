@@ -173,10 +173,10 @@ TEST_CASE("bravo fold: a callsign keeps the second Bravo heard it, else the fram
     Flight flight({{edge_ms_of(2) + 300, named_long_ago}, {edge_ms_of(2) + 400, named_undated}});
     flight.fly(4);
     const traffic::CallsignTable& names = flight.state().callsigns;
-    CHECK(names.find(settings::kIcaoAddressMappingTable, kTarget) != nullptr);
+    CHECK(names.find(adsl::kAddressTableIcao, kTarget) != nullptr);
     flight.fly(1);
-    CHECK(names.find(settings::kIcaoAddressMappingTable, kTarget) == nullptr);
-    CHECK(names.find(settings::kIcaoAddressMappingTable, kOtherTarget) != nullptr);
+    CHECK(names.find(adsl::kAddressTableIcao, kTarget) == nullptr);
+    CHECK(names.find(adsl::kAddressTableIcao, kOtherTarget) != nullptr);
 }
 
 TEST_CASE("bravo fold: an armed capture records each folded ADS-B aircraft") {

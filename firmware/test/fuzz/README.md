@@ -4,7 +4,7 @@ Five libFuzzer harnesses, one per door a stranger's bytes come in through. Each 
 
 | Harness | Door | Input |
 |---|---|---|
-| `fuzz_air` | the radio: ADS-L, ALP-TAS and the O-band uplink | a receiver (UTC, position), a transmitter's frame, then chip noise |
+| `fuzz_air` | the radio: ADS-L, ALP-TAS and the G.3 uplink on the O band, its record count read off the D.1.1 length and each record judged for age | a receiver (UTC, position, phase in the second), a transmitter's frame or uplink packet, raw, sealed by its parity or encoded from fields, then noise |
 | `fuzz_adsb` | the 1090 MHz radio: DF17 | a transmitter's frame, then chip noise |
 | `fuzz_adsb_assembly` | the 1090 MHz radio: one aircraft's messages after another | a receiver's reference and own address, then frames, each after a gap of time |
 | `fuzz_nmea` | the L76K's UART | the byte stream, as the parser's `feed()` sees it |
@@ -46,5 +46,5 @@ The input is in `build/fuzz/crashes/` (or `build/fuzz-ilp32/crashes/`), and CI u
 
 ## What these cannot see
 
-- `alptas_decode` reads no field the encoder cannot write, except a course of 360 to 511 and the two constants behind the decrypt check. Each is one comparison and a refusal, reached only through a raw frame. Turn rate and GNSS accuracy are on the wire and not decoded at all.
+- `alptas::decode` reads no field the encoder cannot write, except a course of 360 to 511 and the two constants behind the decrypt check. Each is one comparison and a refusal, reached only through a raw frame. Turn rate and GNSS accuracy are on the wire and not decoded at all.
 - `fuzz_link` runs about 300 inputs a second. The same input takes 0.4 ms uninstrumented and about 4 ms under ASan, UBSan and coverage. Under callgrind a third of it is `Product::setup()`, most of that drawing the self-test page into a framebuffer no panel shows, and the rest is the product stepping. A 32-sector partition would buy 1.5 times and a device that does not exist; leaving `ui/`, the pages, the simulator and `hardware/` without coverage would buy 1.1 times. It gets the most seconds instead.

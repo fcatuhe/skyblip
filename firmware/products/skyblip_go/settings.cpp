@@ -5,6 +5,7 @@
 #include "core/comms/link_registry.h"
 #include "core/power/battery.h"
 #include "core/protocol/adsl.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/settings/blob.h"
 #include "core/util/cbor.h"
@@ -77,7 +78,8 @@ void write_config_fields(cbor::Writer& writer, const Settings& settings,
                          settings::AirAddress address) {
     writer.add_unsigned(link::config_key::kVersion, settings.version);
     if (address) writer.add_unsigned(link::config_key::kAddress, *address);
-    writer.add_unsigned(link::config_key::kAddressMappingTable, settings::kAddressMappingTable);
+    writer.add_unsigned(link::config_key::kAddressMappingTable,
+                        settings::kSkyblipAddressMappingTable);
     write_settings_fields(writer, settings);
 }
 

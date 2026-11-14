@@ -91,7 +91,7 @@ TEST_CASE("flash window: a healthy cell flushes the change it was holding") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     fly(rig, now_ms);
-    step_until(rig, now_ms, now_ms + static_cast<uint32_t>(timing::kDirectStartMs) + 20);
+    step_until(rig, now_ms, now_ms + static_cast<uint32_t>(adsl::kDirectStartMs) + 20);
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 

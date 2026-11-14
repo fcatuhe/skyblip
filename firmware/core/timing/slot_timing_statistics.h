@@ -17,7 +17,7 @@ namespace skyblip::timing {
 // figures that already bound this budget, not a round number:
 //  - kRetuneUs, the SX1262's own share of it. Semtech DS.SX1261-2.W.APP rev
 //    2.1 §3.5.2 table 3-7, TS_HOP: 30 us typical for a 10 MHz synthesizer
-//    step; the M-band hop here is 200 kHz (kMBand1Hz - kMBand0Hz), so the chip
+//    step; the M-band hop here is 200 kHz (adsl::kMBand1Hz - adsl::kMBand0Hz), so the chip
 //    settles inside this bucket with room left over. An error this small is
 //    the radio doing exactly what its own datasheet promises, not a PPS or a
 //    scheduling fault.

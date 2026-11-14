@@ -186,13 +186,13 @@ TEST_CASE("l76k: the whole burst closes before the direct slot opens, satellites
           doctest::Approx(333).epsilon(0.02));
     CHECK(parts::L76k::kBurstMs == doctest::Approx(28).epsilon(0.04));
 
-    CHECK(parts::L76k::kBurstStartMs + parts::L76k::kBurstMs < uint32_t(timing::kDirectStartMs));
+    CHECK(parts::L76k::kBurstStartMs + parts::L76k::kBurstMs < uint32_t(adsl::kDirectStartMs));
     CHECK(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs <
-          uint32_t(timing::kDirectStartMs));
+          uint32_t(adsl::kDirectStartMs));
     // The same burst at the rate the receiver boots at: past the slot, and past the second.
     CHECK(parts::L76k::kBurstStartMs +
               io::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
-          uint32_t(timing::kDirectStartMs));
+          uint32_t(adsl::kDirectStartMs));
 }
 
 // The gyroscope and the barometer beside this part sample far faster than it reports.

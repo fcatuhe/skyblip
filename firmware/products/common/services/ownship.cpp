@@ -10,7 +10,7 @@
 #include "core/timing/slot.h"
 #include "core/timing/slot_timing_statistics.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::common {
 

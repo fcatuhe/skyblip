@@ -325,10 +325,10 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     second();
 
     const bus::State& bravo = tango.bravo.state();
-    const int heard = bravo.traffic.find(settings::kIcaoAddressMappingTable, kAircraft);
+    const int heard = bravo.traffic.find(adsl::kAddressTableIcao, kAircraft);
     REQUIRE(heard >= 0);
     const bus::State& go = tango.go.state();
-    const int folded = go.traffic.find(settings::kIcaoAddressMappingTable, kAircraft);
+    const int folded = go.traffic.find(adsl::kAddressTableIcao, kAircraft);
     REQUIRE(folded >= 0);
     const model::AircraftObservation& sent = bravo.traffic.at(heard)->observation;
     const model::AircraftObservation& read = go.traffic.at(folded)->observation;
@@ -336,7 +336,7 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     CHECK(read.received.at_s == sent.received.at_s);
     CHECK(read.latitude_1e7 == sent.latitude_1e7);
     CHECK(read.pressure_altitude_ft == sent.pressure_altitude_ft);
-    const char* callsign = go.callsigns.find(settings::kIcaoAddressMappingTable, kAircraft);
+    const char* callsign = go.callsigns.find(adsl::kAddressTableIcao, kAircraft);
     REQUIRE(callsign != nullptr);
     CHECK(std::string(callsign) == "AFR123");
 }

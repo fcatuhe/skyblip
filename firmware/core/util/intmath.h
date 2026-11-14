@@ -3,58 +3,10 @@
 #define SKYBLIP_CORE_UTIL_INTMATH_H
 
 #include <cstdint>
-#include <type_traits>
 
 namespace skyblip {
 
-// INFO: fc 19sep26 integer division truncates toward zero, which reads a measurement a unit low
-template <class T>
-constexpr T divide_rounded(T number, T divisor) {
-    return number >= 0 ? (number + divisor / 2) / divisor : -((-number + divisor / 2) / divisor);
-}
-
-constexpr int64_t kE7PerTurn = 3600000000LL;
-// INFO: fc 10nov26 the tree's one size of the earth: 1e-7 degree of latitude is 11132 micrometres
-constexpr int64_t kMicrometresPerE7 = 11132;
-
-constexpr int32_t wrapped_longitude_1e7(int64_t longitude_1e7) {
-    const int64_t half_turn = kE7PerTurn / 2;
-    return static_cast<int32_t>(
-        ((longitude_1e7 + half_turn) % kE7PerTurn + kE7PerTurn) % kE7PerTurn - half_turn);
-}
-
-constexpr int32_t kTrigOne = 16384;
-
-int16_t sine(int16_t angle);
-inline int16_t cosine(int16_t angle) { return sine(static_cast<int16_t>(angle + 0x4000)); }
-
 int16_t arctangent(int32_t y, int32_t x);
-
-// INFO: fc 09nov26 rounds to the nearest root, and a negative square, which has none, gives 0
-template <class T>
-T square_root(T square) {
-    if (square <= 0) return 0;
-    using Unsigned = std::make_unsigned_t<T>;
-    Unsigned remainder = static_cast<Unsigned>(square);
-    Unsigned root = 0;
-    Unsigned place = Unsigned{1} << (sizeof(T) * 8 - 2);
-    while (place > remainder) place >>= 2;
-    for (; place != 0; place >>= 2) {
-        if (remainder >= root + place) {
-            remainder -= root + place;
-            root = (root >> 1) + place;
-        } else {
-            root >>= 1;
-        }
-    }
-    if (remainder > root) root++;
-    return static_cast<T>(root);
-}
-
-inline uint32_t hypotenuse(int32_t delta_x, int32_t delta_y) {
-    return static_cast<uint32_t>(square_root<uint64_t>(static_cast<uint64_t>(
-        static_cast<int64_t>(delta_x) * delta_x + static_cast<int64_t>(delta_y) * delta_y)));
-}
 
 }
 

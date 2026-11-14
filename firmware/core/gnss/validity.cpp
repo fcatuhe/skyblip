@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::gnss {
 
@@ -54,7 +54,7 @@ void FixValidity::observe(const GnssSolution& solution, Sentence which, uint32_t
         return;
     }
 
-    const int32_t longitude_step_1e7 = wrapped_longitude_1e7(
+    const int32_t longitude_step_1e7 = wire::wrapped_longitude_1e7(
         static_cast<int64_t>(solution.longitude_1e7) - previous_longitude_1e7_);
     jumped_ = previous_valid_ &&
               (std::abs(solution.latitude_1e7 - previous_latitude_1e7_) > kLatitudeJumpCeiling1e7 ||

@@ -12,7 +12,8 @@
     gap: var(--space-2xs) var(--space-inline-s);
   }
 
-  .unit-facts {
+  .unit-facts,
+  .unit-protocols {
     grid-column: 1;
     margin: 0;
     font-size: var(--text-s);

@@ -10,6 +10,7 @@ function(skyblip_shared_layers)
   target_include_directories(app PRIVATE ${SKYBLIP_FIRMWARE} ${SKYBLIP_FIRMWARE}/vendor)
 
   file(GLOB_RECURSE shared
+    ${SKYBLIP_FIRMWARE}/protocols/*.cpp
     ${SKYBLIP_FIRMWARE}/core/*.cpp
     ${SKYBLIP_FIRMWARE}/ui/*.cpp
     ${SKYBLIP_FIRMWARE}/runtime/*.cpp
@@ -18,6 +19,7 @@ function(skyblip_shared_layers)
     ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/*.cpp
   )
   list(FILTER shared EXCLUDE REGEX "/test_[^/]*\\.cpp$")
+  list(FILTER shared EXCLUDE REGEX "/protocols/[^/]+/test/")
   # Removed rather than globbed apart, so the Go links its objects in the order it always has.
   if(NOT CONFIG_SKYBLIP_ACTIVATION)
     list(REMOVE_ITEM shared ${SKYBLIP_FIRMWARE}/hardware/platform/zephyr/identity.cpp)

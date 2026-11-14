@@ -10,10 +10,12 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/protocol/callsign.h"
 #include "core/timing/slot.h"
 #include "hardware/parts/gnss_truth.h"
 #include "hardware/platform/host/meshtracker_x1.h"
 #include "hardware/platform/host/platform.h"
+#include "protocols/common/geometry.h"
 #include "simulator/world/adsb_out.h"
 #include "simulator/world/air.h"
 #include "simulator/world/scenario.h"
@@ -49,7 +51,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::AdslPacket::kInformationTextBytes + 1]{0};
+    char callsign[protocol::kInformationTextBytes + 1]{0};
 };
 
 struct AdsbDatum {
@@ -118,6 +120,8 @@ class Sky {
     static constexpr double kThreatSinkMps = -3;
     // INFO: fc 03aug26 a skyPost is a mast 12 km away at 500 mW e.r.p. (C.4): background, but heard
     static constexpr double kGroundStationRangeM = 12000;
+    // INFO: fc 13nov26 the simulated skyPost sends as a skyBlip, under serial 0xFFFE nobody holds
+    static constexpr uint32_t kGroundStationAddress = 0x00FFFE;
 
     const models::GnssTruth& own_;
     Air air_{};
@@ -166,7 +170,7 @@ class World : public Sky {
     }
     void set_altitude_m(int32_t altitude_m) { gnss().altitude_m = altitude_m; }
     void set_speed_kt(int32_t speed_kt) {
-        gnss().speed_mm_s = divide_rounded(speed_kt * 514444, 1000);
+        gnss().speed_mm_s = wire::divide_rounded(speed_kt * 514444, 1000);
     }
     void set_track_deg(int32_t track_deg) { gnss().track_deg = ((track_deg % 360) + 360) % 360; }
     void set_turn_dps(double turn_dps) { gnss().turn_dps = turn_dps; }
