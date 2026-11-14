@@ -134,6 +134,7 @@ fr:
       firmware: "Firmware"
       activated: "Activé\u00a0: %{name}. Sa radio émet. Ajoutez votre indicatif et votre type d\u2019aéronef."
       connected: "Connecté"
+      protocols: "Protocoles radio\u00a0: %{protocols}"
       not_connected: "Non connecté"
       connecting: "Connexion"
       restarting: "Redémarrage"
