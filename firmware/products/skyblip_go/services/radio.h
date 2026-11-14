@@ -6,6 +6,7 @@
 
 #include "core/diagnostics/payload.h"
 #include "core/flight/state.h"
+#include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
 #include "core/radio/log.h"
@@ -39,7 +40,7 @@ class RadioService : public runtime::Service {
         return transmitter_.air_time().permille(now_ms);
     }
     bool over_budget() const { return over_budget_; }
-    protocol::StatusReport status_report() const;
+    adsl::StatusReport status_report() const;
 
    private:
     static constexpr uint64_t kSecondUs = 1000000;
@@ -106,6 +107,7 @@ class RadioService : public runtime::Service {
     static uint64_t armed_between(const Armed& dwell, uint64_t from_us, uint64_t to_us);
     uint32_t slot_utc_s(uint32_t now_ms) const;
     int32_t fix_lag_ms() const;
+    void count_given_up(uint32_t now_ms);
     protocol::BurstInstant burst_instant(const timing::Transmitter::Attempt& attempt,
                                          uint64_t tx_at_us, uint32_t utc_s) const;
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
@@ -155,7 +157,10 @@ class RadioService : public runtime::Service {
     // nothing transmits from either. Adding the comparison would put work inside a
     // dwell to defend against a state this composition cannot reach; the property
     // is asserted over the air instead, in test/products/test_rf_timing.cpp.
-    protocol::AdslPacket outgoing_{};
+    adsl::Packet outgoing_{};
+    // INFO: fc 13nov26 B.5: the second a position was last held, so each held second counts once
+    uint32_t held_for_b5_s_{0};
+    bool held_for_b5_{false};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};

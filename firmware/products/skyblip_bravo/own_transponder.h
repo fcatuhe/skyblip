@@ -6,7 +6,7 @@
 #include <optional>
 
 #include "core/comms/peer.h"
-#include "core/protocol/adsb.h"
+#include "protocols/adsb/message.h"
 
 namespace skyblip::bravo {
 
@@ -21,7 +21,7 @@ class OwnTransponder {
     static constexpr uint32_t kEmitterMaxAgeMs = 5000;
     static constexpr int kTrackedEmitters = 8;
 
-    void hear(const protocol::AdsbMessage& message, uint32_t now_ms);
+    void hear(const adsb::Message& message, uint32_t now_ms);
     void tick(uint32_t now_ms);
 
     std::optional<comms::OwnTransponderHeard> heard() const;

@@ -26,6 +26,7 @@ void RadioService::tick(uint32_t now_ms) {
     accrue_armed();
     const timing::SlotPlan plan = timing::Scheduler::plan(phase_ms(), context_.state.clock);
     context_.state.rf.plan = plan;
+    count_given_up(now_ms);
     take_carrier_samples();
     take_switching(now_ms);
     collect_outcome(now_ms);
@@ -101,50 +102,6 @@ int RadioService::phase_at(uint64_t now_us) const {
     return static_cast<int>(now_us / 1000 % 1000);
 }
 
-void RadioService::take_switching(uint32_t now_ms) {
-    const ports::RfSwitching switching = context_.roles.rf.switching();
-    context_.state.rf.timing_statistics.record_switching(
-        switching.hop_us, switching.to_o_band_us, switching.to_m_band_us, switching.late_starts);
-    if (switching.switches == seen_switches_) return;
-    seen_switches_ = switching.switches;
-    record_switch(switching.last, now_ms);
-}
-
-void RadioService::record_switch(const ports::RfSwitch& change, uint32_t now_ms) {
-    if (!context_.diagnostics.armed()) return;
-    diagnostics::Switch value{};
-    value.to_hz = change.to_hz;
-    value.margin_us = static_cast<int32_t>(
-        std::clamp<int64_t>(change.margin_us(), std::numeric_limits<int32_t>::min(),
-                            std::numeric_limits<int32_t>::max()));
-    value.took_us = clamp_uint16(change.took_us());
-    value.gap_us = clamp_uint16(change.gap_us());
-    value.change = kind_of(change);
-    value.armed_ahead = change.armed_ahead;
-    value.late = change.late_start();
-    const timing::ClockState& clock = context_.state.clock;
-    const events::Stamp stamp = events::stamp_of(
-        change.ready_us, clock.pps_edge_us, clock.pps_locked, context_.state.traffic_now_s(now_ms));
-    context_.diagnostics.record(value,
-                                diagnostics::instant_of(stamp, context_.instant(now_ms).utc_dated));
-}
-
-diagnostics::SwitchKind RadioService::kind_of(const ports::RfSwitch& change) {
-    if (change.from == ports::RfMode::Idle) return diagnostics::SwitchKind::Wake;
-    if (change.from != change.to)
-        return change.to == ports::RfMode::RxOBand ? diagnostics::SwitchKind::ToOBand
-                                                   : diagnostics::SwitchKind::ToMBand;
-    return change.from_hz != change.to_hz ? diagnostics::SwitchKind::Hop
-                                          : diagnostics::SwitchKind::Retune;
-}
-
-void RadioService::take_carrier_samples() {
-    const ports::RfCarrier carrier = context_.roles.rf.carrier();
-    if (carrier.samples == seen_carrier_samples_) return;
-    seen_carrier_samples_ = carrier.samples;
-    noise_floor_.sample(carrier.level_dbm);
-}
-
 // The top of the second phase_ms() counts from, to the microsecond: the latched
 // edge a whole number of seconds back, never the phase rounded to a millisecond.
 int64_t RadioService::second_origin_us() const {
@@ -200,21 +157,6 @@ void RadioService::fly(const Armed& dwell) {
     current_dwell_ = dwell;
 }
 
-// Two clocks meet here. The TimeStamp field counts quarter seconds from the top
-// of the UTC second the slot belongs to, which the latched PPS edge anchors;
-// the position has to be carried over the interval since the fix, which is a
-// monotonic one. The dwell is armed before the slot opens, so the second figure
-// is the staleness already accrued plus the whole wait still to come.
-protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::Attempt& attempt,
-                                                   uint64_t tx_at_us, uint32_t utc_s) const {
-    const uint32_t tx_ms = static_cast<uint32_t>(tx_at_us / 1000);
-    protocol::BurstInstant instant{};
-    instant.utc_s = utc_s;
-    instant.into_utc_ms = attempt.at_ms;
-    instant.since_fix_ms = static_cast<int32_t>(tx_ms - context_.state.own.fix_at_ms);
-    return instant;
-}
-
 uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
     const bool in_slot1_tail = phase_ms() < timing::kSlot1WrapMs;
@@ -232,22 +174,22 @@ ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {
 // dwell that only moved the synthesiser was tuned to the O band and deaf on it.
 void RadioService::listen_for(timing::Band band, ports::RfPlan& plan) {
     if (band == timing::Band::O) {
-        plan.sync = protocol::kUplinkSync;
-        plan.sync_bits = protocol::kUplinkSyncBits;
-        plan.rx_bytes = protocol::kUplinkFrameBytes;
-        plan.bitrate = protocol::kUplinkChipRateBps;
-        plan.deviation_hz = protocol::kUplinkDeviationHz;
-        plan.bandwidth_hz = protocol::kUplinkChannelBandwidthHz;
-        plan.gaussian_bt_e2 = protocol::kUplinkGaussianBtE2;
+        plan.sync = adsl::kUplinkSync;
+        plan.sync_bits = adsl::kUplinkSyncBits;
+        plan.rx_bytes = 1 + adsl::kUplinkMaxLength;
+        plan.bitrate = adsl::kUplinkChipRateBps;
+        plan.deviation_hz = adsl::kUplinkDeviationHz;
+        plan.bandwidth_hz = adsl::kUplinkChannelBandwidthHz;
+        plan.gaussian_bt_e2 = adsl::kUplinkGaussianBtE2;
         return;
     }
     plan.sync = protocol::kSharedSync;
     plan.sync_bits = protocol::kSharedSyncBits;
     plan.rx_bytes = protocol::kRxChipBytes;
-    plan.bitrate = protocol::kMBandChipRateBps;
-    plan.deviation_hz = protocol::kMBandDeviationHz;
-    plan.bandwidth_hz = protocol::kMBandChannelBandwidthHz;
-    plan.gaussian_bt_e2 = protocol::kMBandGaussianBtE2;
+    plan.bitrate = adsl::kMBandChipRateBps;
+    plan.deviation_hz = adsl::kMBandDeviationHz;
+    plan.bandwidth_hz = adsl::kMBandChannelBandwidthHz;
+    plan.gaussian_bt_e2 = adsl::kMBandGaussianBtE2;
 }
 
 // INFO: fc 15sep26 the gates a burst waits on clear inside the dwell, ports::Rf::arm() joins it
@@ -294,10 +236,20 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
     if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return timing::Transmitter::Attempt{};
     const bool full_rate =
-        !flight::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_category));
+        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
     return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate, fix_lag_ms(), payload);
+}
+
+void RadioService::count_given_up(uint32_t now_ms) {
+    const model::Ownship& own = context_.state.own;
+    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
+        return;
+    const bool full_rate =
+        !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
+    context_.state.air.tx_given_up +=
+        transmitter_.give_up(slot_utc_s(now_ms), full_rate, settings_.callsign[0] != 0);
 }
 
 // INFO: fc 13sep26 zero when this second's solution is in hand, a whole second when one was missed
@@ -368,7 +320,7 @@ void RadioService::arm_dwell(const timing::SlotPlan& slot, int64_t origin_us, ui
             continue;
         uint8_t* chips = outgoing_chips_[armed.chip_buffer][static_cast<int>(payload)];
         const uint8_t tx_bytes = encode(payload_attempt, tx_at_us, armed.utc_s, chips);
-        // INFO: fc 18oct26 defence in depth, unreachable: ownship_transmits needs an address
+        // INFO: fc 18oct26 no address, no burst | 13nov26 also B.5 holding a position
         if (tx_bytes == 0) continue;
         ports::RfPlan with_burst = plan;
         with_burst.tx = chips;
@@ -417,100 +369,6 @@ void RadioService::refuse_dwell(const timing::SlotPlan& slot,
     context_.state.rf.timing_statistics.record_missed();
     if (carried_tx) log_refusal(radio::Verdict::Unarmed, slot, now_ms);
     record_dwell(slot, first, phase, /*armed=*/false, /*carries_tx=*/false, now_ms);
-}
-
-uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us,
-                             uint32_t utc_s, uint8_t* chips) {
-    // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
-    const settings::AirAddress address = context_.state.activation.address();
-    bool built = false;
-    switch (attempt.payload) {
-        case Payload::Position:
-            built = protocol::from_own(
-                outgoing_, context_.state.own, address, settings::kAddressMappingTable,
-                context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
-            break;
-        case Payload::Status:
-            built = protocol::from_own_status(outgoing_, address, settings::kAddressMappingTable,
-                                              status_report());
-            break;
-        case Payload::Callsign:
-            built = protocol::from_own_callsign(outgoing_, address, settings::kAddressMappingTable,
-                                                settings_.callsign);
-            break;
-    }
-    if (!built) return 0;
-    outgoing_.scramble();
-    outgoing_.set_crc();
-    return static_cast<uint8_t>(protocol::m_band_payload(protocol::kAdslSyncWord, outgoing_.data,
-                                                         protocol::kAdslFrameBytes, chips));
-}
-
-// INFO: fc 13nov26 G.2.6 leaves an unknown capability unset, so ADS-B counts only while Bravo is
-// live
-protocol::StatusReport RadioService::status_report() const {
-    protocol::StatusReport report{};
-    report.m_band = protocol::receive_class(timing::Scheduler::direct_heard_permille());
-    report.conspicuity_received = protocol::conspicuity::kFlarm;
-    if (context_.state.bravo == comms::BravoState::Live)
-        report.conspicuity_received |= protocol::conspicuity::kAdsb1090;
-    report.traffic_uplink_client = true;
-    return report;
-}
-
-void RadioService::record_dwell(const timing::SlotPlan& slot,
-                                const timing::Transmitter::Attempt& attempt, int phase, bool armed,
-                                bool carries_tx, uint32_t now_ms) {
-    if (!context_.diagnostics.armed()) return;
-    diagnostics::Dwell value{};
-    value.frequency_hz = slot.frequency_hz;
-    value.start_ms = static_cast<uint16_t>(slot.start_ms);
-    value.end_ms = static_cast<uint16_t>(slot.end_ms);
-    value.phase_ms = static_cast<uint16_t>(phase);
-    value.duty_permille = static_cast<uint16_t>(duty_permille(now_ms));
-    value.state = slot.state;
-    value.band = slot.band;
-    value.refusal = refusal_of(slot, attempt, armed, carries_tx);
-    value.noise_dbm = noise_floor_.level_dbm();
-    value.tx_allowed = slot.tx_allowed;
-    value.own_tx_dwell = slot.own_tx_dwell;
-    value.listen_only = slot.listen_only;
-    value.armed = armed;
-    value.burst_armed = carries_tx;
-    context_.diagnostics.record(value, context_.instant(now_ms));
-}
-
-// INFO: fc 20sep26 a dwell the slot map never offered own-ship refuses nothing, so it names nothing
-diagnostics::Refusal RadioService::refusal_of(const timing::SlotPlan& slot,
-                                              const timing::Transmitter::Attempt& attempt,
-                                              bool armed, bool carries_tx) const {
-    if (!slot.tx_allowed) return diagnostics::Refusal::None;
-    if (!armed) return diagnostics::Refusal::Unarmed;
-    if (carries_tx) return diagnostics::Refusal::None;
-    if (attempt.over_budget) return diagnostics::Refusal::OverBudget;
-    if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
-                                   context_.state.activation.address()))
-        return diagnostics::Refusal::Unsettled;
-    return diagnostics::Refusal::OffSchedule;
-}
-
-void RadioService::log_refusal(radio::Verdict outcome, const timing::SlotPlan& slot,
-                               uint32_t now_ms) {
-    const bus::State& state = context_.state;
-    const events::Stamp stamp =
-        events::stamp_of(context_.roles.clock.microseconds(), state.clock.pps_edge_us,
-                         state.clock.pps_locked, state.traffic_now_s(now_ms));
-    radio::Entry entry{};
-    entry.verdict = outcome;
-    entry.band = slot.band;
-    entry.channel = slot.frequency_hz == timing::kMBand1Hz ? 1 : 0;
-    entry.at_s = stamp.at_s;
-    entry.into_ms = stamp.into_ms;
-    entry.phase_valid = stamp.phase_valid;
-    entry.utc_dated = context_.instant(now_ms).utc_dated;
-    entry.airborne = flight::airborne(state.own.flight_state);
-    context_.state.radio_log.record(entry);
-    context_.diagnostics.record(entry);
 }
 
 void RadioService::collect_outcome(uint32_t now_ms) {

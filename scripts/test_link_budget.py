@@ -25,7 +25,7 @@ import link_budget  # noqa: E402
 
 FIRMWARE = pathlib.Path(__file__).resolve().parents[1] / "firmware"
 SX1262_H = FIRMWARE / "hardware" / "parts" / "sx1262" / "sx1262.h"
-SLOT_H = FIRMWARE / "core" / "timing" / "slot.h"
+PHYSICAL_H = FIRMWARE / "protocols" / "adsl" / "physical.h"
 
 CONFIG = 2
 BURST = 5
@@ -365,7 +365,7 @@ class Firmware(Case):
                                self.constant(SX1262_H, "kAntennaPeakGainDbiCentiDb"))
 
     def test_the_frequency_is_midway_between_the_two_m_band_channels(self):
-        channels = (self.constant(SLOT_H, "kMBand0Hz"), self.constant(SLOT_H, "kMBand1Hz"))
+        channels = (self.constant(PHYSICAL_H, "kMBand0Hz"), self.constant(PHYSICAL_H, "kMBand1Hz"))
         self.assertEqual(link_budget.MBAND_HZ, sum(channels) // 2)
 
     def test_every_field_the_link_reads_is_a_field_the_decoder_decodes(self):

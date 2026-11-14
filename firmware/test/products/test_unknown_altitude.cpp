@@ -30,7 +30,7 @@ void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     transmitter.speed_mm_s = 0;
     transmitter.vdop_e2 = 150;
 
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     protocol::from_own(packet, transmitter, kAddress, /*address_mapping_table=*/6,
                        /*aircraft_category=*/4);
     if (!altitude_sent) packet.set_altitude_invalid();
@@ -38,8 +38,8 @@ void hear(Rig& rig, int32_t north_m, bool altitude_sent) {
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes =
+        wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
     event.rssi_dbm = -80;

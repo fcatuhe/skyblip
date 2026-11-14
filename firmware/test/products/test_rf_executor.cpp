@@ -117,10 +117,10 @@ TEST_CASE("rf: the burst keys at its drawn instant, on a held channel as on a qu
     platform::host::Rf rf(radio, clock, events);
     REQUIRE(rf.begin() == Status::Ok);
 
-    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    const uint8_t frame[adsl::Packet::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMBand;
-    plan.frequency_hz = timing::kMBand0Hz;
+    plan.frequency_hz = adsl::kMBand0Hz;
     plan.start_us = 450000;
     plan.end_us = 795000;
     plan.tx = frame;
@@ -175,14 +175,14 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
     REQUIRE(radio.begin() == Status::Ok);
     parts::RadioConfig config{};
-    config.frequency_hz = timing::kMBand0Hz;
+    config.frequency_hz = adsl::kMBand0Hz;
     config.sync = protocol::kSharedSync;
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     REQUIRE(radio.start_receive() == Status::Ok);
 
-    uint8_t frame[protocol::kAdslFrameBytes] = {0};
+    uint8_t frame[adsl::kFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     // The chip is holding a timer that expires well inside one 400 ms dwell.
     const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx1262::kTimeoutStepNs / 1000000u;
@@ -191,7 +191,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.
-    config.frequency_hz = timing::kMBand1Hz;
+    config.frequency_hz = adsl::kMBand1Hz;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
     CHECK(chip.standby);
     CHECK_FALSE(chip.receiving);
@@ -273,7 +273,7 @@ TEST_CASE("rf: a burst at the end of a second is dated in the second it happened
     events::RfEvent burst{};
     burst.type = events::RfEventType::CrcError;
     burst.band = model::Band::M;
-    burst.frequency_hz = timing::kMBand1Hz;
+    burst.frequency_hz = adsl::kMBand1Hz;
     burst.at_us = edge_us + 954'000;
     burst.rssi_dbm = -101;
     burst.rssi_valid = true;
@@ -370,7 +370,7 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
 
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMBand;
-    plan.frequency_hz = timing::kMBand0Hz;
+    plan.frequency_hz = adsl::kMBand0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
@@ -389,7 +389,7 @@ TEST_CASE("rf: a receiver that hears nothing is reinitialised by the executor th
     CHECK(radio.mode() == parts::RadioMode::Rx);
 
     // A frame that arrives restarts the rope rather than shortening it.
-    uint8_t burst[protocol::kAdslFrameBytes] = {0};
+    uint8_t burst[adsl::kFrameBytes] = {0};
     chip.queue_rx(burst, sizeof(burst));
     for (uint32_t now_ms = deadline_ms + 100; now_ms <= 2 * deadline_ms; now_ms += 10) {
         clock.set_milliseconds(now_ms);
@@ -411,7 +411,7 @@ TEST_CASE("rf: a receiver re-armed every dwell is still reinitialised when it he
         if (now_ms % 400 == 0) {
             ports::RfPlan plan{};
             plan.mode = ports::RfMode::RxMBand;
-            plan.frequency_hz = timing::kMBand0Hz;
+            plan.frequency_hz = adsl::kMBand0Hz;
             plan.start_us = static_cast<uint64_t>(now_ms) * 1000;
             plan.end_us = plan.start_us + 390000;
             REQUIRE(rf.arm(plan) == Status::Ok);
@@ -434,7 +434,7 @@ TEST_CASE("rf: a reinitialisation that failed is tried again a rope later") {
 
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMBand;
-    plan.frequency_hz = timing::kMBand0Hz;
+    plan.frequency_hz = adsl::kMBand0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
@@ -485,7 +485,7 @@ TEST_CASE("rf: after the shutdown park, the radio does no recovery or reinitiali
 
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMBand;
-    plan.frequency_hz = timing::kMBand0Hz;
+    plan.frequency_hz = adsl::kMBand0Hz;
     plan.start_us = 0;
     plan.end_us = 400000;
     REQUIRE(rf.arm(plan) == Status::Ok);
@@ -531,10 +531,10 @@ TEST_CASE("rf: a dwell whose radio would not configure keys nothing, and says so
     platform::host::Rf rf(radio, clock, events);
     REQUIRE(rf.begin() == Status::Ok);
 
-    const uint8_t frame[protocol::AdslPacket::kTxBytes] = {0x72, 0x4B};
+    const uint8_t frame[adsl::Packet::kTxBytes] = {0x72, 0x4B};
     ports::RfPlan plan{};
     plan.mode = ports::RfMode::RxMBand;
-    plan.frequency_hz = timing::kMBand1Hz;
+    plan.frequency_hz = adsl::kMBand1Hz;
     plan.start_us = 400000;
     plan.end_us = 799000;
     plan.tx = frame;

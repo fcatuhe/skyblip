@@ -1,101 +1,65 @@
 #include "core/protocol/adsl_uplink.h"
 
-#include <cstring>
-
-#include "core/fec/xxtea.h"
 #include "core/model/aircraft.h"
-#include "core/settings/address.h"
-#include "core/util/little_endian.h"
+#include "core/protocol/adsl.h"
+#include "protocols/adsl/packet.h"
 
 namespace skyblip::protocol {
 
 namespace {
-void pack_record(uint8_t* record, const model::AircraftObservation& target) {
-    put_uint24(record, target.address & settings::kAddressMask);
-    record[3] = static_cast<uint8_t>((target.address_mapping_table & 0x3F) |
-                                     ((target.flight_state & 0x03) << 6));
-    record[4] = target.aircraft_category;
-    record[5] = static_cast<uint8_t>(target.speed_q > 255 ? 255 : target.speed_q);
-    put_int32(record + 6, target.latitude_1e7);
-    put_int32(record + 10, target.longitude_1e7);
-    put_int16(record + 14, static_cast<int16_t>(target.altitude_m));
+
+adsl::Packet traffic_of(const model::AircraftObservation& target, uint8_t timestamp) {
+    adsl::Traffic traffic;
+    traffic.address = target.address;
+    traffic.timestamp = timestamp;
+    traffic.flight_state = target.flight_state;
+    traffic.aircraft_category = target.aircraft_category;
+    traffic.emergency = target.emergency;
+    traffic.position_valid = target.position_valid;
+    traffic.latitude_1e7 = target.latitude_1e7;
+    traffic.longitude_1e7 = target.longitude_1e7;
+    traffic.altitude_valid = target.altitude_valid;
+    traffic.altitude_m = target.altitude_m;
+    traffic.speed_valid = target.speed_valid;
+    traffic.speed_q = target.speed_q;
+    traffic.climb_valid = target.climb_valid;
+    traffic.climb_e8 = target.climb_e8;
+    traffic.track_c9 = target.track_c9;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, target.address_mapping_table, traffic);
+    return packet;
 }
 
-void unpack_record(const uint8_t* record, model::AircraftObservation& target) {
-    target = model::AircraftObservation{};
-    target.address = get_uint24(record);
-    target.address_mapping_table = record[3] & 0x3F;
-    target.flight_state = (record[3] >> 6) & 0x03;
-    target.aircraft_category = record[4];
-    target.speed_q = record[5];
-    target.speed_valid = record[5] != 0;
-    target.latitude_1e7 = get_int32(record + 6);
-    target.longitude_1e7 = get_int32(record + 10);
-    target.altitude_m = get_int16(record + 14);
-    target.position_valid = true;
-    target.source = model::Source::AdslUplink;
-    target.emergency = 1;
-}
+}  // namespace
 
-// The gate between a codeword that satisfied parity and a target on a pilot's
-// screen. RS(255,223) can decode to a valid codeword that is not the one that
-// was sent (test/core/test_uplink.cpp measures how often), and a ground station
-// is one transmitter reaching every aircraft in range: one miscorrected frame
-// would otherwise put a whole screenful of phantoms in front of everybody at
-// once. An address of zero is no aircraft, and a position off the globe is no
-// position.
-bool plausible(const model::AircraftObservation& target) {
-    if (target.address == 0) return false;
-    if (target.latitude_1e7 < -900000000 || target.latitude_1e7 > 900000000) return false;
-    if (target.longitude_1e7 < -1800000000 || target.longitude_1e7 > 1800000000) return false;
-    return true;
-}
-}
-
-Status AdslUplink::encode(const model::AircraftObservation* targets, int count, uint8_t key_index,
-                          uint8_t out_frame[kFrameBytes]) const {
+Status AdslUplink::encode(const model::AircraftObservation* targets, int count, uint32_t utc_s,
+                          int32_t into_ms, uint32_t sender_address, uint8_t sender_table,
+                          uint8_t out_packet[kPacketBytes]) const {
     if (count < 0 || count > kMaxTargets) return Status::Full;
-    uint8_t data[fec::ReedSolomon255::kDataBytes];
-    std::memset(data, 0, sizeof(data));
-    data[0] = kVersion;
-    data[1] = static_cast<uint8_t>(count);
-    data[2] = key_index;
-    for (int i = 0; i < count; i++) {
-        pack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, targets[i]);
-    }
-    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
-    std::memcpy(words, data, sizeof(words));
-    fec::xxtea_encrypt(words, sizeof(words) / 4, fec::kXxteaZeroKey, 6);
-    std::memcpy(data, words, sizeof(words));
-
-    std::memcpy(out_frame, data, fec::ReedSolomon255::kDataBytes);
-    reed_solomon_.encode(data, out_frame + fec::ReedSolomon255::kDataBytes);
-    return Status::Ok;
+    adsl::Packet records[kMaxTargets];
+    const uint8_t timestamp = adsl::timestamp_code(utc_s, into_ms);
+    for (int i = 0; i < count; i++) records[i] = traffic_of(targets[i], timestamp);
+    return status_of(codec_.encode(sender_address, sender_table, records, count, out_packet));
 }
 
-Status AdslUplink::decode(const uint8_t frame[kFrameBytes], model::AircraftObservation* targets,
-                          int capacity, DecodeStatistics& statistics) const {
-    uint8_t codeword[fec::ReedSolomon255::kCodewordBytes];
-    std::memcpy(codeword, frame, sizeof(codeword));
-    int corrected = reed_solomon_.decode(codeword);
-    if (corrected < 0) return Status::Crc;
-    statistics.corrected = corrected;
-
-    uint8_t data[fec::ReedSolomon255::kDataBytes];
-    std::memcpy(data, codeword, fec::ReedSolomon255::kDataBytes);
-    uint32_t words[fec::ReedSolomon255::kDataBytes / 4];
-    std::memcpy(words, data, sizeof(words));
-    fec::xxtea_decrypt(words, sizeof(words) / 4, fec::kXxteaZeroKey, 6);
-    std::memcpy(data, words, sizeof(words));
-
-    if (data[0] != kVersion) return Status::Unsupported;
-    int carried = data[1];
-    if (carried > kMaxTargets) return Status::Invalid;
+Status AdslUplink::decode(const uint8_t* packet, size_t bytes, uint32_t utc_s, int32_t into_ms,
+                          model::AircraftObservation* targets, int capacity,
+                          DecodeStatistics& statistics) const {
+    statistics = DecodeStatistics{};
+    adsl::Packet records[kMaxTargets];
+    adsl::UplinkStatistics heard;
+    const Status status = status_of(codec_.decode(packet, bytes, records, kMaxTargets, heard));
+    statistics.corrected = heard.corrected;
+    statistics.rejected = heard.rejected;
+    if (status != Status::Ok) return status;
     int kept = 0;
-    for (int i = 0; i < carried && kept < capacity; i++) {
+    for (int i = 0; i < heard.targets && kept < capacity; i++) {
+        if (!adsl::uplink_record_current(records[i], utc_s, into_ms)) {
+            statistics.stale++;
+            continue;
+        }
         model::AircraftObservation target{};
-        unpack_record(data + kHeaderBytes + static_cast<ptrdiff_t>(i) * kRecordBytes, target);
-        if (!plausible(target)) {
+        if (!to_observation(records[i], events::Stamp{}, 0, model::Source::AdslUplink, target)) {
             statistics.rejected++;
             continue;
         }

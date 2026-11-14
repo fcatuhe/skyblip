@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
+#include "protocols/adsb/message.h"
 
 namespace skyblip::events {
 
@@ -12,10 +12,10 @@ struct AdsbFrame {
     uint64_t at_us;
     int8_t rssi_dbm;
     bool rssi_valid;
-    std::array<uint8_t, protocol::kAdsbChipBytes> chips;
+    std::array<uint8_t, adsb::kChipBytes> chips;
 };
 
-// INFO: fc 11nov26 DO-260B Table 2-105 class A0, the figure protocol::AdsbAssembly::kMaxAircraft is
+// INFO: fc 11nov26 DO-260B Table 2-105 class A0, the figure adsb::Assembly::kMaxAircraft is
 constexpr uint32_t kAdsbDesignAircraft = 100;
 // INFO: fc 11nov26 DO-260B 2.2.3.3.1.3: 6.2 squitters a second averaged over 60 s, so an average
 // load, no burst bound

@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "core/model/aircraft.h"
-#include "core/protocol/adsb.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
+#include "protocols/adsb/message.h"
 #include "simulator/bravo_simulator.h"
 #include "simulator/simulator.h"
 #include "simulator/world/adsb_out.h"
@@ -291,11 +291,10 @@ TEST_CASE("bravo scenario: a negative track flies and is sent as the same track 
 TEST_CASE("bravo scenario: ADS-B Out rounds a velocity field to its nearest step and saturates") {
     simulator::AdsbFrame frame = simulator::adsb_ground_velocity(0x300001, 5, 10, 10, -295, 4000);
     simulator::adsb_seal(frame.bytes);
-    uint8_t chips[protocol::kAdsbChipBytes];
+    uint8_t chips[adsb::kChipBytes];
     simulator::adsb_chips(frame.bytes, chips);
-    protocol::AdsbMessage message;
-    REQUIRE(protocol::adsb_receive(chips, sizeof(chips), protocol::AdsbReception{}, message) ==
-            Status::Ok);
+    adsb::Message message;
+    REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
     CHECK(message.velocity.climb_fpm.value == -320);
     CHECK(message.velocity.gnss_minus_pressure_ft.saturated);
 }

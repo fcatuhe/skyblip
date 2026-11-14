@@ -9,52 +9,34 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "core/events/rf.h"
 #include "core/model/band.h"
-#include "core/protocol/adsl.h"
-#include "core/protocol/adsl_uplink.h"
-#include "core/protocol/alptas.h"
+#include "protocols/adsl/physical.h"
+#include "protocols/adsl/uplink.h"
+#include "protocols/alptas/frame.h"
+#include "protocols/common/manchester.h"
 
 namespace skyblip::protocol {
 
 enum class System : uint8_t { Unknown, AdslDirect, Alptas, AdslUplink };
 
-// ADS-L spends its last sync byte on the frame length, 0x18 = 24 data bytes.
-constexpr uint32_t kAdslSyncWord = 0xF5724B18u;
-constexpr uint32_t kAlptasSyncWord = 0xF531FAB6u;
-
-constexpr uint8_t kAdslFrameBytes = AdslPacket::kDataBytes;
-
-// INFO: fc 18sep26 §C.2's table, clocked at the chip rate because §C.2.1's Manchester halves it
-constexpr uint32_t kMBandChipRateBps = 100000;
-constexpr uint32_t kMBandDeviationHz = 50000;
-constexpr uint32_t kMBandChannelBandwidthHz = 200000;
-constexpr uint16_t kMBandGaussianBtE2 = 50;
-
-// One data bit becomes two chips: 1 -> 01, 0 -> 10 (§C.2.1), which is the table
-// fec::manchester_encode holds.
-constexpr uint16_t manchester_chips(uint8_t byte) {
-    uint16_t chips = 0;
-    for (int bit = 7; bit >= 0; bit--) {
-        chips = static_cast<uint16_t>(chips << 2);
-        chips = static_cast<uint16_t>(chips | (((byte >> bit) & 1u) ? 0x1u : 0x2u));
-    }
-    return chips;
-}
+static_assert(1 + adsl::kUplinkMaxLength <= events::kRfEventBytes,
+              "an uplink frame would be truncated on its way off the radio");
 
 constexpr uint8_t kSharedSyncBits = 16;
 constexpr uint8_t kSharedSyncEndChip = kSharedSyncBits;
 
 constexpr uint16_t shared_sync(uint32_t sync_word) {
-    const uint32_t first = manchester_chips(static_cast<uint8_t>(sync_word >> 24));
-    const uint32_t second = manchester_chips(static_cast<uint8_t>(sync_word >> 16));
+    const uint32_t first = wire::manchester_chips(static_cast<uint8_t>(sync_word >> 24));
+    const uint32_t second = wire::manchester_chips(static_cast<uint8_t>(sync_word >> 16));
     return static_cast<uint16_t>(((first << 16) | second) >> (32u - kSharedSyncEndChip));
 }
 
-static_assert(shared_sync(kAdslSyncWord) == shared_sync(kAlptasSyncWord),
+static_assert(shared_sync(adsl::kSyncWord) == shared_sync(alptas::kSyncWord),
               "the shared chips are what let one dwell hear both systems");
 
-constexpr uint8_t kSharedSync[2] = {static_cast<uint8_t>(shared_sync(kAdslSyncWord) >> 8),
-                                    static_cast<uint8_t>(shared_sync(kAdslSyncWord))};
+constexpr uint8_t kSharedSync[2] = {static_cast<uint8_t>(shared_sync(adsl::kSyncWord) >> 8),
+                                    static_cast<uint8_t>(shared_sync(adsl::kSyncWord))};
 
 // What the detector consumed is gone from the report, so the frame arrives
 // behind the rest of whichever sync word it was.
@@ -69,15 +51,14 @@ constexpr uint32_t sync_tail(uint32_t sync_word) {
 }
 
 // Read the sync tail plus the longer of the two frames, and read it as chips.
-constexpr uint8_t kRxFrameBytes = kSyncTailBytes + kAlptasFrameBytes;
+constexpr uint8_t kRxFrameBytes = kSyncTailBytes + alptas::kFrameBytes;
 constexpr uint8_t kRxChipBytes = 2 * kRxFrameBytes;
-constexpr uint8_t kSyncWordBytes = 4;
-constexpr uint8_t kSyncWindowBytes = kSyncWordBytes - kSyncTailBytes;
+constexpr uint8_t kSyncWindowBytes = wire::kSyncWordBytes - kSyncTailBytes;
 constexpr uint8_t kSyncWindowChipBytes = 2 * kSyncWindowBytes;
 constexpr uint8_t kSyncTailChipBytes = 2 * kSyncTailBytes;
 constexpr uint8_t kSyncChipBytes = kSyncWindowChipBytes + kSyncTailChipBytes;
-constexpr uint8_t kTxChipBytes = kSyncChipBytes + 2 * kAlptasFrameBytes;
-constexpr uint8_t kTxPayloadChipBytes = kSyncTailChipBytes + 2 * kAlptasFrameBytes;
+constexpr uint8_t kTxChipBytes = kSyncChipBytes + 2 * alptas::kFrameBytes;
+constexpr uint8_t kTxPayloadChipBytes = kSyncTailChipBytes + 2 * alptas::kFrameBytes;
 
 struct Frame {
     System system{System::Unknown};
@@ -88,10 +69,6 @@ struct Frame {
 };
 
 uint8_t frame_bytes(System system);
-
-// The chip stream a transmitter puts on air: the whole sync word, then the
-// frame, both Manchester-encoded.
-size_t encode_m_band(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
 
 // INFO: fc 15sep26 SX1262 DS 6.2.2: the part inserts the window, the buffer carries the rest
 size_t m_band_payload(uint32_t sync_word, const uint8_t* frame, uint8_t bytes, uint8_t* chips);
@@ -104,25 +81,20 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out);
 constexpr uint8_t kNoiseWindowBytes = 12;
 constexpr uint16_t kNoiseBadChips = kNoiseWindowBytes * 8u / 4u;
 
-static_assert(kNoiseWindowBytes <= kSyncTailBytes + kAdslFrameBytes,
+static_assert(kNoiseWindowBytes <= kSyncTailBytes + adsl::kFrameBytes,
               "the window has to end inside the shortest burst this band carries");
 
 bool framed_noise(const Frame& frame);
-
-// The chips a transmitter puts on the O band: no Manchester (§C.4), so the sync
-// word, the §D.1.1 length byte and the codeword, as they are. Written here
-// beside its M-band twin because encode and decode change together.
-size_t encode_o_band(const uint8_t* frame, uint8_t* out);
 
 // One burst off the bus, named by the dwell that heard it.
 //
 // The M band carries two systems past one shared sync window, so there the name
 // has to be Manchester-decoded out of the sync tail. The O band carries the
 // ground station's uplink and nothing else: the dwell was armed for §C.4.3's
-// sync word and for the one frame length that follows it, so a burst reported
-// on that band either is an uplink frame or has the wrong length and is not one.
-// out is filled for the M band only - an uplink codeword is eleven times longer
-// than a Frame and stays where the executor already put it.
+// sync word, and the §D.1.1 length byte behind it names one of G.3's eleven
+// packet lengths or the burst is not an uplink packet. out is filled for the M
+// band only - an uplink packet is nine times longer than a Frame and stays where
+// the executor already put it.
 //
 // Naming a burst is protocol policy, so it lives here rather than in the
 // service that pulls the event: the service moves messages.

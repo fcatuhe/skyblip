@@ -3,6 +3,7 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 
+using namespace skyblip;
 using namespace skyblip::timing;
 
 // E1. Nothing gates a burst on the channel, but a pilot still reads how loud the site is.

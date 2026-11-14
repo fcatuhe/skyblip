@@ -5,8 +5,8 @@
 
 #include "core/events/stamp.h"
 #include "core/util/clamp.h"
-#include "core/util/little_endian.h"
 #include "core/util/result.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::diagnostics {
 

@@ -4,6 +4,7 @@
 
 #include "core/flight/arc.h"
 #include "products/skyblip_go/pages/radar_geometry.h"
+#include "protocols/common/geometry.h"
 #include "ui/widgets/blip.h"
 #include "ui/widgets/skyship.h"
 
@@ -82,7 +83,7 @@ bool pixel_within(int x, int y, int radius) {
 HeadingUp on_the_rim(int32_t right, int32_t ahead) {
     const int64_t wide_right = right, wide_ahead = ahead;
     const int64_t apart = std::max<int64_t>(
-        1, square_root<int64_t>(wide_right * wide_right + wide_ahead * wide_ahead));
+        1, wire::square_root<int64_t>(wide_right * wide_right + wide_ahead * wide_ahead));
     return {static_cast<int32_t>(wide_ahead * kRimRadius / apart),
             static_cast<int32_t>(wide_right * kRimRadius / apart)};
 }
@@ -411,7 +412,7 @@ Plotted clear_of(const Plotted& plotted, const Bounds& label) {
     Plotted moved = plotted;
     moved.x = slid_x(plotted, label);
     const int32_t delta_x = moved.x - kFar;
-    moved.y = kFar + square_root<int32_t>(kRimRadius * kRimRadius - delta_x * delta_x);
+    moved.y = kFar + wire::square_root<int32_t>(kRimRadius * kRimRadius - delta_x * delta_x);
     return moved;
 }
 

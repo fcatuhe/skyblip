@@ -11,11 +11,11 @@
 namespace skyblip::traffic {
 
 constexpr uint32_t kTargetForgetReports = 6;
-constexpr uint32_t kAirborneTargetForgetS = kTargetForgetReports * flight::kAirborneReportPeriodS;
-constexpr uint32_t kGroundTargetForgetS = kTargetForgetReports * flight::kGroundReportPeriodS;
+constexpr uint32_t kAirborneTargetForgetS = kTargetForgetReports * adsl::kAirborneReportPeriodS;
+constexpr uint32_t kGroundTargetForgetS = kTargetForgetReports * adsl::kGroundReportPeriodS;
 
 inline uint32_t report_period_s(const model::AircraftObservation& observation) {
-    return flight::report_period_s(flight::state_from(observation.flight_state));
+    return adsl::report_period_s(flight::state_from(observation.flight_state));
 }
 
 inline uint32_t forget_s(const model::AircraftObservation& observation) {

@@ -2,7 +2,7 @@
 
 skyBlip Bravo: a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B full time and feeds one phone EFB over FLARM NMEA, alarming on its own buzzer and motor. It transmits nothing. `product.h` wires it over `boards/seeed/meshtracker_x1/board.h`, and `main.cpp` is the shell on silicon. The host suite runs the same product on the X1's part models (`hardware/platform/host/meshtracker_x1.h`), and the simulator flies it among ADS-B traffic, with a phone reading its NMEA (`../../simulator/README.md`).
 
-Nothing here has run on an X1. Only the first unit's factory bootloader has been read (`../../boards/seeed/meshtracker_x1/factory/README.md`), so every pin, timing and part behaviour below the product is unverified until #169 benches one, and the bench list is at the end.
+It runs on the X1. The factory bootloader it installs under is read in `../../boards/seeed/meshtracker_x1/factory/README.md`, and the pins, timings and part behaviours #169 still benches are listed at the end.
 
 ## The services
 
@@ -23,7 +23,7 @@ Nothing here has run on an X1. Only the first unit's factory bootloader has been
 
 `ownship` runs before `adsb`, so a frame is folded against this pass's fix. `alarm` runs before `button`, so a press is read against the lamp the pilot is looking at. `peer` runs last, so the loop codes of the nine before it hold. It sends what `adsb` folded in the same pass, and `adsb` places traffic against the claims `peer` read in the pass before.
 
-Bravo runs no `TrafficService`. 1090 MHz is its only source, so `AdsbService` owns `state.traffic` instead: it hands the table the reference and the own ICAO on every pass, as the Go's traffic service hands its own position and setting (Paired with a Go). Alone, the reference is Bravo's own fix and the own ICAO its own setting. It pops each `events::AdsbFrame` from the queue the radio thread fills, decodes it with `protocol::adsb_receive`, and counts a frame it refuses: in `crc()` when its parity fails, and in `unsupported()` when its parity holds but its message is one the decoder does not read. It keeps the chips of the first refused frames for the console (Reading the rejects). It folds the rest into `protocol::AdsbAssembly` against Bravo's own position, with the frame's instant on `ports::Clock` and a stamp on the PPS edge. Each folded observation goes to `common::AdsbCapture::record` before the table, because #183 asks about every aircraft heard and a full table keeps only the nearest (`../common/README.md`). An observation with a position then goes to the table. An identification message's callsign goes to `state.callsigns`, keyed on the address, so a `$PFLAA` and the Go both read it there. `age_out` runs on the assembly every pass, as `core/protocol/README.md` requires, and on the table and the callsigns after it.
+Bravo runs no `TrafficService`. 1090 MHz is its only source, so `AdsbService` owns `state.traffic` instead: it hands the table the reference and the own ICAO on every pass, as the Go's traffic service hands its own position and setting (Paired with a Go). Alone, the reference is Bravo's own fix and the own ICAO its own setting. It pops each `events::AdsbFrame` from the queue the radio thread fills, decodes it with `adsb::receive`, and counts a frame it refuses: in `crc()` when its parity fails, and in `unsupported()` when its parity holds but its message is one the decoder does not read. It keeps the chips of the first refused frames for the console (Reading the rejects). It folds the rest into `adsb::Assembly` against Bravo's own position, with the frame's instant on `ports::Clock` and a stamp on the PPS edge. Each folded observation goes to `common::AdsbCapture::record` before the table, because #183 asks about every aircraft heard and a full table keeps only the nearest (`../common/README.md`). An observation with a position then goes to the table. An identification message's callsign goes to `state.callsigns`, keyed on the address, so a `$PFLAA` and the Go both read it there. `age_out` runs on the assembly every pass, as `protocols/adsb/README.md` requires, and on the table and the callsigns after it.
 
 The queue, `bus::AdsbQueue`, lives in the product beside `bus::Bus`, because only Bravo hears 1090 MHz. The board's receiver pushes into it, from its own thread on silicon and from the board's poll on the host.
 
@@ -211,7 +211,7 @@ The `adsb` line of the status dump follows a frame from the antenna to the table
 | `dropped` | was lost before the decoder |
 | `crc` | failed its parity, and the one repair allowed, a single doubtful chip pair, did not clear it |
 | `unsupported` | passed its parity and carries a DF17 message the decoder does not read |
-| `folded` | was decoded and folded into an aircraft by `protocol::AdsbAssembly` |
+| `folded` | was decoded and folded into an aircraft by `adsb::Assembly` |
 | `aircraft` | not a frame: the aircraft the assembly holds now, with or without a position |
 
 `tracked`, on the `traffic` line, counts the aircraft that reached the table, each with a position. So `crc` close to `frames` is a reception problem, and `aircraft` above 0 with `tracked` at 0 is aircraft heard without a decoded position.

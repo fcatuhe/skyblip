@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 
-#include "core/protocol/adsl.h"
+#include "core/protocol/callsign.h"
 #include "core/traffic/table.h"
 
 namespace skyblip::traffic {
@@ -15,7 +15,7 @@ constexpr uint32_t kCallsignForgetS = 600;
 class CallsignTable {
    public:
     static constexpr int kMaxCallsigns = TrafficTable::kMaxTargets;
-    static constexpr int kTextBytes = protocol::AdslPacket::kInformationTextBytes + 1;
+    static constexpr int kTextBytes = protocol::kInformationTextBytes + 1;
 
     void learn(uint8_t address_mapping_table, uint32_t address, const char* callsign,
                uint32_t now_s);

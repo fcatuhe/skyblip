@@ -1,6 +1,7 @@
 # Host unit-test + simulator build. Depends on nothing but a C++ compiler.
 #
 #   make test        build + run all host doctest suites
+#   make test-protocols  each protocols/ stack built and tested alone, from a copy
 #   make test-sanitize  the same suites under ASan + UBSan, in build/sanitize/
 #   make fuzz        every libFuzzer harness in turn, in build/fuzz/ (clang)
 #   make fuzz-nmea   one of them: nmea, air, adsb, adsb_assembly or link
@@ -68,7 +69,7 @@ endif
 # Every layer is globbed: a file that exists is a file that is compiled and
 # tested. Zephyr-only sources are inert on the host (guarded by __ZEPHYR__) and
 # the silicon platform + product entry point are excluded outright.
-SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard core/*/*.cpp ui/*.cpp ui/*/*.cpp \
+SRC := $(filter-out hardware/platform/zephyr/%,$(wildcard protocols/*/*.cpp core/*/*.cpp ui/*.cpp ui/*/*.cpp \
        hardware/parts/*/*.cpp runtime/*.cpp products/*/*.cpp products/*/pages/*.cpp products/*/services/*.cpp \
        simulator/world/*.cpp))
 SRC := $(filter-out products/%/main.cpp %/test_%.cpp,$(SRC))
@@ -79,7 +80,8 @@ VENDOR_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(VENDOR_SRC))
 
 # Test sources (mirrored tree): one folder per layer, tests never live beside
 # the code they test.
-TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp))
+TEST_SRC := $(filter-out test/fuzz/%,$(wildcard test/*.cpp test/*/*.cpp test/*/*/*.cpp)) \
+            $(wildcard protocols/*/test/*.cpp protocols/*/test/*/*.cpp)
 
 # One harness per file, each linked against every host source as the suite is.
 FUZZ_SRC := $(wildcard test/fuzz/fuzz_*.cpp)
@@ -108,7 +110,7 @@ WEB_BUILD := $(BUILD)/web
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
 WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
-.PHONY: test test-sanitize fuzz fuzzers all clean simulator browser watch tidy
+.PHONY: test test-sanitize test-protocols fuzz fuzzers all clean simulator browser watch tidy
 all: test
 
 test: $(BIN)
@@ -116,6 +118,24 @@ test: $(BIN)
 
 test-sanitize:
 	@UBSAN_OPTIONS=print_stacktrace=1 $(MAKE) --no-print-directory test SANITIZE=1
+
+# Each stack is copied with protocols/common and vendor/doctest and nothing else, then built and
+# run there: an include that reaches outside fails to compile, as it would in another project.
+PROTOCOLS_BUILD := $(BUILD)/protocols-alone
+PROTOCOL_STACKS := $(filter-out common,$(patsubst protocols/%/,%,$(wildcard protocols/*/)))
+PROTOCOLS_CXXFLAGS := $(filter-out -I. -Ivendor -MMD -MP,$(CXXFLAGS))
+
+test-protocols: $(addprefix test-protocol-,$(PROTOCOL_STACKS))
+
+test-protocol-%:
+	@rm -rf $(PROTOCOLS_BUILD)/$*
+	@mkdir -p $(PROTOCOLS_BUILD)/$*/tree/protocols $(PROTOCOLS_BUILD)/$*/tree/vendor
+	cp -R protocols/common protocols/$* $(PROTOCOLS_BUILD)/$*/tree/protocols/
+	cp -R vendor/doctest $(PROTOCOLS_BUILD)/$*/tree/vendor/
+	printf '#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN\n#include "doctest/doctest.h"\n' > $(PROTOCOLS_BUILD)/$*/main.cpp
+	cd $(PROTOCOLS_BUILD)/$*/tree && $(CXX) $(PROTOCOLS_CXXFLAGS) -I. -Ivendor \
+	  $$(find protocols -name '*.cpp' | sort) ../main.cpp -o ../$*_tests
+	$(PROTOCOLS_BUILD)/$*/$*_tests
 
 # Built once, then run one at a time: three fuzzers printing at once is a log nobody can read.
 fuzz:

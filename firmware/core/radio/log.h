@@ -21,7 +21,8 @@ enum class Verdict : uint8_t {
     Miskeyed = 8,
     Undecoded = 9,
     Unsupported = 10,
-    Unattempted = 11
+    Unattempted = 11,
+    Declared = 12
 };
 
 struct Entry {

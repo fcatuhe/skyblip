@@ -8,7 +8,7 @@
 #include "core/traffic/lease.h"
 #include "core/traffic/range.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::formation {
 
@@ -17,11 +17,11 @@ namespace {
 void heading_up(int32_t north_m, int32_t east_m, int32_t track_cdeg, int32_t& ahead_m,
                 int32_t& right_m) {
     const int16_t track = to_angle16(CentiDegrees(track_cdeg));
-    const int64_t cosine_of_track = cosine(track), sine_of_track = sine(track);
-    ahead_m = static_cast<int32_t>(
-        divide_rounded<int64_t>(north_m * cosine_of_track + east_m * sine_of_track, kTrigOne));
-    right_m = static_cast<int32_t>(
-        divide_rounded<int64_t>(east_m * cosine_of_track - north_m * sine_of_track, kTrigOne));
+    const int64_t cosine_of_track = wire::cosine(track), sine_of_track = wire::sine(track);
+    ahead_m = static_cast<int32_t>(wire::divide_rounded<int64_t>(
+        north_m * cosine_of_track + east_m * sine_of_track, wire::kTrigOne));
+    right_m = static_cast<int32_t>(wire::divide_rounded<int64_t>(
+        east_m * cosine_of_track - north_m * sine_of_track, wire::kTrigOne));
 }
 
 uint32_t reception_key(const model::AircraftObservation& observation) {
@@ -83,7 +83,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     if (slot == nullptr) return out;
     slot->seen_ms = now_ms;
 
-    const int32_t range_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
+    const int32_t range_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
     if (range_m > kRangeM || std::abs(up_m) > kVerticalM) {
         *slot = Slot{};
         return out;
@@ -110,7 +110,7 @@ Report Tracker::observe(const model::Ownship& own_fix, const model::AircraftObse
     }
 
     const int32_t drift_m = static_cast<int32_t>(
-        hypotenuse(out.ahead_m - slot->anchor_ahead_m, out.right_m - slot->anchor_right_m));
+        wire::hypotenuse(out.ahead_m - slot->anchor_ahead_m, out.right_m - slot->anchor_right_m));
     const bool station_kept =
         drift_m <= kDriftM && std::abs(out.up_m - slot->anchor_up_m) <= kVerticalDriftM;
 

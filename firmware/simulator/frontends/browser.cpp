@@ -175,6 +175,15 @@ KEEPALIVE int simulator_tx_named() {
 KEEPALIVE int simulator_rx_named() {
     return static_cast<int>(go_unit().product().state().air.rx_named);
 }
+KEEPALIVE int simulator_tx_held_for_b5() {
+    return static_cast<int>(go_unit().product().state().air.tx_held_for_b5);
+}
+KEEPALIVE int simulator_rx_status() {
+    return static_cast<int>(go_unit().product().state().air.rx_status);
+}
+KEEPALIVE int simulator_uplink_stale() {
+    return static_cast<int>(go_unit().product().state().air.uplink_stale);
+}
 KEEPALIVE int simulator_prompt() {
     return go_unit().product().screen().prompt() != comms::Pending::None ? 1 : 0;
 }

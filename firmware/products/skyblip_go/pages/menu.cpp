@@ -22,11 +22,6 @@ constexpr Menu menu_of(const MenuRow (&rows)[Count]) {
     return Menu{rows, Count};
 }
 
-// INFO: cf 02aug26 ADS-L 4 SRD-860 issue 2 G.1.3 wire values: the code stored is transmitted
-const char* const kAircraftNames[kNamedAircraftTypes] = {
-    "UNKNOWN",    "LIGHT",      "HEAVY",    "HELICOPTER", "GLIDER",    "BALLOON",
-    "MICROLIGHT", "PARAGLIDER", "SKYDIVER", "VTOL",       "GYROCOPTER"};
-
 // CALLSIGN at double height is eight cells, and the row holds fifteen.
 constexpr int kCallsignRowCharacters = 6;
 
@@ -123,13 +118,18 @@ Page page_behind(MenuRow row) {
     }
 }
 
+bool named_aircraft_type(uint8_t code) { return aircraft_type_name(code)[0] != 0; }
+
 const char* aircraft_type_name(uint8_t code) {
-    return code < kNamedAircraftTypes ? kAircraftNames[code] : "";
+    for (const AircraftType& type : kAircraftTypes)
+        if (type.code == code) return type.name;
+    return "";
 }
 
 uint8_t next_aircraft_type(uint8_t code) {
-    if (code + 1 >= kNamedAircraftTypes) return 0;
-    return static_cast<uint8_t>(code + 1);
+    for (int i = 0; i + 1 < kNamedAircraftTypes; i++)
+        if (kAircraftTypes[i].code == code) return kAircraftTypes[i + 1].code;
+    return kAircraftTypes[0].code;
 }
 
 char next_callsign_character(char character) {

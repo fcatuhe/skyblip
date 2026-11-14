@@ -7,6 +7,7 @@
 #include "core/util/format.h"
 #include "core/util/intmath.h"
 #include "products/skyblip_go/pages/page.h"
+#include "protocols/common/geometry.h"
 #include "ui/widgets/skyship.h"
 
 namespace skyblip::go {
@@ -70,7 +71,7 @@ constexpr int kReferenceDotRadius = 2;
 // integer division truncates toward zero and pulls both ends of a mark inward.
 int radial_half(int32_t radius_in_halves, int32_t axis) {
     const int32_t product = radius_in_halves * axis;
-    return (product + (product < 0 ? -kTrigOne : kTrigOne)) / (2 * kTrigOne);
+    return (product + (product < 0 ? -wire::kTrigOne : wire::kTrigOne)) / (2 * wire::kTrigOne);
 }
 
 int radial(int32_t radius, int32_t axis) { return radial_half(2 * radius, axis); }
@@ -112,7 +113,7 @@ void centred_value(ui::Canvas& canvas, int centre_x, int row, bool valid, int32_
 // mark by degrees, which is what made the scales look bent.
 void radial_mark(ui::Canvas& canvas, int centre_x, int centre_y, int16_t angle, int from_radius,
                  int to_radius) {
-    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int32_t unit_x = wire::sine(angle), unit_y = wire::cosine(angle);
     for (int half = 2 * from_radius; half <= 2 * to_radius; half++) {
         canvas.set_pixel(centre_x + radial_half(half, unit_x), centre_y - radial_half(half, unit_y),
                          true);
@@ -167,7 +168,7 @@ void vsi_face(ui::Canvas& canvas, int centre_x, int centre_y) {
 void needle(ui::Canvas& canvas, int centre_x, int centre_y, int32_t angle_deg, int length,
             bool thick = false, bool cleared = false) {
     const int16_t angle = angle16_of_degrees(angle_deg);
-    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int32_t unit_x = wire::sine(angle), unit_y = wire::cosine(angle);
     const int tip_x = centre_x + radial(length, unit_x);
     const int tip_y = centre_y - radial(length, unit_y);
     if (cleared)
@@ -189,9 +190,9 @@ void horizon(ui::Canvas& canvas, int centre_x, int centre_y, int32_t pitch_deg, 
         kPitchFullScaleDeg;
     const int16_t angle =
         angle16_of_degrees(std::clamp<int32_t>(bank_deg, -kBankLimitDeg, kBankLimitDeg));
-    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int32_t unit_x = wire::sine(angle), unit_y = wire::cosine(angle);
     for (int delta_x = -kDialRadius + 1; delta_x < kDialRadius; delta_x++) {
-        const int chord = static_cast<int>(square_root<uint32_t>(
+        const int chord = static_cast<int>(wire::square_root<uint32_t>(
             static_cast<uint32_t>(kDialRadius * kDialRadius - delta_x * delta_x)));
         const int32_t horizon_y =
             std::clamp<int32_t>(pitch_offset - (delta_x * unit_x) / unit_y, -chord, chord);
@@ -228,7 +229,7 @@ void inclinometer(ui::Canvas& canvas, int centre_x, int centre_y, const SixPackS
 
 void turn_coordinator(ui::Canvas& canvas, int centre_x, int centre_y, int32_t turn_cdps) {
     const int16_t angle = angle16_of_degrees(rate_deflection_deg(turn_cdps));
-    const int32_t unit_x = sine(angle), unit_y = cosine(angle);
+    const int32_t unit_x = wire::sine(angle), unit_y = wire::cosine(angle);
     const int wing_x = radial(kWingHalfSpan, unit_y);
     const int wing_y = radial(kWingHalfSpan, unit_x);
     const int tail_up_x = radial(kTailUp, unit_x);
@@ -258,9 +259,10 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
             tick(canvas, centre_x, centre_y, angle);
             continue;
         }
-        canvas.draw_character(centre_x - kCellWidth / 2 + radial(kCardRadius, sine(angle)),
-                              centre_y - kCharacterHeight / 2 - radial(kCardRadius, cosine(angle)),
-                              kCardinal[bearing / 90], true);
+        canvas.draw_character(
+            centre_x - kCellWidth / 2 + radial(kCardRadius, wire::sine(angle)),
+            centre_y - kCharacterHeight / 2 - radial(kCardRadius, wire::cosine(angle)),
+            kCardinal[bearing / 90], true);
     }
     canvas.rectangle(centre_x - 1, centre_y - kDialRadius, 3, kIndexTableLength, true,
                      true);  // the lubber index, on the case
@@ -270,14 +272,15 @@ void heading_card(ui::Canvas& canvas, int centre_x, int centre_y, int32_t track_
 int32_t flight_path_deg(int32_t climb_fpm, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
     return (static_cast<int32_t>(arctangent(climb_fpm * 10, speed_kt * 1013)) * 360) /
-           kAngle16PerTurn;
+           wire::kAngle16PerTurn;
 }
 
 // Coordinated turn: tan(bank) = omega * V / g, which in deg/s and knots is
 // turn_dps * kt / 1093, and no sensor on this device measures a bank.
 int32_t inferred_bank_deg(int32_t turn_dps, int32_t speed_kt) {
     if (speed_kt <= 0) return 0;
-    return (static_cast<int32_t>(arctangent(turn_dps * speed_kt, 1093)) * 360) / kAngle16PerTurn;
+    return (static_cast<int32_t>(arctangent(turn_dps * speed_kt, 1093)) * 360) /
+           wire::kAngle16PerTurn;
 }
 
 // INFO: fc 11oct26 on the cable the divider reads the USB rail, so the dial reads it as that
@@ -287,7 +290,8 @@ void battery_dial(ui::Canvas& canvas, int centre_x, int row, const SixPackSnapsh
     if (snapshot.charging) {
         dial(canvas, centre_x, row, "CHARGE V", 0);
         written = format_unsigned(
-            text, static_cast<uint32_t>(divide_rounded<int32_t>(snapshot.battery_mv, 10)), 1, 2);
+            text, static_cast<uint32_t>(wire::divide_rounded<int32_t>(snapshot.battery_mv, 10)), 1,
+            2);
     } else {
         dial(canvas, centre_x, row, "BATTERY", 0);
         written = snapshot.battery_valid ? format_unsigned(text, snapshot.battery_percent)

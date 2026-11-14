@@ -46,6 +46,10 @@ struct Diagnostics {
     uint32_t tx_ok{0};
     uint32_t tx_lost{0};
     uint32_t tx_named{0};
+    uint32_t tx_held_for_b5{0};
+    uint32_t rx_status{0};
+    uint32_t uplink_stale{0};
+    uint32_t tx_given_up{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
     bool dio1_armed{false};
@@ -115,7 +119,7 @@ class DiagnosticsReport {
     // The widest console line any group can produce at its widest values, plus
     // its terminator. test/core/test_diagnostics.cpp measures it rather than
     // trusting it.
-    static constexpr int kLineBytes = 377;
+    static constexpr int kLineBytes = 471;
     // Enough for one frame at its widest on a link that can carry a whole group;
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
@@ -149,7 +153,7 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 59;
+    static constexpr int kMaxFields = 63;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,

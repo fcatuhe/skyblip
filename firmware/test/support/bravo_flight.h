@@ -65,7 +65,7 @@ struct Flight {
     void fly(uint32_t seconds) { go().seconds(tango.now_ms, seconds, kSpeedMmS, kAltitudeMslM); }
 
     const traffic::Target* target() {
-        const int slot = state().traffic.find(settings::kIcaoAddressMappingTable, kTarget);
+        const int slot = state().traffic.find(adsl::kAddressTableIcao, kTarget);
         return slot < 0 ? nullptr : state().traffic.at(slot);
     }
 

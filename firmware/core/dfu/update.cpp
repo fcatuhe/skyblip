@@ -3,7 +3,7 @@
 #include <cstring>
 
 #include "core/util/format.h"
-#include "core/util/little_endian.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::dfu {
 
@@ -12,8 +12,8 @@ namespace {
 void put_version(uint8_t* out, const ports::ImageVersion& version) {
     out[0] = version.major;
     out[1] = version.minor;
-    put_uint16(out + 2, version.revision);
-    put_uint32(out + 4, version.build);
+    wire::put_uint16(out + 2, version.revision);
+    wire::put_uint32(out + 4, version.build);
 }
 
 const char* parse_field(const char* at, uint32_t ceiling, char terminator, uint32_t& out) {
@@ -43,8 +43,8 @@ ports::ImageVersion get_version(const uint8_t* bytes) {
     ports::ImageVersion version;
     version.major = bytes[0];
     version.minor = bytes[1];
-    version.revision = get_uint16(bytes + 2);
-    version.build = get_uint32(bytes + 4);
+    version.revision = wire::get_uint16(bytes + 2);
+    version.build = wire::get_uint32(bytes + 4);
     return version;
 }
 

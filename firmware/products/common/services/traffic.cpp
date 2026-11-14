@@ -1,11 +1,17 @@
 #include "products/common/services/traffic.h"
 
+#include <optional>
+
 #include "core/events/rf.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
+#include "core/protocol/alptas.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
+#include "protocols/adsl/versioning.h"
+#include "protocols/alptas/frame.h"
 
 namespace skyblip::common {
 
@@ -28,7 +34,7 @@ void TrafficService::tick(uint32_t now_ms) {
     // own-ship has already run this pass, so this is the newest fix there is.
     context_.state.traffic.set_own_reference(context_.state.own);
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
-    context_.state.traffic.set_own_address(settings::kAddressMappingTable,
+    context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
     context_.state.traffic.set_own_icao(settings_.own_icao);
     events::RfEvent event{};
@@ -77,7 +83,7 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     radio::Entry entry{};
     entry.verdict = outcome;
     entry.band = event.band;
-    entry.channel = event.frequency_hz == timing::kMBand1Hz ? 1 : 0;
+    entry.channel = event.frequency_hz == adsl::kMBand1Hz ? 1 : 0;
     entry.at_s = stamp.at_s;
     entry.into_ms = stamp.into_ms;
     entry.phase_valid = stamp.phase_valid;
@@ -140,6 +146,11 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
         log(event, stamp, outcome, &observation);
         return;
     }
+    if (outcome == radio::Verdict::Declared) {
+        context_.state.air.rx_status++;
+        log(event, stamp, outcome, &observation);
+        return;
+    }
     if (outcome != radio::Verdict::Received) {
         count_refusal(outcome);
         const bool named = alptas && names_its_sender(outcome);
@@ -156,10 +167,10 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     log(event, stamp, radio::Verdict::Received, &observation);
 }
 
-// One frame from the ground, up to thirteen aircraft in it (§C.4's higher rate
+// One packet from the ground, up to ten aircraft in it (§C.4's higher rate
 // buys the room the M band has no space for), each one an observation in its
-// own right.
-// The counters are the uplink's own: a codeword Reed-Solomon refuses is not an
+// own right, and each dated by the second it was heard in so G.3's age rule holds.
+// The counters are the uplink's own: a packet Reed-Solomon refuses is not an
 // M-band framing failure, and counting it as one is what let this whole path go
 // missing without a single number moving.
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
@@ -169,8 +180,13 @@ void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp
 
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
     protocol::AdslUplink::DecodeStatistics statistics{};
-    if (uplink_codec_.decode(event.data.data(), relayed, protocol::AdslUplink::kMaxTargets,
-                             statistics) != Status::Ok) {
+    const uint32_t heard_s = context_.state.traffic_now_s(now_ms);
+    const int32_t heard_ms = stamp.phase_valid ? stamp.into_ms : 0;
+    const Status decoded =
+        uplink_codec_.decode(event.data.data(), event.bytes, heard_s, heard_ms, relayed,
+                             protocol::AdslUplink::kMaxTargets, statistics);
+    context_.state.air.uplink_stale += static_cast<uint32_t>(statistics.stale);
+    if (decoded != Status::Ok) {
         context_.state.air.uplink_bad++;
         log(event, stamp, radio::Verdict::BadCrc);
         return;
@@ -218,13 +234,15 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     packet.reset();
-    __builtin_memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    __builtin_memcpy(packet.data, frame.data, adsl::kFrameBytes);
     if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
         return radio::Verdict::BadCrc;
     packet.descramble();
-    if (packet.is_registration()) return learn_callsign(packet, utc_s, observation);
+    if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
+    if (packet.payload_type == adsl::Packet::kPayloadTypeStatus)
+        return learn_status(packet, observation);
     if (!packet.is_position()) return radio::Verdict::Unsupported;
     events::Stamp received = stamp;
     received.at_s = utc_s;
@@ -233,7 +251,20 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
     return radio::Verdict::Received;
 }
 
-radio::Verdict TrafficService::learn_callsign(const protocol::AdslPacket& packet, uint32_t utc_s,
+// INFO: fc 13nov26 B.5: a Status from an untracked aircraft is dropped, and its next one counts
+radio::Verdict TrafficService::learn_status(const adsl::Packet& packet,
+                                            model::AircraftObservation& observation) {
+    observation.address = packet.address();
+    observation.address_mapping_table = packet.address_mapping_table();
+    observation.source = model::Source::AdslDirect;
+    const std::optional<uint8_t> declared = adsl::status_max_version(packet);
+    if (!declared || !context_.state.traffic.declare_max_version(observation.address_mapping_table,
+                                                                 observation.address, *declared))
+        return radio::Verdict::Unsupported;
+    return radio::Verdict::Declared;
+}
+
+radio::Verdict TrafficService::learn_callsign(const adsl::Packet& packet, uint32_t utc_s,
                                               model::AircraftObservation& observation) {
     char callsign[traffic::CallsignTable::kTextBytes];
     if (protocol::callsign_of(packet, callsign, sizeof(callsign)) == 0)
@@ -252,8 +283,8 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
                                              int8_t& key_offset_s) const {
     const model::Ownship& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Verdict::Unattempted;
-    if (protocol::alptas_correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
-    observation.address = protocol::alptas_address(frame.data);
+    if (alptas::correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
+    observation.address = alptas::address(frame.data);
     observation.source = model::Source::Alptas;
     const int32_t latitude = own.latitude_1e7;
     const int32_t longitude = own.longitude_1e7;
@@ -265,7 +296,7 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
     if (verdict != radio::Verdict::Undecoded) return verdict;
 
     uint32_t keyed = 0;
-    if (protocol::alptas_keyed_second(frame.data, utc_s, keyed) != Status::Ok) return verdict;
+    if (alptas::keyed_second(frame.data, utc_s, keyed) != wire::Status::Ok) return verdict;
     const int32_t offset = static_cast<int32_t>(keyed - utc_s);
     if (offset == 0) return verdict;
     key_offset_s = static_cast<int8_t>(offset);

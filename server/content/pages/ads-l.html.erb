@@ -1,0 +1,32 @@
+---
+title: "skyBlip and ADS-L"
+nav_title: ADS-L
+description: "skyBlip's ADS-L address assignment, callsign question, draft declaration of conformity and proposal for the link from ADS-L equipment to a display."
+updated_on: "2026-11-13"
+---
+
+<section>
+  <p class="kicker">ADS-L</p>
+  <h1>skyBlip&rsquo;s work on ADS-L.</h1>
+  <p class="lede">skyBlip is open-source electronic conspicuity equipment for general aviation, built by François Catuhe in France.</p>
+  <p>Go transmits and receives ADS-L. Bravo receives ADS-B on 1090&nbsp;MHz and transmits nothing. These pages record our exchanges with EASA and the ADS-L registry, the declaration we are preparing, and a proposal for equipment and display developers.</p>
+  <ul>
+    <li>
+      <h3><%= link_to_page "ads-l/registry" %></h3>
+      <p>The registry assigned skyBlip AMT entry 58, manufacturer page 49 and prefix 0 on 5 October 2026. This page records the assignment and preserves the application as sent.</p>
+    </li>
+    <li>
+      <h3><%= link_to_page "ads-l/callsign" %></h3>
+      <p>Issue 2 has no callsign field. This page preserves our question to the registry and explains the interim record Go sends until Issue 3 defines one.</p>
+    </li>
+    <li>
+      <h3><%= link_to_page "ads-l/conformity" %></h3>
+      <p>The draft ADS-L declaration for Go and Go+, with the supporting documents the specification asks a manufacturer to supply. It identifies what is ready and what remains missing.</p>
+    </li>
+    <li>
+      <h3><%= link_to_page "ads-l/nmea" %></h3>
+      <p>A proposed NMEA sentence family carries ADS-L fields to a navigation display without translating them into FLARM&rsquo;s fields. It keeps the current output for displays that do not request it.</p>
+    </li>
+  </ul>
+  <p><%= link_to_page "ads-l/registry", class: "cta cta--next" %></p>
+</section>

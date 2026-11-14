@@ -4,7 +4,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::traffic {
 
@@ -21,7 +21,7 @@ bool range_to(const model::Ownship& own, const model::AircraftObservation& obser
     out.source = observation.source;
     out.up_m = up_m;
     out.up_valid = up_valid;
-    out.ground_m = static_cast<int32_t>(hypotenuse(north_m, east_m));
+    out.ground_m = static_cast<int32_t>(wire::hypotenuse(north_m, east_m));
     return true;
 }
 

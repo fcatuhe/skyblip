@@ -1,10 +1,10 @@
 // What the LR2021 driver asks of the part, in what order, and what it hands up from 1090 MHz.
 #include <cstdint>
 
-#include "core/protocol/adsb.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/lr2021/lr2021.h"
 #include "hardware/parts/lr2021/model.h"
+#include "protocols/adsb/message.h"
 #include "test/support/adsb_frames.h"
 #include "test/support/lr2021_rig.h"
 
@@ -20,9 +20,9 @@ constexpr uint32_t kAddress = 0x4840D6;
 constexpr uint32_t kOtherAddress = 0x3C6586;
 
 uint32_t address_in(const uint8_t* chips) {
-    protocol::AdsbMessage message{};
-    if (protocol::adsb_receive(chips, protocol::kAdsbChipBytes, protocol::AdsbReception{0, -70},
-                               message) != Status::Ok)
+    adsb::Message message{};
+    if (adsb::receive(chips, adsb::kChipBytes, adsb::Reception{0, -70}, message) !=
+        wire::Status::Ok)
         return 0;
     return message.address;
 }
@@ -105,7 +105,7 @@ TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver") {
     CHECK(part.depth == 0x00);
     CHECK(part.preamble_chips == 16);
     CHECK(part.packet_format == 0x00);
-    CHECK(part.payload_bytes == protocol::kAdsbChipBytes);
+    CHECK(part.payload_bytes == adsb::kChipBytes);
     CHECK(part.crc_manchester == 0x00);
     CHECK(part.whitening_polynom == 0);
     CHECK(part.sync == 0x95);
@@ -175,7 +175,7 @@ TEST_CASE("lr2021: the 27 chips after the 0x95 sync are a frame the DF17 decoder
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -61));
     CHECK(radio.irq_asserted());
 
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     const parts::Lr2021Event event = radio.poll(chips, sizeof(chips));
     REQUIRE(event.type == Lr2021EventType::Frame);
     CHECK(event.rssi_valid);
@@ -188,7 +188,7 @@ TEST_CASE("lr2021: the 27 chips after the 0x95 sync are a frame the DF17 decoder
 TEST_CASE("lr2021: the next frame is heard without another SetRx") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     for (const uint32_t address : {kAddress, kOtherAddress}) {
         const AdsbAir air = identification(address);
         REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
@@ -207,7 +207,7 @@ TEST_CASE("lr2021: two frames read in one wake come out oldest first, the RSSI o
     REQUIRE(part.receive_air(first.chips, sizeof(first.chips), -80));
     REQUIRE(part.receive_air(second.chips, sizeof(second.chips), -50));
 
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     const parts::Lr2021Event older = radio.poll(chips, sizeof(chips));
     REQUIRE(older.type == Lr2021EventType::Frame);
     CHECK_FALSE(older.rssi_valid);
@@ -226,7 +226,7 @@ TEST_CASE("lr2021: chips with no preamble in them are not a frame") {
     AdsbAir noise = identification(kAddress);
     noise.chips[0] = 0x00;
     CHECK_FALSE(part.receive_air(noise.chips, sizeof(noise.chips)));
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::None);
 }
 
@@ -235,7 +235,7 @@ TEST_CASE("lr2021: an RxDone with nothing in the FIFO is no frame, no drop and n
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     part.irq |= chip::kIrqRxDone;
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::None);
     CHECK(radio.fifo_drops() == 0);
     CHECK(part.count(chip::kClearRxFifo) == 0);
@@ -255,7 +255,7 @@ TEST_CASE("lr2021: a silent receiver is re-armed through standby at the silence 
 
     const AdsbAir air = identification(kAddress);
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
 }
 
@@ -265,7 +265,7 @@ TEST_CASE("lr2021: a frame starts the silence count again") {
     CHECK_FALSE(radio.service(20000, 30000));
     const AdsbAir air = identification(kAddress);
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     REQUIRE(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
     CHECK_FALSE(radio.service(20000, 30000));
     CHECK(radio.rearms() == 0);
@@ -278,7 +278,7 @@ TEST_CASE("lr2021: BUSY stuck in a read is a fault, and the next service resets 
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
     part.busy_stuck = true;
     const uint64_t stuck_at_us = part.elapsed_us;
-    uint8_t chips[protocol::kAdsbChipBytes]{};
+    uint8_t chips[adsb::kChipBytes]{};
     CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Fault);
     CHECK(part.elapsed_us - stuck_at_us >= chip::kCommandBusyCeilingUs);
 

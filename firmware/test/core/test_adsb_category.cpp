@@ -11,17 +11,18 @@ constexpr uint8_t kSetD = 1, kSetC = 2, kSetB = 3, kSetA = 4;
 
 }  // namespace
 
-// A1 is under 15 500 lb, which is the boundary G.1.3 draws between its categories 1 and 2.
+// A1 is under 15 500 lb, G.1.3's line between 1 and 2. A6 and A7 give no weight, so the heavier.
 TEST_CASE("adsb category: set A splits light fixed wing from the rest at G.1.3's own boundary") {
-    const uint8_t expected[8] = {0, 1, 2, 2, 2, 2, 2, 3};
+    const uint8_t expected[8] = {0, 1, 2, 2, 2, 2, 2, 15};
     for (uint8_t emitter = 0; emitter < 8; emitter++) {
         CAPTURE(int(emitter));
         CHECK(int(adsb_emitter_to_adsl_category(kSetA, emitter)) == int(expected[emitter]));
     }
 }
 
+// ADS-B is typical of heavier aircraft: B4 reads as the ultralight, B6 as the specific UAS.
 TEST_CASE("adsb category: set B names the airborne kinds G.1.3 has a value for, and no more") {
-    const uint8_t expected[8] = {0, 4, 5, 8, 6, 0, 11, 0};
+    const uint8_t expected[8] = {0, 4, 5, 8, 6, 0, 12, 0};
     for (uint8_t emitter = 0; emitter < 8; emitter++) {
         CAPTURE(int(emitter));
         CHECK(int(adsb_emitter_to_adsl_category(kSetB, emitter)) == int(expected[emitter]));
@@ -55,4 +56,17 @@ TEST_CASE("adsb category: an airliner reaches PFLAA as a jet, and a light aircra
     }
     CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetA, 1)) == 0x8);
     CHECK(adsl_category_to_alptas_type(adsb_emitter_to_adsl_category(kSetB, 4)) == 0x8);
+}
+
+// A weight split read heavier for traffic is read lighter for the aircraft a pilot sits in.
+TEST_CASE("adsb category: own-ship takes the lighter side of every weight split") {
+    const uint8_t set_a[8] = {0, 1, 2, 2, 2, 2, 1, 3};
+    const uint8_t set_b[8] = {0, 4, 5, 8, 6, 0, 11, 0};
+    for (uint8_t emitter = 0; emitter < 8; emitter++) {
+        CAPTURE(int(emitter));
+        CHECK(int(adsb_emitter_to_own_category(kSetA, emitter)) == int(set_a[emitter]));
+        CHECK(int(adsb_emitter_to_own_category(kSetB, emitter)) == int(set_b[emitter]));
+        CHECK(adsb_emitter_to_own_category(kSetC, emitter) == 0);
+        CHECK(adsb_emitter_to_own_category(kSetD, emitter) == 0);
+    }
 }

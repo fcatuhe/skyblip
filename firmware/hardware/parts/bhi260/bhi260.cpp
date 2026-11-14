@@ -1,6 +1,6 @@
 #include "hardware/parts/bhi260/bhi260.h"
 
-#include "core/util/little_endian.h"
+#include "protocols/common/little_endian.h"
 
 namespace skyblip::parts {
 
@@ -52,7 +52,7 @@ void Bhi260::load(Image& image, uint32_t now_ms) {
 
     uint8_t magic[2] = {0};
     if (image.size() < kCommandHeaderBytes || !image.read(0, magic, sizeof(magic)) ||
-        get_uint16(magic) != kFirmwareMagic) {
+        wire::get_uint16(magic) != kFirmwareMagic) {
         fail(Status::Invalid);
         return;
     }
@@ -221,7 +221,7 @@ void Bhi260::read_kernel_version(uint32_t now_ms) {
         fail(Status::Down);
         return;
     }
-    kernel_version_ = get_uint16(version);
+    kernel_version_ = wire::get_uint16(version);
     if (kernel_version_ == 0) {
         fail(Status::Down);
         return;
@@ -282,7 +282,7 @@ void Bhi260::confirm_configuration(uint32_t now_ms) {
         return;
     }
     if (code == kParameterSensorConfig + kSensorAccelerometer && answered >= 4 &&
-        get_uint32(config) == 0) {
+        wire::get_uint32(config) == 0) {
         fail(Status::Unsupported);
         return;
     }
@@ -308,8 +308,8 @@ bool Bhi260::parameter_ready() {
 int Bhi260::read_status_channel(uint16_t& code, uint8_t* out, uint16_t capacity) {
     uint8_t header[4] = {};
     if (!read_registers(kRegisterStatusChannel, header, sizeof(header))) return -1;
-    code = get_uint16(header);
-    const uint16_t bytes = get_uint16(header + 2);
+    code = wire::get_uint16(header);
+    const uint16_t bytes = wire::get_uint16(header + 2);
     if (bytes == 0) return 0;
     if (bytes > capacity) return -1;
     if (!read_registers(kRegisterStatusChannel, out, bytes)) return -1;
@@ -359,7 +359,7 @@ void Bhi260::drain_fifo(Fifo& fifo, uint32_t now_ms) {
             fail(Status::Down);
             return;
         }
-        fifo.remaining = get_uint16(available);
+        fifo.remaining = wire::get_uint16(available);
         fifo.resynchronising = false;
         fifo.carried = 0;
         if (fifo.remaining == 0) return;
@@ -427,7 +427,7 @@ uint8_t Bhi260::event_bytes(uint8_t event_id) {
 }
 
 int16_t Bhi260::to_milli_g(const uint8_t* bytes) {
-    const int32_t raw = get_int16(bytes);
+    const int32_t raw = wire::get_int16(bytes);
     return static_cast<int16_t>(raw * kRangeG * 1000 / kCountsPerRange);
 }
 

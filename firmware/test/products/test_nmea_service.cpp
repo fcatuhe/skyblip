@@ -33,6 +33,7 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/air.h"
+#include "core/protocol/callsign.h"
 #include "core/units/units.h"
 #include "doctest/doctest.h"
 #include "hardware/parts/sx1262/model.h"
@@ -65,15 +66,15 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
     transmitter.speed_mm_s = 40000;
     transmitter.vdop_e2 = 150;
 
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     protocol::from_own(packet, transmitter, address, /*address_mapping_table=*/6,
                        /*aircraft_category=*/4);
     packet.scramble();
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes =
+        wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;
@@ -86,14 +87,14 @@ void hear(Rig& rig, uint32_t address, int32_t north_m, int32_t east_m, int32_t u
 
 // The same aircraft naming itself, one Type 66 burst (core/protocol/README.md).
 void hear_callsign(Rig& rig, uint32_t address, const char* callsign) {
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     protocol::from_own_callsign(packet, address, /*address_mapping_table=*/6, callsign);
     packet.scramble();
     packet.set_crc();
 
     uint8_t chips[protocol::kTxChipBytes];
-    const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, packet.data,
-                                                      protocol::kAdslFrameBytes, chips);
+    const size_t chip_bytes =
+        wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 
     events::RfEvent event{};
     event.type = events::RfEventType::RxDone;

@@ -1,8 +1,8 @@
 // Where an aircraft will be if it keeps doing what it is doing: one path, drawn and alarmed on.
 #include "core/flight/arc.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
 #include "doctest/doctest.h"
+#include "protocols/common/geometry.h"
 
 using namespace skyblip;
 using namespace skyblip::flight;
@@ -44,7 +44,7 @@ TEST_CASE("arc: an aircraft not turning flies a straight ray") {
 TEST_CASE("arc: a turn flies the radius its rate and speed describe") {
     // 23.15 m/s at 12 deg/s is radius = speed / rate = 111 m, so 221 m across at the half turn.
     const Position half = after(flying(0, kThermalSpeedMmS, 12), 15);
-    const int32_t diameter = static_cast<int32_t>(hypotenuse(half.north_m, half.east_m));
+    const int32_t diameter = static_cast<int32_t>(wire::hypotenuse(half.north_m, half.east_m));
     CHECK(diameter > 213);
     CHECK(diameter < 229);
     CHECK(half.east_m > 213);
@@ -54,7 +54,7 @@ TEST_CASE("arc: a turn flies the radius its rate and speed describe") {
 
 TEST_CASE("arc: a full circle comes back to where it started") {
     const Position full = after(flying(0, kThermalSpeedMmS, 12), 30);
-    CHECK(hypotenuse(full.north_m, full.east_m) < 8);
+    CHECK(wire::hypotenuse(full.north_m, full.east_m) < 8);
 }
 
 TEST_CASE("arc: a left turn mirrors a right turn") {
@@ -68,7 +68,7 @@ TEST_CASE("arc: the step is a cadence, not a shape") {
     const Motion motion = flying(30, kThermalSpeedMmS, 9);
     const Position coarse = after(motion, 20, 2000);
     const Position fine = after(motion, 20, 500);
-    CHECK(hypotenuse(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
+    CHECK(wire::hypotenuse(coarse.north_m - fine.north_m, coarse.east_m - fine.east_m) < 10);
 }
 
 TEST_CASE("arc: a climb is carried with the path") {

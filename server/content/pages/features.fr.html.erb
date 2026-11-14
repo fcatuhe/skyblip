@@ -1,9 +1,9 @@
 ---
 title: "skyBlip Go, détecteur de trafic ADS-L et FLARM"
 nav_title: Go
-slug: fonctionnalites
+slug: go
 description: "skyBlip Go émet en ADS-L et reçoit l'ADS-L et le FLARM. Radar, alerte de trafic et liaison Bluetooth, sans téléphone ni abonnement pour voler."
-updated_on: "2026-11-11"
+updated_on: "2026-11-13"
 product:
   name: skyBlip Go
   low_price: "68"
@@ -27,14 +27,14 @@ product:
       <h3 id="radar">Un radar <span class="highlight">route en haut</span>.</h3>
       <p>
         Vous êtes au centre, route en haut, et c&rsquo;est le ciel qui tourne
-        autour de vous. Un trafic en haut à droite se cherche à droite du nez,
-        sans rien convertir.
+        autour de vous. Un trafic en haut à droite se trouve à droite du nez.
+        Pas besoin de réorienter l&rsquo;image mentalement.
       </p>
       <p>
-        Chaque aéronef est une forme&nbsp;: pointe en haut, il est
-        au-dessus&nbsp;; pointe en bas, en dessous&nbsp;; losange, à votre
-        niveau. Un chevron s&rsquo;ajoute s&rsquo;il monte ou descend, et un
-        trait mène là où il sera dans une minute.
+        Chaque aéronef a un symbole&nbsp;: pointe en haut, il est
+        au-dessus de vous. Pointe en bas, en dessous. Un losange indique votre
+        niveau. Un chevron signale une montée ou une descente, et un
+        trait indique où il sera dans une minute.
       </p>
       <p class="feature-guide">
         <%= link_to_page "radar", label: "Lire le radar", anchor: "heading-up" %>
@@ -42,7 +42,7 @@ product:
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec son trait d'une minute, et votre route en pointillés" %>
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant sa position dans une minute, et votre route en pointillés" %>
     </figure>
   </div>
 
@@ -50,8 +50,8 @@ product:
     <li>Route en haut, jamais le nord</li>
     <li>Cercle de 1, 2, 4 ou 8&nbsp;NM</li>
     <li>Au-dessus, au niveau, en dessous</li>
-    <li>Une minute de route devant chaque aéronef</li>
-    <li>Le nombre d&rsquo;aéronefs reçus</li>
+    <li>Un trait indique où sera chaque aéronef dans une minute</li>
+    <li>Le nombre d&rsquo;aéronefs dont le signal est reçu</li>
     <li>Le temps de vol, pour le carnet</li>
   </ul>
 
@@ -60,13 +60,13 @@ product:
       <h3 id="every-aircraft">Tous les aéronefs, <span class="highlight">aussi loin soient-ils</span>.</h3>
       <p>
         Avec <span class="mono">PLOT ALL</span>, le réglage d&rsquo;origine, le
-        cercle laisse une bande autour de lui. Un aéronef au-delà du cercle
-        s&rsquo;y place, dans son relèvement, avec sa forme. Rien de ce qui est
-        reçu avec une position n&rsquo;est laissé de côté.
+        cercle est entouré d&rsquo;une bande. Un aéronef au-delà du cercle
+        y est placé, dans sa direction, avec son symbole. Tout aéronef
+        reçu avec une position est affiché.
       </p>
       <p>
         Avec <span class="mono">PLOT TO SCALE</span>, l&rsquo;image est à
-        l&rsquo;échelle du cercle, et s&rsquo;arrête au bord de l&rsquo;écran.
+        l&rsquo;échelle du cercle et s&rsquo;arrête au bord de l&rsquo;écran.
       </p>
       <p class="feature-guide">
         <%= link_to_page "displays", label: "Le radar, des deux façons", anchor: "both-ways" %>
@@ -82,12 +82,12 @@ product:
     <div>
       <h3 id="alarm">Une alarme <span class="highlight">qui dit où regarder</span>.</h3>
       <p>
-        À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran centré
-        sur le trafic clignote, une fois par seconde, et le radar reprend la main
-        quelle que soit la page affichée.
+        Quand un trafic est à moins de 3&nbsp;km et 300&nbsp;m au-dessus ou en dessous, un quart de l&rsquo;écran centré
+        sur lui clignote une fois par seconde. Le radar remplace
+        la page affichée.
       </p>
       <p>
-        Le secteur est penché sur l&rsquo;angle exact du trafic. L&rsquo;appareil
+        Le secteur est orienté dans la direction exacte du trafic. L&rsquo;appareil
         ne dit jamais de monter ou de descendre&nbsp;: il dit de regarder.
       </p>
       <p class="feature-guide">
@@ -96,7 +96,7 @@ product:
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : un secteur de 90° penché sur le trafic, passé au noir" %>
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : un secteur de 90° orienté vers le trafic, devenu noir" %>
     </figure>
   </div>
 
@@ -104,7 +104,7 @@ product:
     <li>3&nbsp;km autour, 300&nbsp;m au-dessus et en dessous</li>
     <li>Un quart d&rsquo;écran, centré sur le trafic</li>
     <li>Un clignotement par seconde</li>
-    <li>Un contact sur le pavé la fait taire</li>
+    <li>Un appui sur le pavé la fait taire</li>
     <li>Le radar reprend la main</li>
     <li>Un avertissement, jamais un ordre</li>
   </ul>
@@ -114,7 +114,7 @@ product:
       <h3 id="nearby">Qui est là, <span class="highlight">du plus proche au plus loin</span>.</h3>
       <p>
         Une ligne par aéronef&nbsp;: la source, ADS-L ou FLARM, l&rsquo;indicatif
-        ou l&rsquo;adresse, la distance au sol et l&rsquo;altitude relative.
+        ou l&rsquo;adresse, la distance au sol et l&rsquo;écart d&rsquo;altitude avec vous.
       </p>
       <p class="feature-guide">
         <%= link_to_page "radar", label: "La liste Nearby", anchor: "nearby" %>
@@ -122,7 +122,7 @@ product:
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source, leur indicatif, leur distance et leur altitude relative" %>
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs du plus proche au plus loin, avec leur source, leur indicatif, leur distance et leur écart d'altitude avec vous" %>
     </figure>
   </div>
 
@@ -138,12 +138,12 @@ product:
       <p>
         En vol, il émet votre position en ADS-L une fois par seconde, au sol une
         fois toutes les dix secondes. L&rsquo;émission dure environ 5&nbsp;ms, à
-        un instant tiré de son adresse et de la seconde en cours.
+        un instant déterminé par son adresse et la seconde en cours.
       </p>
       <p>
-        Le reste de la seconde, il écoute&nbsp;: les deux canaux 868&nbsp;MHz pour
-        l&rsquo;ADS-L et le FLARM, et 869,525&nbsp;MHz, réservé à la liaison
-        montante des futures stations skyPost.
+        Le reste de la seconde, il écoute les deux canaux 868&nbsp;MHz pour
+        l&rsquo;ADS-L et le FLARM, ainsi que 869,525&nbsp;MHz, réservé aux émissions
+        des futures stations sol skyPost.
       </p>
       <p class="feature-guide">
         <%= link_to_page "radio", label: "Où passe la seconde", anchor: "second" %>
@@ -168,9 +168,9 @@ product:
     <div>
       <h3 id="callsign">Votre indicatif <span class="highlight">chez les autres</span>.</h3>
       <p>
-        Tapé sur l&rsquo;appareil avec deux contacts, envoyé depuis votre
-        téléphone ou réglé depuis le navigateur. Il part sur les ondes une fois
-        toutes les dix secondes, et s&rsquo;affiche sur l&rsquo;écran des
+        Saisissez votre indicatif sur l&rsquo;appareil avec ses deux commandes, envoyez-le depuis votre
+        téléphone ou réglez-le depuis le navigateur. Il est émis une fois
+        toutes les dix secondes et s&rsquo;affiche sur les écrans des
         aéronefs autour de vous.
       </p>
       <p class="feature-guide">
@@ -193,8 +193,8 @@ product:
     <div>
       <h3 id="apps">Trois applications, <span class="highlight">sans appairage</span>.</h3>
       <p>
-        Il apparaît sous son nom, skyBlip Go suivi de son adresse. Le flux FLARM
-        NMEA part vers SDVFR Next, SkyDemon, ForeFlight et les autres&nbsp;: la
+        Il apparaît sous son nom, skyBlip Go suivi de son adresse. Il envoie les données de trafic au format FLARM
+        NMEA à SDVFR Next, SkyDemon, ForeFlight et aux autres applications. La
         tablette, le téléphone et l&rsquo;iPad du passager voient le même trafic.
       </p>
       <p>
@@ -219,7 +219,7 @@ product:
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="asked">Chaque changement <span class="highlight">demandé à l&rsquo;écran</span>.</h3>
+      <h3 id="asked">Chaque changement <span class="highlight">attend votre accord</span>.</h3>
       <p>
         Un nouveau firmware, des réglages, l&rsquo;effacement de vos vols&nbsp;:
         l&rsquo;appareil ne croit pas le téléphone sur parole. Il pose la question
@@ -250,12 +250,12 @@ product:
     <div>
       <h3 id="instruments">Le GPS et le baromètre <span class="highlight">en six cadrans</span>.</h3>
       <p>
-        Vitesse sol, horizon, altimètre, virage, route et vario, une façon
-        ludique d&rsquo;afficher les mesures du GPS et du baromètre, avec la
-        batterie au-dessus du cadran central.
+        Vitesse sol, horizon, altimètre, virage, route et vario&nbsp;: une façon
+        ludique d&rsquo;afficher les mesures du GPS et du baromètre. Le niveau de
+        batterie apparaît au-dessus du cadran central.
       </p>
       <p>
-        Ce ne sont pas des instruments de vol&nbsp;: rien n&rsquo;est certifié,
+        Ce ne sont pas des instruments de vol. Aucun n&rsquo;est certifié,
         et ce n&rsquo;est pas un horizon pour voler en nuage.
       </p>
       <p class="feature-guide">
@@ -270,11 +270,11 @@ product:
 
   <div class="feature feature--reverse">
     <div>
-      <h3 id="controls">Deux contacts, <span class="highlight">sans téléphone</span>.</h3>
+      <h3 id="controls">Deux commandes, <span class="highlight">sans téléphone</span>.</h3>
       <p>
-        Une tape sur le pavé change de page, un contact d&rsquo;une seconde
+        Un appui bref sur le pavé tactile change de page. Un appui d&rsquo;une seconde
         ramène le radar. Le bouton ouvre le menu&nbsp;: type d&rsquo;aéronef,
-        indicatif, unités, portée, tracé, alarme et volume.
+        indicatif, unités, portée, mode d&rsquo;affichage, alarme et volume.
       </p>
       <p class="feature-guide">
         <%= link_to_page "controls", label: "Les commandes", anchor: "two-contacts" %>
@@ -282,7 +282,7 @@ product:
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d'aéronef, indicatif, unités, portée, tracé, alarme et volume" %>
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d'aéronef, indicatif, unités, portée, mode d'affichage, alarme et volume" %>
     </figure>
   </div>
 
@@ -290,9 +290,9 @@ product:
     <div>
       <h3 id="power">Une batterie <span class="highlight">qui prévient</span>.</h3>
       <p>
-        Sans position, il dit où en est le récepteur. Éteint, l&rsquo;écran
-        e-paper garde le logo sans courant. Batterie vide, il
-        l&rsquo;écrit à l&rsquo;écran avant de couper.
+        Tant qu&rsquo;il n&rsquo;a pas de position, il indique où en est le récepteur GPS. Éteint, l&rsquo;écran
+        à papier électronique (e-paper) garde le logo sans courant. Batterie vide, il
+        l&rsquo;écrit à l&rsquo;écran avant de s&rsquo;éteindre.
       </p>
       <p class="feature-guide">
         <%= link_to_page "power", label: "La batterie", anchor: "waiting" %>
@@ -300,7 +300,7 @@ product:
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil éteint sur une batterie vide : le logo skyBlip et FLAT BATTERY" %>
+      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint parce que sa batterie était vide : le logo skyBlip et FLAT BATTERY" %>
     </figure>
   </div>
 

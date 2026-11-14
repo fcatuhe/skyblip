@@ -3,10 +3,10 @@
 #include <cstring>
 #include <string>
 
-#include "core/fec/crc.h"
 #include "core/flight/log_events.h"
 #include "core/flight/log_record.h"
 #include "doctest/doctest.h"
+#include "protocols/common/crc.h"
 
 using namespace skyblip;
 
@@ -52,7 +52,7 @@ std::string hex(const uint8_t* raw) {
 }
 
 void reseal(uint8_t* raw) {
-    const uint16_t crc = fec::crc16_ccitt(raw, flight::kLogRecordBytes - 2);
+    const uint16_t crc = wire::crc16_ccitt(raw, flight::kLogRecordBytes - 2);
     raw[22] = static_cast<uint8_t>(crc);
     raw[23] = static_cast<uint8_t>(crc >> 8);
 }

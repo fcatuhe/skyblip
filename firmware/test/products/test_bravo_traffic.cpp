@@ -71,8 +71,7 @@ TEST_CASE("bravo traffic: Bravo's target enters the table at the instants Bravo 
     CHECK(target->observation.source == model::Source::Adsb);
     CHECK(target->observation.received.at_s == utc_of(2));
     CHECK(target->observation.at_ms == edge_ms_of(2) + 200);
-    CHECK(std::string(flight.state().callsigns.find(settings::kIcaoAddressMappingTable, kTarget)) ==
-          "DLH4AB");
+    CHECK(std::string(flight.state().callsigns.find(adsl::kAddressTableIcao, kTarget)) == "DLH4AB");
     CHECK(flight.tango.service().unplaced() == 0);
 }
 

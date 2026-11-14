@@ -400,6 +400,10 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"unsupported", 61, Type::Unsigned, nullptr, 0, false},
     {"folded", 62, Type::Unsigned, nullptr, 0, false},
     {"aircraft", 63, Type::Unsigned, nullptr, 0, false},
+    {"tx_held_for_b5", 64, Type::Unsigned, nullptr, 0, false},
+    {"rx_status", 65, Type::Unsigned, nullptr, 0, false},
+    {"uplink_stale", 66, Type::Unsigned, nullptr, 0, false},
+    {"tx_given_up", 67, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -631,8 +635,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 63},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 67},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 67},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

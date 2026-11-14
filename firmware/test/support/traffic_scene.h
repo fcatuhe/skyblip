@@ -6,7 +6,7 @@
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip {
 
@@ -41,7 +41,8 @@ inline model::AircraftObservation target_at(const model::Ownship& own, int north
         own.latitude_1e7 + static_cast<int32_t>(static_cast<int64_t>(north_m) * 1000000 / 11132);
     const int16_t latitude_angle =
         static_cast<int16_t>((static_cast<int64_t>(own.latitude_1e7) * 65536) / 3600000000LL);
-    const int64_t east_scaled = static_cast<int64_t>(east_m) * kTrigOne / cosine(latitude_angle);
+    const int64_t east_scaled =
+        static_cast<int64_t>(east_m) * wire::kTrigOne / wire::cosine(latitude_angle);
     observation.longitude_1e7 =
         own.longitude_1e7 + static_cast<int32_t>(east_scaled * 1000000 / 11132);
     observation.received.at_s = at_ms / 1000;

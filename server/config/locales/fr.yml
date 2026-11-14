@@ -36,7 +36,7 @@ fr:
     copied: "copié"
   tango:
     title: "skyBlip Tango"
-    description: "skyBlip Bravo recevra l'ADS-B et le transmettra à skyBlip Go en Bluetooth. Le Go recevra l'ADS-L et le FLARM, émettra votre position en ADS-L et enverra tout le trafic à votre téléphone en un seul flux."
+    description: "skyBlip Bravo reçoit l'ADS-B et le transmet à skyBlip Go en Bluetooth. Le Go reçoit l'ADS-L et le FLARM, émet votre position en ADS-L et envoie tout le trafic à votre téléphone en un seul flux."
     adsb: "ADS-B 1090 MHz"
     adsl_flarm: "ADS-L, FLARM"
     adsl: "ADS-L"
@@ -49,12 +49,12 @@ fr:
   settings:
     aircraft_type: "Type d\u2019aéronef"
     callsign: "Indicatif"
-    callsign_hint: "Jusqu\u2019à neuf lettres, chiffres, tirets ou blancs."
+    callsign_hint: "Jusqu\u2019à neuf lettres, chiffres, tirets ou espaces."
     own_icao: "Adresse OACI"
-    own_icao_hint: "Celle de votre transpondeur, comme 3C6586, pour ne jamais l\u2019afficher comme un trafic. Vide sans transpondeur."
+    own_icao_hint: "Saisissez l\u2019adresse de votre transpondeur, comme 3C6586, pour que votre aéronef ne s\u2019affiche jamais comme un trafic. Laissez vide si vous n\u2019avez pas de transpondeur."
   footer:
     description: "Visibilité électronique pour l'aviation légère. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."
-    open_source: "Open source, sans abonnement, sans compte."
+    open_source: "Pour l'aviation privée et les sports aériens : open source, sans abonnement, sans compte."
     product: "Appareils"
     guides: "Guides"
     project: "skyBlip"
@@ -63,10 +63,9 @@ fr:
     license: "Code sous licence MIT"
     notices: "Licences tierces"
   share:
-    in_development: "Firmware en développement"
     locale: "fr_FR"
     images:
       go: "skyBlip Go, ADS-L et FLARM : un LilyGO T-Echo blanc avec son antenne, le radar du trafic sur son écran e-paper"
       radar: "skyBlip Go, ADS-L et FLARM : la page radar, trois aéronefs autour de vous, chacun avec sa trajectoire sur une minute"
-      bravo: "skyBlip Bravo, firmware en développement : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte qui recevra l'ADS-B 1090 MHz"
-      tango: "skyBlip Tango, firmware en développement : un skyBlip Go et un Seeed SenseCAP MeshTracker X1 côte à côte. Associés, ils réuniront l'ADS-B, l'ADS-L et le FLARM sur un radar"
+      bravo: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte qui reçoit l'ADS-B 1090 MHz"
+      tango: "skyBlip Tango : un skyBlip Go et un Seeed SenseCAP MeshTracker X1 côte à côte. Associés, ils réunissent l'ADS-B, l'ADS-L et le FLARM sur un radar"

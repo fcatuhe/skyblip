@@ -210,7 +210,7 @@ TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the conf
     config.sync_bits = protocol::kSharedSyncBits;
     config.payload_bytes = protocol::kRxChipBytes;
     REQUIRE(radio.configure_radio(config) == Status::Ok);
-    uint8_t frame[protocol::kAdslFrameBytes] = {0};
+    uint8_t frame[adsl::kFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
     CHECK(chip.tx_timeout_ticks != 0);
     // 100 kbps: one bit is 10 us. Preamble + sync window + payload.

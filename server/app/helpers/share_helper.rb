@@ -8,7 +8,7 @@ module ShareHelper
   end
 
   def share_image_url
-    Content.canonical_url(image_path("share/#{ShareImages.filename(share_image_name, I18n.locale)}"))
+    Content.canonical_url(image_path("share/#{ShareImages.filename(share_image_name)}"))
   end
 
   private

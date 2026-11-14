@@ -8,7 +8,7 @@
 using namespace skyblip;
 
 namespace {
-protocol::AdslPacket from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = true) {
+adsl::Packet from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = true) {
     model::Ownship own{};
     own.fix_valid = fix;
     own.utc_valid = true;
@@ -19,7 +19,7 @@ protocol::AdslPacket from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = tru
     own.hdop_e2 = hdop_e2;
     own.vdop_e2 = vdop_e2;
     own.flight_state = 2;
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     protocol::from_own(packet, own, 0x123456, 6, 4);
     return packet;
 }
@@ -28,20 +28,9 @@ protocol::AdslPacket from_dop(uint16_t hdop_e2, uint16_t vdop_e2, bool fix = tru
 constexpr uint32_t kSpecUereM = 6;
 }  // namespace
 
-TEST_CASE("ADS-L.4.SRD860.G.1.11: the source integrity level is two bits, and 0 is undefined") {
-    protocol::AdslPacket packet{};
-    packet.reset();
-    for (uint8_t code = 0; code < 4; code++) {
-        packet.source_integrity = code;
-        CHECK(packet.source_integrity == code);
-    }
-    packet.set_integrity_unknown();
-    CHECK(packet.source_integrity == 0);
-}
-
 // No design assurance credit is held for this firmware, and the clause has a code that says so.
 TEST_CASE("ADS-L.4.SRD860.G.1.12: the design assurance transmitted is 0, none") {
-    CHECK(protocol::AdslPacket::kDesignAssuranceNone == 0);
+    CHECK(adsl::Packet::kDesignAssuranceNone == 0);
     CHECK(from_dop(90, 150).design_assurance == 0);
     CHECK(from_dop(0, 0, /*fix=*/false).design_assurance == 0);
 }
@@ -53,39 +42,11 @@ TEST_CASE("ADS-L.4.SRD860.G.1.13: without a protection level the navigation inte
     CHECK(from_dop(0, 0, /*fix=*/false).navigation_integrity == 0);
 }
 
-// The NACp table, in centimetres of 95% horizontal error bound.
-TEST_CASE("ADS-L.4.SRD860.G.1.14: the horizontal accuracy code sits on the table's boundaries") {
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(299) == 7);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(300) == 6);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(999) == 6);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(1000) == 5);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(2999) == 5);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(3000) == 4);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(9259) == 4);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(9260) == 3);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(18519) == 3);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(18520) == 2);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(55559) == 2);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(55560) == 1);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(92599) == 1);
-    CHECK(protocol::AdslPacket::horizontal_accuracy_code(92600) == 0);
-}
-
 TEST_CASE("ADS-L.4.SRD860.G.1.14: HFOM is derived from HDOP as 2 * HDOP * 6 m") {
     const uint16_t hdop_e2 = 90;
     const uint32_t spec_hfom_cm = 2u * hdop_e2 * kSpecUereM;
     CHECK(from_dop(hdop_e2, 150).horizontal_accuracy ==
-          protocol::AdslPacket::horizontal_accuracy_code(spec_hfom_cm));
-}
-
-// The GVA table, in centimetres of 95% vertical error bound.
-TEST_CASE("ADS-L.4.SRD860.G.1.15: the vertical accuracy code sits on the table's boundaries") {
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(999) == 3);
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(1000) == 2);
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(4499) == 2);
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(4500) == 1);
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(14999) == 1);
-    CHECK(protocol::AdslPacket::vertical_accuracy_code(15000) == 0);
+          adsl::Packet::horizontal_accuracy_code(spec_hfom_cm));
 }
 
 // A 2D solution reports no VDOP, and a height nothing measured the quality of gets no claim at all.
@@ -94,19 +55,43 @@ TEST_CASE("ADS-L.4.SRD860.G.1.15: a solution with no VDOP claims no vertical acc
     CHECK(from_dop(90, 150).vertical_accuracy > 0);
 }
 
-// The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code follows NACp down") {
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(7) == 3);
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(6) == 2);
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(5) == 1);
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(4) == 0);
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(3) == 0);
-    CHECK(protocol::AdslPacket::velocity_accuracy_code(0) == 0);
+// HFOM's model taken to VDOP: 1.00 is a 12 m VFOM, which the two issues code differently.
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.15: own-ship sends a 10 to 15 m VFOM as Issue 2, or GVA 3 for Issue 1") {
+    const auto sent = [](uint16_t vdop_e2, model::Ownship& own) {
+        own.fix_valid = true;
+        own.utc_valid = true;
+        own.climb_valid = true;
+        own.latitude_1e7 = 481234500;
+        own.longitude_1e7 = 81234500;
+        own.altitude_hae_mm = 1000000;
+        own.speed_mm_s = 100000;
+        own.hdop_e2 = 90;
+        own.vdop_e2 = vdop_e2;
+        own.flight_state = 2;
+        adsl::Packet packet{};
+        protocol::from_own(packet, own, 0x123456, 6, 4);
+        return packet;
+    };
+    model::Ownship own{};
+    adsl::Packet twelve = sent(100, own);
+    CHECK(twelve.vertical_accuracy == 2);
+    CHECK(twelve.protocol_version() == 1);
+    REQUIRE(protocol::issue1_form(twelve, own));
+    CHECK(twelve.vertical_accuracy == 3);
+    CHECK(twelve.protocol_version() == 0);
+
+    const adsl::Packet nine = sent(80, own);
+    CHECK(nine.vertical_accuracy == 3);
+    CHECK(nine.protocol_version() == 0);
+    const adsl::Packet eighteen = sent(150, own);
+    CHECK(eighteen.vertical_accuracy == 2);
+    CHECK(eighteen.protocol_version() == 0);
 }
 
 // Every code in the block has a zero meaning "no fix", and without one that is the honest answer.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: with no fix the whole quality block claims nothing") {
-    protocol::AdslPacket packet = from_dop(90, 150, /*fix=*/false);
+    adsl::Packet packet = from_dop(90, 150, /*fix=*/false);
     CHECK(packet.source_integrity == 0);
     CHECK(packet.design_assurance == 0);
     CHECK(packet.navigation_integrity == 0);
@@ -117,7 +102,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: with no fix the whole quality block claims not
 
 // A receiver that reports no HDOP is not a receiver reporting a good one.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: a fix with no reported HDOP claims no accuracy either") {
-    protocol::AdslPacket packet = from_dop(0, 0);
+    adsl::Packet packet = from_dop(0, 0);
     CHECK(packet.horizontal_accuracy == 0);
     CHECK(packet.navigation_integrity == 0);
     CHECK(packet.velocity_accuracy == 0);
@@ -125,16 +110,26 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: a fix with no reported HDOP claims no accuracy
 
 // The accuracy claim moves with the fix, which is what the clause asks an uncertified device for.
 TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static zero") {
-    const protocol::AdslPacket good = from_dop(90, 150);
-    const protocol::AdslPacket poor = from_dop(800, 800);
+    const adsl::Packet good = from_dop(90, 150);
+    const adsl::Packet poor = from_dop(800, 800);
     CHECK(good.horizontal_accuracy > poor.horizontal_accuracy);
     CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
     CHECK(good.velocity_accuracy > poor.velocity_accuracy);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
-    const protocol::AdslPacket packet = from_dop(90, 150);
+    const adsl::Packet packet = from_dop(90, 150);
     CHECK(packet.source_integrity == 0);
     CHECK(packet.design_assurance == 0);
     CHECK(packet.navigation_integrity == 0);
+}
+
+// The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code follows NACp down") {
+    CHECK(protocol::velocity_accuracy_code(7) == 3);
+    CHECK(protocol::velocity_accuracy_code(6) == 2);
+    CHECK(protocol::velocity_accuracy_code(5) == 1);
+    CHECK(protocol::velocity_accuracy_code(4) == 0);
+    CHECK(protocol::velocity_accuracy_code(3) == 0);
+    CHECK(protocol::velocity_accuracy_code(0) == 0);
 }
