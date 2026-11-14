@@ -24,6 +24,7 @@ export default class extends Controller {
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
+                    "report", "reportSend", "reportMessage",
                     "forgetDialog", "forgetQuestion", "browsers", "browserList", "browsersMessage", "forgetOthers"]
   static values = { slug: String, home: String, activation: String }
   static outlets = ["glass"]
@@ -127,6 +128,15 @@ export default class extends Controller {
     this.#render()
   }
 
+  // INFO: fc 15nov26 every key of the dump is a counter or a state, the kind the journal may carry
+  async sendReport() {
+    const journal = sharedJournal()
+    journal.record("device.diagnosed", { dump: this.unit.state.dump }, { device: this.slugValue })
+    const sent = await journal.flush()
+    this.reported = { key: sent ? "sent" : "not_sent", good: sent, values: { code: journal.supportCode } }
+    this.#render()
+  }
+
   #token() {
     return document.querySelector('meta[name="csrf-token"]')?.content ?? null
   }
@@ -178,6 +188,7 @@ export default class extends Controller {
     this.#firmwareRow(state, linked && !asking)
     this.terminalRowTarget.hidden = !linked || asking
     this.#capture(unit, state)
+    this.#report(unit, state)
     this.#browsers(unit, state)
     this.#glass(unit, asking)
     if (linked) offerNewest(unit, shelfIn(this.element))?.then(() => this.#render())
@@ -376,6 +387,13 @@ export default class extends Controller {
     this.captureSendMessageTarget.hidden = !sending
     this.captureSendMessageTarget.textContent = sending ? say(`capture.${sending.key}`, sending.values) : ""
     this.captureSendMessageTarget.classList.toggle("is-good", sending?.good === true)
+  }
+
+  #report(unit, state) {
+    this.reportTarget.hidden = !(unit?.linked ?? false) || !state?.dump || this.#prompting(state)
+    this.reportMessageTarget.hidden = !this.reported
+    this.reportMessageTarget.textContent = this.reported ? say(`report.${this.reported.key}`, this.reported.values) : ""
+    this.reportMessageTarget.classList.toggle("is-good", this.reported?.good === true)
   }
 
   // INFO: fc 13nov26 only a browser the unit trusts reads the list, so the section waits for that trust

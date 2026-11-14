@@ -81,6 +81,12 @@ fr:
       sent: "Envoyée. Donnez votre code d\u2019assistance %{code} quand vous nous écrivez."
       empty: "L\u2019appareil ne contient aucune capture."
       not_sent: "La capture n\u2019a pas pu être envoyée\u00a0: %{detail}. Réessayez plus tard."
+    report:
+      title: "Envoyer un rapport"
+      hint: "Envoie les compteurs de l\u2019appareil à skyBlip, sans position ni adresse. Utilisez-le quand l\u2019appareil se comporte mal."
+      send: "Envoyer un rapport"
+      sent: "Envoyé. Donnez votre code d\u2019assistance %{code} quand vous nous écrivez."
+      not_sent: "Le rapport attend dans ce navigateur et partira une fois en ligne. Votre code d\u2019assistance est %{code}."
     browsers:
       title: "Navigateurs de confiance"
       hint: "Ces navigateurs peuvent changer les réglages et lancer une mise à jour sans appui sur l\u2019appareil. Un navigateur entre dans la liste quand vous appuyez deux fois pour autoriser son premier enregistrement ou sa première mise à jour."

@@ -16,7 +16,8 @@ class Event::CatalogTest < ActiveSupport::TestCase
   end
 
   test "an event the browser sends names the keys it may carry, and each key has a type" do
-    typed = Event::Journal::WORDS + Event::Journal::COUNTS + Event::Journal::FLAGS + Event::Journal::TEXTS.keys + Event::Journal::PATHS + Event::Journal::LISTS
+    typed = Event::Journal::WORDS + Event::Journal::COUNTS + Event::Journal::FLAGS + Event::Journal::TEXTS.keys + Event::Journal::PATHS +
+      Event::Journal::LISTS + Event::Journal::DUMPS
 
     Event::Catalog.entries.select(&:browser?).each do |entry|
       assert_empty entry.keys - typed, "#{entry.name} carries a key with no type"

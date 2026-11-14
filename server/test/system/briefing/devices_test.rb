@@ -300,6 +300,18 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a report sends the device's dump to skyBlip, and says the support code" do
+    in_range a_go(servesCaptures: true)
+    on_the_shelf do
+      connect_go
+      click_button "Send a report"
+      assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
+      report = journaled("device.diagnosed")
+      assert_equal 170, report.payload.dig("dump", "capture", "takes_sectors")
+      assert_equal "go-00012a", report.device
+    end
+  end
+
   test "a capture refused on Bravo's button arms nothing, and asks nothing more until a reconnect" do
     in_range a_bravo
     on_the_shelf do

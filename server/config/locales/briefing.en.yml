@@ -81,6 +81,12 @@ en:
       sent: "Sent. Give your support code %{code} when you write to us."
       empty: The device holds no capture.
       not_sent: "The capture could not be sent: %{detail}. Try again later."
+    report:
+      title: Send a report
+      hint: "Sends the device's counters to skyBlip, with no position and no address. Use it when the device misbehaves."
+      send: Send a report
+      sent: "Sent. Give your support code %{code} when you write to us."
+      not_sent: "The report waits in this browser and leaves once it is online. Your support code is %{code}."
     browsers:
       title: Trusted browsers
       hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press twice to allow its first save or update."

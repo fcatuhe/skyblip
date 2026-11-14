@@ -88,6 +88,12 @@ device.installed:
   keys: [from, to, lasted_ms]
   says: A device came back from an install on the version the app sent, with the version before and how long the whole install took from the upload's start.
   answers: How many installs succeed, how long they take, and the version pilots move from.
+device.diagnosed:
+  group: Devices
+  from: browser
+  keys: [dump]
+  says: A pilot sent a report from a device page, the device's diagnostics dump by group, each a counter or a state, with no position and no address.
+  answers: What the device's radio, receiver, cell and capture said when its pilot asked for help, without asking the pilot to copy anything.
 device.forgotten:
   group: Devices
   from: browser
