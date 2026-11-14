@@ -452,7 +452,7 @@ class Product {
     // Declared before the config service, which is handed it: the settings writer
     // asks core/power whether the cell will survive a write before it makes one.
     common::PowerService power_{context_, settings_.battery_offset_mv};
-    SettingsStore settings_store_{settings_, state_.activation};
+    SettingsStore settings_store_{settings_, state_.activation, state_.own_transponder};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,          power_.cutoff_monitor(),
         "skyBlip Go", identity::bluetooth_name, dfu::Product::SkyblipGo};

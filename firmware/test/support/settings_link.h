@@ -3,6 +3,7 @@
 #define SKYBLIP_TEST_SUPPORT_SETTINGS_LINK_H
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "core/comms/link_registry.h"
@@ -13,11 +14,12 @@
 
 namespace skyblip {
 
-inline Status apply_patch(go::Settings& settings, const char* patch) {
+inline Status apply_patch(go::Settings& settings, const char* patch,
+                          std::optional<uint32_t> own_transponder = std::nullopt) {
     const std::string set = std::string("{\"command\":\"set\",") + (patch + 1);
     const events::RxFrame frame = config_frame(set.c_str());
-    return go::apply_settings(settings,
-                              cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)));
+    return go::apply_settings(settings, cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)),
+                              own_transponder);
 }
 
 inline std::string config_fields(const go::Settings& settings, settings::AirAddress address) {

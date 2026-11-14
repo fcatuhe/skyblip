@@ -19,6 +19,7 @@ enum class [[nodiscard]] Status : uint8_t {
     Full,
     Empty,
     NotFound,
+    Conflict,
 };
 
 constexpr bool is_ok(Status status) { return status == Status::Ok; }
@@ -35,6 +36,7 @@ constexpr const char* to_string(Status status) {
         case Status::Full: return "Full";
         case Status::Empty: return "Empty";
         case Status::NotFound: return "NotFound";
+        case Status::Conflict: return "Conflict";
     }
     return "?";
 }

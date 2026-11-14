@@ -152,6 +152,7 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
     flight.tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
     flight.fly(3);
     CHECK_FALSE(flight.go().product.screen().noticing());
+    CHECK_FALSE(flight.state().own_transponder);
 
     uint32_t& now_ms = flight.tango.now_ms;
     open_menu(flight.go(), now_ms);

@@ -51,6 +51,7 @@ void RadioService::tick(uint32_t now_ms) {
 }
 
 // INFO: fc 18oct26 a unit with no serial arms nothing, so it neither transmits nor receives
+// | 14nov26 the schedule keys on the serial, so setting an own ICAO moves no burst
 bool RadioService::identified() {
     const settings::AirAddress address = context_.state.activation.address();
     if (address) transmitter_.configure(*address);

@@ -3,6 +3,7 @@
 #define SKYBLIP_TEST_SUPPORT_CONFIG_FRAME_H
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "core/events/link.h"
@@ -12,6 +13,7 @@
 namespace skyblip {
 
 inline const identity::Activation kTestActivation{0x1234, 0x3F2A};
+inline const std::optional<uint32_t> kNoOwnTransponder{};
 
 inline constexpr const char* kSmallMtuRefusal =
     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"small_mtu\"}";

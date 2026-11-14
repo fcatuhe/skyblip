@@ -31,7 +31,7 @@ constexpr const char* kPromptRequests[] = {
 struct Bench {
     platform::host::Link link;
     go::Settings settings = go::defaults();
-    go::SettingsStore store{settings, kTestActivation};
+    go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     ConfigService config{link, store};
 
     explicit Bench(flight::FlightState state) {
@@ -161,7 +161,7 @@ TEST_CASE(
     platform::host::Link link;
     link.raise_link(1);
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     FinishedUpload dfu;
     ConfigService config(link, store, &dfu);
     config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));

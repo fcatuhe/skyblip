@@ -249,7 +249,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu.running_key_valid = true;
     dfu.allows_downgrade = true;
     go::Settings settings = go::defaults();
-    go::SettingsStore store(settings, kTestActivation);
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     comms::ConfigService config(link, store, &dfu);
     link.raise_link(1);
     link.declare_payload_bytes(495);
