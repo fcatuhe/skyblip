@@ -1971,6 +1971,34 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "own_transponder_category",
           "number": 15,
           "type": "unsigned"
+        },
+        {
+          "name": "firmware",
+          "number": 16,
+          "type": "text"
+        },
+        {
+          "name": "battery_percent",
+          "number": 17,
+          "type": "unsigned"
+        },
+        {
+          "name": "charging",
+          "number": 18,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "power_level",
+          "number": 19,
+          "type": "enum",
+          "enum": "power_level",
+          "required": true
+        },
+        {
+          "name": "frame_rate_hz",
+          "number": 20,
+          "type": "unsigned"
         }
       ]
     },

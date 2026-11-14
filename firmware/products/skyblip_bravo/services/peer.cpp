@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "core/dfu/update.h"
+
 namespace skyblip::bravo {
 
 namespace {
@@ -157,6 +159,18 @@ void PeerService::keep_pin() {
     kept_ = pin;
 }
 
+// INFO: fc 15nov26 Bravo has no glass, so its Go shows what it runs, holds and hears
+void PeerService::describe_self(comms::PeerHealth& health) const {
+    ports::ImageVersion running{};
+    if (context_.roles.dfu.running_version(running))
+        dfu::format_version(running, health.firmware, sizeof(health.firmware));
+    const power::BatteryState& battery = context_.state.power.battery;
+    if (battery.valid) health.battery_percent = battery.percent;
+    health.charging = battery.charging;
+    health.power_level = context_.state.power.level;
+    if (health.listening) health.frame_rate_hz = receiver_.statistics().frame_rate_hz;
+}
+
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it
 void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms) {
     if (!health_owed_ && now_ms - health_sent_ms_ < kHealthPeriodMs) return;
@@ -169,6 +183,7 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;
     health.own_transponder = own_transponder_.heard();
+    describe_self(health);
     bool blocked = false;
     for (const Go& go : gos_) {
         if (!go.used) continue;

@@ -69,6 +69,7 @@ class PeerService : public runtime::Service {
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
     void adopt_own_icao(uint32_t own_icao);
+    void describe_self(comms::PeerHealth& health) const;
     void send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void send_observations(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void serve(int slot, const traffic::Target& target,

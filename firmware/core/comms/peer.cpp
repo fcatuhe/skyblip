@@ -211,6 +211,25 @@ bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
     return true;
 }
 
+// INFO: fc 15nov26 a Bravo from before these keys sends none of them, which reads as no reading
+bool read_bravo_status(const cbor::Reader& reader, PeerHealth& health) {
+    uint32_t percent = 0, level = 0, rate = 0;
+    bool charged = false, levelled = false, rated = false, percented = false;
+    if (!take(reader.read_unsigned(link::health_key::kBatteryPercent), percent, percented) ||
+        !take(reader.read_boolean(link::health_key::kCharging), health.charging, charged) ||
+        !take(reader.read_unsigned(link::health_key::kPowerLevel), level, levelled) ||
+        !take(reader.read_unsigned(link::health_key::kFrameRateHz), rate, rated))
+        return false;
+    if (percent > 100 || level > static_cast<uint32_t>(power::PowerLevel::Low)) return false;
+    const Status text =
+        reader.read_text(link::health_key::kFirmware, health.firmware, kPeerFirmwareBytes);
+    if (text != Status::Ok && text != Status::NotFound) return false;
+    if (percented) health.battery_percent = static_cast<uint8_t>(percent);
+    health.power_level = static_cast<power::PowerLevel>(level);
+    if (rated) health.frame_rate_hz = rate;
+    return true;
+}
+
 }  // namespace
 
 int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
@@ -283,6 +302,13 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
         if (heard.aircraft_category != 0)
             writer.add_unsigned(link::health_key::kOwnTransponderCategory, heard.aircraft_category);
     }
+    if (health.firmware[0] != 0) writer.add_text(link::health_key::kFirmware, health.firmware);
+    if (health.battery_percent)
+        writer.add_unsigned(link::health_key::kBatteryPercent, *health.battery_percent);
+    writer.add_boolean(link::health_key::kCharging, health.charging);
+    writer.add_code(link::health_key::kPowerLevel, health.power_level);
+    if (health.frame_rate_hz)
+        writer.add_unsigned(link::health_key::kFrameRateHz, *health.frame_rate_hz);
     return writer.finish();
 }
 
@@ -365,7 +391,8 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.utc_valid = utc_valid.value();
     health.own_icao_set = own_icao_set.value();
     health.paired = paired.value();
-    if (!read_own_transponder(reader, health)) return Status::Invalid;
+    if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health))
+        return Status::Invalid;
     return health;
 }
 

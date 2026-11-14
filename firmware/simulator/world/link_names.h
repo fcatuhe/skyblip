@@ -568,6 +568,11 @@ inline constexpr Key kHealthKeys[] = {
     {"own_transponder", 13, Type::Unsigned, nullptr, 0, false},
     {"own_transponder_callsign", 14, Type::Text, nullptr, 0, false},
     {"own_transponder_category", 15, Type::Unsigned, nullptr, 0, false},
+    {"firmware", 16, Type::Text, nullptr, 0, false},
+    {"battery_percent", 17, Type::Unsigned, nullptr, 0, false},
+    {"charging", 18, Type::Boolean, nullptr, 0, true},
+    {"power_level", 19, Type::Enum, &kPowerLevel, 0, true},
+    {"frame_rate_hz", 20, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -668,7 +673,7 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 13},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 18},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 14},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
     {"browser_challenge", 30, events::Endpoint::Config, Sender::Both, kBrowserChallengeKeys, 2},

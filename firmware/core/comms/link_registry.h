@@ -433,6 +433,11 @@ enum : uint32_t {
     kOwnTransponder = 13,
     kOwnTransponderCallsign = 14,
     kOwnTransponderCategory = 15,
+    kFirmware = 16,
+    kBatteryPercent = 17,
+    kCharging = 18,
+    kPowerLevel = 19,
+    kFrameRateHz = 20,
 };
 }
 

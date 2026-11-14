@@ -37,6 +37,7 @@ class BravoStub {
         std::string export_reference{"own"};
         bool paired{true};
         std::string own_transponder_fields{};
+        std::string status_fields{"\"charging\":false,\"power_level\":\"normal\""};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -125,6 +126,7 @@ class BravoStub {
                            health.export_reference + "\",\"paired\":" + text_of(health.paired);
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         if (!health.own_transponder_fields.empty()) json += "," + health.own_transponder_fields;
+        json += "," + health.status_fields;
         return complete_registry_frame(json + "}");
     }
 
