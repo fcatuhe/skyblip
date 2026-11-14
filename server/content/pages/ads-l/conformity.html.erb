@@ -4,7 +4,7 @@ nav_title: ADS-L conformity
 description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go and Go+, and the CE, installation and user documents the standard asks a manufacturer for."
 published_on: "2026-11-12"
 parent: ads-l
-updated_on: "2026-11-13"
+updated_on: "2026-11-14"
 ---
 
 <section>
@@ -22,7 +22,9 @@ updated_on: "2026-11-13"
     This page holds the declaration for skyBlip Go and Go+, filled in as far as
     the facts allow, and links each of the four documents. It will be signed
     in November or December 2026. Two of the four statements the manufacturer
-    must make do not hold yet, and the tables below say which.
+    must make do not hold yet, and the tables below say which. The firmware
+    also does not yet meet F.2.3, the mandatory clause on transmitting a
+    configured ICAO address.
   </p>
 </section>
 
@@ -134,14 +136,16 @@ updated_on: "2026-11-13"
   <div class="table-scroll">
     <table>
       <tbody>
-        <tr><th>Manufacturer</th><td>FRANCOIS CATUHE EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
+        <tr><th>Manufacturer</th><td>François Catuhe EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
         <tr><th>Product name</th><td>skyBlip Go, on a LilyGO T-Echo. skyBlip Go+, on a LilyGO T-Echo Plus, is the same product with accessories.</td></tr>
         <tr><th>Device P/N</th><td>skyBlipGo</td></tr>
-        <tr><th>Firmware version</th><td>skyBlip 1.0.0</td></tr>
+        <tr><th>Firmware version</th><td>skyBlip 0.1.0</td></tr>
         <tr><th>Standard</th><td>ADS-L 4 SRD860 Issue 2</td></tr>
       </tbody>
     </table>
   </div>
+
+  <p>This draft names firmware 0.1.0 and skyBlip&rsquo;s ADS-L implementation 0.1.0, for ADS-L 4 SRD-860 Issue 2. No production release of firmware 0.1.0 exists yet. The ADS-L implementation version is separate from the packet&rsquo;s Protocol Version field in E.1.1. It stays at 0.1.0 until ready for production. After that, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
 
   <h3>Transmission parameters</h3>
   <div class="table-scroll">
@@ -149,11 +153,11 @@ updated_on: "2026-11-13"
       <tbody>
         <tr>
           <th>Transmission bands and power levels</th>
-          <td>M-band only, 868.2 and 868.4&nbsp;MHz, alternating by UTC second. The firmware caps the output at +14&nbsp;dBm e.r.p., computed from the antenna&rsquo;s datasheet gain and not yet measured. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
+          <td>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the address and UTC second. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
         </tr>
         <tr>
           <th>Optional parameters transmitted</th>
-          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. In addition, one callsign record of payload type 66 is transmitted every 10&nbsp;s in OGN-Tracker&rsquo;s layout. F.2.1 assigns that type to OGN Diagnostics and leaves its definition outside the specification.</td>
+          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. In addition, one callsign record of payload type 66 is scheduled every 10&nbsp;s in OGN-Tracker&rsquo;s layout: telemetry type 1, info type 5, with 14 characters. F.2.1 assigns that type to OGN Diagnostics and leaves its definition outside the specification. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status and payload 66 always carry Protocol Version 1.</td>
         </tr>
         <tr>
           <th>Receive capabilities</th>
@@ -163,7 +167,9 @@ updated_on: "2026-11-13"
     </table>
   </div>
 
-  <p>The Status payload, type 3, is transmitted every 20&nbsp;s, the minimum nominal rate of G.2.11. It uses the unit&rsquo;s ground second every other time that second occurs. Successive Status transmissions alternate between 868.2 and 868.4&nbsp;MHz.</p>
+  <p>Channel access uses EN 300 220-2 band M&rsquo;s 1&nbsp;% duty-cycle limit over any hour. The firmware refuses a burst past that budget. D.3 also requires listen-before-talk. Before an unforced burst, Go assesses its channel for 200&nbsp;&micro;s, ending at most 2&nbsp;ms before transmission. The -78.99&nbsp;dBm limit for a 0&nbsp;dBd antenna becomes -78.44&nbsp;dBm at the antenna connector after correction for the antenna&rsquo;s datasheet gain of -0.55&nbsp;dBd. The 0.5&nbsp;dB feed loss allowance between connector and chip puts the chip&rsquo;s busy threshold at -78.94&nbsp;dBm. Neither gain nor loss has been measured on a unit. The SX1262&rsquo;s RSSI is uncalibrated, with no margin for its error. This is a known limit of the declaration. A busy channel defers the burst by a random 1 to 8 units of 5&nbsp;ms within its window. Only on the ground may Go force it after 3000&nbsp;ms, followed by 2000&nbsp;ms without its own transmissions.</p>
+
+  <p>The Status payload, type 3, is scheduled twice per 20&nbsp;s cycle, airborne and on the ground in the same seconds. The cycle starts at the even second <code>c = 2 * (serial mod 10)</code>, where the serial is the address&rsquo;s low 16 bits. Status goes at c+2 on 868.4&nbsp;MHz and c+11 on 868.2&nbsp;MHz. The intervals are 9 then 11&nbsp;s. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum for a receiver listening on one channel. These are nominal rates. An unsent burst retries at 2&nbsp;s intervals on the same channel when its dwell is free, until sent or its type&rsquo;s next turn is due.</p>
   <div class="table-scroll">
     <table>
       <thead>
@@ -183,7 +189,7 @@ updated_on: "2026-11-13"
       </tbody>
     </table>
   </div>
-  <p class="note">The callsign record uses the second five seconds after the unit&rsquo;s ground second, in slot 1&rsquo;s tail from 1000 to 1193&nbsp;ms on 868.4&nbsp;MHz. C.5 reserves that interval. Transmitting there is a deliberate deviation. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> explains the record and its planned replacement by Issue 3.</p>
+  <p class="note">The callsign record is scheduled in slot 1&rsquo;s tail in seconds c+4 and c+14, from 1000 to 1193&nbsp;ms after each second starts, on 868.4&nbsp;MHz. Those seconds follow the scheduled ground positions by 4 and 5&nbsp;s respectively. The tail falls in the next UTC second&rsquo;s reserved interval under C.5. skyBlip treats the record as its own payload, but it travels in the same ADS-L frame, with the same sync word, scrambling and CRC-24. Transmitting there is a deliberate deviation from C.5. The <%= link_to_page "ads-l/callsign", label: "callsign page" %> explains the record and its planned replacement by Issue 3.</p>
 
   <h3>What the manufacturer additionally declares</h3>
   <div class="table-scroll">
@@ -195,7 +201,7 @@ updated_on: "2026-11-13"
         <tr>
           <th>Design processes and production controls</th>
           <td>to write</td>
-          <td>LilyGO builds the hardware. skyBlip builds the firmware, and every build runs the conformance suite in <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/adsl"><code>firmware/test/adsl/</code></a>, one case per clause of Issue 2. The statement still has to say how both halves are controlled.</td>
+          <td>LilyGO builds the hardware. skyBlip builds the firmware. CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Twenty cases are skipped: one not implemented, nine prose, two paperwork and eight optional. The unmet mandatory clause is F.2.3. Go stores a configured ICAO address only to exclude its own transponder from the traffic table. It still transmits AMT entry 58 and its serial instead of that ICAO address. These software checks do not replace measurements on a unit. The statement still has to say how hardware and firmware design and production are controlled.</td>
         </tr>
         <tr>
           <th>CE marked and documented</th>
@@ -210,7 +216,7 @@ updated_on: "2026-11-13"
         <tr>
           <th>Traffic and Status payloads, Subpart G</th>
           <td>yes</td>
-          <td>Traffic is transmitted at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on the ground. Status, payload type 3, is transmitted every 20&nbsp;s, as G.2.11 requires.</td>
+          <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
         </tr>
       </tbody>
     </table>
@@ -238,8 +244,16 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <strong>skyBlip firmware</strong> &mdash;
-      <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/adsl">the ADS-L conformance suite</a>.
-      <span class="support">One case per clause, and a skipped case with its reason for every clause the firmware does not meet.</span>
+      the ADS-L conformance suite in
+      <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/protocols/adsl/test/conformance"><code>firmware/protocols/adsl/test/conformance/</code></a>
+      and
+      <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/adsl"><code>firmware/test/adsl/</code></a>.
+      <span class="support">The first half checks the ADS-L component on its own. The second checks what needs the device around it. Together they read all 80 clause headings of Issue 2. A skipped case records its reason as not implemented, prose, paperwork or optional.</span>
+    </li>
+    <li>
+      <strong>skyBlip firmware</strong> &mdash;
+      <a href="https://github.com/fcatuhe/skyblip/tree/main/firmware/test/en300220">the EN 300 220 suite</a>.
+      <span class="support">Eleven listed clauses of EN 300 220-1 V3.1.1 and EN 300 220-2 V3.3.1 for the 868&nbsp;MHz transmitter. Two cases are skipped for optional adaptive frequency agility, which Go does not use.</span>
     </li>
   </ul>
   <p>

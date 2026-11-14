@@ -4,7 +4,7 @@ nav_title: ADS-L callsign
 description: "Issue 2 has no callsign field. EASA says Issue 3 will carry one. skyBlip records its question and the interim callsign record it sends every 10 seconds."
 published_on: "2026-09-18"
 parent: ads-l
-updated_on: "2026-11-13"
+updated_on: "2026-11-14"
 ---
 
 <section>
@@ -18,7 +18,7 @@ updated_on: "2026-11-13"
   <h2 class="kicker">Until Issue 3</h2>
   <h3>Go sends the callsign in OGN-Tracker&rsquo;s record format.</h3>
   <p>F.2.1 assigns payload type 66 to &ldquo;OGN Diagnostics&rdquo; and leaves its definition outside the specification. skyBlip Go uses OGN-Tracker&rsquo;s layout: the same 6+24-bit sender address as its position, a header byte, then 14 characters. The pilot enters up to 9 characters through Go&rsquo;s menu.</p>
-  <p>Go sends one record every 10&nbsp;s, in the second five seconds after the unit&rsquo;s ground second. It uses slot 1&rsquo;s tail, from 1000 to 1193&nbsp;ms on 868.4&nbsp;MHz. That tail falls in the next UTC second&rsquo;s reserved 0 to 200&nbsp;ms interval under C.5. Transmitting there is a deliberate deviation, not a requirement of the radio hardware.</p>
+  <p>Go schedules one record every 10&nbsp;s, airborne and on the ground in the same seconds. Each unit owns a 20&nbsp;s cycle starting on the even UTC second <code>c = 2 * (serial mod 10)</code>. The record goes in slot 1&rsquo;s tail in seconds c+4 and c+14, from 1000 to 1193&nbsp;ms after each second starts, on 868.4&nbsp;MHz. On the ground those seconds follow the scheduled positions by 4 and 5&nbsp;s respectively. The tail is 0 to 193&nbsp;ms into the next UTC second, within the 0 to 200&nbsp;ms interval C.5 reserves for future extensions and forbids ADS-L transmissions to use. skyBlip treats the name as its own payload, not ADS-L&rsquo;s, sent where ADS-L transmits nothing today until the standard says where it belongs. It travels in the same frame as an ADS-L packet, with the same sync word, scrambling and CRC-24. Transmitting there is a deliberate deviation from C.5, not a requirement of the radio hardware.</p>
   <p>Go also reads this record from other aircraft. It refuses the whole record if any character is outside blank, dash, A to Z and 0 to 9.</p>
   <p>Today the callsign reaches a display inside the ID field of FLARM&rsquo;s <code>$PFLAA</code>. It is cut when space runs out. The <%= link_to_page "ads-l/nmea", label: "ADS-L NMEA proposal" %> gives it field 10 of <code>$PDSLI</code>, separate from the address and ready to follow Issue 3&rsquo;s length and character set.</p>
 </section>

@@ -4,7 +4,7 @@ nav_title: Radio
 description: "How skyBlip Go transmits ADS-L and receives ADS-L and FLARM on 868 MHz. Channels, GPS timing and reception of future ground-station uplinks."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-14"
 ---
 
 <section>
@@ -30,7 +30,7 @@ updated_on: "2026-11-09"
         <tr><th>Time since the start of the second</th><th>Tuned to</th><th>What is on the channel</th></tr>
       </thead>
       <tbody>
-        <tr><th>0 to 200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 800&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. Receive only</td></tr>
+        <tr><th>0 to 200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 800&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
         <tr><th>205 to 395&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
         <tr><th>400 to 800&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
         <tr><th>800 to 1200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 200&nbsp;ms into the next second</td></tr>
@@ -56,14 +56,22 @@ updated_on: "2026-11-09"
     200&nbsp;kbit/s GMSK above.
   </p>
   <p class="lede">
-    The transmit window is shorter. The device transmits on the 868 channels only,
-    between 450 and 1000&nbsp;ms, on whichever of the two channels is assigned
-    to that second. It always transmits ADS-L: the FLARM-generation format
-    is received, never transmitted. The ground station transmits on
-    869.525&nbsp;MHz. This device only listens there and never
-    transmits on that frequency. Its transmission time within the slot is calculated from
-    the device address and the current second, then recalculated every second. This
-    keeps two aircraft whose transmissions overlapped once from overlapping again.
+    The transmit window is shorter. Positions and Status messages, which report
+    what the device can hear, go between 450 and 1000&nbsp;ms after the start
+    of the second. Positions use 868.2&nbsp;MHz in an even UTC second and
+    868.4&nbsp;MHz in an odd one. They are scheduled every second airborne,
+    and 9 then 11&nbsp;s apart on the ground. Status goes twice per 20&nbsp;s
+    cycle, on the other channel from that second&rsquo;s position. The callsign
+    is the exception: every 10&nbsp;s, it goes between 1000 and 1193&nbsp;ms
+    on 868.4&nbsp;MHz, in the tail that falls in the next second.
+    The device sends ADS-L frames, including its own callsign record:
+    the FLARM-generation format is received, never transmitted.
+    The ground station transmits on 869.525&nbsp;MHz. This device only listens
+    there and never transmits on that frequency. Its planned transmission time
+    within each window is calculated from the device address and the current
+    second, then recalculated every second to reduce repeated overlaps.
+    Before each burst it listens to the channel and, if it is busy, waits
+    and listens again within the same window.
   </p>
 
   <ul class="points">
@@ -71,8 +79,8 @@ updated_on: "2026-11-09"
     <li>The device uses 868.200 and 868.400&nbsp;MHz for 400&nbsp;ms each</li>
     <li>It listens for the ground station on 869.525&nbsp;MHz for 190&nbsp;ms</li>
     <li>It decodes two systems within one synchronisation window</li>
-    <li>It transmits for about 5&nbsp;ms, at a time no received signal can change</li>
-    <li>It may transmit for 1% of the hour and uses half of that</li>
+    <li>Each burst lasts about 5&nbsp;ms. A busy channel can delay it</li>
+    <li>It may transmit for 1&nbsp;% of any hour and uses about 0.6&nbsp;% airborne or 0.15&nbsp;% on the ground. The firmware enforces the limit</li>
   </ul>
 </section>
 
