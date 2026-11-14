@@ -31,6 +31,7 @@ jobs:
       pull-requests: read
     outputs:
       firmware: ${{ steps.filter.outputs.firmware }}
+      glass: ${{ steps.filter.outputs.glass }}
       # main signs with the development key, and so does any branch run by hand: a pull request never.
       signing: ${{ (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) && 'development' || '' }}
     steps:
@@ -41,6 +42,20 @@ jobs:
           filters: |
             firmware:
               - '!(server)/**'
+            # What bin/screenshots compiles and flies, and the pictures it writes.
+            glass:
+              - 'firmware/core/**'
+              - 'firmware/ui/**'
+              - 'firmware/ports/**'
+              - 'firmware/runtime/**'
+              - 'firmware/hardware/parts/**'
+              - 'firmware/products/**'
+              - 'firmware/simulator/**'
+              - 'firmware/vendor/**'
+              - 'firmware/Makefile'
+              - 'server/bin/screenshots'
+              - 'server/bin/blips.cpp'
+              - 'server/content_images/pages/skyblip-go/**'
 
   host-tests:
     # arm64 on purpose: plain `char` is unsigned there, as on the Cortex-M target.
@@ -340,7 +355,7 @@ jobs:
   simulator:
     name: browser simulator
     needs: changes
-    if: needs.changes.outputs.firmware == 'true'
+    if: needs.changes.outputs.firmware == 'true' || needs.changes.outputs.glass == 'true'
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
@@ -350,6 +365,12 @@ jobs:
           actions-cache-folder: emsdk-cache
       - name: Build WASM
         run: make -C firmware browser
+      # The site shows the glass as the firmware draws it, so a change to the glass carries its pictures.
+      - name: The device screenshots are the firmware's own
+        if: needs.changes.outputs.glass == 'true'
+        run: |
+          server/bin/screenshots
+          git diff --exit-code server/content_images
       - name: Bundle simulator scenarios
         run: ruby scripts/simulator_scenarios.rb > firmware/build/browser/scenarios.json
       - uses: actions/upload-artifact@v7

@@ -136,19 +136,19 @@ updated_on: "2026-11-09"
   <h2 class="kicker" id="settings">Réglages</h2>
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "Le menu du radar : type d'aéronef, indicatif, unités, portée, tracé, alarme et volume, avec l'aide PAD MOVES - BUTTON CHANGES en bas" %>
+      <%= screen_image_tag "menu-radar.png", alt: "Le menu des réglages : éclairage, aéronef, unités, portée, tracé, alarme et volume, avec la touche du bouton CHANGE et celle du pavé NEXT en bas" %>
       <figcaption>Le menu du radar</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en caractères de triple hauteur, une barre sous le troisième caractère, PAD ROLLS au-dessus de BUTTON NEXT, et BLANK THE FIRST TO CLEAR en bas" %>
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, et les touches NEXT pour le bouton et CHANGE pour le pavé" %>
       <figcaption>Le champ indicatif</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace sélectionné comme premier caractère, la barre dessous, et l'aide qui affiche maintenant PAD ROLLS au-dessus de BUTTON CLEARS" %>
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Le champ indicatif avec un espace comme premier caractère, la barre dessous, et la touche du bouton qui affiche maintenant ERASE" %>
       <figcaption>Le premier caractère effacé</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu du radar après l'appui, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Le menu aéronef après l'appui, avec la ligne CALLSIGN sélectionnée qui affiche NONE" %>
       <figcaption>Une pression plus tard</figcaption>
     </figure>
   </div>
@@ -181,7 +181,7 @@ updated_on: "2026-11-09"
       <figcaption>Autotest</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état est à l'arrêt, avec deux modes de capture au choix, FULL pour toutes les données et POWER RUN pour l'alimentation et l'activité. Le mode choisi indique son prix, les secteurs de mémoire flash qu'il utiliserait, les vols enregistrés qu'il effacerait et les heures d'enregistrement qu'il conserverait. PAD PICKS, PRESS TWICE TO ARM apparaît en bas" %>
+      <%= screen_image_tag "capture.png", alt: "La page capture sans enregistrement en cours : l'état est à l'arrêt, avec deux modes de capture au choix, FULL pour toutes les données et POWER RUN pour l'alimentation et l'activité. Le mode choisi indique son prix, les secteurs de mémoire flash qu'il utiliserait, les vols enregistrés qu'il effacerait et les heures d'enregistrement qu'il conserverait. PAD SELECTS, PUSH TWICE TO START apparaît en bas" %>
       <figcaption>Capture</figcaption>
     </figure>
   </div>
@@ -210,7 +210,7 @@ updated_on: "2026-11-09"
       <figcaption>Éteint</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint seul, batterie vide : le logo skyBlip avec les mots FLAT BATTERY dessous" %>
+      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint seul, batterie vide : le logo skyBlip avec les mots EMPTY BATTERY dessous" %>
       <figcaption>Batterie vide</figcaption>
     </figure>
   </div>
@@ -223,11 +223,11 @@ updated_on: "2026-11-09"
   <h2 class="kicker" id="asked">Il demande votre accord à l&rsquo;écran.</h2>
   <div class="shots">
     <figure class="shot">
-      <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour appliquer les réglages envoyés par le téléphone : AUTHORISE, SETTINGS, PRESS TWICE TO ALLOW au-dessus de ONE PRESS REFUSES. La demande est refusée après 30 s" %>
+      <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour des réglages envoyés par le téléphone : SETTINGS sous le grand logo, le changement demandé, TO CANCEL, PUSH ONCE OR WAIT avec les secondes restantes, et la touche du bouton ACCEPT pour deux pressions" %>
       <figcaption>Il demande avant de modifier les réglages</figcaption>
     </figure>
     <figure class="shot">
-      <%= screen_image_tag "recovery.png", alt: "La page de récupération : RECOVERY, USB BOOTLOADER, PRESS THE BUTTON TO START IT, puis un lecteur nommé TECHOBOOT sur USB, un .uf2 déposé dessus est un nouveau firmware, RST ramène à skyBlip, et rien n'est émis pendant ce temps" %>
+      <%= screen_image_tag "recovery.png", alt: "La page de récupération : RECOVERY sous le grand logo, le nom de la clé USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET, et la touche du bouton START" %>
       <figcaption>Confié au bootloader USB</figcaption>
     </figure>
   </div>
