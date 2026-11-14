@@ -7,6 +7,7 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
       connect_go
       click_link "Terminal"
       assert_current_path "/briefing/devices/go-00012a/terminal"
+      assert_button "Pause"
 
       page.execute_script("#{unit("00012A")}.sentence('$PFLAU,0,1,1,1,0,,0,,*63')")
       page.execute_script("#{unit("00012A")}.status()")
@@ -52,6 +53,7 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Terminal"
+      assert_button "Pause"
       page.execute_script("#{unit("00012A")}.status()")
       assert_selector ".terminal-line.is-config"
       click_button "Pause"
