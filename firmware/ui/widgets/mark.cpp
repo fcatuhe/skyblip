@@ -1,7 +1,8 @@
 #include "ui/widgets/mark.h"
 
+#include <algorithm>
 #include <cstdint>
-#include <initializer_list>
+#include <iterator>
 
 namespace skyblip::ui {
 
@@ -30,12 +31,12 @@ bool inked(const Geometry& g, int x, int y) {
     if (d2 <= g.dot * g.dot) return true;
     const int32_t up = -dy;
     if (up <= 0 || (dx < 0 ? -dx : dx) * 1000 > kTan46DegreesThousandths * up) return false;
-    for (const int32_t radius : {g.inner, g.outer}) {
+    const int32_t radii[] = {g.inner, g.outer};
+    return std::any_of(std::begin(radii), std::end(radii), [&](int32_t radius) {
         const int32_t near = radius - g.half_stroke;
         const int32_t far = radius + g.half_stroke;
-        if (d2 >= near * near && d2 <= far * far) return true;
-    }
-    return false;
+        return d2 >= near * near && d2 <= far * far;
+    });
 }
 
 struct Box {
@@ -47,10 +48,10 @@ Box ink_box(const Geometry& g) {
     for (int y = -kReach; y <= kReach; y++)
         for (int x = -kReach; x <= kReach; x++)
             if (inked(g, x, y)) {
-                if (x < box.left) box.left = x;
-                if (x > box.right) box.right = x;
-                if (y < box.top) box.top = y;
-                if (y > box.bottom) box.bottom = y;
+                box.left = std::min(box.left, x);
+                box.right = std::max(box.right, x);
+                box.top = std::min(box.top, y);
+                box.bottom = std::max(box.bottom, y);
             }
     return box;
 }
