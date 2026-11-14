@@ -125,7 +125,8 @@ TEST_CASE("own transponder: a frame with no level of its own is no evidence of l
     CHECK_FALSE(cockpit.own.heard().has_value());
 }
 
-TEST_CASE("own transponder: address 000000 is never named, since as own ICAO it means unset") {
+TEST_CASE(
+    "own transponder: address 000000 is never named, since as aircraft address it means unset") {
     Cockpit cockpit;
     for (int i = 0; i < 100; i++) {
         cockpit.own.hear(position_of(0, kCockpitDbm), cockpit.now_ms);

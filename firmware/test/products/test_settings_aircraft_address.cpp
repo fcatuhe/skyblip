@@ -37,74 +37,80 @@ std::string answer_to_set(Settings& settings, const std::optional<uint32_t>& own
 }  // namespace
 
 // ICAO Annex 10 Volume III, Appendix to Chapter 9, 5.2 f): 24 ones is assigned to no aircraft.
-TEST_CASE("settings: an own ICAO of 24 ones is refused, and the one below it is stored") {
+TEST_CASE("settings: an aircraft address of 24 ones is refused, and the one below it is stored") {
     Settings settings = defaults();
-    CHECK(apply_patch(settings, "{\"own_icao\":16777215}") == Status::OutOfRange);
-    CHECK(settings.own_icao == kOwnIcaoUnset);
-    CHECK(apply_patch(settings, "{\"own_icao\":16777214}") == Status::Ok);
-    CHECK(settings.own_icao == 0xFFFFFEu);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":16777215}") == Status::OutOfRange);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":16777214}") == Status::Ok);
+    CHECK(settings.aircraft_address == 0xFFFFFEu);
 
-    settings.own_icao = 0xFFFFFF;
+    settings.aircraft_address = 0xFFFFFF;
     CHECK(validate(settings) == Status::OutOfRange);
 }
 
 // An older build took 24 ones, so the blob that holds it loses that and keeps everything else.
-TEST_CASE("settings: an own ICAO of 24 ones read from flash comes back unset, the rest kept") {
+TEST_CASE(
+    "settings: an aircraft address of 24 ones read from flash comes back unset, the rest kept") {
     Settings settings = defaults();
     std::strncpy(settings.callsign, "D-KXYZ", kCallsignBytes - 1);
-    settings.own_icao = 0xFFFFFF;
+    settings.aircraft_address = 0xFFFFFF;
     uint8_t blob[64];
     to_blob(settings, blob, sizeof(blob));
 
     Settings loaded;
     REQUIRE(from_blob(blob, blob_size(), loaded) == Status::Ok);
-    CHECK(loaded.own_icao == kOwnIcaoUnset);
+    CHECK(loaded.aircraft_address == kAircraftAddressUnset);
     CHECK(std::string(loaded.callsign) == "D-KXYZ");
 }
 
-TEST_CASE("settings: an own ICAO other than the transponder a paired Bravo names is refused") {
+TEST_CASE(
+    "settings: an aircraft address other than the transponder a paired Bravo names is refused") {
     Settings settings = defaults();
-    CHECK(apply_patch(settings, "{\"own_icao\":3934737,\"units\":\"metric\"}", kHeard) ==
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3934737,\"units\":\"metric\"}", kHeard) ==
           Status::Conflict);
-    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
     CHECK(settings.units == Units::Nautical);
 
-    CHECK(apply_patch(settings, "{\"own_icao\":3958150}", kHeard) == Status::Ok);
-    CHECK(settings.own_icao == kHeard);
-    CHECK(apply_patch(settings, "{\"own_icao\":3934737}") == Status::Ok);
-    CHECK(settings.own_icao == kOther);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3958150}", kHeard) == Status::Ok);
+    CHECK(settings.aircraft_address == kHeard);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3934737}") == Status::Ok);
+    CHECK(settings.aircraft_address == kOther);
 }
 
-// F.2.3 asks for the setting to be revertible, and a set that leaves own_icao out did not enter it.
+// F.2.3 asks for the setting to be revertible, and a set that leaves aircraft_address out did not
+// enter it.
 TEST_CASE(
-    "settings: a clear, or a set without own_icao, is never refused for Bravo's transponder") {
+    "settings: a clear, or a set without aircraft_address, is never refused for Bravo's "
+    "transponder") {
     Settings settings = defaults();
-    settings.own_icao = kOther;
+    settings.aircraft_address = kOther;
     CHECK(apply_patch(settings, "{\"units\":\"metric\"}", kHeard) == Status::Ok);
-    CHECK(settings.own_icao == kOther);
-    CHECK(apply_patch(settings, "{\"own_icao\":0}", kHeard) == Status::Ok);
-    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(settings.aircraft_address == kOther);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":0}", kHeard) == Status::Ok);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
 }
 
-TEST_CASE("comms: a set of an own ICAO Bravo does not name is refused not_own_transponder") {
+TEST_CASE(
+    "comms: a set of an aircraft address Bravo does not name is refused not_own_transponder") {
     Settings settings = defaults();
     const std::optional<uint32_t> heard = kHeard;
-    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"own_icao\":3934737}") ==
+    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"aircraft_address\":3934737}") ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"not_own_"
           "transponder\"}");
-    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
 
-    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"own_icao\":3958150}") ==
+    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"aircraft_address\":3958150}") ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
-    CHECK(settings.own_icao == kHeard);
+    CHECK(settings.aircraft_address == kHeard);
 
-    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"own_icao\":16777215}") ==
+    CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"aircraft_address\":16777215}") ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"out_of_range\"}");
-    CHECK(settings.own_icao == kHeard);
+    CHECK(settings.aircraft_address == kHeard);
 }
 
 // Bravo can name another transponder between the prompt and the presses, so both are checked.
-TEST_CASE("comms: an own ICAO staged before Bravo named another is refused at the presses") {
+TEST_CASE(
+    "comms: an aircraft address staged before Bravo named another is refused at the presses") {
     Settings settings = defaults();
     std::optional<uint32_t> heard{};
     platform::host::Link link;
@@ -112,7 +118,7 @@ TEST_CASE("comms: an own ICAO staged before Bravo named another is refused at th
     SettingsStore store(settings, kTestActivation, heard);
     comms::ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"set\",\"own_icao\":3934737}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_address\":3934737}"));
     REQUIRE(config.pending() == comms::Pending::Set);
 
     heard = kHeard;
@@ -120,5 +126,5 @@ TEST_CASE("comms: an own ICAO staged before Bravo named another is refused at th
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"not_own_"
           "transponder\"}");
-    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
 }

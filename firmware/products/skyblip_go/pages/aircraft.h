@@ -12,7 +12,7 @@ enum class Detection : uint8_t { Unpaired, NotConnected, Airborne, NoFix, Listen
 
 struct Detected {
     Detection state{Detection::Unpaired};
-    uint32_t address{kOwnIcaoUnset};
+    uint32_t address{kAircraftAddressUnset};
     char callsign[kCallsignBytes]{};
     uint8_t aircraft_type{0};
 };

@@ -9,8 +9,8 @@
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
+#include "products/skyblip_go/aircraft_address_warning.h"
 #include "products/skyblip_go/bravo_log.h"
-#include "products/skyblip_go/own_icao_warning.h"
 #include "products/skyblip_go/pairing.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
@@ -61,8 +61,10 @@ class BravoService : public runtime::Service {
     int found_count() const { return found_count_; }
     const events::BluetoothAddress& found(int index) const { return found_[index]; }
     const events::BluetoothAddress& pairing_with() const { return pairing_with_; }
-    OwnIcaoWarning& own_icao_warning() { return own_icao_warning_; }
-    const OwnIcaoWarning& own_icao_warning() const { return own_icao_warning_; }
+    AircraftAddressWarning& aircraft_address_warning() { return aircraft_address_warning_; }
+    const AircraftAddressWarning& aircraft_address_warning() const {
+        return aircraft_address_warning_;
+    }
     // INFO: fc 12nov26 observations with no UTC of ours to place them by, or dated too far ahead
     uint32_t unplaced() const { return unplaced_; }
     // INFO: fc 12nov26 observation frames comms::read_observation() refused
@@ -108,7 +110,7 @@ class BravoService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     ports::Central& central_;
-    OwnIcaoWarning own_icao_warning_{};
+    AircraftAddressWarning aircraft_address_warning_{};
     common::AdsbCapture adsb_capture_{context_};
     comms::PeerHealth health_{};
     events::BluetoothAddress found_[kBravoFoundRows]{};

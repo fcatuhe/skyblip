@@ -53,7 +53,7 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
         field.text = editor_.text();
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);
-        if (editor_.field() == MenuRow::OwnIcao) {
+        if (editor_.field() == MenuRow::AircraftAddress) {
             field.own_transponder = context_.state.own_transponder;
             field.refused = editor_.refused();
         }
@@ -97,7 +97,6 @@ void ScreenService::render(uint32_t now_ms) {
                 draw_aircraft_notice(framebuffer_, noticed_aircraft_,
                                      seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));
                 break;
-            case Notice::OwnIcao: draw_own_icao_notice(framebuffer_); break;
         }
         return;
     }
@@ -218,7 +217,8 @@ void ScreenService::render(uint32_t now_ms) {
         case Page::Nearby: {
             NearbySnapshot snapshot;
             snapshot.own_address =
-                settings::on_air(context_.state.activation.address(), settings.own_icao).address;
+                settings::on_air(context_.state.activation.address(), settings.aircraft_address)
+                    .address;
             snapshot.own_callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
@@ -233,7 +233,8 @@ void ScreenService::render(uint32_t now_ms) {
             // INFO: fc 18oct26 the parts are boot's, the address now's: an unlock needs no reboot
             SelfTestSnapshot now = self_test_;
             now.address = context_.state.activation.address();
-            now.own_icao_warning = bravo_.own_icao_warning().stands(settings.own_icao);
+            now.aircraft_address_warning =
+                bravo_.aircraft_address_warning().stands(settings.aircraft_address);
             now.bravo = context_.state.bravo;
             now.bravo_tag = events::bluetooth_tag(settings.bravo);
             draw_self_test(framebuffer_, now);
@@ -293,7 +294,8 @@ void ScreenService::render(uint32_t now_ms) {
         default: {
             StatusSnapshot snapshot;
             snapshot.address =
-                settings::on_air(context_.state.activation.address(), settings.own_icao).address;
+                settings::on_air(context_.state.activation.address(), settings.aircraft_address)
+                    .address;
             snapshot.callsign = settings.callsign;
             snapshot.fix_valid = own.fix_valid;
             snapshot.utc_valid = own.utc_valid;

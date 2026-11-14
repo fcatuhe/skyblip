@@ -184,10 +184,11 @@ Status read_claim_pressure_and_icao(const cbor::Reader& reader, PeerClaim& claim
               claim.pressure_altitude_mm, claim.pressure_altitude_valid) ||
         !take(reader.read_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs),
               claim.pressure_altitude_age_ms, age) ||
-        !take(reader.read_unsigned(link::peer_claim_key::kOwnIcao), claim.own_icao, icao))
+        !take(reader.read_unsigned(link::peer_claim_key::kAircraftAddress), claim.aircraft_address,
+              icao))
         return Status::Invalid;
     if (claim.pressure_altitude_valid != age) return Status::Invalid;
-    return claim.own_icao > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
+    return claim.aircraft_address > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
 }
 
 // INFO: fc 13nov26 a callsign or a category with no address is half a field, refused whole
@@ -254,7 +255,8 @@ int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
         writer.add_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs,
                             claim.pressure_altitude_age_ms);
     }
-    if (claim.own_icao != 0) writer.add_unsigned(link::peer_claim_key::kOwnIcao, claim.own_icao);
+    if (claim.aircraft_address != 0)
+        writer.add_unsigned(link::peer_claim_key::kAircraftAddress, claim.aircraft_address);
     writer.add_boolean(link::peer_claim_key::kAlarmRequested, claim.alarm_requested);
     writer.add_boolean(link::peer_claim_key::kPaired, claim.paired);
     return writer.finish();
@@ -290,7 +292,7 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     writer.add_boolean(link::health_key::kUtcValid, health.utc_valid);
     if (health.last_sequence_valid)
         writer.add_unsigned(link::health_key::kLastSequence, health.last_sequence);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, health.own_icao_set);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, health.aircraft_address_set);
     writer.add_boolean(link::health_key::kAlarmGranted, health.alarm_granted);
     writer.add_code(link::health_key::kExportReference, health.export_reference);
     writer.add_boolean(link::health_key::kPaired, health.paired);
@@ -381,15 +383,17 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     const Result<uint32_t> epoch = reader.read_unsigned(link::health_key::kBootEpoch);
     const Result<bool> listening = reader.read_boolean(link::health_key::kListening);
     const Result<bool> utc_valid = reader.read_boolean(link::health_key::kUtcValid);
-    const Result<bool> own_icao_set = reader.read_boolean(link::health_key::kOwnIcaoSet);
+    const Result<bool> aircraft_address_set =
+        reader.read_boolean(link::health_key::kAircraftAddressSet);
     const Result<bool> paired = reader.read_boolean(link::health_key::kPaired);
-    if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !own_icao_set.ok() || !paired.ok())
+    if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !aircraft_address_set.ok() ||
+        !paired.ok())
         return Status::Invalid;
     PeerHealth health{};
     health.boot_epoch = epoch.value();
     health.listening = listening.value();
     health.utc_valid = utc_valid.value();
-    health.own_icao_set = own_icao_set.value();
+    health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
     if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health))
         return Status::Invalid;

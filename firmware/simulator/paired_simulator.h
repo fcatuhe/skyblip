@@ -23,8 +23,9 @@ class PairedSimulator {
     using Bravo = bravo::Product<platform::host::MeshtrackerX1>;
 
     static constexpr uint32_t kStepMs = Simulator::kStepMs;
-    // INFO: fc 14nov26 test_menu.cpp's own ICAO: a Tango's pilot sets one, so no notice shows
-    static constexpr uint32_t kOwnIcao = 0x3C6586;
+    // INFO: fc 14nov26 test_menu.cpp's aircraft address: a Tango's pilot sets one, so no notice
+    // shows
+    static constexpr uint32_t kAircraftAddress = 0x3C6586;
 
     Status setup() {
         const Status pinned = pin();
@@ -82,7 +83,7 @@ class PairedSimulator {
     Status pin() {
         go::Settings go_settings = go::defaults();
         go_settings.bravo = PairedLink::kPeripheralAddress;
-        go_settings.own_icao = kOwnIcao;
+        go_settings.aircraft_address = kAircraftAddress;
         std::vector<uint8_t> go_blob(go::blob_size());
         go::to_blob(go_settings, go_blob.data(), go_blob.size());
 

@@ -84,7 +84,7 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Pinned:
         case Heard::Committed:
             gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
-            adopt_own_icao(claim.value().own_icao);
+            adopt_aircraft_address(claim.value().aircraft_address);
             hear_alarm_request(go->address, claim.value().alarm_requested, now_ms);
             break;
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
@@ -101,12 +101,14 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
 }
 
 // INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo
-void PeerService::adopt_own_icao(uint32_t own_icao) {
-    const bool cleared = own_icao == kOwnIcaoUnset;
-    if (cleared && !settings_.own_icao_from_go) return;
-    if (own_icao == settings_.own_icao && settings_.own_icao_from_go == !cleared) return;
-    settings_.own_icao = own_icao;
-    settings_.own_icao_from_go = !cleared;
+void PeerService::adopt_aircraft_address(uint32_t aircraft_address) {
+    const bool cleared = aircraft_address == kAircraftAddressUnset;
+    if (cleared && !settings_.aircraft_address_from_go) return;
+    if (aircraft_address == settings_.aircraft_address &&
+        settings_.aircraft_address_from_go == !cleared)
+        return;
+    settings_.aircraft_address = aircraft_address;
+    settings_.aircraft_address_from_go = !cleared;
     config_.note_settings_changed();
     health_owed_ = true;
 }
@@ -176,7 +178,7 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     if (!health_owed_ && now_ms - health_sent_ms_ < kHealthPeriodMs) return;
     comms::PeerHealth health{};
     health.boot_epoch = boot_epoch_;
-    health.own_icao_set = settings_.own_icao != kOwnIcaoUnset;
+    health.aircraft_address_set = settings_.aircraft_address != kAircraftAddressUnset;
     health.listening = receiver_.listening();
     health.utc_valid = utc_valid;
     health.last_sequence_valid = observed_;

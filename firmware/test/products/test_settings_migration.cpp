@@ -130,8 +130,9 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     CHECK(int(kBlobVersion) == 13);
 }
 
-// Until version 12 a unit held no own ICAO, so the transponder it filters is none.
-TEST_CASE("settings: a blob written by version-11 firmware comes back whole, with no own ICAO") {
+// Until version 12 a unit held no aircraft address, so the transponder it filters is none.
+TEST_CASE(
+    "settings: a blob written by version-11 firmware comes back whole, with no aircraft address") {
     struct V11 {
         uint8_t version{1};
         int16_t battery_offset_mv{0};
@@ -176,15 +177,15 @@ TEST_CASE("settings: a blob written by version-11 firmware comes back whole, wit
     CHECK(int(out.range_step) == 3);
     CHECK(out.plot == RadarPlot::ToScale);
     CHECK(std::string(out.callsign) == "F-JABC");
-    CHECK(out.own_icao == kOwnIcaoUnset);
+    CHECK(out.aircraft_address == kAircraftAddressUnset);
 
-    out.own_icao = 0x3C6586;
+    out.aircraft_address = 0x3C6586;
     uint8_t rewritten[128] = {0};
     to_blob(out, rewritten, sizeof(rewritten));
     CHECK(int(rewritten[0]) == int(kBlobVersion));
     Settings again;
     REQUIRE(from_blob(rewritten, blob_size(), again) == Status::Ok);
-    CHECK(again.own_icao == 0x3C6586u);
+    CHECK(again.aircraft_address == 0x3C6586u);
     CHECK(std::string(again.callsign) == "F-JABC");
 }
 

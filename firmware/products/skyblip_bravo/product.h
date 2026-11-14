@@ -317,7 +317,7 @@ class Product {
         kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
     GateReference gate_{};
-    AdsbService adsb_{context_, adsb_frames_, settings_.own_icao, gate_};
+    AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};
     common::AlarmService alarm_{
         context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
     PeerService peer_{context_,          settings_, config_link_.config(),

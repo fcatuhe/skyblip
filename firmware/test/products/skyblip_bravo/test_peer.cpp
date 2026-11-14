@@ -64,7 +64,8 @@ struct Served {
         rig.product.bus().gnss.push(solution);
     }
 
-    std::string claim_json(bool paired, const GoPosition* position, uint32_t own_icao = 0) const {
+    std::string claim_json(bool paired, const GoPosition* position,
+                           uint32_t aircraft_address = 0) const {
         std::string json = "{\"command\":\"peer_claim\",\"boot_epoch\":7";
         if (position != nullptr) {
             json += ",\"at_s\":" + std::to_string(utc_s() - position->written_s_ago) +
@@ -79,14 +80,15 @@ struct Served {
                     ",\"pressure_altitude_age_ms\":" +
                     std::to_string(position->pressure_altitude_age_ms);
         }
-        if (own_icao != 0) json += ",\"own_icao\":" + std::to_string(own_icao);
+        if (aircraft_address != 0)
+            json += ",\"aircraft_address\":" + std::to_string(aircraft_address);
         json += ",\"alarm_requested\":false,";
         json += std::string("\"paired\":") + (paired ? "true" : "false") + "}";
         return complete_registry_frame(json);
     }
 
-    void claim(const GoPosition* position, uint32_t own_icao = 0) {
-        REQUIRE(go.write(claim_json(true, position, own_icao)) == Status::Ok);
+    void claim(const GoPosition* position, uint32_t aircraft_address = 0) {
+        REQUIRE(go.write(claim_json(true, position, aircraft_address)) == Status::Ok);
     }
 
     // One second of the Go's world: Bravo's solution, the Go's claim, then the passes after.
@@ -138,7 +140,7 @@ TEST_CASE("bravo peer: health goes to the pinned Go once a second, whatever the 
     CHECK(field(last, "boot_epoch") == std::to_string(served.rig.product.peer().boot_epoch()));
     CHECK(field(last, "listening") == "true");
     CHECK(field(last, "utc_valid") == "true");
-    CHECK(field(last, "own_icao_set") == "false");
+    CHECK(field(last, "aircraft_address_set") == "false");
     CHECK(field(last, "alarm_granted") == "false");
     CHECK(field(last, "export_reference") == "own");
     CHECK(field(last, "paired") == "true");
@@ -416,9 +418,10 @@ TEST_CASE(
     CHECK(served.observations_of(kAircraft).size() == 1);
 }
 
-TEST_CASE("bravo peer: the pinned Go's own ICAO drops its transponder, else Bravo's setting") {
+TEST_CASE(
+    "bravo peer: the pinned Go's aircraft address drops its transponder, else Bravo's setting") {
     Served served;
-    served.rig.product.settings().own_icao = kOtherAircraft;
+    served.rig.product.settings().aircraft_address = kOtherAircraft;
     served.seconds(2, true, nullptr);
     REQUIRE(served.go.write(served.claim_json(true, nullptr, kAircraft)) == Status::Ok);
     served.run_for(100);
@@ -429,13 +432,13 @@ TEST_CASE("bravo peer: the pinned Go's own ICAO drops its transponder, else Brav
     served.run_for(1000);
     CHECK(served.observations_of(kAircraft).empty());
     CHECK(served.observations_of(kOtherAircraft).size() == 1);
-    CHECK(field(served.last_health(), "own_icao_set") == "true");
+    CHECK(field(served.last_health(), "aircraft_address_set") == "true");
 }
 
-// The Go proposes this address as its own ICAO, so it must outlive the filter it then sets.
+// The Go proposes this address as its aircraft address, so it must outlive the filter it then sets.
 TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtered or not") {
     Served served;
-    const auto cockpit_second = [&served](uint32_t own_icao) {
+    const auto cockpit_second = [&served](uint32_t aircraft_address) {
         constexpr int8_t kCockpitDbm = -12;
         const double latitude = BravoRig::kLatitude1e7 / 1e7;
         const double longitude = BravoRig::kLongitude1e7 / 1e7;
@@ -444,7 +447,7 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
             served.rig.hear(adsb_airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
                             kCockpitDbm);
         served.rig.push_fix();
-        served.claim(nullptr, own_icao);
+        served.claim(nullptr, aircraft_address);
         served.run_for(1000);
         served.rig.utc_offset_s++;
     };
@@ -461,33 +464,35 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
     CHECK(field(served.last_health(), "own_transponder") == std::to_string(kAircraft));
 }
 
-// The Go stores an own ICAO the pilot confirmed, and the Bravo in the same aircraft keeps it too.
+// The Go stores an aircraft address the pilot confirmed, and the Bravo in the same aircraft keeps
+// it too.
 TEST_CASE(
-    "bravo peer: Bravo stores the own ICAO its pinned Go gives, and drops it when the Go does") {
+    "bravo peer: Bravo stores the aircraft address its pinned Go gives, and drops it when the Go "
+    "does") {
     Served served;
     served.seconds(1, true, nullptr);
-    REQUIRE(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    REQUIRE(served.rig.product.settings().aircraft_address == bravo::kAircraftAddressUnset);
     served.rig.push_fix();
     served.claim(nullptr, kAircraft);
     served.run_for(1000);
-    CHECK(served.rig.product.settings().own_icao == kAircraft);
-    CHECK(field(served.last_health(), "own_icao_set") == "true");
+    CHECK(served.rig.product.settings().aircraft_address == kAircraft);
+    CHECK(field(served.last_health(), "aircraft_address_set") == "true");
 
     // A Go cleared on its glass sends none, and Bravo drops the address that Go gave it.
     served.seconds(2, true, nullptr);
-    CHECK(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
-    CHECK(field(served.last_health(), "own_icao_set") == "false");
+    CHECK(served.rig.product.settings().aircraft_address == bravo::kAircraftAddressUnset);
+    CHECK(field(served.last_health(), "aircraft_address_set") == "false");
 }
 
-TEST_CASE("bravo peer: a Go with no own ICAO leaves the one a phone set on Bravo") {
+TEST_CASE("bravo peer: a Go with no aircraft address leaves the one a phone set on Bravo") {
     Served served;
-    served.rig.product.settings().own_icao = kOtherAircraft;
+    served.rig.product.settings().aircraft_address = kOtherAircraft;
     served.seconds(3, true, nullptr);
-    CHECK(served.rig.product.settings().own_icao == kOtherAircraft);
-    CHECK(field(served.last_health(), "own_icao_set") == "true");
+    CHECK(served.rig.product.settings().aircraft_address == kOtherAircraft);
+    CHECK(field(served.last_health(), "aircraft_address_set") == "true");
 }
 
-TEST_CASE("bravo peer: a stranger's claim never sets the reference or the own ICAO") {
+TEST_CASE("bravo peer: a stranger's claim never sets the reference or the aircraft address") {
     Served served(false);
     PairedLink stranger{served.rig.platform.link(), 2, kStranger};
     served.stranger = &stranger;
@@ -498,8 +503,8 @@ TEST_CASE("bravo peer: a stranger's claim never sets the reference or the own IC
     served.seconds(2, false, nullptr);
     CHECK(served.rig.product.gate().choose(served.rig.state().own, served.rig.now_ms).reference ==
           comms::ExportReference::None);
-    CHECK(served.rig.product.gate().own_icao(0) == 0);
-    CHECK(served.rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    CHECK(served.rig.product.gate().aircraft_address(0) == 0);
+    CHECK(served.rig.product.settings().aircraft_address == bravo::kAircraftAddressUnset);
 }
 
 TEST_CASE("bravo peer: a malformed claim is refused and counted, and changes nothing") {

@@ -180,20 +180,20 @@ void type(Bench& bench, const char* wanted) {
 
 }  // namespace
 
-TEST_CASE("menu editor: the own ICAO is typed in hex, six digits, and stored on the last") {
+TEST_CASE("menu editor: the aircraft address is typed in hex, six digits, and stored on the last") {
     Bench bench;
-    bench.focus_on(MenuRow::OwnIcao);
+    bench.focus_on(MenuRow::AircraftAddress);
     REQUIRE(bench.change() == MenuAction::Moved);
     REQUIRE(bench.editor.editing());
-    CHECK(bench.editor.field() == MenuRow::OwnIcao);
+    CHECK(bench.editor.field() == MenuRow::AircraftAddress);
     CHECK(std::string(bench.editor.text()) == "      ");
 
     type(bench, "3C6586");
-    CHECK(bench.editor.cursor() == kOwnIcaoCharacters - 1);
+    CHECK(bench.editor.cursor() == kAircraftAddressCharacters - 1);
     CHECK(bench.change() == MenuAction::Changed);
     CHECK_FALSE(bench.editor.editing());
-    CHECK(bench.values.settings.own_icao == 0x3C6586u);
-    CHECK(bench.editor.focus() == MenuRow::OwnIcao);
+    CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
+    CHECK(bench.editor.focus() == MenuRow::AircraftAddress);
 
     // Opened again, it shows what is stored.
     REQUIRE(bench.change() == MenuAction::Moved);
@@ -201,25 +201,27 @@ TEST_CASE("menu editor: the own ICAO is typed in hex, six digits, and stored on 
 }
 
 // Five digits and a blank are no address, so the field stores nothing rather than guess.
-TEST_CASE("menu editor: an own ICAO with a digit left blank stores nothing") {
+TEST_CASE("menu editor: an aircraft address with a digit left blank stores nothing") {
     Bench bench;
-    bench.values.settings.own_icao = 0x3C6586;
-    bench.focus_on(MenuRow::OwnIcao);
+    bench.values.settings.aircraft_address = 0x3C6586;
+    bench.focus_on(MenuRow::AircraftAddress);
     REQUIRE(bench.change() == MenuAction::Moved);
-    for (int at = 0; at < kOwnIcaoCharacters - 1; at++)
+    for (int at = 0; at < kAircraftAddressCharacters - 1; at++)
         REQUIRE(bench.change() == MenuAction::Moved);
-    for (int i = 0; i < 40 && bench.editor.text()[kOwnIcaoCharacters - 1] != ' '; i++) bench.move();
+    for (int i = 0; i < 40 && bench.editor.text()[kAircraftAddressCharacters - 1] != ' '; i++)
+        bench.move();
     REQUIRE(std::string(bench.editor.text()) == "3C658 ");
 
     CHECK(bench.change() == MenuAction::Moved);
     CHECK_FALSE(bench.editor.editing());
-    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+    CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
 }
 
-TEST_CASE("menu editor: clearing the own ICAO is asked again: the button clears, the pad keeps") {
+TEST_CASE(
+    "menu editor: clearing the aircraft address is asked again: the button clears, the pad keeps") {
     Bench bench;
-    bench.values.settings.own_icao = 0x3C6586;
-    bench.focus_on(MenuRow::OwnIcao);
+    bench.values.settings.aircraft_address = 0x3C6586;
+    bench.focus_on(MenuRow::AircraftAddress);
 
     for (const bool confirm : {false, true}) {
         CAPTURE(confirm);
@@ -228,43 +230,43 @@ TEST_CASE("menu editor: clearing the own ICAO is asked again: the button clears,
         CHECK(bench.change() == MenuAction::Moved);
         REQUIRE(bench.editor.clearing());
         CHECK(std::string(bench.editor.text()) == "3C6586");
-        CHECK(bench.values.settings.own_icao == 0x3C6586u);
+        CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
 
         if (confirm) {
             CHECK(bench.change() == MenuAction::Changed);
-            CHECK(bench.values.settings.own_icao == kOwnIcaoUnset);
+            CHECK(bench.values.settings.aircraft_address == kAircraftAddressUnset);
         } else {
             CHECK(bench.move() == MenuAction::Moved);
-            CHECK(bench.values.settings.own_icao == 0x3C6586u);
+            CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
         }
         CHECK_FALSE(bench.editor.clearing());
         CHECK_FALSE(bench.editor.editing());
-        CHECK(bench.editor.focus() == MenuRow::OwnIcao);
+        CHECK(bench.editor.focus() == MenuRow::AircraftAddress);
     }
 }
 
 TEST_CASE("menu editor: a clear nobody confirms, or of no address, changes nothing") {
     Bench bench;
-    bench.focus_on(MenuRow::OwnIcao);
+    bench.focus_on(MenuRow::AircraftAddress);
     REQUIRE(bench.change() == MenuAction::Moved);
     CHECK(bench.change() == MenuAction::Moved);
     CHECK_FALSE(bench.editor.clearing());
     CHECK_FALSE(bench.editor.editing());
 
-    bench.values.settings.own_icao = 0x3C6586;
+    bench.values.settings.aircraft_address = 0x3C6586;
     REQUIRE(bench.change() == MenuAction::Moved);
     type(bench, " ");
     REQUIRE(bench.change() == MenuAction::Moved);
     REQUIRE(bench.editor.clearing());
     CHECK(bench.run(MenuEditor::kIdleReturnHoldMs + 100) == MenuAction::Leave);
     CHECK_FALSE(bench.editor.clearing());
-    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+    CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
 }
 
 TEST_CASE("menu editor: a clear nobody answers is kept after thirty seconds, and counts down") {
     Bench bench;
-    bench.values.settings.own_icao = 0x3C6586;
-    bench.focus_on(MenuRow::OwnIcao);
+    bench.values.settings.aircraft_address = 0x3C6586;
+    bench.focus_on(MenuRow::AircraftAddress);
     REQUIRE(bench.change() == MenuAction::Moved);
     type(bench, " ");
     REQUIRE(bench.change() == MenuAction::Moved);
@@ -277,7 +279,7 @@ TEST_CASE("menu editor: a clear nobody answers is kept after thirty seconds, and
     CHECK(bench.run(1000) == MenuAction::Moved);
     CHECK_FALSE(bench.editor.clearing());
     CHECK(bench.editor.active());
-    CHECK(bench.values.settings.own_icao == 0x3C6586u);
+    CHECK(bench.values.settings.aircraft_address == 0x3C6586u);
 }
 
 TEST_CASE("menu editor: the focus only ever advances, and walks out of the menu") {

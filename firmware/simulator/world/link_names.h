@@ -295,7 +295,7 @@ inline constexpr Key kConfigKeys[] = {
     {"callsign", 8, Type::Text, nullptr, 0, false},
     {"battery_offset_mv", 9, Type::Integer, nullptr, 0, false},
     {"frequency_trim_e1_ppm", 10, Type::Integer, nullptr, 0, false},
-    {"own_icao", 11, Type::Unsigned, nullptr, 0, false},
+    {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -578,7 +578,7 @@ inline constexpr Key kHealthKeys[] = {
     {"listening", 3, Type::Boolean, nullptr, 0, true},
     {"utc_valid", 4, Type::Boolean, nullptr, 0, true},
     {"last_sequence", 5, Type::Unsigned, nullptr, 0, false},
-    {"own_icao_set", 6, Type::Boolean, nullptr, 0, true},
+    {"aircraft_address_set", 6, Type::Boolean, nullptr, 0, true},
     {"alarm_granted", 7, Type::Boolean, nullptr, 0, true},
     {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
     {"paired", 12, Type::Boolean, nullptr, 0, true},
@@ -604,7 +604,7 @@ inline constexpr Key kPeerClaimKeys[] = {
     {"altitude_hae_age_ms", 8, Type::Unsigned, nullptr, 0, false},
     {"pressure_altitude_mm", 9, Type::Integer, nullptr, 0, false},
     {"pressure_altitude_age_ms", 10, Type::Unsigned, nullptr, 0, false},
-    {"own_icao", 11, Type::Unsigned, nullptr, 0, false},
+    {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
     {"alarm_requested", 12, Type::Boolean, nullptr, 0, true},
     {"paired", 18, Type::Boolean, nullptr, 0, true},
 };

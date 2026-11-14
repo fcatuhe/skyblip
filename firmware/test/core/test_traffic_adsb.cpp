@@ -90,7 +90,7 @@ TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merge
 TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both not traffic") {
     TrafficTable table;
     table.set_own_address(settings::kSkyblipAddressMappingTable, 0x00ABCD);
-    table.set_own_icao(0x3C6586);
+    table.set_aircraft_address(0x3C6586);
     CHECK(table.update(observation(0x00ABCD, settings::kSkyblipAddressMappingTable, 100), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Alptas), 100) < 0);
@@ -103,7 +103,7 @@ TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both n
     CHECK(table.update(observation(0x00ABCD, kIcao, 100, model::Source::Adsb), 100) >= 0);
     CHECK(table.count() == 3);
 
-    table.set_own_icao(0);
+    table.set_aircraft_address(0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100) >= 0);
     CHECK(table.count() == 4);
 }
@@ -117,16 +117,16 @@ TEST_CASE("traffic: setting our ICAO address releases the target it names, alarm
     table.at(table.find(kIcao, 0x3C6586))->alarm_level = Level::Advisory;
     REQUIRE(table.count() == 3);
 
-    table.set_own_icao(0x3C6586);
+    table.set_aircraft_address(0x3C6586);
     CHECK(table.find(kIcao, 0x3C6586) < 0);
     CHECK(table.find(kIcao, 0x3C6587) >= 0);
     CHECK(table.find(6, 0x3C6586) >= 0);
     CHECK(table.count() == 2);
 
     REQUIRE(table.update(observation(0x3C6588, kIcao, 100, model::Source::Adsb), 100) >= 0);
-    table.set_own_icao(0x3C6586);
+    table.set_aircraft_address(0x3C6586);
     CHECK(table.count() == 3);
-    table.set_own_icao(0);
+    table.set_aircraft_address(0);
     CHECK(table.count() == 3);
 }
 

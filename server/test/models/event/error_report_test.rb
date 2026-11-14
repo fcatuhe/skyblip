@@ -13,7 +13,7 @@ class Event::ErrorReportTest < ActiveSupport::TestCase
     assert_match(/\A\h{16}\z/, payload["fingerprint"])
   end
 
-  test "an error raised again from the same method is the same problem, whatever its message" do
+  test "an error raised again from the same method is the same error, whatever its message" do
     first = Event::ErrorReport.new(raised { fail_with "serial 1" }, handled: false, severity: :error, context: {}, source: "test")
     again = Event::ErrorReport.new(raised { fail_with "serial 2" }, handled: false, severity: :error, context: {}, source: "test")
     other = Event::ErrorReport.new(raised { raise "serial 1" }, handled: false, severity: :error, context: {}, source: "test")

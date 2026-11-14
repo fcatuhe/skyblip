@@ -15,6 +15,6 @@ class ApplicationTool < MCP::Tool
 
       def refused(message) = MCP::Tool::Response.new([ { type: "text", text: message } ], error: true)
 
-      def admins_only = refused("Only an admin may read skyBlip's events")
+      def admins_only = refused("Only an admin may use skyBlip's events")
   end
 end

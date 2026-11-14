@@ -284,9 +284,10 @@ TEST_CASE(
     CHECK_FALSE(reads_at(ordinary, kSelfTestLeftX, footer_y, "BAT 4.05 V WAS EMPTY"));
 }
 
-// #191's contract: the warning is listed here for as long as go::OwnIcaoWarning stands.
+// #191's contract: the warning is listed here for as long as go::AircraftAddressWarning stands.
 TEST_CASE(
-    "self-test page: a paired Go with no own ICAO either side lists the warning under the bus") {
+    "self-test page: a paired Go with no aircraft address either side lists the warning under the "
+    "bus") {
     const SelfTestPart parts[] = {{"RADIO", PartState::Pass}, {"BARO", PartState::Pass, "76"}};
     const uint8_t found[] = {0x76};
     const char* const roles[] = {"BARO"};
@@ -297,12 +298,14 @@ TEST_CASE(
 
     Glass without;
     draw_self_test(without, snapshot);
-    CHECK_FALSE(reads_at(without, kSelfTestLeftX, self_test_row_y(3), kSelfTestOwnIcaoText));
+    CHECK_FALSE(
+        reads_at(without, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressName));
 
-    snapshot.own_icao_warning = true;
+    snapshot.aircraft_address_warning = true;
     Glass with;
     draw_self_test(with, snapshot);
-    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestOwnIcaoText));
+    CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(3), kSelfTestAircraftAddressName));
+    CHECK(row_reads(with, 3, kSelfTestUnsetVerdict));
     CHECK(reads_at(with, kSelfTestLeftX, self_test_row_y(2), "I2C BARO"));
 }
 
@@ -338,8 +341,10 @@ TEST_CASE("self-test page: a paired Go lists its Bravo by tag under the bus, and
     }
 }
 
-// One row for both: a loss or a wait comes first, the own-ICAO warning next, LIVE last.
-TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless it is lost or waiting") {
+// One row for both: a loss or a wait comes first, the aircraft-address warning next, LIVE last.
+TEST_CASE(
+    "self-test page: the aircraft-address warning takes the Bravo row unless it is lost or "
+    "waiting") {
     const SelfTestPart parts[kSelfTestRows - 2] = {};
     SelfTestSnapshot snapshot = page(parts, kSelfTestRows - 2, /*flyable=*/true);
     const uint8_t found[] = {0x76};
@@ -348,13 +353,14 @@ TEST_CASE("self-test page: the own-ICAO warning takes the Bravo row unless it is
     snapshot.i2c_roles = roles;
     snapshot.i2c_address_count = 1;
     snapshot.bravo_tag = 0x3F2A;
-    snapshot.own_icao_warning = true;
+    snapshot.aircraft_address_warning = true;
     const int last = kSelfTestRows - 1;
 
     snapshot.bravo = skyblip::comms::BravoState::Live;
     Glass live;
     draw_self_test(live, snapshot);
-    CHECK(reads_at(live, kSelfTestLeftX, self_test_row_y(last), kSelfTestOwnIcaoText));
+    CHECK(reads_at(live, kSelfTestLeftX, self_test_row_y(last), kSelfTestAircraftAddressName));
+    CHECK(row_reads(live, last, kSelfTestUnsetVerdict));
 
     snapshot.bravo = skyblip::comms::BravoState::NoUtc;
     Glass lost;

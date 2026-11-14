@@ -37,7 +37,7 @@ struct PeerClaim {
     bool pressure_altitude_valid{false};
     int32_t pressure_altitude_mm{0};
     uint32_t pressure_altitude_age_ms{0};
-    uint32_t own_icao{0};
+    uint32_t aircraft_address{0};
     bool alarm_requested{false};
     bool paired{false};
 };
@@ -65,7 +65,7 @@ struct PeerHealth {
     uint32_t boot_epoch{0};
     bool listening{false};
     bool utc_valid{false};
-    bool own_icao_set{false};
+    bool aircraft_address_set{false};
     bool last_sequence_valid{false};
     uint32_t last_sequence{0};
     bool alarm_granted{false};

@@ -92,7 +92,7 @@ void BravoService::unpair() {
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     if (farewell) {
         leaving_ = true;
         farewell_owed_ = true;
@@ -153,7 +153,7 @@ void BravoService::went_down() {
     connecting_ = false;
     up_ = false;
     if (leaving_) leave();
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     if (step_ == BravoStep::Waiting) refuse(BravoRefusal::LinkLost);
     if (link_ == BravoLink::Up) link_ = BravoLink::Down;
 }
@@ -200,7 +200,7 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     }
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
-    own_icao_warning_.paired(health.value().own_icao_set);
+    aircraft_address_warning_.paired(health.value().aircraft_address_set);
     health_ = health.value();
     if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;
@@ -234,7 +234,7 @@ void BravoService::refuse_protocol() {
     }
     if (!paired(settings_)) return;
     link_ = BravoLink::Unsupported;
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     if (connecting_ || up_) central_.disconnect();
 }
 
@@ -245,7 +245,7 @@ void BravoService::forget() {
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     forgotten_ = true;
     central_.disconnect();
     release_unless_paired();
@@ -310,7 +310,7 @@ void BravoService::claim(uint32_t now_ms) {
     claim.pressure_altitude_valid = own.pressure_altitude_valid;
     claim.pressure_altitude_mm = own.pressure_altitude_mm;
     claim.pressure_altitude_age_ms = now_ms - own.pressure_altitude_at_ms;
-    claim.own_icao = settings_.own_icao;
+    claim.aircraft_address = settings_.aircraft_address;
     claim.alarm_requested = takes_alarm();
     claim.paired = paired(settings_);
     uint8_t frame[comms::kPeerClaimWidestBytes];

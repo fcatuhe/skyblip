@@ -130,7 +130,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: an ICAO address goes on the air exactly as it w
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();
     std::strncpy(settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
-    REQUIRE(apply_patch(settings, "{\"own_icao\":3934737}") == Status::Ok);
+    REQUIRE(apply_patch(settings, "{\"aircraft_address\":3934737}") == Status::Ok);
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(50);
     run_on(simulator, past_settling(simulator), 21000);
@@ -143,13 +143,13 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's 
     REQUIRE(simulator.setup() == Status::Ok);
     go::Settings& settings = simulator.product().settings();
     std::strncpy(settings.callsign, "D-KXYZ", go::kCallsignBytes - 1);
-    REQUIRE(apply_patch(settings, "{\"own_icao\":3934737}") == Status::Ok);
+    REQUIRE(apply_patch(settings, "{\"aircraft_address\":3934737}") == Status::Ok);
     simulator.world().set_fix(true);
     simulator.world().set_speed_kt(50);
     const uint32_t from_ms = past_settling(simulator);
     run_on(simulator, from_ms, 10000);
     simulator.world().air().clear();
-    REQUIRE(apply_patch(settings, "{\"own_icao\":0}") == Status::Ok);
+    REQUIRE(apply_patch(settings, "{\"aircraft_address\":0}") == Status::Ok);
     run_on(simulator, from_ms + 10000 + simulator::Simulator::kStepMs, 21000);
     CHECK(
         fewest_of_each_payload_from(simulator.world().air(), settings::kSkyblipAddressMappingTable,
@@ -159,11 +159,11 @@ TEST_CASE("ADS-L.4.SRD860.F.2.3: a cleared ICAO address puts the manufacturer's 
 // "The ADS-L system shall enforce this by disallowing inconsistent user configurations."
 TEST_CASE("ADS-L.4.SRD860.F.2.3: an address no aircraft holds, or not the one aboard, is refused") {
     go::Settings settings = go::defaults();
-    CHECK(apply_patch(settings, "{\"own_icao\":16777215}") == Status::OutOfRange);
-    CHECK(apply_patch(settings, "{\"own_icao\":3934737}", 0x3C6586u) == Status::Conflict);
-    CHECK(settings.own_icao == go::kOwnIcaoUnset);
-    CHECK(apply_patch(settings, "{\"own_icao\":3958150}", 0x3C6586u) == Status::Ok);
-    CHECK(apply_patch(settings, "{\"own_icao\":0}", 0x3C6586u) == Status::Ok);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":16777215}") == Status::OutOfRange);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3934737}", 0x3C6586u) == Status::Conflict);
+    CHECK(settings.aircraft_address == go::kAircraftAddressUnset);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3958150}", 0x3C6586u) == Status::Ok);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":0}", 0x3C6586u) == Status::Ok);
 }
 
 // INFO: fc 13nov26 optional: F.2.4 says a device "may be operated in privacy mode", ours is not
@@ -171,7 +171,7 @@ TEST_CASE("ADS-L.4.SRD860.F.2.4: privacy mode selects table 0, the random one" *
     FAIL("optional: no privacy mode, so the table is the one configured and nothing switches it");
 }
 
-// A host cannot name the address or the table: own_icao is how an ICAO address gets on air.
+// A host cannot name the address or the table: aircraft_address is how an ICAO address gets on air.
 TEST_CASE("ADS-L.4.SRD860.F.2.3: a table the configured address does not belong to is refused") {
     go::Settings settings = go::defaults();
     // 0x3C0A11 under ICAO

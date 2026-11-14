@@ -1,10 +1,11 @@
 class ListErrorsTool < ApplicationTool
   tool_name "list_errors"
   title "List what breaks in skyBlip"
-  description "The errors of the server and the scripts browsers ran over the last days, grouped into problems by " \
-              "fingerprint, latest first: the class, the message, where it was raised, how often, on how many devices " \
-              "and browsers, when it was first and last seen and the revision that raised it last. Read a problem's " \
-              "occurrences with list_events and its fingerprint. For admins only."
+  description "The errors of the server and the scripts browsers ran over the last days, grouped by fingerprint, latest " \
+              "first: the class, the message, where it was raised, how often, on how many devices and browsers, when it " \
+              "was first and last seen and the revision that raised it last. An error resolved with resolve_error is left " \
+              "out until it happens again, when it comes back with reopened. Read an error's occurrences with list_events " \
+              "and its fingerprint. For admins only."
   MAX_DAYS = Rails.configuration.x.retention.in_days.to_i
 
   input_schema properties: {
@@ -15,7 +16,7 @@ class ListErrorsTool < ApplicationTool
   def self.call(server_context:, days: 7)
     if admin(server_context)
       since = days.to_i.clamp(1, MAX_DAYS).days.ago
-      json Event::Problem.since(since).map { it.to_h.merge(new: it.new_since?(since)) }
+      json Event::Error.since(since).reject(&:resolved?).map { it.to_h.merge(new: it.new_since?(since)) }
     else
       admins_only
     end

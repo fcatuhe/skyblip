@@ -182,12 +182,12 @@ struct SettingsV12 {
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
     char callsign[kCallsignBytes]{0};
-    uint32_t own_icao{kOwnIcaoUnset};
+    uint32_t aircraft_address{kAircraftAddressUnset};
 };
 
 static_assert(sizeof(SettingsV11) == sizeof(SettingsV10), "the volume changed scale, not width");
 static_assert(sizeof(SettingsV12) == sizeof(SettingsV11) + sizeof(uint32_t),
-              "own_icao went in where it costs no padding");
+              "aircraft_address went in where it costs no padding");
 static_assert(sizeof(Settings) == sizeof(SettingsV12) + sizeof(events::BluetoothAddress) + 1,
               "the Bravo pin went on the end, with one byte of padding to the next word");
 
@@ -355,7 +355,7 @@ void migrate_v11(const SettingsV11& old, Settings& out) {
     out.plot = old.plot;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
-    out.own_icao = kOwnIcaoUnset;
+    out.aircraft_address = kAircraftAddressUnset;
 }
 
 void migrate_v12(const SettingsV12& old, Settings& out) {
@@ -372,7 +372,7 @@ void migrate_v12(const SettingsV12& old, Settings& out) {
     out.plot = old.plot;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
-    out.own_icao = old.own_icao;
+    out.aircraft_address = old.aircraft_address;
 }
 
 template <class Old>

@@ -92,7 +92,7 @@ TEST_CASE("paired link: Bravo's recorded observations and its health reach the c
             std::vector<std::string>{"health", "observation", "health", "observation"});
     const std::string epoch = std::to_string(pair.bravo.boot_epoch());
     CHECK(frames[0] == "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":" + epoch +
-                           ",\"listening\":true,\"utc_valid\":true,\"own_icao_set\":false,"
+                           ",\"listening\":true,\"utc_valid\":true,\"aircraft_address_set\":false,"
                            "\"alarm_granted\":false,\"export_reference\":\"own\",\"paired\":true,"
                            "\"charging\":false,\"power_level\":\"normal\"}");
     CHECK(frames[1] == "{\"command\":\"observation\",\"address\":4479337,\"boot_epoch\":" + epoch +

@@ -21,7 +21,7 @@ class Event::Review
 
   def to_h
     { window: "#{since.to_date} to #{till.to_date}", headline:, browsers:, devices:, notices:, tasks:, installs:, firmware:,
-      activations:, stranded:, errors: errors.merge(problems:), requests:, jobs:, agents: }
+      activations:, stranded:, errors: errors.merge(open:), requests:, jobs:, agents: }
   end
 
   def headline
@@ -116,9 +116,9 @@ class Event::Review
     @errors ||= { server: within("error.reported").count, browser: within("browser.failed").count }
   end
 
-  def problems
-    found = Event::Problem.since(since).select { it.last_at <= till }
-    { count: found.size, new: found.count { it.new_since?(since) }, latest: found.first(SHOWN).map(&:to_h) }
+  def open
+    found = Event::Error.since(since).select { it.last_at <= till }.reject(&:resolved?)
+    { count: found.size, new: found.count { it.new_since?(since) }, reopened: found.count(&:reopened?), latest: found.first(SHOWN).map(&:to_h) }
   end
 
   def requests

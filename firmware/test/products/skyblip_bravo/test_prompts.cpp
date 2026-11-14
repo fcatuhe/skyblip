@@ -56,10 +56,10 @@ TEST_CASE("bravo: a prompt nobody answers expires, and nothing changes") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
-    rig.send("{\"command\":\"set\",\"own_icao\":3958150}");
+    rig.send("{\"command\":\"set\",\"aircraft_address\":3958150}");
     rig.run_for(comms::kPromptCeilingMs + 1000);
     CHECK(refused_with(rig.last_on(events::Endpoint::Config), "expired"));
-    CHECK(rig.product.settings().own_icao == bravo::kOwnIcaoUnset);
+    CHECK(rig.product.settings().aircraft_address == bravo::kAircraftAddressUnset);
     CHECK(rig.product.button().prompt() == comms::Pending::None);
 }
 
@@ -177,7 +177,7 @@ TEST_CASE("bravo: a replaced prompt cannot spend a hold begun on the one it repl
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
-    rig.send("{\"command\":\"set\",\"own_icao\":3958150}");
+    rig.send("{\"command\":\"set\",\"aircraft_address\":3958150}");
     rig.run_for(1500);
     REQUIRE(rig.product.button().armed());
     rig.platform.set_button_down(true);
