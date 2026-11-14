@@ -438,7 +438,7 @@ While it pairs, the page reads `PAIRING` over the tag, then `WAIT`, then `PUSH T
 
 Paired, the page reads the tag and `CONNECTED`, `NOT CONNECTED`, `LINK TOO SMALL` or `UPDATE NECESSARY`. The button asks first, `UNPAIR BRAVO` with the keys `UNPAIR` and `KEEP`, and a second press unpairs and hands the page back.
 
-The own-ICAO notice is drawn here too, `draw_own_icao_notice()`, titled `NO OWN ICAO` under the large mark, though it is no page: `ScreenService` shows it over whatever page stands, once a boot (`../README.md`, Own ICAO).
+The own-ICAO notice is drawn here too, `draw_own_icao_notice()`, titled `SET OWN ICAO` under the large mark, though it is no page: `ScreenService` shows it over whatever page stands, once a boot (`../README.md`, Own ICAO). The title says what to do and the body says why. The button's key reads `SET` and opens the `AIRCRAFT` menu on the block of what Bravo heard. The pad's key reads `CLOSE` and gives the page back.
 
 ## The callsign field
 

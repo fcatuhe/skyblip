@@ -143,7 +143,7 @@ TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it")
     CHECK(reads_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt));
     CHECK(centred_reads(canvas, "YOUR TRANSPONDER", kMenuScale));
     CHECK(centred_reads(canvas, "AIRCRAFT", kMenuScale));
-    CHECK(reads_button_key(canvas, "CLOSE"));
+    CHECK(reads_button_key(canvas, "SET"));
     CHECK(reads_pad_key(canvas, "CLOSE"));
 }
 

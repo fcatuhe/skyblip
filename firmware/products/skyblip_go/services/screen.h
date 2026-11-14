@@ -119,6 +119,7 @@ class ScreenService : public runtime::Service {
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page();
     void enter_menu(uint32_t now_ms);
+    void open_aircraft_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
     void show_radar();

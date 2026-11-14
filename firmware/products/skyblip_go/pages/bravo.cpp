@@ -183,7 +183,7 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
 void draw_own_icao_notice(ui::Canvas& canvas) {
     draw_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt);
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, kOwnIcaoNoticeBody, 7);
-    draw_keys(canvas, {{Press::Once, "CLOSE"}, "CLOSE"});
+    draw_keys(canvas, {{Press::Once, "SET"}, "CLOSE"});
 }
 
 // INFO: fc 11nov26 Bravo holds no pin for this Go, a pairing cut short or a Bravo paired elsewhere
