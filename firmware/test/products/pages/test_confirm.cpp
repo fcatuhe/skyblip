@@ -98,7 +98,7 @@ TEST_CASE("confirm page: the allowing gesture and the refusing one are both spel
 
     // And the page says it will refuse on its own, so a prompt left standing is
     // not read as one waiting indefinitely.
-    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 30 S", 1));
+    CHECK(reads_at(canvas, kConfirmLeftX, kConfirmExpiryY, "IT CANCELS IN 30 S", 1));
 }
 
 TEST_CASE("confirm page: the seconds left count down, and none left draws no line") {
@@ -106,7 +106,7 @@ TEST_CASE("confirm page: the seconds left count down, and none left draws no lin
     snapshot.seconds_left = 7;
     Glass seven;
     draw_confirm(seven, snapshot);
-    CHECK(reads_at(seven, kConfirmLeftX, kConfirmExpiryY, "REFUSED IN 7 S", 1));
+    CHECK(reads_at(seven, kConfirmLeftX, kConfirmExpiryY, "IT CANCELS IN 7 S", 1));
 
     snapshot.seconds_left = 0;
     Glass none;

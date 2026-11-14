@@ -56,8 +56,8 @@ void row(ui::Canvas& canvas, int line, uint16_t value, bool focused) {
 const char* link_state(BravoLink link) {
     switch (link) {
         case BravoLink::Up: return "CONNECTED";
-        case BravoLink::Narrow: return "LINK TOO NARROW";
-        case BravoLink::Unsupported: return "UPDATE NEEDED";
+        case BravoLink::Narrow: return "LINK TOO SMALL";
+        case BravoLink::Unsupported: return "UPDATE NECESSARY";
         case BravoLink::Down: break;
     }
     return "NOT CONNECTED";
@@ -85,8 +85,8 @@ void draw_list(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     }
     header(canvas, "BRAVO");
     if (snapshot.view.found_count == 0) {
-        centred(canvas, kEmptyListY, "LISTENING", kMenuScale);
-        centred(canvas, kEmptyListDetailY, "SWITCH BRAVO ON NEARBY", 1);
+        centred(canvas, kEmptyListY, "NO BRAVO FOUND", kMenuScale);
+        centred(canvas, kEmptyListDetailY, "START A BRAVO NEAR THIS GO.", 1);
     }
     for (int i = 0; i < snapshot.view.found_count && i < kMenuLines; i++)
         row(canvas, i, snapshot.view.found_tags[i], i == snapshot.focus);
@@ -97,10 +97,10 @@ void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     header(canvas, "PAIRING");
     tag(canvas, kCallsignTextY, snapshot.view.pairing_tag);
     if (snapshot.view.step == BravoStep::Connecting) {
-        centred(canvas, kCallsignPadHintY, "CONNECTING", kCallsignHintScale);
+        centred(canvas, kCallsignPadHintY, "WAIT", kCallsignHintScale);
     } else {
-        centred(canvas, kCallsignPadHintY, "PRESS THE", kCallsignHintScale);
-        centred(canvas, kCallsignButtonHintY, "BUTTON ON BRAVO", kCallsignHintScale);
+        centred(canvas, kCallsignPadHintY, "PUSH THE", kCallsignHintScale);
+        centred(canvas, kCallsignButtonHintY, "BUTTON ON BRAVO.", kCallsignHintScale);
     }
     centred(canvas, kMenuHintY, "PAD CANCELS", 1);
 }
@@ -113,29 +113,29 @@ struct Reason {
 Reason reason_of(BravoRefusal refusal) {
     switch (refusal) {
         case BravoRefusal::PhonesConnected: return {"PHONES", "CONNECTED"};
-        case BravoRefusal::NarrowLink: return {"LINK TOO", "NARROW"};
-        case BravoRefusal::NoAnswer: return {"NO ANSWER", "FROM BRAVO"};
+        case BravoRefusal::NarrowLink: return {"LINK TOO", "SMALL"};
+        case BravoRefusal::NoAnswer: return {"NO DATA", "FROM BRAVO"};
         case BravoRefusal::UnknownProtocol: return {"UNKNOWN", "PROTOCOL"};
         case BravoRefusal::LinkLost:
         case BravoRefusal::None: break;
     }
-    return {"LINK LOST", ""};
+    return {"NO LINK", ""};
 }
 
 int reason_detail(char* out, BravoRefusal refusal) {
     switch (refusal) {
-        case BravoRefusal::PhonesConnected: return format_string(out, "DISCONNECT ONE TO PAIR");
+        case BravoRefusal::PhonesConnected: return format_string(out, "DISCONNECT ONE TO PAIR.");
         case BravoRefusal::NarrowLink: {
-            int written = format_string(out, "BRAVO LINK UNDER ");
+            int written = format_string(out, "LINK IS LESS THAN ");
             written += format_unsigned(out + written, comms::kPeerPayloadFloorBytes);
-            return written + format_string(out + written, " BYTES");
+            return written + format_string(out + written, " BYTES.");
         }
-        case BravoRefusal::NoAnswer: return format_string(out, "ITS BUTTON WAS NOT PRESSED");
-        case BravoRefusal::UnknownProtocol: return format_string(out, "UPDATE THE GO OR BRAVO");
+        case BravoRefusal::NoAnswer: return format_string(out, "PUSH THE BUTTON ON BRAVO.");
+        case BravoRefusal::UnknownProtocol: return format_string(out, "UPDATE THE GO OR BRAVO.");
         case BravoRefusal::LinkLost:
         case BravoRefusal::None: break;
     }
-    return format_string(out, "BRAVO OFF OR OUT OF RANGE");
+    return format_string(out, "BRAVO IS OFF OR OUT OF RANGE.");
 }
 
 void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
@@ -155,9 +155,10 @@ void draw_refused(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     char detail[kDetailBytes];
     detail[reason_detail(detail, refusal)] = 0;
     centred(canvas, kDetailY, detail, 1);
-    centred(canvas, kMenuHintY,
-            refusal == BravoRefusal::PhonesConnected ? "PAD BACK" : "PAD BACK    BUTTON RETRIES",
-            1);
+    centred(
+        canvas, kMenuHintY,
+        refusal == BravoRefusal::PhonesConnected ? "PAD BACK" : "PAD BACK    BUTTON TRIES AGAIN",
+        1);
 }
 
 }  // namespace
@@ -182,7 +183,7 @@ void draw_own_icao_notice(ui::Canvas& canvas) {
     centred(canvas, kReasonY, "NOT SET ON", kMenuScale);
     centred(canvas, kReasonY + kReasonLineGap, "GO OR BRAVO", kMenuScale);
     centred(canvas, kDetailY, "OWN TRANSPONDER SHOWS AS TRAFFIC", 1);
-    centred(canvas, kDetailY + kNoticeDetailGap, "SET IT UNDER SETTINGS AIRCRAFT", 1);
+    centred(canvas, kDetailY + kNoticeDetailGap, "SET IT IN SETTINGS, AIRCRAFT.", 1);
     centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
 }
 
@@ -191,8 +192,8 @@ void draw_bravo_forgot_notice(ui::Canvas& canvas) {
     header(canvas, "BRAVO");
     centred(canvas, kReasonY, "NOT PAIRED", kMenuScale);
     centred(canvas, kReasonY + kReasonLineGap, "ON BRAVO", kMenuScale);
-    centred(canvas, kDetailY, "THE GO FORGOT IT TOO", 1);
-    centred(canvas, kDetailY + kNoticeDetailGap, "PAIR AGAIN FROM SETTINGS", 1);
+    centred(canvas, kDetailY, "THE GO REMOVED IT TOO.", 1);
+    centred(canvas, kDetailY + kNoticeDetailGap, "PAIR AGAIN IN SETTINGS.", 1);
     centred(canvas, kMenuHintY, "PAD OR BUTTON CLOSES", 1);
 }
 

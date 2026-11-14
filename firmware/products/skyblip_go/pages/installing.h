@@ -11,14 +11,15 @@ constexpr int kInstallingLineHeight = 14;
 constexpr int kInstallingBodyY = 90;
 
 constexpr const char* kInstallingHeader = "FIRMWARE";
-constexpr const char* kInstallingTitle = "INSTALLING";
-constexpr const char* kInstallingBody[] = {"LEAVE THE DEVICE ON", "IT RESTARTS BY ITSELF",
-                                           "IN ABOUT 30 S", "THE SCREEN STAYS STILL"};
+constexpr const char* kInstallingTitle = "INSTALLATION";
+constexpr const char* kInstallingBody[] = {"KEEP THE DEVICE ON.", "IT STARTS AGAIN IN",
+                                           "APPROXIMATELY 30 S.", "THE DISPLAY DOES NOT CHANGE."};
 constexpr int kInstallingBodyRows = 4;
 
-constexpr const char* kReceivingTitle = "RECEIVING";
-constexpr const char* kReceivingBody[] = {"KEEP THE PHONE NEAR", "IT INSTALLS BY ITSELF",
-                                          "ONCE THE IMAGE IS IN", "ONE PRESS CANCELS"};
+constexpr const char* kReceivingTitle = "DOWNLOAD";
+constexpr const char* kReceivingBody[] = {"KEEP THE PHONE NEAR THE DEVICE.",
+                                          "AFTER THE DOWNLOAD, THE DEVICE",
+                                          "INSTALLS THE FIRMWARE.", "PUSH ONCE TO CANCEL."};
 constexpr int kReceivingBodyRows = 4;
 
 constexpr int installing_body_y(int row) { return kInstallingBodyY + row * kInstallingLineHeight; }

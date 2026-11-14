@@ -53,8 +53,8 @@ TEST_CASE("bravo page: a scan that heard nothing yet says it is listening") {
     BravoSnapshot snapshot;
     snapshot.view = scanning(0);
     const Glass canvas = drawn(snapshot);
-    CHECK(centred_reads(canvas, "LISTENING", kMenuScale));
-    CHECK(centred_reads(canvas, "SWITCH BRAVO ON NEARBY", 1));
+    CHECK(centred_reads(canvas, "NO BRAVO FOUND", kMenuScale));
+    CHECK(centred_reads(canvas, "START A BRAVO NEAR THIS GO.", 1));
 }
 
 TEST_CASE("bravo page: confirm, then the wait for Bravo's button, name the tag") {
@@ -70,7 +70,7 @@ TEST_CASE("bravo page: confirm, then the wait for Bravo's button, name the tag")
     snapshot.view.pairing_tag = 0x3F2A;
     canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "3F2A", kCallsignScale));
-    CHECK(centred_reads(canvas, "BUTTON ON BRAVO", kCallsignHintScale));
+    CHECK(centred_reads(canvas, "BUTTON ON BRAVO.", kCallsignHintScale));
     CHECK(centred_reads(canvas, "PAD CANCELS", 1));
 }
 
@@ -80,21 +80,21 @@ TEST_CASE("bravo page: each refusal says why") {
     snapshot.view.refusal = BravoRefusal::PhonesConnected;
     Glass canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "3 PHONES", kMenuScale));
-    CHECK(centred_reads(canvas, "DISCONNECT ONE TO PAIR", 1));
+    CHECK(centred_reads(canvas, "DISCONNECT ONE TO PAIR.", 1));
 
     snapshot.view.refusal = BravoRefusal::NarrowLink;
     canvas = drawn(snapshot);
-    CHECK(centred_reads(canvas, "BRAVO LINK UNDER 126 BYTES", 1));
+    CHECK(centred_reads(canvas, "LINK IS LESS THAN 126 BYTES.", 1));
 
     snapshot.view.refusal = BravoRefusal::NoAnswer;
     canvas = drawn(snapshot);
-    CHECK(centred_reads(canvas, "NO ANSWER", kMenuScale));
-    CHECK(centred_reads(canvas, "PAD BACK    BUTTON RETRIES", 1));
+    CHECK(centred_reads(canvas, "NO DATA", kMenuScale));
+    CHECK(centred_reads(canvas, "PAD BACK    BUTTON TRIES AGAIN", 1));
 
     snapshot.view.refusal = BravoRefusal::UnknownProtocol;
     canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "UNKNOWN", kMenuScale));
-    CHECK(centred_reads(canvas, "UPDATE THE GO OR BRAVO", 1));
+    CHECK(centred_reads(canvas, "UPDATE THE GO OR BRAVO.", 1));
 }
 
 TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is connected") {
@@ -109,7 +109,7 @@ TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is conne
 
     snapshot.view.link = BravoLink::Unsupported;
     canvas = drawn(snapshot);
-    CHECK(centred_reads(canvas, "UPDATE NEEDED", kMenuScale));
+    CHECK(centred_reads(canvas, "UPDATE NECESSARY", kMenuScale));
 
     snapshot.unpairing = true;
     canvas = drawn(snapshot);
@@ -120,7 +120,7 @@ TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it")
     Glass canvas;
     draw_own_icao_notice(canvas);
     CHECK(centred_reads(canvas, "OWN TRANSPONDER SHOWS AS TRAFFIC", 1));
-    CHECK(centred_reads(canvas, "SET IT UNDER SETTINGS AIRCRAFT", 1));
+    CHECK(centred_reads(canvas, "SET IT IN SETTINGS, AIRCRAFT.", 1));
 }
 
 TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropped it too") {
@@ -128,8 +128,8 @@ TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropp
     draw_bravo_forgot_notice(canvas);
     CHECK(centred_reads(canvas, "NOT PAIRED", kMenuScale));
     CHECK(centred_reads(canvas, "ON BRAVO", kMenuScale));
-    CHECK(centred_reads(canvas, "THE GO FORGOT IT TOO", 1));
-    CHECK(centred_reads(canvas, "PAIR AGAIN FROM SETTINGS", 1));
+    CHECK(centred_reads(canvas, "THE GO REMOVED IT TOO.", 1));
+    CHECK(centred_reads(canvas, "PAIR AGAIN IN SETTINGS.", 1));
 }
 
 TEST_CASE("bravo page: the pad walks the list and leaves past its end, the button confirms first") {

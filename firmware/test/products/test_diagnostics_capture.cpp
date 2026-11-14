@@ -108,8 +108,8 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     CHECK(price.pool_sectors == platform::host::FlashRegion::kSectorCount);
     CHECK(price.growth_sectors == platform::host::FlashRegion::kSectorCount);
     CHECK(price.keeps_s > 0);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "TAKES 298 OF 298 SECTORS", 0, 0, 200, 200));
-    CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO ARM", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "USES 298 OF 298 SECTORS", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "PUSH TWICE TO START", 0, 0, 200, 200));
 
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 2000);
@@ -122,8 +122,8 @@ TEST_CASE("capture: the diagnostics page states the price, and one press does no
     CHECK(rig.product.diagnostics().armed());
     CHECK(rig.product.diagnostics().profile() == diagnostics::Profile::Full);
     CHECK(rig.product.capture().capturing());
-    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED FULL", 0, 0, 200, 200));
-    CHECK(reads_in(rig.product.screen().framebuffer(), "PRESS TWICE TO STOP", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ON FULL", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "PUSH TWICE TO STOP", 0, 0, 200, 200));
 }
 
 TEST_CASE("capture: the page prices every capture, and the pad picks between them") {
@@ -170,7 +170,7 @@ TEST_CASE("capture: the double press arms the capture in focus, and no other") {
     CHECK(rig.product.capture().capturing());
 
     taxi(rig, now_ms, 5);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ARMED POWER RUN", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "STATE ON POWER RUN", 0, 0, 200, 200));
     // A capture recording two subjects every 30 s outlasts one recording eleven a second.
     CHECK(rig.state().capture.keeps_s >
           10 * rig.product.capture().keeps_s(diagnostics::Profile::Full));
@@ -426,7 +426,7 @@ TEST_CASE("capture: a device with no partition offers no capture to arm") {
 
     open_capture_page(rig, now_ms);
     CHECK_FALSE(rig.state().capture.available);
-    CHECK(reads_in(rig.product.screen().framebuffer(), "NO FLASH FITTED", 0, 0, 200, 200));
+    CHECK(reads_in(rig.product.screen().framebuffer(), "NO FLASH INSTALLED", 0, 0, 200, 200));
 
     rig.double_press(now_ms);
     rig.run(now_ms, now_ms + 1000);

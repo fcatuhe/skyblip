@@ -530,7 +530,7 @@ void ScreenService::draw_park_frame(ParkFrame frame) {
         case ParkFrame::Recovery: draw_recovery(framebuffer_, recovery_path_); return;
         // INFO: fc 12sep26 months of one image is the ghosting an e-paper never fully loses
         case ParkFrame::Blank: framebuffer_.clear(/*white=*/true); return;
-        case ParkFrame::FlatCell: draw_parked_cell("FLAT BATTERY"); return;
+        case ParkFrame::FlatCell: draw_parked_cell("EMPTY BATTERY"); return;
         case ParkFrame::LowCell: draw_parked_cell("CHARGE BATTERY"); return;
         case ParkFrame::Wordmark:
         default:

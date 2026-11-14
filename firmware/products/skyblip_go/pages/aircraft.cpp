@@ -27,7 +27,7 @@ const char* state_text(Detection state) {
         case Detection::NotConnected: return "NOT CONNECTED";
         case Detection::Airborne: return "IN FLIGHT";
         case Detection::NoFix: return "NO FIX";
-        case Detection::Listening: return "LISTENING";
+        case Detection::Listening: return "NOT HEARD";
         case Detection::Heard: break;
     }
     return "";
@@ -35,10 +35,10 @@ const char* state_text(Detection state) {
 
 const char* detail_text(Detection state) {
     switch (state) {
-        case Detection::Unpaired: return "PAIR ONE TO DETECT THE AIRCRAFT";
+        case Detection::Unpaired: return "PAIR A BRAVO FIRST.";
         case Detection::Airborne:
-        case Detection::NoFix: return "IT DETECTS ON THE GROUND";
-        case Detection::Listening: return "TRANSPONDER TO ON OR ALT";
+        case Detection::NoFix: return "BRAVO FINDS IT ON THE GROUND.";
+        case Detection::Listening: return "SET THE TRANSPONDER TO ALT.";
         case Detection::NotConnected:
         case Detection::Heard: break;
     }
@@ -108,7 +108,7 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
     canvas.draw_text(kMenuLeftX, top + kLabelInset, label, ink, 1);
     char address[kOwnIcaoCharacters + 1];
     canvas.draw_text(kMenuLeftX, top + kNameInset, name_of(detected, address), ink, kCallsignScale);
-    const char* type = matches(detected, settings) ? "MATCHES"
+    const char* type = matches(detected, settings) ? "SAME"
                        : named_type(detected.aircraft_type)
                            ? aircraft_type_name(detected.aircraft_type)
                            : "";

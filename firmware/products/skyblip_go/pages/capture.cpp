@@ -75,7 +75,7 @@ void draw_state(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     char text[40];
     int written = format_word(text, "STATE");
     if (snapshot.capture.armed) {
-        written += format_word(text + written, "ARMED");
+        written += format_word(text + written, "ON");
         written += format_string(text + written, capture_name(snapshot.running));
     } else {
         written += format_string(text + written, stopped_word(snapshot.capture.stopped));
@@ -97,21 +97,20 @@ void draw_offered_capture(ui::Canvas& canvas, int line, diagnostics::Profile pro
 
 void draw_price(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
     char text[40];
-    int written = format_word(text, "TAKES");
+    int written = format_word(text, "USES");
     written += format_unsigned(text + written, snapshot.capture.growth_sectors);
     written += format_string(text + written, " OF ");
     written += format_unsigned(text + written, snapshot.capture.pool_sectors);
     written += format_string(text + written, " SECTORS");
     row(canvas, kPriceLine, text, written);
 
-    written = format_word(text, "EVICTS");
+    written = format_word(text, "REMOVES");
     written += format_unsigned(text + written, snapshot.capture.evicted_flights);
     written += format_string(text + written, " FLIGHTS");
     row(canvas, kPriceLine + 1, text, written);
 
     written = format_word(text, "KEEPS");
     written += format_span(text + written, snapshot.focus_keeps_s);
-    written += format_string(text + written, " ROLLING");
     row(canvas, kPriceLine + 2, text, written);
 }
 
@@ -160,7 +159,7 @@ void draw_progress(ui::Canvas& canvas, const bus::CaptureState& capture) {
 void draw_faults(ui::Canvas& canvas, const bus::CaptureState& capture, int line) {
     if (capture.faults == 0 && capture.unreadable_sectors == 0) return;
     char text[40];
-    int written = format_word(text, "FLASH FAULTS");
+    int written = format_word(text, "FLASH ERRORS");
     written += format_unsigned(text + written, capture.faults);
     written += format_string(text + written, " UNREAD ");
     written += format_unsigned(text + written, capture.unreadable_sectors);
@@ -168,10 +167,10 @@ void draw_faults(ui::Canvas& canvas, const bus::CaptureState& capture, int line)
 }
 
 void draw_hint(ui::Canvas& canvas, const CaptureSnapshot& snapshot) {
-    const char* hint = !snapshot.capture.available ? "NO FLASH FITTED"
-                       : snapshot.capture.armed    ? "PRESS TWICE TO STOP"
-                       : snapshot.arming           ? "PRESS AGAIN TO ARM"
-                                                   : "PAD PICKS  PRESS TWICE TO ARM";
+    const char* hint = !snapshot.capture.available ? "NO FLASH INSTALLED"
+                       : snapshot.capture.armed    ? "PUSH TWICE TO STOP"
+                       : snapshot.arming           ? "PUSH AGAIN TO START"
+                                                   : "PAD SELECTS  PUSH TWICE TO START";
     canvas.horizontal_line(kLeft, kHintRuleY, kRight - kLeft, true);
     canvas.draw_text(kLeft, kHintY, hint, true, 1);
 }

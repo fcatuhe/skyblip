@@ -51,7 +51,7 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
     // Reversed out across the full width: whatever page was up, this cannot be
     // mistaken for one of them at arm's length.
     canvas.rectangle(0, 0, kGlassWidth, 26, true, /*fill=*/true);
-    canvas.draw_text(kLeft + kCellWidth, kConfirmHeaderY, "AUTHORISE", false, 2);
+    canvas.draw_text(kLeft + kCellWidth, kConfirmHeaderY, "AUTHORIZE", false, 2);
 
     canvas.draw_text(kLeft, kConfirmTitleY, snapshot.title, true, 2);
     canvas.horizontal_line(kLeft, kConfirmTitleY + 22, kGlassWidth - 2 * kLeft, true);
@@ -73,7 +73,7 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
 
     if (snapshot.seconds_left == 0) return;
     char text[32];
-    int written = format_string(text, "REFUSED IN ");
+    int written = format_string(text, "IT CANCELS IN ");
     written += format_unsigned(text + written, snapshot.seconds_left);
     written += format_string(text + written, " S");
     text[written] = 0;

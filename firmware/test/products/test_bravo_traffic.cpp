@@ -1,4 +1,4 @@
-// A Go paired with the Bravo stub folds Bravo's targets in, and says BRAVO LOST on health alone.
+// A Go paired with the Bravo stub folds Bravo's targets in, and says NO BRAVO on health alone.
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -95,7 +95,7 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     flight.fly(3);
     CHECK(flight.state().bravo == comms::BravoState::Live);
     CHECK(flight.reads("BRAVO"));
-    CHECK_FALSE(flight.reads("BRAVO LOST", 2));
+    CHECK_FALSE(flight.reads("NO BRAVO", 2));
 
     flight.go().tap(flight.tango.now_ms);
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
@@ -104,18 +104,18 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
 }
 
 // An empty sky is a healthy one: Bravo's health, not its traffic, says it is there.
-TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming is no BRAVO LOST and no tone") {
+TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming is no NO BRAVO and no tone") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
     flight.fly(17);
     CHECK(flight.state().bravo == comms::BravoState::Live);
-    CHECK_FALSE(flight.reads("BRAVO LOST", 2));
+    CHECK_FALSE(flight.reads("NO BRAVO", 2));
     CHECK(flight.tones.empty());
     CHECK(last_status(flight.go()).find("\"bravo\":\"live\"") != std::string::npos);
 }
 
-TEST_CASE("bravo traffic: a lost health says BRAVO LOST once, with one tone, until it comes back") {
+TEST_CASE("bravo traffic: a lost health says NO BRAVO once, with one tone, until it comes back") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
@@ -126,7 +126,7 @@ TEST_CASE("bravo traffic: a lost health says BRAVO LOST once, with one tone, unt
 
     flight.fly(4);
     CHECK(flight.state().bravo == comms::BravoState::LinkDown);
-    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.reads("NO BRAVO", 2));
     CHECK(flight.reads("LINK DOWN"));
     CHECK_FALSE(flight.reads("BRAVO"));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
@@ -135,19 +135,19 @@ TEST_CASE("bravo traffic: a lost health says BRAVO LOST once, with one tone, unt
     flight.tango.air.set_in_range(true);
     flight.fly(5);
     CHECK(flight.state().bravo == comms::BravoState::Live);
-    CHECK_FALSE(flight.reads("BRAVO LOST", 2));
+    CHECK_FALSE(flight.reads("NO BRAVO", 2));
     CHECK(flight.tones.size() == 1);
     CHECK(last_status(flight.go()).find("\"bravo\":\"live\"") != std::string::npos);
 }
 
-TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are BRAVO LOST, and say which") {
+TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are NO BRAVO, and say which") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
     flight.tango.bravo.health.listening = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::ReceiverDown);
-    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.reads("NO BRAVO", 2));
     CHECK(flight.reads("RECEIVER DOWN"));
     CHECK(last_status(flight.go()).find("\"bravo\":\"receiver_down\"") != std::string::npos);
 
@@ -166,7 +166,7 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are BRAVO LOST
                    go::kGlassHeight));
 }
 
-TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is BRAVO LOST, with one tone") {
+TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is NO BRAVO, with one tone") {
     Flight flight;
     flight.fly(3);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
@@ -174,7 +174,7 @@ TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is BRAVO LOST, with 
     flight.tango.bravo.health.utc_valid = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.reads("NO BRAVO", 2));
     CHECK(flight.reads("NO UTC"));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
 }
@@ -190,7 +190,7 @@ TEST_CASE("bravo traffic: a Bravo that reboots after having UTC is lost until it
     flight.fly(5);
     REQUIRE(flight.tango.service().link() == go::BravoLink::Up);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(flight.reads("BRAVO LOST", 2));
+    CHECK(flight.reads("NO BRAVO", 2));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
 
     flight.tango.bravo.health.utc_valid = true;
@@ -228,13 +228,13 @@ TEST_CASE("bravo traffic: a dropped pin forgets Bravo's UTC, so the next Bravo w
     CHECK(flight.tones.empty());
 }
 
-TEST_CASE("bravo traffic: an unpaired Go never says BRAVO LOST, nor sends a bravo key") {
+TEST_CASE("bravo traffic: an unpaired Go never says NO BRAVO, nor sends a bravo key") {
     Flight flight({}, /*paired=*/false);
     flight.fly(3);
     flight.tones.clear();
     flight.fly(17);
     CHECK(flight.state().bravo == comms::BravoState::Unpaired);
-    CHECK_FALSE(flight.reads("BRAVO LOST", 2));
+    CHECK_FALSE(flight.reads("NO BRAVO", 2));
     CHECK_FALSE(flight.reads("BRAVO"));
     CHECK(flight.tones.empty());
     CHECK(last_status(flight.go()).find("bravo") == std::string::npos);

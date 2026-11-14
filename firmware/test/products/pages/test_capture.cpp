@@ -58,11 +58,11 @@ TEST_CASE("capture page: a disarmed device states the price before it is paid") 
     CHECK(reads_in(canvas, "STATE OFF", 0, 14, 200, 40));
     CHECK(reads_in(canvas, "POWER RUN", 0, 42, 200, 70));
     CHECK(reads_in(canvas, "FLIGHT RUN", 0, 56, 200, 84));
-    CHECK(reads_in(canvas, "TAKES 266 OF 330 SECTORS", 0, 70, 200, 98));
-    CHECK(reads_in(canvas, "EVICTS 3 FLIGHTS", 0, 84, 200, 112));
-    CHECK(reads_in(canvas, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
-    CHECK(reads_in(canvas, "PAD PICKS", 0, 170, 200, 200));
-    CHECK(reads_in(canvas, "PRESS TWICE TO ARM", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "USES 266 OF 330 SECTORS", 0, 70, 200, 98));
+    CHECK(reads_in(canvas, "REMOVES 3 FLIGHTS", 0, 84, 200, 112));
+    CHECK(reads_in(canvas, "KEEPS 1H08", 0, 98, 200, 126));
+    CHECK(reads_in(canvas, "PAD SELECTS", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "PUSH TWICE TO START", 0, 170, 200, 200));
 }
 
 TEST_CASE("capture page: the full capture and the two runs quote spans two orders apart") {
@@ -73,10 +73,10 @@ TEST_CASE("capture page: the full capture and the two runs quote spans two order
     Glass flight_run;
     draw_capture(flight_run, offering(Profile::FlightRun));
 
-    CHECK(reads_in(full, "KEEPS 1H08 ROLLING", 0, 98, 200, 126));
-    CHECK(reads_in(power_run, "KEEPS 188H25 ROLLING", 0, 98, 200, 126));
-    CHECK_FALSE(reads_in(power_run, "KEEPS 1H08 ROLLING", 0, 0, 200, 200));
-    CHECK(reads_in(flight_run, "KEEPS 188H25 ROLLING", 0, 98, 200, 126));
+    CHECK(reads_in(full, "KEEPS 1H08", 0, 98, 200, 126));
+    CHECK(reads_in(power_run, "KEEPS 188H25", 0, 98, 200, 126));
+    CHECK_FALSE(reads_in(power_run, "KEEPS 1H08", 0, 0, 200, 200));
+    CHECK(reads_in(flight_run, "KEEPS 188H25", 0, 98, 200, 126));
 }
 
 TEST_CASE("capture page: the flight run records power and duty, as the power run does") {
@@ -107,11 +107,11 @@ TEST_CASE("capture page: an armed device shows what it wrote, what it lost and w
     Glass canvas;
     draw_capture(canvas, armed_device());
 
-    CHECK(reads_in(canvas, "STATE ARMED FULL", 0, 14, 200, 40));
+    CHECK(reads_in(canvas, "STATE ON FULL", 0, 14, 200, 40));
     CHECK(reads_in(canvas, "SESSION 1785628800", 0, 28, 200, 56));
     CHECK(reads_in(canvas, "WROTE 4213 DROP 17", 0, 42, 200, 70));
     CHECK(reads_in(canvas, "SECTORS 25 KEEPS 1H00", 0, 56, 200, 84));
-    CHECK(reads_in(canvas, "PRESS TWICE TO STOP", 0, 170, 200, 200));
+    CHECK(reads_in(canvas, "PUSH TWICE TO STOP", 0, 170, 200, 200));
 }
 
 TEST_CASE("capture page: an armed device names the capture that is running") {
@@ -120,14 +120,14 @@ TEST_CASE("capture page: an armed device names the capture that is running") {
     Glass canvas;
     draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(canvas, "STATE ARMED POWER RUN", 0, 14, 200, 40));
-    CHECK_FALSE(reads_in(canvas, "STATE ARMED FULL", 0, 0, 200, 200));
-    CHECK_FALSE(reads_in(canvas, "PAD PICKS", 0, 0, 200, 200));
+    CHECK(reads_in(canvas, "STATE ON POWER RUN", 0, 14, 200, 40));
+    CHECK_FALSE(reads_in(canvas, "STATE ON FULL", 0, 0, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "PAD SELECTS", 0, 0, 200, 200));
 
     snapshot.running = Profile::FlightRun;
     Glass flight_run;
     draw_capture(flight_run, snapshot);
-    CHECK(reads_in(flight_run, "STATE ARMED FLIGHT RUN", 0, 14, 200, 40));
+    CHECK(reads_in(flight_run, "STATE ON FLIGHT RUN", 0, 14, 200, 40));
 }
 
 // A capture that stopped on its own says so: the pilot did not ask for it.
@@ -150,7 +150,7 @@ TEST_CASE("capture page: a refused flash write is on the glass, not only in a co
     Glass canvas;
     draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(canvas, "FLASH FAULTS 3 UNREAD 1", 0, 84, 200, 126));
+    CHECK(reads_in(canvas, "FLASH ERRORS 3 UNREAD 1", 0, 84, 200, 126));
 }
 
 TEST_CASE("capture page: a device with no partition offers no gesture at all") {
@@ -159,8 +159,8 @@ TEST_CASE("capture page: a device with no partition offers no gesture at all") {
     Glass canvas;
     draw_capture(canvas, snapshot);
 
-    CHECK(reads_in(canvas, "NO FLASH FITTED", 0, 170, 200, 200));
-    CHECK_FALSE(reads_in(canvas, "PRESS TWICE TO ARM", 0, 0, 200, 200));
+    CHECK(reads_in(canvas, "NO FLASH INSTALLED", 0, 170, 200, 200));
+    CHECK_FALSE(reads_in(canvas, "PUSH TWICE TO START", 0, 0, 200, 200));
     CHECK_FALSE(reads_in(canvas, "POWER RUN", 0, 0, 200, 200));
     CHECK_FALSE(reads_in(canvas, "FLIGHT RUN", 0, 0, 200, 200));
 }

@@ -201,15 +201,15 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
     if (const char* cell = cell_word(snapshot, cell_buffer)) words[count++] = cell;
     if (!snapshot.fix_valid) words[count++] = "NO FIX";
     if (const char* loss = bravo_loss_word(snapshot.bravo)) {
-        words[count++] = "BRAVO LOST";
+        words[count++] = "NO BRAVO";
         if (count == 1) words[count++] = loss;
     } else if (snapshot.bravo == comms::BravoState::Waiting) {
-        // INFO: fc 12nov26 BRAVO WAITING overruns the ALL ring at banner height, so a banner splits
+        // INFO: fc 12nov26 WAIT FOR BRAVO overruns the ALL ring as a banner, so the banner splits
         if (count == 0) {
+            words[count++] = "WAIT FOR";
             words[count++] = "BRAVO";
-            words[count++] = "WAITING";
         } else {
-            words[count++] = "BRAVO WAITING";
+            words[count++] = "WAIT FOR BRAVO";
         }
     }
     if (snapshot.fix_valid) {

@@ -138,10 +138,10 @@ constexpr int kCallsignTextY = 80;
 constexpr int kCallsignCursorY = kCallsignTextY + 7 * kCallsignScale + 4;
 constexpr int kCallsignCursorHeight = 3;
 constexpr int kCallsignHintScale = 2;
-constexpr const char* kCallsignPadHintText = "PAD ROLLS";
+constexpr const char* kCallsignPadHintText = "PAD CHANGES";
 constexpr const char* kCallsignNextHintText = "BUTTON NEXT";
-constexpr const char* kCallsignClearHintText = "BUTTON CLEARS";
-constexpr const char* kCallsignClearHelpText = "BLANK THE FIRST TO CLEAR";
+constexpr const char* kCallsignClearHintText = "BUTTON ERASES";
+constexpr const char* kCallsignClearHelpText = "AN EMPTY FIRST LETTER ERASES IT.";
 
 constexpr int centred_x(const char* text, int scale) {
     return (kGlassWidth - text_cells(text) * ui::kCellWidth * scale) / 2;

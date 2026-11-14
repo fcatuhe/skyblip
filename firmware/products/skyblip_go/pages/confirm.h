@@ -36,8 +36,8 @@ constexpr int confirm_detail_y(int row) { return kConfirmDetailY + row * kConfir
 
 // The two halves of the gesture, spelled out. They are constants because the
 // page and its test must not be able to disagree about what the device accepts.
-constexpr const char* kConfirmAllowText = "PRESS TWICE TO ALLOW";
-constexpr const char* kConfirmRefuseText = "ONE PRESS REFUSES";
+constexpr const char* kConfirmAllowText = "PUSH TWICE TO ACCEPT";
+constexpr const char* kConfirmRefuseText = "PUSH ONCE TO CANCEL";
 
 void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot);
 

@@ -13,7 +13,7 @@ namespace skyblip {
 
 inline uint32_t seconds_left_on(const ui::Canvas& canvas) {
     for (uint32_t seconds = 1; seconds <= comms::kPromptCeilingMs / 1000u; seconds++) {
-        const std::string text = "REFUSED IN " + std::to_string(seconds) + " S";
+        const std::string text = "IT CANCELS IN " + std::to_string(seconds) + " S";
         if (reads_at(canvas, go::kConfirmLeftX, go::kConfirmExpiryY, text.c_str())) return seconds;
     }
     return 0;

@@ -41,7 +41,7 @@ TEST_CASE("product: a cell that takes the device down names itself on the way ou
     REQUIRE(rig.product.ready_to_power_off());
 
     const go::Glass& parked = rig.platform.chips().epd.framebuffer();
-    CHECK(reads_in(parked, "FLAT BATTERY", 10, 130, 190, 199, 2));
+    CHECK(reads_in(parked, "EMPTY BATTERY", 10, 130, 190, 199, 2));
     CHECK_FALSE(reads_in(parked, "%", 0, 0, 200, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
 
@@ -63,7 +63,7 @@ TEST_CASE("product: a boot refused on a flat cell writes the reason under the ma
     CHECK(rig.platform.chips().epd.present_count == 1);
     CHECK(rig.platform.chips().epd.last_full);
     CHECK_FALSE(rig.platform.chips().epd.powered);
-    CHECK(reads_in(parked, "FLAT BATTERY", 10, 130, 190, 199, 2));
+    CHECK(reads_in(parked, "EMPTY BATTERY", 10, 130, 190, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Flat);
 
     // Never a percentage: it would be the reading the device died at, standing unchanged
@@ -82,7 +82,7 @@ TEST_CASE("product: a refused boot pushes no frame the glass is already wearing"
     CHECK(rig.platform.chips().epd.present_count == 0);
 }
 
-// The cutoff left FLAT BATTERY on the glass, and the press that follows needs no other answer.
+// The cutoff left EMPTY BATTERY on the glass, and the press that follows needs no other answer.
 TEST_CASE("product: a press after a cutoff is refused and leaves the flat frame where it is") {
     Rig dying;
     REQUIRE(dying.setup() == Status::Ok);
@@ -162,7 +162,7 @@ TEST_CASE("product: a press on the cable after a cutoff starts the device and cl
     plugged.run(0, 5000);
     CHECK_FALSE(plugged.product.shutdown().going_down());
     CHECK_FALSE(
-        reads_in(plugged.platform.chips().epd.framebuffer(), "FLAT BATTERY", 0, 0, 200, 199, 2));
+        reads_in(plugged.platform.chips().epd.framebuffer(), "EMPTY BATTERY", 0, 0, 200, 199, 2));
     CHECK(plugged.platform.system_power().cell_on_glass() == power::CellOnGlass::None);
 }
 
@@ -208,7 +208,7 @@ TEST_CASE("product: a switch-off on a critical cell asks for the charger under t
 
     const go::Glass& parked = rig.platform.chips().epd.framebuffer();
     CHECK(reads_in(parked, "CHARGE BATTERY", 0, 130, 200, 199, 2));
-    CHECK_FALSE(reads_in(parked, "FLAT BATTERY", 0, 0, 200, 199, 2));
+    CHECK_FALSE(reads_in(parked, "EMPTY BATTERY", 0, 0, 200, 199, 2));
     CHECK(rig.platform.system_power().cell_on_glass() == power::CellOnGlass::Low);
     CHECK_FALSE(rig.platform.system_power().went_dark_flat());
 }
@@ -287,7 +287,7 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     REQUIRE(pressed.setup() == Status::Ok);
     REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
     CHECK(pressed.product.went_dark_flat());
-    CHECK(reads_in(pressed.product.self_test_page(), "WAS FLAT", 0, 150, 200, 199));
+    CHECK(reads_in(pressed.product.self_test_page(), "WAS EMPTY", 0, 150, 200, 199));
     CHECK_FALSE(pressed.platform.system_power().went_dark_flat());
     pressed.send("{\"command\":\"status\"}");
     pressed.run(0, 200);
@@ -307,7 +307,7 @@ TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot
     Rig ordinary;
     REQUIRE(ordinary.setup() == Status::Ok);
     CHECK_FALSE(ordinary.product.went_dark_flat());
-    CHECK_FALSE(reads_in(ordinary.product.self_test_page(), "WAS FLAT", 0, 0, 200, 199));
+    CHECK_FALSE(reads_in(ordinary.product.self_test_page(), "WAS EMPTY", 0, 0, 200, 199));
 }
 
 // The note is the cell's, not the frame's: a panel held off in the heat parks nothing.

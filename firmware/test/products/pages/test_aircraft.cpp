@@ -114,13 +114,13 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
 }
 
 TEST_CASE(
-    "aircraft menu: a transponder already stored reads MATCHES, and the press is spent on "
+    "aircraft menu: a transponder already stored reads SAME, and the press is spent on "
     "nothing") {
     MenuValues values = default_menu_values();
     values.detected = heard_glider();
     REQUIRE(adopt(values.detected, values.settings));
     const Glass canvas = aircraft_menu_of(values, MenuRow::OwnIcao);
-    CHECK(reads(canvas, "MATCHES", kMenuScale));
+    CHECK(reads(canvas, "SAME", kMenuScale));
 
     Bench bench;
     bench.values = values;
@@ -142,11 +142,11 @@ TEST_CASE("aircraft menu: each state with nothing to propose says why, and what 
         const char* reads;
         const char* detail;
     } cases[] = {
-        {Detection::Unpaired, "NOT PAIRED", "PAIR ONE TO DETECT THE AIRCRAFT"},
+        {Detection::Unpaired, "NOT PAIRED", "PAIR A BRAVO FIRST."},
         {Detection::NotConnected, "NOT CONNECTED", nullptr},
-        {Detection::Airborne, "IN FLIGHT", "IT DETECTS ON THE GROUND"},
-        {Detection::NoFix, "NO FIX", "IT DETECTS ON THE GROUND"},
-        {Detection::Listening, "LISTENING", "TRANSPONDER TO ON OR ALT"},
+        {Detection::Airborne, "IN FLIGHT", "BRAVO FINDS IT ON THE GROUND."},
+        {Detection::NoFix, "NO FIX", "BRAVO FINDS IT ON THE GROUND."},
+        {Detection::Listening, "NOT HEARD", "SET THE TRANSPONDER TO ALT."},
     };
     for (const auto& each : cases) {
         CAPTURE(each.reads);

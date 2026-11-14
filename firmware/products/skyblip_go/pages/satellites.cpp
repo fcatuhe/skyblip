@@ -176,7 +176,7 @@ void draw_satellites(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     if (!snapshot.levels_live || snapshot.sky == nullptr || snapshot.sky->count() == 0) {
         draw_used_by_system(canvas, snapshot);
         canvas.draw_text(kLeft, kNoteY,
-                         used_count(snapshot) == 0 ? "NO SATELLITE HEARD" : "LEVELS COMING UP",
+                         used_count(snapshot) == 0 ? "NO SATELLITE HEARD" : "WAIT FOR THE LEVELS.",
                          true, 1);
         return;
     }
@@ -184,7 +184,7 @@ void draw_satellites(ui::Canvas& canvas, const SatellitesSnapshot& snapshot) {
     scale_mark(canvas);
     int x = kLeft;
     for (gnss::System system : kSystemOrder) x = draw_group(canvas, *snapshot.sky, system, x);
-    canvas.draw_text(kLeft, kNoteY, "FILLED: IN THE SOLUTION", true, 1);
+    canvas.draw_text(kLeft, kNoteY, "FILLED: USED IN THE SOLUTION", true, 1);
 }
 
 }  // namespace skyblip::go

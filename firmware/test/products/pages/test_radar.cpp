@@ -345,7 +345,7 @@ TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is rea
     const Glass searching = radar(blind);
     CHECK(reads_in(searching, "BAT 4%", 40, 120, 160, 160, 2));
     CHECK(reads_in(searching, "NO FIX", 40, 145, 160, 170));
-    CHECK_FALSE(reads_in(searching, "BLIND", 0, 0, 200, 199));
+    CHECK_FALSE(reads_in(searching, "OUTDOORS", 0, 0, 200, 199));
 
     // A healthy cell writes nothing there at all.
     CHECK_FALSE(reads_in(radar(flying(47)), "BAT", 0, 0, 200, 199, 2));
@@ -357,7 +357,7 @@ TEST_CASE("radar page: a warned cell takes the ring, at the size the ring is rea
     const Glass charging = radar(cabled);
     CHECK_FALSE(reads_in(charging, "BAT", 0, 0, 200, 199, 2));
     CHECK(reads_in(charging, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(charging, "BLIND", 40, 145, 160, 170));
+    CHECK(reads_in(charging, "OUTDOORS", 40, 145, 160, 170));
 }
 
 // NO FIX says the plot is not being fed; the word under it says whether that is going anywhere.
@@ -366,22 +366,22 @@ TEST_CASE("radar page: under NO FIX stands how far the receiver has got") {
     searching.stage = skyblip::gnss::Stage::Blind;
     const Glass looking = radar(searching);
     CHECK(reads_in(looking, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(looking, "BLIND", 40, 145, 160, 170));
+    CHECK(reads_in(looking, "OUTDOORS", 40, 145, 160, 170));
 
     RadarSnapshot reading = searching;
     reading.stage = skyblip::gnss::Stage::Solving;
-    CHECK(reads_in(radar(reading), "SOLVING", 40, 145, 160, 170));
+    CHECK(reads_in(radar(reading), "WAIT", 40, 145, 160, 170));
 
     RadarSnapshot quiet = searching;
     quiet.stage = skyblip::gnss::Stage::Silent;
-    CHECK(reads_in(radar(quiet), "SILENT", 40, 145, 160, 170));
+    CHECK(reads_in(radar(quiet), "NO DATA", 40, 145, 160, 170));
 
     // A fix is the plot itself: no word, and no seconds ticking a partial refresh out of the panel.
     RadarSnapshot fixed = flying(0);
     fixed.stage = skyblip::gnss::Stage::Fixed;
     const Glass plotted = radar(fixed);
     CHECK_FALSE(reads_in(plotted, "FIX", 0, 0, 200, 199));
-    CHECK_FALSE(reads_in(plotted, "BLIND", 0, 0, 200, 199));
+    CHECK_FALSE(reads_in(plotted, "OUTDOORS", 0, 0, 200, 199));
 }
 
 // The readings are the ground the traffic is struck over: a word is no plaque to hide under.

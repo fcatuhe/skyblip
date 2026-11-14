@@ -186,7 +186,7 @@ void draw_radio_log(ui::Canvas& canvas, const RadioLogSnapshot& snapshot) {
     canvas.horizontal_line(kLeft, kRuleY, kRightEnd - kLeft, true);
 
     if (snapshot.log == nullptr || snapshot.row_count == 0) {
-        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NOTHING ON AIR YET", true, 1);
+        canvas.draw_text(kLeft, kFirstRowY + kLineHeight, "NO RADIO DATA", true, 1);
         return;
     }
 

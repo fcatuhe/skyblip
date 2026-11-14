@@ -71,7 +71,8 @@ struct Paired {
         return reads_in(simulator.product().screen().framebuffer(), text, 0, 0, go::kGlassWidth,
                         go::kGlassHeight, scale);
     }
-    bool reads_lost() { return reads("BRAVO LOST", 2); }
+    bool reads_lost() { return reads("NO BRAVO", 2); }
+    bool reads_waiting() { return reads("WAIT FOR BRAVO") || reads("WAIT FOR", 2); }
 
     static uint32_t sounds_of(const platform::host::Annunciator& annunciator) {
         return annunciator.tone_commands() + annunciator.motor_starts();
@@ -253,7 +254,7 @@ TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go,
     CHECK_FALSE(paired.reads("B 300003", go::kNearbyScale));
 }
 
-TEST_CASE("paired scenario: a lost link says BRAVO LOST, keeps the ADS-L target, and comes back") {
+TEST_CASE("paired scenario: a lost link says NO BRAVO, keeps the ADS-L target, and comes back") {
     Paired paired("scenarios/paired_link_lost.json");
     paired.run_until(11900);
     CHECK(paired.bravo() == comms::BravoState::Live);
@@ -280,7 +281,7 @@ TEST_CASE("paired scenario: a lost link says BRAVO LOST, keeps the ADS-L target,
     CHECK(paired.go().traffic.count() == 3);
 }
 
-TEST_CASE("paired scenario: BRAVO LOST shows only where the link is lost, from boot on") {
+TEST_CASE("paired scenario: NO BRAVO shows only where the link is lost, from boot on") {
     for (const char* file :
          {"scenarios/paired.json", "scenarios/paired_bravo_without_fix.json",
           "scenarios/paired_quiet_sky.json", "scenarios/paired_dense_sky.json"}) {
@@ -316,15 +317,15 @@ TEST_CASE("paired scenario: BRAVO LOST shows only where the link is lost, from b
     }
 }
 
-TEST_CASE("paired scenario: the Go reads BRAVO WAITING until Bravo has UTC, then live") {
+TEST_CASE("paired scenario: the Go reads WAIT FOR BRAVO until Bravo has UTC, then live") {
     Paired paired("scenarios/paired_quiet_sky.json");
     paired.run_until(500);
     CHECK(paired.bravo() == comms::BravoState::Waiting);
     CHECK_FALSE(paired.simulator.bravo().state().own.utc_valid);
-    CHECK(paired.reads("WAITING"));
+    CHECK(paired.reads_waiting());
     paired.run_until(3000);
     CHECK(paired.bravo() == comms::BravoState::Live);
-    CHECK_FALSE(paired.reads("WAITING"));
+    CHECK_FALSE(paired.reads_waiting());
 }
 
 TEST_CASE(
@@ -341,7 +342,7 @@ TEST_CASE(
               .choose(paired.simulator.bravo().state().own, paired.now_ms)
               .reference == comms::ExportReference::Go);
     CHECK(paired.bravo() == comms::BravoState::Live);
-    CHECK_FALSE(paired.reads("WAITING"));
+    CHECK_FALSE(paired.reads_waiting());
     CHECK_FALSE(paired.reads_lost());
     for (const uint32_t address : {0x300001u, 0x300002u}) {
         const traffic::Target* target = target_of(paired.go(), address);

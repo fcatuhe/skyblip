@@ -242,7 +242,7 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     CHECK(config.link_drops() == 0);
 }
 
-// A page shows BRAVO LOST as the glass does, without polling for it.
+// A page shows NO BRAVO as the glass does, without polling for it.
 TEST_CASE("comms: a paired Go pushes status when its Bravo is lost and when it is back") {
     platform::host::Link link;
     link.raise_link(1);

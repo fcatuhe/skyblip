@@ -114,7 +114,7 @@ TEST_CASE("raw page: a solution nothing has dated reports no phase at all") {
     draw_raw(canvas, snapshot);
 
     CHECK(reads_in(canvas, "NAV ---", 0, 24, 200, 41));
-    CHECK(reads_in(canvas, "FIX BLIND", 0, 35, 200, 52));
+    CHECK(reads_in(canvas, "FIX OUTDOORS", 0, 35, 200, 52));
     CHECK(reads_in(canvas, "HDOP --- VDOP 1.50 RES ---", 0, 46, 200, 63));
     CHECK(reads_in(canvas, "PPS NONE", 0, 68, 200, 85));
     CHECK(reads_in(canvas, "UTC --:--:--", 0, 68, 200, 85));

@@ -2986,7 +2986,7 @@ The AIRCRAFT menu as drawn and as a thumb walks it: what Bravo heard, and the th
 - a press on what Bravo heard stores it and goes back to settings
   > One press stores what the glass shows, and the settings row it came from reads the new name.
 - a press with nothing heard changes nothing, unpaired it opens BRAVO
-- a transponder already stored reads MATCHES, and the press is spent on nothing
+- a transponder already stored reads SAME, and the press is spent on nothing
 - an address is shown where the transponder sends no callsign
 - each state with nothing to propose says why, and what to do
 - the settings row opens it, and the pad past its last row comes back
@@ -3273,15 +3273,15 @@ An alarm on the radar: a flashing sector on the bearing of every graded aircraft
 
 ### test/products/pages/test_radar_bravo.cpp
 
-What the radar says of a paired Bravo: its mark while live, BRAVO LOST and why, or that it waits.
+What the radar says of a paired Bravo: its mark while live, NO BRAVO and why, or that it waits.
 
 **radar page**
 
 - a live Bravo stands over the count, in both plots, and nothing else does
 - a lost Bravo takes the ring's banner, and the line under it says why
 - a lost Bravo yields the banner to a warned cell and to NO FIX
-  > The ring's two slots read top down: the cell, NO FIX, BRAVO LOST and its reason, then the rest.
-- a waiting Bravo takes the loss's place, BRAVO over WAITING as a banner
+  > The ring's two slots read top down: the cell, NO FIX, NO BRAVO and its reason, then the rest.
+- a waiting Bravo takes the loss's place, WAIT FOR over BRAVO as a banner
 
 ### test/products/pages/test_radar_plot.cpp
 
@@ -3743,25 +3743,25 @@ A whole Go pairs with the Bravo stub over a simulated link, keeps the pin, and k
 
 ### test/products/test_bravo_traffic.cpp
 
-A Go paired with the Bravo stub folds Bravo's targets in, and says BRAVO LOST on health alone.
+A Go paired with the Bravo stub folds Bravo's targets in, and says NO BRAVO on health alone.
 
 **bravo traffic**
 
 - Bravo's target enters the table at the instants Bravo heard it
-- a Bravo that loses the UTC it had is BRAVO LOST, with one tone
+- a Bravo that loses the UTC it had is NO BRAVO, with one tone
 - a Bravo that reboots after having UTC is lost until it has it again
-- a deaf receiver and a Bravo without UTC are BRAVO LOST, and say which
+- a deaf receiver and a Bravo without UTC are NO BRAVO, and say which
 - a dropped pin forgets Bravo's UTC, so the next Bravo without it waits/forgotten by Bravo
 - a dropped pin forgets Bravo's UTC, so the next Bravo without it waits/unpaired on the Go
 - a lost Bravo stays lost when the uptime counter comes round again
   > ports::Clock's milliseconds come round every 49.7 days, and an old health must not come back.
-- a lost health says BRAVO LOST once, with one tone, until it comes back
+- a lost health says NO BRAVO once, with one tone, until it comes back
 - a paired Go waits for its Bravo after boot, then says it is lost
 - a pressure-only target has a height while the barometer is live
-- a quiet sky with Bravo's health coming is no BRAVO LOST and no tone
+- a quiet sky with Bravo's health coming is no NO BRAVO and no tone
   > An empty sky is a healthy one: Bravo's health, not its traffic, says it is there.
 - a stale observation forwarded late is held to its own lease, no longer
-- an unpaired Go never says BRAVO LOST, nor sends a bravo key
+- an unpaired Go never says NO BRAVO, nor sends a bravo key
 - nearby lists Bravo's target under B, and the radar marks a live Bravo
 - the flight log records the Bravo lost in flight, and back
 - the phone hears Bravo's target in the Go's own $PFLAA, as Source 1
@@ -3892,7 +3892,7 @@ What the companion link REPORTS, as opposed to what it authorises: why the devic
 - a dump nobody has collected says so, not zeros
 - a flight state that changes under a link is pushed, a repeat is not
 - a paired Go pushes status when its Bravo is lost and when it is back
-  > A page shows BRAVO LOST as the glass does, without polling for it.
+  > A page shows NO BRAVO as the glass does, without polling for it.
 - asking for the dump twice answers the same numbers twice
   > Asking is not clearing. Every counter in the dump belongs to somebody else and keeps counting; two questions in a row must produce the same answer.
 - no push without a link, one push per real change, none for a repeat or for noise inside a step
@@ -4765,7 +4765,7 @@ The cell on the glass: the word the ring wears, the words under the mark, and th
 - a cutoff too hot to park a frame still notes the flat cell
   > The note is the cell's, not the frame's: a panel held off in the heat parks nothing.
 - a press after a cutoff is refused and leaves the flat frame where it is
-  > The cutoff left FLAT BATTERY on the glass, and the press that follows needs no other answer.
+  > The cutoff left EMPTY BATTERY on the glass, and the press that follows needs no other answer.
 - a press on the cable after a cutoff starts the device and clears the word
   > The lockout spares external power, so the cable and a press are the way out of a flat cell.
 - a refused boot pushes no frame the glass is already wearing
@@ -4830,7 +4830,7 @@ The self test on the glass: the page that names the part which did not answer, r
   > A device that can fly spends no full refresh on a page nobody asked for.
 - a footprint nothing answered names the part and prints no address
   > The row already says FAIL, and "00" would read as a part at address zero.
-- an optional part nothing answered reads NOT FITTED and names the part
+- an optional part nothing answered reads NOT FOUND and names the part
   > A footprint with nothing behind it is a real answer, and the row names what was looked for.
 - every capability the product flies on or without has a row
   > The page is the inventory: a capability with no row is a part nobody can miss.
@@ -5298,18 +5298,18 @@ A Go and a Bravo paired in one aircraft: the scenarios fly both over one sky and
 
 **paired scenario**
 
-- BRAVO LOST shows only where the link is lost, from boot on
 - Bravo flies the Go's own-ship, and hears the sky the Go flies in
 - Bravo sounds while the link is lost, and keeps silent once it is back
 - Bravo without a fix takes the Go's position, and the Go keeps its B targets
+- NO BRAVO shows only where the link is lost, from boot on
 - a Bravo event or a link outside a pair, or one Bravo cannot take, refuses the file
 - a dense sky reaches the Go through Bravo, all of it ADS-B
-- a lost link says BRAVO LOST, keeps the ADS-L target, and comes back
+- a lost link says NO BRAVO, keeps the ADS-L target, and comes back
 - a quiet sky is a live Bravo with nothing to show
 - an ADS-B threat after the grant sounds on the Go+ and not on Bravo
 - an aircraft on ADS-L and ADS-B shows once on the Go, as ADS-L
   > ADS-L F.2.3 puts the ICAO address on both systems, and the table ranks a direct reception first.
-- the Go reads BRAVO WAITING until Bravo has UTC, then live
+- the Go reads WAIT FOR BRAVO until Bravo has UTC, then live
 - the Go shows Bravo's ADS-B as B targets, the airliner at FL370 too
 - the Go+ takes the alarm within a claim period of reading Bravo live
 - the committed files replay with their expectations met
