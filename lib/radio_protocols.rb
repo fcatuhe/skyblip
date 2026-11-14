@@ -1,6 +1,7 @@
 class RadioProtocols
   NAMES = { "adsl" => "ADS-L", "adsb" => "ADS-B", "alptas" => "ALP-TAS" }.freeze
   VERSION = /\A\d+\.\d+\.\d+\z/
+  DECLARATION = /^inline constexpr char kVersion\[\] = "([^"]*)";$/
 
   def initialize(firmware)
     @firmware = firmware
@@ -34,11 +35,15 @@ class RadioProtocols
     end
 
     def version(stem)
-      version = File.read(File.join(@firmware, "core/protocol/#{stem}.version")).strip
+      header = "protocols/#{stem}/version.h"
+      declarations = File.read(File.join(@firmware, header)).scan(DECLARATION).flatten
+      raise ArgumentError, "No single kVersion in #{header}" unless declarations.one?
+
+      version = declarations.first
       if VERSION.match?(version)
         version
       else
-        raise ArgumentError, "Invalid #{NAMES.fetch(stem)} version in #{stem}.version: #{version.inspect}"
+        raise ArgumentError, "Invalid #{NAMES.fetch(stem)} version in #{header}: #{version.inspect}"
       end
     end
 end

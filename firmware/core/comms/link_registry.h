@@ -236,6 +236,10 @@ enum : uint32_t {
     kUnsupported = 61,
     kFolded = 62,
     kAircraft = 63,
+    kTxHeldForB5 = 64,
+    kRxStatus = 65,
+    kUplinkStale = 66,
+    kTxGivenUp = 67,
 };
 }
 

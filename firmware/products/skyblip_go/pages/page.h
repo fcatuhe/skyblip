@@ -6,8 +6,8 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go {
 
@@ -58,7 +58,7 @@ constexpr const char* range_unit(Units units) { return units == Units::Metric ? 
 constexpr int16_t angle16_of_degrees(int32_t degrees) {
     int32_t wrapped = ((degrees % 360) + 360) % 360;
     if (wrapped >= 180) wrapped -= 360;  // keep the cordic value inside int16_t
-    return static_cast<int16_t>((wrapped * kAngle16PerTurn) / 360);
+    return static_cast<int16_t>((wrapped * wire::kAngle16PerTurn) / 360);
 }
 
 constexpr uint8_t kFewestSatellitesForAltitude = 4;
@@ -66,7 +66,7 @@ constexpr uint8_t kFewestSatellitesForAltitude = 4;
 constexpr int32_t kClimbFigureStepFpm = 10;
 
 constexpr int32_t climb_figure_fpm(int32_t climb_fpm) {
-    return divide_rounded(climb_fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
+    return wire::divide_rounded(climb_fpm, kClimbFigureStepFpm) * kClimbFigureStepFpm;
 }
 
 constexpr RadarPlot next_radar_plot(RadarPlot plot) {

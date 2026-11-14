@@ -48,6 +48,9 @@ struct RawRadio {
     uint32_t tx_ok{0};
     uint32_t tx_lost{0};
     uint32_t tx_named{0};
+    uint32_t tx_held_for_b5{0};
+    uint32_t rx_status{0};
+    uint32_t uplink_stale{0};
     uint32_t missed{0};
     uint32_t refused{0};
     uint32_t duty_permille{0};

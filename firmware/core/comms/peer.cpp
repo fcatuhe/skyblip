@@ -6,6 +6,7 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "core/util/cbor.h"
+#include "protocols/adsl/packet.h"
 
 namespace skyblip::comms {
 
@@ -394,7 +395,7 @@ Result<PeerObservation> read_observation(ConstByteSpan frame) {
 
     model::AircraftObservation& observation = out.observation;
     observation.address = address.value();
-    observation.address_mapping_table = settings::kIcaoAddressMappingTable;
+    observation.address_mapping_table = adsl::kAddressTableIcao;
     observation.source = model::Source::Adsb;
     observation.rssi_valid = false;
     if (!read_position(reader, observation) || !read_altitudes(reader, observation) ||

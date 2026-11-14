@@ -54,6 +54,7 @@ const char* verdict_of(const radio::Entry& entry) {
         case radio::Verdict::Unsupported: return "TYPE";
         case radio::Verdict::Unattempted: return "WAIT";
         case radio::Verdict::Named: return "NAMED";
+        case radio::Verdict::Declared: return "STAT";
         case radio::Verdict::Transmitted:
         case radio::Verdict::Received:
         default: return nullptr;

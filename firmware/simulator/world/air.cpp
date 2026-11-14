@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "core/model/aircraft.h"
+#include "core/protocol/adsl_uplink.h"
 
 namespace skyblip::simulator {
 
@@ -14,8 +15,8 @@ const char* kEventName[] = {"TX  ", "RX  ", "DEAF", "COLL"};
 // The radio reports the frequency its PLL word resolves to, a few hertz off the
 // channel it was asked for.
 const char* channel_name(uint32_t frequency_hz) {
-    if (Air::tuned_to(frequency_hz, timing::kOBandHz)) return "869.525";
-    if (Air::tuned_to(frequency_hz, timing::kMBand1Hz)) return "868.400";
+    if (Air::tuned_to(frequency_hz, adsl::kOBandHz)) return "869.525";
+    if (Air::tuned_to(frequency_hz, adsl::kMBand1Hz)) return "868.400";
     return "868.200";
 }
 }  // namespace
@@ -142,9 +143,9 @@ bool Air::framed(const AirRecord& record, protocol::Frame& out) {
 }
 
 bool Air::framed_uplink(const AirRecord& record, uint8_t* frame) {
-    return models::Sx1262::deliver_after_sync(record.chips, record.bytes, protocol::kUplinkSync,
-                                              protocol::kUplinkSyncBits, frame,
-                                              protocol::kUplinkFrameBytes) != 0;
+    return models::Sx1262::deliver_after_sync(record.chips, record.bytes, adsl::kUplinkSync,
+                                              adsl::kUplinkSyncBits, frame,
+                                              protocol::AdslUplink::kPacketBytes) != 0;
 }
 
 const AirRecord& Air::record_at(int index) const {
@@ -179,15 +180,15 @@ int Air::format(int index, char* out, int capacity) const {
     // The O band carries one thing and it is not Manchester-coded, so it is read
     // its own way: how many aircraft the ground station put in the frame, which
     // is the number a relay is worth judging by.
-    if (tuned_to(record.frequency_hz, timing::kOBandHz)) {
-        uint8_t frame_bytes[protocol::kUplinkFrameBytes] = {0};
-        if (!framed_uplink(record, frame_bytes))
+    if (tuned_to(record.frequency_hz, adsl::kOBandHz)) {
+        uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+        if (!framed_uplink(record, packet))
             return head + std::snprintf(out + head, left, "unframed");
-        protocol::AdslUplink codec;
-        model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
-        protocol::AdslUplink::DecodeStatistics statistics{};
-        if (codec.decode(frame_bytes, relayed, protocol::AdslUplink::kMaxTargets, statistics) !=
-            Status::Ok)
+        adsl::Uplink codec;
+        adsl::Packet relayed[adsl::kUplinkMaxTargets];
+        adsl::UplinkStatistics statistics;
+        if (codec.decode(packet, sizeof(packet), relayed, adsl::kUplinkMaxTargets, statistics) !=
+            wire::Status::Ok)
             return head + std::snprintf(out + head, left, "UPLINK RS BAD");
         return head + std::snprintf(out + head, left, "UPLINK %d aircraft, %d corrected",
                                     statistics.targets, statistics.corrected);
@@ -197,14 +198,14 @@ int Air::format(int index, char* out, int capacity) const {
     if (!framed(record, frame)) return head + std::snprintf(out + head, left, "unframed");
 
     if (frame.system == protocol::System::Alptas) {
-        const uint32_t address = protocol::alptas_address(frame.data);
-        const char* crc = protocol::alptas_crc_ok(frame.data) ? "crc ok" : "CRC BAD";
+        const uint32_t address = alptas::address(frame.data);
+        const char* crc = alptas::crc_ok(frame.data) ? "crc ok" : "CRC BAD";
         return head + std::snprintf(out + head, left, "ALP-TAS %06X %s", address, crc);
     }
 
-    protocol::AdslPacket packet{};
+    adsl::Packet packet{};
     packet.reset();
-    std::memcpy(packet.data, frame.data, protocol::kAdslFrameBytes);
+    std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
     const bool crc_ok = packet.check_crc() == 0;
     packet.descramble();
     return head + std::snprintf(out + head, left, "ADS-L %06X %+.5f,%+.5f %5d m %s",

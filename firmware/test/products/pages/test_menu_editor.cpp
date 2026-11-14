@@ -308,7 +308,7 @@ TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft
 
     // Every step is a code the page can name, and the list closes.
     for (int i = 0; i < kNamedAircraftTypes; i++) {
-        CHECK(bench.values.settings.aircraft_type < kNamedAircraftTypes);
+        CHECK(named_aircraft_type(bench.values.settings.aircraft_type));
         CHECK(aircraft_type_name(bench.values.settings.aircraft_type)[0] != 0);
         CHECK(go::validate(bench.values.settings) == Status::Ok);
         bench.change();

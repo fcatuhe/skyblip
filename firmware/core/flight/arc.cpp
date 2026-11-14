@@ -1,7 +1,7 @@
 #include "core/flight/arc.h"
 
 #include "core/units/units.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::flight {
 
@@ -13,8 +13,8 @@ constexpr int64_t kCentiDegreeMillisecondsPerTurn = 36000000;
 
 int32_t turn_angle16(int16_t turn_cdps, int32_t elapsed_ms) {
     return static_cast<int32_t>(
-        divide_rounded(static_cast<int64_t>(turn_cdps) * elapsed_ms * kAngle16PerTurn,
-                       kCentiDegreeMillisecondsPerTurn));
+        wire::divide_rounded(static_cast<int64_t>(turn_cdps) * elapsed_ms * wire::kAngle16PerTurn,
+                             kCentiDegreeMillisecondsPerTurn));
 }
 
 int16_t clamped_turn_cdps(int32_t turn_cdps) {
@@ -54,42 +54,44 @@ Arc::Arc(const Motion& motion, uint32_t step_ms)
       climb_mm_s_(motion.climbing ? motion.climb_mm_s : 0),
       step_ms_(static_cast<int32_t>(step_ms)) {
     const int16_t angle = to_angle16(CentiDegrees(motion.track_cdeg));
-    velocity_north_mm_s_ = static_cast<int32_t>(
-        divide_rounded<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * cosine(angle), kTrigOne));
-    velocity_east_mm_s_ = static_cast<int32_t>(
-        divide_rounded<int64_t>(static_cast<int64_t>(motion.speed_mm_s) * sine(angle), kTrigOne));
+    velocity_north_mm_s_ = static_cast<int32_t>(wire::divide_rounded<int64_t>(
+        static_cast<int64_t>(motion.speed_mm_s) * wire::cosine(angle), wire::kTrigOne));
+    velocity_east_mm_s_ = static_cast<int32_t>(wire::divide_rounded<int64_t>(
+        static_cast<int64_t>(motion.speed_mm_s) * wire::sine(angle), wire::kTrigOne));
     const int32_t half_turn =
         motion.turning ? turn_angle16(clamped_turn_cdps(motion.turn_cdps), step_ms_ / 2) : 0;
     const int16_t half = static_cast<int16_t>(static_cast<uint16_t>(half_turn));
-    half_cosine_ = cosine(half);
-    half_sine_ = sine(half);
+    half_cosine_ = wire::cosine(half);
+    half_sine_ = wire::sine(half);
 }
 
 Position Arc::here() const {
     Position position{};
     position.north_m =
-        static_cast<int32_t>(divide_rounded<int64_t>(north_mm_, kMillimetresPerMetre));
-    position.east_m = static_cast<int32_t>(divide_rounded<int64_t>(east_mm_, kMillimetresPerMetre));
-    position.up_m = static_cast<int32_t>(divide_rounded<int64_t>(up_mm_, kMillimetresPerMetre));
+        static_cast<int32_t>(wire::divide_rounded<int64_t>(north_mm_, kMillimetresPerMetre));
+    position.east_m =
+        static_cast<int32_t>(wire::divide_rounded<int64_t>(east_mm_, kMillimetresPerMetre));
+    position.up_m =
+        static_cast<int32_t>(wire::divide_rounded<int64_t>(up_mm_, kMillimetresPerMetre));
     return position;
 }
 
 void Arc::rotate_half() {
     const int64_t north = velocity_north_mm_s_, east = velocity_east_mm_s_;
     velocity_north_mm_s_ = static_cast<int32_t>(
-        divide_rounded<int64_t>(north * half_cosine_ - east * half_sine_, kTrigOne));
+        wire::divide_rounded<int64_t>(north * half_cosine_ - east * half_sine_, wire::kTrigOne));
     velocity_east_mm_s_ = static_cast<int32_t>(
-        divide_rounded<int64_t>(north * half_sine_ + east * half_cosine_, kTrigOne));
+        wire::divide_rounded<int64_t>(north * half_sine_ + east * half_cosine_, wire::kTrigOne));
 }
 
 Position Arc::advance() {
     rotate_half();
-    north_mm_ += divide_rounded<int64_t>(static_cast<int64_t>(velocity_north_mm_s_) * step_ms_,
-                                         kMillisecondsPerSecond);
-    east_mm_ += divide_rounded<int64_t>(static_cast<int64_t>(velocity_east_mm_s_) * step_ms_,
-                                        kMillisecondsPerSecond);
-    up_mm_ += divide_rounded<int64_t>(static_cast<int64_t>(climb_mm_s_) * step_ms_,
-                                      kMillisecondsPerSecond);
+    north_mm_ += wire::divide_rounded<int64_t>(
+        static_cast<int64_t>(velocity_north_mm_s_) * step_ms_, kMillisecondsPerSecond);
+    east_mm_ += wire::divide_rounded<int64_t>(static_cast<int64_t>(velocity_east_mm_s_) * step_ms_,
+                                              kMillisecondsPerSecond);
+    up_mm_ += wire::divide_rounded<int64_t>(static_cast<int64_t>(climb_mm_s_) * step_ms_,
+                                            kMillisecondsPerSecond);
     rotate_half();
     return here();
 }

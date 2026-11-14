@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include "core/util/format.h"
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::models {
 
@@ -50,12 +50,12 @@ class GnssTruth {
 
     // INFO: fc 19sep26 a real receiver reports hundredths of a knot and of a degree, and decimetres
     uint32_t knots_e2() const {
-        return static_cast<uint32_t>(divide_rounded<int64_t>(
+        return static_cast<uint32_t>(wire::divide_rounded<int64_t>(
             static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 194384, 1000000));
     }
 
     uint32_t kmh_e2() const {
-        return static_cast<uint32_t>(divide_rounded<int64_t>(
+        return static_cast<uint32_t>(wire::divide_rounded<int64_t>(
             static_cast<int64_t>(speed_mm_s < 0 ? 0 : speed_mm_s) * 36, 100));
     }
 

@@ -3,8 +3,8 @@
 #include "core/model/aircraft.h"
 #include "core/units/units.h"
 #include "core/util/format.h"
-#include "core/util/intmath.h"
 #include "products/skyblip_go/pages/page.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::go {
 
@@ -117,7 +117,7 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
     canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
 
     const int32_t distance_e1 =
-        metric ? divide_rounded(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).value;
+        metric ? wire::divide_rounded(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).value;
     int written = distance_e1 > kDistanceCeilingE1
                       ? format_string(text, "FAR")
                       : format_unsigned(text, static_cast<uint32_t>(distance_e1), 2, 1);

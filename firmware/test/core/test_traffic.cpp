@@ -80,7 +80,7 @@ TEST_CASE("traffic: the direct hold is the alarm layer's patience with a target"
 
 // At 0.1 Hz a relay taking over five seconds in replaces every ground report with a poorer copy.
 TEST_CASE("traffic: a parked aircraft keeps its direct report until the next one is due") {
-    CHECK(direct_preferred_max_age_s(parked(0x111, 6, 100)) == flight::kGroundReportPeriodS);
+    CHECK(direct_preferred_max_age_s(parked(0x111, 6, 100)) == adsl::kGroundReportPeriodS);
 
     TrafficTable table;
     table.update(parked(0x111, 6, 100), 100);
@@ -189,7 +189,7 @@ TEST_CASE("traffic: the plot, the annunciator and the formation lose an aircraft
     CHECK_FALSE(wingmen.together(6, 0x314159));
 }
 
-// A relay names thirteen aircraft a frame, and a burst of them evicted one flying a kilometre away.
+// A relay names ten aircraft a frame, and a burst of them evicted one flying a kilometre away.
 TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in farther away") {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;

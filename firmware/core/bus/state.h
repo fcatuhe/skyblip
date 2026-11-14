@@ -228,6 +228,12 @@ struct State {
         uint32_t rx_miskeyed{0};
         uint32_t rx_noise{0};
         uint32_t rx_named{0};
+        // INFO: fc 13nov26 B.5: Status payloads whose Max. Protocol Version a target now holds
+        uint32_t rx_status{0};
+        // INFO: fc 13nov26 B.5: seconds a position with an unknown field waited for an Issue 1 one
+        uint32_t tx_held_for_b5{0};
+        // INFO: fc 13nov26 turns of ours whose retries ran out before the type's next turn
+        uint32_t tx_given_up{0};
         uint32_t tx_ok{0};
         uint32_t tx_lost{0};
         uint32_t tx_named{0};
@@ -243,6 +249,7 @@ struct State {
         uint32_t uplink_frames{0};
         uint32_t uplink_bad{0};
         uint32_t uplink_targets{0};
+        uint32_t uplink_stale{0};
     } air{};
 
     bool panel_presented{false};

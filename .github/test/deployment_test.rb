@@ -5,6 +5,7 @@ require "json"
 require "open3"
 require "tmpdir"
 require "fileutils"
+require_relative "../../lib/radio_protocols"
 require_relative "../../server/app/models/release"
 
 class DeploymentTest < Minitest::Test
@@ -81,7 +82,7 @@ class DeploymentTest < Minitest::Test
     checkout = steps.find { |step| step["uses"].to_s.start_with?("actions/checkout") }
 
     assert steps.any? { |step| step.dig("with", "pattern") == "skyblip-*" && step.dig("with", "merge-multiple") }
-    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/core/protocol/*.version firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb scripts/dev_release.rb],
+    assert_equal %w[LICENSE NOTICE.md LICENSES firmware/protocols/*/version.h firmware/products/*/PROTOCOLS lib/dev_release.rb lib/radio_protocols.rb scripts/dev_release.rb],
                  checkout.dig("with", "sparse-checkout").split
     assert_equal "ruby source/scripts/dev_release.rb image simulator source", steps.last.fetch("run")
   end
@@ -225,7 +226,7 @@ class DeploymentTest < Minitest::Test
     Dir.mktmpdir do |tree|
       release_tree(tree, slug: "skyblip-go", hub_image: true)
       %w[lib/radio_protocols.rb scripts/radio_protocols.rb firmware/products/skyblip_go/PROTOCOLS firmware/products/skyblip_bravo/PROTOCOLS
-         firmware/core/protocol/adsl.version firmware/core/protocol/adsb.version firmware/core/protocol/alptas.version].each do |file|
+         firmware/protocols/adsl/version.h firmware/protocols/adsb/version.h firmware/protocols/alptas/version.h].each do |file|
         FileUtils.mkdir_p(File.join(tree, File.dirname(file)))
         FileUtils.cp(File.join(ROOT, file), File.join(tree, file))
       end
@@ -238,7 +239,7 @@ class DeploymentTest < Minitest::Test
       assert_equal Dir.children(File.join(tree, "release")).sort - %w[SHA256SUMS], listed.sort
       assert_includes listed, "skyblip-bravo-0.2.0.signed.bin"
       assert_includes listed, "scenarios.json"
-      versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/core/protocol/#{stem}.version")).strip ] }
+      versions = %w[adsl adsb alptas].to_h { |stem| [ stem, File.read(File.join(ROOT, "firmware/protocols/#{stem}/version.h"))[RadioProtocols::DECLARATION, 1] ] }
       assert_includes File.read(File.join(tree, "release/PROTOCOLS.md")), "- `skyblip-bravo`: ADS-B #{versions["adsb"]}\n- `skyblip-go`: ADS-L #{versions["adsl"]}, ALP-TAS #{versions["alptas"]}\n"
       assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
     end

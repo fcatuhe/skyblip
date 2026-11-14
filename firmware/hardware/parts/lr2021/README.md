@@ -42,7 +42,7 @@ SoftRF drives the LR2021 through its own copy of RadioLib 7.7.1, which takes flo
 
 `start_receive()` sends SetRxPath, SetDioIrqConfig with RxDone alone on the IRQ DIO, ClearIrq and SetRx with timeout 0xFFFFFF, which is continuous receive (DS 6.3.5): the part keeps listening after each frame without another command.
 
-DS 16.3.8 gives the ADS-B detector settings itself. Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at two chips a microsecond, with its pulses at 0, 1, 3.5 and 4.5 us. The sync word 0x95 is the chips of the bits `1000` that open DF16 and DF17, so the FIFO holds the 27 chip bytes after it, which is what `protocol::adsb_receive` takes (`core/protocol/README.md`).
+DS 16.3.8 gives the ADS-B detector settings itself. Pattern 0x0285 read first bit first is `1010000101000000`, the 8 us preamble at two chips a microsecond, with its pulses at 0, 1, 3.5 and 4.5 us. The sync word 0x95 is the chips of the bits `1000` that open DF16 and DF17, so the FIFO holds the 27 chip bytes after it, which is what `adsb::receive` takes (`protocols/adsb/README.md`).
 
 ## Reading a frame
 

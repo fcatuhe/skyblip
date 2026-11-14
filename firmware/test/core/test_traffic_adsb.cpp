@@ -6,6 +6,7 @@
 #include "core/traffic/lease.h"
 #include "core/traffic/table.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/packet.h"
 #include "test/support/traffic_scene.h"
 
 using namespace skyblip;
@@ -13,7 +14,7 @@ using namespace skyblip::traffic;
 
 namespace {
 
-constexpr uint8_t kIcao = settings::kIcaoAddressMappingTable;
+constexpr uint8_t kIcao = adsl::kAddressTableIcao;
 
 model::AircraftObservation heard(const model::Ownship& own, uint32_t address, int north_m, int up_m,
                                  model::Source source, uint32_t at_s = 100) {
@@ -81,22 +82,23 @@ TEST_CASE("traffic: only an ADS-L or FLARM target sending its ICAO address merge
     CHECK(source_of(table, table.find(kIcao, 0x3C6586)) == model::Source::Alptas);
 
     table.update(observation(0x3C6586, 6, 100, model::Source::Alptas), 100);
-    table.update(observation(0x3C6586, settings::kAddressMappingTable, 100), 100);
+    table.update(observation(0x3C6586, settings::kSkyblipAddressMappingTable, 100), 100);
     CHECK(table.count() == 3);
 }
 
 // The Bravo in our cockpit, a FLARM set to our ICAO and every ground station all report our own.
 TEST_CASE("traffic: our ADS-L address and our aircraft's ICAO address are both not traffic") {
     TrafficTable table;
-    table.set_own_address(settings::kAddressMappingTable, 0x00ABCD);
+    table.set_own_address(settings::kSkyblipAddressMappingTable, 0x00ABCD);
     table.set_own_icao(0x3C6586);
-    CHECK(table.update(observation(0x00ABCD, settings::kAddressMappingTable, 100), 100) < 0);
+    CHECK(table.update(observation(0x00ABCD, settings::kSkyblipAddressMappingTable, 100), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Adsb), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::Alptas), 100) < 0);
     CHECK(table.update(observation(0x3C6586, kIcao, 100, model::Source::AdslUplink), 100) < 0);
     CHECK(table.count() == 0);
 
-    CHECK(table.update(observation(0x3C6586, settings::kAddressMappingTable, 100), 100) >= 0);
+    CHECK(table.update(observation(0x3C6586, settings::kSkyblipAddressMappingTable, 100), 100) >=
+          0);
     CHECK(table.update(observation(0x3C6586, 6, 100, model::Source::Alptas), 100) >= 0);
     CHECK(table.update(observation(0x00ABCD, kIcao, 100, model::Source::Adsb), 100) >= 0);
     CHECK(table.count() == 3);

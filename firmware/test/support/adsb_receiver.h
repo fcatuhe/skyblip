@@ -1,4 +1,4 @@
-// Harness, not a test: a Bravo receiver folding DF17 frames into an AdsbAssembly.
+// Harness, not a test: a Bravo receiver folding DF17 frames into an adsb::Assembly.
 #ifndef SKYBLIP_TEST_SUPPORT_ADSB_RECEIVER_H
 #define SKYBLIP_TEST_SUPPORT_ADSB_RECEIVER_H
 
@@ -7,15 +7,14 @@
 
 #include "core/events/stamp.h"
 #include "core/model/aircraft.h"
-#include "core/protocol/adsb.h"
-#include "core/protocol/adsb_assembly.h"
+#include "core/protocol/adsb_observation.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
+#include "protocols/adsb/assembly.h"
+#include "protocols/adsb/message.h"
 #include "test/support/adsb_frames.h"
 
 namespace skyblip::adsb_receiver {
-
-using namespace skyblip::protocol;
 
 constexpr uint32_t kAddress = 0x3C4D5E;
 constexpr uint8_t kNoCapability = 0;
@@ -27,8 +26,8 @@ constexpr uint32_t kUtcS = 1700000000;
 
 inline int32_t e7(double degrees) { return static_cast<int32_t>(std::lround(degrees * 1e7)); }
 
-inline AdsbReference reference_at(double latitude, double longitude) {
-    AdsbReference reference;
+inline adsb::Reference reference_at(double latitude, double longitude) {
+    adsb::Reference reference;
     reference.position = {e7(latitude), e7(longitude)};
     reference.valid = true;
     return reference;
@@ -49,25 +48,26 @@ inline AdsbFrame frame_of(const char* text) {
 }
 
 struct Bravo {
-    AdsbAssembly assembly;
-    AdsbReference reference = reference_at(kHomeLatitude, kHomeLongitude);
+    adsb::Assembly assembly;
+    adsb::Reference reference = reference_at(kHomeLatitude, kHomeLongitude);
     model::AircraftObservation heard{};
 
     bool hear(const AdsbFrame& frame, uint32_t at_ms) {
-        AdsbMessage message;
+        adsb::Message message;
         REQUIRE(adsb_hear(frame, message) == Status::Ok);
         events::Stamp received;
         received.at_s = kUtcS + at_ms / 1000;
         received.into_ms = static_cast<uint16_t>(at_ms % 1000);
-        return assembly.fold(message, at_ms, received, reference, heard);
+        return protocol::adsb_fold(assembly, message, at_ms, received, reference, heard);
     }
 
     bool hear_raw(const char* text, uint32_t at_ms) {
-        AdsbMessage message;
-        uint8_t chips[kAdsbChipBytes];
+        adsb::Message message;
+        uint8_t chips[adsb::kChipBytes];
         adsb_chips(frame_of(text).bytes, chips);
-        REQUIRE(adsb_receive(chips, sizeof(chips), AdsbReception{}, message) == Status::Ok);
-        return assembly.fold(message, at_ms, events::Stamp{}, reference, heard);
+        REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) ==
+                wire::Status::Ok);
+        return protocol::adsb_fold(assembly, message, at_ms, events::Stamp{}, reference, heard);
     }
 
     void fly(double latitude, double longitude, uint32_t at_ms, bool odd,

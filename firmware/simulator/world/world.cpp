@@ -8,6 +8,8 @@
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
+#include "core/protocol/alptas.h"
+#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/transmit.h"
 #include "core/units/units.h"
@@ -82,7 +84,7 @@ void Sky::name_aircraft(int index, const char* callsign) {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used || callsign == nullptr) return;
     char* out = aircraft_[index].callsign;
     int copied = 0;
-    while (copied < protocol::AdslPacket::kInformationTextBytes && callsign[copied] != 0) {
+    while (copied < protocol::kInformationTextBytes && callsign[copied] != 0) {
         out[copied] = callsign[copied];
         copied++;
     }
@@ -214,19 +216,30 @@ void Sky::schedule_second(uint64_t epoch_us, const model::Ownship& own) {
     relay(epoch_us, own);
 }
 
-// What the ground station knows about one aircraft, which is less than the
-// aircraft's own frame carries: an address, a place, a height, a speed. No
-// climb rate and no track, because an uplink record has no room for them - which
-// is the whole reason a direct reception outranks a relay of the same aircraft.
+namespace {
+
+int16_t climb_e8_of(const VirtualAircraft& aircraft) {
+    constexpr double kEighthsPerMps = 8;
+    return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
+}
+
+}  // namespace
+
+// What the ground station heard of one aircraft, which G.3 forwards as a whole
+// Traffic payload: the aircraft's own address, place, height and motion.
 model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
                                            const model::Ownship& own) const {
     model::AircraftObservation observation{};
     observation.address = aircraft.address;
-    observation.address_mapping_table = 6;
+    observation.address_mapping_table = adsl::kAddressTableFlarm;
     observation.aircraft_category = 4;
     observation.flight_state = 2;
+    observation.emergency = adsl::kEmergencyNone;
     observation.speed_q = static_cast<uint16_t>(aircraft.speed_mps * 4);
     observation.speed_valid = true;
+    observation.climb_e8 = climb_e8_of(aircraft);
+    observation.climb_valid = true;
+    observation.track_c9 = static_cast<uint16_t>(aircraft.track_deg * 512 / 360) & 0x1FF;
     observation.latitude_1e7 = latitude_1e7_of(aircraft);
     observation.longitude_1e7 = longitude_1e7_of(aircraft);
     observation.altitude_m =
@@ -251,14 +264,18 @@ void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
     }
     if (relayed_count == 0) return;
 
-    uint8_t frame[protocol::kUplinkFrameBytes] = {0};
-    if (uplink_.encode(relayed, relayed_count, /*key_index=*/0, frame) != Status::Ok) return;
-    uint8_t burst[protocol::kUplinkBurstBytes] = {0};
-    const size_t burst_bytes = protocol::encode_o_band(frame, burst);
+    const uint32_t utc_s = own.utc_valid ? own.utc_s : static_cast<uint32_t>(epoch_us / 1000000);
+    uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
+    if (uplink_.encode(relayed, relayed_count, utc_s, timing::kGroundEmitStartMs,
+                       kGroundStationAddress, settings::kSkyblipAddressMappingTable,
+                       packet) != Status::Ok)
+        return;
+    uint8_t burst[adsl::kUplinkMaxBurstBytes] = {0};
+    const size_t burst_bytes = adsl::encode_o_band(packet, burst);
 
-    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, timing::kOBandHz,
+    air_.emit(epoch_us + static_cast<uint64_t>(timing::kGroundEmitStartMs) * 1000, adsl::kOBandHz,
               burst, static_cast<uint16_t>(burst_bytes), rssi_at(kGroundStationRangeM),
-              protocol::kUplinkChipRateBps);
+              adsl::kUplinkChipRateBps);
 }
 
 // Free-space-ish: a burst 100 m away lands at -40 dBm and every decade of
@@ -272,36 +289,30 @@ int8_t Sky::rssi_at(double range_m) {
 
 namespace {
 
-int16_t climb_e8_of(const VirtualAircraft& aircraft) {
-    constexpr double kEighthsPerMps = 8;
-    return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
-}
-
 // INFO: fc 13nov26 ADS-L F.2.3: a unit beside a transponder sends its ICAO address, under table 5
 uint8_t address_mapping_table_of(const VirtualAircraft& aircraft) {
-    return aircraft.adsb.fitted ? settings::kIcaoAddressMappingTable : 6;
+    return aircraft.adsb.fitted ? adsl::kAddressTableIcao : adsl::kAddressTableFlarm;
 }
 
 size_t callsign_burst(const VirtualAircraft& aircraft, uint8_t* chips) {
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     protocol::from_own_callsign(packet, aircraft.address, address_mapping_table_of(aircraft),
                                 aircraft.callsign);
     packet.scramble();
     packet.set_crc();
-    return protocol::encode_m_band(protocol::kAdslSyncWord, packet.data, protocol::kAdslFrameBytes,
-                                   chips);
+    return wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 }
 
 size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altitude_m,
                   int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
-    protocol::AdslPacket packet;
+    adsl::Packet packet;
     packet.reset();
     packet.set_address(aircraft.address);
     packet.set_address_mapping_table(address_mapping_table_of(aircraft));
     packet.timestamp = static_cast<uint8_t>((utc_s % 15) * 4);
     packet.flight_state = 2;
     packet.aircraft_category = 4;
-    packet.emergency = 1;
+    packet.emergency = adsl::kEmergencyNone;
     packet.set_latitude_1e7(latitude_1e7);
     packet.set_longitude_1e7(longitude_1e7);
     packet.set_altitude_m(altitude_m);
@@ -316,8 +327,7 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     packet.velocity_accuracy = 2;
     packet.scramble();
     packet.set_crc();
-    return protocol::encode_m_band(protocol::kAdslSyncWord, packet.data, protocol::kAdslFrameBytes,
-                                   chips);
+    return wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 }
 
 // An ALP-TAS aircraft carries a FLARM-taxonomy address, so the address type says
@@ -326,7 +336,7 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
                     int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
     model::AircraftObservation observation{};
     observation.address = aircraft.address;
-    observation.address_mapping_table = 0x06;
+    observation.address_mapping_table = adsl::kAddressTableFlarm;
     observation.aircraft_category = 4;
     observation.flight_state = 2;
     observation.latitude_1e7 = latitude_1e7;
@@ -339,12 +349,9 @@ size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t alt
     observation.climb_valid = true;
     observation.position_valid = true;
 
-    uint8_t frame[protocol::kAlptasFrameBytes] = {0};
-    if (protocol::alptas_encode(frame, observation, utc_s, latitude_1e7, longitude_1e7) !=
-        Status::Ok)
-        return 0;
-    return protocol::encode_m_band(protocol::kAlptasSyncWord, frame, protocol::kAlptasFrameBytes,
-                                   chips);
+    uint8_t frame[alptas::kFrameBytes] = {0};
+    if (protocol::alptas_encode(frame, observation, utc_s) != Status::Ok) return 0;
+    return wire::manchester_frame(alptas::kSyncWord, frame, alptas::kFrameBytes, chips);
 }
 
 }  // namespace
@@ -398,8 +405,7 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
 void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32_t utc_s,
                       double range_m) {
     if (aircraft.callsign[0] == 0) return;
-    const uint32_t period_s = timing::Transmitter::kCallsignPeriodS;
-    if (utc_s % period_s != aircraft.address % period_s) return;
+    if (utc_s % adsl::kGroundReportPeriodS != aircraft.address % adsl::kGroundReportPeriodS) return;
 
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes = callsign_burst(aircraft, chips);
@@ -409,7 +415,7 @@ void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32
         timing::kCallsignEndMs - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
     const int phase_ms = first_ms + static_cast<int>((aircraft.address * 2654435761u) %
                                                      static_cast<uint32_t>(last_ms - first_ms));
-    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, timing::kMBand1Hz, chips,
+    air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, adsl::kMBand1Hz, chips,
               static_cast<uint8_t>(chip_bytes), rssi_at(range_m));
 }
 

@@ -124,6 +124,15 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             diagnostics.dio1_edges);
         add(Group::Radio, "dio1_missed", link::diagnostics_key::kDio1Missed, Kind::Unsigned,
             diagnostics.dio1_missed);
+        // INFO: fc 13nov26 a frame's keys climb, so the counters numbered last are added last
+        add(Group::Radio, "tx_held_for_b5", link::diagnostics_key::kTxHeldForB5, Kind::Unsigned,
+            diagnostics.tx_held_for_b5);
+        add(Group::Radio, "rx_status", link::diagnostics_key::kRxStatus, Kind::Unsigned,
+            diagnostics.rx_status);
+        add(Group::Radio, "uplink_stale", link::diagnostics_key::kUplinkStale, Kind::Unsigned,
+            diagnostics.uplink_stale);
+        add(Group::Radio, "tx_given_up", link::diagnostics_key::kTxGivenUp, Kind::Unsigned,
+            diagnostics.tx_given_up);
     }
 
     if (traffic) {

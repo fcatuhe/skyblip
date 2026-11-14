@@ -88,8 +88,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRollingSpeedMmS` | 1500 (1.5 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kGroundSpeedMmS` | 1000 (1 m/s) | millimetres per second | - | [README](../firmware/core/flight/README.md) argues it |
 | `kLandingHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/core/flight/README.md) argues it |
-| `kAirborneReportPeriodS` | 1 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
-| `kGroundReportPeriodS` | 10 | seconds | Period | [README](../firmware/core/flight/README.md) argues it |
 | `kTurnWindowMs` | 1000 (1 s) | milliseconds | Window | [README](../firmware/core/flight/README.md) argues it |
 
 ## [`firmware/core/gnss`](../firmware/core/gnss/README.md)
@@ -132,26 +130,6 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kClimbStepFpm` | 64 | feet per minute | - | DO-260A Appendix A draft, Figure A-6: a vertical rate step is 64 ft/min |
-| `kUnknownRangeM` | `INT32_MAX` | metres | - | - |
-| `kAirbornePairMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
-| `kSlowSurfacePairMaxAgeMs` | 50000 (50 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
-| `kSurfacePairMaxAgeMs` | 25000 (25 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
-| `kTrackPositionMaxAgeMs` | 120000 (2 min) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
-| `kTrackJumpWindowMs` | 30000 (30 s) | milliseconds | Window | [README](../firmware/core/protocol/README.md) argues it |
-| `kAirborneJumpCeilingM` | `6 * 1852` = 11112 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
-| `kTransitionJumpCeilingM` | `5 * 1852 / 2` = 4630 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
-| `kSurfaceJumpCeilingM` | `3 * 1852 / 4` = 1389 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
-| `kAdsbRangeCeilingM` | `180 * 1852` = 333360 | metres | Ceiling | [README](../firmware/core/protocol/README.md) argues it |
-| `kHeightDifferenceMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/core/protocol/README.md) argues it |
-| `kAdsbAircraftForgetMs` | 250000 (4.16667 min) | milliseconds | Forget | [README](../firmware/core/protocol/README.md) argues it |
-| `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
-| `kAltitudeOffsetM` | 320 | metres | - | - |
-| `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
-| `kTimestampQuarterMs` | 250 | milliseconds | - | - |
-| `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | - |
-| `kAltitudeOffsetM` | 1000 | metres | - | - |
-| `kAlptasKeyWindowS` | 18 | seconds | Window | GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by |
 | `kLk8NoAltitudeM` | 99999 | metres | - | - |
 | `kLk8NoVarioCmS` | 9999 | seconds | - | - |
 | `kLk8AltitudeFloorM` | -1000 | metres | Floor | - |
@@ -200,10 +178,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSlot1StartMs` | 800 | milliseconds | - | - |
 | `kSlot1EndMs` | 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
 | `kSlot1WrapMs` | `kSlot1EndMs - 1000` = 200 | milliseconds | - | How far slot 1 reaches past the second it started in. |
-| `kDirectStartMs` | 450 | milliseconds | - | The ADS-L direct slot, which our own bursts respect on top of the dwell map: we listen on M-band from 400 ms, we start transmitting at 450. |
-| `kDirectEndMs` | 1000 (1 s) | milliseconds | - | - |
-| `kCallsignStartMs` | `kDirectEndMs` = 1000 (1 s) | milliseconds | - | §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on |
-| `kCallsignEndMs` | `kSlot1EndMs` = 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kCallsignStartMs` | `adsl::kDirectEndMs` = 1000 (1 s) | milliseconds | - | §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on |
+| `kCallsignEndMs` | `kSlot1EndMs` = 1200 (1.2 s) | milliseconds | - | - |
 | `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
 | `kHopGuardMs` | 2 | milliseconds | - | bench worst dwell end to listening 1.16 ms over 2880 hops, 2 leaves 0.84 |
 | `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
@@ -212,10 +188,11 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kHopGuardUs` | `kHopGuardMs * 1000` = 2000 (2 ms) | microseconds | - | - |
 | `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
-| `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
-| `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
-| `kCallsignPeriodS` | 10 | seconds | Period | a name never changes in flight, this only bounds how long a target is hex |
-| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
+| `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
+| `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
+| `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
+| `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
+| `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | - |
 | `kCompletionGuardMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
@@ -239,8 +216,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kClosingFixes` | 2 | fixes | Fixes | [README](../firmware/core/traffic/README.md) argues it |
 | `kLiftoffWindowMs` | `kTogetherHoldMs` = 6000 (6 s) | milliseconds | Window | [README](../firmware/core/traffic/README.md) argues it |
 | `kTargetForgetReports` | 6 | reports of the aircraft's own | Forget | [README](../firmware/core/traffic/README.md) argues it |
-| `kAirborneTargetForgetS` | `kTargetForgetReports * flight::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
-| `kGroundTargetForgetS` | `kTargetForgetReports * flight::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kAirborneTargetForgetS` | `kTargetForgetReports * adsl::kAirborneReportPeriodS` = 6 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
+| `kGroundTargetForgetS` | `kTargetForgetReports * adsl::kGroundReportPeriodS` = 60 | seconds | Forget | [README](../firmware/core/traffic/README.md) argues it |
 | `kPlausibleRangeCeilingM` | 30000 | metres | Ceiling | The honest ceiling of our own link, computed rather than borrowed:  +14 dBm e.r.p. transmitted, which is the ERC 70-03 band h1.4 limit and what the driver programs (hardware/parts/sx1262/sx1262.h); about -107 dBm of receive sensitivity at the M band's 100 kchip/s with the boosted gain of J1 - a bench figure, not a datasheet one; dipole-referenced antennas at both ends and nothing at all in the way. |
 | `kRelayedRangeCeilingM` | `2 * kPlausibleRangeCeilingM` = 60000 | metres | Ceiling | A relayed target did not travel that path. |
 | `kAdsbRangeCeilingM` | 1115000 | metres | Ceiling | 1090 MHz line of sight between two aircraft at FL600, worked out in README.md |
@@ -257,7 +234,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kRecordPeriodMs` | `protocol::kHeightDifferenceMaxAgeMs` = 10000 (10 s) | milliseconds | Period | a GNSS-baro difference is trusted 10 s, so one record per aircraft in it |
+| `kRecordPeriodMs` | `adsb::kHeightDifferenceMaxAgeMs` = 10000 (10 s) | milliseconds | Period | a GNSS-baro difference is trusted 10 s, so one record per aircraft in it |
 | `kBudgetWindowMs` | 1000 (1 s) | milliseconds | Window | the ring's writer can be blocked about a second, so its budget is a second's |
 | `kBudgetCeilingRecords` | `static_cast<uint32_t>(kAircraft) * kBudgetWindowMs / kRecordPeriodMs` | records | Ceiling | a full assembly spread evenly over the period, so no burst outruns the ring |
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
@@ -349,6 +326,54 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLockedRedrawWindowEndMs` | 800 | milliseconds | Window | - |
 | `kRecordPeriodMs` | `kRenderPeriodMs` = 1000 (1 s) | milliseconds | Period | the render cadence: a capture says what was on the glass, not what was drawn |
 
+## [`firmware/protocols/adsb`](../firmware/protocols/adsb/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kUnknownRangeM` | `INT32_MAX` | metres | - | - |
+| `kAirbornePairMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kSlowSurfacePairMaxAgeMs` | 50000 (50 s) | milliseconds | MaxAge | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kSurfacePairMaxAgeMs` | 25000 (25 s) | milliseconds | MaxAge | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kTrackPositionMaxAgeMs` | 120000 (2 min) | milliseconds | MaxAge | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kTrackJumpWindowMs` | 30000 (30 s) | milliseconds | Window | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kAirborneJumpCeilingM` | `6 * 1852` = 11112 | metres | Ceiling | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kTransitionJumpCeilingM` | `5 * 1852 / 2` = 4630 | metres | Ceiling | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kSurfaceJumpCeilingM` | `3 * 1852 / 4` = 1389 | metres | Ceiling | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kAdsbRangeCeilingM` | `180 * 1852` = 333360 | metres | Ceiling | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kHeightDifferenceMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kAdsbAircraftForgetMs` | 250000 (4.16667 min) | milliseconds | Forget | [README](../firmware/protocols/adsb/README.md) argues it |
+| `kClimbStepFpm` | 64 | feet per minute | - | DO-260A Appendix A draft, Figure A-6: a vertical rate step is 64 ft/min |
+
+## [`firmware/protocols/adsl`](../firmware/protocols/adsl/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kAirborneReportPeriodS` | 1 | seconds | Period | - |
+| `kGroundReportPeriodS` | 10 | seconds | Period | - |
+| `kCycleMs` | `static_cast<int64_t>(kTimestampCycleS) * 1000` | milliseconds | - | - |
+| `kAltitudeOffsetM` | 320 | metres | - | - |
+| `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
+| `kTimestampQuarterMs` | 250 | milliseconds | - | - |
+| `kUplinkSlotStartMs` | 200 | milliseconds | - | §C.5 gives the ground stations 200 to 450 ms and the aircraft 450 to 1000 |
+| `kUplinkSlotEndMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kDirectStartMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kDirectEndMs` | 1000 (1 s) | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
+| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
+| `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
+| `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kUplinkRecordMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | G.3: a relayed Traffic payload no older than 10 s and not from the future |
+| `kCloseHorizontalM` | 1000 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kCloseVerticalM` | 800 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kCloseTcpaS` | 30 | seconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
+
+## [`firmware/protocols/alptas`](../firmware/protocols/alptas/README.md)
+
+| Constant | Value | Unit | Mechanism | Why |
+|---|---|---|---|---|
+| `kAltitudeOffsetM` | 1000 | metres | - | - |
+| `kKeyWindowS` | 18 | seconds | Window | GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by |
+
 ## `firmware/runtime`
 
 | Constant | Value | Unit | Mechanism | Why |
@@ -364,4 +389,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-239 constants over 22 folders.
+249 constants over 25 folders.

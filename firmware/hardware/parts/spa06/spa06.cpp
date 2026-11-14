@@ -1,6 +1,6 @@
 #include "hardware/parts/spa06/spa06.h"
 
-#include "core/util/intmath.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::parts {
 
@@ -112,12 +112,12 @@ bool Spa06::write_register(uint8_t register_address, uint8_t value) {
 }
 
 bool Spa06::compensate(int32_t raw_pressure, int32_t raw_temperature, Reading& out) const {
-    const int64_t temperature_dc =
-        divide_rounded<int64_t>(int64_t{coefficients_.temperature_offset} * 5 * kTemperatureScale +
-                                    int64_t{coefficients_.temperature_slope} * raw_temperature * 10,
-                                kTemperatureScale);
-    const int64_t pressure_mpa =
-        divide_rounded<int64_t>(pressure_q16(raw_pressure, raw_temperature) * 1000, kFixedPointOne);
+    const int64_t temperature_dc = wire::divide_rounded<int64_t>(
+        int64_t{coefficients_.temperature_offset} * 5 * kTemperatureScale +
+            int64_t{coefficients_.temperature_slope} * raw_temperature * 10,
+        kTemperatureScale);
+    const int64_t pressure_mpa = wire::divide_rounded<int64_t>(
+        pressure_q16(raw_pressure, raw_temperature) * 1000, kFixedPointOne);
     if (temperature_dc < kPlausibleTemperatureFloorDeciCelsius ||
         temperature_dc > kPlausibleTemperatureCeilingDeciCelsius)
         return false;
@@ -133,12 +133,13 @@ int64_t Spa06::pressure_q16(int32_t raw_pressure, int32_t raw_temperature) const
     int64_t pressure = 0;
     for (int i = 4; i >= 0; i--)
         pressure = coefficients_.pressure_terms[i] * kFixedPointOne +
-                   divide_rounded<int64_t>(pressure * raw_pressure, kPressureScale);
+                   wire::divide_rounded<int64_t>(pressure * raw_pressure, kPressureScale);
     int64_t temperature = 0;
     for (int i = 3; i >= 0; i--)
         temperature = coefficients_.temperature_terms[i] * kFixedPointOne +
-                      divide_rounded<int64_t>(temperature * raw_pressure, kPressureScale);
-    return pressure + divide_rounded<int64_t>(temperature * raw_temperature, kTemperatureScale);
+                      wire::divide_rounded<int64_t>(temperature * raw_pressure, kPressureScale);
+    return pressure +
+           wire::divide_rounded<int64_t>(temperature * raw_temperature, kTemperatureScale);
 }
 
 }  // namespace skyblip::parts

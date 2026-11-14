@@ -113,7 +113,7 @@ TEST_CASE(
 
 TEST_CASE("diagnostics record: a dwell carries the plan the second ran under and its refusal") {
     diagnostics::Dwell in{};
-    in.frequency_hz = timing::kMBand1Hz;
+    in.frequency_hz = adsl::kMBand1Hz;
     in.start_ms = 800;
     in.end_ms = 1200;
     in.phase_ms = 947;

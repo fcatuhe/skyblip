@@ -65,6 +65,10 @@ class DiagnosticsDump {
         snapshot.tx_ok = state.air.tx_ok;
         snapshot.tx_lost = state.air.tx_lost;
         snapshot.tx_named = state.air.tx_named;
+        snapshot.tx_held_for_b5 = state.air.tx_held_for_b5;
+        snapshot.rx_status = state.air.rx_status;
+        snapshot.uplink_stale = state.air.uplink_stale;
+        snapshot.tx_given_up = state.air.tx_given_up;
         snapshot.tx_keyed_us = state.rf.last_tx_keyed_us;
         snapshot.tx_span_us = state.rf.last_tx_span_us;
         const ports::RfDio1 dio1 = product.board().roles().rf.dio1();

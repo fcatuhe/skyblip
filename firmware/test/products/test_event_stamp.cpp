@@ -67,7 +67,7 @@ struct StampRig {
     void hear(uint32_t address, uint64_t at_us, uint32_t now_ms) {
         model::Ownship sender = state.own;
         sender.latitude_1e7 += 7000;
-        protocol::AdslPacket tx;
+        adsl::Packet tx;
         protocol::from_own(tx, sender, address, 6, 4);
         tx.scramble();
         tx.set_crc();
@@ -78,8 +78,8 @@ struct StampRig {
         event.at_us = at_us;
         event.rssi_dbm = -80;
         uint8_t chips[protocol::kTxChipBytes] = {0};
-        const size_t chip_bytes = protocol::encode_m_band(protocol::kAdslSyncWord, tx.data,
-                                                          protocol::AdslPacket::kDataBytes, chips);
+        const size_t chip_bytes =
+            wire::manchester_frame(adsl::kSyncWord, tx.data, adsl::Packet::kDataBytes, chips);
         deliver(chips, chip_bytes, event.data.data(), protocol::kRxChipBytes);
         event.bytes = protocol::kRxChipBytes;
         bus.rf.push(event);
