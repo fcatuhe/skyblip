@@ -32,13 +32,12 @@ export class Replies {
     }
   }
 
-  // INFO: fc 13nov26 a request from before a reconnect is never sent, so no stale waiter takes a new reply
+  // INFO: fc 13nov26 a request from before a reconnect is never sent, so no stale waiter takes a new reply | 14nov26 the wait starts once the write is out, as an upload can hold the queue for minutes
   async ask(command, matches) {
     if (this.#generation !== this.#opened) return null;
     let waiter;
     const answered = new Promise(resolve => {
       waiter = { matches, resolve };
-      waiter.timer = setTimeout(() => this.#drop(waiter), this.#withinMs);
       this.#waiting.push(waiter);
     });
     try {
@@ -47,6 +46,7 @@ export class Replies {
       this.#drop(waiter);
       throw error;
     }
+    if (this.#waiting.includes(waiter)) waiter.timer = setTimeout(() => this.#drop(waiter), this.#withinMs);
     return answered;
   }
 

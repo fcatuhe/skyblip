@@ -148,7 +148,9 @@ export class Updater {
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
     this.#onChange = onChange;
     this.#trust = new BrowserTrust({ send: command => this.#device.sendConfig(command), loadKey: browserKey, onChange: patch => this.#set(patch) });
-    this.#attestation = attestations && new FirmwareAttestation({ send: command => this.#device.sendConfig(command), server: attestations });
+    this.#attestation = attestations && new FirmwareAttestation({
+      send: command => this.#device.sendConfig(command), server: attestations, idle: () => this.#state.phase === 'ready' && !this.#state.task,
+    });
     this.#bluetoothDevice = device;
     this.#returnEveryMs = returnEveryMs;
     this.#returnWithinMs = returnWithinMs;

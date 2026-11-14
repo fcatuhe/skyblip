@@ -62,6 +62,7 @@ export class FakeServer {
     return {
       challenge: async () => {
         this.requests.push('attestation_challenge');
+        if (this.held) await this.held.promise;
         this.#refuse();
         const serverNonce = hex(randomBytes(16));
         this.attestationNonces.add(serverNonce);

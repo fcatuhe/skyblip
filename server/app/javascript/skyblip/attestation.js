@@ -22,9 +22,11 @@ export function attestationServer({ challenges = '/attestation/challenges', stat
 export class FirmwareAttestation {
   #server;
   #replies;
+  #idle;
 
-  constructor({ send, server }) {
+  constructor({ send, server, idle }) {
     this.#server = server;
+    this.#idle = idle;
     this.#replies = new Replies({ send, withinMs: ANSWER_WITHIN_MS });
   }
 
@@ -40,7 +42,7 @@ export class FirmwareAttestation {
   async attest() {
     this.#replies.open();
     const challenge = await recorded(() => this.#server.challenge());
-    if (!challenge) return null;
+    if (!challenge || !this.#idle()) return null;
     const reply = await this.#replies.ask({ command: 'attest', server_nonce: challenge.server_nonce }, answers);
     if (reply?.command !== 'attestation') return null;
     return recorded(() => this.#server.attest({ ...relayed(reply), server_nonce: challenge.server_nonce }));

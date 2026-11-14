@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ATTESTATION_FRAME_BYTES, FakeServer, FakeUnit, VECTORS, keyPair, messages } from './fake_activation.mjs';
-import { ATT_HEADER_BYTES } from './fake_skyblip.mjs';
-import { session } from './update_session.mjs';
+import { ATT_HEADER_BYTES, signedImage } from './fake_skyblip.mjs';
+import { NEWER, asking, session } from './update_session.mjs';
 
 const CHROME_MTU = 498;
 const ADDRESS = 0x00012a;
@@ -80,6 +80,20 @@ test('the unit refuses what it cannot sign, and the page carries on', async () =
   await turns();
   assert.deepEqual(narrow.server.firmwares, []);
   assert.equal(narrow.unit.commands.at(-1), 'attest');
+});
+
+// A refusal of attest arriving in the middle of an install would read as the install's.
+test('a pilot who starts something before the server answers keeps the unit to themselves', async () => {
+  const server = knowing(new FakeServer());
+  server.hold();
+  const { unit, updater, until } = await connected({ server });
+  await updater.choose(signedImage(NEWER, 6000), 'skyblip_go-0.2.0+15.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  server.release();
+  await turns();
+  assert.ok(!unit.commands.includes('attest'));
+  assert.equal(updater.state.task, 'dfu');
 });
 
 test('a statement the active key did not sign is refused by the server and recorded nowhere', async () => {
