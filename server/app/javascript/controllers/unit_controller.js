@@ -5,12 +5,15 @@ import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
+import { sendCapture } from "#skyblip/capture_upload"
+import { sharedJournal } from "#skyblip/journal"
 
 const SET_NOTICES = ["set_notices", "notices"]
 const CAPTURE_NOTICES = ["capture_notices", "notices"]
 const BROWSER_NOTICES = ["browsers_notices", "notices"]
 const CAPTURE_DONE = new Set(["capture_armed", "capture_stopped"])
 const PROMPTS = { set: "SETTINGS", capture: "CAPTURE" }
+const HOUR_S = 3600
 const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "small_mtu", "no_bluetooth", "not_skyblip", "failed", "no_params"])
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 const WORKING = new Set(["asking", "confirming", "uploading", "installing", "rebooting"])
@@ -19,7 +22,8 @@ const LAST_READ = ["aircraft_type", "callsign", "own_icao", "units", "alarm_enab
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
                     "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
-                    "capture", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
+                    "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
+                    "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "forgetDialog", "forgetQuestion", "browsers", "browserList", "browsersMessage", "forgetOthers"]
   static values = { slug: String, home: String, activation: String }
   static outlets = ["glass"]
@@ -100,6 +104,31 @@ export default class extends Controller {
 
   stopCapture() {
     this.unit.updater.orderCapture("stop")
+  }
+
+  // INFO: fc 15nov26 the fetch runs on the device's link and the upload on the network, so either may fail alone
+  async sendCapture() {
+    const { updater } = this.unit
+    const journal = sharedJournal()
+    this.sending = { key: "uploading" }
+    const fetched = await updater.fetchCapture()
+    if (!fetched) {
+      this.sending = updater.state.notice ? null : { key: "empty" }
+      return this.#render()
+    }
+    this.sending = { key: "uploading" }
+    this.#render()
+    try {
+      await sendCapture({ url: this.captureSendTarget.dataset.url, fetched, browser: journal.browser, token: this.#token() })
+      this.sending = { key: "sent", good: true, values: { code: journal.supportCode } }
+    } catch (error) {
+      this.sending = { key: "not_sent", values: { detail: error.message } }
+    }
+    this.#render()
+  }
+
+  #token() {
+    return document.querySelector('meta[name="csrf-token"]')?.content ?? null
   }
 
   forgetBrowser({ params: { id } }) {
@@ -301,10 +330,11 @@ export default class extends Controller {
     return ["asking", "confirming"].includes(state?.phase) && Boolean(PROMPTS[state.task])
   }
 
-  // INFO: fc 12nov26 only a Bravo arms a capture over the link, since a Go arms one on its glass
+  // INFO: fc 15nov26 a unit that answers the dump's capture group arms over the link, and a Bravo always did
   #capture(unit, state) {
     const linked = unit?.linked ?? false
-    this.captureTarget.hidden = !linked || unit.product !== "skyblip_bravo" || this.#prompting(state)
+    const serves = Boolean(state?.capture) || unit?.product === "skyblip_bravo"
+    this.captureTarget.hidden = !linked || !serves || this.#prompting(state)
     const notice = state?.notice?.during === "capture" && !this.#refusedHere(state) && !LINK_NOTICES.has(state.notice.key) ? sayNotice(state.notice, ...CAPTURE_NOTICES) : ""
     this.captureMessageTarget.hidden = !notice
     this.captureMessageTarget.textContent = notice
@@ -312,12 +342,40 @@ export default class extends Controller {
     if (this.captureTarget.hidden) return
     const airborne = state.status?.flight === "airborne"
     const idle = state.phase === "ready" && !airborne && !state.refusedOnDevice
+    this.#captureState(state.capture)
     this.captureFieldsTarget.disabled = !idle
-    this.captureArmTarget.disabled = !idle
+    this.captureArmTarget.disabled = !idle || state.capture?.armed === true
     this.captureArmTarget.hidden = state.refusedOnDevice
     this.captureArmTarget.textContent = airborne ? say("words.locked") : this.captureArmTarget.dataset.label
-    this.captureStopTarget.disabled = !idle
+    this.captureStopTarget.disabled = !idle || state.capture?.armed === false
     this.captureStopTarget.hidden = airborne || state.refusedOnDevice
+    this.#captureSend(state, idle)
+  }
+
+  #captureState(capture) {
+    this.captureStateTarget.hidden = !capture
+    if (!capture) return
+    const lines = capture.armed
+      ? [say("capture.running", { profile: say(`capture.profile_names.${capture.profile}`), records: capture.records, keeps: span(capture.keeps) })]
+      : [say("capture.idle"), say("capture.price", { full: span(capture.keepsFull), run: span(capture.keepsPowerRun) }),
+         capture.evictsFlights > 0 ? sayCount("capture.erases", capture.evictsFlights) : null]
+    this.captureStateTarget.textContent = lines.filter(Boolean).join(" ")
+  }
+
+  #captureSend(state, idle) {
+    const fetching = state.fetching
+    this.captureSendSectionTarget.hidden = !state.capture || state.capture.armed
+    this.captureSendTarget.disabled = !idle || Boolean(fetching) || this.sending?.key === "uploading"
+    this.captureProgressTarget.hidden = !fetching
+    if (fetching) {
+      this.captureProgressBarTarget.max = fetching.total ?? 1
+      this.captureProgressBarTarget.value = fetching.at
+      this.captureProgressTextTarget.textContent = say("capture.fetching", { at: fetching.at, total: fetching.total ?? "?" })
+    }
+    const sending = fetching ? null : this.sending
+    this.captureSendMessageTarget.hidden = !sending
+    this.captureSendMessageTarget.textContent = sending ? say(`capture.${sending.key}`, sending.values) : ""
+    this.captureSendMessageTarget.classList.toggle("is-good", sending?.good === true)
   }
 
   // INFO: fc 13nov26 only a browser the unit trusts reads the list, so the section waits for that trust
@@ -397,4 +455,9 @@ export default class extends Controller {
     const field = this.settingsTarget.elements[key]
     return [...field.options].find(option => option.value === String(value))?.text ?? String(value)
   }
+}
+
+// INFO: fc 15nov26 a capture keeps minutes or days, so the span is read in the unit that fits it
+function span(seconds) {
+  return seconds >= 2 * HOUR_S ? `${Math.round(seconds / HOUR_S)} h` : `${Math.round(seconds / 60)} min`
 }

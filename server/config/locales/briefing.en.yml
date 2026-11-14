@@ -62,9 +62,25 @@ en:
         full: Full
         power_run: Power run
         flight_run: Flight run
-      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. We review the capture with you after a flight."
+      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. The device asks for two presses before it starts, and records on its own until you stop it."
       arm: Arm
       stop: Stop the capture
+      idle: Nothing is recording.
+      running: "Recording a %{profile} capture: %{records} records so far. The device keeps the last %{keeps} of it."
+      price: "A full capture keeps %{full}, a power run or a flight run %{run}."
+      erases:
+        one: "Starting one erases 1 stored flight."
+        other: "Starting one erases %{count} stored flights."
+      months:
+        one: 1 month
+        other: "%{count} months"
+      send: Fetch and send
+      send_hint: "Stop the capture, then send it to skyBlip from here. It holds your positions and the aircraft you heard. We keep a full capture %{full} and a power run or a flight run %{run}, then delete it."
+      fetching: "Reading the capture: %{at} of %{total} records."
+      uploading: Sending the capture.
+      sent: "Sent. Give your support code %{code} when you write to us."
+      empty: The device holds no capture.
+      not_sent: "The capture could not be sent: %{detail}. Try again later."
     browsers:
       title: Trusted browsers
       hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press twice to allow its first save or update."
@@ -242,11 +258,11 @@ en:
       out_of_range: The device refused a value it cannot store. FFFFFF is no aircraft's ICAO address. Nothing changed.
       not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or take the one the Go's AIRCRAFT menu shows. Nothing changed.
     capture_notices:
-      capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. This continues in flight.
+      capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. The capture continues in flight.
       capture_stopped: Stopped. The LED is back to its single blink.
       capturing: A capture is already running. Stop it first.
       not_capturing: No capture is running. There is nothing to stop.
-      no_storage: This Bravo has no memory for a capture. Tell us its firmware version.
+      no_storage: This device has no memory for a capture. Tell us its firmware version.
       in_flight: The device is in flight. Nothing changed. Try again once it has landed.
       expired: Nobody pressed twice within thirty seconds. Nothing changed.
       cancelled: Refused on the device. Nothing changed.

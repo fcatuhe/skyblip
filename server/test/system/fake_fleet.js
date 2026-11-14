@@ -65,6 +65,8 @@
         probationMs: 1500,
         vectors: null,
         diagnostics: [],
+        servesCaptures: null,
+        evictsFlights: 3,
         browsers: null,
         installReport: null,
         protocols: null,
@@ -211,7 +213,8 @@
         return this.ask('dfu', 'confirm_dfu');
       }
       if (command === 'recovery') return this.ask('recovery', 'confirm_recovery');
-      if (command === 'capture' && this.product === 'skyblip_bravo') return this.orderCapture(fields.profile);
+      if (command === 'capture' && this.captures()) return this.orderCapture(fields.profile);
+      if (command === 'diagnostics') return this.dump();
       if (command === 'challenge') {
         this.nonce = hex(crypto.getRandomValues(new Uint8Array(16)));
         return this.reply({ command: 'challenge', nonce: this.nonce, server_key_id: this.vectors.server_key_id });
@@ -255,6 +258,22 @@
         replies.push({ command: 'chunk', session, from: at, ends_session: end >= total, records: entry.held.slice(at * RECORD_BYTES, end * RECORD_BYTES) });
       }
       return replies;
+    }
+
+    // INFO: fc 15nov26 a Bravo always served capture, and a Go from the firmware that answers its dump group
+    captures() {
+      return this.servesCaptures ?? this.product === 'skyblip_bravo';
+    }
+
+    async dump() {
+      await this.reply({ command: 'diagnostics', group: 'system', part: 0, more: this.captures(), uptime_s: 120, reset: 'power_on' });
+      if (!this.captures()) return;
+      return this.reply({
+        command: 'diagnostics', group: 'capture', part: 1, more: false, armed: Boolean(this.capturing),
+        ...(this.capturing ? { profile: this.capture } : {}), session: this.capturing ? 1785628800 : 0, records: this.capturing ? 960 : 0,
+        records_dropped: 0, sectors: 0, keeps_s: this.capturing ? 433500 : 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
+        keeps_full_s: 1926, keeps_power_run_s: 433500,
+      });
     }
 
     // INFO: fc 12nov26 capture_request.cpp's checks after the prompt guards and the flight

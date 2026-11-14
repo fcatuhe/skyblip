@@ -2,6 +2,14 @@ require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
   GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
+  # Three ADS-B records, a traffic record and the end marker, as console_test.rb reads them.
+  CAPTURE = %w[
+    15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02
+    1513000085886e6a3412dd00282300000000000000000000
+    0d66000040f9a16a5e4d3c00c8050c00000000000104b903
+    151300008d886e6a5e4d3c00ac0d00000000000000000000
+    110000008e886e6a05000000000000000000000000000000
+  ].join.freeze
 
   test "a first visit offers one thing, and a Go connected there opens on its settings" do
     in_range a_go
@@ -233,7 +241,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Bravo arms and stops a capture with two presses on its lamp, and a Go offers none" do
+  test "a Bravo arms and stops a capture with two presses on its lamp, and a Go from before it served one offers none" do
     in_range a_go, a_bravo
     on_the_shelf do
       connect_go
@@ -251,13 +259,44 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Armed. The LED blinks twice every 3 s"
-      click_button "Arm"
-      assert_selector ".unit-message", text: "A capture is already running. Stop it first."
+      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture"
+      assert_button "Arm", disabled: true
 
       click_button "Stop the capture"
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Stopped. The LED is back to its single blink."
       assert_equal false, page.evaluate_script("#{unit("3F2A")}.capturing")
+    end
+  end
+
+  test "a Go says what a capture costs, asks for it on its glass, and says it records" do
+    in_range a_go(servesCaptures: true)
+    on_the_shelf do
+      connect_go
+      within("[data-unit-target=capture]") do
+        assert_selector "[data-unit-target=captureState]",
+          text: "Nothing is recording. A full capture keeps 32 min, a power run or a flight run 120 h. Starting one erases 3 stored flights."
+        select "Power run", from: "Profile"
+        click_button "Arm"
+      end
+      assert_glass "CAPTURE"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture: 960 records so far. The device keeps the last 120 h of it."
+      assert_button "Arm", disabled: true
+      assert_no_button "Fetch and send"
+    end
+  end
+
+  test "a stopped capture is fetched off the device and sent to skyBlip, under the browser's support code" do
+    in_range a_go(servesCaptures: true, diagnostics: [ { session: 1_785_628_800, records: CAPTURE, closed: true } ])
+    on_the_shelf do
+      connect_go
+      assert_text "a full capture 13 months and a power run or a flight run 25 months"
+      click_button "Fetch and send"
+      assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
+      capture = Capture.sole
+      assert_equal [ "go-00012a", 1_785_628_800, 5, "full" ], [ capture.device, capture.session, capture.records, capture.profile ]
+      assert_match(/\A[0-9A-HJKMNP-TV-Z]{8}\z/, capture.browser)
     end
   end
 
