@@ -288,16 +288,16 @@ TEST_CASE("bravo traffic: a pressure-only target has a height while the baromete
         flight.fly(1);
     }
     traffic::RangeRow rows[4];
-    REQUIRE(traffic::rank_by_range(flight.state().traffic, flight.state().callsigns,
-                                   flight.state().own, rows, 4) == 1);
+    REQUIRE(traffic::rank_by_relevance(flight.state().traffic, flight.state().callsigns,
+                                       flight.state().own, rows, 4) == 1);
     CHECK(rows[0].up_valid);
     // 4500 ft is 1371.6 m of pressure altitude, and own-ship's barometer reads 1000 m.
     CHECK(rows[0].up_m == doctest::Approx(372).epsilon(0.01));
 
     flight.fly(5);
     CHECK_FALSE(flight.state().own.pressure_altitude_valid);
-    REQUIRE(traffic::rank_by_range(flight.state().traffic, flight.state().callsigns,
-                                   flight.state().own, rows, 4) == 1);
+    REQUIRE(traffic::rank_by_relevance(flight.state().traffic, flight.state().callsigns,
+                                       flight.state().own, rows, 4) == 1);
     CHECK_FALSE(rows[0].up_valid);
 }
 

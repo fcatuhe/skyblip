@@ -36,6 +36,8 @@ No figure stands beside the blip. The page carried the relative altitude in hund
 
 Which also gives the leader lines their glass back. A tag centred over a target tracking up the picture erased the whole minute underneath it, and the placement rules existed to protect that line. With the tags gone the lines are simply drawn.
 
+The radar draws at most `kMaxRadarTargets`, twelve aircraft, and the traffic table holds 48. The twelve are the ones `traffic::rank_by_relevance` puts first, the order `nearby` lists in too: every aircraft raising an alarm, then the ones inside `kAdvisoryAltitudeM` of our height, then the rest, nearest first in each. They were the first twelve slots of the table, so a thirteenth aircraft raising an alarm lost its blip and its wedge while the buzzer sounded, and a paired Bravo's ADS-B fills thirteen slots in any busy sky. What is left off is traffic that cannot raise an alarm, and `TFC` still counts it.
+
 The page is drawn in two layers. The ground goes down first: the ring, own ship, the footer readings and the state word in the ring, each reading on the patch it clears for itself. Every patch is the reading plus `kLabelPad`, 2 px of glass on each side, the clock's and the state word's alike. The range keeps `kRangePad`, 4 px, because it is the one reading the ring runs into from both sides. The alarm sector spares exactly each patch and no margin beyond it. Traffic goes over it: the leaders, the symbols, the alarm sector, the formation square and the rim. A symbol is ink and nothing else, it clears no glass under itself, so an aircraft over `FLIGHT`, the range or another mark covers the strokes it lands on and leaves every other pixel as it was. A reading under an aircraft is the cheaper loss: it is read again once the aircraft has moved, and an aircraft hidden under a label is the one thing this page is for.
 
 There is no resolution advisory here, and there never will be. An RA is an instruction to climb or descend, coordinated with the other aircraft so the two are not told to do the same thing; this device has no link to coordinate over and no authority to give one. The loudest thing it can say is look. Where to look is the wedge below.
@@ -124,7 +126,7 @@ The three of them share one baseline, which stands the same four pixels off the 
 
 ## nearby
 
-What the radar plots, as a list: one row per target the device can place, nearest first, and the count of everything it heard in the corner. The radar answers where to look, this page answers who that is and by how much they are above.
+What the radar plots, as a list: one row per target the device can place, most relevant first, and the count of everything it heard in the corner. The radar answers where to look, this page answers who that is and by how much they are above.
 
 The top line is own identity and the count, and it is the radar's footer arrangement turned up to the corner: what this aircraft is at the height the rows are read at, the figure at double height on the right margin with `TRAFFIC` beside it. The page does not name itself, because a pilot who walked here knows where they are and the six hex digits are asked for on the radio, read off to a controller and typed into a club list. This is the page a pilot is already on when the question comes, and `status` prints the same address for the pilot who went looking for it.
 
@@ -147,6 +149,8 @@ A row wears a callsign the moment one is heard, in place of the hex: `A D-KXYZ` 
 Ground distance, because that is the distance a pilot flies: the aircraft 2 km overhead is no conflict at all, and a column that read 1.1 NM for it would be the page arguing with the `+66` beside it. Slant range is the path the wave took, which is a fact about the receiver and not about the sky, and no pilot turns, climbs or looks out of the window on a hypotenuse. The radar ring and the alarm have always meant ground distance by distance, and now the list does too: one word for one thing across the device. The vertical is the column next door, where a separation is read in the feet it is cleared in. A tenth of a mile is 185 m, which is the resolution two GNSS receivers and one extrapolation to a common instant can honestly support, and hundredths would be a digit that moves when nothing has.
 
 What left this page is the radio: RSSI, and the e.r.p. that level implied at that range. Those are a question about antennas rather than about traffic, they are read on a bench and not in a circuit, and the level of a burst is already on the row `radio_log` prints for it. The link-budget model went with them rather than staying as arithmetic nothing on the glass reads (`git log core/traffic/range.cpp`), and what is left of that file is the geometry the list is ordered by. Eight rows fit at this size where nine fitted at the old one, and the corner still counts every emitter heard rather than the handful on the glass: a page that quietly lists eight of twelve says the sky is emptier than it is.
+
+The order is `traffic::rank_by_relevance`, the radar's: every aircraft raising an alarm, then the ones inside `kAdvisoryAltitudeM` of our height, the radar's large blips, then the rest, nearest first in each. It was ground distance alone, and with a Bravo's ADS-B that put an airliner at FL350 two miles away above a glider three miles away at our height. A target that sends no altitude may be at ours, so it ranks inside the window. What overflows the eight rows is what ranks last, traffic that cannot raise an alarm.
 
 No fix means no range, and the page says so instead of listing: every figure here is geometry against own-ship's position, and without one there is nothing to be nearest.
 
@@ -503,7 +507,7 @@ The pad picks and the button arms, which is the division of labour the menus alr
 | `sixpack` | what own-ship is doing: speed, altitude, vertical speed, track, turn, and what the cell has left, or the charge rail on the cable |
 | `status` | what the sensors say: fix, position, pressure, battery, UTC, and whether we transmit |
 | `satellites` | what is above the antenna, how loud, and which satellites solved |
-| `nearby` | every target placed, nearest first: who, how far, how far above |
+| `nearby` | every target placed, most relevant first: who, how far, how far above |
 | `menu` | the other side of a page: what it is made of, and what a pilot can change |
 | `confirm`, `installing`, `recovery` | the moments that are not pages: being asked, receiving an image and being written, being handed to the USB bootloader |
 | `activation` | what a unit with no serial says instead of every page: where to activate it, and the tag that names it in the phone's chooser |

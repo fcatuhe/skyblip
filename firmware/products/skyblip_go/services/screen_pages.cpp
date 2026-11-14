@@ -204,10 +204,12 @@ void ScreenService::render(uint32_t now_ms) {
             int count = 0;
             if (own.fix_valid) {
                 const model::Ownship own_now = flight::carried_to(own, now_ms);
-                for (int i = 0; i < traffic::TrafficTable::kMaxTargets && count < kMaxRadarTargets;
-                     i++) {
-                    const traffic::Target* target = context_.state.traffic.at(i);
-                    if (!target || !target->used) continue;
+                traffic::RangeRow ranked[kMaxRadarTargets];
+                const int ranked_count =
+                    traffic::rank_by_relevance(context_.state.traffic, context_.state.callsigns,
+                                               own, ranked, kMaxRadarTargets);
+                for (int i = 0; i < ranked_count; i++) {
+                    const traffic::Target* target = context_.state.traffic.at(ranked[i].slot);
                     const model::AircraftObservation observation =
                         flight::carried_to(target->observation, now_ms);
                     int32_t north = 0, east = 0, up = 0;
@@ -285,7 +287,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
             snapshot.heard_count = context_.state.traffic.count();
-            snapshot.row_count = traffic::rank_by_range(
+            snapshot.row_count = traffic::rank_by_relevance(
                 context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
             snapshot.rows = nearby_rows_;
             draw_nearby(framebuffer_, snapshot);
