@@ -14,7 +14,7 @@ class BriefingWordsTest < ActiveSupport::TestCase
   # INFO: fc 12nov26 the page offers the registry's profiles by name, so it never sends one past stop
   NEVER_SENT = %w[out_of_range].freeze
   CAPTURE_NOTICES = %w[capture_armed capture_stopped expired cancelled prompt_pending refused_on_device unknown_command].freeze
-  SET_REFUSALS = %w[in_flight low_power expired cancelled prompt_pending refused_on_device small_mtu unknown_command].freeze
+  SET_REFUSALS = %w[in_flight low_power expired cancelled prompt_pending refused_on_device small_mtu unknown_command out_of_range not_own_transponder].freeze
   PROMPT_REFUSALS = %w[expired cancelled prompt_pending refused_on_device claimed unknown_command small_mtu].freeze
   SERVER_REFUSALS = %w[invalid unknown_server_key expired bad_signature other_key revoked_key daily_cap network_cap no_serial rate_limited unreachable failed].freeze
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze

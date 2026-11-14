@@ -242,6 +242,8 @@ en:
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
       unknown_command: This firmware is too old to change settings. Update it first.
+      out_of_range: The device refused a value it cannot store. FFFFFF is no aircraft's ICAO address. Nothing changed.
+      not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or take the one the Go's AIRCRAFT menu shows. Nothing changed.
     capture_notices:
       capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. This continues in flight.
       capture_stopped: Stopped. The LED is back to its single blink.
