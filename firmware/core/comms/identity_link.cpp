@@ -140,6 +140,52 @@ void ConfigService::send_registration() {
     (void)reply(frame, bytes);
 }
 
+// INFO: fc 14nov26 no prompt: the unit signs only its own firmware, under a label nothing else
+// signs
+void ConfigService::attest(const cbor::Reader& frame) {
+    if (identity_refused_in_flight()) return;
+    identity::Unit& unit = identity_->unit();
+    char version[dfu::kVersionTextBytes] = {0};
+    if (!unit.key_provisioned() || !running_version_text(version, sizeof(version))) {
+        refuse(link::Reason::Keyless);
+        return;
+    }
+    if (payload_bytes_to(claim_.holder()) < IdentityLink::kAttestationFrameBytes) {
+        refuse_too_wide();
+        return;
+    }
+    identity::Nonce server_nonce{};
+    if (!read_bytes<link::attest_bytes::kServerNonce>(frame, link::attest_key::kServerNonce,
+                                                      server_nonce)) {
+        acknowledge(false, link::Reason::Invalid);
+        return;
+    }
+    const bool release = dfu_ != nullptr && dfu_->release_build();
+    const std::optional<crypto::Ed25519::Signature> signature =
+        unit.sign(identity::attestation_message(unit.device_id(), unit.public_key(), server_nonce,
+                                                release, version)
+                      .bytes());
+    if (!signature) {
+        refuse(link::Reason::Keyless);
+        return;
+    }
+    uint8_t reply_frame[IdentityLink::kAttestationFrameBytes];
+    cbor::Writer writer(reply_frame, sizeof(reply_frame));
+    writer.add_code(link::kCommandKey, link::Command::Attestation);
+    add_bytes<link::attestation_bytes::kDeviceId>(writer, link::attestation_key::kDeviceId,
+                                                  unit.device_id());
+    writer.add_text(link::attestation_key::kVersion, version);
+    writer.add_boolean(link::attestation_key::kRelease, release);
+    add_bytes<link::attestation_bytes::kSignature>(writer, link::attestation_key::kSignature,
+                                                   *signature);
+    const int bytes = writer.finish();
+    if (bytes == 0) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(reply_frame, bytes);
+}
+
 // INFO: fc 18oct26 the nonce is spent before the check, so a refused code is never retried on it
 void ConfigService::unlock(const cbor::Reader& frame) {
     if (identity_refused_in_flight()) return;

@@ -143,6 +143,24 @@ class UnitTest < ActiveSupport::TestCase
     assert_nil units(:contested).reload.active_key
   end
 
+  # A development unit may go back to an older image, and its history must say so rather than fold it into the first stretch.
+  test "a firmware signed again extends its stretch, and a unit back on an earlier one opens a new stretch" do
+    unit = units(:bound)
+    unit.attest_firmware(version: "0.3.0+1300", release: true)
+    unit.attest_firmware(version: "0.4.0+1400", release: true)
+    unit.attest_firmware(version: "0.4.0+1400", release: false)
+    unit.attest_firmware(version: "0.3.0+1300", release: true)
+
+    assert_equal [ [ "0.3.0+1300", true ], [ "0.4.0+1400", false ], [ "0.4.0+1400", true ], [ "0.3.0+1300", true ] ],
+      unit.firmwares.newest_first.pluck(:version, :release)
+    assert_equal Time.current.to_date, unit.firmwares.newest_first.last.updated_at.to_date
+  end
+
+  test "a unit that has not signed its firmware since it registered shows the one it registered with" do
+    assert_equal "0.3.0+1300", units(:bound).signed_firmware.version
+    assert_equal "0.3.0+1200", units(:contested).signed_firmware.version
+  end
+
   test "the database refuses serial 0 on its own" do
     assert_raises(ActiveRecord::StatementInvalid) { Unit.insert_all([ { device_id: vectors["device_id"], serial: 0 } ]) }
   end

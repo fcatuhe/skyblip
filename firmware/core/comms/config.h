@@ -327,6 +327,7 @@ class ConfigService {
     void challenge();
     void register_unit(const cbor::Reader& frame);
     void send_registration();
+    void attest(const cbor::Reader& frame);
     bool running_version_text(char* out, size_t capacity) const;
     bool identity_refused_in_flight();
     void unlock(const cbor::Reader& frame);

@@ -22,6 +22,16 @@ class Activation::RegistrationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ vectors["version"], "890026b1", false, "203.0.113.8" ], [ key.version, key.server_key_id, key.release, key.ip_address ]
   end
 
+  test "records the firmware an active key signed, and none for a key it refuses" do
+    post activation_registrations_path, params: signed_registration(@challenge, release: false), as: :json
+    assert_equal [ [ vectors["version"], false ] ], Unit.find_by!(device_id: vectors["device_id"]).firmwares.pluck(:version, :release)
+
+    assert_no_difference -> { units(:bound).firmwares.count } do
+      post activation_registrations_path, params: signed_registration(Activation::Challenge.issue(unit_nonce: vectors["unit_nonce"], server_key_id: "890026b1"), device_id: units(:bound).device_id), as: :json
+    end
+    assert_response :conflict
+  end
+
   test "refuses a registration that does not say whether it is a release" do
     post activation_registrations_path, params: signed_registration(@challenge).except(:release), as: :json
 

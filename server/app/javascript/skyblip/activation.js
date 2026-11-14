@@ -16,30 +16,30 @@ export class ServerRefusal extends Error {
   }
 }
 
-export function httpServer({ challenges, registrations, token = null, browser = null }) {
-  async function post(url, body) {
-    let response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', Accept: 'application/json',
-          ...(token ? { 'X-CSRF-Token': token } : {}), ...(browser ? { 'X-Briefing-Browser': browser } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-    } catch (error) {
-      throw new ServerRefusal('unreachable', error.message);
-    }
-    const reply = await response.json().catch(() => null);
-    if (response.ok && reply) return reply;
-    if (reply?.error) throw new ServerRefusal(reply.error);
-    throw new ServerRefusal('failed', `HTTP ${response.status}`);
+export async function postJson(url, body, { token = null, browser = null } = {}) {
+  let response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', Accept: 'application/json',
+        ...(token ? { 'X-CSRF-Token': token } : {}), ...(browser ? { 'X-Briefing-Browser': browser } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new ServerRefusal('unreachable', error.message);
   }
+  const reply = await response.json().catch(() => null);
+  if (response.ok && reply) return reply;
+  if (reply?.error) throw new ServerRefusal(reply.error);
+  throw new ServerRefusal('failed', `HTTP ${response.status}`);
+}
 
+export function httpServer({ challenges, registrations, token = null, browser = null }) {
   return {
-    challenge: body => post(challenges, body),
-    register: body => post(registrations, body),
+    challenge: body => postJson(challenges, body, { token, browser }),
+    register: body => postJson(registrations, body, { token, browser }),
   };
 }
 
@@ -171,6 +171,6 @@ export class Activator {
   }
 }
 
-function relayed(frame) {
+export function relayed(frame) {
   return Object.fromEntries(Object.entries(frame).map(([name, value]) => [name, value instanceof Uint8Array ? hex(value) : value]));
 }

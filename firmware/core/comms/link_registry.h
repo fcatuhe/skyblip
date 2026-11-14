@@ -46,6 +46,8 @@ enum class Command : uint8_t {
     ForgetBrowser = 34,
     InstallReport = 35,
     Protocols = 36,
+    Attest = 37,
+    Attestation = 38,
 };
 
 enum class Reason : uint8_t {
@@ -557,6 +559,30 @@ enum : uint32_t {
 };
 }
 
+namespace attest_key {
+enum : uint32_t {
+    kServerNonce = 1,
+};
+}
+
+namespace attest_bytes {
+constexpr size_t kServerNonce = 16;
+}
+
+namespace attestation_key {
+enum : uint32_t {
+    kDeviceId = 1,
+    kVersion = 2,
+    kRelease = 3,
+    kSignature = 4,
+};
+}
+
+namespace attestation_bytes {
+constexpr size_t kDeviceId = 8;
+constexpr size_t kSignature = 64;
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -588,13 +614,15 @@ constexpr uint64_t host_keys(Command command) {
         case Command::BrowserChallenge:
         case Command::Browser:
         case Command::InstallReport:
-        case Command::Protocols: return 0x1;
+        case Command::Protocols:
+        case Command::Attestation: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:
         case Command::Browsers:
-        case Command::ForgetBrowser: return 0x3;
+        case Command::ForgetBrowser:
+        case Command::Attest: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;

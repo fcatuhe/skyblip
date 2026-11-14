@@ -8,6 +8,8 @@ class Unit < ApplicationRecord
 
   has_many :keys, dependent: :destroy
   has_one :active_key, -> { active }, class_name: "Unit::Key"
+  has_many :firmwares, dependent: :destroy
+  has_one :latest_firmware, -> { newest_first }, class_name: "Unit::Firmware"
 
   validates :device_id, uniqueness: true, format: { with: Activation::DEVICE_ID }
   validates :serial, uniqueness: true, inclusion: { in: SERIALS }
@@ -78,6 +80,23 @@ class Unit < ApplicationRecord
     Rails.event.notify("unit_key.bound", unit_id: id, device: slug, status: key.status, release: key.release, version: key.version, renewed:)
     key
   end
+
+  # INFO: fc 14nov26 a row per stretch on one firmware, so a unit that goes back to a version gets a new row
+  def attest_firmware(version:, release:)
+    firmware = firmwares.newest_first.first
+    if firmware&.version == version && firmware.release == release
+      firmware.touch
+    else
+      firmware = firmwares.create!(version:, release:)
+    end
+    Rails.event.notify "unit.firmware_attested", unit_id: id, device: slug, version:, release:, changed: firmware.previously_new_record?
+    firmware
+  end
+
+  # INFO: fc 14nov26 a registration signs the version too, so a unit that has not attested since shows the one it registered with
+  def signed_firmware = latest_firmware || active_key
+
+  def reported_firmware = Unit::ReportedFirmware.new(self).stretches
 
   def address = format("%02X%04X", MANUFACTURER_PREFIX, serial)
 

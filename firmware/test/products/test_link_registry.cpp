@@ -218,6 +218,8 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.say("{\"command\":\"unlock\",\"serial\":" + std::to_string(Identity::kSerial) +
              ",\"signature\":\"" + unlock_signature() + "\"}");
     taxi(unit.rig, unit.now_ms, 3);
+    unit.say("{\"command\":\"attest\",\"server_nonce\":\"" +
+             hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\"}");
     unit.rig.raise_link(2);
     unit.rig.send_from(2, "{\"command\":\"get\"}");
     taxi(unit.rig, unit.now_ms, 1);
@@ -347,6 +349,7 @@ const std::vector<Answer> kAnswers = {
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
     {"capture", kConfig, prompt("confirm_capture"), "invalid"},
+    {"attest", kConfig, reply("attestation"), "invalid"},
     {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
     {"trust_browser", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
@@ -379,6 +382,8 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
         {"register.signature", "\"" + register_signature() + "\""},
+        {"attest.server_nonce",
+         "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
         {"unlock.serial", std::to_string(Identity::kSerial)},
         {"unlock.signature", "\"" + unlock_signature() + "\""},
         {"list.log", "\"flights\""},

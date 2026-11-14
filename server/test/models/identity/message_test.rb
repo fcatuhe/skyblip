@@ -14,6 +14,15 @@ class Identity::MessageTest < ActiveSupport::TestCase
     assert_equal vectors["development_registration_signature"], unit_key.sign(nil, message).unpack1("H*")
   end
 
+  test "builds the attestation byte for byte as the vectors the firmware checks, and the unit's signature verifies" do
+    message = Identity::Message.attestation(device_id: vectors["device_id"], public_key: vectors["unit_public_key"],
+      server_nonce: vectors["server_nonce"], release: vectors["release"], version: vectors["version"])
+
+    assert_equal vectors["attestation_message"], hex(message)
+    assert_equal vectors["attestation_signature"], unit_key.sign(nil, message).unpack1("H*")
+    assert_not unit_public_key.verify(nil, bytes(vectors["attestation_signature"]), bytes(vectors["registration_message"]))
+  end
+
   # Ed25519 is deterministic, so equal signatures mean OpenSSL and Monocypher sign alike.
   test "OpenSSL signs the server's two messages as the firmware does, and verifies the unit's" do
     server_key = Identity::ServerKey.current

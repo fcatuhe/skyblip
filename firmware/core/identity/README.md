@@ -2,7 +2,7 @@
 
 Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a key of its own, the server key the build trusts, and once the server has signed one, a serial. The design is issue #126, the wire contract the activation frames of `schemas/link.v1.json` and `schemas/activation.v1.schema.json`. Nothing here uses the firmware signing keys.
 
-## The three messages
+## The four messages
 
 `messages.{h,cpp}` builds every byte string a signature covers, in one place, exactly as the schema lays them out: an ASCII label naming the purpose and version, then fixed-width fields, so no signature made for one purpose can pass for another, a future air packet included.
 
@@ -11,8 +11,11 @@ Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a 
 | register | `skyblip:register:v1` Nu Ns | the server |
 | registration | `skyblip:registration:v1` DEVICEID Pd Nu Ns server-key-id release version | the unit |
 | unlock | `skyblip:unlock:v1` DEVICEID Pd serial(2, big-endian) Nu | the server |
+| attestation | `skyblip:attestation:v1` DEVICEID Pd Ns release version | the unit |
 
-DEVICEID is FICR `DEVICEID[1]` then `DEVICEID[0]`, each big-endian, as Zephyr's hwinfo hands it out. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. `release` is one byte, 1 for a release build and 0 otherwise, and it is the build the release fragments in `products/<product>/release/` made: the one whose bootloader refuses an older image, which `ports::Dfu::release_build()` reports as the inverse of `downgrade_allowed()`. The server keeps it beside the key; nothing on the air differs, a development unit being a real aircraft with a real serial. The host platform says false unless a case asks for a release. `test/core/test_identity.cpp` builds all three from `schemas/activation.v1.vectors.json` and compares them byte for byte, then signs and verifies each: Ed25519 is deterministic, so the unit's registration signature comes out identical to the one the server's suite checks.
+The attestation is the unit's word on the firmware it runs, over a nonce the server minted, which `attest` asks for on any connection once the unit is activated (`core/comms/README.md`, Attestation).
+
+DEVICEID is FICR `DEVICEID[1]` then `DEVICEID[0]`, each big-endian, as Zephyr's hwinfo hands it out. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. `release` is one byte, 1 for a release build and 0 otherwise, and it is the build the release fragments in `products/<product>/release/` made: the one whose bootloader refuses an older image, which `ports::Dfu::release_build()` reports as the inverse of `downgrade_allowed()`. The server keeps it beside the key; nothing on the air differs, a development unit being a real aircraft with a real serial. The host platform says false unless a case asks for a release. `test/core/test_identity.cpp` builds all four from `schemas/activation.v1.vectors.json` and compares them byte for byte, then signs and verifies each: Ed25519 is deterministic, so the unit's registration signature comes out identical to the one the server's suite checks.
 
 ## The unit
 

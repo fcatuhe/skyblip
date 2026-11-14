@@ -225,6 +225,7 @@
         return this.ask('register', 'confirm_register');
       }
       if (command === 'unlock') return this.unlock(fields);
+      if (command === 'attest' && this.vectors) return this.attest(fields);
       if (this.browsers && BROWSER_COMMANDS.includes(command)) return this.answerBrowser(command, fields);
       return this.acknowledge(false, 'unknown_command');
     }
@@ -377,6 +378,15 @@
       this.address = fields.serial;
       this.name = `skyBlip Go ${fields.serial.toString(16).toUpperCase().padStart(6, '0')}`;
       return this.acknowledge(true, 'unlock');
+    }
+
+    async attest({ server_nonce }) {
+      const { device_id, unit_public_key, unit_seed } = this.vectors;
+      const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
+      const release = !this.downgrade;
+      const message = join(label('attestation'), bytes(device_id, unit_public_key), server_nonce, Uint8Array.of(release ? 1 : 0), encoder.encode(this.running));
+      const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
+      this.reply({ command: 'attestation', device_id, version: this.running, release, signature });
     }
 
     async verifies(signature, message) {

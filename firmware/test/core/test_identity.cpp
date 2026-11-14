@@ -102,6 +102,20 @@ TEST_CASE("identity: the unlock message carries the serial big-endian, and the s
     CHECK(Ed25519::verify(unlock_signature, x.server_key, message.bytes()));
 }
 
+TEST_CASE(
+    "identity: the attestation message ends in the version, and the unit's signature is the "
+    "vectors'") {
+    Exchange x;
+    const identity::Message message = identity::attestation_message(
+        x.device_id, x.unit_key, x.server_nonce, x.release, x.version.c_str());
+    CHECK(same(message.bytes(), x.vectors.message("attestation_message")));
+    const auto attestation_signature = x.vectors.bytes<64>("attestation_signature");
+    CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == attestation_signature);
+    const std::vector<uint8_t> registration = x.vectors.message("registration_message");
+    CHECK_FALSE(Ed25519::verify(attestation_signature, x.unit_key,
+                                ConstByteSpan(registration.data(), registration.size())));
+}
+
 TEST_CASE("identity: no signature passes for another purpose, the labels see to that") {
     Exchange x;
     const auto register_signature = x.vectors.bytes<64>("register_signature");

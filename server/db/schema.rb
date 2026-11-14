@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_153805) do
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
@@ -20,6 +20,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_activation_challenges_on_created_at"
     t.index ["server_nonce"], name: "index_activation_challenges_on_server_nonce", unique: true
+  end
+
+  create_table "attestation_challenges", force: :cascade do |t|
+    t.string "server_nonce", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_attestation_challenges_on_created_at"
+    t.index ["server_nonce"], name: "index_attestation_challenges_on_server_nonce", unique: true
   end
 
   create_table "oauth_clients", force: :cascade do |t|
@@ -83,6 +91,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "unit_firmwares", force: :cascade do |t|
+    t.integer "unit_id", null: false
+    t.string "version", null: false
+    t.boolean "release", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["unit_id", "created_at"], name: "index_unit_firmwares_on_unit_id_and_created_at"
+  end
+
   create_table "unit_keys", force: :cascade do |t|
     t.integer "unit_id", null: false
     t.string "public_key", null: false
@@ -126,5 +143,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
   add_foreign_key "oauth_grants", "users"
   add_foreign_key "oauth_tokens", "oauth_grants", column: "grant_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
+  add_foreign_key "unit_firmwares", "units"
   add_foreign_key "unit_keys", "units"
 end

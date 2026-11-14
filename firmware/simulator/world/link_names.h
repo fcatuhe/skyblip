@@ -266,8 +266,10 @@ inline constexpr Value kCommandValues[] = {
     {"forget_browser", 34},
     {"install_report", 35},
     {"protocols", 36},
+    {"attest", 37},
+    {"attestation", 38},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 37};
+inline constexpr Enumeration kCommand{kCommandValues, 39};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -660,6 +662,19 @@ inline constexpr Key kProtocolsKeys[] = {
     {"alptas_version", 3, Type::Text, nullptr, 0, false},
 };
 
+inline constexpr Key kAttestKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"server_nonce", 1, Type::Bytes, nullptr, 16, true},
+};
+
+inline constexpr Key kAttestationKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"device_id", 1, Type::Bytes, nullptr, 8, true},
+    {"version", 2, Type::Text, nullptr, 0, true},
+    {"release", 3, Type::Boolean, nullptr, 0, true},
+    {"signature", 4, Type::Bytes, nullptr, 64, true},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
@@ -698,6 +713,8 @@ inline constexpr Frame kFrames[] = {
     {"forget_browser", 34, events::Endpoint::Config, Sender::Host, kForgetBrowserKeys, 2},
     {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 10},
     {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
+    {"attest", 37, events::Endpoint::Config, Sender::Host, kAttestKeys, 2},
+    {"attestation", 38, events::Endpoint::Config, Sender::Unit, kAttestationKeys, 5},
 };
 
 }

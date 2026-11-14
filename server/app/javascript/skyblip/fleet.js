@@ -1,3 +1,4 @@
+import { attestationServer } from '#skyblip/attestation';
 import { hasWebBluetooth, permittedDevices, requestDevice } from '#skyblip/ble';
 import { ActivationWitness, DeviceWitness } from '#skyblip/device_journal';
 import { journalOrNull } from '#skyblip/journal';
@@ -135,11 +136,13 @@ export class Fleet {
   #restored = null;
   #seenThisSession = new WeakSet();
   #journal;
+  #attestations;
 
-  constructor({ storage = null, returnEveryMs = RETURN_EVERY_MS, journal = journalOrNull() } = {}) {
+  constructor({ storage = null, returnEveryMs = RETURN_EVERY_MS, journal = journalOrNull(), attestations = null } = {}) {
     this.#storage = storage;
     this.#returnEveryMs = returnEveryMs;
     this.#journal = journal;
+    this.#attestations = attestations;
     for (const record of this.#recall()) this.#units.set(record.slug, new Unit(this, record.slug, record));
   }
 
@@ -214,7 +217,7 @@ export class Fleet {
   }
 
   updaterFor(unit, device) {
-    return new Updater({ device, returnEveryMs: this.#returnEveryMs, onChange: state => this.#heard(unit, state) });
+    return new Updater({ device, returnEveryMs: this.#returnEveryMs, attestations: this.#attestations, onChange: state => this.#heard(unit, state) });
   }
 
   // INFO: fc 14nov26 Chrome closes the chooser as NotFoundError both when the pilot cancels and when Bluetooth is off, and only the message tells them apart
@@ -302,7 +305,7 @@ function localStorageOrNull() {
 
 // INFO: fc 11nov26 Turbo swaps pages without reloading this module, so every link outlives the page that opened it
 export function joinFleet(listener) {
-  shared ??= new Fleet({ storage: localStorageOrNull() });
+  shared ??= new Fleet({ storage: localStorageOrNull(), attestations: attestationServer() });
   const leave = shared.listen(listener);
   return { fleet: shared, leave };
 }

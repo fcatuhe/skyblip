@@ -115,6 +115,10 @@ activation.refused:
   group: Activation
   says: The server refused a challenge or a registration, with the reason the page words, such as `bad_signature`, `other_key`, `revoked_key`, `daily_cap` or `network_cap`, and the `step`.
   answers: Why activations fail on the server, and whether a cap is turning pilots away.
+attestation.refused:
+  group: Units
+  says: The server refused a challenge or a statement of the firmware a unit signed, with the reason, such as `bad_signature`, `unknown_unit`, `no_active_key` or `expired`, and the `step`.
+  answers: Why a unit's firmware goes unrecorded, and whether someone posts statements no unit signed.
 unit.enrolled:
   group: Units
   says: A new DEVICEID got the next serial, with its unit, serial and device slug.
@@ -123,6 +127,10 @@ unit_key.bound:
   group: Units
   says: A registration bound a key to a unit, `active`, `pending` for another key than the one it holds, or `revoked`, with the firmware version and whether it is a release build, and `renewed` when the key was already known.
   answers: How many registrations bring a new key to a known unit, which an owner then writes in about.
+unit.firmware_attested:
+  group: Units
+  says: A unit signed the firmware it runs with its active key, at activation or on a connection to the briefing app, with the version, whether it is a release build, and `changed` when it differs from the one it signed last.
+  answers: Which firmware each unit runs, proven by the unit itself, and when it moved to it.
 unit_key.promoted:
   group: Units
   says: An admin, `by_id`, made a pending key the active one of a unit.
