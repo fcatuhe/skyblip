@@ -32,9 +32,11 @@ An event holds ids, states, versions, counts, durations and error messages, neve
 
 ## Errors
 
-`Event::ErrorReport` turns a reported error into `error.reported`: its class, its message cut to 300 characters, its cause, the first fifteen frames of the app's backtrace, or of the gems' when the app has none, the controller or job that raised it, whether it was handled, and `revision`, the image Kamal deployed. Its `fingerprint` is the class and the method of the first frame without its line number, so the same error from the same place is one problem across edits and deploys. A script's `browser.failed` is fingerprinted by its kind, class, message with its numbers taken out, and its file without the asset digest.
+`Event::ErrorReport` turns a reported error into `error.reported`: its class, its message cut to 300 characters, its cause, the first fifteen frames of the app's backtrace, or of the gems' when the app has none, the controller or job that raised it, whether it was handled, and `revision`, the image Kamal deployed. Its `fingerprint` is the class and the method of the first frame without its line number, so the same error from the same place is one error across edits and deploys. A script's `browser.failed` is fingerprinted by its kind, class, message with its numbers taken out, and its file without the asset digest.
 
-`Event::Problem` groups both by fingerprint: how many times, on how many devices and browsers, first and last seen, and whether it is new in the period. The Errors page and `list_errors` read it. Nothing alerts yet: the app has no mailer, so a new problem waits for someone to look.
+`Event::Error` groups both by fingerprint: how many times, on how many devices and browsers, first and last seen, and whether it is new in the period. The Errors page and `list_errors` read it. Nothing alerts yet: the app has no mailer, so a new error waits for someone to look.
+
+An admin resolves an error once its fix is deployed, on its page or through `resolve_error`, which keeps `resolved_at` in `event_error_resolutions` and records `error.resolved`. A resolved error leaves the list and Insights. Once it happens again after `resolved_at` it is reopened: it comes back flagged, and resolving it again moves `resolved_at`. Reopen on the page takes a resolution back by hand, as `error.reopened`. Nothing is written when an error happens, since reopened is read from the occurrences.
 
 ## Adding an event
 
@@ -58,7 +60,7 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 `Event::Review` computes the numbers for a period, against the period before: browsers and those without Bluetooth, devices connected and how long it takes, links dropped mid-task, choosers closed empty, the notices pilots read most, tasks granted and refused, installs started, succeeded and failed by cause, the firmware the fleet runs, activations and their refusals, the browsers left stranded, errors, the slowest requests, failing jobs and agents' calls. A browser is stranded when its last step in the period was a failure: a notice other than a result, a task refused, a chooser closed empty or refused, an activation refused. Each is a pilot who may have given up there, listed with their support code so an admin can look before they write in.
 
 - **Insights**, in the admin area: the numbers for 7, 30 or 90 days.
-- **Errors**: the problems, and each one's frames and latest occurrences.
+- **Errors**: the errors not resolved, then the resolved ones, and each one's frames, latest occurrences and resolution.
 - **Events**: the catalog with how often each event happened and when it was last seen, an event never seen standing out, and everybody's events narrowed by name, device, support code, fingerprint or request. A unit's page links its timeline.
-- **The MCP server**: `get_insights`, `list_errors`, `list_events` and `get_unit`, for admins only, each read of events logged as `event.listed`. `.agents/skills/improve-skyblip/SKILL.md` says how an agent turns them into changes, and `.agents/skills/help-a-pilot/SKILL.md` how it answers a pilot.
+- **The MCP server**: `get_insights`, `list_errors`, `list_events`, `resolve_error` and `get_unit`, for admins only, each read of events logged as `event.listed` and each resolution as `error.resolved`. `.agents/skills/improve-skyblip/SKILL.md` says how an agent turns them into changes, and `.agents/skills/help-a-pilot/SKILL.md` how it answers a pilot.
 - **The command line**, through Kamal in production: `bin/rails events:review DAYS=30`, `bin/rails events:tail NAME=device.noticed`, `DEVICE=`, `CODE=`, `FINGERPRINT=` and `LAST=`.

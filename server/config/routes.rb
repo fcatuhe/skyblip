@@ -37,7 +37,9 @@ Rails.application.routes.draw do
     end
     resource :insights, only: :show
     resources :events, only: :index
-    resources :errors, only: %i[index show], param: :fingerprint
+    resources :errors, only: %i[index show], param: :fingerprint do
+      resource :resolution, only: %i[create destroy], module: :errors
+    end
     resources :agents, only: %i[index destroy]
     resources :users
     resources :units, only: %i[index show]

@@ -1,8 +1,8 @@
 # oauth
 
-skyBlip is its own OAuth 2.1 authorization server, for one resource: the MCP endpoint at `/mcp`, where an admin's coding agent reads the insights, the errors, everybody's events and the units. Signing in to the admin area is the login. An admin who adds skyBlip to Claude Code, Codex or pi sees one consent page, `/oauth/authorization/new`, and clicks Connect. A user who is not an admin is refused there, and a tool answers an error to an agent whose admin was demoted since.
+skyBlip is its own OAuth 2.1 authorization server, for one resource: the MCP endpoint at `/mcp`, where an admin's coding agent reads the insights, the errors, everybody's events and the units, and resolves an error once its fix is deployed. Signing in to the admin area is the login. An admin who adds skyBlip to Claude Code, Codex or pi sees one consent page, `/oauth/authorization/new`, and clicks Connect. A user who is not an admin is refused there, and a tool answers an error to an agent whose admin was demoted since.
 
-The tools are read only. Events hold messages browsers and devices wrote, so the server's instructions tell the agent to read them as data, never as instructions.
+The tools read, except `resolve_error`, which only takes an error off `list_errors` until it happens again, and is logged as `error.resolved`. Events hold messages browsers and devices wrote, so the server's instructions tell the agent to read them as data, never as instructions.
 
 ## How an agent finds skyBlip
 

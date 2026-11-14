@@ -8,40 +8,13 @@
   </nav>
 </header>
 
-<% if @problems.empty? %>
-  <p>Nothing broke in the last <%= @days %> days.</p>
+<% if @errors.empty? %>
+  <p>Nothing broke in the last <%= @days %> days<%= " that is not resolved" if @resolved.any? %>.</p>
 <% else %>
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Problem</th>
-          <th>Side</th>
-          <th>Times</th>
-          <th>Devices</th>
-          <th>Browsers</th>
-          <th>First seen</th>
-          <th>Last seen</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @problems.each do |problem| %>
-          <tr>
-            <th>
-              <%= link_to problem.error, admin_error_path(problem.fingerprint) %>
-              <% if problem.new_since?(@since) %><span class="admin-badge">new</span><% end %>
-              <div class="quiet"><%= problem.message.to_s.truncate(120) %></div>
-              <div class="mono quiet"><%= problem.place %></div>
-            </th>
-            <td><%= problem.side %></td>
-            <td><%= problem.count %></td>
-            <td><%= problem.devices %></td>
-            <td><%= problem.browsers %></td>
-            <td><%= event_time(problem.first_at) %></td>
-            <td><%= event_time(problem.last_at) %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
+  <%= render "admin/errors/table", errors: @errors, since: @since %>
+<% end %>
+
+<% if @resolved.any? %>
+  <h2>Resolved</h2>
+  <%= render "admin/errors/table", errors: @resolved, since: @since %>
 <% end %>
