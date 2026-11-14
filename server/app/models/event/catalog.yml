@@ -49,8 +49,8 @@ device.disconnected:
 device.read:
   group: Devices
   from: browser
-  keys: [product, running, track, image, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
-  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
+  keys: [product, running, track, image, key, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
+  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, the first four bytes of the signing key it runs as `key`, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
   answers: Which firmware the fleet runs, how many units fell back on their settings or hold a reverted image, and what a unit was like when its pilot asked for help.
 device.noticed:
   group: Devices
@@ -61,8 +61,8 @@ device.noticed:
 device.task_started:
   group: Devices
   from: browser
-  keys: [task, version, full, advice, upgrade]
-  says: The app asked a device to do something that needs its approval, an install, a recovery, a settings save or a capture, with for an install the version, whether the file is the full image, the image the device needs and whether it is newer.
+  keys: [task, version, full, key, sha, advice, upgrade]
+  says: The app asked a device to do something that needs its approval, an install, a recovery, a settings save or a capture, with for an install the version, whether the file is the full image, the first four bytes of the key that signed it as `key`, the first eight bytes of its SHA-256 as `sha`, the image the device needs and whether it is newer.
   answers: How often pilots install, save settings or arm a capture, and with which files.
 device.task_ended:
   group: Devices
@@ -76,6 +76,12 @@ device.install_reported:
   keys: [cause, product, running, tried, image, from, to, check, swap, request_error, boots, probation_boots, proof, reset, report]
   says: The install report a unit gave after an install that did not take, the cause the page worded and every field of the line pilots used to copy and send.
   answers: Why installs fail in the field, without asking the pilot to copy anything.
+device.upload_refused:
+  group: Devices
+  from: browser
+  keys: [reason, version, check, staged_key, key, unit_key]
+  says: A device refused an image once its upload had landed, `nothing_staged`, `not_approved` or `wrong_key` as `reason`, with what it found in slot 1 at the refusal, `check` `matched` when slot 1 held the whole image its digest names, the key it read there as `staged_key`, absent when it found none, beside the file's `key` and the key the device runs as `unit_key`.
+  answers: Why a device refused an image it received, an image signed by another key or a slot it could not read back, without asking the pilot for anything.
 device.installed:
   group: Devices
   from: browser

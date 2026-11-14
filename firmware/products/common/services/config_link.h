@@ -112,7 +112,6 @@ class ConfigLinkService : public runtime::Service {
     static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kPriorSettingsKey = "settings.prior";
-    // TODO: fc 13nov26 the install report's key, which the image that retires it erases (#294)
     static constexpr const char* kReportKey = "install.report";
 
     void drain_link_events(uint32_t now_ms);
@@ -190,7 +189,6 @@ class ConfigLinkService : public runtime::Service {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     bool update_recorded_{false};
-    // TODO: fc 13nov26 the install report, retired with #294 with the four methods that keep it
     dfu::InstallReport report_{};
     bool reported_{false};
 };

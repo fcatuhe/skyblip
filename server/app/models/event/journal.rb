@@ -8,7 +8,8 @@ class Event::Journal
   OLDEST = 30.days
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
-             key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language].freeze
+             key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
+             sha reason staged_key unit_key].freeze
   COUNTS = %w[load_ms line column connect_ms linked_ms battery_percent lasted_ms sent_bytes total_bytes request_error boots
               probation_boots browser_major].freeze
   FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report].freeze
