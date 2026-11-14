@@ -53,14 +53,6 @@ test('a unit not yet activated states nothing, and asks the server for nothing',
   assert.deepEqual(server.requests, []);
 });
 
-test('firmware from before attest answers unknown_command, which the pilot never sees', async () => {
-  const { unit, server, updater } = await connected({ attests: false });
-  await turns();
-  assert.equal(unit.commands.at(-1), 'attest');
-  assert.deepEqual(server.requests, ['attestation_challenge']);
-  assert.equal(updater.state.notice, null);
-});
-
 test('a server out of reach costs the unit no command, and the page no notice', async () => {
   const server = knowing(new FakeServer());
   server.refuseNext = 'unreachable';

@@ -204,7 +204,7 @@ en:
       registering: Getting its serial number
     notices:
       no_bluetooth: This browser does not support Web Bluetooth. Use Chrome or Edge on Android or a computer.
-      not_skyblip: This device has no skyBlip update service. It is not a skyBlip, or its firmware is too old for Bluetooth updates.
+      not_skyblip: This device has no skyBlip update service. It is not a skyBlip.
       link_lost: The connection dropped. Bring the device closer and reconnect. An upload in progress resumes where it stopped.
       not_back: The device did not come back after its restart. Connect it again.
       timeout: The device stopped answering. Reconnect and try again.

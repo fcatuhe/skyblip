@@ -3,7 +3,7 @@ import { Replies } from '#skyblip/replies';
 
 const ANSWER_WITHIN_MS = 5_000;
 // INFO: fc 14nov26 the unit refuses attest with these alone, so an earlier command's refusal is not taken for its answer
-const REFUSALS = new Set(['in_flight', 'keyless', 'small_mtu', 'invalid', 'unknown_command', 'claimed']);
+const REFUSALS = new Set(['in_flight', 'keyless', 'small_mtu', 'invalid', 'claimed']);
 
 const answers = reply => reply.command === 'attestation' || (reply.command === 'acknowledgement' && REFUSALS.has(reply.reason));
 
