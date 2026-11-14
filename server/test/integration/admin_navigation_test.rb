@@ -58,6 +58,17 @@ class AdminNavigationTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # A window opened with noopener leaves the app's browsing context group, so the next link would open yet another window.
+  test "the jobs dashboard opens in its own window, which every link reuses" do
+    sign_in_as users(:francois)
+
+    get admin_users_path
+
+    assert_select "a[href^=?]", admin_mission_control_jobs_path, minimum: 1
+    assert_select "a[href^=?]:not([target=mission_control])", admin_mission_control_jobs_path, count: 0
+    assert_select "a[href^=?][rel~=noopener]", admin_mission_control_jobs_path, count: 0
+  end
+
   test "the jobs dashboard leaves the site its French, even as the first page to translate" do
     sign_in_as users(:francois)
 
