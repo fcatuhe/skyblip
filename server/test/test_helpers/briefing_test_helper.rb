@@ -43,16 +43,6 @@ module BriefingTestHelper
       assert_selector ".unit-row", text: /is out|up to date/, wait: 15
     end
 
-    # INFO: fc 15nov26 the shelf frame brings the changelog, which lands above Install, so a test waits for it before it clicks
-    def open_firmware
-      click_link "Firmware"
-      shelf_on_the_page
-    end
-
-    def shelf_on_the_page
-      assert_selector "turbo-frame#firmware_shelf[complete]", visible: :all
-    end
-
     # INFO: fc 11nov26 BRIEFING_SCREENS=dir saves every screen a test walks through, at phone and laptop sizes, for the pull request
     def screen(name)
       return unless (directory = ENV["BRIEFING_SCREENS"])
