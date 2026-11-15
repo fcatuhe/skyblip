@@ -17,6 +17,7 @@
   }
 
   .kicker {
+    text-wrap: balance;
     font-size: var(--text-xs);
     letter-spacing: 0.23em;
     text-transform: uppercase;
