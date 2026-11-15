@@ -22,7 +22,7 @@ class ReleaseTest < ActiveSupport::TestCase
                                              skyblip-tango-dev-1010.signed.bin embed.js])
 
     assert_equal %w[skyblip-go-dev-1010.signed.bin skyblip-go-dev-1010.full.signed.bin skyblip-bravo-dev-1010.signed.bin], release.firmware_files
-    assert_equal %w[skyblip_go skyblip_go skyblip_bravo], release.firmware_files.map { |file| Release.product_of(file) }
+    assert_equal %w[go go bravo], release.firmware_files.map { |file| Release.product_of(file) }
     assert_nil Release.product_of("embed.js")
   end
 
@@ -34,11 +34,10 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_raises(Release::NotFound) { Release.download("bravo-dev-1010", "skyblip-bravo-dev-1010.signed.bin") }
   end
 
-  # GitHub returns dev-998, dev-1005, dev-1002 in this recording, not newest first.
-  test "the shelf lists releases newest first whatever order GitHub returns" do
+  test "the shelf lists the published development builds newest first, a branch's included" do
     releases = VCR.use_cassette("github/releases") { Release.all }
 
-    assert_equal %w[dev-1005 dev-1002 dev-998], releases.map(&:tag)
+    assert_equal %w[dev-1765 dev-1758 dev-1748 dev-1673-feat-bravo-adsb-trial], releases.map(&:tag)
   end
 
   test "the shelf keeps the newest stable release and every development build, never a release candidate" do
@@ -89,12 +88,14 @@ class ReleaseTest < ActiveSupport::TestCase
     end
   end
 
-  # This recording holds no release with the simulator files.
-  test "without a local build, the prompt glass looks for a release and says when none holds the simulator" do
+  test "without a local build, the prompt glass takes the newest main build that holds the simulator" do
     with_config(simulator_build: nil, local_simulator_only: false) do
-      error = VCR.use_cassette("github/releases") { assert_raises(Release::Unavailable) { Release.prompt_glass_tag } }
-      assert_equal "No release holds the simulator", error.message
+      assert_equal "dev-1765", VCR.use_cassette("github/releases") { Release.prompt_glass_tag }
     end
+  end
+
+  test "the simulator is in no release when none holds its files" do
+    assert_nil Release.simulator([ release("dev-1005", prerelease: true, assets: %w[embed.js]) ])
   end
 
   test "the changelog holds a stable release's news and a main build's technical changes, newest first" do

@@ -14,7 +14,7 @@ export function channelOf(unit) {
 export function fitting(shelf, unit) {
   const image = unit.state?.image
   if (!shelf || !image?.key) return []
-  return [...shelf.options].filter(option => option.value && option.dataset.channel === channelOf(unit) && option.dataset.product === productOf(image))
+  return [...shelf.options].filter(option => option.value && option.dataset.channel === channelOf(unit) && option.dataset.product === productOf(unit.state))
 }
 
 // INFO: fc 11nov26 once per connection, the newest slim image of the unit's track and product is read, so the page knows whether it is behind

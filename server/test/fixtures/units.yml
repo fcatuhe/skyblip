@@ -1,7 +1,19 @@
 bound:
   device_id: 0123456789abcdef
   serial: 1
+  product: go
+  variant: plus
+  bluetooth_tag: 16170
+  activated_at: <%= 10.days.ago %>
 
 contested:
   device_id: fedcba9876543210
   serial: 2
+  product: go
+  activated_at: <%= 10.days.ago %>
+
+bravo:
+  device_id: 5a5a5a5a5a5a5a5a
+  product: bravo
+  variant: standard
+  bluetooth_tag: 16170

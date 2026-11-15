@@ -37,6 +37,7 @@ const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
+const IDENTITY_REFUSALS = new Set(['unknown_command', 'small_mtu', 'no_version']);
 
 class LinkLost extends Error {
   constructor() {
@@ -65,7 +66,17 @@ function imageOf(reply) {
     imu: reply.imu === 'held' ? hex(reply.imu_digest) : reply.imu,
     downgrade: reply.downgrade === true,
     key: reply.key ? hex(reply.key).toUpperCase() : null,
-    product: reply.product ?? null,
+  };
+}
+
+function identityOf(reply) {
+  return {
+    product: reply.product,
+    variant: reply.variant,
+    version: reply.version,
+    release: reply.release,
+    deviceId: hex(reply.device_id),
+    bluetoothTag: reply.bluetooth_tag,
   };
 }
 
@@ -75,12 +86,11 @@ export function protocolsOf(reply) {
     .map(([stem, name]) => ({ name, version: reply[`${stem}_version`] }));
 }
 
-// INFO: fc 10nov26 a Go leaves product out, so an unread frame is a Go too
-export function productOf(image) {
-  return image?.product ?? 'skyblip_go';
+export function productOf({ identity } = {}) {
+  return identity?.product ?? null;
 }
 
-function identityOf(reply) {
+function activationOf(reply) {
   return { address: addressOf(reply) };
 }
 
@@ -135,6 +145,7 @@ export class Updater {
   #dump = {};
   #dumpAsked = false;
   #dumpPending = false;
+  #identityPending = false;
   #windowOpen = false;
   #leaving = false;
   #choice = 0;
@@ -150,6 +161,7 @@ export class Updater {
     task: null,
     device: null,
     image: null,
+    identity: null,
     running: null,
     status: null,
     settings: null,
@@ -374,14 +386,17 @@ export class Updater {
 
   #refusal() {
     const unit = this.#state.image;
-    if (this.#product && this.#product !== productOf(unit)) return 'wrong_product';
-    if (!this.#product && unit?.product) return 'unmarked_image';
+    const product = productOf(this.#state);
+    if (this.#product && product && this.#product !== product) return 'wrong_product';
+    if (!this.#product && product) return 'unmarked_image';
     if (unit?.key && this.#key !== unit.key) return 'wrong_key';
     if (this.#running && !unit?.downgrade && compareVersions(this.#version, this.#running) < 0) return 'older';
     return null;
   }
 
   async #learn() {
+    this.#identityPending = true;
+    await this.#send({ command: 'identity' });
     await this.#send({ command: 'update' });
     await this.#send({ command: 'install_report' });
     await this.#send({ command: 'protocols' });
@@ -426,7 +441,8 @@ export class Updater {
 
   #receive(reply) {
     if (!reply || this.#trust.receive(reply) || this.#attestation?.receive(reply)) return;
-    if (reply.command === 'update') this.#set({ image: imageOf(reply) });
+    if (reply.command === 'identity') this.#identified(reply);
+    else if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
     else if (reply.command === 'config') this.#configured(reply);
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
@@ -438,7 +454,7 @@ export class Updater {
 
   // INFO: fc 15nov26 the dump is asked once the settings are answered, so a small_mtu after it is the dump's own
   #configured(reply) {
-    this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
+    this.#set({ settings: settingsOf(reply), ...activationOf(reply) });
     if (!this.#dumpAsked) this.readDiagnostics();
   }
 
@@ -452,6 +468,11 @@ export class Updater {
     this.#set({ dump, capture: captureOf(dump) });
   }
 
+  #identified(reply) {
+    this.#identityPending = false;
+    this.#set({ identity: identityOf(reply) });
+  }
+
   #reported(reply) {
     this.#set({ installReport: installReportOf(reply), landing: landingOf(reply) });
   }
@@ -459,6 +480,8 @@ export class Updater {
   #acked(reply) {
     const { phase, task } = this.#state;
     if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
+    // INFO: fc 15nov26 identity is asked first, so the first refusal it can earn is its own, and a page goes on without it
+    if (this.#identityPending && IDENTITY_REFUSALS.has(reply.reason)) return (this.#identityPending = false);
     if (this.#dumpPending && ['small_mtu', 'no_statistics'].includes(reply.reason)) return (this.#dumpPending = false);
     if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
@@ -573,18 +596,19 @@ export class Updater {
     this.#dump = {};
     this.#dumpAsked = false;
     this.#dumpPending = false;
+    this.#identityPending = false;
     this.#smp.close(new LinkLost());
     this.#trust.close();
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
+      phase: 'offline', task: null, device: null, identity: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });

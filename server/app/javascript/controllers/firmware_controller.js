@@ -193,7 +193,7 @@ export default class extends Controller {
     const minutes = this.#minutesLeft(progress)
     const left = minutes ? say("words.left", { minutes }) : say("words.estimating")
     const product = productWord(unit)
-    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "skyblip_bravo" ? "words.stops" : "words.stops_with_pad", { product })]
+    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "bravo" ? "words.stops" : "words.stops_with_pad", { product })]
       .map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 
@@ -235,7 +235,7 @@ export default class extends Controller {
   #glass(unit, state) {
     if (!this.glass) return
     const { phase, task, file } = state
-    const lamp = unit.product === "skyblip_bravo"
+    const lamp = unit.product === "bravo"
     const product = productWord(unit)
     if (phase === "confirming" && task === "dfu") this.glass.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
     else if (phase === "confirming" && task === "recovery") this.glass.show({ title: "RECOVERY", prompt: "recovery", product, lamp })

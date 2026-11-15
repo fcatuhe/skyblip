@@ -24,7 +24,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_field "Callsign", with: "F-JXYZ"
       assert_select "Alarm volume", selected: "Soft"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
     end
   end
@@ -34,18 +34,18 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out."
 
       visit "/briefing"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-last", text: /Callsign\s*F-JXYZ/
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       assert_no_link "Update"
       screen "04-device-not-connected"
 
       find(".app-bar-brand").click
       assert_selector "h1", text: "Your devices"
-      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1005 is out/
+      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1765 is out/
       assert_no_selector ".fleet-activate"
       screen "03-home-remembered"
 
@@ -309,6 +309,21 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo connected once is recorded on skyBlip, with the firmware it runs and no serial" do
+    in_range a_bravo(deviceId: "5b5b5b5b5b5b5b5b")
+    on_the_shelf do
+      visit "/briefing"
+      page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
+      click_button "Connect a device"
+      assert_current_path "/briefing/devices/bravo-3f2a"
+      journaled("device.read")
+
+      unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+      assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
+      assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
+    end
+  end
+
   test "a capture refused on Bravo's button arms nothing, and asks nothing more until a reconnect" do
     in_range a_bravo
     on_the_shelf do
@@ -420,7 +435,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
       assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
-      assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"
     end

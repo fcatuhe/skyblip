@@ -6,7 +6,7 @@ class Release
   REPOSITORY = "fcatuhe/skyblip".freeze
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
   TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
-  FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
+  FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
@@ -30,7 +30,7 @@ class Release
     raise Unavailable, "Invalid GitHub release list: #{error.class}"
   end
 
-  def self.product_of(file) = file[FIRMWARE, 1]&.tr("-", "_")
+  def self.product_of(file) = file[FIRMWARE, 1]
   def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "slim"
 
   def self.firmware_shelf(releases)

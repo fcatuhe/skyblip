@@ -97,15 +97,20 @@ export class FakeSkyblip {
     key = PRODUCTION_KEY,
     downgrade = false,
     address = 0x00012a,
-    product = 'skyblip_go',
+    product = 'go',
+    variant = 'standard',
+    deviceId = '8f3a1c2e9b7d4f60',
+    bluetoothTag = 0x5afe,
+    release = !downgrade,
+    identity = true,
     name = 'skyBlip Go 5B5AFE',
     logStore = new FakeLogStore(),
     installReport = {},
-    protocols = product === 'skyblip_bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' },
+    protocols = product === 'bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' },
     evictsFlights = 3,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, key, downgrade, address, product });
+    Object.assign(this, { stored: { ...stored }, key, downgrade, address, product, variant, deviceId, bluetoothTag, release, identity });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -264,6 +269,7 @@ export class FakeSkyblip {
   answer({ command, ...fields }) {
     this.commands.push(command);
     if (this.claimedBy !== null) return this.reply({ command: 'acknowledgement', acknowledge: false, reason: 'claimed', by: this.claimedBy });
+    if (command === 'identity' && this.identity) return this.sendIdentity();
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();
     if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
@@ -405,8 +411,14 @@ export class FakeSkyblip {
     frame.swap_powered = this.swapPowered;
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
-    if (this.product !== 'skyblip_go') frame.product = this.product;
     this.reply(frame, { asked });
+  }
+
+  sendIdentity() {
+    this.reply({
+      command: 'identity', product: this.product, variant: this.variant, version: versionText(parseVersion(this.running)), release: this.release,
+      device_id: this.deviceId, bluetooth_tag: this.bluetoothTag,
+    });
   }
 
   sendStatus() {

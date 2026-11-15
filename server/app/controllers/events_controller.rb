@@ -8,7 +8,7 @@ class EventsController < ApplicationController
 
   def create
     journal = Event::Journal.new(browser: params[:browser], entries: params.expect(entries: [ ENTRY ]),
-      user: Current.user, request_id: request.request_id)
+      user: Current.user, request_id: request.request_id, ip_address: request.remote_ip)
 
     if journal.valid?
       journal.record

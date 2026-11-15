@@ -17,7 +17,7 @@ test('connecting asks the radio protocols, and reads each stack the unit names',
 });
 
 test('a Bravo names its ADS-B stack', async () => {
-  const { until } = await connected({ product: 'skyblip_bravo', protocols: { adsb_version: '0.1.0' } });
+  const { until } = await connected({ product: 'bravo', protocols: { adsb_version: '0.1.0' } });
   const state = await until(state => state.protocols);
   assert.deepEqual(state.protocols, [{ name: 'ADS-B', version: '0.1.0' }]);
 });
@@ -38,7 +38,9 @@ for (const mtu of [23, 104]) {
     const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu, protocols: GO });
     await until(state => state.protocols && state.settings && state.defaults);
     assert.equal(updater.state.notice, null);
-    assert.equal(device.smallMtuRefusals, 0);
+    // The identity frame never fits a 20-byte link, and its refusal raises no notice.
+    assert.equal(updater.state.identity === null, mtu === 23);
+    assert.equal(device.smallMtuRefusals, mtu === 23 ? 1 : 0);
   });
 }
 

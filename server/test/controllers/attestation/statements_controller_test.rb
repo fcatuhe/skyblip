@@ -11,8 +11,19 @@ class Attestation::StatementsControllerTest < ActionDispatch::IntegrationTest
     post attestation_statements_path, params: signed_statement(@challenge, release: false), as: :json
 
     assert_response :created
-    assert_equal({ "version" => vectors["version"], "release" => false }, response.parsed_body)
-    assert_equal [ [ vectors["version"], false ] ], @unit.firmwares.pluck(:version, :release)
+    assert_equal({ "version" => vectors["version"], "release" => false, "variant" => "plus" }, response.parsed_body)
+    assert_equal [ [ vectors["version"], false, "plus", "attested" ] ], @unit.firmwares.pluck(:version, :release, :variant, :source)
+    assert_equal [ "go", "plus" ], [ @unit.reload.product, @unit.variant ]
+  end
+
+  # A Plus whose haptic driver stops answering its probe signs standard from that boot on.
+  test "a unit that signs another variant opens a stretch on it, and the change is journaled" do
+    post attestation_statements_path, params: signed_statement(@challenge), as: :json
+
+    assert_event_reported "unit.variant_changed", payload: { from: "plus", to: "standard", version: vectors["version"] } do
+      post attestation_statements_path, params: signed_statement(Attestation::Challenge.create!, variant: "standard"), as: :json
+    end
+    assert_equal [ "standard", "plus" ], @unit.firmwares.newest_first.pluck(:variant)
   end
 
   test "the same firmware again keeps one row and moves its last signing, and another firmware opens a row" do
@@ -42,6 +53,9 @@ class Attestation::StatementsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
 
+    post attestation_statements_path, params: signed_statement(@challenge).merge(variant: "standard"), as: :json
+    assert_equal({ "error" => "bad_signature" }, response.parsed_body)
+
     post attestation_statements_path, params: signed_statement(@challenge, unit_key: unit_key("11" * 32)), as: :json
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
     assert_empty @unit.firmwares
@@ -62,7 +76,7 @@ class Attestation::StatementsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "refuses a malformed statement, a release that is not a JSON boolean included" do
-    [ { device_id: "XYZ" }, { release: "true" }, { release: 1 }, { version: "" } ].each do |change|
+    [ { device_id: "XYZ" }, { release: "true" }, { release: 1 }, { version: "" }, { product: "tango" }, { variant: nil } ].each do |change|
       post attestation_statements_path, params: signed_statement(@challenge).merge(change), as: :json
 
       assert_response :unprocessable_content

@@ -49,8 +49,8 @@ device.disconnected:
 device.read:
   group: Devices
   from: browser
-  keys: [product, running, track, image, key, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
-  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, the first four bytes of the signing key it runs as `key`, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
+  keys: [product, variant, version, release, device_id, bluetooth_tag, running, track, image, key, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
+  says: Once a connection has learned it, what the device runs and holds, its identity as its identity frame states it, product, variant, version, release build, DEVICEID and Bluetooth tag, absent on firmware without the frame, then its firmware, track, image state, the first four bytes of the signing key it runs as `key`, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
   answers: Which firmware the fleet runs, how many units fell back on their settings or hold a reverted image, and what a unit was like when its pilot asked for help.
 device.noticed:
   group: Devices
@@ -85,8 +85,8 @@ device.upload_refused:
 device.installed:
   group: Devices
   from: browser
-  keys: [from, to, lasted_ms]
-  says: A device came back from an install on the version the app sent, with the version before and how long the whole install took from the upload's start.
+  keys: [from, to, lasted_ms, device_id]
+  says: A device came back from an install on the version the app sent, with the version before, how long the whole install took from the upload's start, and its DEVICEID when its identity frame named it.
   answers: How many installs succeed, how long they take, and the version pilots move from.
 device.diagnosed:
   group: Devices
@@ -133,8 +133,12 @@ unit_key.bound:
   answers: How many registrations bring a new key to a known unit, which an owner then writes in about.
 unit.firmware_attested:
   group: Units
-  says: A unit signed the firmware it runs with its active key, at activation or on a connection to the briefing app, with the version, whether it is a release build, and `changed` when it differs from the one it signed last.
+  says: A unit signed the firmware it runs with its active key, at activation or on a connection to the briefing app, with the version, whether it is a release build, the variant it signed, none at activation, and `changed` when it opened a new stretch.
   answers: Which firmware each unit runs, proven by the unit itself, and when it moved to it.
+unit.variant_changed:
+  group: Units
+  says: A unit was read or signed on another variant than the one before, `from` and `to`, such as a Go+ that boots as a Go, with the firmware it ran.
+  answers: Which units lost or gained a part between two connections, a Plus reading as a Go being the sign of a part that stopped answering its probe.
 unit_key.promoted:
   group: Units
   says: An admin, `by_id`, made a pending key the active one of a unit.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { asking, connected } from './update_session.mjs';
 
-const bravo = (options = {}) => connected({ product: 'skyblip_bravo', ...options });
+const bravo = (options = {}) => connected({ product: 'bravo', ...options });
 
 test('a capture is asked on Bravo and armed by its press', async () => {
   const { device, updater, until } = await bravo();

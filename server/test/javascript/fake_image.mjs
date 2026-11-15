@@ -11,7 +11,7 @@ const TLV_IMU_FULL = 0x00a1;
 const TLV_IMAGE_CLASS = 0x0075;
 const DNS_NAMESPACE = '6ba7b8109dad11d180b400c04fd430c8';
 
-export function signedImage({ major, minor, revision, build }, size, { imu = null, key = PRODUCTION_KEY, product = 'skyblip_go' } = {}) {
+export function signedImage({ major, minor, revision, build }, size, { imu = null, key = PRODUCTION_KEY, product = 'go' } = {}) {
   const bytes = new Uint8Array(size);
   for (let at = 0; at < size; at++) bytes[at] = (at * 31 + 7) & 0xff;
   const protectedArea = imu || product ? protectedTlvs({ ...imu, product }) : new Uint8Array(0);
@@ -53,8 +53,9 @@ function tlvArea(magic, entries) {
   return area;
 }
 
+// INFO: fc 15nov26 the class hashes the firmware's product directory, skyblip_go, not the product the link names
 export function imageClass(product) {
-  return uuid5(uuid5(fromHex(DNS_NAMESPACE), 'skyblip.eu'), product);
+  return uuid5(uuid5(fromHex(DNS_NAMESPACE), 'skyblip.eu'), `skyblip_${product}`);
 }
 
 function uuid5(namespace, name) {

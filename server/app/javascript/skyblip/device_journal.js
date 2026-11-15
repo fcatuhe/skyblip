@@ -110,7 +110,9 @@ export class DeviceWitness {
       if (report) entries.push(['device.install_reported', report]);
     }
     if (this.#returning && this.#install && attempted && state.running === attempted && state.image.state === 'confirmed') {
-      entries.push(['device.installed', { from: this.#install.from, to: state.running, lasted_ms: Math.round(this.#now() - this.#install.since) }]);
+      entries.push(['device.installed', {
+        from: this.#install.from, to: state.running, lasted_ms: Math.round(this.#now() - this.#install.since), device_id: state.identity?.deviceId,
+      }]);
       this.#install = null;
       this.#returning = false;
     }
@@ -118,23 +120,26 @@ export class DeviceWitness {
   }
 }
 
-function readOf({ image, running, trust, address, status }) {
-  const product = productOf(image);
+function readOf(state) {
+  const { image, identity, running, trust, address, status } = state;
+  const product = productOf(state);
   return {
-    product, running, image: image.state, key: image.key,
+    product, variant: identity?.variant, version: identity?.version, release: identity?.release, device_id: identity?.deviceId,
+    bluetooth_tag: identity?.bluetoothTag, running, image: image.state, key: image.key,
     track: image.key ? (image.downgrade ? 'development' : 'release') : null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,
-    activated: product === 'skyblip_go' ? address !== null : null,
+    activated: product === 'go' ? address !== null : null,
     flight: status?.flight, battery_percent: status?.batteryPercent, charging: status?.charging, power_level: status?.powerLevel,
   };
 }
 
-function reportOf({ image, installReport: report, running }, attempted) {
+function reportOf(state, attempted) {
+  const { image, installReport: report, running } = state;
   const cause = installCause({ image, report, running, attempted });
   if (!reportShown({ image, cause })) return null;
   return {
-    cause, product: productOf(image), running, tried: attempted, image: image?.state, from: image?.from, to: image?.to,
+    cause, product: productOf(state), running, tried: attempted, image: image?.state, from: image?.from, to: image?.to,
     report: Boolean(report), check: report?.check, swap: report?.swap, request_error: report?.requestError,
     boots: report?.boots, probation_boots: report?.probationBoots, proof: report?.proof, reset: report?.reset,
   };

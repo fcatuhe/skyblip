@@ -309,7 +309,7 @@ export default class extends Controller {
     if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
     this.glass.show({
-      title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers,
+      title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "bravo", remembers,
       argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
     })

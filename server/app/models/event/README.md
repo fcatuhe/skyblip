@@ -4,7 +4,7 @@ Everything skyBlip does that someone may later want to understand lands as a row
 
 ## What is recorded
 
-- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a key bound, promoted or revoked, a firmware a unit signed, an activation or an attestation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
+- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a unit read on another variant, a key bound, promoted or revoked, a firmware a unit signed, an activation or an attestation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
 - **Traces** from the framework: every request (`action_controller.request_completed`, with controller, action, status and duration), every job run, and a `rescue_from` that answered. The framework's other events, SQL and renders among them, are not kept. A post of a browser's journal is kept only when it was refused, since every open briefing posts every few seconds.
 - **Errors** reported to `Rails.error`, which Rails does for every exception a request or a job raises: `error.reported`, below.
 - **The browser's journal**: what only the page sees, below.
@@ -49,7 +49,7 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 - **Could the browser reach a device at all?** `browser.opened`: `bluetooth` false is a browser without Web Bluetooth, such as any browser on an iPhone.
 - **Did the chooser show the device?** `bluetooth.chooser_closed`: its `detail` tells a pilot who cancelled from a Bluetooth adapter that is off.
 - **Did it connect, and stay connected?** `device.connected` and how long it took, `device.disconnected` and the phase it dropped in.
-- **What was the device like?** `device.read`: firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
+- **What was the device like?** `device.read`: the identity the unit stated, product, variant, version, build, DEVICEID and Bluetooth tag, which `Unit.hear` keeps on the unit's record (`server/README.md`, Every unit a browser meets), then firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
 - **What did the pilot read?** `device.noticed`, every notice the page showed, by the key `config/locales/briefing.*.yml` words it with.
 - **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report. `device.upload_refused` for an image the unit refused once it landed, with what it found in slot 1 and the keys on both sides.
 - **What did the device say about itself?** `device.diagnosed`, the diagnostics dump a pilot sent with Send a report: every counter and state of the radio, the receiver, the cell, the 1090 MHz receiver and the capture, by group, and never a position or an address. `capture.received` for a capture the pilot sent, which the Captures page in the admin area downloads.

@@ -15,8 +15,8 @@ const TLV_IMAGE_CLASS = 0x0075;
 const CLASS_BYTES = 16;
 // INFO: fc 10nov26 uuid5 of the product directory in uuid5(DNS, skyblip.eu), as imgtool signs it (scripts/check_image_product.py)
 const PRODUCT_CLASSES = {
-  d1d4d6655f2b5695ad59f122902c2120: 'skyblip_go',
-  '46d97790da405396a354779456a09465': 'skyblip_bravo',
+  d1d4d6655f2b5695ad59f122902c2120: 'go',
+  '46d97790da405396a354779456a09465': 'bravo',
 };
 const KEY_HASH_BYTES = 32;
 const KEY_PREFIX_BYTES = 4;

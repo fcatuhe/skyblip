@@ -54,6 +54,19 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_not_equal first, other
   end
 
+  # A journal posted again must not open a second stretch from an old read.
+  test "a unit's read is recorded on the unit once, however often its entry arrives" do
+    read = entry("device.read", properties: { product: "bravo", variant: "standard", version: "0.2.0+950", release: true,
+      device_id: "0a0b0c0d0e0f1011", bluetooth_tag: 0x1234 })
+    journal = Event::Journal.new(browser: BROWSER, entries: [ read ])
+
+    2.times { journal.record }
+
+    unit = Unit.find_by!(device_id: "0a0b0c0d0e0f1011")
+    assert_equal [ "bravo", "bravo-1234" ], [ unit.product, unit.slug ]
+    assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
+  end
+
   private
     def entry(name, id: SecureRandom.uuid, at: "2026-11-14T10:00:00Z", **fields)
       { id:, name:, at:, seq: 1, page: SecureRandom.uuid, **fields }

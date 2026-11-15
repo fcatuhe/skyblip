@@ -7,46 +7,46 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       connect_go
       within(".unit-banner") { click_link "Update" }
       assert_current_path "/briefing/devices/go-00012a/firmware"
-      assert_button "Install 0.1.0+1005"
+      assert_button "Install 0.1.0+1765"
       screen "20-firmware-ready"
 
-      click_button "Install 0.1.0+1005"
+      click_button "Install 0.1.0+1765"
       assert_glass "FIRMWARE"
       screen "21-firmware-asking"
 
       page.execute_script("#{unit("00012A")}.press()")
-      assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1765"
       assert_no_selector ".firmware-other"
       assert_no_selector ".unit-menu"
-      assert_selector ".firmware-progress-text", text: /\d+ %, \d+ of 394 kB/
+      assert_selector ".firmware-progress-text", text: /\d+ %, \d+ of 392 kB/
       screen "22-firmware-uploading"
 
       assert_selector ".firmware-status", text: "The device is installing the firmware and restarting. This takes about thirty seconds. It connects again by itself.", wait: 30
       screen "23-firmware-restarting"
 
-      assert_selector ".firmware-status", text: "0.1.0+1005 is starting.", wait: 10
+      assert_selector ".firmware-status", text: "0.1.0+1765 is starting.", wait: 10
       screen "24-firmware-probation"
 
-      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1005.", wait: 10
+      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 10
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
       screen "25-firmware-done"
 
       click_link "Back to settings"
       assert_no_selector ".unit-banner"
-      assert_selector ".unit-row", text: "0.1.0+1005, development · up to date"
+      assert_selector ".unit-row", text: "0.1.0+1765, development · up to date"
     end
   end
 
   test "a device behind is told what changed in every build since its own, up to the one offered" do
-    in_range a_go(running: "0.1.0+1000")
+    in_range a_go(running: "0.1.0+1748")
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      assert_button "Install 0.1.0+1005"
+      assert_button "Install 0.1.0+1765"
       within(".firmware-changes") do
-        assert_equal %w[0.1.0+1005 0.1.0+1002], all("h3").map(&:text)
-        assert_link "ui(radar): draw traffic over the readings and count it as TFC", href: "https://github.com/fcatuhe/skyblip/pull/127"
-        assert_no_text "warble the advisory"
+        assert_equal %w[0.1.0+1765 0.1.0+1758], all("h3").map(&:text)
+        assert_link "infra(deps): track emsdk, doctest and Zephyr with Dependabot", href: "https://github.com/fcatuhe/skyblip/pull/351"
+        assert_no_text "count every question down"
       end
       screen "20a-firmware-changes"
     end
@@ -58,18 +58,18 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      click_button "Install 0.1.0+1005"
+      click_button "Install 0.1.0+1765"
       page.execute_script("#{unit("00012A")}.press()")
-      assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
+      assert_selector ".firmware-status", text: "Sending 0.1.0+1765"
       assert_no_selector ".firmware-report"
       assert_selector ".firmware-status", text: "The device is installing the firmware and restarting", wait: 30
-      assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1005. It kept no record of the installation.", wait: 10
+      assert_selector ".unit-message", text: "The device restarted on 0.1.0+1000 instead of 0.1.0+1765. It kept no record of the installation.", wait: 10
       assert_no_selector ".firmware-progress"
       assert_selector ".firmware-report", text: /skyBlip received the details of this failure\. .* give your support code [0-9A-Z]{4}-[0-9A-Z]{4}\./
       screen "28-firmware-no-record"
 
       reported = journaled("device.install_reported")
-      assert_equal [ "no_record", "0.1.0+1000", "0.1.0+1005", false ], reported.payload.values_at("cause", "running", "tried", "report")
+      assert_equal [ "no_record", "0.1.0+1000", "0.1.0+1765", false ], reported.payload.values_at("cause", "running", "tried", "report")
       assert_equal "go-00012a", reported.device
     end
   end
@@ -92,13 +92,13 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   end
 
   test "a device on the newest image is told so, and can still install a file of its own" do
-    in_range a_go(running: "0.1.0+1005")
+    in_range a_go(running: "0.1.0+1765")
     on_the_shelf do
       connect_go
       assert_selector ".unit-row", text: "up to date"
       assert_no_selector ".unit-banner"
       click_link "Firmware"
-      assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1005."
+      assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1765."
       assert_no_selector ".firmware-changes"
       find(".firmware-other summary").click
       assert_field "Or a file ending in .signed.bin"
@@ -119,12 +119,12 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
         window.fetch = (url, options) => String(url).includes("/briefing/firmwares") ? released.then(() => fetchNow(url, options)) : fetchNow(url, options)
       JS
       click_link "Firmware"
-      assert_button "Install 0.1.0+1005", disabled: true
+      assert_button "Install 0.1.0+1765", disabled: true
       assert_no_selector ".firmware-changes"
 
       page.execute_script("window.releaseShelf()")
-      assert_selector ".firmware-changes", text: "0.1.0+1005"
-      assert_button "Install 0.1.0+1005", disabled: false
+      assert_selector ".firmware-changes", text: "0.1.0+1765"
+      assert_button "Install 0.1.0+1765", disabled: false
     end
   end
 
@@ -133,11 +133,11 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      click_button "Install 0.1.0+1005"
+      click_button "Install 0.1.0+1765"
       assert_glass "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
       assert_selector ".unit-notes", text: "Refused on the device. Nothing changed. Reconnect before the device can ask again."
-      assert_no_button "Install 0.1.0+1005"
+      assert_no_button "Install 0.1.0+1765"
       assert_button "Reconnect"
       screen "27-firmware-refused"
     end
@@ -148,7 +148,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      assert_selector ".firmware-changes", text: "0.1.0+1005"
+      assert_selector ".firmware-changes", text: "0.1.0+1765"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
       assert_glass "RECOVERY"
@@ -169,7 +169,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      assert_button "Install 0.1.0+1005"
+      assert_button "Install 0.1.0+1765"
       page.execute_script(<<~JS)
         window.failures = []
         addEventListener("stimulus:failed", ({ detail }) => failures.push(detail.error.message))
@@ -178,7 +178,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
         Stimulus.unload(identifiers)
         Stimulus.load(definitions)
       JS
-      click_button "Install 0.1.0+1005"
+      click_button "Install 0.1.0+1765"
       assert_selector ".glass-press", text: "Press the Go's button."
       assert_empty page.evaluate_script("failures")
     end
