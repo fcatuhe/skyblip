@@ -93,6 +93,10 @@ void ScreenService::render(uint32_t now_ms) {
     if (notice_) {
         switch (notice_kind_) {
             case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
+            case Notice::BravoAsks:
+                draw_bravo_asks_notice(framebuffer_, seconds_left(bravo_.step_since_ms(), now_ms,
+                                                                  BravoService::kAnswerCeilingMs));
+                break;
             case Notice::NewAircraft:
                 draw_aircraft_notice(framebuffer_, noticed_aircraft_,
                                      seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));

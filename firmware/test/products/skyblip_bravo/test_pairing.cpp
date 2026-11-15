@@ -464,7 +464,7 @@ TEST_CASE("bravo pairing: a Go unpaired with Bravo away unpins it when it asks a
 }
 
 // GPT's review: Bravo restarted after the Go read its health, and the Go read CONNECTED for ever.
-TEST_CASE("bravo pairing: a Go pinned alone by Bravo's restart drops its pin and says so") {
+TEST_CASE("bravo pairing: a Go pinned alone by Bravo's restart asks again, and one press pairs") {
     std::optional<BravoRig> booted{};
     PairedProducts tango;
     tango.ask();
@@ -488,14 +488,27 @@ TEST_CASE("bravo pairing: a Go pinned alone by Bravo's restart drops its pin and
     tango.run_for(5000);
     CHECK_FALSE(tango.go_pinned());
     CHECK_FALSE(rebooted.product.peer().paired());
-    CHECK(tango.go.product.screen().noticing());
-    CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::BravoForgot);
-    for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
-    CHECK(tango.go.platform.link().links() == 3);
+    CHECK(rebooted.product.peer().requested());
+    CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::BravoAsks);
+
+    tango.go.world = [&](uint32_t at_ms) {
+        rebooted.now_ms = at_ms;
+        rebooted.step();
+        tango.air.pump();
+    };
+    rebooted.platform.set_button_down(true);
+    tango.run_for(150);
+    rebooted.platform.set_button_down(false);
+    tango.run_for(5000);
+    CHECK(tango.go_pinned());
+    CHECK(rebooted.product.peer().paired());
+    CHECK(tango.service().link() == go::BravoLink::Up);
+    CHECK_FALSE(tango.go.product.screen().noticing());
 }
 
 // GPT's review: a Go back after Bravo's offer lapsed kept a pin Bravo never stored.
-TEST_CASE("bravo pairing: a Go back after Bravo's offer lapsed drops its pin and says so") {
+TEST_CASE(
+    "bravo pairing: a Go back after Bravo's offer lapsed drops its pin unless Bravo answers") {
     PairedProducts tango;
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Lost);
@@ -515,10 +528,13 @@ TEST_CASE("bravo pairing: a Go back after Bravo's offer lapsed drops its pin and
         CHECK(tango.service().link() != go::BravoLink::Up);
     };
     tango.air.set_in_range(true);
-    tango.run_for(5000);
+    tango.run_for(go::BravoService::kAnswerCeilingMs + 5000);
     CHECK_FALSE(tango.go_pinned());
     CHECK_FALSE(tango.peer().paired());
+    CHECK_FALSE(tango.peer().requested());
     CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::BravoForgot);
+    for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
+    CHECK(tango.go.platform.link().links() == 3);
 }
 
 TEST_CASE("bravo pairing: a Go that leaves its request takes the blinking lamp with it") {
@@ -558,4 +574,45 @@ TEST_CASE("bravo pairing: a second Go's request and a press replace the pin") {
     tango.run_for(2000);
     CHECK(go::paired(second.settings()));
     CHECK(bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo);
+}
+
+// A Go switched off while a second one paired asks again when it comes back, and a press would take
+// Bravo back.
+TEST_CASE("bravo pairing: a Go replaced while away never asks while the new Go is connected") {
+    PairedProducts tango;
+    tango.pair_and_store();
+    tango.air.set_in_range(false);
+    tango.air.drop();
+
+    Rig second{};
+    REQUIRE(second.setup() == Status::Ok);
+    PairedLink second_air{tango.bravo.platform.link(), second.platform.central(), 2, kSecondGo};
+    bool replaced = false;
+    tango.go.world = [&](uint32_t at_ms) {
+        tango.bravo.now_ms = at_ms;
+        tango.bravo.step();
+        tango.air.pump();
+        second.platform.clock().set_milliseconds(at_ms);
+        second.product.run_pass(at_ms);
+        second_air.pump();
+        if (replaced) CHECK_FALSE(tango.peer().requested());
+    };
+    second.show(tango.now_ms, go::Page::Bravo);
+    tango.run_for(300);
+    second.press(tango.now_ms);
+    second.press(tango.now_ms);
+    tango.run_for(2000);
+    tango.press_bravo();
+    tango.run_for(5000);
+    REQUIRE(bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo);
+    replaced = true;
+
+    tango.air.set_in_range(true);
+    tango.run_for(5000);
+    CHECK(tango.service().asking_again());
+    tango.run_for(go::BravoService::kAnswerCeilingMs);
+    CHECK_FALSE(tango.go_pinned());
+    CHECK(go::paired(second.settings()));
+    CHECK(bravo::address_of(tango.bravo.product.settings().peer) == kSecondGo);
+    CHECK(tango.go.product.screen().notice() == go::ScreenService::Notice::BravoForgot);
 }

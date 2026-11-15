@@ -88,14 +88,27 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
         case Heard::Unpinned:
             health_owed_ = true;
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+            ask(*go, now_ms);
             break;
-        case Heard::Asking:
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+        case Heard::Asking: ask(*go, now_ms); break;
+        case Heard::Stranger:
+            go->claimed_pin = true;
+            health_owed_ = true;
             break;
-        case Heard::Stranger: health_owed_ = true; break;
         case Heard::Awaited: break;
     }
+}
+
+// INFO: fc 15nov26 a press must not hand Bravo back to a replaced Go while the new one is here
+void PeerService::ask(Go& go, uint32_t now_ms) {
+    if (go.asked || (go.claimed_pin && pinned_go_connected())) return;
+    if (pairing_.ask(go.address, now_ms)) go.asked = true;
+}
+
+bool PeerService::pinned_go_connected() const {
+    for (const Go& go : gos_)
+        if (go.used && pairing_.pinned_to(go.address)) return true;
+    return false;
 }
 
 // INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo

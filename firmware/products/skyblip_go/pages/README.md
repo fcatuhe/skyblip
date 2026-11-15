@@ -438,7 +438,9 @@ Unpaired, opening it starts the scan, and the page lists each Bravo heard as a r
 
 While it pairs, the page reads `PAIRING` over the tag, then `WAIT`, then `PUSH THE BUTTON ON BRAVO`, and the pad's key cancels. This screen never idles out: the pairing has its own ceilings. The wait for Bravo's button is the one a pilot can watch, so it counts down from `CANCELS IN 30 S` over the keys, `BravoService::kAnswerCeilingMs`, the same 30 s Bravo's request stands on its lamp. A refusal reads `NOT PAIRED` and why: `3 PHONES CONNECTED`, which clears on its own once a phone goes, `LINK TOO SMALL`, `NO DATA FROM BRAVO`, `NO LINK`, or `UNKNOWN PROTOCOL` for a Bravo whose peer frames this Go does not speak, each with what to do. The button's key, `PAIR`, tries again, and is not there for the three phones, which a retry would meet again.
 
-Paired, the page reads the tag and `CONNECTED`, `NOT CONNECTED`, `LINK TOO SMALL` or `UPDATE NECESSARY`. The button asks first, `UNPAIR BRAVO` with the keys `UNPAIR` and `KEEP`, and a second press unpairs and hands the page back. It counts down from `CANCELS IN 30 S` and keeps the pin at zero.
+Paired, the page reads the tag and `CONNECTED`, `NOT CONNECTED`, `LINK TOO SMALL` or `UPDATE NECESSARY`. The button asks first, `UNPAIR BRAVO` with the keys `UNPAIR` and `KEEP`, and a second press unpairs and lists the Bravos in range, so a pilot who replaces one pairs the next on the same page. A pick waits until the Go has told the old Bravo, at most `BravoService::kFarewellCeilingMs`. The question counts down from `CANCELS IN 30 S` and keeps the pin at zero.
+
+A paired Go whose Bravo says it holds no pin for it asks again (`../../../core/comms/README.md`, The Go's link to its Bravo), and says so once over any page but an alarm: `BRAVO LOST THIS GO` and `PUSH THE BUTTON ON BRAVO` under the large mark, counting down `BravoService::kAnswerCeilingMs`, with `CLOSE` on both keys. Closing it leaves the request standing on Bravo's lamp. The notice goes once Bravo answers. With no answer, `BRAVO IS NOT PAIRED` takes its place.
 
 ## The callsign field
 

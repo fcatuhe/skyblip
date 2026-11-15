@@ -80,6 +80,9 @@ class BravoService : public runtime::Service {
     const comms::PeerHealth* health() const { return health_heard_ ? &health_ : nullptr; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
+    // INFO: fc 15nov26 true once when the Go asks its Bravo again, for the glass
+    bool take_asking_notice();
+    bool asking_again() const { return asking_again_; }
 
    private:
     void take_event(const events::CentralEvent& event, uint32_t now_ms);
@@ -100,6 +103,8 @@ class BravoService : public runtime::Service {
     void claim(uint32_t now_ms);
     bool takes_alarm() const;
     std::optional<uint32_t> own_transponder_on_ground() const;
+    void ask_again(uint32_t now_ms);
+    void drop_pin();
     void forget();
     void leave();
     bool linked() const {
@@ -139,6 +144,8 @@ class BravoService : public runtime::Service {
     bool leaving_{false};
     bool farewell_owed_{false};
     bool forgotten_{false};
+    bool asking_again_{false};
+    bool asking_noticed_{false};
 };
 
 }  // namespace skyblip::go

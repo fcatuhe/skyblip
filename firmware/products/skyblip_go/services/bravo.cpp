@@ -58,13 +58,14 @@ void BravoService::tick(uint32_t now_ms) {
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
-    if (paired(settings_)) return;
+    if (paired(settings_) || asking_again_) return;
     end_pairing();
     found_count_ = 0;
     start_scan();
 }
 
 void BravoService::end_pairing() {
+    asking_again_ = false;
     if (step_ == BravoStep::Scanning) central_.stop_scan();
     if (step_ == BravoStep::Connecting || step_ == BravoStep::Waiting) central_.disconnect();
     step_ = BravoStep::Idle;
@@ -72,8 +73,11 @@ void BravoService::end_pairing() {
     release_unless_paired();
 }
 
+// INFO: fc 15nov26 the link to the Bravo just unpaired is the central's one, so a pairing waits for
+// it
 void BravoService::pair(int found_index, uint32_t now_ms) {
-    if (step_ != BravoStep::Scanning || found_index < 0 || found_index >= found_count_) return;
+    if (step_ != BravoStep::Scanning || leaving_ || found_index < 0 || found_index >= found_count_)
+        return;
     central_.stop_scan();
     pairing_with_ = found_[found_index];
     step_ = BravoStep::Connecting;
@@ -85,12 +89,7 @@ void BravoService::pair(int found_index, uint32_t now_ms) {
 void BravoService::unpair() {
     if (!paired(settings_)) return;
     const bool farewell = up_ && link_ == BravoLink::Up;
-    settings_.bravo = events::BluetoothAddress{};
-    config_.note_settings_changed();
-    link_ = BravoLink::Down;
-    health_heard_ = false;
-    utc_heard_ = false;
-    aircraft_address_warning_.unpaired();
+    drop_pin();
     if (farewell) {
         leaving_ = true;
         farewell_owed_ = true;
@@ -104,6 +103,12 @@ bool BravoService::take_forgotten_notice() {
     const bool forgotten = forgotten_;
     forgotten_ = false;
     return forgotten;
+}
+
+bool BravoService::take_asking_notice() {
+    const bool asking = asking_noticed_;
+    asking_noticed_ = false;
+    return asking;
 }
 
 void BravoService::take_event(const events::CentralEvent& event, uint32_t now_ms) {
@@ -187,10 +192,11 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     // INFO: fc 11nov26 only Bravo's press offers its pin, so a health that says false pins nothing
     if (step_ == BravoStep::Waiting && !health.value().paired) return;
     if (step_ == BravoStep::Idle && paired(settings_) && !health.value().paired) {
-        forget();
+        ask_again(now_ms);
         return;
     }
     if (step_ == BravoStep::Waiting) {
+        asking_again_ = false;
         settings_.bravo = pairing_with_;
         config_.note_settings_changed();
         step_ = BravoStep::Idle;
@@ -236,16 +242,32 @@ void BravoService::refuse_protocol() {
     if (connecting_ || up_) central_.disconnect();
 }
 
-// INFO: fc 11nov26 Bravo holds no pin for this Go, so the Go drops its own and says so once
-void BravoService::forget() {
+// INFO: fc 15nov26 Bravo holds no pin for this Go, so the Go asks for the press a new pairing takes
+void BravoService::ask_again(uint32_t now_ms) {
+    pairing_with_ = settings_.bravo;
+    drop_pin();
+    asking_again_ = true;
+    asking_noticed_ = true;
+    step_ = BravoStep::Waiting;
+    step_since_ms_ = now_ms;
+    claim(now_ms);
+}
+
+void BravoService::drop_pin() {
     settings_.bravo = events::BluetoothAddress{};
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
     aircraft_address_warning_.unpaired();
+}
+
+// INFO: fc 11nov26 the Go asked again and Bravo never answered, so the Go says so once
+void BravoService::forget() {
+    asking_again_ = false;
     forgotten_ = true;
-    central_.disconnect();
+    step_ = BravoStep::Idle;
+    refusal_ = BravoRefusal::None;
     release_unless_paired();
 }
 
@@ -253,7 +275,7 @@ void BravoService::leave() {
     leaving_ = false;
     farewell_owed_ = false;
     if (up_ || connecting_) central_.disconnect();
-    release_unless_paired();
+    if (step_ == BravoStep::Idle) release_unless_paired();
 }
 
 void BravoService::start_scan() {
@@ -274,6 +296,10 @@ void BravoService::start_scan() {
 void BravoService::refuse(BravoRefusal refusal) {
     if (step_ == BravoStep::Scanning) central_.stop_scan();
     if (connecting_ || up_) central_.disconnect();
+    if (asking_again_) {
+        forget();
+        return;
+    }
     step_ = BravoStep::Refused;
     refusal_ = refusal;
     release_unless_paired();
