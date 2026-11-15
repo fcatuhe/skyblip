@@ -5,6 +5,7 @@
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
+#include "core/identity/variant.h"
 #include "core/model/aircraft.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
@@ -193,8 +194,16 @@ constexpr bool on_the_wire(model::ClimbSource value) {
 
 constexpr bool on_the_wire(dfu::Product value) {
     switch (value) {
-        case dfu::Product::SkyblipGo:
-        case dfu::Product::SkyblipBravo: return true;
+        case dfu::Product::Go:
+        case dfu::Product::Bravo: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(identity::Variant value) {
+    switch (value) {
+        case identity::Variant::Standard:
+        case identity::Variant::Plus: return true;
     }
     return false;
 }
@@ -361,9 +370,13 @@ static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");
 static_assert(code(model::ClimbSource::Barometric) == 2, "climb_source barometric");
 static_assert(on_the_wire(model::ClimbSource::Unknown), "climb_source");
 
-static_assert(code(dfu::Product::SkyblipGo) == 0, "product skyblip_go");
-static_assert(code(dfu::Product::SkyblipBravo) == 1, "product skyblip_bravo");
-static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
+static_assert(code(dfu::Product::Go) == 0, "product go");
+static_assert(code(dfu::Product::Bravo) == 1, "product bravo");
+static_assert(on_the_wire(dfu::Product::Go), "product");
+
+static_assert(code(identity::Variant::Standard) == 0, "variant standard");
+static_assert(code(identity::Variant::Plus) == 1, "variant plus");
+static_assert(on_the_wire(identity::Variant::Standard), "variant");
 
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");

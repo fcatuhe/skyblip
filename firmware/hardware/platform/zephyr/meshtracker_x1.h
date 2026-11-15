@@ -11,6 +11,7 @@
 #include "hardware/platform/zephyr/adsb_receiver.h"
 #include "hardware/platform/zephyr/ag3335.h"
 #include "hardware/platform/zephyr/bluetooth_tag.h"
+#include "hardware/platform/zephyr/device_id.h"
 #include "hardware/platform/zephyr/dfu.h"
 #include "hardware/platform/zephyr/flash_region.h"
 #include "hardware/platform/zephyr/io.h"
@@ -103,7 +104,7 @@ class MeshtrackerX1 {
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
-    ports::KeylessIdentity identity_{zephyr::bluetooth_tag()};
+    ports::KeylessIdentity identity_{zephyr::device_id(), zephyr::bluetooth_tag()};
     zephyr::Random random_{};
 };
 

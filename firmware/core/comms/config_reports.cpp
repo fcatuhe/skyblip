@@ -18,6 +18,8 @@ static_assert(dfu::HubImageReport::kDigestBytes == link::update_bytes::kImuDiges
               "the update frame carries the whole digest the hub image report holds");
 static_assert(link::update_bytes::kKey <= std::tuple_size<ports::SigningKeyHash>::value,
               "the update frame's key is a prefix of the signing key's hash");
+static_assert(link::identity_bytes::kDeviceId == identity::kDeviceIdBytes,
+              "the identity frame carries the whole DEVICEID");
 
 struct StackVersion {
     RadioProtocol protocol;
@@ -180,6 +182,31 @@ void ConfigService::send_protocols() {
     (void)reply(frame, writer.finish());
 }
 
+void ConfigService::send_identity() {
+    char version[dfu::kVersionTextBytes] = {0};
+    if (!running_version_text(version, sizeof(version))) {
+        refuse(link::Reason::NoVersion);
+        return;
+    }
+    const identity::Unit& unit = identity_->unit();
+    uint8_t frame[IdentityLink::kIdentityFrameBytes];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Identity);
+    writer.add_code(link::identity_key::kProduct, product_);
+    writer.add_code(link::identity_key::kVariant, variant_);
+    writer.add_text(link::identity_key::kVersion, version);
+    writer.add_boolean(link::identity_key::kRelease, dfu_ != nullptr && dfu_->release_build());
+    writer.add_bytes(link::identity_key::kDeviceId,
+                     ConstByteSpan(unit.device_id().data(), link::identity_bytes::kDeviceId));
+    writer.add_unsigned(link::identity_key::kBluetoothTag, unit.activation().bluetooth_tag);
+    const int bytes = writer.finish();
+    if (bytes == 0) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(frame, bytes);
+}
+
 bool ConfigService::carries(RadioProtocol protocol) const {
     return std::any_of(radio_protocols_.begin(), radio_protocols_.end(),
                        [protocol](RadioProtocol carried) { return carried == protocol; });
@@ -220,9 +247,6 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     if (dfu_ != nullptr && dfu_->running_key(trusted))
         writer.add_bytes(link::update_key::kKey,
                          ConstByteSpan(trusted.data(), link::update_bytes::kKey));
-    // INFO: fc 10nov26 absent reads as skyblip_go, which keeps a Go's frame inside a 20-byte link
-    if (product_ && *product_ != dfu::Product::SkyblipGo)
-        writer.add_code(link::update_key::kProduct, *product_);
     return writer.finish();
 }
 

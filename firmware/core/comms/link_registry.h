@@ -48,6 +48,7 @@ enum class Command : uint8_t {
     Protocols = 36,
     Attest = 37,
     Attestation = 38,
+    Identity = 39,
 };
 
 enum class Reason : uint8_t {
@@ -275,7 +276,6 @@ enum : uint32_t {
     kImuDigest = 7,
     kDowngrade = 8,
     kKey = 9,
-    kProduct = 10,
 };
 }
 
@@ -575,16 +575,33 @@ constexpr size_t kServerNonce = 16;
 
 namespace attestation_key {
 enum : uint32_t {
-    kDeviceId = 1,
-    kVersion = 2,
-    kRelease = 3,
-    kSignature = 4,
+    kProduct = 1,
+    kVariant = 2,
+    kVersion = 3,
+    kRelease = 4,
+    kDeviceId = 5,
+    kSignature = 6,
 };
 }
 
 namespace attestation_bytes {
 constexpr size_t kDeviceId = 8;
 constexpr size_t kSignature = 64;
+}
+
+namespace identity_key {
+enum : uint32_t {
+    kProduct = 1,
+    kVariant = 2,
+    kVersion = 3,
+    kRelease = 4,
+    kDeviceId = 5,
+    kBluetoothTag = 6,
+};
+}
+
+namespace identity_bytes {
+constexpr size_t kDeviceId = 8;
 }
 
 namespace defaults_key = config_key;
@@ -619,7 +636,8 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Browser:
         case Command::InstallReport:
         case Command::Protocols:
-        case Command::Attestation: return 0x1;
+        case Command::Attestation:
+        case Command::Identity: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:

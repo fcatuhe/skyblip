@@ -1424,12 +1424,6 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 9,
           "type": "bytes",
           "bytes": 4
-        },
-        {
-          "name": "product",
-          "number": 10,
-          "type": "enum",
-          "enum": "product"
         }
       ]
     },
@@ -2508,29 +2502,96 @@ export const LINK_REGISTRY = Object.freeze({
           "enum": "command"
         },
         {
-          "name": "device_id",
+          "name": "product",
           "number": 1,
-          "type": "bytes",
-          "bytes": 8,
+          "type": "enum",
+          "enum": "product",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "number": 2,
+          "type": "enum",
+          "enum": "variant",
           "required": true
         },
         {
           "name": "version",
-          "number": 2,
+          "number": 3,
           "type": "text",
           "required": true
         },
         {
           "name": "release",
-          "number": 3,
+          "number": 4,
           "type": "boolean",
           "required": true
         },
         {
+          "name": "device_id",
+          "number": 5,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        },
+        {
           "name": "signature",
-          "number": 4,
+          "number": 6,
           "type": "bytes",
           "bytes": 64,
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "identity",
+      "code": 39,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "product",
+          "number": 1,
+          "type": "enum",
+          "enum": "product",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "number": 2,
+          "type": "enum",
+          "enum": "variant",
+          "required": true
+        },
+        {
+          "name": "version",
+          "number": 3,
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "release",
+          "number": 4,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "device_id",
+          "number": 5,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        },
+        {
+          "name": "bluetooth_tag",
+          "number": 6,
+          "type": "unsigned",
           "required": true
         }
       ]
@@ -3249,14 +3310,32 @@ export const LINK_REGISTRY = Object.freeze({
       },
       "values": [
         {
-          "name": "skyblip_go",
+          "name": "go",
           "code": 0,
-          "mirrors": "SkyblipGo"
+          "mirrors": "Go"
         },
         {
-          "name": "skyblip_bravo",
+          "name": "bravo",
           "code": 1,
-          "mirrors": "SkyblipBravo"
+          "mirrors": "Bravo"
+        }
+      ]
+    },
+    "variant": {
+      "mirrors": {
+        "type": "identity::Variant",
+        "header": "core/identity/variant.h"
+      },
+      "values": [
+        {
+          "name": "standard",
+          "code": 0,
+          "mirrors": "Standard"
+        },
+        {
+          "name": "plus",
+          "code": 1,
+          "mirrors": "Plus"
         }
       ]
     },
@@ -3585,6 +3664,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "attestation",
           "code": 38
+        },
+        {
+          "name": "identity",
+          "code": 39
         }
       ]
     }

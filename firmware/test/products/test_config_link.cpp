@@ -80,12 +80,8 @@ struct LinkRig {
     runtime::Context context{roles, bus, state, recorder};
     power::CutoffMonitor cutoff{};
     WideSettings settings;
-    common::ConfigLinkService link{context,
-                                   settings,
-                                   cutoff,
-                                   "skyBlip Test",
-                                   identity::bluetooth_name,
-                                   dfu::Product::SkyblipGo};
+    common::ConfigLinkService link{
+        context, settings, cutoff, "skyBlip Test", identity::bluetooth_name, dfu::Product::Go};
 
     void change_and_flush() {
         link.load();

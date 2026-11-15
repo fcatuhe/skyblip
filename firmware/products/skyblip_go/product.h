@@ -64,6 +64,7 @@ class Product {
         const Status board = board_.begin();
         roles_.capabilities = board_.capabilities();
         config_link_.set_product_name(product_name(roles_.capabilities));
+        config_link_.config().set_variant(variant_of(roles_.capabilities));
         const power::ResetCause causes = platform_.system_power().reset_causes();
         reset_reason_ = power::classify(causes);
         // The register is read once and then only remembered, so the companion
@@ -478,7 +479,7 @@ class Product {
     SettingsStore settings_store_{settings_, state_.activation, state_.own_transponder};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,          power_.cutoff_monitor(),
-        "skyBlip Go", identity::bluetooth_name, dfu::Product::SkyblipGo};
+        "skyBlip Go", identity::bluetooth_name, dfu::Product::Go};
     common::OwnshipService ownship_{context_, settings_.aircraft_type};
     RadioService radio_{context_, settings_};
     common::TrafficService traffic_{context_, kFeatures, settings_.aircraft_address};
