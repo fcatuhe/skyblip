@@ -78,8 +78,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     report = { check: "matched", swap: "test", request_error: 0, boots: 2, probation_boots: 1, proof: "started", reset: "watchdog" }
     in_range a_bravo(image: "reverted", from: "0.1.0+40", to: "0.1.0+44", installReport: report)
     on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
+      connect_go
       click_link "Firmware"
       assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
       assert_selector ".firmware-report", text: "skyBlip received the details of this failure."
