@@ -103,6 +103,12 @@ class ConfigService {
 
     TrustedBrowsers& trusted_browsers() { return browsers_.trusted(); }
     bool browsers_dirty() const { return browsers_dirty_; }
+    // INFO: fc 15nov26 the glass's own way to clear the list, as a lost phone keeps its trust till
+    // then
+    void forget_browsers() {
+        browsers_.forget_all();
+        browsers_dirty_ = true;
+    }
     void clear_browsers_dirty() { browsers_dirty_ = false; }
 
     // Drives the upload-window timeout. Called once per App::step().

@@ -44,6 +44,7 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
         ClearSnapshot clear;
         clear.title = menu_row_label(editor_.field());
         clear.text = editor_.text();
+        if (editor_.field() == MenuRow::Browsers) clear.lines = kBrowsersClearLines;
         clear.seconds_left = editor_.clear_seconds_left(now_ms);
         draw_clear(framebuffer_, clear);
         return;

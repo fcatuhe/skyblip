@@ -247,6 +247,7 @@ MenuValues ScreenService::menu_values() const {
     values.light = backlight_;
     values.detected = detected();
     values.own_transponder = context_.state.own_transponder;
+    values.browsers = config_.trusted_browsers().count();
     return values;
 }
 
@@ -274,6 +275,10 @@ void ScreenService::step_editor(uint32_t now_ms) {
         case MenuAction::Light:
             set_backlight(next.light);
             leave_menu();
+            break;
+        case MenuAction::ForgetBrowsers:
+            config_.forget_browsers();
+            dirty_ = true;
             break;
         case MenuAction::None:
         default: break;

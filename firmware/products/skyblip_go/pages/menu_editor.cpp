@@ -192,8 +192,17 @@ MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
 MenuAction MenuEditor::confirm_clear(const MenuValues& current, MenuValues& next) {
     close_field();
     next = current;
+    if (field_ == MenuRow::Browsers) return MenuAction::ForgetBrowsers;
     next.settings.aircraft_address = kAircraftAddressUnset;
     return MenuAction::Changed;
+}
+
+MenuAction MenuEditor::ask_forget_browsers(const MenuValues& current) {
+    if (current.browsers == 0) return MenuAction::None;
+    field_ = MenuRow::Browsers;
+    text_[format_unsigned(text_, static_cast<uint32_t>(current.browsers))] = 0;
+    clearing_ = true;
+    return MenuAction::Moved;
 }
 
 MenuAction MenuEditor::keep() {
@@ -220,6 +229,7 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             focus_ = 0;
             return MenuAction::Moved;
         case MenuRow::Detected: return use_detected(current, next);
+        case MenuRow::Browsers: return ask_forget_browsers(current);
         case MenuRow::Callsign:
         case MenuRow::AircraftAddress: edit(row, current); return MenuAction::Moved;
         case MenuRow::AircraftType:

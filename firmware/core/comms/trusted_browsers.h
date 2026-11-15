@@ -36,6 +36,7 @@ class TrustedBrowsers {
     // INFO: fc 13nov26 a ninth browser replaces the one stored first, so a lost browser ages out
     void store(const crypto::Ed25519::PublicKey& key, const char* label);
     bool forget(const BrowserId& id);
+    void forget_all() { *this = TrustedBrowsers{}; }
 
     size_t to_blob(uint8_t* out, size_t capacity) const;
     bool adopt(const uint8_t* blob, size_t bytes);

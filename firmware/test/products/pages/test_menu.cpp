@@ -109,12 +109,12 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
-// Eight rows and seven lines: the rows slide up under the focus, one line at a time.
+// Nine rows and seven lines: the rows slide up under the focus, one line at a time.
 TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
     MenuValues values = default_menu_values();
     values.settings.alarm_volume = go::AlarmVolume::Soft;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 1);
+    REQUIRE(menu.row_count == kMenuLines + 2);
 
     const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
     CHECK(line_of(top, MenuRow::Light) == 0);
@@ -123,13 +123,14 @@ TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps
     CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
     CHECK(reads_pad_key(top.canvas, "NEXT"));
 
-    const Drawn last = page_of(Page::Radar, values, MenuRow::Bravo);
-    CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
-    CHECK(row_label_reads(last, MenuRow::Bravo, true));
-    CHECK(row_value_reads(last, MenuRow::Bravo, "NONE", true));
+    const Drawn last = page_of(Page::Radar, values, MenuRow::Browsers);
+    CHECK(line_of(last, MenuRow::Browsers) == kMenuLines - 1);
+    CHECK(row_label_reads(last, MenuRow::Browsers, true));
+    CHECK(row_value_reads(last, MenuRow::Browsers, "NONE", true));
+    CHECK(row_value_reads(last, MenuRow::Bravo, "NONE", false));
     CHECK(row_value_reads(last, MenuRow::Volume, "SOFT", false));
-    CHECK(row_label_reads(last, MenuRow::Aircraft, false));
-    CHECK(line_of(last, MenuRow::Aircraft) == 0);
+    CHECK(row_label_reads(last, MenuRow::Units, false));
+    CHECK(line_of(last, MenuRow::Units) == 0);
     // Off the last row the pad hands the glass back, and the key says so.
     CHECK(reads_pad_key(last.canvas, "BACK"));
 }
