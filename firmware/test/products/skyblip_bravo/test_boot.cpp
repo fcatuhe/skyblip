@@ -51,6 +51,24 @@ TEST_CASE("bravo: a unit keeps no key, so an activation request is refused keyle
     CHECK_FALSE(rig.state().activation.activated());
 }
 
+// Bravo has no glass, so a browser it trusts is what spares the pilot a blind press.
+TEST_CASE("bravo: a unit with no key still draws a browser challenge from its RNG") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.send("{\"command\":\"browser_challenge\"}");
+    rig.run_for(200);
+    const std::string reply = rig.last_on(events::Endpoint::Config);
+    CHECK(reply.find("\"command\":\"browser_challenge\"") != std::string::npos);
+    CHECK(reply.find("keyless") == std::string::npos);
+}
+
+TEST_CASE("bravo: each boot draws its peer boot epoch from the RNG") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.platform.random().draws > 0);
+    CHECK(rig.product.peer().boot_epoch() != 0);
+}
+
 TEST_CASE("bravo: a unit whose receiver does not answer refuses to fly and advertises nothing") {
     BravoRig rig(ports::without(platform::host::MeshtrackerX1::kFullyFitted,
                                 ports::Capability::AdsbReceiver));

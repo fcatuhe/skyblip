@@ -54,6 +54,7 @@ class PeerService : public runtime::Service {
         events::BluetoothAddress address{};
         bool asked{false};
         bool used{false};
+        bool claimed_pin{false};
     };
 
     struct AlarmRequest {
@@ -62,6 +63,8 @@ class PeerService : public runtime::Service {
     };
 
     void forget_gone();
+    void ask(Go& go, uint32_t now_ms);
+    bool pinned_go_connected() const;
     void hear_alarm_request(const events::BluetoothAddress& go, bool requested, uint32_t now_ms);
     void expire_alarm_request(uint32_t now_ms);
     bool grants_alarm_to(const events::BluetoothAddress& go) const;

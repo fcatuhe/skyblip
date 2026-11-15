@@ -8,7 +8,7 @@ namespace skyblip::bravo {
 
 void ButtonService::tick(uint32_t now_ms) {
     sync_prompt(now_ms);
-    pairing_.sync(peer_.requested(), pairing_readable(), now_ms);
+    sync_pairing(now_ms);
     sync_receiving(now_ms);
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
@@ -17,10 +17,10 @@ void ButtonService::tick(uint32_t now_ms) {
         const bool pressed = !event.down && answer_.pressing() &&
                              event.at_ms - answer_.pressed_ms() < power::kLongPressHoldMs;
         answer_.contact(event, now_ms);
-        pairing_.contact(answer_, now_ms);
+        pairing_.contact(event, now_ms);
         if (pressed) press(now_ms);
     }
-    pairing_.arm_once_quiet(answer_, pairing_readable(), now_ms);
+    if (requested_) pairing_.arm_once_quiet(pairing_readable(), now_ms);
     if (answering()) answer_.arm_once_quiet(prompt_readable(), now_ms);
 }
 
@@ -33,6 +33,15 @@ void ButtonService::sync_prompt(uint32_t now_ms) {
     prompt_ = pending;
     prompts_staged_ = staged;
     answer_.ask(now_ms);
+}
+
+// INFO: fc 11nov26 an advisory or a prompt that takes the lamp disarms the pairing press
+void ButtonService::sync_pairing(uint32_t now_ms) {
+    if (!pairing_readable()) pairing_.disarm();
+    const bool requested = peer_.requested();
+    if (requested == requested_) return;
+    requested_ = requested;
+    pairing_.ask(now_ms);
 }
 
 // INFO: fc 12nov26 as on the Go's glass: the lamp shows the prompt and the thumb is up and still
@@ -63,7 +72,7 @@ void ButtonService::press(uint32_t now_ms) {
         return;
     }
     if (pairing_.armed()) {
-        if (peer_.answer(now_ms)) pairing_.spend();
+        if (peer_.answer(now_ms)) pairing_.disarm();
         return;
     }
     if (answering()) return;

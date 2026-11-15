@@ -19,11 +19,9 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
-    uint8_t epoch[sizeof(boot_epoch_)] = {};
-    if (context_.roles.identity.draw_random(ByteSpan(epoch, sizeof(epoch))))
-        boot_epoch_ = static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
-                      (static_cast<uint32_t>(epoch[2]) << 16) |
-                      (static_cast<uint32_t>(epoch[3]) << 24);
+    const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
+    if (!epoch) return Status::Down;
+    boot_epoch_ = *epoch;
     keep_pin();
     return Status::Ok;
 }
@@ -90,14 +88,26 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
         case Heard::Unpinned:
             health_owed_ = true;
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+            ask(*go, now_ms);
             break;
-        case Heard::Asking:
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+        case Heard::Asking: ask(*go, now_ms); break;
+        case Heard::Stranger:
+            go->claimed_pin = true;
+            health_owed_ = true;
             break;
-        case Heard::Stranger: health_owed_ = true; break;
         case Heard::Awaited: break;
     }
+}
+
+// INFO: fc 15nov26 a press must not hand Bravo back to a replaced Go while the new one is here
+void PeerService::ask(Go& go, uint32_t now_ms) {
+    if (go.asked || (go.claimed_pin && pinned_go_connected())) return;
+    if (pairing_.ask(go.address, now_ms)) go.asked = true;
+}
+
+bool PeerService::pinned_go_connected() const {
+    return std::any_of(gos_.begin(), gos_.end(),
+                       [&](const Go& go) { return go.used && pairing_.pinned_to(go.address); });
 }
 
 // INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo

@@ -6,6 +6,7 @@
 #include "core/diagnostics/payload.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "products/common/services/record_store.h"
 #include "products/skyblip_go/flash_window.h"
 #include "test/support/product_rig.h"
@@ -39,6 +40,7 @@ struct StoreRig {
     platform::host::Clock clock;
     platform::host::Link link;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::FlashRegion& flash;
     ports::Roles roles;
@@ -54,7 +56,7 @@ struct StoreRig {
         : flash(region),
           roles{clock,     null.rf,          link,     null.display,         null.key_value,
                 region,    null.annunciator, null.dfu, null.die_temperature, null.indicator,
-                null.gnss, identity} {
+                null.gnss, identity,         random} {
         roles.capabilities = ports::Capability::Storage | ports::Capability::Link;
         link.raise_link(1);
     }

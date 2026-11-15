@@ -43,7 +43,7 @@ Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps A
 
 ## Prompts without a screen
 
-A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds.
+A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds. A browser Bravo trusts changes the settings and starts an update with no press (`core/comms/README.md`, Trusted browsers). Bravo holds no key, and draws the challenge's nonce from its RNG.
 
 `common::PromptAnswer` (`../common/prompt_answer.h`) arms the answer only once the lamp shows the prompt, the button is up, and it has been up for `kAnswerSettleMs` since its last release and since the prompt arrived. A contact that began before it armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release. A prompt replaced by another of the same kind disarms it as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the answer stays disarmed and a press dismisses the advisory.
 
@@ -104,9 +104,9 @@ A pairing interrupted on either side leaves no pin on one side alone for long:
 - before the press, nothing is stored on either side;
 - a `health` lost after the press leaves the Go unpinned. It refuses for no answer, and the offer expires. A Go that asks again on a new connection, before the offer expires, drops the offer and needs a new press;
 - a Go that pinned and lost the link before Bravo read its confirmation reconnects. Within the offer window its first claim completes Bravo's half;
-- after the offer window, or after Bravo restarted, the Go's first claim on the new connection is answered at once with `health` saying `paired` false. The Go drops its pin, frees its phone slot, never reads `CONNECTED`, and its glass shows `NOT PAIRED ON BRAVO`.
+- after the offer window, or after Bravo restarted, the Go's first claim on the new connection is answered at once with `health` saying `paired` false. The Go drops its pin, never reads `CONNECTED`, and asks again: the lamp blinks blue, and one press pairs both sides. With no press in time the Go frees its phone slot and its glass shows `NOT PAIRED ON BRAVO`.
 
-So a pin on the Go alone lasts until the Go next reaches Bravo, and is cleared on the first `health` after its first claim. A pin on Bravo alone needs the Go to restart inside its 3 s settings write after reading Bravo's `health`. Bravo cannot tell that Go from a paired Go switched off, so its pin stays until that Go asks again or another Go replaces it.
+So a pin on the Go alone lasts until the Go next reaches Bravo, and is cleared on the first `health` after its first claim. Bravo raises no request from a Go it told `paired` false on that connection while its pinned Go is connected (`PeerService::ask`), so a Go another one replaced cannot take Bravo back with a stray press. A pin on Bravo alone needs the Go to restart inside its 3 s settings write after reading Bravo's `health`. Bravo cannot tell that Go from a paired Go switched off, so its pin stays until that Go asks again or another Go replaces it.
 
 A Go that unpairs while connected says so: it writes one `peer_claim` with `paired` false and keeps the link until Bravo's `health` answers `paired` false, at most `BravoService::kFarewellCeilingMs`, 2 s. Bravo drops its pin and frees the kept connection on that claim. A Go unpaired while away from Bravo cannot say so, and Bravo keeps its pin until that Go asks it again or another Go replaces it. A farewell lost on the link ends the same way, since the Go drops the link after 2 s whether Bravo answered or not. A Go that asks to pair while Bravo holds its pin has unpaired, so Bravo drops its pin and shows the request. Another Go's request answered with a press replaces the pin, and the old Go's next claim is answered `paired` false, so it drops its own.
 
@@ -219,7 +219,7 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 
 ## Untested on silicon
 
-The host suite runs every service above on the part models. On an X1 nothing has run. The bench (#169) checks, in this order:
+The host suite runs every service above on the part models. On an X1, a Go has paired: its request blinked the lamp blue and one press paired both sides. The bench (#169) checks the rest, in this order:
 
 - the image boots from the `.uf2`;
 - the lamp winks blue, then green once the AG3335 has a fix, and the button switches the unit off and on, and the hand feels three pulses going off and one coming on;
@@ -231,7 +231,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - a capture armed from its Briefing device page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
 - a switch-off reaches SYSTEM OFF with the off current measured, and a cable plugged in leaves it off;
 - after a switch-off, the button held while the cable goes in opens the `X1` drive with the LED white, and released within 3 s it boots the unit, which depends on what the reset circuit makes of the cable;
-- a Go pairs: its request blinks the lamp blue, one press pairs both sides, and both keep the pin across a power cycle of either;
+- both sides of a pairing keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;
 - the Go's BRAVO page reads `CONNECTED`, and an aircraft Bravo hears reaches the Go as `observation` frames, at most two a second;
 - paired with a Go+ that has a fix, an advisory sounds on the Go+ alone, and Bravo sounds again within 3 s of the Go+ switching off;

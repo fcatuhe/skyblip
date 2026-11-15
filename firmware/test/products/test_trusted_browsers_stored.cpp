@@ -1,6 +1,7 @@
 // The trusted browsers live in NVS beside the settings, written as the settings are.
 #include <string>
 
+#include "core/comms/link_registry.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "test/support/product_rig.h"
@@ -19,7 +20,7 @@ std::string hex_text(ConstByteSpan bytes) {
 }
 
 std::string trust_browser() {
-    std::string message = "skyblip:browser:v1";
+    std::string message = link::trust_browser_signed_over::kSignature;
     message.append(reinterpret_cast<const char*>(kNonce.data()), kNonce.size());
     const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
         kBrowserSeed,
@@ -40,7 +41,7 @@ void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
 }
 
 void prove(Rig& rig, uint32_t& now_ms) {
-    rig.platform.identity().queue_random(kNonce);
+    rig.platform.random().queue(kNonce);
     say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
     say(rig, now_ms, trust_browser());
 }

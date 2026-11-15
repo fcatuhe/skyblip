@@ -4,6 +4,7 @@
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/die_temperature.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "products/common/services/power.h"
 
@@ -14,11 +15,12 @@ namespace {
 struct ThermalRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     platform::host::DieTemperature sensor{};
-    ports::Roles roles{clock,          null.rf,        null.link,        null.display,
-                       null.key_value, null.log_flash, null.annunciator, null.dfu,
-                       sensor,         null.indicator, null.gnss,        identity};
+    ports::Roles roles{clock,          null.rf,          null.link, null.display, null.key_value,
+                       null.log_flash, null.annunciator, null.dfu,  sensor,       null.indicator,
+                       null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

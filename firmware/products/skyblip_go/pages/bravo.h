@@ -29,6 +29,7 @@ struct BravoSnapshot {
 
 void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot);
 void draw_bravo_forgot_notice(ui::Canvas& canvas);
+void draw_bravo_asks_notice(ui::Canvas& canvas, uint32_t seconds_left);
 
 enum class BravoAction : uint8_t { None, Redraw, Leave, Pair, Cancel, Retry, Unpair };
 

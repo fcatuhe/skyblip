@@ -123,6 +123,8 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
     REQUIRE(tango.go.product.screen().bravo_page().unpairing());
     tango.go.press(tango.now_ms);
     tango.run_for(5000);
+    tango.go.tap(tango.now_ms);
+    tango.run_for(500);
 
     CHECK_FALSE(go::paired(tango.go.settings()));
     CHECK_FALSE(tango.go.platform.central().up());
@@ -135,6 +137,27 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
 
     for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
     CHECK(tango.go.platform.link().links() == 3);
+}
+
+// A pilot who unpairs a Bravo is often replacing it, so the page lists the Bravos in range.
+TEST_CASE("bravo pairing: unpairing lists the Bravos in range, and the next press pairs one") {
+    Tango tango;
+    tango.pair_and_store();
+    tango.go.show(tango.now_ms, go::Page::Bravo);
+    tango.go.press(tango.now_ms);
+    tango.go.press(tango.now_ms);
+    tango.run_for(5000);
+    CHECK(tango.go.product.screen().page() == go::Page::Bravo);
+    CHECK(tango.service().step() == go::BravoStep::Scanning);
+    REQUIRE(tango.service().found_count() == 1);
+    for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
+    CHECK(tango.go.platform.link().links() == 2);
+
+    tango.go.press(tango.now_ms);
+    tango.go.press(tango.now_ms);
+    tango.run_for(2000);
+    CHECK(tango.go.settings().bravo == PairedLink::kPeripheralAddress);
+    CHECK(tango.service().link() == go::BravoLink::Up);
 }
 
 TEST_CASE("bravo pairing: three phones connected refuse the pairing until one goes") {

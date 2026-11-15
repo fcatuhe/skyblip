@@ -19,6 +19,8 @@ constexpr int kDetailBytes = kGlassWidth / ui::kCellWidth + 1;
 constexpr BodyLine kForgotNoticeBody[] = {{"BRAVO IS NOT"},   {"PAIRED"},  {""},
                                           {"THE GO REMOVED"}, {"IT TOO"},  {""},
                                           {"PAIR AGAIN IN"},  {"SETTINGS"}};
+constexpr BodyLine kAsksNoticeBody[] = {
+    {"BRAVO LOST"}, {"THIS GO"}, {""}, {"PUSH THE BUTTON"}, {"ON BRAVO"}};
 constexpr BodyLine kEmptyListBody[] = {
     {"NO BRAVO FOUND"}, {""}, {"START A BRAVO"}, {"NEAR THIS GO"}};
 
@@ -183,6 +185,13 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
 void draw_bravo_forgot_notice(ui::Canvas& canvas) {
     draw_heading(canvas, "BRAVO", Heading::Interrupt);
     draw_body(canvas, Heading::Interrupt, /*keys=*/true, kForgotNoticeBody, 8);
+    draw_keys(canvas, {"CLOSE", "CLOSE"});
+}
+
+// INFO: fc 15nov26 Bravo holds no pin for this Go, which asks for a press before it drops its own
+void draw_bravo_asks_notice(ui::Canvas& canvas, uint32_t seconds_left) {
+    draw_heading(canvas, "BRAVO", Heading::Interrupt);
+    draw_question_body(canvas, Heading::Interrupt, seconds_left, kAsksNoticeBody, 5);
     draw_keys(canvas, {"CLOSE", "CLOSE"});
 }
 

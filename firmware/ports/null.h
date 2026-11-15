@@ -99,7 +99,6 @@ class KeylessIdentity : public Identity {
     const crypto::Ed25519::PublicKey& trusted_server_key() const override { return kNoServerKey; }
     Status read_unlock_code(identity::UnlockCode&) override { return Status::NotFound; }
     Status write_unlock_code(const identity::UnlockCode&) override { return Status::Unsupported; }
-    bool draw_random(ByteSpan) override { return false; }
 
    private:
     static constexpr crypto::Ed25519::PublicKey kNoServerKey{};

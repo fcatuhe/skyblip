@@ -243,7 +243,7 @@ TEST_CASE("bravo traffic: a dropped pin forgets Bravo's UTC, so the next Bravo w
     }
     SUBCASE("forgotten by Bravo") {
         flight.tango.bravo.health.paired = false;
-        flight.tango.run_for(2000);
+        flight.tango.run_for(go::BravoService::kAnswerCeilingMs + 2000);
         flight.tango.bravo.health.paired = true;
         REQUIRE(flight.go().product.screen().notice() == go::ScreenService::Notice::BravoForgot);
         flight.go().tap(flight.tango.now_ms);

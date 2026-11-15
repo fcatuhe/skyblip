@@ -1,7 +1,10 @@
 import { hex } from '#skyblip/link';
+import { LINK_REGISTRY } from '#skyblip/link_registry';
 import { Replies } from '#skyblip/replies';
 
-const DOMAIN = new TextEncoder().encode('skyblip:browser:v1');
+const DOMAIN = new TextEncoder().encode(
+  LINK_REGISTRY.frames.find(frame => frame.command === 'trust_browser').keys.find(key => key.name === 'signature').signed_over
+);
 const LABEL_BYTES = 24;
 const ID_BYTES = 8;
 const DATABASE = 'skyblip';

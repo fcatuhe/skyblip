@@ -34,6 +34,7 @@ void ScreenService::draw_prompt(uint32_t now_ms) {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(prompt_);
     snapshot.detail = config_.prompt_detail();
+    snapshot.trusts_browser = config_.prompt_trusts_browser();
     snapshot.seconds_left = config_.prompt_seconds_left(now_ms);
     draw_confirm(framebuffer_, snapshot);
 }
@@ -93,6 +94,10 @@ void ScreenService::render(uint32_t now_ms) {
     if (notice_) {
         switch (notice_kind_) {
             case Notice::BravoForgot: draw_bravo_forgot_notice(framebuffer_); break;
+            case Notice::BravoAsks:
+                draw_bravo_asks_notice(framebuffer_, seconds_left(bravo_.step_since_ms(), now_ms,
+                                                                  BravoService::kAnswerCeilingMs));
+                break;
             case Notice::NewAircraft:
                 draw_aircraft_notice(framebuffer_, noticed_aircraft_,
                                      seconds_left(notice_since_ms_, now_ms, notice_ceiling_ms()));

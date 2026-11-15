@@ -10,6 +10,7 @@
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "ports/null.h"
 #include "products/common/services/config_link.h"
@@ -64,6 +65,7 @@ struct LinkRig {
 
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     platform::host::Watchdog watchdog;
     platform::host::Dfu dfu{watchdog};
@@ -71,7 +73,7 @@ struct LinkRig {
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         key_value,
         null.log_flash, null.annunciator, dfu,       null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

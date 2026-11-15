@@ -2292,7 +2292,8 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 2,
           "type": "bytes",
           "bytes": 64,
-          "required": true
+          "required": true,
+          "signed_over": "skyblip:browser:v1"
         },
         {
           "name": "label",

@@ -9,6 +9,7 @@
 #include "core/identity/key_slots.h"
 #include "core/identity/messages.h"
 #include "core/identity/unlock_code.h"
+#include "hardware/platform/zephyr/random.h"
 #include "ports/identity.h"
 
 namespace skyblip::platform::zephyr {
@@ -16,6 +17,8 @@ namespace skyblip::platform::zephyr {
 // INFO: fc 18oct26 UICR CUSTOMER key slots and the identity page at 0xEA000, README beside
 class Identity : public ports::Identity {
    public:
+    explicit Identity(Random& random) : uicr_(random) {}
+
     Status begin();
 
     identity::DeviceId device_id() const override { return device_id_; }
@@ -24,22 +27,20 @@ class Identity : public ports::Identity {
     const crypto::Ed25519::PublicKey& trusted_server_key() const override;
     Status read_unlock_code(identity::UnlockCode& out) override;
     Status write_unlock_code(const identity::UnlockCode& code) override;
-    bool draw_random(ByteSpan out) override;
 
    private:
     class Uicr : public identity::KeySlots::Memory {
        public:
-        explicit Uicr(const struct device* entropy) : entropy_(entropy) {}
+        explicit Uicr(Random& random) : random_(random) {}
         bool read(identity::KeySlots::Words& out) const override;
         void write(int word, uint32_t value) override;
         bool draw(identity::KeySlots::Material& out) override;
 
        private:
-        const struct device* entropy_;
+        Random& random_;
     };
 
-    const struct device* entropy_{DEVICE_DT_GET(DT_CHOSEN(zephyr_entropy))};
-    Uicr uicr_{entropy_};
+    Uicr uicr_;
     const struct flash_area* unlock_page_{nullptr};
     identity::DeviceId device_id_{};
     uint16_t bluetooth_tag_{0};

@@ -28,13 +28,16 @@ void ScreenService::act_on_bravo(BravoAction action, uint32_t now_ms) {
             return;
         case BravoAction::Cancel:
         case BravoAction::Retry:
+            bravo_.end_pairing();
             bravo_.begin_pairing(now_ms);
             bravo_page_.open(now_ms);
             dirty_ = true;
             return;
         case BravoAction::Unpair:
             bravo_.unpair();
-            show_page(page_after(Page::Bravo));
+            bravo_.begin_pairing(now_ms);
+            bravo_page_.open(now_ms);
+            dirty_ = true;
             return;
     }
 }
@@ -57,12 +60,15 @@ void ScreenService::sync_notice(uint32_t now_ms) {
     // INFO: fc 13nov26 an aircraft no longer heard on the ground, takeoff included, is no proposal
     const bool proposal_gone =
         notice_kind_ == Notice::NewAircraft && !same_aircraft(heard, noticed_aircraft_);
-    if (notice_ &&
-        (alarm_takes_glass() || proposal_gone || now_ms - notice_since_ms_ >= notice_ceiling_ms()))
+    const bool answered = notice_kind_ == Notice::BravoAsks && !bravo_.asking_again();
+    if (notice_ && (alarm_takes_glass() || proposal_gone || answered ||
+                    now_ms - notice_since_ms_ >= notice_ceiling_ms()))
         close_notice();
     if (alarm_takes_glass()) return;
     if (bravo_.take_forgotten_notice()) {
         notice_kind_ = Notice::BravoForgot;
+    } else if (bravo_.take_asking_notice()) {
+        notice_kind_ = Notice::BravoAsks;
     } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
         notice_kind_ = Notice::NewAircraft;
         noticed_aircraft_ = heard;

@@ -22,6 +22,7 @@
 #include "ports/indicator.h"
 #include "ports/kvstore.h"
 #include "ports/link.h"
+#include "ports/random.h"
 #include "ports/system_power.h"
 #include "ports/watchdog.h"
 
@@ -96,6 +97,8 @@ constexpr bool fills_the_platform_contract() {
         std::is_convertible_v<decltype(std::declval<Self>().identity()), ports::Identity&>,
         "platform: identity() -> ports::Identity&, the unit's key provisioned before the link "
         "comes up");
+    static_assert(std::is_convertible_v<decltype(std::declval<Self>().random()), ports::Random&>,
+                  "platform: random() -> ports::Random&, the RNG nonces and boot epochs draw from");
 
     static_assert(std::is_convertible_v<decltype(std::declval<Self>().barometer_answers()), bool>,
                   "platform: barometer_answers() -> bool, the board's probe of the BME280");

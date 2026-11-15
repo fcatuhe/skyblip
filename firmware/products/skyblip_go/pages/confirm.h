@@ -17,6 +17,7 @@ namespace skyblip::go {
 struct ConfirmSnapshot {
     const char* title{""};
     const char* detail{""};
+    bool trusts_browser{false};
     // INFO: fc 11nov26 one partial refresh a second, the alarm wedge's rate, shows the time left
     uint32_t seconds_left{0};
 };
@@ -27,6 +28,7 @@ constexpr int kConfirmDetailRows = 3;
 constexpr const char* kConfirmAllowVerb = "ACCEPT";
 constexpr const char* kConfirmCancelVerb = "CANCEL";
 constexpr const char* kConfirmCountdownWords = "CANCELS IN ";
+constexpr const char* kConfirmTrustsBrowser = "TRUSTS BROWSER";
 constexpr int kConfirmCountdownBytes = 24;
 
 // INFO: fc 14nov26 a question the Go asks of itself stands as long as a phone's prompt does

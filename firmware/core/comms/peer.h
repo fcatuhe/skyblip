@@ -10,6 +10,7 @@
 #include "core/power/cutoff.h"
 #include "core/util/result.h"
 #include "core/util/span.h"
+#include "ports/random.h"
 
 namespace skyblip::comms {
 
@@ -20,6 +21,8 @@ constexpr int kPeerClaimWidestBytes = 72;
 
 // INFO: fc 11nov26 schemas/link.v1.json: protocol_version 1 is the three peer frames as written
 constexpr uint32_t kPeerProtocolVersion = 1;
+
+std::optional<uint32_t> draw_boot_epoch(ports::Random& random);
 
 struct PeerClaim {
     uint32_t boot_epoch{0};

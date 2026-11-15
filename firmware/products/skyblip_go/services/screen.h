@@ -94,7 +94,7 @@ class ScreenService : public runtime::Service {
     bool parking() const { return park_ != ParkStep::None; }
     power::CellOnGlass cell_on_glass() const { return cell_on_glass_; }
     const Glass& framebuffer() const { return framebuffer_; }
-    enum class Notice : uint8_t { BravoForgot, NewAircraft };
+    enum class Notice : uint8_t { BravoForgot, BravoAsks, NewAircraft };
 
     bool noticing() const { return notice_; }
     Notice notice() const { return notice_kind_; }
@@ -109,7 +109,9 @@ class ScreenService : public runtime::Service {
     // INFO: fc 14nov26 a notice that asks stands as long as any question, one that only tells, a
     // menu's
     uint32_t notice_ceiling_ms() const {
-        return notice_kind_ == Notice::NewAircraft ? kAskCeilingMs : MenuEditor::kIdleReturnHoldMs;
+        if (notice_kind_ == Notice::NewAircraft) return kAskCeilingMs;
+        if (notice_kind_ == Notice::BravoAsks) return BravoService::kAnswerCeilingMs;
+        return MenuEditor::kIdleReturnHoldMs;
     }
     void act_on_bravo(BravoAction action, uint32_t now_ms);
     void step_bravo(uint32_t now_ms);

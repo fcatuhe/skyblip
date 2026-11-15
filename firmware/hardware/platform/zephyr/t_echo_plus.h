@@ -29,6 +29,7 @@
 #include "hardware/platform/zephyr/kvstore.h"
 #include "hardware/platform/zephyr/link.h"
 #include "hardware/platform/zephyr/pps.h"
+#include "hardware/platform/zephyr/random.h"
 #include "hardware/platform/zephyr/rf.h"
 #include "hardware/platform/zephyr/system_power.h"
 #include "hardware/platform/zephyr/watchdog.h"
@@ -113,6 +114,7 @@ class TEchoPlus {
     zephyr::Dfu& dfu() { return dfu_; }
     zephyr::Pps& pps() { return pps_; }
     zephyr::Identity& identity() { return identity_; }
+    zephyr::Random& random() { return random_; }
     zephyr::Battery& battery() { return battery_; }
     zephyr::DieTemperature& die_temperature() { return die_temperature_; }
     zephyr::Watchdog& watchdog() { return watchdog_; }
@@ -228,7 +230,8 @@ class TEchoPlus {
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
     zephyr::Central& central_{zephyr::central()};
-    zephyr::Identity identity_{};
+    zephyr::Random random_{};
+    zephyr::Identity identity_{random_};
     zephyr::Battery battery_{battery_device_};
     zephyr::DieTemperature die_temperature_{};
     zephyr::Pps pps_{};

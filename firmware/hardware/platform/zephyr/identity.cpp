@@ -3,16 +3,10 @@
 #include "hardware/platform/zephyr/identity.h"
 
 #include <hal/nrf_nvmc.h>
-#include <zephyr/drivers/entropy.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/irq.h>
 
 #include "hardware/platform/zephyr/bluetooth_tag.h"
-
-BUILD_ASSERT(IS_ENABLED(CONFIG_ENTROPY_NRF5_BIAS_CORRECTION),
-             "the unit's key is drawn from the RNG, which is biased without its correction");
-BUILD_ASSERT(DT_NODE_HAS_COMPAT(DT_CHOSEN(zephyr_entropy), nordic_nrf_rng),
-             "the unit's key is drawn from the nRF RNG, the source the bias correction applies to");
 
 namespace skyblip::platform::zephyr {
 
@@ -58,8 +52,7 @@ void Identity::Uicr::write(int word, uint32_t value) {
 }
 
 bool Identity::Uicr::draw(identity::KeySlots::Material& out) {
-    return device_is_ready(entropy_) &&
-           entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
+    return random_.draw(ByteSpan(out.data(), out.size()));
 }
 
 bool Identity::seed(crypto::Ed25519::Seed& out) const {
@@ -93,11 +86,6 @@ Status Identity::write_unlock_code(const identity::UnlockCode& code) {
         read_back != page)
         return Status::Down;
     return Status::Ok;
-}
-
-bool Identity::draw_random(ByteSpan out) {
-    return device_is_ready(entropy_) &&
-           entropy_get_entropy(entropy_, out.data(), static_cast<uint16_t>(out.size())) == 0;
 }
 
 }  // namespace skyblip::platform::zephyr

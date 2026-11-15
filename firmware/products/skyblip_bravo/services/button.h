@@ -6,7 +6,6 @@
 #include "core/comms/config.h"
 #include "products/common/prompt_answer.h"
 #include "products/common/services/alarm.h"
-#include "products/skyblip_bravo/pairing_gesture.h"
 #include "products/skyblip_bravo/services/peer.h"
 #include "runtime/service.h"
 
@@ -28,6 +27,7 @@ class ButtonService : public runtime::Service {
 
    private:
     void sync_prompt(uint32_t now_ms);
+    void sync_pairing(uint32_t now_ms);
     void sync_receiving(uint32_t now_ms);
     bool prompt_readable() const;
     bool pairing_readable() const;
@@ -39,7 +39,8 @@ class ButtonService : public runtime::Service {
     common::AlarmService& alarm_;
     PeerService& peer_;
     common::PromptAnswer answer_{};
-    PairingGesture pairing_{};
+    common::PromptAnswer pairing_{};
+    bool requested_{false};
     comms::Pending prompt_{comms::Pending::None};
     uint32_t prompts_staged_{0};
     uint32_t receiving_since_ms_{0};

@@ -11,6 +11,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/activation_vectors.h"
@@ -32,7 +33,8 @@ struct Desk {
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port;
-    identity::Unit unit{port};
+    platform::host::Random random;
+    identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     ActivationVectors vectors;
 

@@ -8,6 +8,7 @@
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "products/common/services/adsb_capture.h"
 #include "test/support/adsb_frames.h"
@@ -24,11 +25,12 @@ namespace {
 struct Writer {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     runtime::Context context;
     common::AdsbCapture capture{context};
 

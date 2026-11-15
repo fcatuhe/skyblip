@@ -39,6 +39,7 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/link.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "products/skyblip_go/settings.h"
 #include "products/skyblip_go/settings_store.h"
@@ -409,10 +410,11 @@ struct FeatureRig {
     platform::host::Link link;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::Roles roles{
         clock,          null.rf,          link,     null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu, null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

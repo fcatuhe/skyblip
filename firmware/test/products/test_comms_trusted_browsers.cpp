@@ -4,12 +4,14 @@
 
 #include "core/comms/config.h"
 #include "core/comms/identity_link.h"
+#include "core/comms/link_registry.h"
 #include "core/identity/unit.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -48,7 +50,8 @@ struct Desk {
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port{std::nullopt};
-    identity::Unit unit{port};
+    platform::host::Random random;
+    identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     identity::Nonce nonce{5, 4, 3, 2, 1};
 
@@ -69,13 +72,13 @@ struct Desk {
     }
 
     std::string challenge() {
-        port.queue_random(nonce);
+        random.queue(nonce);
         return say("{\"command\":\"browser_challenge\"}");
     }
 
     std::string prove(const crypto::Ed25519::Seed& seed, const identity::Nonce& signed_nonce,
                       const std::string& label = "Chrome on Android") {
-        std::string message = "skyblip:browser:v1";
+        std::string message = link::trust_browser_signed_over::kSignature;
         message.append(reinterpret_cast<const char*>(signed_nonce.data()), signed_nonce.size());
         const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
             seed, ConstByteSpan(reinterpret_cast<const uint8_t*>(message.data()), message.size()));
@@ -261,7 +264,7 @@ TEST_CASE("trusted browsers: each frame is as wide as the registry says at its w
     const std::string label(comms::kBrowserLabelBytes, 'x');
     desk.challenge();
     CHECK(desk.link.last().bytes.size() == comms::BrowserLink::kChallengeFrameBytes);
-    std::string message = "skyblip:browser:v1";
+    std::string message = link::trust_browser_signed_over::kSignature;
     message.append(reinterpret_cast<const char*>(desk.nonce.data()), desk.nonce.size());
     const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(kBrowserSeed);
     const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
