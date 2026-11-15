@@ -10,7 +10,6 @@
 #include <zephyr/bluetooth/hci_types.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
 
 #include <cstring>
 
@@ -18,8 +17,6 @@
 #include "hardware/platform/zephyr/att_budget.h"
 #include "hardware/platform/zephyr/bluetooth_address.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
-
-LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
 namespace skyblip::platform::zephyr {
 
@@ -36,13 +33,10 @@ constexpr uint16_t kNotifyHeaderBytes = 3;
 constexpr uint32_t kScanUnitUs = 625;
 constexpr uint32_t kScanUnitsFloor = 0x0004;
 constexpr uint32_t kScanUnitsCeiling = 0x4000;
-// INFO: fc 11nov26 a loss is logged at most this often, with every count since boot
-constexpr int64_t kLossReportPeriodMs = 10000;
 
 struct k_spinlock g_lock;
 Fifo<CentralEvent, 8> g_events;
 Fifo<RxFrame, 8> g_rx;
-atomic_t g_dropped = ATOMIC_INIT(0);
 atomic_t g_up = ATOMIC_INIT(0);
 // INFO: fc 11nov26 written and cleared under g_lock only, and one central link at most
 struct bt_conn* g_peer = nullptr;
@@ -61,7 +55,6 @@ struct PendingWrite {
 };
 PendingWrite g_write = {};
 atomic_t g_writes_in_flight = ATOMIC_INIT(0);
-atomic_t g_write_refusals = ATOMIC_INIT(0);
 atomic_t g_generation = ATOMIC_INIT(0);
 
 void written(struct bt_conn* /*connection*/, void* user_data) {
@@ -76,9 +69,7 @@ void send_write(struct k_work* /*work*/) {
         connection, g_write.value_handle, g_write.data, g_write.bytes, false, written,
         reinterpret_cast<void*>(static_cast<uintptr_t>(g_write.generation)));
     bt_conn_unref(connection);
-    if (error == 0) return;
-    atomic_inc(&g_write_refusals);
-    atomic_dec(&g_writes_in_flight);
+    if (error != 0) atomic_dec(&g_writes_in_flight);
 }
 
 K_WORK_DEFINE(g_write_work, send_write);
@@ -101,9 +92,8 @@ uint16_t payload_from_mtu(uint16_t mtu) {
 
 void raise(const CentralEvent& event) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    const Status queued = g_events.push(event);
+    (void)g_events.push(event);
     k_spin_unlock(&g_lock, key);
-    if (!is_ok(queued)) atomic_inc(&g_dropped);
 }
 
 void raise(CentralEventType type, uint16_t payload_bytes = 0) {
@@ -143,33 +133,8 @@ void release_peer(struct bt_conn* connection) {
     raise(CentralEventType::Down);
 }
 
-Status refused(Status status) {
-    atomic_inc(&g_write_refusals);
-    return status;
-}
-
-void report_losses() {
-    static atomic_val_t reported_drops = 0;
-    static atomic_val_t reported_refusals = 0;
-    static int64_t reported_ms = -kLossReportPeriodMs;
-    const atomic_val_t drops = atomic_get(&g_dropped);
-    const atomic_val_t refusals = atomic_get(&g_write_refusals);
-    if (drops == reported_drops && refusals == reported_refusals) return;
-    const int64_t now_ms = k_uptime_get();
-    if (now_ms - reported_ms < kLossReportPeriodMs) return;
-    reported_ms = now_ms;
-    reported_drops = drops;
-    reported_refusals = refusals;
-    LOG_WRN(
-        "bluetooth: Bravo's link dropped %ld events or frames and refused %ld writes since boot",
-        static_cast<long>(drops), static_cast<long>(refusals));
-}
-
-void abandon(struct bt_conn* connection, const char* step, int error) {
-    LOG_ERR("bluetooth: the link to Bravo failed at %s (%d)", step, error);
-    const int dropped = bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-    if (dropped != 0 && dropped != -ENOTCONN)
-        LOG_ERR("bluetooth: the link to Bravo would not drop (%d)", dropped);
+void abandon(struct bt_conn* connection) {
+    (void)bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
 }
 
 bool read_name(struct bt_data* data, void* user_data) {
@@ -198,25 +163,21 @@ void scanned(const bt_addr_le_t* address, int8_t /*rssi*/, uint8_t type,
 uint8_t notified(struct bt_conn* /*connection*/, struct bt_gatt_subscribe_params* /*params*/,
                  const void* data, uint16_t bytes) {
     if (data == nullptr) return BT_GATT_ITER_STOP;
-    if (bytes > sizeof(RxFrame::data)) {
-        atomic_inc(&g_dropped);
-        return BT_GATT_ITER_CONTINUE;
-    }
+    if (bytes > sizeof(RxFrame::data)) return BT_GATT_ITER_CONTINUE;
     RxFrame frame{};
     frame.endpoint = events::Endpoint::Peer;
     frame.bytes = bytes;
     std::memcpy(frame.data.data(), data, bytes);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    const Status queued = g_rx.push(frame);
+    (void)g_rx.push(frame);
     k_spin_unlock(&g_lock, key);
-    if (!is_ok(queued)) atomic_inc(&g_dropped);
     return BT_GATT_ITER_CONTINUE;
 }
 
 void subscribed(struct bt_conn* connection, uint8_t error,
                 struct bt_gatt_subscribe_params* /*params*/) {
     if (error != 0) {
-        abandon(connection, "the subscription", error);
+        abandon(connection);
         return;
     }
     k_spinlock_key_t key = k_spin_lock(&g_lock);
@@ -229,7 +190,7 @@ void subscribed(struct bt_conn* connection, uint8_t error,
 uint8_t discovered(struct bt_conn* connection, const struct bt_gatt_attr* attribute,
                    struct bt_gatt_discover_params* /*params*/) {
     if (attribute == nullptr) {
-        abandon(connection, "the peer characteristic", -ENOENT);
+        abandon(connection);
         return BT_GATT_ITER_STOP;
     }
     const auto* characteristic = static_cast<const struct bt_gatt_chrc*>(attribute->user_data);
@@ -242,7 +203,7 @@ uint8_t discovered(struct bt_conn* connection, const struct bt_gatt_attr* attrib
     g_subscribe.disc_params = &g_ccc_discover;
     g_subscribe.value = BT_GATT_CCC_NOTIFY;
     const int error = bt_gatt_subscribe(connection, &g_subscribe);
-    if (error != 0 && error != -EALREADY) abandon(connection, "subscribing", error);
+    if (error != 0 && error != -EALREADY) abandon(connection);
     return BT_GATT_ITER_STOP;
 }
 
@@ -254,7 +215,7 @@ void discover(struct bt_conn* connection) {
     g_discover.end_handle = BT_ATT_LAST_ATTRIBUTE_HANDLE;
     g_discover.type = BT_GATT_DISCOVER_CHARACTERISTIC;
     const int error = bt_gatt_discover(connection, &g_discover);
-    if (error != 0) abandon(connection, "discovery", error);
+    if (error != 0) abandon(connection);
 }
 
 // INFO: fc 11nov26 a refused exchange leaves 20 bytes, which the Go refuses as too narrow at Up
@@ -277,7 +238,7 @@ void connected(struct bt_conn* connection, uint8_t error) {
     if (asked == -EALREADY)
         discover(connection);
     else if (asked != 0)
-        abandon(connection, "the MTU exchange", asked);
+        abandon(connection);
 }
 
 void disconnected(struct bt_conn* connection, uint8_t /*reason*/) {
@@ -298,15 +259,10 @@ Status Central::scan(const ports::ScanDuty& duty, const char* name_prefix) {
     parameters.interval = scan_units(duty.period_us);
     parameters.window = scan_units(duty.window_us);
     const int error = bt_le_scan_start(&parameters, scanned);
-    if (error == 0 || error == -EALREADY) return Status::Ok;
-    LOG_ERR("bluetooth: the scan for Bravo did not start (%d)", error);
-    return Status::Down;
+    return error == 0 || error == -EALREADY ? Status::Ok : Status::Down;
 }
 
-void Central::stop_scan() {
-    const int error = bt_le_scan_stop();
-    if (error != 0 && error != -EALREADY) LOG_ERR("bluetooth: the scan did not stop (%d)", error);
-}
+void Central::stop_scan() { (void)bt_le_scan_stop(); }
 
 Status Central::connect(const events::BluetoothAddress& address, const ports::ScanDuty& duty) {
     struct bt_conn* held = peer_reference();
@@ -323,10 +279,7 @@ Status Central::connect(const events::BluetoothAddress& address, const ports::Sc
     struct bt_conn* created = nullptr;
     const int error = bt_conn_le_create(&peer, &create, BT_LE_CONN_PARAM_DEFAULT, &created);
     if (error == -EAGAIN || error == -EALREADY || error == -ENOMEM) return Status::WouldBlock;
-    if (error != 0) {
-        LOG_ERR("bluetooth: the connection to Bravo was not started (%d)", error);
-        return Status::Down;
-    }
+    if (error != 0) return Status::Down;
     key = k_spin_lock(&g_lock);
     g_peer = created;
     struct bt_conn* probe = bt_conn_ref(created);
@@ -342,25 +295,23 @@ Status Central::connect(const events::BluetoothAddress& address, const ports::Sc
 void Central::disconnect() {
     struct bt_conn* connection = peer_reference();
     if (connection == nullptr) return;
-    const int error = bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
-    if (error != 0 && error != -ENOTCONN) LOG_ERR("bluetooth: Bravo would not drop (%d)", error);
+    (void)bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_USER_TERM_CONN);
     bt_conn_unref(connection);
 }
 
 // INFO: fc 11nov26 never blocks, and takes connection and handle under the lock that clears them
 Status Central::write(ConstByteSpan bytes) {
-    if (bytes.size() > sizeof(g_write.data)) return refused(Status::OutOfRange);
-    if (atomic_get(&g_writes_in_flight) >= kCentralWritesInFlight)
-        return refused(Status::WouldBlock);
+    if (bytes.size() > sizeof(g_write.data)) return Status::OutOfRange;
+    if (atomic_get(&g_writes_in_flight) >= kCentralWritesInFlight) return Status::WouldBlock;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     const bool up = atomic_get(&g_up) != 0 && g_peer != nullptr && g_value_handle != 0;
     struct bt_conn* connection = up ? bt_conn_ref(g_peer) : nullptr;
     const uint16_t value_handle = g_value_handle;
     k_spin_unlock(&g_lock, key);
-    if (connection == nullptr) return refused(Status::Down);
+    if (connection == nullptr) return Status::Down;
     if (bytes.size() > payload_from_mtu(bt_gatt_get_mtu(connection))) {
         bt_conn_unref(connection);
-        return refused(Status::OutOfRange);
+        return Status::OutOfRange;
     }
     atomic_inc(&g_writes_in_flight);
     g_write.connection = connection;
@@ -372,11 +323,10 @@ Status Central::write(ConstByteSpan bytes) {
     g_write.connection = nullptr;
     bt_conn_unref(connection);
     atomic_dec(&g_writes_in_flight);
-    return refused(Status::Down);
+    return Status::Down;
 }
 
 bool Central::pop_event(CentralEvent& out) {
-    report_losses();
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     Result<CentralEvent> popped = g_events.pop();
     k_spin_unlock(&g_lock, key);
@@ -392,12 +342,6 @@ bool Central::pop_rx(RxFrame& out) {
     if (!popped.ok()) return false;
     out = popped.value();
     return true;
-}
-
-uint32_t Central::dropped() const { return static_cast<uint32_t>(atomic_get(&g_dropped)); }
-
-uint32_t Central::writes_refused() const {
-    return static_cast<uint32_t>(atomic_get(&g_write_refusals));
 }
 
 Central& central() {

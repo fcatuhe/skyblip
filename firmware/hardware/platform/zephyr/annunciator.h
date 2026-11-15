@@ -5,7 +5,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
-#include <zephyr/sys/printk.h>
 
 #include "core/annunciation/annunciator.h"
 #include "ports/annunciator.h"
@@ -93,15 +92,9 @@ class Annunciator : public ports::Annunciator {
         Annunciator* owner;
     };
 
-    static void cut_tone(struct k_work* work) {
-        printk("annunciator: tone on past %u ms, cut\n", kCeilingMs);
-        pwm_set_pulse_dt(&owner_of(work)->buzzer_, 0);
-    }
+    static void cut_tone(struct k_work* work) { pwm_set_pulse_dt(&owner_of(work)->buzzer_, 0); }
 
-    static void cut_motor(struct k_work* work) {
-        printk("annunciator: motor on past %u ms, cut\n", kCeilingMs);
-        owner_of(work)->haptic_->stop();
-    }
+    static void cut_motor(struct k_work* work) { owner_of(work)->haptic_->stop(); }
 
     static Annunciator* owner_of(struct k_work* work) {
         return CONTAINER_OF(k_work_delayable_from_work(work), Guard, work)->owner;

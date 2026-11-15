@@ -37,7 +37,7 @@ SoftRF and Meshtastic are GPL-3.0 and were read for facts only. No code is copie
 | IMU and magnetometer interrupts | P1.02, P1.12 | SoftRF, Seeed | |
 | Reset | P0.18 | SoftRF, Meshtastic bootloader | The bootloader keeps it as nRESET. Nothing drives it. |
 
-SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2`. SoftRF also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The console is USB CDC.
+SoftRF lists a console UART on P0.16 and P0.17, and Meshtastic names it `SERIAL2`. SoftRF also says the X1 does not expose it (`nRF52.cpp:3885-3893`), so the devicetree leaves it out. The console is USB CDC, which only the smoke image below builds.
 
 ## Parts
 
@@ -81,7 +81,7 @@ The factory bootloader enters UF2 mode once the button has been held for about 3
 
 `board.h` is the X1 assembled once, a template over the platform as the T-Echo's is: `hardware/platform/zephyr/meshtracker_x1.h` on silicon, `hardware/platform/host/meshtracker_x1.h` on the host. `pins.h` holds the four lines the parts' own drivers drive as `io::Gpio` numbers, and on silicon a `static_assert` holds each to the devicetree. The constructor touches no part: the product is a global, and a global's constructor runs before `main()` arms the watchdog and before the product has decided whether a wake runs. `probe()` does the work once both hold, and the product then copies the capabilities into its roles. The roles' references are chosen at construction and depend on no probe: the annunciator is always the platform's, and a DRV2605 the probe finds attaches to it. In `probe()`, the LR2021 answering its version grants `Capability::AdsbReceiver`, the SPA06 answering its chip id `Capability::Barometer`, and the DRV2605 answering and identifying itself `Capability::Haptic` and `Capability::HapticDriver`, which it then attaches to the annunciator. The LR2021's receiver pushes each frame into the `bus::AdsbQueue` the product hands the board. The board polls the AG3335, the battery, the button and the PPS edge as the T-Echo's does, and triggers the SPA06 once a second on the PPS edge, because the part has no filter (`../../../hardware/parts/spa06/README.md`).
 
-The inventory #170 moved to #176 is `ports::Inventory`: every address that answers on the sensor bus, the barometer's address, the haptic driver, and whether the YSN8900 answers on its own bus once `begin()` has raised its enable. Bravo prints it on the console at boot, because it has no self-test page.
+The board scans no bus and keeps no inventory: each part answers its own probe, and nothing on Bravo reads the YSN8900, so nothing probes it.
 
 ## The way down
 

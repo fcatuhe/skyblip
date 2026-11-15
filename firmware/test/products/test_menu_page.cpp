@@ -132,8 +132,11 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
     rig.tap(now_ms);
     settle(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
+    // A flyable boot leaves the bus unscanned, and the menu scans it before the page can draw.
+    CHECK(rig.product.board().inventory().i2c_count == 0);
 
     open_menu(rig, now_ms);
+    CHECK(rig.product.board().inventory().i2c_count > 0);
     focus_on(rig, now_ms, go::MenuRow::SelfTest);
     change(rig, now_ms);
     rig.run(now_ms, now_ms + 4000);

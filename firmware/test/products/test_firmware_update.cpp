@@ -179,7 +179,7 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     CHECK(reads_button_key(glass, go::kRecoveryStartVerb));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK(rig.product.ready_to_power_off());
-    CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
 }
 
 TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {

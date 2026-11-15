@@ -27,13 +27,6 @@ void AdsbService::tick(uint32_t now_ms) {
     state.callsigns.age_out(now_s);
 }
 
-bool AdsbService::take_reject(AdsbReject& out) {
-    const Result<AdsbReject> taken = rejects_.pop();
-    if (!taken.ok()) return false;
-    out = taken.value();
-    return true;
-}
-
 adsb::Reference AdsbService::reference(const model::Ownship& own) {
     adsb::Reference here{};
     if (!own.fix_valid) return here;
@@ -49,7 +42,7 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     const Status status =
         status_of(adsb::receive(frame.chips.data(), frame.chips.size(), reception, message));
     if (status != Status::Ok) {
-        refuse(frame, status);
+        refuse(status);
         return;
     }
     // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as
@@ -71,14 +64,12 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
 }
 
 // INFO: fc 12nov26 a whole 27-byte frame is never Invalid, so any refusal but Unsupported is parity
-void AdsbService::refuse(const events::AdsbFrame& frame, Status status) {
+void AdsbService::refuse(Status status) {
     if (status == Status::Unsupported) {
         unsupported_++;
     } else {
         crc_++;
     }
-    // INFO: fc 12nov26 a reject past kRejectsKept waiting for the console is counted and not kept
-    (void)rejects_.push(AdsbReject{status, frame.rssi_dbm, frame.rssi_valid, frame.chips});
 }
 
 }  // namespace skyblip::bravo

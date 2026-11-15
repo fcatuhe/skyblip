@@ -49,8 +49,10 @@ TEST_CASE("drv2605: bring-up identifies the part and leaves it configured and as
     // STATUS[7:5] = 7 is the DRV2605L the model presents.
     CHECK(int(haptic.device_id()) == 7);
 
-    // The enable line is up before anything on the bus is believed.
+    // The enable line is up, and the part had its power-up time, before anything on the bus is
+    // believed.
     CHECK(chip.enabled);
+    CHECK(chip.waited_us == parts::Drv2605::kPowerUpUs);
     // An ERM in open loop: the fitted motor is in no datasheet we have, so
     // closed loop has no rated voltage or back-EMF it could trust.
     CHECK(chip.erm_selected());
@@ -251,11 +253,12 @@ TEST_CASE("drv2605: a calibration that never ends is given up at its ceiling and
     chip.calibration_hangs = true;
     parts::Drv2605 haptic = lra_driver_for(chip);
     REQUIRE(haptic.begin() == Status::Ok);
+    const uint32_t brought_up_us = chip.waited_us;
 
     haptic.calibrate();
     CHECK(haptic.calibration().ran);
     CHECK_FALSE(haptic.calibration().passed);
-    CHECK(chip.waited_us == parts::Drv2605::kCalibrationCeilingMs * 1000);
+    CHECK(chip.waited_us - brought_up_us == parts::Drv2605::kCalibrationCeilingMs * 1000);
     CHECK(int(chip.registers[0x0C]) == 0);
     CHECK(chip.standby());
     CHECK_FALSE(chip.moving());

@@ -25,8 +25,8 @@ This tree is open source, and some of what it compiles in names skyBlip and nobo
 | Identity | Where | What a copy does |
 |---|---|---|
 | ADS-L address table 58 and manufacturer prefix 0 | `core/settings/address.h` (`kSkyblipAddressMappingTable`, `kSkyblipManufacturerPrefix`) | applies to the ADS-L registry (`registry@ads-l.aero`) for its own: the registry assigned these to skyBlip, ticket #228794 (`protocols/adsl/README.md`) |
-| USB Product ID 0x5AFE under pid.codes' Vendor ID 0x1209 | `products/skyblip_go/prj.conf`, `products/skyblip_bravo/prj.conf`, `test/twister/meshtracker_x1/prj.conf` | requests its own PID from pid.codes. No host tool, udev rule or WebSerial filter in this repository matches on it |
-| USB manufacturer and product strings `skyBlip`, `skyBlip Go`, `skyBlip Bravo` | the same `prj.conf` files | names its own product |
+| USB Product ID 0x5AFE under pid.codes' Vendor ID 0x1209 | `test/twister/meshtracker_x1/prj.conf`, the X1 smoke image. The products run no USB device | requests its own PID from pid.codes. No host tool, udev rule or WebSerial filter in this repository matches on it |
+| USB manufacturer and product strings `skyBlip`, `skyBlip Bravo` | the same `prj.conf` | names its own product |
 | Bluetooth names `skyBlip Go`, `skyBlip Go+`, `skyBlip Bravo`, with the serial behind them | `CONFIG_BT_DEVICE_NAME` in each `prj.conf`, `products/skyblip_go/product.h`, `products/skyblip_bravo/name.h`, `core/identity/` | names its own product, so a companion app does not take it for a skyBlip |
 | Bluetooth service and characteristic UUIDs, base `69c21300-0187-4204-a91d-02eb8858b440` | `hardware/platform/zephyr/skyblip_uuid.h` | draws its own 128-bit base |
 | MCUboot signing keys | `keys/development.pub.pem`, `keys/production.pub.pem` | signs with keys of its own (`keys/README.md`) |

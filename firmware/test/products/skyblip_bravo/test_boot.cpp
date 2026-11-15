@@ -20,16 +20,6 @@ TEST_CASE("bravo: boots on the X1's host models and listens on 1090 MHz under it
     CHECK(rig.lamp() == indication::Condition::NoFix);
 }
 
-TEST_CASE("bravo: the inventory names the barometer, the haptic driver and the RTC it found") {
-    BravoRig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    const ports::Inventory& found = rig.product.board().inventory();
-    CHECK(found.barometer_address == parts::Spa06::kAddressPrimary);
-    CHECK(found.haptic == ports::HapticKind::WaveformDriver);
-    CHECK(found.rtc_fitted);
-    CHECK(found.has_i2c_address(parts::Drv2605::kAddress));
-}
-
 // Meshtastic drives the X1's motor as an LRA, and our ERM drive gave the first unit a weak buzz.
 TEST_CASE("bravo: the X1's motor is an LRA in closed loop, never buzzed by a calibration at boot") {
     BravoRig rig;

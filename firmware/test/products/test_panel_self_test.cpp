@@ -2,6 +2,7 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "test/support/glass_text.h"
+#include "test/support/menu_rig.h"
 #include "test/support/product_rig.h"
 #include "ui/widgets/wordmark.h"
 
@@ -30,6 +31,7 @@ TEST_CASE("product: the self-test page reaches the panel before anything refuses
     Rig rig{kNoGnss};
     CHECK(rig.setup() == Status::Down);
     CHECK_FALSE(rig.product.flyable());
+    CHECK(rig.product.board().inventory().i2c_count > 0);
 
     // Painted, full, and it is the self-test page rather than a blank glass.
     CHECK(rig.platform.chips().epd.present_count == 1);
@@ -80,6 +82,8 @@ TEST_CASE("product: the self-test page names the part, not just the failure") {
 TEST_CASE("product: the self-test page carries what the probes found, not what was expected") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
 
     const go::SelfTestPart* barometer = nullptr;
     const go::SelfTestPart* haptic = nullptr;
@@ -127,6 +131,8 @@ TEST_CASE("product: every row on the self-test page names its part, inside the w
 TEST_CASE("product: the parts this firmware never drives are named on the bus row") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 100;
+    open_menu(rig, now_ms);
 
     CHECK(reads_at(rig.product.self_test_page(), go::kSelfTestLeftX,
                    go::self_test_row_y(go::kSelfTestPartCount), "I2C IMU RTC HAPTIC BARO"));

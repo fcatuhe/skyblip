@@ -27,13 +27,12 @@ class Ag3335Wiring {
         if (gpio_pin_configure_dt(&rtc_wake_, GPIO_OUTPUT_INACTIVE) != 0) return Status::Down;
         if (!device_is_ready(uart_device_)) return Status::Down;
         if (uart_.begin() != Status::Ok) return Status::Down;
-        pps_armed_ = pps_.begin() == Status::Ok;
+        (void)pps_.begin();
         return Status::Ok;
     }
 
     io::Uart& uart() { return uart_; }
     zephyr::Pps& pps() { return pps_; }
-    bool pps_armed() const { return pps_armed_; }
 
    private:
     bool lines_ready() const {
@@ -50,7 +49,6 @@ class Ag3335Wiring {
     struct gpio_dt_spec rtc_wake_ = GPIO_DT_SPEC_GET(DT_ALIAS(gnss_rtc_wake), gpios);
     Uart uart_{uart_device_};
     Pps pps_{};
-    bool pps_armed_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

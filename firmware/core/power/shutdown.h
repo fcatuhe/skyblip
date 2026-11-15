@@ -23,8 +23,6 @@ enum class ShutdownReason : uint8_t {
 };
 enum class ShutdownPhase : uint8_t { Running, Parking, AwaitRelease, Off };
 
-const char* to_string(ShutdownReason reason);
-
 // INFO: fc 13nov26 an install and a rebooting recovery come straight back, so neither signs off
 constexpr bool ends_switched_off(ShutdownReason reason, bool recovery_powers_off) {
     switch (reason) {
@@ -152,8 +150,6 @@ static_assert(step_order(PowerDownStep::PeripheralRailOff) == kPowerDownStepCoun
 // releasing them (nRF52.cpp:2075). It is the rail's discharge, not the pin's.
 // | 08nov26 now the wait between the rail dropping and the wake pin being armed
 constexpr uint32_t kRailSettleMs = 20;
-
-const char* to_string(PowerDownStep step);
 
 // What a board can actually do, one step at a time. The board decides how; this
 // module decides when, and that is the whole division.

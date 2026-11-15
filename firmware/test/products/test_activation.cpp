@@ -417,7 +417,7 @@ TEST_CASE("activation: a link that refuses the first name is asked again, once a
     CHECK(rig.platform.link().advertise_calls == 3);
 }
 
-// A Bluetooth that failed to come up refuses forever, and must not flood the console doing it.
+// A Bluetooth that failed to come up refuses forever, and must not spin the loop doing it.
 TEST_CASE("activation: a link that never takes the name is asked at most once a second") {
     Rig rig;
     rig.platform.link().advertise_refusals = 1000;

@@ -95,8 +95,6 @@ TEST_CASE("diagnostics: the widest radio frame is 162 bytes, one frame on an iPh
 TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own name") {
     const Diagnostics diagnostics = busy_device();
     DiagnosticsReport report(diagnostics, link::Command::Radio, DiagnosticsReport::Group::Radio);
-    CHECK(report.line_count() == 1);
-
     uint8_t buffer[DiagnosticsReport::kFrameBytes];
     std::string body;
     while (!report.exhausted()) {

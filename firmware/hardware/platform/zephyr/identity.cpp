@@ -6,11 +6,8 @@
 #include <zephyr/drivers/entropy.h>
 #include <zephyr/drivers/hwinfo.h>
 #include <zephyr/irq.h>
-#include <zephyr/logging/log.h>
 
 #include "hardware/platform/zephyr/bluetooth_tag.h"
-
-LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
 BUILD_ASSERT(IS_ENABLED(CONFIG_ENTROPY_NRF5_BIAS_CORRECTION),
              "the unit's key is drawn from the RNG, which is biased without its correction");
@@ -30,25 +27,14 @@ const crypto::Ed25519::PublicKey kTrustedServerKey = {
 Status Identity::begin() {
     uint8_t hardware_id[identity::kDeviceIdBytes] = {0};
     if (hwinfo_get_device_id(hardware_id, sizeof(hardware_id)) !=
-        static_cast<ssize_t>(sizeof(hardware_id))) {
-        LOG_ERR("identity: no DEVICEID, the unit has no key");
+        static_cast<ssize_t>(sizeof(hardware_id)))
         return Status::Down;
-    }
     for (size_t i = 0; i < sizeof(hardware_id); i++) device_id_[i] = hardware_id[i];
     device_id_read_ = true;
     bluetooth_tag_ = zephyr::bluetooth_tag();
-    if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0) {
+    if (flash_area_open(PARTITION_ID(identity_partition), &unlock_page_) != 0)
         unlock_page_ = nullptr;
-        LOG_ERR("identity: the page at 0xEA000 did not open, no unlock code can be kept");
-    }
-    if (!device_is_ready(entropy_)) LOG_ERR("identity: no entropy, so no new key and no nonce");
-    const std::optional<int> slot = identity::KeySlots::provision(uicr_, device_id_);
-    if (!slot) {
-        LOG_ERR("identity: no UICR slot holds a key or took one, the unit has no key");
-        return Status::Down;
-    }
-    LOG_INF("identity: key in UICR slot %d", *slot);
-    return Status::Ok;
+    return identity::KeySlots::provision(uicr_, device_id_) ? Status::Ok : Status::Down;
 }
 
 bool Identity::Uicr::read(identity::KeySlots::Words& out) const {
@@ -100,20 +86,12 @@ Status Identity::read_unlock_code(identity::UnlockCode& out) {
 Status Identity::write_unlock_code(const identity::UnlockCode& code) {
     if (unlock_page_ == nullptr) return Status::Down;
     const identity::UnlockPage page = identity::page_of(code);
-    if (flash_area_erase(unlock_page_, 0, unlock_page_->fa_size) != 0) {
-        LOG_ERR("identity: the unlock page did not erase");
-        return Status::Down;
-    }
-    if (flash_area_write(unlock_page_, 0, page.data(), page.size()) != 0) {
-        LOG_ERR("identity: the unlock code was not written");
-        return Status::Down;
-    }
+    if (flash_area_erase(unlock_page_, 0, unlock_page_->fa_size) != 0) return Status::Down;
+    if (flash_area_write(unlock_page_, 0, page.data(), page.size()) != 0) return Status::Down;
     identity::UnlockPage read_back{};
     if (flash_area_read(unlock_page_, 0, read_back.data(), read_back.size()) != 0 ||
-        read_back != page) {
-        LOG_ERR("identity: the unlock code did not read back as written");
+        read_back != page)
         return Status::Down;
-    }
     return Status::Ok;
 }
 

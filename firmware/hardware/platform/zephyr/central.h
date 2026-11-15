@@ -20,10 +20,6 @@ class Central : public ports::Central {
 
     bool pop_event(events::CentralEvent& out);
     bool pop_rx(events::RxFrame& out);
-    // INFO: fc 11nov26 events and frames the queues could not take, or too long, logged every 10 s
-    uint32_t dropped() const;
-    // INFO: fc 11nov26 writes refused here or by the system work queue, logged with dropped()
-    uint32_t writes_refused() const;
 };
 
 Central& central();

@@ -27,6 +27,10 @@ class LoopMeter {
         pass_phase_ms_ = phase_ms;
     }
 
+    // INFO: fc 14nov26 a pass nobody records is not timed, so the next one measures no gap across
+    // it
+    void rest() { began_ = false; }
+
     template <class Work>
     void timed(uint8_t service, Work&& work) {
         const uint64_t began_us = clock_.microseconds();

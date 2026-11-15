@@ -39,20 +39,17 @@ class MeshtrackerX1 {
         system_power_.arm_supply_monitor();
         if (lines_.begin() != Status::Ok) return Status::Down;
         if (!device_is_ready(radio_spi_device_)) return Status::Down;
-        gnss_ready_ = gnss_.begin() == Status::Ok;
+        (void)gnss_.begin();
         // TODO: fc 12nov26 P0.09 powers the YSN8900 per SoftRF and Seeed, unverified until #169
-        rtc_powered_ = gpio_pin_configure_dt(&rtc_enable_, GPIO_OUTPUT_ACTIVE) == 0;
+        (void)gpio_pin_configure_dt(&rtc_enable_, GPIO_OUTPUT_ACTIVE);
         (void)log_flash_.begin();
-        link_up_ = link_.begin() == Status::Ok;
+        (void)link_.begin();
         return Status::Ok;
     }
 
     io::Spi& spi(io::BusId) { return radio_spi_; }
     io::Uart& uart(io::BusId) { return gnss_.uart(); }
-    io::I2c& i2c(io::BusId bus) {
-        if (bus == io::BusId::Rtc) return rtc_i2c_;
-        return lines_.i2c(bus);
-    }
+    io::I2c& i2c(io::BusId bus) { return lines_.i2c(bus); }
     io::Gpio& gpio() { return lines_.gpio(); }
     io::Delay& delay() { return lines_.delay(); }
     const struct gpio_dt_spec& radio_irq() const { return radio_irq_; }
@@ -73,12 +70,6 @@ class MeshtrackerX1 {
     bool button_down() { return lines_.button_down(); }
     bool read_battery_mv(uint16_t& out_mv) { return lines_.read_battery_mv(out_mv); }
     bool external_power() { return lines_.external_power(); }
-
-    bool gnss_wired() const { return gnss_ready_; }
-    bool pps_armed() const { return gnss_.pps_armed(); }
-    bool storage_mounted() const { return lines_.storage_mounted(); }
-    bool link_up() const { return link_up_; }
-    bool rtc_powered() const { return rtc_powered_; }
 
     // INFO: fc 12nov26 the board grants the radio, the barometer and the haptic driver from their
     // probes
@@ -106,15 +97,11 @@ class MeshtrackerX1 {
     struct gpio_dt_spec radio_irq_ = GPIO_DT_SPEC_GET(DT_NODELABEL(radio_irq_gpio), gpios);
     struct gpio_dt_spec rtc_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(rtc_enable), gpios);
     Spi radio_spi_{radio_spi_device_, kSpiConfig, radio_cs_};
-    I2c rtc_i2c_{DEVICE_DT_GET(DT_ALIAS(rtc_i2c))};
     Ag3335Wiring gnss_{};
     FlashRegion log_flash_{PARTITION_ID(log_partition)};
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
     ports::KeylessIdentity identity_{zephyr::bluetooth_tag()};
-    bool gnss_ready_{false};
-    bool rtc_powered_{false};
-    bool link_up_{false};
 };
 
 }  // namespace skyblip::platform::zephyr

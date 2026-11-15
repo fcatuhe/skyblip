@@ -10,12 +10,8 @@ namespace skyblip::runtime {
 
 class Loop {
    public:
-    // names is a parallel array of literals, for the log line that says which
-    // service went quiet. Optional: a loop with no names still supervises.
-    Loop(Service* const* services, int count, const char* const* names = nullptr)
-        : services_(services), count_(count) {
-        for (int i = 0; i < count_; i++)
-            feed_decision_.add(names != nullptr ? names[i] : "?", kServiceSilenceCeilingMs);
+    Loop(Service* const* services, int count) : services_(services), count_(count) {
+        for (int i = 0; i < count_; i++) feed_decision_.add(kServiceSilenceCeilingMs);
     }
 
     Status setup() {
@@ -43,7 +39,6 @@ class Loop {
 
     bool may_feed_watchdog(uint32_t now_ms) const { return feed_decision_.may_feed(now_ms); }
     int stalled_service(uint32_t now_ms) const { return feed_decision_.stalled_service(now_ms); }
-    const FeedDecision& feed_decision() const { return feed_decision_; }
 
    private:
     Service* const* services_;

@@ -9,7 +9,6 @@
 // / nvs_read / nvs_write / nvs_delete - so this is a relocation, not a redesign.
 #include <zephyr/kvss/nvs.h>
 #include <zephyr/storage/flash_map.h>
-#include <zephyr/sys/printk.h>
 
 #include "hardware/platform/store_mount.h"
 #include "ports/kvstore.h"
@@ -32,13 +31,7 @@ class KeyValueStore : public ports::KeyValueStore {
         file_system_.sector_size = info.size;
         file_system_.sector_count = kSectors;
         Partition partition{file_system_};
-        const StoreMount mount = mount_store(partition, kSectors);
-        if (mount == StoreMount::ClearedForeignRing)
-            printk("NVS: storage_partition held Meshtastic's WarmNodeStore ring, now erased\n");
-        if (mount == StoreMount::ClearedRefused)
-            printk("NVS: storage_partition was refused, now erased, and what it held is gone\n");
-        if (mount == StoreMount::Down) printk("NVS: storage_partition did not mount\n");
-        mounted_ = mount != StoreMount::Down;
+        mounted_ = mount_store(partition, kSectors) != StoreMount::Down;
         return mounted_ ? Status::Ok : Status::Down;
     }
 
@@ -70,24 +63,18 @@ class KeyValueStore : public ports::KeyValueStore {
         bool read_word(int sector, uint32_t& word) {
             const off_t at =
                 file_system.offset + static_cast<off_t>(sector) * file_system.sector_size;
-            const int read = flash_read(file_system.flash_device, at, &word, sizeof(word));
-            if (read != 0) printk("NVS: reading sector %d failed (%d)\n", sector, read);
-            return read == 0;
+            return flash_read(file_system.flash_device, at, &word, sizeof(word)) == 0;
         }
 
         bool erase() {
-            const int erased = flash_flatten(file_system.flash_device, file_system.offset,
-                                             size_t{file_system.sector_size} * kSectors);
-            if (erased != 0) printk("NVS: erasing storage_partition failed (%d)\n", erased);
-            if (erased == 0) printk("NVS: erased storage_partition\n");
-            return erased == 0;
+            return flash_flatten(file_system.flash_device, file_system.offset,
+                                 size_t{file_system.sector_size} * kSectors) == 0;
         }
 
         // INFO: fc 12nov26 -EDEADLK and -ESPIPE are nvs_startup's two refusals of the content
         MountAttempt mount() {
             const int mounted = nvs_mount(&file_system);
             if (mounted == 0) return MountAttempt::Mounted;
-            printk("NVS: mount failed (%d)\n", mounted);
             if (mounted == -EDEADLK || mounted == -ESPIPE) return MountAttempt::RefusedContent;
             return MountAttempt::Failed;
         }

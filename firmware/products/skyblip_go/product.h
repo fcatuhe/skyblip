@@ -61,9 +61,9 @@ class Product {
 
     Status setup() {
         board_.probe();
+        const Status board = board_.begin();
         roles_.capabilities = board_.capabilities();
         config_link_.set_product_name(product_name(roles_.capabilities));
-        const Status board = board_.begin();
         const power::ResetCause causes = platform_.system_power().reset_causes();
         reset_reason_ = power::classify(causes);
         // The register is read once and then only remembered, so the companion
@@ -92,6 +92,7 @@ class Product {
         // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
         if (flyable_) config_link_.load_identity();
 
+        if (!flyable_) (void)board_.take_bus_inventory();
         draw_self_test();
         if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
 
@@ -106,16 +107,23 @@ class Product {
     void run_pass(uint32_t now_ms) {
         if (!flyable_ && !shutdown_.going_down()) guard_cell(now_ms);
         if (flyable_ && !shutdown_.going_down()) {
-            meter_.begin_pass(context_.instant(now_ms).into_ms);
-            meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            const bool metered = diagnostics_.armed();
+            if (metered) {
+                meter_.begin_pass(context_.instant(now_ms).into_ms);
+                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            } else {
+                meter_.rest();
+                board_.poll(state_, now_ms);
+            }
             // Polled before the services run, so the pass that may write flash is
             // the pass that already knows the rail is going. One atomic read on
             // the silicon side; nothing here is allowed to be slower than that,
             // because the warning's whole value is the milliseconds it is early.
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.run_pass(now_ms, &meter_);
-            meter_.end_pass();
+            loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
+            if (metered) meter_.end_pass();
             record_loop(now_ms);
+            scan_for_self_test();
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             if (config_link_.config().power_off_requested()) {
                 config_link_.config().clear_power_off_request();
@@ -210,7 +218,6 @@ class Product {
         return loop_.may_feed_watchdog(now_ms);
     }
     int stalled_service(uint32_t now_ms) const { return loop_.stalled_service(now_ms); }
-    const char* service_name(int index) const { return loop_.feed_decision().name(index); }
 
     Board& board() { return board_; }
     bus::Bus& bus() { return bus_; }
@@ -299,6 +306,16 @@ class Product {
         board_.poll_battery(now_ms);
         power_.tick(now_ms);
         if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
+    }
+
+    // INFO: fc 14nov26 a menu is a tap away from the self-test page, so the bus is scanned before
+    // it draws
+    void scan_for_self_test() {
+        const bool on_page = screen_.mode() == Mode::Page && screen_.page() == Page::SelfTest;
+        if (screen_.mode() != Mode::Menu && !on_page) return;
+        if (!board_.take_bus_inventory()) return;
+        draw_self_test();
+        if (on_page) screen_.mark_dirty();
     }
 
     void draw_self_test() {
@@ -487,10 +504,7 @@ class Product {
     runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &radio_,
                                                &traffic_,     &alarm_,   &nmea_,  &flight_log_,
                                                &capture_,     &screen_,  &bravo_};
-    static constexpr const char* kServiceNames[kServiceCount] = {
-        "config", "ownship",    "power",   "radio",  "traffic", "alarm",
-        "nmea",   "flight_log", "capture", "screen", "bravo"};
-    runtime::Loop loop_{services_, kServiceCount, kServiceNames};
+    runtime::Loop loop_{services_, kServiceCount};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};
     // The barometer's address as the page prints it. A member and not a local:

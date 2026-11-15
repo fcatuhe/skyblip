@@ -574,7 +574,7 @@
 	pinctrl-names = "default", "sleep";
 };
 
-/* USB CDC ACM = console/log + a wired MCUmgr DFU transport.
+/* USB CDC ACM, for an image that builds a console. The products build none.
  *
  * The `zephyr_udc0` label is REQUIRED, not decoration: the USB device next
  * stack's CDC ACM serial helper does USBD_DEVICE_DEFINE(...,

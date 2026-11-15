@@ -44,12 +44,10 @@ constexpr const char* i2c_role(uint8_t address) {
 }
 
 // Every address on the bus, in one pass. 112 probes at 100 kHz is about 20 ms of
-// bus time, once, at boot.
-inline ports::Inventory scan_i2c(io::I2c& bus) {
-    ports::Inventory inventory{};
+// bus time, once, when the self-test page first needs it.
+inline void scan_i2c(io::I2c& bus, ports::Inventory& inventory) {
     io::scan_i2c(bus, inventory);
     inventory.rtc_fitted = inventory.has_i2c_address(kRtcAddress);
-    return inventory;
 }
 
 }  // namespace skyblip::boards::t_echo_plus

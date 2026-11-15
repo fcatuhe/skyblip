@@ -45,9 +45,9 @@ TEST_CASE("board: a sensor hub that answers and names itself is an inclinometer"
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
 
     CHECK(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer") {
@@ -56,9 +56,9 @@ TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
@@ -67,9 +67,9 @@ TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
-    CHECK_FALSE(board.inventory().has_i2c_address(parts::Bhi260::kAddress));
 }
 
 // The chip is a quarter turn from the case and face down with it: +X is up, +Y right, +Z forward.
@@ -79,6 +79,7 @@ TEST_CASE("board: the chip's axes are turned into the case's before anything rea
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -96,6 +97,7 @@ TEST_CASE("board: the hub is booted from the loop, and reports once it runs") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     const uint32_t now_ms = run(platform, board, state, 0, 2000);
@@ -116,6 +118,7 @@ TEST_CASE("board: nothing is asked of a bus with no hub on it") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -172,6 +175,7 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     uint32_t now_ms = run(platform, board, state, 0, 2000);
@@ -194,6 +198,7 @@ TEST_CASE("board: a slim image boots the hub from the copy on flash") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -210,6 +215,7 @@ TEST_CASE("board: a slim image on an empty partition leaves the hub idle and say
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -231,6 +237,7 @@ TEST_CASE("board: a slim image refuses a copy it was not built with") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -246,6 +253,7 @@ TEST_CASE("board: a full image replaces a copy that is not its own") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -258,6 +266,7 @@ TEST_CASE("board: a plain T-Echo reports no hub and keeps nothing on flash") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);
@@ -273,6 +282,7 @@ TEST_CASE("board: the copy waits for a flash window, as the log does") {
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
     state.rf.plan.tx_allowed = true;
 
@@ -288,6 +298,7 @@ TEST_CASE("board: a hub that answers but whose flash does not is reported unread
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.begin() == Status::Ok);
     bus::State state;
 
     run(platform, board, state, 0, 2000);

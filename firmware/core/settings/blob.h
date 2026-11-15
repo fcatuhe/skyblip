@@ -17,8 +17,6 @@ constexpr uint8_t blob_version(const uint8_t* data) { return data[0]; }
 // What the settings in use are, when they are not the blob a product stores.
 enum class Fallback : uint8_t { None, Prior, Defaults };
 
-const char* to_string(Fallback fallback);
-
 void seal(uint8_t version, const void* payload, size_t payload_bytes, uint8_t* out,
           size_t capacity);
 
