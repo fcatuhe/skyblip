@@ -63,7 +63,7 @@ class PowerService : public runtime::Service {
                   "two Duty records this far apart cannot be subtracted");
 
    private:
-    // INFO: fc 05aug26 a die read sleeps, and the die moves in minutes: ../README.md
+    // INFO: fc 05aug26 the die moves in minutes, and each read sleeps on the HFCLK: 10 s is plenty
     static constexpr uint32_t kDiePeriodMs = 10000;
     static_assert(kDieStaleMs >= 2 * kDiePeriodMs, "one missed sample is not a dead sensor");
 
