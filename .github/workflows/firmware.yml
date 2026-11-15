@@ -126,8 +126,8 @@ jobs:
       - name: the registry check refuses a file that differs by one byte
         run: python3 scripts/test_link_registry.py
       # All that stands between a partition edit and an install that erases the
-      # factory bootloader. Stdlib only, so it runs here and not on the slow job.
-      - name: mkuf2 range guards
+      # factory bootloader, or one that hangs on an earlier swap's status. Stdlib only, so it runs here.
+      - name: mkuf2 range guards and blanked trailer sector
         run: python3 scripts/test_mkuf2.py
       # The update page picks the file a unit needs off two TLVs: an image without them makes it guess.
       - name: the image says which hub image it pins
