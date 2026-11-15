@@ -1,6 +1,6 @@
 # scripts
 
-Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb`, `radio_protocols.rb` and `upstream_pins.rb`, which are Ruby.
+Host tooling. Everything here is Python 3 on the standard library, except `blip.py`, which needs a Bluetooth stack and says so in its shebang, and `simulator_scenarios.rb`, `dev_release.rb`, `radio_protocols.rb`, `upstream_pins.rb` and `emsdk.rb`, which are Ruby.
 
 | Script | What it does |
 |---|---|
@@ -18,6 +18,7 @@ Host tooling. Everything here is Python 3 on the standard library, except `blip.
 | `build_image.sh` | build, sign and check one product's images in a ready workspace, in its own build directory: the slim and full images of a product with a sensor hub, the one image of a product without, and `check_imu_image.py` only for the first. What `build_local.sh`, CI and a release share |
 | `dev_release.rb` | publish every product image of a `firmware.yml` run as one development pre-release and prune the old ones, its logic in `lib/dev_release.rb`, tested by `.github/test/dev_release_test.rb` |
 | `upstream_pins.rb` | read a version `.github/pins/action.yml` pins for Dependabot (`version emscripten-core/emsdk`), or fail while the vendored doctest or the Zephyr in `firmware/west.yml` differs from its pin (`check`), its logic in `lib/upstream_pins.rb`, tested by `.github/test/upstream_pins_test.rb` |
+| `emsdk.rb` | print the pinned Emscripten version and the `emcc` that runs it, for `make browser`: the one given if it runs the pin, else the one in `$EMSDK` or `~/.local/opt/emsdk`, which it clones, pulls and installs as needed. Its logic is in `lib/emsdk.rb`, tested by `.github/test/emsdk_test.rb` |
 | `radio_protocols.rb` | write the `PROTOCOLS.md` a production release carries: the radio protocol versions each product's `PROTOCOLS` names, each beside the specification it implements, its logic in `lib/radio_protocols.rb`, which `dev_release.rb` reads them through too |
 | `behavior_index.py`, `tuning_index.py`, `spec_to_md.py`, `etsi_to_md.py` | generate `docs/` out of the tree. The two specification converters share `layout_to_md.py` |
 | `fetch_etsi.py` | downloads the ETSI standards into `docs/reference/`, checks their SHA-256 and converts them. The PDFs are git-ignored |
