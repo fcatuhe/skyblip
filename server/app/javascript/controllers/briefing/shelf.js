@@ -1,3 +1,4 @@
+import { compareVersions, parseVersion } from "#skyblip/image"
 import { productOf, trustedKeys } from "#skyblip/update"
 
 const offered = new WeakMap()
@@ -15,7 +16,16 @@ export function fitting(shelf, unit) {
   const image = unit.state?.image
   const trusted = trustedKeys(image)
   if (!shelf || !trusted) return []
-  return [...shelf.options].filter(option => option.value && trusted.includes(option.dataset.key) && option.dataset.product === productOf(image))
+  return [...shelf.options].filter(option => option.value && trusted.includes(option.dataset.key) && option.dataset.product === productOf(image) && !older(option, unit))
+}
+
+// INFO: fc 15nov26 a stable tag has no build number, so it is held to the running version's triple
+function older(option, { state }) {
+  const offered = parseVersion(option.dataset.version)
+  const running = parseVersion(state?.running)
+  if (state?.image?.downgrade || !offered || !running) return false
+  const floor = /^\d+\.\d+\.\d+[.+]\d+$/.test(option.dataset.version) ? running : { ...running, build: 0 }
+  return compareVersions(offered, floor) < 0
 }
 
 // INFO: fc 11nov26 once per connection, the newest slim image of the unit's track and product is read, so the page knows whether it is behind
