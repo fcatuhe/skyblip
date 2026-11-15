@@ -10,7 +10,7 @@
   <dt>Device ID</dt>
   <dd class="mono"><%= @unit.device_id %></dd>
   <% if @unit.slug %>
-    <dt>Bluetooth</dt>
+    <dt>Device</dt>
     <dd class="mono"><%= @unit.slug %></dd>
   <% end %>
   <dt>First seen</dt>
@@ -19,46 +19,48 @@
   <dd><%= @unit.activated_at ? l(@unit.activated_at, format: "%b %-d, %Y, %H:%M") : "no" %></dd>
 </dl>
 
-<div class="table-scroll">
-  <table>
-    <thead>
-      <tr>
-        <th>Public key</th>
-        <th>Status</th>
-        <th>Also on</th>
-        <th>Registered on</th>
-        <th>Build</th>
-        <th>Server key id</th>
-        <th>First seen</th>
-        <th>Last seen</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @unit.keys.order(created_at: :desc).each do |key| %>
+<% if @unit.keys.any? %>
+  <div class="table-scroll">
+    <table>
+      <thead>
         <tr>
-          <th class="mono"><%= key.public_key %></th>
-          <td><%= key.status %></td>
-          <td><%= unit_links(key.other_units) %></td>
-          <td class="mono"><%= key.version %></td>
-          <td><%= unit_build(key) %></td>
-          <td class="mono"><%= key.server_key_id %></td>
-          <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
-          <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
-          <td>
-            <% if key.pending? %>
-              <%= button_to "Promote", admin_unit_key_promotion_path(key), class: "button button--primary button--small",
-                    form: { data: { turbo_confirm: "Make this key the unit's own, and revoke the active one? Check with the owner first." } } %>
-            <% elsif key.active? %>
-              <%= button_to "Revoke", admin_unit_key_revocation_path(key), class: "button button--danger button--small",
-                    form: { data: { turbo_confirm: "Revoke this key? The next registration of this unit binds its key, whoever sends it." } } %>
-            <% end %>
-          </td>
+          <th>Public key</th>
+          <th>Status</th>
+          <th>Also on</th>
+          <th>Registered on</th>
+          <th>Build</th>
+          <th>Server key id</th>
+          <th>First seen</th>
+          <th>Last seen</th>
+          <th></th>
         </tr>
-      <% end %>
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody>
+        <% @unit.keys.order(created_at: :desc).each do |key| %>
+          <tr>
+            <th class="mono"><%= key.public_key %></th>
+            <td><%= key.status %></td>
+            <td><%= unit_links(key.other_units) %></td>
+            <td class="mono"><%= key.version %></td>
+            <td><%= unit_build(key) %></td>
+            <td class="mono"><%= key.server_key_id %></td>
+            <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td>
+              <% if key.pending? %>
+                <%= button_to "Promote", admin_unit_key_promotion_path(key), class: "button button--primary button--small",
+                      form: { data: { turbo_confirm: "Make this key the unit's own, and revoke the active one? Check with the owner first." } } %>
+              <% elsif key.active? %>
+                <%= button_to "Revoke", admin_unit_key_revocation_path(key), class: "button button--danger button--small",
+                      form: { data: { turbo_confirm: "Revoke this key? The next registration of this unit binds its key, whoever sends it." } } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
 
 <h2>Firmware</h2>
 <% if @unit.firmwares.any? %>

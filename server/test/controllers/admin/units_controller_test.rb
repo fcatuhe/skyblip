@@ -52,6 +52,10 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", admin_unit_path(units(:bravo)), text: "bravo-3f2a"
     assert_select "tr", text: /bravo-3f2a.*skyBlip Bravo.*0\.2\.0\+900.*reported by a browser/m
 
+    get admin_unit_path(units(:bravo))
+    assert_select "dd", text: "none, the unit transmits on no address"
+    assert_select "th", text: "Public key", count: 0
+
     get admin_units_path(activated: "1")
     assert_select "a[href=?]", admin_unit_path(units(:bravo)), count: 0
     assert_select "a[href=?]", admin_unit_path(units(:bound)), text: "000001"
