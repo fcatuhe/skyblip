@@ -259,7 +259,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
 | `kRecordPeriodMs` | `runtime::kBatteryPeriodMs` = 1000 (1 s) | milliseconds | Period | the cadence the cell is sampled at, so no record repeats a reading |
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
-| `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
+| `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | the die moves in minutes, and each read sleeps on the HFCLK: 10 s is plenty |
 
 ## [`firmware/products/skyblip_bravo`](../firmware/products/skyblip_bravo/README.md)
 

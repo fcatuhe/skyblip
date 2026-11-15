@@ -617,10 +617,9 @@ zephyr_udc0: &usbd {
  * is what closes it.
  *
  * Devicetree and not Kconfig, and no driver is involved: soc/nordic/nrf52/soc.c
- * :35-38 reads THIS PROPERTY at compile time and calls nrf_power_dcdcen_set()
- * during SoC init. CONFIG_SOC_DCDC_NRF52X still reaches the same line but is
- * deprecated, and its help text names this node property as the replacement
- * (soc/nordic/nrf52/Kconfig:37-49). CONFIG_BOARD_ENABLE_DCDC, which most
+ * :35-36 reads THIS PROPERTY at compile time and calls nrf_power_dcdcen_set()
+ * during SoC init. Zephyr 4.5 removed CONFIG_SOC_DCDC_NRF52X, the Kconfig route
+ * to the same line. CONFIG_BOARD_ENABLE_DCDC, which most
  * out-of-tree nRF52 boards still carry, does not exist unless the board itself
  * defines it, and assigning an undefined symbol is the Kconfig warning that
  * failed this build the first time.

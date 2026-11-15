@@ -359,7 +359,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     static constexpr struct spi_config kSpiConfig = {
         .frequency = 8000000U,
-        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
+        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_CONTROLLER,
         .slave = 0,
         .cs = {},
     };

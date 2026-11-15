@@ -30,7 +30,7 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 
 ## Built into a firmware image
 
-`firmware/west.yml` pins Zephyr v4.4.2. Zephyr's own manifest pins the module revisions, and `west update` fetches them. The C and C++ libraries come with the Zephyr SDK's toolchain. Monocypher and the Bosch image are the vendored copies above.
+`firmware/west.yml` pins Zephyr v4.5.0. Zephyr's own manifest pins the module revisions, and `west update` fetches them. The C and C++ libraries come with the Zephyr SDK's toolchain. Monocypher and the Bosch image are the vendored copies above.
 
 | Component | What it does in the image | License |
 |---|---|---|
@@ -41,7 +41,7 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 | [hal_nordic](https://github.com/zephyrproject-rtos/hal_nordic) | nrfx and the MDK, the nRF52840's drivers and register definitions | BSD-3-Clause, Copyright (c) 2010 - 2026, Nordic Semiconductor ASA, text below. The MDK's `system_nrf52.c` is Apache-2.0, Copyright (c) 2009-2026 ARM Limited |
 | [Mbed TLS](https://github.com/zephyrproject-rtos/mbedtls) and [TF-PSA-Crypto](https://github.com/zephyrproject-rtos/tf-psa-crypto) | the PSA crypto the Bluetooth host uses | Apache-2.0, chosen from Apache-2.0 OR GPL-2.0-or-later |
 | [zcbor](https://github.com/zephyrproject-rtos/zcbor) | the CBOR codec of MCUmgr | Apache-2.0 |
-| picolibc, from the Zephyr SDK | the C library | BSD-3-Clause and the other permissive licenses in its `COPYING.picolibc`, copied as `LICENSES/picolibc.txt` from the revision Zephyr v4.4.2 pins. Its GPL-2.0 and AGPL-3.0 entries cover tests and a build script, not the library |
+| picolibc, from the Zephyr SDK | the C library | BSD-3-Clause and the other permissive licenses in its `COPYING.picolibc`, copied as `LICENSES/picolibc.txt` from the revision Zephyr v4.5.0 pins. Its GPL-2.0 and AGPL-3.0 entries cover tests and a build script, not the library |
 | libstdc++ and libgcc, from the Zephyr SDK's GCC | C++ and compiler runtime support | GPL-3.0-or-later WITH GCC-exception-3.1, which lets the image ship under any terms and asks for no notice |
 | Monocypher | the Ed25519 check | CC0-1.0 |
 | Bosch BHI260AP firmware | the inertial unit's image, in a full image only | BSD-3-Clause, text below |

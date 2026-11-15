@@ -1,6 +1,8 @@
 tests:
   parts.ag3335.adapter:
-    tags: parts gnss
+    tags:
+      - parts
+      - gnss
     # Built, never run: no X1 has run skyBlip yet, and the overlay's pins are unverified until #169.
     build_only: true
     platform_allow:
