@@ -3,7 +3,7 @@
 #include "simulator/simulator.h"
 #include "simulator/world/prompt_glass.h"
 
-// INFO: fc 15nov26 the Makefile hides every other symbol of ours, so the WASM exports these and no more
+// INFO: fc 15nov26 the Makefile hides every other symbol of ours, so the WASM exports only these
 #define KEEPALIVE __attribute__((used, visibility("default")))
 
 using namespace skyblip;
