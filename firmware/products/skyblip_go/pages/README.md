@@ -388,7 +388,7 @@ Neither is titled after the page behind it. A heading reading `RADAR` over five 
 
 Seven rows are why `kMenuRowHeight` is 20: seven of them fit between the heading's rule and the keys. The words stand in the middle of the focused row's bar, two pixels above and two below.
 
-`BROWSERS` reads how many browsers the unit trusts, or `NONE`. A press asks first, the count at triple height over `TRUSTED BROWSERS ASK FOR A PRESS AGAIN`, with the keys `ERASE` and `KEEP`, and a second press forgets them all: a lost phone keeps its trust until then (`../../../core/comms/README.md`, Trusted browsers). With none trusted, the press asks nothing.
+`BROWSERS` reads how many browsers the unit trusts, or `NONE`, and its button key reads `ERASE`, or nothing with none trusted. A press asks first, the count at triple height over `TRUSTED BROWSERS ASK FOR A PRESS AGAIN`, with the keys `ERASE` and `KEEP`, and a second press forgets them all: a lost phone keeps its trust until then (`../../../core/comms/README.md`, Trusted browsers). With none trusted, the press asks nothing.
 
 Seven is `kMenuLines`, and the radar's menu has nine rows. The eighth and ninth did not take the height down again: the rows slide up under the focus instead, one line for each tap past the seventh, so `BRAVO` comes onto the glass as `LIGHT` goes off the top, then `BROWSERS` as `AIRCRAFT` does, and the keys stay where they are. The pad only ever moves the focus down, so the rows only ever slide one way, and the next time the menu opens it is at the top again. Nothing marks the row below the last line: the pad walks onto it.
 
