@@ -13,11 +13,9 @@ constexpr char kBravoNamePrefix[] = "skyBlip Bravo ";
 }  // namespace
 
 Status BravoService::setup() {
-    uint8_t epoch[sizeof(boot_epoch_)] = {};
-    if (context_.roles.identity.draw_random(ByteSpan(epoch, sizeof(epoch))))
-        boot_epoch_ = static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
-                      (static_cast<uint32_t>(epoch[2]) << 16) |
-                      (static_cast<uint32_t>(epoch[3]) << 24);
+    const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
+    if (!epoch) return Status::Down;
+    boot_epoch_ = *epoch;
     // INFO: fc 11nov26 a board with no Bluetooth answers Down, and that must not fail the setup
     if (paired(settings_)) (void)context_.roles.link.reserve_peer_connection(true);
     return Status::Ok;

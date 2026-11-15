@@ -98,6 +98,7 @@ class MeshtrackerX1 {
             ports::has(capabilities_, ports::Capability::Gnss) ? static_cast<ports::Gnss&>(gnss_)
                                                                : null_.gnss,
             platform_.identity(),
+            platform_.random(),
             capabilities_,
         };
     }

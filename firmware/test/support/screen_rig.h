@@ -8,6 +8,7 @@
 #include "hardware/parts/ssd1681/ssd1681.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "products/common/services/alarm.h"
 #include "products/common/services/capture.h"
@@ -30,10 +31,11 @@ struct ScreenRig {
     platform::host::Clock clock;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::Roles roles{
         clock,          null.rf,        null.link,        epd,  // epd fills Display
         null.key_value, null.log_flash, null.annunciator, null.dfu, null.die_temperature,
-        null.indicator, null.gnss,      identity};
+        null.indicator, null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

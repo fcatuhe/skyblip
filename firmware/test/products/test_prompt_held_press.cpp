@@ -38,7 +38,7 @@ struct Unit {
         REQUIRE(rig.setup() == Status::Ok);
         pass(500);
         if (pending == comms::Pending::Register) {
-            rig.platform.identity().queue_random(vectors.bytes<16>("unit_nonce"));
+            rig.platform.random().queue(vectors.bytes<16>("unit_nonce"));
             rig.send("{\"command\":\"challenge\"}");
             pass(300);
         }

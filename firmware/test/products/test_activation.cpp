@@ -10,6 +10,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/settings_store.h"
@@ -84,7 +85,7 @@ struct Bench {
     }
 
     std::string challenge_with_vectors_nonce() {
-        rig.platform.identity().queue_random(vectors.bytes<16>("unit_nonce"));
+        rig.platform.random().queue(vectors.bytes<16>("unit_nonce"));
         return say("{\"command\":\"challenge\"}");
     }
 
@@ -373,7 +374,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
     SUBCASE("no randomness") {
         Bench bench;
         bench.boot();
-        bench.rig.platform.identity().random_fails = true;
+        bench.rig.platform.random().fails = true;
         CHECK(bench.say("{\"command\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no running version") {
@@ -483,7 +484,7 @@ struct QueuedUnlock {
                 flight::FlightState::Ground);
 
         const identity::Nonce nonce{4, 2};
-        bench.rig.platform.identity().queue_random(nonce);
+        bench.rig.platform.random().queue(nonce);
         REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
         const identity::UnlockCode code = Identity::unlock_code_for(kNewSerial, nonce);
         std::string signature(128, '?');
@@ -529,7 +530,7 @@ TEST_CASE(
     bench.rig.seconds(bench.now_ms, 20, 0, 300);
 
     const identity::Nonce nonce{4, 2};
-    bench.rig.platform.identity().queue_random(nonce);
+    bench.rig.platform.random().queue(nonce);
     REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
     const identity::UnlockCode code = Identity::unlock_code_for(Identity::kSerial, nonce);
     std::string signature(128, '?');
@@ -609,7 +610,8 @@ struct Desk {
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port;
-    identity::Unit unit{port};
+    platform::host::Random random;
+    identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     ActivationVectors vectors;
 
@@ -654,7 +656,7 @@ TEST_CASE(
         Desk desk;
         desk.dfu.release = desk.vectors.flag("release");
         desk.config.set_flight_state(flight_state);
-        desk.port.queue_random(desk.vectors.bytes<16>("unit_nonce"));
+        desk.random.queue(desk.vectors.bytes<16>("unit_nonce"));
         desk.say("{\"command\":\"challenge\"}");
         desk.say(register_command(desk.vectors.text("server_nonce"),
                                   desk.vectors.text("register_signature")));

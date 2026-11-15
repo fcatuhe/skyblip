@@ -52,7 +52,7 @@ class ConfigLinkService : public runtime::Service {
           power_(power),
           product_name_(product_name),
           name_rule_(name_rule),
-          unit_(context.roles.identity),
+          unit_(context.roles.identity, context.roles.random),
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);

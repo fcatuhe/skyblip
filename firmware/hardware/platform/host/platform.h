@@ -19,6 +19,7 @@
 #include "hardware/platform/host/io.h"
 #include "hardware/platform/host/kvstore.h"
 #include "hardware/platform/host/link.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/rf.h"
 #include "hardware/platform/host/system_power.h"
 #include "hardware/platform/host/watchdog.h"
@@ -242,6 +243,7 @@ class Platform {
     host::Watchdog& watchdog() { return watchdog_; }
     host::SystemPower& system_power() { return system_power_; }
     host::Identity& identity() { return identity_; }
+    host::Random& random() { return random_; }
     bool button_down() const { return gpio_.button_down; }
     bool pad_down() const { return gpio_.pad_down; }
 
@@ -328,6 +330,7 @@ class Platform {
     host::Pps pps_{clock_};
     host::SystemPower system_power_{};
     host::Identity identity_;
+    host::Random random_{};
     ports::Capabilities fitted_;
     bool buzzer_pin_held_low_{false};
     bool imu_firmware_linked_{true};

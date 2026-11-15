@@ -43,7 +43,7 @@ Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps A
 
 ## Prompts without a screen
 
-A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds.
+A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds. A browser Bravo trusts changes the settings and starts an update with no press (`core/comms/README.md`, Trusted browsers). Bravo holds no key, and draws the challenge's nonce from its RNG.
 
 `common::PromptAnswer` (`../common/prompt_answer.h`) arms the answer only once the lamp shows the prompt, the button is up, and it has been up for `kAnswerSettleMs` since its last release and since the prompt arrived. A contact that began before it armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release. A prompt replaced by another of the same kind disarms it as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the answer stays disarmed and a press dismisses the advisory.
 

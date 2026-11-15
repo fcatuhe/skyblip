@@ -193,18 +193,18 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     const std::string trust = "{\"command\":\"trust_browser\",\"key\":\"" + browser_key() +
                               "\",\"signature\":\"" + browser_signature() +
                               "\",\"label\":\"Chrome on Android\"}";
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"browser_challenge\"}");
     unit.say(trust);
     unit.say("{\"command\":\"set\",\"units\":\"nautical\"}");
     unit.confirm();
     unit.reconnect();
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"browser_challenge\"}");
     unit.say(trust);
     unit.say("{\"command\":\"browsers\",\"index\":0}");
     unit.say("{\"command\":\"browsers\",\"index\":1}");
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"challenge\"}");
     unit.say("{\"command\":\"register\",\"server_nonce\":\"" +
              hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) +
@@ -441,8 +441,8 @@ std::string refusal(const names::Frame& frame, const Answer& answer) {
 TEST_CASE("link registry: the unit reads every key a host frame may carry, and refuses any other") {
     GroundedUnitWithLogs unit;
     unit.rig.raise_link(1);
-    unit.rig.platform.identity().queue_random(kUnitNonce);
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     const std::map<std::string, std::string> values = samples(unit);
     for (const names::Frame& frame : names::kFrames) {
         if (frame.sender == names::Sender::Unit || !on_a_phone_endpoint(frame)) continue;

@@ -43,6 +43,7 @@ struct Pass {
                        null.indicator,
                        null.gnss,
                        platform.identity(),
+                       platform.random(),
                        ports::Capability::Rf};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};

@@ -40,7 +40,7 @@ void say(Rig& rig, uint32_t& now_ms, const std::string& json) {
 }
 
 void prove(Rig& rig, uint32_t& now_ms) {
-    rig.platform.identity().queue_random(kNonce);
+    rig.platform.random().queue(kNonce);
     say(rig, now_ms, "{\"command\":\"browser_challenge\"}");
     say(rig, now_ms, trust_browser());
 }

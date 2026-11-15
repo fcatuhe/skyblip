@@ -101,9 +101,10 @@ struct SmallPoolRig {
     platform::host::FlashRegion flash;
     ports::NullRoles null;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::Roles roles{clock,     null.rf,          link,     null.display,         null.key_value,
                        flash,     null.annunciator, null.dfu, null.die_temperature, null.indicator,
-                       null.gnss, identity};
+                       null.gnss, identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

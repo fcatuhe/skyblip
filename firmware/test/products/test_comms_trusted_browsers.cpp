@@ -10,6 +10,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/settings_store.h"
 #include "test/support/config_frame.h"
@@ -48,7 +49,8 @@ struct Desk {
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port{std::nullopt};
-    identity::Unit unit{port};
+    platform::host::Random random;
+    identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     identity::Nonce nonce{5, 4, 3, 2, 1};
 
@@ -69,7 +71,7 @@ struct Desk {
     }
 
     std::string challenge() {
-        port.queue_random(nonce);
+        random.queue(nonce);
         return say("{\"command\":\"browser_challenge\"}");
     }
 

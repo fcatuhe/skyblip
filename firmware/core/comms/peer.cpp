@@ -10,6 +10,13 @@
 
 namespace skyblip::comms {
 
+std::optional<uint32_t> draw_boot_epoch(ports::Random& random) {
+    uint8_t epoch[sizeof(uint32_t)] = {};
+    if (!random.draw(ByteSpan(epoch, sizeof(epoch)))) return std::nullopt;
+    return static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
+           (static_cast<uint32_t>(epoch[2]) << 16) | (static_cast<uint32_t>(epoch[3]) << 24);
+}
+
 namespace {
 
 // INFO: fc 12nov26 schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s

@@ -17,6 +17,7 @@
 #include "hardware/platform/zephyr/link.h"
 #include "hardware/platform/zephyr/meshtracker_x1_lines.h"
 #include "hardware/platform/zephyr/meshtracker_x1_power.h"
+#include "hardware/platform/zephyr/random.h"
 #include "ports/capabilities.h"
 #include "ports/null.h"
 
@@ -66,6 +67,7 @@ class MeshtrackerX1 {
     zephyr::Watchdog& watchdog() { return lines_.watchdog(); }
     MeshtrackerX1Power& system_power() { return system_power_; }
     ports::KeylessIdentity& identity() { return identity_; }
+    zephyr::Random& random() { return random_; }
 
     bool button_down() { return lines_.button_down(); }
     bool read_battery_mv(uint16_t& out_mv) { return lines_.read_battery_mv(out_mv); }
@@ -102,6 +104,7 @@ class MeshtrackerX1 {
     Dfu dfu_{};
     zephyr::Link& link_{zephyr::link()};
     ports::KeylessIdentity identity_{zephyr::bluetooth_tag()};
+    zephyr::Random random_{};
 };
 
 }  // namespace skyblip::platform::zephyr

@@ -98,6 +98,7 @@ class MeshtrackerX1 {
     host::Watchdog& watchdog() { return watchdog_; }
     host::SystemPower& system_power() { return system_power_; }
     ports::KeylessIdentity& identity() { return identity_; }
+    host::Random& random() { return random_; }
     host::Battery& battery() { return battery_; }
 
     models::Lr2021& radio() { return radio_; }
@@ -141,6 +142,7 @@ class MeshtrackerX1 {
     host::SystemPower system_power_{};
     host::Battery battery_{};
     ports::KeylessIdentity identity_{host::Identity::kBluetoothTag};
+    host::Random random_{};
     bool button_down_{false};
 };
 

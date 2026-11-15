@@ -11,6 +11,7 @@
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "test/support/activation_vectors.h"
 
 using namespace skyblip;
@@ -204,7 +205,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         Identity port(std::nullopt);
         port.stored_unlock_code =
             identity::UnlockCode{x.serial, x.unit_nonce, x.vectors.bytes<64>("unlock_signature")};
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK(unit.key_provisioned());
         CHECK(unit.activation().serial == x.serial);
@@ -215,7 +217,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         Identity port(std::nullopt);
         port.stored_unlock_code = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
                                                        x.vectors.bytes<64>("unlock_signature")};
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -229,7 +232,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                                    code.serial, code.nonce)
                               .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -244,7 +248,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                      code.serial, code.nonce)
                 .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -258,28 +263,32 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                      code.serial, code.nonce)
                 .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a code the trusted key signed for serial 0") {
         Identity port(std::nullopt);
         port.stored_unlock_code = Identity::unlock_code_for(0, identity::Nonce{});
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a unit whose key could not be read") {
         Identity port(Identity::kSerial);
         port.key_provisioned = false;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("an erased page") {
         Identity port(std::nullopt);
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());

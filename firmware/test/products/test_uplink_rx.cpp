@@ -32,6 +32,7 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "protocols/common/test/channel.h"
 #include "test/support/product_rig.h"
@@ -165,11 +166,12 @@ void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, sec
 struct FeatureRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

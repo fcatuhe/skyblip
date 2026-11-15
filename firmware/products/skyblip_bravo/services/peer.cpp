@@ -19,11 +19,9 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
-    uint8_t epoch[sizeof(boot_epoch_)] = {};
-    if (context_.roles.identity.draw_random(ByteSpan(epoch, sizeof(epoch))))
-        boot_epoch_ = static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
-                      (static_cast<uint32_t>(epoch[2]) << 16) |
-                      (static_cast<uint32_t>(epoch[3]) << 24);
+    const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
+    if (!epoch) return Status::Down;
+    boot_epoch_ = *epoch;
     keep_pin();
     return Status::Ok;
 }
