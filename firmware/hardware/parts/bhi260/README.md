@@ -2,7 +2,7 @@
 
 The Bosch BHI260AP on the T-Echo Plus sensor bus, at 0x28 (0x29 with the address pin high). It is what puts the ball in the six-pack's turn coordinator, and it is the only part on this board that arrives without a program.
 
-The references only trust an IMU after a settling delay: "MPU9250 or ICM20948 start-up time for register R/W is 11-100 ms", and SoftRF (`platform/nRF52.cpp:1145-1147`) waits 90 ms before probing one. Here the rails go up in `board.c` at `PRE_KERNEL_1` and the I2C scan (`boards/lilygo/t_echo_plus/i2c_scan.h`) runs after the whole driver model is initialised, milliseconds of clock, flash and USB setup later, so boot order pays the delay rather than a sleep. The day the scan moves earlier, that stops being true.
+The references only trust an IMU after a settling delay: "MPU9250 or ICM20948 start-up time for register R/W is 11-100 ms", and SoftRF (`platform/nRF52.cpp:1145-1147`) waits 90 ms before probing one. Here the rails go up in `board.c` at `PRE_KERNEL_1`, and `Board::begin()` probes the hub only after the platform's 50 ms wait for the SX1262's TCXO, so boot order pays most of the delay rather than a sleep of its own. The day the probe moves before that wait, that stops being true.
 
 ## Why this is not a register map
 

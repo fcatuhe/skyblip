@@ -361,7 +361,7 @@ What the board asks its own hardware at bring-up, and what it concludes.  The T-
 - a panel nobody has fingerprinted is named, not guessed at
 - an output left on past its ceiling is cut, the motor and the buzzer both
   > A loop that stalls mid-call would otherwise hold an output on until the watchdog bites.
-- one scan names everything on the sensor bus, driven or not
+- one scan, taken when the page asks, names everything on the sensor bus
 - the T-Echo Plus drives its motor as an ERM in open loop, uncalibrated
   > The X1 runs an LRA through the same part, and that choice must not leak into this board.
 - the guard counts from turn-on: an off re-arms it, a pitch change does not

@@ -61,9 +61,9 @@ class Product {
 
     Status setup() {
         board_.probe();
+        const Status board = board_.begin();
         roles_.capabilities = board_.capabilities();
         config_link_.set_product_name(product_name(roles_.capabilities));
-        const Status board = board_.begin();
         const power::ResetCause causes = platform_.system_power().reset_causes();
         reset_reason_ = power::classify(causes);
         // The register is read once and then only remembered, so the companion
@@ -92,6 +92,7 @@ class Product {
         // INFO: fc 18oct26 a refused unit serves nothing, so it advertises nothing either
         if (flyable_) config_link_.load_identity();
 
+        if (!flyable_) (void)board_.take_bus_inventory();
         draw_self_test();
         if (!flyable_) roles_.display.present(self_test_page_, ports::Refresh::Full, 0);
 
@@ -122,6 +123,7 @@ class Product {
             loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
             if (metered) meter_.end_pass();
             record_loop(now_ms);
+            scan_for_self_test();
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             if (config_link_.config().power_off_requested()) {
                 config_link_.config().clear_power_off_request();
@@ -304,6 +306,16 @@ class Product {
         board_.poll_battery(now_ms);
         power_.tick(now_ms);
         if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
+    }
+
+    // INFO: fc 14nov26 a menu is a tap away from the self-test page, so the bus is scanned before
+    // it draws
+    void scan_for_self_test() {
+        const bool on_page = screen_.mode() == Mode::Page && screen_.page() == Page::SelfTest;
+        if (screen_.mode() != Mode::Menu && !on_page) return;
+        if (!board_.take_bus_inventory()) return;
+        draw_self_test();
+        if (on_page) screen_.mark_dirty();
     }
 
     void draw_self_test() {

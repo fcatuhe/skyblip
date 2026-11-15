@@ -38,6 +38,9 @@ class Drv2605 : public ports::Haptic {
 
     // INFO: fc 12nov26 SLOS854D 8.6.24 ends AUTO_CAL_TIME 3 within 1200 ms, so a later GO has hung
     static constexpr uint32_t kCalibrationCeilingMs = 1500;
+    // INFO: fc 14nov26 SLOS854D 9.3.1: 250 us from power-up to I2C, in case the enable line gates
+    // the supply
+    static constexpr uint32_t kPowerUpUs = 250;
 
     Drv2605(io::I2c& bus, io::Gpio& gpio, io::Delay& delay, int enable_pin, Actuator actuator)
         : bus_(bus), gpio_(gpio), delay_(delay), enable_pin_(enable_pin), actuator_(actuator) {}

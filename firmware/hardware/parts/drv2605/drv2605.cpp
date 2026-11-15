@@ -11,6 +11,7 @@ void Drv2605::power_up() {
 Status Drv2605::begin() {
     ready_ = false;
     power_up();
+    if (enable_pin_ >= 0) delay_.wait_at_least_us(kPowerUpUs);
 
     // The address has to answer before a register read means anything: a
     // zero-length write is the bus's own presence question, and on a bus with

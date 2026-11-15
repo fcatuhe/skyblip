@@ -71,21 +71,22 @@ class TEchoPlus {
         // INFO: fc 11nov26 a register read back proves the radio: asserting it hides a dead MISO
         if (radio_.probe() == Status::Ok) capabilities_ = capabilities_ | ports::Capability::Rf;
 
-        take_bus_inventory();
         identify_panel();
         establish_haptic();
         establish_buzzer();
-        establish_inclinometer();
         establish_barometer();
         prove_roles();
     }
 
-    // Probing is done: capabilities() is already known. This is bring-up, and a part that
-    // is present but refuses to start is a degraded state, not a missing
-    // capability.
+    // Probing is done but for the IMU: capabilities() is known once this returns. This is
+    // bring-up, and a part that is present but refuses to start is a degraded state, not a
+    // missing capability.
     Status begin() {
         const Status status = platform_.begin();
         if (status != Status::Ok) return status;
+        // INFO: fc 14nov26 after the platform's 50 ms TCXO wait, which a BHI260AP's start-up needs
+        // too
+        establish_inclinometer();
         if (ports::has(capabilities_, ports::Capability::Display)) display_.begin();
         read_stored_imu_image();
         if (!ports::has(capabilities_, ports::Capability::Rf)) return Status::Ok;
@@ -95,7 +96,7 @@ class TEchoPlus {
     // The way down, for the parts the board owns rather than the platform: a
     // haptic driver that answered goes to standby and its enable is held low
     // before the rail it hangs off collapses, and otherwise the enable that
-    // take_bus_inventory() raised is released. SoftRF puts it in standby in the
+    // its probe raised is released. SoftRF puts it in standby in the
     // same place (platform/nRF52.cpp:3007-3020). Called on every road into
     // SYSTEM OFF, after the services have stopped running.
     void park() { haptic_.park(); }
@@ -106,8 +107,23 @@ class TEchoPlus {
     // What answered, by name and address, behind the capability bits. The
     // self-test page reads it: two BME280 addresses, five shipped e-paper
     // signatures and a haptic that may or may not be a waveform driver are
-    // exactly the facts a bench cannot get from a PASS.
+    // exactly the facts a PASS does not say.
     const ports::Inventory& inventory() const { return inventory_; }
+
+    // INFO: fc 14nov26 only the self-test page reads the bus scan, so it runs once, when first
+    // asked
+    bool take_bus_inventory() {
+        if (bus_scanned_) return false;
+        bus_scanned_ = true;
+        t_echo_plus::scan_i2c(platform_.i2c(io::BusId::Sensor), inventory_);
+        inventory_.barometer_address =
+            inventory_.has_i2c_address(parts::Bme280::kAddressPrimary)
+                ? parts::Bme280::kAddressPrimary
+            : inventory_.has_i2c_address(parts::Bme280::kAddressAlternate)
+                ? parts::Bme280::kAddressAlternate
+                : 0;
+        return true;
+    }
 
     ports::Roles roles() {
         return ports::Roles{
@@ -317,20 +333,6 @@ class TEchoPlus {
         inventory_.panel_name = display_.panel_name();
     }
 
-    void take_bus_inventory() {
-        // The enable line first: it costs one register write, and if it turns out
-        // to gate the driver's supply rather than its standby, a scan taken before
-        // it would miss the part entirely.
-        haptic_.power_up();
-        inventory_ = t_echo_plus::scan_i2c(platform_.i2c(io::BusId::Sensor));
-        inventory_.barometer_address =
-            inventory_.has_i2c_address(parts::Bme280::kAddressPrimary)
-                ? parts::Bme280::kAddressPrimary
-            : inventory_.has_i2c_address(parts::Bme280::kAddressAlternate)
-                ? parts::Bme280::kAddressAlternate
-                : 0;
-    }
-
     // The haptic is a part on a bus, not a pin. Capability::Haptic is granted by
     // the part answering and identifying itself, never by the board being a Plus:
     // P0.08 high with no DRV2605 behind it is a device that claims a vibration
@@ -346,7 +348,6 @@ class TEchoPlus {
     void establish_haptic() {
         capabilities_ = without(ports::Capability::Haptic);
         inventory_.haptic = ports::HapticKind::None;
-        if (!inventory_.has_i2c_address(parts::Drv2605::kAddress)) return;
         if (haptic_.begin() != Status::Ok) return;
         platform_.annunciator().attach_haptic(haptic_);
         inventory_.haptic = ports::HapticKind::WaveformDriver;
@@ -366,9 +367,6 @@ class TEchoPlus {
 
     void establish_inclinometer() {
         capabilities_ = without(ports::Capability::Inclinometer);
-        if (!inventory_.has_i2c_address(parts::Bhi260::kAddress) &&
-            !inventory_.has_i2c_address(parts::Bhi260::kAddressAlternate))
-            return;
         if (imu_.probe() != Status::Ok) return;
         capabilities_ = capabilities_ | ports::Capability::Inclinometer;
     }
@@ -474,6 +472,7 @@ class TEchoPlus {
     bool imu_image_store_tried_{false};
     typename Platform::Rf rf_;
     ports::Inventory inventory_{};
+    bool bus_scanned_{false};
     input::Contact button_{t_echo_plus::kButtonHoldMs};
     input::Contact pad_{t_echo_plus::kPadSettleMs};
     ports::NullRoles null_{};

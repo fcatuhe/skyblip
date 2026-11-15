@@ -124,7 +124,7 @@ TEST_CASE("product: building the product touches no part, and setup probes the p
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.platform.chips().radio.reset_pulses > 0);
     CHECK(rig.platform.chips().haptic.enable_raises > 0);
-    CHECK(rig.product.board().inventory().i2c_count > 0);
+    CHECK(rig.product.board().inventory().i2c_count == 0);
     CHECK(ports::has(rig.product.capabilities(),
                      ports::Capability::Rf | ports::Capability::Barometer));
 }
