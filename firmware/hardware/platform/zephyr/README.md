@@ -54,4 +54,4 @@ No SMP and no bonding, on this link as on the phones', so the Windows Web Blueto
 
 Subscription state is not held here. `bt_gatt_is_subscribed()` is per connection and already correct; the three booleans this file used to keep were one device's worth of state for what is now three centrals.
 
-Advertising stops the instant a connection is created, and Zephyr 4.4 does not resume it. Both `connected()` and `recycled()` start it again: the first picks up the next free connection object, the second is the stack saying one has been freed. `-ENOMEM` from either is normal and means every object is in use.
+Advertising stops the instant a connection is created, and Zephyr 4.5 does not resume it. Both `connected()` and `recycled()` start it again: the first picks up the next free connection object, the second is the stack saying one has been freed. `-ENOMEM` from either is normal and means every object is in use.

@@ -63,14 +63,7 @@ class PowerService : public runtime::Service {
                   "two Duty records this far apart cannot be subtracted");
 
    private:
-    // INFO: fc 05aug26 Die temperature moves in minutes: it is the temperature of
-    // a lump of plastic in the sun, low-passed by its own mass. Ten seconds is
-    // already generous, so the cheapest correct cadence is the one to take - and
-    // the measurement is not free. Zephyr's temp_nrf5 sample_fetch takes a mutex,
-    // requests the HFCLK through onoff and then BLOCKS on the DATARDY semaphore
-    // (drivers/sensor/nordic/temp/temp_nrf5.c:41-75), so it is a sleeping call and
-    // may not be made from an interrupt or from the radio thread. It runs on the
-    // service pass, where the executor that owns the dwells outranks it.
+    // INFO: fc 05aug26 a die read sleeps, and the die moves in minutes: ../README.md
     static constexpr uint32_t kDiePeriodMs = 10000;
     static_assert(kDieStaleMs >= 2 * kDiePeriodMs, "one missed sample is not a dead sensor");
 
