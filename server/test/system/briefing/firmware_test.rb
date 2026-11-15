@@ -7,6 +7,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       connect_go
       within(".unit-banner") { click_link "Update" }
       assert_current_path "/briefing/devices/go-00012a/firmware"
+      shelf_on_the_page
       assert_button "Install 0.1.0+1005"
       screen "20-firmware-ready"
 
@@ -41,7 +42,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     in_range a_go(running: "0.1.0+1000")
     on_the_shelf do
       connect_go
-      click_link "Firmware"
+      open_firmware
       assert_button "Install 0.1.0+1005"
       within(".firmware-changes") do
         assert_equal %w[0.1.0+1005 0.1.0+1002], all("h3").map(&:text)
@@ -57,7 +58,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
     on_the_shelf do
       connect_go
-      click_link "Firmware"
+      open_firmware
       click_button "Install 0.1.0+1005"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".firmware-status", text: "Sending 0.1.0+1005"
@@ -80,7 +81,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      click_link "Firmware"
+      open_firmware
       assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
       assert_selector ".firmware-report", text: "skyBlip received the details of this failure."
       screen "29-firmware-reverted-report"
@@ -97,7 +98,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       connect_go
       assert_selector ".unit-row", text: "up to date"
       assert_no_selector ".unit-banner"
-      click_link "Firmware"
+      open_firmware
       assert_selector ".firmware-status", text: "Your device is running the latest image, 0.1.0+1005."
       assert_no_selector ".firmware-changes"
       find(".firmware-other summary").click
@@ -110,7 +111,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      click_link "Firmware"
+      open_firmware
       click_button "Install 0.1.0+1005"
       assert_glass "FIRMWARE"
       page.execute_script("#{unit("00012A")}.refuse()")
@@ -125,7 +126,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      click_link "Firmware"
+      open_firmware
       assert_selector ".firmware-changes", text: "0.1.0+1005"
       find(".firmware-recovery summary").click
       click_button "Restart into the USB drive"
@@ -146,7 +147,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      click_link "Firmware"
+      open_firmware
       assert_button "Install 0.1.0+1005"
       page.execute_script(<<~JS)
         window.failures = []
@@ -168,7 +169,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       assert_field "Callsign", with: "F-JXYZ"
-      click_link "Firmware"
+      open_firmware
       find(".firmware-other summary").click
       assert_text "The published firmware list is unavailable. Choose a file instead."
       assert_field "Or a file ending in .signed.bin"
