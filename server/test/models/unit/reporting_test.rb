@@ -30,10 +30,42 @@ class Unit::ReportingTest < ActiveSupport::TestCase
     unit = Unit.find_by!(device_id: DEVICE_ID)
     assert_equal [ "installed", "0.3.0+1234", 41_000 ], unit.latest_firmware.slice(:source, :from_version, :lasted_ms).values
 
-    unit.attest_firmware(version: "0.4.0+1400", release: true)
+    unit.attest_firmware(version: "0.4.0+1400", release: true, product: "bravo", variant: "standard")
     hear read(version: "0.4.0+1400")
 
-    assert_equal [ [ "0.4.0+1400", "attested" ] ], unit.firmwares.pluck(:version, :source)
+    assert_equal [ [ "0.4.0+1400", "attested", "standard" ] ], unit.firmwares.pluck(:version, :source, :variant)
+  end
+
+  # A registration signs the version and the build only, so the variant a browser read must not pass for signed.
+  test "a statement that names no variant opens its own stretch over a read one, and a later read fills no variant in it" do
+    hear read(variant: "plus", at: 2.hours.ago)
+    unit = Unit.find_by!(device_id: DEVICE_ID)
+
+    unit.attest_firmware(version: "0.3.0+1234", release: true)
+    hear read(variant: "plus", at: 1.hour.ago)
+    assert_equal [ [ "attested", nil ], [ "read", "plus" ] ], unit.firmwares.newest_first.pluck(:source, :variant)
+
+    unit.attest_firmware(version: "0.3.0+1234", release: true, product: "go", variant: "plus")
+    assert_equal [ "attested", "plus" ], unit.latest_firmware.reload.slice(:source, :variant).values
+  end
+
+  test "a browser changes neither the product nor the variant an activated unit signed" do
+    unit = units(:bound)
+    unit.attest_firmware(version: "0.3.0+1300", release: true, product: "go", variant: "plus")
+
+    assert_no_event_reported "unit.variant_changed" do
+      hear read(device_id: unit.device_id, product: "bravo", variant: "standard", version: "0.3.0+1300")
+    end
+    assert_equal [ "go", "plus" ], [ unit.reload.product, unit.variant ]
+  end
+
+  test "a journal posted late changes neither the unit's identity nor its firmware history" do
+    hear read(variant: "plus", version: "0.4.0+1400", at: 1.hour.ago)
+    hear read(variant: "standard", version: "0.3.0+1234", at: 3.hours.ago)
+
+    unit = Unit.find_by!(device_id: DEVICE_ID)
+    assert_equal "plus", unit.variant
+    assert_equal [ "0.4.0+1400" ], unit.firmwares.pluck(:version)
   end
 
   test "an install the unit did not come back on marks nothing" do
@@ -46,7 +78,7 @@ class Unit::ReportingTest < ActiveSupport::TestCase
   test "a unit read on another variant opens a stretch on it, and the change is journaled" do
     hear read(variant: "plus", at: 2.hours.ago)
 
-    assert_event_reported "unit.variant_changed", payload: { from: "plus", to: "standard", version: "0.4.0+1400" } do
+    assert_event_reported "unit.variant_changed", payload: { from: "plus", to: "standard", version: "0.4.0+1400", source: "read" } do
       hear read(variant: "standard", version: "0.4.0+1400")
     end
     assert_equal [ "standard", "plus" ], Unit.find_by!(device_id: DEVICE_ID).firmwares.newest_first.pluck(:variant)
@@ -82,7 +114,7 @@ class Unit::ReportingTest < ActiveSupport::TestCase
   end
 
   private
-    def hear(*entries, ip_address: nil) = Unit.hear(entries, ip_address:)
+    def hear(*events, ip_address: nil) = Unit.hear_now(events.map(&:uuid), ip_address:)
 
     def read(at: 2.hours.ago, **identity)
       entry("device.read", at:, device_id: DEVICE_ID, product: "bravo", variant: "standard", version: "0.3.0+1234", release: true,
@@ -90,6 +122,6 @@ class Unit::ReportingTest < ActiveSupport::TestCase
     end
 
     def entry(name, at: Time.current, **payload)
-      { name:, payload:, occurred_at: at }
+      Event.create!(uuid: SecureRandom.uuid, name:, payload:, occurred_at: at)
     end
 end

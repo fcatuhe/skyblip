@@ -39,6 +39,7 @@ class Unit < ApplicationRecord
       key.update!(status: bound_to?(key) ? :active : :pending, **seen)
     end
     key.touch unless key.saved_changes?
+    touch
     forget_old_pending_keys if key.pending?
     Rails.event.notify("unit_key.bound", unit_id: id, device: slug, status: key.status, release: key.release, version: key.version, renewed:)
     key
@@ -47,25 +48,29 @@ class Unit < ApplicationRecord
   # INFO: fc 15nov26 a registration signs no product nor variant, so it names neither
   def attest_firmware(version:, release:, product: nil, variant: nil)
     firmware = transaction do
-      identify(product:, variant:, version:) if product
+      if product
+        identify(product:, variant:, version:, source: "attested")
+      else
+        touch
+      end
       record_firmware(version:, release:, variant:, source: "attested")
     end
     Rails.event.notify "unit.firmware_attested", unit_id: id, device: slug, version:, release:, variant:, changed: firmware.previously_new_record?
     firmware
   end
 
-  def identify(product:, variant:, version:, **seen)
+  def identify(product:, variant:, version:, source:, **seen)
     before = self.variant
-    update!(product:, variant:, **seen)
+    update!({ updated_at: Time.current, product:, variant: }.merge(seen))
     if before && before != variant
-      Rails.event.notify "unit.variant_changed", unit_id: id, device: slug, from: before, to: variant, version:
+      Rails.event.notify "unit.variant_changed", unit_id: id, device: slug, from: before, to: variant, version:, source:
     end
   end
 
   # INFO: fc 14nov26 a row per stretch on one firmware and one variant, so a unit that goes back to a version gets a new row
   def record_firmware(version:, release:, source:, variant: nil, at: Time.current)
     latest = firmwares.newest_first.first
-    if latest&.continued_by?(version:, release:, variant:)
+    if latest&.continued_by?(version:, release:, source:, variant:)
       latest.continue(source:, variant:, at:)
     else
       firmwares.create!(version:, release:, variant:, source:, created_at: at, updated_at: at)

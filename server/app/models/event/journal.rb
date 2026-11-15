@@ -39,7 +39,7 @@ class Event::Journal
     rows = @entries.filter_map { row_of(it) }
     if rows.any?
       fresh = Event.insert_all(rows, unique_by: :uuid, returning: :uuid).rows.flatten
-      Unit.hear(rows.select { fresh.include?(it[:uuid]) }, ip_address: @ip_address)
+      Unit.hear_later(fresh, ip_address: @ip_address)
     end
     rows.size
   end

@@ -20,7 +20,7 @@ class Attestation::StatementsControllerTest < ActionDispatch::IntegrationTest
   test "a unit that signs another variant opens a stretch on it, and the change is journaled" do
     post attestation_statements_path, params: signed_statement(@challenge), as: :json
 
-    assert_event_reported "unit.variant_changed", payload: { from: "plus", to: "standard", version: vectors["version"] } do
+    assert_event_reported "unit.variant_changed", payload: { from: "plus", to: "standard", version: vectors["version"], source: "attested" } do
       post attestation_statements_path, params: signed_statement(Attestation::Challenge.create!, variant: "standard"), as: :json
     end
     assert_equal [ "standard", "plus" ], @unit.firmwares.newest_first.pluck(:variant)
@@ -54,6 +54,9 @@ class Attestation::StatementsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
 
     post attestation_statements_path, params: signed_statement(@challenge).merge(variant: "standard"), as: :json
+    assert_equal({ "error" => "bad_signature" }, response.parsed_body)
+
+    post attestation_statements_path, params: signed_statement(@challenge).merge(product: "bravo"), as: :json
     assert_equal({ "error" => "bad_signature" }, response.parsed_body)
 
     post attestation_statements_path, params: signed_statement(@challenge, unit_key: unit_key("11" * 32)), as: :json

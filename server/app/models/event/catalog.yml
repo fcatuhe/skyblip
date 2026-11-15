@@ -137,7 +137,7 @@ unit.firmware_attested:
   answers: Which firmware each unit runs, proven by the unit itself, and when it moved to it.
 unit.variant_changed:
   group: Units
-  says: A unit was read or signed on another variant than the one before, `from` and `to`, such as a Go+ that boots as a Go, with the firmware it ran.
+  says: A unit was read or signed on another variant than the one before, `from` and `to`, such as a Go+ that boots as a Go, with the firmware it ran and the `source`, `read` from a browser that any browser can post, or `attested` by the unit. An activated unit's variant changes only from an attestation.
   answers: Which units lost or gained a part between two connections, a Plus reading as a Go being the sign of a part that stopped answering its probe.
 unit_key.promoted:
   group: Units

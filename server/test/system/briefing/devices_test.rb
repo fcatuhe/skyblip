@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
+  include ActiveJob::TestHelper
+
   # Three ADS-B records, a traffic record and the end marker, as console_test.rb reads them.
   CAPTURE = %w[
     15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02
@@ -311,16 +313,18 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
   test "a Bravo connected once is recorded on skyBlip, with the firmware it runs and no serial" do
     in_range a_bravo(deviceId: "5b5b5b5b5b5b5b5b")
-    on_the_shelf do
-      visit "/briefing"
-      page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
-      click_button "Connect a device"
-      assert_current_path "/briefing/devices/bravo-3f2a"
-      journaled("device.read")
+    perform_enqueued_jobs do
+      on_the_shelf do
+        visit "/briefing"
+        page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
+        click_button "Connect a device"
+        assert_current_path "/briefing/devices/bravo-3f2a"
+        journaled("device.read")
 
-      unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
-      assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
-      assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
+        unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+        assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
+        assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
+      end
     end
   end
 

@@ -6,16 +6,14 @@ class GetUnitTool < ApplicationTool
               "with, active, pending or revoked. Then its firmware, newest first, one stretch per version, build and variant, " \
               "each with its source: read, a browser's report nobody vouches for, installed, an install from the briefing app " \
               "the unit came back on, or attested, signed by the unit. A tag names up to 65536 units, so a slug from one can " \
-              "match several. For admins only."
+              "match several, so the answer is always a list. For admins only."
   input_schema properties: { device: DEVICE }, required: [ "device" ]
   annotations(**READING)
 
   def self.call(server_context:, device:)
     if admin(server_context)
       units = Unit.with_slug(device).includes(:keys, :firmwares).to_a
-      if units.one?
-        json facts_of(units.first)
-      elsif units.any?
+      if units.any?
         json(units.map { facts_of(it) })
       else
         refused "No unit is known as #{device.to_s.truncate(40)}"
