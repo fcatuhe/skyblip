@@ -107,6 +107,7 @@ WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
 # editing one file rebuilds one file (a single emcc pass over all sources costs
 # ~30 s every save; this makes the edit->reload loop a couple of seconds).
 WEB_BUILD := $(BUILD)/web
+WEB_STAMP := $(BUILD)/web/emsdk-version
 WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
 WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
 
@@ -175,12 +176,13 @@ simulator: $(SIMULATOR_BIN)
 $(SIMULATOR_BIN): $(SIMULATOR_OBJ)
 	$(CXX) $(CXXFLAGS) $(SIMULATOR_OBJ) -o $@ $(LDFLAGS)
 
-# WASM build. Requires Emscripten (https://emscripten.org). Releases publish it
-# for the Rails app's simulator pages.
+# WASM build, with the Emscripten .github/pins/action.yml pins: ../scripts/emsdk.rb installs it
+# when $(EMCC) runs another version. Objects sit under the version, and the stamp relinks on a switch.
 browser:
-	@command -v $(EMCC) >/dev/null 2>&1 || { \
-	  echo "emcc not found. Install Emscripten, then: make browser"; exit 1; }
-	@$(MAKE) --no-print-directory $(WEB_OUT) $(WEB_DIST)/embed.js
+	@pinned=$$(ruby ../scripts/emsdk.rb "$(EMCC)") && set -- $$pinned && mkdir -p $(dir $(WEB_STAMP)) && \
+	  { echo "$$1" | cmp -s - $(WEB_STAMP) || echo "$$1" > $(WEB_STAMP); } && \
+	  $(MAKE) --no-print-directory $(WEB_OUT) $(WEB_DIST)/embed.js \
+	    EMCC="$$2" EMXX="$${2%emcc}em++" WEB_BUILD="$(BUILD)/web/$$1"
 
 $(WEB_BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
@@ -190,7 +192,7 @@ $(WEB_BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(EMCC) $(WEB_CXXFLAGS) -x c++ -c $< -o $@
 
-$(WEB_OUT): $(WEB_OBJ)
+$(WEB_OUT): $(WEB_OBJ) $(WEB_STAMP)
 	@mkdir -p $(WEB_DIST)
 	$(EMXX) -O2 $(WEB_OBJ) \
 	  -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPU8 \

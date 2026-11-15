@@ -53,6 +53,8 @@ jobs:
               - 'scripts/dev_release.rb'
               - 'lib/upstream_pins.rb'
               - 'scripts/upstream_pins.rb'
+              - 'lib/emsdk.rb'
+              - 'scripts/emsdk.rb'
               - '.github/pins/action.yml'
               - 'lib/radio_protocols.rb'
               - 'scripts/radio_protocols.rb'
@@ -171,6 +173,8 @@ jobs:
         run: bundle exec ruby ../.github/test/dev_release_test.rb
       - name: Run upstream pin tests
         run: bundle exec ruby ../.github/test/upstream_pins_test.rb
+      - name: Run emsdk install tests
+        run: bundle exec ruby ../.github/test/emsdk_test.rb
       # The registry check compares the generated C++ as the pinned clang-format writes it.
       - name: Install the pinned clang-format
         run: pip install --disable-pip-version-check "$(grep '^clang-format==' ../.github/lint/requirements.txt)"
