@@ -1,67 +1,84 @@
 <header class="admin-header">
-  <h1>Unit <span class="mono"><%= @unit.address %></span></h1>
+  <h1>Unit <span class="mono"><%= unit_label(@unit) %></span></h1>
 </header>
 
 <dl class="admin-details">
+  <dt>Product</dt>
+  <dd><%= unit_product(@unit) || "not stated yet" %></dd>
+  <dt>Variant read</dt>
+  <dd><%= @unit.variant || "not stated yet" %></dd>
   <dt>Serial</dt>
-  <dd><%= @unit.serial %></dd>
+  <dd><%= @unit.serial || "none, the unit transmits on no address" %></dd>
   <dt>Device ID</dt>
   <dd class="mono"><%= @unit.device_id %></dd>
-  <dt>Activated</dt>
+  <% if @unit.slug %>
+    <dt>Device</dt>
+    <dd class="mono"><%= @unit.slug %></dd>
+  <% end %>
+  <dt>First seen</dt>
   <dd><%= l @unit.created_at, format: "%b %-d, %Y, %H:%M" %></dd>
+  <dt>Activated</dt>
+  <dd><%= @unit.activated_at ? l(@unit.activated_at, format: "%b %-d, %Y, %H:%M") : "no" %></dd>
 </dl>
 
-<div class="table-scroll">
-  <table>
-    <thead>
-      <tr>
-        <th>Public key</th>
-        <th>Status</th>
-        <th>Also on</th>
-        <th>Registered on</th>
-        <th>Build</th>
-        <th>Server key id</th>
-        <th>First seen</th>
-        <th>Last seen</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @unit.keys.order(created_at: :desc).each do |key| %>
-        <tr>
-          <th class="mono"><%= key.public_key %></th>
-          <td><%= key.status %></td>
-          <td><%= unit_links(key.other_units) %></td>
-          <td class="mono"><%= key.version %></td>
-          <td><%= unit_build(key) %></td>
-          <td class="mono"><%= key.server_key_id %></td>
-          <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
-          <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
-          <td>
-            <% if key.pending? %>
-              <%= button_to "Promote", admin_unit_key_promotion_path(key), class: "button button--primary button--small",
-                    form: { data: { turbo_confirm: "Make this key the unit's own, and revoke the active one? Check with the owner first." } } %>
-            <% elsif key.active? %>
-              <%= button_to "Revoke", admin_unit_key_revocation_path(key), class: "button button--danger button--small",
-                    form: { data: { turbo_confirm: "Revoke this key? The next registration of this unit binds its key, whoever sends it." } } %>
-            <% end %>
-          </td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-</div>
+<%= render "help" %>
 
-<h2>Firmware the unit signed</h2>
+<% if @unit.keys.any? %>
+  <div class="table-scroll admin-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Public key</th>
+          <th>Status</th>
+          <th>Also on</th>
+          <th>Registered on</th>
+          <th>Build</th>
+          <th>Server key id</th>
+          <th>First seen</th>
+          <th>Last seen</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @unit.keys.order(created_at: :desc).each do |key| %>
+          <tr>
+            <th class="mono"><%= key.public_key %></th>
+            <td><%= key.status %></td>
+            <td><%= unit_links(key.other_units) %></td>
+            <td class="mono"><%= key.version %></td>
+            <td><%= unit_build(key) %></td>
+            <td class="mono"><%= key.server_key_id %></td>
+            <td><%= l key.created_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td><%= l key.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
+            <td>
+              <% if key.pending? %>
+                <%= button_to "Promote", admin_unit_key_promotion_path(key), class: "button button--primary button--small",
+                      form: { data: { turbo_confirm: "Make this key the unit's own, and revoke the active one? Check with the owner first." } } %>
+              <% elsif key.active? %>
+                <%= button_to "Revoke", admin_unit_key_revocation_path(key), class: "button button--danger button--small",
+                      form: { data: { turbo_confirm: "Revoke this key? The next registration of this unit binds its key, whoever sends it." } } %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
+
+<h2>Firmware</h2>
 <% if @unit.firmwares.any? %>
-  <div class="table-scroll">
+  <div class="table-scroll admin-table">
     <table>
       <thead>
         <tr>
           <th>Version</th>
           <th>Build</th>
-          <th>First signed</th>
-          <th>Last signed</th>
+          <th>Variant read</th>
+          <th>Source</th>
+          <th>Installed from</th>
+          <th>First seen</th>
+          <th>Last seen</th>
         </tr>
       </thead>
       <tbody>
@@ -69,6 +86,9 @@
           <tr>
             <th class="mono"><%= firmware.version %></th>
             <td><%= unit_build(firmware) %></td>
+            <td><%= firmware.variant %></td>
+            <td><%= firmware_source(firmware) %></td>
+            <td class="mono"><%= firmware.from_version %></td>
             <td><%= l firmware.created_at, format: "%b %-d, %Y, %H:%M" %></td>
             <td><%= l firmware.updated_at, format: "%b %-d, %Y, %H:%M" %></td>
           </tr>
@@ -77,35 +97,7 @@
     </table>
   </div>
 <% else %>
-  <p>None yet: the unit signs its firmware at activation, and on every connection to the briefing app once it runs firmware that knows how.</p>
+  <p>None yet: a browser reports the firmware on every connection once the unit runs firmware that names itself, and an activated unit signs it.</p>
 <% end %>
 
-<h2>Firmware browsers reported</h2>
-<% if (stretches = @unit.reported_firmware).any? %>
-  <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th>Version</th>
-          <th>Track</th>
-          <th>First seen</th>
-          <th>Last seen</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% stretches.each do |stretch| %>
-          <tr>
-            <th class="mono"><%= stretch.version %></th>
-            <td><%= stretch.track %></td>
-            <td><%= l stretch.first_seen_at, format: "%b %-d, %Y, %H:%M" %></td>
-            <td><%= l stretch.last_seen_at, format: "%b %-d, %Y, %H:%M" %></td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-<% else %>
-  <p>None in the events kept: a browser reports what a unit runs each time it connects, and nobody vouches for what it says.</p>
-<% end %>
-
-<p><%= link_to "Timeline", admin_events_path(device: @unit.slug) %> · <%= link_to "All units", admin_units_path %></p>
+<p><% if @unit.slug %><%= link_to "Timeline", admin_events_path(device: @unit.slug) %> · <% end %><%= link_to "All units", admin_units_path %></p>

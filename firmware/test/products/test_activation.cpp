@@ -296,8 +296,11 @@ TEST_CASE("activation: a register the trusted server did not sign is refused at 
     CHECK(bench.pending() == comms::Pending::None);
 }
 
-// A fresh challenge replaces Nu, so R over the old one no longer checks.
-TEST_CASE("activation: a second challenge replaces the nonce, and R over the first is refused") {
+// A fresh challenge replaces unit_nonce, so the register signature over the old one no longer
+// checks.
+TEST_CASE(
+    "activation: a second challenge replaces the nonce, and the register signature over the first "
+    "is refused") {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();

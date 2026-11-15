@@ -17,13 +17,15 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "turbo-frame#firmware_shelf select[data-shelf]"
     assert_select "option[data-channel=development][data-key='212602F2']", minimum: 1
-    assert_select "option[value*='/dev-1005/'][data-version='0.1.0+1005']", count: 2
+    assert_select "option[value*='/dev-1765/'][data-version='0.1.0+1765']", count: 3
     assert_select "option[value^='/releases/dev-']", minimum: 1
-    assert_select "option[data-product=skyblip_go][value*='/skyblip-go-']", minimum: 1
-    assert_select "option:not([data-product=skyblip_go])[data-channel]", count: 0
+    assert_select "option[data-product=go][value*='/skyblip-go-']", minimum: 1
+    assert_select "option[data-product=bravo][value*='/skyblip-bravo-']", minimum: 1
     images = css_select("option[data-kind]")
-    assert_equal %w[slim slim slim full full full], images.map { |option| option["data-kind"] }
-    assert_equal "/releases/dev-1005/skyblip-go-dev-1005.signed.bin", images.first["value"]
+    assert_equal %w[base] * 8 + %w[full] * 4, images.map { |option| option["data-kind"] }
+    assert_equal "/releases/dev-1765/skyblip-bravo-dev-1765.signed.bin", images.first["value"]
+    assert_equal "/releases/dev-1765/skyblip-go-dev-1765.full.signed.bin", images[8]["value"]
+    assert_equal [ "skyBlip dev 0.1.0+1765", "skyBlip dev 0.1.0+1765, with the motion sensor firmware" ], [ images.first.text, images[8].text ]
   end
 
   test "the shelf carries each main build's technical changes, newest first, for the page to pick from" do
@@ -32,8 +34,8 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     end
 
     sections = css_select("template[data-changes] section[data-channel=development]")
-    assert_equal %w[0.1.0+1005 0.1.0+1002 0.1.0+998], sections.map { |section| section["data-version"] }
-    assert_select sections.first, "li a[href='https://github.com/fcatuhe/skyblip/pull/127']", text: "ui(radar): draw traffic over the readings and count it as TFC"
+    assert_equal %w[0.1.0+1765 0.1.0+1758 0.1.0+1748], sections.map { |section| section["data-version"] }
+    assert_select sections.first, "li a[href='https://github.com/fcatuhe/skyblip/pull/351']", text: "infra(deps): track emsdk, doctest and Zephyr with Dependabot"
   end
 
   # The cassette records GitHub rejecting an invalid token with HTTP 401.

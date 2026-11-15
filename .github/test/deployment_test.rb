@@ -138,7 +138,7 @@ class DeploymentTest < Minitest::Test
     declared_products.each do |product|
       slug = product.tr("_", "-")
       assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
-      assert_equal product, Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
+      assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
       assert_includes matrix.map { |leg| [ leg.fetch("product"), leg.fetch("slug") ] }, [ product, slug ]
     end
   end

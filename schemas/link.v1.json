@@ -185,7 +185,7 @@
     },
     {
       "command": "update", "code": 10, "endpoint": "config", "sender": "both",
-      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, two more for a product other than skyblip_go, which names itself in product, and 10 more for a bootloader that trusts two keys, as a development one does.",
+      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, and 10 more for a bootloader that trusts two keys, as a development one does. Key 10, product, is retired and never reused: the identity frame names the product.",
       "keys": [
         {"name": "image", "number": 1, "type": "enum", "enum": "image", "required": true, "description": "What became of the last install: confirmed, probation (running, not yet confirmed), reverted (started and never confirmed itself, so the bootloader swapped the old one back) or refused (never started)"},
         {"name": "from", "number": 2, "type": "text", "description": "The version the last install replaced, as dfu writes it, 0.3.0+1234. Present unless image is confirmed"},
@@ -196,7 +196,6 @@
         {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the verified hub blob's SHA-256, present when imu is held"},
         {"name": "downgrade", "number": 8, "type": "boolean", "description": "Present and true on a unit whose bootloader accepts an image older than the running one, a development build"},
         {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the key that signed the running image, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"},
-        {"name": "product", "number": 10, "type": "enum", "enum": "product", "description": "The product the unit runs, which is the only one whose images it installs (firmware/core/dfu/README.md), so a page offers it no other. Absent on a skyblip_go, so its frame stays as narrow as before the key, and on firmware built before the key, all of it skyblip_go"},
         {"name": "bootloader_keys", "number": 11, "type": "bytes", "description": "The keys the bootloader verifies an image against, which are the keys whose images the unit installs: the first four bytes of each key's hash, as key gives them, one after the other, 4 to 16 bytes. A development bootloader trusts the development and production keys, a release bootloader the production key only (firmware/keys/README.md). Absent when the unit cannot read its bootloader, and on firmware built before the key, where key stands for the bootloader's one key"}
       ]
     },
@@ -217,18 +216,18 @@
     },
     {
       "command": "challenge", "code": 14, "endpoint": "config", "sender": "both",
-      "description": "Opens an activation session (schemas/activation.v1.schema.json says what each signature covers). The host asks with the bare command, the unit draws a fresh Nu, which replaces any it held, and answers it with the id of the server key it trusts, so the server knows which of its keys to sign with: 27 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when unlock uses it, when the link of the session that holds the claim drops, or after ten minutes. Refused keyless by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as in_flight while it is airborne.",
+      "description": "Opens an activation session (schemas/activation.v1.schema.json says what each signature covers). The host asks with the bare command, the unit draws a fresh unit_nonce, which replaces any it held, and answers it with the id of the server key it trusts, so the server knows which of its keys to sign with: 27 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when unlock uses it, when the link of the session that holds the claim drops, or after ten minutes. Refused keyless by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as in_flight while it is airborne.",
       "keys": [
-        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Nu, 16 random bytes from the hardware RNG, used once"},
+        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "unit_nonce, 16 random bytes from the hardware RNG, used once"},
         {"name": "server_key_id", "number": 2, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the firmware is built to trust, the first four bytes of the SHA-256 of its raw 32-byte public key: every device build trusts skyblip.eu's server key (firmware/keys/server.pub), the host suite, the simulator and a local server the public test key of schemas/activation.v1.vectors.json"}
       ]
     },
     {
       "command": "register", "code": 15, "endpoint": "config", "sender": "host",
-      "description": "Host to unit, 88 bytes. The unit checks R with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. One press answers the registration frame, a tap of the pad cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state, because the unit is silent. An activated unit asks only when it is not airborne, and a take-off cancels the prompt. Refusals, in the order checked: prompt_pending (a prompt stands) and refused_on_device (a prompt on this link was refused on the device) (firmware/core/comms/README.md, One prompt at a time), in_flight (an activated unit in flight), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
+      "description": "Host to unit, 88 bytes. The unit checks the signature with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. One press answers the registration frame, a tap of the pad cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state, because the unit is silent. An activated unit asks only when it is not airborne, and a take-off cancels the prompt. Refusals, in the order checked: prompt_pending (a prompt stands) and refused_on_device (a prompt on this link was refused on the device) (firmware/core/comms/README.md, One prompt at a time), in_flight (an activated unit in flight), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
       "keys": [
-        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, the server's 16 random bytes, used once"},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "R, the server's Ed25519 signature over the register message, 'skyblip:register:v1' || Nu || Ns"}
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "server_nonce, the server's 16 random bytes, used once"},
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "The server's Ed25519 signature over the register message, 'skyblip:register:v1' || unit_nonce || server_nonce"}
       ]
     },
     {
@@ -236,7 +235,7 @@
       "description": "Unit to host after the press that answers register, at most 138 bytes in one notification, which an iPhone's 182-byte payload carries. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
       "keys": [
         {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian"},
-        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "Pd, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
+        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "public_key, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
         {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
         {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the unit trusts, as in the challenge reply"},
         {"name": "release", "number": 5, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
@@ -245,10 +244,10 @@
     },
     {
       "command": "unlock", "code": 17, "endpoint": "config", "sender": "host",
-      "description": "Host to unit, at most 74 bytes, carrying what the server answered the registration with. The unit stores serial, Nu and U in its identity page only if U verifies with the key it trusts over its own DEVICEID, its current Pd, the serial and the nonce of this session, then answers acknowledgement with reason unlock and uses the serial from then on. Refused before the code is read, the nonce kept: in_flight (an activated unit in flight), no_session, low_power (the cell cannot take a flash write). Once read, the nonce is spent whether the code verifies or not: bad_signature (serial 0 included), flash (the identity page could not be written), or low_power if the cell fell while an activated unit placed the write.",
+      "description": "Host to unit, at most 74 bytes, carrying what the server answered the registration with. The unit stores serial, unit_nonce and the unlock signature in its identity page only if that signature verifies with the key it trusts over its own DEVICEID, its current public_key, the serial and the nonce of this session, then answers acknowledgement with reason unlock and uses the serial from then on. Refused before the code is read, the nonce kept: in_flight (an activated unit in flight), no_session, low_power (the cell cannot take a flash write). Once read, the nonce is spent whether the code verifies or not: bad_signature (serial 0 included), flash (the identity page could not be written), or low_power if the cell fell while an activated unit placed the write.",
       "keys": [
         {"name": "serial", "number": 1, "type": "unsigned", "required": true, "description": "Assigned densely by the server, from 1 to 65535: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "U, the server's Ed25519 signature over the unlock message, 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu"}
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "The server's Ed25519 signature over the unlock message, 'skyblip:unlock:v1' || device_id || public_key || serial as two bytes big-endian || unit_nonce"}
       ]
     },
     {
@@ -472,17 +471,31 @@
       "command": "attest", "code": 37, "endpoint": "config", "sender": "host",
       "description": "Host to unit, 22 bytes: asks the unit to sign the firmware it runs over a nonce from skyblip.eu, which the browser posts to /attestation/statements (schemas/activation.v1.schema.json). The unit answers the attestation frame at once, with no prompt, because it signs only its own version under a label nothing else carries. Refusals, in the order checked: in_flight (an activated unit in flight), keyless (no key of its own, or no running version to report), small_mtu (the link cannot carry the attestation frame in one notification), invalid (no server_nonce of 16 bytes). A Bravo has no key of its own, so it answers keyless.",
       "keys": [
-        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, 16 random bytes from POST /attestation/challenges, which the server accepts once within five minutes"}
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "server_nonce, 16 random bytes from POST /attestation/challenges, which the server accepts once within five minutes"}
       ]
     },
     {
       "command": "attestation", "code": 38, "endpoint": "config", "sender": "unit",
-      "description": "Unit to host in answer to attest, at most 98 bytes in one notification. The browser posts its keys to /attestation/statements as they are, byte strings in hexadecimal, beside the server nonce (schemas/activation.v1.schema.json).",
+      "description": "Unit to host in answer to attest, at most 102 bytes in one notification. Its keys name the unit as the identity frame does, in the same order, and the signature covers each of them. The browser posts them to /attestation/statements as they are, byte strings in hexadecimal, beside the server nonce (schemas/activation.v1.schema.json).",
       "keys": [
-        {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server finds the unit and its active key"},
-        {"name": "version", "number": 2, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
-        {"name": "release", "number": 3, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
-        {"name": "signature", "number": 4, "type": "bytes", "bytes": 64, "required": true, "description": "The unit's Ed25519 signature over the attestation message, 'skyblip:attestation:v1' || DEVICEID || Pd || Ns || release || version (schemas/activation.v1.schema.json)"}
+        {"name": "product", "number": 1, "type": "enum", "enum": "product", "required": true, "description": "The product the unit runs, as the identity frame names it"},
+        {"name": "variant", "number": 2, "type": "enum", "enum": "variant", "required": true, "description": "The product's hardware build, as the identity frame names it, worked out at this boot"},
+        {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
+        {"name": "release", "number": 4, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
+        {"name": "device_id", "number": 5, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server finds the unit and its active key"},
+        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64, "required": true, "description": "The unit's Ed25519 signature over the attestation message, 'skyblip:attestation:v1' || device_id || public_key || server_nonce || release || product || variant || version (schemas/activation.v1.schema.json)"}
+      ]
+    },
+    {
+      "command": "identity", "code": 39, "endpoint": "config", "sender": "both",
+      "description": "Asked with the bare command on every connection, answered with who the unit is and what it runs, the words docs/ADSL_NMEA_PROPOSAL.md gives a display in $PDSLV: product, variant and firmware version, then the chip it runs on. A page reads the product here to offer a unit only its own product's images, and the server keeps the rest as the unit's record (server/app/models/unit.rb). Every unit answers it, activated or not, a Bravo included, and refuses it no_version only when it cannot read its running version. 31 to 39 bytes, so a link that stayed at 20 bytes is answered small_mtu.",
+      "keys": [
+        {"name": "product", "number": 1, "type": "enum", "enum": "product", "required": true, "description": "The product the unit runs, which is the only one whose images it installs (firmware/core/dfu/README.md)"},
+        {"name": "variant", "number": 2, "type": "enum", "enum": "variant", "required": true, "description": "The product's hardware build: plus on a Go whose board has the inclinometer, the buzzer and the haptic motor fitted (products/skyblip_go/product_name.h), standard otherwise"},
+        {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
+        {"name": "release", "number": 4, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
+        {"name": "device_id", "number": 5, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server knows the unit across its names"},
+        {"name": "bluetooth_tag", "number": 6, "type": "unsigned", "required": true, "description": "The four hex digits the unit advertises before it holds an address, activate 3F2A skyBlip or skyBlip Bravo 3F2A: the low 16 bits of FICR DEVICEADDR, 0 to 65535"}
       ]
     }
   ],
@@ -695,8 +708,15 @@
     "product": {
       "mirrors": {"type": "dfu::Product", "header": "core/dfu/update.h"},
       "values": [
-        {"name": "skyblip_go", "code": 0, "mirrors": "SkyblipGo"},
-        {"name": "skyblip_bravo", "code": 1, "mirrors": "SkyblipBravo"}
+        {"name": "go", "code": 0, "mirrors": "Go"},
+        {"name": "bravo", "code": 1, "mirrors": "Bravo"}
+      ]
+    },
+    "variant": {
+      "mirrors": {"type": "identity::Variant", "header": "core/identity/variant.h"},
+      "values": [
+        {"name": "standard", "code": 0, "mirrors": "Standard"},
+        {"name": "plus", "code": 1, "mirrors": "Plus"}
       ]
     },
     "log": {

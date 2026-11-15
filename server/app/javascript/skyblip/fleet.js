@@ -44,7 +44,7 @@ function recordOf(slug, state, before = {}) {
   return {
     slug,
     name: slugOf(device) === slug ? device : before.name ?? nameOf(slug),
-    product: image ? productOf(image) : before.product ?? null,
+    product: productOf(state) ?? before.product ?? null,
     address: address ?? before.address ?? null,
     running: running ?? before.running ?? null,
     newest: newestOf(state, before),
@@ -82,7 +82,7 @@ export class Unit {
   }
 
   get product() {
-    return this.state?.image ? productOf(this.state.image) : this.record.product;
+    return (this.state && productOf(this.state)) ?? this.record.product;
   }
 
   get remembered() {
@@ -103,7 +103,7 @@ export class Unit {
 
   get needsActivation() {
     const state = this.state;
-    return Boolean(state?.settings) && state.address === null && productOf(state.image) === 'skyblip_go';
+    return Boolean(state?.settings) && state.address === null && productOf(state) === 'go';
   }
 
   activator(build) {

@@ -319,7 +319,7 @@ class Product {
     SettingsStore settings_store_{settings_};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,       power_.cutoff_monitor(),
-        kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
+        kProductName, bravo::bluetooth_name, dfu::Product::Bravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
     GateReference gate_{};
     AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};

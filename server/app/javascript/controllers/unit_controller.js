@@ -289,17 +289,20 @@ export default class extends Controller {
   // INFO: fc 11nov26 offline, the banner says what this browser last saw offered, and connecting is the way to it
   #banner(unit, linked, quiet) {
     const news = unit ? newsOf(unit) : null
-    const shown = Boolean(news) && !quiet
+    const motionSensor = linked && unit.state.motionSensorWithoutFirmware
+    const shown = Boolean(news || motionSensor) && !quiet
     this.bannerTarget.hidden = !shown
     this.bannerActionTarget.hidden = !linked
-    if (shown) this.bannerTextTarget.textContent = say("words.update_banner", { version: news, running: unit.state?.running ?? unit.record.running })
+    const running = unit?.state?.running ?? unit?.record.running
+    if (shown) this.bannerTextTarget.textContent = motionSensor ? say("words.motion_sensor_banner", { running }) : say("words.update_banner", { version: news, running })
   }
 
   #firmwareRow(state, linked) {
     this.firmwareRowTarget.hidden = !linked
     if (!linked) return
     const version = running(state.running, trackOf(state.image))
-    const news = state.upgrade === true ? say("words.firmware_out", { version: state.file.version }) : state.upgrade === false ? say("words.firmware_current") : null
+    const news = state.motionSensorWithoutFirmware ? say("words.motion_sensor_needs") : state.upgrade === true ? say("words.firmware_out", { version: state.file.version }) :
+      state.upgrade === false ? say("words.firmware_current") : null
     this.firmwareTarget.textContent = [version, news].filter(Boolean).join(" · ")
   }
 
@@ -309,7 +312,7 @@ export default class extends Controller {
     if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
     this.glass.show({
-      title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "skyblip_bravo", remembers,
+      title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "bravo", remembers,
       argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
     })

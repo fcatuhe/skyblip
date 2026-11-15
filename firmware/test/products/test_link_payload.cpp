@@ -252,7 +252,7 @@ struct UpdateBench {
     platform::host::Dfu dfu{watchdog};
     ConfigService config{link, store, &dfu};
 
-    explicit UpdateBench(bool allows_downgrade, dfu::Product product = dfu::Product::SkyblipGo,
+    explicit UpdateBench(bool allows_downgrade,
                          uint16_t payload_bytes = kSmallestSupportedPayloadBytes) {
         const ports::ImageVersion version = dfu::kWidestVersion;
         link.raise_link(1);
@@ -268,7 +268,6 @@ struct UpdateBench {
         held.holding = dfu::HubImage::Held;
         for (uint8_t& byte : held.digest) byte = 0xAB;
         config.set_hub_image(held);
-        config.set_product(product);
         config.on_rx(config_frame("{\"command\":\"update\"}"));
     }
 };
@@ -293,24 +292,14 @@ TEST_CASE(
     CHECK(bench.config.link_drops() == 0);
 }
 
-TEST_CASE("comms: a Bravo's update report names its product, two bytes wider than a Go's") {
-    UpdateBench release(false, dfu::Product::SkyblipBravo);
-    CHECK(release.link.last().bytes.size() == 59);
-    CHECK(link_text(release.link.last().bytes).find("\"product\":\"skyblip_bravo\"") !=
-          std::string::npos);
-    UpdateBench development(true, dfu::Product::SkyblipBravo);
-    CHECK(development.link.last().bytes.size() == 61);
-    CHECK(development.config.link_drops() == 0);
-}
-
 TEST_CASE(
     "comms: an update report too wide for the payload is refused small_mtu and counted, never "
     "sent without its key") {
     // The widest development Go's report is 59 bytes, two more than the release one for its
     // downgrade.
-    UpdateBench fits(true, dfu::Product::SkyblipGo, 59);
+    UpdateBench fits(true, 59);
     CHECK(fits.link.last().bytes.size() == 59);
-    UpdateBench bench(true, dfu::Product::SkyblipGo, 58);
+    UpdateBench bench(true, 58);
     REQUIRE(bench.link.sent.size() == 1);
     CHECK(link_text(bench.link.last().bytes) == kSmallMtuRefusal);
     CHECK(bench.config.link_drops() == 1);

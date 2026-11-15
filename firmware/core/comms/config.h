@@ -17,6 +17,7 @@
 #include "core/dfu/update.h"
 #include "core/events/link.h"
 #include "core/flight/state.h"
+#include "core/identity/variant.h"
 #include "core/power/battery.h"
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
@@ -201,6 +202,8 @@ class ConfigService {
 
     void set_product(dfu::Product product) { product_ = product; }
 
+    void set_variant(identity::Variant variant) { variant_ = variant; }
+
     void set_radio_protocols(Span<const RadioProtocol> protocols) { radio_protocols_ = protocols; }
 
     // INFO: cf 02aug26 BLE pairing is off on this product (encrypted GATT
@@ -321,6 +324,7 @@ class ConfigService {
     void send_update();
     void send_install_report();
     void send_protocols();
+    void send_identity();
     bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
@@ -425,7 +429,8 @@ class ConfigService {
     std::optional<dfu::Landing> landing_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
-    std::optional<dfu::Product> product_{};
+    dfu::Product product_{dfu::Product::Go};
+    identity::Variant variant_{identity::Variant::Standard};
     Span<const RadioProtocol> radio_protocols_{};
 
     // Long enough to upload ~730 KB over BLE on a slow phone, short enough that

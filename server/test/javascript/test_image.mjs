@@ -22,8 +22,8 @@ test('an image from before the split has no protected area, so no pin is known',
 });
 
 test('the image class names the product an image is for', () => {
-  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES)).product, 'skyblip_go');
-  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES, { product: 'skyblip_bravo', imu: { full: true } })).product, 'skyblip_bravo');
+  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES)).product, 'go');
+  assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES, { product: 'bravo', imu: { full: true } })).product, 'bravo');
   assert.equal(readImage(signedImage(VERSION, IMAGE_BYTES, { product: 'skyblip_tango' })).product, 'unknown');
 });
 

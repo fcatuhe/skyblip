@@ -11,7 +11,7 @@ module BriefingTestHelper
 
     def a_new_go(**options) = { name: "activate 3F2A skyBlip", address: nil, vectors:, stored: NEW_SETTINGS, **options }
     def a_go(**options) = { name: "skyBlip Go 00012A", **options }
-    def a_bravo(**options) = { name: "skyBlip Bravo 3F2A", product: "skyblip_bravo", address: nil, running: "0.1.0+40", key: "BBBBBBBB", imu: nil, **options }
+    def a_bravo(**options) = { name: "skyBlip Bravo 3F2A", product: "bravo", address: nil, running: "0.1.0+40", key: "212602F2", imu: nil, **options }
 
     # INFO: fc 12nov26 a shelf frame still loading when the cassettes close would reach GitHub, so the block waits for it
     def on_the_shelf
@@ -40,7 +40,7 @@ module BriefingTestHelper
     def connect_go
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-row", text: /is out|up to date/, wait: 15
+      assert_selector ".unit-row", text: /is out|up to date|needs its firmware/, wait: 15
     end
 
     # INFO: fc 11nov26 BRIEFING_SCREENS=dir saves every screen a test walks through, at phone and laptop sizes, for the pull request

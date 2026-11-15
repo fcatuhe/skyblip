@@ -3,7 +3,7 @@ require "test_helper"
 class Releases::AssetsControllerTest < ActionDispatch::IntegrationTest
   test "firmware is fetched through our origin and has immutable caching" do
     VCR.use_cassette("github/firmware") do
-      get "/releases/dev-1005/skyblip-go-dev-1005.signed.bin"
+      get "/releases/dev-1765/skyblip-go-dev-1765.signed.bin"
     end
 
     assert_response :success

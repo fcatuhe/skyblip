@@ -9,7 +9,7 @@ export function shortName(unit) {
 }
 
 export function productWord(unit) {
-  return unit.product === "skyblip_bravo" ? "Bravo" : "Go"
+  return unit.product === "bravo" ? "Bravo" : "Go"
 }
 
 export function battery(status) {

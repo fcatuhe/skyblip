@@ -140,11 +140,11 @@ export default class extends Controller {
     this.changesTarget.hidden = sections.length === 0
   }
 
-  // INFO: fc 11nov26 a slim image for a hub that lacks its blob would install, then revert, so the page swaps in the full one of that release
+  // INFO: fc 11nov26 a base image for a hub that lacks its blob would install, then revert, so the page swaps in the full one of that release
   #upgradeToFull(unit, state) {
     if (state.notice?.key !== "needs_full" || taken(unit)) return
-    const slim = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
-    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.product === slim.dataset.product && option.dataset.kind === "full")
+    const base = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
+    const full = base && [...this.shelf.options].find(option => option.dataset.release === base.dataset.release && option.dataset.product === base.dataset.product && option.dataset.kind === "full")
     if (full) this.#taking(take(unit, full))
   }
 
@@ -153,7 +153,9 @@ export default class extends Controller {
     const airborne = state.status?.flight === "airborne"
     this.installTarget.disabled = !asks || !file || Boolean(taken(unit)) || !this.#changelogSettled()
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
-    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
+    const restoresMotionSensor = state.motionSensorWithoutFirmware && Boolean(file?.full) && file.version === state.running
+    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) ||
+      (state.upgrade === false && !this.picked && !restoresMotionSensor)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
     else this.installTarget.textContent = this.installTarget.dataset.label
@@ -164,8 +166,8 @@ export default class extends Controller {
     return Boolean(this.changelogLanded || this.element.querySelector("template[data-changes]"))
   }
 
-  #done({ running, image }) {
-    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed"
+  #done({ running, image, motionSensorWithoutFirmware }) {
+    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed" && image.imu !== "writing" && !motionSensorWithoutFirmware
   }
 
   #status(state, unit) {
@@ -177,7 +179,9 @@ export default class extends Controller {
     if (image?.state === "probation") return say("words.probation", { version: running ?? image.to ?? "" })
     if (this.#done(state)) return say("words.done", { version: running })
     if (taken(unit)) return ""
+    if (state.motionSensorWithoutFirmware) return say("words.motion_sensor_without_firmware", { version: running })
     if (upgrade === false) return say("words.newest", { version: running })
+    if (state.identityRefused && !file) return say("words.no_product")
     if (!file && this.shelf && fitting(this.shelf, unit).length === 0) return say("words.no_image")
     return ""
   }
@@ -193,7 +197,7 @@ export default class extends Controller {
     const minutes = this.#minutesLeft(progress)
     const left = minutes ? say("words.left", { minutes }) : say("words.estimating")
     const product = productWord(unit)
-    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "skyblip_bravo" ? "words.stops" : "words.stops_with_pad", { product })]
+    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "bravo" ? "words.stops" : "words.stops_with_pad", { product })]
       .map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 
@@ -235,7 +239,7 @@ export default class extends Controller {
   #glass(unit, state) {
     if (!this.glass) return
     const { phase, task, file } = state
-    const lamp = unit.product === "skyblip_bravo"
+    const lamp = unit.product === "bravo"
     const product = productWord(unit)
     if (phase === "confirming" && task === "dfu") this.glass.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
     else if (phase === "confirming" && task === "recovery") this.glass.show({ title: "RECOVERY", prompt: "recovery", product, lamp })

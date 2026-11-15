@@ -12,8 +12,8 @@ module ActivationTestHelper
     fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
   end
 
-  def signed_statement(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"], release: true)
-    fields = { device_id:, version:, release:, server_nonce: challenge.server_nonce }
+  def signed_statement(challenge, unit_key: self.unit_key, device_id: vectors["device_id"], version: vectors["version"], release: true, variant: vectors["variant"])
+    fields = { product: vectors["product"], variant:, version:, release:, device_id:, server_nonce: challenge.server_nonce }
     message = Identity::Message.attestation(**fields, public_key: unit_key.raw_public_key.unpack1("H*"))
     fields.merge(signature: unit_key.sign(nil, message).unpack1("H*"))
   end

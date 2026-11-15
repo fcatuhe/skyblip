@@ -6,6 +6,7 @@
 #include "core/comms/identity_link.h"
 #include "core/dfu/update.h"
 #include "core/identity/unit.h"
+#include "core/identity/variant.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
@@ -23,6 +24,8 @@ using platform::host::Identity;
 namespace {
 
 constexpr uint16_t kChromePayloadBytes = 495;
+constexpr uint8_t kGo = static_cast<uint8_t>(dfu::Product::Go);
+constexpr uint8_t kPlus = static_cast<uint8_t>(identity::Variant::Plus);
 
 // INFO: fc 14nov26 the config endpoint of a unit running the vectors' 0.3.0+1234
 struct Desk {
@@ -46,6 +49,7 @@ struct Desk {
         dfu.release = true;
         unit.load();
         config.set_identity(&identity);
+        config.set_variant(identity::Variant::Plus);
     }
 
     std::string say(const std::string& json) {
@@ -79,11 +83,12 @@ TEST_CASE("attestation: the unit signs the vectors' attestation byte for byte, w
     Desk desk(Identity::kSerial);
     REQUIRE(desk.vectors.flag("release"));
 
-    CHECK(desk.attest_with_vectors() == "{\"command\":\"attestation\",\"device_id\":\"" +
-                                            desk.vectors.text("device_id") + "\",\"version\":\"" +
-                                            desk.vectors.text("version") +
-                                            "\",\"release\":true,\"signature\":\"" +
-                                            desk.vectors.text("attestation_signature") + "\"}");
+    CHECK(desk.attest_with_vectors() ==
+          "{\"command\":\"attestation\",\"product\":\"" + desk.vectors.text("product") +
+              "\",\"variant\":\"" + desk.vectors.text("variant") + "\",\"version\":\"" +
+              desk.vectors.text("version") + "\",\"release\":true,\"device_id\":\"" +
+              desk.vectors.text("device_id") + "\",\"signature\":\"" +
+              desk.vectors.text("attestation_signature") + "\"}");
     CHECK(desk.config.pending() == comms::Pending::None);
 }
 
@@ -98,11 +103,36 @@ TEST_CASE("attestation: a development build signs release false, and the signatu
     const crypto::Ed25519::Signature signature = signature_in(frame);
     CHECK(crypto::Ed25519::verify(
         signature, key,
-        identity::attestation_message(Identity::kDeviceId, key, server_nonce, false, "0.3.0+1234")
+        identity::attestation_message(Identity::kDeviceId, key, server_nonce, false, kGo, kPlus,
+                                      "0.3.0+1234")
             .bytes()));
     CHECK_FALSE(crypto::Ed25519::verify(
         signature, key,
-        identity::attestation_message(Identity::kDeviceId, key, server_nonce, true, "0.3.0+1234")
+        identity::attestation_message(Identity::kDeviceId, key, server_nonce, true, kGo, kPlus,
+                                      "0.3.0+1234")
+            .bytes()));
+}
+
+// A Plus whose haptic driver stops answering signs standard, so the server sees the part go.
+TEST_CASE("attestation: the signature covers the variant the unit found at this boot") {
+    Desk desk(Identity::kSerial);
+    desk.config.set_variant(identity::Variant::Standard);
+    const std::string frame = desk.attest_with_vectors();
+    REQUIRE(frame.find("\"variant\":\"standard\"") != std::string::npos);
+
+    const auto server_nonce = desk.vectors.bytes<16>("server_nonce");
+    const crypto::Ed25519::PublicKey key = crypto::Ed25519::public_key_of(Identity::kUnitSeed);
+    const crypto::Ed25519::Signature signature = signature_in(frame);
+    const uint8_t standard = static_cast<uint8_t>(identity::Variant::Standard);
+    CHECK(crypto::Ed25519::verify(
+        signature, key,
+        identity::attestation_message(Identity::kDeviceId, key, server_nonce, true, kGo, standard,
+                                      "0.3.0+1234")
+            .bytes()));
+    CHECK_FALSE(crypto::Ed25519::verify(
+        signature, key,
+        identity::attestation_message(Identity::kDeviceId, key, server_nonce, true, kGo, kPlus,
+                                      "0.3.0+1234")
             .bytes()));
 }
 

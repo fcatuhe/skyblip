@@ -9,10 +9,10 @@ class Event::Journal
 
   WORDS = %w[navigation control kind error controller filter phase product running track image imu settings trust flight power_level
              key during task version advice outcome cause tried from to check swap proof reset previous browser_name os_name language
-             sha reason staged_key unit_key bootloader_keys].freeze
+             sha reason staged_key unit_key bootloader_keys device_id variant].freeze
   COUNTS = %w[load_ms line column connect_ms linked_ms battery_percent lasted_ms sent_bytes total_bytes request_error boots
-              probation_boots browser_major].freeze
-  FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report].freeze
+              probation_boots browser_major bluetooth_tag].freeze
+  FLAGS = %w[bluetooth standalone online storage mobile returned expected swap_powered activated charging full upgrade confirmed report release].freeze
   TEXTS = { "message" => 300, "detail" => 200 }.freeze
   PATHS = %w[file].freeze
   LISTS = %w[frames].freeze
@@ -24,11 +24,12 @@ class Event::Journal
 
   attr_reader :browser
 
-  def initialize(browser:, entries:, user: nil, request_id: nil)
+  def initialize(browser:, entries:, user: nil, request_id: nil, ip_address: nil)
     @browser = browser.to_s[BROWSER]
     @entries = Array(entries).first(ENTRIES)
     @user = user
     @request_id = request_id
+    @ip_address = ip_address
   end
 
   def valid? = browser.present?
@@ -36,7 +37,10 @@ class Event::Journal
   # INFO: fc 14nov26 a journal is posted again until it is answered, so an entry's uuid keeps it once however often it arrives
   def record
     rows = @entries.filter_map { row_of(it) }
-    Event.insert_all(rows, unique_by: :uuid) if rows.any?
+    if rows.any?
+      fresh = Event.insert_all(rows, unique_by: :uuid, returning: :uuid).rows.flatten
+      Unit.hear_later(fresh, ip_address: @ip_address)
+    end
     rows.size
   end
 

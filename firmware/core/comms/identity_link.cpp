@@ -163,7 +163,8 @@ void ConfigService::attest(const cbor::Reader& frame) {
     const bool release = dfu_ != nullptr && dfu_->release_build();
     const std::optional<crypto::Ed25519::Signature> signature =
         unit.sign(identity::attestation_message(unit.device_id(), unit.public_key(), server_nonce,
-                                                release, version)
+                                                release, static_cast<uint8_t>(product_),
+                                                static_cast<uint8_t>(variant_), version)
                       .bytes());
     if (!signature) {
         refuse(link::Reason::Keyless);
@@ -172,10 +173,12 @@ void ConfigService::attest(const cbor::Reader& frame) {
     uint8_t reply_frame[IdentityLink::kAttestationFrameBytes];
     cbor::Writer writer(reply_frame, sizeof(reply_frame));
     writer.add_code(link::kCommandKey, link::Command::Attestation);
-    add_bytes<link::attestation_bytes::kDeviceId>(writer, link::attestation_key::kDeviceId,
-                                                  unit.device_id());
+    writer.add_code(link::attestation_key::kProduct, product_);
+    writer.add_code(link::attestation_key::kVariant, variant_);
     writer.add_text(link::attestation_key::kVersion, version);
     writer.add_boolean(link::attestation_key::kRelease, release);
+    add_bytes<link::attestation_bytes::kDeviceId>(writer, link::attestation_key::kDeviceId,
+                                                  unit.device_id());
     add_bytes<link::attestation_bytes::kSignature>(writer, link::attestation_key::kSignature,
                                                    *signature);
     const int bytes = writer.finish();

@@ -10,6 +10,24 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal "000003", key.unit.address
   end
 
+  test "a unit a browser reported before its activation gets the next serial on the same record" do
+    reported = Unit.create!(device_id: vectors["device_id"], product: "go", variant: "plus", bluetooth_tag: 0x3f2a)
+
+    key = Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"])
+
+    assert_equal [ reported, 3, "go-000003" ], [ key.unit, key.unit.serial, key.unit.slug ]
+    assert_equal Time.current.to_date, key.unit.activated_at.to_date
+    assert_equal [ units(:bound), units(:contested), reported ].sort_by(&:id), Unit.activated.order(:id).to_a
+  end
+
+  test "the daily cap counts the units activated today, not the units browsers reported" do
+    Activation::Cap.current.update!(new_units_per_day: 1)
+    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), product: "bravo" } })
+
+    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]).active?
+    assert Unit.daily_cap_reached?
+  end
+
   test "a known device with its own key keeps its serial" do
     key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, version: "0.3.0+1300")
 
@@ -79,7 +97,7 @@ class UnitTest < ActiveSupport::TestCase
 
   test "refuses new devices past the daily cap an admin set, and still serves known ones" do
     Activation::Cap.current.update!(new_units_per_day: 3)
-    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
+    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, activated_at: Time.current } })
 
     refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]) }
     assert_equal :daily_cap, refusal.reason
@@ -163,11 +181,6 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal [ [ "0.3.0+1300", true ], [ "0.4.0+1400", false ], [ "0.4.0+1400", true ], [ "0.3.0+1300", true ] ],
       unit.firmwares.newest_first.pluck(:version, :release)
     assert_equal Time.current.to_date, unit.firmwares.newest_first.last.updated_at.to_date
-  end
-
-  test "a unit that has not signed its firmware since it registered shows the one it registered with" do
-    assert_equal "0.3.0+1300", units(:bound).signed_firmware.version
-    assert_equal "0.3.0+1200", units(:contested).signed_firmware.version
   end
 
   test "the database refuses serial 0 on its own" do

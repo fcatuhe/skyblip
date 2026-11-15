@@ -4,10 +4,12 @@
 #include <vector>
 
 #include "core/crypto/ed25519.h"
+#include "core/dfu/update.h"
 #include "core/identity/activation.h"
 #include "core/identity/messages.h"
 #include "core/identity/unit.h"
 #include "core/identity/unlock_code.h"
+#include "core/identity/variant.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
@@ -56,7 +58,9 @@ TEST_CASE(
     CHECK(hex_of(ConstByteSpan(key_id.data(), key_id.size())) == x.vectors.text("server_key_id"));
 }
 
-TEST_CASE("identity: the register message is the label, Nu and Ns, and the server's R checks") {
+TEST_CASE(
+    "identity: the register message is the label, unit_nonce and server_nonce, and the server's "
+    "signature checks") {
     Exchange x;
     const identity::Message message = identity::register_message(x.unit_nonce, x.server_nonce);
     CHECK(same(message.bytes(), x.vectors.message("register_message")));
@@ -92,7 +96,9 @@ TEST_CASE(
         Ed25519::verify(signature, x.unit_key, ConstByteSpan(release.data(), release.size())));
 }
 
-TEST_CASE("identity: the unlock message carries the serial big-endian, and the server's U checks") {
+TEST_CASE(
+    "identity: the unlock message carries the serial big-endian, and the server's signature "
+    "checks") {
     Exchange x;
     REQUIRE(x.serial == 298);
     const identity::Message message =
@@ -104,11 +110,14 @@ TEST_CASE("identity: the unlock message carries the serial big-endian, and the s
 }
 
 TEST_CASE(
-    "identity: the attestation message ends in the version, and the unit's signature is the "
-    "vectors'") {
+    "identity: the attestation message names the product and the variant, ends in the version, and "
+    "the unit's signature is the vectors'") {
     Exchange x;
+    REQUIRE(x.vectors.text("product") == "go");
+    REQUIRE(x.vectors.text("variant") == "plus");
     const identity::Message message = identity::attestation_message(
-        x.device_id, x.unit_key, x.server_nonce, x.release, x.version.c_str());
+        x.device_id, x.unit_key, x.server_nonce, x.release, static_cast<uint8_t>(dfu::Product::Go),
+        static_cast<uint8_t>(identity::Variant::Plus), x.version.c_str());
     CHECK(same(message.bytes(), x.vectors.message("attestation_message")));
     const auto attestation_signature = x.vectors.bytes<64>("attestation_signature");
     CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == attestation_signature);
@@ -149,7 +158,9 @@ TEST_CASE("identity: hex is lowercase both ways, and a read takes exactly the di
     CHECK(hex_of(ConstByteSpan(out, 2)) == "0aff");
 }
 
-TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page holds nothing") {
+TEST_CASE(
+    "identity: the unlock page holds serial, unit_nonce and the unlock signature, and an erased "
+    "page holds nothing") {
     identity::UnlockCode code{};
     code.serial = 0x012A;
     code.nonce.fill(0x11);

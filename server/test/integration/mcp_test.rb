@@ -55,11 +55,13 @@ class McpTest < ActionDispatch::IntegrationTest
     errors = JSON.parse(call_tool("list_errors", {}, token:))
     assert_equal [ [ "RuntimeError", "the challenge expired", 1, true ] ], errors.map { it.values_at("error", "message", "count", "new") }
 
-    unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:))
+    unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:)).sole
     assert_equal [ 1, "000001" ], unit.values_at("serial", "address")
     assert_equal [ "active" ], unit["keys"].pluck("status")
-    assert_equal [ [ "0.3.0+1300", true ] ], unit["signed_firmware"].map { it.values_at("version", "release") }
-    assert_equal [], unit["reported_firmware"]
+    assert_equal [ [ "0.3.0+1300", true, "plus", "attested" ] ], unit["firmware"].map { it.values_at("version", "release", "variant", "source") }
+
+    bravo = JSON.parse(call_tool("get_unit", { device: "bravo-3f2a" }, token:)).sole
+    assert_equal [ "bravo", nil, [ "read" ] ], [ bravo["product"], bravo["serial"], bravo["firmware"].pluck("source") ]
 
     call_tool("get_unit", { device: "go-00ffff" }, token:)
     assert response.parsed_body.dig("result", "isError")

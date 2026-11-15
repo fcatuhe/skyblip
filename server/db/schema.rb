@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_202120) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_15_130212) do
   create_table "activation_caps", force: :cascade do |t|
     t.integer "new_units_per_day", default: 50, null: false
     t.datetime "created_at", null: false
@@ -103,6 +103,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_202120) do
     t.boolean "release", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "source", null: false
+    t.string "variant"
+    t.string "from_version"
+    t.integer "lasted_ms"
     t.index ["unit_id", "created_at"], name: "index_unit_firmwares_on_unit_id_and_created_at"
   end
 
@@ -122,10 +126,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_202120) do
 
   create_table "units", force: :cascade do |t|
     t.string "device_id", null: false
-    t.integer "serial", null: false
+    t.integer "serial"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "product"
+    t.string "variant"
+    t.integer "bluetooth_tag"
+    t.datetime "activated_at"
+    t.index ["activated_at"], name: "index_units_on_activated_at"
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
+    t.index ["product", "bluetooth_tag"], name: "index_units_on_product_and_bluetooth_tag"
     t.index ["serial"], name: "index_units_on_serial", unique: true
     t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end

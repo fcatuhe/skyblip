@@ -166,7 +166,7 @@ The three figures are unmeasured. Free space alone puts a 250 W transponder at a
 
 ## The name
 
-Bravo advertises `skyBlip Bravo 3F2A`, where `3F2A` is the low 16 bits of FICR `DEVICEADDR`. The name rule is the product's, `bravo::bluetooth_name` in `name.h`, handed to the shared config link as an `identity::NameRule`. The Go hands it `identity::bluetooth_name`, its activation rule. The tag is not an activation identity, and Bravo is never activated: its platform fills `ports::KeylessIdentity`, so `challenge` answers `keyless`.
+Bravo advertises `skyBlip Bravo 3F2A`, where `3F2A` is the low 16 bits of FICR `DEVICEADDR`. The name rule is the product's, `bravo::bluetooth_name` in `name.h`, handed to the shared config link as an `identity::NameRule`. The Go hands it `identity::bluetooth_name`, its activation rule. The tag is not an activation identity, and Bravo is never activated: its platform fills `ports::KeylessIdentity` with the DEVICEID and the tag, so `challenge` answers `keyless` and `identity` names the unit as every Go does.
 
 ## The way down
 

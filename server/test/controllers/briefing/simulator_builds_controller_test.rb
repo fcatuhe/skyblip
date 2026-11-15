@@ -8,13 +8,14 @@ class Briefing::SimulatorBuildsControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame#simulator_build[src]"
   end
 
-  test "releases without simulator assets show an explicit empty state" do
+  test "the frame offers the simulator of the newest main build that holds it" do
     VCR.use_cassette("github/releases") do
       get "/briefing/simulator_build"
     end
 
     assert_response :success
-    assert_select "turbo-frame#simulator_build [role=status]", text: /No simulator build/
+    assert_select "turbo-frame#simulator_build [role=status]", count: 0
+    assert_match "dev-1765", response.body
   end
 
   test "GitHub failure is contained in the simulator frame" do

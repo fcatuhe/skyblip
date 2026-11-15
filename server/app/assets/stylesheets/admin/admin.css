@@ -110,4 +110,22 @@
     flex-wrap: wrap;
     gap: var(--space-s) var(--space-inline-2xl);
   }
+
+  .table-scroll.admin-table td.mono { font-family: var(--font-mono); }
+
+  .admin-help {
+    max-inline-size: 70ch;
+    margin-block: 0 var(--space-m);
+    font-size: var(--text-s);
+  }
+
+  .admin-help summary {
+    cursor: pointer;
+    color: var(--ink-soft);
+    padding-block: var(--space-2xs);
+  }
+
+  .admin-help dl { margin-block: var(--space-xs) 0; }
+  .admin-help dt { font-weight: 700; margin-block-start: var(--space-xs); }
+  .admin-help dd { margin: 0; color: var(--ink-soft); }
 }

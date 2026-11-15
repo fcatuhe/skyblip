@@ -190,7 +190,7 @@ TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it 
     CHECK(state.imu.bootable);
 }
 
-TEST_CASE("board: a slim image boots the hub from the copy on flash") {
+TEST_CASE("board: a base image boots the hub from the copy on flash") {
     platform::host::Platform platform;
     const ConstByteSpan carried = platform.imu_firmware();
     platform.set_imu_firmware_linked(false);
@@ -209,7 +209,7 @@ TEST_CASE("board: a slim image boots the hub from the copy on flash") {
     CHECK(std::string(state.imu.fault).empty());
 }
 
-TEST_CASE("board: a slim image on an empty partition leaves the hub idle and says why") {
+TEST_CASE("board: a base image on an empty partition leaves the hub idle and says why") {
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
     bus::Bus bus;
@@ -229,7 +229,7 @@ TEST_CASE("board: a slim image on an empty partition leaves the hub idle and say
     CHECK(platform.imu_flash().erases == 0);
 }
 
-TEST_CASE("board: a slim image refuses a copy it was not built with") {
+TEST_CASE("board: a base image refuses a copy it was not built with") {
     platform::host::Platform platform;
     platform.set_imu_firmware_linked(false);
     const uint8_t other[] = {0x2B, 0x66, 0x00, 0x00, 0x99, 0x88, 0x77, 0x66};

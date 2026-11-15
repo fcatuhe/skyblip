@@ -146,7 +146,7 @@ std::string update_frame(Rig& rig, uint32_t at_ms) {
 
 }  // namespace
 
-TEST_CASE("inclinometer: a slim image with no hub image on flash says so on the status page") {
+TEST_CASE("inclinometer: a base image with no hub image on flash says so on the status page") {
     Rig rig;
     rig.platform.set_imu_firmware_linked(false);
     REQUIRE(rig.setup() == Status::Ok);
@@ -185,12 +185,12 @@ TEST_CASE("inclinometer: the phone is told what the flash holds for the hub") {
     CHECK(held.find("\"imu\":\"held\",") != std::string::npos);
     CHECK(held.find(std::string("\"imu_digest\":\"") + expected + "\"") != std::string::npos);
 
-    Rig slim;
-    slim.platform.set_imu_firmware_linked(false);
-    REQUIRE(slim.setup() == Status::Ok);
-    slim.raise_link();
-    slim.run(0, 200);
-    CHECK(update_frame(slim, 200).find("\"imu\":\"missing\"") != std::string::npos);
+    Rig base;
+    base.platform.set_imu_firmware_linked(false);
+    REQUIRE(base.setup() == Status::Ok);
+    base.raise_link();
+    base.run(0, 200);
+    CHECK(update_frame(base, 200).find("\"imu\":\"missing\"") != std::string::npos);
 
     Rig plain(kPlainTEcho);
     REQUIRE(plain.setup() == Status::Ok);
@@ -200,7 +200,7 @@ TEST_CASE("inclinometer: the phone is told what the flash holds for the hub") {
 }
 
 // The bootloader reverts it on the next reset, to the image before, which booted the hub.
-TEST_CASE("inclinometer: a slim image that cannot boot its hub never confirms itself") {
+TEST_CASE("inclinometer: a base image that cannot boot its hub never confirms itself") {
     Rig rig;
     rig.platform.set_imu_firmware_linked(false);
     rig.platform.dfu().image_confirmed = false;
@@ -219,19 +219,19 @@ TEST_CASE("inclinometer: a slim image that cannot boot its hub never confirms it
 }
 
 TEST_CASE(
-    "inclinometer: a full image fills an empty partition, and the slim image after it boots from "
+    "inclinometer: a full image fills an empty partition, and the base image after it boots from "
     "it") {
     Rig fitted;
     REQUIRE(fitted.setup() == Status::Ok);
     fitted.run(0, kBootToBallMs);
     REQUIRE(fitted.product.board().imu_store().holds(fitted.platform.imu_firmware_digest()));
 
-    Rig slim;
-    slim.platform.imu_flash().restore(fitted.platform.imu_flash().bytes());
-    slim.platform.set_imu_firmware_linked(false);
-    REQUIRE(slim.setup() == Status::Ok);
-    fly_uncoordinated(slim, 0);
-    slim.run(0, kBootToBallMs);
-    CHECK(slim.product.board().imu().stage() == parts::Bhi260::Stage::Running);
-    CHECK(slim.state().slip.valid);
+    Rig base;
+    base.platform.imu_flash().restore(fitted.platform.imu_flash().bytes());
+    base.platform.set_imu_firmware_linked(false);
+    REQUIRE(base.setup() == Status::Ok);
+    fly_uncoordinated(base, 0);
+    base.run(0, kBootToBallMs);
+    CHECK(base.product.board().imu().stage() == parts::Bhi260::Stage::Running);
+    CHECK(base.state().slip.valid);
 }
