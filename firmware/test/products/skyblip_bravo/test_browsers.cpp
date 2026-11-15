@@ -53,7 +53,7 @@ TEST_CASE(
     rig.platform.random().queue(kNonce);
     say(rig, "{\"command\":\"browser_challenge\"}");
     CHECK(say(rig, trust_browser()).find("untrusted") != std::string::npos);
-    say(rig, "{\"command\":\"set\",\"alarm_volume\":\"soft\"}");
+    say(rig, "{\"command\":\"set\",\"alarm\":\"soft\"}");
     comms::ConfigService& config = rig.product.config_link().config();
     REQUIRE(config.pending() == comms::Pending::Set);
     config.confirm();
@@ -63,7 +63,7 @@ TEST_CASE(
     CHECK(say(rig, "{\"command\":\"browsers\",\"index\":0}") ==
           "{\"command\":\"browser\",\"index\":0,\"count\":1,\"id\":\"" + id_text() +
               "\",\"label\":\"Chrome on Android\"}");
-    say(rig, "{\"command\":\"set\",\"alarm_volume\":\"loud\"}");
+    say(rig, "{\"command\":\"set\",\"alarm\":\"loud\"}");
     CHECK(config.pending() == comms::Pending::None);
 
     CHECK(say(rig, "{\"command\":\"forget_browser\",\"id\":\"" + id_text() + "\"}")

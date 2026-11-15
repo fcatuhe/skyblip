@@ -24,7 +24,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connected · 82 % · On the ground · 0.1.0+1000, development"
       assert_field "Callsign", with: "F-JXYZ"
-      assert_select "Alarm volume", selected: "Soft"
+      assert_select "Alarm", selected: "Soft"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
       assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
@@ -70,7 +70,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       assert_selector ".fleet-unit.is-linked", count: 2
       assert_no_field "Callsign"
-      assert_select "Alarm volume", selected: "Soft"
+      assert_select "Alarm", selected: "Soft"
       screen "05-go-and-bravo"
 
       click_link "Go 00012A"
@@ -84,7 +84,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       fill_in "Callsign", with: "f-abcd"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       assert_button "Save 2 changes"
       screen "06-settings-edited"
 
@@ -100,8 +100,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
       assert_field "Callsign", with: "F-ABCD"
-      assert_select "Alarm volume", selected: "Loud"
-      assert_equal({ "callsign" => "F-ABCD", "alarm_volume" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_select "Alarm", selected: "Loud"
+      assert_equal({ "callsign" => "F-ABCD", "alarm" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
       screen "08-settings-saved"
     end
   end
@@ -113,11 +113,11 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Back to defaults (3)"
       assert_select "Aircraft type", selected: "Light aircraft"
       assert_field "Callsign", with: ""
-      assert_select "Alarm volume", selected: "Loud"
+      assert_select "Alarm", selected: "Loud"
       click_button "Save 3 changes"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
-      assert_equal({ "aircraft_type" => 1, "callsign" => "", "alarm_volume" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_equal({ "aircraft_type" => 1, "callsign" => "", "alarm" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
       assert_no_selector "[data-unit-target=reset]"
     end
   end
@@ -126,7 +126,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-prompt"
       page.execute_script("#{unit("00012A")}.refuse()")
@@ -148,7 +148,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       assert_no_selector "[data-unit-target=browsers]"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-remembers", text: "Allowing it also adds this browser to the trusted list"
       screen "15-glass-trusts"
@@ -162,7 +162,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       end
       screen "16-trusted-browsers"
 
-      select "Soft", from: "Alarm volume"
+      select "Soft", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
       assert_no_selector ".glass-prompt"
@@ -178,7 +178,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector "[data-unit-target=browsers] li", text: "this browser"
@@ -186,10 +186,10 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-notes", text: "This browser can still change the device's settings. Other actions are available again after landing."
       screen "17-trusted-airborne"
-      select "Soft", from: "Alarm volume"
+      select "Soft", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
-      assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm_volume")
+      assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm")
     end
   end
 
@@ -233,7 +233,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
       assert_selector ".glass-press", text: "Press the Bravo's button."
@@ -356,6 +356,17 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.press()")
       assert_field "ADS-B address", with: "3C6586"
       assert_equal({ "aircraft_address" => 0x3C6586 }, page.evaluate_script("#{unit("00012A")}.staged"))
+    end
+  end
+
+  test "a Go with no buzzer and no haptic offers its alarm as off or visual only" do
+    in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "display" })
+    on_the_shelf do
+      connect_go
+      assert_select "Alarm", selected: "Visual only"
+      offered = "[...document.querySelectorAll('#unit-alarm option')].filter(option => !option.disabled).map(option => option.value)"
+      assert_equal %w[off display], page.evaluate_script(offered)
+      screen "11b-go-visual-only"
     end
   end
 

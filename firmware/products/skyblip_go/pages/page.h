@@ -74,11 +74,14 @@ constexpr RadarPlot next_radar_plot(RadarPlot plot) {
     return plot == RadarPlot::All ? RadarPlot::ToScale : RadarPlot::All;
 }
 
-constexpr AlarmVolume next_alarm_volume(AlarmVolume volume) {
-    switch (volume) {
-        case AlarmVolume::Loud: return AlarmVolume::Soft;
-        case AlarmVolume::Soft: return AlarmVolume::Off;
-        default: return AlarmVolume::Loud;
+// INFO: fc 15nov26 one stray press from LOUD still sounds, and a Go that cannot sound only shows
+constexpr Alarm next_alarm(Alarm alarm, bool sounds) {
+    if (!sounds) return alarm == Alarm::Off ? Alarm::Display : Alarm::Off;
+    switch (alarm) {
+        case Alarm::Loud: return Alarm::Soft;
+        case Alarm::Soft: return Alarm::Display;
+        case Alarm::Display: return Alarm::Off;
+        default: return Alarm::Loud;
     }
 }
 

@@ -254,7 +254,7 @@ TEST_CASE("product: a set sent in flight never puts a prompt over the radar") {
 
     bool prompted = false;
     for (int i = 0; i < 3; i++) {
-        rig.send("{\"command\":\"set\",\"alarm_volume\":1}");
+        rig.send("{\"command\":\"set\",\"alarm\":2}");
         for (const uint32_t until = now_ms + 1000; now_ms <= until; now_ms += 50) {
             rig.platform.clock().set_milliseconds(now_ms);
             rig.product.run_pass(now_ms);
@@ -264,7 +264,7 @@ TEST_CASE("product: a set sent in flight never puts a prompt over the radar") {
     CHECK_FALSE(prompted);
     CHECK(rig.config().pending() == comms::Pending::None);
     CHECK(rig.product.screen().page() == go::Page::Radar);
-    CHECK(rig.product.settings().alarm_volume == go::AlarmVolume::Loud);
+    CHECK(rig.product.settings().alarm == go::Alarm::Loud);
 }
 
 // Pass by pass, because config ran before ownship and saw the take-off one pass late.
@@ -273,7 +273,7 @@ TEST_CASE("product: no prompt stands on the glass on any pass the latch says air
         const char* request;
         bool fixed_first;
     };
-    for (const Staged staged : {Staged{"{\"command\":\"set\",\"alarm_volume\":1}", false},
+    for (const Staged staged : {Staged{"{\"command\":\"set\",\"alarm\":2}", false},
                                 Staged{"{\"command\":\"power_off\"}", true}}) {
         const std::string request = staged.request;
         CAPTURE(request);
@@ -312,7 +312,7 @@ TEST_CASE("product: no prompt stands on the glass on any pass the latch says air
 TEST_CASE("product: the pass the first fix says airborne takes a staged set off an advisory") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.send("{\"command\":\"set\",\"alarm_volume\":1}");
+    rig.send("{\"command\":\"set\",\"alarm\":2}");
     rig.run(0, 3000);
     REQUIRE(rig.config().flight_state() == flight::FlightState::Unknown);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
@@ -345,7 +345,7 @@ TEST_CASE("product: the pass the first fix says airborne takes a staged set off 
     REQUIRE(rig.state().flight.confirmed_state == flight::FlightState::Airborne);
     REQUIRE(rig.state().alarm_undismissed == traffic::Level::Advisory);
     CHECK(rig.product.screen().prompt() == comms::Pending::None);
-    CHECK(rig.product.settings().alarm_volume == go::AlarmVolume::Loud);
+    CHECK(rig.product.settings().alarm == go::Alarm::Loud);
 
     // The next pass, config hears the take-off and drops what the glass already dropped.
     pass(3310);

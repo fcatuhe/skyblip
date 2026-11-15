@@ -98,6 +98,11 @@ class DiagnosticsPayloads(unittest.TestCase):
             tx_power_dbm=-9, pa_rated_dbm=22, alarm_enabled=True, metric=True,
             battery_trim_manual=True))
 
+    def test_config_names_its_alarm_setting_only_where_the_flag_says_it_was_written(self):
+        payload = struct.pack("<I2h4B2bB", 0xABCDEF, 0, 0, 1, 58, 0, 1, 14, 22, 1)
+        self.assertEqual(decoded(2, payload, 0b10_0000)["alarm_setting"], "display")
+        self.assertNotIn("alarm_setting", decoded(2, payload, 0))
+
     def test_gnss_reads_its_five_words_two_enums_and_six_flags(self):
         payload = struct.pack("<5H5B", 350, 12, 120, 180, 900, 11, 17, 3, 4, 2)
         self.assertEqual(decoded(3, payload, 0b1111_1100), whole(

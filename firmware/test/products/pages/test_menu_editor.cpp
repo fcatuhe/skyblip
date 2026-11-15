@@ -47,14 +47,14 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
     CHECK(bench.editor.focus() == MenuRow::Alarm);
 
     // The press acts on the row the focus is on, and leaves the focus there.
-    CHECK(bench.values.settings.alarm_enabled);
+    CHECK(bench.values.settings.alarm == go::Alarm::Loud);
     CHECK(bench.change() == MenuAction::Changed);
     CHECK(bench.editor.focus() == MenuRow::Alarm);
-    CHECK_FALSE(bench.values.settings.alarm_enabled);
+    CHECK(bench.values.settings.alarm == go::Alarm::Soft);
 
-    // The next press toggles it back: one press, one step, no rhythm to get right.
+    // The next press steps it again: one press, one step, no rhythm to get right.
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(bench.values.settings.alarm_enabled);
+    CHECK(bench.values.settings.alarm == go::Alarm::Display);
 }
 
 // Reached in the dark, so it is the top row, and the press that sets it closes the menu.
@@ -68,7 +68,7 @@ TEST_CASE("menu editor: the light is the first row, and a press on it switches i
     CHECK(bench.values.light);
     CHECK_FALSE(bench.editor.active());
     CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
-    CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
+    CHECK(before.alarm == bench.values.settings.alarm);
 
     char value[kMenuValueBytes];
     menu_row_value(value, MenuRow::Light, bench.values);
@@ -308,8 +308,7 @@ TEST_CASE("menu editor: moving the focus over a row is not editing it") {
     for (int i = 0; i < bench.rows(); i++) bench.move();
     CHECK_FALSE(bench.editor.active());
     CHECK(before.aircraft_type == bench.values.settings.aircraft_type);
-    CHECK(before.alarm_enabled == bench.values.settings.alarm_enabled);
-    CHECK(before.alarm_volume == bench.values.settings.alarm_volume);
+    CHECK(before.alarm == bench.values.settings.alarm);
     CHECK(before.units == bench.values.settings.units);
     CHECK(range_before == bench.values.settings.range_step);
 }
@@ -338,18 +337,37 @@ TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft
 }
 
 // One press from the default is still heard: silent takes a second press.
-TEST_CASE("menu editor: the volume steps down from loud through soft to off, and round") {
+TEST_CASE(
+    "menu editor: the alarm steps down from loud through soft and display to off, and round") {
     Bench bench;
-    bench.focus_on(MenuRow::Volume);
-    REQUIRE(bench.values.settings.alarm_volume == go::AlarmVolume::Loud);
+    bench.focus_on(MenuRow::Alarm);
+    REQUIRE(bench.values.settings.alarm == go::Alarm::Loud);
 
+    char value[kMenuValueBytes];
+    for (const char* shown : {"SOFT", "DISPLAY", "OFF", "LOUD"}) {
+        bench.change();
+        CHECK(go::validate(bench.values.settings) == Status::Ok);
+        menu_row_value(value, MenuRow::Alarm, bench.values);
+        CHECK(std::string(value) == shown);
+    }
+    CHECK(bench.values.settings.alarm == go::Alarm::Loud);
+}
+
+// A Go with no buzzer and no haptic can only show an alarm, so its row is a toggle.
+TEST_CASE("menu editor: a Go that cannot sound toggles its alarm between display and off") {
+    Bench bench;
+    bench.values.sounds = false;
+    bench.focus_on(MenuRow::Alarm);
+
+    char value[kMenuValueBytes];
+    menu_row_value(value, MenuRow::Alarm, bench.values);
+    CHECK(std::string(value) == "DISPLAY");
     bench.change();
-    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Soft);
+    CHECK(bench.values.settings.alarm == go::Alarm::Off);
     bench.change();
-    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Off);
-    CHECK(go::validate(bench.values.settings) == Status::Ok);
-    bench.change();
-    CHECK(bench.values.settings.alarm_volume == go::AlarmVolume::Loud);
+    CHECK(bench.values.settings.alarm == go::Alarm::Display);
+    menu_row_value(value, MenuRow::Alarm, bench.values);
+    CHECK(std::string(value) == "DISPLAY");
 }
 
 TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle closes") {
@@ -391,12 +409,12 @@ TEST_CASE("menu editor: a value that would not validate is never handed back") {
     // The menu reads and does not write: it hands back no blob the firmware would refuse.
     Bench bench;
     bench.values.settings.aircraft_type = 200;
-    bench.focus_on(MenuRow::Volume);
+    bench.focus_on(MenuRow::Alarm);
     REQUIRE(go::validate(bench.values.settings) != Status::Ok);
 
-    const go::AlarmVolume volume = bench.values.settings.alarm_volume;
+    const go::Alarm volume = bench.values.settings.alarm;
     CHECK(bench.change() == MenuAction::None);
-    CHECK(bench.values.settings.alarm_volume == volume);
+    CHECK(bench.values.settings.alarm == volume);
     CHECK(bench.values.settings.aircraft_type == 200);
 }
 

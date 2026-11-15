@@ -8,11 +8,11 @@
 #include "core/events/central.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
-#include "products/common/alarm_volume.h"
+#include "products/common/alarm.h"
 
 namespace skyblip::bravo {
 
-using common::AlarmVolume;
+using common::Alarm;
 
 constexpr uint32_t kAircraftAddressUnset = 0;
 constexpr size_t kPeerAddressBytes = 6;
@@ -33,14 +33,13 @@ PeerPin pin_of(const events::BluetoothAddress& address);
 struct Settings {
     uint32_t aircraft_address{kAircraftAddressUnset};
     PeerPin peer{};
-    bool alarm_enabled{true};
-    AlarmVolume alarm_volume{AlarmVolume::Loud};
+    Alarm alarm{Alarm::Loud};
     // INFO: fc 13nov26 aircraft_address came from the pinned Go, so that Go clearing it clears it
     // here
     bool aircraft_address_from_go{false};
 };
 
-constexpr uint8_t kBlobVersion = 2;
+constexpr uint8_t kBlobVersion = 3;
 
 Settings defaults();
 

@@ -44,8 +44,8 @@ struct ScreenRig {
     go::SettingsStore store{settings, state.activation, state.own_transponder};
     comms::ConfigService config{null.link, store};
     go::SelfTestSnapshot self_test{};
-    common::AlarmService alarm_service{
-        context, go::kFeatures, {settings.alarm_enabled, settings.alarm_volume}};
+    common::AlarmService alarm_service{context, go::kFeatures,
+                                       common::AlarmSettings{settings.alarm}};
     common::RecordPool pool{context, go::book_flash_in_dwell};
     common::RecordStore capture_store{pool, store::SectorOwner::Diagnostics};
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};

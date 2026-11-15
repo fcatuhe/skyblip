@@ -8,6 +8,9 @@ namespace skyblip::go {
 
 namespace {
 
+// INFO: fc 15nov26 the volume blobs 11 to 13 stored, before alarm replaced it and alarm_enabled
+enum class AlarmVolume : uint8_t { Off = 0, Soft = 1, Loud = 2 };
+
 // The version-1 payload, byte for byte: the struct as it was declared when a
 // device in the field last wrote its flash. Same members in the same order means
 // the same layout, so a blob written then still decodes now.
@@ -185,11 +188,35 @@ struct SettingsV12 {
     uint32_t aircraft_address{kAircraftAddressUnset};
 };
 
+struct SettingsV13 {
+    uint8_t version{1};
+    int16_t battery_offset_mv{0};
+    int16_t frequency_trim_e1_ppm{0};
+    bool battery_offset_manual{false};
+    uint8_t aircraft_type{kAircraftTypeLight};
+    bool alarm_enabled{true};
+    AlarmVolume alarm_volume{AlarmVolume::Loud};
+    Units units{Units::Nautical};
+    uint8_t range_step{kDefaultRangeStep};
+    RadarPlot plot{RadarPlot::All};
+    char callsign[kCallsignBytes]{0};
+    uint32_t aircraft_address{kAircraftAddressUnset};
+    events::BluetoothAddress bravo{};
+};
+
 static_assert(sizeof(SettingsV11) == sizeof(SettingsV10), "the volume changed scale, not width");
 static_assert(sizeof(SettingsV12) == sizeof(SettingsV11) + sizeof(uint32_t),
               "aircraft_address went in where it costs no padding");
-static_assert(sizeof(Settings) == sizeof(SettingsV12) + sizeof(events::BluetoothAddress) + 1,
+static_assert(sizeof(SettingsV13) == sizeof(SettingsV12) + sizeof(events::BluetoothAddress) + 1,
               "the Bravo pin went on the end, with one byte of padding to the next word");
+static_assert(sizeof(Settings) == sizeof(SettingsV13), "alarm took two bytes' place in one");
+
+// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the glass, as display
+// does
+Alarm alarm_of(bool enabled, AlarmVolume volume) {
+    if (!enabled || volume == AlarmVolume::Off) return Alarm::Display;
+    return volume == AlarmVolume::Soft ? Alarm::Soft : Alarm::Loud;
+}
 
 // INFO: fc 15oct26 the old 3 to 5 all drove half duty, the loudest; 1 and 2 were the quieter ones
 AlarmVolume three_step_volume(uint8_t six_step) {
@@ -202,8 +229,7 @@ void migrate_v1(const SettingsV1& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -216,8 +242,7 @@ void migrate_v2(const SettingsV2& old, Settings& out) {
     out = Settings{};
     out.version = Settings::kCurrentVersion;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     out.battery_offset_mv = 0;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
@@ -233,8 +258,7 @@ void migrate_v3(const SettingsV3& old, Settings& out) {
     out.version = Settings::kCurrentVersion;
     out.battery_offset_mv = old.battery_offset_mv;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     out.frequency_trim_e1_ppm = 0;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
@@ -249,8 +273,7 @@ void migrate_v4(const SettingsV4& old, Settings& out) {
     out.battery_offset_mv = old.battery_offset_mv;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -262,8 +285,7 @@ void migrate_v5(const SettingsV5& old, Settings& out) {
     out.battery_offset_mv = old.battery_offset_mv;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -275,8 +297,7 @@ void migrate_v6(const SettingsV6& old, Settings& out) {
     out.battery_offset_mv = old.battery_offset_mv;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -289,8 +310,7 @@ void migrate_v8(const SettingsV8& old, Settings& out) {
     out.battery_offset_manual = old.battery_offset_mv != 0;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -305,8 +325,7 @@ void migrate_v9(const SettingsV9& old, Settings& out) {
     out.battery_offset_manual = old.battery_offset_manual;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -319,8 +338,7 @@ void migrate_v10(const SettingsV10& old, Settings& out) {
     out.battery_offset_manual = old.battery_offset_manual;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     out.range_step = old.range_step;
     out.plot = old.plot;
@@ -334,8 +352,7 @@ void migrate_v7(const SettingsV7& old, Settings& out) {
     out.battery_offset_mv = old.battery_offset_mv;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = three_step_volume(old.alarm_volume);
+    out.alarm = alarm_of(old.alarm_enabled, three_step_volume(old.alarm_volume));
     out.units = old.units;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
@@ -348,8 +365,7 @@ void migrate_v11(const SettingsV11& old, Settings& out) {
     out.battery_offset_manual = old.battery_offset_manual;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = old.alarm_volume;
+    out.alarm = alarm_of(old.alarm_enabled, old.alarm_volume);
     out.units = old.units;
     out.range_step = old.range_step;
     out.plot = old.plot;
@@ -365,14 +381,30 @@ void migrate_v12(const SettingsV12& old, Settings& out) {
     out.battery_offset_manual = old.battery_offset_manual;
     out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
     out.aircraft_type = old.aircraft_type;
-    out.alarm_enabled = old.alarm_enabled;
-    out.alarm_volume = old.alarm_volume;
+    out.alarm = alarm_of(old.alarm_enabled, old.alarm_volume);
     out.units = old.units;
     out.range_step = old.range_step;
     out.plot = old.plot;
     std::memcpy(out.callsign, old.callsign, kCallsignBytes);
     out.callsign[kCallsignBytes - 1] = 0;
     out.aircraft_address = old.aircraft_address;
+}
+
+void migrate_v13(const SettingsV13& old, Settings& out) {
+    out = Settings{};
+    out.version = Settings::kCurrentVersion;
+    out.battery_offset_mv = old.battery_offset_mv;
+    out.battery_offset_manual = old.battery_offset_manual;
+    out.frequency_trim_e1_ppm = old.frequency_trim_e1_ppm;
+    out.aircraft_type = old.aircraft_type;
+    out.alarm = alarm_of(old.alarm_enabled, old.alarm_volume);
+    out.units = old.units;
+    out.range_step = old.range_step;
+    out.plot = old.plot;
+    std::memcpy(out.callsign, old.callsign, kCallsignBytes);
+    out.callsign[kCallsignBytes - 1] = 0;
+    out.aircraft_address = old.aircraft_address;
+    out.bravo = old.bravo;
 }
 
 template <class Old>
@@ -388,6 +420,7 @@ Status open_as(const uint8_t* in, size_t length, Settings& out,
 
 Status migrate_blob(uint8_t version, const uint8_t* in, size_t length, Settings& out) {
     switch (version) {
+        case 13: return open_as<SettingsV13>(in, length, out, migrate_v13);
         case 12: return open_as<SettingsV12>(in, length, out, migrate_v12);
         case 11: return open_as<SettingsV11>(in, length, out, migrate_v11);
         case 10: return open_as<SettingsV10>(in, length, out, migrate_v10);

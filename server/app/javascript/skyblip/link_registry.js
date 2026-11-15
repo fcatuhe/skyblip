@@ -84,17 +84,6 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "alarm_enabled",
-          "number": 5,
-          "type": "boolean"
-        },
-        {
-          "name": "alarm_volume",
-          "number": 6,
-          "type": "enum",
-          "enum": "alarm_volume"
-        },
-        {
           "name": "units",
           "number": 7,
           "type": "enum",
@@ -119,6 +108,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
+        },
+        {
+          "name": "alarm",
+          "number": 12,
+          "type": "enum",
+          "enum": "alarm"
         }
       ]
     },
@@ -155,17 +150,6 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "alarm_enabled",
-          "number": 5,
-          "type": "boolean"
-        },
-        {
-          "name": "alarm_volume",
-          "number": 6,
-          "type": "enum",
-          "enum": "alarm_volume"
-        },
-        {
           "name": "units",
           "number": 7,
           "type": "enum",
@@ -190,6 +174,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
+        },
+        {
+          "name": "alarm",
+          "number": 12,
+          "type": "enum",
+          "enum": "alarm"
         }
       ],
       "keys_of": "config"
@@ -227,17 +217,6 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "alarm_enabled",
-          "number": 5,
-          "type": "boolean"
-        },
-        {
-          "name": "alarm_volume",
-          "number": 6,
-          "type": "enum",
-          "enum": "alarm_volume"
-        },
-        {
           "name": "units",
           "number": 7,
           "type": "enum",
@@ -262,6 +241,12 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
+        },
+        {
+          "name": "alarm",
+          "number": 12,
+          "type": "enum",
+          "enum": "alarm"
         }
       ],
       "keys_of": "config"
@@ -2815,9 +2800,9 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
-    "alarm_volume": {
+    "alarm": {
       "mirrors": {
-        "type": "go::AlarmVolume",
+        "type": "go::Alarm",
         "header": "products/skyblip_go/settings.h"
       },
       "values": [
@@ -2827,13 +2812,18 @@ export const LINK_REGISTRY = Object.freeze({
           "mirrors": "Off"
         },
         {
-          "name": "soft",
+          "name": "display",
           "code": 1,
+          "mirrors": "Display"
+        },
+        {
+          "name": "soft",
+          "code": 2,
           "mirrors": "Soft"
         },
         {
           "name": "loud",
-          "code": 2,
+          "code": 3,
           "mirrors": "Loud"
         }
       ]

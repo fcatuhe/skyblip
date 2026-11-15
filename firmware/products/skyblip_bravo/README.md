@@ -35,9 +35,9 @@ A fix that comes back does not make an old observation fresh. Each assembly fiel
 
 ## Settings
 
-`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 2. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm_enabled`, `alarm_volume`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. The pin is in version 1, so the first image already carried it. Version 2 added `aircraft_address_from_go`, and `from_blob` reads a version 1 blob whole, pin included, with `aircraft_address_from_go` false.
+`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 3. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. The pin is in version 1, so the first image already carried it. Version 2 added `aircraft_address_from_go`, and `from_blob` reads a version 1 blob whole, pin included, with `aircraft_address_from_go` false. Version 3 replaced `alarm_enabled` and `alarm_volume` with `alarm`, and either old off comes back `display` (`../common/README.md`).
 
-Bravo answers `config` and `defaults` with `alarm_enabled`, `alarm_volume` and `aircraft_address` only, and ignores every other key of a `set`, as the Go ignores `address`. `schemas/link.v1.json` says which product stores each key. A `set` on Bravo stands as a prompt like any other, and `describe_changes` writes no rows, because there is no glass to show them on.
+Bravo answers `config` and `defaults` with `aircraft_address` and `alarm` only, and ignores every other key of a `set`, as the Go ignores `address`. `schemas/link.v1.json` says which product stores each key. A `set` on Bravo stands as a prompt like any other, and `describe_changes` writes no rows, because there is no glass to show them on.
 
 Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps ADS-L G.1.3 category 0, no emitter category, and the power service reads the divider untrimmed.
 
@@ -148,9 +148,9 @@ Only Bravo silences itself, and only for a Go+ that sounds for both units (#179)
 
 `health.alarm_granted` says so to that Go, and is false to every other Go. A claim from a Go Bravo has not pinned never silences it.
 
-Bravo sounds again by its own `alarm_enabled` and `alarm_volume`, on the pass after any of these: the Go's connection drops, a claim says `alarm_requested` false, the Go unpairs, or no requesting claim arrived for 3 s with the link up. An advisory that stands is announced again at once. After a boot Bravo sounds until a requesting claim arrives.
+Bravo sounds again by its own `alarm`, on the pass after any of these: the Go's connection drops, a claim says `alarm_requested` false, the Go unpairs, or no requesting claim arrived for 3 s with the link up. An advisory that stands is announced again at once. After a boot Bravo sounds until a requesting claim arrives.
 
-`PeerService` publishes the decision as `bus::State::alarm_granted`, and `common::AlarmService` reads it with the alarm settings, so the traffic call, the first-fix tune and the motor all fall silent the way `ALARM OFF` silences them. Nothing else changes: the lamp still flickers on an advisory, a press still dismisses it, and the `$PFLAU` and `$PFLAA` to a phone keep their alarm levels, because an EFB's alarm follows its own stream (#184).
+`PeerService` publishes the decision as `bus::State::alarm_granted`, and `common::AlarmService` reads it with the alarm settings, so the traffic call, the first-fix tune and the motor all fall silent the way `display` silences them. Nothing else changes: the lamp still flickers on an advisory, a press still dismisses it, and the `$PFLAU` and `$PFLAA` to a phone keep their alarm levels, because an EFB's alarm follows its own stream (#184).
 
 Two costs are accepted rather than built around. At a handover, a Go+ that loses its fix stops asking only on its next claim, so up to about a claim period passes with no unit sounding. While the link fails one way, both units may sound. Two longer gaps are bounded by the ages above. A Go+ that switches off or stops in flight leaves Bravo silent until its connection drops or its last claim ages out, at most 3 s. Bravo's frames lost on the way to a Go+ whose claims still arrive leave Bravo silent until the Go+ reads `NO BRAVO`, at most the Go's `kHealthMaxAgeMs` and one claim period, 4 s, while the Go+ keeps alarming on the targets it already holds.
 

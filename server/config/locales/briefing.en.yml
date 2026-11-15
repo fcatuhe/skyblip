@@ -47,10 +47,10 @@ en:
       unit_names:
         nautical: "NM, kt"
         metric: "km, km/h"
-      alarm_enabled: Alarm sound
-      alarm_volume: Alarm volume
-      volume_names:
+      alarm: Alarm
+      alarm_names:
         "off": "Off"
+        display: Visual only
         soft: Soft
         loud: Loud
       save: Save

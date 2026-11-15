@@ -14,9 +14,9 @@ class CaptureSettings final : public common::CaptureSettings {
     explicit CaptureSettings(Settings&&) = delete;
 
     void describe(diagnostics::Config& record) const override {
-        record.alarm_volume = static_cast<uint8_t>(settings_.alarm_volume);
         record.settings_version = kBlobVersion;
-        record.alarm_enabled = settings_.alarm_enabled;
+        record.alarm_setting = static_cast<uint8_t>(settings_.alarm);
+        record.alarm_setting_recorded = true;
     }
 
    private:

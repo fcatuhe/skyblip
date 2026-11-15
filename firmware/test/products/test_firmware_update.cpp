@@ -556,7 +556,7 @@ TEST_CASE("product: an image with nothing of its own beside a newer blob starts 
             Status::Ok);
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(rig.product.config_link().settings_fallback() == settings::Fallback::Defaults);
-    CHECK(rig.settings().alarm_volume == go::defaults().alarm_volume);
+    CHECK(rig.settings().alarm == go::defaults().alarm);
     CHECK(holds(rig, "settings", newer.bytes, sizeof(newer.bytes)));
 }
 

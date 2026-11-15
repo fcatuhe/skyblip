@@ -42,7 +42,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     link.raise_link(1);
     go::Settings settings = go::defaults();
     settings.aircraft_type = 7;
-    settings.alarm_volume = go::AlarmVolume::Soft;
+    settings.alarm = go::Alarm::Soft;
     std::memcpy(settings.callsign, "D-KXYZ", 7);
     settings.aircraft_address = 0x3C6586;
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
@@ -52,16 +52,15 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     config.on_rx(config_frame("{\"command\":\"defaults\"}"));
     const std::string body = link_text(link.last().bytes);
     CHECK(body ==
-          "{\"command\":\"defaults\",\"aircraft_type\":1,\"alarm_enabled\":true,"
-          "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"\",\"aircraft_address\":"
-          "0}");
+          "{\"command\":\"defaults\",\"aircraft_type\":1,\"units\":\"nautical\","
+          "\"callsign\":\"\",\"aircraft_address\":0,\"alarm\":\"loud\"}");
 
     const std::string set = "{\"command\":\"set\"" + body.substr(body.find(','));
     config.on_rx(config_frame(set.c_str()));
     config.confirm();
     const go::Settings shipped = go::defaults();
     CHECK(settings.aircraft_type == shipped.aircraft_type);
-    CHECK(settings.alarm_volume == shipped.alarm_volume);
+    CHECK(settings.alarm == shipped.alarm);
     CHECK(std::string(settings.callsign).empty());
     CHECK(settings.aircraft_address == go::kAircraftAddressUnset);
 }
@@ -95,10 +94,10 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
 
-    config.on_rx(config_frame(
-        "{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm_volume\":1}"));
+    config.on_rx(
+        config_frame("{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":0,\"alarm\":2}"));
     REQUIRE(config.pending() == Pending::Set);
-    CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nVOLUME SOFT");
+    CHECK(std::string(config.prompt_detail()) == "CALLSIGN F-JXYZ\nALARM SOFT");
 
     config.tick(kPromptCeilingMs);
     config.on_rx(config_frame("{\"command\":\"set\",\"units\":0}"));
@@ -229,7 +228,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"set\",\"alarm_enabled\":false}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"display\"}"));
     CHECK(config.pending() == Pending::Set);
     config.on_link_down(events::LinkDown{1});
     CHECK(config.pending() == Pending::None);

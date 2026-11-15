@@ -248,15 +248,12 @@ TEST_CASE("product: a press from off signs on with one green pulse, felt as it i
 }
 
 // The signs say the unit is on or off, which is not an alarm the pilot switched off.
-TEST_CASE("product: alarms or volume switched off still sign off in the hand, and sound nothing") {
-    for (const bool volume_off : {false, true}) {
-        CAPTURE(volume_off);
+TEST_CASE("product: an alarm on off or display still signs off in the hand, and sounds nothing") {
+    for (const go::Alarm alarm : {go::Alarm::Off, go::Alarm::Display}) {
+        CAPTURE(static_cast<int>(alarm));
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
-        if (volume_off)
-            rig.settings().alarm_volume = go::AlarmVolume::Off;
-        else
-            rig.settings().alarm_enabled = false;
+        rig.settings().alarm = alarm;
         uint32_t now_ms = 0;
         settle(rig, now_ms);
 
@@ -309,14 +306,14 @@ TEST_CASE("product: a unit with no status LED flies and lights nothing") {
     CHECK_FALSE(lamp_of(rig).lit());
 }
 
-TEST_CASE("product: switching alarms off silences the buzzer and does not darken the lamp") {
+TEST_CASE("product: switching the alarm off silences the buzzer and does not darken the lamp") {
     // "Is this thing on" is not a preference. A pilot who turned the noise off did
     // not ask to lose the only way there is of telling a live device from a dead
-    // one, which is why settings.alarm_enabled reaches core/annunciation and is not
+    // one, which is why the alarm setting reaches core/annunciation and is not
     // a field in core/indication's situation at all.
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_enabled = false;
+    rig.settings().alarm = go::Alarm::Off;
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     uint32_t now_ms = 0;
     settle(rig, now_ms);

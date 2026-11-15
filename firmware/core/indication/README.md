@@ -12,7 +12,7 @@ Annunciation announces EVENTS and every pattern it plays ends by itself, which i
 
 The inputs do not overlap. Annunciation's situation is a traffic level, whether it just got worse, and the first fix. This one's is the cell as the cutoff monitor reads it, the fix, and the alarm.
 
-`settings.alarm_enabled` silences the buzzer. It must not darken the lamp: "is this thing on" is not a preference, and a pilot who turned the noise off did not ask to be unable to tell a live device from a dead one.
+An alarm of off or display silences the buzzer. It must not darken the lamp: "is this thing on" is not a preference, and a pilot who turned the noise off did not ask to be unable to tell a live device from a dead one.
 
 Arbitration is the opposite shape. Annunciation hands one voice to another and has to decide who may interrupt whom. Here every condition is true or not true at the same instant and exactly one wins, which is a priority order over a closed set: `kTable`, top row first.
 
@@ -69,7 +69,7 @@ The sign on waits for the loop's first pass, so it costs bring-up nothing, and i
 
 The sign off starts on the pass after the shutdown's, because the shutdown's own pass flushes the settings and drains a capture to flash, and a stall there would merge two pulses. It opens with a gap, so a traffic call it cuts short never runs into the first pulse. It plays inside `power::kParkSettleMs`, the wait every shutdown already spends parking, and `signature.h` asserts that it fits, so no switch-off lasts longer. The product parks the lamp, the buzzer and the motor once the sign ends. A sign stays off the UTC grid, as the buzzer does, because it answers a press or a shutdown at once. An install and a recovery that reboots come straight back, so they go down unsigned (`power::ends_switched_off`).
 
-A sign is not an alarm. `settings.alarm_enabled` and a volume of off silence the buzzer and the motor for traffic, but a pilot who turned the noise off still needs to know that the unit came on. A sign is an event that ends by itself, which the section above calls annunciation's kind. It lives here because it makes no sound and answers this lamp's own question, whether the device is on. A traffic call outranks a sign on and cancels it, though a sign on ends long before a first fix can bring traffic.
+A sign is not an alarm. An alarm of off or display silences the buzzer and the motor for traffic, but a pilot who turned the noise off still needs to know that the unit came on. A sign is an event that ends by itself, which the section above calls annunciation's kind. It lives here because it makes no sound and answers this lamp's own question, whether the device is on. A traffic call outranks a sign on and cancels it, though a sign on ends long before a first fix can bring traffic.
 
 ## Why charge is not a row
 

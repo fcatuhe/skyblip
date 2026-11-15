@@ -7,9 +7,9 @@ namespace skyblip::go {
 
 namespace {
 
-constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light,  MenuRow::Aircraft, MenuRow::Units,
-                                      MenuRow::Range,  MenuRow::Plot,     MenuRow::Alarm,
-                                      MenuRow::Volume, MenuRow::Bravo};
+constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Units,
+                                      MenuRow::Range, MenuRow::Plot,     MenuRow::Alarm,
+                                      MenuRow::Bravo};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
                                          MenuRow::Callsign, MenuRow::AircraftAddress};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
@@ -23,12 +23,10 @@ constexpr Menu menu_of(const MenuRow (&rows)[Count]) {
 // CALLSIGN at double height is eight cells, and the row holds fifteen.
 constexpr int kCallsignRowCharacters = 6;
 
-const char* alarm_volume_name(go::AlarmVolume volume) {
-    switch (volume) {
-        case go::AlarmVolume::Off: return "OFF";
-        case go::AlarmVolume::Soft: return "SOFT";
-        default: return "LOUD";
-    }
+const char* alarm_name(go::Alarm alarm, bool sounds) {
+    if (alarm == go::Alarm::Off) return "OFF";
+    if (alarm == go::Alarm::Display || !sounds) return "DISPLAY";
+    return alarm == go::Alarm::Soft ? "SOFT" : "LOUD";
 }
 
 void row_text(ui::Canvas& canvas, int line, const char* label, const char* value, bool focused) {
@@ -109,7 +107,6 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::Range: return "RANGE";
         case MenuRow::Plot: return "PLOT";
         case MenuRow::Alarm: return "ALARM";
-        case MenuRow::Volume: return "VOLUME";
         case MenuRow::Status: return "STATUS";
         case MenuRow::Satellites: return "SATELLITES";
         case MenuRow::RadioLog: return "RADIO LOG";
@@ -239,10 +236,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
                           : format_string(out, "NONE");
             break;
         case MenuRow::Alarm:
-            written = format_string(out, values.settings.alarm_enabled ? "ON" : "OFF");
-            break;
-        case MenuRow::Volume:
-            written = format_string(out, alarm_volume_name(values.settings.alarm_volume));
+            written = format_string(out, alarm_name(values.settings.alarm, values.sounds));
             break;
         default: break;
     }

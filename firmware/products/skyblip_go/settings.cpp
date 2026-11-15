@@ -39,7 +39,7 @@ Settings defaults() { return Settings{}; }
 Status validate(const Settings& settings) {
     if (settings.version != Settings::kCurrentVersion) return Status::Unsupported;
     if (settings.aircraft_type > 17) return Status::OutOfRange;
-    if (settings.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
+    if (settings.alarm > Alarm::Loud) return Status::OutOfRange;
     if (settings.range_step >= kRangeStepCount) return Status::OutOfRange;
     if (settings.plot != RadarPlot::All && settings.plot != RadarPlot::ToScale)
         return Status::OutOfRange;
@@ -90,11 +90,10 @@ void write_config_fields(cbor::Writer& writer, const Settings& settings,
 
 void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_unsigned(link::config_key::kAircraftType, settings.aircraft_type);
-    writer.add_boolean(link::config_key::kAlarmEnabled, settings.alarm_enabled);
-    writer.add_code(link::config_key::kAlarmVolume, settings.alarm_volume);
     writer.add_code(link::config_key::kUnits, settings.units);
     writer.add_text(link::config_key::kCallsign, settings.callsign);
     writer.add_unsigned(link::config_key::kAircraftAddress, settings.aircraft_address);
+    writer.add_code(link::config_key::kAlarm, settings.alarm);
 }
 
 Status apply_settings(Settings& settings, const cbor::Reader& frame,
@@ -107,14 +106,9 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame,
             return Status::Ok;
         });
     if (status == Status::Ok)
-        status = apply_key(frame.read_boolean(link::set_key::kAlarmEnabled), [&](bool value) {
-            next.alarm_enabled = value;
-            return Status::Ok;
-        });
-    if (status == Status::Ok)
-        status = apply_key(frame.read_unsigned(link::set_key::kAlarmVolume), [&](uint32_t value) {
-            if (value > static_cast<uint32_t>(AlarmVolume::Loud)) return Status::OutOfRange;
-            next.alarm_volume = static_cast<AlarmVolume>(value);
+        status = apply_key(frame.read_unsigned(link::set_key::kAlarm), [&](uint32_t value) {
+            if (value > static_cast<uint32_t>(Alarm::Loud)) return Status::OutOfRange;
+            next.alarm = static_cast<Alarm>(value);
             return Status::Ok;
         });
     if (status == Status::Ok)

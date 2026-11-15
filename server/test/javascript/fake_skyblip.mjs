@@ -20,7 +20,7 @@ const IMAGE_GROUP = 1;
 export const IMG_MGMT_ERR_INVALID_TLV = 5;
 export const IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER = 27;
 export const DEVELOPMENT_KEY = 0xa1;
-export const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 };
+export const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' };
 export const BLOB_PIN = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08';
 const DIGEST = /^[0-9a-f]{16}$/;
 
