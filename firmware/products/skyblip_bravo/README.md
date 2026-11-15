@@ -219,7 +219,7 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 
 ## Untested on silicon
 
-The host suite runs every service above on the part models. On an X1 nothing has run. The bench (#169) checks, in this order:
+The host suite runs every service above on the part models. On an X1, a Go has paired: its request blinked the lamp blue and one press paired both sides. The bench (#169) checks the rest, in this order:
 
 - the image boots from the `.uf2`;
 - the lamp winks blue, then green once the AG3335 has a fix, and the button switches the unit off and on, and the hand feels three pulses going off and one coming on;
@@ -231,7 +231,7 @@ The host suite runs every service above on the part models. On an X1 nothing has
 - a capture armed from its Briefing device page winks the lamp twice every 3 s, records ADS-B through a flight, stops from the page, and `blip.py fetch --log diagnostics` reads it back;
 - a switch-off reaches SYSTEM OFF with the off current measured, and a cable plugged in leaves it off;
 - after a switch-off, the button held while the cable goes in opens the `X1` drive with the LED white, and released within 3 s it boots the unit, which depends on what the reset circuit makes of the cable;
-- a Go pairs: its request blinks the lamp blue, one press pairs both sides, and both keep the pin across a power cycle of either;
+- both sides of a pairing keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;
 - the Go's BRAVO page reads `CONNECTED`, and an aircraft Bravo hears reaches the Go as `observation` frames, at most two a second;
 - paired with a Go+ that has a fix, an advisory sounds on the Go+ alone, and Bravo sounds again within 3 s of the Go+ switching off;
