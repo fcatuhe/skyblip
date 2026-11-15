@@ -79,6 +79,11 @@ class Dfu : public ports::Dfu {
         out = staged_signer;
         return true;
     }
+    bool bootloader_keys(ports::BootloaderKeys& out) override {
+        if (bootloader.count == 0) return false;
+        out = bootloader;
+        return true;
+    }
     bool downgrade_allowed() const override { return allows_downgrade; }
     bool release_build() const override { return release; }
     ports::RecoveryPath recovery_path() const override {
@@ -114,6 +119,7 @@ class Dfu : public ports::Dfu {
     bool release{false};
     ports::SigningKeyHash running_signer{};
     ports::SigningKeyHash staged_signer{};
+    ports::BootloaderKeys bootloader{};
     ports::ImageVersion running_image_version{};
     ports::ImageVersion staged_image_version{};
     ports::ImageHash running_image_hash{};

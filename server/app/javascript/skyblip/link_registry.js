@@ -1430,6 +1430,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 10,
           "type": "enum",
           "enum": "product"
+        },
+        {
+          "name": "bootloader_keys",
+          "number": 11,
+          "type": "bytes"
         }
       ]
     },

@@ -223,6 +223,15 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     // INFO: fc 10nov26 absent reads as skyblip_go, which keeps a Go's frame inside a 20-byte link
     if (product_ && *product_ != dfu::Product::SkyblipGo)
         writer.add_code(link::update_key::kProduct, *product_);
+    ports::BootloaderKeys bootloader;
+    if (dfu_ != nullptr && dfu_->bootloader_keys(bootloader)) {
+        uint8_t ids[ports::BootloaderKeys::kCapacity * link::update_bytes::kKey];
+        for (size_t i = 0; i < bootloader.count; i++)
+            std::copy_n(bootloader.keys[i].data(), link::update_bytes::kKey,
+                        ids + i * link::update_bytes::kKey);
+        writer.add_bytes(link::update_key::kBootloaderKeys,
+                         ConstByteSpan(ids, bootloader.count * link::update_bytes::kKey));
+    }
     return writer.finish();
 }
 
