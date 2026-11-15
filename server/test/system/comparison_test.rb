@@ -17,14 +17,15 @@ class ComparisonTest < ApplicationSystemTestCase
     page.execute_script("fakeReceivers.bravo.send('GPRMC,101530.00,A,4454.400,N,12259.693,W,95.2,271.5,201126,,,A')")
     page.execute_script("fakeReceivers.bravo.send('PFLAA,0,25,0,0,1,AB4549!N825V,45,,63,0.3,8,0,1,')")
 
-    assert_selector "[data-comparison-target=aircraft] tr", text: /AB4549\s+N825V\s+retro \+ bravo/
-    assert_selector "[data-comparison-target=attributes][data-source=retro] td", text: "true track"
-    assert_selector "[data-comparison-target=attributes][data-source=bravo] td", text: "ADS-B"
+    # The page redraws its tables every second, so the test reads the table, which stays, not the rows it replaces.
+    assert_selector "[data-comparison-target=aircraft]", text: /AB4549\s+N825V\s+retro \+ bravo/
+    assert_selector "[data-comparison-target=attributes][data-source=retro]", text: "true track"
+    assert_selector "[data-comparison-target=attributes][data-source=bravo]", text: "ADS-B"
     assert_selector "[data-comparison-target=tally]", text: "1 aircraft heard: 1 by both"
 
     click_button "AB4549"
     assert_selector "[data-comparison-target=focusTitle]", text: "N825V · AB4549 · light"
-    assert_selector "[data-comparison-target=focusRows] tr", text: /Ground speed, kt\s+123\s+122\s+\+1/
-    assert_selector "[data-comparison-target=focusRows] tr", text: /New positions\s+1, .*not told apart in NMEA/
+    assert_selector "[data-comparison-target=focusRows]", text: /Ground speed, kt\s+123\s+122\s+\+1/
+    assert_selector "[data-comparison-target=focusRows]", text: /New positions\s+1, .*not told apart in NMEA/
   end
 end
