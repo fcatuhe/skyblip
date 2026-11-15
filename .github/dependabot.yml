@@ -1,10 +1,9 @@
 # Actions ride their major tag (actions/checkout@v7), and Dependabot opens the
-# PR when a new major ships. Zephyr modules come from west.yml, which Dependabot
-# does not read (firmware-deps.yml reports those weekly), and the repo's own
-# scripts are stdlib-only Python.
+# PR when a new major ships. The repo's own scripts are stdlib-only Python.
 #
-# The split: this file is every dependency with a manifest a resolver
-# understands, firmware-deps.yml is the two firmware pins that have none.
+# Every upstream is watched here. One with no manifest a resolver understands,
+# emsdk, the vendored doctest and the Zephyr in west.yml, is named as a step in
+# .github/pins/action.yml, which only Dependabot reads.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -31,6 +30,15 @@ updates:
     groups:
       lint:
         patterns: ["*"]
+
+  # One PR per upstream: emsdk's is tested by the screenshots and the system tests,
+  # and doctest's and Zephyr's fail CI until the copy in use follows (scripts/upstream_pins.rb).
+  - package-ecosystem: github-actions
+    directory: "/.github/pins"
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps(pins)"
 
   # Resolve the server's nested Gemfile.
   - package-ecosystem: bundler

@@ -74,9 +74,15 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: read the emsdk version .github/pins holds
+        id: emsdk
+        run: |
+          version=$(ruby scripts/upstream_pins.rb version emscripten-core/emsdk)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
         with:
-          version: 6.0.9
+          version: ${{ steps.emsdk.outputs.version }}
           no-cache: true
 
       - name: build the WASM and bundle the scenarios
