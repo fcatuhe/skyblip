@@ -276,6 +276,7 @@ enum : uint32_t {
     kDowngrade = 8,
     kKey = 9,
     kProduct = 10,
+    kBootloaderKeys = 11,
 };
 }
 

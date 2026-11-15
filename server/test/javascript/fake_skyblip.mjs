@@ -96,6 +96,7 @@ export class FakeSkyblip {
     verdictFirst = false,
     key = PRODUCTION_KEY,
     downgrade = false,
+    bootloaderKeys = null,
     address = 0x00012a,
     product = 'skyblip_go',
     name = 'skyBlip Go 5B5AFE',
@@ -105,7 +106,7 @@ export class FakeSkyblip {
     evictsFlights = 3,
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
-    Object.assign(this, { stored: { ...stored }, key, downgrade, address, product });
+    Object.assign(this, { stored: { ...stored }, key, downgrade, bootloaderKeys, address, product });
     Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights });
     this.hasSmp = smp;
     this.writesInPacket = 0;
@@ -388,7 +389,8 @@ export class FakeSkyblip {
   landingRefusal(image) {
     if (this.refuseInstall) return this.refuseInstall;
     if (!image || versionText(image.version) !== this.approved) return 'not_approved';
-    if (this.key !== null && image.key !== keyName(this.key)) return 'wrong_key';
+    const trusted = this.bootloaderKeys ?? (this.key === null ? null : [this.key]);
+    if (trusted && !trusted.map(keyName).includes(image.key)) return 'wrong_key';
     return null;
   }
 
@@ -406,6 +408,7 @@ export class FakeSkyblip {
     if (this.downgrade) frame.downgrade = true;
     if (this.key !== null) frame.key = keyName(this.key);
     if (this.product !== 'skyblip_go') frame.product = this.product;
+    if (this.bootloaderKeys) frame.bootloader_keys = this.bootloaderKeys.map(keyName).join('');
     this.reply(frame, { asked });
   }
 
