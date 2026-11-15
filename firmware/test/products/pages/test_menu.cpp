@@ -139,10 +139,6 @@ TEST_CASE("menu page: the button's key names what a press does to the focused ro
     const MenuValues values = default_menu_values();
     CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Units).canvas, "CHANGE"));
     CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Bravo).canvas, "OPEN"));
-    CHECK_FALSE(reads_button_key(page_of(Page::Radar, values, MenuRow::Browsers).canvas, "CHANGE"));
-    MenuValues trusted = values;
-    trusted.browsers = 2;
-    CHECK(reads_button_key(page_of(Page::Radar, trusted, MenuRow::Browsers).canvas, "ERASE"));
     CHECK(reads_button_key(page_of(Page::Radar, values, MenuRow::Aircraft).canvas, "OPEN"));
     CHECK(reads_button_key(page_of(Page::Nearby, values, MenuRow::Status).canvas, "OPEN"));
     CHECK(reads_heading(page_of(Page::Nearby, values, MenuRow::Status).canvas, "DIAGNOSTICS",

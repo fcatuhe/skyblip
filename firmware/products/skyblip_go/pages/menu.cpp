@@ -59,7 +59,6 @@ const char* detected_verb(const Detected& detected, const Settings& settings) {
 
 const char* row_verb(MenuRow row, const MenuValues& values) {
     if (row == MenuRow::Detected) return detected_verb(values.detected, values.settings);
-    if (row == MenuRow::Browsers) return values.browsers > 0 ? kFieldEraseVerb : "";
     return opens_a_page(row) || row == MenuRow::Aircraft ? "OPEN" : "CHANGE";
 }
 
