@@ -86,6 +86,20 @@ class SizeCheck(unittest.TestCase):
         self.assertEqual(size_check.report(elf(0x35000, 737131, 4096), BRAVO_CONFIG)[1],
                          ["over the flash budget by 1 B"])
 
+    # 0xB6000 less two 4 KB sectors is the largest image MCUboot's swap-using-offset moves.
+    def test_a_swap_using_offset_go_is_held_to_what_mcuboot_can_swap(self):
+        config = GO_CONFIG + "CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_OFFSET=y\n"
+        lines, found = size_check.report(elf(0x34000, 529296, 4096), config, 737280)
+        self.assertEqual(found, [])
+        self.assertIn("swap: 737280 B signed / 737280 B budget", lines[2])
+        self.assertEqual(size_check.report(elf(0x34000, 529296, 4096), config, 737281)[1],
+                         ["over the swap budget by 1 B: MCUboot would refuse to swap it"])
+
+    def test_a_swap_using_offset_build_without_its_signed_image_fails(self):
+        config = BRAVO_CONFIG + "CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_OFFSET=y\n"
+        self.assertEqual(size_check.report(elf(0x35000, 4096, 4096), config)[1],
+                         ["no zephyr.signed.bin beside the ELF to hold to the swap limit"])
+
     def test_a_board_with_no_slot_fails(self):
         self.assertEqual(size_check.report(elf(0, 4096, 4096), SLOTLESS_CONFIG)[1],
                          ["nrf52840dk has no slot to hold the image to"])
