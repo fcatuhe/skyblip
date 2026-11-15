@@ -86,7 +86,7 @@ class MeshtrackerX1 {
     // TODO: fc 12nov26 the SX1262's 8 MHz mode 0 SPI, unverified for the LR2021 until #169
     static constexpr struct spi_config kSpiConfig = {
         .frequency = 8000000U,
-        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
+        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_CONTROLLER,
         .slave = 0,
         .cs = {},
     };

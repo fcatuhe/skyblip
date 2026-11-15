@@ -1,6 +1,8 @@
 tests:
   platform.adapters:
-    tags: platform kvstore
+    tags:
+      - platform
+      - kvstore
     # These prove the adapter code, not the board, and the list below is what
     # twister obeys: adding t_echo_plus is what running them on a unit takes.
     platform_allow:
