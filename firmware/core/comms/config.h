@@ -217,6 +217,11 @@ class ConfigService {
     // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
     bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
+    // INFO: fc 15nov26 the press on this prompt also stores the browser's proven key
+    bool prompt_trusts_browser() const {
+        return (pending_ == Pending::Set || pending_ == Pending::Dfu) &&
+               browsers_.enrolls(claim_.peer());
+    }
     uint32_t prompt_seconds_left(uint32_t now_ms) const;
     bool settings_dirty() const { return settings_dirty_; }
     void clear_dirty() { settings_dirty_ = false; }

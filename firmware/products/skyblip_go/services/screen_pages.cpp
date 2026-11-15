@@ -34,6 +34,7 @@ void ScreenService::draw_prompt(uint32_t now_ms) {
     ConfirmSnapshot snapshot;
     snapshot.title = comms::pending_title(prompt_);
     snapshot.detail = config_.prompt_detail();
+    snapshot.trusts_browser = config_.prompt_trusts_browser();
     snapshot.seconds_left = config_.prompt_seconds_left(now_ms);
     draw_confirm(framebuffer_, snapshot);
 }

@@ -8,13 +8,17 @@ void draw_confirm(ui::Canvas& canvas, const ConfirmSnapshot& snapshot) {
     draw_heading(canvas, snapshot.title, Heading::Interrupt);
 
     char detail[kConfirmDetailRows][kConfirmDetailColumns + 1];
-    BodyLine body[kConfirmDetailRows];
+    BodyLine body[kConfirmDetailRows + 2];
     int count = 0;
     int at = 0;
     for (int row = 0; row < kConfirmDetailRows; row++) {
         at = take_line(snapshot.detail, at, detail[row], kConfirmDetailColumns);
         if (detail[row][0] == 0) break;
         body[count++] = {detail[row]};
+    }
+    if (snapshot.trusts_browser) {
+        body[count++] = {""};
+        body[count++] = {kConfirmTrustsBrowser};
     }
     draw_question_body(canvas, Heading::Interrupt, snapshot.seconds_left, body, count);
     draw_keys(canvas, {kConfirmAllowVerb, kConfirmCancelVerb});
