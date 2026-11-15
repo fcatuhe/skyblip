@@ -9,7 +9,7 @@ namespace {
 
 constexpr MenuRow kRadarMenuRows[] = {MenuRow::Light,  MenuRow::Aircraft, MenuRow::Units,
                                       MenuRow::Range,  MenuRow::Plot,     MenuRow::Alarm,
-                                      MenuRow::Volume, MenuRow::Bravo,    MenuRow::Browsers};
+                                      MenuRow::Volume, MenuRow::Bravo};
 constexpr MenuRow kAircraftMenuRows[] = {MenuRow::Detected, MenuRow::AircraftType,
                                          MenuRow::Callsign, MenuRow::AircraftAddress};
 constexpr MenuRow kNearbyMenuRows[] = {MenuRow::Status, MenuRow::Satellites, MenuRow::RadioLog,
@@ -117,7 +117,6 @@ const char* menu_row_label(MenuRow row) {
         case MenuRow::SelfTest: return "SELF TEST";
         case MenuRow::Bravo: return "BRAVO";
         case MenuRow::Aircraft: return "AIRCRAFT";
-        case MenuRow::Browsers: return "BROWSERS";
         default: return "";
     }
 }
@@ -242,11 +241,6 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
         case MenuRow::Alarm:
             written = format_string(out, values.settings.alarm_enabled ? "ON" : "OFF");
             break;
-        case MenuRow::Browsers:
-            written = values.browsers > 0
-                          ? format_unsigned(out, static_cast<uint32_t>(values.browsers))
-                          : format_string(out, "NONE");
-            break;
         case MenuRow::Volume:
             written = format_string(out, alarm_volume_name(values.settings.alarm_volume));
             break;
@@ -319,9 +313,9 @@ void draw_clear(ui::Canvas& canvas, const ClearSnapshot& snapshot) {
     draw_heading(canvas, snapshot.title, Heading::Opened);
     const BodyLine body[] = {{snapshot.text, kCallsignScale},
                              {""},
-                             {snapshot.lines[0]},
-                             {snapshot.lines[1]},
-                             {snapshot.lines[2]}};
+                             {kAircraftAddressClearLines[0]},
+                             {kAircraftAddressClearLines[1]},
+                             {kAircraftAddressClearLines[2]}};
     draw_question_body(canvas, Heading::Opened, snapshot.seconds_left, body, 5);
     draw_keys(canvas, {kFieldEraseVerb, kFieldKeepVerb});
 }

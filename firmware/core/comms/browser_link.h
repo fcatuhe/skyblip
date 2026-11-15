@@ -61,12 +61,6 @@ class BrowserLink {
         return true;
     }
 
-    void forget_all() {
-        trusted_.forget_all();
-        proven_ = false;
-        trusted_session_ = false;
-    }
-
     void forget(uint16_t session_id) {
         if (session_id != peer_.session_id) return;
         peer_ = events::Peer{0, 0};

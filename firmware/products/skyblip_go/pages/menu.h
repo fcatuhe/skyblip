@@ -30,7 +30,6 @@ enum class MenuRow : uint8_t {
     Aircraft,
     Detected,
     BravoLog,
-    Browsers,
     kCount
 };
 
@@ -49,7 +48,6 @@ struct MenuValues {
     Detected detected{};
     // INFO: fc 14nov26 bus::State::own_transponder, the one an aircraft address typed must match
     std::optional<uint32_t> own_transponder{};
-    int browsers{0};
 };
 
 struct MenuSnapshot {
@@ -89,7 +87,7 @@ constexpr int kNamedAircraftTypes =
     static_cast<int>(sizeof(kAircraftTypes) / sizeof(kAircraftTypes[0]));
 bool named_aircraft_type(uint8_t code);
 
-enum class MenuAction : uint8_t { None, Moved, Changed, Open, Leave, Light, ForgetBrowsers };
+enum class MenuAction : uint8_t { None, Moved, Changed, Open, Leave, Light };
 
 const char* menu_row_label(MenuRow row);
 const char* aircraft_type_name(uint8_t code);
@@ -161,13 +159,11 @@ const char* field_button_verb(const CallsignSnapshot& snapshot);
 void draw_callsign(ui::Canvas& canvas, const CallsignSnapshot& snapshot);
 
 constexpr const char* kAircraftAddressClearLines[] = {"YOUR TRANSPONDER", "SHOWS AS", "TRAFFIC"};
-constexpr const char* kBrowsersClearLines[] = {"TRUSTED BROWSERS", "ASK FOR A PRESS", "AGAIN"};
-constexpr int kClearLineCount = 3;
+constexpr int kAircraftAddressClearLineCount = 3;
 
 struct ClearSnapshot {
     const char* title{""};
     const char* text{""};
-    const char* const* lines{kAircraftAddressClearLines};
     uint32_t seconds_left{0};
 };
 
@@ -216,7 +212,6 @@ class MenuEditor {
     MenuAction store(const MenuValues& current, MenuValues& next);
     MenuAction clear(const MenuValues& current, MenuValues& next);
     MenuAction confirm_clear(const MenuValues& current, MenuValues& next);
-    MenuAction ask_forget_browsers(const MenuValues& current);
     MenuAction keep();
     void close_field();
 
