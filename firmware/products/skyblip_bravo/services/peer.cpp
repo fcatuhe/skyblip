@@ -106,9 +106,8 @@ void PeerService::ask(Go& go, uint32_t now_ms) {
 }
 
 bool PeerService::pinned_go_connected() const {
-    for (const Go& go : gos_)
-        if (go.used && pairing_.pinned_to(go.address)) return true;
-    return false;
+    return std::any_of(gos_.begin(), gos_.end(),
+                       [&](const Go& go) { return go.used && pairing_.pinned_to(go.address); });
 }
 
 // INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo
