@@ -43,6 +43,7 @@
     font-family: var(--font-display);
     font-size: var(--text-xl);
     letter-spacing: -0.015em;
+    line-height: 1.25;
     margin-block: 0 var(--space-s);
   }
 
