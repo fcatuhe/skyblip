@@ -8,4 +8,4 @@ runs:
   steps:
     - uses: emscripten-core/emsdk@6.0.9
     - uses: doctest/doctest@v2.5.3
-    - uses: zephyrproject-rtos/zephyr@v4.4.2
+    - uses: zephyrproject-rtos/zephyr@v4.5.0
