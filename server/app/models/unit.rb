@@ -4,7 +4,6 @@ class Unit < ApplicationRecord
   MANUFACTURER_PREFIX = 0x00
   BLUETOOTH_TAGS = 0..0xFFFF
   PENDING_KEYS_KEPT = 5
-  PRODUCT_NAMES = { "go" => "skyBlip Go", "bravo" => "skyBlip Bravo" }.freeze
 
   has_many :keys, dependent: :destroy
   has_one :active_key, -> { active }, class_name: "Unit::Key"
@@ -70,12 +69,6 @@ class Unit < ApplicationRecord
       latest.continue(source:, variant:, at:)
     else
       firmwares.create!(version:, release:, variant:, source:, created_at: at, updated_at: at)
-    end
-  end
-
-  def name
-    if product
-      plus? ? "#{PRODUCT_NAMES.fetch(product)}+" : PRODUCT_NAMES.fetch(product)
     end
   end
 

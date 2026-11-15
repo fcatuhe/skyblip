@@ -37,7 +37,9 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
 
     get admin_unit_path(units(:bound))
 
-    assert_select "dd", text: "skyBlip Go+"
+    assert_select "dd", text: "skyBlip Go"
+    assert_select "dd", text: "plus"
+    assert_select "details.admin-help summary", text: "How to read these pages"
     assert_select "tr", text: /0\.4\.0\+1400.*development.*standard.*reported by a browser/m
     assert_select "tr", text: /0\.3\.0\+1300.*release.*plus.*signed by the unit/m
 

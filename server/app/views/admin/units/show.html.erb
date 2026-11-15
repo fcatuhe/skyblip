@@ -4,7 +4,9 @@
 
 <dl class="admin-details">
   <dt>Product</dt>
-  <dd><%= @unit.name || "not stated yet" %></dd>
+  <dd><%= unit_product(@unit) || "not stated yet" %></dd>
+  <dt>Variant read</dt>
+  <dd><%= @unit.variant || "not stated yet" %></dd>
   <dt>Serial</dt>
   <dd><%= @unit.serial || "none, the unit transmits on no address" %></dd>
   <dt>Device ID</dt>
@@ -19,8 +21,10 @@
   <dd><%= @unit.activated_at ? l(@unit.activated_at, format: "%b %-d, %Y, %H:%M") : "no" %></dd>
 </dl>
 
+<%= render "help" %>
+
 <% if @unit.keys.any? %>
-  <div class="table-scroll">
+  <div class="table-scroll admin-table">
     <table>
       <thead>
         <tr>
@@ -64,13 +68,13 @@
 
 <h2>Firmware</h2>
 <% if @unit.firmwares.any? %>
-  <div class="table-scroll">
+  <div class="table-scroll admin-table">
     <table>
       <thead>
         <tr>
           <th>Version</th>
           <th>Build</th>
-          <th>Variant</th>
+          <th>Variant read</th>
           <th>Source</th>
           <th>Installed from</th>
           <th>First seen</th>

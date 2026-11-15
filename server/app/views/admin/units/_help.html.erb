@@ -1,0 +1,45 @@
+<details class="admin-help">
+  <summary>How to read these pages</summary>
+  <dl>
+    <dt>Unit</dt>
+    <dd>One skyBlip, known by its chip from its first connection to the briefing app. A unit that never connected is not listed.</dd>
+
+    <dt>Product</dt>
+    <dd>What the unit is, and so which firmware it takes: skyBlip Go or skyBlip Bravo. It never changes.</dd>
+
+    <dt>Variant read</dt>
+    <dd>
+      The parts the unit found at its last boot, as it stated them. <code>plus</code> is a Go on which the inclinometer, the buzzer and the haptic motor were all found, <code>standard</code> any other unit.
+      The unit works it out at every boot and stores it nowhere, so a Go+ whose haptic motor stops answering its probe reads <code>standard</code>: the sign of a failing part, not of another unit.
+      Its Bluetooth name follows the same rule, skyBlip Go+ or skyBlip Go.
+    </dd>
+
+    <dt>Serial, activated</dt>
+    <dd>The serial is the unit's ADS-L address, given at activation. Only an activated unit transmits on ADS-L, and <em>Activated only</em> lists those, the units an authority asks about. A Bravo is never activated.</dd>
+
+    <dt>Device ID, device</dt>
+    <dd>The device ID is the chip's FICR DEVICEID, which never changes. The device is the name the briefing app and the events use: <code>go-00012a</code> once activated, <code>activate-3f2a</code> before, <code>bravo-3f2a</code> for a Bravo. Its four hex digits are a Bluetooth tag that several units can share.</dd>
+
+    <dt>Firmware</dt>
+    <dd>One row per stretch on one version, build and variant read. Reading the same again extends the row. A new version, a return to an earlier one, or another variant opens a row, so the rows say which parts the unit had on each firmware.</dd>
+
+    <dt>Build</dt>
+    <dd><code>release</code>, built from a <code>v*</code> tag and signed with the production key, or <code>development</code>.</dd>
+
+    <dt>Source</dt>
+    <dd>
+      How far the row is trusted. It only rises:
+      <em>reported by a browser</em>, which any browser can post;
+      <em>installed from the briefing app</em>, once the unit came back on the version the app sent, with the version it left;
+      <em>signed by the unit</em>, once an activated unit signed the version, the build, the product and the variant.
+      <em>Registered with</em> is the version an activation signed, shown until a row exists.
+    </dd>
+
+    <dt>Full and slim images</dt>
+    <dd>
+      The same firmware at the same version. A full image also carries the firmware of the sensor hub behind the inclinometer, the BHI260AP, and writes it to the hub's flash once the image is confirmed.
+      A unit without the hub, a plain Go or a Bravo, only ever needs the slim image, and a Bravo has no full one. A unit with the hub needs the full image once per hub firmware: at its first install, and when a release brings a new one. The variant does not say which: a Go with the hub and no buzzer reads <code>standard</code> and needs the full image too.
+      A slim image never confirms itself on a unit whose hub lacks the firmware it names, and the bootloader puts the image before back. So a confirmed version also tells the hub holds the right firmware, and the rows record neither full nor slim.
+    </dd>
+  </dl>
+</details>

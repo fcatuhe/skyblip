@@ -30,18 +30,21 @@
   </p>
 <% end %>
 
+<%= render "help" %>
+
 <%= form_with url: admin_units_path, method: :get, class: "admin-filters" do |form| %>
   <%= form.label :activated, "Activated only, the units that transmit on ADS-L" %>
   <%= form.check_box :activated, { checked: @activated_only }, "1", nil %>
   <%= form.submit "Show", class: "button button--small" %>
 <% end %>
 
-<div class="table-scroll">
+<div class="table-scroll admin-table">
   <table>
     <thead>
       <tr>
         <th>Unit</th>
         <th>Product</th>
+        <th>Variant read</th>
         <th>Serial</th>
         <th>Device ID</th>
         <th>Key</th>
@@ -57,7 +60,8 @@
       <% @units.each do |unit| %>
         <tr>
           <th><%= link_to unit_label(unit), admin_unit_path(unit), class: "mono" %></th>
-          <td><%= unit.name %></td>
+          <td><%= unit_product(unit) %></td>
+          <td><%= unit.variant %></td>
           <td><%= unit.serial %></td>
           <td class="mono"><%= unit.device_id %></td>
           <td class="mono"><%= unit.active_key&.public_key&.first(8) || "none" %></td>

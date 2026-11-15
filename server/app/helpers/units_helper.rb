@@ -11,6 +11,8 @@ module UnitsHelper
 
   def unit_label(unit) = unit.address || unit.slug || unit.device_id
 
+  def unit_product(unit) = BriefingHelper::DEVICE_NAMES[unit.product]
+
   def unit_links(units)
     links = units.first(UNITS_LISTED).map { |unit| link_to unit_label(unit), admin_unit_path(unit), class: "mono" }
     more = units.size - UNITS_LISTED

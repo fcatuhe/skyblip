@@ -9,7 +9,7 @@ class Unit::ReportingTest < ActiveSupport::TestCase
     hear read(product: "go", variant: "plus", bluetooth_tag: 0x3f2a)
 
     unit = Unit.find_by!(device_id: DEVICE_ID)
-    assert_equal [ nil, "activate-3f2a", "skyBlip Go+" ], [ unit.serial, unit.slug, unit.name ]
+    assert_equal [ nil, "activate-3f2a", "go", "plus" ], [ unit.serial, unit.slug, unit.product, unit.variant ]
     assert_equal [ [ "0.3.0+1234", true, "plus", "read" ] ], unit.firmwares.pluck(:version, :release, :variant, :source)
     assert_equal 2.hours.ago, unit.created_at
   end
