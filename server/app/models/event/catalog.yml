@@ -49,8 +49,8 @@ device.disconnected:
 device.read:
   group: Devices
   from: browser
-  keys: [product, running, track, image, key, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
-  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, the first four bytes of the signing key it runs as `key`, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
+  keys: [product, running, track, image, key, bootloader_keys, imu, settings, swap_powered, trust, activated, flight, battery_percent, charging, power_level]
+  says: Once a connection has learned it, what the device runs and holds, its product, firmware, track, image state, the first four bytes of the signing key it runs as `key`, those of each key its bootloader verifies as `bootloader_keys`, sensor hub blob, settings fallback, whether it trusts this browser, whether it is activated, its flight state and its battery.
   answers: Which firmware the fleet runs, how many units fell back on their settings or hold a reverted image, and what a unit was like when its pilot asked for help.
 device.noticed:
   group: Devices

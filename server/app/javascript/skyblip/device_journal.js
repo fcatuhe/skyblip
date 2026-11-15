@@ -123,6 +123,7 @@ function readOf({ image, running, trust, address, status }) {
   return {
     product, running, image: image.state, key: image.key,
     track: image.key ? (image.downgrade ? 'development' : 'release') : null,
+    bootloader_keys: image.bootloaderKeys?.join(' ') ?? null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,
     activated: product === 'skyblip_go' ? address !== null : null,
