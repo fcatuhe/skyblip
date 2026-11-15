@@ -72,7 +72,7 @@ class SettingsStore : public common::SettingsStore {
     // INFO: fc 15nov26 a Go with no buzzer and no haptic can only show an alarm, never sound it
     Settings fitted(Settings settings) const {
         if (!common::can_sound(fitted_) && common::audible(settings.alarm))
-            settings.alarm = Alarm::Display;
+            settings.alarm = Alarm::Visual;
         return settings;
     }
 

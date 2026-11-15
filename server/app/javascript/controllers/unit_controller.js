@@ -328,8 +328,8 @@ export default class extends Controller {
     this.settingsMessageTarget.classList.toggle("is-good", state?.notice?.key === "saved")
     if (!linked || !settings) return
     if (settings !== this.shown) this.#fill(settings)
-    // INFO: fc 15nov26 a Go with no buzzer and no haptic ships on display, so its defaults say it cannot sound
-    const sounds = state.defaults?.alarm !== "display"
+    // INFO: fc 15nov26 a Go with no buzzer and no haptic ships on visual, so its defaults say it cannot sound
+    const sounds = state.defaults?.alarm !== "visual"
     for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) option.hidden = option.disabled = !sounds
     const edited = this.#edited()
     const changed = Object.keys(edited).filter(key => edited[key] !== settings[key])

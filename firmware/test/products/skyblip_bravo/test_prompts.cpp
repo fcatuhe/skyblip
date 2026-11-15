@@ -39,7 +39,7 @@ TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it")
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
-    rig.send("{\"command\":\"set\",\"alarm\":\"display\"}");
+    rig.send("{\"command\":\"set\",\"alarm\":\"visual\"}");
     rig.run_for(1000);
     REQUIRE(rig.product.button().prompt() == comms::Pending::Set);
     CHECK(rig.lamp() == indication::Condition::Prompt);
@@ -48,7 +48,7 @@ TEST_CASE("bravo: a set from a phone blinks the prompt and one press stores it")
     rig.press();
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) == kAccepted);
-    CHECK(rig.product.settings().alarm == bravo::Alarm::Display);
+    CHECK(rig.product.settings().alarm == bravo::Alarm::Visual);
     CHECK(rig.lamp() == indication::Condition::AliveLinked);
 }
 
@@ -117,8 +117,8 @@ TEST_CASE("bravo: in flight an advisory flickers the lamp and sounds, and one pr
     CHECK(rig.lamp() == indication::Condition::Alive);
 }
 
-TEST_CASE("bravo: display flickers the lamp in silence, and off leaves the lamp to the fix") {
-    for (const bravo::Alarm alarm : {bravo::Alarm::Display, bravo::Alarm::Off}) {
+TEST_CASE("bravo: visual flickers the lamp in silence, and off leaves the lamp to the fix") {
+    for (const bravo::Alarm alarm : {bravo::Alarm::Visual, bravo::Alarm::Off}) {
         CAPTURE(static_cast<int>(alarm));
         BravoRig rig;
         REQUIRE(rig.setup() == Status::Ok);
@@ -128,7 +128,7 @@ TEST_CASE("bravo: display flickers the lamp in silence, and off leaves the lamp 
         rig.seconds_with_fix(1, 25000);
         REQUIRE(rig.state().alarm_level == traffic::Level::Advisory);
         CHECK(rig.platform.annunciator().tone_commands() == 0);
-        const bool shown = alarm == bravo::Alarm::Display;
+        const bool shown = alarm == bravo::Alarm::Visual;
         CHECK((rig.lamp() == indication::Condition::Alarm) == shown);
         CHECK((rig.state().alarm_undismissed == traffic::Level::Advisory) == shown);
     }
@@ -137,7 +137,7 @@ TEST_CASE("bravo: display flickers the lamp in silence, and off leaves the lamp 
 // GPT's review: a press begun before the prompt stood was released into an armed gesture.
 TEST_CASE("bravo: a press held through a prompt's arrival, and one press after, allow nothing") {
     const char* const prompts[] = {
-        "{\"command\":\"set\",\"alarm\":\"display\"}",
+        "{\"command\":\"set\",\"alarm\":\"visual\"}",
         "{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}",
         "{\"command\":\"recovery\"}",
         "{\"command\":\"power_off\"}",
@@ -201,7 +201,7 @@ TEST_CASE("bravo: a replaced prompt cannot spend a hold begun on the one it repl
     rig.run_for(100);
     rig.platform.link().drop_link();
     rig.raise_link(2);
-    rig.send("{\"command\":\"set\",\"alarm\":\"display\"}");
+    rig.send("{\"command\":\"set\",\"alarm\":\"visual\"}");
     rig.run_for(800);
     REQUIRE(rig.product.config_link().config().claim_holder() == 2);
     REQUIRE(rig.product.button().prompt() == comms::Pending::Set);

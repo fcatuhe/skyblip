@@ -100,7 +100,7 @@ class DiagnosticsPayloads(unittest.TestCase):
 
     def test_config_names_its_alarm_setting_only_where_the_flag_says_it_was_written(self):
         payload = struct.pack("<I2h4B2bB", 0xABCDEF, 0, 0, 1, 58, 0, 1, 14, 22, 1)
-        self.assertEqual(decoded(2, payload, 0b10_0000)["alarm_setting"], "display")
+        self.assertEqual(decoded(2, payload, 0b10_0000)["alarm_setting"], "visual")
         self.assertNotIn("alarm_setting", decoded(2, payload, 0))
 
     def test_gnss_reads_its_five_words_two_enums_and_six_flags(self):

@@ -219,7 +219,7 @@
       if (command === 'identity') return this.sendIdentity();
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
-      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds ? {} : { alarm: 'display' }) });
+      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds ? {} : { alarm: 'visual' }) });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
       if (command === 'protocols') return this.reply({ command, ...(this.protocols ?? this.stacks()) });
       if (command === 'set') {

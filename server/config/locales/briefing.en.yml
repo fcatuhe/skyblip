@@ -50,7 +50,7 @@ en:
       alarm: Alarm
       alarm_names:
         "off": "Off"
-        display: Visual only
+        visual: Visual only
         soft: Soft
         loud: Loud
       save: Save

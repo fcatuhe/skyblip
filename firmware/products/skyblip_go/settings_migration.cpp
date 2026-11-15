@@ -211,10 +211,10 @@ static_assert(sizeof(SettingsV13) == sizeof(SettingsV12) + sizeof(events::Blueto
               "the Bravo pin went on the end, with one byte of padding to the next word");
 static_assert(sizeof(Settings) == sizeof(SettingsV13), "alarm took two bytes' place in one");
 
-// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the glass, as display
+// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the glass, as visual
 // does
 Alarm alarm_of(bool enabled, AlarmVolume volume) {
-    if (!enabled || volume == AlarmVolume::Off) return Alarm::Display;
+    if (!enabled || volume == AlarmVolume::Off) return Alarm::Visual;
     return volume == AlarmVolume::Soft ? Alarm::Soft : Alarm::Loud;
 }
 

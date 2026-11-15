@@ -76,11 +76,11 @@ constexpr RadarPlot next_radar_plot(RadarPlot plot) {
 
 // INFO: fc 15nov26 one stray press from LOUD still sounds, and a Go that cannot sound only shows
 constexpr Alarm next_alarm(Alarm alarm, bool sounds) {
-    if (!sounds) return alarm == Alarm::Off ? Alarm::Display : Alarm::Off;
+    if (!sounds) return alarm == Alarm::Off ? Alarm::Visual : Alarm::Off;
     switch (alarm) {
         case Alarm::Loud: return Alarm::Soft;
-        case Alarm::Soft: return Alarm::Display;
-        case Alarm::Display: return Alarm::Off;
+        case Alarm::Soft: return Alarm::Visual;
+        case Alarm::Visual: return Alarm::Off;
         default: return Alarm::Loud;
     }
 }

@@ -59,7 +59,7 @@ TEST_CASE("settings: a blob written by version-1 firmware comes back as itself")
     Settings out;
     REQUIRE(from_blob(blob, 1 + sizeof(V1) + 4, out) == Status::Ok);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(out.alarm == Alarm::Display);
+    CHECK(out.alarm == Alarm::Visual);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     CHECK(int(out.version) == int(Settings::kCurrentVersion));
@@ -113,7 +113,7 @@ TEST_CASE("settings: a blob written by version-2 firmware comes back as itself, 
     Settings out;
     REQUIRE(from_blob(blob, 1 + sizeof(V2) + 4, out) == Status::Ok);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(out.alarm == Alarm::Display);
+    CHECK(out.alarm == Alarm::Visual);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     // A unit that stored its settings before the trim existed was never
@@ -202,8 +202,8 @@ TEST_CASE(
         char callsign[10]{0};
     };
 
-    const Alarm heard_as[] = {Alarm::Display, Alarm::Soft, Alarm::Soft,
-                              Alarm::Loud,    Alarm::Loud, Alarm::Loud};
+    const Alarm heard_as[] = {Alarm::Visual, Alarm::Soft, Alarm::Soft,
+                              Alarm::Loud,   Alarm::Loud, Alarm::Loud};
     for (uint8_t six_step = 0; six_step < 6; six_step++) {
         V10 old{};
         old.aircraft_type = 7;
@@ -404,7 +404,7 @@ TEST_CASE("settings: a blob written by version-6 firmware comes back without ste
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(out.alarm == Alarm::Display);
+    CHECK(out.alarm == Alarm::Visual);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 
@@ -458,7 +458,7 @@ TEST_CASE("settings: a blob written by version-3 firmware comes back as itself, 
     REQUIRE(from_blob(blob, 1 + sizeof(V3) + 4, out) == Status::Ok);
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(out.alarm == Alarm::Display);
+    CHECK(out.alarm == Alarm::Visual);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
     // A unit that stored its settings before the radio trim existed was never
@@ -517,7 +517,7 @@ TEST_CASE("settings: a blob written by version-4 firmware comes back without its
     CHECK(int(out.battery_offset_mv) == -120);
     CHECK(int(out.frequency_trim_e1_ppm) == -37);
     CHECK(int(out.aircraft_type) == 9);
-    CHECK(out.alarm == Alarm::Display);
+    CHECK(out.alarm == Alarm::Visual);
     CHECK(out.units == Units::Nautical);
     CHECK(std::string(out.callsign) == "D-KXYZ");
 

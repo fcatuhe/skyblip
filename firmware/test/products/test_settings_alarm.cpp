@@ -1,4 +1,4 @@
-// The one alarm setting, version 14: off, display, soft and loud, and what a Go that cannot sound
+// The one alarm setting, version 14: off, visual, soft and loud, and what a Go that cannot sound
 // keeps.
 #include <cstring>
 #include <string>
@@ -53,14 +53,14 @@ std::string default_fields(const SettingsStore& store) {
 
 }  // namespace
 
-// Both old offs silenced the buzzer and the haptic and kept the glass, which display does.
-TEST_CASE("settings: a version-13 blob keeps its pin, and both its offs come back as display") {
+// Both old offs silenced the buzzer and the haptic and kept the glass, which visual does.
+TEST_CASE("settings: a version-13 blob keeps its pin, and both its offs come back as visual") {
     struct Case {
         bool enabled;
         uint8_t volume;
         Alarm alarm;
     };
-    for (const Case each : {Case{false, 2, Alarm::Display}, Case{true, 0, Alarm::Display},
+    for (const Case each : {Case{false, 2, Alarm::Visual}, Case{true, 0, Alarm::Visual},
                             Case{true, 1, Alarm::Soft}, Case{true, 2, Alarm::Loud}}) {
         CAPTURE(int(each.volume));
         V13 old{};
@@ -77,24 +77,23 @@ TEST_CASE("settings: a version-13 blob keeps its pin, and both its offs come bac
     }
 }
 
-TEST_CASE(
-    "settings: a Go that cannot sound ships on display, reads loud as display, refuses soft") {
+TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visual, refuses soft") {
     const ports::Capabilities silent = ports::Capability::Display;
     Settings settings = defaults();
     SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
 
     store.restore_defaults();
-    CHECK(settings.alarm == Alarm::Display);
-    CHECK(default_fields(store).find("\"alarm\":\"display\"") != std::string::npos);
+    CHECK(settings.alarm == Alarm::Visual);
+    CHECK(default_fields(store).find("\"alarm\":\"visual\"") != std::string::npos);
 
     uint8_t blob[128] = {0};
     const size_t bytes = sealed_v13(V13{}, blob);
     REQUIRE(store.adopt(blob, bytes) == Status::Ok);
-    CHECK(settings.alarm == Alarm::Display);
+    CHECK(settings.alarm == Alarm::Visual);
 
     CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"soft\"}") == Status::OutOfRange);
     CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"loud\"}") == Status::OutOfRange);
-    CHECK(settings.alarm == Alarm::Display);
+    CHECK(settings.alarm == Alarm::Visual);
     CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"off\"}") == Status::Ok);
     CHECK(settings.alarm == Alarm::Off);
 }
@@ -105,7 +104,7 @@ TEST_CASE("settings: a Go+ ships on loud and takes every step") {
     SettingsStore store(settings, kTestActivation, kNoOwnTransponder, sounding);
     store.restore_defaults();
     CHECK(settings.alarm == Alarm::Loud);
-    for (const char* step : {"off", "display", "soft", "loud"}) {
+    for (const char* step : {"off", "visual", "soft", "loud"}) {
         const std::string json = std::string("{\"command\":\"set\",\"alarm\":\"") + step + "\"}";
         CHECK(apply_json(store, json.c_str()) == Status::Ok);
     }

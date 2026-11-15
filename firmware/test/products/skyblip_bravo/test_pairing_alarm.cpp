@@ -154,8 +154,8 @@ TEST_CASE("bravo alarm: a Go+ that loses its Bravo's health gives the alarm back
     CHECK_FALSE(flight.granted());
 }
 
-TEST_CASE("bravo alarm: off or display on the Go+ still keeps Bravo silent") {
-    for (const go::Alarm alarm : {go::Alarm::Off, go::Alarm::Display}) {
+TEST_CASE("bravo alarm: off or visual on the Go+ still keeps Bravo silent") {
+    for (const go::Alarm alarm : {go::Alarm::Off, go::Alarm::Visual}) {
         CAPTURE(static_cast<int>(alarm));
         Flight flight;
         flight.pair.go.settings().alarm = alarm;

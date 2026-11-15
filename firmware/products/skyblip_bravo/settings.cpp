@@ -32,10 +32,10 @@ struct SettingsV2 {
 constexpr uint8_t kBlobVersionV1 = 1;
 constexpr uint8_t kBlobVersionV2 = 2;
 
-// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the lamp, as display
+// INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the lamp, as visual
 // does
 Alarm alarm_of(bool enabled, AlarmVolume volume) {
-    if (!enabled || volume == AlarmVolume::Off) return Alarm::Display;
+    if (!enabled || volume == AlarmVolume::Off) return Alarm::Visual;
     return volume == AlarmVolume::Soft ? Alarm::Soft : Alarm::Loud;
 }
 

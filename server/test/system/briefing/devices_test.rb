@@ -360,12 +360,12 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a Go with no buzzer and no haptic offers its alarm as off or visual only" do
-    in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "display" })
+    in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "visual" })
     on_the_shelf do
       connect_go
       assert_select "Alarm", selected: "Visual only"
       offered = "[...document.querySelectorAll('#unit-alarm option')].filter(option => !option.disabled).map(option => option.value)"
-      assert_equal %w[off display], page.evaluate_script(offered)
+      assert_equal %w[off visual], page.evaluate_script(offered)
       screen "11b-go-visual-only"
     end
   end

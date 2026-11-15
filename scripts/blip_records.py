@@ -137,7 +137,7 @@ RESET = ("UNKNOWN", "POWER ON", "RESET PIN", "BROWNOUT", "SOFT RESET", "WATCHDOG
          "CHARGER WAKE", "BUTTON WAKE", "DEBUGGER")
 IMAGE_STATE = ("confirmed", "probation", "reverted", "refused")
 PROFILE = ("full", "power_run", "flight_run")
-ALARM_SETTING = ("off", "display", "soft", "loud")
+ALARM_SETTING = ("off", "visual", "soft", "loud")
 REJECT = ("NONE", "NO SOLUTION", "NO RMC", "NO GGA", "STALE", "NO DATE", "JUMP")
 STAGE = ("silent", "blind", "solving", "fixed")
 VERDICT = ("transmitted", "lost", "held", "unarmed", "received", "named", "bad_crc", "unframed",

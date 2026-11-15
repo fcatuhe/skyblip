@@ -99,8 +99,8 @@ TEST_CASE(
     CHECK(read.alarm == bravo::Alarm::Soft);
 }
 
-// Both old offs silenced the buzzer and the haptic and kept the lamp, which display does.
-TEST_CASE("bravo: a version 2 blob's alarm off or volume off comes back as display") {
+// Both old offs silenced the buzzer and the haptic and kept the lamp, which visual does.
+TEST_CASE("bravo: a version 2 blob's alarm off or volume off comes back as visual") {
     struct V2 {
         uint32_t aircraft_address{0};
         bravo::PeerPin peer{};
@@ -113,7 +113,7 @@ TEST_CASE("bravo: a version 2 blob's alarm off or volume off comes back as displ
         settings::seal(2, &old, sizeof(old), blob, sizeof(blob));
         bravo::Settings read{};
         REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(old)), read) == Status::Ok);
-        CHECK(read.alarm == bravo::Alarm::Display);
+        CHECK(read.alarm == bravo::Alarm::Visual);
         CHECK(read.aircraft_address_from_go);
     }
 }

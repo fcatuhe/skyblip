@@ -26,4 +26,4 @@ A paired Go that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `
 
 ## Loudness is the port's, the tune is not
 
-The tune decides pitch and timing and never level. The pilot's volume reaches the port as `ports::Loudness`, `Soft` or `Loud`, and what that means in duty cycle is the platform's: a square wave's fundamental goes as sin(pi x duty), so half duty is the most one pin can give and a tenth of the period is about 10 dB under it. An alarm of off or display never reaches the port: the service silences the buzzer and the motor both.
+The tune decides pitch and timing and never level. The pilot's volume reaches the port as `ports::Loudness`, `Soft` or `Loud`, and what that means in duty cycle is the platform's: a square wave's fundamental goes as sin(pi x duty), so half duty is the most one pin can give and a tenth of the period is about 10 dB under it. An alarm of off or visual never reaches the port: the service silences the buzzer and the motor both.

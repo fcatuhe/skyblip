@@ -30,7 +30,7 @@ namespace {
 constexpr bool on_the_wire(go::Alarm value) {
     switch (value) {
         case go::Alarm::Off:
-        case go::Alarm::Display:
+        case go::Alarm::Visual:
         case go::Alarm::Soft:
         case go::Alarm::Loud: return true;
     }
@@ -268,7 +268,7 @@ constexpr bool on_the_wire(dfu::Proof value) {
 }
 
 static_assert(code(go::Alarm::Off) == 0, "alarm off");
-static_assert(code(go::Alarm::Display) == 1, "alarm display");
+static_assert(code(go::Alarm::Visual) == 1, "alarm visual");
 static_assert(code(go::Alarm::Soft) == 2, "alarm soft");
 static_assert(code(go::Alarm::Loud) == 3, "alarm loud");
 static_assert(on_the_wire(go::Alarm::Off), "alarm");

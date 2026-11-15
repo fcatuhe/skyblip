@@ -25,7 +25,7 @@ constexpr int kCallsignRowCharacters = 6;
 
 const char* alarm_name(go::Alarm alarm, bool sounds) {
     if (alarm == go::Alarm::Off) return "OFF";
-    if (alarm == go::Alarm::Display || !sounds) return "DISPLAY";
+    if (alarm == go::Alarm::Visual || !sounds) return "VISUAL";
     return alarm == go::Alarm::Soft ? "SOFT" : "LOUD";
 }
 

@@ -97,7 +97,7 @@ inline constexpr Enumeration kReason{kReasonValues, 52};
 
 inline constexpr Value kAlarmValues[] = {
     {"off", 0},
-    {"display", 1},
+    {"visual", 1},
     {"soft", 2},
     {"loud", 3},
 };

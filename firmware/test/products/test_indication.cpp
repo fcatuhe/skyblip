@@ -248,8 +248,8 @@ TEST_CASE("product: a press from off signs on with one green pulse, felt as it i
 }
 
 // The signs say the unit is on or off, which is not an alarm the pilot switched off.
-TEST_CASE("product: an alarm on off or display still signs off in the hand, and sounds nothing") {
-    for (const go::Alarm alarm : {go::Alarm::Off, go::Alarm::Display}) {
+TEST_CASE("product: an alarm on off or visual still signs off in the hand, and sounds nothing") {
+    for (const go::Alarm alarm : {go::Alarm::Off, go::Alarm::Visual}) {
         CAPTURE(static_cast<int>(alarm));
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);

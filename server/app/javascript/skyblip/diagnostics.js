@@ -28,7 +28,7 @@ const scaled = (inner, factor) => (raw, flags) => inner(raw, flags) * factor;
 const RESET = ['UNKNOWN', 'POWER ON', 'RESET PIN', 'BROWNOUT', 'SOFT RESET', 'WATCHDOG', 'CPU LOCKUP', 'CHARGER WAKE', 'BUTTON WAKE', 'DEBUGGER'];
 const IMAGE_STATE = ['confirmed', 'probation', 'reverted', 'refused'];
 const PROFILE = ['full', 'power_run', 'flight_run'];
-const ALARM_SETTING = ['off', 'display', 'soft', 'loud'];
+const ALARM_SETTING = ['off', 'visual', 'soft', 'loud'];
 const REJECT = ['NONE', 'NO SOLUTION', 'NO RMC', 'NO GGA', 'STALE', 'NO DATE', 'JUMP'];
 const STAGE = ['silent', 'blind', 'solving', 'fixed'];
 const VERDICT = ['transmitted', 'lost', 'held', 'unarmed', 'received', 'named', 'bad_crc', 'unframed', 'miskeyed', 'undecoded', 'unsupported', 'unattempted', 'declared', 'deferred', 'forced', 'busy'];

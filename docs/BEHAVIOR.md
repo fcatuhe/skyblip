@@ -2977,7 +2977,7 @@ The menu editor: what the pad moves, what the button changes, and what a pilot t
 
 **menu editor**
 
-- a Go that cannot sound toggles its alarm between display and off
+- a Go that cannot sound toggles its alarm between visual and off
   > A Go with no buzzer and no haptic can only show an alarm, so its row is a toggle.
 - a blank first character on an unnamed device stores nothing
   > The same press on a device nobody has named: the field it opens blank is the field it closes.
@@ -2995,7 +2995,7 @@ The menu editor: what the pad moves, what the button changes, and what a pilot t
 - clearing the aircraft address is asked again: the button clears, the pad keeps
 - moving the focus over a row is not editing it
 - the aircraft address is typed in hex, six digits, and stored on the last
-- the alarm steps down from loud through soft and display to off, and round
+- the alarm steps down from loud through soft and visual to off, and round
   > One press from the default is still heard: silent takes a second press.
 - the callsign field opens on what is stored
   > A name already stored is what the field opens on, not nine blanks.
@@ -3518,13 +3518,13 @@ What the buzzer does in a cockpit, through the whole product: virtual aircraft t
 - an advisory is two calls, and the target standing says nothing more
 - an announcement reaches the haptic driver's registers
 - an empty sky releases the buzzer and does not re-announce anything
-- display shows the advisory and sounds neither the buzzer nor the motor
 - off raises no advisory and sounds nothing, and the target keeps its level
   > The traffic picture and an EFB's stream keep the level, so off only stops the interruption.
 - soft or loud, the advisory is called at that loudness and felt
-- switching the alarm to display silences the buzzer and stills the motor at once
+- switching the alarm to visual silences the buzzer and stills the motor at once
 - the first fix plays its tune, and traffic takes the buzzer off it
 - the motor is not left running after its calls
+- visual shows the advisory and sounds neither the buzzer nor the motor
 
 ### test/products/test_attestation.cpp
 
@@ -4374,7 +4374,7 @@ The status lamp through the whole product: the cell, the fix, real ADS-L frames,
 - a restart or a first power-on signs nothing, and an install goes down unsigned
 - a running device with no fix winks blue, and green once it has one
 - a unit with no status LED flies and lights nothing
-- an alarm on off or display still signs off in the hand, and sounds nothing
+- an alarm on off or visual still signs off in the hand, and sounds nothing
   > The signs say the unit is on or off, which is not an alarm the pilot switched off.
 - an urgent target takes the lamp off the wink
 - switching the alarm off silences the buzzer and does not darken the lamp
@@ -5428,14 +5428,14 @@ ADS-L F.2.3's "disallowing inconsistent user configurations", as the Go's settin
 
 ### test/products/test_settings_alarm.cpp
 
-The one alarm setting, version 14: off, display, soft and loud, and what a Go that cannot sound keeps.
+The one alarm setting, version 14: off, visual, soft and loud, and what a Go that cannot sound keeps.
 
 **settings**
 
-- a Go that cannot sound ships on display, reads loud as display, refuses soft
+- a Go that cannot sound ships on visual, reads loud as visual, refuses soft
 - a Go+ ships on loud and takes every step
-- a version-13 blob keeps its pin, and both its offs come back as display
-  > Both old offs silenced the buzzer and the haptic and kept the glass, which display does.
+- a version-13 blob keeps its pin, and both its offs come back as visual
+  > Both old offs silenced the buzzer and the haptic and kept the glass, which visual does.
 
 ### test/products/test_settings_migration.cpp
 
@@ -6344,7 +6344,7 @@ A whole Go+ takes the alarm from a whole Bravo, which keeps silent only while th
   > Bravo's frames lost on the way to the Go, its claims still arriving: the Go+ has no Bravo traffic.
 - a Go+ with a fix takes the alarm from its live Bravo, which says so
 - a Go+ without a fix never takes the alarm
-- off or display on the Go+ still keeps Bravo silent
+- off or visual on the Go+ still keeps Bravo silent
 - the Go+ sounds for Bravo's traffic while Bravo keeps silent
 
 ### test/products/skyblip_bravo/test_peer.cpp
@@ -6448,11 +6448,11 @@ Bravo has no screen: a phone's prompt is a lamp pattern, and one press accepts i
 - a set from a phone blinks the prompt and one press stores it
 - after a press that began before arming, the accepting press waits a quiet window
   > GPT's re-review of #245: the button was never up a whole window before the accepting press.
-- display flickers the lamp in silence, and off leaves the lamp to the fix
 - in flight a prompt is refused before it stands
 - in flight an advisory flickers the lamp and sounds, and one press dismisses it
 - presses made before the prompt stood are never spent on it
 - the gesture stays disarmed while the button is down, and arms once it settles
+- visual flickers the lamp in silence, and off leaves the lamp to the fix
 - with no fix since boot a power-off from the phone stands, and one press obeys
   > The Go refuses a prompt in flight only, so a Bravo with no fix since boot can still be updated.
 
@@ -6466,8 +6466,8 @@ Bravo's own blob, version 1, and the three keys of the link's table it stores (#
 - a set stores Bravo's keys and ignores the Go's, as address is ignored
 - a version 1 blob is read whole, the pin kept and the aircraft address a phone's
   > Version 2 adds where the aircraft address came from, and must not cost a Bravo its pin.
-- a version 2 blob's alarm off or volume off comes back as display
-  > Both old offs silenced the buzzer and the haptic and kept the lamp, which display does.
+- a version 2 blob's alarm off or volume off comes back as visual
+  > Both old offs silenced the buzzer and the haptic and kept the lamp, which visual does.
 - blob version 3 carries the peer pin whole, and refuses any other version
   > #192 stores the pinned Go from the first image, and version 3 keeps it.
 - config answers aircraft_address and alarm, and nothing else

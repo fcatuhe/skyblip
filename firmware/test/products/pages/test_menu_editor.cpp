@@ -54,7 +54,7 @@ TEST_CASE("menu editor: the pad moves down a row, the button changes the row it 
 
     // The next press steps it again: one press, one step, no rhythm to get right.
     CHECK(bench.change() == MenuAction::Changed);
-    CHECK(bench.values.settings.alarm == go::Alarm::Display);
+    CHECK(bench.values.settings.alarm == go::Alarm::Visual);
 }
 
 // Reached in the dark, so it is the top row, and the press that sets it closes the menu.
@@ -337,14 +337,13 @@ TEST_CASE("menu editor: aircraft type walks the categories that name an aircraft
 }
 
 // One press from the default is still heard: silent takes a second press.
-TEST_CASE(
-    "menu editor: the alarm steps down from loud through soft and display to off, and round") {
+TEST_CASE("menu editor: the alarm steps down from loud through soft and visual to off, and round") {
     Bench bench;
     bench.focus_on(MenuRow::Alarm);
     REQUIRE(bench.values.settings.alarm == go::Alarm::Loud);
 
     char value[kMenuValueBytes];
-    for (const char* shown : {"SOFT", "DISPLAY", "OFF", "LOUD"}) {
+    for (const char* shown : {"SOFT", "VISUAL", "OFF", "LOUD"}) {
         bench.change();
         CHECK(go::validate(bench.values.settings) == Status::Ok);
         menu_row_value(value, MenuRow::Alarm, bench.values);
@@ -354,20 +353,20 @@ TEST_CASE(
 }
 
 // A Go with no buzzer and no haptic can only show an alarm, so its row is a toggle.
-TEST_CASE("menu editor: a Go that cannot sound toggles its alarm between display and off") {
+TEST_CASE("menu editor: a Go that cannot sound toggles its alarm between visual and off") {
     Bench bench;
     bench.values.sounds = false;
     bench.focus_on(MenuRow::Alarm);
 
     char value[kMenuValueBytes];
     menu_row_value(value, MenuRow::Alarm, bench.values);
-    CHECK(std::string(value) == "DISPLAY");
+    CHECK(std::string(value) == "VISUAL");
     bench.change();
     CHECK(bench.values.settings.alarm == go::Alarm::Off);
     bench.change();
-    CHECK(bench.values.settings.alarm == go::Alarm::Display);
+    CHECK(bench.values.settings.alarm == go::Alarm::Visual);
     menu_row_value(value, MenuRow::Alarm, bench.values);
-    CHECK(std::string(value) == "DISPLAY");
+    CHECK(std::string(value) == "VISUAL");
 }
 
 TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle closes") {

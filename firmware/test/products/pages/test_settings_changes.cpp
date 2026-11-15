@@ -95,7 +95,7 @@ TEST_CASE("settings changes page: a callsign too long for one line takes two, an
     std::strcpy(to.callsign, "F-JXYZ123");
     to.units = Units::Metric;
     CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nUNITS METRIC");
-    to.alarm = Alarm::Display;
+    to.alarm = Alarm::Visual;
     CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nAND 2 MORE");
 }
 

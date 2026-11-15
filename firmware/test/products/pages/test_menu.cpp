@@ -112,7 +112,7 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
 // Seven rows and seven lines: the radar menu fits, and only a longer one slides under the focus.
 TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up under the focus") {
     MenuValues values = default_menu_values();
-    values.settings.alarm = go::Alarm::Display;
+    values.settings.alarm = go::Alarm::Visual;
     const Menu menu = menu_for(Page::Radar);
     REQUIRE(menu.row_count == kMenuLines);
 
@@ -120,7 +120,7 @@ TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up
     CHECK(line_of(last, MenuRow::Light) == 0);
     CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
     CHECK(row_label_reads(last, MenuRow::Bravo, true));
-    CHECK(row_value_reads(last, MenuRow::Alarm, "DISPLAY", false));
+    CHECK(row_value_reads(last, MenuRow::Alarm, "VISUAL", false));
     // Off the last row the pad hands the glass back, and the key says so.
     CHECK(reads_pad_key(last.canvas, "BACK"));
 

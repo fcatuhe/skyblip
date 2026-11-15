@@ -2812,9 +2812,9 @@ export const LINK_REGISTRY = Object.freeze({
           "mirrors": "Off"
         },
         {
-          "name": "display",
+          "name": "visual",
           "code": 1,
-          "mirrors": "Display"
+          "mirrors": "Visual"
         },
         {
           "name": "soft",

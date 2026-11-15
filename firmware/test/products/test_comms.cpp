@@ -228,7 +228,7 @@ TEST_CASE("comms: link down cancels a pending change") {
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
-    config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"display\"}"));
+    config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":\"visual\"}"));
     CHECK(config.pending() == Pending::Set);
     config.on_link_down(events::LinkDown{1});
     CHECK(config.pending() == Pending::None);

@@ -126,7 +126,7 @@ TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
 }
 
 TEST_CASE(
-    "product: switching the alarm to display silences the buzzer and stills the motor at once") {
+    "product: switching the alarm to visual silences the buzzer and stills the motor at once") {
     Sky sky;
     models::Drv2605& chip = sky.simulator.platform().chips().haptic;
     uint32_t now_ms = sky.with_a_target_in_the_window();
@@ -138,7 +138,7 @@ TEST_CASE(
     REQUIRE(chip.moving());
     const uint32_t silences = sky.buzzer().silences();
 
-    sky.simulator.product().settings().alarm = go::Alarm::Display;
+    sky.simulator.product().settings().alarm = go::Alarm::Visual;
     sky.simulator.step(now_ms + kStepMs);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(sky.buzzer().silences() == silences + 1);
@@ -174,10 +174,10 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
     }
 }
 
-TEST_CASE("product: display shows the advisory and sounds neither the buzzer nor the motor") {
+TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor") {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);
-    sky.simulator.product().settings().alarm = go::Alarm::Display;
+    sky.simulator.product().settings().alarm = go::Alarm::Visual;
     sky.run(0, 2000);
     sky.simulator.world().add_threat();
     sky.run(2000, 8000);

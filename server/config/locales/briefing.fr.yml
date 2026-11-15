@@ -50,7 +50,7 @@ fr:
       alarm: "Alarme"
       alarm_names:
         "off": "Coupée"
-        display: "Visuelle seulement"
+        visual: "Visuelle seulement"
         soft: "Faible"
         loud: "Forte"
       save: "Enregistrer"

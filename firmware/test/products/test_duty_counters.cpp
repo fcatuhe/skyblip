@@ -209,7 +209,7 @@ TEST_CASE("duty: the annunciator counter runs while it sounds and stands still w
         advisory_tone_ms += note.tone_ms;
     CHECK(sounded - before == 2 * advisory_tone_ms);
 
-    simulator.product().settings().alarm = go::Alarm::Display;
+    simulator.product().settings().alarm = go::Alarm::Visual;
     for (uint32_t now_ms = 9000; now_ms <= 15000; now_ms += step) simulator.step(now_ms);
     CHECK(simulator.product().state().duty.annunciator_ms == sounded);
 }
