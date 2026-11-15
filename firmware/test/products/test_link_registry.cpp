@@ -104,7 +104,7 @@ std::string browser_key() {
 }
 
 std::string browser_signature() {
-    std::string message = "skyblip:browser:v1";
+    std::string message = link::trust_browser_signed_over::kSignature;
     message.append(reinterpret_cast<const char*>(kUnitNonce.data()), kUnitNonce.size());
     const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
         kBrowserSeed,

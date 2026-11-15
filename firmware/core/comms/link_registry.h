@@ -504,6 +504,10 @@ constexpr size_t kKey = 32;
 constexpr size_t kSignature = 64;
 }
 
+namespace trust_browser_signed_over {
+constexpr char kSignature[] = "skyblip:browser:v1";
+}
+
 namespace browsers_key {
 enum : uint32_t {
     kIndex = 1,
