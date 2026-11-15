@@ -53,7 +53,7 @@ class DeploymentTest < Minitest::Test
 
   def test_production_checksums_the_simulator_before_publishing
     workflow = File.read(File.join(ROOT, ".github/workflows/release.yml"))
-    copy = workflow.index(%r{^ +cp simulator/skyblip_simulator\.js})
+    copy = workflow.index(%r{^ +cp simulator/skyblip_simulator\.wasm})
     checksums = workflow.index("sha256sum -- * > SHA256SUMS")
 
     assert copy, "release copies simulator release assets"
@@ -270,12 +270,12 @@ class DeploymentTest < Minitest::Test
     end
   end
 
-  def test_the_jobs_holding_the_production_key_run_no_emscripten_and_write_nothing
+  def test_the_jobs_holding_the_production_key_build_no_wasm_and_write_nothing
     jobs = workflow("release").fetch("jobs")
     image = jobs.fetch("image")
 
     assert_includes image.fetch("needs"), "simulator"
-    refute image.fetch("steps").any? { |step| step["uses"].to_s.include?("setup-emsdk") || step["run"].to_s.include?("make -C firmware browser") }
+    refute image.fetch("steps").any? { |step| step["run"].to_s.include?("ziglang") || step["run"].to_s.include?("make -C firmware browser") }
     refute image.key?("permissions")
     assert_equal({ "contents" => "read" }, workflow("release").fetch("permissions"))
     assert_equal [ "draft" ], jobs.select { |_name, job| job.dig("permissions", "contents") == "write" }.keys
@@ -360,7 +360,7 @@ class DeploymentTest < Minitest::Test
       %w[builds simulator LICENSES].each { |dir| FileUtils.mkdir_p(File.join(tree, dir)) }
       endings = %w[.uf2 .signed.bin .signed.confirmed.bin .version] + (hub_image ? %w[.full.signed.bin] : [])
       endings.each { |ending| File.write(File.join(tree, "builds", "#{slug}#{ending}"), ending) }
-      %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].each { |file| File.write(File.join(tree, "simulator", file), file) }
+      %w[skyblip_simulator.wasm embed.js scenarios.json].each { |file| File.write(File.join(tree, "simulator", file), file) }
       %w[LICENSE NOTICE.md LICENSES/Apache-2.0.txt].each { |file| File.write(File.join(tree, file), file) }
     end
 

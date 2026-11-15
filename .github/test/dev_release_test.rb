@@ -47,7 +47,7 @@ class DevReleaseTest < Minitest::Test
 
     **Full Changelog**: https://github.com/fcatuhe/skyblip/compare/dev-1005...dev-1010
   NOTES
-  SHARED_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip_simulator.js skyblip_simulator.wasm].freeze
+  SHARED_FILES = %w[Apache-2.0.txt LICENSE NOTICE.md SHA256SUMS TinyCrypt.txt embed.js scenarios.json skyblip_simulator.wasm].freeze
   GO_FILES = %w[skyblip-go-%s.full.signed.bin skyblip-go-%s.signed.bin skyblip-go-%s.uf2].freeze
   BRAVO_FILES = %w[skyblip-bravo-%s.signed.bin skyblip-bravo-%s.uf2].freeze
 

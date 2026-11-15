@@ -97,18 +97,19 @@ BIN := $(BUILD)/skyblip_tests
 SIMULATOR_OBJ := $(patsubst %.cpp,$(BUILD)/%.o,$(SRC) simulator/frontends/terminal.cpp) $(VENDOR_OBJ)
 SIMULATOR_BIN := $(BUILD)/skyblip_simulator
 
-EMCC ?= emcc
-# Linking C++ objects with emcc leaves operator new/delete undefined.
-EMXX ?= em++
+# Zig's clang, wasi-libc and libc++, at the version .github/wasm/requirements.txt pins.
+WASM_CXX ?= zig c++
 WEB_SRC := $(SRC) simulator/frontends/browser.cpp
 WEB_DIST := $(BUILD)/browser
-WEB_OUT := $(WEB_DIST)/skyblip_simulator.js
-# Incremental browser build: compile to objects under build/web/ and link, so
-# editing one file rebuilds one file (a single emcc pass over all sources costs
-# ~30 s every save; this makes the edit->reload loop a couple of seconds).
-WEB_BUILD := $(BUILD)/web
-WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(WEB_SRC)) $(patsubst %.c,$(WEB_BUILD)/%.o,$(VENDOR_SRC))
-WEB_CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor -fno-exceptions -fno-rtti -MMD -MP
+WEB_OUT := $(WEB_DIST)/skyblip_simulator.wasm
+# Incremental browser build: compile to objects under build/wasm/ and link, so
+# editing one file rebuilds one file (a single pass over all sources costs
+# ~30 s every save; this makes the edit->reload loop a couple of seconds). The objects
+# link in sorted order, so every machine builds the same bytes.
+WEB_BUILD := $(BUILD)/wasm
+WEB_OBJ := $(patsubst %.cpp,$(WEB_BUILD)/%.o,$(sort $(WEB_SRC))) $(patsubst %.c,$(WEB_BUILD)/%.o,$(sort $(VENDOR_SRC)))
+WEB_CXXFLAGS := --target=wasm32-wasi -std=c++17 -O2 -Wall -Wextra -Wshadow -Werror -I. -Ivendor \
+                -fno-exceptions -fno-rtti -fvisibility=hidden -MMD -MP
 
 .PHONY: test test-sanitize test-protocols fuzz fuzzers all clean simulator browser watch tidy
 all: test
@@ -175,28 +176,24 @@ simulator: $(SIMULATOR_BIN)
 $(SIMULATOR_BIN): $(SIMULATOR_OBJ)
 	$(CXX) $(CXXFLAGS) $(SIMULATOR_OBJ) -o $@ $(LDFLAGS)
 
-# WASM build. Requires Emscripten (https://emscripten.org). Releases publish it
-# for the Rails app's simulator pages.
+# WASM build. Requires Zig (simulator/README.md).
+# Releases publish it for the Rails app's simulator pages.
 browser:
-	@command -v $(EMCC) >/dev/null 2>&1 || { \
-	  echo "emcc not found. Install Emscripten, then: make browser"; exit 1; }
 	@$(MAKE) --no-print-directory $(WEB_OUT) $(WEB_DIST)/embed.js
 
 $(WEB_BUILD)/%.o: %.cpp
 	@mkdir -p $(dir $@)
-	$(EMCC) $(WEB_CXXFLAGS) -c $< -o $@
+	$(WASM_CXX) $(WEB_CXXFLAGS) -c $< -o $@
 
 $(WEB_BUILD)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(EMCC) $(WEB_CXXFLAGS) -x c++ -c $< -o $@
+	$(WASM_CXX) $(WEB_CXXFLAGS) -x c++ -c $< -o $@
 
+# A reactor has no main: embed.js calls _initialize once to run the constructors.
 $(WEB_OUT): $(WEB_OBJ)
 	@mkdir -p $(WEB_DIST)
-	$(EMXX) -O2 $(WEB_OBJ) \
-	  -sEXPORTED_RUNTIME_METHODS=ccall,cwrap,HEAPU8 \
-	  -sALLOW_MEMORY_GROWTH=1 -sEXIT_RUNTIME=0 \
-	  -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web \
-	  -o $(WEB_OUT)
+	$(WASM_CXX) --target=wasm32-wasi -mexec-model=reactor -O2 $(WEB_OBJ) \
+	  -Wl,--export-dynamic -Wl,--export=malloc -Wl,--export=free -Wl,--strip-all -o $@
 	@echo "built $(WEB_DIST)/"
 
 # Its own target: copied by the link recipe, an edit to it alone shipped nothing.

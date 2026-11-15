@@ -1,5 +1,3 @@
-import createModule from './skyblip_simulator.js';
-
 export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', '', '', 'self test', 'bravo', 'bravo log'];
 export const ALARM = ['none', 'advisory'];
 export const PRODUCT = ['go', 'bravo', 'paired'];
@@ -9,20 +7,62 @@ export const REFRESH = ['idle', 'partial refresh', 'full refresh'];
 export const DWELL = ['uplink RX · 869.525', 'retune O->M', 'slot 0 · 868.200',
                       'hop', 'slot 1 · 868.400', 'retune M->O'];
 
+const WASM = new URL('./skyblip_simulator.wasm', import.meta.url);
 const SLOT_EDGE_STEP_MS = 5;
 const REFUSAL_CEILING_MS = 10000;
+const STDOUT = 1;
+const STDERR = 2;
 const INK = [20, 20, 20];
 const PAPER = [201, 201, 196];
 
-export async function load(options = {}) {
-  const { boot, ...moduleOptions } = options;
-  const module = await createModule(moduleOptions);
-  const call = (name, ret, args) => module.cwrap(name, ret, args);
+export async function load({ boot, wasm } = {}) {
+  let memory = null;
+  const { instance } = await WebAssembly.instantiate(wasm ?? await fetchWasm(), {
+    wasi_snapshot_preview1: wasi(() => memory),
+  });
+  const exports = instance.exports;
+  memory = exports.memory;
+  exports._initialize();
+
+  let view = new Uint8Array(memory.buffer);
+  const heap = () => {
+    if (view.buffer !== memory.buffer) view = new Uint8Array(memory.buffer);
+    return view;
+  };
+  const toC = (text) => {
+    if (text === null || text === undefined) return 0;
+    const bytes = new TextEncoder().encode(String(text));
+    const pointer = exports.malloc(bytes.length + 1);
+    if (pointer === 0) throw new Error('the simulator ran out of memory');
+    heap().set(bytes, pointer);
+    heap()[pointer + bytes.length] = 0;
+    return pointer;
+  };
+  const fromC = (pointer) => {
+    if (pointer === 0) return '';
+    const bytes = heap();
+    const end = bytes.indexOf(0, pointer);
+    return new TextDecoder().decode(bytes.subarray(pointer, end));
+  };
+  const call = (name, ret, args) => {
+    const fn = exports[name];
+    if (typeof fn !== 'function') throw new Error(`the simulator exports no ${name}`);
+    return (...values) => {
+      const passed = args.map((type, index) => (type === 'string' ? toC(values[index]) : values[index]));
+      try {
+        const result = fn(...passed);
+        return ret === 'string' ? fromC(result) : result;
+      } finally {
+        args.forEach((type, index) => { if (type === 'string') exports.free(passed[index]); });
+      }
+    };
+  };
   const noArgs = [];
   const oneNumber = ['number'];
   const sendConfigText = call('simulator_send_config', 'number', ['string']);
 
   const sim = {
+    memory,
     setup: call('simulator_setup', null, noArgs),
     step: call('simulator_step', null, oneNumber),
     parkRefusal: call('simulator_park_refusal', 'number', oneNumber),
@@ -144,10 +184,10 @@ export async function load(options = {}) {
   const paintFrom = (canvas, base) => {
     const context = canvas.getContext('2d');
     if (image === null) image = context.createImageData(sim.width, sim.height);
-    const heap = module.HEAPU8;
+    const pixels = heap();
     for (let y = 0; y < sim.height; y++) {
       for (let x = 0; x < sim.width; x++) {
-        const black = heap[base + y * sim.stride + (x >> 3)] & (0x80 >> (x & 7));
+        const black = pixels[base + y * sim.stride + (x >> 3)] & (0x80 >> (x & 7));
         const pixel = black ? INK : PAPER;
         const offset = (y * sim.width + x) * 4;
         image.data[offset] = pixel[0];
@@ -185,4 +225,34 @@ export async function load(options = {}) {
   if (boot?.externalPower !== undefined) sim.setExternalPower(boot.externalPower ? 1 : 0);
   sim.setup();
   return sim;
+}
+
+async function fetchWasm() {
+  const response = await fetch(WASM);
+  if (!response.ok) throw new Error(`${WASM} answered ${response.status}`);
+  return response.arrayBuffer();
+}
+
+// INFO: fc 15nov26 only the WASI calls Zig's libc links in today, so a new one fails to instantiate rather than run
+function wasi(memory) {
+  const unexpected = (name) => () => { throw new Error(`the simulator called WASI ${name}, which embed.js does not provide`); };
+  return {
+    fd_write: (fd, iovs, count, written) => {
+      if (fd !== STDOUT && fd !== STDERR) return unexpected(`fd_write to descriptor ${fd}`)();
+      const words = new DataView(memory().buffer);
+      let text = '';
+      let bytes = 0;
+      for (let index = 0; index < count; index++) {
+        const base = words.getUint32(iovs + index * 8, true);
+        const length = words.getUint32(iovs + index * 8 + 4, true);
+        text += new TextDecoder().decode(new Uint8Array(memory().buffer, base, length));
+        bytes += length;
+      }
+      (fd === STDERR ? console.error : console.log)(text);
+      words.setUint32(written, bytes, true);
+      return 0;
+    },
+    fd_seek: unexpected('fd_seek'),
+    fd_close: unexpected('fd_close'),
+  };
 }

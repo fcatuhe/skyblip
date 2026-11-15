@@ -9,7 +9,7 @@ class DevRelease
   PRODUCT_ORDER = %w[skyblip-go skyblip-bravo].freeze
   IMAGE_ENDINGS = %w[.uf2 .signed.bin].freeze
   HUB_IMAGE_ENDING = ".full.signed.bin".freeze
-  SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js scenarios.json].freeze
+  SIMULATOR_FILES = %w[skyblip_simulator.wasm embed.js scenarios.json].freeze
   BUILD_ENDINGS = %w[.version .signed.confirmed.bin].freeze
   FIRMWARE_PATHS = %w[firmware/ scripts/build_image.sh scripts/mkuf2.py].freeze
   CHANGES_HEADING = "## What's Changed".freeze

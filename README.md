@@ -83,7 +83,7 @@ skyBlip stands on a decade of open work by the free-flight community. Thanks to 
 
 The repository is **MIT**: see [`LICENSE`](LICENSE). That covers the firmware, the server, the schemas and the build and release tooling. Any of it may go into another product, open or closed.
 
-A few files in the tree are other people's work under their own terms: Bosch Sensortec's image for the inertial unit, the web fonts and EASA's ADS-L specification. A firmware image is also built from Zephyr, its modules and the toolchain's libraries, and the simulator's WASM from Emscripten's runtime. [`NOTICE.md`](NOTICE.md) lists each one with its license, and every release ships it beside the image.
+A few files in the tree are other people's work under their own terms: Bosch Sensortec's image for the inertial unit, the web fonts and EASA's ADS-L specification. A firmware image is also built from Zephyr, its modules and the toolchain's libraries, and the simulator's WASM from Zig's runtime, wasi-libc and LLVM's C++ runtime. [`NOTICE.md`](NOTICE.md) lists each one with its license, and every release ships it beside the image.
 
 ## Trademark
 

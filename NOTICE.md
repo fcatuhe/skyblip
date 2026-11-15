@@ -48,13 +48,15 @@ The skyBlip wordmark in `firmware/ui/widgets/wordmark.cpp` is a bitmap rendered 
 
 ## Built into the browser simulator
 
-`skyblip_simulator.wasm` and `skyblip_simulator.js` are our firmware compiled by Emscripten, which adds its own runtime.
+`skyblip_simulator.wasm` is our firmware compiled by Zig's clang for WASI and linked with the libraries Zig ships, below. `embed.js`, which loads it, is ours.
 
 | Component | License |
 |---|---|
-| [Emscripten](https://github.com/emscripten-core/emscripten)'s runtime and JavaScript glue | MIT or NCSA, used under MIT, text below |
-| [musl](https://musl.libc.org), the C library | MIT, and Sun's fdlibm notice for the math functions, texts below |
-| libc++, libc++abi and compiler-rt, from LLVM | Apache-2.0 WITH LLVM-exception, and NCSA or MIT for legacy code, used under MIT, text below |
+| [wasi-libc](https://github.com/WebAssembly/wasi-libc), the C library | Apache-2.0 WITH LLVM-exception, Apache-2.0 or MIT, used under MIT, text below |
+| [musl](https://musl.libc.org), inside wasi-libc | MIT, and Sun's fdlibm notice for the math functions, texts below |
+| cloudlibc, inside wasi-libc | BSD-2-Clause, Copyright (c) 2015-2017 Nuxi and contributors, text below |
+| [Zig](https://ziglang.org)'s compiler_rt and the parts of its C library written in Zig, such as `malloc` | MIT, Copyright (c) Zig contributors, text below |
+| libc++ and libc++abi, from LLVM | Apache-2.0 WITH LLVM-exception, and NCSA or MIT for legacy code, used under MIT, text below |
 
 ## Notices
 
@@ -194,10 +196,38 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-Emscripten:
+wasi-libc, Copyright 2018-2020 Dan Gohman and wasi-libc contributors:
 
 ```
-Copyright (c) 2010-2014 Emscripten authors, see AUTHORS file.
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+Zig:
+
+```
+Copyright (c) Zig contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -216,6 +246,33 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+cloudlibc, inside wasi-libc:
+
+```
+Copyright (c) 2015-2017 Nuxi (https://nuxi.nl/) and contributors.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:
+1. Redistributions of source code must retain the above copyright
+   notice, this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright
+   notice, this list of conditions and the following disclaimer in the
+   documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGE.
 ```
 
 musl:
@@ -243,7 +300,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-LLVM's libc++, libc++abi and compiler-rt, for their legacy code:
+LLVM's libc++ and libc++abi, for their legacy code:
 
 ```
 Copyright (c) 2009-2014 by the contributors listed in CREDITS.TXT

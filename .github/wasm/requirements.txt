@@ -1,0 +1,4 @@
+# Zig, whose clang, wasi-libc and libc++ build the browser simulator's WASM, pinned
+# so a new release cannot change what ships without a commit saying so. The Python
+# wheel is Zig's own release, repackaged: Dependabot watches this file.
+ziglang==0.17.1

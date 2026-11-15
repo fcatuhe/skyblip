@@ -36,22 +36,11 @@ const wasm = readFileSync(join(dist, "skyblip_simulator.wasm"));
 
 class Device {
   static async boot(boot = undefined) {
-    let memory = null;
-    const sim = await load({
-      boot,
-      instantiateWasm(imports, done) {
-        const instance = new WebAssembly.Instance(new WebAssembly.Module(wasm), imports);
-        memory = instance.exports.memory;
-        done(instance);
-        return instance.exports;
-      }
-    });
-    return new Device(sim, memory);
+    return new Device(await load({ boot, wasm }));
   }
 
-  constructor(sim, memory) {
+  constructor(sim) {
     this.sim = sim;
-    this.memory = memory;
     this.now = 0;
   }
 
@@ -152,7 +141,7 @@ class Device {
 
   frame() {
     const base = this.sim.panel();
-    return new Uint8Array(this.memory.buffer, base, this.sim.height * this.sim.stride).slice();
+    return new Uint8Array(this.sim.memory.buffer, base, this.sim.height * this.sim.stride).slice();
   }
 
   ink() {

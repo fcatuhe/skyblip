@@ -3,12 +3,8 @@
 #include "simulator/simulator.h"
 #include "simulator/world/prompt_glass.h"
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#define KEEPALIVE EMSCRIPTEN_KEEPALIVE
-#else
-#define KEEPALIVE
-#endif
+// INFO: fc 15nov26 the Makefile hides every other symbol of ours, so the WASM exports these and no more
+#define KEEPALIVE __attribute__((used, visibility("default")))
 
 using namespace skyblip;
 
@@ -346,5 +342,3 @@ KEEPALIVE int simulator_failures() {
     return on_unit([](auto& unit) { return unit.world().failures(); });
 }
 }
-
-int main() { return 0; }

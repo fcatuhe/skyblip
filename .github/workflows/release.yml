@@ -64,20 +64,20 @@ jobs:
           ! cmp -s firmware/keys/production.pub.pem firmware/keys/development.pub.pem \
             || { echo "FAIL: production.pub.pem is the development key"; exit 1; }
 
-  # Its own job, so the Emscripten toolchain never runs on the runner that holds the key.
+  # Its own job away from the key, on the image and packages firmware.yml tests the WASM with.
   simulator:
     name: browser simulator
     needs: tag
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04-arm
+    env:
+      WASM_CXX: python3 -m ziglang c++
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
-        with:
-          version: 6.0.9
-          no-cache: true
+      - name: install the Zig .github/wasm/requirements.txt pins
+        run: python3 -m pip install --disable-pip-version-check -r .github/wasm/requirements.txt
 
       - name: build the WASM and bundle the scenarios
         run: |
@@ -88,7 +88,6 @@ jobs:
         with:
           name: browser-simulator
           path: |
-            firmware/build/browser/skyblip_simulator.js
             firmware/build/browser/skyblip_simulator.wasm
             firmware/build/browser/embed.js
             firmware/build/browser/scenarios.json
@@ -217,7 +216,7 @@ jobs:
 
       - name: add the simulator, the notices, the radio protocols and the checksums
         run: |
-          cp simulator/skyblip_simulator.js simulator/skyblip_simulator.wasm simulator/embed.js release/
+          cp simulator/skyblip_simulator.wasm simulator/embed.js release/
           cp simulator/scenarios.json release/
           cp LICENSE NOTICE.md LICENSES/*.txt release/
           ruby scripts/radio_protocols.rb firmware "$RELEASE_VERSION" "$PRODUCTS" > release/PROTOCOLS.md

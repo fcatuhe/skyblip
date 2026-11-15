@@ -9,7 +9,7 @@ class Release
   FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
-  SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
+  SIMULATOR_FILES = %w[skyblip_simulator.wasm embed.js].freeze
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024

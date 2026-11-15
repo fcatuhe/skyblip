@@ -59,6 +59,7 @@ jobs:
               - 'firmware/products/*/VERSION'
               - '.github/workflows/firmware.yml'
               - '.github/workflows/release.yml'
+              - '.github/wasm/requirements.txt'
               - 'firmware/scenarios/*.json'
               - 'firmware/ui/widgets/skyship.cpp'
               - 'firmware/ui/widgets/skyship.h'
@@ -200,15 +201,18 @@ jobs:
         uses: actions/cache@v6
         with:
           path: firmware/build/browser
-          key: browser-emsdk-6.0.9-${{ hashFiles('firmware/**/*.cpp', 'firmware/**/*.c', 'firmware/**/*.h', 'firmware/Makefile', 'firmware/simulator/web/embed.js') }}
-      - uses: mymindstorm/setup-emsdk@v16
+          key: browser-${{ hashFiles('firmware/**/*.cpp', 'firmware/**/*.c', 'firmware/**/*.h', 'firmware/Makefile', 'firmware/simulator/web/embed.js', '.github/wasm/requirements.txt') }}
+      - name: Install the pinned Zig
+        if: steps.simulator.outputs.cache-hit != 'true'
+        run: python3 -m pip install --disable-pip-version-check -r ../.github/wasm/requirements.txt
+      - uses: actions/cache@v6
         if: steps.simulator.outputs.cache-hit != 'true'
         with:
-          version: 6.0.9
-          actions-cache-folder: emsdk-cache
+          path: ~/.cache/zig
+          key: zig-${{ hashFiles('.github/wasm/requirements.txt') }}
       - name: Build the simulator the prompt is drawn with
         if: steps.simulator.outputs.cache-hit != 'true'
-        run: make -C ../firmware browser
+        run: make -C ../firmware browser WASM_CXX="python3 -m ziglang c++"
       - name: Run system tests
         env:
           RAILS_ENV: test
