@@ -23,13 +23,13 @@ TEST_CASE("installing page: it shows no key, because no gesture changes it") {
     CHECK_FALSE(has_pad_key(canvas));
 }
 
-TEST_CASE("receiving page: it says the install follows on its own, and the button cancels it") {
+TEST_CASE("receiving page: it says the install follows on its own, and the pad cancels it") {
     Glass canvas;
     draw_receiving(canvas);
     CHECK(reads_heading(canvas, kReceivingTitle, Heading::Interrupt));
     CHECK(reads_body(canvas, Heading::Interrupt, true, kReceivingBody, kReceivingBodyRows));
-    CHECK(reads_button_key(canvas, kReceivingCancelVerb));
-    CHECK_FALSE(has_pad_key(canvas));
+    CHECK(reads_pad_key(canvas, kReceivingCancelVerb));
+    CHECK_FALSE(has_button_key(canvas));
     CHECK_FALSE(reads_heading(canvas, kInstallingTitle, Heading::Interrupt));
 }
 

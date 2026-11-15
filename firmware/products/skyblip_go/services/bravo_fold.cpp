@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "products/skyblip_go/services/bravo.h"
 
 namespace skyblip::go {
@@ -15,6 +17,7 @@ void BravoService::fold(const comms::PeerObservation& peer, uint32_t now_ms) {
     const std::optional<uint32_t> edge_ms = second_edge_ms(peer.at.at_s);
     if (!edge_ms) {
         unplaced_++;
+        log(BravoVerdict::Unplaced, &peer, now_ms);
         return;
     }
     model::AircraftObservation observation = peer.observation;
@@ -23,6 +26,7 @@ void BravoService::fold(const comms::PeerObservation& peer, uint32_t now_ms) {
     observation.at_ms = *edge_ms + (peer.at.phase_valid ? peer.at.into_ms : 0u);
     if (static_cast<int32_t>(observation.at_ms - now_ms) > static_cast<int32_t>(kAheadCeilingMs)) {
         unplaced_++;
+        log(BravoVerdict::Unplaced, &peer, now_ms);
         return;
     }
 
@@ -32,6 +36,23 @@ void BravoService::fold(const comms::PeerObservation& peer, uint32_t now_ms) {
                                        peer.callsign,
                                        peer.callsign_dated ? peer.callsign_heard_s : peer.at.at_s);
     context_.state.traffic.update(observation, context_.state.traffic_now_s(now_ms));
+    folded_++;
+    log(BravoVerdict::Folded, &peer, now_ms);
+}
+
+// INFO: fc 15nov26 stamped when it reached the Go, as the radio log stamps a reception
+void BravoService::log(BravoVerdict verdict, const comms::PeerObservation* peer, uint32_t now_ms) {
+    BravoLogEntry entry{};
+    entry.verdict = verdict;
+    entry.at = context_.instant(now_ms);
+    if (peer != nullptr) {
+        entry.address = peer->observation.address;
+        entry.address_valid = true;
+        entry.pressure_altitude_ft = peer->observation.pressure_altitude_ft;
+        entry.pressure_altitude_valid = peer->observation.pressure_altitude_valid;
+        std::memcpy(entry.callsign, peer->callsign, sizeof(entry.callsign));
+    }
+    log_.record(entry);
 }
 
 // INFO: fc 12nov26 the PPS edge a UTC second was anchored to, else the fix that named it

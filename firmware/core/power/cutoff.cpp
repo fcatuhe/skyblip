@@ -31,17 +31,6 @@ uint8_t lengthened(uint8_t run) {
 
 }  // namespace
 
-const char* to_string(PowerLevel level) {
-    switch (level) {
-        case PowerLevel::Normal: return "OK";
-        case PowerLevel::Low: return "LOW";
-        case PowerLevel::Critical: return "CRITICAL";
-        case PowerLevel::Flat: return "FLAT";
-        case PowerLevel::Unknown: break;
-    }
-    return "--";
-}
-
 // A flight log record is written whatever the level says, and that is the point
 // of the rule rather than an exception to it: it is the one write whose value is
 // highest exactly when the cell is lowest. It is also the cheap one - an append

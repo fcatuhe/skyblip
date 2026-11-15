@@ -17,12 +17,24 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.full.signed.bin], stable.firmware_files
   end
 
+  # A unit installs the images whose key its bootloader names, so the shelf must name each image's key right.
+  test "each channel names the KEYHASH prefix of the key in firmware/keys that signs it" do
+    keys = { "development" => "development", "release" => "production" }.transform_values do |name|
+      der = OpenSSL::PKey.read(Rails.root.join("../firmware/keys/#{name}.pub.pem").read).public_to_der
+      OpenSSL::Digest::SHA256.hexdigest(der).first(8).upcase
+    end
+
+    assert_equal keys, Release::KEYS
+    assert_equal "212602F2", release("dev-1005").key
+    assert_equal "88A4BEF5", release("v0.1.0").key
+  end
+
   test "a release offers every product's images, each under the product its file names" do
     release = release("dev-1010", assets: %w[skyblip-go-dev-1010.signed.bin skyblip-go-dev-1010.full.signed.bin skyblip-bravo-dev-1010.signed.bin
                                              skyblip-tango-dev-1010.signed.bin embed.js])
 
     assert_equal %w[skyblip-go-dev-1010.signed.bin skyblip-go-dev-1010.full.signed.bin skyblip-bravo-dev-1010.signed.bin], release.firmware_files
-    assert_equal %w[skyblip_go skyblip_go skyblip_bravo], release.firmware_files.map { |file| Release.product_of(file) }
+    assert_equal %w[go go bravo], release.firmware_files.map { |file| Release.product_of(file) }
     assert_nil Release.product_of("embed.js")
   end
 
@@ -34,11 +46,10 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_raises(Release::NotFound) { Release.download("bravo-dev-1010", "skyblip-bravo-dev-1010.signed.bin") }
   end
 
-  # GitHub returns dev-998, dev-1005, dev-1002 in this recording, not newest first.
-  test "the shelf lists releases newest first whatever order GitHub returns" do
+  test "the shelf lists the published development builds newest first, a branch's included" do
     releases = VCR.use_cassette("github/releases") { Release.all }
 
-    assert_equal %w[dev-1005 dev-1002 dev-998], releases.map(&:tag)
+    assert_equal %w[dev-1765 dev-1758 dev-1748 dev-1673-feat-bravo-adsb-trial], releases.map(&:tag)
   end
 
   test "the shelf keeps the newest stable release and every development build, never a release candidate" do
@@ -51,7 +62,7 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
   end
 
-  test "the firmware shelf lists every slim image newest first, then every full one" do
+  test "the firmware shelf lists every base image newest first, then every full one" do
     older = release("dev-1002", published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1002.full.signed.bin skyblip-go-dev-1002.signed.bin])
     newer = release("dev-1005", published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1005.signed.bin])
 
@@ -71,20 +82,60 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_nil Release.simulator([ branch ])
   end
 
+  test "the prompt glass is drawn with the local build when one is complete" do
+    Dir.mktmpdir do |directory|
+      Release::SIMULATOR_FILES.each { |file| FileUtils.touch(File.join(directory, file)) }
+
+      with_config(simulator_build: directory) { assert_equal Release::LOCAL_TAG, Release.prompt_glass_tag }
+    end
+  end
+
+  test "with only the local build allowed, an incomplete one refuses the prompt glass rather than reach GitHub" do
+    Dir.mktmpdir do |directory|
+      FileUtils.touch(File.join(directory, "embed.js"))
+
+      with_config(simulator_build: directory, local_simulator_only: true) do
+        assert_raises(Release::Unavailable) { Release.prompt_glass_tag }
+      end
+    end
+  end
+
+  test "without a local build, the prompt glass takes the newest main build that holds the simulator" do
+    with_config(simulator_build: nil, local_simulator_only: false) do
+      assert_equal "dev-1765", VCR.use_cassette("github/releases") { Release.prompt_glass_tag }
+    end
+  end
+
+  test "the simulator is in no release when none holds its files" do
+    assert_nil Release.simulator([ release("dev-1005", prerelease: true, assets: %w[embed.js]) ])
+  end
+
+  test "the changelog holds a stable release's news and a main build's technical changes, newest first" do
+    stable = release("v0.2.0", published_at: "2026-10-10T00:00:00Z", body: "## What's new\n\n- The alarm warbles.\n\n## What's Changed\n* feat: warble by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/130\n")
+    main = release("dev-1005", name: "skyBlip dev 0.1.0+1005", prerelease: true, published_at: "2026-10-14T00:00:00Z",
+                               body: "## What's Changed\n* ui: draw traffic by @fcatuhe in https://github.com/fcatuhe/skyblip/pull/127\n")
+    branch = release("dev-1010-feat-x", name: "skyBlip dev 0.1.0+1010 (feat-x)", prerelease: true, body: "## What's Changed\n* feat: x\n")
+    silent = release("dev-1002", name: "skyBlip dev 0.1.0+1002", prerelease: true, body: nil)
+
+    changelog = Release.changelog([ stable, branch, silent, main ], :en)
+
+    assert_equal [ [ "0.1.0+1005", "development" ], [ "0.2.0", "release" ] ], changelog.map { |release, _| [ release.version, release.channel ] }
+    assert_equal [ [ "ui: draw traffic" ], [ "The alarm warbles." ] ], changelog.map { |_, changes| changes.map(&:text) }
+  end
+
   private
-    def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [])
+    def release(tag, name: "skyBlip", prerelease: false, published_at: "2026-10-17T00:00:00Z", assets: [], body: nil)
       Release.new("tag_name" => tag, "name" => name, "prerelease" => prerelease, "published_at" => published_at,
-                  "assets" => assets.map { |asset| { "name" => asset } })
+                  "assets" => assets.map { |asset| { "name" => asset } }, "body" => body)
     end
 
   # Every device page asks for the list, so a burst of pilots must not spend the hourly GitHub allowance.
   test "the release list is asked of GitHub once, then read from the cache" do
-    cache, Rails.cache = Rails.cache, ActiveSupport::Cache::MemoryStore.new
-    VCR.use_cassette("github/releases") do
-      first = Release.all
-      assert_equal first.map(&:tag), Release.all.map(&:tag)
+    with_memory_cache do
+      VCR.use_cassette("github/releases") do
+        first = Release.all
+        assert_equal first.map(&:tag), Release.all.map(&:tag)
+      end
     end
-  ensure
-    Rails.cache = cache
   end
 end

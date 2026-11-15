@@ -54,6 +54,7 @@ class PeerService : public runtime::Service {
         events::BluetoothAddress address{};
         bool asked{false};
         bool used{false};
+        bool claimed_pin{false};
     };
 
     struct AlarmRequest {
@@ -62,13 +63,16 @@ class PeerService : public runtime::Service {
     };
 
     void forget_gone();
+    void ask(Go& go, uint32_t now_ms);
+    bool pinned_go_connected() const;
     void hear_alarm_request(const events::BluetoothAddress& go, bool requested, uint32_t now_ms);
     void expire_alarm_request(uint32_t now_ms);
     bool grants_alarm_to(const events::BluetoothAddress& go) const;
     void take(const events::RxFrame& frame, uint32_t now_ms);
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
-    void adopt_own_icao(uint32_t own_icao);
+    void adopt_aircraft_address(uint32_t aircraft_address);
+    void describe_self(comms::PeerHealth& health) const;
     void send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void send_observations(const GateChoice& choice, bool utc_valid, uint32_t now_ms);
     void serve(int slot, const traffic::Target& target,

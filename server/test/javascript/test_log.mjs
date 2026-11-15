@@ -20,7 +20,7 @@ const sessionOf = (session, count, options = {}) => {
 };
 
 async function bravoWith(store, { timeoutMs } = {}) {
-  const fake = new FakeSkyblip({ product: 'skyblip_bravo', name: 'skyBlip Bravo 3F2A', logStore: store }).install();
+  const fake = new FakeSkyblip({ product: 'bravo', name: 'skyBlip Bravo 3F2A', logStore: store }).install();
   let reader = null;
   const link = await connect({ onReply: () => {}, onLog: (...reply) => reader.receive(...reply), onClose: () => {} });
   reader = new LogReader(fields => link.sendLog(fields), { timeoutMs });

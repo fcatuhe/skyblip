@@ -12,7 +12,6 @@
 
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
@@ -133,8 +132,11 @@ TEST_CASE("product: the self test is a page the nearby menu opens") {
     rig.tap(now_ms);
     settle(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Nearby);
+    // A flyable boot leaves the bus unscanned, and the menu scans it before the page can draw.
+    CHECK(rig.product.board().inventory().i2c_count == 0);
 
     open_menu(rig, now_ms);
+    CHECK(rig.product.board().inventory().i2c_count > 0);
     focus_on(rig, now_ms, go::MenuRow::SelfTest);
     change(rig, now_ms);
     rig.run(now_ms, now_ms + 4000);
@@ -287,24 +289,25 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
 }
 
 TEST_CASE(
-    "product: an own ICAO typed on the panel is stored, drawn, and cleared only when confirmed") {
+    "product: an aircraft address typed on the panel is stored, drawn, and cleared only when "
+    "confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
-    REQUIRE(rig.settings().own_icao == go::kOwnIcaoUnset);
+    REQUIRE(rig.settings().aircraft_address == go::kAircraftAddressUnset);
 
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::OwnIcao);
+    focus_on(rig, now_ms, go::MenuRow::AircraftAddress);
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().editing());
-    CHECK(rig.product.screen().editor().field() == go::MenuRow::OwnIcao);
+    CHECK(rig.product.screen().editor().field() == go::MenuRow::AircraftAddress);
 
     const char* wanted = "3C6586";
-    for (int at = 0; at < go::kOwnIcaoCharacters; at++) {
+    for (int at = 0; at < go::kAircraftAddressCharacters; at++) {
         while (rig.product.screen().editor().text()[at] != wanted[at]) move(rig, now_ms);
         if (at == 2) {
             go::CallsignSnapshot field;
-            field.title = "OWN ICAO";
+            field.title = "ADS-B";
             field.text = "3C6   ";
             field.cursor = 2;
             go::Glass expected;
@@ -315,29 +318,38 @@ TEST_CASE(
     }
     CHECK_FALSE(rig.product.screen().editor().editing());
     run_past_the_write_settle(rig, now_ms);
-    CHECK(rig.settings().own_icao == 0x3C6586u);
+    CHECK(rig.settings().aircraft_address == 0x3C6586u);
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.own_icao == 0x3C6586u);
+    CHECK(stored.aircraft_address == 0x3C6586u);
 
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().editing());
     while (rig.product.screen().editor().text()[0] != ' ') move(rig, now_ms);
     change(rig, now_ms);
     REQUIRE(rig.product.screen().editor().clearing());
-    go::ClearSnapshot clear;
-    clear.title = "OWN ICAO";
-    clear.text = "3C6586";
-    go::Glass asked;
-    go::draw_clear(asked, clear);
-    CHECK(glass_shows(rig, now_ms, asked));
+    rig.run(now_ms, now_ms + 4000);
+    now_ms += 4000;
+    // The countdown on the glass is whichever second the last redraw fell in.
+    bool shown = false;
+    for (uint32_t seconds = 1; seconds <= go::kAskCeilingMs / 1000 && !shown; seconds++) {
+        go::ClearSnapshot clear;
+        clear.title = "ADS-B";
+        clear.text = "3C6586";
+        clear.seconds_left = seconds;
+        go::Glass asked;
+        go::draw_clear(asked, clear);
+        shown = std::memcmp(rig.product.screen().framebuffer().data(), asked.data(),
+                            go::Glass::kBytes) == 0;
+    }
+    CHECK(shown);
 
     change(rig, now_ms);
     CHECK_FALSE(rig.product.screen().editor().editing());
     run_past_the_write_settle(rig, now_ms);
-    CHECK(rig.settings().own_icao == go::kOwnIcaoUnset);
+    CHECK(rig.settings().aircraft_address == go::kAircraftAddressUnset);
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.own_icao == go::kOwnIcaoUnset);
+    CHECK(stored.aircraft_address == go::kAircraftAddressUnset);
 }
 
 TEST_CASE("product: walking the rows without changing one writes nothing at all") {
@@ -440,6 +452,7 @@ TEST_CASE("product: a screen change wipes the glass, and no keypress asks for a 
 TEST_CASE("product: every page the pad does not walk is opened by a row that names it") {
     for (int i = go::kWalkedPages; i < go::kPageCount; i++) {
         const go::Page page = static_cast<go::Page>(i);
+        if (go::page_title(page)[0] == 0) continue;  // a retired code
         CHECK(go::walked(go::menu_owner(page)));
         CHECK(Rig::row_for(page) != go::MenuRow::kCount);
         CHECK(go::page_after(page) == go::menu_owner(page));

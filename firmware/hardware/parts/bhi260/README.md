@@ -2,20 +2,20 @@
 
 The Bosch BHI260AP on the T-Echo Plus sensor bus, at 0x28 (0x29 with the address pin high). It is what puts the ball in the six-pack's turn coordinator, and it is the only part on this board that arrives without a program.
 
-The references only trust an IMU after a settling delay: "MPU9250 or ICM20948 start-up time for register R/W is 11-100 ms", and SoftRF (`platform/nRF52.cpp:1145-1147`) waits 90 ms before probing one. Here the rails go up in `board.c` at `PRE_KERNEL_1` and the I2C scan (`boards/lilygo/t_echo_plus/i2c_scan.h`) runs after the whole driver model is initialised, milliseconds of clock, flash and USB setup later, so boot order pays the delay rather than a sleep. The day the scan moves earlier, that stops being true.
+The references only trust an IMU after a settling delay: "MPU9250 or ICM20948 start-up time for register R/W is 11-100 ms", and SoftRF (`platform/nRF52.cpp:1145-1147`) waits 90 ms before probing one. Here the rails go up in `board.c` at `PRE_KERNEL_1`, and `Board::begin()` probes the hub only after the platform's 50 ms wait for the SX1262's TCXO, so boot order pays most of the delay rather than a sleep of its own. The day the probe moves before that wait, that stops being true.
 
 ## Why this is not a register map
 
 A BMA423 or an ICM-20948 is a chip with an accelerometer behind some registers: probe it, set a range, read six bytes. The BHI260AP is a sensor hub - a Fuser2 core, a boot ROM, and 100 KB of RAM with nothing in it. Until a host uploads Bosch's firmware image and boots the core from RAM, the part answers its address, names itself `0x89` on `PRODUCT_ID`, and has no accelerometer to read at all. There is no flash on this board for it to boot from itself (`BOOT_STATUS` reports `NO_FLASH`), and the rail it hangs off is switched, so the upload is paid again after every power cycle and after every `SYSTEM OFF`.
 
-That is the whole reason this driver is a state machine rather than four register writes. `firmware/` holds the image, where it came from, and where a slim image finds it. `load()` takes a `Bhi260::Image`, read a chunk at a time: `LinkedImage` over the bytes a full image carries, or `Bhi260ImageStore` over the copy on the external flash.
+That is the whole reason this driver is a state machine rather than four register writes. `firmware/` holds the image, where it came from, and where a base image finds it. `load()` takes a `Bhi260::Image`, read a chunk at a time: `LinkedImage` over the bytes a full image carries, or `Bhi260ImageStore` over the copy on the external flash.
 
 ## The sequence
 
 | Stage | What it does | How it can end |
 |---|---|---|
 | `Absent` | nothing answered 0x28 or 0x29, or what answered is not a BHI260 | the board grants no capability |
-| `Idle` | probed and named, waiting for an image | `load()`, or `NOBLOB` on the status line when a slim image has none to give it (`firmware/README.md`) |
+| `Idle` | probed and named, waiting for an image | `load()`, or `NOBLOB` on the status line when a base image has none to give it (`firmware/README.md`) |
 | `Resetting` | `RESET_REQ`, then 100 ms | the settle expires |
 | `HostInterface` | polls `BOOT_STATUS` for `HOST_INTERFACE_READY` every 50 ms | ready, or `Timeout` after 2 s |
 | `Uploading` | one 240-byte chunk of the image per `service()` | the last chunk sends `BOOT_PROGRAM_RAM` |

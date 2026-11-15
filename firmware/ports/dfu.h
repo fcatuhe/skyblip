@@ -40,6 +40,18 @@ constexpr bool operator!=(const ImageHash& left, const ImageHash& right) {
 
 using SigningKeyHash = std::array<uint8_t, 32>;
 
+struct BootloaderKeys {
+    static constexpr size_t kCapacity = 4;
+    std::array<SigningKeyHash, kCapacity> keys{};
+    size_t count{0};
+
+    bool trusts(const SigningKeyHash& key) const {
+        for (size_t i = 0; i < count; i++)
+            if (keys[i] == key) return true;
+        return false;
+    }
+};
+
 enum class StagedCheck : uint8_t {
     Unchecked = 0,
     Matched = 1,
@@ -71,6 +83,7 @@ class Dfu {
 
     // INFO: fc 13nov26 marks slot 1 for a test swap only once its whole image matches its digest
     virtual SwapRequest request_swap() { return {}; }
+    virtual StagedCheck check_staged() { return StagedCheck::Unchecked; }
     // INFO: fc 07sep26 one-shot swap: an image that never calls confirm() is reverted next boot
     virtual void trigger() = 0;
 
@@ -81,6 +94,8 @@ class Dfu {
     virtual bool staged_version(ImageVersion&) { return false; }
     virtual bool running_key(SigningKeyHash&) { return false; }
     virtual bool staged_key(SigningKeyHash&) { return false; }
+    // INFO: fc 15nov26 the KEYHASH of every key MCUboot verifies against, read off its own image
+    virtual bool bootloader_keys(BootloaderKeys&) { return false; }
 
     // INFO: fc 03oct26 the bootloader's rule, built into both images: a release refuses an older
     // one
@@ -88,7 +103,7 @@ class Dfu {
     // INFO: fc 18oct26 a release build is the one that refuses downgrades, told to the server only
     virtual bool release_build() const { return false; }
 
-    // INFO: fc 03oct26 slim and full images of a release share a version, not a hash
+    // INFO: fc 03oct26 base and full images of a release share a version, not a hash
     virtual bool running_hash(ImageHash&) { return false; }
     virtual bool staged_hash(ImageHash&) { return false; }
 

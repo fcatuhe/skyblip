@@ -7,15 +7,16 @@
 #include <zephyr/kernel.h>
 #include <zephyr/retention/retention.h>
 #include <zephyr/storage/flash_map.h>
-#include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
 #include <cstring>
+#include <optional>
 
 #if defined(CONFIG_SOC_FAMILY_NORDIC_NRF)
 #include <hal/nrf_wdt.h>
 #endif
 
+#include "core/dfu/bootloader_keys.h"
 #include "core/dfu/image.h"
 #include "core/power/shutdown.h"
 #include "hardware/platform/zephyr/upload_gate.h"
@@ -61,14 +62,17 @@ class Dfu : public ports::Dfu {
    public:
     ports::SwapRequest request_swap() override {
         ports::SwapRequest request;
-        StagedSlot slot;
-        request.check = slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
+        request.check = check_staged();
         if (request.check == ports::StagedCheck::Matched)
             request.error = static_cast<int16_t>(boot_request_upgrade(BOOT_UPGRADE_TEST));
         request.swap = swap_type(mcuboot_swap_type());
-        printk("dfu: slot1 %s, swap request %d, swap type %d\n", check_word(request.check),
-               request.error, static_cast<int>(request.swap));
         return request;
+    }
+
+    ports::StagedCheck check_staged() override {
+        AreaImage slot{PARTITION_ID(slot1_partition),
+                       boot_get_image_start_offset(PARTITION_ID(slot1_partition))};
+        return slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
     }
 
     void trigger() override { sys_reboot(SYS_REBOOT_WARM); }
@@ -87,6 +91,17 @@ class Dfu : public ports::Dfu {
     }
     bool staged_key(ports::SigningKeyHash& out) override {
         return read_key(PARTITION_ID(slot1_partition), out);
+    }
+    // INFO: fc 15nov26 read once: only a drag-and-drop, which restarts the app, replaces MCUboot
+    bool bootloader_keys(ports::BootloaderKeys& out) override {
+        if (!bootloader_keys_) {
+            AreaImage bootloader{PARTITION_ID(boot_partition), 0};
+            ports::BootloaderKeys found;
+            if (bootloader.opened() && dfu::find_bootloader_keys(bootloader, found))
+                bootloader_keys_ = found;
+        }
+        if (bootloader_keys_) out = *bootloader_keys_;
+        return bootloader_keys_.has_value();
     }
     bool running_class(dfu::ImageClass& out) {
         uint8_t tlvs[kTlvReadBytes];
@@ -126,12 +141,11 @@ class Dfu : public ports::Dfu {
     }
 
    private:
-    class StagedSlot : public dfu::ImageReader {
+    class AreaImage : public dfu::ImageReader {
        public:
-        StagedSlot()
-            : opened_(flash_area_open(PARTITION_ID(slot1_partition), &area_) == 0),
-              start_(boot_get_image_start_offset(PARTITION_ID(slot1_partition))) {}
-        ~StagedSlot() override {
+        AreaImage(uint8_t area_id, size_t start)
+            : opened_(flash_area_open(area_id, &area_) == 0), start_(start) {}
+        ~AreaImage() override {
             if (opened_) flash_area_close(area_);
         }
 
@@ -162,17 +176,6 @@ class Dfu : public ports::Dfu {
             case kBootSwapTypePanic: return ports::SwapType::Panic;
             default: return ports::SwapType::Unknown;
         }
-    }
-
-    static const char* check_word(ports::StagedCheck check) {
-        switch (check) {
-            case ports::StagedCheck::Unchecked: return "unchecked";
-            case ports::StagedCheck::Matched: return "matches its digest";
-            case ports::StagedCheck::Damaged: return "damaged";
-            case ports::StagedCheck::Unreadable: return "unreadable";
-            case ports::StagedCheck::Undigested: return "has no digest";
-        }
-        return "unknown";
     }
 
     static constexpr int kPrimarySlot = 0;
@@ -233,6 +236,7 @@ class Dfu : public ports::Dfu {
     }
 
     inline static bool recovery_armed_ = false;
+    inline static std::optional<ports::BootloaderKeys> bootloader_keys_{};
 };
 
 }  // namespace skyblip::platform::zephyr

@@ -18,6 +18,7 @@
 #include "core/dfu/update.h"
 #include "core/events/link.h"
 #include "core/flight/state.h"
+#include "core/identity/variant.h"
 #include "core/power/battery.h"
 #include "core/power/cutoff.h"
 #include "core/power/reset_reason.h"
@@ -44,8 +45,6 @@ enum class Pending : uint8_t {
     Capture = 9
 };
 
-enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
-
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
 // reading the app cannot be looking at two different descriptions of the same
@@ -53,6 +52,7 @@ enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Sto
 const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
+int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an
@@ -158,8 +158,8 @@ class ConfigService {
 
     // The status dump, held here because this is the one service that can put it
     // on a link (core/comms/diagnostics.h). Everything above writes its own half
-    // of it, so the reply, the unsolicited push and the console dump report one
-    // set of numbers rather than three copies of them; the product's collector
+    // of it, so the reply, the unsolicited push and the dump report one set of
+    // numbers rather than a copy each; the product's collector
     // fills the other half through this door, once a second.
     Diagnostics& diagnostics() { return diagnostics_; }
     const Diagnostics& diagnostics() const { return diagnostics_; }
@@ -195,7 +195,6 @@ class ConfigService {
     }
     dfu::ImageState image_state() const { return image_state_; }
 
-    // TODO: fc 13nov26 the install report on the link, retired with #294
     void set_install_report(const dfu::InstallReport* report) { install_report_ = report; }
 
     void set_settings_fallback(settings::Fallback fallback) { settings_fallback_ = fallback; }
@@ -203,6 +202,8 @@ class ConfigService {
     void set_hub_image(const dfu::HubImageReport& report) { hub_image_ = report; }
 
     void set_product(dfu::Product product) { product_ = product; }
+
+    void set_variant(identity::Variant variant) { variant_ = variant; }
 
     void set_radio_protocols(Span<const RadioProtocol> protocols) { radio_protocols_ = protocols; }
 
@@ -220,6 +221,11 @@ class ConfigService {
     // INFO: fc 10nov26 the screen asks with the latch of this pass, which config hears a pass later
     bool prompt_allowed_in(flight::FlightState state) const;
     const char* prompt_detail() const;
+    // INFO: fc 15nov26 the press on this prompt also stores the browser's proven key
+    bool prompt_trusts_browser() const {
+        return (pending_ == Pending::Set || pending_ == Pending::Dfu) &&
+               browsers_.enrolls(claim_.peer());
+    }
     uint32_t prompt_seconds_left(uint32_t now_ms) const;
     bool settings_dirty() const { return settings_dirty_; }
     void clear_dirty() { settings_dirty_ = false; }
@@ -324,17 +330,18 @@ class ConfigService {
     void send_update();
     void send_install_report();
     void send_protocols();
+    void send_identity();
     bool carries(RadioProtocol protocol) const;
     void push_update(const events::Peer& peer);
     int format_update(uint8_t* out, int capacity);
-    // And the whole dump, which is the same table as the console's: one frame per
-    // subsystem where the payload allows it, more where it does not, and never a
-    // frame that mixes two subsystems (core/comms/diagnostics.h).
+    // And the whole dump: one frame per subsystem where the payload allows it, more where it does
+    // not, and never a frame that mixes two subsystems (core/comms/diagnostics.h).
     void send_diagnostics();
     bool answers(link::Command command) const;
     void challenge();
     void register_unit(const cbor::Reader& frame);
     void send_registration();
+    void attest(const cbor::Reader& frame);
     bool running_version_text(char* out, size_t capacity) const;
     bool identity_refused_in_flight();
     void unlock(const cbor::Reader& frame);
@@ -358,6 +365,7 @@ class ConfigService {
     void request_capture(const cbor::Reader& frame);
     void request_adsb_trial(const cbor::Reader& frame);
     void install_received_image();
+    void refuse_landing(link::Reason reason);
     void open_upload_window();
     void apply_settings(const cbor::Reader& frame);
     bool signed_by_trusted_key() const;
@@ -427,9 +435,11 @@ class ConfigService {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     const dfu::InstallReport* install_report_{nullptr};
+    std::optional<dfu::Landing> landing_{};
     settings::Fallback settings_fallback_{settings::Fallback::None};
     dfu::HubImageReport hub_image_{};
-    std::optional<dfu::Product> product_{};
+    dfu::Product product_{dfu::Product::Go};
+    identity::Variant variant_{identity::Variant::Standard};
     Span<const RadioProtocol> radio_protocols_{};
 
     // Long enough to upload ~730 KB over BLE on a slow phone, short enough that

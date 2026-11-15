@@ -16,7 +16,7 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", admin_unit_path(units(:contested)), text: "000002"
-    assert_select "tr", text: /000001.*release/m
+    assert_select "tr", text: /000001.*0\.3\.0\+1300.*release/m
     assert_select "dd", text: /890026b1, public key #{vectors["server_public_key"]}/
   end
 
@@ -29,6 +29,48 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", admin_unit_key_promotion_path(unit_keys(:contested_pending))
     assert_select "form[action=?]", admin_unit_key_revocation_path(unit_keys(:contested_active))
     assert_select "tr", text: /#{unit_keys(:contested_pending).public_key}.*development/m
+  end
+
+  test "shows each firmware stretch with its variant and where it came from" do
+    sign_in_as users(:francois)
+    units(:bound).record_firmware(version: "0.4.0+1400", release: false, variant: "standard", source: "read")
+
+    get admin_unit_path(units(:bound))
+
+    assert_select "dd", text: "skyBlip Go"
+    assert_select "dd", text: "plus"
+    assert_select "details.admin-help summary", text: "How to read these pages"
+    assert_select "tr", text: /0\.4\.0\+1400.*development.*standard.*reported by a browser/m
+    assert_select "tr", text: /0\.3\.0\+1300.*release.*plus.*signed by the unit/m
+
+    get admin_unit_path(units(:contested))
+    assert_select "p", text: /None yet/
+  end
+
+  test "lists the units of every product, and only the activated ones when asked" do
+    sign_in_as users(:francois)
+
+    get admin_units_path
+    assert_select "a[href=?]", admin_unit_path(units(:bravo)), text: "bravo-3f2a"
+    assert_select "tr", text: /bravo-3f2a.*skyBlip Bravo.*0\.2\.0\+900.*reported by a browser/m
+
+    get admin_unit_path(units(:bravo))
+    assert_select "dd", text: "none, the unit transmits on no address"
+    assert_select "th", text: "Public key", count: 0
+
+    get admin_units_path(activated: "1")
+    assert_select "a[href=?]", admin_unit_path(units(:bravo)), count: 0
+    assert_select "a[href=?]", admin_unit_path(units(:bound)), text: "000001"
+  end
+
+  test "lists each unit's newest signed firmware, or the one it registered with until it signs one" do
+    sign_in_as users(:francois)
+    units(:bound).attest_firmware(version: "0.4.0+1400", release: false)
+
+    get admin_units_path
+
+    assert_select "tr", text: /000001.*0\.4\.0\+1400.*development/m
+    assert_select "tr", text: /000002.*0\.3\.0\+1200/m
   end
 
   test "flags the units that share a key, on the list and beside the key" do

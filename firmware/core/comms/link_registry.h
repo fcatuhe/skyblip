@@ -46,7 +46,10 @@ enum class Command : uint8_t {
     ForgetBrowser = 34,
     InstallReport = 35,
     Protocols = 36,
-    AdsbTrial = 37,
+    Attest = 37,
+    Attestation = 38,
+    Identity = 39,
+    AdsbTrial = 40,
 };
 
 enum class Reason : uint8_t {
@@ -126,7 +129,7 @@ enum : uint32_t {
     kCallsign = 8,
     kBatteryOffsetMv = 9,
     kFrequencyTrimE1Ppm = 10,
-    kOwnIcao = 11,
+    kAircraftAddress = 11,
 };
 }
 
@@ -247,6 +250,20 @@ enum : uint32_t {
     kTxDeferred = 68,
     kTxForced = 69,
     kTxBusyMissed = 70,
+    kArmed = 71,
+    kProfile = 72,
+    kSession = 73,
+    kRecords = 74,
+    kRecordsDropped = 75,
+    kSectors = 76,
+    kKeepsS = 77,
+    kTakesSectors = 78,
+    kEvictsFlights = 79,
+    kKeepsFullS = 80,
+    kKeepsPowerRunS = 81,
+    kUplinkFrames = 82,
+    kUplinkBad = 83,
+    kUplinkTargets = 84,
 };
 }
 
@@ -261,7 +278,7 @@ enum : uint32_t {
     kImuDigest = 7,
     kDowngrade = 8,
     kKey = 9,
-    kProduct = 10,
+    kBootloaderKeys = 11,
 };
 }
 
@@ -428,13 +445,18 @@ enum : uint32_t {
     kListening = 3,
     kUtcValid = 4,
     kLastSequence = 5,
-    kOwnIcaoSet = 6,
+    kAircraftAddressSet = 6,
     kAlarmGranted = 7,
     kExportReference = 11,
     kPaired = 12,
     kOwnTransponder = 13,
     kOwnTransponderCallsign = 14,
     kOwnTransponderCategory = 15,
+    kFirmware = 16,
+    kBatteryPercent = 17,
+    kCharging = 18,
+    kPowerLevel = 19,
+    kFrameRateHz = 20,
 };
 }
 
@@ -450,7 +472,7 @@ enum : uint32_t {
     kAltitudeHaeAgeMs = 8,
     kPressureAltitudeMm = 9,
     kPressureAltitudeAgeMs = 10,
-    kOwnIcao = 11,
+    kAircraftAddress = 11,
     kAlarmRequested = 12,
     kPaired = 18,
 };
@@ -483,6 +505,10 @@ enum : uint32_t {
 namespace trust_browser_bytes {
 constexpr size_t kKey = 32;
 constexpr size_t kSignature = 64;
+}
+
+namespace trust_browser_signed_over {
+constexpr char kSignature[] = "skyblip:browser:v1";
 }
 
 namespace browsers_key {
@@ -523,7 +549,13 @@ enum : uint32_t {
     kProbationBoots = 5,
     kProof = 6,
     kReset = 7,
+    kLandedCheck = 8,
+    kStagedKey = 9,
 };
+}
+
+namespace install_report_bytes {
+constexpr size_t kStagedKey = 4;
 }
 
 namespace protocols_key {
@@ -532,6 +564,47 @@ enum : uint32_t {
     kAdslVersion = 2,
     kAlptasVersion = 3,
 };
+}
+
+namespace attest_key {
+enum : uint32_t {
+    kServerNonce = 1,
+};
+}
+
+namespace attest_bytes {
+constexpr size_t kServerNonce = 16;
+}
+
+namespace attestation_key {
+enum : uint32_t {
+    kProduct = 1,
+    kVariant = 2,
+    kVersion = 3,
+    kRelease = 4,
+    kDeviceId = 5,
+    kSignature = 6,
+};
+}
+
+namespace attestation_bytes {
+constexpr size_t kDeviceId = 8;
+constexpr size_t kSignature = 64;
+}
+
+namespace identity_key {
+enum : uint32_t {
+    kProduct = 1,
+    kVariant = 2,
+    kVersion = 3,
+    kRelease = 4,
+    kDeviceId = 5,
+    kBluetoothTag = 6,
+};
+}
+
+namespace identity_bytes {
+constexpr size_t kDeviceId = 8;
 }
 
 namespace adsb_trial_key {
@@ -576,13 +649,16 @@ constexpr uint64_t host_keys(Command command) {
         case Command::BrowserChallenge:
         case Command::Browser:
         case Command::InstallReport:
-        case Command::Protocols: return 0x1;
+        case Command::Protocols:
+        case Command::Attestation:
+        case Command::Identity: return 0x1;
         case Command::Set: return 0xFFF;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:
         case Command::Browsers:
-        case Command::ForgetBrowser: return 0x3;
+        case Command::ForgetBrowser:
+        case Command::Attest: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;

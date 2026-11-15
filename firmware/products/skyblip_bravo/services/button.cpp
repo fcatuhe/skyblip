@@ -6,15 +6,9 @@
 
 namespace skyblip::bravo {
 
-namespace {
-bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= common::ConfirmGesture::kDoublePressWindowMs;
-}
-}  // namespace
-
 void ButtonService::tick(uint32_t now_ms) {
     sync_prompt(now_ms);
-    pairing_.sync(peer_.requested(), pairing_readable(), now_ms);
+    sync_pairing(now_ms);
     sync_receiving(now_ms);
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
@@ -23,14 +17,11 @@ void ButtonService::tick(uint32_t now_ms) {
         const bool pressed = !event.down && answer_.pressing() &&
                              event.at_ms - answer_.pressed_ms() < power::kLongPressHoldMs;
         answer_.contact(event, now_ms);
-        pairing_.contact(answer_, now_ms);
+        pairing_.contact(event, now_ms);
         if (pressed) press(now_ms);
     }
-    pairing_.arm_once_quiet(answer_, pairing_readable(), now_ms);
-    if (answering()) {
-        answer_.arm_once_quiet(prompt_readable(), now_ms);
-        resolve(answer_.tick(now_ms));
-    }
+    if (requested_) pairing_.arm_once_quiet(pairing_readable(), now_ms);
+    if (answering()) answer_.arm_once_quiet(prompt_readable(), now_ms);
 }
 
 void ButtonService::sync_prompt(uint32_t now_ms) {
@@ -42,6 +33,15 @@ void ButtonService::sync_prompt(uint32_t now_ms) {
     prompt_ = pending;
     prompts_staged_ = staged;
     answer_.ask(now_ms);
+}
+
+// INFO: fc 11nov26 an advisory or a prompt that takes the lamp disarms the pairing press
+void ButtonService::sync_pairing(uint32_t now_ms) {
+    if (!pairing_readable()) pairing_.disarm();
+    const bool requested = peer_.requested();
+    if (requested == requested_) return;
+    requested_ = requested;
+    pairing_.ask(now_ms);
 }
 
 // INFO: fc 12nov26 as on the Go's glass: the lamp shows the prompt and the thumb is up and still
@@ -63,8 +63,8 @@ void ButtonService::sync_receiving(uint32_t now_ms) {
 }
 
 void ButtonService::press(uint32_t now_ms) {
-    if (answer_.armed()) {
-        resolve(answer_.press(now_ms));
+    if (answer_.press()) {
+        accept_prompt();
         return;
     }
     if (alarm_stands()) {
@@ -72,20 +72,17 @@ void ButtonService::press(uint32_t now_ms) {
         return;
     }
     if (pairing_.armed()) {
-        if (peer_.answer(now_ms)) pairing_.spend();
+        if (peer_.answer(now_ms)) pairing_.disarm();
         return;
     }
     if (answering()) return;
     // INFO: fc 12nov26 the press that confirmed the upload must not be the one that cancels it
-    if (receiving_ && settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
+    if (receiving_ && common::PromptAnswer::settled_since(now_ms, receiving_since_ms_))
+        config_.cancel();
 }
 
-void ButtonService::resolve(common::Answer answer) {
-    if (answer == common::Answer::None) return;
-    if (answer == common::Answer::Confirm)
-        config_.confirm();
-    else
-        config_.cancel();
+void ButtonService::accept_prompt() {
+    config_.confirm();
     prompt_ = comms::Pending::None;
     answer_.disarm();
 }

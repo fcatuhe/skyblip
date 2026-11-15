@@ -1,10 +1,9 @@
-// What editing on the panel cannot spend: the prompt a double press answers, the hold that
+// What editing on the panel cannot spend: the prompt a press answers, the hold that
 // switches the device off, and the refusal a phone gets in the air.
 #include <string>
 
 #include "core/timing/durable_write.h"
 #include "doctest/doctest.h"
-#include "products/common/confirm_gesture.h"
 #include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"

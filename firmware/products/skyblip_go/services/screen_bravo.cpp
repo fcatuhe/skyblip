@@ -28,13 +28,16 @@ void ScreenService::act_on_bravo(BravoAction action, uint32_t now_ms) {
             return;
         case BravoAction::Cancel:
         case BravoAction::Retry:
+            bravo_.end_pairing();
             bravo_.begin_pairing(now_ms);
             bravo_page_.open(now_ms);
             dirty_ = true;
             return;
         case BravoAction::Unpair:
             bravo_.unpair();
-            show_page(page_after(Page::Bravo));
+            bravo_.begin_pairing(now_ms);
+            bravo_page_.open(now_ms);
+            dirty_ = true;
             return;
     }
 }
@@ -43,21 +46,29 @@ void ScreenService::step_bravo(uint32_t now_ms) {
     if (on_bravo_page()) act_on_bravo(bravo_page_.idle(bravo_view(), now_ms), now_ms);
 }
 
+uint32_t ScreenService::bravo_seconds_left(const BravoView& view, uint32_t now_ms) const {
+    if (bravo_page_.confirming() || bravo_page_.unpairing())
+        return bravo_page_.seconds_left(now_ms);
+    if (!view.paired && view.step == BravoStep::Waiting)
+        return seconds_left(bravo_.step_since_ms(), now_ms, BravoService::kAnswerCeilingMs);
+    return 0;
+}
+
 // INFO: fc 11nov26 once a boot, never over an alarm, and gone after the menu's idle hold
 void ScreenService::sync_notice(uint32_t now_ms) {
     const Detected heard = detected();
     // INFO: fc 13nov26 an aircraft no longer heard on the ground, takeoff included, is no proposal
     const bool proposal_gone =
         notice_kind_ == Notice::NewAircraft && !same_aircraft(heard, noticed_aircraft_);
-    if (notice_ && (alarm_takes_glass() || proposal_gone ||
-                    now_ms - notice_since_ms_ >= MenuEditor::kIdleReturnHoldMs))
+    const bool answered = notice_kind_ == Notice::BravoAsks && !bravo_.asking_again();
+    if (notice_ && (alarm_takes_glass() || proposal_gone || answered ||
+                    now_ms - notice_since_ms_ >= notice_ceiling_ms()))
         close_notice();
     if (alarm_takes_glass()) return;
-    // INFO: fc 11nov26 a lost pin outranks the own-ICAO notice, which no longer stands unpaired
     if (bravo_.take_forgotten_notice()) {
         notice_kind_ = Notice::BravoForgot;
-    } else if (!notice_ && bravo_.own_icao_warning().take_notice(settings_.own_icao)) {
-        notice_kind_ = Notice::OwnIcao;
+    } else if (bravo_.take_asking_notice()) {
+        notice_kind_ = Notice::BravoAsks;
     } else if (!notice_ && !aircraft_noticed_ && mode_ == Mode::Page && new_aircraft(heard)) {
         notice_kind_ = Notice::NewAircraft;
         noticed_aircraft_ = heard;
@@ -102,7 +113,7 @@ Detected ScreenService::detected_to_store(const Detected& shown) const {
 
 // INFO: fc 13nov26 once a boot, for an address the Go does not hold: a new aircraft or a first one
 bool ScreenService::new_aircraft(const Detected& detected) const {
-    return detected.state == Detection::Heard && detected.address != settings_.own_icao;
+    return detected.state == Detection::Heard && detected.address != settings_.aircraft_address;
 }
 
 void ScreenService::use_noticed_aircraft() {

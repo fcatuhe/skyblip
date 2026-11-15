@@ -1,11 +1,11 @@
 #include <cstdint>
 
-#include "core/comms/config.h"
 #include "core/comms/diagnostics.h"
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
+#include "core/identity/variant.h"
 #include "core/model/aircraft.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
@@ -71,7 +71,8 @@ constexpr bool on_the_wire(comms::DiagnosticsReport::Group value) {
         case comms::DiagnosticsReport::Group::Traffic:
         case comms::DiagnosticsReport::Group::Gnss:
         case comms::DiagnosticsReport::Group::Power:
-        case comms::DiagnosticsReport::Group::Adsb: return true;
+        case comms::DiagnosticsReport::Group::Adsb:
+        case comms::DiagnosticsReport::Group::Capture: return true;
     }
     return false;
 }
@@ -193,8 +194,16 @@ constexpr bool on_the_wire(model::ClimbSource value) {
 
 constexpr bool on_the_wire(dfu::Product value) {
     switch (value) {
-        case dfu::Product::SkyblipGo:
-        case dfu::Product::SkyblipBravo: return true;
+        case dfu::Product::Go:
+        case dfu::Product::Bravo: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(identity::Variant value) {
+    switch (value) {
+        case identity::Variant::Standard:
+        case identity::Variant::Plus: return true;
     }
     return false;
 }
@@ -284,6 +293,7 @@ static_assert(code(comms::DiagnosticsReport::Group::Traffic) == 2, "group traffi
 static_assert(code(comms::DiagnosticsReport::Group::Gnss) == 3, "group gnss");
 static_assert(code(comms::DiagnosticsReport::Group::Power) == 4, "group power");
 static_assert(code(comms::DiagnosticsReport::Group::Adsb) == 5, "group adsb");
+static_assert(code(comms::DiagnosticsReport::Group::Capture) == 6, "group capture");
 static_assert(on_the_wire(comms::DiagnosticsReport::Group::System), "group");
 
 static_assert(code(power::ResetReason::Unknown) == 0, "reset unknown");
@@ -360,9 +370,13 @@ static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");
 static_assert(code(model::ClimbSource::Barometric) == 2, "climb_source barometric");
 static_assert(on_the_wire(model::ClimbSource::Unknown), "climb_source");
 
-static_assert(code(dfu::Product::SkyblipGo) == 0, "product skyblip_go");
-static_assert(code(dfu::Product::SkyblipBravo) == 1, "product skyblip_bravo");
-static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
+static_assert(code(dfu::Product::Go) == 0, "product go");
+static_assert(code(dfu::Product::Bravo) == 1, "product bravo");
+static_assert(on_the_wire(dfu::Product::Go), "product");
+
+static_assert(code(identity::Variant::Standard) == 0, "variant standard");
+static_assert(code(identity::Variant::Plus) == 1, "variant plus");
+static_assert(on_the_wire(identity::Variant::Standard), "variant");
 
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");

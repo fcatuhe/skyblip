@@ -34,6 +34,18 @@ const char* pending_detail(Pending pending) {
     return "";
 }
 
+// INFO: fc 15nov26 three rows of sixteen at double height, so the profile and the price each fit
+int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights) {
+    if (profile == CaptureProfile::Stop) return format_string(out, "STOP THE CAPTURE");
+    int written = format_string(out, "START A ");
+    written += format_string(out + written, capture_profile_word(profile));
+    if (profile == CaptureProfile::Full) written += format_string(out + written, " CAPTURE");
+    if (evicts_flights == 0) return written;
+    written += format_string(out + written, ", ERASES ");
+    written += format_unsigned(out + written, evicts_flights);
+    return written + format_string(out + written, evicts_flights == 1 ? " FLIGHT" : " FLIGHTS");
+}
+
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version) {
     int written = format_string(out, "INSTALL ");
     written += dfu::format_version(version, out + written, capacity - static_cast<size_t>(written));

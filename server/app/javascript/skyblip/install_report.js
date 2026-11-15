@@ -1,4 +1,4 @@
-// TODO: fc 13nov26 troubleshooting for #278, retired with #294 once Bluetooth updates land in the field
+import { hex } from '#skyblip/link';
 
 const CHECK_CAUSES = { damaged: 'slot_damaged', unreadable: 'slot_unreadable', undigested: 'slot_undigested' };
 const FAILED_IMAGES = new Set(['reverted', 'refused']);
@@ -16,6 +16,11 @@ export function installReportOf(reply) {
     proof: reply.proof,
     reset: reply.reset,
   };
+}
+
+export function landingOf(reply) {
+  if (reply.landed_check === undefined) return null;
+  return { check: reply.landed_check, stagedKey: reply.staged_key ? hex(reply.staged_key).toUpperCase() : null };
 }
 
 export function installCause({ image, report, running, attempted }) {

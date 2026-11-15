@@ -27,5 +27,6 @@ once.
 vendored copy entirely and fetch doctest at configure time, which removes 9148
 lines of third-party code from this repo along with the problem.
 
-`.github/workflows/firmware-deps.yml` reports when upstream moves ahead, since no
-Dependabot ecosystem can see a vendored header.
+No Dependabot ecosystem can see a vendored header, so `.github/pins/action.yml`
+names doctest's version for it: Dependabot opens a PR when upstream moves ahead,
+and `scripts/upstream_pins.rb` fails it until this header is the new one.

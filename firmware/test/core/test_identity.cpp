@@ -4,13 +4,16 @@
 #include <vector>
 
 #include "core/crypto/ed25519.h"
+#include "core/dfu/update.h"
 #include "core/identity/activation.h"
 #include "core/identity/messages.h"
 #include "core/identity/unit.h"
 #include "core/identity/unlock_code.h"
+#include "core/identity/variant.h"
 #include "core/util/hex.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "test/support/activation_vectors.h"
 
 using namespace skyblip;
@@ -55,7 +58,9 @@ TEST_CASE(
     CHECK(hex_of(ConstByteSpan(key_id.data(), key_id.size())) == x.vectors.text("server_key_id"));
 }
 
-TEST_CASE("identity: the register message is the label, Nu and Ns, and the server's R checks") {
+TEST_CASE(
+    "identity: the register message is the label, unit_nonce and server_nonce, and the server's "
+    "signature checks") {
     Exchange x;
     const identity::Message message = identity::register_message(x.unit_nonce, x.server_nonce);
     CHECK(same(message.bytes(), x.vectors.message("register_message")));
@@ -91,7 +96,9 @@ TEST_CASE(
         Ed25519::verify(signature, x.unit_key, ConstByteSpan(release.data(), release.size())));
 }
 
-TEST_CASE("identity: the unlock message carries the serial big-endian, and the server's U checks") {
+TEST_CASE(
+    "identity: the unlock message carries the serial big-endian, and the server's signature "
+    "checks") {
     Exchange x;
     REQUIRE(x.serial == 298);
     const identity::Message message =
@@ -100,6 +107,23 @@ TEST_CASE("identity: the unlock message carries the serial big-endian, and the s
     const auto unlock_signature = x.vectors.bytes<64>("unlock_signature");
     CHECK(Ed25519::sign(x.server_seed, message.bytes()) == unlock_signature);
     CHECK(Ed25519::verify(unlock_signature, x.server_key, message.bytes()));
+}
+
+TEST_CASE(
+    "identity: the attestation message names the product and the variant, ends in the version, and "
+    "the unit's signature is the vectors'") {
+    Exchange x;
+    REQUIRE(x.vectors.text("product") == "go");
+    REQUIRE(x.vectors.text("variant") == "plus");
+    const identity::Message message = identity::attestation_message(
+        x.device_id, x.unit_key, x.server_nonce, x.release, static_cast<uint8_t>(dfu::Product::Go),
+        static_cast<uint8_t>(identity::Variant::Plus), x.version.c_str());
+    CHECK(same(message.bytes(), x.vectors.message("attestation_message")));
+    const auto attestation_signature = x.vectors.bytes<64>("attestation_signature");
+    CHECK(Ed25519::sign(x.unit_seed, message.bytes()) == attestation_signature);
+    const std::vector<uint8_t> registration = x.vectors.message("registration_message");
+    CHECK_FALSE(Ed25519::verify(attestation_signature, x.unit_key,
+                                ConstByteSpan(registration.data(), registration.size())));
 }
 
 TEST_CASE("identity: no signature passes for another purpose, the labels see to that") {
@@ -134,7 +158,9 @@ TEST_CASE("identity: hex is lowercase both ways, and a read takes exactly the di
     CHECK(hex_of(ConstByteSpan(out, 2)) == "0aff");
 }
 
-TEST_CASE("identity: the unlock page holds serial, Nu and U, and an erased page holds nothing") {
+TEST_CASE(
+    "identity: the unlock page holds serial, unit_nonce and the unlock signature, and an erased "
+    "page holds nothing") {
     identity::UnlockCode code{};
     code.serial = 0x012A;
     code.nonce.fill(0x11);
@@ -190,7 +216,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         Identity port(std::nullopt);
         port.stored_unlock_code =
             identity::UnlockCode{x.serial, x.unit_nonce, x.vectors.bytes<64>("unlock_signature")};
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK(unit.key_provisioned());
         CHECK(unit.activation().serial == x.serial);
@@ -201,7 +228,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
         Identity port(std::nullopt);
         port.stored_unlock_code = identity::UnlockCode{uint16_t(x.serial + 1), x.unit_nonce,
                                                        x.vectors.bytes<64>("unlock_signature")};
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -215,7 +243,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                                    code.serial, code.nonce)
                               .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -230,7 +259,8 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                      code.serial, code.nonce)
                 .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
@@ -244,28 +274,32 @@ TEST_CASE("identity: a unit is activated at load only by a code its trusted key 
                                      code.serial, code.nonce)
                 .bytes());
         port.stored_unlock_code = code;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a code the trusted key signed for serial 0") {
         Identity port(std::nullopt);
         port.stored_unlock_code = Identity::unlock_code_for(0, identity::Nonce{});
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("a unit whose key could not be read") {
         Identity port(Identity::kSerial);
         port.key_provisioned = false;
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK_FALSE(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());
     }
     SUBCASE("an erased page") {
         Identity port(std::nullopt);
-        identity::Unit unit(port);
+        platform::host::Random random;
+        identity::Unit unit(port, random);
         unit.load();
         CHECK(unit.key_provisioned());
         CHECK_FALSE(unit.activation().activated());

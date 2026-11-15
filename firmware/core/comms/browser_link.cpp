@@ -8,8 +8,8 @@
 namespace skyblip::comms {
 
 namespace {
-constexpr char kBrowserDomain[] = "skyblip:browser:v1";
-constexpr size_t kDomainBytes = sizeof(kBrowserDomain) - 1;
+constexpr const char* kBrowserDomain = link::trust_browser_signed_over::kSignature;
+constexpr size_t kDomainBytes = sizeof(link::trust_browser_signed_over::kSignature) - 1;
 
 using BrowserMessage = std::array<uint8_t, kDomainBytes + identity::kNonceBytes>;
 

@@ -1,6 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 import { joinFleet } from "#skyblip/fleet"
-import { fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { channelOf, fitting, offerNewest, shelfIn, take, taken } from "controllers/briefing/shelf"
+import { changesSince } from "controllers/briefing/changelog"
 import { productWord } from "controllers/briefing/facts"
 import { installCause, reportShown } from "#skyblip/install_report"
 import { say, sayNotice } from "controllers/briefing/words"
@@ -14,22 +15,35 @@ const WORKING = new Set(["asking", "confirming", "uploading", "installing", "reb
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 
 export default class extends Controller {
-  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "install", "back", "other", "file", "release", "recovery", "recover"]
+  static targets = ["panel", "status", "progress", "bar", "progressText", "message", "report", "changes", "changeList", "install", "back", "other", "file", "release", "recovery", "recover"]
   static values = { slug: String }
   static outlets = ["glass"]
 
   connect() {
     this.session = joinFleet(() => this.#render())
     this.fleet = this.session.fleet
-    this.framed = () => this.#render()
+    this.framed = () => {
+      this.changelogLanded = true
+      this.#render()
+    }
     this.element.addEventListener("turbo:frame-load", this.framed)
+    this.element.addEventListener("turbo:fetch-request-error", this.framed)
     this.#render()
   }
 
   disconnect() {
     clearTimeout(this.recheck)
     this.element.removeEventListener("turbo:frame-load", this.framed)
+    this.element.removeEventListener("turbo:fetch-request-error", this.framed)
     this.session.leave()
+  }
+
+  glassOutletConnected(glass) {
+    this.glass = glass
+  }
+
+  glassOutletDisconnected() {
+    this.glass = null
   }
 
   get unit() {
@@ -81,13 +95,14 @@ export default class extends Controller {
     const shown = Boolean(state) && (unit.linked || WORKING.has(state.phase) || Boolean(unit.attempted && state.phase !== "offline"))
     this.panelTarget.hidden = !shown
     clearTimeout(this.recheck)
-    if (!shown) return this.glassOutlet?.hide()
+    if (!shown) return this.glass?.hide()
     if (state.phase === "rebooting") unit.restarted = true
     const idle = state.phase === "ready" && state.status?.flight !== "airborne"
     const asks = idle && !state.refusedOnDevice
     if (unit.linked) offerNewest(unit, this.shelf)?.then(() => this.#render())
     this.#upgradeToFull(unit, state)
     this.#offer(unit, state, idle)
+    this.#changes(unit, state)
     this.#install(unit, state, asks)
     this.recoverTarget.disabled = !asks
     const busy = WORKING.has(state.phase) || state.image?.state === "probation" || state.image?.imu === "writing"
@@ -116,27 +131,43 @@ export default class extends Controller {
     if (chosen) this.releaseTarget.href = chosen.dataset.release
   }
 
-  // INFO: fc 11nov26 a slim image for a hub that lacks its blob would install, then revert, so the page swaps in the full one of that release
+  #changes(unit, state) {
+    const changelog = this.element.querySelector("template[data-changes]")
+    const sections = changelog ? changesSince([...changelog.content.querySelectorAll("section[data-version]")], { channel: channelOf(unit), running: state.running, offered: state.file?.version }) : []
+    const shown = sections.map(section => section.dataset.version).join(" ")
+    if (shown !== this.changesShown) this.changeListTarget.replaceChildren(...sections.map(section => document.importNode(section, true)))
+    this.changesShown = shown
+    this.changesTarget.hidden = sections.length === 0
+  }
+
+  // INFO: fc 11nov26 a base image for a hub that lacks its blob would install, then revert, so the page swaps in the full one of that release
   #upgradeToFull(unit, state) {
     if (state.notice?.key !== "needs_full" || taken(unit)) return
-    const slim = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
-    const full = slim && [...this.shelf.options].find(option => option.dataset.release === slim.dataset.release && option.dataset.product === slim.dataset.product && option.dataset.kind === "full")
+    const base = [...(this.shelf?.options ?? [])].find(option => option.value.split("/").pop() === state.file?.name)
+    const full = base && [...this.shelf.options].find(option => option.dataset.release === base.dataset.release && option.dataset.product === base.dataset.product && option.dataset.kind === "full")
     if (full) this.#taking(take(unit, full))
   }
 
   #install(unit, state, asks) {
     const { file, advice } = state
     const airborne = state.status?.flight === "airborne"
-    this.installTarget.disabled = !asks || !file || Boolean(taken(unit))
+    this.installTarget.disabled = !asks || !file || Boolean(taken(unit)) || !this.#changelogSettled()
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
-    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
+    const restoresMotionSensor = state.motionSensorWithoutFirmware && Boolean(file?.full) && file.version === state.running
+    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) ||
+      (state.upgrade === false && !this.picked && !restoresMotionSensor)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
     else this.installTarget.textContent = this.installTarget.dataset.label
   }
 
-  #done({ running, image }) {
-    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed"
+  // INFO: fc 15nov26 the changelog lands above Install, so Install waits for its frame to load or fail
+  #changelogSettled() {
+    return Boolean(this.changelogLanded || this.element.querySelector("template[data-changes]"))
+  }
+
+  #done({ running, image, motionSensorWithoutFirmware }) {
+    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed" && image.imu !== "writing" && !motionSensorWithoutFirmware
   }
 
   #status(state, unit) {
@@ -148,7 +179,9 @@ export default class extends Controller {
     if (image?.state === "probation") return say("words.probation", { version: running ?? image.to ?? "" })
     if (this.#done(state)) return say("words.done", { version: running })
     if (taken(unit)) return ""
+    if (state.motionSensorWithoutFirmware) return say("words.motion_sensor_without_firmware", { version: running })
     if (upgrade === false) return say("words.newest", { version: running })
+    if (state.identityRefused && !file) return say("words.no_product")
     if (!file && this.shelf && fitting(this.shelf, unit).length === 0) return say("words.no_image")
     return ""
   }
@@ -164,7 +197,7 @@ export default class extends Controller {
     const minutes = this.#minutesLeft(progress)
     const left = minutes ? say("words.left", { minutes }) : say("words.estimating")
     const product = productWord(unit)
-    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say("words.stops", { product })]
+    this.progressTextTarget.replaceChildren(...[`${sent} · ${left}`, say("words.keep_close", { product }), say(unit.product === "bravo" ? "words.stops" : "words.stops_with_pad", { product })]
       .map(line => Object.assign(document.createElement("span"), { textContent: line })))
   }
 
@@ -188,7 +221,6 @@ export default class extends Controller {
     if (cause) lines.push(say(`notices.install_report.${cause}`, { running: state.running, attempted }))
     else if (IMAGE_NOTES[image?.state] && image.state !== "probation") lines.push(`${say(`notices.${IMAGE_NOTES[image.state]}`)} ${image.to ?? ""}`.trim())
     if (image?.imu === "writing") lines.push(say("notices.imu_writing"))
-    if (image && !image.key) lines.push(say("notices.no_key"))
     if (image && !image.swapPowered) lines.push(say("notices.swap_unpowered"))
     if (status?.wentDarkFlat) lines.push(say("notices.went_dark_flat"))
     this.#report(state, cause)
@@ -205,13 +237,13 @@ export default class extends Controller {
   }
 
   #glass(unit, state) {
-    if (!this.hasGlassOutlet) return
+    if (!this.glass) return
     const { phase, task, file } = state
-    const lamp = unit.product === "skyblip_bravo"
+    const lamp = unit.product === "bravo"
     const product = productWord(unit)
-    if (phase === "confirming" && task === "dfu") this.glassOutlet.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
-    else if (phase === "confirming" && task === "recovery") this.glassOutlet.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
-    else if (task !== "set") this.glassOutlet.hide()
+    if (phase === "confirming" && task === "dfu") this.glass.show({ title: "FIRMWARE", prompt: "dfu", argument: file?.version ?? "", product, lamp, remembers: state.trust === "proven" })
+    else if (phase === "confirming" && task === "recovery") this.glass.show({ title: "RECOVERY", prompt: "recovery", product, lamp })
+    else if (task !== "set") this.glass.hide()
   }
 
 }

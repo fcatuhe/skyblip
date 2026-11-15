@@ -88,7 +88,7 @@ Widths below count characters from `$` through CR LF. They are computed at the w
 | Sentence | Direction | Carries | Sent | Widest |
 |---|---|---|---|---|
 | `$PDSLR` | display to device | request: highest family version the display reads | once after connecting | 14 |
-| `$PDSLV` | device to display | answer: family version sent, manufacturer, model, firmware | in answer to `$PDSLR` | 65 |
+| `$PDSLV` | device to display | answer: family version sent, manufacturer, product, variant, firmware | in answer to `$PDSLR` | 82 |
 | `$PDSLA` | device to display | a target's Traffic payload | each reception, at most once a second per target | 81 |
 | `$PDSLO` | device to display | own-ship's Traffic payload, as transmitted | 1 Hz while the device has a fix | 81 |
 | `$PDSLI` | device to display | an address's category, quality indicators and callsign | first reception, on change, every 10 s; own-ship every 10 s | 52 |
@@ -109,8 +109,11 @@ Widths below count characters from `$` through CR LF. They are computed at the w
 |---|---|---|---|
 | 1 | family version | unsigned, 1 to 99 | this proposal |
 | 2 | manufacturer | text, up to 16 characters | this proposal |
-| 3 | model | text, up to 16 characters | this proposal |
-| 4 | firmware version | text, up to 16 characters | this proposal |
+| 3 | product | text, up to 16 characters | this proposal |
+| 4 | variant | text, up to 16 characters, empty for the product's standard build | this proposal |
+| 5 | firmware version | text, up to 16 characters | this proposal |
+
+The product names what the device is and the variant which hardware build of it, so a skyBlip Go+ answers product `Go` and variant `Plus`. skyBlip's own link names a unit with the same words (`schemas/link.v1.json`, frame `identity`). At their widest the five fields fill NMEA 0183's 82 characters.
 
 Text fields hold printable ASCII except `$`, `*`, `,`, `!`, `\`, `^`, `~`, NMEA's reserved characters.
 
@@ -262,7 +265,8 @@ The examples use positions near Grenoble on 13 November 2026, with device UTC 10
 | Example | Sentence |
 |---|---|
 | the display asks for version 1 | `$PDSLR,1*44` |
-| the device answers | `$PDSLV,1,skyBlip,Go,1.0.0+874*33` |
+| the device answers | `$PDSLV,1,skyBlip,Go,,1.0.0+874*1F` |
+| a Go+ answers | `$PDSLV,1,skyBlip,Go,Plus,1.0.0+874*25` |
 | own-ship, a microlight, transmitting | `$PDSLO,L,58,00012A,7.25,2,1,45.20113,5.80245,30.5,1532,G,1.1,90.0*1B` |
 | its identity | `$PDSLI,58,00012A,1,0,0,0,6,2,2,F-JABC*6B` |
 | its capabilities | `$PDSLC,58,00012A,1,2,0,0,0,01,00,0,1,0*34` |

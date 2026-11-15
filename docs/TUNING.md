@@ -42,8 +42,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAdsbTrialSlotCeilingS` | 255 | seconds | Ceiling | - |
 | `kPromptCeilingMs` | `30u * 1000u` = 30000 (30 s) | milliseconds | Ceiling | A prompt is an open authorisation standing on the glass, so it is not allowed to stand there forever: a device left on a wing with an unanswered "confirm firmware upload" is a device a stranger can walk up to. |
 | `kUploadWindowMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Window | Long enough to upload ~730 KB over BLE on a slow phone, short enough that a device left on a bench does not stay writable all afternoon. |
-| `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | The snapshot is refreshed once a second and dumped once every ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker src/ogn-radio.cpp:1559-1573). |
-| `kDiagnosticsDumpPeriodMs` | 10000 (10 s) | milliseconds | Period | - |
+| `kDiagnosticsRefreshPeriodMs` | 1000 (1 s) | milliseconds | Period | refreshed every second, because the link may ask at any instant |
 | `kNonceForgetMs` | `10u * 60u * 1000u` = 600000 (10 min) | milliseconds | Forget | #126: long enough to reach the server and back, short of a forgotten tab |
 | `kIntoCeilingMs` | 999 | milliseconds | Ceiling | schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s |
 | `kAltitudeFloorM` | `to_metres(Feet(kPressureAltitudeFloorFt - kHeightDifferenceCeilingFt)).value` | metres | Floor | - |
@@ -239,7 +238,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kDoublePressWindowMs` | 600 | milliseconds | Window | Wider than a human double tap (~200 ms) and far narrower than core/power's kLongPressHoldMs, so the three things the button says stay disjoint: one press pages or refuses, two inside this window authorise, a hold past 2 s powers the device down. |
+| `kAnswerSettleMs` | 600 | milliseconds | Settle | wider than the gap inside a quick run of presses, far narrower than kLongPressHoldMs |
 
 ## `firmware/products/common/services`
 
@@ -250,7 +249,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBudgetCeilingRecords` | `static_cast<uint32_t>(kAircraft) * kBudgetWindowMs / kRecordPeriodMs` | records | Ceiling | a full assembly spread evenly over the period, so no burst outruns the ring |
 | `kPublishPeriodMs` | 1000 (1 s) | milliseconds | Period | the price walks the whole pool, so it is answered at the render cadence |
 | `kDrainCeilingRecords` | 16 | records | Ceiling | caps the flash work one pass books in the product's flash window |
-| `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked, and logs its refusal, once a second |
+| `kAdvertiseRetryPeriodMs` | 1000 (1 s) | milliseconds | Period | a Bluetooth that never came up is asked once a second, not every pass |
 | `kMovingTargetRedrawPeriodMs` | 1000 (1 s) | milliseconds | Period | The cadence is what a moving map needs to draw a target as flying rather than teleporting, and it is not a radio figure. |
 | `kTargetRefreshCeilingMs` | `traffic::kAlertMaxAgeMs` = 5000 (5 s) | milliseconds | Ceiling | What the rotation below guarantees: every target in the table reaches the tablet inside this. |
 | `kPassDeferralCeilingMs` | 100 | milliseconds | Ceiling | A pass is formatting and a handful of notifications, none of which stalls the core the way a flash write does (core/timing/durable_write.h), but own-ship keying the transmitter is the one window in the second that owes the radio something. |
@@ -262,7 +261,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDieStaleMs` | 30000 (30 s) | milliseconds | Stale | a sensor that stopped answering must neither hold nor drive the glass |
 | `kRecordPeriodMs` | `runtime::kBatteryPeriodMs` = 1000 (1 s) | milliseconds | Period | the cadence the cell is sampled at, so no record repeats a reading |
 | `kDutyRecordPeriodMs` | 10000 (10 s) | milliseconds | Period | a counter of screen, receiver and buzzer seconds needs no finer grain |
-| `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | Die temperature moves in minutes: it is the temperature of a lump of plastic in the sun, low-passed by its own mass. |
+| `kDiePeriodMs` | 10000 (10 s) | milliseconds | Period | the die moves in minutes, and each read sleeps on the HFCLK: 10 s is plenty |
 
 ## [`firmware/products/skyblip_bravo`](../firmware/products/skyblip_bravo/README.md)
 
@@ -274,7 +273,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kLevelDampingSamples` | 4 | samples | Damping | a frame moves the level a quarter of the way, so one fade decides nothing |
 | `kLeadHoldMs` | 10000 (10 s) | milliseconds | Hold | [README](../firmware/products/skyblip_bravo/README.md) argues it |
 | `kEmitterMaxAgeMs` | 5000 (5 s) | milliseconds | MaxAge | a transponder squitters about six times a second, so 5 s quiet is gone |
-| `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s, inside the Go's 35 s kAnswerCeilingMs |
+| `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs waits as long |
 | `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
 
@@ -304,6 +303,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kAskCeilingMs` | `comms::kPromptCeilingMs` = 30000 (30 s) | milliseconds | Ceiling | a question the Go asks of itself stands as long as a phone's prompt does |
 | `kLevelFlightMg` | `flight::kLevelFlightMg` = 1000 | thousandths of g | - | - |
 | `kIdleReturnHoldMs` | 60000 (1 min) | milliseconds | Hold | a menu left open is the traffic picture taken away, and nobody dismissed it |
 | `kClimbFigureStepFpm` | 10 | feet per minute | - | [README](../firmware/products/skyblip_go/pages/README.md) argues it |
@@ -322,7 +322,7 @@ in `firmware/products/skyblip_go/settings.h`.
 |---|---|---|---|---|
 | `kClaimPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: the Go writes peer_claim once a second while paired |
 | `kConnectCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | unverified: a Bravo in range answers a connection in a few scan windows |
-| `kAnswerCeilingMs` | 35000 (35 s) | milliseconds | Ceiling | unverified: #192's proposed 30 s press window, a health period, a margin |
+| `kAnswerCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | Bravo's 30 s press window, so the glass counts down the time Bravo allows |
 | `kPairingScanWindowUs` | 30000 (30 ms) | microseconds | Window | GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting |
 | `kPairingScanPeriodUs` | 60000 (60 ms) | microseconds | Period | - |
 | `kReconnectScanWindowUs` | 11250 (11.25 ms) | microseconds | Window | GAP slow scanning 1, 11.25 ms in 1.28 s, until #194 measures the cost |

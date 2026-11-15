@@ -10,16 +10,30 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_15_130212) do
+  create_table "activation_caps", force: :cascade do |t|
+    t.integer "new_units_per_day", default: 50, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.check_constraint "new_units_per_day > 0", name: "activation_caps_new_units_positive"
+  end
+
   create_table "activation_challenges", force: :cascade do |t|
     t.string "server_nonce", null: false
     t.string "unit_nonce", null: false
     t.string "server_key_id", null: false
-    t.string "ip_address"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["created_at"], name: "index_activation_challenges_on_created_at"
     t.index ["server_nonce"], name: "index_activation_challenges_on_server_nonce", unique: true
+  end
+
+  create_table "attestation_challenges", force: :cascade do |t|
+    t.string "server_nonce", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_attestation_challenges_on_created_at"
+    t.index ["server_nonce"], name: "index_attestation_challenges_on_server_nonce", unique: true
   end
 
   create_table "oauth_clients", force: :cascade do |t|
@@ -83,11 +97,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "unit_firmwares", force: :cascade do |t|
+    t.integer "unit_id", null: false
+    t.string "version", null: false
+    t.boolean "release", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "source", null: false
+    t.string "variant"
+    t.string "from_version"
+    t.integer "lasted_ms"
+    t.index ["unit_id", "created_at"], name: "index_unit_firmwares_on_unit_id_and_created_at"
+  end
+
   create_table "unit_keys", force: :cascade do |t|
     t.integer "unit_id", null: false
     t.string "public_key", null: false
     t.string "status", null: false
-    t.string "ip_address"
     t.string "version"
     t.string "server_key_id"
     t.datetime "created_at", null: false
@@ -100,12 +126,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
 
   create_table "units", force: :cascade do |t|
     t.string "device_id", null: false
-    t.integer "serial", null: false
+    t.integer "serial"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "enrolled_from"
+    t.string "product"
+    t.string "variant"
+    t.integer "bluetooth_tag"
+    t.datetime "activated_at"
+    t.index ["activated_at"], name: "index_units_on_activated_at"
     t.index ["device_id"], name: "index_units_on_device_id", unique: true
-    t.index ["enrolled_from", "created_at"], name: "index_units_on_enrolled_from_and_created_at"
+    t.index ["product", "bluetooth_tag"], name: "index_units_on_product_and_bluetooth_tag"
     t.index ["serial"], name: "index_units_on_serial", unique: true
     t.check_constraint "serial BETWEEN 1 AND 65535", name: "units_serial_from_one"
   end
@@ -126,5 +156,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_122342) do
   add_foreign_key "oauth_grants", "users"
   add_foreign_key "oauth_tokens", "oauth_grants", column: "grant_id", on_delete: :cascade
   add_foreign_key "sessions", "users"
+  add_foreign_key "unit_firmwares", "units"
   add_foreign_key "unit_keys", "units"
 end

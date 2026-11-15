@@ -88,7 +88,7 @@ test('a config notification arrives decoded by name, and one that is no frame ar
 test('two devices stay connected side by side', async () => {
   const go = new FakeSkyblip().install();
   const first = await connect({ onReply: () => {}, onClose: () => {} });
-  const bravo = new FakeSkyblip({ product: 'skyblip_bravo' }).install();
+  const bravo = new FakeSkyblip({ product: 'bravo' }).install();
   const second = await connect({ onReply: () => {}, onClose: () => {} });
   assert.equal(go.connected, true);
   assert.equal(bravo.connected, true);

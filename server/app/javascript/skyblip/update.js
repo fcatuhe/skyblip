@@ -1,7 +1,9 @@
 import { GATT_WRITE_BYTES, addressOf, connect, hasWebBluetooth } from '#skyblip/ble';
 import { compareVersions, fullImageNeeded, parseVersion, readImage, sha256, versionText } from '#skyblip/image';
-import { installReportOf } from '#skyblip/install_report';
+import { FirmwareAttestation } from '#skyblip/attestation';
+import { installReportOf, landingOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
+import { LogReader, fetchDiagnostics } from '#skyblip/log';
 import { changedSettings, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
@@ -33,7 +35,11 @@ export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
 const NOTED_TASKS = new Set(['set', 'capture']);
+const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
+const IDENTITY_REFUSALS = new Set(['unknown_command', 'small_mtu', 'no_version']);
+// INFO: fc 15nov26 unreadable is the unit's flash failing, which no image fixes
+const MOTION_SENSOR_WITHOUT_FIRMWARE = new Set(['missing', 'corrupt']);
 
 class LinkLost extends Error {
   constructor() {
@@ -62,8 +68,24 @@ function imageOf(reply) {
     imu: reply.imu === 'held' ? hex(reply.imu_digest) : reply.imu,
     downgrade: reply.downgrade === true,
     key: reply.key ? hex(reply.key).toUpperCase() : null,
-    product: reply.product ?? null,
+    bootloaderKeys: reply.bootloader_keys ? hex(reply.bootloader_keys).toUpperCase().match(/.{8}/g) : null,
   };
+}
+
+function identityOf(reply) {
+  return {
+    product: reply.product,
+    variant: reply.variant,
+    version: reply.version,
+    release: reply.release,
+    deviceId: hex(reply.device_id),
+    bluetoothTag: reply.bluetooth_tag,
+  };
+}
+
+// INFO: fc 15nov26 firmware that names no bootloader keys has one, the key it runs
+export function trustedKeys(image) {
+  return image?.bootloaderKeys ?? (image?.key ? [image.key] : null);
 }
 
 export function protocolsOf(reply) {
@@ -72,12 +94,11 @@ export function protocolsOf(reply) {
     .map(([stem, name]) => ({ name, version: reply[`${stem}_version`] }));
 }
 
-// INFO: fc 10nov26 a Go leaves product out, as all firmware before the key did, so an unread frame is a Go too
-export function productOf(image) {
-  return image?.product ?? 'skyblip_go';
+export function productOf({ identity } = {}) {
+  return identity?.product ?? null;
 }
 
-function identityOf(reply) {
+function activationOf(reply) {
   return { address: addressOf(reply) };
 }
 
@@ -85,7 +106,7 @@ function adviceOf({ image, file }) {
   if (!image) return null;
   // INFO: fc 03oct26 before a file is chosen, the blob the device verified stands in for the release's pin
   const pin = file ? file.pin : image.imu;
-  return fullImageNeeded(image.imu, pin) ? 'full' : 'slim';
+  return fullImageNeeded(image.imu, pin) ? 'full' : 'base';
 }
 
 function upgradeOf({ file, running }) {
@@ -93,8 +114,30 @@ function upgradeOf({ file, running }) {
   return compareVersions(parseVersion(file.version), parseVersion(running)) > 0;
 }
 
+// INFO: fc 15nov26 the dump's capture group, absent on a unit with no capture flash
+export function captureOf(dump) {
+  const group = dump?.capture;
+  if (!group) return null;
+  return {
+    armed: group.armed === true,
+    profile: group.profile ?? null,
+    session: group.session ?? 0,
+    records: group.records ?? 0,
+    keeps: group.keeps_s ?? 0,
+    takesSectors: group.takes_sectors ?? 0,
+    evictsFlights: group.evicts_flights ?? 0,
+    keepsFull: group.keeps_full_s ?? 0,
+    keepsPowerRun: group.keeps_power_run_s ?? 0,
+  };
+}
+
 function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
+}
+
+// INFO: fc 15nov26 only a confirmed image counts: a base one on probation over such a motion sensor reverts by itself
+function motionSensorWithoutFirmwareOf({ image }) {
+  return image?.state === 'confirmed' && MOTION_SENSOR_WITHOUT_FIRMWARE.has(image.imu);
 }
 
 export class Updater {
@@ -111,6 +154,11 @@ export class Updater {
   #key = null;
   #product = null;
   #captureProfile = null;
+  #log = null;
+  #dump = {};
+  #dumpAsked = false;
+  #dumpPending = false;
+  #identityPending = false;
   #windowOpen = false;
   #leaving = false;
   #choice = 0;
@@ -120,11 +168,14 @@ export class Updater {
   #returnWithinMs;
   #returnTimer = null;
   #trust;
+  #attestation;
   #state = {
     phase: 'offline',
     task: null,
     device: null,
     image: null,
+    identity: null,
+    identityRefused: null,
     running: null,
     status: null,
     settings: null,
@@ -135,17 +186,25 @@ export class Updater {
     advice: null,
     upgrade: null,
     settling: false,
+    motionSensorWithoutFirmware: false,
     progress: null,
     notice: null,
     trust: null,
     browsers: null,
     installReport: null,
+    landing: null,
     protocols: null,
+    dump: null,
+    capture: null,
+    fetching: null,
   };
 
-  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey }) {
+  constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
     this.#onChange = onChange;
     this.#trust = new BrowserTrust({ send: command => this.#device.sendConfig(command), loadKey: browserKey, onChange: patch => this.#set(patch) });
+    this.#attestation = attestations && new FirmwareAttestation({
+      send: command => this.#device.sendConfig(command), server: attestations, idle: () => this.#state.phase === 'ready' && !this.#state.task,
+    });
     this.#bluetoothDevice = device;
     this.#returnEveryMs = returnEveryMs;
     this.#returnWithinMs = returnWithinMs;
@@ -187,6 +246,7 @@ export class Updater {
     const device = await connect({
       device: this.#bluetoothDevice,
       onReply: reply => this.#receive(reply),
+      onLog: (frame, bytes, error) => this.#log?.receive(frame, bytes, error),
       onSmp: bytes => this.#smp.receive(bytes),
       onClose: () => this.#closed(),
     });
@@ -201,6 +261,7 @@ export class Updater {
       return this.#set({ phase: 'offline', notice: { key: 'not_skyblip' } });
     }
     this.#device = device;
+    this.#log = device.hasLog ? new LogReader(fields => device.sendLog(fields)) : null;
     await this.#trust.prove();
     this.#set({ phase: 'ready', device: device.name });
     await this.#learn();
@@ -252,7 +313,7 @@ export class Updater {
     this.#image = bytes;
     this.#sha = sha;
     this.#version = image.version;
-    const file = { name, version: versionText(image.version), bytes: bytes.length, ...image.imu };
+    const file = { name, version: versionText(image.version), bytes: bytes.length, key: image.key, sha: hex(sha.subarray(0, 8)), ...image.imu };
     this.#key = image.key;
     this.#product = image.product;
     this.#set({ file, notice: this.#needsFull(file) ? { key: 'needs_full' } : null });
@@ -290,12 +351,32 @@ export class Updater {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
   }
 
-  // INFO: fc 12nov26 only a skyBlip Bravo answers capture, and a Go answers it unknown_command
   orderCapture(profile) {
     if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'capture' } });
     this.#captureProfile = profile;
     this.#set({ notice: null });
     return this.#ask('capture', { profile });
+  }
+
+  // INFO: fc 15nov26 a narrow link answers a dump too wide for it small_mtu, which no pilot asked about
+  readDiagnostics() {
+    this.#dumpAsked = true;
+    this.#dumpPending = true;
+    return this.#send({ command: 'diagnostics' });
+  }
+
+  // INFO: fc 15nov26 the last session of the diagnostics store, which is the capture the page armed
+  async fetchCapture() {
+    if (this.#state.phase !== 'ready' || !this.#log) return null;
+    this.#set({ phase: 'asking', task: 'fetch', fetching: { at: 0, total: null }, notice: null });
+    try {
+      const fetched = await fetchDiagnostics(this.#log, { onProgress: (at, total) => this.#set({ fetching: { at, total } }) });
+      if (this.#state.task === 'fetch') this.#set({ phase: 'ready', task: null, fetching: null });
+      return fetched;
+    } catch (error) {
+      if (this.#state.task === 'fetch') this.#set({ phase: this.#device ? 'ready' : 'offline', task: null, fetching: null, notice: { key: error.reason ?? 'failed', detail: error.message, during: 'capture' } });
+      return null;
+    }
   }
 
   // INFO: fc 13nov26 the unit's replies carry no request id, so the list waits for the link to be quiet
@@ -320,16 +401,19 @@ export class Updater {
 
   #refusal() {
     const unit = this.#state.image;
-    if (this.#product && this.#product !== productOf(unit)) return 'wrong_product';
-    if (!this.#product && unit?.product) return 'unmarked_image';
-    if (unit?.key && this.#key !== unit.key) return 'wrong_key';
+    const product = productOf(this.#state);
+    if (this.#product && product && this.#product !== product) return 'wrong_product';
+    if (!this.#product && product) return 'unmarked_image';
+    const trusted = trustedKeys(unit);
+    if (trusted && !trusted.includes(this.#key)) return 'wrong_key';
     if (this.#running && !unit?.downgrade && compareVersions(this.#version, this.#running) < 0) return 'older';
     return null;
   }
 
   async #learn() {
+    this.#identityPending = true;
+    await this.#send({ command: 'identity' });
     await this.#send({ command: 'update' });
-    // TODO: fc 13nov26 the install report, retired with #294
     await this.#send({ command: 'install_report' });
     await this.#send({ command: 'protocols' });
     await this.#send({ command: 'status' });
@@ -343,6 +427,12 @@ export class Updater {
     }
     this.#set({ running: this.#running && versionText(this.#running) });
     await this.listBrowsers();
+    if (this.#state.address) this.#attest();
+  }
+
+  // INFO: fc 14nov26 the server's answer can take as long as the network, so the page does not wait for it
+  #attest() {
+    this.#attestation?.attest().catch(error => console.error('The unit could not state its firmware:', error));
   }
 
   #needsFull({ full, pin }) {
@@ -365,20 +455,61 @@ export class Updater {
     return this.#send(asked);
   }
 
+  // INFO: fc 15nov26 replies come in order, so any other frame means identity's answer was dropped, and it is no longer awaited
   #receive(reply) {
-    if (!reply || this.#trust.receive(reply)) return;
-    if (reply.command === 'update') this.#set({ image: imageOf(reply) });
+    if (!reply || this.#trust.receive(reply) || this.#attestation?.receive(reply)) return;
+    if (reply.command !== 'identity' && reply.command !== 'acknowledgement') this.#identityPending = false;
+    if (reply.command === 'identity') this.#identified(reply);
+    else if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
-    else if (reply.command === 'config') this.#set({ settings: settingsOf(reply), ...identityOf(reply) });
+    else if (reply.command === 'config') this.#configured(reply);
     else if (reply.command === 'defaults') this.#set({ defaults: settingsOf(reply) });
-    else if (reply.command === 'install_report') this.#set({ installReport: installReportOf(reply) });
+    else if (reply.command === 'install_report') this.#reported(reply);
     else if (reply.command === 'protocols') this.#set({ protocols: protocolsOf(reply) });
+    else if (reply.command === 'diagnostics') this.#dumped(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
+  }
+
+  // INFO: fc 15nov26 the dump is asked once the settings are answered, so a small_mtu after it is the dump's own
+  #configured(reply) {
+    this.#set({ settings: settingsOf(reply), ...activationOf(reply) });
+    if (!this.#dumpAsked) this.readDiagnostics();
+  }
+
+  // INFO: fc 15nov26 one frame per group, or more for a group wider than the link, and more false on the last
+  #dumped({ command, group, part, more, ...fields }) {
+    this.#dump = { ...this.#dump, [group]: { ...this.#dump[group], ...fields } };
+    if (more) return;
+    const dump = this.#dump;
+    this.#dump = {};
+    this.#dumpPending = false;
+    this.#set({ dump, capture: captureOf(dump) });
+  }
+
+  #identified(reply) {
+    this.#identityPending = false;
+    this.#set({ identity: identityOf(reply), identityRefused: null });
+  }
+
+  #identityRefusedAs(reason) {
+    this.#identityPending = false;
+    this.#set({ identityRefused: reason });
+    if (reason === 'small_mtu') this.#narrow();
+  }
+
+  #reported(reply) {
+    this.#set({ installReport: installReportOf(reply), landing: landingOf(reply) });
   }
 
   #acked(reply) {
     const { phase, task } = this.#state;
-    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
+    if (reply.reason === 'claimed') {
+      this.#identityPending = false;
+      return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
+    }
+    // INFO: fc 15nov26 identity is asked first, so the first refusal it can earn is its own
+    if (this.#identityPending && IDENTITY_REFUSALS.has(reply.reason)) return this.#identityRefusedAs(reply.reason);
+    if (this.#dumpPending && ['small_mtu', 'no_statistics'].includes(reply.reason)) return (this.#dumpPending = false);
     if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
@@ -387,17 +518,20 @@ export class Updater {
     if (task === 'install') this.#windowOpen = false;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
     this.#set({ phase: 'ready', task: null, refusedOnDevice, notice: this.#noticeDuring(task, { key: reply.reason || 'refused' }) });
+    if (task === 'install' && LANDING_REFUSALS.has(reply.reason)) return this.#send({ command: 'install_report' });
   }
 
   #narrow() {
     const asked = this.#state.phase === 'asking' ? { phase: 'ready', task: null } : {};
     this.#set({ ...asked, notice: { key: 'small_mtu' } });
+    if (!this.#dumpAsked) this.readDiagnostics();
   }
 
   #granted(task) {
     if (task === 'capture') {
       const key = this.#captureProfile === 'stop' ? 'capture_stopped' : 'capture_armed';
-      return this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
+      this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
+      return this.readDiagnostics();
     }
     if (task === 'dfu') {
       this.#trust.confirmed();
@@ -484,25 +618,32 @@ export class Updater {
     this.#packetBytes = null;
     this.#writeBytes = GATT_WRITE_BYTES;
     this.#probed = false;
+    this.#log?.close();
+    this.#log = null;
+    this.#dump = {};
+    this.#dumpAsked = false;
+    this.#dumpPending = false;
+    this.#identityPending = false;
     this.#smp.close(new LinkLost());
     this.#trust.close();
+    this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, protocols: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
-      progress: null, installReport: null, protocols: null,
+      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
+      progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });
   }
 
   #set(patch) {
     const state = { ...this.#state, ...patch };
-    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state) };
+    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), motionSensorWithoutFirmware: motionSensorWithoutFirmwareOf(state) };
     this.#onChange(this.#state);
   }
 }

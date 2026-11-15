@@ -2,7 +2,6 @@
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_IDENTITY_H
 
 #include <cstdint>
-#include <deque>
 #include <optional>
 
 #include "core/crypto/ed25519.h"
@@ -70,33 +69,10 @@ class Identity : public ports::Identity {
         return Status::Ok;
     }
 
-    bool draw_random(ByteSpan out) override {
-        draws++;
-        if (random_fails) return false;
-        for (size_t i = 0; i < out.size(); i++) {
-            if (queued_random.empty()) {
-                out[i] = static_cast<uint8_t>(counter_++ * 37u + 11u);
-            } else {
-                out[i] = queued_random.front();
-                queued_random.pop_front();
-            }
-        }
-        return true;
-    }
-    void queue_random(const identity::Nonce& nonce) {
-        queued_random.insert(queued_random.end(), nonce.begin(), nonce.end());
-    }
-
     std::optional<identity::UnlockCode> stored_unlock_code{};
-    std::deque<uint8_t> queued_random{};
     int writes{0};
-    int draws{0};
     bool key_provisioned{true};
     bool write_fails{false};
-    bool random_fails{false};
-
-   private:
-    uint32_t counter_{0};
 };
 
 }  // namespace skyblip::platform::host

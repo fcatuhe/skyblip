@@ -56,6 +56,17 @@ TEST_CASE("prompt glass: a dfu names the version the phone sends, as the Go does
     CHECK(reads_heading(glass, "FIRMWARE", go::Heading::Interrupt));
 }
 
+TEST_CASE(
+    "prompt glass: a capture names the profile asked and the flights it erases, as the Go does") {
+    go::Glass glass;
+    REQUIRE(simulator::draw_prompt(glass, "capture", "power_run:3", "", 30));
+    CHECK(same(glass, confirm(comms::Pending::Capture, "START A POWER RUN, ERASES 3 FLIGHTS", 30)));
+    REQUIRE(simulator::draw_prompt(glass, "capture", "stop:0", "", 30));
+    CHECK(same(glass, confirm(comms::Pending::Capture, "STOP THE CAPTURE", 30)));
+    CHECK_FALSE(simulator::draw_prompt(glass, "capture", "launch:3", "", 30));
+    CHECK_FALSE(simulator::draw_prompt(glass, "capture", "full:many", "", 30));
+}
+
 TEST_CASE("prompt glass: every other prompt is the Go's title and detail for it") {
     const struct {
         const char* name;
@@ -80,17 +91,17 @@ TEST_CASE("prompt glass: a prompt the Go never raises, or a frame it cannot read
 }
 
 // A screen reader cannot read the canvas, so the page's words go with it, in reading order.
-TEST_CASE("prompt glass: the words a screen reader hears are the page's, key last") {
+TEST_CASE("prompt glass: the words a screen reader hears are the page's, keys last") {
     go::Glass glass;
     char words[simulator::kPromptWordsBytes];
     REQUIRE(simulator::draw_prompt(
         glass, "set", "{\"command\":\"set\",\"callsign\":\"F-JXYZ\",\"units\":\"metric\"}",
         "{\"command\":\"set\",\"callsign\":\"F-JABC\"}", 27, words, sizeof(words)));
     CHECK(std::string(words) ==
-          "SETTINGS. CALLSIGN F-JXYZ, UNITS METRIC. TO CANCEL, PUSH ONCE OR WAIT 27 S. PUSH TWICE "
-          "TO ACCEPT.");
+          "SETTINGS. CALLSIGN F-JXYZ, UNITS METRIC. CANCELS IN 27 S. PUSH TO ACCEPT. TOUCH THE "
+          "PAD TO CANCEL.");
 
     REQUIRE(simulator::draw_prompt(glass, "power_off", "", "", 0, words, sizeof(words)));
     CHECK(std::string(words) ==
-          "POWER OFF. STOP THE DEVICE. TO CANCEL, PUSH ONCE. PUSH TWICE TO ACCEPT.");
+          "POWER OFF. STOP THE DEVICE. PUSH TO ACCEPT. TOUCH THE PAD TO CANCEL.");
 }

@@ -93,11 +93,17 @@ class Product {
             show_refusal(now_ms);
         }
         if (flyable_ && !shutdown_.going_down()) {
-            meter_.begin_pass(context_.instant(now_ms).into_ms);
-            meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            const bool metered = diagnostics_.armed();
+            if (metered) {
+                meter_.begin_pass(context_.instant(now_ms).into_ms);
+                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+            } else {
+                meter_.rest();
+                board_.poll(state_, now_ms);
+            }
             if (platform_.system_power().take_supply_warning()) power_.on_supply_warning();
-            loop_.run_pass(now_ms, &meter_);
-            meter_.end_pass();
+            loop_.run_pass(now_ms, metered ? &meter_ : nullptr);
+            if (metered) meter_.end_pass();
             record_loop(now_ms);
             if (power_.cutoff()) shutdown_.request(power::ShutdownReason::LowBattery, now_ms);
             take_link_requests(now_ms);
@@ -155,7 +161,6 @@ class Product {
         return loop_.may_feed_watchdog(now_ms);
     }
     int stalled_service(uint32_t now_ms) const { return loop_.stalled_service(now_ms); }
-    const char* service_name(int index) const { return loop_.feed_decision().name(index); }
 
     Board& board() { return board_; }
     bus::Bus& bus() { return bus_; }
@@ -222,7 +227,7 @@ class Product {
         }
         if (const std::optional<comms::CaptureProfile> profile = config.capture_requested()) {
             config.clear_capture_request();
-            order_capture(*profile);
+            common::order_capture(diagnostics_, *profile);
         }
         // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
         if (const std::optional<comms::AdsbTrialPlan> plan = config.adsb_trial_requested()) {
@@ -237,19 +242,6 @@ class Product {
         if (const std::optional<parts::Lr2021Tuning> tuning =
                 adsb_trial_.tick(now_ms, board_.receiver().statistics()))
             board_.receiver().retune(*tuning);
-    }
-
-    void order_capture(comms::CaptureProfile profile) {
-        switch (profile) {
-            case comms::CaptureProfile::Full: diagnostics_.arm(diagnostics::Profile::Full); return;
-            case comms::CaptureProfile::PowerRun:
-                diagnostics_.arm(diagnostics::Profile::PowerRun);
-                return;
-            case comms::CaptureProfile::FlightRun:
-                diagnostics_.arm(diagnostics::Profile::FlightRun);
-                return;
-            case comms::CaptureProfile::Stop: diagnostics_.disarm(); return;
-        }
     }
 
     void drive_shutdown(uint32_t now_ms) {
@@ -346,12 +338,12 @@ class Product {
     SettingsStore settings_store_{settings_};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,       power_.cutoff_monitor(),
-        kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
+        kProductName, bravo::bluetooth_name, dfu::Product::Bravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
     // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
     AdsbTrial adsb_trial_{context_};
     GateReference gate_{};
-    AdsbService adsb_{context_, adsb_frames_, settings_.own_icao, gate_};
+    AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};
     common::AlarmService alarm_{
         context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
     PeerService peer_{context_,          settings_, config_link_.config(),
@@ -370,10 +362,7 @@ class Product {
     runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &adsb_,
                                                &alarm_,       &button_,  &nmea_,  &flight_log_,
                                                &capture_,     &peer_};
-    static constexpr const char* kServiceNames[kServiceCount] = {
-        "config", "ownship", "power",      "adsb",    "alarm",
-        "button", "nmea",    "flight_log", "capture", "peer"};
-    runtime::Loop loop_{services_, kServiceCount, kServiceNames};
+    runtime::Loop loop_{services_, kServiceCount};
 
     power::ShutdownSequencer shutdown_{};
     power::ShutdownPhase acted_phase_{power::ShutdownPhase::Running};

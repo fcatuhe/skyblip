@@ -77,7 +77,7 @@ The 180 NM and 45 NM local limits are met by construction rather than tested. A 
 
 **Version and GVA.** A type code 31 message names the version, and the GVA when the decoder read one: an airborne status from version 2. Version 0's layout has no version field, so it reads 0.
 
-**Own aircraft.** `set_own_address` names the aircraft's own ICAO address, and its messages are dropped before they reach the cache. While paired it is the Go's `own_icao` from `peer_claim` when that is set, else Bravo's own setting (#192). Zero drops nothing.
+**Own aircraft.** `set_own_address` names the aircraft address, and its messages are dropped before they reach the cache. While paired it is the Go's `aircraft_address` from `peer_claim` when that is set, else Bravo's own setting (#192). Zero drops nothing.
 
 ## The ADS-B cache
 

@@ -6,6 +6,7 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "products/skyblip_go/services/radio.h"
 #include "simulator/simulator.h"
 #include "test/support/product_rig.h"
@@ -26,11 +27,12 @@ constexpr uint32_t kDwellMsPerSecond =
 struct RefusingExecutor {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};

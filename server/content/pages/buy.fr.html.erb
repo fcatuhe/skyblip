@@ -2,18 +2,13 @@
 title: "T-Echo 868 MHz, prix et installation du Go"
 nav_title: S'équiper
 slug: s-equiper
-description: "Comparez Go et Go+, dès 68 € et 84 €. Choisissez un T-Echo 868 MHz avec BME280, trouvez les vendeurs, installez et activez le firmware gratuit."
+description: "Comparez Go et Go+, dès 68 € et 84 €, ou choisissez Bravo seul pour le trafic ADS-B. Trouvez où acheter le matériel et installez le firmware gratuit."
 updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
   <h1>Trois boîtiers, un firmware ouvert, sans abonnement.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip Go est un LilyGO T-Echo, skyBlip Go+ un T-Echo Plus, skyBlip Bravo
-    un Seeed SenseCAP MeshTracker X1.<br>
-    Vous achetez le boîtier et vous installez le firmware skyBlip par USB.
-    Le X1 est livré avec Meshtastic.
-  </p>
+  <p class="page-hero-subtitle">Pour émettre votre position en ADS-L et recevoir le trafic ADS-L et FLARM, choisissez un Go sur LilyGO T-Echo ou un Go+ sur T-Echo Plus. Bravo fonctionne sur un MeshTracker X1 et reçoit les positions des autres aéronefs équipés ADS-B. Utilisez-le avec votre Go ou seul avec votre application de navigation. Achetez le matériel, puis installez le firmware gratuit skyBlip par USB. Le X1 est livré avec Meshtastic, qui ne reçoit pas l&rsquo;ADS-B.</p>
 </header>
 
 <section>
@@ -53,10 +48,11 @@ updated_on: "2026-11-13"
       <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte", class: "photo-x1" %>
       <h2>skyBlip Bravo</h2>
       <p class="offer-price"><s><span class="visually-hidden">Sans code&nbsp;: </span>49,90&nbsp;$</s> <span class="visually-hidden">Avec le code&nbsp;: </span>44,91&nbsp;$<small class="offer-code">avec le code <%= seeed_promo_code %></small><small class="offer-code">55,95&nbsp;$ avec 11,04&nbsp;$ de livraison vers la France</small></p>
-      <p class="offer-tagline">Seeed SenseCAP MeshTracker X1 <span class="status status--available">Disponible</span></p>
+      <p class="offer-tagline">MeshTracker X1</p>
       <ul class="points">
-        <li>Reçoit l&rsquo;ADS-B, pour votre application ou votre Go</li>
-        <li>Avertisseur sonore et vibreur</li>
+        <li>Reçoit les positions des aéronefs équipés ADS-B</li>
+        <li>Trafic dans votre application de navigation en Bluetooth, sans Go</li>
+        <li>Avertisseur sonore et vibreur pour le trafic qui se rapproche</li>
         <li>Batterie 1100&nbsp;mAh</li>
       </ul>
       <p class="offer-buy">
@@ -165,7 +161,7 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Activez.</h3>
-      <p><%= link_to "Activez-le", briefing_activation_path %> en Bluetooth depuis Chrome ou Edge, puis confirmez l&rsquo;activation par deux pressions sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. Le Briefing vous permet ensuite de choisir votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Si l&rsquo;appareil a besoin d&rsquo;une position GPS avant de les enregistrer, il vous le signale. Vous pourrez les modifier plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to "le Briefing", briefing_root_path %>.</p>
+      <p>Le Go émet en ADS-L. L&rsquo;activation lui attribue donc une adresse dans la plage réservée à skyBlip par le registre ADS-L. Aucun compte n&rsquo;est nécessaire. <%= link_to "Activez-le", briefing_activation_path %> en Bluetooth depuis Chrome ou Edge, puis confirmez l&rsquo;activation par une pression sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. Le Briefing vous permet ensuite de choisir votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Si l&rsquo;appareil a besoin d&rsquo;une position GPS avant de les enregistrer, il vous le signale. Vous pourrez les modifier plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to "le Briefing", briefing_root_path %>.</p>
     </li>
   </ol>
 </section>
@@ -175,20 +171,21 @@ updated_on: "2026-11-13"
   <ol class="steps-grid steps-grid--sequence">
     <li>
       <h3>Commandez.</h3>
-      <p>Commandez un Seeed SenseCAP MeshTracker X1.</p>
+      <p>Commandez un MeshTracker X1.</p>
     </li>
     <li>
       <h3>Installez.</h3>
       <p>Maintenez le bouton enfoncé, branchez le câble USB-C et gardez le bouton enfoncé jusqu&rsquo;à ce que le voyant devienne blanc, au bout d&rsquo;environ 3 secondes. Un lecteur nommé <span class="mono">X1</span> apparaît. Copiez d&rsquo;abord le fichier <span class="mono">CURRENT.UF2</span> sur votre ordinateur. Glisser ce fichier sur le lecteur permet de restaurer Meshtastic. Copiez ensuite le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version de skyBlip Bravo</a> sur le lecteur <span class="mono">X1</span>.</p>
     </li>
     <li>
-      <h3>Configurez.</h3>
-      <p>Bravo ne nécessite aucune activation. Dans <%= link_to "le Briefing", briefing_root_path %>, renseignez l&rsquo;adresse OACI de votre aéronef pour exclure votre propre transpondeur.</p>
+      <h3>Saisissez l&rsquo;adresse de votre transpondeur.</h3>
+      <p>Seul un appareil qui émet en ADS-L a besoin d&rsquo;une adresse individuelle issue de la plage attribuée à skyBlip par le registre ADS-L. Le Go reçoit la sienne à l&rsquo;activation. Bravo n&rsquo;émet rien et n&rsquo;a donc besoin ni d&rsquo;activation ni de compte.</p>
+      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans <%= link_to "le Briefing", briefing_root_path %>, l&rsquo;application web de skyblip.eu pour les réglages et les mises à jour. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Utilisez Chrome ou Edge sur un ordinateur ou sur Android, puis validez la modification par une pression sur Bravo. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
     </li>
   </ol>
   <p class="signature">
     Pour les deux appareils, les mises à jour se font ensuite depuis <%= link_to "le Briefing", briefing_root_path %>
-    en Bluetooth. Chacune est validée sur l&rsquo;appareil&nbsp;: sur l&rsquo;écran du Go, ou par deux pressions sur Bravo. Le même fichier fonctionne sur le T&#8209;Echo et le T&#8209;Echo Plus. Pour
+    en Bluetooth. Chacune est validée sur l&rsquo;appareil&nbsp;: sur l&rsquo;écran du Go, ou par une pression sur Bravo. Le même fichier fonctionne sur le T&#8209;Echo et le T&#8209;Echo Plus. Pour
     l&rsquo;instant, seules des versions de développement sont publiées pour les deux appareils.
   </p>
 </section>
@@ -236,7 +233,7 @@ updated_on: "2026-11-13"
     </details>
     <details>
       <summary>Les mises à jour sont-elles payantes&nbsp;?</summary>
-      <p>Non. Pour l&rsquo;aviation privée et les sports aériens, le firmware et ses mises à jour sont gratuits et le resteront.</p>
+      <p>Non. Pour l&rsquo;aviation de loisir et les sports aériens, le firmware et ses mises à jour sont gratuits et le resteront.</p>
     </details>
     <details>
       <summary>Puis-je mettre à jour depuis un iPhone&nbsp;?</summary>

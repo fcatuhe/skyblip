@@ -9,7 +9,8 @@
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
-#include "products/skyblip_go/own_icao_warning.h"
+#include "products/skyblip_go/aircraft_address_warning.h"
+#include "products/skyblip_go/bravo_log.h"
 #include "products/skyblip_go/pairing.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
@@ -22,8 +23,8 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kClaimPeriodMs = 1000;
     // INFO: fc 11nov26 unverified: a Bravo in range answers a connection in a few scan windows
     static constexpr uint32_t kConnectCeilingMs = 10000;
-    // INFO: fc 11nov26 unverified: #192's proposed 30 s press window, a health period, a margin
-    static constexpr uint32_t kAnswerCeilingMs = 35000;
+    // INFO: fc 14nov26 Bravo's 30 s press window, so the glass counts down the time Bravo allows
+    static constexpr uint32_t kAnswerCeilingMs = 30000;
     // INFO: fc 11nov26 GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting
     static constexpr uint32_t kPairingScanWindowUs = 30000;
     static constexpr uint32_t kPairingScanPeriodUs = 60000;
@@ -54,30 +55,41 @@ class BravoService : public runtime::Service {
     void unpair();
 
     BravoStep step() const { return step_; }
+    uint32_t step_since_ms() const { return step_since_ms_; }
     BravoRefusal refusal() const { return refusal_; }
     BravoLink link() const { return link_; }
     int found_count() const { return found_count_; }
     const events::BluetoothAddress& found(int index) const { return found_[index]; }
     const events::BluetoothAddress& pairing_with() const { return pairing_with_; }
-    OwnIcaoWarning& own_icao_warning() { return own_icao_warning_; }
-    const OwnIcaoWarning& own_icao_warning() const { return own_icao_warning_; }
+    AircraftAddressWarning& aircraft_address_warning() { return aircraft_address_warning_; }
+    const AircraftAddressWarning& aircraft_address_warning() const {
+        return aircraft_address_warning_;
+    }
     // INFO: fc 12nov26 observations with no UTC of ours to place them by, or dated too far ahead
     uint32_t unplaced() const { return unplaced_; }
     // INFO: fc 12nov26 observation frames comms::read_observation() refused
     uint32_t refused() const { return refused_; }
+    uint32_t folded() const { return folded_; }
+    const BravoLog& log() const { return log_; }
     bool leaving() const { return leaving_; }
     // INFO: fc 13nov26 the transponder the last fresh health named, for AIRCRAFT to propose
     std::optional<comms::OwnTransponderHeard> own_transponder() const {
         return health_heard_ ? health_.own_transponder : std::nullopt;
     }
+    // INFO: fc 15nov26 the last health from the pinned Bravo while fresh, nullptr once it ages out
+    const comms::PeerHealth* health() const { return health_heard_ ? &health_ : nullptr; }
     // INFO: fc 11nov26 true once after Bravo said it holds no pin for this Go, for the glass
     bool take_forgotten_notice();
+    // INFO: fc 15nov26 true once when the Go asks its Bravo again, for the glass
+    bool take_asking_notice();
+    bool asking_again() const { return asking_again_; }
 
    private:
     void take_event(const events::CentralEvent& event, uint32_t now_ms);
     void take_frame(const events::RxFrame& frame, uint32_t now_ms);
     void take_health(ConstByteSpan bytes, uint32_t now_ms);
     void fold(const comms::PeerObservation& peer, uint32_t now_ms);
+    void log(BravoVerdict verdict, const comms::PeerObservation* peer, uint32_t now_ms);
     std::optional<uint32_t> second_edge_ms(uint32_t at_s) const;
     comms::BravoState state_now() const;
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
@@ -91,6 +103,8 @@ class BravoService : public runtime::Service {
     void claim(uint32_t now_ms);
     bool takes_alarm() const;
     std::optional<uint32_t> own_transponder_on_ground() const;
+    void ask_again(uint32_t now_ms);
+    void drop_pin();
     void forget();
     void leave();
     bool linked() const {
@@ -101,7 +115,7 @@ class BravoService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     ports::Central& central_;
-    OwnIcaoWarning own_icao_warning_{};
+    AircraftAddressWarning aircraft_address_warning_{};
     common::AdsbCapture adsb_capture_{context_};
     comms::PeerHealth health_{};
     events::BluetoothAddress found_[kBravoFoundRows]{};
@@ -117,6 +131,8 @@ class BravoService : public runtime::Service {
     uint32_t started_ms_{0};
     uint32_t unplaced_{0};
     uint32_t refused_{0};
+    uint32_t folded_{0};
+    BravoLog log_{};
     bool health_heard_{false};
     // INFO: fc 12nov26 the pinned Bravo sent UTC since the Go booted, so no UTC from now is lost
     bool utc_heard_{false};
@@ -128,6 +144,8 @@ class BravoService : public runtime::Service {
     bool leaving_{false};
     bool farewell_owed_{false};
     bool forgotten_{false};
+    bool asking_again_{false};
+    bool asking_noticed_{false};
 };
 
 }  // namespace skyblip::go

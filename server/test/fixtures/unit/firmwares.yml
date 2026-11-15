@@ -1,0 +1,17 @@
+bound_release:
+  unit: bound
+  version: 0.3.0+1300
+  release: true
+  variant: plus
+  source: attested
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 1.day.ago %>
+
+bravo_read:
+  unit: bravo
+  version: 0.2.0+900
+  release: true
+  variant: standard
+  source: read
+  created_at: <%= 5.days.ago %>
+  updated_at: <%= 2.days.ago %>

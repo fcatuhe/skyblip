@@ -38,7 +38,7 @@ struct Unit {
         REQUIRE(rig.setup() == Status::Ok);
         pass(500);
         if (pending == comms::Pending::Register) {
-            rig.platform.identity().queue_random(vectors.bytes<16>("unit_nonce"));
+            rig.platform.random().queue(vectors.bytes<16>("unit_nonce"));
             rig.send("{\"command\":\"challenge\"}");
             pass(300);
         }
@@ -121,13 +121,13 @@ TEST_CASE("product: after a held press the gesture arms only once the thumb has 
         Unit unit(pending);
         unit.hold_through_the_prompt();
         unit.pass(250);
-        unit.rig.double_press(unit.now_ms);
+        unit.rig.press(unit.now_ms);
         unit.pass(100);
         CHECK(unit.prompt_stands());
         CHECK_FALSE(unit.allowed_anything());
 
         unit.pass(800);
-        unit.rig.double_press(unit.now_ms);
+        unit.rig.press(unit.now_ms);
         unit.pass(100);
         CHECK_FALSE(unit.prompt_stands());
         CHECK(unit.allowed_anything());
@@ -174,7 +174,7 @@ TEST_CASE("product: after a hold carried from boot the gesture waits a window fr
     rig.platform.board_gpio().button_down = false;
     rig.run(now_ms, now_ms + 100);
     now_ms += 150;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     now_ms += 150;
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Dfu);
@@ -182,7 +182,7 @@ TEST_CASE("product: after a hold carried from boot the gesture waits a window fr
 
     rig.run(now_ms, now_ms + 800);
     now_ms += 850;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.product.config_link().config().receiving_firmware());
 }
@@ -213,8 +213,9 @@ TEST_CASE("product: a replaced prompt cannot spend a hold begun on the one it re
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 }
 
-// GPT's re-review: the longest gap before the double press is 560 ms, from 2090 to 2650.
-TEST_CASE("product: after a press that began before arming, a double press waits a quiet window") {
+// GPT's re-review: the longest gap before the accepting press is 560 ms, from 2090 to 2650.
+TEST_CASE(
+    "product: after a press that began before arming, the accepting press waits a quiet window") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().alarm_volume = go::AlarmVolume::Soft;
@@ -232,14 +233,14 @@ TEST_CASE("product: after a press that began before arming, a double press waits
     rig.platform.board_gpio().button_down = false;
     rig.run(2730, 2770, 40);
     uint32_t now_ms = 2810;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Set);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
 
     rig.run(now_ms, now_ms + 750);
     now_ms += 800;
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
 }

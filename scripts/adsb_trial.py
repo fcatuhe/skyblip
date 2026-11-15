@@ -16,19 +16,21 @@ import argparse
 import collections
 import json
 import math
-import pathlib
 import statistics
 import sys
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-
-import adsb_rejects  # noqa: E402
 
 METRICS = ("positions", "folded", "aircraft", "frames")
 # INFO: fc 13nov26 a slot that counted under half of the usual is a start, a stop or a clock jump
 SHORT_SLOT_SHARE = 0.5
 Z_95 = 1.96
 POLICIES = ("strict", "pair", "flip", "slip")
+SYNC_CHIPS = 0x95
+CHIP_BYTES = 27
+BITS = 112
+STREAM_CHIPS = 8 + 8 * CHIP_BYTES
+GENERATOR = 0x1FFF409
+EXTENDED_SQUITTER = 17
+SLIPS = (1, 2, -1, -2)
 
 
 def main(argv):
@@ -128,7 +130,7 @@ def paired(slots, metric):
 
 
 def frames_of(lines):
-    """Each sampled frame as (label, verdict, rssi, 27 chip bytes), labelled by the slot after it."""
+    """Each sampled frame as (label, verdict, rssi, chips), labelled by the slot after it."""
     frames, waiting, head = [], [], None
     for line in lines:
         kind = line.get("type")
@@ -150,26 +152,26 @@ def frames_of(lines):
 
 def policies_passed(chips, slips):
     """Which policies accept the frame as a DF17, and the address each one reads."""
-    stream = adsb_rejects.stream_of(chips)
-    bits, doubtful = adsb_rejects.decode(stream)
-    value = adsb_rejects.number(bits)
-    residue = adsb_rejects.remainder(value)
+    stream = stream_of(chips)
+    bits, doubtful = decode(stream)
+    value = number(bits)
+    residue = remainder(value)
     passed = {}
     if residue == 0:
         passed.update(dict.fromkeys(POLICIES, value))
     else:
-        flip = next((bit for bit in range(1, adsb_rejects.BITS + 1)
-                     if adsb_rejects.SYNDROMES[bit] == residue), None)
+        flip = next((bit for bit in range(1, BITS + 1)
+                     if SYNDROMES[bit] == residue), None)
         if flip is not None:
-            fixed = value ^ (1 << (adsb_rejects.BITS - flip))
+            fixed = value ^ (1 << (BITS - flip))
             passed["flip"] = fixed
             if flip in doubtful:
                 passed["pair"] = fixed
-        if slips and next(adsb_rejects.slips(stream), None) is not None:
+        if slips and next(slip_points(stream), None) is not None:
             passed["slip"] = None
-    return {policy: (value >> (adsb_rejects.BITS - 32)) & 0xFFFFFF if value is not None else None
+    return {policy: (value >> (BITS - 32)) & 0xFFFFFF if value is not None else None
             for policy, value in passed.items()
-            if value is None or value >> (adsb_rejects.BITS - 5) == adsb_rejects.EXTENDED_SQUITTER}
+            if value is None or value >> (BITS - 5) == EXTENDED_SQUITTER}
 
 
 def replay_report(frames, slips):
@@ -194,6 +196,57 @@ def replay_report(frames, slips):
         out.append("addresses only %s finds, never in a sound frame: %s" % (
             policy, ", ".join("%06x" % address for address in unheard) or "none"))
     return out
+
+
+def stream_of(chips):
+    """The chips the decoder reads: the 0x95 sync, then the 27 bytes behind it."""
+    stream = [(SYNC_CHIPS >> (7 - i)) & 1 for i in range(8)]
+    for byte in chips:
+        stream.extend((byte >> (7 - i)) & 1 for i in range(8))
+    return stream
+
+
+def decode(stream):
+    """A Mode S 1 is the chips 10 and a 0 is 01, so a bit is the inverse of its second chip."""
+    bits = [1 - stream[2 * i + 1] for i in range(BITS)]
+    doubtful = [i + 1 for i in range(BITS) if stream[2 * i] == stream[2 * i + 1]]
+    return bits, doubtful
+
+
+def number(bits):
+    value = 0
+    for bit in bits:
+        value = (value << 1) | bit
+    return value
+
+
+def remainder(value):
+    for position in range(BITS - 1, 23, -1):
+        if value >> position & 1:
+            value ^= GENERATOR << (position - 24)
+    return value
+
+
+SYNDROMES = {bit: remainder(1 << (BITS - bit)) for bit in range(1, BITS + 1)}
+
+
+def slip_points(stream):
+    """Every chip, from 0 at the first sync chip, where one or two chips more or less pass."""
+    for at in range(8, STREAM_CHIPS):
+        for by in SLIPS:
+            for filler in fillers(abs(by)):
+                if by > 0:
+                    candidate = stream[:at] + stream[at + by:] + filler
+                else:
+                    candidate = stream[:at] + filler + stream[at:STREAM_CHIPS + by]
+                value = number(decode(candidate)[0])
+                if remainder(value) == 0 and value >> (BITS - 5) == EXTENDED_SQUITTER:
+                    yield at, by
+                    break
+
+
+def fillers(count):
+    return [[(n >> i) & 1 for i in range(count)] for n in range(1 << count)]
 
 
 if __name__ == "__main__":

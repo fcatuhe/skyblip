@@ -45,7 +45,7 @@ go::Settings widest_settings() {
     settings.alarm_volume = go::AlarmVolume::Loud;
     settings.units = go::Units::Nautical;
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
-    settings.own_icao = 0xFFFFFE;                     // the widest address ICAO assigns
+    settings.aircraft_address = 0xFFFFFE;             // the widest address ICAO assigns
     return settings;
 }
 
@@ -188,7 +188,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     const std::string frame = link.last().bytes;
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     // A ten-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
-    // and the own ICAO 0xFFFFFE behind a 4-byte head.
+    // and the aircraft address 0xFFFFFE behind a 4-byte head.
     const uint8_t golden[] = {0xAA, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF, 0x03,
                               0x18, 0x3A, 0x04, 0x11, 0x05, 0xF4, 0x06, 0x02, 0x07, 0x00,
                               0x08, 0x69, 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',
@@ -205,7 +205,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
-    CHECK(body.find("\"own_icao\":16777214") != std::string::npos);
+    CHECK(body.find("\"aircraft_address\":16777214") != std::string::npos);
 }
 
 // A link that never exchanged its MTU reassembles a write from prj.conf's two Prepare Writes.
@@ -217,7 +217,7 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     const events::RxFrame set = config_frame(
         "{\"command\":\"set\",\"aircraft_type\":17,\"alarm_enabled\":false,"
         "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"ABCDEFGHI\","
-        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"own_icao\":16777214}");
+        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"aircraft_address\":16777214}");
     CHECK(set.bytes == 34);
     CHECK(set.bytes <= kPrepareSegments * kPrepareSegmentBytes);
 
@@ -230,7 +230,7 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     config.on_rx(set);
     REQUIRE(config.pending() == Pending::Set);
     config.confirm();
-    CHECK(settings.own_icao == 0xFFFFFEu);
+    CHECK(settings.aircraft_address == 0xFFFFFEu);
     CHECK(settings.frequency_trim_e1_ppm == -100);
 }
 
@@ -252,7 +252,7 @@ struct UpdateBench {
     platform::host::Dfu dfu{watchdog};
     ConfigService config{link, store, &dfu};
 
-    explicit UpdateBench(bool allows_downgrade, dfu::Product product = dfu::Product::SkyblipGo,
+    explicit UpdateBench(bool allows_downgrade,
                          uint16_t payload_bytes = kSmallestSupportedPayloadBytes) {
         const ports::ImageVersion version = dfu::kWidestVersion;
         link.raise_link(1);
@@ -268,7 +268,6 @@ struct UpdateBench {
         held.holding = dfu::HubImage::Held;
         for (uint8_t& byte : held.digest) byte = 0xAB;
         config.set_hub_image(held);
-        config.set_product(product);
         config.on_rx(config_frame("{\"command\":\"update\"}"));
     }
 };
@@ -293,24 +292,14 @@ TEST_CASE(
     CHECK(bench.config.link_drops() == 0);
 }
 
-TEST_CASE("comms: a Bravo's update report names its product, two bytes wider than a Go's") {
-    UpdateBench release(false, dfu::Product::SkyblipBravo);
-    CHECK(release.link.last().bytes.size() == 59);
-    CHECK(link_text(release.link.last().bytes).find("\"product\":\"skyblip_bravo\"") !=
-          std::string::npos);
-    UpdateBench development(true, dfu::Product::SkyblipBravo);
-    CHECK(development.link.last().bytes.size() == 61);
-    CHECK(development.config.link_drops() == 0);
-}
-
 TEST_CASE(
     "comms: an update report too wide for the payload is refused small_mtu and counted, never "
     "sent without its key") {
     // The widest development Go's report is 59 bytes, two more than the release one for its
     // downgrade.
-    UpdateBench fits(true, dfu::Product::SkyblipGo, 59);
+    UpdateBench fits(true, 59);
     CHECK(fits.link.last().bytes.size() == 59);
-    UpdateBench bench(true, dfu::Product::SkyblipGo, 58);
+    UpdateBench bench(true, 58);
     REQUIRE(bench.link.sent.size() == 1);
     CHECK(link_text(bench.link.last().bytes) == kSmallMtuRefusal);
     CHECK(bench.config.link_drops() == 1);
@@ -318,7 +307,6 @@ TEST_CASE(
 
 namespace {
 
-// TODO: fc 13nov26 the install report's width, retired with #294 once Bluetooth updates land
 std::string widest_install_report_on(uint16_t payload_bytes) {
     dfu::InstallReport widest{};
     widest.request = {ports::StagedCheck::Undigested, -32768, ports::SwapType::Panic};
@@ -329,20 +317,31 @@ std::string widest_install_report_on(uint16_t payload_bytes) {
     platform::host::Link link;
     go::Settings settings = widest_settings();
     go::SettingsStore store{settings, kWidestAddress, kNoOwnTransponder};
-    ConfigService config{link, store, nullptr};
+    platform::host::Watchdog watchdog;
+    platform::host::Dfu dfu{watchdog};
+    dfu.staged_check = ports::StagedCheck::Undigested;
+    dfu.staged_key_valid = true;
+    ConfigService config{link, store, &dfu};
     link.raise_link(1);
     link.raise_link(1);
-    link.declare_payload_bytes(payload_bytes);
     config.set_install_report(&widest);
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    dfu.finished_upload = true;
+    config.tick(0);
+    link.declare_payload_bytes(payload_bytes);
     config.on_rx(config_frame("{\"command\":\"install_report\"}"));
     return link.last().bytes;
 }
 
 }  // namespace
 
-TEST_CASE("comms: the install report is 22 bytes at its widest, refused small_mtu a byte short") {
-    CHECK(widest_install_report_on(22).size() == 22);
-    CHECK(link_text(widest_install_report_on(21)) == kSmallMtuRefusal);
+TEST_CASE(
+    "comms: the install report with a refused landing is 30 bytes at its widest, refused "
+    "small_mtu a byte short") {
+    CHECK(link_text(widest_install_report_on(30)).find("\"staged_key\"") != std::string::npos);
+    CHECK(widest_install_report_on(30).size() == 30);
+    CHECK(link_text(widest_install_report_on(29)) == kSmallMtuRefusal);
 }
 
 TEST_CASE("comms: the bench's timing report is one frame on a wide link and several on a narrow") {

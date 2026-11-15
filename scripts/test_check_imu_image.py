@@ -27,23 +27,23 @@ def signed(tlvs, protected_magic=0x6908):
 
 
 class CheckImuImage(unittest.TestCase):
-    def test_a_slim_image_pinned_to_the_hub_image_passes(self):
+    def test_a_base_image_pinned_to_the_hub_image_passes(self):
         image = signed([(0xA0, hashlib.sha256(HUB_IMAGE).digest()), (0xA1, b"\x00")])
-        self.assertEqual(check_imu_image.problems(image, HUB_IMAGE, "slim"), [])
+        self.assertEqual(check_imu_image.problems(image, HUB_IMAGE, "base"), [])
 
     def test_a_full_image_says_it_carries_the_hub_image(self):
         image = signed([(0xA0, hashlib.sha256(HUB_IMAGE).digest()), (0xA1, b"\x01")])
         self.assertEqual(check_imu_image.problems(image, HUB_IMAGE, "full"), [])
-        self.assertEqual(len(check_imu_image.problems(image, HUB_IMAGE, "slim")), 1)
+        self.assertEqual(len(check_imu_image.problems(image, HUB_IMAGE, "base")), 1)
 
     def test_a_pin_to_another_hub_image_fails(self):
         image = signed([(0xA0, hashlib.sha256(b"older").digest()), (0xA1, b"\x00")])
         self.assertIn("TLV 0xa0 is not the SHA-256 of the hub's image",
-                      check_imu_image.problems(image, HUB_IMAGE, "slim"))
+                      check_imu_image.problems(image, HUB_IMAGE, "base"))
 
     def test_an_image_without_protected_tlvs_fails(self):
         image = signed([], protected_magic=0x6907)
-        self.assertEqual(check_imu_image.problems(image, HUB_IMAGE, "slim"), ["no protected TLVs"])
+        self.assertEqual(check_imu_image.problems(image, HUB_IMAGE, "base"), ["no protected TLVs"])
 
     def test_a_file_that_is_not_an_image_fails(self):
         self.assertEqual(check_imu_image.problems(bytes(64), HUB_IMAGE, "full"),

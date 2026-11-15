@@ -29,6 +29,16 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
     assert_equal "content/pages", visit.ahoy_visit.events.find_by!(name: "pages#show").properties["controller"]
   end
 
+  test "a visit keeps its agent and what it names, and neither its address nor its coordinates" do
+    get page_path(slug: "go"), headers: { "User-Agent" => SAFARI, "REMOTE_ADDR" => "203.0.113.8" }
+
+    visit = Ahoy::Visit.sole
+    assert_equal [ "Safari", "Mac", "Desktop" ], [ visit.browser, visit.os, visit.device_type ]
+    assert_equal SAFARI, visit.user_agent
+    assert_not visit.has_attribute?(:ip)
+    assert_not visit.has_attribute?(:latitude)
+  end
+
   test "the tracking script loads only where tracking is on" do
     get root_path
     assert_select "script[type=module]", text: /ahoy-module/
@@ -56,7 +66,7 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
   # A response public caches keep a year must not hand one visitor's cookie to the next.
   test "a firmware download sets no cookie" do
     VCR.use_cassette("github/firmware") do
-      get "/releases/dev-1005/skyblip-go-dev-1005.signed.bin", headers: { "User-Agent" => SAFARI }
+      get "/releases/dev-1765/skyblip-go-dev-1765.signed.bin", headers: { "User-Agent" => SAFARI }
     end
 
     assert_response :success

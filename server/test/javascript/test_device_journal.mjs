@@ -34,9 +34,35 @@ const settled = (fleet, predicate) => new Promise(resolve => {
   });
 });
 
+test('an upload the unit refused once it landed is told with what it found in slot 1 and both keys', async () => {
+  const fake = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 });
+  airwaves(fake);
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.running);
+  await unit.updater.choose(signedImage({ major: 0, minor: 2, revision: 0, build: 15 }, 6000), 'skyblip-go-0.2.0+15.signed.bin');
+  fake.refuseInstall = 'wrong_key';
+  unit.updater.install();
+  await settled(fleet, () => unit.state.phase === 'confirming');
+  fake.press();
+  await settled(fleet, () => journal.named('device.upload_refused').length);
+  unit.disconnect();
+
+  const [started] = journal.named('device.task_started');
+  assert.equal(started.key, 'B2B2B2B2');
+  assert.match(started.sha, /^[0-9a-f]{16}$/);
+  assert.equal(journal.named('device.read')[0].key, 'B2B2B2B2');
+  const [refused] = journal.named('device.upload_refused');
+  assert.deepEqual(
+    { reason: refused.reason, version: refused.version, check: refused.check, staged_key: refused.staged_key, key: refused.key, unit_key: refused.unit_key },
+    { reason: 'wrong_key', version: '0.2.0+15', check: 'matched', staged_key: 'B2B2B2B2', key: 'B2B2B2B2', unit_key: 'B2B2B2B2' },
+  );
+});
+
 // A pilot who asks for help is read back from the journal, so a connection says what the unit was like.
 test('a connection is told once, with what the device runs and holds', async () => {
-  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, settings: 'prior' }));
+  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300, settings: 'prior', variant: 'plus' }));
   const journal = recorder();
   const fleet = new Fleet({ journal });
   const unit = await fleet.connectNew();
@@ -51,11 +77,28 @@ test('a connection is told once, with what the device runs and holds', async () 
   const [read] = journal.named('device.read');
   assert.deepEqual(
     { product: read.product, running: read.running, image: read.image, track: read.track, imu: read.imu, settings: read.settings, activated: read.activated, flight: read.flight },
-    { product: 'skyblip_go', running: '0.1.0+12', image: 'confirmed', track: 'release', imu: 'held', settings: 'prior', activated: true, flight: 'ground' },
+    { product: 'go', running: '0.1.0+12', image: 'confirmed', track: 'release', imu: 'held', settings: 'prior', activated: true, flight: 'ground' },
+  );
+  assert.deepEqual(
+    { variant: read.variant, version: read.version, release: read.release, device_id: read.device_id, bluetooth_tag: read.bluetooth_tag },
+    { variant: 'plus', version: '0.1.0+12', release: true, device_id: '8f3a1c2e9b7d4f60', bluetooth_tag: 0x5afe },
   );
   const [disconnected] = journal.named('device.disconnected');
   assert.equal(disconnected.expected, false);
   assert.equal(journal.named('device.read').length, 1);
+});
+
+// A unit on a release with a development bootloader still takes development images, which its track alone hides.
+test('a connection names the keys the unit\'s bootloader verifies', async () => {
+  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bootloaderKeys: [0xa1, 0xb2] }));
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.running && journal.named('device.read').length);
+  const [read] = journal.named('device.read');
+  assert.equal(read.track, 'release');
+  assert.equal(read.bootloader_keys, 'A1A1A1A1 B2B2B2B2');
+  unit.disconnect();
 });
 
 test('a chooser closed with no pick is told, with the browser\'s words for why', async () => {
@@ -92,7 +135,7 @@ test('an install is told from the question to the unit back on the new version',
   assert.deepEqual({ phase: restarted.phase, expected: restarted.expected }, { phase: 'installing', expected: true });
   assert.deepEqual(journal.named('device.connected').map(({ returned }) => returned), [false, true]);
   const [installed] = journal.named('device.installed');
-  assert.deepEqual({ from: installed.from, to: installed.to }, { from: '0.1.0+12', to: '0.2.0+15' });
+  assert.deepEqual({ from: installed.from, to: installed.to, device_id: installed.device_id }, { from: '0.1.0+12', to: '0.2.0+15', device_id: '8f3a1c2e9b7d4f60' });
 });
 
 test('a refusal on the glass is told as the notice the pilot read and the task it ended', async () => {

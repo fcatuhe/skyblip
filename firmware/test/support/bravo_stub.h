@@ -33,10 +33,11 @@ class BravoStub {
         uint32_t protocol_version{kProtocolVersion};
         bool listening{true};
         bool utc_valid{true};
-        bool own_icao_set{false};
+        bool aircraft_address_set{false};
         std::string export_reference{"own"};
         bool paired{true};
         std::string own_transponder_fields{};
+        std::string status_fields{"\"charging\":false,\"power_level\":\"normal\""};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -120,11 +121,12 @@ class BravoStub {
                            ",\"boot_epoch\":" + std::to_string(boot_epoch_) +
                            ",\"listening\":" + text_of(health.listening) +
                            ",\"utc_valid\":" + text_of(health.utc_valid) +
-                           ",\"own_icao_set\":" + text_of(health.own_icao_set) +
+                           ",\"aircraft_address_set\":" + text_of(health.aircraft_address_set) +
                            ",\"alarm_granted\":false,\"export_reference\":\"" +
                            health.export_reference + "\",\"paired\":" + text_of(health.paired);
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         if (!health.own_transponder_fields.empty()) json += "," + health.own_transponder_fields;
+        json += "," + health.status_fields;
         return complete_registry_frame(json + "}");
     }
 

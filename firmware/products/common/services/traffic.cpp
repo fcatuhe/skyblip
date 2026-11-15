@@ -36,7 +36,7 @@ void TrafficService::tick(uint32_t now_ms) {
     // INFO: fc 18oct26 each pass: a ground relay echoes us, and an unlock hands the address mid-run
     context_.state.traffic.set_own_address(settings::kSkyblipAddressMappingTable,
                                            context_.state.activation.address().value_or(0));
-    context_.state.traffic.set_own_icao(settings_.own_icao);
+    context_.state.traffic.set_aircraft_address(settings_.aircraft_address);
     events::RfEvent event{};
     while (context_.bus.rf.pop(event)) {
         switch (event.type) {

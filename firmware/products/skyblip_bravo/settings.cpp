@@ -10,9 +10,9 @@ namespace {
 
 constexpr size_t kPayload = sizeof(Settings);
 
-// INFO: fc 13nov26 version 1's layout, read once and migrated: it had no own_icao_from_go
+// INFO: fc 13nov26 version 1's layout, read once and migrated: it had no aircraft_address_from_go
 struct SettingsV1 {
-    uint32_t own_icao{kOwnIcaoUnset};
+    uint32_t aircraft_address{kAircraftAddressUnset};
     PeerPin peer{};
     bool alarm_enabled{true};
     AlarmVolume alarm_volume{AlarmVolume::Loud};
@@ -25,7 +25,7 @@ Status open_v1(const uint8_t* in, size_t length, Settings& out) {
     const Status status = settings::open(in, length, sizeof(SettingsV1), &read);
     if (status != Status::Ok) return status;
     out = Settings{};
-    out.own_icao = read.own_icao;
+    out.aircraft_address = read.aircraft_address;
     out.peer = read.peer;
     out.alarm_enabled = read.alarm_enabled;
     out.alarm_volume = read.alarm_volume;
@@ -60,7 +60,7 @@ PeerPin pin_of(const events::BluetoothAddress& address) {
 
 Status validate(const Settings& settings) {
     if (settings.alarm_volume > AlarmVolume::Loud) return Status::OutOfRange;
-    if (settings.own_icao > settings::kAddressMask) return Status::OutOfRange;
+    if (settings.aircraft_address > settings::kAddressMask) return Status::OutOfRange;
     return Status::Ok;
 }
 
@@ -86,7 +86,7 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
 void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_boolean(link::config_key::kAlarmEnabled, settings.alarm_enabled);
     writer.add_code(link::config_key::kAlarmVolume, settings.alarm_volume);
-    writer.add_unsigned(link::config_key::kOwnIcao, settings.own_icao);
+    writer.add_unsigned(link::config_key::kAircraftAddress, settings.aircraft_address);
 }
 
 // INFO: fc 12nov26 a key Bravo does not store is ignored, as the Go ignores address
@@ -103,12 +103,13 @@ Status apply_settings(Settings& settings, const cbor::Reader& frame) {
             return Status::Ok;
         });
     if (status == Status::Ok)
-        status = apply_key(frame.read_unsigned(link::set_key::kOwnIcao), [&](uint32_t value) {
-            if (value > settings::kAddressMask) return Status::OutOfRange;
-            next.own_icao = value;
-            next.own_icao_from_go = false;
-            return Status::Ok;
-        });
+        status =
+            apply_key(frame.read_unsigned(link::set_key::kAircraftAddress), [&](uint32_t value) {
+                if (value > settings::kAddressMask) return Status::OutOfRange;
+                next.aircraft_address = value;
+                next.aircraft_address_from_go = false;
+                return Status::Ok;
+            });
     if (status == Status::Ok) status = validate(next);
     if (status != Status::Ok) return status;
     settings = next;

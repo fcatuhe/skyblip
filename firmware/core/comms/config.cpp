@@ -16,7 +16,8 @@ static_assert(
     kAcknowledgementFrameBytes <= ports::kMinimumLinkPayloadBytes,
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
-// INFO: fc 14nov26 Conflict is the Go's own ICAO against its Bravo's transponder, ADS-L F.2.3
+// INFO: fc 14nov26 Conflict is the Go's aircraft address against its Bravo's transponder, ADS-L
+// F.2.3
 link::Reason settings_refusal(Status status) {
     switch (status) {
         case Status::OutOfRange: return link::Reason::OutOfRange;
@@ -295,11 +296,11 @@ void ConfigService::install_received_image() {
     install_held_ = false;
     ports::ImageVersion staged;
     if (!dfu_->staged_version(staged)) {
-        acknowledge(false, link::Reason::NothingStaged);
+        refuse_landing(link::Reason::NothingStaged);
     } else if (staged != approved_version_) {
-        acknowledge(false, link::Reason::NotApproved);
+        refuse_landing(link::Reason::NotApproved);
     } else if (!signed_by_trusted_key()) {
-        acknowledge(false, link::Reason::WrongKey);
+        refuse_landing(link::Reason::WrongKey);
     } else if (!swap_powered()) {
         acknowledge(false, link::Reason::LowPower);
     } else {
@@ -308,11 +309,21 @@ void ConfigService::install_received_image() {
     }
 }
 
-// INFO: fc 03oct26 the bootloader verifies against this key, so a foreign image stops before the
-// reboot
+void ConfigService::refuse_landing(link::Reason reason) {
+    dfu::Landing landing{dfu_->check_staged()};
+    ports::SigningKeyHash key;
+    if (dfu_->staged_key(key)) landing.staged_key = key;
+    landing_ = landing;
+    refuse(reason);
+}
+
+// INFO: fc 03oct26 a key MCUboot refuses stops here, before the reboot | 15nov26 read off MCUboot
 bool ConfigService::signed_by_trusted_key() const {
-    ports::SigningKeyHash trusted;
     ports::SigningKeyHash signer;
+    ports::BootloaderKeys bootloader;
+    if (dfu_->bootloader_keys(bootloader))
+        return dfu_->staged_key(signer) && bootloader.trusts(signer);
+    ports::SigningKeyHash trusted;
     if (!dfu_->running_key(trusted)) return true;
     return dfu_->staged_key(signer) && signer == trusted;
 }
@@ -358,6 +369,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Challenge: challenge(); return;
         case link::Command::Register: register_unit(reader); return;
         case link::Command::Unlock: unlock(reader); return;
+        case link::Command::Attest: attest(reader); return;
         case link::Command::Capture: request_capture(reader); return;
         case link::Command::BrowserChallenge: browser_challenge(); return;
         case link::Command::TrustBrowser: trust_browser(reader); return;
@@ -365,6 +377,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::ForgetBrowser: forget_browser(reader); return;
         case link::Command::InstallReport: send_install_report(); return;
         case link::Command::Protocols: send_protocols(); return;
+        case link::Command::Identity: send_identity(); return;
         case link::Command::AdsbTrial: request_adsb_trial(reader); return;
         default: return;
     }
@@ -389,6 +402,8 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Challenge:
         case link::Command::Register:
         case link::Command::Unlock:
+        case link::Command::Attest:
+        case link::Command::Identity:
         case link::Command::BrowserChallenge:
         case link::Command::TrustBrowser:
         case link::Command::Browsers:
@@ -399,6 +414,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:
+        case link::Command::Attestation:
         case link::Command::List:
         case link::Command::Read:
         case link::Command::Erase:
@@ -566,6 +582,7 @@ void ConfigService::apply_settings(const cbor::Reader& frame) {
 void ConfigService::open_upload_window() {
     upload_window_open_ = true;
     upload_window_opened_ms_ = now_ms_;
+    landing_.reset();
     if (dfu_) dfu_->forget_upload();
 }
 

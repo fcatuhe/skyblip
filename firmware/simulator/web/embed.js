@@ -1,6 +1,6 @@
 import createModule from './skyblip_simulator.js';
 
-export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', 'raw', 'capture', 'self test', 'bravo'];
+export const PAGES = ['radar', 'nearby', '6-pack', 'g meter', 'status', 'satellites', 'radio log', '', '', 'self test', 'bravo', 'bravo log'];
 export const ALARM = ['none', 'advisory'];
 export const PRODUCT = ['go', 'bravo', 'paired'];
 export const BRAVO_STATE = ['unpaired', 'waiting', 'live', 'link down', 'receiver down', 'no UTC'];

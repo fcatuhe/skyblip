@@ -311,6 +311,31 @@ TEST_CASE("screen policy: an alarm flashes the wedge at a flip a second") {
     CHECK(rig.chip.present_count == held);
 }
 
+// The radar draws twelve aircraft, and the table slot an alarm landed in must not decide if it is
+// one.
+TEST_CASE("screen policy: an alarm past twelve quiet aircraft still flashes its wedge") {
+    ScreenRig rig;
+    uint32_t now_ms = 0;
+    rig.run_seconds(now_ms, 3);
+    for (uint32_t i = 0; i < go::kMaxRadarTargets; i++) {
+        model::AircraftObservation observation{};
+        observation.address = 0x500000 + i;
+        observation.position_valid = true;
+        observation.latitude_1e7 = rig.state.own.latitude_1e7 + 90000 + 1000 * int32_t(i);
+        observation.longitude_1e7 = rig.state.own.longitude_1e7;
+        observation.altitude_m = 3000;
+        observation.received.at_s = now_ms / 1000;
+        observation.at_ms = now_ms;
+        rig.state.traffic.update(observation, now_ms / 1000);
+    }
+    rig.run_seconds(now_ms, 2);
+    const int settled = rig.chip.present_count;
+
+    rig.threat(traffic::Level::Advisory, 0, 1500, now_ms);
+    for (int i = 0; i < 100; i++) rig.tick(now_ms += 100);
+    CHECK(rig.chip.present_count - settled >= 9);
+}
+
 namespace {
 
 constexpr uint32_t kPassMs = 11;

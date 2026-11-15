@@ -18,6 +18,8 @@ static_assert(dfu::HubImageReport::kDigestBytes == link::update_bytes::kImuDiges
               "the update frame carries the whole digest the hub image report holds");
 static_assert(link::update_bytes::kKey <= std::tuple_size<ports::SigningKeyHash>::value,
               "the update frame's key is a prefix of the signing key's hash");
+static_assert(link::identity_bytes::kDeviceId == identity::kDeviceIdBytes,
+              "the identity frame carries the whole DEVICEID");
 
 struct StackVersion {
     RadioProtocol protocol;
@@ -147,7 +149,6 @@ void ConfigService::send_update() {
     (void)reply(frame, bytes);
 }
 
-// TODO: fc 13nov26 the install report's frame, retired with #294
 void ConfigService::send_install_report() {
     uint8_t frame[kSmallestSupportedPayloadBytes];
     cbor::Writer writer(frame, sizeof(frame));
@@ -162,6 +163,13 @@ void ConfigService::send_install_report() {
         writer.add_code(link::install_report_key::kProof, report.proof);
         writer.add_code(link::install_report_key::kReset, report.reset);
     }
+    if (landing_) {
+        writer.add_code(link::install_report_key::kLandedCheck, landing_->check);
+        if (landing_->staged_key)
+            writer.add_bytes(link::install_report_key::kStagedKey,
+                             ConstByteSpan(landing_->staged_key->data(),
+                                           link::install_report_bytes::kStagedKey));
+    }
     (void)reply(frame, writer.finish());
 }
 
@@ -172,6 +180,31 @@ void ConfigService::send_protocols() {
     for (const StackVersion& stack : kStackVersions)
         if (carries(stack.protocol)) writer.add_text(stack.key, stack.version);
     (void)reply(frame, writer.finish());
+}
+
+void ConfigService::send_identity() {
+    char version[dfu::kVersionTextBytes] = {0};
+    if (!running_version_text(version, sizeof(version))) {
+        refuse(link::Reason::NoVersion);
+        return;
+    }
+    const identity::Unit& unit = identity_->unit();
+    uint8_t frame[IdentityLink::kIdentityFrameBytes];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Identity);
+    writer.add_code(link::identity_key::kProduct, product_);
+    writer.add_code(link::identity_key::kVariant, variant_);
+    writer.add_text(link::identity_key::kVersion, version);
+    writer.add_boolean(link::identity_key::kRelease, dfu_ != nullptr && dfu_->release_build());
+    writer.add_bytes(link::identity_key::kDeviceId,
+                     ConstByteSpan(unit.device_id().data(), link::identity_bytes::kDeviceId));
+    writer.add_unsigned(link::identity_key::kBluetoothTag, unit.activation().bluetooth_tag);
+    const int bytes = writer.finish();
+    if (bytes == 0) {
+        diagnostics_.link_drops++;
+        return;
+    }
+    (void)reply(frame, bytes);
 }
 
 bool ConfigService::carries(RadioProtocol protocol) const {
@@ -214,9 +247,15 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     if (dfu_ != nullptr && dfu_->running_key(trusted))
         writer.add_bytes(link::update_key::kKey,
                          ConstByteSpan(trusted.data(), link::update_bytes::kKey));
-    // INFO: fc 10nov26 absent reads as skyblip_go, which keeps a Go's frame inside a 20-byte link
-    if (product_ && *product_ != dfu::Product::SkyblipGo)
-        writer.add_code(link::update_key::kProduct, *product_);
+    ports::BootloaderKeys bootloader;
+    if (dfu_ != nullptr && dfu_->bootloader_keys(bootloader)) {
+        uint8_t ids[ports::BootloaderKeys::kCapacity * link::update_bytes::kKey];
+        for (size_t i = 0; i < bootloader.count; i++)
+            std::copy_n(bootloader.keys[i].data(), link::update_bytes::kKey,
+                        ids + i * link::update_bytes::kKey);
+        writer.add_bytes(link::update_key::kBootloaderKeys,
+                         ConstByteSpan(ids, bootloader.count * link::update_bytes::kKey));
+    }
     return writer.finish();
 }
 

@@ -5,6 +5,7 @@
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/bravo.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 #include "products/skyblip_go/settings.h"
 #include "test/support/frame_glass.h"
@@ -137,16 +138,6 @@ TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is conne
     CHECK(reads_pad_key(canvas, "KEEP"));
 }
 
-TEST_CASE("bravo page: the own-ICAO notice says what shows and where to set it") {
-    Glass canvas;
-    draw_own_icao_notice(canvas);
-    CHECK(reads_heading(canvas, kOwnIcaoNoticeTitle, Heading::Interrupt));
-    CHECK(centred_reads(canvas, "YOUR TRANSPONDER", kMenuScale));
-    CHECK(centred_reads(canvas, "AIRCRAFT", kMenuScale));
-    CHECK(reads_button_key(canvas, "CLOSE"));
-    CHECK(reads_pad_key(canvas, "CLOSE"));
-}
-
 TEST_CASE("bravo page: the notice of a pin Bravo does not hold says the Go dropped it too") {
     Glass canvas;
     draw_bravo_forgot_notice(canvas);
@@ -190,6 +181,48 @@ TEST_CASE("bravo page: a pairing under way is cancelled by the pad and never idl
 
     view.step = BravoStep::Scanning;
     CHECK(page.idle(view, 30 + MenuEditor::kIdleReturnHoldMs) == BravoAction::Leave);
+}
+
+TEST_CASE("bravo page: a pair or an unpair nobody answers is cancelled after thirty seconds") {
+    BravoPage pairing;
+    pairing.open(0);
+    REQUIRE(pairing.button(scanning(2), 10) == BravoAction::Redraw);
+    REQUIRE(pairing.confirming());
+    CHECK(pairing.seconds_left(10) == 30);
+    CHECK(pairing.idle(scanning(2), 10 + kAskCeilingMs - 1) == BravoAction::None);
+    CHECK(pairing.seconds_left(10 + kAskCeilingMs - 1) == 1);
+    CHECK(pairing.idle(scanning(2), 10 + kAskCeilingMs) == BravoAction::Redraw);
+    CHECK_FALSE(pairing.confirming());
+
+    BravoPage unpairing;
+    unpairing.open(0);
+    BravoView paired;
+    paired.paired = true;
+    REQUIRE(unpairing.button(paired, 10) == BravoAction::Redraw);
+    REQUIRE(unpairing.unpairing());
+    CHECK(unpairing.idle(paired, 10 + kAskCeilingMs) == BravoAction::Redraw);
+    CHECK_FALSE(unpairing.unpairing());
+}
+
+TEST_CASE("bravo page: each question counts down on the line over the keys") {
+    BravoSnapshot confirm;
+    confirm.view = scanning(1);
+    confirm.confirming = true;
+    confirm.seconds_left = 30;
+    CHECK(reads_foot_line(drawn(confirm), "CANCELS IN 30 S"));
+
+    BravoSnapshot waiting;
+    waiting.view.step = BravoStep::Waiting;
+    waiting.view.pairing_tag = 0x3F2A;
+    waiting.seconds_left = 12;
+    CHECK(reads_foot_line(drawn(waiting), "CANCELS IN 12 S"));
+
+    BravoSnapshot unpair;
+    unpair.view.paired = true;
+    unpair.view.paired_tag = 0x3F2A;
+    unpair.unpairing = true;
+    unpair.seconds_left = 7;
+    CHECK(reads_foot_line(drawn(unpair), "CANCELS IN 7 S"));
 }
 
 TEST_CASE("bravo page: a refusal retries on the button, but three phones wait for a slot") {

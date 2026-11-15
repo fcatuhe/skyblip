@@ -138,7 +138,7 @@ class DeploymentTest < Minitest::Test
     declared_products.each do |product|
       slug = product.tr("_", "-")
       assert File.file?(File.join(ROOT, "firmware/products", product, "PROTOCOLS")), "#{product} has no PROTOCOLS"
-      assert_equal product, Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
+      assert_equal product.delete_prefix("skyblip_"), Release.product_of("#{slug}-0.1.0.signed.bin"), "Release::FIRMWARE does not match #{slug}"
       assert_includes matrix.map { |leg| [ leg.fetch("product"), leg.fetch("slug") ] }, [ product, slug ]
     end
   end
@@ -279,6 +279,16 @@ class DeploymentTest < Minitest::Test
     refute image.key?("permissions")
     assert_equal({ "contents" => "read" }, workflow("release").fetch("permissions"))
     assert_equal [ "draft" ], jobs.select { |_name, job| job.dig("permissions", "contents") == "write" }.keys
+  end
+
+  def test_every_emsdk_setup_installs_the_version_the_pins_hold
+    %w[firmware release server].each do |name|
+      steps = workflow(name).fetch("jobs").values.flat_map { |job| job.fetch("steps", []) }
+      setups = steps.select { |step| step["uses"].to_s.include?("setup-emsdk") }
+
+      refute_empty setups, name
+      setups.each { |step| assert_equal "${{ steps.emsdk.outputs.version }}", step.dig("with", "version"), name }
+    end
   end
 
   def test_scenario_bundle_contains_the_firmware_scenarios_from_any_directory

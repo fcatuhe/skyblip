@@ -3,12 +3,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "core/dfu/update.h"
 #include "core/power/reset_reason.h"
 #include "ports/dfu.h"
 
-// TODO: fc 13nov26 troubleshooting for #278, retired with #294 once Bluetooth updates land
 namespace skyblip::dfu {
 
 struct InstallReport {
@@ -20,6 +20,11 @@ struct InstallReport {
 
     void booted(bool on_probation, power::ResetReason reason);
     bool proved(Proof reached);
+};
+
+struct Landing {
+    ports::StagedCheck check{ports::StagedCheck::Unchecked};
+    std::optional<ports::SigningKeyHash> staged_key{};
 };
 
 constexpr size_t kInstallReportBytes = 9;

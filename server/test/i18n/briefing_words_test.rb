@@ -9,29 +9,28 @@ class BriefingWordsTest < ActiveSupport::TestCase
   UPDATE_NOTICES = %w[
     claimed window_closed older wrong_key wrong_product unmarked_image too_large not_image flash smp failed refused
     timeout link_lost not_back not_skyblip no_bluetooth no_file no_params shelf_failed needs_full recovering
-    probation reverted image_refused settings_prior settings_defaults swap_unpowered went_dark_flat imu_writing no_key not_activated
+    probation reverted image_refused settings_prior settings_defaults swap_unpowered went_dark_flat imu_writing not_activated
   ].freeze
   # INFO: fc 12nov26 the page offers the registry's profiles by name, so it never sends one past stop
   NEVER_SENT = %w[out_of_range].freeze
-  CAPTURE_NOTICES = %w[capture_armed capture_stopped expired cancelled prompt_pending refused_on_device unknown_command].freeze
+  CAPTURE_NOTICES = %w[capture_armed capture_stopped expired cancelled prompt_pending refused_on_device].freeze
   SET_REFUSALS = %w[in_flight low_power expired cancelled prompt_pending refused_on_device small_mtu unknown_command out_of_range not_own_transponder].freeze
-  PROMPT_REFUSALS = %w[expired cancelled prompt_pending refused_on_device claimed unknown_command small_mtu].freeze
+  PROMPT_REFUSALS = %w[expired cancelled prompt_pending refused_on_device claimed small_mtu].freeze
   SERVER_REFUSALS = %w[invalid unknown_server_key expired bad_signature other_key revoked_key daily_cap network_cap no_serial rate_limited unreachable failed].freeze
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze
   # INFO: fc 13nov26 a forget the unit never answers is a timeout, which trust.js names
   BROWSER_NOTICES = %w[untrusted invalid timeout].freeze
-  # TODO: fc 13nov26 the install report's causes, retired with #294
   INSTALL_CAUSES = Rails.root.join("app/javascript/skyblip/install_report.js").read[/INSTALL_CAUSES = \[(.*?)\]/, 1].scan(/'(\w+)'/).flatten
 
   test "the firmware still refuses with the reasons this test reads" do
-    assert_includes refusals("config.cpp", "acknowledge\\(false, "), "not_approved"
+    assert_includes refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()"), "not_approved"
     assert_includes refusals("capture_request.cpp", "refuse\\("), "not_capturing"
     assert_includes refusals("identity_link.cpp", "refuse\\("), "bad_signature"
   end
 
   I18n.available_locales.each do |locale|
     test "every refusal and notice of an install has words in #{locale}" do
-      keys = refusals("config.cpp", "acknowledge\\(false, ") - NEVER_ASKED + UPDATE_NOTICES
+      keys = refusals("config.cpp", "(?:acknowledge\\(false, |refuse_landing\\()") - NEVER_ASKED + UPDATE_NOTICES
       assert_empty keys - words(locale, :notices)
     end
 

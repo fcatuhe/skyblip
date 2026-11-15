@@ -12,10 +12,6 @@
 namespace skyblip::go {
 
 namespace {
-bool settled_for_a_double_press(uint32_t now_ms, uint32_t since_ms) {
-    return now_ms - since_ms >= common::ConfirmGesture::kDoublePressWindowMs;
-}
-
 bool second_due(const diagnostics::Instant& at, uint32_t now_ms, uint32_t last_ms,
                 uint32_t period_ms) {
     if (!at.phase_valid) return now_ms - last_ms >= period_ms;
@@ -52,9 +48,8 @@ void ScreenService::handle_input(uint32_t now_ms) {
         answer_.arm_once_quiet(readable, now_ms);
     }
 
-    sync_receiving(now_ms);
+    sync_receiving();
     sync_editor(now_ms);
-    sync_arming(now_ms);
 
     events::ContactEvent event{};
     while (context_.bus.input.pop(event)) {
@@ -65,21 +60,16 @@ void ScreenService::handle_input(uint32_t now_ms) {
     }
     obey(controls_.tick(now_ms), now_ms);
 
-    if (answering()) {
-        resolve(answer_.tick(now_ms));
-        return;
-    }
-    if (arming_.tick(now_ms) != common::Answer::None) dirty_ = true;
+    if (answering()) return;
     step_editor(now_ms);
     step_bravo(now_ms);
     sync_notice(now_ms);
 }
 
-void ScreenService::sync_receiving(uint32_t now_ms) {
+void ScreenService::sync_receiving() {
     const bool receiving = config_.receiving_firmware();
     if (receiving == receiving_) return;
     receiving_ = receiving;
-    receiving_since_ms_ = now_ms;
     change_screen();
 }
 
@@ -121,35 +111,6 @@ uint32_t ScreenService::microseconds_since(uint64_t began_us) const {
     return took_us > 0xFFFFFFFFu ? 0xFFFFFFFFu : static_cast<uint32_t>(took_us);
 }
 
-// INFO: fc 20sep26 the price has to be on the glass before a press can be spent arming
-void ScreenService::sync_arming(uint32_t now_ms) {
-    if (answering() || !on_capture_page() || !capture_on_glass_ ||
-        !context_.state.capture.available) {
-        arming_.disarm();
-        return;
-    }
-    if (!arming_.armed()) arming_.arm(now_ms);
-}
-
-void ScreenService::toggle_capture() {
-    if (context_.diagnostics.armed())
-        context_.diagnostics.disarm();
-    else
-        context_.diagnostics.arm(capture_in_focus_);
-}
-
-bool ScreenService::picking_a_capture() const {
-    return on_capture_page() && !context_.diagnostics.armed() && context_.state.capture.available;
-}
-
-bool ScreenService::step_capture_focus() {
-    if (!picking_a_capture()) return false;
-    capture_in_focus_ = next_capture(capture_in_focus_);
-    dirty_ = true;
-    const bool walked_off_the_last_capture = capture_in_focus_ == kFirstCapture;
-    return !walked_off_the_last_capture;
-}
-
 void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
     switch (gesture) {
         case Gesture::Tap: tap(now_ms); return;
@@ -160,13 +121,20 @@ void ScreenService::obey(Gesture gesture, uint32_t now_ms) {
 }
 
 void ScreenService::tap(uint32_t now_ms) {
-    if (answering() || receiving_ || !context_.state.activation.activated()) return;
+    if (answering()) {
+        if (answer_.armed()) close_prompt(/*accepted=*/false);
+        return;
+    }
+    if (receiving_) {
+        config_.cancel();
+        return;
+    }
+    if (!context_.state.activation.activated()) return;
     if (close_notice()) return;
     if (on_bravo_page()) {
         act_on_bravo(bravo_page_.pad(bravo_view(), now_ms), now_ms);
         return;
     }
-    if (step_capture_focus()) return;
     page_forward(now_ms);
 }
 
@@ -182,14 +150,10 @@ void ScreenService::long_touch() {
 
 void ScreenService::press(uint32_t now_ms) {
     if (answering()) {
-        resolve(answer_.press(now_ms));
+        if (answer_.press()) close_prompt(/*accepted=*/true);
         return;
     }
-    if (receiving_) {
-        // INFO: fc 03oct26 the press that confirmed the upload must not be the one that cancels it
-        if (settled_for_a_double_press(now_ms, receiving_since_ms_)) config_.cancel();
-        return;
-    }
+    if (receiving_) return;
     // INFO: fc 18oct26 the activation page has no menu behind it; the power-off hold is the shell's
     if (!context_.state.activation.activated()) return;
     if (notice_ && notice_kind_ == Notice::NewAircraft) {
@@ -204,11 +168,6 @@ void ScreenService::press(uint32_t now_ms) {
     }
     if (editor_.active()) {
         editor_.button(now_ms);
-        return;
-    }
-    if (on_capture_page()) {
-        if (arming_.press(now_ms) == common::Answer::Confirm) toggle_capture();
-        dirty_ = true;
         return;
     }
     enter_menu(now_ms);
@@ -321,9 +280,8 @@ void ScreenService::step_editor(uint32_t now_ms) {
     }
 }
 
-void ScreenService::resolve(common::Answer answer) {
-    if (answer == common::Answer::None) return;
-    if (answer == common::Answer::Confirm)
+void ScreenService::close_prompt(bool accepted) {
+    if (accepted)
         config_.confirm();
     else
         config_.cancel();
@@ -400,7 +358,8 @@ void ScreenService::flash_alarm() {
 }
 
 bool ScreenService::notice_read(uint32_t now_ms) const {
-    return notice_on_glass_ && settled_for_a_double_press(now_ms, notice_on_glass_since_ms_);
+    return notice_on_glass_ &&
+           common::PromptAnswer::settled_since(now_ms, notice_on_glass_since_ms_);
 }
 
 bool ScreenService::refresh_allowed() const {
@@ -421,7 +380,6 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
     note_presented(now_ms);
     prompt_on_glass_ = false;
     notice_on_glass_ = false;
-    capture_on_glass_ = false;
     last_render_ms_ = now_ms;
     dirty_ = true;
     change_ = Change::Wiped;
@@ -441,7 +399,6 @@ void ScreenService::note_presented(uint32_t now_ms) {
     presented_once_ = true;
     context_.state.panel_presented = true;
     prompt_on_glass_ = answering();
-    capture_on_glass_ = on_capture_page();
     if (notice_ && !notice_on_glass_) notice_on_glass_since_ms_ = now_ms;
     notice_on_glass_ = notice_;
     last_present_ms_ = now_ms;

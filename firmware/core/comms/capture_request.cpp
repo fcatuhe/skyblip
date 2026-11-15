@@ -24,6 +24,8 @@ void ConfigService::request_capture(const cbor::Reader& frame) {
     } else {
         staged_capture_ = static_cast<CaptureProfile>(code.value());
         stage(Pending::Capture, link::Reason::ConfirmCapture);
+        (void)format_capture_detail(prompt_detail_, staged_capture_,
+                                    diagnostics_.capture_evicts_flights);
     }
 }
 

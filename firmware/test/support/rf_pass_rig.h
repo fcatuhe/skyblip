@@ -43,12 +43,13 @@ struct Pass {
                        null.indicator,
                        null.gnss,
                        platform.identity(),
+                       platform.random(),
                        ports::Capability::Rf};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
-    common::TrafficService traffic_service{context, go::kFeatures, settings.own_icao};
+    common::TrafficService traffic_service{context, go::kFeatures, settings.aircraft_address};
 
     Status begin() {
         const Status status = rf.begin();

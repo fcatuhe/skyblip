@@ -2,8 +2,7 @@ fr:
   firmwares:
     label: Image publiée
     prompt: Choisissez une image
-    slim: allégée
-    full: complète
+    full: avec le firmware du capteur de mouvement
     loading: Chargement des firmwares publiés.
     unavailable: La liste des firmwares publiés est indisponible. Choisissez plutôt un fichier.
     empty: "Aucun firmware n\u2019est encore publié. Choisissez plutôt un fichier."

@@ -5,9 +5,6 @@ CONFIG_CLOCK_CONTROL=y
 CONFIG_CONSOLE=y
 CONFIG_UART_CONSOLE=y
 CONFIG_SERIAL=y
-# nRF52840 uses the internal RC/xtal LF clock for the BT stack + kernel tick.
-CONFIG_CLOCK_CONTROL_NRF_K32SRC_XTAL=y
-
 # Link into the `zephyr,code-partition` chosen in the board devicetree rather
 # than at flash base 0. Without this, CONFIG_FLASH_LOAD_OFFSET defaults to 0
 # (Kconfig.zephyr:133) and both the ELF and the generated .uf2 target 0x0:

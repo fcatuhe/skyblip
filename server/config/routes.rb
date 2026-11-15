@@ -37,10 +37,14 @@ Rails.application.routes.draw do
     end
     resource :insights, only: :show
     resources :events, only: :index
-    resources :errors, only: %i[index show], param: :fingerprint
+    resources :errors, only: %i[index show], param: :fingerprint do
+      resource :resolution, only: %i[create destroy], module: :errors
+    end
     resources :agents, only: %i[index destroy]
     resources :users
     resources :units, only: %i[index show]
+    resource :activation_cap, only: %i[edit update]
+    resources :captures, only: %i[index show]
     resources :unit_keys, only: [] do
       scope module: :unit_keys do
         resource :promotion, only: :create
@@ -53,6 +57,11 @@ Rails.application.routes.draw do
   namespace :activation do
     resources :challenges, only: :create
     resources :registrations, only: :create
+  end
+
+  namespace :attestation do
+    resources :challenges, only: :create
+    resources :statements, only: :create
   end
 
   resources :releases, only: [], param: :tag do
@@ -77,6 +86,7 @@ Rails.application.routes.draw do
     resources :devices, only: :show, param: :slug, constraints: { slug: /(go|bravo)-[0-9a-f]+/ } do
       resource :firmware, only: :show, module: :devices
       resource :terminal, only: :show, module: :devices
+      resources :captures, only: :create, module: :devices
     end
     resource :activation, only: :show, path: "activate"
     resource :preferences, only: %i[show update]

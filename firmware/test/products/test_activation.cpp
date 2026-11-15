@@ -10,6 +10,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/watchdog.h"
 #include "products/skyblip_go/pages/activation.h"
 #include "products/skyblip_go/settings_store.h"
@@ -84,7 +85,7 @@ struct Bench {
     }
 
     std::string challenge_with_vectors_nonce() {
-        rig.platform.identity().queue_random(vectors.bytes<16>("unit_nonce"));
+        rig.platform.random().queue(vectors.bytes<16>("unit_nonce"));
         return say("{\"command\":\"challenge\"}");
     }
 
@@ -100,10 +101,10 @@ struct Bench {
     // INFO: fc 18oct26 a press counts once the prompt is on the glass and the thumb has stopped
     void read_the_prompt() { pass(3000); }
 
-    std::string press_twice() {
+    std::string accept() {
         read_the_prompt();
         const size_t before = rig.platform.link().sent.size();
-        rig.double_press(now_ms);
+        rig.press(now_ms);
         pass(500);
         return answer_since(before);
     }
@@ -167,7 +168,7 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
           "\"confirm_register\"}");
     REQUIRE(bench.pending() == comms::Pending::Register);
 
-    const std::string registration = bench.press_twice();
+    const std::string registration = bench.accept();
     CHECK(registration ==
           "{\"command\":\"registration\",\"device_id\":\"" + bench.vectors.text("device_id") +
               "\",\"public_key\":\"" + bench.vectors.text("unit_public_key") + "\",\"version\":\"" +
@@ -190,7 +191,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
@@ -202,7 +203,7 @@ TEST_CASE("activation: once unlocked the unit names itself, reports its address,
                          go::kGlassWidth, go::kGlassHeight, go::kFrameScale));
 }
 
-TEST_CASE("activation: the glass names the operation two presses authorise") {
+TEST_CASE("activation: the glass names the operation one press authorises") {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
@@ -215,19 +216,19 @@ TEST_CASE("activation: the glass names the operation two presses authorise") {
     CHECK(reads_in(glass, "SKYBLIP.EU", 0, 0, go::kGlassWidth, go::kGlassHeight, 2));
 }
 
-TEST_CASE("activation: one press cancels the registration, thirty seconds expire it") {
-    SUBCASE("one press") {
+TEST_CASE("activation: a tap of the pad cancels the registration, thirty seconds expire it") {
+    SUBCASE("a tap of the pad") {
         Bench bench;
         bench.boot();
         bench.challenge_with_vectors_nonce();
         bench.register_with_vectors();
         bench.read_the_prompt();
         const size_t before = bench.rig.platform.link().sent.size();
-        bench.rig.press(bench.now_ms);
+        bench.rig.tap(bench.now_ms);
         bench.pass(1000);
         CHECK(bench.answer_since(before) == refusal("cancelled"));
     }
-    SUBCASE("no press") {
+    SUBCASE("no answer") {
         Bench bench;
         bench.boot();
         bench.challenge_with_vectors_nonce();
@@ -252,8 +253,7 @@ TEST_CASE(
               register_command(std::string(32, '0'), bench.vectors.text("register_signature"))) ==
           refusal("prompt_pending"));
     CHECK(bench.pending() == comms::Pending::Register);
-    CHECK(bench.press_twice().find(bench.vectors.text("registration_signature")) !=
-          std::string::npos);
+    CHECK(bench.accept().find(bench.vectors.text("registration_signature")) != std::string::npos);
 }
 
 // The activation page's run on one link: each answer opens the next question, none is re-sent.
@@ -262,7 +262,7 @@ TEST_CASE("activation: the page activates, then stores the settings it offers, o
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     REQUIRE(bench.rig.product.config_link().config().flight_state() ==
@@ -270,7 +270,7 @@ TEST_CASE("activation: the page activates, then stores the settings it offers, o
 
     CHECK(bench.say("{\"command\":\"set\",\"aircraft_type\":4,\"callsign\":\"F-JABC\"}")
               .find("\"pending\":true") != std::string::npos);
-    CHECK(bench.press_twice() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
+    CHECK(bench.accept() == "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
     CHECK(int(bench.rig.settings().aircraft_type) == 4);
     CHECK(std::string(bench.rig.settings().callsign) == "F-JABC");
 }
@@ -296,8 +296,11 @@ TEST_CASE("activation: a register the trusted server did not sign is refused at 
     CHECK(bench.pending() == comms::Pending::None);
 }
 
-// A fresh challenge replaces Nu, so R over the old one no longer checks.
-TEST_CASE("activation: a second challenge replaces the nonce, and R over the first is refused") {
+// A fresh challenge replaces unit_nonce, so the register signature over the old one no longer
+// checks.
+TEST_CASE(
+    "activation: a second challenge replaces the nonce, and the register signature over the first "
+    "is refused") {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
@@ -374,7 +377,7 @@ TEST_CASE("activation: a unit with no key, or no version to report, cannot be ac
     SUBCASE("no randomness") {
         Bench bench;
         bench.boot();
-        bench.rig.platform.identity().random_fails = true;
+        bench.rig.platform.random().fails = true;
         CHECK(bench.say("{\"command\":\"challenge\"}") == refusal("keyless"));
     }
     SUBCASE("no running version") {
@@ -418,7 +421,7 @@ TEST_CASE("activation: a link that refuses the first name is asked again, once a
     CHECK(rig.platform.link().advertise_calls == 3);
 }
 
-// A Bluetooth that failed to come up refuses forever, and must not flood the console doing it.
+// A Bluetooth that failed to come up refuses forever, and must not spin the loop doing it.
 TEST_CASE("activation: a link that never takes the name is asked at most once a second") {
     Rig rig;
     rig.platform.link().advertise_refusals = 1000;
@@ -455,7 +458,7 @@ TEST_CASE("activation: the self-test page shows the address an unlock gave, with
     bench.boot();
     bench.challenge_with_vectors_nonce();
     bench.register_with_vectors();
-    bench.press_twice();
+    bench.accept();
     REQUIRE(bench.unlock_with_vectors() ==
             "{\"command\":\"acknowledgement\",\"acknowledge\":true,\"reason\":\"unlock\"}");
     bench.pass(3000);
@@ -484,7 +487,7 @@ struct QueuedUnlock {
                 flight::FlightState::Ground);
 
         const identity::Nonce nonce{4, 2};
-        bench.rig.platform.identity().queue_random(nonce);
+        bench.rig.platform.random().queue(nonce);
         REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
         const identity::UnlockCode code = Identity::unlock_code_for(kNewSerial, nonce);
         std::string signature(128, '?');
@@ -530,7 +533,7 @@ TEST_CASE(
     bench.rig.seconds(bench.now_ms, 20, 0, 300);
 
     const identity::Nonce nonce{4, 2};
-    bench.rig.platform.identity().queue_random(nonce);
+    bench.rig.platform.random().queue(nonce);
     REQUIRE(bench.say("{\"command\":\"challenge\"}").find("\"nonce\"") != std::string::npos);
     const identity::UnlockCode code = Identity::unlock_code_for(Identity::kSerial, nonce);
     std::string signature(128, '?');
@@ -610,7 +613,8 @@ struct Desk {
     go::SettingsStore store{settings, kTestActivation, kNoOwnTransponder};
     comms::ConfigService config{link, store, &dfu};
     Identity port;
-    identity::Unit unit{port};
+    platform::host::Random random;
+    identity::Unit unit{port, random};
     comms::IdentityLink identity{unit};
     ActivationVectors vectors;
 
@@ -655,7 +659,7 @@ TEST_CASE(
         Desk desk;
         desk.dfu.release = desk.vectors.flag("release");
         desk.config.set_flight_state(flight_state);
-        desk.port.queue_random(desk.vectors.bytes<16>("unit_nonce"));
+        desk.random.queue(desk.vectors.bytes<16>("unit_nonce"));
         desk.say("{\"command\":\"challenge\"}");
         desk.say(register_command(desk.vectors.text("server_nonce"),
                                   desk.vectors.text("register_signature")));

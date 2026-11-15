@@ -2,8 +2,23 @@
   .unit { display: grid; gap: var(--space-l); }
   .unit [hidden] { display: none; }
 
-  .unit-back { font-size: var(--text-s); color: var(--ink-muted); margin-block-end: calc(-1 * var(--space-s)); }
-  .unit-back::before { content: "< "; }
+  .unit-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-inline-xs);
+    justify-self: start;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+    margin-block-end: calc(-1 * var(--space-s));
+  }
+  .unit-back::before {
+    content: "";
+    inline-size: 0.45em;
+    block-size: 0.45em;
+    border-inline-start: 2px solid currentColor;
+    border-block-end: 2px solid currentColor;
+    rotate: 45deg;
+  }
 
   .unit-head {
     display: grid;
@@ -157,6 +172,11 @@
   }
   .unit-browser-list .is-self { color: var(--ink-muted); }
   .unit-capture-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-inline-s); align-items: center; }
+  .unit-capture-state { margin: 0; font-size: var(--text-s); color: var(--ink-soft); }
+
+  .unit-capture,
+  .unit-browsers { margin-block-start: var(--space-s); }
+  .unit-capture-send { display: grid; gap: var(--space-s); }
 
   .unit-fields {
     display: grid;
@@ -186,31 +206,48 @@
     color: var(--ink);
   }
   .field input[name="callsign"] { text-transform: uppercase; letter-spacing: 0.04em; }
-  .field input[name="own_icao"] { font-family: var(--font-mono); text-transform: uppercase; }
+  .field input[name="aircraft_address"] { font-family: var(--font-mono); text-transform: uppercase; }
   .field.is-edited { box-shadow: inset 3px 0 0 var(--signal); padding-inline-start: var(--space-inline-s); }
   .field :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
   .field :user-invalid { border-color: var(--blip-text); }
   .field--check input { justify-self: end; inline-size: 1.4rem; block-size: 1.4rem; accent-color: var(--blip); }
 
   .field-hint,
-  .field-default { grid-column: 1 / -1; margin: 0; font-size: var(--text-xs); }
+  .field-default { grid-column: 1 / -1; margin: 0; font-size: var(--text-s); line-height: 1.5; }
   .field-hint { color: var(--quiet-text); }
   .field-default { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
 
-  .unit-row {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-inline-m);
-    padding: var(--space-s) var(--space-inline-m);
+  .unit-rows {
+    display: grid;
+    overflow: hidden;
     border: 1px solid var(--card-border);
     border-radius: var(--space-inline-xs);
     background: var(--card-bg);
+  }
+  .unit-rows:not(:has(> :not([hidden]))) { display: none; }
+
+  .unit-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-inline-m);
+    min-block-size: var(--tap);
+    padding: var(--space-s) var(--space-inline-m);
     color: var(--ink);
     font-weight: 700;
   }
-  .unit-row:hover { color: var(--ink); border-color: var(--ink); }
-  .unit-row-value { font-weight: 400; color: var(--ink-muted); font-variant-numeric: tabular-nums; text-align: end; }
-  .unit-row-value::after { content: " >"; color: var(--ink); }
+  .unit-row:not([hidden]) ~ .unit-row { border-block-start: 1px solid var(--card-border); }
+  .unit-row:hover { color: var(--ink); background: var(--sky-soft); }
+  .unit-row:focus-visible { outline-offset: -2px; }
+  .unit-row::after {
+    content: "";
+    flex: none;
+    inline-size: 0.45em;
+    block-size: 0.45em;
+    border-inline-end: 2px solid var(--ink-muted);
+    border-block-start: 2px solid var(--ink-muted);
+    rotate: 45deg;
+  }
+  .unit-row-value { margin-inline-start: auto; font-size: var(--text-s); font-weight: 400; color: var(--ink-muted); font-variant-numeric: tabular-nums; text-align: end; }
 
   .firmware { display: grid; gap: var(--space-m); }
   .firmware-status { margin: 0; font-weight: 700; }
@@ -246,13 +283,27 @@
   .firmware-recovery .note { margin: 0; }
   .firmware-release { font-size: var(--text-s); text-decoration: underline; text-decoration-color: var(--quiet); }
   .firmware-report { margin: 0; }
+  .firmware-changes { display: grid; gap: var(--space-s); }
+  .firmware-changes[hidden] { display: none; }
+  .firmware-changes h2 { margin: 0; font-size: var(--text-m); }
+  .firmware-change-list { display: grid; gap: var(--space-s); }
+  .firmware-change { display: grid; gap: var(--space-2xs); }
+  .firmware-change h3 { margin: 0; font-size: var(--text-s); color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .firmware-change ul { margin: 0; padding-inline-start: var(--space-m); }
   .support-code { font-family: var(--font-mono); letter-spacing: 0.05em; user-select: all; }
   .firmware .field { grid-template-columns: minmax(0, 1fr); border: 0; padding: 0; }
   .firmware .field :is(select, input) { inline-size: 100%; }
 
   .tools,
   .preferences { display: grid; gap: var(--space-m); }
-  .preferences legend { padding: 0; margin-block-end: var(--space-xs); font-weight: 700; }
+  .preferences .unit-fields { border-block-start: 0; }
+  .preferences legend {
+    float: inline-start;
+    inline-size: 100%;
+    padding: 0 0 var(--space-xs);
+    border-block-end: 1px solid var(--card-border);
+    font-weight: 700;
+  }
   .preferences-support { display: grid; gap: var(--space-xs); }
   .preferences-support :is(h2, p) { margin: 0; }
   .preferences-support h2 { font-size: inherit; }

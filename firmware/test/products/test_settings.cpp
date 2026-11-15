@@ -398,31 +398,34 @@ TEST_CASE("settings: a patch that names an identity changes nothing and refuses 
 
 // The aircraft's transponder address: 24 bits, 0 while unset, and nothing wider is ever stored.
 TEST_CASE(
-    "settings: the own ICAO is set over the link, cleared by 0, and refused whole past 24 bits") {
+    "settings: the aircraft address is set over the link, cleared by 0, and refused whole past 24 "
+    "bits") {
     Settings settings = defaults();
-    CHECK(settings.own_icao == kOwnIcaoUnset);
-    CHECK(config_fields(settings, std::nullopt).find("\"own_icao\":0}") != std::string::npos);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
+    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":0}") !=
+          std::string::npos);
 
-    CHECK(apply_patch(settings, "{\"own_icao\":3958150}") == Status::Ok);
-    CHECK(settings.own_icao == 0x3C6586u);
-    CHECK(config_fields(settings, std::nullopt).find("\"own_icao\":3958150}") != std::string::npos);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":3958150}") == Status::Ok);
+    CHECK(settings.aircraft_address == 0x3C6586u);
+    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":3958150}") !=
+          std::string::npos);
 
-    CHECK(apply_patch(settings, "{\"aircraft_type\":4,\"own_icao\":16777216}") ==
+    CHECK(apply_patch(settings, "{\"aircraft_type\":4,\"aircraft_address\":16777216}") ==
           Status::OutOfRange);
-    CHECK(settings.own_icao == 0x3C6586u);
+    CHECK(settings.aircraft_address == 0x3C6586u);
     CHECK(int(settings.aircraft_type) == int(kAircraftTypeLight));
-    CHECK(apply_patch(settings, "{\"own_icao\":16777214}") == Status::Ok);
-    CHECK(settings.own_icao == 0xFFFFFEu);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":16777214}") == Status::Ok);
+    CHECK(settings.aircraft_address == 0xFFFFFEu);
 
     uint8_t blob[64];
     to_blob(settings, blob, sizeof(blob));
     Settings loaded;
     REQUIRE(from_blob(blob, blob_size(), loaded) == Status::Ok);
-    CHECK(loaded.own_icao == 0xFFFFFEu);
+    CHECK(loaded.aircraft_address == 0xFFFFFEu);
 
-    CHECK(apply_patch(settings, "{\"own_icao\":0}") == Status::Ok);
-    CHECK(settings.own_icao == kOwnIcaoUnset);
+    CHECK(apply_patch(settings, "{\"aircraft_address\":0}") == Status::Ok);
+    CHECK(settings.aircraft_address == kAircraftAddressUnset);
 
-    settings.own_icao = 0x1000000;
+    settings.aircraft_address = 0x1000000;
     CHECK(validate(settings) == Status::OutOfRange);
 }

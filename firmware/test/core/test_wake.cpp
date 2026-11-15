@@ -161,10 +161,6 @@ TEST_CASE("wake: a charger wake that reaches the refusal takes the word back off
     // A cell nobody read is not a flat one, here as everywhere else in this file.
     CHECK(refused_frame(BootCell{}, CellOnGlass::Flat) == RefusedFrame::Wordmark);
     CHECK(refused_frame(healthy(200), CellOnGlass::None) == RefusedFrame::Leave);
-
-    CHECK(std::string(to_string(RefusedFrame::FlatCell)) == "FLAT CELL");
-    CHECK(std::string(to_string(RefusedFrame::Wordmark)) == "WORDMARK");
-    CHECK(std::string(to_string(RefusedFrame::Leave)) == "LEAVE");
 }
 
 TEST_CASE("wake: a charger wake is named without hiding a fault that came with it") {
@@ -172,6 +168,4 @@ TEST_CASE("wake: a charger wake is named without hiding a fault that came with i
     // boot when nothing worse did.
     CHECK(classify(ResetCause::Watchdog | ResetCause::UsbVbus) == ResetReason::Watchdog);
     CHECK(classify(ResetCause::Pin | ResetCause::UsbVbus) == ResetReason::Pin);
-    CHECK(std::string(to_string(BootPath::SleepAgain)) == "SLEEP AGAIN");
-    CHECK(std::string(to_string(BootPath::Run)) == "RUN");
 }

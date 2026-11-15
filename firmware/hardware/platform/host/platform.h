@@ -19,6 +19,7 @@
 #include "hardware/platform/host/io.h"
 #include "hardware/platform/host/kvstore.h"
 #include "hardware/platform/host/link.h"
+#include "hardware/platform/host/random.h"
 #include "hardware/platform/host/rf.h"
 #include "hardware/platform/host/system_power.h"
 #include "hardware/platform/host/watchdog.h"
@@ -35,6 +36,10 @@ class Dfu : public ports::Dfu {
     ports::SwapRequest request_swap() override {
         swap_requests++;
         return swap_request;
+    }
+    ports::StagedCheck check_staged() override {
+        staged_checks++;
+        return staged_check;
     }
     void trigger() override { triggered++; }
     bool confirm() override {
@@ -74,6 +79,11 @@ class Dfu : public ports::Dfu {
         out = staged_signer;
         return true;
     }
+    bool bootloader_keys(ports::BootloaderKeys& out) override {
+        if (bootloader.count == 0) return false;
+        out = bootloader;
+        return true;
+    }
     bool downgrade_allowed() const override { return allows_downgrade; }
     bool release_build() const override { return release; }
     ports::RecoveryPath recovery_path() const override {
@@ -90,6 +100,8 @@ class Dfu : public ports::Dfu {
 
     ports::SwapRequest swap_request{ports::StagedCheck::Matched, 0, ports::SwapType::Test};
     int swap_requests{0};
+    ports::StagedCheck staged_check{ports::StagedCheck::Matched};
+    int staged_checks{0};
     int triggered{0};
     int confirms{0};
     int recoveries{0};
@@ -107,6 +119,7 @@ class Dfu : public ports::Dfu {
     bool release{false};
     ports::SigningKeyHash running_signer{};
     ports::SigningKeyHash staged_signer{};
+    ports::BootloaderKeys bootloader{};
     ports::ImageVersion running_image_version{};
     ports::ImageVersion staged_image_version{};
     ports::ImageHash running_image_hash{};
@@ -236,6 +249,7 @@ class Platform {
     host::Watchdog& watchdog() { return watchdog_; }
     host::SystemPower& system_power() { return system_power_; }
     host::Identity& identity() { return identity_; }
+    host::Random& random() { return random_; }
     bool button_down() const { return gpio_.button_down; }
     bool pad_down() const { return gpio_.pad_down; }
 
@@ -322,6 +336,7 @@ class Platform {
     host::Pps pps_{clock_};
     host::SystemPower system_power_{};
     host::Identity identity_;
+    host::Random random_{};
     ports::Capabilities fitted_;
     bool buzzer_pin_held_low_{false};
     bool imu_firmware_linked_{true};

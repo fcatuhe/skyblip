@@ -21,11 +21,14 @@ using boards::t_echo_plus::kRtcAddress;
 
 }  // namespace
 
-TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
+TEST_CASE("board: one scan, taken when the page asks, names everything on the sensor bus") {
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
+    CHECK(board.inventory().i2c_count == 0);
+    CHECK(board.take_bus_inventory());
+    CHECK_FALSE(board.take_bus_inventory());
 
     const ports::Inventory& inventory = board.inventory();
 
@@ -35,7 +38,6 @@ TEST_CASE("board: one scan names everything on the sensor bus, driven or not") {
     CHECK(inventory.has_i2c_address(0x76));
     CHECK_FALSE(inventory.has_i2c_address(0x77));
 
-    // The haptic driver, which is the whole reason the scan exists.
     CHECK(inventory.has_i2c_address(parts::Drv2605::kAddress));
 
     // And the two parts nothing drives, because a scan that hid the soldered-on
@@ -159,7 +161,6 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
 
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Haptic));
     CHECK(board.inventory().haptic == ports::HapticKind::None);
-    CHECK_FALSE(board.inventory().has_i2c_address(parts::Drv2605::kAddress));
 
     // The call site does not change and does not check: it asks for a pulse and
     // gets whatever this board can make, which here is nothing at all.
@@ -231,6 +232,7 @@ TEST_CASE("board: a barometer at LilyGO's address is the one reported") {
     platform.i2c_bus().answer(0x77, true);
     Board board{platform, bus};
     board.probe();
+    REQUIRE(board.take_bus_inventory());
 
     CHECK(int(board.inventory().barometer_address) == 0x77);
 }

@@ -1,21 +1,29 @@
-// A Go's update frame stays as narrow as it was: only another product names itself.
+// The update frame names no product on any unit: the identity frame does, for every product alike.
 #include <string>
 
 #include "doctest/doctest.h"
+#include "test/support/bravo_rig.h"
 #include "test/support/product_rig.h"
 #include "test/support/update_rig.h"
 
 using namespace skyblip;
 
-TEST_CASE(
-    "product: a Go's update frame names no product, which every reader takes for skyblip_go") {
-    Rig rig;
-    REQUIRE(rig.setup() == Status::Ok);
+TEST_CASE("product: neither a Go's update frame nor a Bravo's names a product") {
+    Rig go;
+    REQUIRE(go.setup() == Status::Ok);
     uint32_t now_ms = 0;
-    on_ground(rig, now_ms);
-    rig.send("{\"command\":\"update\"}");
-    rig.run(now_ms, now_ms + 200);
-    const std::string frame = rig.last_on(events::Endpoint::Config);
-    CHECK(frame.rfind("{\"command\":\"update\"", 0) == 0);
-    CHECK(frame.find("\"product\"") == std::string::npos);
+    on_ground(go, now_ms);
+    go.send("{\"command\":\"update\"}");
+    go.run(now_ms, now_ms + 200);
+    const std::string go_frame = go.last_on(events::Endpoint::Config);
+    CHECK(go_frame.rfind("{\"command\":\"update\"", 0) == 0);
+    CHECK(go_frame.find("\"product\"") == std::string::npos);
+
+    BravoRig bravo;
+    REQUIRE(bravo.setup() == Status::Ok);
+    bravo.send("{\"command\":\"update\"}");
+    bravo.run_for(200);
+    const std::string bravo_frame = bravo.last_on(events::Endpoint::Config);
+    CHECK(bravo_frame.rfind("{\"command\":\"update\"", 0) == 0);
+    CHECK(bravo_frame.find("\"product\"") == std::string::npos);
 }

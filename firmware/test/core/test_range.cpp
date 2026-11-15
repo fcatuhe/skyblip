@@ -1,4 +1,4 @@
-// How far an emitter is and how far it is above, and the order the nearby page lists them in.
+// How far an emitter is and how far it is above, and the order the radar and nearby take them in.
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/traffic/range.h"
@@ -88,7 +88,7 @@ TEST_CASE("range: an emitter that sends no altitude has a distance and no height
     CHECK(row.up_valid);
 }
 
-TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
+TEST_CASE("range: ranking puts the nearest emitters at one height first and drops the rest") {
     TrafficTable table;
     const int32_t ranges[6] = {8000, 1000, 5000, 300, 12000, 2500};
     for (int i = 0; i < 6; i++) {
@@ -99,7 +99,7 @@ TEST_CASE("range: ranking puts the nearest emitters first and drops the rest") {
 
     RangeRow rows[4];
     const CallsignTable callsigns;
-    const int ranked = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
+    const int ranked = rank_by_relevance(table, callsigns, own_at_equator(), rows, 4);
     REQUIRE(ranked == 4);
     CHECK(rows[0].address == 0x103);  // 300 m
     CHECK(rows[1].address == 0x101);  // 1000 m
@@ -121,7 +121,64 @@ TEST_CASE("range: ranking skips what it cannot range") {
 
     RangeRow rows[4];
     const CallsignTable callsigns;
-    const int ranked = rank_by_range(table, callsigns, own_at_equator(), rows, 4);
+    const int ranked = rank_by_relevance(table, callsigns, own_at_equator(), rows, 4);
     CHECK(ranked == 1);
     CHECK(rows[0].address == 0x200);
+}
+
+TEST_CASE("range: an aircraft raising an alarm ranks above every quiet one, however near") {
+    TrafficTable table;
+    for (int i = 0; i < 4; i++) {
+        model::AircraftObservation observation = emitter(500 + 100 * i);
+        observation.address = 0x300u + static_cast<uint32_t>(i);
+        table.update(observation, 100);
+    }
+    model::AircraftObservation threat = emitter(2500);
+    threat.address = 0x3FF;
+    table.update(threat, 100);
+    table.at(table.find(threat.address_mapping_table, threat.address))->alarm_level =
+        Level::Advisory;
+
+    RangeRow rows[4];
+    const CallsignTable callsigns;
+    REQUIRE(rank_by_relevance(table, callsigns, own_at_equator(), rows, 4) == 4);
+    CHECK(rows[0].address == 0x3FF);
+    CHECK(rows[0].alarm_level == Level::Advisory);
+    CHECK(rows[1].address == 0x300);
+}
+
+// An airliner overhead is nearer on the ground than the glider at our height, and matters less.
+TEST_CASE("range: inside the advisory's height window outranks nearer traffic far above") {
+    TrafficTable table;
+    model::AircraftObservation airliner = emitter(1000);
+    airliner.address = 0x401;
+    airliner.altitude_m = 1000 + kAdvisoryAltitudeM + 1;
+    table.update(airliner, 100);
+    model::AircraftObservation glider = emitter(5000);
+    glider.address = 0x402;
+    glider.altitude_m = 1000 + kAdvisoryAltitudeM;
+    table.update(glider, 100);
+    model::AircraftObservation silent = emitter(8000);
+    silent.address = 0x403;
+    silent.altitude_valid = false;
+    table.update(silent, 100);
+
+    RangeRow rows[3];
+    const CallsignTable callsigns;
+    REQUIRE(rank_by_relevance(table, callsigns, own_at_equator(), rows, 3) == 3);
+    CHECK(rows[0].address == 0x402);
+    CHECK(rows[1].address == 0x403);  // no altitude may be ours, so it is in the window
+    CHECK(rows[2].address == 0x401);
+}
+
+TEST_CASE("range: a ranked row names the table slot it came from") {
+    TrafficTable table;
+    model::AircraftObservation observation = emitter(1000);
+    observation.address = 0x501;
+    table.update(observation, 100);
+
+    RangeRow rows[1];
+    const CallsignTable callsigns;
+    REQUIRE(rank_by_relevance(table, callsigns, own_at_equator(), rows, 1) == 1);
+    CHECK(table.at(rows[0].slot)->observation.address == 0x501);
 }

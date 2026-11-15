@@ -52,7 +52,7 @@ class ConfigLinkService : public runtime::Service {
           power_(power),
           product_name_(product_name),
           name_rule_(name_rule),
-          unit_(context.roles.identity),
+          unit_(context.roles.identity, context.roles.random),
           identity_(unit_) {
         config_.set_durable_writes(&writes_);
         config_.set_identity(&identity_);
@@ -107,12 +107,11 @@ class ConfigLinkService : public runtime::Service {
     void publish_upload_verdict();
     void publish_link();
 
-    // INFO: fc 18oct26 a Bluetooth that never came up is asked, and logs its refusal, once a second
+    // INFO: fc 18oct26 a Bluetooth that never came up is asked once a second, not every pass
     static constexpr uint32_t kAdvertiseRetryPeriodMs = 1000;
     static constexpr size_t kBlobBytes = 64;
     static constexpr const char* kUpdateKey = "update";
     static constexpr const char* kPriorSettingsKey = "settings.prior";
-    // TODO: fc 13nov26 the install report's key, which the image that retires it erases (#294)
     static constexpr const char* kReportKey = "install.report";
 
     void drain_link_events(uint32_t now_ms);
@@ -190,7 +189,6 @@ class ConfigLinkService : public runtime::Service {
     dfu::ImageState image_state_{dfu::ImageState::Confirmed};
     dfu::UpdateRecord update_record_{};
     bool update_recorded_{false};
-    // TODO: fc 13nov26 the install report, retired with #294 with the four methods that keep it
     dfu::InstallReport report_{};
     bool reported_{false};
 };

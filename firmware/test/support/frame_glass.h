@@ -19,11 +19,10 @@ inline bool reads_centred(const ui::Canvas& canvas, int y, const char* text,
 
 inline bool fits_a_line(const char* text) { return go::text_cells(text) <= go::kFrameColumns; }
 
-inline bool reads_body(const ui::Canvas& canvas, go::Heading heading, bool keys,
-                       const go::BodyLine* lines, int count) {
-    int y = go::body_top(heading, keys, lines, count);
+inline bool reads_body_above(const ui::Canvas& canvas, go::Heading heading, int bottom,
+                             const go::BodyLine* lines, int count) {
+    int y = go::body_top_above(heading, bottom, lines, count);
     const int rule_y = heading == go::Heading::Interrupt ? go::kInterruptRuleY : go::kOpenedRuleY;
-    const int bottom = keys ? go::kKeyTop : go::kGlassHeight;
     // INFO: fc 14nov26 a body keeps glass between itself and the rule, and the keys or the foot
     if (y - rule_y <= go::kParagraphGap / 2 || bottom - (y + go::body_height(lines, count)) <= 2)
         return false;
@@ -41,6 +40,15 @@ inline bool reads_body(const ui::Canvas& canvas, go::Heading heading, bool keys,
         started = true;
     }
     return true;
+}
+
+inline bool reads_body(const ui::Canvas& canvas, go::Heading heading, bool keys,
+                       const go::BodyLine* lines, int count) {
+    return reads_body_above(canvas, heading, keys ? go::kKeyTop : go::kGlassHeight, lines, count);
+}
+
+inline bool reads_foot_line(const ui::Canvas& canvas, const char* text) {
+    return reads_centred(canvas, go::kFootLineY, text);
 }
 
 inline bool reads_inside_body(const ui::Canvas& canvas, const char* text,

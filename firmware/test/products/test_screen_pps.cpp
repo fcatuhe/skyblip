@@ -1,4 +1,4 @@
-// The PPS word on the diagnostics pages, read off the glass against the slot map's own holdover.
+// The PPS word on the radio log, read off the glass against the slot map's own holdover.
 #include "core/timing/slot.h"
 #include "test/support/glass_text.h"
 #include "test/support/screen_rig.h"
@@ -20,14 +20,10 @@ bool radio_log_reads(ScreenRig& rig, const char* text) {
     return reads_in(rig.chip.framebuffer(), text, 0, 10, 200, 24);
 }
 
-bool raw_reads(ScreenRig& rig, const char* text) {
-    return reads_in(rig.chip.framebuffer(), text, 0, 68, 200, 85);
-}
-
 }  // namespace
 
 // Pps::locked() holds for 3 s, so a late edge is still anchored and still transmitting.
-TEST_CASE("screen pps: an edge 2 s old on a locked clock reads LOCK on both pages") {
+TEST_CASE("screen pps: an edge 2 s old on a locked clock reads LOCK on the radio log") {
     ScreenRig rig;
     uint32_t now_ms = 0;
     edge_lost(rig, 2 * kSecondMs, true);
@@ -35,10 +31,6 @@ TEST_CASE("screen pps: an edge 2 s old on a locked clock reads LOCK on both page
     rig.show(now_ms, go::Page::RadioLog);
     rig.run_seconds(now_ms, 3);
     CHECK(radio_log_reads(rig, "PPS LOCK"));
-
-    rig.show(now_ms, go::Page::Raw);
-    rig.run_seconds(now_ms, 3);
-    CHECK(raw_reads(rig, "PPS LOCK 2000MS"));
 }
 
 TEST_CASE("screen pps: an edge 10 s old reads HOLD with its age while the slot map flies on") {
@@ -50,10 +42,6 @@ TEST_CASE("screen pps: an edge 10 s old reads HOLD with its age while the slot m
     rig.show(now_ms, go::Page::RadioLog);
     rig.run_seconds(now_ms, 3);
     CHECK(radio_log_reads(rig, "PPS HOLD 10"));
-
-    rig.show(now_ms, go::Page::Raw);
-    rig.run_seconds(now_ms, 3);
-    CHECK(raw_reads(rig, "PPS HOLD 10000MS"));
 }
 
 TEST_CASE("screen pps: an edge 61 s old is past holdover and reads NONE") {
@@ -65,10 +53,6 @@ TEST_CASE("screen pps: an edge 61 s old is past holdover and reads NONE") {
     rig.show(now_ms, go::Page::RadioLog);
     rig.run_seconds(now_ms, 3);
     CHECK(radio_log_reads(rig, "PPS NONE"));
-
-    rig.show(now_ms, go::Page::Raw);
-    rig.run_seconds(now_ms, 3);
-    CHECK(raw_reads(rig, "PPS NONE"));
 }
 
 // Pps::since_edge_ms() reads 0 before the first edge, which the pages once showed as HOLD 0.
@@ -83,8 +67,4 @@ TEST_CASE("screen pps: a clock with UTC and no edge ever reads NONE, and transmi
     rig.show(now_ms, go::Page::RadioLog);
     rig.run_seconds(now_ms, 3);
     CHECK(radio_log_reads(rig, "PPS NONE"));
-
-    rig.show(now_ms, go::Page::Raw);
-    rig.run_seconds(now_ms, 3);
-    CHECK(raw_reads(rig, "PPS NONE 0MS"));
 }

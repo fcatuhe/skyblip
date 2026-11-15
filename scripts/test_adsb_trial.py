@@ -21,8 +21,8 @@ import blip_records as records  # noqa: E402
 SOUND = bytes.fromhex("8D4840D6202CC371C32CE0576098")
 
 
-def chips_of(frame, doubtful=None, flipped=None):
-    """The 27 chip bytes behind the 0x95 sync, with one bit's pair doubled or turned over."""
+def chips_of(frame, doubtful=None, flipped=None, lost=None):
+    """The 27 chip bytes behind the 0x95 sync, with one pair doubled or turned, or a chip lost."""
     stream = []
     for bit in range(len(frame) * 8):
         one = frame[bit >> 3] >> (7 - (bit & 7)) & 1
@@ -33,6 +33,8 @@ def chips_of(frame, doubtful=None, flipped=None):
             pair = pair[::-1]
         stream.extend(pair)
     stream = stream[8:]
+    if lost is not None:
+        stream = stream[:lost] + stream[lost + 1:] + [0]
     return bytes(int("".join(map(str, stream[i:i + 8])), 2) for i in range(0, len(stream), 8))
 
 
@@ -109,6 +111,11 @@ class Replay(unittest.TestCase):
         out = adsb_trial.replay_report(frames, slips=False)
         self.assertIn("-90 dBm, gain agc, boost 0, 0x18, chips: 3, 1, 2, 3", out)
         self.assertIn("addresses only flip finds, never in a sound frame: none", out)
+
+    def test_a_chip_lost_inside_the_frame_passes_the_slip_policy_alone(self):
+        self.assertEqual(adsb_trial.policies_passed(chips_of(SOUND, lost=100), slips=True),
+                         {"slip": None})
+        self.assertEqual(adsb_trial.policies_passed(chips_of(SOUND, lost=100), slips=False), {})
 
     def test_a_tail_without_its_head_is_no_frame_and_a_frame_past_the_last_slot_is_open(self):
         lines = halves(1, chips_of(SOUND))[1:] + halves(2, chips_of(SOUND))

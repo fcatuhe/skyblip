@@ -5,13 +5,8 @@ updated_on: "2026-11-13"
 ---
 
 <header class="page-hero">
-  <p class="kicker">ADS-L &middot; open, lightweight, interoperable</p>
   <h1>The traffic around you, in your pocket.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip Go broadcasts your position in ADS-L and shows ADS-L and FLARM
-    traffic. skyBlip Bravo adds ADS-B. Together they make a skyBlip
-    Tango.
-  </p>
+  <p class="page-hero-subtitle">skyBlip Go broadcasts your position in ADS-L and shows ADS-L and FLARM traffic. Bravo sends the traffic of other aircraft fitted with ADS-B to your app on its own, or to your Go as a Tango.</p>
 
   <%= render "shared/cta", prompt: false %>
 
@@ -21,7 +16,6 @@ updated_on: "2026-11-13"
         <%= pages_image_tag "skyblip-go-techo.avif", alt: "skyBlip Go: a white case with its antenna, the traffic radar on its e-paper screen" %>
       </figure>
       <h2><%= link_to_page "features", label: "skyBlip Go" %></h2>
-      <p class="status status--available">Available</p>
       <p>Shows ADS&#8209;L and FLARM traffic. Broadcasts your position in ADS&#8209;L.</p>
     </li>
     <li>
@@ -29,8 +23,7 @@ updated_on: "2026-11-13"
         <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "photo-x1" %>
       </figure>
       <h2><%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %></h2>
-      <p class="status status--available">Available</p>
-      <p>Receives ADS&#8209;B, airliners included. Does not transmit.</p>
+      <p>Receives aircraft fitted with ADS&#8209;B. Sends traffic to your navigation app over Bluetooth, without a Go. Does not broadcast your position.</p>
     </li>
     <li>
       <figure class="pair">
@@ -39,7 +32,6 @@ updated_on: "2026-11-13"
         <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo", class: "photo-x1" %>
       </figure>
       <h2><%= link_to_page "skyblip-tango", label: "skyBlip Tango" %></h2>
-      <p class="status status--available">Available</p>
       <p>Go + Bravo. Shows ADS&#8209;B, ADS&#8209;L and FLARM on one radar.</p>
     </li>
   </ul>
@@ -55,7 +47,6 @@ updated_on: "2026-11-13"
 
   <div class="feature">
     <div>
-      <p class="eyebrow">See the traffic</p>
       <h3>A radar <span class="highlight">you can read at a glance</span>.</h3>
       <p>
         You are in the centre, track up. Each traffic icon shows whether the aircraft
@@ -69,7 +60,6 @@ updated_on: "2026-11-13"
 
   <div class="feature feature--reverse">
     <div>
-      <p class="eyebrow">Know where to look</p>
       <h3>An alarm <span class="highlight">that gives the direction</span>.</h3>
       <p>
         Within 3&nbsp;km and 300&nbsp;m, a quarter of the screen flashes on the
@@ -83,7 +73,6 @@ updated_on: "2026-11-13"
 
   <div class="feature">
     <div>
-      <p class="eyebrow">Be seen</p>
       <h3>Your position <span class="highlight">broadcast every second</span>.</h3>
       <p>
         In flight, the Go broadcasts your position in ADS-L every second. Any
@@ -91,13 +80,12 @@ updated_on: "2026-11-13"
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "The Nearby page: five aircraft nearest first, with their source ADS-L or FLARM, their callsign, their distance and their height above or below you" %>
+      <%= screen_image_tag "nearby.png", alt: "The Nearby page: five aircraft, those at your height first, with their source ADS-L or FLARM, their callsign, their distance and their height above or below you" %>
     </figure>
   </div>
 
   <div class="feature feature--reverse">
     <div>
-      <p class="eyebrow">Keep your usual app</p>
       <h3>The traffic <span class="highlight">in your app</span>.</h3>
       <p>
         Over Bluetooth, the traffic shows up in SDVFR Next, SkyDemon,
@@ -116,24 +104,14 @@ updated_on: "2026-11-13"
 </section>
 
 <section class="band">
-  <h2 class="section-title">Add the <span class="highlight">airliners</span></h2>
+  <h2 class="section-title">Add <span class="highlight">ADS&#8209;B traffic</span></h2>
   <div class="feature">
     <div>
-      <p class="eyebrow">skyBlip Bravo and Tango</p>
-      <h3>ADS-B, ADS-L and FLARM, <span class="highlight">on one radar</span>.</h3>
-      <p>
-        skyBlip Bravo receives ADS-B on 1090&nbsp;MHz. On its own, it sends
-        that traffic to your navigation app. It does not transmit.
-      </p>
-      <p>
-        Paired with a Go as a skyBlip Tango, it puts the airliners on the
-        Go&rsquo;s radar with the ADS-L and FLARM traffic. The Go keeps
-        broadcasting your position in ADS-L.
-      </p>
-      <p class="note">
-        The Seeed SenseCAP MeshTracker X1 is on sale. The skyBlip Bravo
-        firmware is published on GitHub, like the Go firmware.
-      </p>
+      <h3>Other aircraft with ADS&#8209;B, <span class="highlight">at your altitudes</span>.</h3>
+      <p>Pair your Go with a Bravo to see other aircraft fitted with ADS-B alongside ADS-L and FLARM traffic on one radar. They share your altitudes and airspace. They include newer aircraft, and older ones whose owners installed a glass cockpit or a new ADS-B transponder. The Go keeps broadcasting your position in ADS-L.</p>
+      <p>Bravo receives ADS-B on 1090&nbsp;MHz. It also works on its own, sending traffic over Bluetooth to your navigation app. Bravo does not broadcast your position.</p>
+      <p>Bravo also receives airliners, business jets and helicopters fitted with ADS-B. You may meet them in controlled airspace around airfields and airports.</p>
+      <p class="note">The Seeed SenseCAP MeshTracker X1 is on sale. The skyBlip Bravo firmware is published on GitHub, like the Go firmware.</p>
       <p class="feature-guide">
         <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> &middot;
         <%= link_to_page "skyblip-tango", label: "skyBlip Tango" %>
@@ -144,19 +122,19 @@ updated_on: "2026-11-13"
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title">A Go <span class="highlight">from €68</span>, and that is all</h2>
+  <h2 class="section-title">Buy the hardware. <span class="highlight">The firmware is free.</span></h2>
   <div class="columns">
     <div>
       <h3>Consumer hardware.</h3>
-      <p>A LilyGO T-Echo for the Go, a Seeed X1 for Bravo, both mass-produced.</p>
+      <p>A LilyGO T-Echo for the Go, a MeshTracker X1 for Bravo, both mass-produced.</p>
     </div>
     <div>
       <h3>No subscription.</h3>
       <p>You pay nothing for transmitting, receiving, the alarm or updates.</p>
     </div>
     <div>
-      <h3>Open source, for good.</h3>
-      <p>The code is public. Safety features for private flying and air sports stay free.</p>
+      <h3>Open source.</h3>
+      <p>The code is public. For recreational flying and air sports, safety features will always be open source and free.</p>
     </div>
   </div>
   <p class="more"><%= link_to_page "buy", label: "Buy and install" %></p>
@@ -170,13 +148,8 @@ updated_on: "2026-11-13"
       <p>Aircraft fitted with ADS-L. skyBlip Go also receives FLARM, but transmits only ADS-L.</p>
     </details>
     <details>
-      <summary>Do I see airliners?</summary>
-      <p>
-        Not with a Go alone. Airliners transmit ADS-B on 1090&nbsp;MHz, which a
-        Go does not receive. skyBlip Bravo receives it. Use it with your
-        phone or pair it with your Go as a Tango:
-        <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %>.
-      </p>
+      <summary>Do I see aircraft fitted with ADS-B?</summary>
+      <p>Not with a Go alone. A Go receives ADS-L and FLARM, not ADS-B on 1090&nbsp;MHz. Add a <%= link_to_page "skyblip-bravo", label: "Bravo" %> to see those aircraft on your Go as a Tango, or use Bravo on its own with your navigation app. The aircraft must transmit ADS-B. A Mode S transponder without that function is invisible to Bravo.</p>
     </details>
     <details>
       <summary>Does Bravo see every aircraft with a transponder?</summary>
@@ -204,7 +177,7 @@ updated_on: "2026-11-13"
     </details>
     <details>
       <summary>Is there a subscription?</summary>
-      <p>No. Once you own a Go, everything works: transmitting, receiving, the alarm, updates. The firmware is free, including Bravo&rsquo;s.</p>
+      <p>No. The firmware and updates are free and open source for both Go and Bravo. You pay for the hardware, not for receiving traffic, the alarm or the Go&rsquo;s position broadcasts.</p>
     </details>
     <details>
       <summary>Is it certified?</summary>
@@ -288,7 +261,7 @@ updated_on: "2026-11-13"
 <section class="band band--blip quote">
   <blockquote>
     &ldquo;Safety is not a <span class="highlight">premium option</span>.
-    Our safety features for private flying and air sports stay <span class="highlight">open source and free</span>.&rdquo;
+    Our safety features for recreational flying and air sports stay <span class="highlight">open source and free</span>.&rdquo;
   </blockquote>
   <p><%= link_to_page "about", label: "Our commitment" %></p>
 

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Event::JournalTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   BROWSER = "01AZ018Z"
 
   test "an entry is kept with the keys its event names, each of its type, and the page it came from" do
@@ -13,6 +15,14 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal({ "key" => "link_lost", "detail" => "GATT Server is disconnected.", "phase" => "offline" }, event.payload)
     assert_equal [ "go-00012a", BROWSER, "/briefing/devices/go-00012a/firmware" ], [ event.device, event.browser, event.context["path"] ]
     assert_equal Time.utc(2026, 11, 14, 10), event.occurred_at
+  end
+
+  test "a device read keeps the keys the unit's bootloader verifies, as words" do
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.read", properties: { key: "88A4BEF5", bootloader_keys: "212602F2 88A4BEF5", track: "release" })
+    ]).record
+
+    assert_equal({ "key" => "88A4BEF5", "bootloader_keys" => "212602F2 88A4BEF5", "track" => "release" }, Event.sole.payload)
   end
 
   # A pilot's phone posts its journal again until it is answered, and a beacon may land twice.
@@ -52,6 +62,19 @@ class Event::JournalTest < ActiveSupport::TestCase
     first, again, other = Event.order(:id).map(&:fingerprint)
     assert_equal first, again
     assert_not_equal first, other
+  end
+
+  # A journal posted again must not open a second stretch from an old read.
+  test "a unit's read is recorded on the unit once, however often its entry arrives" do
+    read = entry("device.read", properties: { product: "bravo", variant: "standard", version: "0.2.0+950", release: true,
+      device_id: "0a0b0c0d0e0f1011", bluetooth_tag: 0x1234 })
+    journal = Event::Journal.new(browser: BROWSER, entries: [ read ])
+
+    perform_enqueued_jobs { 2.times { journal.record } }
+
+    unit = Unit.find_by!(device_id: "0a0b0c0d0e0f1011")
+    assert_equal [ "bravo", "bravo-1234" ], [ unit.product, unit.slug ]
+    assert_equal [ [ "0.2.0+950", "read" ] ], unit.firmwares.pluck(:version, :source)
   end
 
   private

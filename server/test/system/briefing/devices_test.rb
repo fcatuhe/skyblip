@@ -1,7 +1,16 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
-  GO_PROTOCOLS = { adsl_version: "0.1.0", alptas_version: "0.1.0" }.freeze
+  include ActiveJob::TestHelper
+
+  # Three ADS-B records, a traffic record and the end marker, as console_test.rb reads them.
+  CAPTURE = %w[
+    15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02
+    1513000085886e6a3412dd00282300000000000000000000
+    0d66000040f9a16a5e4d3c00c8050c00000000000104b903
+    151300008d886e6a5e4d3c00ac0d00000000000000000000
+    110000008e886e6a05000000000000000000000000000000
+  ].join.freeze
 
   test "a first visit offers one thing, and a Go connected there opens on its settings" do
     in_range a_go
@@ -17,7 +26,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_field "Callsign", with: "F-JXYZ"
       assert_select "Alarm volume", selected: "Soft"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
     end
   end
@@ -27,18 +36,18 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out."
 
       visit "/briefing"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-last", text: /Callsign\s*F-JXYZ/
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       assert_no_link "Update"
       screen "04-device-not-connected"
 
       find(".app-bar-brand").click
       assert_selector "h1", text: "Your devices"
-      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1005 is out/
+      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1765 is out/
       assert_no_selector ".fleet-activate"
       screen "03-home-remembered"
 
@@ -70,7 +79,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a change is saved after two presses on the glass, and the page shows what the device stored" do
+  test "a change is saved after a press on the glass, and the page shows what the device stored" do
     in_range a_go
     on_the_shelf do
       connect_go
@@ -81,8 +90,9 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
       click_button "Save 2 changes"
       assert_glass "SETTINGS"
-      assert_selector ".glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 30 S. PUSH TWICE TO ACCEPT.'], .glass-prompt canvas.glass[aria-label$='TO CANCEL, PUSH ONCE OR WAIT 29 S. PUSH TWICE TO ACCEPT.']"
-      assert_selector ".glass-press", text: "Press the Go's button twice."
+      assert_selector ".glass-prompt canvas.glass[aria-label*='CANCELS IN 30 S.'], .glass-prompt canvas.glass[aria-label*='CANCELS IN 29 S.']"
+      assert_selector ".glass-prompt canvas.glass[aria-label$='PUSH TO ACCEPT. TOUCH THE PAD TO CANCEL.']"
+      assert_selector ".glass-press", text: "Press the Go's button."
       assert_selector ".glass-seconds", text: /\A(30|29)\z/
       assert_no_field "Callsign"
       screen "07-glass-asking"
@@ -133,7 +143,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a save two presses allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
+  test "a save a press allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
     in_range a_go(browsers: [ { id: "0102030405060708", label: "Edge on Windows" } ])
     on_the_shelf do
       connect_go
@@ -165,7 +175,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a trusted browser changes settings in flight, and the notes say updates wait for the landing" do
-    in_range a_go(browsers: [])
+    in_range a_go
     on_the_shelf do
       connect_go
       select "Loud", from: "Alarm volume"
@@ -225,39 +235,96 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud", from: "Alarm volume"
       click_button "Save 1 change"
-      assert_selector ".glass-lamp", text: "The LED blinks green fast. One press refuses."
-      assert_selector ".glass-press", text: "Press the Bravo's button twice."
+      assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
+      assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_selector ".glass"
       assert_no_text "Not activated"
       screen "11-bravo-lamp"
     end
   end
 
-  test "a Bravo arms and stops a capture with two presses on its lamp, and a Go offers none" do
-    in_range a_go, a_bravo
+  test "a Bravo arms and stops a capture with a press on its lamp" do
+    in_range a_bravo
     on_the_shelf do
-      connect_go
-      assert_no_select "Profile"
-
-      page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
-      within(".fleet--rail") { click_button "Connect a device" }
+      visit "/briefing"
+      click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Power run", from: "Profile"
       click_button "Arm"
       assert_selector ".glass-lamp", text: "The LED blinks green fast."
-      assert_selector ".glass-press", text: "Press the Bravo's button twice."
+      assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_select "Profile"
       assert_equal "power_run", page.evaluate_script("#{unit("3F2A")}.capture")
 
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Armed. The LED blinks twice every 3 s"
-      click_button "Arm"
-      assert_selector ".unit-message", text: "A capture is already running. Stop it first."
+      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture"
+      assert_button "Arm", disabled: true
 
       click_button "Stop the capture"
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message.is-good", text: "Stopped. The LED is back to its single blink."
       assert_equal false, page.evaluate_script("#{unit("3F2A")}.capturing")
+    end
+  end
+
+  test "a Go says what a capture costs, asks for it on its glass, and says it records" do
+    in_range a_go
+    on_the_shelf do
+      connect_go
+      within("[data-unit-target=capture]") do
+        assert_selector "[data-unit-target=captureState]",
+          text: "Nothing is recording. A full capture keeps 32 min, a power run or a flight run 120 h. Starting one erases 3 stored flights."
+        select "Power run", from: "Profile"
+        click_button "Arm"
+      end
+      assert_glass "CAPTURE"
+      page.execute_script("#{unit("00012A")}.press()")
+      assert_selector "[data-unit-target=captureState]", text: "Recording a Power run capture: 960 records so far. The device keeps the last 120 h of it."
+      assert_button "Arm", disabled: true
+      assert_no_button "Fetch and send"
+    end
+  end
+
+  test "a stopped capture is fetched off the device and sent to skyBlip, under the browser's support code" do
+    in_range a_go(diagnostics: [ { session: 1_785_628_800, records: CAPTURE, closed: true } ])
+    on_the_shelf do
+      connect_go
+      assert_text "a full capture 13 months and a power run or a flight run 25 months"
+      click_button "Fetch and send"
+      assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
+      capture = Capture.sole
+      assert_equal [ "go-00012a", 1_785_628_800, 5, "full" ], [ capture.device, capture.session, capture.records, capture.profile ]
+      assert_match(/\A[0-9A-HJKMNP-TV-Z]{8}\z/, capture.browser)
+    end
+  end
+
+  test "a report sends the device's dump to skyBlip, and says the support code" do
+    in_range a_go
+    on_the_shelf do
+      connect_go
+      click_button "Send a report"
+      assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
+      report = journaled("device.diagnosed")
+      assert_equal 170, report.payload.dig("dump", "capture", "takes_sectors")
+      assert_equal "go-00012a", report.device
+    end
+  end
+
+  test "a Bravo connected once is recorded on skyBlip, with the firmware it runs and no serial" do
+    in_range a_bravo(deviceId: "5b5b5b5b5b5b5b5b")
+    perform_enqueued_jobs do
+      on_the_shelf do
+        visit "/briefing"
+        page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
+        click_button "Connect a device"
+        assert_current_path "/briefing/devices/bravo-3f2a"
+        journaled("device.read")
+
+        unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+        assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
+        assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
+      end
     end
   end
 
@@ -275,20 +342,20 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "the own ICAO is typed in hex, and half an address is never sent" do
+  test "the ADS-B address is typed in hex, and half an address is never sent" do
     in_range a_go
     on_the_shelf do
       connect_go
-      fill_in "Own ICAO address", with: "3C65"
+      fill_in "ADS-B address", with: "3C65"
       click_button "Save 1 change"
-      assert_selector "#unit-own-icao:invalid"
+      assert_selector "#unit-aircraft-address:invalid"
       assert_nil page.evaluate_script("#{unit("00012A")}.staged ?? null")
 
-      fill_in "Own ICAO address", with: "3c6586"
+      fill_in "ADS-B address", with: "3c6586"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
-      assert_field "Own ICAO address", with: "3C6586"
-      assert_equal({ "own_icao" => 0x3C6586 }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_field "ADS-B address", with: "3C6586"
+      assert_equal({ "aircraft_address" => 0x3C6586 }, page.evaluate_script("#{unit("00012A")}.staged"))
     end
   end
 
@@ -343,7 +410,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   end
 
   test "a connected device names the radio protocol versions it carries" do
-    in_range a_go(protocols: GO_PROTOCOLS)
+    in_range a_go
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
@@ -356,19 +423,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "firmware from before the protocols frame names none, and the page says nothing about it" do
-    in_range a_go
-    on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_field "Callsign", with: "F-JXYZ"
-      assert_no_selector ".unit-protocols"
-      assert_no_selector ".unit-notes p"
-    end
-  end
-
   test "the app speaks French once the pilot chooses it in the settings" do
-    in_range a_go(protocols: GO_PROTOCOLS)
+    in_range a_go
     on_the_shelf do
       visit "/briefing"
       find("summary", text: "Menu").click
@@ -383,7 +439,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
       assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
-      assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"
     end

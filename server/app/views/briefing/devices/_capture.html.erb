@@ -1,5 +1,6 @@
 <form class="unit-capture" data-unit-target="capture" data-action="submit->unit#armCapture" aria-labelledby="unit-capture-title" hidden>
   <h2 class="unit-label" id="unit-capture-title"><%= t("briefing.capture.title") %></h2>
+  <p class="unit-capture-state" role="status" data-unit-target="captureState" hidden></p>
   <fieldset class="unit-fields" data-unit-target="captureFields">
     <div class="field">
       <label for="unit-capture-profile"><%= t("briefing.capture.profile") %></label>
@@ -16,5 +17,20 @@
   <div class="unit-capture-actions">
     <button type="submit" class="button-app" data-unit-target="captureArm" data-label="<%= t("briefing.capture.arm") %>" disabled><%= t("briefing.capture.arm") %></button>
     <button type="button" class="button-app button-app--text" data-unit-target="captureStop" data-action="unit#stopCapture" disabled><%= t("briefing.capture.stop") %></button>
+  </div>
+
+  <div class="unit-capture-send" data-unit-target="captureSendSection" hidden>
+    <p class="field-hint"><%= t("briefing.capture.send_hint",
+          full: t("briefing.capture.months", count: Rails.configuration.x.tracker_lifetime.in_months.round),
+          run: t("briefing.capture.months", count: Rails.configuration.x.retention.in_months.round)) %></p>
+    <div class="firmware-progress" data-unit-target="captureProgress" hidden>
+      <progress data-unit-target="captureProgressBar" aria-labelledby="unit-capture-progress-text"></progress>
+      <p class="firmware-progress-text" id="unit-capture-progress-text" data-unit-target="captureProgressText"></p>
+    </div>
+    <p class="unit-message" role="status" data-unit-target="captureSendMessage" hidden></p>
+    <div class="unit-capture-actions">
+      <button type="button" class="button-app" data-unit-target="captureSend" data-action="unit#sendCapture"
+              data-url="<%= briefing_device_captures_path(device_slug: @slug) %>"><%= t("briefing.capture.send") %></button>
+    </div>
   </div>
 </form>

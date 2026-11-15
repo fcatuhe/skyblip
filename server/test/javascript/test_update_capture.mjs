@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 
 import { asking, connected } from './update_session.mjs';
 
-const bravo = (options = {}) => connected({ product: 'skyblip_bravo', ...options });
+const bravo = (options = {}) => connected({ product: 'bravo', ...options });
 
-test('a capture is asked on Bravo and armed by its two presses', async () => {
+test('a capture is asked on Bravo and armed by its press', async () => {
   const { device, updater, until } = await bravo();
   updater.orderCapture('power_run');
   await until(asking('capture'));
@@ -27,7 +27,7 @@ test('a stop allowed on Bravo says the capture stopped', async () => {
   assert.equal(device.capturing, false);
 });
 
-test('one press on Bravo reads as cancelled, under the capture control', async () => {
+test('a refusal on the unit reads as cancelled, under the capture control', async () => {
   const { device, updater, until } = await bravo();
   updater.orderCapture('full');
   await until(asking('capture'));
@@ -55,9 +55,23 @@ test('in flight the page refuses before it asks, as the unit would', async () =>
   assert.equal(device.commands.includes('capture'), false);
 });
 
-test('a Go answers unknown_command, and the page says so under the capture control', async () => {
+test('a Go asks for a capture on its glass, and the dump then says it records', async () => {
+  const { device, updater, until } = await connected();
+  const idle = await until(state => state.capture);
+  assert.deepEqual(idle.capture, {
+    armed: false, profile: null, session: 0, records: 0, keeps: 0, takesSectors: 170, evictsFlights: 3, keepsFull: 1926, keepsPowerRun: 433500,
+  });
+  updater.orderCapture('power_run');
+  await until(asking('capture'));
+  device.press();
+  const armed = await until(state => state.capture?.armed);
+  assert.equal(armed.capture.profile, 'power_run');
+  assert.equal(armed.capture.records, 960);
+});
+
+test('the dump keeps every group it read, for a report', async () => {
   const { updater, until } = await connected();
-  updater.orderCapture('full');
-  const refused = await until(state => state.notice?.key === 'unknown_command');
-  assert.deepEqual(refused.notice, { key: 'unknown_command', during: 'capture' });
+  const read = await until(state => state.dump);
+  assert.deepEqual(read.dump.system, { uptime_s: 120, reset: 'power_on' });
+  assert.equal(read.dump.capture.takes_sectors, 170);
 });

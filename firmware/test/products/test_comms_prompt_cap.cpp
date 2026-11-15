@@ -138,7 +138,7 @@ TEST_CASE("comms prompt cap: a prompt that stands still expires 30 s after it wa
 }
 
 // One press is the pilot saying no, and a sender that asks again at once is not taking it.
-TEST_CASE("comms prompt cap: after one press refuses, that link raises no prompt until it drops") {
+TEST_CASE("comms prompt cap: after a refusal, that link raises no prompt until it drops") {
     Desk desk;
     desk.say(kSetType);
     desk.config.cancel();
@@ -212,7 +212,7 @@ TEST_CASE("comms prompt cap: the update page's settings, install and retry run o
         rig.run(now_ms, now_ms + 3000);
         now_ms += 3000;
         REQUIRE(config.pending() == Pending::Set);
-        rig.double_press(now_ms);
+        rig.press(now_ms);
         rig.run(now_ms, now_ms + 1000);
         now_ms += 1000;
         CHECK(std::string(rig.settings().callsign) == callsign);
@@ -227,12 +227,12 @@ TEST_CASE("comms prompt cap: the update page's settings, install and retry run o
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(config.pending() == Pending::Dfu);
-    rig.double_press(now_ms);
+    rig.press(now_ms);
     rig.run(now_ms, now_ms + 1000);
     CHECK(config.receiving_firmware());
 }
 
-TEST_CASE("comms prompt cap: on the glass, one press refuses and a new connection asks again") {
+TEST_CASE("comms prompt cap: on the glass, a tap refuses and a new connection asks again") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -243,7 +243,7 @@ TEST_CASE("comms prompt cap: on the glass, one press refuses and a new connectio
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     REQUIRE(rig.product.screen().prompt() == Pending::Set);
-    rig.press(now_ms);
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 1000);
     now_ms += 1000;
     REQUIRE(rig.last_on(events::Endpoint::Config) == refusal("cancelled"));

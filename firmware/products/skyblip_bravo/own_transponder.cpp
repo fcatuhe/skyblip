@@ -15,7 +15,8 @@ constexpr int32_t kLevelDampingSamples = 4;
 }  // namespace
 
 void OwnTransponder::hear(const adsb::Message& message, uint32_t now_ms) {
-    // INFO: fc 13nov26 a misconfigured transponder squitters 000000, which as own ICAO means unset
+    // INFO: fc 13nov26 a misconfigured transponder squitters 000000, which as aircraft address
+    // means unset
     if (message.address == 0) return;
     Emitter* emitter = nullptr;
     for (Emitter& candidate : emitters_)

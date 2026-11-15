@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fail unless a signed image pins the BHI260AP image it was built against.
 
-    python3 scripts/check_imu_image.py <image.signed.bin> <BHI260AP.fw> full|slim
+    python3 scripts/check_imu_image.py <image.signed.bin> <BHI260AP.fw> full|base
 
 The update page reads two protected TLVs to pick the file a device needs:
 0xa0, the SHA-256 of the hub's image, and 0xa1, 1 when the image carries it.
@@ -53,7 +53,7 @@ def problems(image, hub_image, variant):
 
 
 def main(argv):
-    if len(argv) != 4 or argv[3] not in ("full", "slim"):
+    if len(argv) != 4 or argv[3] not in ("full", "base"):
         print(__doc__.strip().splitlines()[2])
         return 2
     with open(argv[1], "rb") as image, open(argv[2], "rb") as hub_image:

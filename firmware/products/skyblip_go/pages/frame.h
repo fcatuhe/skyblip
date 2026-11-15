@@ -8,15 +8,8 @@
 namespace skyblip::go {
 
 enum class Heading : uint8_t { Opened, Interrupt };
-enum class Press : uint8_t { Once, Twice };
-
-struct ButtonKey {
-    Press press{Press::Once};
-    const char* verb{""};
-};
-
 struct Keys {
-    ButtonKey button{};
+    const char* button{""};
     const char* pad{""};
 };
 
@@ -38,6 +31,8 @@ constexpr int kKeyWidth = 97;
 constexpr int kButtonKeyX = 1;
 constexpr int kPadKeyX = kGlassWidth - kButtonKeyX - kKeyWidth;
 constexpr int kBodyBottom = kKeyTop - 4;
+constexpr int kFootLineGap = 6;
+constexpr int kFootLineY = kKeyTop - kFootLineGap - ui::kCharacterHeight * kFrameScale;
 
 constexpr int text_cells(const char* text) {
     int count = 0;
@@ -73,7 +68,11 @@ constexpr int kMaxBodyLines = 12;
 
 int body_height(const BodyLine* lines, int count);
 int body_top(Heading heading, bool keys, const BodyLine* lines, int count);
+int body_top_above(Heading heading, int bottom, const BodyLine* lines, int count);
 void draw_body(ui::Canvas& canvas, Heading heading, bool keys, const BodyLine* lines, int count);
+void draw_body_above(ui::Canvas& canvas, Heading heading, int bottom, const BodyLine* lines,
+                     int count);
+void draw_foot_line(ui::Canvas& canvas, const char* text);
 
 }  // namespace skyblip::go
 

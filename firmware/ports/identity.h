@@ -22,8 +22,6 @@ class Identity {
 
     virtual Status read_unlock_code(identity::UnlockCode& out) = 0;
     virtual Status write_unlock_code(const identity::UnlockCode& code) = 0;
-
-    virtual bool draw_random(ByteSpan out) = 0;
 };
 
 }  // namespace skyblip::ports

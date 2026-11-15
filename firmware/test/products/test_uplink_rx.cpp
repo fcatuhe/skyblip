@@ -32,6 +32,7 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "protocols/common/test/channel.h"
 #include "test/support/product_rig.h"
@@ -165,19 +166,20 @@ void fly(Rig& rig, uint32_t& now_ms, uint32_t seconds) { rig.seconds(now_ms, sec
 struct FeatureRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
-    uint32_t own_icao{};
+    uint32_t aircraft_address{};
     common::TrafficService traffic;
 
-    explicit FeatureRig(common::Feature declared) : traffic(context, declared, own_icao) {
+    explicit FeatureRig(common::Feature declared) : traffic(context, declared, aircraft_address) {
         roles.capabilities = ports::Capability::Rf;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
@@ -355,7 +357,9 @@ TEST_CASE("uplink: own-ship relayed back by the ground station is not traffic") 
 }
 
 // A ground station also relays the transponder of the aircraft we fly in, under the ICAO table.
-TEST_CASE("uplink: our aircraft's transponder relayed back is traffic until the own ICAO is set") {
+TEST_CASE(
+    "uplink: our aircraft's transponder relayed back is traffic until the aircraft address is "
+    "set") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -370,7 +374,7 @@ TEST_CASE("uplink: our aircraft's transponder relayed back is traffic until the 
     CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) >= 0);
     CHECK(rig.state().traffic.count() == 2);
 
-    rig.settings().own_icao = 0x3C6586;
+    rig.settings().aircraft_address = 0x3C6586;
     fly(rig, now_ms, 1);
     CHECK(rig.state().traffic.find(adsl::kAddressTableIcao, 0x3C6586) < 0);
     CHECK(target_for(rig, 0x4D0001) != nullptr);

@@ -91,19 +91,20 @@ class NullRf : public Rf {
 // INFO: fc 12nov26 a unit that is never activated: the FICR tag names it, and it holds no key
 class KeylessIdentity : public Identity {
    public:
-    explicit KeylessIdentity(uint16_t bluetooth_tag) : bluetooth_tag_(bluetooth_tag) {}
+    KeylessIdentity(const identity::DeviceId& device_id, uint16_t bluetooth_tag)
+        : device_id_(device_id), bluetooth_tag_(bluetooth_tag) {}
 
-    identity::DeviceId device_id() const override { return identity::DeviceId{}; }
+    identity::DeviceId device_id() const override { return device_id_; }
     uint16_t bluetooth_tag() const override { return bluetooth_tag_; }
     bool seed(crypto::Ed25519::Seed&) const override { return false; }
     const crypto::Ed25519::PublicKey& trusted_server_key() const override { return kNoServerKey; }
     Status read_unlock_code(identity::UnlockCode&) override { return Status::NotFound; }
     Status write_unlock_code(const identity::UnlockCode&) override { return Status::Unsupported; }
-    bool draw_random(ByteSpan) override { return false; }
 
    private:
     static constexpr crypto::Ed25519::PublicKey kNoServerKey{};
 
+    identity::DeviceId device_id_;
     uint16_t bluetooth_tag_;
 };
 

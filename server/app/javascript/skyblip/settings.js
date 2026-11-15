@@ -1,19 +1,19 @@
-export const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign', 'own_icao'];
+export const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign', 'aircraft_address'];
 
 const NUMBERS = new Set(['aircraft_type']);
-const OWN_ICAO = /^[0-9A-F]{6}$/;
+const AIRCRAFT_ADDRESS = /^[0-9A-F]{6}$/;
 
 export function settingsOf(reply, keys = SETTING_KEYS) {
-  return Object.fromEntries(keys.filter(key => key in reply).map(key => [key, key === 'own_icao' ? ownIcaoText(reply[key]) : reply[key]]));
+  return Object.fromEntries(keys.filter(key => key in reply).map(key => [key, key === 'aircraft_address' ? aircraftAddressText(reply[key]) : reply[key]]));
 }
 
 export function settingsFrame(settings) {
-  if (!('own_icao' in settings)) return settings;
-  const text = settings.own_icao;
-  return { ...settings, own_icao: text === '' ? 0 : OWN_ICAO.test(text) ? Number.parseInt(text, 16) : text };
+  if (!('aircraft_address' in settings)) return settings;
+  const text = settings.aircraft_address;
+  return { ...settings, aircraft_address: text === '' ? 0 : AIRCRAFT_ADDRESS.test(text) ? Number.parseInt(text, 16) : text };
 }
 
-function ownIcaoText(address) {
+function aircraftAddressText(address) {
   return address === 0 ? '' : address.toString(16).toUpperCase().padStart(6, '0');
 }
 

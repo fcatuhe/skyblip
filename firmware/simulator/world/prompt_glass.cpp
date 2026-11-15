@@ -1,5 +1,6 @@
 #include "simulator/world/prompt_glass.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include "core/comms/config.h"
@@ -37,6 +38,33 @@ comms::Pending pending_named(const char* name) {
 
 constexpr int kFrameBytes = 512;
 
+struct NamedProfile {
+    const char* name;
+    comms::CaptureProfile profile;
+};
+
+constexpr NamedProfile kProfiles[] = {{"full", comms::CaptureProfile::Full},
+                                      {"power_run", comms::CaptureProfile::PowerRun},
+                                      {"flight_run", comms::CaptureProfile::FlightRun},
+                                      {"stop", comms::CaptureProfile::Stop}};
+
+// INFO: fc 15nov26 the page sends the profile it asked for and the flights the dump said it erases
+bool capture_detail(const char* argument, char* out) {
+    const char* colon = std::strchr(argument, ':');
+    if (colon == nullptr) return false;
+    const size_t named = static_cast<size_t>(colon - argument);
+    for (const NamedProfile& each : kProfiles) {
+        if (std::strlen(each.name) != named || std::strncmp(each.name, argument, named) != 0)
+            continue;
+        char* end = nullptr;
+        const unsigned long evicts = std::strtoul(colon + 1, &end, 10);
+        if (end == colon + 1 || *end != 0) return false;
+        out[comms::format_capture_detail(out, each.profile, static_cast<uint32_t>(evicts))] = 0;
+        return true;
+    }
+    return false;
+}
+
 bool applied(go::Settings& settings, const char* json) {
     uint8_t frame[kFrameBytes];
     const int bytes = link_text::frame_from_text(json, frame, kFrameBytes);
@@ -53,32 +81,27 @@ bool settings_detail(const char* set, const char* settings, char* out, int capac
     return go::describe_settings_changes(from, to, out, capacity) > 0;
 }
 
-// INFO: fc 14nov26 a screen reader hears the page's words in reading order, the key last
+// INFO: fc 14nov26 a screen reader hears the page's words in reading order, the keys last
 void say(char* out, int capacity, const char* title, const char* detail, uint32_t seconds_left) {
     char text[kPromptWordsBytes];
     int written = format_string(text, title);
     written += format_string(text + written, ". ");
-    for (const char* at = detail; *at != 0 && written < kPromptWordsBytes - 64; at++) {
+    for (const char* at = detail; *at != 0 && written < kPromptWordsBytes - 80; at++) {
         if (*at == '\n')
             written += format_string(text + written, ", ");
         else
             text[written++] = *at;
     }
     if (written > 0 && text[written - 1] != '.') text[written++] = '.';
-    text[written++] = ' ';
-    written += format_string(text + written, go::kConfirmCancelLine);
-    text[written++] = ' ';
-    if (seconds_left == 0) {
-        written += format_string(text + written, go::kConfirmOnceLine);
-    } else {
-        written += format_string(text + written, go::kConfirmWaitLine);
+    if (seconds_left != 0) {
         text[written++] = ' ';
-        written += format_unsigned(text + written, seconds_left);
-        written += format_string(text + written, " S");
+        written += go::format_confirm_countdown(text + written, seconds_left);
+        text[written++] = '.';
     }
-    text[written++] = '.';
-    written += format_string(text + written, " PUSH TWICE TO ");
+    written += format_string(text + written, " PUSH TO ");
     written += format_string(text + written, go::kConfirmAllowVerb);
+    written += format_string(text + written, ". TOUCH THE PAD TO ");
+    written += format_string(text + written, go::kConfirmCancelVerb);
     text[written++] = '.';
     text[written] = 0;
     std::strncpy(out, text, static_cast<size_t>(capacity) - 1);
@@ -98,6 +121,8 @@ bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, con
         ports::ImageVersion version;
         if (!dfu::parse_version(argument, version)) return false;
         (void)comms::format_dfu_detail(detail, sizeof(detail), version);
+    } else if (pending == comms::Pending::Capture && argument[0] != 0) {
+        if (!capture_detail(argument, detail)) return false;
     } else {
         std::strncpy(detail, comms::pending_detail(pending), sizeof(detail) - 1);
     }

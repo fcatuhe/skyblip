@@ -7,8 +7,10 @@
 #include "core/comms/link_registry.h"
 #include "core/events/stamp.h"
 #include "core/model/aircraft.h"
+#include "core/power/cutoff.h"
 #include "core/util/result.h"
 #include "core/util/span.h"
+#include "ports/random.h"
 
 namespace skyblip::comms {
 
@@ -19,6 +21,8 @@ constexpr int kPeerClaimWidestBytes = 72;
 
 // INFO: fc 11nov26 schemas/link.v1.json: protocol_version 1 is the three peer frames as written
 constexpr uint32_t kPeerProtocolVersion = 1;
+
+std::optional<uint32_t> draw_boot_epoch(ports::Random& random);
 
 struct PeerClaim {
     uint32_t boot_epoch{0};
@@ -36,7 +40,7 @@ struct PeerClaim {
     bool pressure_altitude_valid{false};
     int32_t pressure_altitude_mm{0};
     uint32_t pressure_altitude_age_ms{0};
-    uint32_t own_icao{0};
+    uint32_t aircraft_address{0};
     bool alarm_requested{false};
     bool paired{false};
 };
@@ -51,6 +55,8 @@ enum class ExportReference : uint8_t { None = 0, Go = 1, Own = 2 };
 
 // INFO: fc 12nov26 schemas/link.v1.json, observation: a callsign of at most eight characters
 constexpr int kPeerCallsignBytes = 9;
+// INFO: fc 15nov26 schemas/link.v1.json, health: a version of at most 13 characters, 9.99.99+99999
+constexpr int kPeerFirmwareBytes = 14;
 
 struct OwnTransponderHeard {
     uint32_t address{0};
@@ -62,13 +68,18 @@ struct PeerHealth {
     uint32_t boot_epoch{0};
     bool listening{false};
     bool utc_valid{false};
-    bool own_icao_set{false};
+    bool aircraft_address_set{false};
     bool last_sequence_valid{false};
     uint32_t last_sequence{0};
     bool alarm_granted{false};
     ExportReference export_reference{ExportReference::None};
     bool paired{false};
     std::optional<OwnTransponderHeard> own_transponder{};
+    char firmware[kPeerFirmwareBytes]{};
+    std::optional<uint8_t> battery_percent{};
+    bool charging{false};
+    power::PowerLevel power_level{power::PowerLevel::Unknown};
+    std::optional<uint32_t> frame_rate_hz{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

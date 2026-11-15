@@ -10,9 +10,23 @@
         <option value=""><%= t("firmwares.prompt") %></option>
         <% @images.each do |release, file| %>
           <option value="<%= release_asset_path(release.tag, file) %>"
-                  data-channel="<%= release.channel %>" data-product="<%= Release.product_of(file) %>" data-kind="<%= Release.kind_of(file) %>" data-release="<%= release.url %>" hidden><%= release.name %>, <%= t("firmwares.#{Release.kind_of(file)}") %></option>
+                  data-channel="<%= release.channel %>" data-key="<%= release.key %>" data-version="<%= release.version %>" data-product="<%= Release.product_of(file) %>" data-kind="<%= Release.kind_of(file) %>" data-release="<%= release.url %>" hidden><%= firmware_label(release, file) %></option>
         <% end %>
       </select>
     </div>
+  <% end %>
+  <% unless @unavailable %>
+    <template data-changes>
+      <% @changelog.each do |release, changes| %>
+        <section class="firmware-change" data-version="<%= release.version %>" data-channel="<%= release.channel %>">
+          <h3><%= release.version %></h3>
+          <ul>
+            <% changes.each do |change| %>
+              <li><%= change.url ? link_to(change.text, change.url, target: "_blank", rel: "noopener") : change.text %></li>
+            <% end %>
+          </ul>
+        </section>
+      <% end %>
+    </template>
   <% end %>
 <% end %>

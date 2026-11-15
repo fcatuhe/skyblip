@@ -41,7 +41,7 @@ class ConsoleTest < ApplicationSystemTestCase
     click_button "Connect"
     select "full", from: "Profile"
     click_button "Arm"
-    assert_selector "#capturemessage", text: "press its button twice to allow"
+    assert_selector "#capturemessage", text: "press its button to allow"
     page.execute_script("#{unit("3F2A")}.press()")
     assert_selector "#capturemessage.ok", text: "full capture armed"
 

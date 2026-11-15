@@ -79,7 +79,7 @@ inline constexpr Row kTable[kRowCount] = {
     {Condition::Prompt,
      {indication::Lamp::Green, 60, 190},
      Budget::Transient,
-     "green, fast blink: a phone asks, two presses allow and one refuses"},
+     "green, fast blink: a phone asks, one press allows"},
     {Condition::Pairing,
      {indication::Lamp::Blue, 60, 190},
      Budget::Transient,
@@ -235,6 +235,7 @@ struct Situation {
     bool prompting{false};
     bool pairing{false};
     bool linked{false};
+    // INFO: fc 15nov26 every product, since a page arms a capture on a Go too
     bool capturing{false};
 };
 

@@ -12,7 +12,8 @@ skyBlip records every request, job, error, activation and every step a browser t
 From skyBlip's MCP server, `https://skyblip.eu/mcp`, which an admin connects as `server/app/models/oauth/README.md` says. Every tool is for admins only:
 
 - `get_insights` with `days` 7, 30 or 90: this period against the one before, the numbers of the Insights page.
-- `list_errors` with `days`: what breaks, grouped into problems, newest first.
+- `list_errors` with `days`: what breaks, grouped by fingerprint, newest first, without the errors resolved since they last happened.
+- `resolve_error` with `fingerprint`: once the fix for an error is deployed, takes it off `list_errors` until it happens again.
 - `list_events`: the catalog first, then everybody's events as JSON lines. Narrow with `name` (`device.`, `browser.failed`), `device`, `support_code` or an error's `fingerprint`.
 - `get_unit` with `device`: an activated unit's record.
 
@@ -26,7 +27,7 @@ mise run kamal app exec "bin/rails events:tail NAME=browser.failed LAST=200"
 ## Look for, in this order
 
 1. **Pilots stranded.** `stranded` in the insights: browsers whose last step was a failure, by reason. Each reason with more than one browser is a place pilots give up. Read two or three of their journals before believing it.
-2. **What breaks.** New problems in `list_errors`, on the server and in browsers, and `requests.server_errors` and `jobs.failed`. A problem new since a revision is that revision's.
+2. **What breaks.** New and reopened errors in `list_errors`, on the server and in browsers, and `requests.server_errors` and `jobs.failed`. An error new since a revision is that revision's. A reopened error is one whose fix did not hold.
 3. **Installs.** `installs.failed_by_cause` against `installs.installed`, and `tasks.install.refused`. A cause from the install report is a firmware fix, `firmware/core/dfu/`. A refusal on the page is the briefing's words or flow.
 4. **Bluetooth.** `devices.choosers_closed` against `devices.connected`, `devices.dropped_while_busy`, and the `link_lost`, `small_mtu`, `failed` and `timeout` notices. Their `detail` says what the browser answered, by browser and system in `browser.opened`.
 5. **Browsers that cannot connect.** `browsers.without_bluetooth_on`: a pilot on a browser with no Web Bluetooth is stranded at the door, and the page that tells them where to go instead is the lever.
@@ -42,7 +43,7 @@ When a question cannot be answered from the events, the change is an event: one 
 
 ## Check it after the deploy
 
-A week after the deploy, read `get_insights` again and compare the number with the one in the PR. Say on the PR whether it moved, and by how much. If it did not, say so, and revert or try the next hypothesis.
+Once a fix for an error is deployed, resolve the error with `resolve_error`. A week after the deploy, read `get_insights` again and compare the number with the one in the PR. Say on the PR whether it moved, and by how much. If it did not, say so, and revert or try the next hypothesis.
 
 ## Never
 

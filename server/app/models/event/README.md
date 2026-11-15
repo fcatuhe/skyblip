@@ -4,7 +4,7 @@ Everything skyBlip does that someone may later want to understand lands as a row
 
 ## What is recorded
 
-- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a key bound, promoted or revoked, an activation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
+- **Domain events**, named `<model>.<past tense verb>`, emitted by the models where the fact happens: a unit enrolled, a unit read on another variant, a key bound, promoted or revoked, a firmware a unit signed, an activation or an attestation refused, a user signed in or created, an agent connected. They carry ids, states, versions and counts.
 - **Traces** from the framework: every request (`action_controller.request_completed`, with controller, action, status and duration), every job run, and a `rescue_from` that answered. The framework's other events, SQL and renders among them, are not kept. A post of a browser's journal is kept only when it was refused, since every open briefing posts every few seconds.
 - **Errors** reported to `Rails.error`, which Rails does for every exception a request or a job raises: `error.reported`, below.
 - **The browser's journal**: what only the page sees, below.
@@ -32,9 +32,11 @@ An event holds ids, states, versions, counts, durations and error messages, neve
 
 ## Errors
 
-`Event::ErrorReport` turns a reported error into `error.reported`: its class, its message cut to 300 characters, its cause, the first fifteen frames of the app's backtrace, or of the gems' when the app has none, the controller or job that raised it, whether it was handled, and `revision`, the image Kamal deployed. Its `fingerprint` is the class and the method of the first frame without its line number, so the same error from the same place is one problem across edits and deploys. A script's `browser.failed` is fingerprinted by its kind, class, message with its numbers taken out, and its file without the asset digest.
+`Event::ErrorReport` turns a reported error into `error.reported`: its class, its message cut to 300 characters, its cause, the first fifteen frames of the app's backtrace, or of the gems' when the app has none, the controller or job that raised it, whether it was handled, and `revision`, the image Kamal deployed. Its `fingerprint` is the class and the method of the first frame without its line number, so the same error from the same place is one error across edits and deploys. A script's `browser.failed` is fingerprinted by its kind, class, message with its numbers taken out, and its file without the asset digest.
 
-`Event::Problem` groups both by fingerprint: how many times, on how many devices and browsers, first and last seen, and whether it is new in the period. The Errors page and `list_errors` read it. Nothing alerts yet: the app has no mailer, so a new problem waits for someone to look.
+`Event::Error` groups both by fingerprint: how many times, on how many devices and browsers, first and last seen, and whether it is new in the period. The Errors page and `list_errors` read it. Nothing alerts yet: the app has no mailer, so a new error waits for someone to look.
+
+An admin resolves an error once its fix is deployed, on its page or through `resolve_error`, which keeps `resolved_at` in `event_error_resolutions` and records `error.resolved`. A resolved error leaves the list and Insights. Once it happens again after `resolved_at` it is reopened: it comes back flagged, and resolving it again moves `resolved_at`. Reopen on the page takes a resolution back by hand, as `error.reopened`. Nothing is written when an error happens, since reopened is read from the occurrences.
 
 ## Adding an event
 
@@ -47,9 +49,10 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 - **Could the browser reach a device at all?** `browser.opened`: `bluetooth` false is a browser without Web Bluetooth, such as any browser on an iPhone.
 - **Did the chooser show the device?** `bluetooth.chooser_closed`: its `detail` tells a pilot who cancelled from a Bluetooth adapter that is off.
 - **Did it connect, and stay connected?** `device.connected` and how long it took, `device.disconnected` and the phase it dropped in.
-- **What was the device like?** `device.read`: firmware, track, image state, sensor hub blob, settings fallback, trust, activation, flight state and battery.
+- **What was the device like?** `device.read`: the identity the unit stated, product, variant, version, build, DEVICEID and Bluetooth tag, which `Unit.hear` keeps on the unit's record (`server/README.md`, Every unit a browser meets), then firmware, track, image state, the signing key it runs, sensor hub blob, settings fallback, trust, activation, flight state and battery.
 - **What did the pilot read?** `device.noticed`, every notice the page showed, by the key `config/locales/briefing.*.yml` words it with.
-- **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report.
+- **What did they ask, and how did it end?** `device.task_started` and `device.task_ended`, with the outcome, whether the glass asked and how far an upload got. `device.installed` for an install that took, `device.install_reported` for one that did not, with the cause the page showed and the unit's report. `device.upload_refused` for an image the unit refused once it landed, with what it found in slot 1 and the keys on both sides.
+- **What did the device say about itself?** `device.diagnosed`, the diagnostics dump a pilot sent with Send a report: every counter and state of the radio, the receiver, the cell, the 1090 MHz receiver and the capture, by group, and never a position or an address. `capture.received` for a capture the pilot sent, which the Captures page in the admin area downloads.
 - **What broke?** `browser.failed` in the page, and `error.reported` on the server, tied to the browser when it asked.
 
 ## Reading it
@@ -57,7 +60,7 @@ Ask for the support code, or the device's address. `list_events` with `support_c
 `Event::Review` computes the numbers for a period, against the period before: browsers and those without Bluetooth, devices connected and how long it takes, links dropped mid-task, choosers closed empty, the notices pilots read most, tasks granted and refused, installs started, succeeded and failed by cause, the firmware the fleet runs, activations and their refusals, the browsers left stranded, errors, the slowest requests, failing jobs and agents' calls. A browser is stranded when its last step in the period was a failure: a notice other than a result, a task refused, a chooser closed empty or refused, an activation refused. Each is a pilot who may have given up there, listed with their support code so an admin can look before they write in.
 
 - **Insights**, in the admin area: the numbers for 7, 30 or 90 days.
-- **Errors**: the problems, and each one's frames and latest occurrences.
+- **Errors**: the errors not resolved, then the resolved ones, and each one's frames, latest occurrences and resolution.
 - **Events**: the catalog with how often each event happened and when it was last seen, an event never seen standing out, and everybody's events narrowed by name, device, support code, fingerprint or request. A unit's page links its timeline.
-- **The MCP server**: `get_insights`, `list_errors`, `list_events` and `get_unit`, for admins only, each read of events logged as `event.listed`. `.agents/skills/improve-skyblip/SKILL.md` says how an agent turns them into changes, and `.agents/skills/help-a-pilot/SKILL.md` how it answers a pilot.
+- **The MCP server**: `get_insights`, `list_errors`, `list_events`, `resolve_error` and `get_unit`, for admins only, each read of events logged as `event.listed` and each resolution as `error.resolved`. `.agents/skills/improve-skyblip/SKILL.md` says how an agent turns them into changes, and `.agents/skills/help-a-pilot/SKILL.md` how it answers a pilot.
 - **The command line**, through Kamal in production: `bin/rails events:review DAYS=30`, `bin/rails events:tail NAME=device.noticed`, `DEVICE=`, `CODE=`, `FINGERPRINT=` and `LAST=`.

@@ -12,7 +12,7 @@ enum class Detection : uint8_t { Unpaired, NotConnected, Airborne, NoFix, Listen
 
 struct Detected {
     Detection state{Detection::Unpaired};
-    uint32_t address{kOwnIcaoUnset};
+    uint32_t address{kAircraftAddressUnset};
     char callsign[kCallsignBytes]{};
     uint8_t aircraft_type{0};
 };
@@ -24,12 +24,10 @@ bool same_aircraft(const Detected& a, const Detected& b);
 
 constexpr int kDetectedLines = 4;
 constexpr const char* kAircraftNoticeTitle = "BRAVO HEARS";
-constexpr const char* kAircraftNoticeLines[] = {"USE SETS IT AS", "YOUR AIRCRAFT"};
-constexpr int kAircraftNoticeLineCount = 2;
 
 void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings& settings,
                    bool focused);
-void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected);
+void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t seconds_left);
 
 }  // namespace skyblip::go
 

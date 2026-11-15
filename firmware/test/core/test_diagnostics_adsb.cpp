@@ -47,33 +47,31 @@ bool has(const std::string& haystack, const char* needle) {
 
 }  // namespace
 
-TEST_CASE("diagnostics adsb: a unit with no 1090 MHz receiver prints and sends no adsb group") {
+TEST_CASE("diagnostics adsb: a unit with no 1090 MHz receiver sends no adsb group") {
     const Diagnostics go{};
     DiagnosticsReport report(go, link::Command::Diagnostics);
-    CHECK(report.line_count() == DiagnosticsReport::kGroupCount - 1);
-    char line[DiagnosticsReport::kLineBytes];
-    for (int i = 0; i < report.line_count(); i++) {
-        REQUIRE(report.line(i, line, static_cast<int>(sizeof(line))) > 0);
-        CHECK_FALSE(has(line, "adsb"));
+    uint8_t buffer[DiagnosticsReport::kFrameBytes];
+    while (!report.exhausted()) {
+        const int written = report.next_frame(512, buffer, static_cast<int>(sizeof(buffer)));
+        REQUIRE(written > 0);
+        // INFO: fc 14nov26 REQUIRE does not stop this build, so a frame that is not cut ends it
+        if (written <= 0) break;
+        const std::string frame =
+            link_text(std::string(reinterpret_cast<const char*>(buffer), written));
+        CHECK_FALSE(has(frame, "\"group\":\"adsb\""));
+        CHECK_FALSE(has(frame, "\"group\":\"capture\""));
     }
     DiagnosticsReport alone(go, link::Command::Diagnostics, DiagnosticsReport::Group::Adsb);
     CHECK(alone.exhausted());
 }
 
-TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reach both surfaces") {
+TEST_CASE("diagnostics adsb: the receiver's counters and its RSSI histogram reach the link") {
     const Diagnostics diagnostics = receiving();
-    DiagnosticsReport console(diagnostics, link::Command::Diagnostics,
-                              DiagnosticsReport::Group::Adsb);
-    char line[DiagnosticsReport::kLineBytes];
-    REQUIRE(console.line(0, line, static_cast<int>(sizeof(line))) > 0);
-    CHECK(std::string(line) ==
-          "adsb frames=900 frame_rate_hz=31 dropped=2 rearms=3 resets=1 command_errors=5 "
-          "errors=128 rssi_dbm=0,1,2,3,4,5,6,7 crc=120 unsupported=14 folded=766 aircraft=9");
-
     DiagnosticsReport link(diagnostics, link::Command::Diagnostics, DiagnosticsReport::Group::Adsb);
     const std::string frame = only_adsb_frame(link);
     CHECK(has(frame, "\"group\":\"adsb\""));
     CHECK(has(frame, "\"frames\":900"));
+    CHECK(has(frame, "\"errors\":128"));
     CHECK(has(frame, "\"crc\":120"));
     CHECK(has(frame, "\"unsupported\":14"));
     CHECK(has(frame, "\"folded\":766"));

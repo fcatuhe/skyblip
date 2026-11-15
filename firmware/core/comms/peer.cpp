@@ -10,6 +10,13 @@
 
 namespace skyblip::comms {
 
+std::optional<uint32_t> draw_boot_epoch(ports::Random& random) {
+    uint8_t epoch[sizeof(uint32_t)] = {};
+    if (!random.draw(ByteSpan(epoch, sizeof(epoch)))) return std::nullopt;
+    return static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
+           (static_cast<uint32_t>(epoch[2]) << 16) | (static_cast<uint32_t>(epoch[3]) << 24);
+}
+
 namespace {
 
 // INFO: fc 12nov26 schemas/link.v1.json, observation: 0 to 999 milliseconds into at_s
@@ -184,10 +191,11 @@ Status read_claim_pressure_and_icao(const cbor::Reader& reader, PeerClaim& claim
               claim.pressure_altitude_mm, claim.pressure_altitude_valid) ||
         !take(reader.read_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs),
               claim.pressure_altitude_age_ms, age) ||
-        !take(reader.read_unsigned(link::peer_claim_key::kOwnIcao), claim.own_icao, icao))
+        !take(reader.read_unsigned(link::peer_claim_key::kAircraftAddress), claim.aircraft_address,
+              icao))
         return Status::Invalid;
     if (claim.pressure_altitude_valid != age) return Status::Invalid;
-    return claim.own_icao > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
+    return claim.aircraft_address > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
 }
 
 // INFO: fc 13nov26 a callsign or a category with no address is half a field, refused whole
@@ -208,6 +216,25 @@ bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
         return false;
     heard.aircraft_category = static_cast<uint8_t>(category);
     health.own_transponder = heard;
+    return true;
+}
+
+// INFO: fc 15nov26 a Bravo from before these keys sends none of them, which reads as no reading
+bool read_bravo_status(const cbor::Reader& reader, PeerHealth& health) {
+    uint32_t percent = 0, level = 0, rate = 0;
+    bool charged = false, levelled = false, rated = false, percented = false;
+    if (!take(reader.read_unsigned(link::health_key::kBatteryPercent), percent, percented) ||
+        !take(reader.read_boolean(link::health_key::kCharging), health.charging, charged) ||
+        !take(reader.read_unsigned(link::health_key::kPowerLevel), level, levelled) ||
+        !take(reader.read_unsigned(link::health_key::kFrameRateHz), rate, rated))
+        return false;
+    if (percent > 100 || level > static_cast<uint32_t>(power::PowerLevel::Low)) return false;
+    const Status text =
+        reader.read_text(link::health_key::kFirmware, health.firmware, kPeerFirmwareBytes);
+    if (text != Status::Ok && text != Status::NotFound) return false;
+    if (percented) health.battery_percent = static_cast<uint8_t>(percent);
+    health.power_level = static_cast<power::PowerLevel>(level);
+    if (rated) health.frame_rate_hz = rate;
     return true;
 }
 
@@ -235,7 +262,8 @@ int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
         writer.add_unsigned(link::peer_claim_key::kPressureAltitudeAgeMs,
                             claim.pressure_altitude_age_ms);
     }
-    if (claim.own_icao != 0) writer.add_unsigned(link::peer_claim_key::kOwnIcao, claim.own_icao);
+    if (claim.aircraft_address != 0)
+        writer.add_unsigned(link::peer_claim_key::kAircraftAddress, claim.aircraft_address);
     writer.add_boolean(link::peer_claim_key::kAlarmRequested, claim.alarm_requested);
     writer.add_boolean(link::peer_claim_key::kPaired, claim.paired);
     return writer.finish();
@@ -271,7 +299,7 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     writer.add_boolean(link::health_key::kUtcValid, health.utc_valid);
     if (health.last_sequence_valid)
         writer.add_unsigned(link::health_key::kLastSequence, health.last_sequence);
-    writer.add_boolean(link::health_key::kOwnIcaoSet, health.own_icao_set);
+    writer.add_boolean(link::health_key::kAircraftAddressSet, health.aircraft_address_set);
     writer.add_boolean(link::health_key::kAlarmGranted, health.alarm_granted);
     writer.add_code(link::health_key::kExportReference, health.export_reference);
     writer.add_boolean(link::health_key::kPaired, health.paired);
@@ -283,6 +311,13 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
         if (heard.aircraft_category != 0)
             writer.add_unsigned(link::health_key::kOwnTransponderCategory, heard.aircraft_category);
     }
+    if (health.firmware[0] != 0) writer.add_text(link::health_key::kFirmware, health.firmware);
+    if (health.battery_percent)
+        writer.add_unsigned(link::health_key::kBatteryPercent, *health.battery_percent);
+    writer.add_boolean(link::health_key::kCharging, health.charging);
+    writer.add_code(link::health_key::kPowerLevel, health.power_level);
+    if (health.frame_rate_hz)
+        writer.add_unsigned(link::health_key::kFrameRateHz, *health.frame_rate_hz);
     return writer.finish();
 }
 
@@ -355,17 +390,20 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     const Result<uint32_t> epoch = reader.read_unsigned(link::health_key::kBootEpoch);
     const Result<bool> listening = reader.read_boolean(link::health_key::kListening);
     const Result<bool> utc_valid = reader.read_boolean(link::health_key::kUtcValid);
-    const Result<bool> own_icao_set = reader.read_boolean(link::health_key::kOwnIcaoSet);
+    const Result<bool> aircraft_address_set =
+        reader.read_boolean(link::health_key::kAircraftAddressSet);
     const Result<bool> paired = reader.read_boolean(link::health_key::kPaired);
-    if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !own_icao_set.ok() || !paired.ok())
+    if (!epoch.ok() || !listening.ok() || !utc_valid.ok() || !aircraft_address_set.ok() ||
+        !paired.ok())
         return Status::Invalid;
     PeerHealth health{};
     health.boot_epoch = epoch.value();
     health.listening = listening.value();
     health.utc_valid = utc_valid.value();
-    health.own_icao_set = own_icao_set.value();
+    health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
-    if (!read_own_transponder(reader, health)) return Status::Invalid;
+    if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health))
+        return Status::Invalid;
     return health;
 }
 

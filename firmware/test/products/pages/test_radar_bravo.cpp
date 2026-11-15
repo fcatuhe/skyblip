@@ -95,3 +95,32 @@ TEST_CASE("radar page: a lost Bravo yields the banner to a warned cell and to NO
     CHECK(reads_in(searching, "NO FIX", 40, 120, 160, 160, 2));
     CHECK(reads_in(searching, "NO BRAVO", 20, 140, 180, 175));
 }
+
+// Bravo's lamp winks red from its knee, and a Bravo in a flight bag shows it to nobody.
+TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its charge") {
+    for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
+        RadarSnapshot low = flying(0);
+        low.plot = plot;
+        low.bravo = BravoState::Live;
+        low.bravo_battery_low = true;
+        low.bravo_battery_percent = 9;
+        const Glass canvas = radar(low);
+        CHECK(reads_in(canvas, "BRAVO", 20, 100, 180, 165, 2));
+        CHECK(reads_in(canvas, "BAT 9%", 20, 110, 180, 180, 2));
+    }
+
+    RadarSnapshot unread = flying(0);
+    unread.bravo = BravoState::Live;
+    unread.bravo_battery_low = true;
+    CHECK(reads_in(radar(unread), "BAT LOW", 20, 110, 180, 180, 2));
+
+    RadarSnapshot both = flying(0);
+    both.bravo = BravoState::Live;
+    both.battery_low = true;
+    both.battery_percent = 4;
+    both.bravo_battery_low = true;
+    both.bravo_battery_percent = 9;
+    const Glass warned = radar(both);
+    CHECK(reads_in(warned, "BAT 4%", 40, 120, 160, 160, 2));
+    CHECK(reads_in(warned, "BRAVO BAT 9%", 20, 140, 180, 175));
+}

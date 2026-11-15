@@ -20,13 +20,13 @@ class McpTest < ActionDispatch::IntegrationTest
     assert_equal [ "S256" ], response.parsed_body["code_challenge_methods_supported"]
   end
 
-  test "Claude Code, Codex, pi and Claude on the web each connect through their metadata document, to read-only tools" do
+  test "Claude Code, Codex, pi and Claude on the web each connect through their metadata document, to tools that read but one" do
     [ [ CLAUDE_CODE, LOOPBACK ], [ CODEX, LOOPBACK ], [ PI, LOOPBACK ], [ CLAUDE, HOSTED ] ].each do |client_id, redirect_uri|
       mcp "tools/list", token: connect(client_id:, redirect_uri:).fetch("access_token")
 
       tools = response.parsed_body.dig("result", "tools")
-      assert_equal %w[get_insights list_events list_errors get_unit], tools.pluck("name"), client_id
-      assert tools.all? { it.dig("annotations", "readOnlyHint") }
+      assert_equal %w[get_insights list_events list_errors resolve_error get_unit], tools.pluck("name"), client_id
+      assert_equal %w[resolve_error], tools.reject { it.dig("annotations", "readOnlyHint") }.pluck("name")
     end
     assert_equal "tools/list", Event.where(name: "mcp.answered").last.payload["method"]
   end
@@ -52,14 +52,34 @@ class McpTest < ActionDispatch::IntegrationTest
     token = connect(client_id: CLAUDE_CODE).fetch("access_token")
     Rails.error.report RuntimeError.new("the challenge expired"), handled: true, source: "activation"
 
-    problems = JSON.parse(call_tool("list_errors", {}, token:))
-    assert_equal [ [ "RuntimeError", "the challenge expired", 1, true ] ], problems.map { it.values_at("error", "message", "count", "new") }
+    errors = JSON.parse(call_tool("list_errors", {}, token:))
+    assert_equal [ [ "RuntimeError", "the challenge expired", 1, true ] ], errors.map { it.values_at("error", "message", "count", "new") }
 
-    unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:))
+    unit = JSON.parse(call_tool("get_unit", { device: units(:bound).slug }, token:)).sole
     assert_equal [ 1, "000001" ], unit.values_at("serial", "address")
     assert_equal [ "active" ], unit["keys"].pluck("status")
+    assert_equal [ [ "0.3.0+1300", true, "plus", "attested" ] ], unit["firmware"].map { it.values_at("version", "release", "variant", "source") }
+
+    bravo = JSON.parse(call_tool("get_unit", { device: "bravo-3f2a" }, token:)).sole
+    assert_equal [ "bravo", nil, [ "read" ] ], [ bravo["product"], bravo["serial"], bravo["firmware"].pluck("source") ]
 
     call_tool("get_unit", { device: "go-00ffff" }, token:)
+    assert response.parsed_body.dig("result", "isError")
+  end
+
+  # An agent resolves an error once its fix is deployed, and list_errors stops showing it until it happens again.
+  test "resolve_error takes an error off list_errors, and logs who resolved it" do
+    token = connect(client_id: CLAUDE_CODE).fetch("access_token")
+    Rails.error.report RuntimeError.new("the challenge expired"), handled: true
+    fingerprint = JSON.parse(call_tool("list_errors", {}, token:)).sole["fingerprint"]
+
+    resolved = JSON.parse(call_tool("resolve_error", { fingerprint: }, token:))
+
+    assert resolved["resolved_at"]
+    assert_equal [], JSON.parse(call_tool("list_errors", {}, token:))
+    assert_equal({ "fingerprint" => fingerprint, "by_id" => users(:francois).id }, Event.find_by(name: "error.resolved").payload)
+
+    call_tool("resolve_error", { fingerprint: "ffffffffffffffff" }, token:)
     assert response.parsed_body.dig("result", "isError")
   end
 

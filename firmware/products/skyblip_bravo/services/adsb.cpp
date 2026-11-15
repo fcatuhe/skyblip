@@ -11,10 +11,10 @@ void AdsbService::tick(uint32_t now_ms) {
     bus::State& state = context_.state;
     // INFO: fc 11nov26 placed against the Go's position while paired, so exports are around the Go
     const GateChoice gate = gate_.choose(state.own, now_ms);
-    const uint32_t own_icao = gate_.own_icao(settings_.own_icao);
+    const uint32_t aircraft_address = gate_.aircraft_address(settings_.aircraft_address);
     state.traffic.set_own_reference(gate.own);
-    state.traffic.set_own_icao(own_icao);
-    assembly_.set_own_address(own_icao);
+    state.traffic.set_aircraft_address(aircraft_address);
+    assembly_.set_own_address(aircraft_address);
     const adsb::Reference here = reference(gate.own);
     events::AdsbFrame frame{};
     while (frames_.pop(frame)) hear(frame, here, now_ms);
@@ -25,13 +25,6 @@ void AdsbService::tick(uint32_t now_ms) {
     const uint32_t now_s = state.traffic_now_s(now_ms);
     state.traffic.age_out(now_s);
     state.callsigns.age_out(now_s);
-}
-
-bool AdsbService::take_reject(AdsbReject& out) {
-    const Result<AdsbReject> taken = rejects_.pop();
-    if (!taken.ok()) return false;
-    out = taken.value();
-    return true;
 }
 
 adsb::Reference AdsbService::reference(const model::Ownship& own) {
@@ -51,10 +44,11 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     // TODO: fc 13nov26 adsb trial #293, remove once the trial picks the LR2021 settings
     if (trial_ != nullptr) trial_->heard(frame, status, now_ms);
     if (status != Status::Ok) {
-        refuse(frame, status);
+        refuse(status);
         return;
     }
-    // INFO: fc 13nov26 before the fold drops the own ICAO, so a set address still reads as heard
+    // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as
+    // heard
     own_transponder_.hear(message, now_ms);
     const bus::State& state = context_.state;
     const uint32_t now_s = state.traffic_now_s(now_ms);
@@ -74,14 +68,12 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
 }
 
 // INFO: fc 12nov26 a whole 27-byte frame is never Invalid, so any refusal but Unsupported is parity
-void AdsbService::refuse(const events::AdsbFrame& frame, Status status) {
+void AdsbService::refuse(Status status) {
     if (status == Status::Unsupported) {
         unsupported_++;
     } else {
         crc_++;
     }
-    // INFO: fc 12nov26 a reject past kRejectsKept waiting for the console is counted and not kept
-    (void)rejects_.push(AdsbReject{status, frame.rssi_dbm, frame.rssi_valid, frame.chips});
 }
 
 }  // namespace skyblip::bravo

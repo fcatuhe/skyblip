@@ -123,6 +123,8 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
     REQUIRE(tango.go.product.screen().bravo_page().unpairing());
     tango.go.press(tango.now_ms);
     tango.run_for(5000);
+    tango.go.tap(tango.now_ms);
+    tango.run_for(500);
 
     CHECK_FALSE(go::paired(tango.go.settings()));
     CHECK_FALSE(tango.go.platform.central().up());
@@ -135,6 +137,27 @@ TEST_CASE("bravo pairing: unpairing forgets the pin, drops the link and frees th
 
     for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
     CHECK(tango.go.platform.link().links() == 3);
+}
+
+// A pilot who unpairs a Bravo is often replacing it, so the page lists the Bravos in range.
+TEST_CASE("bravo pairing: unpairing lists the Bravos in range, and the next press pairs one") {
+    Tango tango;
+    tango.pair_and_store();
+    tango.go.show(tango.now_ms, go::Page::Bravo);
+    tango.go.press(tango.now_ms);
+    tango.go.press(tango.now_ms);
+    tango.run_for(5000);
+    CHECK(tango.go.product.screen().page() == go::Page::Bravo);
+    CHECK(tango.service().step() == go::BravoStep::Scanning);
+    REQUIRE(tango.service().found_count() == 1);
+    for (uint16_t phone = 1; phone <= 3; phone++) tango.go.raise_link(phone);
+    CHECK(tango.go.platform.link().links() == 2);
+
+    tango.go.press(tango.now_ms);
+    tango.go.press(tango.now_ms);
+    tango.run_for(2000);
+    CHECK(tango.go.settings().bravo == PairedLink::kPeripheralAddress);
+    CHECK(tango.service().link() == go::BravoLink::Up);
 }
 
 TEST_CASE("bravo pairing: three phones connected refuse the pairing until one goes") {
@@ -222,48 +245,48 @@ TEST_CASE("bravo pairing: leaving the page stops the scan and frees the phone sl
     CHECK(tango.go.platform.link().links() == 3);
 }
 
-// #191's contract: the notice once a boot, the self-test row while it stands.
-TEST_CASE("bravo pairing: with no own ICAO on either side the Go says so once a boot") {
+// The self-test row stands while neither side has one. Only a transponder heard is a notice.
+TEST_CASE("bravo pairing: no aircraft address on either side and nothing heard shows no notice") {
     Tango tango;
     tango.pair();
-    CHECK(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
-    CHECK(tango.go.product.screen().noticing());
-
-    tango.go.tap(tango.now_ms);
+    CHECK(tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     CHECK_FALSE(tango.go.product.screen().noticing());
 
     tango.air.set_in_range(false);
     tango.air.drop();
     tango.run_for(500);
-    CHECK_FALSE(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
+    CHECK_FALSE(
+        tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     tango.air.set_in_range(true);
     tango.run_for(4000);
     REQUIRE(tango.service().link() == go::BravoLink::Up);
-    CHECK(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
+    CHECK(tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     CHECK_FALSE(tango.go.product.screen().noticing());
 }
 
-TEST_CASE("bravo pairing: Bravo's own ICAO, or the Go's, keeps the warning down") {
+TEST_CASE("bravo pairing: Bravo's aircraft address, or the Go's, keeps the warning down") {
     Tango tango;
-    tango.bravo.health.own_icao_set = true;
+    tango.bravo.health.aircraft_address_set = true;
     tango.pair();
-    CHECK_FALSE(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
+    CHECK_FALSE(
+        tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     CHECK_FALSE(tango.go.product.screen().noticing());
 
-    tango.bravo.health.own_icao_set = false;
-    tango.go.settings().own_icao = 0x3C6586;
+    tango.bravo.health.aircraft_address_set = false;
+    tango.go.settings().aircraft_address = 0x3C6586;
     tango.run_for(2000);
-    CHECK_FALSE(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
+    CHECK_FALSE(
+        tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     CHECK_FALSE(tango.go.product.screen().noticing());
 }
 
-TEST_CASE("bravo pairing: the peer_claim carries the Go's own ICAO") {
+TEST_CASE("bravo pairing: the peer_claim carries the Go's aircraft address") {
     Tango tango;
-    tango.go.settings().own_icao = 0x3C6586;
+    tango.go.settings().aircraft_address = 0x3C6586;
     tango.pair();
     REQUIRE_FALSE(tango.bravo.claims.empty());
     const std::string& claim = tango.bravo.claims.back();
-    CHECK(field(claim, "own_icao") == std::to_string(0x3C6586));
+    CHECK(field(claim, "aircraft_address") == std::to_string(0x3C6586));
     CHECK(field(claim, "latitude_1e7").empty());
     CHECK(tango.go.platform.central().writes_refused == 0);
 }
@@ -279,7 +302,8 @@ TEST_CASE("bravo pairing: a Bravo speaking an unknown peer protocol is refused a
     CHECK(tango.service().refusal() == go::BravoRefusal::UnknownProtocol);
     CHECK_FALSE(go::paired(tango.go.settings()));
     CHECK_FALSE(tango.go.platform.central().up());
-    CHECK_FALSE(tango.service().own_icao_warning().stands(tango.go.settings().own_icao));
+    CHECK_FALSE(
+        tango.service().aircraft_address_warning().stands(tango.go.settings().aircraft_address));
     CHECK(tango.go.platform.link().admits_phone());
 }
 

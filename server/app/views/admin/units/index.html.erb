@@ -4,7 +4,7 @@
 
 <% if Unit.daily_cap_reached? %>
   <p class="admin-flash admin-flash--alert" role="alert">
-    The daily cap of <%= Unit::NEW_PER_DAY %> new units is reached: new units are refused until midnight UTC.
+    The daily cap of <%= Unit.daily_cap %> new units is reached: new units are refused until midnight UTC.
   </p>
 <% end %>
 
@@ -15,42 +15,62 @@
   </p>
 <% end %>
 
-<% if @server_key %>
-  <dl class="admin-details">
+<dl class="admin-details">
+  <dt>Daily cap</dt>
+  <dd><%= pluralize(Unit.daily_cap, "new unit") %> a day · <%= link_to "Change", edit_admin_activation_cap_path %></dd>
+  <% if @server_key %>
     <dt>Server key</dt>
     <dd><span class="mono"><%= @server_key.id %></span>, public key <span class="mono"><%= @server_key.public_key %></span></dd>
-  </dl>
-<% else %>
+  <% end %>
+</dl>
+
+<% unless @server_key %>
   <p class="admin-flash admin-flash--alert" role="alert">
     No server key in the credentials: every activation fails. The README's Activation section says how to add it.
   </p>
 <% end %>
 
-<div class="table-scroll">
+<%= render "help" %>
+
+<%= form_with url: admin_units_path, method: :get, class: "admin-filters" do |form| %>
+  <%= form.label :activated, "Activated only, the units that transmit on ADS-L" %>
+  <%= form.check_box :activated, { checked: @activated_only }, "1", nil %>
+  <%= form.submit "Show", class: "button button--small" %>
+<% end %>
+
+<div class="table-scroll admin-table">
   <table>
     <thead>
       <tr>
-        <th>Address</th>
+        <th>Unit</th>
+        <th>Product</th>
+        <th>Variant read</th>
         <th>Serial</th>
         <th>Device ID</th>
         <th>Key</th>
         <th>Pending</th>
         <th>Firmware</th>
         <th>Build</th>
+        <th>Source</th>
         <th>Activated</th>
+        <th>Last seen</th>
       </tr>
     </thead>
     <tbody>
       <% @units.each do |unit| %>
         <tr>
-          <th><%= link_to unit.address, admin_unit_path(unit), class: "mono" %></th>
+          <th><%= link_to unit_label(unit), admin_unit_path(unit), class: "mono" %></th>
+          <td><%= unit_product(unit) %></td>
+          <td><%= unit.variant %></td>
           <td><%= unit.serial %></td>
           <td class="mono"><%= unit.device_id %></td>
           <td class="mono"><%= unit.active_key&.public_key&.first(8) || "none" %></td>
           <td><%= unit.keys.count(&:pending?) %></td>
-          <td class="mono"><%= unit.active_key&.version %></td>
-          <td><%= unit_key_build(unit.active_key) %></td>
-          <td><%= l unit.created_at, format: "%b %-d, %Y" %></td>
+          <td class="mono"><%= unit_firmware(unit)&.version %></td>
+          <td><%= unit_build(unit_firmware(unit)) %></td>
+          <td><%= firmware_source(unit_firmware(unit)) %></td>
+          <td><%= l unit.activated_at, format: "%b %-d, %Y" if unit.activated_at %></td>
+          <td><%= l unit.updated_at, format: "%b %-d, %Y" %></td>
         </tr>
       <% end %>
     </tbody>

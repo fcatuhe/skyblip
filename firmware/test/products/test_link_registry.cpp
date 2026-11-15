@@ -87,11 +87,6 @@ class Witness {
     std::set<const names::Key*> keys_;
 };
 
-struct NoConsole {
-    bool ready() const { return false; }
-    void line(const char*, int) {}
-};
-
 const identity::Nonce kUnitNonce{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 const identity::Nonce kServerNonce{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9};
 
@@ -109,7 +104,7 @@ std::string browser_key() {
 }
 
 std::string browser_signature() {
-    std::string message = "skyblip:browser:v1";
+    std::string message = link::trust_browser_signed_over::kSignature;
     message.append(reinterpret_cast<const char*>(kUnitNonce.data()), kUnitNonce.size());
     const crypto::Ed25519::Signature signature = crypto::Ed25519::sign(
         kBrowserSeed,
@@ -133,17 +128,17 @@ struct GroundedUnitWithLogs {
         rig.platform.dfu().running_image_version = ports::ImageVersion{0, 3, 0, 1234};
         REQUIRE(rig.setup() == Status::Ok);
         taxi(rig, now_ms, 5);
-        arm_from_the_page(rig, now_ms);
+        arm_over_the_link(rig, now_ms);
         capture = rig.product.capture().session_id();
         feed(rig, now_ms, 30);
-        rig.double_press(now_ms);
+        stop_over_the_link(rig, now_ms);
         taxi(rig, now_ms, 20);
         fly(rig, now_ms, 80);
         taxi(rig, now_ms, 40);
         flight = rig.product.flight_log().session_id();
         REQUIRE_FALSE(rig.product.capture().capturing());
         REQUIRE_FALSE(rig.product.flight_log().recording());
-        go::DiagnosticsDump<Go, NoConsole>().step(rig.product, now_ms);
+        go::DiagnosticsCollector<Go>().step(rig.product, now_ms);
     }
 
     void say(events::Endpoint endpoint, const std::string& json) {
@@ -155,7 +150,7 @@ struct GroundedUnitWithLogs {
 
     void confirm() {
         taxi(rig, now_ms, 3);
-        rig.double_press(now_ms);
+        rig.press(now_ms);
         taxi(rig, now_ms, 2);
     }
 
@@ -186,7 +181,7 @@ struct GroundedUnitWithLogs {
 void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.rig.raise_link(1);
     for (const char* command : {"get", "defaults", "status", "timing", "flash", "radio",
-                                "diagnostics", "update", "install_report", "protocols"})
+                                "diagnostics", "update", "install_report", "protocols", "identity"})
         unit.say(std::string("{\"command\":\"") + command + "\"}");
     unit.say("{\"command\":\"set\",\"units\":\"metric\",\"callsign\":\"D-KXYZ\"}");
     unit.confirm();
@@ -198,18 +193,18 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     const std::string trust = "{\"command\":\"trust_browser\",\"key\":\"" + browser_key() +
                               "\",\"signature\":\"" + browser_signature() +
                               "\",\"label\":\"Chrome on Android\"}";
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"browser_challenge\"}");
     unit.say(trust);
     unit.say("{\"command\":\"set\",\"units\":\"nautical\"}");
     unit.confirm();
     unit.reconnect();
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"browser_challenge\"}");
     unit.say(trust);
     unit.say("{\"command\":\"browsers\",\"index\":0}");
     unit.say("{\"command\":\"browsers\",\"index\":1}");
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     unit.say("{\"command\":\"challenge\"}");
     unit.say("{\"command\":\"register\",\"server_nonce\":\"" +
              hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) +
@@ -218,6 +213,8 @@ void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.say("{\"command\":\"unlock\",\"serial\":" + std::to_string(Identity::kSerial) +
              ",\"signature\":\"" + unlock_signature() + "\"}");
     taxi(unit.rig, unit.now_ms, 3);
+    unit.say("{\"command\":\"attest\",\"server_nonce\":\"" +
+             hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\"}");
     unit.rig.raise_link(2);
     unit.rig.send_from(2, "{\"command\":\"get\"}");
     taxi(unit.rig, unit.now_ms, 1);
@@ -248,6 +245,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     platform::host::Dfu dfu{watchdog};
     dfu.running_key_valid = true;
     dfu.allows_downgrade = true;
+    dfu.bootloader.count = 2;
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     comms::ConfigService config(link, store, &dfu);
@@ -261,18 +259,24 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.residual_valid = true;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
+    dump.capture_available = true;
+    dump.capture_armed = true;
     config.set_image_state(dfu::ImageState::Probation,
                            dfu::UpdateRecord{dfu::kWidestVersion, dfu::kWidestVersion});
     config.set_settings_fallback(settings::Fallback::Prior);
     dfu::HubImageReport held{};
     held.holding = dfu::HubImage::Held;
     config.set_hub_image(held);
-    config.set_product(dfu::Product::SkyblipBravo);
     config.set_bravo_state(comms::BravoState::NoUtc);
     dfu::InstallReport report{};
     report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
     report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);
     config.set_install_report(&report);
+    dfu.staged_key_valid = true;
+    config.on_rx(config_frame("{\"command\":\"dfu\",\"version\":\"0.2.0+15\"}"));
+    config.confirm();
+    dfu.finished_upload = true;
+    config.tick(0);
     config.set_radio_protocols(bravo::kRadioProtocols);
     for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
@@ -325,6 +329,7 @@ const std::vector<Answer> kAnswers = {
     {"update", kConfig, reply("update"), "invalid"},
     {"install_report", kConfig, reply("install_report"), "invalid"},
     {"protocols", kConfig, reply("protocols"), "invalid"},
+    {"identity", kConfig, reply("identity"), "invalid"},
     {"dfu", kConfig, prompt("confirm_dfu"), "invalid"},
     {"recovery", kConfig, prompt("confirm_recovery"), "invalid"},
     {"power_off", kConfig, prompt("confirm_power_off"), "invalid"},
@@ -339,9 +344,8 @@ const std::vector<Answer> kAnswers = {
     {"ownship", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
-    {"capture", kConfig,
-     "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
-     "unknown_command"},
+    {"capture", kConfig, prompt("confirm_capture"), "invalid"},
+    {"attest", kConfig, reply("attestation"), "invalid"},
     {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
     {"trust_browser", kConfig,
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"untrusted\"}", "invalid"},
@@ -372,11 +376,13 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.callsign", "\"D-KXYZ\""},
         {"set.battery_offset_mv", "10"},
         {"set.frequency_trim_e1_ppm", "-5"},
-        {"set.own_icao", "3958150"},
+        {"set.aircraft_address", "3958150"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
         {"register.signature", "\"" + register_signature() + "\""},
+        {"attest.server_nonce",
+         "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
         {"unlock.serial", std::to_string(Identity::kSerial)},
         {"unlock.signature", "\"" + unlock_signature() + "\""},
         {"list.log", "\"flights\""},
@@ -445,8 +451,8 @@ std::string refusal(const names::Frame& frame, const Answer& answer) {
 TEST_CASE("link registry: the unit reads every key a host frame may carry, and refuses any other") {
     GroundedUnitWithLogs unit;
     unit.rig.raise_link(1);
-    unit.rig.platform.identity().queue_random(kUnitNonce);
-    unit.rig.platform.identity().queue_random(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
+    unit.rig.platform.random().queue(kUnitNonce);
     const std::map<std::string, std::string> values = samples(unit);
     for (const names::Frame& frame : names::kFrames) {
         if (frame.sender == names::Sender::Unit || !on_a_phone_endpoint(frame)) continue;

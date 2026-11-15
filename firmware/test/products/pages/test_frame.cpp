@@ -51,7 +51,7 @@ TEST_CASE("frame: the pilot's own pages wear the small mark, the device's own th
 TEST_CASE("frame: the button's key is filled on the left, the pad's is open on the right") {
     Glass canvas;
     canvas.clear(true);
-    draw_keys(canvas, {{Press::Once, "PAIR"}, "BACK"});
+    draw_keys(canvas, {"PAIR", "BACK"});
     CHECK(reads_button_key(canvas, "PAIR"));
     CHECK(reads_pad_key(canvas, "BACK"));
     // Filled: the middle of the button's key is ink where no letter stands; the pad's is glass.
@@ -63,13 +63,13 @@ TEST_CASE("frame: the button's key is filled on the left, the pad's is open on t
 TEST_CASE("frame: a contact with nothing to do has no key, and the other stays in its place") {
     Glass pad_only;
     pad_only.clear(true);
-    draw_keys(pad_only, {{}, "CANCEL"});
+    draw_keys(pad_only, {"", "CANCEL"});
     CHECK_FALSE(has_button_key(pad_only));
     CHECK(reads_pad_key(pad_only, "CANCEL"));
 
     Glass button_only;
     button_only.clear(true);
-    draw_keys(button_only, {{Press::Twice, "ACCEPT"}, ""});
+    draw_keys(button_only, {"ACCEPT", ""});
     CHECK(reads_button_key(button_only, "ACCEPT"));
     CHECK_FALSE(has_pad_key(button_only));
 }

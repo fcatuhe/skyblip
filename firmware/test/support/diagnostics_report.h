@@ -1,5 +1,4 @@
-// Harness, not a test: a busy and a widest device snapshot, and the dump read back as console lines
-// and as link frames.
+// Harness, not a test: a busy and a widest device snapshot, and the dump read back as link frames.
 #ifndef SKYBLIP_TEST_SUPPORT_DIAGNOSTICS_REPORT_H
 #define SKYBLIP_TEST_SUPPORT_DIAGNOSTICS_REPORT_H
 
@@ -56,6 +55,9 @@ inline Diagnostics busy_device() {
 
     diagnostics.tracked = 4;
     diagnostics.alarm = 2;
+    diagnostics.uplink_frames = 30;
+    diagnostics.uplink_bad = 1;
+    diagnostics.uplink_targets = 52;
 
     diagnostics.gnss_fixes = 5210;
     diagnostics.fix_valid = true;
@@ -95,6 +97,18 @@ inline Diagnostics busy_device() {
     const uint32_t levels[ports::AdsbReceiverStatistics::kRssiBuckets] = {0,    120, 900, 3000,
                                                                           2500, 800, 90,  3};
     std::copy(std::begin(levels), std::end(levels), std::begin(diagnostics.adsb.rssi));
+
+    diagnostics.capture_available = true;
+    diagnostics.capture_armed = true;
+    diagnostics.capture_profile = comms::CaptureProfile::PowerRun;
+    diagnostics.capture_session = 41;
+    diagnostics.capture_records = 960;
+    diagnostics.capture_sectors = 6;
+    diagnostics.capture_keeps_s = 433500;
+    diagnostics.capture_takes_sectors = 170;
+    diagnostics.capture_evicts_flights = 3;
+    diagnostics.capture_keeps_full_s = 1926;
+    diagnostics.capture_keeps_power_run_s = 433500;
     return diagnostics;
 }
 
@@ -133,6 +147,9 @@ inline Diagnostics widest_device() {
     diagnostics.dio1_missed = 0xFFFFFFFFu;
     diagnostics.tracked = 0xFFFFFFFFu;
     diagnostics.alarm = 255;
+    diagnostics.uplink_frames = 0xFFFFFFFFu;
+    diagnostics.uplink_bad = 0xFFFFFFFFu;
+    diagnostics.uplink_targets = 0xFFFFFFFFu;
     diagnostics.gnss_fixes = 0xFFFFFFFFu;
     diagnostics.gnss_baud = 921600;
     diagnostics.gnss_config = ports::GnssConfigStage::Degraded;  // "DEGRADED"
@@ -170,21 +187,19 @@ inline Diagnostics widest_device() {
     diagnostics.adsb.command_errors = 0xFFFFFFFFu;
     diagnostics.adsb.device_errors = 0xFFFF;
     std::fill(std::begin(diagnostics.adsb.rssi), std::end(diagnostics.adsb.rssi), 0xFFFFFFFFu);
+    diagnostics.capture_available = true;
+    diagnostics.capture_armed = true;
+    diagnostics.capture_profile = comms::CaptureProfile::FlightRun;  // "FLIGHT RUN"
+    diagnostics.capture_session = 0xFFFFFFFFu;
+    diagnostics.capture_records = 0xFFFFFFFFu;
+    diagnostics.capture_dropped = 0xFFFFFFFFu;
+    diagnostics.capture_sectors = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_s = 0xFFFFFFFFu;
+    diagnostics.capture_takes_sectors = 0xFFFFFFFFu;
+    diagnostics.capture_evicts_flights = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_full_s = 0xFFFFFFFFu;
+    diagnostics.capture_keeps_power_run_s = 0xFFFFFFFFu;
     return diagnostics;
-}
-
-inline std::string console(const Diagnostics& diagnostics) {
-    DiagnosticsReport report(diagnostics, link::Command::Diagnostics);
-    std::string all;
-    char line[DiagnosticsReport::kLineBytes];
-    for (int i = 0; i < report.line_count(); i++) {
-        const int written = report.line(i, line, static_cast<int>(sizeof(line)));
-        REQUIRE(written > 0);
-        CHECK(static_cast<int>(std::string(line).size()) == written);
-        all += line;
-        all += "\n";
-    }
-    return all;
 }
 
 // Every frame the report produces at a given payload, joined, plus a count.

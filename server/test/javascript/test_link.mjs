@@ -38,16 +38,18 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
   [
     {
       command: 'health', protocol_version: 1, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
-      own_icao_set: true, alarm_granted: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
-      own_transponder_callsign: 'ABCD1234', own_transponder_category: 17,
+      aircraft_address_set: true, alarm_granted: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
+      own_transponder_callsign: 'ABCD1234', own_transponder_category: 17, firmware: '9.99.99+99999', battery_percent: 100,
+      charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED,
     },
-    'ad00181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334' + '0f11',
+    'b200181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334' +
+      '0f11106d392e39392e39392b393939393911186412f51304141affffffff',
   ],
   [
     {
       command: 'peer_claim', boot_epoch: WIDEST_UNSIGNED, at_s: WIDEST_UNSIGNED, into_ms: 999, latitude_1e7: -900000000,
       longitude_1e7: -1800000000, position_age_ms: WIDEST_UNSIGNED, altitude_hae_mm: WIDEST_INTEGER, altitude_hae_age_ms: WIDEST_UNSIGNED,
-      pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, own_icao: 0xffffff, alarm_requested: true,
+      pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, aircraft_address: 0xffffff, alarm_requested: true,
       paired: true,
     },
     'ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +

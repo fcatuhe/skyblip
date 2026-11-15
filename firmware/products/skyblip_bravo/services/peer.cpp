@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "core/dfu/update.h"
+
 namespace skyblip::bravo {
 
 namespace {
@@ -17,11 +19,9 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
-    uint8_t epoch[sizeof(boot_epoch_)] = {};
-    if (context_.roles.identity.draw_random(ByteSpan(epoch, sizeof(epoch))))
-        boot_epoch_ = static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
-                      (static_cast<uint32_t>(epoch[2]) << 16) |
-                      (static_cast<uint32_t>(epoch[3]) << 24);
+    const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
+    if (!epoch) return Status::Down;
+    boot_epoch_ = *epoch;
     keep_pin();
     return Status::Ok;
 }
@@ -82,29 +82,43 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Pinned:
         case Heard::Committed:
             gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
-            adopt_own_icao(claim.value().own_icao);
+            adopt_aircraft_address(claim.value().aircraft_address);
             hear_alarm_request(go->address, claim.value().alarm_requested, now_ms);
             break;
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
         case Heard::Unpinned:
             health_owed_ = true;
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+            ask(*go, now_ms);
             break;
-        case Heard::Asking:
-            if (!go->asked && pairing_.ask(go->address, now_ms)) go->asked = true;
+        case Heard::Asking: ask(*go, now_ms); break;
+        case Heard::Stranger:
+            go->claimed_pin = true;
+            health_owed_ = true;
             break;
-        case Heard::Stranger: health_owed_ = true; break;
         case Heard::Awaited: break;
     }
 }
 
+// INFO: fc 15nov26 a press must not hand Bravo back to a replaced Go while the new one is here
+void PeerService::ask(Go& go, uint32_t now_ms) {
+    if (go.asked || (go.claimed_pin && pinned_go_connected())) return;
+    if (pairing_.ask(go.address, now_ms)) go.asked = true;
+}
+
+bool PeerService::pinned_go_connected() const {
+    return std::any_of(gos_.begin(), gos_.end(),
+                       [&](const Go& go) { return go.used && pairing_.pinned_to(go.address); });
+}
+
 // INFO: fc 13nov26 a Go with none clears only what a Go gave, never what a phone set on Bravo
-void PeerService::adopt_own_icao(uint32_t own_icao) {
-    const bool cleared = own_icao == kOwnIcaoUnset;
-    if (cleared && !settings_.own_icao_from_go) return;
-    if (own_icao == settings_.own_icao && settings_.own_icao_from_go == !cleared) return;
-    settings_.own_icao = own_icao;
-    settings_.own_icao_from_go = !cleared;
+void PeerService::adopt_aircraft_address(uint32_t aircraft_address) {
+    const bool cleared = aircraft_address == kAircraftAddressUnset;
+    if (cleared && !settings_.aircraft_address_from_go) return;
+    if (aircraft_address == settings_.aircraft_address &&
+        settings_.aircraft_address_from_go == !cleared)
+        return;
+    settings_.aircraft_address = aircraft_address;
+    settings_.aircraft_address_from_go = !cleared;
     config_.note_settings_changed();
     health_owed_ = true;
 }
@@ -157,18 +171,31 @@ void PeerService::keep_pin() {
     kept_ = pin;
 }
 
+// INFO: fc 15nov26 Bravo has no glass, so its Go shows what it runs, holds and hears
+void PeerService::describe_self(comms::PeerHealth& health) const {
+    ports::ImageVersion running{};
+    if (context_.roles.dfu.running_version(running))
+        dfu::format_version(running, health.firmware, sizeof(health.firmware));
+    const power::BatteryState& battery = context_.state.power.battery;
+    if (battery.valid) health.battery_percent = battery.percent;
+    health.charging = battery.charging;
+    health.power_level = context_.state.power.level;
+    if (health.listening) health.frame_rate_hz = receiver_.statistics().frame_rate_hz;
+}
+
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it
 void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t now_ms) {
     if (!health_owed_ && now_ms - health_sent_ms_ < kHealthPeriodMs) return;
     comms::PeerHealth health{};
     health.boot_epoch = boot_epoch_;
-    health.own_icao_set = settings_.own_icao != kOwnIcaoUnset;
+    health.aircraft_address_set = settings_.aircraft_address != kAircraftAddressUnset;
     health.listening = receiver_.listening();
     health.utc_valid = utc_valid;
     health.last_sequence_valid = observed_;
     health.last_sequence = sequence_ - 1;
     health.export_reference = choice.reference;
     health.own_transponder = own_transponder_.heard();
+    describe_self(health);
     bool blocked = false;
     for (const Go& go : gos_) {
         if (!go.used) continue;

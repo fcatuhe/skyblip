@@ -31,6 +31,7 @@ export class DeviceWitness {
       ...this.#link(before, state),
       ...this.#tasks(before, state),
       ...this.#notice(before, state),
+      ...this.#landing(before, state),
       ...this.#learned(state, attempted),
     ];
   }
@@ -72,7 +73,7 @@ export class DeviceWitness {
     if (task !== 'install') return ['device.task_started', { task }];
     this.#install = { since: this.#now(), from: state.running };
     const { file, advice, upgrade } = state;
-    return ['device.task_started', { task, version: file?.version, full: file?.full, advice, upgrade }];
+    return ['device.task_started', { task, version: file?.version, full: file?.full, key: file?.key, sha: file?.sha, advice, upgrade }];
   }
 
   #ended(before, state) {
@@ -91,6 +92,14 @@ export class DeviceWitness {
     return [['device.noticed', { key, during, detail, phase: state.phase, task: taskOf(before?.task ?? state.task) }]];
   }
 
+  #landing(before, state) {
+    const { landing, notice, file, image } = state;
+    if (!landing || landing === before?.landing) return [];
+    return [['device.upload_refused', {
+      reason: notice?.key, version: file?.version, check: landing.check, staged_key: landing.stagedKey, key: file?.key, unit_key: image?.key,
+    }]];
+  }
+
   #learned(state, attempted) {
     if (!linked(state) || !state.running || !state.image) return [];
     const entries = [];
@@ -101,7 +110,9 @@ export class DeviceWitness {
       if (report) entries.push(['device.install_reported', report]);
     }
     if (this.#returning && this.#install && attempted && state.running === attempted && state.image.state === 'confirmed') {
-      entries.push(['device.installed', { from: this.#install.from, to: state.running, lasted_ms: Math.round(this.#now() - this.#install.since) }]);
+      entries.push(['device.installed', {
+        from: this.#install.from, to: state.running, lasted_ms: Math.round(this.#now() - this.#install.since), device_id: state.identity?.deviceId,
+      }]);
       this.#install = null;
       this.#returning = false;
     }
@@ -109,23 +120,27 @@ export class DeviceWitness {
   }
 }
 
-function readOf({ image, running, trust, address, status }) {
-  const product = productOf(image);
+function readOf(state) {
+  const { image, identity, running, trust, address, status } = state;
+  const product = productOf(state);
   return {
-    product, running, image: image.state,
+    product, variant: identity?.variant, version: identity?.version, release: identity?.release, device_id: identity?.deviceId,
+    bluetooth_tag: identity?.bluetoothTag, running, image: image.state, key: image.key,
     track: image.key ? (image.downgrade ? 'development' : 'release') : null,
+    bootloader_keys: image.bootloaderKeys?.join(' ') ?? null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,
-    activated: product === 'skyblip_go' ? address !== null : null,
+    activated: product === 'go' ? address !== null : null,
     flight: status?.flight, battery_percent: status?.batteryPercent, charging: status?.charging, power_level: status?.powerLevel,
   };
 }
 
-function reportOf({ image, installReport: report, running }, attempted) {
+function reportOf(state, attempted) {
+  const { image, installReport: report, running } = state;
   const cause = installCause({ image, report, running, attempted });
   if (!reportShown({ image, cause })) return null;
   return {
-    cause, product: productOf(image), running, tried: attempted, image: image?.state, from: image?.from, to: image?.to,
+    cause, product: productOf(state), running, tried: attempted, image: image?.state, from: image?.from, to: image?.to,
     report: Boolean(report), check: report?.check, swap: report?.swap, request_error: report?.requestError,
     boots: report?.boots, probation_boots: report?.probationBoots, proof: report?.proof, reset: report?.reset,
   };

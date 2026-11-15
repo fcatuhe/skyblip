@@ -24,13 +24,12 @@ struct BravoSnapshot {
     int focus{0};
     bool confirming{false};
     bool unpairing{false};
+    uint32_t seconds_left{0};
 };
 
 void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot);
-constexpr const char* kOwnIcaoNoticeTitle = "NO OWN ICAO";
-
-void draw_own_icao_notice(ui::Canvas& canvas);
 void draw_bravo_forgot_notice(ui::Canvas& canvas);
+void draw_bravo_asks_notice(ui::Canvas& canvas, uint32_t seconds_left);
 
 enum class BravoAction : uint8_t { None, Redraw, Leave, Pair, Cancel, Retry, Unpair };
 
@@ -39,7 +38,8 @@ class BravoPage {
     void open(uint32_t now_ms);
     BravoAction pad(const BravoView& view, uint32_t now_ms);
     BravoAction button(const BravoView& view, uint32_t now_ms);
-    BravoAction idle(const BravoView& view, uint32_t now_ms) const;
+    BravoAction idle(const BravoView& view, uint32_t now_ms);
+    uint32_t seconds_left(uint32_t now_ms) const;
 
     int focus() const { return focus_; }
     bool confirming() const { return confirming_; }

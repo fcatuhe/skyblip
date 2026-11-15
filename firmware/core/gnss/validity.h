@@ -40,8 +40,6 @@ enum class FixReject : uint8_t {
     Jump = 6,        // a position no aircraft could have flown to
 };
 
-const char* reject_name(FixReject reason);
-
 // GGA field 6. SoftRF accepts GPS through float RTK and nothing else: 0 is no
 // fix and 6 is dead reckoning, which is a receiver guessing.
 constexpr uint8_t kQualityGps = 1;

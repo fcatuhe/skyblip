@@ -8,7 +8,6 @@
 #include <zephyr/bluetooth/gatt.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/kernel.h>
-#include <zephyr/logging/log.h>
 
 #include "core/comms/link_sessions.h"
 #include "core/events/link.h"
@@ -17,8 +16,6 @@
 #include "hardware/platform/zephyr/att_budget.h"
 #include "hardware/platform/zephyr/bluetooth_address.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
-
-LOG_MODULE_DECLARE(skyblip, LOG_LEVEL_INF);
 
 namespace skyblip::platform::zephyr {
 
@@ -290,10 +287,7 @@ void resume_advertising() {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     const bool admits = g_sessions.admits();
     k_spin_unlock(&g_lock, key);
-    if (!admits) return;
-    const int error = start_advertising();
-    if (error != 0 && error != -ENOMEM && error != -EALREADY)
-        LOG_ERR("bluetooth: advertising did not resume (%d), the device is invisible", error);
+    if (admits) (void)start_advertising();
 }
 
 // INFO: le 04aug26 The three callbacks are the whole producer side, and none of
@@ -315,9 +309,7 @@ void connected(struct bt_conn* connection, uint8_t error) {
     if (admitted) g_connections[index] = bt_conn_ref(connection);
     k_spin_unlock(&g_lock, key);
     if (!admitted) {
-        const int refused = bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_LOW_RESOURCES);
-        if (refused != 0)
-            LOG_ERR("bluetooth: a phone past the ceiling stayed connected (%d)", refused);
+        (void)bt_conn_disconnect(connection, BT_HCI_ERR_REMOTE_LOW_RESOURCES);
         return;
     }
     request_mtu(connection);
@@ -377,7 +369,6 @@ Status Link::advertise_as(const char* name) {
     atomic_ptr_set(&g_response, next);
 
     const int named = bt_set_name(next->name);
-    if (named != 0) LOG_ERR("bluetooth: the GAP name was not set (%d)", named);
     int error = 0;
     if (atomic_get(&g_advertising) == 0) {
         error = start_advertising();
@@ -387,7 +378,6 @@ Status Link::advertise_as(const char* name) {
                                       next->scan_data, ARRAY_SIZE(next->scan_data));
         if (error == -EAGAIN) error = 0;
     }
-    if (error != 0) LOG_ERR("bluetooth: advertising as %s failed (%d)", next->name, error);
     return named == 0 && error == 0 ? Status::Ok : Status::Down;
 }
 
@@ -427,9 +417,7 @@ Status Link::advertise_within_ceiling(Status status, bool admits) {
         resume_advertising();
         return status;
     }
-    const int stopped = bt_le_adv_stop();
-    if (stopped != 0)
-        LOG_ERR("bluetooth: advertising past the phone ceiling did not stop (%d)", stopped);
+    (void)bt_le_adv_stop();
     return status;
 }
 

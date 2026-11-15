@@ -114,7 +114,7 @@ dfu::Proof ConfigLinkService::proof() const {
     const bus::State& state = context_.state;
     if (!state.started) return dfu::Proof::Booted;
     if (state.flight.gnss_solutions == 0) return dfu::Proof::Started;
-    // INFO: fc 03oct26 a slim image that cannot boot its hub is reverted, to the image that could
+    // INFO: fc 03oct26 a base image that cannot boot its hub is reverted, to the image that could
     if (!state.imu.bootable) return dfu::Proof::GnssHeard;
     if (ports::has(context_.roles.capabilities, ports::Capability::Display) &&
         !state.panel_presented)
@@ -139,7 +139,6 @@ void ConfigLinkService::confirm_image_once_healthy() {
     publish_image_state();
 }
 
-// TODO: fc 13nov26 the install report's storage, retired with #294 once Bluetooth updates land
 void ConfigLinkService::load_report() {
     uint8_t blob[dfu::kInstallReportBytes];
     size_t blob_bytes = 0;

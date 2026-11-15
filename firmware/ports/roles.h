@@ -13,6 +13,7 @@
 #include "ports/indicator.h"
 #include "ports/kvstore.h"
 #include "ports/link.h"
+#include "ports/random.h"
 #include "ports/rf.h"
 
 namespace skyblip::ports {
@@ -32,6 +33,7 @@ struct Roles {
     Indicator& indicator;
     Gnss& gnss;
     Identity& identity;
+    Random& random;
     Capabilities capabilities{Capability::None};
 };
 

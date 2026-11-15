@@ -9,8 +9,8 @@
 namespace skyblip::bravo {
 
 // INFO: fc 12nov26 the Go's collector with Bravo's parts: the adsb group, the AG3335, no SX1262
-template <class Product, class Sink>
-class DiagnosticsDump {
+template <class Product>
+class DiagnosticsCollector {
    public:
     void step(Product& product, uint32_t now_ms) {
         comms::Diagnostics& snapshot = product.config_link().config().diagnostics();
@@ -18,14 +18,8 @@ class DiagnosticsDump {
             refresh(product, snapshot, now_ms);
             refreshed_ms_ = now_ms;
         }
-        if (!started_ || now_ms - dumped_ms_ >= comms::kDiagnosticsDumpPeriodMs) {
-            dumped_ms_ = now_ms;
-            emit(snapshot);
-        }
         started_ = true;
     }
-
-    Sink& sink() { return sink_; }
 
    private:
     void refresh(Product& product, comms::Diagnostics& snapshot, uint32_t now_ms) {
@@ -34,6 +28,9 @@ class DiagnosticsDump {
 
         snapshot.tracked = static_cast<uint32_t>(state.traffic.count());
         snapshot.alarm = traffic::to_number(state.alarm_level);
+        snapshot.uplink_frames = state.air.uplink_frames;
+        snapshot.uplink_bad = state.air.uplink_bad;
+        snapshot.uplink_targets = state.air.uplink_targets;
 
         snapshot.gnss_fixes = state.flight.gnss_solutions;
         snapshot.fix_valid = state.own.fix_valid;
@@ -62,22 +59,12 @@ class DiagnosticsDump {
         snapshot.adsb_folded = product.adsb().folded();
         snapshot.adsb_aircraft = static_cast<uint32_t>(product.adsb().assembly().count());
 
+        product.capture().describe(snapshot);
+
         snapshot.refreshes++;
     }
 
-    void emit(const comms::Diagnostics& snapshot) {
-        if (!sink_.ready()) return;
-        comms::DiagnosticsReport report(snapshot, link::Command::Diagnostics);
-        char line[comms::DiagnosticsReport::kLineBytes];
-        for (int i = 0; i < report.line_count(); i++) {
-            const int length = report.line(i, line, static_cast<int>(sizeof(line)));
-            if (length > 0) sink_.line(line, length);
-        }
-    }
-
-    Sink sink_{};
     uint32_t refreshed_ms_{0};
-    uint32_t dumped_ms_{0};
     bool started_{false};
 };
 

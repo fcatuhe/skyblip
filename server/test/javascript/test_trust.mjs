@@ -30,7 +30,7 @@ async function trustedSession(options = {}) {
   return { key, ...link };
 }
 
-test('a browser two presses approved on a save is trusted, and its next save asks nothing', async () => {
+test('a browser a press approved on a save is trusted, and its next save asks nothing', async () => {
   const { key, load } = await browserKey();
   const { device, updater, until } = await connected({ browserKey: load });
   assert.equal(updater.state.trust, 'proven');
@@ -74,7 +74,7 @@ test('a trusted browser installs with no prompt on the glass', async () => {
   assert.equal(device.approved, '0.2.0+15');
 });
 
-test('a dfu two presses approved trusts the browser too', async () => {
+test('a dfu a press approved trusts the browser too', async () => {
   const { load } = await browserKey();
   const { device, updater, until } = await chosen({ browserKey: load });
   updater.install();
@@ -93,15 +93,6 @@ test('a refused save trusts no browser', async () => {
   const refused = await until(state => state.notice?.key === 'cancelled');
   assert.equal(refused.trust, 'proven');
   assert.deepEqual(device.trustedBrowsers, []);
-});
-
-test('firmware that knows no trusted browsers is asked with presses, as before', async () => {
-  const { load } = await browserKey();
-  const { device, updater, until } = await connected({ browserKey: load, knowsBrowsers: false });
-  assert.equal(updater.state.trust, null);
-  updater.saveSettings({ ...updater.state.settings, units: 'metric' });
-  await until(asking('set'));
-  assert.equal(device.pending, 'set');
 });
 
 test('a trusted browser lists the browsers, finds itself, and forgets the others', async () => {

@@ -19,12 +19,8 @@ namespace skyblip::power {
 // back to SYSTEM OFF without painting the panel or starting the loop.
 enum class BootPath : uint8_t { Run, SleepAgain };
 
-const char* to_string(BootPath path);
-
 // INFO: fc 21sep26 what a refused boot owes the glass, and why the refusal owes it: README.md
 enum class RefusedFrame : uint8_t { Leave, Wordmark, FlatCell };
-
-const char* to_string(RefusedFrame frame);
 
 enum class CellOnGlass : uint8_t { None, Low, Flat };
 

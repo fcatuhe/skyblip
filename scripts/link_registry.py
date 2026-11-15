@@ -127,6 +127,12 @@ def firmware_header(registry):
             lines += ["constexpr size_t %s = %d;" % (constant(key["name"]), key["bytes"])
                       for key in widths]
             lines += ["}", ""]
+        labels = [key for key in frame["keys"] if "signed_over" in key]
+        if labels:
+            lines.append("namespace %s_signed_over {" % frame["command"])
+            lines += ["constexpr char %s[] = \"%s\";" % (constant(key["name"]), key["signed_over"])
+                      for key in labels]
+            lines += ["}", ""]
     for frame in registry["frames"]:
         if "keys_of" in frame:
             lines += ["namespace %s_key = %s_key;" % (frame["command"], frame["keys_of"]), ""]

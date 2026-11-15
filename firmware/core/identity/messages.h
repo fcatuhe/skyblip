@@ -45,6 +45,10 @@ Message registration_message(const DeviceId& device_id, const Ed25519::PublicKey
                              const ServerKeyId& server_key_id, bool release, const char* version);
 Message unlock_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
                        uint16_t serial, const Nonce& unit_nonce);
+// INFO: fc 15nov26 product and variant: one byte each, the link's codes, after the release byte
+Message attestation_message(const DeviceId& device_id, const Ed25519::PublicKey& unit_key,
+                            const Nonce& server_nonce, bool release, uint8_t product,
+                            uint8_t variant, const char* version);
 
 }  // namespace skyblip::identity
 

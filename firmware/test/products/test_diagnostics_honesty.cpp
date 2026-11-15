@@ -31,19 +31,20 @@ bool last_of(const std::vector<diagnostics::Record>& records, T& out) {
 struct ServiceRig {
     platform::host::Clock clock;
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null;
     ports::Roles roles{
         clock,          null.rf,          null.link, null.display,         null.key_value,
         null.log_flash, null.annunciator, null.dfu,  null.die_temperature, null.indicator,
-        null.gnss,      identity};
+        null.gnss,      identity,         random};
     bus::Bus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     uint8_t aircraft_type{go::kAircraftTypeLight};
     common::OwnshipService ownship{context, aircraft_type};
-    uint32_t own_icao{};
-    common::TrafficService traffic{context, common::Feature::None, own_icao};
+    uint32_t aircraft_address{};
+    common::TrafficService traffic{context, common::Feature::None, aircraft_address};
 
     ServiceRig() { recorder.arm(); }
 

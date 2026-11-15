@@ -62,12 +62,34 @@ en:
         full: Full
         power_run: Power run
         flight_run: Flight run
-      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. We review the capture with you after a flight."
+      hint: "Full records all types of data. Power run records power use and duty cycle. Flight run records the same data with the flight timer running. The device asks for a press before it starts, and records on its own until you stop it."
       arm: Arm
       stop: Stop the capture
+      idle: Nothing is recording.
+      running: "Recording a %{profile} capture: %{records} records so far. The device keeps the last %{keeps} of it."
+      price: "A full capture keeps %{full}, a power run or a flight run %{run}."
+      erases:
+        one: "Starting one erases 1 stored flight."
+        other: "Starting one erases %{count} stored flights."
+      months:
+        one: 1 month
+        other: "%{count} months"
+      send: Fetch and send
+      send_hint: "Stop the capture, then send it to skyBlip from here. It holds your positions and the aircraft you heard. We keep a full capture %{full} and a power run or a flight run %{run}, then delete it."
+      fetching: "Reading the capture: %{at} of %{total} records."
+      uploading: Sending the capture.
+      sent: "Sent. Give your support code %{code} when you write to us."
+      empty: The device holds no capture.
+      not_sent: "The capture could not be sent: %{detail}. Try again later."
+    report:
+      title: Send a report
+      hint: "Sends the device's counters to skyBlip, with no position and no address. Use it when the device misbehaves."
+      send: Send a report
+      sent: "Sent. Give your support code %{code} when you write to us."
+      not_sent: "The report waits in this browser and leaves once it is online. Your support code is %{code}."
     browsers:
       title: Trusted browsers
-      hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press twice to allow its first save or update."
+      hint: "These browsers can change the device's settings and start updates without a button press on the device. A browser joins the list when you press to allow its first save or update."
       this_browser: this browser
       unnamed: A browser with no name
       forget: Forget
@@ -80,6 +102,7 @@ en:
       other: Another image
       file: Or a file ending in .signed.bin
       release: Release notes and the .uf2
+      changes: What changed since your version
       recovery: Firmware will not take?
       recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
       recover: Restart into the USB drive
@@ -102,7 +125,7 @@ en:
       find: Find the new Go
       activate: Activate
       kept_summary: What skyblip.eu keeps
-      kept: skyblip.eu keeps the device's chip identifier, key, serial number and firmware, along with the internet address used for activation. No account.
+      kept: skyblip.eu keeps the device's factory identifier, public key, serial number and firmware. The Go transmits in ADS-L, so activation assigns it an address from skyBlip's range in the ADS-L registry. No account needed.
     glass:
       lamp: The LED blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
@@ -122,7 +145,7 @@ en:
       forget_question: "Forget %{name}?"
       sending_short: "Sending, %{percent} %"
       activate_now: Activate
-      glass_refuse: One press refuses.
+      glass_refuse: With no press, it refuses after thirty seconds.
       locked: Locked in flight
       reconnect_needed: Refused on the device. Nothing changed. Reconnect before the device can ask again.
       reset_count: "Back to defaults (%{count})"
@@ -152,6 +175,8 @@ en:
       firmware_current: up to date
       firmware_out: "%{version} is out"
       update_banner: "%{version} is out. Your device is running %{running}."
+      motion_sensor_needs: the motion sensor needs its firmware
+      motion_sensor_banner: "The motion sensor has no firmware, so the slip ball is off. Your device is running %{running}."
       save_count:
         one: Save 1 change
         other: "Save %{count} changes"
@@ -161,18 +186,21 @@ en:
       none: none
       in_flight_lock: Changes are available again after landing.
       in_flight_lock_trusted: This browser can still change the device's settings. Other actions are available again after landing.
-      glass_press: "Press the %{product}'s button twice."
+      glass_press: "Press the %{product}'s button."
       glass_waiting: Waiting for its answer.
       install_version: "Install %{version}"
-      install_full: "Install %{version}, with the sensor hub firmware"
+      install_full: "Install %{version}, with the motion sensor firmware"
       newest: "Your device is running the latest image, %{version}."
+      motion_sensor_without_firmware: "The motion sensor has no firmware, so the slip ball is off. Install %{version} again, with the motion sensor firmware."
       no_image: No published image for this device yet. Choose a file below.
+      no_product: This device did not say which product it is, so no published image is offered. Choose a file below, or update it over USB.
       sending: "Sending %{version}"
       sent: "%{percent} %, %{sent} of %{total} kB"
       left: "about %{minutes} min left"
       estimating: working out the time left
       keep_close: "Keep this screen open and the %{product} close."
       stops: "One press on the %{product} stops the upload."
+      stops_with_pad: "A tap on the %{product}'s pad stops the upload."
       installing: The device is installing the firmware and restarting. This takes about thirty seconds.
       reconnecting: It connects again by itself.
       probation: "%{version} is starting. It checks its radio, GPS and screen."
@@ -181,16 +209,16 @@ en:
       registering: Getting its serial number
     notices:
       no_bluetooth: This browser does not support Web Bluetooth. Use Chrome or Edge on Android or a computer.
-      not_skyblip: This device has no skyBlip update service. It is not a skyBlip, or its firmware is too old for Bluetooth updates.
+      not_skyblip: This device has no skyBlip update service. It is not a skyBlip.
       link_lost: The connection dropped. Bring the device closer and reconnect. An upload in progress resumes where it stopped.
       not_back: The device did not come back after its restart. Connect it again.
       timeout: The device stopped answering. Reconnect and try again.
       no_params: The device did not report how much data it can receive at once. Reconnect.
       claimed: Another app controls this device's settings. Close that app then reconnect.
       small_mtu: This phone or browser is using the smallest Bluetooth packet. It is too small for the reply. Reconnect. If it happens again, update the browser or use another phone or a computer.
-      in_flight: The device is in flight. Older firmware also needs a GPS fix. Install once it has landed.
+      in_flight: The device is in flight. Install once it has landed.
       low_power: The battery is too low to install. Charge it first.
-      expired: Nobody pressed twice within thirty seconds. Try again.
+      expired: Nobody pressed within thirty seconds. Try again.
       cancelled: Refused on the device. Reconnect before the device can ask again.
       refused_on_device: Refused on the device. Reconnect before the device can ask again.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -206,7 +234,7 @@ en:
       flash: The device could not write the image. Try again, then try the USB drive.
       unknown_command: This firmware is too old for that. Update it over USB.
       no_file: No image selected. Choose an image first.
-      needs_full: This device needs the image with the sensor hub firmware, ending in .full.signed.bin.
+      needs_full: This device needs the image with the motion sensor firmware, ending in .full.signed.bin.
       shelf_failed: The image did not download. Check the connection and choose it again.
       smp: "The device refused the image:"
       failed: "Something failed:"
@@ -226,15 +254,14 @@ en:
       settings_defaults: It lost its settings and runs on defaults. Check the callsign and the aircraft type.
       swap_unpowered: The battery is critically low. It is too low to install the firmware. Charge it first.
       went_dark_flat: The device last shut down because its battery was flat. Charge it before you install.
-      imu_writing: The device is writing the sensor hub firmware. This takes up to a minute. Leave it on.
-      no_key: This firmware is too old to name the key it trusts. Install one file by hand once, the .full.signed.bin of a release.
+      imu_writing: The device is writing the motion sensor firmware. This takes up to a minute. Leave it on.
       not_activated: Not activated yet. It neither transmits nor receives.
       recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PUSH THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RESET to go back to skyBlip. Nothing transmits meanwhile."
     set_notices:
       saved: Saved on the device.
       in_flight: The device is in flight. Nothing changed. Save once it has landed.
       low_power: The battery is too low to store settings. Charge it first.
-      expired: Nobody pressed twice within thirty seconds. Nothing changed.
+      expired: Nobody pressed within thirty seconds. Nothing changed.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
@@ -242,17 +269,16 @@ en:
       out_of_range: The device refused a value it cannot store. FFFFFF is no aircraft's ICAO address. Nothing changed.
       not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or take the one the Go's AIRCRAFT menu shows. Nothing changed.
     capture_notices:
-      capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. This continues in flight.
+      capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. The capture continues in flight.
       capture_stopped: Stopped. The LED is back to its single blink.
       capturing: A capture is already running. Stop it first.
       not_capturing: No capture is running. There is nothing to stop.
-      no_storage: This Bravo has no memory for a capture. Tell us its firmware version.
+      no_storage: This device has no memory for a capture. Tell us its firmware version.
       in_flight: The device is in flight. Nothing changed. Try again once it has landed.
-      expired: Nobody pressed twice within thirty seconds. Nothing changed.
+      expired: Nobody pressed within thirty seconds. Nothing changed.
       cancelled: Refused on the device. Nothing changed.
       refused_on_device: Refused on the device. Nothing changed.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
-      unknown_command: This firmware is too old to capture. Update it first.
     browsers_notices:
       invalid: The device could not identify which browser to forget. Reload the page and try again.
       unknown_browser: The device no longer trusts that browser.
@@ -272,12 +298,11 @@ en:
       in_flight: This device is already activated. It is in flight. Activate it again once it has landed.
       low_power: The battery is too low to store the serial number. Charge it then activate.
       flash: The device could not store its serial number. Activate again. If it happens again, tell us.
-      expired: Nobody pressed twice within thirty seconds. Activate again.
+      expired: Nobody pressed within thirty seconds. Activate again.
       cancelled: Refused on the Go. Reconnect, then activate again.
       refused_on_device: Refused on the Go. Reconnect, then activate again.
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
       claimed: Another app controls this device's settings. Close that app then reconnect.
-      unknown_command: This firmware predates activation and does not need it. Update it first.
       server_unknown_server_key: This firmware trusts a key that skyblip.eu does not have. Install a release first.
       server_expired: More than five minutes passed. Activate again.
       server_bad_signature: skyblip.eu could not verify what the device signed. Activate again. If it happens twice, tell us which firmware it runs.

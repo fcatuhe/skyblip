@@ -1,4 +1,5 @@
 #include "core/util/format.h"
+#include "products/skyblip_go/pages/confirm.h"
 #include "products/skyblip_go/pages/menu.h"
 
 namespace skyblip::go {
@@ -60,11 +61,17 @@ MenuAction MenuEditor::tick(uint32_t now_ms, const MenuValues& current, MenuValu
         if (clearing_) return keep();
         return editing_ ? roll() : advance();
     }
+    if (clearing_ && now_ms - idle_since_ms_ >= kAskCeilingMs) return keep();
     if (now_ms - idle_since_ms_ >= kIdleReturnHoldMs) {
         leave();
         return MenuAction::Leave;
     }
     return MenuAction::None;
+}
+
+// INFO: fc 14nov26 the press that opened the question is the editor's last contact, so it dates it
+uint32_t MenuEditor::clear_seconds_left(uint32_t now_ms) const {
+    return seconds_left(idle_since_ms_, now_ms, kAskCeilingMs);
 }
 
 MenuAction MenuEditor::advance() {
@@ -106,9 +113,10 @@ void MenuEditor::edit(MenuRow field, const MenuValues& current) {
     refused_ = false;
     cursor_ = 0;
     int written = 0;
-    if (field == MenuRow::OwnIcao) {
-        if (current.settings.own_icao != kOwnIcaoUnset)
-            written = format_hex(text_, current.settings.own_icao, kOwnIcaoCharacters);
+    if (field == MenuRow::AircraftAddress) {
+        if (current.settings.aircraft_address != kAircraftAddressUnset)
+            written =
+                format_hex(text_, current.settings.aircraft_address, kAircraftAddressCharacters);
     } else {
         while (written < kCallsignCharacters && current.settings.callsign[written] != 0) {
             text_[written] = current.settings.callsign[written];
@@ -120,13 +128,13 @@ void MenuEditor::edit(MenuRow field, const MenuValues& current) {
 }
 
 int MenuEditor::characters() const {
-    return field_ == MenuRow::OwnIcao ? kOwnIcaoCharacters : kCallsignCharacters;
+    return field_ == MenuRow::AircraftAddress ? kAircraftAddressCharacters : kCallsignCharacters;
 }
 
 MenuAction MenuEditor::roll() {
     refused_ = false;
-    text_[cursor_] = field_ == MenuRow::OwnIcao ? next_hex_character(text_[cursor_])
-                                                : next_callsign_character(text_[cursor_]);
+    text_[cursor_] = field_ == MenuRow::AircraftAddress ? next_hex_character(text_[cursor_])
+                                                        : next_callsign_character(text_[cursor_]);
     return MenuAction::Moved;
 }
 
@@ -144,11 +152,11 @@ MenuAction MenuEditor::step(const MenuValues& current, MenuValues& next) {
 MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
     next = current;
     bool typed = true;
-    if (field_ == MenuRow::OwnIcao) {
-        next.settings.own_icao = own_icao_typed(text_);
-        typed = next.settings.own_icao != kOwnIcaoUnset;
+    if (field_ == MenuRow::AircraftAddress) {
+        next.settings.aircraft_address = aircraft_address_typed(text_);
+        typed = next.settings.aircraft_address != kAircraftAddressUnset;
         // INFO: fc 14nov26 ADS-L F.2.3: refused in the open field, under what Bravo names instead
-        if (contradicts(next.settings.own_icao, current.own_transponder)) {
+        if (contradicts(next.settings.aircraft_address, current.own_transponder)) {
             next = current;
             refused_ = true;
             cursor_ = 0;
@@ -164,13 +172,13 @@ MenuAction MenuEditor::store(const MenuValues& current, MenuValues& next) {
 }
 
 MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
-    if (field_ == MenuRow::OwnIcao) {
-        if (current.settings.own_icao == kOwnIcaoUnset) {
+    if (field_ == MenuRow::AircraftAddress) {
+        if (current.settings.aircraft_address == kAircraftAddressUnset) {
             close_field();
             return MenuAction::Moved;
         }
-        format_hex(text_, current.settings.own_icao, kOwnIcaoCharacters);
-        text_[kOwnIcaoCharacters] = 0;
+        format_hex(text_, current.settings.aircraft_address, kAircraftAddressCharacters);
+        text_[kAircraftAddressCharacters] = 0;
         clearing_ = true;
         return MenuAction::Moved;
     }
@@ -184,7 +192,7 @@ MenuAction MenuEditor::clear(const MenuValues& current, MenuValues& next) {
 MenuAction MenuEditor::confirm_clear(const MenuValues& current, MenuValues& next) {
     close_field();
     next = current;
-    next.settings.own_icao = kOwnIcaoUnset;
+    next.settings.aircraft_address = kAircraftAddressUnset;
     return MenuAction::Changed;
 }
 
@@ -213,7 +221,7 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             return MenuAction::Moved;
         case MenuRow::Detected: return use_detected(current, next);
         case MenuRow::Callsign:
-        case MenuRow::OwnIcao: edit(row, current); return MenuAction::Moved;
+        case MenuRow::AircraftAddress: edit(row, current); return MenuAction::Moved;
         case MenuRow::AircraftType:
             next.settings.aircraft_type = next_aircraft_type(current.settings.aircraft_type);
             break;

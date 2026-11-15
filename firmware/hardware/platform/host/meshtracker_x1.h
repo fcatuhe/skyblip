@@ -6,7 +6,6 @@
 #include "hardware/parts/drv2605/model.h"
 #include "hardware/parts/lr2021/model.h"
 #include "hardware/parts/spa06/model.h"
-#include "hardware/parts/ysn8900/model.h"
 #include "hardware/platform/host/adsb_receiver.h"
 #include "hardware/platform/host/platform.h"
 #include "ports/null.h"
@@ -70,7 +69,6 @@ class MeshtrackerX1 {
         log_flash_.set_fitted(ports::has(fitted, ports::Capability::Storage));
         sensor_bus_.attach(models::Spa06::kAddress, barometer_);
         sensor_bus_.attach(models::Drv2605::kAddress, haptic_);
-        rtc_bus_.attach(models::Ysn8900::kAddress, rtc_);
     }
 
     // INFO: fc 12nov26 the reset causes, the button and the cell need no bring-up on the host
@@ -83,10 +81,7 @@ class MeshtrackerX1 {
 
     io::Spi& spi(io::BusId) { return radio_; }
     io::Uart& uart(io::BusId) { return gnss_; }
-    io::I2c& i2c(io::BusId bus) {
-        if (bus == io::BusId::Rtc) return rtc_bus_;
-        return sensor_bus_;
-    }
+    io::I2c& i2c(io::BusId) { return sensor_bus_; }
     io::Gpio& gpio() { return gpio_; }
     io::Delay& delay() { return radio_; }
     static int radio_irq() { return boards::meshtracker_x1::kRadioIrq; }
@@ -103,13 +98,13 @@ class MeshtrackerX1 {
     host::Watchdog& watchdog() { return watchdog_; }
     host::SystemPower& system_power() { return system_power_; }
     ports::KeylessIdentity& identity() { return identity_; }
+    host::Random& random() { return random_; }
     host::Battery& battery() { return battery_; }
 
     models::Lr2021& radio() { return radio_; }
     models::Ag3335& gnss() { return gnss_; }
     models::Spa06& barometer() { return barometer_; }
     models::Drv2605& haptic() { return haptic_; }
-    models::Ysn8900& rtc() { return rtc_; }
 
     bool button_down() const { return button_down_; }
     void set_button_down(bool down) { button_down_ = down; }
@@ -133,9 +128,7 @@ class MeshtrackerX1 {
     models::Ag3335 gnss_{};
     models::Spa06 barometer_{};
     models::Drv2605 haptic_{};
-    models::Ysn8900 rtc_{};
     I2cBus sensor_bus_{};
-    I2cBus rtc_bus_{};
     MeshtrackerX1Gpio gpio_{radio_, haptic_};
     host::Link link_{};
     host::KeyValueStore key_value_{};
@@ -148,7 +141,8 @@ class MeshtrackerX1 {
     host::Pps pps_{clock_};
     host::SystemPower system_power_{};
     host::Battery battery_{};
-    ports::KeylessIdentity identity_{host::Identity::kBluetoothTag};
+    ports::KeylessIdentity identity_{host::Identity::kDeviceId, host::Identity::kBluetoothTag};
+    host::Random random_{};
     bool button_down_{false};
 };
 

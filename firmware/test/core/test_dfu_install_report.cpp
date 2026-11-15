@@ -1,4 +1,4 @@
-// The install report's arithmetic and its blob (#278, retired with #294).
+// The install report's arithmetic and its blob (#278).
 #include "core/dfu/install_report.h"
 #include "doctest/doctest.h"
 

@@ -7,7 +7,7 @@ import { connected } from './update_session.mjs';
 
 const GO = { adsl_version: '0.1.0', alptas_version: '0.2.0' };
 // INFO: fc 14nov26 every frame of this unit fits 20 bytes, so a notice on connect could only come from protocols
-const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', own_icao: 0 }, imu: 'none', knowsBrowsers: false };
+const NARROWEST_UNIT = { address: null, stored: { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 }, imu: 'none' };
 
 test('connecting asks the radio protocols, and reads each stack the unit names', async () => {
   const { device, until } = await connected({ protocols: GO });
@@ -17,7 +17,7 @@ test('connecting asks the radio protocols, and reads each stack the unit names',
 });
 
 test('a Bravo names its ADS-B stack', async () => {
-  const { until } = await connected({ product: 'skyblip_bravo', protocols: { adsb_version: '0.1.0' } });
+  const { until } = await connected({ product: 'bravo', protocols: { adsb_version: '0.1.0' } });
   const state = await until(state => state.protocols);
   assert.deepEqual(state.protocols, [{ name: 'ADS-B', version: '0.1.0' }]);
 });
@@ -33,22 +33,21 @@ test('the stacks the page names are the registry\'s', () => {
   assert.deepEqual(stems, Object.keys(PROTOCOL_NAMES));
 });
 
-test('firmware from before the frame answers unknown_command, and the page shows nothing and says nothing', async () => {
-  const { device, updater, until } = await connected();
-  await until(state => state.settings && state.defaults);
-  assert.ok(device.commands.includes('protocols'));
-  assert.equal(updater.state.protocols, null);
+test('at MTU 104 a Go names its protocols and connecting raises no notice', async () => {
+  const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu: 104, protocols: GO });
+  await until(state => state.protocols && state.settings && state.defaults);
   assert.equal(updater.state.notice, null);
+  assert.equal(device.smallMtuRefusals, 0);
 });
 
-for (const mtu of [23, 104]) {
-  test(`at MTU ${mtu} a Go names its protocols and connecting raises no notice`, async () => {
-    const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu, protocols: GO });
-    await until(state => state.protocols && state.settings && state.defaults);
-    assert.equal(updater.state.notice, null);
-    assert.equal(device.smallMtuRefusals, 0);
-  });
-}
+// The identity frame never fits a 20-byte link, so the page knows no product and says why.
+test('at MTU 23 a Go names its protocols, and the identity it cannot send raises small_mtu', async () => {
+  const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu: 23, protocols: GO });
+  await until(state => state.protocols && state.settings && state.defaults);
+  assert.equal(updater.state.notice.key, 'small_mtu');
+  assert.deepEqual([updater.state.identity, updater.state.identityRefused], [null, 'small_mtu']);
+  assert.equal(device.smallMtuRefusals, 1);
+});
 
 test('the protocols go with the link that named them', async () => {
   const { updater, until } = await connected({ protocols: GO });

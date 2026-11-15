@@ -1,6 +1,9 @@
 class Event::Review
   PERIODS = [ 7, 30, 90 ].freeze
   SHOWN = 10
+  # INFO: fc 14nov26 the daily cap stops a flood of made-up units, so it should stay two to three times the busiest real day
+  CAP_HEADROOM = 2
+  CAP_TARGET = 3
   RESULTS = %w[saved capture_armed capture_stopped activated needs_full].freeze
   BUSY = %w[asking confirming uploading].freeze
   JOURNEY = %w[
@@ -18,7 +21,7 @@ class Event::Review
 
   def to_h
     { window: "#{since.to_date} to #{till.to_date}", headline:, browsers:, devices:, notices:, tasks:, installs:, firmware:,
-      activations:, stranded:, errors: errors.merge(problems:), requests:, jobs:, agents: }
+      activations:, stranded:, errors: errors.merge(open:), requests:, jobs:, agents: }
   end
 
   def headline
@@ -86,8 +89,16 @@ class Event::Review
   end
 
   def activations
-    { enrolled: within("unit.enrolled").count, refused_by_server: top(rows("activation.refused", "payload.reason").map { it["payload.reason"] }),
+    { enrolled: within("unit.enrolled").count, daily_cap:, refused_by_server: top(rows("activation.refused", "payload.reason").map { it["payload.reason"] }),
       noticed: top(rows("activation.noticed", "payload.key").map { it["payload.key"] } - [ "activated" ]) }
+  end
+
+  def daily_cap
+    cap = Unit.daily_cap
+    busiest = within("unit.enrolled").pluck(:occurred_at).group_by(&:to_date).values.map(&:size).max.to_i
+    advice = ("raise it to #{busiest * CAP_TARGET}: it covers less than #{CAP_HEADROOM} times the busiest day" if cap < busiest * CAP_HEADROOM)
+
+    { cap:, busiest_day: busiest, covers: (cap.fdiv(busiest).round(1) if busiest > 0), advice: }.compact
   end
 
   # INFO: fc 14nov26 a pilot whose last step in the app was a failure gave up there, so that browser is worth a look before they write
@@ -105,9 +116,9 @@ class Event::Review
     @errors ||= { server: within("error.reported").count, browser: within("browser.failed").count }
   end
 
-  def problems
-    found = Event::Problem.since(since).select { it.last_at <= till }
-    { count: found.size, new: found.count { it.new_since?(since) }, latest: found.first(SHOWN).map(&:to_h) }
+  def open
+    found = Event::Error.since(since).select { it.last_at <= till }.reject(&:resolved?)
+    { count: found.size, new: found.count { it.new_since?(since) }, reopened: found.count(&:reopened?), latest: found.first(SHOWN).map(&:to_h) }
   end
 
   def requests

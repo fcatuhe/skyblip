@@ -39,8 +39,6 @@ constexpr uint8_t kLevelSamples = 3;
 // INFO: fc 30sep26 each value is its diagnostics wire code, and Low joined the ladder last
 enum class PowerLevel : uint8_t { Unknown = 0, Normal = 1, Low = 4, Critical = 2, Flat = 3 };
 
-const char* to_string(PowerLevel level);
-
 constexpr bool needs_charge(PowerLevel level) {
     return level == PowerLevel::Low || level == PowerLevel::Critical || level == PowerLevel::Flat;
 }

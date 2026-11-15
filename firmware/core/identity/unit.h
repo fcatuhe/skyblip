@@ -11,12 +11,13 @@
 #include "core/util/result.h"
 #include "core/util/span.h"
 #include "ports/identity.h"
+#include "ports/random.h"
 
 namespace skyblip::identity {
 
 class Unit {
    public:
-    explicit Unit(ports::Identity& port) : port_(port) {}
+    Unit(ports::Identity& port, ports::Random& random) : port_(port), random_(random) {}
 
     void load();
 
@@ -26,7 +27,7 @@ class Unit {
     const ServerKeyId& server_key_id() const { return server_key_id_; }
     Activation activation() const { return activation_; }
 
-    bool draw_nonce(Nonce& out) { return port_.draw_random(ByteSpan(out.data(), out.size())); }
+    bool draw_nonce(Nonce& out) { return random_.draw(ByteSpan(out.data(), out.size())); }
     bool registers(const Nonce& unit_nonce, const Nonce& server_nonce,
                    const Ed25519::Signature& signature) const;
     std::optional<Ed25519::Signature> sign(ConstByteSpan message) const;
@@ -35,6 +36,7 @@ class Unit {
 
    private:
     ports::Identity& port_;
+    ports::Random& random_;
     DeviceId device_id_{};
     Ed25519::PublicKey public_key_{};
     ServerKeyId server_key_id_{};

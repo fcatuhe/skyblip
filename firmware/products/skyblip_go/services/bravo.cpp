@@ -13,11 +13,9 @@ constexpr char kBravoNamePrefix[] = "skyBlip Bravo ";
 }  // namespace
 
 Status BravoService::setup() {
-    uint8_t epoch[sizeof(boot_epoch_)] = {};
-    if (context_.roles.identity.draw_random(ByteSpan(epoch, sizeof(epoch))))
-        boot_epoch_ = static_cast<uint32_t>(epoch[0]) | (static_cast<uint32_t>(epoch[1]) << 8) |
-                      (static_cast<uint32_t>(epoch[2]) << 16) |
-                      (static_cast<uint32_t>(epoch[3]) << 24);
+    const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
+    if (!epoch) return Status::Down;
+    boot_epoch_ = *epoch;
     // INFO: fc 11nov26 a board with no Bluetooth answers Down, and that must not fail the setup
     if (paired(settings_)) (void)context_.roles.link.reserve_peer_connection(true);
     return Status::Ok;
@@ -60,13 +58,14 @@ void BravoService::tick(uint32_t now_ms) {
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
-    if (paired(settings_)) return;
+    if (paired(settings_) || asking_again_) return;
     end_pairing();
     found_count_ = 0;
     start_scan();
 }
 
 void BravoService::end_pairing() {
+    asking_again_ = false;
     if (step_ == BravoStep::Scanning) central_.stop_scan();
     if (step_ == BravoStep::Connecting || step_ == BravoStep::Waiting) central_.disconnect();
     step_ = BravoStep::Idle;
@@ -74,8 +73,11 @@ void BravoService::end_pairing() {
     release_unless_paired();
 }
 
+// INFO: fc 15nov26 the link to the Bravo just unpaired is the central's one, so a pairing waits for
+// it
 void BravoService::pair(int found_index, uint32_t now_ms) {
-    if (step_ != BravoStep::Scanning || found_index < 0 || found_index >= found_count_) return;
+    if (step_ != BravoStep::Scanning || leaving_ || found_index < 0 || found_index >= found_count_)
+        return;
     central_.stop_scan();
     pairing_with_ = found_[found_index];
     step_ = BravoStep::Connecting;
@@ -87,12 +89,7 @@ void BravoService::pair(int found_index, uint32_t now_ms) {
 void BravoService::unpair() {
     if (!paired(settings_)) return;
     const bool farewell = up_ && link_ == BravoLink::Up;
-    settings_.bravo = events::BluetoothAddress{};
-    config_.note_settings_changed();
-    link_ = BravoLink::Down;
-    health_heard_ = false;
-    utc_heard_ = false;
-    own_icao_warning_.unpaired();
+    drop_pin();
     if (farewell) {
         leaving_ = true;
         farewell_owed_ = true;
@@ -106,6 +103,12 @@ bool BravoService::take_forgotten_notice() {
     const bool forgotten = forgotten_;
     forgotten_ = false;
     return forgotten;
+}
+
+bool BravoService::take_asking_notice() {
+    const bool asking = asking_noticed_;
+    asking_noticed_ = false;
+    return asking;
 }
 
 void BravoService::take_event(const events::CentralEvent& event, uint32_t now_ms) {
@@ -153,7 +156,7 @@ void BravoService::went_down() {
     connecting_ = false;
     up_ = false;
     if (leaving_) leave();
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     if (step_ == BravoStep::Waiting) refuse(BravoRefusal::LinkLost);
     if (link_ == BravoLink::Up) link_ = BravoLink::Down;
 }
@@ -166,10 +169,12 @@ void BravoService::take_frame(const events::RxFrame& frame, uint32_t now_ms) {
         take_health(bytes, now_ms);
     } else if (command.value() == link::Command::Observation) {
         const Result<comms::PeerObservation> observation = comms::read_observation(bytes);
-        if (observation.ok())
+        if (observation.ok()) {
             fold(observation.value(), now_ms);
-        else
+        } else {
             refused_++;
+            log(BravoVerdict::Refused, nullptr, now_ms);
+        }
     }
 }
 
@@ -187,10 +192,11 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     // INFO: fc 11nov26 only Bravo's press offers its pin, so a health that says false pins nothing
     if (step_ == BravoStep::Waiting && !health.value().paired) return;
     if (step_ == BravoStep::Idle && paired(settings_) && !health.value().paired) {
-        forget();
+        ask_again(now_ms);
         return;
     }
     if (step_ == BravoStep::Waiting) {
+        asking_again_ = false;
         settings_.bravo = pairing_with_;
         config_.note_settings_changed();
         step_ = BravoStep::Idle;
@@ -198,7 +204,7 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     }
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
-    own_icao_warning_.paired(health.value().own_icao_set);
+    aircraft_address_warning_.paired(health.value().aircraft_address_set);
     health_ = health.value();
     if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;
@@ -232,20 +238,36 @@ void BravoService::refuse_protocol() {
     }
     if (!paired(settings_)) return;
     link_ = BravoLink::Unsupported;
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
     if (connecting_ || up_) central_.disconnect();
 }
 
-// INFO: fc 11nov26 Bravo holds no pin for this Go, so the Go drops its own and says so once
-void BravoService::forget() {
+// INFO: fc 15nov26 Bravo holds no pin for this Go, so the Go asks for the press a new pairing takes
+void BravoService::ask_again(uint32_t now_ms) {
+    pairing_with_ = settings_.bravo;
+    drop_pin();
+    asking_again_ = true;
+    asking_noticed_ = true;
+    step_ = BravoStep::Waiting;
+    step_since_ms_ = now_ms;
+    claim(now_ms);
+}
+
+void BravoService::drop_pin() {
     settings_.bravo = events::BluetoothAddress{};
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
-    own_icao_warning_.unpaired();
+    aircraft_address_warning_.unpaired();
+}
+
+// INFO: fc 11nov26 the Go asked again and Bravo never answered, so the Go says so once
+void BravoService::forget() {
+    asking_again_ = false;
     forgotten_ = true;
-    central_.disconnect();
+    step_ = BravoStep::Idle;
+    refusal_ = BravoRefusal::None;
     release_unless_paired();
 }
 
@@ -253,7 +275,7 @@ void BravoService::leave() {
     leaving_ = false;
     farewell_owed_ = false;
     if (up_ || connecting_) central_.disconnect();
-    release_unless_paired();
+    if (step_ == BravoStep::Idle) release_unless_paired();
 }
 
 void BravoService::start_scan() {
@@ -274,6 +296,10 @@ void BravoService::start_scan() {
 void BravoService::refuse(BravoRefusal refusal) {
     if (step_ == BravoStep::Scanning) central_.stop_scan();
     if (connecting_ || up_) central_.disconnect();
+    if (asking_again_) {
+        forget();
+        return;
+    }
     step_ = BravoStep::Refused;
     refusal_ = refusal;
     release_unless_paired();
@@ -308,12 +334,12 @@ void BravoService::claim(uint32_t now_ms) {
     claim.pressure_altitude_valid = own.pressure_altitude_valid;
     claim.pressure_altitude_mm = own.pressure_altitude_mm;
     claim.pressure_altitude_age_ms = now_ms - own.pressure_altitude_at_ms;
-    claim.own_icao = settings_.own_icao;
+    claim.aircraft_address = settings_.aircraft_address;
     claim.alarm_requested = takes_alarm();
     claim.paired = paired(settings_);
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(claim, frame, sizeof(frame));
-    // INFO: fc 11nov26 the central counts and logs every write it refuses, so the result is its own
+    // INFO: fc 11nov26 a refused claim is dropped, and the next one leaves kClaimPeriodMs later
     if (bytes > 0) (void)central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes)));
 }
 

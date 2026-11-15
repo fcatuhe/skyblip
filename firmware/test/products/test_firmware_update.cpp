@@ -179,7 +179,7 @@ TEST_CASE("product: under a running watchdog a recovery asks for the press, then
     CHECK(reads_button_key(glass, go::kRecoveryStartVerb));
     CHECK(rig.platform.dfu().recoveries == 1);
     CHECK(rig.product.ready_to_power_off());
-    CHECK(std::string(power::to_string(rig.product.shutdown().reason())) == "RECOVERY");
+    CHECK(rig.product.shutdown().reason() == power::ShutdownReason::Recovery);
 }
 
 TEST_CASE("product: the SMP hook's gate opens on the pass after the window is confirmed") {
@@ -207,7 +207,9 @@ TEST_CASE("product: a take-off leaves the SMP hook's gate open once the window i
     CHECK(rig.platform.dfu().upload_allowed_published);
 }
 
-TEST_CASE("product: a single press on the receiving page closes the window, and nothing installs") {
+TEST_CASE(
+    "product: a press leaves the receiving page open, a tap of the pad closes it, nothing "
+    "installs") {
     Rig rig;
     stage_versions(rig);
     REQUIRE(rig.setup() == Status::Ok);
@@ -218,6 +220,11 @@ TEST_CASE("product: a single press on the receiving page closes the window, and 
     REQUIRE(config(rig).receiving_firmware());
 
     rig.press(now_ms);
+    rig.run(now_ms, now_ms + 3000);
+    now_ms += 3000;
+    REQUIRE(config(rig).receiving_firmware());
+
+    rig.tap(now_ms);
     rig.run(now_ms, now_ms + 3000);
     now_ms += 3000;
     CHECK_FALSE(config(rig).receiving_firmware());
@@ -275,13 +282,13 @@ TEST_CASE(
 
 // The full image of the running version, sent to give a fitted hub its image: by version it landed.
 TEST_CASE("product: a same-version image the bootloader reverted reads as reverted by its hash") {
-    constexpr ports::ImageHash kSlim{{0x51, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
+    constexpr ports::ImageHash kBase{{0x51, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
     constexpr ports::ImageHash kFull{{0xF0, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}};
     Rig before;
     stage_versions(before);
     before.platform.dfu().staged_image_version = kRunning;
     before.platform.dfu().running_hash_valid = true;
-    before.platform.dfu().running_image_hash = kSlim;
+    before.platform.dfu().running_image_hash = kBase;
     before.platform.dfu().staged_hash_valid = true;
     before.platform.dfu().staged_image_hash = kFull;
     REQUIRE(before.setup() == Status::Ok);
@@ -297,7 +304,7 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
     after.rig.platform.dfu().running_hash_valid = true;
-    after.rig.platform.dfu().running_image_hash = kSlim;
+    after.rig.platform.dfu().running_image_hash = kBase;
     after.rig.platform.dfu().staged_hash_valid = true;
     after.rig.platform.dfu().staged_image_hash = kFull;
     REQUIRE(after.rig.setup() == Status::Ok);
@@ -384,13 +391,6 @@ std::string land(Rig& rig) {
     land_upload(rig, now_ms);
     return rig.last_on(events::Endpoint::Config);
 }
-
-void sign(Rig& rig, uint8_t trusted, uint8_t signer) {
-    rig.platform.dfu().running_key_valid = true;
-    rig.platform.dfu().running_signer.fill(trusted);
-    rig.platform.dfu().staged_key_valid = true;
-    rig.platform.dfu().staged_signer.fill(signer);
-}
 }  // namespace
 
 TEST_CASE(
@@ -401,6 +401,49 @@ TEST_CASE(
     REQUIRE(rig.setup() == Status::Ok);
     CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
     CHECK_FALSE(config(rig).receiving_firmware());
+    CHECK(rig.platform.dfu().triggered == 0);
+}
+
+namespace {
+void trust(Rig& rig, std::initializer_list<uint8_t> keys) {
+    ports::BootloaderKeys& bootloader = rig.platform.dfu().bootloader;
+    for (uint8_t key : keys) bootloader.keys[bootloader.count++].fill(key);
+}
+}  // namespace
+
+TEST_CASE("product: a development bootloader installs a release over a development image") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x88);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    CHECK(rig.platform.dfu().triggered == 1);
+}
+
+TEST_CASE("product: a development bootloader takes a development image back over a release") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x88, 0x21);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    CHECK(rig.platform.dfu().triggered == 1);
+}
+
+TEST_CASE("product: a release bootloader refuses a development image whatever the unit runs") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x21);
+    trust(rig, {0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
     CHECK(rig.platform.dfu().triggered == 0);
 }
 
@@ -456,6 +499,20 @@ TEST_CASE("product: the update frame names the trusted key and, on a development
     development.run(0, 200);
     CHECK(development.last_on(events::Endpoint::Config).find("\"downgrade\":true") !=
           std::string::npos);
+    CHECK(development.last_on(events::Endpoint::Config).find("bootloader_keys") ==
+          std::string::npos);
+}
+
+TEST_CASE("product: the update frame names every key the bootloader trusts") {
+    Rig rig;
+    sign(rig, 0x88, 0x88);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.send("{\"command\":\"update\"}");
+    rig.run(0, 200);
+    const std::string said = rig.last_on(events::Endpoint::Config);
+    CHECK(said.find("\"key\":\"88888888\"") != std::string::npos);
+    CHECK(said.find("\"bootloader_keys\":\"2121212188888888\"") != std::string::npos);
 }
 
 TEST_CASE("product: an image nobody staged over the air clears a stale attempt") {

@@ -112,7 +112,7 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 
 `tx_lost` is `messages::RfEventType::Missed`, which is only ever emitted for a dwell or a transmission of ours that did not complete and was never a reception at all. It was counted as a bad reception until the same day, which is [#61](https://github.com/fcatuhe/skyblip/issues/61), now closed.
 
-All of them reach `core/comms/diagnostics.h`'s radio group, so they leave on the USB console line, in the `diagnostics` dump and in the `radio` reply, under the names above. The radio group is 162 bytes at its widest, one frame on a 182-byte link (`test/core/test_diagnostics_frames.cpp`). The dump is framed per group, a narrower link splits a group over frames that never mix two, and `fits()` still refuses a link that cannot carry a whole field. The tape's own header keeps `RX`, `TX` and `NOISE`, because the panel's reader of `WAIT` and `TYPE` is the sixteen rows underneath it.
+All of them reach `core/comms/diagnostics.h`'s radio group, so they leave in the `diagnostics` dump and in the `radio` reply, under the names above. The radio group is 162 bytes at its widest, one frame on a 182-byte link (`test/core/test_diagnostics_frames.cpp`). The dump is framed per group, a narrower link splits a group over frames that never mix two, and `fits()` still refuses a link that cannot carry a whole field. The tape's own header keeps `RX`, `TX` and `NOISE`, because the panel's reader of `WAIT` and `TYPE` is the sixteen rows underneath it.
 
 ## Who writes what
 

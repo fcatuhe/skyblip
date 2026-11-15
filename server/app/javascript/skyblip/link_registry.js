@@ -116,7 +116,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -187,7 +187,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -259,7 +259,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "integer"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         }
@@ -846,6 +846,77 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_busy_missed",
           "number": 70,
           "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1215,6 +1286,77 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_busy_missed",
           "number": 70,
           "type": "unsigned"
+        },
+        {
+          "name": "armed",
+          "number": 71,
+          "type": "boolean"
+        },
+        {
+          "name": "profile",
+          "number": 72,
+          "type": "enum",
+          "enum": "capture_profile"
+        },
+        {
+          "name": "session",
+          "number": 73,
+          "type": "unsigned"
+        },
+        {
+          "name": "records",
+          "number": 74,
+          "type": "unsigned"
+        },
+        {
+          "name": "records_dropped",
+          "number": 75,
+          "type": "unsigned"
+        },
+        {
+          "name": "sectors",
+          "number": 76,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_s",
+          "number": 77,
+          "type": "unsigned"
+        },
+        {
+          "name": "takes_sectors",
+          "number": 78,
+          "type": "unsigned"
+        },
+        {
+          "name": "evicts_flights",
+          "number": 79,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_full_s",
+          "number": 80,
+          "type": "unsigned"
+        },
+        {
+          "name": "keeps_power_run_s",
+          "number": 81,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_frames",
+          "number": 82,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_bad",
+          "number": 83,
+          "type": "unsigned"
+        },
+        {
+          "name": "uplink_targets",
+          "number": 84,
+          "type": "unsigned"
         }
       ]
     },
@@ -1284,10 +1426,9 @@ export const LINK_REGISTRY = Object.freeze({
           "bytes": 4
         },
         {
-          "name": "product",
-          "number": 10,
-          "type": "enum",
-          "enum": "product"
+          "name": "bootloader_keys",
+          "number": 11,
+          "type": "bytes"
         }
       ]
     },
@@ -1933,7 +2074,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "own_icao_set",
+          "name": "aircraft_address_set",
           "number": 6,
           "type": "boolean",
           "required": true
@@ -1970,6 +2111,34 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "own_transponder_category",
           "number": 15,
+          "type": "unsigned"
+        },
+        {
+          "name": "firmware",
+          "number": 16,
+          "type": "text"
+        },
+        {
+          "name": "battery_percent",
+          "number": 17,
+          "type": "unsigned"
+        },
+        {
+          "name": "charging",
+          "number": 18,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "power_level",
+          "number": 19,
+          "type": "enum",
+          "enum": "power_level",
+          "required": true
+        },
+        {
+          "name": "frame_rate_hz",
+          "number": 20,
           "type": "unsigned"
         }
       ]
@@ -2038,7 +2207,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "own_icao",
+          "name": "aircraft_address",
           "number": 11,
           "type": "unsigned"
         },
@@ -2122,7 +2291,8 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 2,
           "type": "bytes",
           "bytes": 64,
-          "required": true
+          "required": true,
+          "signed_over": "skyblip:browser:v1"
         },
         {
           "name": "label",
@@ -2259,6 +2429,18 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 7,
           "type": "enum",
           "enum": "reset"
+        },
+        {
+          "name": "landed_check",
+          "number": 8,
+          "type": "enum",
+          "enum": "staged_check"
+        },
+        {
+          "name": "staged_key",
+          "number": 9,
+          "type": "bytes",
+          "bytes": 4
         }
       ]
     },
@@ -2292,8 +2474,136 @@ export const LINK_REGISTRY = Object.freeze({
       ]
     },
     {
-      "command": "adsb_trial",
+      "command": "attest",
       "code": 37,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "server_nonce",
+          "number": 1,
+          "type": "bytes",
+          "bytes": 16,
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "attestation",
+      "code": 38,
+      "endpoint": "config",
+      "sender": "unit",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "product",
+          "number": 1,
+          "type": "enum",
+          "enum": "product",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "number": 2,
+          "type": "enum",
+          "enum": "variant",
+          "required": true
+        },
+        {
+          "name": "version",
+          "number": 3,
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "release",
+          "number": 4,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "device_id",
+          "number": 5,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        },
+        {
+          "name": "signature",
+          "number": 6,
+          "type": "bytes",
+          "bytes": 64,
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "identity",
+      "code": 39,
+      "endpoint": "config",
+      "sender": "both",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "product",
+          "number": 1,
+          "type": "enum",
+          "enum": "product",
+          "required": true
+        },
+        {
+          "name": "variant",
+          "number": 2,
+          "type": "enum",
+          "enum": "variant",
+          "required": true
+        },
+        {
+          "name": "version",
+          "number": 3,
+          "type": "text",
+          "required": true
+        },
+        {
+          "name": "release",
+          "number": 4,
+          "type": "boolean",
+          "required": true
+        },
+        {
+          "name": "device_id",
+          "number": 5,
+          "type": "bytes",
+          "bytes": 8,
+          "required": true
+        },
+        {
+          "name": "bluetooth_tag",
+          "number": 6,
+          "type": "unsigned",
+          "required": true
+        }
+      ]
+    },
+    {
+      "command": "adsb_trial",
+      "code": 40,
       "endpoint": "config",
       "sender": "host",
       "keys": [
@@ -2685,6 +2995,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "adsb",
           "code": 5,
           "mirrors": "Adsb"
+        },
+        {
+          "name": "capture",
+          "code": 6,
+          "mirrors": "Capture"
         }
       ]
     },
@@ -3048,14 +3363,32 @@ export const LINK_REGISTRY = Object.freeze({
       },
       "values": [
         {
-          "name": "skyblip_go",
+          "name": "go",
           "code": 0,
-          "mirrors": "SkyblipGo"
+          "mirrors": "Go"
         },
         {
-          "name": "skyblip_bravo",
+          "name": "bravo",
           "code": 1,
-          "mirrors": "SkyblipBravo"
+          "mirrors": "Bravo"
+        }
+      ]
+    },
+    "variant": {
+      "mirrors": {
+        "type": "identity::Variant",
+        "header": "core/identity/variant.h"
+      },
+      "values": [
+        {
+          "name": "standard",
+          "code": 0,
+          "mirrors": "Standard"
+        },
+        {
+          "name": "plus",
+          "code": 1,
+          "mirrors": "Plus"
         }
       ]
     },
@@ -3083,7 +3416,7 @@ export const LINK_REGISTRY = Object.freeze({
     "capture_profile": {
       "mirrors": {
         "type": "comms::CaptureProfile",
-        "header": "core/comms/config.h"
+        "header": "core/comms/diagnostics.h"
       },
       "values": [
         {
@@ -3378,8 +3711,20 @@ export const LINK_REGISTRY = Object.freeze({
           "code": 36
         },
         {
-          "name": "adsb_trial",
+          "name": "attest",
           "code": 37
+        },
+        {
+          "name": "attestation",
+          "code": 38
+        },
+        {
+          "name": "identity",
+          "code": 39
+        },
+        {
+          "name": "adsb_trial",
+          "code": 40
         }
       ]
     }

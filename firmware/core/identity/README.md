@@ -2,17 +2,20 @@
 
 Who this unit is, as skyblip.eu knows it: a FICR DEVICEID, the public half of a key of its own, the server key the build trusts, and once the server has signed one, a serial. The design is issue #126, the wire contract the activation frames of `schemas/link.v1.json` and `schemas/activation.v1.schema.json`. Nothing here uses the firmware signing keys.
 
-## The three messages
+## The four messages
 
 `messages.{h,cpp}` builds every byte string a signature covers, in one place, exactly as the schema lays them out: an ASCII label naming the purpose and version, then fixed-width fields, so no signature made for one purpose can pass for another, a future air packet included.
 
 | Message | Bytes | Signed by |
 |---|---|---|
-| register | `skyblip:register:v1` Nu Ns | the server |
-| registration | `skyblip:registration:v1` DEVICEID Pd Nu Ns server-key-id release version | the unit |
-| unlock | `skyblip:unlock:v1` DEVICEID Pd serial(2, big-endian) Nu | the server |
+| register | `skyblip:register:v1` unit_nonce server_nonce | the server |
+| registration | `skyblip:registration:v1` device_id public_key unit_nonce server_nonce server_key_id release version | the unit |
+| unlock | `skyblip:unlock:v1` device_id public_key serial(2, big-endian) unit_nonce | the server |
+| attestation | `skyblip:attestation:v1` device_id public_key server_nonce release product variant version | the unit |
 
-DEVICEID is FICR `DEVICEID[1]` then `DEVICEID[0]`, each big-endian, as Zephyr's hwinfo hands it out. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. `release` is one byte, 1 for a release build and 0 otherwise, and it is the build the release fragments in `products/<product>/release/` made: the one whose bootloader refuses an older image, which `ports::Dfu::release_build()` reports as the inverse of `downgrade_allowed()`. The server keeps it beside the key; nothing on the air differs, a development unit being a real aircraft with a real serial. The host platform says false unless a case asks for a release. `test/core/test_identity.cpp` builds all three from `schemas/activation.v1.vectors.json` and compares them byte for byte, then signs and verifies each: Ed25519 is deterministic, so the unit's registration signature comes out identical to the one the server's suite checks.
+The attestation is the unit's word on the firmware it runs, over a nonce the server minted, which `attest` asks for on any connection once the unit is activated (`core/comms/README.md`, Attestation).
+
+DEVICEID is FICR `DEVICEID[1]` then `DEVICEID[0]`, each big-endian, as Zephyr's hwinfo hands it out. A server key id is the first four bytes of the SHA-256 of the raw 32-byte public key. `release` is one byte, 1 for a release build and 0 otherwise, and `product` and `variant` one byte each, the codes `schemas/link.v1.json` gives them, and it is the build the release fragments in `products/<product>/release/` made: the one whose bootloader refuses an older image, which `ports::Dfu::release_build()` reports as the inverse of `downgrade_allowed()`. The server keeps it beside the key; nothing on the air differs, a development unit being a real aircraft with a real serial. The host platform says false unless a case asks for a release. `test/core/test_identity.cpp` builds all four from `schemas/activation.v1.vectors.json` and compares them byte for byte, then signs and verifies each: Ed25519 is deterministic, so the unit's registration signature comes out identical to the one the server's suite checks.
 
 ## The unit
 
@@ -20,7 +23,9 @@ DEVICEID is FICR `DEVICEID[1]` then `DEVICEID[0]`, each big-endian, as Zephyr's 
 
 `activation.{h,cpp}` is what the rest of the firmware reads: `identity::Activation`, the serial if there is one and the Bluetooth tag, published on `bus::State::activation` by the config service, which owns the unit. Its `address()` is `settings::address_of(serial)` or nothing. `bluetooth_name()` makes the name the unit advertises: `activate 3F2A skyBlip` before activation, where `3F2A` is the tag, and `skyBlip Go 00012A` or `skyBlip Go+ 00012A` after it, the product word coming from the product and the address in six uppercase hex digits. It is the Go's `NameRule`: the product hands the config link its rule with its name, and skyBlip Bravo, which is never activated, hands it one that always advertises `skyBlip Bravo 3F2A` (`products/skyblip_bravo/name.h`).
 
-`unlock_code.{h,cpp}` is the 82 bytes the unit keeps: the serial big-endian, Nu, then U, padded with 0xFF to 84 so the page is written in whole words. An erased page reads all 0xFF and holds no code; anything else decodes, and the signature decides.
+`variant.h` is `identity::Variant`, `standard` or `plus`: the hardware build of a product, which the `identity` frame names beside the product (`core/comms/README.md`, Identity). The Go works it out from the parts it found at boot, with the same rule as its name.
+
+`unlock_code.{h,cpp}` is the 82 bytes the unit keeps: the serial big-endian, `unit_nonce`, then the unlock signature, padded with 0xFF to 84 so the page is written in whole words. An erased page reads all 0xFF and holds no code; anything else decodes, and the signature decides.
 
 ## The key and the page, on the T-Echo
 

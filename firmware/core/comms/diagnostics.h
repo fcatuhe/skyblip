@@ -1,8 +1,8 @@
 // core/comms/diagnostics.h: the one status dump, and the only place its fields
 // are named.
 //
-// INFO: fc 11nov26 six subsystems, the sixth only on a 1090 MHz receiver, and nothing is reset by
-// being read
+// INFO: fc 15nov26 seven subsystems, adsb only on a 1090 MHz receiver, capture only on a capture
+// ring
 #ifndef SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 #define SKYBLIP_CORE_COMMS_DIAGNOSTICS_H
 
@@ -19,6 +19,11 @@
 #include "ports/gnss.h"
 
 namespace skyblip::comms {
+
+enum class CaptureProfile : uint8_t { Full = 0, PowerRun = 1, FlightRun = 2, Stop = 3 };
+
+// INFO: fc 15nov26 the words the capture prompt on the glass names them by
+const char* capture_profile_word(CaptureProfile profile);
 
 // What the dump is made of. A plain snapshot with two writers and no logic: the
 // product's collector fills the first half from the services and the board
@@ -61,6 +66,9 @@ struct Diagnostics {
 
     uint32_t tracked{0};
     uint8_t alarm{0};
+    uint32_t uplink_frames{0};
+    uint32_t uplink_bad{0};
+    uint32_t uplink_targets{0};
 
     uint32_t gnss_fixes{0};
     bool fix_valid{false};
@@ -95,6 +103,19 @@ struct Diagnostics {
     uint32_t adsb_folded{0};
     uint32_t adsb_aircraft{0};
 
+    bool capture_available{false};
+    bool capture_armed{false};
+    CaptureProfile capture_profile{CaptureProfile::Full};
+    uint32_t capture_session{0};
+    uint32_t capture_records{0};
+    uint32_t capture_dropped{0};
+    uint32_t capture_sectors{0};
+    uint32_t capture_keeps_s{0};
+    uint32_t capture_takes_sectors{0};
+    uint32_t capture_evicts_flights{0};
+    uint32_t capture_keeps_full_s{0};
+    uint32_t capture_keeps_power_run_s{0};
+
     // Held by comms::ConfigService, which is told each of these by the product.
     power::ResetReason reset{power::ResetReason::Unknown};
     uint32_t link_drops{0};
@@ -112,17 +133,13 @@ struct Diagnostics {
 // status reply and the dump must not round a support case differently.
 int whole_celsius(int16_t temperature_dc);
 
-// The dump, rendered. Built cheaply on the stack from a snapshot, read either as
-// console lines or as link frames, and then thrown away.
+// The dump, rendered. Built cheaply on the stack from a snapshot, read as link
+// frames, and then thrown away.
 class DiagnosticsReport {
    public:
-    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb };
-    static constexpr int kGroupCount = 6;
+    enum class Group : uint8_t { System, Radio, Traffic, Gnss, Power, Adsb, Capture };
+    static constexpr int kGroupCount = 7;
 
-    // The widest console line any group can produce at its widest values, plus
-    // its terminator. test/core/test_diagnostics.cpp measures it rather than
-    // trusting it.
-    static constexpr int kLineBytes = 541;
     // Enough for one frame at its widest on a link that can carry a whole group;
     // a frame is never longer than the negotiated payload, this only bounds the
     // buffer the caller lends.
@@ -132,23 +149,15 @@ class DiagnosticsReport {
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command);
     DiagnosticsReport(const Diagnostics& diagnostics, link::Command command, Group only);
 
-    // The console surface: one subsystem per line, "radio noise_dbm=-105 ...".
-    int line_count() const { return line_count_; }
-    // Writes line `index`, NUL-terminated, and returns its length. 0 when the
-    // index is past the end or the buffer cannot hold the line whole - a line cut
-    // in half is a counter misread, so it is refused instead.
-    int line(int index, char* out, int capacity) const;
-
     // INFO: fc 20oct26 whole maps with command, group, part and more, never two groups in one
     bool fits(int payload_bytes) const;
     bool exhausted() const { return at_ >= count_; }
     int next_frame(int payload_bytes, uint8_t* out, int capacity);
 
    private:
-    enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, Code, UnsignedArray };
+    enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, UnsignedArray };
 
     struct Field {
-        const char* name;
         uint32_t key;
         const char* text;
         int64_t value;
@@ -156,16 +165,12 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 66;
+    static constexpr int kMaxFields = 80;
 
     void build(const Diagnostics& diagnostics, const Group* only);
-    void add(Group group, const char* name, uint32_t key, Kind kind, int64_t value,
-             const char* text = nullptr);
+    void add_capture(const Diagnostics& diagnostics);
+    void add(Group group, uint32_t key, Kind kind, int64_t value, const char* text = nullptr);
     int field_bytes(const Field& field) const;
-    static const char* group_name(Group group);
-    // Where the index-th line's fields start, or count_ when there is no such
-    // line.
-    int line_start(int index) const;
 
     link::Command command_;
     // INFO: fc 11nov26 the one array field reads this copy, so a refresh never changes a dump in
@@ -174,25 +179,12 @@ class DiagnosticsReport {
     uint32_t adsb_rssi_[kAdsbRssiCount]{};
     Field fields_[kMaxFields]{};
     int count_{0};
-    int line_count_{0};
     int at_{0};
     int part_{0};
 };
 
-// INFO: fc 05aug26 The snapshot is refreshed once a second and dumped once every
-// ten, which is OGN's own console cadence (oss/nrf52-ogn-tracker
-// src/ogn-radio.cpp:1559-1573). Ten seconds is slow enough that a bench eye can
-// read one dump before the next arrives and fast enough that a counter climbing
-// under a fault is visible while the fault is still happening. It costs a battery
-// nothing by construction: the console writer only emits when the CDC host has
-// raised DTR, and a USB host is also 5 V on the same connector. The link half is
-// pull-only, so a phone pays for exactly the dumps it asks for.
-//
-// The refresh is the cheaper half (thirty loads and four accessor calls) and is
-// separate because the link may ask at any instant: a "diagnostics" answered from a
-// ten-second-old snapshot would report a fix that was lost nine seconds ago.
+// INFO: fc 05aug26 refreshed every second, because the link may ask at any instant
 constexpr uint32_t kDiagnosticsRefreshPeriodMs = 1000;
-constexpr uint32_t kDiagnosticsDumpPeriodMs = 10000;
 
 }  // namespace skyblip::comms
 

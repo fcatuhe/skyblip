@@ -49,16 +49,19 @@ const char* bravo_verdict(comms::BravoState state) {
     return "";
 }
 
+void named_row(ui::Canvas& canvas, int y, const char* name, const char* mark) {
+    canvas.draw_text(kLeft, y, name, true, 1);
+    leaders(canvas, kLeft + (length(name) + 1) * kCellWidth,
+            kRight - (length(mark) + 1) * kCellWidth, y);
+    right_aligned(canvas, kRight, y, mark);
+}
+
 void bravo_row(ui::Canvas& canvas, int y, const SelfTestSnapshot& snapshot) {
     char name[12];
     int written = format_string(name, "BRAVO ");
     written += format_hex(name + written, snapshot.bravo_tag, 4);
     name[written] = 0;
-    const char* mark = bravo_verdict(snapshot.bravo);
-    canvas.draw_text(kLeft, y, name, true, 1);
-    leaders(canvas, kLeft + (written + 1) * kCellWidth, kRight - (length(mark) + 1) * kCellWidth,
-            y);
-    right_aligned(canvas, kRight, y, mark);
+    named_row(canvas, y, name, bravo_verdict(snapshot.bravo));
 }
 
 }  // namespace
@@ -113,13 +116,14 @@ void draw_self_test(ui::Canvas& canvas, const SelfTestSnapshot& snapshot) {
         y += kLineHeight;
     }
 
-    // INFO: fc 12nov26 one row for both: a loss or a wait outranks the own-ICAO warning, then LIVE
+    // INFO: fc 12nov26 one row for both: a loss or a wait outranks the aircraft-address warning,
+    // then LIVE
     const bool paired = snapshot.bravo != comms::BravoState::Unpaired;
-    const bool warned = snapshot.own_icao_warning && !comms::lost(snapshot.bravo) &&
+    const bool warned = snapshot.aircraft_address_warning && !comms::lost(snapshot.bravo) &&
                         snapshot.bravo != comms::BravoState::Waiting;
     if ((paired || warned) && y < self_test_row_y(kSelfTestRows)) {
         if (warned)
-            canvas.draw_text(kLeft, y, kSelfTestOwnIcaoText, true, 1);
+            named_row(canvas, y, kSelfTestAircraftAddressName, kSelfTestUnsetVerdict);
         else
             bravo_row(canvas, y, snapshot);
         y += kLineHeight;

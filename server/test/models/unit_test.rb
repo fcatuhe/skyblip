@@ -10,6 +10,24 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal "000003", key.unit.address
   end
 
+  test "a unit a browser reported before its activation gets the next serial on the same record" do
+    reported = Unit.create!(device_id: vectors["device_id"], product: "go", variant: "plus", bluetooth_tag: 0x3f2a)
+
+    key = Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"])
+
+    assert_equal [ reported, 3, "go-000003" ], [ key.unit, key.unit.serial, key.unit.slug ]
+    assert_equal Time.current.to_date, key.unit.activated_at.to_date
+    assert_equal [ units(:bound), units(:contested), reported ].sort_by(&:id), Unit.activated.order(:id).to_a
+  end
+
+  test "the daily cap counts the units activated today, not the units browsers reported" do
+    Activation::Cap.current.update!(new_units_per_day: 1)
+    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), product: "bravo" } })
+
+    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]).active?
+    assert Unit.daily_cap_reached?
+  end
+
   test "a known device with its own key keeps its serial" do
     key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, version: "0.3.0+1300")
 
@@ -21,7 +39,7 @@ class UnitTest < ActiveSupport::TestCase
 
   # The admin page reads a key's updated_at as when it was last seen.
   test "a known device registering again with nothing new is seen again" do
-    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release, :ip_address).symbolize_keys
+    seen = unit_keys(:bound_active).slice(:version, :server_key_id, :release).symbolize_keys
 
     travel 1.hour do
       key = Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, **seen)
@@ -34,7 +52,6 @@ class UnitTest < ActiveSupport::TestCase
 
     assert key.pending?
     assert key.persisted?
-    assert_equal "203.0.113.4", key.ip_address
     assert_equal unit_keys(:bound_active), units(:bound).active_key
   end
 
@@ -67,7 +84,6 @@ class UnitTest < ActiveSupport::TestCase
     end
 
     assert revoked.all?(&:revoked?)
-    assert_equal [ "203.0.113.5" ] * 2, revoked.map(&:ip_address)
     assert_nil units(:bound).reload.active_key
   end
 
@@ -79,8 +95,9 @@ class UnitTest < ActiveSupport::TestCase
     assert_equal unit_keys(:contested_pending), units(:contested).reload.active_key
   end
 
-  test "refuses new devices past the daily cap, and still serves known ones" do
-    Unit.insert_all(Array.new(Unit::NEW_PER_DAY) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index } })
+  test "refuses new devices past the daily cap an admin set, and still serves known ones" do
+    Activation::Cap.current.update!(new_units_per_day: 3)
+    Unit.insert_all(Array.new(3) { |index| { device_id: format("%016x", 0xa000 + index), serial: 100 + index, activated_at: Time.current } })
 
     refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"]) }
     assert_equal :daily_cap, refusal.reason
@@ -88,14 +105,16 @@ class UnitTest < ActiveSupport::TestCase
   end
 
   test "refuses a new device past the cap of its network, an IPv6 /56 counting as one, and serves other networks" do
-    Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
-      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "2001:db8:1:2::#{index + 1}")
-    end
+    with_memory_cache do
+      Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
+        Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "2001:db8:1:2::#{index + 1}")
+      end
 
-    refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:ff:ffff::9") }
-    assert_equal :network_cap, refusal.reason
-    assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:100::1").active?
-    assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, ip_address: "2001:db8:1:2::1").active?
+      refusal = assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:ff:ffff::9") }
+      assert_equal :network_cap, refusal.reason
+      assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "2001:db8:1:100::1").active?
+      assert Unit.register(device_id: units(:bound).device_id, public_key: unit_keys(:bound_active).public_key, ip_address: "2001:db8:1:2::1").active?
+    end
   end
 
   test "names a network by its IPv4 address or its IPv6 /56, a mapped IPv4 address as itself" do
@@ -111,18 +130,26 @@ class UnitTest < ActiveSupport::TestCase
     assert_nil Unit.network_of("::1")
     assert_nil Unit.network_of("fe80::1")
 
-    (Unit::NEW_PER_NETWORK_PER_DAY + 1).times do |index|
-      assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, ip_address: "172.18.0.1").active?
+    with_memory_cache do
+      (Unit::NEW_PER_NETWORK_PER_DAY + 1).times do |index|
+        assert Unit.register(device_id: format("%016x", 0xc000 + index), public_key: "d4" * 32, ip_address: "172.18.0.1").active?
+      end
     end
   end
 
-  test "counts a network's new devices for today only" do
-    Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
-      Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8")
-    end
+  test "counts a network's new devices for 24 hours from its first, in the cache and not on the units" do
+    with_memory_cache do
+      Unit::NEW_PER_NETWORK_PER_DAY.times do |index|
+        Unit.register(device_id: format("%016x", 0xb000 + index), public_key: "d4" * 32, ip_address: "203.0.113.8")
+      end
+      assert_not Unit.new.has_attribute?(:enrolled_from)
 
-    travel 1.day do
-      assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "203.0.113.8").active?
+      travel 23.hours do
+        assert_raises(Activation::Refusal) { Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "203.0.113.8") }
+      end
+      travel 24.hours + 1.second do
+        assert Unit.register(device_id: vectors["device_id"], public_key: vectors["unit_public_key"], ip_address: "203.0.113.8").active?
+      end
     end
   end
 
@@ -141,6 +168,19 @@ class UnitTest < ActiveSupport::TestCase
     assert_not stale.promote
     assert unit_keys(:contested_pending).reload.revoked?
     assert_nil units(:contested).reload.active_key
+  end
+
+  # A development unit may go back to an older image, and its history must say so rather than fold it into the first stretch.
+  test "a firmware signed again extends its stretch, and a unit back on an earlier one opens a new stretch" do
+    unit = units(:bound)
+    unit.attest_firmware(version: "0.3.0+1300", release: true)
+    unit.attest_firmware(version: "0.4.0+1400", release: true)
+    unit.attest_firmware(version: "0.4.0+1400", release: false)
+    unit.attest_firmware(version: "0.3.0+1300", release: true)
+
+    assert_equal [ [ "0.3.0+1300", true ], [ "0.4.0+1400", false ], [ "0.4.0+1400", true ], [ "0.3.0+1300", true ] ],
+      unit.firmwares.newest_first.pluck(:version, :release)
+    assert_equal Time.current.to_date, unit.firmwares.newest_first.last.updated_at.to_date
   end
 
   test "the database refuses serial 0 on its own" do

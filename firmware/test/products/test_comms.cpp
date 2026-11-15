@@ -44,7 +44,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     settings.aircraft_type = 7;
     settings.alarm_volume = go::AlarmVolume::Soft;
     std::memcpy(settings.callsign, "D-KXYZ", 7);
-    settings.own_icao = 0x3C6586;
+    settings.aircraft_address = 0x3C6586;
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     ConfigService config(link, store);
     config.set_flight_state(flight::FlightState::Ground);
@@ -53,7 +53,8 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     const std::string body = link_text(link.last().bytes);
     CHECK(body ==
           "{\"command\":\"defaults\",\"aircraft_type\":1,\"alarm_enabled\":true,"
-          "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"\",\"own_icao\":0}");
+          "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"\",\"aircraft_address\":"
+          "0}");
 
     const std::string set = "{\"command\":\"set\"" + body.substr(body.find(','));
     config.on_rx(config_frame(set.c_str()));
@@ -62,7 +63,7 @@ TEST_CASE("comms: defaults answers what a new unit ships on, and sent back as a 
     CHECK(settings.aircraft_type == shipped.aircraft_type);
     CHECK(settings.alarm_volume == shipped.alarm_volume);
     CHECK(std::string(settings.callsign).empty());
-    CHECK(settings.own_icao == go::kOwnIcaoUnset);
+    CHECK(settings.aircraft_address == go::kAircraftAddressUnset);
 }
 
 TEST_CASE("comms: set on the ground stages, needs confirmation, then applies") {
@@ -104,7 +105,7 @@ TEST_CASE("comms: the settings prompt lists what the set changes, and only that"
     CHECK(std::string(config.prompt_detail()) == pending_detail(Pending::Set));
 }
 
-// A set the store refuses used to stand on the glass and fail only after two presses.
+// A set the store refuses used to stand on the glass and fail only after the press.
 TEST_CASE("comms: a set out of range or invalid is refused at the door, never staged") {
     platform::host::Link link;
     link.raise_link(1);

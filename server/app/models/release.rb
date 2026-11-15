@@ -6,39 +6,63 @@ class Release
   REPOSITORY = "fcatuhe/skyblip".freeze
   API_URL = "https://api.github.com/repos/#{REPOSITORY}/releases?per_page=100".freeze
   TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
-  FIRMWARE = /\A(skyblip-(?:go|bravo))-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
+  FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
   FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
+  DEVELOPMENT_VERSION = /\d+\.\d+\.\d+\+\d+/
+  # INFO: fc 15nov26 the KEYHASH prefix of firmware/keys/<channel>.pub.pem, which signs every image of the channel
+  KEYS = { "development" => "212602F2", "release" => "88A4BEF5" }.freeze
+
+  def self.all = shelf(published)
 
   # INFO: fc 11nov26 every device page asks for the list, and GitHub grants 60 unauthenticated requests an hour to the server's address
-  def self.all
+  def self.published
     body = Rails.cache.fetch("github/releases", expires_in: 5.minutes) { request(URI(API_URL)).body }
     entries = JSON.parse(body)
     raise TypeError unless entries.is_a?(Array)
 
-    shelf entries.reject { |entry| entry.fetch("draft") }
+    entries.reject { |entry| entry.fetch("draft") }
       .select { |entry| TAG.match?(entry.fetch("tag_name")) }
       .map { |entry| new(entry) }
   rescue JSON::ParserError, KeyError, TypeError, ArgumentError => error
     raise Unavailable, "Invalid GitHub release list: #{error.class}"
   end
 
-  def self.product_of(file) = file[FIRMWARE, 1]&.tr("-", "_")
-  def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "slim"
+  def self.product_of(file) = file[FIRMWARE, 1]
+  def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "base"
 
   def self.firmware_shelf(releases)
     images = releases.sort_by(&:published_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
-    slim, full = images.partition { |_release, file| kind_of(file) == "slim" }
-    slim + full
+    base, full = images.partition { |_release, file| kind_of(file) == "base" }
+    base + full
+  end
+
+  def self.changelog(releases, locale)
+    releases.sort_by(&:published_at).reverse.filter_map do |release|
+      changes = release.changes(locale)
+      [ release, changes ] if release.version && changes.any?
+    end
   end
 
   def self.shelf(releases)
     newest_first = releases.sort_by(&:published_at).reverse
     [ newest_first.find(&:stable?), *newest_first.select(&:development?) ].compact
+  end
+
+  def self.prompt_glass_tag
+    if local_simulator
+      LOCAL_TAG
+    elsif Rails.configuration.x.local_simulator_only
+      raise Unavailable, "No local simulator build"
+    elsif (release = simulator)
+      release.tag
+    else
+      raise Unavailable, "No release holds the simulator"
+    end
   end
 
   def self.simulator(releases = all)
@@ -112,7 +136,7 @@ class Release
   end
   private_class_method :local_file
 
-  attr_reader :tag, :name, :assets, :published_at
+  attr_reader :tag, :name, :assets, :published_at, :notes
 
   def initialize(entry)
     @tag = entry.fetch("tag_name")
@@ -120,12 +144,26 @@ class Release
     @assets = entry.fetch("assets").map { |asset| asset.fetch("name") }
     @prerelease = entry.fetch("prerelease")
     @published_at = Time.iso8601(entry.fetch("published_at"))
+    @notes = Notes.new(entry.fetch("body").to_s)
   end
+
+  def changes(locale)
+    if stable?
+      notes.news(locale)
+    elsif main_development?
+      notes.technical
+    else
+      []
+    end
+  end
+
+  def version = stable? ? tag.delete_prefix("v") : name[DEVELOPMENT_VERSION]
 
   def development? = tag.start_with?("dev-")
   def main_development? = /\Adev-\d+\z/.match?(tag)
   def stable? = tag.start_with?("v") && !@prerelease
   def channel = development? ? "development" : "release"
+  def key = KEYS.fetch(channel)
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
   def firmware_files = assets.grep(FIRMWARE)

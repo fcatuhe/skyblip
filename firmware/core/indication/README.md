@@ -32,7 +32,7 @@ Blue was the obvious colour for a first battery step and it is the wrong one. It
 
 ## Six rows for a device with no glass
 
-`Prompt`, `Pairing`, `NoFixLinked`, `AliveLinked`, `NoFixCapturing` and `AliveCapturing` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt, a Go's pairing request, a connection or a running capture on. The Go makes no claim, so `Situation::prompting`, `Situation::pairing`, `Situation::linked` and `Situation::capturing` stay false there and its lamp is the one above.
+`Prompt`, `Pairing`, `NoFixLinked` and `AliveLinked` are lit only for a product that claims `common::Feature::LampShowsLink`, skyBlip Bravo, whose lamp is the only thing it can show a phone's prompt, a Go's pairing request or a connection on. The Go makes no claim, so `Situation::prompting`, `Situation::pairing` and `Situation::linked` stay false there. `NoFixCapturing` and `AliveCapturing` are lit on every product: a page arms a capture on a Go too, and the pilot who armed it may have left the glass on any page, so the lamp is where a running capture shows on both.
 
 `Prompt` is a fast green blink, 60 ms in every 250, a `Transient` row because a prompt expires in thirty seconds. It sits below `Alarm`, so an advisory keeps the lamp, and above the cell, because a pilot answering a phone is standing beside the unit. Bravo arms the two-press gesture only while this row is showing (`products/skyblip_bravo/README.md`).
 

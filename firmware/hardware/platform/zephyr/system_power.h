@@ -11,7 +11,6 @@
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/poweroff.h>
-#include <zephyr/sys/printk.h>
 #include <zephyr/sys/reboot.h>
 
 #include "boards/lilygo/t_echo_plus/pins.h"
@@ -238,16 +237,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
         gpio_pin_configure_dt(&radio_reset_, GPIO_OUTPUT_ACTIVE);
         k_busy_wait(parts::sx1262::kResetLowUs);
         gpio_pin_set_dt(&radio_reset_, 0);
-        // INFO: fc 08nov26 printk, not LOG_ERR: main.cpp registers the log module after including
-        // this
-        if (!radio_ready()) {
-            printk("power down: SX1262 BUSY did not fall after NRESET, SetSleep not sent\n");
-            return;
-        }
-        if (Rf::abandoned()) {
-            printk("power down: radio executor abandoned, SX1262 left in STDBY_RC, no SetSleep\n");
-            return;
-        }
+        if (!radio_ready() || Rf::abandoned()) return;
         uint8_t frame[2] = {parts::sx1262::kSetSleep, parts::sx1262::kSleepColdStartNoRtc};
         write_spi(radio_bus_, radio_cs_, frame, sizeof(frame));
         k_busy_wait(parts::sx1262::kSleepSettleUs);
@@ -369,7 +359,7 @@ class SystemPower : public ports::SystemPower, private power::PowerDownSink {
 
     static constexpr struct spi_config kSpiConfig = {
         .frequency = 8000000U,
-        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_MASTER,
+        .operation = SPI_WORD_SET(8) | SPI_TRANSFER_MSB | SPI_OP_MODE_CONTROLLER,
         .slave = 0,
         .cs = {},
     };

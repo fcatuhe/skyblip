@@ -1,4 +1,4 @@
-// The sensor hub's image on the external flash: written once by a full image, read by a slim one.
+// The sensor hub's image on the external flash: written once by a full image, read by a base one.
 #include <vector>
 
 #include "core/store/sector.h"

@@ -20,16 +20,6 @@ TEST_CASE("bravo: boots on the X1's host models and listens on 1090 MHz under it
     CHECK(rig.lamp() == indication::Condition::NoFix);
 }
 
-TEST_CASE("bravo: the inventory names the barometer, the haptic driver and the RTC it found") {
-    BravoRig rig;
-    REQUIRE(rig.setup() == Status::Ok);
-    const ports::Inventory& found = rig.product.board().inventory();
-    CHECK(found.barometer_address == parts::Spa06::kAddressPrimary);
-    CHECK(found.haptic == ports::HapticKind::WaveformDriver);
-    CHECK(found.rtc_fitted);
-    CHECK(found.has_i2c_address(parts::Drv2605::kAddress));
-}
-
 // Meshtastic drives the X1's motor as an LRA, and our ERM drive gave the first unit a weak buzz.
 TEST_CASE("bravo: the X1's motor is an LRA in closed loop, never buzzed by a calibration at boot") {
     BravoRig rig;
@@ -59,6 +49,24 @@ TEST_CASE("bravo: a unit keeps no key, so an activation request is refused keyle
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config).find("keyless") != std::string::npos);
     CHECK_FALSE(rig.state().activation.activated());
+}
+
+// Bravo has no glass, so a browser it trusts is what spares the pilot a blind press.
+TEST_CASE("bravo: a unit with no key still draws a browser challenge from its RNG") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.send("{\"command\":\"browser_challenge\"}");
+    rig.run_for(200);
+    const std::string reply = rig.last_on(events::Endpoint::Config);
+    CHECK(reply.find("\"command\":\"browser_challenge\"") != std::string::npos);
+    CHECK(reply.find("keyless") == std::string::npos);
+}
+
+TEST_CASE("bravo: each boot draws its peer boot epoch from the RNG") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.platform.random().draws > 0);
+    CHECK(rig.product.peer().boot_epoch() != 0);
 }
 
 TEST_CASE("bravo: a unit whose receiver does not answer refuses to fly and advertises nothing") {

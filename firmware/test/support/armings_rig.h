@@ -10,6 +10,7 @@
 #include "core/diagnostics/recorder.h"
 #include "hardware/platform/host/clock.h"
 #include "hardware/platform/host/identity.h"
+#include "hardware/platform/host/random.h"
 #include "ports/null.h"
 #include "ports/rf.h"
 #include "products/skyblip_go/services/radio.h"
@@ -73,6 +74,7 @@ struct Armings {
     bus::Bus bus{};
     bus::State state{};
     platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
     ports::NullRoles null{};
     ports::Roles roles{clock,
                        rf,
@@ -86,6 +88,7 @@ struct Armings {
                        null.indicator,
                        null.gnss,
                        identity,
+                       random,
                        ports::Capability::Rf};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
