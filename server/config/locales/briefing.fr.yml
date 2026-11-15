@@ -175,6 +175,8 @@ fr:
       firmware_current: "à jour"
       firmware_out: "%{version} est sortie"
       update_banner: "%{version} est sortie. Vous avez %{running}."
+      hub_needs: "la centrale attend son firmware"
+      hub_banner: "La centrale n\u2019a pas de firmware, la bille est \u00e9teinte. Vous avez %{running}."
       save_count:
         one: "Enregistrer 1 changement"
         other: "Enregistrer %{count} changements"
@@ -189,6 +191,7 @@ fr:
       install_version: "Installer %{version}"
       install_full: "Installer %{version}, avec le firmware de la centrale"
       newest: "Vous avez la dernière image, %{version}."
+      hub_without_firmware: "La centrale n\u2019a pas de firmware, la bille est \u00e9teinte. R\u00e9installez %{version}, avec le firmware de la centrale."
       no_image: "Aucune image publiée pour cet appareil pour l\u2019instant. Choisissez un fichier ci-dessous."
       sending: "Envoi de %{version}"
       sent: "%{percent}\u00a0%, %{sent} sur %{total} ko"

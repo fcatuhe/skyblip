@@ -38,6 +38,7 @@ const NOTED_TASKS = new Set(['set', 'capture']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 const IDENTITY_REFUSALS = new Set(['unknown_command', 'small_mtu', 'no_version']);
+const HUB_WITHOUT_FIRMWARE = new Set(['missing', 'corrupt', 'unreadable']);
 
 class LinkLost extends Error {
   constructor() {
@@ -127,6 +128,11 @@ function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
 
+// INFO: fc 15nov26 only a confirmed image counts: a slim one on probation over such a hub reverts by itself
+function hubWithoutFirmwareOf({ image }) {
+  return image?.state === 'confirmed' && HUB_WITHOUT_FIRMWARE.has(image.imu);
+}
+
 export class Updater {
   #onChange;
   #device = null;
@@ -172,6 +178,7 @@ export class Updater {
     advice: null,
     upgrade: null,
     settling: false,
+    hubWithoutFirmware: false,
     progress: null,
     notice: null,
     trust: null,
@@ -616,7 +623,7 @@ export class Updater {
 
   #set(patch) {
     const state = { ...this.#state, ...patch };
-    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state) };
+    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), hubWithoutFirmware: hubWithoutFirmwareOf(state) };
     this.#onChange(this.#state);
   }
 }

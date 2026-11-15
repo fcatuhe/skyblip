@@ -177,8 +177,9 @@
     }
 
     sendUpdate() {
-      const frame = { command: 'update', image: this.image, imu: this.imu ? 'held' : 'none', swap_powered: this.battery >= 10 };
-      if (this.imu) frame.imu_digest = this.imu;
+      const held = /^[0-9a-f]{16}$/.test(this.imu ?? '');
+      const frame = { command: 'update', image: this.image, imu: held ? 'held' : this.imu ?? 'none', swap_powered: this.battery >= 10 };
+      if (held) frame.imu_digest = this.imu;
       if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
       if (this.downgrade) frame.downgrade = true;
       if (this.key) frame.key = this.key;
@@ -466,6 +467,7 @@
       this.windowOpen = false;
       const image = readImage(this.slot);
       if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
+      this.landed = image;
       this.acknowledge(true, 'install');
       later(() => this.reboot(this.approved), 50);
     }
@@ -483,6 +485,8 @@
         this.image = 'probation';
         later(() => {
           this.image = 'confirmed';
+          // INFO: fc 15nov26 a confirmed full image writes the hub's firmware, as the BHI260AP's README says
+          if (this.imu !== null && this.landed?.imu.full) this.imu = this.landed.imu.pin.slice(0, 16);
           if (this.connected) this.sendUpdate();
         }, this.probationMs);
       }, this.rebootMs);

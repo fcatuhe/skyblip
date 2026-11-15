@@ -153,7 +153,9 @@ export default class extends Controller {
     const airborne = state.status?.flight === "airborne"
     this.installTarget.disabled = !asks || !file || Boolean(taken(unit)) || !this.#changelogSettled()
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
-    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
+    const restoresHub = state.hubWithoutFirmware && Boolean(file?.full)
+    this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) ||
+      (state.upgrade === false && !this.picked && !restoresHub)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
     else this.installTarget.textContent = this.installTarget.dataset.label
@@ -164,8 +166,8 @@ export default class extends Controller {
     return Boolean(this.changelogLanded || this.element.querySelector("template[data-changes]"))
   }
 
-  #done({ running, image }) {
-    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed"
+  #done({ running, image, hubWithoutFirmware }) {
+    return Boolean(this.unit.attempted) && running === this.unit.attempted && image?.state === "confirmed" && !hubWithoutFirmware
   }
 
   #status(state, unit) {
@@ -177,6 +179,7 @@ export default class extends Controller {
     if (image?.state === "probation") return say("words.probation", { version: running ?? image.to ?? "" })
     if (this.#done(state)) return say("words.done", { version: running })
     if (taken(unit)) return ""
+    if (state.hubWithoutFirmware) return say("words.hub_without_firmware", { version: running })
     if (upgrade === false) return say("words.newest", { version: running })
     if (!file && this.shelf && fitting(this.shelf, unit).length === 0) return say("words.no_image")
     return ""

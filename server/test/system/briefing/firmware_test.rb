@@ -37,6 +37,41 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Go+ whose hub holds another firmware is offered the full image, and its hub holds the new one after" do
+    in_range a_go(running: "0.1.0+1748", imu: "0123456789abcdef", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
+    on_the_shelf do
+      connect_go
+      click_link "Firmware"
+      click_button "Install 0.1.0+1765, with the sensor hub firmware"
+      page.execute_script("#{unit("00012A")}.press()")
+
+      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40
+      assert_not_equal "0123456789abcdef", page.evaluate_script("#{unit("00012A")}.imu")
+    end
+  end
+
+  # A hub fitted after the install, or whose flash failed, boots nothing, and the newest image is the one the unit runs.
+  test "a Go+ on the newest version whose hub has no firmware is told so, and the full image of that version restores it" do
+    in_range a_go(running: "0.1.0+1765", imu: "missing", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
+    on_the_shelf do
+      connect_go
+      assert_selector ".unit-banner", text: "The sensor hub has no firmware, so the slip ball is off. Your device is running 0.1.0+1765."
+      assert_selector ".unit-row", text: "0.1.0+1765, development · the sensor hub needs its firmware"
+      screen "27a-hub-without-firmware"
+
+      within(".unit-banner") { click_link "Update" }
+      assert_selector ".firmware-status", text: "The sensor hub has no firmware, so the slip ball is off. Install 0.1.0+1765 again, with the sensor hub firmware."
+      screen "27b-hub-firmware-offered"
+      click_button "Install 0.1.0+1765, with the sensor hub firmware"
+      page.execute_script("#{unit("00012A")}.press()")
+
+      assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40
+      click_link "Back to settings"
+      assert_no_selector ".unit-banner"
+      assert_selector ".unit-row", text: "0.1.0+1765, development · up to date"
+    end
+  end
+
   test "a device behind is told what changed in every build since its own, up to the one offered" do
     in_range a_go(running: "0.1.0+1748")
     on_the_shelf do

@@ -158,6 +158,17 @@ for (const [reported, advice] of [
   });
 }
 
+// A hub fitted after the install, or whose flash failed, leaves a confirmed image with a hub that boots nothing.
+for (const [reported, image, without] of [
+  ['missing', 'confirmed', true], ['corrupt', 'confirmed', true], ['unreadable', 'confirmed', true],
+  ['missing', 'probation', false], ['none', 'confirmed', false], ['writing', 'confirmed', false], [BLOB_PIN.slice(0, 16), 'confirmed', false],
+]) {
+  test(`a ${image} image over a hub reporting ${reported} ${without ? 'is' : 'is not'} a hub without its firmware`, async () => {
+    const { updater } = await connected({ imu: reported, image, from: '0.1.0+11', to: '0.1.0+12' });
+    assert.equal(updater.state.hubWithoutFirmware, without);
+  });
+}
+
 test('no advice is given before the device answered the update question', () => {
   const { updater } = session();
   assert.equal(updater.state.advice, null);

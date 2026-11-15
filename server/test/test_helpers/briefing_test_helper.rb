@@ -40,7 +40,7 @@ module BriefingTestHelper
     def connect_go
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-row", text: /is out|up to date/, wait: 15
+      assert_selector ".unit-row", text: /is out|up to date|needs its firmware/, wait: 15
     end
 
     # INFO: fc 11nov26 BRIEFING_SCREENS=dir saves every screen a test walks through, at phone and laptop sizes, for the pull request

@@ -175,6 +175,8 @@ en:
       firmware_current: up to date
       firmware_out: "%{version} is out"
       update_banner: "%{version} is out. Your device is running %{running}."
+      hub_needs: the sensor hub needs its firmware
+      hub_banner: "The sensor hub has no firmware, so the slip ball is off. Your device is running %{running}."
       save_count:
         one: Save 1 change
         other: "Save %{count} changes"
@@ -189,6 +191,7 @@ en:
       install_version: "Install %{version}"
       install_full: "Install %{version}, with the sensor hub firmware"
       newest: "Your device is running the latest image, %{version}."
+      hub_without_firmware: "The sensor hub has no firmware, so the slip ball is off. Install %{version} again, with the sensor hub firmware."
       no_image: No published image for this device yet. Choose a file below.
       sending: "Sending %{version}"
       sent: "%{percent} %, %{sent} of %{total} kB"

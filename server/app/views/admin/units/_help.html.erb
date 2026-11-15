@@ -38,8 +38,8 @@
     <dt>Full and slim images</dt>
     <dd>
       The same firmware at the same version. A full image also carries the firmware of the sensor hub behind the inclinometer, the BHI260AP, and writes it to the hub's flash once the image is confirmed.
-      A unit without the hub, a plain Go or a Bravo, only ever needs the slim image, and a Bravo has no full one. A unit with the hub needs the full image once per hub firmware: at its first install, and when a release brings a new one. The variant does not say which: a Go with the hub and no buzzer reads <code>standard</code> and needs the full image too.
-      A slim image never confirms itself on a unit whose hub lacks the firmware it names, and the bootloader puts the image before back. So a confirmed version also tells the hub holds the right firmware, and the rows record neither full nor slim.
+      A unit without the hub, a plain Go or a Bravo, only ever needs the slim image, and a Bravo has no full one. A unit with the hub needs the full image once per hub firmware: at its first install, when a release brings a new one, and when its hub lost the firmware, a hub fitted later or flash that failed. The briefing app offers it in each case, on the running version too. The variant does not say which: a Go with the hub and no buzzer reads <code>standard</code> and needs the full image too.
+      A slim image never confirms itself on a unit whose hub lacks the firmware it names, and the bootloader puts the image before back. The rows record neither full nor slim: the version is the same, and what the hub holds is the unit's state, which the briefing app reads on every connection.
     </dd>
   </dl>
 </details>
