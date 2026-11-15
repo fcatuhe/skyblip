@@ -269,6 +269,7 @@ export class FakeSkyblip {
   answer({ command, ...fields }) {
     this.commands.push(command);
     if (this.claimedBy !== null) return this.reply({ command: 'acknowledgement', acknowledge: false, reason: 'claimed', by: this.claimedBy });
+    if (command === 'identity' && this.identity === 'dropped') return;
     if (command === 'identity' && this.identity) return this.sendIdentity();
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();

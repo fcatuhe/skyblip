@@ -113,7 +113,6 @@ TEST_CASE("attestation: a development build signs release false, and the signatu
             .bytes()));
 }
 
-// An activated unit transmits, so it keeps the flight gate every identity command keeps.
 // A Plus whose haptic driver stops answering signs standard, so the server sees the part go.
 TEST_CASE("attestation: the signature covers the variant the unit found at this boot") {
     Desk desk(Identity::kSerial);
@@ -137,6 +136,7 @@ TEST_CASE("attestation: the signature covers the variant the unit found at this 
             .bytes()));
 }
 
+// An activated unit transmits, so it keeps the flight gate every identity command keeps.
 TEST_CASE("attestation: an activated unit refuses in flight, and one with no fix answers") {
     Desk flying(Identity::kSerial);
     flying.config.set_flight_state(flight::FlightState::Airborne);

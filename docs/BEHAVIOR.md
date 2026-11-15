@@ -330,15 +330,15 @@ The sensor hub on the board: probed, booted while the device flies, then read.
 
 **board**
 
+- a base image boots the hub from the copy on flash
+- a base image on an empty partition leaves the hub idle and says why
+- a base image refuses a copy it was not built with
 - a full image keeps a copy of the hub's image on flash once it is confirmed
 - a full image replaces a copy that is not its own
 - a hub that answers but whose flash does not is reported unreadable
 - a plain T-Echo has nothing at 0x28 and no inclinometer
 - a plain T-Echo reports no hub and keeps nothing on flash
 - a sensor hub that answers and names itself is an inclinometer
-- a slim image boots the hub from the copy on flash
-- a slim image on an empty partition leaves the hub idle and says why
-- a slim image refuses a copy it was not built with
 - an address that answers and is not a BHI260 is no inclinometer
 - nothing is asked of a bus with no hub on it
 - the chip's axes are turned into the case's before anything reads them
@@ -2275,7 +2275,7 @@ The sensor hub, against its model: no program of its own until the host uploads 
 
 ### test/hardware/test_bhi260_image_store.cpp
 
-The sensor hub's image on the external flash: written once by a full image, read by a slim one.
+The sensor hub's image on the external flash: written once by a full image, read by a base one.
 
 **bhi260 store**
 
@@ -3525,11 +3525,12 @@ The unit signing the firmware it runs for skyblip.eu, with no prompt, as the att
 - a unit with no key, or no version to report, signs nothing/no key
 - a unit with no key, or no version to report, signs nothing/no running version
 - an activated unit refuses in flight, and one with no fix answers
+  > An activated unit transmits, so it keeps the flight gate every identity command keeps.
 - an attest without a server nonce is invalid
 - the frame at the widest version is exactly the size checked
   > The widest version makes the widest frame, the size attest checks.
 - the signature covers the variant the unit found at this boot
-  > An activated unit transmits, so it keeps the flight gate every identity command keeps. A Plus whose haptic driver stops answering signs standard, so the server sees the part go.
+  > A Plus whose haptic driver stops answering signs standard, so the server sees the part go.
 - the unit signs the vectors' attestation byte for byte, with no prompt
   > Ed25519 is deterministic, so the unit's signature is the one the server's suite checks.
 
@@ -4323,12 +4324,12 @@ The ball, end to end: a hub on the bus, a rudder mistake, ink on the glass.
 
 **inclinometer**
 
-- a full image fills an empty partition, and the slim image after it boots from it
+- a base image that cannot boot its hub never confirms itself
+  > The bootloader reverts it on the next reset, to the image before, which booted the hub.
+- a base image with no hub image on flash says so on the status page
+- a full image fills an empty partition, and the base image after it boots from it
 - a hub that boots gives the six-pack its cage and its ball
 - a hub that stops answering takes the ball off the glass
-- a slim image that cannot boot its hub never confirms itself
-  > The bootloader reverts it on the next reset, to the image before, which booted the hub.
-- a slim image with no hub image on flash says so on the status page
 - a unit with no hub keeps the dial empty rather than centred
 - the ball goes the way the pilot slides, and the rudder follows
 - the hub runs no gyroscope, and the turn rate comes off the fix

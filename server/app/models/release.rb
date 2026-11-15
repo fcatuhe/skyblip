@@ -31,12 +31,12 @@ class Release
   end
 
   def self.product_of(file) = file[FIRMWARE, 1]
-  def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "slim"
+  def self.kind_of(file) = FULL_FIRMWARE.match?(file) ? "full" : "base"
 
   def self.firmware_shelf(releases)
     images = releases.sort_by(&:published_at).reverse.flat_map { |release| release.firmware_files.map { |file| [ release, file ] } }
-    slim, full = images.partition { |_release, file| kind_of(file) == "slim" }
-    slim + full
+    base, full = images.partition { |_release, file| kind_of(file) == "base" }
+    base + full
   end
 
   def self.changelog(releases, locale)

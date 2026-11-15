@@ -317,6 +317,14 @@ test('a unit names its product, variant, firmware, chip and tag in its identity 
   assert.equal(productOf(updater.state), 'go');
 });
 
+// The unit drops a reply without a word while another frame is held, so the next frame is what tells identity's answer is gone.
+test('an identity answer the unit dropped is awaited no longer, and a later small_mtu is the settings\' own', async () => {
+  const { updater, until } = await connected({ identity: 'dropped', mtu: 23, imu: 'none' });
+  await until(state => state.notice);
+  assert.equal(updater.state.notice.key, 'small_mtu');
+  assert.equal(updater.state.identityRefused, null);
+});
+
 test('a unit on firmware before the identity frame names no product, and the page goes on without a notice', async () => {
   const { updater } = await connected({ identity: false });
   assert.equal(updater.state.identity, null);
@@ -392,7 +400,7 @@ test('a unit refuses an image of another product before it writes the chunk that
   assert.equal(device.finished, false);
 });
 
-// The slim and full images of one release share its version, and the full one is how a device gets its blob.
+// The base and full images of one release share its version, and the full one is how a device gets its blob.
 test('an image of the running version is sent', async () => {
   const { updater, until } = await connected({ running: '0.2.0.15', imu: 'missing' });
   await updater.choose(signedImage(NEWER, IMAGE_BYTES, { imu: { pin: BLOB_PIN, full: true } }), 'skyblip-go.full.signed.bin');

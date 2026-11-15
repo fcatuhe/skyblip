@@ -175,8 +175,8 @@ en:
       firmware_current: up to date
       firmware_out: "%{version} is out"
       update_banner: "%{version} is out. Your device is running %{running}."
-      hub_needs: the sensor hub needs its firmware
-      hub_banner: "The sensor hub has no firmware, so the slip ball is off. Your device is running %{running}."
+      motion_sensor_needs: the motion sensor needs its firmware
+      motion_sensor_banner: "The motion sensor has no firmware, so the slip ball is off. Your device is running %{running}."
       save_count:
         one: Save 1 change
         other: "Save %{count} changes"
@@ -189,10 +189,11 @@ en:
       glass_press: "Press the %{product}'s button."
       glass_waiting: Waiting for its answer.
       install_version: "Install %{version}"
-      install_full: "Install %{version}, with the sensor hub firmware"
+      install_full: "Install %{version}, with the motion sensor firmware"
       newest: "Your device is running the latest image, %{version}."
-      hub_without_firmware: "The sensor hub has no firmware, so the slip ball is off. Install %{version} again, with the sensor hub firmware."
+      motion_sensor_without_firmware: "The motion sensor has no firmware, so the slip ball is off. Install %{version} again, with the motion sensor firmware."
       no_image: No published image for this device yet. Choose a file below.
+      no_product: This device did not say which product it is, so no published image is offered. Choose a file below, or update it over USB.
       sending: "Sending %{version}"
       sent: "%{percent} %, %{sent} of %{total} kB"
       left: "about %{minutes} min left"
@@ -233,7 +234,7 @@ en:
       flash: The device could not write the image. Try again, then try the USB drive.
       unknown_command: This firmware is too old for that. Update it over USB.
       no_file: No image selected. Choose an image first.
-      needs_full: This device needs the image with the sensor hub firmware, ending in .full.signed.bin.
+      needs_full: This device needs the image with the motion sensor firmware, ending in .full.signed.bin.
       shelf_failed: The image did not download. Check the connection and choose it again.
       smp: "The device refused the image:"
       failed: "Something failed:"
@@ -253,7 +254,7 @@ en:
       settings_defaults: It lost its settings and runs on defaults. Check the callsign and the aircraft type.
       swap_unpowered: The battery is critically low. It is too low to install the firmware. Charge it first.
       went_dark_flat: The device last shut down because its battery was flat. Charge it before you install.
-      imu_writing: The device is writing the sensor hub firmware. This takes up to a minute. Leave it on.
+      imu_writing: The device is writing the motion sensor firmware. This takes up to a minute. Leave it on.
       not_activated: Not activated yet. It neither transmits nor receives.
       recovering: "The device is now a USB drive named TECHOBOOT. If its glass reads PUSH THE BUTTON TO START IT, press once. Drop the .uf2 file on it, or press RESET to go back to skyBlip. Nothing transmits meanwhile."
     set_notices:

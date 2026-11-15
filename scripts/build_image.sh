@@ -9,7 +9,7 @@
 # against it: that is how CI knows it signed with the key the units trust.
 #
 # A product with a sensor hub lands two images of one commit in firmware/build/out/:
-# the slim .signed.bin, which leaves the BHI260AP image on the external flash, and the
+# the base .signed.bin, which leaves the BHI260AP image on the external flash, and the
 # .full.signed.bin, which carries it. The .uf2 is always the full one. A product with
 # no hub, CONFIG_SKYBLIP_IMU_IMAGE unset in its prj.conf, builds the one image. A
 # .version line lands beside them.
@@ -33,9 +33,9 @@ west=${WEST:-west}
 firmware=$tree/firmware
 # One build directory per product: west refuses a directory configured for another application.
 build=$firmware/build/image/$product
-slim_build=$firmware/build/image-slim/$product
+base_build=$firmware/build/image-base/$product
 app=$build/$product/zephyr
-slim_app=$slim_build/$product/zephyr
+base_app=$base_build/$product/zephyr
 hub_image=$firmware/hardware/parts/bhi260/firmware/BHI260AP.fw
 out=$firmware/build/out
 topdir=$(cd "$firmware" && "$west" topdir)
@@ -60,8 +60,8 @@ main() {
   build_image "$version" "$build" y
   images=("$app")
   if has_hub; then
-    build_image "$version" "$slim_build" n
-    images+=("$slim_app")
+    build_image "$version" "$base_build" n
+    images+=("$base_app")
   fi
   for image in "${images[@]}"; do
     assert_version_stamped "$version" "$image"
@@ -69,13 +69,13 @@ main() {
   done
   assert_downgrade_rule "$build" "$app"
   if has_hub; then
-    assert_downgrade_rule "$slim_build" "$slim_app"
+    assert_downgrade_rule "$base_build" "$base_app"
     "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
-    "$python" "$tree/scripts/check_imu_image.py" "$slim_app/zephyr.signed.bin" "$hub_image" slim
+    "$python" "$tree/scripts/check_imu_image.py" "$base_app/zephyr.signed.bin" "$hub_image" base
   fi
   # A unit refuses an upload naming another product, and takes none while it runs an image naming none.
   signed=("$app/zephyr.signed.bin" "$app/zephyr.signed.confirmed.bin")
-  if has_hub; then signed+=("$slim_app/zephyr.signed.bin"); fi
+  if has_hub; then signed+=("$base_app/zephyr.signed.bin"); fi
   for image in "${signed[@]}"; do
     "$python" "$tree/scripts/check_image_product.py" "$image" "$product"
   done
@@ -121,12 +121,12 @@ declared_board() {
   echo "$declared"
 }
 
-# The hub's image is pinned by the product's prj.conf, and only a product that pins one has a slim build.
+# The hub's image is pinned by the product's prj.conf, and only a product that pins one has a base build.
 has_hub() {
   grep -q '^CONFIG_SKYBLIP_IMU_IMAGE=y' "$firmware/products/$product/prj.conf"
 }
 
-# A full image and a slim one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
+# A full image and a base one: SB_CONFIG_SKYBLIP_IMU_IMAGE_LINKED (products/<product>/Kconfig.sysbuild).
 build_image() {
   local version=$1 dir=$2 linked=$3 conf=$firmware/build-conf
   mkdir -p "$conf"
@@ -202,11 +202,11 @@ assert_confirmed_image_differs() {
     || { echo "FAIL: the confirmed hex is byte-identical to the unconfirmed one"; exit 1; }
 }
 
-# The full image only: the slim one is the same RAM and less flash.
+# The full image only: the base one is the same RAM and less flash.
 check_budgets() {
   "$python" "$tree/scripts/size_check.py" "$app/zephyr.elf"
   if has_hub; then
-    echo "slim image: $(stat -c %s "$slim_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
+    echo "base image: $(stat -c %s "$base_app/zephyr.signed.bin") B over the air, full: $(stat -c %s "$app/zephyr.signed.bin") B"
   else
     echo "image: $(stat -c %s "$app/zephyr.signed.bin") B over the air"
   fi
@@ -223,7 +223,7 @@ stage_artifacts() {
   rm -rf "$out" && mkdir -p "$out"
   cp "$build/$slug.uf2" "$out/$slug.uf2"
   if has_hub; then
-    cp "$slim_app/zephyr.signed.bin" "$out/$slug.signed.bin"
+    cp "$base_app/zephyr.signed.bin" "$out/$slug.signed.bin"
     cp "$app/zephyr.signed.bin" "$out/$slug.full.signed.bin"
   else
     cp "$app/zephyr.signed.bin" "$out/$slug.signed.bin"

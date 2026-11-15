@@ -37,12 +37,12 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Go+ whose hub holds another firmware is offered the full image, and its hub holds the new one after" do
+  test "a Go+ whose motion sensor holds another firmware is offered the full image, and holds the new one after" do
     in_range a_go(running: "0.1.0+1748", imu: "0123456789abcdef", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
     on_the_shelf do
       connect_go
       click_link "Firmware"
-      click_button "Install 0.1.0+1765, with the sensor hub firmware"
+      click_button "Install 0.1.0+1765, with the motion sensor firmware"
       page.execute_script("#{unit("00012A")}.press()")
 
       assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40
@@ -50,19 +50,19 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     end
   end
 
-  # A hub fitted after the install, or whose flash failed, boots nothing, and the newest image is the one the unit runs.
-  test "a Go+ on the newest version whose hub has no firmware is told so, and the full image of that version restores it" do
+  # A motion sensor fitted after the install, or whose flash failed, boots nothing, and the newest image is the one the unit runs.
+  test "a Go+ on the newest version whose motion sensor has no firmware is told so, and the full image of that version restores it" do
     in_range a_go(running: "0.1.0+1765", imu: "missing", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
     on_the_shelf do
       connect_go
-      assert_selector ".unit-banner", text: "The sensor hub has no firmware, so the slip ball is off. Your device is running 0.1.0+1765."
-      assert_selector ".unit-row", text: "0.1.0+1765, development · the sensor hub needs its firmware"
-      screen "27a-hub-without-firmware"
+      assert_selector ".unit-banner", text: "The motion sensor has no firmware, so the slip ball is off. Your device is running 0.1.0+1765."
+      assert_selector ".unit-row", text: "0.1.0+1765, development · the motion sensor needs its firmware"
+      screen "27a-motion-sensor-without-firmware"
 
       within(".unit-banner") { click_link "Update" }
-      assert_selector ".firmware-status", text: "The sensor hub has no firmware, so the slip ball is off. Install 0.1.0+1765 again, with the sensor hub firmware."
-      screen "27b-hub-firmware-offered"
-      click_button "Install 0.1.0+1765, with the sensor hub firmware"
+      assert_selector ".firmware-status", text: "The motion sensor has no firmware, so the slip ball is off. Install 0.1.0+1765 again, with the motion sensor firmware."
+      screen "27b-motion-sensor-firmware-offered"
+      click_button "Install 0.1.0+1765, with the motion sensor firmware"
       page.execute_script("#{unit("00012A")}.press()")
 
       assert_selector ".firmware-status.is-good", text: "Running 0.1.0+1765.", wait: 40

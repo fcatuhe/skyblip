@@ -21,9 +21,10 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
     assert_select "option[data-product=go][value*='/skyblip-go-']", minimum: 1
     assert_select "option[data-product=bravo][value*='/skyblip-bravo-']", minimum: 1
     images = css_select("option[data-kind]")
-    assert_equal %w[slim] * 8 + %w[full] * 4, images.map { |option| option["data-kind"] }
+    assert_equal %w[base] * 8 + %w[full] * 4, images.map { |option| option["data-kind"] }
     assert_equal "/releases/dev-1765/skyblip-bravo-dev-1765.signed.bin", images.first["value"]
     assert_equal "/releases/dev-1765/skyblip-go-dev-1765.full.signed.bin", images[8]["value"]
+    assert_equal [ "skyBlip dev 0.1.0+1765", "skyBlip dev 0.1.0+1765, with the motion sensor firmware" ], [ images.first.text, images[8].text ]
   end
 
   test "the shelf carries each main build's technical changes, newest first, for the page to pick from" do

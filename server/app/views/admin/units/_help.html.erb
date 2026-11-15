@@ -5,11 +5,11 @@
     <dd>One skyBlip, known by its chip from its first connection to the briefing app. A unit that never connected is not listed.</dd>
 
     <dt>Product</dt>
-    <dd>What the unit is, and so which firmware it takes: skyBlip Go or skyBlip Bravo. It never changes.</dd>
+    <dd>What the unit is, and so which firmware it takes: skyBlip Go or skyBlip Bravo. An activated unit signs it on every connection, and a browser's word on it counts only until then.</dd>
 
     <dt>Variant read</dt>
     <dd>
-      The parts the unit found at its last boot, as it stated them. <code>plus</code> is a Go on which the inclinometer, the buzzer and the haptic motor were all found, <code>standard</code> any other unit.
+      The parts the unit found at its last boot, as it stated them, signed once the unit is activated. <code>plus</code> is a Go on which the motion sensor, the buzzer and the haptic motor were all found, <code>standard</code> any other unit.
       The unit works it out at every boot and stores it nowhere, so a Go+ whose haptic motor stops answering its probe reads <code>standard</code>: the sign of a failing part, not of another unit.
       Its Bluetooth name follows the same rule, skyBlip Go+ or skyBlip Go.
     </dd>
@@ -30,16 +30,16 @@
     <dd>
       How far the row is trusted. It only rises:
       <em>reported by a browser</em>, which any browser can post;
-      <em>installed from the briefing app</em>, once the unit came back on the version the app sent, with the version it left;
+      <em>installed from the briefing app</em>, once a browser said the unit came back on the version the app sent, with the version it left, still a browser's word;
       <em>signed by the unit</em>, once an activated unit signed the version, the build, the product and the variant.
       <em>Registered with</em> is the version an activation signed, shown until a row exists.
     </dd>
 
-    <dt>Full and slim images</dt>
+    <dt>Full and base images</dt>
     <dd>
-      The same firmware at the same version. A full image also carries the firmware of the sensor hub behind the inclinometer, the BHI260AP, and writes it to the hub's flash once the image is confirmed.
-      A unit without the hub, a plain Go or a Bravo, only ever needs the slim image, and a Bravo has no full one. A unit with the hub needs the full image once per hub firmware: at its first install, when a release brings a new one, and when its hub lost the firmware, a hub fitted later or flash that failed. The briefing app offers it in each case, on the running version too. The variant does not say which: a Go with the hub and no buzzer reads <code>standard</code> and needs the full image too.
-      A slim image never confirms itself on a unit whose hub lacks the firmware it names, and the bootloader puts the image before back. The rows record neither full nor slim: the version is the same, and what the hub holds is the unit's state, which the briefing app reads on every connection.
+      The same firmware at the same version. A full image also carries the firmware of the motion sensor, the BHI260AP, whose accelerometers drive the slip ball, and writes it to the unit's flash once the image is confirmed.
+      A unit without a motion sensor, a plain Go or a Bravo, only ever needs the base image, and a Bravo has no full one. A unit with one needs the full image once per motion sensor firmware: at its first install, when a release brings a new one, and when the motion sensor lost its firmware, fitted later or after a flash that failed. The briefing app offers it in each case, on the running version too. The variant does not say which: a Go with the motion sensor and no buzzer reads <code>standard</code> and needs the full image too.
+      A base image never confirms itself on a unit whose motion sensor lacks the firmware it names, and the bootloader puts the image before back. The rows record neither full nor base: the version is the same, and what the motion sensor holds is the unit's state, which the briefing app reads on every connection.
     </dd>
   </dl>
 </details>

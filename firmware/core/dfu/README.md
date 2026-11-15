@@ -16,7 +16,7 @@ The mark is MCUboot's image class, `IMAGE_TLV_UUID_CID` (0x75), with the vendor 
 | 0x75, class | `skyblip_go`, in the vendor's namespace | `d1d4d665-5f2b-5695-ad59-f122902c2120` |
 | 0x75, class | `skyblip_bravo`, in the vendor's namespace | `46d97790-da40-5396-a354-779456a09465` |
 
-The class name is the product's directory under `products/`, which is also its link name (`dfu::Product`) and, with dashes, the start of its release files. `scripts/build_image.sh` fails a build whose slim, full or confirmed image does not carry its product's class (`scripts/check_image_product.py`).
+The class name is the product's directory under `products/`, which is also its link name (`dfu::Product`) and, with dashes, the start of its release files. `scripts/build_image.sh` fails a build whose base, full or confirmed image does not carry its product's class (`scripts/check_image_product.py`).
 
 ### Why a TLV and not a key per product
 

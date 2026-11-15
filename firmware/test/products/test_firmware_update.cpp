@@ -282,13 +282,13 @@ TEST_CASE(
 
 // The full image of the running version, sent to give a fitted hub its image: by version it landed.
 TEST_CASE("product: a same-version image the bootloader reverted reads as reverted by its hash") {
-    constexpr ports::ImageHash kSlim{{0x51, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
+    constexpr ports::ImageHash kBase{{0x51, 0x1A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}};
     constexpr ports::ImageHash kFull{{0xF0, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}};
     Rig before;
     stage_versions(before);
     before.platform.dfu().staged_image_version = kRunning;
     before.platform.dfu().running_hash_valid = true;
-    before.platform.dfu().running_image_hash = kSlim;
+    before.platform.dfu().running_image_hash = kBase;
     before.platform.dfu().staged_hash_valid = true;
     before.platform.dfu().staged_image_hash = kFull;
     REQUIRE(before.setup() == Status::Ok);
@@ -304,7 +304,7 @@ TEST_CASE("product: a same-version image the bootloader reverted reads as revert
 
     Rebooted after(before, kRunning, /*confirmed=*/true, kRunning);
     after.rig.platform.dfu().running_hash_valid = true;
-    after.rig.platform.dfu().running_image_hash = kSlim;
+    after.rig.platform.dfu().running_image_hash = kBase;
     after.rig.platform.dfu().staged_hash_valid = true;
     after.rig.platform.dfu().staged_image_hash = kFull;
     REQUIRE(after.rig.setup() == Status::Ok);

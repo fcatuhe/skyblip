@@ -38,7 +38,8 @@ const NOTED_TASKS = new Set(['set', 'capture']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 const IDENTITY_REFUSALS = new Set(['unknown_command', 'small_mtu', 'no_version']);
-const HUB_WITHOUT_FIRMWARE = new Set(['missing', 'corrupt', 'unreadable']);
+// INFO: fc 15nov26 unreadable is the unit's flash failing, which no image fixes
+const MOTION_SENSOR_WITHOUT_FIRMWARE = new Set(['missing', 'corrupt']);
 
 class LinkLost extends Error {
   constructor() {
@@ -99,7 +100,7 @@ function adviceOf({ image, file }) {
   if (!image) return null;
   // INFO: fc 03oct26 before a file is chosen, the blob the device verified stands in for the release's pin
   const pin = file ? file.pin : image.imu;
-  return fullImageNeeded(image.imu, pin) ? 'full' : 'slim';
+  return fullImageNeeded(image.imu, pin) ? 'full' : 'base';
 }
 
 function upgradeOf({ file, running }) {
@@ -128,9 +129,9 @@ function settlingOf({ phase, image }) {
   return phase === 'ready' && (image?.state === 'probation' || image?.imu === 'writing');
 }
 
-// INFO: fc 15nov26 only a confirmed image counts: a slim one on probation over such a hub reverts by itself
-function hubWithoutFirmwareOf({ image }) {
-  return image?.state === 'confirmed' && HUB_WITHOUT_FIRMWARE.has(image.imu);
+// INFO: fc 15nov26 only a confirmed image counts: a base one on probation over such a motion sensor reverts by itself
+function motionSensorWithoutFirmwareOf({ image }) {
+  return image?.state === 'confirmed' && MOTION_SENSOR_WITHOUT_FIRMWARE.has(image.imu);
 }
 
 export class Updater {
@@ -168,6 +169,7 @@ export class Updater {
     device: null,
     image: null,
     identity: null,
+    identityRefused: null,
     running: null,
     status: null,
     settings: null,
@@ -178,7 +180,7 @@ export class Updater {
     advice: null,
     upgrade: null,
     settling: false,
-    hubWithoutFirmware: false,
+    motionSensorWithoutFirmware: false,
     progress: null,
     notice: null,
     trust: null,
@@ -446,8 +448,10 @@ export class Updater {
     return this.#send(asked);
   }
 
+  // INFO: fc 15nov26 replies come in order, so any other frame means identity's answer was dropped, and it is no longer awaited
   #receive(reply) {
     if (!reply || this.#trust.receive(reply) || this.#attestation?.receive(reply)) return;
+    if (reply.command !== 'identity' && reply.command !== 'acknowledgement') this.#identityPending = false;
     if (reply.command === 'identity') this.#identified(reply);
     else if (reply.command === 'update') this.#set({ image: imageOf(reply) });
     else if (reply.command === 'status') this.#set({ status: statusOf(reply) });
@@ -477,7 +481,13 @@ export class Updater {
 
   #identified(reply) {
     this.#identityPending = false;
-    this.#set({ identity: identityOf(reply) });
+    this.#set({ identity: identityOf(reply), identityRefused: null });
+  }
+
+  #identityRefusedAs(reason) {
+    this.#identityPending = false;
+    this.#set({ identityRefused: reason });
+    if (reason === 'small_mtu') this.#narrow();
   }
 
   #reported(reply) {
@@ -486,9 +496,12 @@ export class Updater {
 
   #acked(reply) {
     const { phase, task } = this.#state;
-    if (reply.reason === 'claimed') return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
-    // INFO: fc 15nov26 identity is asked first, so the first refusal it can earn is its own, and a page goes on without it
-    if (this.#identityPending && IDENTITY_REFUSALS.has(reply.reason)) return (this.#identityPending = false);
+    if (reply.reason === 'claimed') {
+      this.#identityPending = false;
+      return this.#set({ phase: 'ready', task: null, notice: this.#noticeDuring(task, { key: 'claimed' }) });
+    }
+    // INFO: fc 15nov26 identity is asked first, so the first refusal it can earn is its own
+    if (this.#identityPending && IDENTITY_REFUSALS.has(reply.reason)) return this.#identityRefusedAs(reply.reason);
     if (this.#dumpPending && ['small_mtu', 'no_statistics'].includes(reply.reason)) return (this.#dumpPending = false);
     if (reply.reason === 'small_mtu') return this.#narrow();
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
@@ -609,13 +622,13 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, identity: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
+      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });
@@ -623,7 +636,7 @@ export class Updater {
 
   #set(patch) {
     const state = { ...this.#state, ...patch };
-    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), hubWithoutFirmware: hubWithoutFirmwareOf(state) };
+    this.#state = { ...state, advice: adviceOf(state), upgrade: upgradeOf(state), settling: settlingOf(state), motionSensorWithoutFirmware: motionSensorWithoutFirmwareOf(state) };
     this.#onChange(this.#state);
   }
 }

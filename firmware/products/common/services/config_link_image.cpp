@@ -114,7 +114,7 @@ dfu::Proof ConfigLinkService::proof() const {
     const bus::State& state = context_.state;
     if (!state.started) return dfu::Proof::Booted;
     if (state.flight.gnss_solutions == 0) return dfu::Proof::Started;
-    // INFO: fc 03oct26 a slim image that cannot boot its hub is reverted, to the image that could
+    // INFO: fc 03oct26 a base image that cannot boot its hub is reverted, to the image that could
     if (!state.imu.bootable) return dfu::Proof::GnssHeard;
     if (ports::has(context_.roles.capabilities, ports::Capability::Display) &&
         !state.panel_presented)

@@ -50,7 +50,7 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[v0.2.0 dev-1010-feat-x dev-1005], Release.shelf([ older_stable, main, candidate, branch, newer_stable ]).map(&:tag)
   end
 
-  test "the firmware shelf lists every slim image newest first, then every full one" do
+  test "the firmware shelf lists every base image newest first, then every full one" do
     older = release("dev-1002", published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1002.full.signed.bin skyblip-go-dev-1002.signed.bin])
     newer = release("dev-1005", published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1005.full.signed.bin skyblip-go-dev-1005.signed.bin])
 

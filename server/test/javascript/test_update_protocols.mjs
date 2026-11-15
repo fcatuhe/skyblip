@@ -33,16 +33,21 @@ test('the stacks the page names are the registry\'s', () => {
   assert.deepEqual(stems, Object.keys(PROTOCOL_NAMES));
 });
 
-for (const mtu of [23, 104]) {
-  test(`at MTU ${mtu} a Go names its protocols and connecting raises no notice`, async () => {
-    const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu, protocols: GO });
-    await until(state => state.protocols && state.settings && state.defaults);
-    assert.equal(updater.state.notice, null);
-    // The identity frame never fits a 20-byte link, and its refusal raises no notice.
-    assert.equal(updater.state.identity === null, mtu === 23);
-    assert.equal(device.smallMtuRefusals, mtu === 23 ? 1 : 0);
-  });
-}
+test('at MTU 104 a Go names its protocols and connecting raises no notice', async () => {
+  const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu: 104, protocols: GO });
+  await until(state => state.protocols && state.settings && state.defaults);
+  assert.equal(updater.state.notice, null);
+  assert.equal(device.smallMtuRefusals, 0);
+});
+
+// The identity frame never fits a 20-byte link, so the page knows no product and says why.
+test('at MTU 23 a Go names its protocols, and the identity it cannot send raises small_mtu', async () => {
+  const { device, updater, until } = await connected({ ...NARROWEST_UNIT, mtu: 23, protocols: GO });
+  await until(state => state.protocols && state.settings && state.defaults);
+  assert.equal(updater.state.notice.key, 'small_mtu');
+  assert.deepEqual([updater.state.identity, updater.state.identityRefused], [null, 'small_mtu']);
+  assert.equal(device.smallMtuRefusals, 1);
+});
 
 test('the protocols go with the link that named them', async () => {
   const { updater, until } = await connected({ protocols: GO });
