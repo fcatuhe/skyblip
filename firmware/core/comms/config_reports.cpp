@@ -247,6 +247,15 @@ int ConfigService::format_update(uint8_t* out, int capacity) {
     if (dfu_ != nullptr && dfu_->running_key(trusted))
         writer.add_bytes(link::update_key::kKey,
                          ConstByteSpan(trusted.data(), link::update_bytes::kKey));
+    ports::BootloaderKeys bootloader;
+    if (dfu_ != nullptr && dfu_->bootloader_keys(bootloader)) {
+        uint8_t ids[ports::BootloaderKeys::kCapacity * link::update_bytes::kKey];
+        for (size_t i = 0; i < bootloader.count; i++)
+            std::copy_n(bootloader.keys[i].data(), link::update_bytes::kKey,
+                        ids + i * link::update_bytes::kKey);
+        writer.add_bytes(link::update_key::kBootloaderKeys,
+                         ConstByteSpan(ids, bootloader.count * link::update_bytes::kKey));
+    }
     return writer.finish();
 }
 

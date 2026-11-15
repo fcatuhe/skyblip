@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  BLOB_PIN, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, signedImage,
+  BLOB_PIN, DEVELOPMENT_KEY, FakeSkyblip, IMG_MGMT_ERR_CURRENT_VERSION_IS_NEWER, PRODUCTION_KEY, signedImage,
 } from './fake_skyblip.mjs';
 import { GATT_WRITE_BYTES } from '#skyblip/ble';
 import { Updater, productOf } from '#skyblip/update';
@@ -310,6 +310,34 @@ test('an image signed by another key is refused before the window opens', async 
   assert.equal(device.commands.includes('dfu'), false);
 });
 
+test('a development bootloader takes a release over a development image', async () => {
+  const both = [DEVELOPMENT_KEY, PRODUCTION_KEY];
+  const { device, updater, until } = await connected({ downgrade: true, key: DEVELOPMENT_KEY, bootloaderKeys: both });
+  assert.deepEqual(updater.state.image.bootloaderKeys, ['A1A1A1A1', 'B2B2B2B2']);
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: PRODUCTION_KEY }), 'release.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+});
+
+test('a development bootloader takes a development image back over a release', async () => {
+  const { device, updater, until } = await connected({ key: PRODUCTION_KEY, bootloaderKeys: [DEVELOPMENT_KEY, PRODUCTION_KEY] });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
+  updater.install();
+  await until(asking('dfu'));
+  device.press();
+  await until(state => state.phase === 'rebooting');
+});
+
+test('a release bootloader refuses a development image before the window opens', async () => {
+  const { device, updater } = await connected({ key: PRODUCTION_KEY, bootloaderKeys: [PRODUCTION_KEY] });
+  await updater.choose(signedImage(NEWER, IMAGE_BYTES, { key: DEVELOPMENT_KEY }), 'dev.signed.bin');
+  await updater.install();
+  assert.equal(updater.state.notice.key, 'wrong_key');
+  assert.equal(device.commands.includes('dfu'), false);
+});
+
 test('a unit names its product, variant, firmware, chip and tag in its identity frame', async () => {
   const { updater } = await connected({ product: 'go', variant: 'plus', bluetoothTag: 0x3f2a });
   assert.deepEqual(updater.state.identity,
@@ -473,7 +501,7 @@ test('an update frame pushed on connect is read without being asked', async () =
   const { image } = await until(state => state.image);
   assert.deepEqual(image, {
     state: 'reverted', from: '0.1.0+12', to: '0.2.0+15', settings: 'prior', swapPowered: true, imu: BLOB_PIN.slice(0, 16),
-    downgrade: false, key: 'B2B2B2B2',
+    downgrade: false, key: 'B2B2B2B2', bootloaderKeys: null,
   });
 });
 

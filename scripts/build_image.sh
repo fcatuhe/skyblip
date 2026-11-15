@@ -68,6 +68,7 @@ main() {
     if [ -n "$public_key" ]; then assert_signed_by "$public_key" "$image"; fi
   done
   assert_downgrade_rule "$build" "$app"
+  assert_bootloader_keys "$build"
   if has_hub; then
     assert_downgrade_rule "$base_build" "$base_app"
     "$python" "$tree/scripts/check_imu_image.py" "$app/zephyr.signed.bin" "$hub_image" full
@@ -130,7 +131,7 @@ has_hub() {
 build_image() {
   local version=$1 dir=$2 linked=$3 conf=$firmware/build-conf
   mkdir -p "$conf"
-  echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(realpath "$key")\"" > "$conf/signing.conf"
+  echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(bootloader_key_files)\"" > "$conf/signing.conf"
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$conf/version.conf"
   # Passed every time, sysbuild/mcuboot.conf too: a -D replaces it, and a list left out stays cached.
   local product_dir=$firmware/products/$product
@@ -152,6 +153,24 @@ build_image() {
        -D"${product}"_EXTRA_CONF_FILE="$app_conf" \
        -Dmcuboot_EXTRA_CONF_FILE="$mcuboot_conf" \
        "${hub_flag[@]}")
+}
+
+# The first key signs. A development bootloader also verifies releases, so a development unit installs either over the air.
+bootloader_key_files() {
+  if [ "$channel" = production ]; then
+    realpath "$key"
+  else
+    echo "$(realpath "$key"),$firmware/keys/production.pub.pem"
+  fi
+}
+
+# A unit installs over the air only what its MCUboot verifies, and reads those keys off MCUboot itself.
+assert_bootloader_keys() {
+  local dir=$1 signing=$firmware/build-conf/signing.pub.pem trusted
+  "$python" "$imgtool" getpub -k "$key" -e pem > "$signing"
+  trusted=("$signing")
+  [ "$channel" = production ] || trusted+=("$firmware/keys/production.pub.pem")
+  "$python" "$tree/scripts/check_bootloader_keys.py" "$dir/mcuboot/zephyr/zephyr.bin" "${trusted[@]}"
 }
 
 # CMake caches the compiler by absolute path, so a build configured against an SDK

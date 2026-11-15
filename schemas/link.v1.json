@@ -185,7 +185,7 @@
     },
     {
       "command": "update", "code": 10, "endpoint": "config", "sender": "both",
-      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, and 59 for a development build. Key 10, product, is retired and never reused: the identity frame names the product.",
+      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, and 10 more for a bootloader that trusts two keys, as a development one does. Key 10, product, is retired and never reused: the identity frame names the product.",
       "keys": [
         {"name": "image", "number": 1, "type": "enum", "enum": "image", "required": true, "description": "What became of the last install: confirmed, probation (running, not yet confirmed), reverted (started and never confirmed itself, so the bootloader swapped the old one back) or refused (never started)"},
         {"name": "from", "number": 2, "type": "text", "description": "The version the last install replaced, as dfu writes it, 0.3.0+1234. Present unless image is confirmed"},
@@ -195,7 +195,8 @@
         {"name": "imu", "number": 6, "type": "enum", "enum": "hub_image", "required": true, "description": "What the sensor hub's partition holds: none (no hub answered), missing, corrupt, unreadable (the external flash did not answer), writing (a full image is writing it now, up to a minute) or held"},
         {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the verified hub blob's SHA-256, present when imu is held"},
         {"name": "downgrade", "number": 8, "type": "boolean", "description": "Present and true on a unit whose bootloader accepts an image older than the running one, a development build"},
-        {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the signing key the bootloader trusts, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"}
+        {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the key that signed the running image, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"},
+        {"name": "bootloader_keys", "number": 11, "type": "bytes", "description": "The keys the bootloader verifies an image against, which are the keys whose images the unit installs: the first four bytes of each key's hash, as key gives them, one after the other, 4 to 16 bytes. A development bootloader trusts the development and production keys, a release bootloader the production key only (firmware/keys/README.md). Absent when the unit cannot read its bootloader, and on firmware built before the key, where key stands for the bootloader's one key"}
       ]
     },
     {

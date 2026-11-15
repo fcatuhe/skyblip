@@ -404,6 +404,49 @@ TEST_CASE(
     CHECK(rig.platform.dfu().triggered == 0);
 }
 
+namespace {
+void trust(Rig& rig, std::initializer_list<uint8_t> keys) {
+    ports::BootloaderKeys& bootloader = rig.platform.dfu().bootloader;
+    for (uint8_t key : keys) bootloader.keys[bootloader.count++].fill(key);
+}
+}  // namespace
+
+TEST_CASE("product: a development bootloader installs a release over a development image") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x88);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    CHECK(rig.platform.dfu().triggered == 1);
+}
+
+TEST_CASE("product: a development bootloader takes a development image back over a release") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x88, 0x21);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    open_upload_window(rig, now_ms);
+    land_upload(rig, now_ms);
+    rig.run(now_ms, now_ms + power::kParkSettleMs + power::kReleaseSettleMs + 5000);
+    CHECK(rig.platform.dfu().triggered == 1);
+}
+
+TEST_CASE("product: a release bootloader refuses a development image whatever the unit runs") {
+    Rig rig;
+    stage_versions(rig);
+    sign(rig, 0x21, 0x21);
+    trust(rig, {0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(land(rig).find("\"reason\":\"wrong_key\"") != std::string::npos);
+    CHECK(rig.platform.dfu().triggered == 0);
+}
+
 TEST_CASE("product: an image with no key hash at all is refused as the wrong key") {
     Rig rig;
     stage_versions(rig);
@@ -456,6 +499,20 @@ TEST_CASE("product: the update frame names the trusted key and, on a development
     development.run(0, 200);
     CHECK(development.last_on(events::Endpoint::Config).find("\"downgrade\":true") !=
           std::string::npos);
+    CHECK(development.last_on(events::Endpoint::Config).find("bootloader_keys") ==
+          std::string::npos);
+}
+
+TEST_CASE("product: the update frame names every key the bootloader trusts") {
+    Rig rig;
+    sign(rig, 0x88, 0x88);
+    trust(rig, {0x21, 0x88});
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.send("{\"command\":\"update\"}");
+    rig.run(0, 200);
+    const std::string said = rig.last_on(events::Endpoint::Config);
+    CHECK(said.find("\"key\":\"88888888\"") != std::string::npos);
+    CHECK(said.find("\"bootloader_keys\":\"2121212188888888\"") != std::string::npos);
 }
 
 TEST_CASE("product: an image nobody staged over the air clears a stale attempt") {

@@ -68,6 +68,7 @@ function imageOf(reply) {
     imu: reply.imu === 'held' ? hex(reply.imu_digest) : reply.imu,
     downgrade: reply.downgrade === true,
     key: reply.key ? hex(reply.key).toUpperCase() : null,
+    bootloaderKeys: reply.bootloader_keys ? hex(reply.bootloader_keys).toUpperCase().match(/.{8}/g) : null,
   };
 }
 
@@ -80,6 +81,11 @@ function identityOf(reply) {
     deviceId: hex(reply.device_id),
     bluetoothTag: reply.bluetooth_tag,
   };
+}
+
+// INFO: fc 15nov26 firmware that names no bootloader keys has one, the key it runs
+export function trustedKeys(image) {
+  return image?.bootloaderKeys ?? (image?.key ? [image.key] : null);
 }
 
 export function protocolsOf(reply) {
@@ -398,7 +404,8 @@ export class Updater {
     const product = productOf(this.#state);
     if (this.#product && product && this.#product !== product) return 'wrong_product';
     if (!this.#product && product) return 'unmarked_image';
-    if (unit?.key && this.#key !== unit.key) return 'wrong_key';
+    const trusted = trustedKeys(unit);
+    if (trusted && !trusted.includes(this.#key)) return 'wrong_key';
     if (this.#running && !unit?.downgrade && compareVersions(this.#version, this.#running) < 0) return 'older';
     return null;
   }

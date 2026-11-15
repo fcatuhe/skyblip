@@ -16,7 +16,8 @@ class Briefing::FirmwaresControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "turbo-frame#firmware_shelf select[data-shelf]"
-    assert_select "option[data-channel=development]", minimum: 1
+    assert_select "option[data-channel=development][data-key='212602F2']", minimum: 1
+    assert_select "option[value*='/dev-1765/'][data-version='0.1.0+1765']", count: 3
     assert_select "option[value^='/releases/dev-']", minimum: 1
     assert_select "option[data-product=go][value*='/skyblip-go-']", minimum: 1
     assert_select "option[data-product=bravo][value*='/skyblip-bravo-']", minimum: 1

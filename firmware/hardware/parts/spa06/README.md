@@ -10,7 +10,7 @@ Nothing here has run on a unit. Every address, register, code, scale factor and 
 
 The part has three modes (DS 4.1). Background mode measures on the part's own timer, so a sample cannot be dated against PPS. Command mode starts when asked and returns to standby when done, which is what forced mode is on the BME280. It measures one type per command, so the pressure goes first and its temperature follows, the order background mode uses (DS 4.1).
 
-Zephyr 4.4.2 has no SPA06 driver under `drivers/sensor`. The BME280 README says why we do not want a sensor-API fetch that sleeps through the conversion in the service loop anyway.
+Zephyr 4.5.0 has no SPA06 driver under `drivers/sensor`. The BME280 README says why we do not want a sensor-API fetch that sleeps through the conversion in the service loop anyway.
 
 ## Names
 

@@ -317,11 +317,13 @@ void ConfigService::refuse_landing(link::Reason reason) {
     refuse(reason);
 }
 
-// INFO: fc 03oct26 the bootloader verifies against this key, so a foreign image stops before the
-// reboot
+// INFO: fc 03oct26 a key MCUboot refuses stops here, before the reboot | 15nov26 read off MCUboot
 bool ConfigService::signed_by_trusted_key() const {
-    ports::SigningKeyHash trusted;
     ports::SigningKeyHash signer;
+    ports::BootloaderKeys bootloader;
+    if (dfu_->bootloader_keys(bootloader))
+        return dfu_->staged_key(signer) && bootloader.trusts(signer);
+    ports::SigningKeyHash trusted;
     if (!dfu_->running_key(trusted)) return true;
     return dfu_->staged_key(signer) && signer == trusted;
 }

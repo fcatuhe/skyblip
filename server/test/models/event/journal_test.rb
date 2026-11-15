@@ -17,6 +17,14 @@ class Event::JournalTest < ActiveSupport::TestCase
     assert_equal Time.utc(2026, 11, 14, 10), event.occurred_at
   end
 
+  test "a device read keeps the keys the unit's bootloader verifies, as words" do
+    Event::Journal.new(browser: BROWSER, entries: [
+      entry("device.read", properties: { key: "88A4BEF5", bootloader_keys: "212602F2 88A4BEF5", track: "release" })
+    ]).record
+
+    assert_equal({ "key" => "88A4BEF5", "bootloader_keys" => "212602F2 88A4BEF5", "track" => "release" }, Event.sole.payload)
+  end
+
   # A pilot's phone posts its journal again until it is answered, and a beacon may land twice.
   test "an entry that arrives twice is kept once" do
     journal = Event::Journal.new(browser: BROWSER, entries: [ entry("device.connected") ])

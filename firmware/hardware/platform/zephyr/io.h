@@ -167,7 +167,7 @@ class Uart : public io::Uart, public io::UartRate {
     static void on_rx_ready(const struct device* uart, void* user_data) {
         Uart* self = static_cast<Uart*>(user_data);
         bool line_ended = false;
-        while (uart_irq_update(uart) == 1 && uart_irq_rx_ready(uart) == 1) {
+        for (uart_irq_update(uart); uart_irq_rx_ready(uart) == 1; uart_irq_update(uart)) {
             uint8_t chunk[16];
             const int fetched = uart_fifo_read(uart, chunk, sizeof(chunk));
             if (fetched <= 0) break;

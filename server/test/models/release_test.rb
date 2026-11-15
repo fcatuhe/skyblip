@@ -17,6 +17,18 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_equal %w[skyblip-go-0.1.0.signed.bin skyblip-go-0.1.0.full.signed.bin], stable.firmware_files
   end
 
+  # A unit installs the images whose key its bootloader names, so the shelf must name each image's key right.
+  test "each channel names the KEYHASH prefix of the key in firmware/keys that signs it" do
+    keys = { "development" => "development", "release" => "production" }.transform_values do |name|
+      der = OpenSSL::PKey.read(Rails.root.join("../firmware/keys/#{name}.pub.pem").read).public_to_der
+      OpenSSL::Digest::SHA256.hexdigest(der).first(8).upcase
+    end
+
+    assert_equal keys, Release::KEYS
+    assert_equal "212602F2", release("dev-1005").key
+    assert_equal "88A4BEF5", release("v0.1.0").key
+  end
+
   test "a release offers every product's images, each under the product its file names" do
     release = release("dev-1010", assets: %w[skyblip-go-dev-1010.signed.bin skyblip-go-dev-1010.full.signed.bin skyblip-bravo-dev-1010.signed.bin
                                              skyblip-tango-dev-1010.signed.bin embed.js])

@@ -14,6 +14,8 @@ class Release
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
   MAX_BYTES = 32 * 1024 * 1024
   DEVELOPMENT_VERSION = /\d+\.\d+\.\d+\+\d+/
+  # INFO: fc 15nov26 the KEYHASH prefix of firmware/keys/<channel>.pub.pem, which signs every image of the channel
+  KEYS = { "development" => "212602F2", "release" => "88A4BEF5" }.freeze
 
   def self.all = shelf(published)
 
@@ -161,6 +163,7 @@ class Release
   def main_development? = /\Adev-\d+\z/.match?(tag)
   def stable? = tag.start_with?("v") && !@prerelease
   def channel = development? ? "development" : "release"
+  def key = KEYS.fetch(channel)
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
   def firmware_files = assets.grep(FIRMWARE)

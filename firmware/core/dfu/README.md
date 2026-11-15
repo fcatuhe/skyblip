@@ -45,6 +45,12 @@ The `identity` frame names the product the unit runs, `go` or `bravo`, on every 
 - An image built before this check names no product, so a unit on a newer image refuses it over the air. Going back to one is a drag-and-drop of its `.uf2`. A unit that names no product cannot be told apart from one without the check, so the page sends such a file to it, and a unit with the check refuses it once the upload reaches its protected area, near its end.
 - The hook itself has run only on `native_sim`, in `test/twister/smp_gate`. The refusal on an nRF52840, through the page and through `mcumgr`, is a hardware acceptance item of #187.
 
+## The keys the bootloader verifies
+
+A unit installs over the air only an image signed by a key its MCUboot verifies, so an image MCUboot would refuse at boot is refused before the restart. `bootloader_keys.h` reads those keys off MCUboot itself, the image in `boot_partition`. MCUboot holds each P-256 key as its DER SubjectPublicKeyInfo, 91 bytes that open on the same 26-byte header (`autogen-pubkey.c`, which `imgtool getpub` writes), and imgtool's KEYHASH TLV is the SHA-256 of those 91 bytes. So the unit finds every key by its header, hashes each, and compares the staged image's KEYHASH with them. The bytes CI's development bootloader embeds hash to `212602f2...`, the KEYHASH of every development image.
+
+The bootloader changes only by drag-and-drop, which restarts the app, so `platform/zephyr/dfu.h` reads it once. A unit that cannot read it, or finds no key, falls back on the key that signed the running image, which was the whole rule before Zephyr 4.5 let MCUboot embed more than one. The `update` frame names the keys as `bootloader_keys`, and `ConfigService::signed_by_trusted_key()` applies the rule when an upload lands. Which bootloader holds which keys is `firmware/keys/README.md`'s.
+
 ## Before the restart
 
 `ConfigLinkService::install()` asks `Dfu::request_swap()` before it restarts the unit. On the device, `request_swap()` hashes slot1's header, body and protected TLVs, as MCUboot does, and compares the digest with the image's SHA-256 TLV (`check_image()` in `image.h`). Only an image that matches is marked for a test swap with `boot_request_upgrade()`. The unit then reads MCUboot's swap type back from the slots into the install report. It restarts whatever the result, because it has already parked its parts, and the old image comes back to say what went wrong. `test/core/test_dfu_check.cpp` holds the check to an image `imgtool sign` made, protected TLVs included.
@@ -82,7 +88,7 @@ On the bench, before anything else touches the unit: `./scripts/blip.py --name "
 
 | What the report says | What happened |
 |---|---|
-| `wrong_key`, `landed_check` `matched`, `staged_key` other than `update`'s `key` | the image is signed by another key than the one the unit runs. Install an image signed by the unit's key |
+| `wrong_key`, `landed_check` `matched`, `staged_key` none of `update`'s `bootloader_keys` | the image is signed by a key the unit's bootloader does not verify. Install an image signed by one of them. A unit that names no `bootloader_keys` installs only images signed by its `key` |
 | a landing refusal, `landed_check` other than `matched` | slot1 does not hold the image that was sent, or the flash would not read it back. The upload or the flash is at fault, not the image |
 | `wrong_key`, `landed_check` `matched`, no `staged_key` | slot1 holds the whole image, but the unit could not find its KEYHASH: a bug in how the unit reads slot1's TLVs |
 | no report, and `update` says `confirmed` on the old version | the unit never wrote its update record: the store was not ready, or the write failed |

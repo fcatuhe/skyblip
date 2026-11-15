@@ -88,6 +88,19 @@ test('a connection is told once, with what the device runs and holds', async () 
   assert.equal(journal.named('device.read').length, 1);
 });
 
+// A unit on a release with a development bootloader still takes development images, which its track alone hides.
+test('a connection names the keys the unit\'s bootloader verifies', async () => {
+  airwaves(new FakeSkyblip({ name: 'skyBlip Go 00012A', bootloaderKeys: [0xa1, 0xb2] }));
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.running && journal.named('device.read').length);
+  const [read] = journal.named('device.read');
+  assert.equal(read.track, 'release');
+  assert.equal(read.bootloader_keys, 'A1A1A1A1 B2B2B2B2');
+  unit.disconnect();
+});
+
 test('a chooser closed with no pick is told, with the browser\'s words for why', async () => {
   airwaves();
   const journal = recorder();

@@ -10,11 +10,13 @@
 #include <zephyr/sys/reboot.h>
 
 #include <cstring>
+#include <optional>
 
 #if defined(CONFIG_SOC_FAMILY_NORDIC_NRF)
 #include <hal/nrf_wdt.h>
 #endif
 
+#include "core/dfu/bootloader_keys.h"
 #include "core/dfu/image.h"
 #include "core/power/shutdown.h"
 #include "hardware/platform/zephyr/upload_gate.h"
@@ -68,7 +70,8 @@ class Dfu : public ports::Dfu {
     }
 
     ports::StagedCheck check_staged() override {
-        StagedSlot slot;
+        AreaImage slot{PARTITION_ID(slot1_partition),
+                       boot_get_image_start_offset(PARTITION_ID(slot1_partition))};
         return slot.opened() ? dfu::check_image(slot) : ports::StagedCheck::Unreadable;
     }
 
@@ -88,6 +91,17 @@ class Dfu : public ports::Dfu {
     }
     bool staged_key(ports::SigningKeyHash& out) override {
         return read_key(PARTITION_ID(slot1_partition), out);
+    }
+    // INFO: fc 15nov26 read once: only a drag-and-drop, which restarts the app, replaces MCUboot
+    bool bootloader_keys(ports::BootloaderKeys& out) override {
+        if (!bootloader_keys_) {
+            AreaImage bootloader{PARTITION_ID(boot_partition), 0};
+            ports::BootloaderKeys found;
+            if (bootloader.opened() && dfu::find_bootloader_keys(bootloader, found))
+                bootloader_keys_ = found;
+        }
+        if (bootloader_keys_) out = *bootloader_keys_;
+        return bootloader_keys_.has_value();
     }
     bool running_class(dfu::ImageClass& out) {
         uint8_t tlvs[kTlvReadBytes];
@@ -127,12 +141,11 @@ class Dfu : public ports::Dfu {
     }
 
    private:
-    class StagedSlot : public dfu::ImageReader {
+    class AreaImage : public dfu::ImageReader {
        public:
-        StagedSlot()
-            : opened_(flash_area_open(PARTITION_ID(slot1_partition), &area_) == 0),
-              start_(boot_get_image_start_offset(PARTITION_ID(slot1_partition))) {}
-        ~StagedSlot() override {
+        AreaImage(uint8_t area_id, size_t start)
+            : opened_(flash_area_open(area_id, &area_) == 0), start_(start) {}
+        ~AreaImage() override {
             if (opened_) flash_area_close(area_);
         }
 
@@ -223,6 +236,7 @@ class Dfu : public ports::Dfu {
     }
 
     inline static bool recovery_armed_ = false;
+    inline static std::optional<ports::BootloaderKeys> bootloader_keys_{};
 };
 
 }  // namespace skyblip::platform::zephyr

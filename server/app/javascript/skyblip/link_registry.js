@@ -1424,6 +1424,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 9,
           "type": "bytes",
           "bytes": 4
+        },
+        {
+          "name": "bootloader_keys",
+          "number": 11,
+          "type": "bytes"
         }
       ]
     },

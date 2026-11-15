@@ -245,6 +245,7 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     platform::host::Dfu dfu{watchdog};
     dfu.running_key_valid = true;
     dfu.allows_downgrade = true;
+    dfu.bootloader.count = 2;
     go::Settings settings = go::defaults();
     go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
     comms::ConfigService config(link, store, &dfu);

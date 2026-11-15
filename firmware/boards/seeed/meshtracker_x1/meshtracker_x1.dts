@@ -332,6 +332,11 @@
 &gpio1 { status = "okay"; };
 &gpiote { status = "okay"; };
 
+/* TODO: fc 11nov26 the 32 kHz crystal is Meshtastic's USE_LFXO for this variant, unverified until #169 */
+&lfclk {
+	k32src = "xtal";
+};
+
 /* TODO: fc 11nov26 P0.09 is the RTC's power enable per SoftRF, Meshtastic and Seeed, unverified until #169 */
 &uicr {
 	nfct-pins-as-gpios;

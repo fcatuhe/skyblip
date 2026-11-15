@@ -127,6 +127,7 @@ function readOf(state) {
     product, variant: identity?.variant, version: identity?.version, release: identity?.release, device_id: identity?.deviceId,
     bluetooth_tag: identity?.bluetoothTag, running, image: image.state, key: image.key,
     track: image.key ? (image.downgrade ? 'development' : 'release') : null,
+    bootloader_keys: image.bootloaderKeys?.join(' ') ?? null,
     imu: IMU_STATES.has(image.imu) ? image.imu : image.imu ? 'held' : null,
     settings: image.settings, swap_powered: image.swapPowered, trust,
     activated: product === 'go' ? address !== null : null,

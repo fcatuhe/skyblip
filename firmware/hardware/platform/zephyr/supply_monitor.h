@@ -12,48 +12,7 @@
 
 namespace skyblip::platform::zephyr {
 
-// The nRF52840's power-failure comparator, POFCON. What it is FOR lives in
-// core/power/cutoff.h (may_write): below the warning nothing durable is written
-// but the record that must survive, and a fired comparator outranks the divider.
-// This is the silicon half, and nothing here decides anything.
-//
-// WHERE THIS API COMES FROM, because it is not a Zephyr driver and that had to be
-// established rather than assumed. Checked against upstream at the exact
-// revisions this tree pins (firmware/west.yml: zephyr v4.4.2, whose west.yml
-// pins hal_nordic 44fd3d44b15cb75f80a25b4679f91d2787e28664):
-//
-//   1. Zephyr 4.4 has NO power-failure comparator driver and no binding for one.
-//      There is no driver class for it (zephyr/drivers/, zephyr/dts/bindings/),
-//      the nRF POWER binding carries reg and interrupts and nothing else
-//      (dts/bindings/power/nordic,nrf-power.yaml), and the two Nordic comparator
-//      drivers are COMP and LPCOMP (drivers/comparator/comparator_nrf_comp.c,
-//      _nrf_lpcomp.c), which are different peripherals on different pins.
-//      soc/nordic/nrf52/soc.c touches POWER only for DCDCEN. So nrfx is not a
-//      shortcut here, it is the only path.
-//   2. nrfx exposes it: nrfx/drivers/include/nrfx_power.h declares
-//      nrfx_power_pof_init/enable/disable and nrfx/hal/nrf_power.h the register
-//      write under it (nrf_power_pofcon_set, NRF_POWER_POFTHR_V17..V28).
-//   3. The interrupt is ALREADY routed. POWER and CLOCK share one IRQ line on
-//      this SoC, and drivers/clock_control/clock_control_nrf.c:809 does
-//      IRQ_CONNECT(DT_INST_IRQN(0), .., nrfx_isr, nrfx_power_clock_irq_handler),
-//      which is nrfx_power.c:423 - it calls nrfx_power_irq_handler() and then
-//      nrfx_clock_irq_handler(). nrfx_power_irq_handler dispatches POFWARN to the
-//      handler registered by nrfx_power_pof_init. nrfx_clock_enable() enables the
-//      NVIC line. So we register a handler; we do not touch an IRQ.
-//   4. nrfx_power is already compiled and already initialised in this image:
-//      drivers/usb/udc/Kconfig.nrf selects NRFX_POWER, and udc_nrf.c:1769 calls
-//      nrfx_power_init() for the USB detect events. POFCON is a second, disjoint
-//      user of the same driver - pof_init only stores the handler
-//      (nrfx_power.c:172-182) and pof_enable only writes POFCON and INTENSET
-//      (nrfx_power.c:184-209), so nothing here re-initialises what USB owns.
-//
-// The Kconfig is set in products/skyblip_go/prj.conf. It is not #error'd here:
-// this header is included by the platform, the platform is included by suites
-// that have no reason to carry a USB stack, and a comparator that is not
-// compiled in is the absent-capability case the seam already has an answer for -
-// armed() says false, the product logs it, and core/power falls back to the
-// voltage rule. What must never happen is a SILENT fallback, which is why
-// armed() is a read-back of the register and not a copy of the argument.
+// INFO: fc 15nov26 Zephyr has no POFCON driver, so this arms it through nrfx: hardware/README.md
 class SupplyMonitor {
    public:
     // INFO: fc 05aug26 2.8 V, the highest threshold POFCON offers for VDD

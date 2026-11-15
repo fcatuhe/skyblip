@@ -135,6 +135,9 @@ jobs:
       # A unit takes only an image naming its own product, and nothing while it runs one naming none.
       - name: the image names its product
         run: python3 scripts/test_check_image_product.py
+      # A unit installs over the air what its MCUboot verifies: both keys on development, production alone on a release.
+      - name: the bootloader embeds the keys of its channel
+        run: python3 scripts/test_check_bootloader_keys.py
       # The budgets come off each build's slot and SRAM, and a build with no slot fails.
       - name: the size check holds each target to its flash and RAM budgets
         run: python3 scripts/test_size_check.py
