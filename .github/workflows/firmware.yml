@@ -2,8 +2,8 @@ name: firmware
 
 # Everything in this tree that is not the server: firmware/, plus the scripts,
 # schemas and simulator harnesses the firmware is tested through. The site has
-# its own workflow, its dependencies are Dependabot's, and the two C++ pins that
-# Dependabot cannot read are firmware-deps.yml's.
+# its own workflow, and every dependency is Dependabot's: the upstreams it has no
+# manifest for are named in .github/pins/action.yml.
 #
 # A push to a branch with an open PR already fires `pull_request`; main is the
 # post-merge signal, and this repo never commits to it directly.
@@ -59,6 +59,7 @@ jobs:
               - 'firmware/simulator/**'
               - 'firmware/vendor/**'
               - 'firmware/Makefile'
+              - '.github/pins/action.yml'
               - 'server/bin/screenshots'
               - 'server/bin/blips.cpp'
               - 'server/content_images/pages/skyblip-go/**'
@@ -147,6 +148,9 @@ jobs:
       # embed.js binds the firmware by C name, resolved only when a page loads the module.
       - name: the browser simulator binds only what it exports
         run: python3 scripts/check_simulator_exports.py
+      # Dependabot proposes doctest and Zephyr in .github/pins, and the copies in use have to follow.
+      - name: the vendored doctest and the Zephyr pin match .github/pins
+        run: ruby scripts/upstream_pins.rb check
       # The host decoder and the firmware's record layout are one layout written
       # twice, and a corpus decoded wrong is worse than one that failed to decode.
       - name: blip decoders, NMEA reassembly and resume
@@ -385,9 +389,14 @@ jobs:
     runs-on: ubuntu-26.04-arm
     steps:
       - uses: actions/checkout@v7
+      - name: Read the emsdk version .github/pins holds
+        id: emsdk
+        run: |
+          version=$(ruby scripts/upstream_pins.rb version emscripten-core/emsdk)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: mymindstorm/setup-emsdk@v16
         with:
-          version: 6.0.9
+          version: ${{ steps.emsdk.outputs.version }}
           actions-cache-folder: emsdk-cache
       - name: Build WASM
         run: make -C firmware browser

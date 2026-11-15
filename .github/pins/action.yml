@@ -1,0 +1,11 @@
+name: upstream pins
+description: >-
+  Never run. Names the upstream versions Dependabot has no other manifest for, as steps its
+  github-actions ecosystem watches. The workflows read emsdk's version from here, and
+  scripts/upstream_pins.rb fails CI until the vendored doctest and firmware/west.yml match theirs.
+runs:
+  using: composite
+  steps:
+    - uses: emscripten-core/emsdk@6.0.9
+    - uses: doctest/doctest@v2.5.3
+    - uses: zephyrproject-rtos/zephyr@v4.4.2

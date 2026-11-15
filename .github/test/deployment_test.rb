@@ -281,6 +281,16 @@ class DeploymentTest < Minitest::Test
     assert_equal [ "draft" ], jobs.select { |_name, job| job.dig("permissions", "contents") == "write" }.keys
   end
 
+  def test_every_emsdk_setup_installs_the_version_the_pins_hold
+    %w[firmware release server].each do |name|
+      steps = workflow(name).fetch("jobs").values.flat_map { |job| job.fetch("steps", []) }
+      setups = steps.select { |step| step["uses"].to_s.include?("setup-emsdk") }
+
+      refute_empty setups, name
+      setups.each { |step| assert_equal "${{ steps.emsdk.outputs.version }}", step.dig("with", "version"), name }
+    end
+  end
+
   def test_scenario_bundle_contains_the_firmware_scenarios_from_any_directory
     output, error, status = Open3.capture3(RbConfig.ruby, File.join(ROOT, "scripts/simulator_scenarios.rb"), chdir: Dir.tmpdir)
     paths = Dir.glob(File.join(ROOT, "firmware/scenarios/*.json")).sort
