@@ -196,7 +196,7 @@ TEST_CASE("diagnostics record: a target keeps the geometry the alarm level was d
     CHECK(out.bearing_deg == in.bearing_deg);
     CHECK(out.relative_altitude_m == in.relative_altitude_m);
     CHECK(out.closing_mps == in.closing_mps);
-    CHECK(out.alarm_setting == in.alarm_setting);
+    CHECK(out.alarm == in.alarm);
     CHECK(out.source == in.source);
     CHECK(out.rssi_dbm == in.rssi_dbm);
     CHECK(out.tracked == in.tracked);
@@ -278,7 +278,7 @@ TEST_CASE("diagnostics record: the glass keeps what was on it and how long it ha
     CHECK(out.page == in.page);
     CHECK(out.mode == in.mode);
     CHECK(out.prompt == in.prompt);
-    CHECK(out.alarm_setting == in.alarm_setting);
+    CHECK(out.alarm == in.alarm);
     CHECK(out.backlight);
     CHECK(out.powered);
     CHECK(out.holding);
