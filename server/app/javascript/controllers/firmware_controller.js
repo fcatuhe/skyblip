@@ -22,14 +22,19 @@ export default class extends Controller {
   connect() {
     this.session = joinFleet(() => this.#render())
     this.fleet = this.session.fleet
-    this.framed = () => this.#render()
+    this.framed = () => {
+      this.changelogLanded = true
+      this.#render()
+    }
     this.element.addEventListener("turbo:frame-load", this.framed)
+    this.element.addEventListener("turbo:fetch-request-error", this.framed)
     this.#render()
   }
 
   disconnect() {
     clearTimeout(this.recheck)
     this.element.removeEventListener("turbo:frame-load", this.framed)
+    this.element.removeEventListener("turbo:fetch-request-error", this.framed)
     this.session.leave()
   }
 
@@ -146,12 +151,17 @@ export default class extends Controller {
   #install(unit, state, asks) {
     const { file, advice } = state
     const airborne = state.status?.flight === "airborne"
-    this.installTarget.disabled = !asks || !file || Boolean(taken(unit))
+    this.installTarget.disabled = !asks || !file || Boolean(taken(unit)) || !this.#changelogSettled()
     const settling = state.image?.state === "probation" || state.image?.imu === "writing"
     this.installTarget.hidden = state.refusedOnDevice || (WORKING.has(state.phase) && state.phase !== "asking") || settling || this.#done(state) || (state.upgrade === false && !this.picked)
     if (airborne) this.installTarget.textContent = say("words.locked")
     else if (file) this.installTarget.textContent = say(file.full && advice === "full" ? "words.install_full" : "words.install_version", { version: file.version })
     else this.installTarget.textContent = this.installTarget.dataset.label
+  }
+
+  // INFO: fc 15nov26 the changelog lands above Install, so Install waits for its frame to load or fail
+  #changelogSettled() {
+    return Boolean(this.changelogLanded || this.element.querySelector("template[data-changes]"))
   }
 
   #done({ running, image }) {
