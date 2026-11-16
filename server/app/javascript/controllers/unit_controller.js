@@ -3,6 +3,7 @@ import { Turbo } from "@hotwired/turbo-rails"
 import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
+import { heardLine, proposedIn } from "controllers/briefing/heard"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
 import { sendCapture } from "#skyblip/capture_upload"
@@ -21,7 +22,7 @@ const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "al
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
+                    "settings", "fields", "default", "heard", "heardText", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "report", "reportSend", "reportMessage",
@@ -169,6 +170,13 @@ export default class extends Controller {
     for (const [key, value] of Object.entries(defaults)) {
       if (elements[key] && !elements[key].disabled) showSetting(elements[key], value)
     }
+    this.#settings(this.unit.state)
+  }
+
+  useHeard() {
+    const { elements } = this.settingsTarget
+    const proposed = proposedIn(this.settingsTarget, this.unit.state.status.ownTransponder, this.#edited())
+    for (const [key, value] of Object.entries(proposed)) showSetting(elements[key], value)
     this.#settings(this.unit.state)
   }
 
@@ -343,6 +351,14 @@ export default class extends Controller {
     this.resetTarget.disabled = !idle
     this.resetTarget.textContent = say("words.reset_count", { count: differs.length })
     for (const note of this.defaultTargets) this.#default(note, edited, defaults)
+    this.#heard(state.status?.ownTransponder, edited)
+  }
+
+  #heard(heard, edited) {
+    const line = heard && "aircraft_address" in edited ? heardLine(this.settingsTarget, heard, edited) : null
+    this.heardTarget.hidden = !line
+    this.heardTextTarget.textContent = line?.text ?? ""
+    this.heardUseTarget.hidden = line?.same ?? true
   }
 
   #prompting(state) {

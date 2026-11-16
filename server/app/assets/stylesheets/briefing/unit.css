@@ -213,9 +213,12 @@
   .field--check input { justify-self: end; inline-size: 1.4rem; block-size: 1.4rem; accent-color: var(--blip); }
 
   .field-hint,
-  .field-default { grid-column: 1 / -1; margin: 0; font-size: var(--text-s); line-height: 1.5; }
+  .field-default,
+  .field-heard { grid-column: 1 / -1; margin: 0; font-size: var(--text-s); line-height: 1.5; }
   .field-hint { color: var(--quiet-text); }
-  .field-default { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
+  .field-default,
+  .field-heard { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
+  .field-heard:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs); }
 
   .unit-rows {
     display: grid;

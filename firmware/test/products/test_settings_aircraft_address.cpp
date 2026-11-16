@@ -22,7 +22,8 @@ constexpr uint32_t kHeard = 0x3C6586;
 constexpr uint32_t kOther = 0x3C0A11;
 
 // The set a page sends, answered as the page reads it, with the glass's press in between.
-std::string answer_to_set(Settings& settings, const std::optional<uint32_t>& own_transponder,
+std::string answer_to_set(Settings& settings,
+                          const std::optional<comms::OwnTransponderHeard>& own_transponder,
                           const char* json) {
     platform::host::Link link;
     link.raise_link(1);
@@ -93,7 +94,7 @@ TEST_CASE(
 TEST_CASE(
     "comms: a set of an aircraft address Bravo does not name is refused not_own_transponder") {
     Settings settings = defaults();
-    const std::optional<uint32_t> heard = kHeard;
+    const std::optional<comms::OwnTransponderHeard> heard = comms::OwnTransponderHeard{kHeard};
     CHECK(answer_to_set(settings, heard, "{\"command\":\"set\",\"aircraft_address\":3934737}") ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"not_own_"
           "transponder\"}");
@@ -112,7 +113,7 @@ TEST_CASE(
 TEST_CASE(
     "comms: an aircraft address staged before Bravo named another is refused at the presses") {
     Settings settings = defaults();
-    std::optional<uint32_t> heard{};
+    std::optional<comms::OwnTransponderHeard> heard{};
     platform::host::Link link;
     link.raise_link(1);
     SettingsStore store(settings, kTestActivation, heard);
@@ -121,7 +122,7 @@ TEST_CASE(
     config.on_rx(config_frame("{\"command\":\"set\",\"aircraft_address\":3934737}"));
     REQUIRE(config.pending() == comms::Pending::Set);
 
-    heard = kHeard;
+    heard = comms::OwnTransponderHeard{kHeard};
     config.confirm();
     CHECK(link_text(link.last().bytes) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"not_own_"

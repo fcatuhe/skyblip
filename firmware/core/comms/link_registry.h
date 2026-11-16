@@ -140,6 +140,9 @@ enum : uint32_t {
     kWentDarkFlat = 6,
     kDieTemperatureC = 7,
     kBravo = 8,
+    kOwnTransponder = 9,
+    kOwnTransponderCallsign = 10,
+    kOwnTransponderCategory = 11,
 };
 }
 

@@ -2,6 +2,7 @@
 #define SKYBLIP_CORE_COMMS_PEER_H
 
 #include <cstdint>
+#include <cstring>
 #include <optional>
 
 #include "core/comms/link_registry.h"
@@ -63,6 +64,19 @@ struct OwnTransponderHeard {
     char callsign[kPeerCallsignBytes]{};
     uint8_t aircraft_category{0};
 };
+
+inline bool operator==(const OwnTransponderHeard& a, const OwnTransponderHeard& b) {
+    return a.address == b.address && std::strcmp(a.callsign, b.callsign) == 0 &&
+           a.aircraft_category == b.aircraft_category;
+}
+
+inline bool operator!=(const OwnTransponderHeard& a, const OwnTransponderHeard& b) {
+    return !(a == b);
+}
+
+inline std::optional<uint32_t> address_of(const std::optional<OwnTransponderHeard>& heard) {
+    return heard ? std::optional<uint32_t>(heard->address) : std::nullopt;
+}
 
 struct PeerHealth {
     uint32_t boot_epoch{0};

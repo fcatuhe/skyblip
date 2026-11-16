@@ -55,6 +55,7 @@ en:
         loud: Loud
       save: Save
       reset: Back to defaults
+      use_heard: Use it
     capture:
       title: Diagnostics capture
       profile: Profile
@@ -179,6 +180,8 @@ en:
         one: Save 1 change
         other: "Save %{count} changes"
       default: "Default: %{value}"
+      heard: "Bravo hears a transponder that may be yours: %{aircraft}."
+      heard_same: "Bravo hears the transponder set here: %{aircraft}."
       "on": "on"
       "off": "off"
       none: none
@@ -263,7 +266,7 @@ en:
       prompt_pending: The device is already asking a question. Answer it or wait thirty seconds.
       unknown_command: This firmware is too old to change settings. Update it first.
       out_of_range: The device refused a value it cannot store. FFFFFF is no aircraft's ICAO address. Nothing changed.
-      not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or take the one the Go's AIRCRAFT menu shows. Nothing changed.
+      not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or use the one Bravo hears. Nothing changed.
     capture_notices:
       capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. The capture continues in flight.
       capture_stopped: Stopped. The LED is back to its single blink.

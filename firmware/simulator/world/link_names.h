@@ -308,6 +308,9 @@ inline constexpr Key kStatusKeys[] = {
     {"went_dark_flat", 6, Type::Boolean, nullptr, 0, true},
     {"die_temperature_c", 7, Type::Integer, nullptr, 0, false},
     {"bravo", 8, Type::Enum, &kBravo, 0, false},
+    {"own_transponder", 9, Type::Unsigned, nullptr, 0, false},
+    {"own_transponder_callsign", 10, Type::Text, nullptr, 0, false},
+    {"own_transponder_category", 11, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kTimingKeys[] = {
@@ -682,7 +685,7 @@ inline constexpr Frame kFrames[] = {
     {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 12},
     {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 12},
     {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 12},
-    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
+    {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
     {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 84},

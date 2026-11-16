@@ -17,7 +17,7 @@ test('connecting reads the running version, the image state and the status', asy
   assert.equal(updater.state.running, '0.1.0+12');
   assert.equal(updater.state.image.state, 'confirmed');
   assert.deepEqual(updater.state.status, {
-    flight: 'ground', upload: false, batteryPercent: 80, charging: false, powerLevel: 'normal', wentDarkFlat: false,
+    flight: 'ground', upload: false, batteryPercent: 80, charging: false, powerLevel: 'normal', wentDarkFlat: false, ownTransponder: null,
   });
 });
 

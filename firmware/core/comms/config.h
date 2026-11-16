@@ -236,6 +236,8 @@ class ConfigService {
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
     // INFO: fc 12nov26 a paired Go's glass says BRAVO LOST, and a page learns it without polling
     void set_bravo_state(BravoState state);
+    // INFO: fc 15nov26 a page proposes the transponder Bravo hears, as the Go's AIRCRAFT menu does
+    void set_own_transponder(const std::optional<OwnTransponderHeard>& heard);
 
     // INFO: fc 12nov26 only Bravo arms a capture over the link: every other product answers
     // unknown_command
@@ -377,6 +379,7 @@ class ConfigService {
     bool supply_warned_{false};
     bool went_dark_flat_{false};
     BravoState bravo_{BravoState::Unpaired};
+    std::optional<OwnTransponderHeard> own_transponder_{};
     uint16_t connected_sessions_[LinkSessions::kMaxSessions]{};
     int connected_count_{0};
     LinkClaim claim_{};

@@ -23,6 +23,10 @@
       <input type="text" id="unit-aircraft-address" name="aircraft_address" maxlength="6" pattern="[0-9A-Fa-f]{6}"
              autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-aircraft-address-hint">
       <p class="field-hint" id="unit-aircraft-address-hint"><%= aircraft_address_hint(slug) %></p>
+      <p class="field-heard" role="status" data-unit-target="heard" hidden>
+        <span data-unit-target="heardText"></span>
+        <button type="button" class="button-app button-app--small" data-unit-target="heardUse" data-action="unit#useHeard"><%= t("briefing.settings.use_heard") %></button>
+      </p>
     </div>
 
     <div class="field">

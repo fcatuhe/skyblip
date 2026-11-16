@@ -156,6 +156,21 @@ TEST_CASE("aircraft detection: the AIRCRAFT menu reads what Bravo hears, and a p
     CHECK(std::string(stored.callsign) == "F-JABC");
 }
 
+// A page beside the Go proposes the same transponder, without the pilot typing it.
+TEST_CASE("aircraft detection: the Go's status names what Bravo hears, as the glass names it") {
+    Tango tango;
+    paired_on_the_radar(tango);
+    tango.bravo.health.own_transponder_fields = heard_fields(kHeardAddress);
+    tango.run_for(2500);
+    tango.go.send("{\"command\":\"status\"}");
+    tango.run_for(200);
+    const std::string status = tango.go.last_on(events::Endpoint::Config);
+    REQUIRE(field(status, "command") == "status");
+    CHECK(field(status, "own_transponder") == std::to_string(kHeardAddress));
+    CHECK(field(status, "own_transponder_callsign") == "F-JABC");
+    CHECK(field(status, "own_transponder_category") == "4");
+}
+
 // A pilot who switches the transponder to ALT at the holding point still has time to take it.
 TEST_CASE("aircraft detection: a transponder first heard while taxiing is proposed") {
     Tango tango;
@@ -177,6 +192,11 @@ TEST_CASE("aircraft detection: in flight nothing is proposed, and the menu says 
     flight.fly(3);
     CHECK_FALSE(flight.go().product.screen().noticing());
     CHECK_FALSE(flight.state().own_transponder);
+    flight.go().send("{\"command\":\"status\"}");
+    flight.fly(1);
+    const std::string status = flight.go().last_on(events::Endpoint::Config);
+    REQUIRE(field(status, "command") == "status");
+    CHECK(field(status, "own_transponder").empty());
 
     uint32_t& now_ms = flight.tango.now_ms;
     open_menu(flight.go(), now_ms);

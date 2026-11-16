@@ -52,8 +52,8 @@ en:
     callsign_hint: "Up to nine letters, digits, dashes or spaces."
     aircraft_address: "ADS-B address"
     aircraft_address_hints:
-      go: "Enter your Mode S or ADS-B out transponder's 24-bit aircraft address, written as six characters such as 3C6586. The Go then broadcasts your position under that address, as ADS-L requires for an aircraft with a transponder. It also keeps your own aircraft out of the traffic. Leave blank if you have no transponder."
-      bravo: "Enter your Mode S or ADS-B out transponder's 24-bit aircraft address, written as six characters such as 3C6586. Bravo then keeps your own transponder out of the traffic and stops it setting off alarms. Leave blank if you have no transponder."
+      go: "Enter your Mode S or ADS-B out transponder's 24-bit aircraft address, written as six characters such as 3C6586. The Go then broadcasts your position under that address, as ADS-L requires for an aircraft with a transponder. It also keeps your own aircraft out of the traffic. On the ground, a paired Bravo that hears your transponder proposes it here. Leave blank if you have no transponder."
+      bravo: "Enter your Mode S or ADS-B out transponder's 24-bit aircraft address, written as six characters such as 3C6586. Bravo then keeps your own transponder out of the traffic and stops it setting off alarms. On the ground with a GPS fix, Bravo proposes your transponder here once it hears it. Leave blank if you have no transponder."
   footer:
     description: "Electronic conspicuity for recreational flying and air sports. skyBlip Go broadcasts your position in ADS-L, receives ADS-L and FLARM traffic and tells you where to look."
     open_source: "Open source, no subscription, no account."
