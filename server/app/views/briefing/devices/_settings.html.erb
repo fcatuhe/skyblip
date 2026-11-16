@@ -5,6 +5,21 @@
     <section class="unit-section" aria-labelledby="unit-aircraft-title">
       <h2 class="unit-label" id="unit-aircraft-title"><%= t("briefing.settings.aircraft") %></h2>
 
+      <div class="unit-heard" data-unit-target="heard" hidden>
+        <p class="unit-heard-title" role="status" data-unit-target="heardText"></p>
+        <table class="unit-heard-changes" data-unit-target="heardChanges">
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden"><%= t("briefing.settings.heard_setting") %></span></th>
+              <th scope="col"><%= t("briefing.settings.heard_now") %></th>
+              <th scope="col"><%= t("briefing.settings.heard_from") %></th>
+            </tr>
+          </thead>
+          <tbody data-unit-target="heardRows"></tbody>
+        </table>
+        <button type="button" class="button-app button-app--small" data-unit-target="heardUse" data-action="unit#useHeard"></button>
+      </div>
+
       <div class="field">
         <label for="unit-aircraft-type"><%= t("settings.aircraft_type") %></label>
         <select id="unit-aircraft-type" name="aircraft_type">
@@ -25,10 +40,6 @@
         <input type="text" id="unit-aircraft-address" name="aircraft_address" maxlength="6" pattern="[0-9A-Fa-f]{6}"
                autocapitalize="characters" autocomplete="off" spellcheck="false" aria-describedby="unit-aircraft-address-hint">
         <p class="field-hint" id="unit-aircraft-address-hint"><%= aircraft_address_hint(slug) %></p>
-        <p class="field-heard" role="status" data-unit-target="heard" hidden>
-          <span data-unit-target="heardText"></span>
-          <button type="button" class="button-app button-app--small" data-unit-target="heardUse" data-action="unit#useHeard"><%= t("briefing.settings.use_heard") %></button>
-        </p>
       </div>
     </section>
 

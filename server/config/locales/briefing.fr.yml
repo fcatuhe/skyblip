@@ -57,7 +57,9 @@ fr:
         loud: "Forte"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
-      use_heard: "L\u2019utiliser"
+      heard_setting: "Réglage"
+      heard_now: "Actuel"
+      heard_from: "Selon Bravo"
     capture:
       title: "Capture de diagnostic"
       profile: "Profil"
@@ -186,6 +188,9 @@ fr:
       default: "D\u2019origine\u00a0: %{value}"
       heard: "Bravo entend %{aircraft}."
       heard_same: "Bravo entend %{aircraft}, comme saisi."
+      use_heard:
+        one: "Utiliser cette valeur"
+        other: "Utiliser ces valeurs"
       "on": "activé"
       "off": "coupé"
       none: "aucun"

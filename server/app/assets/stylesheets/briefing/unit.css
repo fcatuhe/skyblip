@@ -217,12 +217,28 @@
   .field--check input { justify-self: end; inline-size: 1.4rem; block-size: 1.4rem; accent-color: var(--blip); }
 
   .field-hint,
-  .field-default,
-  .field-heard { grid-column: 1 / -1; margin: 0; font-size: var(--text-s); line-height: 1.5; }
+  .field-default { grid-column: 1 / -1; margin: 0; font-size: var(--text-s); line-height: 1.5; }
   .field-hint { color: var(--quiet-text); }
-  .field-default,
-  .field-heard { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
-  .field-heard:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-xs); }
+  .field-default { color: var(--card-ink); padding-inline-start: var(--space-inline-xs); border-inline-start: 3px solid var(--signal); }
+
+  .unit-heard {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-xs);
+    margin-block: var(--space-xs);
+    padding: var(--space-xs) var(--space-inline-s);
+    border-inline-start: 3px solid var(--signal);
+    background: var(--card-bg);
+    font-size: var(--text-s);
+    color: var(--card-ink);
+  }
+  .unit-heard[hidden] { display: none; }
+  .unit-heard-title { margin: 0; font-weight: 700; }
+  .unit-heard-changes { border-collapse: collapse; }
+  .unit-heard-changes :is(th, td) { padding: var(--space-2xs) var(--space-inline-m) var(--space-2xs) 0; text-align: start; vertical-align: baseline; }
+  .unit-heard-changes thead th { font-weight: 400; color: var(--quiet-text); }
+  .unit-heard-changes tbody th { font-weight: 400; color: var(--ink-soft); }
+  .unit-heard-changes td:last-child { font-weight: 700; }
 
   .unit-rows {
     display: grid;

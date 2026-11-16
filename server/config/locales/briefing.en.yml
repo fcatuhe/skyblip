@@ -57,7 +57,9 @@ en:
         loud: Loud
       save: Save
       reset: Back to defaults
-      use_heard: Use it
+      heard_setting: Setting
+      heard_now: Now
+      heard_from: From Bravo
     capture:
       title: Diagnostics capture
       profile: Profile
@@ -186,6 +188,9 @@ en:
       default: "Default: %{value}"
       heard: "Bravo hears %{aircraft}."
       heard_same: "Bravo hears %{aircraft}, as set."
+      use_heard:
+        one: Use this value
+        other: Use these values
       "on": "on"
       "off": "off"
       none: none
