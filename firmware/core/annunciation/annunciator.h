@@ -138,7 +138,7 @@ struct Situation {
     bool first_fix{false};
     // A paired Bravo was lost on this pass.
     bool bravo_lost{false};
-    // settings.alarm_enabled, and a volume that is not off.
+    // An alarm setting of soft or loud.
     bool enabled{true};
     // False from the moment the device starts going down.
     bool running{true};

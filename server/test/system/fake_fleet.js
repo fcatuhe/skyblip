@@ -17,7 +17,7 @@
   const MAX_RECORDS_PER_CHUNK = 19;
   const MAX_READ_CHUNKS = 8;
   const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
-  const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 };
+  const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
   const later = (fn, ms = 0) => setTimeout(fn, ms);
@@ -41,11 +41,20 @@
     return 0;
   };
 
+  // INFO: fc 15nov26 the codes schemas/link.v1.json gives product and variant, one byte each in the attestation
+  const PRODUCT_CODES = { go: 0, bravo: 1 };
+  const VARIANT_CODES = { standard: 0, plus: 1 };
+  // INFO: fc 15nov26 each fake unit gets a DEVICEID of its own from its name, so two in range are two units on the server
+  const deviceIdOf = name => [...name].reduce((hash, char) => (hash * 31n + BigInt(char.charCodeAt(0))) % 2n ** 64n, 7n).toString(16).padStart(16, '0');
+
   class Unit {
     constructor(options) {
       Object.assign(this, {
         name: 'skyBlip Go 00012A',
-        product: null,
+        product: 'go',
+        variant: 'standard',
+        deviceId: null,
+        bluetoothTag: 0x3f2a,
         address: 0x00012a,
         running: '0.1.0+1000',
         key: '212602F2',
@@ -57,7 +66,7 @@
         flight: 'ground',
         battery: 82,
         charging: false,
-        stored: { aircraft_type: 3, alarm_enabled: true, alarm_volume: 'soft', units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0 },
+        stored: { aircraft_type: 3, units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0, alarm: 'soft' },
         mtu: 247,
         pressAfterMs: null,
         uploadDelayMs: 0,
@@ -71,7 +80,9 @@
         protocols: null,
         failure: null,
         heard: null,
+        sounds: true,
       }, options);
+      this.deviceId ??= this.vectors?.device_id ?? deviceIdOf(this.name);
       this.connected = false;
       this.rebooting = false;
       this.pending = null;
@@ -169,19 +180,26 @@
     }
 
     sendUpdate() {
-      const frame = { command: 'update', image: this.image, imu: this.imu ? 'held' : 'none', swap_powered: this.battery >= 10 };
-      if (this.imu) frame.imu_digest = this.imu;
+      const held = /^[0-9a-f]{16}$/.test(this.imu ?? '');
+      const frame = { command: 'update', image: this.image, imu: held ? 'held' : this.imu ?? 'none', swap_powered: this.battery >= 10 };
+      if (held) frame.imu_digest = this.imu;
       if (this.image !== 'confirmed') Object.assign(frame, { from: this.from, to: this.to });
       if (this.downgrade) frame.downgrade = true;
       if (this.key) frame.key = this.key;
-      if (this.product) frame.product = this.product;
       return this.reply(frame);
+    }
+
+    sendIdentity() {
+      return this.reply({
+        command: 'identity', product: this.product, variant: this.variant, version: this.running, release: !this.downgrade,
+        device_id: this.deviceId, bluetooth_tag: this.bluetoothTag,
+      });
     }
 
     config() {
       const address = this.address === null ? {} : { address: this.address };
-      const stored = this.product === 'skyblip_bravo'
-        ? { alarm_enabled: this.stored.alarm_enabled, alarm_volume: this.stored.alarm_volume, aircraft_address: this.stored.aircraft_address }
+      const stored = this.product === 'bravo'
+        ? { aircraft_address: this.stored.aircraft_address, alarm: this.stored.alarm }
         : this.stored;
       return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored });
     }
@@ -200,9 +218,10 @@
       const [{ decodeFrame }] = await modules();
       const { command, ...fields } = decodeFrame(raw);
       if (command === 'status') return this.status();
+      if (command === 'identity') return this.sendIdentity();
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
-      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
+      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds ? {} : { alarm: 'visual' }) });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
       if (command === 'protocols') return this.reply({ command, ...(this.protocols ?? this.stacks()) });
       if (command === 'set') {
@@ -263,7 +282,7 @@
     }
 
     stacks() {
-      return this.product === 'skyblip_bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' };
+      return this.product === 'bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' };
     }
 
     async dump() {
@@ -383,9 +402,10 @@
       const { device_id, unit_public_key, unit_seed } = this.vectors;
       const key = await crypto.subtle.importKey('pkcs8', bytes(PKCS8_ED25519, unit_seed), { name: 'Ed25519' }, false, ['sign']);
       const release = !this.downgrade;
-      const message = join(label('attestation'), bytes(device_id, unit_public_key), server_nonce, Uint8Array.of(release ? 1 : 0), encoder.encode(this.running));
+      const codes = Uint8Array.of(release ? 1 : 0, PRODUCT_CODES[this.product], VARIANT_CODES[this.variant]);
+      const message = join(label('attestation'), bytes(device_id, unit_public_key), server_nonce, codes, encoder.encode(this.running));
       const signature = hex(await crypto.subtle.sign('Ed25519', key, message));
-      this.reply({ command: 'attestation', device_id, version: this.running, release, signature });
+      this.reply({ command: 'attestation', product: this.product, variant: this.variant, version: this.running, release, device_id, signature });
     }
 
     async verifies(signature, message) {
@@ -450,6 +470,7 @@
       this.windowOpen = false;
       const image = readImage(this.slot);
       if (!image || versionText(image.version) !== this.approved) return this.acknowledge(false, 'not_approved');
+      this.landed = image;
       this.acknowledge(true, 'install');
       later(() => this.reboot(this.approved), 50);
     }
@@ -467,6 +488,8 @@
         this.image = 'probation';
         later(() => {
           this.image = 'confirmed';
+          // INFO: fc 15nov26 a confirmed full image writes the hub's firmware, as the BHI260AP's README says
+          if (this.imu !== null && this.landed?.imu.full) this.imu = this.landed.imu.pin.slice(0, 16);
           if (this.connected) this.sendUpdate();
         }, this.probationMs);
       }, this.rebootMs);

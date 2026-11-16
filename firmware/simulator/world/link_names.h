@@ -95,12 +95,13 @@ inline constexpr Value kReasonValues[] = {
 };
 inline constexpr Enumeration kReason{kReasonValues, 52};
 
-inline constexpr Value kAlarmVolumeValues[] = {
+inline constexpr Value kAlarmValues[] = {
     {"off", 0},
-    {"soft", 1},
-    {"loud", 2},
+    {"visual", 1},
+    {"soft", 2},
+    {"loud", 3},
 };
-inline constexpr Enumeration kAlarmVolume{kAlarmVolumeValues, 3};
+inline constexpr Enumeration kAlarm{kAlarmValues, 4};
 
 inline constexpr Value kUnitsValues[] = {
     {"nautical", 0},
@@ -192,10 +193,16 @@ inline constexpr Value kClimbSourceValues[] = {
 inline constexpr Enumeration kClimbSource{kClimbSourceValues, 3};
 
 inline constexpr Value kProductValues[] = {
-    {"skyblip_go", 0},
-    {"skyblip_bravo", 1},
+    {"go", 0},
+    {"bravo", 1},
 };
 inline constexpr Enumeration kProduct{kProductValues, 2};
+
+inline constexpr Value kVariantValues[] = {
+    {"standard", 0},
+    {"plus", 1},
+};
+inline constexpr Enumeration kVariant{kVariantValues, 2};
 
 inline constexpr Value kLogValues[] = {
     {"flights", 1},
@@ -268,8 +275,9 @@ inline constexpr Value kCommandValues[] = {
     {"protocols", 36},
     {"attest", 37},
     {"attestation", 38},
+    {"identity", 39},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 39};
+inline constexpr Enumeration kCommand{kCommandValues, 40};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -289,13 +297,12 @@ inline constexpr Key kConfigKeys[] = {
     {"address", 2, Type::Unsigned, nullptr, 0, false},
     {"address_mapping_table", 3, Type::Unsigned, nullptr, 0, false},
     {"aircraft_type", 4, Type::Unsigned, nullptr, 0, false},
-    {"alarm_enabled", 5, Type::Boolean, nullptr, 0, false},
-    {"alarm_volume", 6, Type::Enum, &kAlarmVolume, 0, false},
     {"units", 7, Type::Enum, &kUnits, 0, false},
     {"callsign", 8, Type::Text, nullptr, 0, false},
     {"battery_offset_mv", 9, Type::Integer, nullptr, 0, false},
     {"frequency_trim_e1_ppm", 10, Type::Integer, nullptr, 0, false},
     {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
+    {"alarm", 12, Type::Enum, &kAlarm, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -442,7 +449,6 @@ inline constexpr Key kUpdateKeys[] = {
     {"imu_digest", 7, Type::Bytes, nullptr, 8, false},
     {"downgrade", 8, Type::Boolean, nullptr, 0, false},
     {"key", 9, Type::Bytes, nullptr, 4, false},
-    {"product", 10, Type::Enum, &kProduct, 0, false},
     {"bootloader_keys", 11, Type::Bytes, nullptr, 0, false},
 };
 
@@ -673,24 +679,36 @@ inline constexpr Key kAttestKeys[] = {
 
 inline constexpr Key kAttestationKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
-    {"device_id", 1, Type::Bytes, nullptr, 8, true},
-    {"version", 2, Type::Text, nullptr, 0, true},
-    {"release", 3, Type::Boolean, nullptr, 0, true},
-    {"signature", 4, Type::Bytes, nullptr, 64, true},
+    {"product", 1, Type::Enum, &kProduct, 0, true},
+    {"variant", 2, Type::Enum, &kVariant, 0, true},
+    {"version", 3, Type::Text, nullptr, 0, true},
+    {"release", 4, Type::Boolean, nullptr, 0, true},
+    {"device_id", 5, Type::Bytes, nullptr, 8, true},
+    {"signature", 6, Type::Bytes, nullptr, 64, true},
+};
+
+inline constexpr Key kIdentityKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"product", 1, Type::Enum, &kProduct, 0, true},
+    {"variant", 2, Type::Enum, &kVariant, 0, true},
+    {"version", 3, Type::Text, nullptr, 0, true},
+    {"release", 4, Type::Boolean, nullptr, 0, true},
+    {"device_id", 5, Type::Bytes, nullptr, 8, true},
+    {"bluetooth_tag", 6, Type::Unsigned, nullptr, 0, true},
 };
 
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 12},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 12},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 12},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 11},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 11},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 11},
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
     {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 84},
     {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 84},
-    {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 12},
+    {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},
     {"power_off", 13, events::Endpoint::Config, Sender::Host, kPowerOffKeys, 1},
@@ -718,7 +736,8 @@ inline constexpr Frame kFrames[] = {
     {"install_report", 35, events::Endpoint::Config, Sender::Both, kInstallReportKeys, 10},
     {"protocols", 36, events::Endpoint::Config, Sender::Both, kProtocolsKeys, 4},
     {"attest", 37, events::Endpoint::Config, Sender::Host, kAttestKeys, 2},
-    {"attestation", 38, events::Endpoint::Config, Sender::Unit, kAttestationKeys, 5},
+    {"attestation", 38, events::Endpoint::Config, Sender::Unit, kAttestationKeys, 7},
+    {"identity", 39, events::Endpoint::Config, Sender::Both, kIdentityKeys, 7},
 };
 
 }

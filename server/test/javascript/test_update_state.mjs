@@ -9,7 +9,7 @@ import { noticeOf } from '#skyblip/update';
 
 import { NEWER, IMAGE_BYTES, session, asking, settled, connected, chosen } from './update_session.mjs';
 
-const FLOWN = { aircraft_type: 7, alarm_enabled: true, alarm_volume: 'soft', units: 'metric', callsign: 'F-JABC', aircraft_address: 0x3C6586 };
+const FLOWN = { aircraft_type: 7, units: 'metric', callsign: 'F-JABC', aircraft_address: 0x3C6586, alarm: 'soft' };
 const FLOWN_SHOWN = { ...FLOWN, aircraft_address: '3C6586' };
 const DEFAULTS_SHOWN = { ...DEFAULTS, aircraft_address: '' };
 
@@ -45,7 +45,7 @@ test('back to defaults sends the defaults the device named, and lands it on them
   const { device, updater, until } = await withSettings();
   updater.resetSettings();
   await until(asking('set'));
-  assert.deepEqual(device.staged, { aircraft_type: 1, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 });
+  assert.deepEqual(device.staged, { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' });
   device.press();
   const { settings } = await until(state => state.notice?.key === 'saved' && state.settings.units === 'nautical');
   assert.deepEqual(settings, DEFAULTS_SHOWN);
@@ -134,7 +134,7 @@ test('the SMP refusals the page words are the ones Zephyr sends', () => {
   assert.deepEqual(noticeOf(new SmpError(9, 1)), { key: 'smp', detail: 'SMP group 1 rc 9' });
 });
 
-const SLIM = { pin: BLOB_PIN, full: false };
+const BASE = { pin: BLOB_PIN, full: false };
 const FULL = { pin: BLOB_PIN, full: true };
 
 async function choosing(options, imu, name) {
@@ -144,8 +144,8 @@ async function choosing(options, imu, name) {
 }
 
 for (const [reported, advice] of [
-  ['none', 'slim'],
-  [BLOB_PIN.slice(0, 16), 'slim'],
+  ['none', 'base'],
+  [BLOB_PIN.slice(0, 16), 'base'],
   ['missing', 'full'],
   ['corrupt', 'full'],
   ['unreadable', 'full'],
@@ -155,6 +155,17 @@ for (const [reported, advice] of [
     const { updater } = await connected({ imu: reported });
     assert.equal(updater.state.image.imu, reported);
     assert.equal(updater.state.advice, advice);
+  });
+}
+
+// A motion sensor fitted after the install, or whose flash failed, leaves a confirmed image with a motion sensor that boots nothing.
+for (const [reported, image, without] of [
+  ['missing', 'confirmed', true], ['corrupt', 'confirmed', true], ['unreadable', 'confirmed', false],
+  ['missing', 'probation', false], ['none', 'confirmed', false], ['writing', 'confirmed', false], [BLOB_PIN.slice(0, 16), 'confirmed', false],
+]) {
+  test(`a ${image} image over a motion sensor reporting ${reported} ${without ? 'is' : 'is not'} a motion sensor without its firmware`, async () => {
+    const { updater } = await connected({ imu: reported, image, from: '0.1.0+11', to: '0.1.0+12' });
+    assert.equal(updater.state.motionSensorWithoutFirmware, without);
   });
 }
 
@@ -170,8 +181,8 @@ test('a verified blob other than the one the chosen file pins turns the advice t
 });
 
 for (const reported of ['missing', 'corrupt', 'unreadable', 'writing']) {
-  test(`a slim file chosen for a device reporting imu ${reported} says it needs the full one, and still installs`, async () => {
-    const { updater, until } = await choosing({ imu: reported }, SLIM, 'skyblip-go.signed.bin');
+  test(`a base file chosen for a device reporting imu ${reported} says it needs the full one, and still installs`, async () => {
+    const { updater, until } = await choosing({ imu: reported }, BASE, 'skyblip-go.signed.bin');
     assert.equal(updater.state.notice.key, 'needs_full');
     assert.equal(updater.state.file.full, false);
     updater.install();
@@ -180,8 +191,8 @@ for (const reported of ['missing', 'corrupt', 'unreadable', 'writing']) {
 }
 
 for (const [reported, imu, name] of [
-  [BLOB_PIN.slice(0, 16), SLIM, 'skyblip-go.signed.bin'],
-  ['none', SLIM, 'skyblip-go.signed.bin'],
+  [BLOB_PIN.slice(0, 16), BASE, 'skyblip-go.signed.bin'],
+  ['none', BASE, 'skyblip-go.signed.bin'],
   [BLOB_PIN.slice(0, 16), FULL, 'skyblip-go.full.signed.bin'],
   ['missing', FULL, 'skyblip-go.full.signed.bin'],
 ]) {
@@ -200,7 +211,7 @@ test('a device writing its blob is asked again until the blob is verified', asyn
   updater.refresh();
   const state = await until(state => state.image.imu !== 'writing');
   assert.equal(state.settling, false);
-  assert.equal(state.advice, 'slim');
+  assert.equal(state.advice, 'base');
 });
 
 test('a device on probation is asked again, a confirmed one is not', async () => {

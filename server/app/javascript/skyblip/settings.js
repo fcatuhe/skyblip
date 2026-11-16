@@ -1,4 +1,4 @@
-export const SETTING_KEYS = ['aircraft_type', 'alarm_enabled', 'alarm_volume', 'units', 'callsign', 'aircraft_address'];
+export const SETTING_KEYS = ['aircraft_type', 'units', 'callsign', 'aircraft_address', 'alarm'];
 
 const NUMBERS = new Set(['aircraft_type']);
 const AIRCRAFT_ADDRESS = /^[0-9A-F]{6}$/;

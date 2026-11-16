@@ -32,28 +32,18 @@
       </div>
     </section>
 
-    <section class="unit-section" aria-labelledby="unit-alarm-title">
-      <h2 class="unit-label" id="unit-alarm-title"><%= t("briefing.settings.alarm") %></h2>
-
-      <div class="field field--check">
-        <label for="unit-alarm-enabled"><%= t("briefing.settings.alarm_enabled") %></label>
-        <input type="checkbox" id="unit-alarm-enabled" name="alarm_enabled" role="switch">
-        <p class="field-default" data-unit-target="default" data-setting="alarm_enabled" hidden></p>
-      </div>
+    <section class="unit-section" aria-labelledby="unit-device-title">
+      <h2 class="unit-label" id="unit-device-title"><%= t("briefing.settings.device") %></h2>
 
       <div class="field">
-        <label for="unit-alarm-volume"><%= t("briefing.settings.alarm_volume") %></label>
-        <select id="unit-alarm-volume" name="alarm_volume">
-          <% t("briefing.settings.volume_names").each do |value, name| %>
-            <option value="<%= value %>"><%= name %></option>
+        <label for="unit-alarm"><%= t("briefing.settings.alarm") %></label>
+        <select id="unit-alarm" name="alarm">
+          <% t("briefing.settings.alarm_names").each do |value, name| %>
+            <option value="<%= value %>" <%= "data-sounds" if %i[soft loud].include?(value) %>><%= name %></option>
           <% end %>
         </select>
-        <p class="field-default" data-unit-target="default" data-setting="alarm_volume" hidden></p>
+        <p class="field-default" data-unit-target="default" data-setting="alarm" hidden></p>
       </div>
-    </section>
-
-    <section class="unit-section" aria-labelledby="unit-display-title">
-      <h2 class="unit-label" id="unit-display-title"><%= t("briefing.settings.display") %></h2>
 
       <div class="field">
         <label for="unit-units"><%= t("briefing.settings.units") %></label>

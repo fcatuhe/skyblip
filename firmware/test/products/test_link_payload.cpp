@@ -41,8 +41,7 @@ const identity::Activation kWidestAddress{0xFFFF, 0xFFFF};
 go::Settings widest_settings() {
     go::Settings settings = go::defaults();
     settings.aircraft_type = 17;
-    settings.alarm_enabled = false;
-    settings.alarm_volume = go::AlarmVolume::Loud;
+    settings.alarm = go::Alarm::Loud;
     settings.units = go::Units::Nautical;
     std::memcpy(settings.callsign, "ABCDEFGHI", 10);  // the nine characters the schema allows
     settings.aircraft_address = 0xFFFFFE;             // the widest address ICAO assigns
@@ -187,25 +186,25 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-    // A ten-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
-    // and the aircraft address 0xFFFFFE behind a 4-byte head.
-    const uint8_t golden[] = {0xAA, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF, 0x03,
-                              0x18, 0x3A, 0x04, 0x11, 0x05, 0xF4, 0x06, 0x02, 0x07, 0x00,
-                              0x08, 0x69, 'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',
-                              'I',  0x0B, 0x1A, 0x00, 0xFF, 0xFF, 0xFE};
+    // A nine-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
+    // the aircraft address 0xFFFFFE behind a 4-byte head, and every alarm code one byte.
+    const uint8_t golden[] = {0xA9, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF,
+                              0x03, 0x18, 0x3A, 0x04, 0x11, 0x07, 0x00, 0x08, 0x69,
+                              'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',  'I',
+                              0x0B, 0x1A, 0x00, 0xFF, 0xFF, 0xFE, 0x0C, 0x03};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
-    CHECK(frame.size() == 37);
+    CHECK(frame.size() == 35);
     CHECK(config.link_drops() == 0);
 
     const std::string body = link_text(frame);
-    CHECK(body.find("\"alarm_enabled\":false") != std::string::npos);
     CHECK(body.find("\"command\":\"config\"") != std::string::npos);
     CHECK(body.find("\"version\":1") != std::string::npos);
     CHECK(body.find("\"address\":65535") != std::string::npos);
     CHECK(body.find("\"address_mapping_table\":58") != std::string::npos);
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
-    // The last field written, so its presence is the proof nothing was dropped.
     CHECK(body.find("\"aircraft_address\":16777214") != std::string::npos);
+    // The last field written, so its presence is the proof nothing was dropped.
+    CHECK(body.find("\"alarm\":\"loud\"}") != std::string::npos);
 }
 
 // A link that never exchanged its MTU reassembles a write from prj.conf's two Prepare Writes.
@@ -215,10 +214,10 @@ TEST_CASE("comms: the widest set, every key the unit stores, fits two 18-byte pr
     constexpr int kPrepareSegmentBytes = kDefaultAttMtu - kPrepareWriteHeaderBytes;
     constexpr int kPrepareSegments = 2;
     const events::RxFrame set = config_frame(
-        "{\"command\":\"set\",\"aircraft_type\":17,\"alarm_enabled\":false,"
-        "\"alarm_volume\":\"loud\",\"units\":\"nautical\",\"callsign\":\"ABCDEFGHI\","
-        "\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,\"aircraft_address\":16777214}");
-    CHECK(set.bytes == 34);
+        "{\"command\":\"set\",\"aircraft_type\":17,\"units\":\"nautical\","
+        "\"callsign\":\"ABCDEFGHI\",\"battery_offset_mv\":-250,\"frequency_trim_e1_ppm\":-100,"
+        "\"aircraft_address\":16777214,\"alarm\":\"loud\"}");
+    CHECK(set.bytes == 32);
     CHECK(set.bytes <= kPrepareSegments * kPrepareSegmentBytes);
 
     platform::host::Link link;
@@ -252,7 +251,7 @@ struct UpdateBench {
     platform::host::Dfu dfu{watchdog};
     ConfigService config{link, store, &dfu};
 
-    explicit UpdateBench(bool allows_downgrade, dfu::Product product = dfu::Product::SkyblipGo,
+    explicit UpdateBench(bool allows_downgrade,
                          uint16_t payload_bytes = kSmallestSupportedPayloadBytes) {
         const ports::ImageVersion version = dfu::kWidestVersion;
         link.raise_link(1);
@@ -268,7 +267,6 @@ struct UpdateBench {
         held.holding = dfu::HubImage::Held;
         for (uint8_t& byte : held.digest) byte = 0xAB;
         config.set_hub_image(held);
-        config.set_product(product);
         config.on_rx(config_frame("{\"command\":\"update\"}"));
     }
 };
@@ -293,24 +291,14 @@ TEST_CASE(
     CHECK(bench.config.link_drops() == 0);
 }
 
-TEST_CASE("comms: a Bravo's update report names its product, two bytes wider than a Go's") {
-    UpdateBench release(false, dfu::Product::SkyblipBravo);
-    CHECK(release.link.last().bytes.size() == 59);
-    CHECK(link_text(release.link.last().bytes).find("\"product\":\"skyblip_bravo\"") !=
-          std::string::npos);
-    UpdateBench development(true, dfu::Product::SkyblipBravo);
-    CHECK(development.link.last().bytes.size() == 61);
-    CHECK(development.config.link_drops() == 0);
-}
-
 TEST_CASE(
     "comms: an update report too wide for the payload is refused small_mtu and counted, never "
     "sent without its key") {
     // The widest development Go's report is 59 bytes, two more than the release one for its
     // downgrade.
-    UpdateBench fits(true, dfu::Product::SkyblipGo, 59);
+    UpdateBench fits(true, 59);
     CHECK(fits.link.last().bytes.size() == 59);
-    UpdateBench bench(true, dfu::Product::SkyblipGo, 58);
+    UpdateBench bench(true, 58);
     REQUIRE(bench.link.sent.size() == 1);
     CHECK(link_text(bench.link.last().bytes) == kSmallMtuRefusal);
     CHECK(bench.config.link_drops() == 1);

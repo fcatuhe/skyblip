@@ -31,19 +31,36 @@ class Admin::UnitsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr", text: /#{unit_keys(:contested_pending).public_key}.*development/m
   end
 
-  test "shows the firmware a unit signed apart from the firmware browsers reported" do
+  test "shows each firmware stretch with its variant and where it came from" do
     sign_in_as users(:francois)
-    Event.create!(name: "device.read", payload: { running: "0.4.0+1400", track: "development" }, context: { device: units(:bound).slug }, occurred_at: 1.hour.ago)
+    units(:bound).record_firmware(version: "0.4.0+1400", release: false, variant: "standard", source: "read")
 
     get admin_unit_path(units(:bound))
 
-    assert_select "h2", text: "Firmware the unit signed"
-    assert_select "h2 + .table-scroll tr", text: /0\.3\.0\+1300.*release/m
-    assert_select "tr", text: /0\.4\.0\+1400.*development/m
+    assert_select "dd", text: "skyBlip Go"
+    assert_select "dd", text: "plus"
+    assert_select "details.admin-help summary", text: "How to read these pages"
+    assert_select "tr", text: /0\.4\.0\+1400.*development.*standard.*reported by a browser/m
+    assert_select "tr", text: /0\.3\.0\+1300.*release.*plus.*signed by the unit/m
 
     get admin_unit_path(units(:contested))
     assert_select "p", text: /None yet/
-    assert_select "p", text: /None in the events kept/
+  end
+
+  test "lists the units of every product, and only the activated ones when asked" do
+    sign_in_as users(:francois)
+
+    get admin_units_path
+    assert_select "a[href=?]", admin_unit_path(units(:bravo)), text: "bravo-3f2a"
+    assert_select "tr", text: /bravo-3f2a.*skyBlip Bravo.*0\.2\.0\+900.*reported by a browser/m
+
+    get admin_unit_path(units(:bravo))
+    assert_select "dd", text: "none, the unit transmits on no address"
+    assert_select "th", text: "Public key", count: 0
+
+    get admin_units_path(activated: "1")
+    assert_select "a[href=?]", admin_unit_path(units(:bravo)), count: 0
+    assert_select "a[href=?]", admin_unit_path(units(:bound)), text: "000001"
   end
 
   test "lists each unit's newest signed firmware, or the one it registered with until it signs one" do

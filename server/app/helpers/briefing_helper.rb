@@ -14,6 +14,14 @@ module BriefingHelper
     "#{DEVICE_NAMES.fetch(kind)} #{tag.upcase}"
   end
 
+  def firmware_label(release, file)
+    if Release.kind_of(file) == "full"
+      "#{release.name}, #{t("firmwares.full")}"
+    else
+      release.name
+    end
+  end
+
   def aircraft_address_hint(slug)
     t("settings.aircraft_address_hints.#{slug.split("-").first}")
   end

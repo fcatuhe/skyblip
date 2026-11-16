@@ -108,8 +108,8 @@ class Registry(unittest.TestCase):
                                  set(frames.REGISTRY["frames"][frame["command"]]["by_name"]))
 
     def test_a_set_and_a_defaults_reply_share_one_key_table(self):
-        defaults = {"command": "defaults", "aircraft_type": 1, "alarm_enabled": True,
-                    "alarm_volume": "loud", "units": "nautical", "callsign": ""}
+        defaults = {"command": "defaults", "aircraft_type": 1, "units": "nautical", "callsign": "",
+                    "alarm": "loud"}
         as_set = dict(defaults, command="set")
         self.assertEqual(frames.encode_frame(defaults)[3:], frames.encode_frame(as_set)[3:])
 

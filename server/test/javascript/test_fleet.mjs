@@ -73,7 +73,7 @@ test('a connected device is remembered by this browser, and listed again after a
 
 test('a Go and a Bravo stay connected side by side', async () => {
   const go = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 });
-  const bravo = new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'skyblip_bravo', address: null });
+  const bravo = new FakeSkyblip({ name: 'skyBlip Bravo 3F2A', bufSize: 300, product: 'bravo', address: null });
   const radio = airwaves(go, bravo);
   const fleet = new Fleet({ storage: storage() });
   radio.picks.push(go);
@@ -82,8 +82,8 @@ test('a Go and a Bravo stay connected side by side', async () => {
   await fleet.connectNew();
   await settled(fleet, () => fleet.units.every(unit => unit.state?.running));
   assert.deepEqual(fleet.units.map(unit => [unit.slug, unit.linked, unit.product]), [
-    ['go-00012a', true, 'skyblip_go'],
-    ['bravo-3f2a', true, 'skyblip_bravo'],
+    ['go-00012a', true, 'go'],
+    ['bravo-3f2a', true, 'bravo'],
   ]);
   assert.ok(go.connected && bravo.connected);
   fleet.units.forEach(unit => unit.disconnect());

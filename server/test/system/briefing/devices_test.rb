@@ -1,6 +1,8 @@
 require "application_system_test_case"
 
 class Briefing::DevicesTest < ApplicationSystemTestCase
+  include ActiveJob::TestHelper
+
   # Three ADS-B records, a traffic record and the end marker, as console_test.rb reads them.
   CAPTURE = %w[
     15ffc80083886e6a5e4d3c12b80b0000edfeb004e5017a02
@@ -22,9 +24,9 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connected · 82 % · On the ground · 0.1.0+1000, development"
       assert_field "Callsign", with: "F-JXYZ"
-      assert_select "Alarm volume", selected: "Soft"
+      assert_select "Alarm", selected: "Soft"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
     end
   end
@@ -34,18 +36,18 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       visit "/briefing"
       click_button "Connect a device"
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out."
 
       visit "/briefing"
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-last", text: /Callsign\s*F-JXYZ/
-      assert_selector ".unit-banner", text: "0.1.0+1005 is out. Your device is running 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       assert_no_link "Update"
       screen "04-device-not-connected"
 
       find(".app-bar-brand").click
       assert_selector "h1", text: "Your devices"
-      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1005 is out/
+      assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1765 is out/
       assert_no_selector ".fleet-activate"
       screen "03-home-remembered"
 
@@ -68,7 +70,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       assert_selector ".fleet-unit.is-linked", count: 2
       assert_no_field "Callsign"
-      assert_select "Alarm volume", selected: "Soft"
+      assert_select "Alarm", selected: "Soft"
       screen "05-go-and-bravo"
 
       click_link "Go 00012A"
@@ -82,7 +84,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       fill_in "Callsign", with: "f-abcd"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       assert_button "Save 2 changes"
       screen "06-settings-edited"
 
@@ -98,8 +100,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
       assert_field "Callsign", with: "F-ABCD"
-      assert_select "Alarm volume", selected: "Loud"
-      assert_equal({ "callsign" => "F-ABCD", "alarm_volume" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_select "Alarm", selected: "Loud"
+      assert_equal({ "callsign" => "F-ABCD", "alarm" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
       screen "08-settings-saved"
     end
   end
@@ -111,11 +113,11 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Back to defaults (3)"
       assert_select "Aircraft type", selected: "Light aircraft"
       assert_field "Callsign", with: ""
-      assert_select "Alarm volume", selected: "Loud"
+      assert_select "Alarm", selected: "Loud"
       click_button "Save 3 changes"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
-      assert_equal({ "aircraft_type" => 1, "callsign" => "", "alarm_volume" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
+      assert_equal({ "aircraft_type" => 1, "callsign" => "", "alarm" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
       assert_no_selector "[data-unit-target=reset]"
     end
   end
@@ -124,7 +126,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-prompt"
       page.execute_script("#{unit("00012A")}.refuse()")
@@ -146,7 +148,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       assert_no_selector "[data-unit-target=browsers]"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-remembers", text: "Allowing it also adds this browser to the trusted list"
       screen "15-glass-trusts"
@@ -160,7 +162,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       end
       screen "16-trusted-browsers"
 
-      select "Soft", from: "Alarm volume"
+      select "Soft", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
       assert_no_selector ".glass-prompt"
@@ -176,7 +178,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector "[data-unit-target=browsers] li", text: "this browser"
@@ -184,10 +186,10 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-notes", text: "This browser can still change the device's settings. Other actions are available again after landing."
       screen "17-trusted-airborne"
-      select "Soft", from: "Alarm volume"
+      select "Soft", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
-      assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm_volume")
+      assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm")
     end
   end
 
@@ -231,7 +233,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
-      select "Loud", from: "Alarm volume"
+      select "Loud", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
       assert_selector ".glass-press", text: "Press the Bravo's button."
@@ -309,6 +311,24 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo connected once is recorded on skyBlip, with the firmware it runs and no serial" do
+    in_range a_bravo(deviceId: "5b5b5b5b5b5b5b5b")
+    perform_enqueued_jobs do
+      on_the_shelf do
+        visit "/briefing"
+        page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
+        click_button "Connect a device"
+        assert_current_path "/briefing/devices/bravo-3f2a"
+        journaled("device.read")
+
+        unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+        assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
+        assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
+        assert_selector ".unit-row", text: /is out|up to date/, wait: 15
+      end
+    end
+  end
+
   test "a capture refused on Bravo's button arms nothing, and asks nothing more until a reconnect" do
     in_range a_bravo
     on_the_shelf do
@@ -365,6 +385,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       assert_selector ".field-heard", text: "Bravo hears F-JABC · ADS-B 3A4B5C · Glider."
+      screen "11c-go-hears"
 
       click_button "Use it"
       assert_select "Aircraft type", selected: "Glider"
@@ -376,6 +397,17 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-facts", text: "Airborne"
       assert_no_selector ".field-heard"
+    end
+  end
+
+  test "a Go with no buzzer and no haptic offers its alarm as off or visual only" do
+    in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "visual" })
+    on_the_shelf do
+      connect_go
+      assert_select "Alarm", selected: "Visual only"
+      offered = "[...document.querySelectorAll('#unit-alarm option')].filter(option => !option.disabled).map(option => option.value)"
+      assert_equal %w[off visual], page.evaluate_script(offered)
+      screen "11b-go-visual-only"
     end
   end
 
@@ -459,7 +491,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connecté · 82 %"
       assert_selector ".unit-protocols", text: "Protocoles radio : ADS-L 0.1.0, ALP-TAS 0.1.0"
-      assert_selector ".unit-banner", text: "0.1.0+1005 est sortie. Vous avez 0.1.0+1000."
+      assert_selector ".unit-banner", text: "0.1.0+1765 est sortie. Vous avez 0.1.0+1000."
       assert_field "Indicatif", with: "F-JXYZ"
       screen "13-french"
     end

@@ -319,12 +319,11 @@ class Product {
     SettingsStore settings_store_{settings_};
     common::ConfigLinkService config_link_{
         context_,     settings_store_,       power_.cutoff_monitor(),
-        kProductName, bravo::bluetooth_name, dfu::Product::SkyblipBravo};
+        kProductName, bravo::bluetooth_name, dfu::Product::Bravo};
     common::OwnshipService ownship_{context_, aircraft_category_};
     GateReference gate_{};
     AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};
-    common::AlarmService alarm_{
-        context_, kFeatures, {settings_.alarm_enabled, settings_.alarm_volume}};
+    common::AlarmService alarm_{context_, kFeatures, common::AlarmSettings{settings_.alarm}};
     PeerService peer_{context_,          settings_, config_link_.config(),
                       board_.receiver(), gate_,     adsb_.own_transponder()};
     ButtonService button_{context_, config_link_.config(), alarm_, peer_};

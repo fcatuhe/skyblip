@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Self-check for mkuf2.py: the range guards, the Intel HEX round trip, and the
-gate that keeps a Nordic DFU package out (check_no_dfu_package.py).
+"""Self-check for mkuf2.py: the range guards, the blanked trailer sector, the
+Intel HEX round trip, and the gate that keeps a Nordic DFU package out
+(check_no_dfu_package.py).
 
     python3 scripts/test_mkuf2.py
 
@@ -169,6 +170,84 @@ class Merging(unittest.TestCase):
         self.assertEqual(mkuf2.ranges_of(byte_map),
                          [(0x1000, 0x1010), (0x2000, 0x2010)])
         self.assertEqual(mkuf2.ranges_of({}), [])
+
+
+PRODUCTS = pathlib.Path(__file__).resolve().parent.parent / "firmware" / "products"
+# INFO: fc 15nov26 swap-using-offset keeps 2 states per sector (MCUboot bootutil_area.h), each one NVMC write wide
+SWAP_STATES_PER_SECTOR = 2
+NVMC_WRITE_BYTES = 4
+# INFO: fc 15nov26 swap_type, copy_done, image_ok and swap_size at BOOT_MAX_ALIGN 8, then the TLV sizes and the magic
+TRAILER_INFO_BYTES = 4 * 8 + 8 + 16
+
+
+def confirmed_trailer(window):
+    trailer = dict(zip(range(window.user_flash_end - 16, window.user_flash_end), mkuf2.MCUBOOT_MAGIC))
+    trailer[window.user_flash_end - mkuf2.IMAGE_OK_FROM_END] = mkuf2.IMAGE_OK_SET
+    return trailer
+
+
+def confirmed_image(window):
+    image = span(window.softdevice_end, 0x100)
+    image.update(confirmed_trailer(window))
+    return image
+
+
+# INFO: fc 15nov26 the Adafruit bootloader rewrites the blocks a .uf2 names and keeps every other byte
+def drop_on(flash, uf2_map):
+    after = dict(flash)
+    after.update(uf2_map)
+    return after
+
+
+def trailer_bytes(conf):
+    sectors = int(re.search(r"^CONFIG_BOOT_MAX_IMG_SECTORS=(\d+)$", conf.read_text(), re.M).group(1))
+    return sectors * SWAP_STATES_PER_SECTOR * NVMC_WRITE_BYTES + TRAILER_INFO_BYTES
+
+
+class TrailerSector(unittest.TestCase):
+    def test_a_drop_blanks_the_trailer_sector_around_the_image_trailer(self):
+        for window in (GO, BRAVO):
+            with self.subTest(window=window.softdevice):
+                trailer = confirmed_trailer(window)
+                byte_map = confirmed_image(window)
+                self.assertIsNone(mkuf2.prepare_drop(byte_map, window))
+                sector = range(window.user_flash_end - mkuf2.TRAILER_SECTOR_BYTES, window.user_flash_end)
+                self.assertTrue(set(sector) <= set(byte_map))
+                self.assertEqual({a: byte_map[a] for a in trailer}, trailer)
+                self.assertEqual({byte_map[a] for a in sector if a not in trailer}, {0xFF})
+
+    # The T-Echo that hung on dev-1794: a Bluetooth swap had left its status at 0xE99C8-0xE9D7C.
+    def test_a_drop_wipes_the_swap_status_an_earlier_bluetooth_swap_left(self):
+        for window in (GO, BRAVO):
+            with self.subTest(window=window.softdevice):
+                flash = {a: 0x01 if (a - 0xE99C8) % 8 == 0 else 0x02 for a in range(0xE99C8, 0xE9D80, 4)}
+                byte_map = confirmed_image(window)
+                self.assertIsNone(mkuf2.prepare_drop(byte_map, window))
+                after = drop_on(flash, byte_map)
+                self.assertEqual({after[a] for a in flash}, {0xFF})
+
+    def test_an_image_without_a_confirmed_trailer_is_refused(self):
+        unconfirmed = confirmed_image(GO)
+        unconfirmed[GO.user_flash_end - mkuf2.IMAGE_OK_FROM_END] = 0xFF
+        self.assertIn("confirmed MCUboot trailer", mkuf2.prepare_drop(unconfirmed, GO))
+        self.assertIn("confirmed MCUboot trailer", mkuf2.prepare_drop(span(GO.softdevice_end, 0x100), GO))
+        # A slot that ends a sector early leaves no trailer at USER_FLASH_END.
+        short = {a - 0x1000: b for a, b in confirmed_image(GO).items()}
+        self.assertIn("0x0EA000", mkuf2.prepare_drop(short, GO))
+
+    def test_a_blanked_drop_still_fits_the_window(self):
+        for window in (GO, BRAVO):
+            byte_map = confirmed_image(window)
+            self.assertIsNone(mkuf2.prepare_drop(byte_map, window))
+            ranges = mkuf2.ranges_of(byte_map)
+            self.assertEqual(ranges[-1], (window.user_flash_end - mkuf2.TRAILER_SECTOR_BYTES, window.user_flash_end))
+
+    # 192 sectors put the status at 0xE99C8, where the stuck T-Echo's flash held it.
+    def test_mcuboot_trailer_and_swap_status_fit_the_blanked_sector(self):
+        for conf in sorted(PRODUCTS.glob("*/sysbuild/mcuboot.conf")):
+            with self.subTest(product=conf.parent.parent.name):
+                self.assertLessEqual(trailer_bytes(conf), mkuf2.TRAILER_SECTOR_BYTES)
+                self.assertEqual(GO.user_flash_end - trailer_bytes(conf), 0xE99C8)
 
 
 class IntelHex(unittest.TestCase):

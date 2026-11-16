@@ -20,26 +20,23 @@ void confirm_set(BravoRig& rig, const char* json) {
 
 }  // namespace
 
-TEST_CASE(
-    "bravo: config answers alarm_enabled, alarm_volume and aircraft_address, and nothing else") {
+TEST_CASE("bravo: config answers aircraft_address and alarm, and nothing else") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.send("{\"command\":\"get\"}");
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) ==
-          "{\"command\":\"config\",\"alarm_enabled\":true,\"alarm_volume\":\"loud\","
-          "\"aircraft_address\":0}");
+          "{\"command\":\"config\",\"aircraft_address\":0,\"alarm\":\"loud\"}");
 }
 
-TEST_CASE("bravo: defaults name the same three keys, as a new unit ships them") {
+TEST_CASE("bravo: defaults name the same two keys, as a new unit ships them") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.product.settings().aircraft_address = 0x3C6586;
     rig.send("{\"command\":\"defaults\"}");
     rig.run_for(200);
     CHECK(rig.last_on(events::Endpoint::Config) ==
-          "{\"command\":\"defaults\",\"alarm_enabled\":true,\"alarm_volume\":\"loud\","
-          "\"aircraft_address\":0}");
+          "{\"command\":\"defaults\",\"aircraft_address\":0,\"alarm\":\"loud\"}");
 }
 
 TEST_CASE("bravo: a set stores Bravo's keys and ignores the Go's, as address is ignored") {
@@ -47,8 +44,8 @@ TEST_CASE("bravo: a set stores Bravo's keys and ignores the Go's, as address is 
     REQUIRE(rig.setup() == Status::Ok);
     confirm_set(rig,
                 "{\"command\":\"set\",\"aircraft_type\":4,\"units\":\"metric\","
-                "\"callsign\":\"F-JABC\",\"alarm_volume\":\"soft\",\"aircraft_address\":3958150}");
-    CHECK(rig.product.settings().alarm_volume == bravo::AlarmVolume::Soft);
+                "\"callsign\":\"F-JABC\",\"alarm\":\"soft\",\"aircraft_address\":3958150}");
+    CHECK(rig.product.settings().alarm == bravo::Alarm::Soft);
     CHECK(rig.product.settings().aircraft_address == 3958150u);
     CHECK(rig.last_on(events::Endpoint::Config) ==
           "{\"command\":\"acknowledgement\",\"acknowledge\":true}");
@@ -69,14 +66,14 @@ TEST_CASE("bravo: the settings come back from flash after a reboot") {
         Bravo first{platform};
         REQUIRE(first.setup() == Status::Ok);
         first.settings().aircraft_address = 0x3C6586;
-        first.settings().alarm_volume = bravo::AlarmVolume::Off;
+        first.settings().alarm = bravo::Alarm::Off;
         first.config_link().config().note_settings_changed();
         first.config_link().flush_settings(1000);
     }
     Bravo second{platform};
     REQUIRE(second.setup() == Status::Ok);
     CHECK(second.settings().aircraft_address == 0x3C6586u);
-    CHECK(second.settings().alarm_volume == bravo::AlarmVolume::Off);
+    CHECK(second.settings().alarm == bravo::Alarm::Off);
     CHECK_FALSE(second.settings().peer.pinned);
 }
 
@@ -86,8 +83,8 @@ TEST_CASE(
     struct {
         uint32_t aircraft_address{0x3C6586};
         bravo::PeerPin peer{};
-        bool alarm_enabled{false};
-        bravo::AlarmVolume alarm_volume{bravo::AlarmVolume::Soft};
+        bool alarm_enabled{true};
+        uint8_t alarm_volume{1};
     } v1{};
     v1.peer.pinned = true;
     v1.peer.address_type = 1;
@@ -99,12 +96,30 @@ TEST_CASE(
     CHECK_FALSE(read.aircraft_address_from_go);
     CHECK(read.peer.pinned);
     CHECK(read.peer.address_type == 1);
-    CHECK_FALSE(read.alarm_enabled);
-    CHECK(read.alarm_volume == bravo::AlarmVolume::Soft);
+    CHECK(read.alarm == bravo::Alarm::Soft);
 }
 
-// #192 stores the pinned Go from the first image, and version 2 keeps it.
-TEST_CASE("bravo: blob version 2 carries the peer pin whole, and refuses any other version") {
+// Both old offs silenced the buzzer and the haptic and kept the lamp, which visual does.
+TEST_CASE("bravo: a version 2 blob's alarm off or volume off comes back as visual") {
+    struct V2 {
+        uint32_t aircraft_address{0};
+        bravo::PeerPin peer{};
+        bool alarm_enabled{true};
+        uint8_t alarm_volume{2};
+        bool aircraft_address_from_go{true};
+    };
+    for (const V2 old : {V2{0, {}, false, 2, true}, V2{0, {}, true, 0, true}}) {
+        uint8_t blob[64]{};
+        settings::seal(2, &old, sizeof(old), blob, sizeof(blob));
+        bravo::Settings read{};
+        REQUIRE(bravo::from_blob(blob, settings::blob_bytes(sizeof(old)), read) == Status::Ok);
+        CHECK(read.alarm == bravo::Alarm::Visual);
+        CHECK(read.aircraft_address_from_go);
+    }
+}
+
+// #192 stores the pinned Go from the first image, and version 3 keeps it.
+TEST_CASE("bravo: blob version 3 carries the peer pin whole, and refuses any other version") {
     bravo::Settings pinned = bravo::defaults();
     pinned.peer.pinned = true;
     pinned.peer.address_type = 1;
@@ -113,13 +128,13 @@ TEST_CASE("bravo: blob version 2 carries the peer pin whole, and refuses any oth
 
     uint8_t blob[64]{};
     bravo::to_blob(pinned, blob, sizeof(blob));
-    CHECK(settings::blob_version(blob) == 2);
+    CHECK(settings::blob_version(blob) == 3);
     bravo::Settings read{};
     REQUIRE(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Ok);
     CHECK(read.peer.pinned);
     CHECK(read.peer.address_type == 1);
     CHECK(std::memcmp(read.peer.address, address, sizeof(address)) == 0);
 
-    blob[0] = 3;
+    blob[0] = 4;
     CHECK(bravo::from_blob(blob, bravo::blob_size(), read) == Status::Unsupported);
 }

@@ -18,7 +18,7 @@ const uint8_t kLinked[] = {
 
 static_assert(sizeof(kLinked) + parts::Bhi260ImageStore::kHeaderBytes <=
                   DT_REG_SIZE(DT_NODELABEL(imu_image_partition)),
-              "the BHI260AP image no longer fits the partition a slim image boots it from");
+              "the BHI260AP image no longer fits the partition a base image boots it from");
 
 const uint8_t* const kImuFirmware = kLinked;
 const size_t kImuFirmwareBytes = sizeof(kLinked);

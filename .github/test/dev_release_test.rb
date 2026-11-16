@@ -300,7 +300,7 @@ class DevReleaseTest < Minitest::Test
 
     def product_image(images, slug, hub_image:)
       File.write(File.join(images, "#{slug}.uf2"), "#{slug} uf2\n")
-      File.write(File.join(images, "#{slug}.signed.bin"), "#{slug} slim image\n")
+      File.write(File.join(images, "#{slug}.signed.bin"), "#{slug} base image\n")
       File.write(File.join(images, "#{slug}.full.signed.bin"), "#{slug} full image\n") if hub_image
       File.write(File.join(images, "#{slug}.signed.confirmed.bin"), "#{slug} confirmed image\n")
       File.write(File.join(images, "#{slug}.version"), "#{slug} 0.1.0+1010 abc1234 development\n")

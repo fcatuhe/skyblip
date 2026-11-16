@@ -5,6 +5,7 @@
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
 #include "core/gnss/validity.h"
+#include "core/identity/variant.h"
 #include "core/model/aircraft.h"
 #include "core/power/charging.h"
 #include "core/power/cutoff.h"
@@ -26,11 +27,12 @@ constexpr uint32_t code(Enumeration value) {
 
 namespace {
 
-constexpr bool on_the_wire(go::AlarmVolume value) {
+constexpr bool on_the_wire(go::Alarm value) {
     switch (value) {
-        case go::AlarmVolume::Off:
-        case go::AlarmVolume::Soft:
-        case go::AlarmVolume::Loud: return true;
+        case go::Alarm::Off:
+        case go::Alarm::Visual:
+        case go::Alarm::Soft:
+        case go::Alarm::Loud: return true;
     }
     return false;
 }
@@ -193,8 +195,16 @@ constexpr bool on_the_wire(model::ClimbSource value) {
 
 constexpr bool on_the_wire(dfu::Product value) {
     switch (value) {
-        case dfu::Product::SkyblipGo:
-        case dfu::Product::SkyblipBravo: return true;
+        case dfu::Product::Go:
+        case dfu::Product::Bravo: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(identity::Variant value) {
+    switch (value) {
+        case identity::Variant::Standard:
+        case identity::Variant::Plus: return true;
     }
     return false;
 }
@@ -257,10 +267,11 @@ constexpr bool on_the_wire(dfu::Proof value) {
 
 }
 
-static_assert(code(go::AlarmVolume::Off) == 0, "alarm_volume off");
-static_assert(code(go::AlarmVolume::Soft) == 1, "alarm_volume soft");
-static_assert(code(go::AlarmVolume::Loud) == 2, "alarm_volume loud");
-static_assert(on_the_wire(go::AlarmVolume::Off), "alarm_volume");
+static_assert(code(go::Alarm::Off) == 0, "alarm off");
+static_assert(code(go::Alarm::Visual) == 1, "alarm visual");
+static_assert(code(go::Alarm::Soft) == 2, "alarm soft");
+static_assert(code(go::Alarm::Loud) == 3, "alarm loud");
+static_assert(on_the_wire(go::Alarm::Off), "alarm");
 
 static_assert(code(go::Units::Nautical) == 0, "units nautical");
 static_assert(code(go::Units::Metric) == 1, "units metric");
@@ -361,9 +372,13 @@ static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");
 static_assert(code(model::ClimbSource::Barometric) == 2, "climb_source barometric");
 static_assert(on_the_wire(model::ClimbSource::Unknown), "climb_source");
 
-static_assert(code(dfu::Product::SkyblipGo) == 0, "product skyblip_go");
-static_assert(code(dfu::Product::SkyblipBravo) == 1, "product skyblip_bravo");
-static_assert(on_the_wire(dfu::Product::SkyblipGo), "product");
+static_assert(code(dfu::Product::Go) == 0, "product go");
+static_assert(code(dfu::Product::Bravo) == 1, "product bravo");
+static_assert(on_the_wire(dfu::Product::Go), "product");
+
+static_assert(code(identity::Variant::Standard) == 0, "variant standard");
+static_assert(code(identity::Variant::Plus) == 1, "variant plus");
+static_assert(on_the_wire(identity::Variant::Standard), "variant");
 
 static_assert(code(store::SectorOwner::Flights) == 1, "log flights");
 static_assert(code(store::SectorOwner::Diagnostics) == 2, "log diagnostics");

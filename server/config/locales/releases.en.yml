@@ -2,8 +2,7 @@ en:
   firmwares:
     label: Published image
     prompt: Choose an image
-    slim: slim
-    full: full
+    full: with the motion sensor firmware
     loading: Loading the published firmware.
     unavailable: The published firmware list is unavailable. Choose a file instead.
     empty: No firmware is published yet. Choose a file instead.

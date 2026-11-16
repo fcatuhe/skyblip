@@ -383,6 +383,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::ForgetBrowser: forget_browser(reader); return;
         case link::Command::InstallReport: send_install_report(); return;
         case link::Command::Protocols: send_protocols(); return;
+        case link::Command::Identity: send_identity(); return;
         default: return;
     }
 }
@@ -407,6 +408,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::Register:
         case link::Command::Unlock:
         case link::Command::Attest:
+        case link::Command::Identity:
         case link::Command::BrowserChallenge:
         case link::Command::TrustBrowser:
         case link::Command::Browsers:

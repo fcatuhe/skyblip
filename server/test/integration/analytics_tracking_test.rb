@@ -66,7 +66,7 @@ class AnalyticsTrackingTest < ActionDispatch::IntegrationTest
   # A response public caches keep a year must not hand one visitor's cookie to the next.
   test "a firmware download sets no cookie" do
     VCR.use_cassette("github/firmware") do
-      get "/releases/dev-1005/skyblip-go-dev-1005.signed.bin", headers: { "User-Agent" => SAFARI }
+      get "/releases/dev-1765/skyblip-go-dev-1765.signed.bin", headers: { "User-Agent" => SAFARI }
     end
 
     assert_response :success

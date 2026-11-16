@@ -380,7 +380,7 @@ The panel half of "a pilot with no phone can change the things that matter". The
 
 | Menu | Rows |
 |---|---|
-| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `VOLUME`, `BRAVO` |
+| `radar` | `SETTINGS`: `LIGHT`, `AIRCRAFT`, `UNITS`, `RANGE`, `PLOT`, `ALARM`, `BRAVO` |
 | `AIRCRAFT` row | `AIRCRAFT`: what Bravo heard, `TYPE`, `CALLSIGN`, `ADS-B` |
 | `nearby` | `DIAGNOSTICS`: `STATUS`, `SATELLITES`, `RADIO LOG`, `BRAVO LOG`, `SELF TEST` |
 
@@ -410,7 +410,7 @@ It is also the one page the walk can be short of. A plain T-Echo has no inertial
 
 `RANGE` steps four rings and comes round again - a thumb reaches any of them in three presses, from a circuit to the whole of what this radio hears - and it is stored like every other row: a pilot who flies a 2 NM circuit every day should not have to step to it after every boot, and a new unit ships on the 4 NM ring the page is designed around. The steps are 1, 2, 4 and 8 NM, or 2, 4, 8 and 16 KM for a pilot who asked for metric: the ring is picked in the unit it is read in, so each table doubles in whole units rather than printing the 1.9, 3.7, 7.4 and 14.8 that converting the miles would give. The step a pilot chose survives the unit being switched, and the circle changes size by the difference between the two tables.
 
-The two contacts mean here what they mean everywhere else: a tap of the pad moves the focus down a row, a press of the button acts on the row the focus is on, and every further press steps the same field again, which is what makes a volume settable with a thumb. No timing to get right, so nothing here can be produced by accident out of the long press that switches the device off, and a standing prompt takes the button away from a menu entirely before the gesture that answers it can be armed.
+The two contacts mean here what they mean everywhere else: a tap of the pad moves the focus down a row, a press of the button acts on the row the focus is on, and every further press steps the same field again, which is what makes the alarm settable with a thumb. `ALARM` steps `LOUD`, `SOFT`, `VISUAL`, `OFF` and round, so one stray press from the default still sounds. A Go with no buzzer and no haptic only toggles `VISUAL` and `OFF`. No timing to get right, so nothing here can be produced by accident out of the long press that switches the device off, and a standing prompt takes the button away from a menu entirely before the gesture that answers it can be armed.
 
 A pilot cannot get stuck here: the rows only ever advance, the tap past the last one lands back on the page the menu belongs to, a long touch of the pad goes back to the radar, and a menu nobody has touched for `kIdleReturnHoldMs` gives the picture back on its own. There is no `Leave` row, because the pad already leaves and a row that only said "done" was a row to walk past on the way to the one a pilot wanted.
 

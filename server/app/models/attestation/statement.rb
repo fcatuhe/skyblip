@@ -3,12 +3,16 @@ class Attestation::Statement
   include ActiveModel::Attributes
 
   attribute :device_id, :string
+  attribute :product, :string
+  attribute :variant, :string
   attribute :version, :string
   attribute :release
   attribute :server_nonce, :string
   attribute :signature, :string
 
   validates :device_id, format: { with: Activation::DEVICE_ID }
+  validates :product, inclusion: { in: Identity::Message::PRODUCTS.keys }
+  validates :variant, inclusion: { in: Identity::Message::VARIANTS.keys }
   validates :version, format: { with: Activation::VERSION }
   validates :server_nonce, format: { with: Activation::NONCE }
   validates :signature, format: { with: Activation::SIGNATURE }
@@ -24,7 +28,7 @@ class Attestation::Statement
 
     Unit.transaction do
       challenge.spend
-      unit.attest_firmware(version:, release:)
+      unit.attest_firmware(product:, variant:, version:, release:)
     end
   end
 
@@ -35,7 +39,7 @@ class Attestation::Statement
     end
 
     def signed_by?(key)
-      message = Identity::Message.attestation(device_id:, public_key: key.public_key, server_nonce:, release:, version:)
+      message = Identity::Message.attestation(device_id:, public_key: key.public_key, server_nonce:, release:, product:, variant:, version:)
       unit_key = OpenSSL::PKey.new_raw_public_key("ED25519", [ key.public_key ].pack("H*"))
       unit_key.verify(nil, [ signature ].pack("H*"), message)
     end

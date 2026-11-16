@@ -18,24 +18,23 @@
     },
     {
       "command": "config", "code": 2, "endpoint": "config", "sender": "unit",
-      "description": "Unit to host, the answer to get: the stored settings a host may change, the settings contract's version, and the unit's address and its mapping table, in one frame of at most 37 bytes. config, set and defaults share this key table, and so do the Go and Bravo: each key says which product stores it, and Bravo answers config with its own keys and ignores the rest of a set (#176). The two per-unit trims, battery_offset_mv and frequency_trim_e1_ppm, are written by a host and never returned. The radar's range and plot are stored settings with no key here: they are set on the device's own menu. address is absent until the unit is activated, and every other key but the trims is always present, aircraft_address as 0 while it is unset.",
+      "description": "Unit to host, the answer to get: the stored settings a host may change, the settings contract's version, and the unit's address and its mapping table, in one frame of at most 35 bytes. config, set and defaults share this key table, and so do the Go and Bravo: each key says which product stores it, and Bravo answers config with its own keys and ignores the rest of a set (#176). The two per-unit trims, battery_offset_mv and frequency_trim_e1_ppm, are written by a host and never returned. The radar's range and plot are stored settings with no key here: they are set on the device's own menu. address is absent until the unit is activated, and every other key but the trims is always present, aircraft_address as 0 while it is unset. Keys 5 and 6, alarm_enabled and alarm_volume, are retired and never reused: alarm replaced both, and a set that carries them is answered as if they were absent.",
       "keys": [
         {"name": "version", "number": 1, "type": "unsigned", "description": "The settings contract, 1 (products/skyblip_go/settings.h, kCurrentVersion): it moves when a key changes meaning, not when the flash layout does. Always in config, never in defaults, and ignored in a set. Sent by the Go"},
         {"name": "address", "number": 2, "type": "unsigned", "description": "The unit's own 24-bit ADS-L address: the manufacturer prefix 0x00 followed by the 16-bit serial skyblip.eu signed at activation (schemas/activation.v1.schema.json). The unit transmits under it while aircraft_address is unset, and under aircraft_address in table 5 while it is set (ADS-L F.2.3). Either way it is this address that names the unit, here and in its Bluetooth name. Absent until the unit is activated, so a page reads its presence as activated. Read-only: the unit re-verifies its unlock code at every boot, and a set carrying it is ignored. Sent by the Go only: Bravo has no ADS-L address (#184)"},
         {"name": "address_mapping_table", "number": 3, "type": "unsigned", "description": "ADS-L address mapping table (issue 2 F.2.2), 0 to 63: 0=random/privacy, 1-4 reserved, 5=ICAO, 6=FLARM, 7=OGN-Tracker, 8=FANET, 9+ manufacturer pages, each a registry-assigned 8-bit prefix and a 16-bit base address. The table of address: a constant 58 on this device, manufacturer page 49 with prefix 0x00 as the ADS-L registry assigned it, so address is that prefix and the unit's serial. While aircraft_address is set the unit transmits table 5 instead, and this key still says 58. Present whether or not the unit is activated. Read-only: a set carrying it is ignored. Sent by the Go only"},
         {"name": "aircraft_type", "number": 4, "type": "unsigned", "description": "ADS-L aircraft category, 0 to 17. A set past 17 is refused out_of_range. Stored by the Go"},
-        {"name": "alarm_enabled", "number": 5, "type": "boolean", "description": "The traffic alarm sounds. False silences the buzzer and the haptic both, as alarm_volume off does. Stored by the Go and by Bravo"},
-        {"name": "alarm_volume", "number": 6, "type": "enum", "enum": "alarm_volume", "description": "The three steps of the radar menu's VOLUME row. off silences the buzzer and the haptic both, as alarm_enabled false does. soft and loud set the buzzer's loudness, and the haptic pulses with each call at either. A device ships on loud. Stored by the Go and by Bravo"},
         {"name": "units", "number": 7, "type": "enum", "enum": "units", "description": "nautical (nautical miles, knots) or metric (kilometres, km/h): what every distance and speed on the glass is printed in, the radar's range ring, the nearby page's distance column and the six-pack's speed dial. Altitudes and vertical speeds stay in feet whatever this says. A device ships on nautical. Stored by the Go"},
         {"name": "callsign", "number": 8, "type": "text", "description": "The aircraft's registration as the radio says it: up to nine characters of A to Z, 0 to 9, dash and blank, the ones the radar menu types. A set with any other character is refused invalid, and a longer one out_of_range. Empty, the default, transmits no name, so an address a receiver cannot resolve stays anonymous. Otherwise the unit transmits it once every ten seconds under ADS-L payload 66 (core/timing/README.md). Stored by the Go"},
         {"name": "battery_offset_mv", "number": 9, "type": "integer", "description": "From -250 to 250, past which a set is refused out_of_range. The per-unit battery gauge trim in millivolts, added to every reading before a state of charge or a cutoff is read from it, and set once on the production line against a bench supply (core/power/battery.h says why the bound is 250). Written by a host only: config and defaults never carry it. Stored by the Go"},
         {"name": "frequency_trim_e1_ppm", "number": 10, "type": "integer", "description": "From -100 to 100, past which a set is refused out_of_range. The radio's centre-frequency trim in tenths of a ppm, positive upwards, applied to every dwell the SX1262 arms. The board fits a TCXO, so 0 is the design intent: the trim answers a batch of references far outside their datasheet, and is set only against a spectrum analyser or a frequency counter. Inside the bound the carrier stays inside ERC 70-03 band h1.4 (868.0 to 868.6 MHz). Written by a host only: config and defaults never carry it. Stored by the Go"},
-        {"name": "aircraft_address", "number": 11, "type": "unsigned", "description": "The 24-bit ICAO address of the aircraft's own Mode-S transponder, 0 to 16777215, past which a set is refused out_of_range. 0, the default, is unset, and a set of 0 clears it, which the glass confirms as it confirms every set. The traffic table refuses this address under table 5, so the aircraft's own transponder is not traffic (firmware/core/traffic/README.md). On the Go it is also the address the unit transmits under: while it is set, every ADS-L payload goes out in table 5 with this address in place of address (ADS-L F.2.3), and a set of 0 puts address back on the next burst. The Go refuses 16777215 out_of_range too, because ICAO never assigns 24 ones (Annex 10 Volume III, Appendix to Chapter 9, 5.2 f). It refuses not_own_transponder a set of any other address than the one a paired, live Bravo names as the aircraft's own transponder on the ground (own_transponder in health), because F.2.3 asks the ADS-L system to disallow an inconsistent configuration. A set of 0 is never refused for that, because F.2.3 asks for the setting to be revertible. Always in config and defaults. Stored by the Go and by Bravo, which only filters it and takes any 24-bit value"}
+        {"name": "aircraft_address", "number": 11, "type": "unsigned", "description": "The 24-bit ICAO address of the aircraft's own Mode-S transponder, 0 to 16777215, past which a set is refused out_of_range. 0, the default, is unset, and a set of 0 clears it, which the glass confirms as it confirms every set. The traffic table refuses this address under table 5, so the aircraft's own transponder is not traffic (firmware/core/traffic/README.md). On the Go it is also the address the unit transmits under: while it is set, every ADS-L payload goes out in table 5 with this address in place of address (ADS-L F.2.3), and a set of 0 puts address back on the next burst. The Go refuses 16777215 out_of_range too, because ICAO never assigns 24 ones (Annex 10 Volume III, Appendix to Chapter 9, 5.2 f). It refuses not_own_transponder a set of any other address than the one a paired, live Bravo names as the aircraft's own transponder on the ground (own_transponder in health), because F.2.3 asks the ADS-L system to disallow an inconsistent configuration. A set of 0 is never refused for that, because F.2.3 asks for the setting to be revertible. Always in config and defaults. Stored by the Go and by Bravo, which only filters it and takes any 24-bit value"},
+        {"name": "alarm", "number": 12, "type": "enum", "enum": "alarm", "description": "What a traffic alarm does, each step adding to the one before: off interrupts nothing, visual takes the Go's glass to the radar and flickers Bravo's lamp, soft and loud also sound the buzzer at that loudness and pulse the haptic. Off and visual leave the radar's marks and the NMEA alarm levels to an EFB as they are. A unit with neither a buzzer nor a haptic, a Go that is not a Go+, refuses soft and loud out_of_range and ships on visual. Every other unit ships on loud. Stored by the Go and by Bravo"}
       ]
     },
     {
       "command": "defaults", "code": 3, "endpoint": "config", "sender": "both", "keys_of": "config",
-      "description": "Host to unit, a bare ask, answered under defaults with the settings a pilot can set as a new unit ships them: aircraft_type, alarm_enabled, alarm_volume, units, callsign and aircraft_address, so the reply with its command swapped for set puts a unit back on its defaults. version, the address keys, the per-unit trims and the radar's range and plot are not in it."
+      "description": "Host to unit, a bare ask, answered under defaults with the settings a pilot can set as a new unit ships them: aircraft_type, units, callsign, aircraft_address and alarm, so the reply with its command swapped for set puts a unit back on its defaults. version, the address keys, the per-unit trims and the radar's range and plot are not in it."
     },
     {
       "command": "set", "code": 4, "endpoint": "config", "sender": "host", "keys_of": "config",
@@ -188,7 +187,7 @@
     },
     {
       "command": "update", "code": 10, "endpoint": "config", "sender": "both",
-      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, two more for a product other than skyblip_go, which names itself in product, and 10 more for a bootloader that trusts two keys, as a development one does.",
+      "description": "The image's state and what an install needs: asked with the bare command, and pushed to a connection when it comes up while the image is not confirmed or the settings fell back (server/app/javascript/skyblip/README.md says how update.js reads it). 57 bytes for a release build at the widest versions scripts/build_image.sh lets through, 59 for a development build, and 10 more for a bootloader that trusts two keys, as a development one does. Key 10, product, is retired and never reused: the identity frame names the product.",
       "keys": [
         {"name": "image", "number": 1, "type": "enum", "enum": "image", "required": true, "description": "What became of the last install: confirmed, probation (running, not yet confirmed), reverted (started and never confirmed itself, so the bootloader swapped the old one back) or refused (never started)"},
         {"name": "from", "number": 2, "type": "text", "description": "The version the last install replaced, as dfu writes it, 0.3.0+1234. Present unless image is confirmed"},
@@ -199,7 +198,6 @@
         {"name": "imu_digest", "number": 7, "type": "bytes", "bytes": 8, "description": "The first eight bytes of the verified hub blob's SHA-256, present when imu is held"},
         {"name": "downgrade", "number": 8, "type": "boolean", "description": "Present and true on a unit whose bootloader accepts an image older than the running one, a development build"},
         {"name": "key", "number": 9, "type": "bytes", "bytes": 4, "description": "The first four bytes of the hash of the key that signed the running image, as imgtool writes it in the image's KEYHASH TLV. Absent when the unit cannot read it"},
-        {"name": "product", "number": 10, "type": "enum", "enum": "product", "description": "The product the unit runs, which is the only one whose images it installs (firmware/core/dfu/README.md), so a page offers it no other. Absent on a skyblip_go, so its frame stays as narrow as before the key, and on firmware built before the key, all of it skyblip_go"},
         {"name": "bootloader_keys", "number": 11, "type": "bytes", "description": "The keys the bootloader verifies an image against, which are the keys whose images the unit installs: the first four bytes of each key's hash, as key gives them, one after the other, 4 to 16 bytes. A development bootloader trusts the development and production keys, a release bootloader the production key only (firmware/keys/README.md). Absent when the unit cannot read its bootloader, and on firmware built before the key, where key stands for the bootloader's one key"}
       ]
     },
@@ -220,18 +218,18 @@
     },
     {
       "command": "challenge", "code": 14, "endpoint": "config", "sender": "both",
-      "description": "Opens an activation session (schemas/activation.v1.schema.json says what each signature covers). The host asks with the bare command, the unit draws a fresh Nu, which replaces any it held, and answers it with the id of the server key it trusts, so the server knows which of its keys to sign with: 27 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when unlock uses it, when the link of the session that holds the claim drops, or after ten minutes. Refused keyless by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as in_flight while it is airborne.",
+      "description": "Opens an activation session (schemas/activation.v1.schema.json says what each signature covers). The host asks with the bare command, the unit draws a fresh unit_nonce, which replaces any it held, and answers it with the id of the server key it trusts, so the server knows which of its keys to sign with: 27 bytes, answered small_mtu instead on a link that cannot carry it. The nonce dies when unlock uses it, when the link of the session that holds the claim drops, or after ten minutes. Refused keyless by a unit that has no key of its own, could not draw a nonce or cannot read its running version. A unit that lacks a required part, the barometer, shows its refusal page and does not advertise at all, so it cannot be activated. An activated unit refuses challenge, register and unlock as in_flight while it is airborne.",
       "keys": [
-        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Nu, 16 random bytes from the hardware RNG, used once"},
+        {"name": "nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "unit_nonce, 16 random bytes from the hardware RNG, used once"},
         {"name": "server_key_id", "number": 2, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the firmware is built to trust, the first four bytes of the SHA-256 of its raw 32-byte public key: every device build trusts skyblip.eu's server key (firmware/keys/server.pub), the host suite, the simulator and a local server the public test key of schemas/activation.v1.vectors.json"}
       ]
     },
     {
       "command": "register", "code": 15, "endpoint": "config", "sender": "host",
-      "description": "Host to unit, 88 bytes. The unit checks R with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. One press answers the registration frame, a tap of the pad cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state, because the unit is silent. An activated unit asks only when it is not airborne, and a take-off cancels the prompt. Refusals, in the order checked: prompt_pending (a prompt stands) and refused_on_device (a prompt on this link was refused on the device) (firmware/core/comms/README.md, One prompt at a time), in_flight (an activated unit in flight), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
+      "description": "Host to unit, 88 bytes. The unit checks the signature with the key it trusts and the nonce of this session, then asks on its glass under confirm_register. One press answers the registration frame, a tap of the pad cancelled, thirty seconds expired. On a unit not yet activated the prompt stands whatever the flight state, because the unit is silent. An activated unit asks only when it is not airborne, and a take-off cancels the prompt. Refusals, in the order checked: prompt_pending (a prompt stands) and refused_on_device (a prompt on this link was refused on the device) (firmware/core/comms/README.md, One prompt at a time), in_flight (an activated unit in flight), keyless, no_session (no live nonce), small_mtu (the link cannot carry the registration frame in one notification), bad_signature.",
       "keys": [
-        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, the server's 16 random bytes, used once"},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "R, the server's Ed25519 signature over the register message, 'skyblip:register:v1' || Nu || Ns"}
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "server_nonce, the server's 16 random bytes, used once"},
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "The server's Ed25519 signature over the register message, 'skyblip:register:v1' || unit_nonce || server_nonce"}
       ]
     },
     {
@@ -239,7 +237,7 @@
       "description": "Unit to host after the press that answers register, at most 138 bytes in one notification, which an iPhone's 182-byte payload carries. The browser posts its keys to /activation/registrations as they are, byte strings in hexadecimal (schemas/activation.v1.schema.json).",
       "keys": [
         {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian"},
-        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "Pd, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
+        {"name": "public_key", "number": 2, "type": "bytes", "bytes": 32, "required": true, "description": "public_key, the raw 32-byte Ed25519 public key of the unit, whose seed comes from its key slot in UICR CUSTOMER (firmware/core/identity/README.md)"},
         {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
         {"name": "server_key_id", "number": 4, "type": "bytes", "bytes": 4, "required": true, "description": "The id of the server key the unit trusts, as in the challenge reply"},
         {"name": "release", "number": 5, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build. Only told to the server, which keeps it beside the key: the air shows no difference, a development unit being a real aircraft with a real serial"},
@@ -248,10 +246,10 @@
     },
     {
       "command": "unlock", "code": 17, "endpoint": "config", "sender": "host",
-      "description": "Host to unit, at most 74 bytes, carrying what the server answered the registration with. The unit stores serial, Nu and U in its identity page only if U verifies with the key it trusts over its own DEVICEID, its current Pd, the serial and the nonce of this session, then answers acknowledgement with reason unlock and uses the serial from then on. Refused before the code is read, the nonce kept: in_flight (an activated unit in flight), no_session, low_power (the cell cannot take a flash write). Once read, the nonce is spent whether the code verifies or not: bad_signature (serial 0 included), flash (the identity page could not be written), or low_power if the cell fell while an activated unit placed the write.",
+      "description": "Host to unit, at most 74 bytes, carrying what the server answered the registration with. The unit stores serial, unit_nonce and the unlock signature in its identity page only if that signature verifies with the key it trusts over its own DEVICEID, its current public_key, the serial and the nonce of this session, then answers acknowledgement with reason unlock and uses the serial from then on. Refused before the code is read, the nonce kept: in_flight (an activated unit in flight), no_session, low_power (the cell cannot take a flash write). Once read, the nonce is spent whether the code verifies or not: bad_signature (serial 0 included), flash (the identity page could not be written), or low_power if the cell fell while an activated unit placed the write.",
       "keys": [
         {"name": "serial", "number": 1, "type": "unsigned", "required": true, "description": "Assigned densely by the server, from 1 to 65535: serial 0 would put 0x000000 on the air, which decoders read as no address. The ADS-L address is the manufacturer prefix 0x00 followed by these 16 bits, under address mapping table 58"},
-        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "U, the server's Ed25519 signature over the unlock message, 'skyblip:unlock:v1' || DEVICEID || Pd || serial as two bytes big-endian || Nu"}
+        {"name": "signature", "number": 2, "type": "bytes", "bytes": 64, "required": true, "description": "The server's Ed25519 signature over the unlock message, 'skyblip:unlock:v1' || device_id || public_key || serial as two bytes big-endian || unit_nonce"}
       ]
     },
     {
@@ -368,7 +366,7 @@
         {"name": "utc_valid", "number": 4, "type": "boolean", "required": true, "description": "Bravo holds UTC from its own receiver. Without it Bravo sends no observation, and exports nothing to an EFB either (#192)"},
         {"name": "last_sequence", "number": 5, "type": "unsigned", "description": "The sequence of the last observation Bravo sent in this boot_epoch. Absent before the first"},
         {"name": "aircraft_address_set", "number": 6, "type": "boolean", "required": true, "description": "Bravo's aircraft-address setting holds an address, so the aircraft's own transponder is not traffic even when the Go sends no aircraft_address (#184)"},
-        {"name": "alarm_granted", "number": 7, "type": "boolean", "required": true, "description": "Bravo keeps its buzzer and haptic silent for this Go (#179): true exactly while this is the Go Bravo pinned, its connection is up, and its last peer_claim said alarm_requested true and is younger than three claim periods. False is Bravo sounding by its own alarm_enabled and alarm_volume. Bravo's NMEA stream to an EFB is unchanged either way"},
+        {"name": "alarm_granted", "number": 7, "type": "boolean", "required": true, "description": "Bravo keeps its buzzer and haptic silent for this Go (#179): true exactly while this is the Go Bravo pinned, its connection is up, and its last peer_claim said alarm_requested true and is younger than three claim periods. False is Bravo sounding by its own alarm. Bravo's NMEA stream to an EFB is unchanged either way"},
         {"name": "export_reference", "number": 11, "type": "enum", "enum": "export_reference", "required": true, "description": "The position Bravo places its exports against, to the Go and to an EFB (#192): go, the Go's from a fresh peer_claim, own, Bravo's own valid fix, or none, so Bravo exports nothing. Bravo reports the reference it would use, whatever utc_valid says, and exports only while this is not none and utc_valid is true"},
         {"name": "paired", "number": 12, "type": "boolean", "required": true, "description": "Bravo holds this Go's pin, or offers it since its button answered this Go's request (#192). A Go asking to pair pins Bravo only on true. A paired Go that reads false holds a pin Bravo does not, from a pairing cut short or a Bravo that pinned another Go, so it drops its pin and says so"},
         {"name": "own_transponder", "number": 13, "type": "unsigned", "description": "The 24-bit ICAO address of the transponder Bravo takes for the aircraft's own: the loudest DF17 emitter it hears, above a floor and ahead of every other one by a lead, for a hold (products/skyblip_bravo/README.md, Own transponder). Bravo hears it before its aircraft-address filter, so it stays present once the address is set. Never 0, which as aircraft_address means unset, and a Go refuses a health that carries 0. Absent while no emitter qualifies. The Go proposes it as aircraft_address only on the ground and only on the pilot's press"},
@@ -396,7 +394,7 @@
         {"name": "pressure_altitude_mm", "number": 9, "type": "integer", "description": "The Go's pressure altitude on 1013.25 hPa in millimetres, own-ship's pressure_altitude_mm, which a target that sends no GNSS height is compared with. Present while own-ship's pressure_altitude_valid"},
         {"name": "pressure_altitude_age_ms", "number": 10, "type": "unsigned", "description": "Milliseconds from own-ship's pressure_altitude_at_ms to the instant the Go wrote this frame. Present with pressure_altitude_mm"},
         {"name": "aircraft_address", "number": 11, "type": "unsigned", "description": "The Go's aircraft-address setting, the 24-bit address of the aircraft's own transponder (#191). Present when set"},
-        {"name": "alarm_requested", "number": 12, "type": "boolean", "required": true, "description": "The Go takes the alarm for the pair, so Bravo keeps its buzzer and haptic silent (#179). True only while the Go has a buzzer or a haptic, a valid fix, Bravo's pin and a Bravo it reads live, whatever its own alarm_enabled and alarm_volume say, so off on the Go keeps the pair silent. A Go with neither part never takes it. Bravo heeds it only from the Go it pinned, while that Go's connection is up and for three claim periods after the claim, and sounds by its own settings again after a claim with false, a disconnect or an unpair"},
+        {"name": "alarm_requested", "number": 12, "type": "boolean", "required": true, "description": "The Go takes the alarm for the pair, so Bravo keeps its buzzer and haptic silent (#179). True only while the Go has a buzzer or a haptic, a valid fix, Bravo's pin and a Bravo it reads live, whatever its own alarm says, so off or visual on the Go keeps the pair silent. A Go with neither part never takes it. Bravo heeds it only from the Go it pinned, while that Go's connection is up and for three claim periods after the claim, and sounds by its own settings again after a claim with false, a disconnect or an unpair"},
         {"name": "paired", "number": 18, "type": "boolean", "required": true, "description": "The Go holds this Bravo's pin: true from the health that pinned it, false while the Go asks to pair. A claim with paired false is the Go's pairing request, and Bravo stores its own pin only once it reads true from the Go its press answered, and health's paired tells a Go when Bravo holds none, so neither side keeps a pin alone (#192). A Go that unpairs while connected writes one claim with false, so Bravo drops its pin too"}
       ]
     },
@@ -475,17 +473,31 @@
       "command": "attest", "code": 37, "endpoint": "config", "sender": "host",
       "description": "Host to unit, 22 bytes: asks the unit to sign the firmware it runs over a nonce from skyblip.eu, which the browser posts to /attestation/statements (schemas/activation.v1.schema.json). The unit answers the attestation frame at once, with no prompt, because it signs only its own version under a label nothing else carries. Refusals, in the order checked: in_flight (an activated unit in flight), keyless (no key of its own, or no running version to report), small_mtu (the link cannot carry the attestation frame in one notification), invalid (no server_nonce of 16 bytes). A Bravo has no key of its own, so it answers keyless.",
       "keys": [
-        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "Ns, 16 random bytes from POST /attestation/challenges, which the server accepts once within five minutes"}
+        {"name": "server_nonce", "number": 1, "type": "bytes", "bytes": 16, "required": true, "description": "server_nonce, 16 random bytes from POST /attestation/challenges, which the server accepts once within five minutes"}
       ]
     },
     {
       "command": "attestation", "code": 38, "endpoint": "config", "sender": "unit",
-      "description": "Unit to host in answer to attest, at most 98 bytes in one notification. The browser posts its keys to /attestation/statements as they are, byte strings in hexadecimal, beside the server nonce (schemas/activation.v1.schema.json).",
+      "description": "Unit to host in answer to attest, at most 102 bytes in one notification. Its keys name the unit as the identity frame does, in the same order, and the signature covers each of them. The browser posts them to /attestation/statements as they are, byte strings in hexadecimal, beside the server nonce (schemas/activation.v1.schema.json).",
       "keys": [
-        {"name": "device_id", "number": 1, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server finds the unit and its active key"},
-        {"name": "version", "number": 2, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
-        {"name": "release", "number": 3, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
-        {"name": "signature", "number": 4, "type": "bytes", "bytes": 64, "required": true, "description": "The unit's Ed25519 signature over the attestation message, 'skyblip:attestation:v1' || DEVICEID || Pd || Ns || release || version (schemas/activation.v1.schema.json)"}
+        {"name": "product", "number": 1, "type": "enum", "enum": "product", "required": true, "description": "The product the unit runs, as the identity frame names it"},
+        {"name": "variant", "number": 2, "type": "enum", "enum": "variant", "required": true, "description": "The product's hardware build, as the identity frame names it, worked out at this boot"},
+        {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
+        {"name": "release", "number": 4, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
+        {"name": "device_id", "number": 5, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server finds the unit and its active key"},
+        {"name": "signature", "number": 6, "type": "bytes", "bytes": 64, "required": true, "description": "The unit's Ed25519 signature over the attestation message, 'skyblip:attestation:v1' || device_id || public_key || server_nonce || release || product || variant || version (schemas/activation.v1.schema.json)"}
+      ]
+    },
+    {
+      "command": "identity", "code": 39, "endpoint": "config", "sender": "both",
+      "description": "Asked with the bare command on every connection, answered with who the unit is and what it runs, the words docs/ADSL_NMEA_PROPOSAL.md gives a display in $PDSLV: product, variant and firmware version, then the chip it runs on. A page reads the product here to offer a unit only its own product's images, and the server keeps the rest as the unit's record (server/app/models/unit.rb). Every unit answers it, activated or not, a Bravo included, and refuses it no_version only when it cannot read its running version. 31 to 39 bytes, so a link that stayed at 20 bytes is answered small_mtu.",
+      "keys": [
+        {"name": "product", "number": 1, "type": "enum", "enum": "product", "required": true, "description": "The product the unit runs, which is the only one whose images it installs (firmware/core/dfu/README.md)"},
+        {"name": "variant", "number": 2, "type": "enum", "enum": "variant", "required": true, "description": "The product's hardware build: plus on a Go whose board has the inclinometer, the buzzer and the haptic motor fitted (products/skyblip_go/product_name.h), standard otherwise"},
+        {"name": "version", "number": 3, "type": "text", "required": true, "description": "The running image's version as the dfu command writes it, 0.3.0+1234: at most 13 characters, 9.99.99+99999"},
+        {"name": "release", "number": 4, "type": "boolean", "required": true, "description": "The unit runs a release build, from a v* tag and the production image key, rather than a development build"},
+        {"name": "device_id", "number": 5, "type": "bytes", "bytes": 8, "required": true, "description": "DEVICEID, the eight bytes of FICR DEVICEID[1] then DEVICEID[0], each big-endian, by which the server knows the unit across its names"},
+        {"name": "bluetooth_tag", "number": 6, "type": "unsigned", "required": true, "description": "The four hex digits the unit advertises before it holds an address, activate 3F2A skyBlip or skyBlip Bravo 3F2A: the low 16 bits of FICR DEVICEADDR, 0 to 65535"}
       ]
     }
   ],
@@ -546,12 +558,13 @@
         {"name": "not_own_transponder", "code": 52}
       ]
     },
-    "alarm_volume": {
-      "mirrors": {"type": "go::AlarmVolume", "header": "products/skyblip_go/settings.h"},
+    "alarm": {
+      "mirrors": {"type": "go::Alarm", "header": "products/skyblip_go/settings.h"},
       "values": [
         {"name": "off", "code": 0, "mirrors": "Off"},
-        {"name": "soft", "code": 1, "mirrors": "Soft"},
-        {"name": "loud", "code": 2, "mirrors": "Loud"}
+        {"name": "visual", "code": 1, "mirrors": "Visual"},
+        {"name": "soft", "code": 2, "mirrors": "Soft"},
+        {"name": "loud", "code": 3, "mirrors": "Loud"}
       ]
     },
     "units": {
@@ -698,8 +711,15 @@
     "product": {
       "mirrors": {"type": "dfu::Product", "header": "core/dfu/update.h"},
       "values": [
-        {"name": "skyblip_go", "code": 0, "mirrors": "SkyblipGo"},
-        {"name": "skyblip_bravo", "code": 1, "mirrors": "SkyblipBravo"}
+        {"name": "go", "code": 0, "mirrors": "Go"},
+        {"name": "bravo", "code": 1, "mirrors": "Bravo"}
+      ]
+    },
+    "variant": {
+      "mirrors": {"type": "identity::Variant", "header": "core/identity/variant.h"},
+      "values": [
+        {"name": "standard", "code": 0, "mirrors": "Standard"},
+        {"name": "plus", "code": 1, "mirrors": "Plus"}
       ]
     },
     "log": {

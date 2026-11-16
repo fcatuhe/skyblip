@@ -181,7 +181,7 @@ struct GroundedUnitWithLogs {
 void speak_every_reply(GroundedUnitWithLogs& unit) {
     unit.rig.raise_link(1);
     for (const char* command : {"get", "defaults", "status", "timing", "flash", "radio",
-                                "diagnostics", "update", "install_report", "protocols"})
+                                "diagnostics", "update", "install_report", "protocols", "identity"})
         unit.say(std::string("{\"command\":\"") + command + "\"}");
     unit.say("{\"command\":\"set\",\"units\":\"metric\",\"callsign\":\"D-KXYZ\"}");
     unit.confirm();
@@ -267,7 +267,6 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu::HubImageReport held{};
     held.holding = dfu::HubImage::Held;
     config.set_hub_image(held);
-    config.set_product(dfu::Product::SkyblipBravo);
     config.set_bravo_state(comms::BravoState::NoUtc);
     comms::OwnTransponderHeard heard{0x3A4B5C, "FJABC", 1};
     config.set_own_transponder(heard);
@@ -332,6 +331,7 @@ const std::vector<Answer> kAnswers = {
     {"update", kConfig, reply("update"), "invalid"},
     {"install_report", kConfig, reply("install_report"), "invalid"},
     {"protocols", kConfig, reply("protocols"), "invalid"},
+    {"identity", kConfig, reply("identity"), "invalid"},
     {"dfu", kConfig, prompt("confirm_dfu"), "invalid"},
     {"recovery", kConfig, prompt("confirm_recovery"), "invalid"},
     {"power_off", kConfig, prompt("confirm_power_off"), "invalid"},
@@ -369,8 +369,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.address", "298"},
         {"set.address_mapping_table", "58"},
         {"set.aircraft_type", "1"},
-        {"set.alarm_enabled", "true"},
-        {"set.alarm_volume", "\"soft\""},
+        {"set.alarm", "\"soft\""},
         {"set.units", "\"metric\""},
         {"set.callsign", "\"D-KXYZ\""},
         {"set.battery_offset_mv", "10"},

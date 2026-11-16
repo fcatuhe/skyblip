@@ -82,8 +82,7 @@ int describe_settings_changes(const Settings& from, const Settings& to, char* ou
     if (std::strncmp(to.callsign, from.callsign, kCallsignBytes) != 0) callsign_row(rows, to);
     if (to.aircraft_address != from.aircraft_address) menu_row(rows, MenuRow::AircraftAddress, to);
     if (to.units != from.units) menu_row(rows, MenuRow::Units, to);
-    if (to.alarm_enabled != from.alarm_enabled) menu_row(rows, MenuRow::Alarm, to);
-    if (to.alarm_volume != from.alarm_volume) menu_row(rows, MenuRow::Volume, to);
+    if (to.alarm != from.alarm) menu_row(rows, MenuRow::Alarm, to);
     if (to.battery_offset_mv != from.battery_offset_mv)
         signed_row(rows, "BATTERY", to.battery_offset_mv, 0, " MV");
     if (to.frequency_trim_e1_ppm != from.frequency_trim_e1_ppm)

@@ -141,7 +141,7 @@ class MeshtrackerX1 {
     host::Pps pps_{clock_};
     host::SystemPower system_power_{};
     host::Battery battery_{};
-    ports::KeylessIdentity identity_{host::Identity::kBluetoothTag};
+    ports::KeylessIdentity identity_{host::Identity::kDeviceId, host::Identity::kBluetoothTag};
     host::Random random_{};
     bool button_down_{false};
 };

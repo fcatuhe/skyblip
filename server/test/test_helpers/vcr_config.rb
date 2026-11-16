@@ -7,13 +7,18 @@ VCR.configure do |config|
     record: ENV["CASSETTES_RECORD"] == "1" ? :all : :once
   }
 
-  # INFO: fc 17oct26 GitHub redirects a download to a signed URL that expires, so the recording keeps none of it.
-  config.filter_sensitive_data("https://release-assets.githubusercontent.com/recorded-asset") do |interaction|
+  # INFO: fc 17oct26 GitHub redirects a download to a signed URL that expires, so the recording keeps only the file's name | 15nov26 one per asset
+  signed_assets = "https://release-assets.githubusercontent.com/"
+  recorded_asset = ->(signed_url) do
+    file = URI.decode_www_form(URI(signed_url).query.to_s).to_h.fetch("rscd")[/filename=([^;]+)/, 1]
+    "#{signed_assets}recorded-asset/#{file}"
+  end
+  config.before_record do |interaction|
     location = interaction.response.headers["Location"]&.first
-    if location&.start_with?("https://release-assets.githubusercontent.com/")
-      location
-    elsif interaction.request.uri.start_with?("https://release-assets.githubusercontent.com/")
-      interaction.request.uri
+    if location&.start_with?(signed_assets)
+      interaction.response.headers["Location"] = [ recorded_asset.(location) ]
+    elsif interaction.request.uri.start_with?(signed_assets)
+      interaction.request.uri = recorded_asset.(interaction.request.uri)
     end
   end
 

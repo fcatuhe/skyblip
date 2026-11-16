@@ -16,7 +16,8 @@ class Identity::MessageTest < ActiveSupport::TestCase
 
   test "builds the attestation byte for byte as the vectors the firmware checks, and the unit's signature verifies" do
     message = Identity::Message.attestation(device_id: vectors["device_id"], public_key: vectors["unit_public_key"],
-      server_nonce: vectors["server_nonce"], release: vectors["release"], version: vectors["version"])
+      server_nonce: vectors["server_nonce"], release: vectors["release"], product: vectors["product"], variant: vectors["variant"],
+      version: vectors["version"])
 
     assert_equal vectors["attestation_message"], hex(message)
     assert_equal vectors["attestation_signature"], unit_key.sign(nil, message).unpack1("H*")

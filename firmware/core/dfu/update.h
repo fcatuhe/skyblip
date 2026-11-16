@@ -11,7 +11,7 @@ namespace skyblip::dfu {
 
 enum class ImageState : uint8_t { Confirmed = 0, Probation = 1, Reverted = 2, Refused = 3 };
 
-enum class Product : uint8_t { SkyblipGo = 0, SkyblipBravo = 1 };
+enum class Product : uint8_t { Go = 0, Bravo = 1 };
 
 // INFO: fc 13nov26 how far an image on probation got towards confirming, in the order it checks
 enum class Proof : uint8_t {

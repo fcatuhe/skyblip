@@ -27,7 +27,10 @@ async function turns(count = 20) {
 }
 
 test('node:crypto signs the attestation as the vectors, which the firmware and the server check', () => {
-  const fields = { deviceId: VECTORS.device_id, publicKey: VECTORS.unit_public_key, serverNonce: VECTORS.server_nonce, release: VECTORS.release, version: VECTORS.version };
+  const fields = {
+    deviceId: VECTORS.device_id, publicKey: VECTORS.unit_public_key, serverNonce: VECTORS.server_nonce, release: VECTORS.release,
+    product: VECTORS.product, variant: VECTORS.variant, version: VECTORS.version,
+  };
   assert.equal(messages.attestation(fields).toString('hex'), VECTORS.attestation_message);
   assert.equal(keyPair(VECTORS.unit_seed).sign(messages.attestation(fields)), VECTORS.attestation_signature);
 });
@@ -36,7 +39,7 @@ test('an activated unit states its firmware to the server on every connection, w
   const { unit, server, updater } = await connected();
   await turns();
   assert.equal(unit.commands.at(-1), 'attest');
-  assert.deepEqual(server.firmwares, [{ device_id: VECTORS.device_id, version: VECTORS.version, release: VECTORS.release }]);
+  assert.deepEqual(server.firmwares, [{ device_id: VECTORS.device_id, variant: VECTORS.variant, version: VECTORS.version, release: VECTORS.release }]);
   assert.equal(updater.state.phase, 'ready');
   assert.equal(updater.state.notice, null);
 
