@@ -39,11 +39,11 @@ Record record_of(const Config& value, const Instant& at) {
     wire::put_int16(record.payload + 6, value.frequency_trim_e1_ppm);
     record.payload[8] = value.aircraft_type;
     record.payload[9] = value.address_mapping_table;
-    record.payload[10] = value.alarm_volume;
     record.payload[11] = value.settings_version;
     put_int8(record.payload + 12, value.tx_power_dbm);
     put_int8(record.payload + 13, value.pa_rated_dbm);
-    set_flag(record.flags, kConfigFlagAlarmEnabled, value.alarm_enabled);
+    record.payload[14] = value.alarm_setting;
+    set_flag(record.flags, kConfigFlagAlarmSettingRecorded, value.alarm_setting_recorded);
     set_flag(record.flags, kConfigFlagMetric, value.metric);
     set_flag(record.flags, kConfigFlagBatteryTrimManual, value.battery_trim_manual);
     return record;
@@ -57,11 +57,11 @@ bool read(const Record& record, Config& out) {
     out.frequency_trim_e1_ppm = wire::get_int16(record.payload + 6);
     out.aircraft_type = record.payload[8];
     out.address_mapping_table = record.payload[9];
-    out.alarm_volume = record.payload[10];
     out.settings_version = record.payload[11];
     out.tx_power_dbm = get_int8(record.payload + 12);
     out.pa_rated_dbm = get_int8(record.payload + 13);
-    out.alarm_enabled = record.flagged(kConfigFlagAlarmEnabled);
+    out.alarm_setting = record.payload[14];
+    out.alarm_setting_recorded = record.flagged(kConfigFlagAlarmSettingRecorded);
     out.metric = record.flagged(kConfigFlagMetric);
     out.battery_trim_manual = record.flagged(kConfigFlagBatteryTrimManual);
     return true;

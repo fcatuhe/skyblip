@@ -17,7 +17,7 @@
   const MAX_RECORDS_PER_CHUNK = 19;
   const MAX_READ_CHUNKS = 8;
   const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
-  const DEFAULTS = { aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '', aircraft_address: 0 };
+  const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
   const later = (fn, ms = 0) => setTimeout(fn, ms);
@@ -66,7 +66,7 @@
         flight: 'ground',
         battery: 82,
         charging: false,
-        stored: { aircraft_type: 3, alarm_enabled: true, alarm_volume: 'soft', units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0 },
+        stored: { aircraft_type: 3, units: 'nautical', callsign: 'F-JXYZ', aircraft_address: 0, alarm: 'soft' },
         mtu: 247,
         pressAfterMs: null,
         uploadDelayMs: 0,
@@ -79,6 +79,7 @@
         installReport: null,
         protocols: null,
         failure: null,
+        sounds: true,
       }, options);
       this.deviceId ??= this.vectors?.device_id ?? deviceIdOf(this.name);
       this.connected = false;
@@ -196,7 +197,7 @@
     config() {
       const address = this.address === null ? {} : { address: this.address };
       const stored = this.product === 'bravo'
-        ? { alarm_enabled: this.stored.alarm_enabled, alarm_volume: this.stored.alarm_volume, aircraft_address: this.stored.aircraft_address }
+        ? { aircraft_address: this.stored.aircraft_address, alarm: this.stored.alarm }
         : this.stored;
       return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored });
     }
@@ -218,7 +219,7 @@
       if (command === 'identity') return this.sendIdentity();
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
-      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
+      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds ? {} : { alarm: 'visual' }) });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
       if (command === 'protocols') return this.reply({ command, ...(this.protocols ?? this.stacks()) });
       if (command === 'set') {

@@ -32,7 +32,7 @@ TEST_CASE("flash window: a change made inside a dwell is not written until the w
     REQUIRE(rig.state().rf.plan.tx_allowed);
     const uint32_t before = writes(rig);
 
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     // Through the whole of the dwell it was made in, and the settle behind it,
     // nothing is on flash.
     step_until(rig, now_ms, now_ms + timing::DurableWriteWindow::kSettleMs);
@@ -55,7 +55,7 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     uint32_t now_ms = 0;
     stand_on_the_ground(rig, now_ms);
     const uint32_t before = writes(rig);
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     rig.platform.clock().set_milliseconds(now_ms);
     rig.product.config_link().tick(now_ms);
     REQUIRE(rig.product.config_link().durable_writes().pending());
@@ -110,7 +110,7 @@ TEST_CASE("flash window: six rapid changes are one write") {
     const uint32_t before = writes(rig);
 
     for (int i = 0; i < 6; i++) {
-        change_volume(rig, i % 2 == 0 ? go::AlarmVolume::Soft : go::AlarmVolume::Off);
+        change_alarm(rig, i % 2 == 0 ? go::Alarm::Soft : go::Alarm::Off);
         step_until(rig, now_ms, now_ms + 120);
     }
     REQUIRE(rig.product.config_link().durable_writes().requests() == 6);
@@ -127,11 +127,11 @@ TEST_CASE("flash window: six rapid changes are one write") {
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == go::AlarmVolume::Off);
+    CHECK(stored.alarm == go::Alarm::Off);
 }
 
 // The same, stepped by a real thumb on the panel: presses in at the pin the board polls.
-TEST_CASE("flash window: a thumb stepping the volume on the panel writes flash once") {
+TEST_CASE("flash window: a thumb stepping the alarm on the panel writes flash once") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -141,18 +141,18 @@ TEST_CASE("flash window: a thumb stepping the volume on the panel writes flash o
     REQUIRE(rig.product.screen().mode() == go::Mode::Menu);
     rig.tap(now_ms);  // off the self test, onto the rows
 
-    // Down to the volume row: a tap of the pad moves the focus.
-    while (rig.product.screen().editor().focus() != go::MenuRow::Volume) rig.tap(now_ms);
+    // Down to the alarm row: a tap of the pad moves the focus.
+    while (rig.product.screen().editor().focus() != go::MenuRow::Alarm) rig.tap(now_ms);
 
     const uint32_t before = writes(rig);
-    const go::AlarmVolume started_at = rig.settings().alarm_volume;
-    // Five presses walk the volume off where it started, which is five accepted changes.
+    const go::Alarm started_at = rig.settings().alarm;
+    // Five presses walk the alarm off where it started, which is five accepted changes.
     for (int press = 0; press < 5; press++) {
         rig.press(now_ms);
         rig.run(now_ms, now_ms + 120);
         now_ms += 120;
     }
-    REQUIRE(rig.settings().alarm_volume != started_at);
+    REQUIRE(rig.settings().alarm != started_at);
     REQUIRE(rig.product.config_link().durable_writes().requests() == 5);
 
     rig.run(now_ms, now_ms + 3000);
@@ -170,12 +170,12 @@ TEST_CASE("flash window: a change is never held past the bound, at any phase") {
     uint32_t now_ms = 0;
     fly(rig, now_ms);
 
-    go::AlarmVolume volume = go::AlarmVolume::Off;
+    go::Alarm volume = go::Alarm::Off;
     for (int offset = 0; offset < 1000; offset += 70) {
         step_until(rig, now_ms, (now_ms / 1000 + 1) * 1000 + static_cast<uint32_t>(offset));
         const uint32_t asked_at = now_ms;
-        volume = volume == go::AlarmVolume::Soft ? go::AlarmVolume::Off : go::AlarmVolume::Soft;
-        change_volume(rig, volume);
+        volume = volume == go::Alarm::Soft ? go::Alarm::Off : go::Alarm::Soft;
+        change_alarm(rig, volume);
         const uint32_t at_ms =
             wait_for_write(rig, now_ms, timing::DurableWriteWindow::kDeferCeilingMs);
         REQUIRE(at_ms != 0);
@@ -198,7 +198,7 @@ TEST_CASE("flash window: a change made on the ground is written promptly") {
     REQUIRE(rig.product.config_link().config().flight_state() == flight::FlightState::Ground);
 
     const uint32_t asked_at = now_ms;
-    change_volume(rig, go::AlarmVolume::Loud);
+    change_alarm(rig, go::Alarm::Loud);
     const uint32_t at_ms = wait_for_write(rig, now_ms, timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(at_ms != 0);
     // The settle, and less than one whole second of window on top of it.
@@ -214,13 +214,13 @@ TEST_CASE("flash window: a change that ends where it started writes no flash") {
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     stand_on_the_ground(rig, now_ms);
-    change_volume(rig, go::AlarmVolume::Loud);
+    change_alarm(rig, go::Alarm::Loud);
     REQUIRE(wait_for_write(rig, now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
 
     const uint32_t before = writes(rig);
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     step_until(rig, now_ms, now_ms + 100);
-    change_volume(rig, go::AlarmVolume::Loud);
+    change_alarm(rig, go::Alarm::Loud);
     step_until(rig, now_ms, now_ms + 3000);
     CHECK(writes(rig) == before);
     // The request was still served: nothing is left pending, so nothing is waiting
@@ -240,7 +240,7 @@ TEST_CASE("flash window: a pending change is flushed on the way to power off") {
     REQUIRE(rig.state().rf.plan.tx_allowed);
 
     const uint32_t before = writes(rig);
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     step_one(rig, now_ms);
     REQUIRE(writes(rig) == before);
     REQUIRE(rig.product.config_link().durable_writes().pending());
@@ -261,7 +261,7 @@ TEST_CASE("flash window: the write counters are readable over the companion link
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     stand_on_the_ground(rig, now_ms);
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     REQUIRE(wait_for_write(rig, now_ms, timing::DurableWriteWindow::kDeferCeilingMs) != 0);
 
     rig.platform.link().clear();
@@ -290,12 +290,12 @@ TEST_CASE("flash window: a hundred patches cost one write") {
     uint32_t now_ms = 0;
     fly(rig, now_ms);
     const uint32_t before = writes(rig);
-    REQUIRE(rig.settings().alarm_volume == go::AlarmVolume::Loud);
+    REQUIRE(rig.settings().alarm == go::Alarm::Loud);
 
     // Every pass, which is faster than a thumb and faster than a keystroke, and
     // the whole hundred inside the bound.
     for (int i = 0; i < 100; i++) {
-        change_volume(rig, i % 2 == 0 ? go::AlarmVolume::Off : go::AlarmVolume::Soft);
+        change_alarm(rig, i % 2 == 0 ? go::Alarm::Off : go::Alarm::Soft);
         step_one(rig, now_ms);
     }
     CHECK(rig.product.config_link().durable_writes().requests() == 100);
@@ -312,7 +312,7 @@ TEST_CASE("flash window: a hundred patches cost one write") {
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
+    CHECK(stored.alarm == go::Alarm::Soft);
 }
 
 // A refused write was counted as written, and the pilot's change was gone at the next boot.
@@ -322,7 +322,7 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
     uint32_t now_ms = 0;
     fly(rig, now_ms);
     rig.platform.key_value().refuse_writes = true;
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     step_until(rig, now_ms, now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(rig.product.config_link().failed_writes() > 0);
     // Retried in the windows it is given, and forced at most once per bound.
@@ -337,7 +337,7 @@ TEST_CASE("flash window: a write the store refused is retried until it lands") {
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
+    CHECK(stored.alarm == go::Alarm::Soft);
 }
 
 TEST_CASE("flash window: a refused write is neither a write nor a change on the bench") {
@@ -349,7 +349,7 @@ TEST_CASE("flash window: a refused write is neither a write nor a change on the 
     const uint32_t requests_before = window.requests();
     const uint32_t writes_before = window.writes();
     rig.platform.key_value().refuse_writes = true;
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     step_until(rig, now_ms, now_ms + 4 * timing::DurableWriteWindow::kDeferCeilingMs);
     REQUIRE(rig.product.config_link().failed_writes() > 1);
     CHECK(window.writes() == writes_before);
@@ -366,7 +366,7 @@ TEST_CASE("flash window: a store that did not mount is never written, and nothin
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
     fly(rig, now_ms);
-    change_volume(rig, go::AlarmVolume::Soft);
+    change_alarm(rig, go::Alarm::Soft);
     step_until(rig, now_ms, now_ms + 2 * timing::DurableWriteWindow::kDeferCeilingMs);
     CHECK(rig.platform.key_value().writes() == 0);
     CHECK(rig.product.config_link().failed_writes() == 0);

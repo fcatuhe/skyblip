@@ -30,13 +30,13 @@ TEST_CASE("settings: defaults are valid") {
 
 TEST_CASE("settings: blob round-trips through version+crc framing") {
     Settings settings = defaults();
-    settings.alarm_volume = AlarmVolume::Soft;
+    settings.alarm = Alarm::Soft;
     settings.units = Units::Metric;
     uint8_t blob[128];
     to_blob(settings, blob, sizeof(blob));
     Settings out;
     CHECK(from_blob(blob, blob_size(), out) == Status::Ok);
-    CHECK(out.alarm_volume == AlarmVolume::Soft);
+    CHECK(out.alarm == Alarm::Soft);
     CHECK(out.units == Units::Metric);
 }
 
@@ -108,11 +108,11 @@ TEST_CASE("settings: the config fields and a set patch round-trip over the link"
     CHECK(config_fields(settings, settings::address_of(0x3456)).find("\"aircraft_type\":1,") !=
           std::string::npos);
 
-    // apply a patch: change type + alarm volume + units
-    const char* patch = "{\"aircraft_type\":4,\"alarm_volume\":0,\"units\":1}";
+    // apply a patch: change type + alarm + units
+    const char* patch = "{\"aircraft_type\":4,\"alarm\":0,\"units\":1}";
     CHECK(apply_patch(settings, patch) == Status::Ok);
     CHECK(int(settings.aircraft_type) == 4);
-    CHECK(settings.alarm_volume == AlarmVolume::Off);
+    CHECK(settings.alarm == Alarm::Off);
     CHECK(settings.units == Units::Metric);
 }
 
@@ -123,10 +123,10 @@ TEST_CASE("settings: a set patch out of range is refused atomically") {
     CHECK(apply_patch(settings, bad) == Status::OutOfRange);
     CHECK(settings.aircraft_type == before);  // unchanged (atomic)
 
-    // The six-step scale an older companion sent tops out past loud.
-    const char* six_step = "{\"alarm_volume\":3}";
-    CHECK(apply_patch(settings, six_step) == Status::OutOfRange);
-    CHECK(settings.alarm_volume == AlarmVolume::Loud);
+    // Loud is the last step, so a code past it is refused.
+    const char* past_loud = "{\"alarm\":4}";
+    CHECK(apply_patch(settings, past_loud) == Status::OutOfRange);
+    CHECK(settings.alarm == Alarm::Loud);
 }
 
 // Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
@@ -198,10 +198,10 @@ TEST_CASE("settings: the battery trim is set over the link and refused whole whe
     CHECK(int(settings.battery_offset_mv) == -40);
 
     // Out of bound, and the rest of the patch does not land either.
-    const char* far_out = "{\"alarm_volume\":1,\"battery_offset_mv\":900}";
+    const char* far_out = "{\"alarm\":2,\"battery_offset_mv\":900}";
     CHECK(apply_patch(settings, far_out) == Status::OutOfRange);
     CHECK(int(settings.battery_offset_mv) == -40);
-    CHECK(settings.alarm_volume == AlarmVolume::Loud);
+    CHECK(settings.alarm == Alarm::Loud);
 
     // The boundary a narrowing cast would hide: 65536 truncates to 0 in an
     // int16, and 65576 truncates to 40 - both inside the bound, neither what
@@ -242,18 +242,18 @@ TEST_CASE("settings: the frequency trim is bounded at the boundary, in both fram
 
 TEST_CASE("settings: the frequency trim is set over the link and refused whole when it is not") {
     Settings settings = defaults();
-    const char* set = "{\"frequency_trim_e1_ppm\":-25,\"alarm_volume\":1}";
+    const char* set = "{\"frequency_trim_e1_ppm\":-25,\"alarm\":2}";
     REQUIRE(apply_patch(settings, set) == Status::Ok);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
-    CHECK(settings.alarm_volume == AlarmVolume::Soft);
+    CHECK(settings.alarm == Alarm::Soft);
 
     // Out of range is refused as a whole patch, not clamped and not partly
     // applied: a bench that asked for 500 ppm has the wrong number written down,
     // and silently storing 10 ppm instead would hide that.
-    const char* far = "{\"frequency_trim_e1_ppm\":5000,\"alarm_volume\":2}";
+    const char* far = "{\"frequency_trim_e1_ppm\":5000,\"alarm\":3}";
     CHECK(apply_patch(settings, far) == Status::OutOfRange);
     CHECK(int(settings.frequency_trim_e1_ppm) == -25);
-    CHECK(settings.alarm_volume == AlarmVolume::Soft);
+    CHECK(settings.alarm == Alarm::Soft);
 
     // Narrowed before it is validated: 65536 tenths of a ppm truncates to 0 in
     // an int16 and would pass a bound check that never saw the value sent.
@@ -290,7 +290,7 @@ TEST_CASE("settings: the config reply offers nothing the firmware does not read"
     CHECK(json.find("stealth") == std::string::npos);
     CHECK(json.find("gyro") == std::string::npos);
     // Kept, because each of these is read: the panel (callsign, units), the
-    // annunciator (alarm, alarm_volume).
+    // annunciator (alarm).
     CHECK(json.find("callsign") != std::string::npos);
     // units survived the same audit the three above failed, on one page: the
     // six-pack graduates its dials in km/h, metres and m/s or in kt, ft and
@@ -305,17 +305,20 @@ TEST_CASE("settings: the config reply offers nothing the firmware does not read"
     CHECK(apply_patch(settings, nautical) == Status::Ok);
     CHECK(settings.units == Units::Nautical);
 
-    // Keys nothing reads are ignored, and the rest of the patch applies.
-    uint8_t stale[16];
+    // Keys nothing reads are ignored, the retired alarm_enabled and alarm_volume among them, and
+    // the rest of the patch applies.
+    uint8_t stale[24];
     cbor::Writer writer(stale, sizeof(stale));
     writer.add_code(link::kCommandKey, link::Command::Set);
-    writer.add_unsigned(link::set_key::kAlarmVolume, 1);
+    writer.add_boolean(5, false);
+    writer.add_unsigned(6, 0);
+    writer.add_code(link::set_key::kAlarm, Alarm::Soft);
     writer.add_unsigned(40, 3);
     writer.add_boolean(41, true);
     const int stale_bytes = writer.finish();
     CHECK(apply_settings(settings, cbor::Reader(ConstByteSpan(
                                        stale, static_cast<size_t>(stale_bytes)))) == Status::Ok);
-    CHECK(settings.alarm_volume == AlarmVolume::Soft);
+    CHECK(settings.alarm == Alarm::Soft);
 }
 
 TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is not is refused") {
@@ -367,29 +370,29 @@ TEST_CASE("settings: a stored name the menu cannot type is dropped, and the trim
     CHECK(out.frequency_trim_e1_ppm == -35);
 }
 
-TEST_CASE("settings: a type or a volume is refused before it is narrowed, never stored wrapped") {
-    for (const char* patch : {"{\"aircraft_type\":260}", "{\"alarm_volume\":256}"}) {
+TEST_CASE("settings: a type or an alarm is refused before it is narrowed, never stored wrapped") {
+    for (const char* patch : {"{\"aircraft_type\":260}", "{\"alarm\":256}"}) {
         CAPTURE(patch);
         Settings settings = defaults();
         CHECK(apply_patch(settings, patch) == Status::OutOfRange);
         CHECK(int(settings.aircraft_type) == int(defaults().aircraft_type));
-        CHECK(int(settings.alarm_volume) == int(defaults().alarm_volume));
+        CHECK(int(settings.alarm) == int(defaults().alarm));
     }
-    for (const char* patch : {"{\"aircraft_type\":-252}", "{\"alarm_volume\":-253}"}) {
+    for (const char* patch : {"{\"aircraft_type\":-252}", "{\"alarm\":-253}"}) {
         CAPTURE(patch);
         Settings settings = defaults();
         CHECK(apply_patch(settings, patch) == Status::Invalid);
         CHECK(int(settings.aircraft_type) == int(defaults().aircraft_type));
-        CHECK(int(settings.alarm_volume) == int(defaults().alarm_volume));
+        CHECK(int(settings.alarm) == int(defaults().alarm));
     }
 }
 
 TEST_CASE("settings: a patch that names an identity changes nothing and refuses nothing") {
     Settings settings = defaults();
     const char* icao =
-        "{\"address\":14488116,\"address_mapping_table\":5,\"alarm_volume\":1}";  // 0xDD1234
+        "{\"address\":14488116,\"address_mapping_table\":5,\"alarm\":2}";  // 0xDD1234
     CHECK(apply_patch(settings, icao) == Status::Ok);
-    CHECK(settings.alarm_volume == AlarmVolume::Soft);
+    CHECK(settings.alarm == Alarm::Soft);
 
     const std::string json = config_fields(settings, 0x5B7E57);
     CHECK(json.find("\"address\":5996119,") != std::string::npos);
@@ -402,12 +405,12 @@ TEST_CASE(
     "bits") {
     Settings settings = defaults();
     CHECK(settings.aircraft_address == kAircraftAddressUnset);
-    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":0}") !=
+    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":0,") !=
           std::string::npos);
 
     CHECK(apply_patch(settings, "{\"aircraft_address\":3958150}") == Status::Ok);
     CHECK(settings.aircraft_address == 0x3C6586u);
-    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":3958150}") !=
+    CHECK(config_fields(settings, std::nullopt).find("\"aircraft_address\":3958150,") !=
           std::string::npos);
 
     CHECK(apply_patch(settings, "{\"aircraft_type\":4,\"aircraft_address\":16777216}") ==

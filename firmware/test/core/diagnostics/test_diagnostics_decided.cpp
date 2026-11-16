@@ -57,9 +57,9 @@ TEST_CASE("diagnostics record: config carries the settings a replay has to assum
     in.frequency_trim_e1_ppm = 62;
     in.aircraft_type = 9;
     in.address_mapping_table = 7;
-    in.alarm_volume = 4;
+    in.alarm_setting = 3;
     in.settings_version = 1;
-    in.alarm_enabled = true;
+    in.alarm_setting_recorded = true;
     in.metric = true;
 
     const diagnostics::Config out = diagnostics_round_trip(in);
@@ -68,9 +68,9 @@ TEST_CASE("diagnostics record: config carries the settings a replay has to assum
     CHECK(out.frequency_trim_e1_ppm == in.frequency_trim_e1_ppm);
     CHECK(out.aircraft_type == in.aircraft_type);
     CHECK(out.address_mapping_table == in.address_mapping_table);
-    CHECK(out.alarm_volume == in.alarm_volume);
+    CHECK(out.alarm_setting == in.alarm_setting);
     CHECK(out.settings_version == in.settings_version);
-    CHECK(out.alarm_enabled);
+    CHECK(out.alarm_setting_recorded);
     CHECK(out.metric);
 }
 

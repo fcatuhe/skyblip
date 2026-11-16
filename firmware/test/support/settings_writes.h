@@ -33,8 +33,8 @@ inline void fly(Rig& rig, uint32_t& now_ms) { rig.seconds(now_ms, 16, /*speed_mm
 // The change a pilot makes on the panel, and the one a phone makes over the link,
 // arrive at the same flag: comms::ConfigService is the single writer of the blob
 // and this is how both editors say the struct moved.
-inline void change_volume(Rig& rig, go::AlarmVolume to) {
-    rig.settings().alarm_volume = to;
+inline void change_alarm(Rig& rig, go::Alarm to) {
+    rig.settings().alarm = to;
     rig.product.config_link().config().note_settings_changed();
 }
 

@@ -27,11 +27,12 @@ constexpr uint32_t code(Enumeration value) {
 
 namespace {
 
-constexpr bool on_the_wire(go::AlarmVolume value) {
+constexpr bool on_the_wire(go::Alarm value) {
     switch (value) {
-        case go::AlarmVolume::Off:
-        case go::AlarmVolume::Soft:
-        case go::AlarmVolume::Loud: return true;
+        case go::Alarm::Off:
+        case go::Alarm::Visual:
+        case go::Alarm::Soft:
+        case go::Alarm::Loud: return true;
     }
     return false;
 }
@@ -266,10 +267,11 @@ constexpr bool on_the_wire(dfu::Proof value) {
 
 }
 
-static_assert(code(go::AlarmVolume::Off) == 0, "alarm_volume off");
-static_assert(code(go::AlarmVolume::Soft) == 1, "alarm_volume soft");
-static_assert(code(go::AlarmVolume::Loud) == 2, "alarm_volume loud");
-static_assert(on_the_wire(go::AlarmVolume::Off), "alarm_volume");
+static_assert(code(go::Alarm::Off) == 0, "alarm off");
+static_assert(code(go::Alarm::Visual) == 1, "alarm visual");
+static_assert(code(go::Alarm::Soft) == 2, "alarm soft");
+static_assert(code(go::Alarm::Loud) == 3, "alarm loud");
+static_assert(on_the_wire(go::Alarm::Off), "alarm");
 
 static_assert(code(go::Units::Nautical) == 0, "units nautical");
 static_assert(code(go::Units::Metric) == 1, "units metric");

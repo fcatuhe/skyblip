@@ -95,12 +95,13 @@ inline constexpr Value kReasonValues[] = {
 };
 inline constexpr Enumeration kReason{kReasonValues, 52};
 
-inline constexpr Value kAlarmVolumeValues[] = {
+inline constexpr Value kAlarmValues[] = {
     {"off", 0},
-    {"soft", 1},
-    {"loud", 2},
+    {"visual", 1},
+    {"soft", 2},
+    {"loud", 3},
 };
-inline constexpr Enumeration kAlarmVolume{kAlarmVolumeValues, 3};
+inline constexpr Enumeration kAlarm{kAlarmValues, 4};
 
 inline constexpr Value kUnitsValues[] = {
     {"nautical", 0},
@@ -296,13 +297,12 @@ inline constexpr Key kConfigKeys[] = {
     {"address", 2, Type::Unsigned, nullptr, 0, false},
     {"address_mapping_table", 3, Type::Unsigned, nullptr, 0, false},
     {"aircraft_type", 4, Type::Unsigned, nullptr, 0, false},
-    {"alarm_enabled", 5, Type::Boolean, nullptr, 0, false},
-    {"alarm_volume", 6, Type::Enum, &kAlarmVolume, 0, false},
     {"units", 7, Type::Enum, &kUnits, 0, false},
     {"callsign", 8, Type::Text, nullptr, 0, false},
     {"battery_offset_mv", 9, Type::Integer, nullptr, 0, false},
     {"frequency_trim_e1_ppm", 10, Type::Integer, nullptr, 0, false},
     {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
+    {"alarm", 12, Type::Enum, &kAlarm, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -697,9 +697,9 @@ inline constexpr Key kIdentityKeys[] = {
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 12},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 12},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 12},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 11},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 11},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 11},
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 9},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},

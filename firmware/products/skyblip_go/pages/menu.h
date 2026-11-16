@@ -20,7 +20,6 @@ enum class MenuRow : uint8_t {
     Range,
     Plot,
     Alarm,
-    Volume,
     Status,
     Satellites,
     RadioLog,
@@ -48,6 +47,8 @@ struct MenuValues {
     Detected detected{};
     // INFO: fc 14nov26 bus::State::own_transponder, the one an aircraft address typed must match
     std::optional<uint32_t> own_transponder{};
+    // INFO: fc 15nov26 the Go has a buzzer or a haptic, so its alarm can be soft or loud
+    bool sounds{true};
 };
 
 struct MenuSnapshot {

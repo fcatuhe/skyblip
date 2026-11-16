@@ -125,7 +125,8 @@ TEST_CASE("product: a long touch of the pad dismisses a standing alarm") {
     CHECK(sky.tone_commands() == before);
 }
 
-TEST_CASE("product: switching alarms off silences the buzzer and stills the motor on that pass") {
+TEST_CASE(
+    "product: switching the alarm to visual silences the buzzer and stills the motor at once") {
     Sky sky;
     models::Drv2605& chip = sky.simulator.platform().chips().haptic;
     uint32_t now_ms = sky.with_a_target_in_the_window();
@@ -137,30 +138,30 @@ TEST_CASE("product: switching alarms off silences the buzzer and stills the moto
     REQUIRE(chip.moving());
     const uint32_t silences = sky.buzzer().silences();
 
-    sky.simulator.product().settings().alarm_enabled = false;
+    sky.simulator.product().settings().alarm = go::Alarm::Visual;
     sky.simulator.step(now_ms + kStepMs);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(sky.buzzer().silences() == silences + 1);
     CHECK_FALSE(chip.moving());
     CHECK(sky.buzzer().guard_cuts() == 0);
 
-    // Silent while it is off, with the threat still closing.
+    // Silent while it only shows, with the threat still closing.
     const uint32_t before = sky.tone_commands();
     sky.run(now_ms, now_ms + 10000);
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.announcing_level()) == 0);
 
-    // And audible again the moment the pilot turns it back on.
-    sky.simulator.product().settings().alarm_enabled = true;
+    // And audible again the moment the pilot turns it back up.
+    sky.simulator.product().settings().alarm = go::Alarm::Loud;
     sky.run(now_ms + 10000, now_ms + 13000);
     CHECK(sky.tone_commands() > before);
 }
 
 TEST_CASE("product: soft or loud, the advisory is called at that loudness and felt") {
-    for (const go::AlarmVolume volume : {go::AlarmVolume::Soft, go::AlarmVolume::Loud}) {
+    for (const go::Alarm volume : {go::Alarm::Soft, go::Alarm::Loud}) {
         Sky sky;
         REQUIRE(sky.simulator.setup() == Status::Ok);
-        sky.simulator.product().settings().alarm_volume = volume;
+        sky.simulator.product().settings().alarm = volume;
         sky.run(0, 2000);
         sky.simulator.world().add_threat();
         REQUIRE(sky.step_until_sounding(2000, 8000) > 0);
@@ -169,14 +170,14 @@ TEST_CASE("product: soft or loud, the advisory is called at that loudness and fe
         CHECK(sky.buzzer().motor_starts() == 1);
         CHECK(sky.buzzer().vibrating());
         CHECK(sky.buzzer().loudness() ==
-              (volume == go::AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud));
+              (volume == go::Alarm::Soft ? ports::Loudness::Soft : ports::Loudness::Loud));
     }
 }
 
-TEST_CASE("product: volume off silences the buzzer and the motor both") {
+TEST_CASE("product: visual shows the advisory and sounds neither the buzzer nor the motor") {
     Sky sky;
     REQUIRE(sky.simulator.setup() == Status::Ok);
-    sky.simulator.product().settings().alarm_volume = go::AlarmVolume::Off;
+    sky.simulator.product().settings().alarm = go::Alarm::Visual;
     sky.run(0, 2000);
     sky.simulator.world().add_threat();
     sky.run(2000, 8000);
@@ -185,6 +186,21 @@ TEST_CASE("product: volume off silences the buzzer and the motor both") {
     CHECK(sky.buzzer().motor_starts() == 0);
     CHECK(sky.tone_commands() == 0);
     CHECK_FALSE(sky.simulator.product().alarm().sounding());
+}
+
+// The traffic picture and an EFB's stream keep the level, so off only stops the interruption.
+TEST_CASE("product: off raises no advisory and sounds nothing, and the target keeps its level") {
+    Sky sky;
+    REQUIRE(sky.simulator.setup() == Status::Ok);
+    sky.simulator.product().settings().alarm = go::Alarm::Off;
+    sky.run(0, 2000);
+    sky.simulator.world().add_threat();
+    sky.run(2000, 8000);
+
+    CHECK(sky.simulator.product().state().alarm_level == traffic::Level::Advisory);
+    CHECK(sky.simulator.product().state().alarm_undismissed == traffic::Level::None);
+    CHECK(sky.buzzer().motor_starts() == 0);
+    CHECK(sky.tone_commands() == 0);
 }
 
 TEST_CASE("product: a device on its way down does not leave the buzzer sounding") {

@@ -51,7 +51,7 @@ struct Unit {
 
     void ask() {
         switch (pending) {
-            case comms::Pending::Set: rig.send("{\"command\":\"set\",\"alarm_volume\":2}"); return;
+            case comms::Pending::Set: rig.send("{\"command\":\"set\",\"alarm\":3}"); return;
             case comms::Pending::Dfu:
                 rig.send("{\"command\":\"dfu\",\"version\":\"0.3.1+15\"}");
                 return;
@@ -104,14 +104,14 @@ TEST_CASE("product: a press held through a prompt's arrival, and one press after
     for (const comms::Pending pending : kPrompts) {
         CAPTURE(pending);
         Unit unit(pending);
-        const go::AlarmVolume volume = unit.rig.settings().alarm_volume;
+        const go::Alarm volume = unit.rig.settings().alarm;
         unit.hold_through_the_prompt();
         unit.pass(100);
         unit.rig.press(unit.now_ms);
         unit.pass(2000);
         CHECK(unit.prompt_stands());
         CHECK_FALSE(unit.allowed_anything());
-        CHECK(unit.rig.settings().alarm_volume == volume);
+        CHECK(unit.rig.settings().alarm == volume);
     }
 }
 
@@ -139,11 +139,11 @@ TEST_CASE("product: after a held press the gesture arms only once the thumb has 
 TEST_CASE("product: a press that began before the gesture armed is never spent on it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.run(0, 500);
     rig.platform.board_gpio().button_down = true;
     rig.run(550, 650);
-    rig.send("{\"command\":\"set\",\"alarm_volume\":2}");
+    rig.send("{\"command\":\"set\",\"alarm\":3}");
     rig.run(700, 2000);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
     rig.platform.board_gpio().button_down = false;
@@ -157,7 +157,7 @@ TEST_CASE("product: a press that began before the gesture armed is never spent o
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Set);
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
 }
 
 // Opus's review: the shutdown ignores the first hold after boot, so its release is the last one.
@@ -191,16 +191,16 @@ TEST_CASE("product: after a hold carried from boot the gesture waits a window fr
 TEST_CASE("product: a replaced prompt cannot spend a hold begun on the one it replaced") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.run(0, 500);
-    rig.send("{\"command\":\"set\",\"alarm_volume\":0}");
+    rig.send("{\"command\":\"set\",\"alarm\":0}");
     rig.run(550, 3500);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
     rig.platform.board_gpio().button_down = true;
     rig.run(3550, 3650);
     rig.drop_link();
     rig.raise_link(2);
-    rig.send_from(2, "{\"command\":\"set\",\"alarm_volume\":2}");
+    rig.send_from(2, "{\"command\":\"set\",\"alarm\":3}");
     rig.run(3700, 4500);
     REQUIRE(rig.product.config_link().config().claim_holder() == 2);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
@@ -210,7 +210,7 @@ TEST_CASE("product: a replaced prompt cannot spend a hold begun on the one it re
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Set);
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
 }
 
 // GPT's re-review: the longest gap before the accepting press is 560 ms, from 2090 to 2650.
@@ -218,11 +218,11 @@ TEST_CASE(
     "product: after a press that began before arming, the accepting press waits a quiet window") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.run(0, 500);
     rig.platform.board_gpio().button_down = true;
     rig.run(550, 650);
-    rig.send("{\"command\":\"set\",\"alarm_volume\":2}");
+    rig.send("{\"command\":\"set\",\"alarm\":3}");
     rig.run(700, 2000);
     REQUIRE(rig.product.screen().prompt() == comms::Pending::Set);
     rig.platform.board_gpio().button_down = false;
@@ -236,11 +236,11 @@ TEST_CASE(
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
     CHECK(rig.product.config_link().config().pending() == comms::Pending::Set);
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
 
     rig.run(now_ms, now_ms + 750);
     now_ms += 800;
     rig.press(now_ms);
     rig.run(now_ms, now_ms + 100);
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
+    CHECK(rig.settings().alarm == go::Alarm::Loud);
 }

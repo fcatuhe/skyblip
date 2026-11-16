@@ -189,7 +189,7 @@ TEST_CASE("bravo silence: claims that stop on a link still up give Bravo its ala
 
 TEST_CASE("bravo silence: after giving the alarm back Bravo sounds by its own settings") {
     Pinned pinned;
-    pinned.rig.product.settings().alarm_volume = bravo::AlarmVolume::Soft;
+    pinned.rig.product.settings().alarm = bravo::Alarm::Soft;
     pinned.seconds(20, Claim::Requesting);
     pinned.advisory(Claim::Requesting);
     REQUIRE_FALSE(pinned.rig.platform.annunciator().sounding());

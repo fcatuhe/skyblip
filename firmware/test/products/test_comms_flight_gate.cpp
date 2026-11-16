@@ -74,25 +74,25 @@ TEST_CASE("comms flight gate: a set with no fix since boot is staged, confirmed 
 // aloft.
 TEST_CASE("comms flight gate: a set in flight is refused in_flight and raises no prompt") {
     Bench bench(flight::FlightState::Airborne);
-    bench.config.on_rx(config_frame("{\"command\":\"set\",\"alarm_volume\":1}"));
+    bench.config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":2}"));
     CHECK(bench.config.pending() == Pending::None);
     CHECK(bench.last() == kInFlight);
     bench.config.confirm();
-    CHECK(bench.settings.alarm_volume == go::AlarmVolume::Loud);
+    CHECK(bench.settings.alarm == go::Alarm::Loud);
 }
 
 TEST_CASE("comms flight gate: a take-off cancels a staged set, from the ground or with no fix") {
     for (const flight::FlightState before :
          {flight::FlightState::Ground, flight::FlightState::Unknown}) {
         Bench bench(before);
-        bench.config.on_rx(config_frame("{\"command\":\"set\",\"alarm_volume\":1}"));
+        bench.config.on_rx(config_frame("{\"command\":\"set\",\"alarm\":2}"));
         REQUIRE(bench.config.pending() == Pending::Set);
 
         bench.config.set_flight_state(flight::FlightState::Airborne);
         CHECK(bench.config.pending() == Pending::None);
         CHECK(bench.last() == kInFlight);
         bench.config.confirm();
-        CHECK(bench.settings.alarm_volume == go::AlarmVolume::Loud);
+        CHECK(bench.settings.alarm == go::Alarm::Loud);
     }
 }
 
