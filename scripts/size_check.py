@@ -27,6 +27,13 @@ with no slot links against the whole flash, over the factory SoftDevice and
 bootloader, so it fails here. An ELF with no loadable segment, or with one
 outside both the flash and the SRAM, fails here too. Each budget is the board's
 slot0 less the footer its build's CONFIG_ROM_END_OFFSET reserves.
+
+A swap-using-offset build is held to a second limit, on the signed image beside
+the ELF: the slot less two sectors, one for MCUboot's trailer and one the
+secondary slot keeps free to move sectors through (MCUboot swap_offset.c,
+app_max_size()). The footer counts 150 B of TLVs and one sector, so an image can
+pass the first limit by up to a sector and still be one MCUboot refuses to swap
+in or out over the air, while a drag-and-drop of it boots.
 """
 import os
 import struct
@@ -35,6 +42,10 @@ import sys
 ELF_HEADER_BYTES = 52
 PROGRAM_HEADER_BYTES = 32
 PT_LOAD = 1
+# INFO: fc 15nov26 the nRF52840 page and the SPI NOR sector both slots are laid out in
+SWAP_SECTOR_BYTES = 0x1000
+SWAP_SPARE_SECTORS = 2
+SIGNED_IMAGE = "zephyr.signed.bin"
 
 
 def main(argv):
@@ -47,8 +58,10 @@ def main(argv):
         if not os.path.isfile(path):
             print(f"ERROR: no such file: {path}")
             return 1
+    signed_path = os.path.join(os.path.dirname(elf_path), SIGNED_IMAGE)
+    signed_bytes = os.path.getsize(signed_path) if os.path.isfile(signed_path) else None
     with open(elf_path, "rb") as elf, open(config_path) as config:
-        lines, found = report(elf.read(), config.read())
+        lines, found = report(elf.read(), config.read(), signed_bytes)
     for line in lines:
         print(line)
     for problem in found:
@@ -58,7 +71,7 @@ def main(argv):
     return 1 if found else 0
 
 
-def report(elf, config_text):
+def report(elf, config_text, signed_bytes=None):
     config = kconfig(config_text)
     try:
         flash_budget, flash_source = flash_budget_bytes(config)
@@ -95,7 +108,22 @@ def report(elf, config_text):
         found.append(f"over the flash budget by {flash_used - flash_budget} B")
     if ram_used > ram_budget:
         found.append(f"over the RAM budget by {ram_used - ram_budget} B")
+    if config.get("CONFIG_MCUBOOT_BOOTLOADER_MODE_SWAP_USING_OFFSET") == "y":
+        swap_line, swap_problem = swap_report(config, signed_bytes)
+        lines.append(swap_line)
+        found += swap_problem
     return lines, found
+
+
+def swap_report(config, signed_bytes):
+    if signed_bytes is None:
+        return "swap: no signed image", [f"no {SIGNED_IMAGE} beside the ELF to hold to the swap limit"]
+    swap_budget = int(config["CONFIG_FLASH_LOAD_SIZE"], 0) - SWAP_SPARE_SECTORS * SWAP_SECTOR_BYTES
+    line = (f"swap: {signed_bytes} B signed / {swap_budget} B budget "
+            f"({100.0 * signed_bytes / swap_budget:.1f}%), the slot less MCUboot's trailer and spare sectors")
+    if signed_bytes > swap_budget:
+        return line, [f"over the swap budget by {signed_bytes - swap_budget} B: MCUboot would refuse to swap it"]
+    return line, []
 
 
 def kconfig(text):

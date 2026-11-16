@@ -61,7 +61,7 @@ CI builds it too, and which key signs it decides which units it can update over 
 
 Each release holds every product's images, named `skyblip-<product>-<version or dev tag>`, with the simulator, the license texts and a `SHA256SUMS` over all of them. A production release adds `PROTOCOLS.md`, the radio protocol versions each product carries and the specification each implements, and a pre-release puts them in its notes. A product with no sensor hub has no `.full.signed.bin`.
 
-The build number after the `+` is the commit count. A unit on the production key refuses an image older than the one it runs, so it only goes up or installs the same version again. A unit on the development key takes any development image, older ones included. Drag-and-drop of a `.uf2` takes either anywhere.
+The build number after the `+` is the commit count. A unit on the production key refuses an image older than the one it runs, so it only goes up or installs the same version again. A unit on the development key takes any development image, older ones included. Drag-and-drop of a `.uf2` takes either anywhere. A `.uf2` built before November 15, 2026 can hang a unit that has installed an update over Bluetooth, in its bootloader with the LED steady. Dropping a current `.uf2` recovers it, because each one now blanks the sector where MCUboot keeps its swap status (`scripts/mkuf2.py`).
 
 ## Identifiers
 
