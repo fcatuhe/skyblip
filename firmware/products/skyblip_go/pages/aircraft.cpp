@@ -13,9 +13,6 @@ namespace {
 constexpr int kStateInset = 4;
 constexpr int kDetailInset = 22;
 constexpr int kDetailRows = 3;
-constexpr int kLabelInset = 6;
-constexpr int kNameInset = 24;
-constexpr int kTypeInset = 50;
 constexpr int kLabelBytes = 24;
 
 const char* state_text(Detection state) {
@@ -109,16 +106,17 @@ void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings&
         wrapped(canvas, top + kDetailInset, detail_text(detected.state), ink);
         return;
     }
-    char label[kLabelBytes];
-    heard_label(label, detected);
-    canvas.draw_text(kMenuLeftX, top + kLabelInset, label, ink, kMenuScale);
-    char address[kAircraftAddressCharacters + 1];
-    canvas.draw_text(kMenuLeftX, top + kNameInset, name_of(detected, address), ink, kCallsignScale);
     const char* type = matches(detected, settings) ? "SAME"
                        : named_type(detected.aircraft_type)
                            ? aircraft_type_name(detected.aircraft_type)
                            : "";
-    canvas.draw_text(kMenuLeftX, top + kTypeInset, type, ink, kMenuScale);
+    canvas.draw_text(kMenuLeftX, top + kDetectedTypeInset, type, ink, kMenuScale);
+    char address[kAircraftAddressCharacters + 1];
+    canvas.draw_text(kMenuLeftX, top + kDetectedNameInset, name_of(detected, address), ink,
+                     kCallsignScale);
+    char label[kLabelBytes];
+    heard_label(label, detected);
+    canvas.draw_text(kMenuLeftX, top + kDetectedAddressInset, label, ink, kMenuScale);
 }
 
 void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t seconds_left) {
@@ -128,10 +126,10 @@ void draw_aircraft_notice(ui::Canvas& canvas, const Detected& detected, uint32_t
     heard_label(label, detected);
     BodyLine body[3];
     int count = 0;
-    body[count++] = {name_of(detected, address), kCallsignScale};
-    body[count++] = {label};
     if (named_type(detected.aircraft_type))
         body[count++] = {aircraft_type_name(detected.aircraft_type)};
+    body[count++] = {name_of(detected, address), kCallsignScale};
+    body[count++] = {label};
     draw_question_body(canvas, Heading::Interrupt, seconds_left, body, count);
     draw_keys(canvas, {"SET", "CLOSE"});
 }

@@ -23,6 +23,10 @@ bool matches(const Detected& detected, const Settings& settings);
 bool same_aircraft(const Detected& a, const Detected& b);
 
 constexpr int kDetectedLines = 4;
+// INFO: fc 16nov26 type, callsign, address, as the menu's rows and the Briefing page order them
+constexpr int kDetectedTypeInset = 6;
+constexpr int kDetectedNameInset = 24;
+constexpr int kDetectedAddressInset = 50;
 constexpr const char* kAircraftNoticeTitle = "BRAVO HEARS";
 
 void draw_detected(ui::Canvas& canvas, const Detected& detected, const Settings& settings,
