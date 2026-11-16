@@ -43,6 +43,9 @@ fr:
       firmware: "Firmware"
       update: "Mettre à jour"
     settings:
+      aircraft: "Aéronef"
+      alarm: "Alarme"
+      display: "Affichage"
       units: "Unités"
       unit_names:
         nautical: "NM, kt"
@@ -180,8 +183,8 @@ fr:
         one: "Enregistrer 1 changement"
         other: "Enregistrer %{count} changements"
       default: "D\u2019origine\u00a0: %{value}"
-      heard: "Bravo entend un transpondeur qui pourrait être le vôtre\u00a0: %{aircraft}."
-      heard_same: "Bravo entend le transpondeur saisi ici\u00a0: %{aircraft}."
+      heard: "Bravo entend %{aircraft}."
+      heard_same: "Bravo entend %{aircraft}, comme saisi."
       "on": "activé"
       "off": "coupé"
       none: "aucun"

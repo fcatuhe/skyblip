@@ -186,6 +186,10 @@
     border-block-start: 1px solid var(--card-border);
   }
   .unit-fields:disabled .field { opacity: 0.55; }
+  .unit-settings .unit-fields { gap: var(--space-l); border-block-start: 0; }
+  .unit-section { display: grid; }
+  .unit-section:not(:has(> .field:not([hidden]))) { display: none; }
+  .unit-section > .unit-label { margin: 0; padding-block-end: var(--space-2xs); border-block-end: 1px solid var(--card-border); }
 
   .field {
     display: grid;

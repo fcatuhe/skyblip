@@ -346,7 +346,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
-      assert_selector ".field-heard", text: "Bravo hears a transponder that may be yours: 3A4B5C, F-JABC."
+      assert_selector ".field-heard", text: "Bravo hears F-JABC · ADS-B 3A4B5C."
       screen "11a-bravo-hears"
 
       click_button "Use it"
@@ -355,7 +355,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("3F2A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
       assert_equal({ "aircraft_address" => 0x3A4B5C }, page.evaluate_script("#{unit("3F2A")}.staged"))
-      assert_selector ".field-heard", text: "Bravo hears the transponder set here: 3A4B5C, F-JABC."
+      assert_selector ".field-heard", text: "Bravo hears F-JABC · ADS-B 3A4B5C, as set."
       assert_no_button "Use it"
     end
   end
@@ -364,13 +364,13 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go(heard: { own_transponder: 0x3A4B5C, own_transponder_callsign: "F-JABC", own_transponder_category: 4 })
     on_the_shelf do
       connect_go
-      assert_selector ".field-heard", text: "Bravo hears a transponder that may be yours: 3A4B5C, F-JABC, Glider."
+      assert_selector ".field-heard", text: "Bravo hears F-JABC · ADS-B 3A4B5C · Glider."
 
       click_button "Use it"
       assert_select "Aircraft type", selected: "Glider"
       assert_field "Callsign", with: "F-JABC"
       assert_field "ADS-B address", with: "3A4B5C"
-      assert_selector ".field-heard", text: "Bravo hears the transponder set here: 3A4B5C, F-JABC, Glider."
+      assert_selector ".field-heard", text: "Bravo hears F-JABC · ADS-B 3A4B5C · Glider, as set."
       assert_button "Save 3 changes"
 
       page.execute_script("#{unit("00012A")}.takeOff()")

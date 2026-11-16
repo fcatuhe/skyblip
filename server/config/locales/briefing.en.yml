@@ -43,6 +43,9 @@ en:
       firmware: Firmware
       update: Update
     settings:
+      aircraft: Aircraft
+      alarm: Alarm
+      display: Display
       units: Units
       unit_names:
         nautical: "NM, kt"
@@ -180,8 +183,8 @@ en:
         one: Save 1 change
         other: "Save %{count} changes"
       default: "Default: %{value}"
-      heard: "Bravo hears a transponder that may be yours: %{aircraft}."
-      heard_same: "Bravo hears the transponder set here: %{aircraft}."
+      heard: "Bravo hears %{aircraft}."
+      heard_same: "Bravo hears %{aircraft}, as set."
       "on": "on"
       "off": "off"
       none: none

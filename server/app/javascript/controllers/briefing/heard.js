@@ -10,7 +10,7 @@ export function heardLine(form, heard, edited) {
   const proposed = proposedIn(form, heard, edited)
   const same = Object.entries(proposed).every(([key, value]) => edited[key] === value)
   const type = "aircraft_type" in proposed ? optionOf(form.elements.aircraft_type, proposed.aircraft_type).text : null
-  const aircraft = [heard.aircraft_address, heard.callsign, type].filter(Boolean).join(", ")
+  const aircraft = [heard.callsign, `ADS-B ${heard.aircraft_address}`, type].filter(Boolean).join(" · ")
   return { text: say(same ? "words.heard_same" : "words.heard", { aircraft }), same }
 }
 
