@@ -41,6 +41,15 @@ and it does so without complaint. So, per board:
     without that bootloader the device installs nothing without a programmer.
 
 All of them are cheap to check here and expensive to discover in the field.
+
+The .uf2 also writes 0xFF over every byte of slot0's last sector that the
+confirmed image leaves out. That sector holds MCUboot's image trailer and the
+swap status before it. The Adafruit bootloader rewrites only the blocks a .uf2
+names, so without this a drag-and-drop keeps the status of an earlier Bluetooth
+swap while the image's own trailer block wipes that swap's size and copy_done.
+MCUboot then resumes a swap of size 0xFFFFFFFF, and its find_last_idx() never
+returns (MCUboot swap_offset.c): the unit hangs in the bootloader for good.
+The firmware image itself is unchanged; only the .uf2 grows by one sector.
 """
 import os
 import pathlib
@@ -57,6 +66,13 @@ class Window(NamedTuple):
     bootloader_start: int
     softdevice: str
 
+
+# INFO: fc 15nov26 one nRF52840 page at slot0's end holds MCUboot's trailer and swap status: test_mkuf2.py
+TRAILER_SECTOR_BYTES = 0x1000
+MCUBOOT_MAGIC = bytes.fromhex("77c295f360d2ef7f3552500f2cb67980")
+# INFO: fc 15nov26 imgtool --confirm sets image_ok, the 8-byte field just below the magic at BOOT_MAX_ALIGN 8
+IMAGE_OK_FROM_END = 24
+IMAGE_OK_SET = 0x01
 
 WINDOWS = {
     "t_echo_plus": Window(0x00026000, 0x000EA000, 0x000F4000, "S140 6.1.1"),
@@ -118,6 +134,28 @@ def write_hex(byte_map, path):
             lines.append(":%s%02X" % (rec.hex().upper(), (-sum(rec)) & 0xFF))
     lines.append(":00000001FF")
     path.write_text("\n".join(lines) + "\n")
+
+
+def prepare_drop(byte_map, window):
+    """Check the merged image is a confirmed slot0 image inside the window, and blank its trailer sector.
+
+    Returns an error message, or None once byte_map is what the .uf2 writes.
+    """
+    end = window.user_flash_end
+    magic = bytes(byte_map.get(a, 0xFF) for a in range(end - len(MCUBOOT_MAGIC), end))
+    if magic != MCUBOOT_MAGIC or byte_map.get(end - IMAGE_OK_FROM_END) != IMAGE_OK_SET:
+        return (
+            f"no confirmed MCUboot trailer ending at 0x{end:06X}. The input must be "
+            "zephyr.signed.confirmed.hex, padded to a slot that ends at USER_FLASH_END."
+        )
+    blank_trailer_sector(byte_map, window)
+    return check_window(ranges_of(byte_map), window)
+
+
+def blank_trailer_sector(byte_map, window):
+    for address in range(window.user_flash_end - TRAILER_SECTOR_BYTES, window.user_flash_end):
+        byte_map.setdefault(address, 0xFF)
+    return byte_map
 
 
 def zephyr_uf2conv():
@@ -192,17 +230,15 @@ def main():
         read_hex(path, byte_map)
         print(f"merged {path}")
 
-    ranges = ranges_of(byte_map)
-    if not ranges:
+    if not byte_map:
         return fail("inputs contain no data records")
-
-    print("combined image covers:")
-    for start, end in ranges:
-        print(f"  0x{start:08X} - 0x{end - 1:08X}  ({end - start} bytes)")
-
-    problem = check_window(ranges, WINDOWS[board])
+    problem = prepare_drop(byte_map, WINDOWS[board])
     if problem:
         return fail(problem)
+
+    print("combined image covers:")
+    for start, end in ranges_of(byte_map):
+        print(f"  0x{start:08X} - 0x{end - 1:08X}  ({end - start} bytes)")
 
     merged = out.with_suffix(".merged.hex")
     write_hex(byte_map, merged)
