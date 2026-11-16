@@ -127,6 +127,12 @@ uint32_t sounding_ms_of(Tune tune) {
 const int kAdvisoryCalls = calls_in(kAdvisoryTune);
 const uint32_t kLastCallMs = kAdvisorySkyMs + kAdvisoryLongBlipMs;
 
+bool within_a_step(uint32_t measured_ms, uint32_t written_ms) {
+    const uint32_t off_ms =
+        measured_ms > written_ms ? measured_ms - written_ms : written_ms - measured_ms;
+    return off_ms < kStepMs;
+}
+
 Situation standing(Level level) {
     Situation situation{};
     situation.level = level;
@@ -272,7 +278,7 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
         now_ms += kStepMs;
         buzzer.run(standing(Level::None), now_ms, 5000);
         CHECK(buzzer.beeps == kFirstFixTune.count);
-        CHECK(buzzer.last_beep_ms == kFirstFixHeldNoteMs);
+        CHECK(within_a_step(buzzer.last_beep_ms, kFirstFixNoteMs));
         CHECK_FALSE(buzzer.on);
         CHECK(buzzer.policy.voice() == Voice::None);
     }
@@ -292,7 +298,7 @@ TEST_CASE("annunciation: the fix tune is heard and never felt") {
     CHECK(buzzer.vibrations == 0);
 }
 
-TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneven rhythm") {
+TEST_CASE("annunciation: the first fix is a 200 BPM melody on an eighth grid") {
     Buzzer buzzer;
     uint32_t now_ms = 1000;
     Situation fix{};
@@ -301,21 +307,20 @@ TEST_CASE("annunciation: the first fix is six notes, three pitches, and an uneve
     now_ms += kStepMs;
     buzzer.run(Situation{}, now_ms, 5000);
 
+    // At 200 BPM an eighth is 150 ms, and a note sounds for 7/9 of it, 117 ms.
+    constexpr uint32_t kEighthMs = 150;
+    constexpr uint32_t kSoundingMs = 117;
+    constexpr uint32_t kOnsetEighths[] = {0, 1, 3, 5, 6, 8};
+    constexpr uint16_t kPitchesHz[] = {kNoteE7Hz, kNoteE7Hz, kNoteE7Hz,
+                                       kNoteC7Hz, kNoteE7Hz, kNoteG7Hz};
     REQUIRE(buzzer.beeps == kFirstFixTune.count);
-    uint32_t tone_ms = 0;
+    uint32_t onset_ms = 0;
     for (uint8_t i = 0; i < kFirstFixTune.count; i++) {
-        CHECK(buzzer.hz_of[i] == kFirstFixJingle[i].pitch_hz);
-        if (i > 0) CHECK(buzzer.gap_before[i] == kFirstFixJingle[i - 1].gap_ms);
-        tone_ms += kFirstFixJingle[i].tone_ms;
+        if (i > 0) onset_ms += buzzer.beep_ms_of[i - 1] + buzzer.gap_before[i];
+        CHECK(within_a_step(onset_ms, kOnsetEighths[i] * kEighthMs));
+        CHECK(within_a_step(buzzer.beep_ms_of[i], kSoundingMs));
+        CHECK(buzzer.hz_of[i] == kPitchesHz[i]);
     }
-    CHECK(buzzer.on_ms == tone_ms);
-
-    // E E . E . C E . G: the two silent beats are the tune.
-    CHECK(buzzer.gap_before[1] == kFirstFixNextBeatMs);
-    CHECK(buzzer.gap_before[2] == kFirstFixSkipBeatMs);
-    CHECK(buzzer.hz_of[3] == kNoteC7Hz);
-    CHECK(buzzer.hz_of[3] < buzzer.hz_of[0]);
-    CHECK(buzzer.hz_of[5] == kNoteG7Hz);
 }
 
 TEST_CASE("annunciation: both tunes are over inside two seconds") {
