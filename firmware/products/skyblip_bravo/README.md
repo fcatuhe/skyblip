@@ -204,7 +204,7 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 
 | Key | A frame counted there |
 |---|---|
-| `frames` | the LR2021 heard a preamble and the 0x95 sync, and handed up the 27 chip bytes behind them |
+| `frames` | the LR2021 heard a preamble, decoded a DF16 or DF17 frame behind it, and handed it up as chips |
 | `dropped` | was lost before the decoder |
 | `crc` | failed its parity, and the one repair allowed, a single doubtful chip pair, did not clear it |
 | `unsupported` | passed its parity and carries a DF17 message the decoder does not read |

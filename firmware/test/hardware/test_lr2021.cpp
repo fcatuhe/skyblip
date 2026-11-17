@@ -95,7 +95,7 @@ TEST_CASE("lr2021: the TCXO is powered at 1.6 V from standby RC before the calib
     CHECK(part.fallback_mode == 0x01);
 }
 
-TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver") {
+TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Manchester layout") {
     models::Lr2021 part;
     REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
     CHECK(part.packet_type == 0x0A);
@@ -105,11 +105,10 @@ TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver") {
     CHECK(part.depth == 0x00);
     CHECK(part.preamble_chips == 16);
     CHECK(part.packet_format == 0x00);
-    CHECK(part.payload_bytes == adsb::kChipBytes);
-    CHECK(part.crc_manchester == 0x00);
+    CHECK(part.payload_bytes == adsb::kFrameBytes);
+    CHECK(part.crc_manchester == 0x09);
     CHECK(part.whitening_polynom == 0);
-    CHECK(part.sync == 0x95);
-    CHECK(part.sync_bits == 8);
+    CHECK(part.sync_bits == 0);
     CHECK(part.sync_msb_first);
     CHECK(part.pattern == 0x0285);
     CHECK(part.pattern_length == 16);
@@ -133,21 +132,26 @@ TEST_CASE("lr2021: the detection pattern is the 8 us ADS-B preamble, first chip 
     CHECK(air == ((kAdsbPreambleAir[0] << 8) | kAdsbPreambleAir[1]));
 }
 
-TEST_CASE("lr2021: the threshold and SoftRF's register go in by masked write after the modem") {
+// #293 found a threshold written before the frequency acting near -106 dBm, whatever it asked.
+TEST_CASE("lr2021: the threshold and the front end go in by masked write after the frequency") {
     models::Lr2021 part;
     REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
     CHECK(part.masks[0xF30E14] == 0x07F00000);
-    CHECK(part.reg(0xF30E14) == 0x07000000);
+    CHECK(part.reg(0xF30E14) == 0x05C00000);
     CHECK(part.masks[0xF30150] == 0x000000FF);
     CHECK(part.reg(0xF30150) == 0x18);
-    CHECK(part.last_order(chip::kWriteRegMemMask32) >
+    CHECK(part.command_order(chip::kWriteRegMemMask32) >
           part.command_order(chip::kSetOokModulationParams));
+    CHECK(part.command_order(chip::kSetOokModulationParams) >
+          part.command_order(chip::kSetRfFrequency));
+    CHECK(part.command_order(chip::kSetRfFrequency) > part.command_order(chip::kCalibFe));
 }
 
-// SoftRF asks RadioLib for -80 dBm, and RadioLib writes level + 64 where Semtech writes level + 74.
-TEST_CASE("lr2021: the default threshold writes the field SoftRF's -80 dBm request wrote") {
-    const int radiolib_field = (64 - 80) & 0x7F;
-    CHECK(((chip::kDetectionThresholdDbm + chip::kOokThresholdOffsetDb) & 0x7F) == radiolib_field);
+// RadioLib writes level + 64 where Semtech writes level + 74, so cb-tfc's +40 is -98 dBm here.
+TEST_CASE("lr2021: the default threshold is the -110 dBm #293 measured best, below cb-tfc's") {
+    const int cb_tfc_field = (64 + 40) & 0x7F;
+    CHECK(((chip::kDetectionThresholdDbm + chip::kOokThresholdOffsetDb) & 0x7F) < cb_tfc_field);
+    CHECK(chip::kDetectionThresholdDbm == -110);
 
     models::Lr2021 part;
     REQUIRE(lr2021_for(part).begin(-100) == Status::Ok);
@@ -167,7 +171,7 @@ TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line") {
     CHECK(part.refused.empty());
 }
 
-TEST_CASE("lr2021: the 27 chips after the 0x95 sync are a frame the DF17 decoder reads") {
+TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the 27 chips the decoder reads") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     REQUIRE(radio.mode() == Lr2021Mode::Receive);
@@ -183,6 +187,24 @@ TEST_CASE("lr2021: the 27 chips after the 0x95 sync are a frame the DF17 decoder
     CHECK(address_in(chips) == kAddress);
     CHECK_FALSE(radio.irq_asserted());
     CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::None);
+}
+
+// With no sync word, DF11 replies land too, and only DF16 and DF17 go up to the decoder.
+TEST_CASE("lr2021: a frame of another downlink format is read and dropped") {
+    models::Lr2021 part;
+    Lr2021 radio = lr2021_receiving(part);
+    AdsbAir reply = identification(kAddress);
+    // The chips of the bits 0101, so the frame opens on DF 01011, an all-call reply.
+    reply.chips[2] = 0x66;
+    const AdsbAir squitter = identification(kOtherAddress);
+    REQUIRE(part.receive_air(reply.chips, sizeof(reply.chips)));
+    REQUIRE(part.receive_air(squitter.chips, sizeof(squitter.chips)));
+
+    uint8_t chips[adsb::kChipBytes]{};
+    REQUIRE(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
+    CHECK(address_in(chips) == kOtherAddress);
+    CHECK(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::None);
+    CHECK(part.fifo.empty());
 }
 
 TEST_CASE("lr2021: the next frame is heard without another SetRx") {
