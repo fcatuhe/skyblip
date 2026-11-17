@@ -310,7 +310,7 @@ def clock(seconds):
 
 def caveats(run, skipped, out):
     out("caveats")
-    for line in records.caveat_lines(run.notes):
+    for line in records.caveat_lines(run.notes, run.records):
         out("  " + line)
     for line in records.missing_index_lines(run.records):
         out("  " + line)

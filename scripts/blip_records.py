@@ -535,7 +535,7 @@ def summarise(lines_in):
         if record.get("error"):
             unreadable.append(record)
 
-    lines = caveat_lines([line for line in lines_in if is_note(line)])
+    lines = caveat_lines([line for line in lines_in if is_note(line)], records)
     lines.append("%d records" % sum(counts.values()))
     if stamped:
         first = min(stamped, key=lambda pair: pair[0])
@@ -559,10 +559,13 @@ def summarise(lines_in):
     return lines
 
 
-def caveat_lines(notes):
+def caveat_lines(notes, records):
     """What an analysis must not assume about these records, before it is handed any count."""
+    kept = {(record.get("session"), record.get("index")) for record in records}
     out = []
     for note in notes:
+        if note["type"] == "torn" and (note["session"], note.get("index")) in kept:
+            continue
         for line in caveats_of(note):
             if line not in out:
                 out.append(line)

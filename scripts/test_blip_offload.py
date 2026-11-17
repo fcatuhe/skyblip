@@ -290,6 +290,15 @@ class ResumedFetch(unittest.TestCase):
             fetch_into(LogEndpoint(9, closed=False), path)
             self.assertEqual(kept_indices(path), list(range(8)))
 
+    def test_the_summary_of_a_resumed_file_does_not_call_a_record_it_fetched_again_dropped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            summary = records.summarise(list(records.read_ndjson(str(path))))
+        self.assertFalse(any("index 4 dropped" in line for line in summary), summary)
+        self.assertTrue(any("index 8 dropped" in line for line in summary), summary)
+
     def test_a_resume_once_the_session_closed_keeps_the_record_it_dropped_as_torn(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
