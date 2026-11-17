@@ -40,7 +40,10 @@ class RecordStore {
     Append append(const uint8_t* record, uint32_t now_ms) { return append(record, 1, now_ms); }
     Append append(const uint8_t* records, uint32_t count, uint32_t now_ms);
     uint32_t run_slots() const;
-    void end_session() { index_stale_ = true; }
+    void end_session() {
+        writing_ = false;
+        index_stale_ = true;
+    }
 
     // INFO: fc 20sep26 records the ring recycled under the session being written, once each
     uint32_t take_lost_records();
@@ -118,6 +121,7 @@ class RecordStore {
     bool index_truncated_{false};
     bool index_stale_{false};
     bool claimed_{false};
+    bool writing_{false};
     bool available_{false};
     bool erasing_{false};
     bool spare_ready_{false};

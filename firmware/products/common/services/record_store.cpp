@@ -133,6 +133,7 @@ Append RecordStore::claim_sector(uint32_t session_id) {
 // INFO: fc 20sep26 the claim waits for the first record: opening a session must not touch flash
 void RecordStore::begin_session(uint32_t session_id) {
     session_id_ = session_id;
+    writing_ = true;
     session_records_ = 0;
     lost_sectors_seen_ = pool_.allocator().lost_sectors(owner_);
     claimed_ = false;
@@ -231,6 +232,7 @@ void RecordStore::step_erase(uint32_t now_ms) {
     spare_ready_ = false;
     session_count_ = 0;
     session_id_ = 0;
+    writing_ = false;
     index_truncated_ = false;
     index_stale_ = false;
     records_written_ = 0;
@@ -287,10 +289,10 @@ void RecordStore::answer_list(const comms::LogRequest& request) {
         return;
     }
     const SessionInfo& entry = index_[request.index];
-    reply(peer,
-          comms::format_log_session(pool_.reply_buffer(), pool_.reply_capacity(), request.index,
-                                    session_count_, entry.session_id, entry.first, entry.records,
-                                    entry.closed, entry.truncated, selector()));
+    reply(peer, comms::format_log_session(pool_.reply_buffer(), pool_.reply_capacity(),
+                                          request.index, session_count_, entry.session_id,
+                                          entry.first, entry.records, entry.closed, entry.truncated,
+                                          writing_ && entry.session_id == session_id_, selector()));
 }
 
 void RecordStore::answer_read(const comms::LogRequest& request) {
