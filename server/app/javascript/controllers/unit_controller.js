@@ -320,7 +320,9 @@ export default class extends Controller {
     const remembers = unit?.state?.task === "set" && unit.state.trust === "proven"
     if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
+    const { sounds, onBravo } = this.#alarmOn(unit.state)
     this.glass.show({
+      sounds, paired: onBravo,
       title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "bravo", remembers,
       argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
@@ -338,10 +340,7 @@ export default class extends Controller {
     if (!linked || !settings) return
     if (settings !== this.shown) this.#fill(settings)
     this.#setOnGo(state.goAlarm ?? null)
-    // INFO: fc 15nov26 a Go with no buzzer and no haptic ships on visual, so its defaults say it cannot sound
-    const sounds = state.defaults?.alarm !== "visual"
-    // INFO: fc 17nov26 a status naming a Bravo says it is paired, and then soft and loud sound on Bravo
-    const onBravo = !sounds && Boolean(state.status?.bravo)
+    const { sounds, onBravo } = this.#alarmOn(state)
     for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) {
       option.hidden = option.disabled = !sounds && !onBravo
       option.textContent = onBravo ? option.dataset.onBravo : option.dataset.label
@@ -485,11 +484,19 @@ export default class extends Controller {
     }
   }
 
+  // INFO: fc 17nov26 config says whether a Go has a buzzer or a haptic, and a status naming a Bravo that it is paired
+  #alarmOn(state) {
+    const sounds = state?.sounds !== false
+    return { sounds, onBravo: !sounds && Boolean(state?.status?.bravo) }
+  }
+
   // INFO: fc 17nov26 a paired Bravo's alarm is its Go's ALARM row, so the field shows it and stays shut
   #setOnGo(goAlarm) {
     const field = this.settingsTarget.elements.alarm
     this.setOnGoTarget.hidden = goAlarm === null
+    if (field && goAlarm === null) field.removeAttribute("aria-describedby")
     if (!field || goAlarm === null) return
+    field.setAttribute("aria-describedby", this.setOnGoTarget.id)
     field.closest(".field").hidden = false
     field.disabled = true
     showSetting(field, goAlarm)

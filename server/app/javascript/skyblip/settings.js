@@ -9,6 +9,10 @@ export function settingsOf(reply, keys = SETTING_KEYS) {
   return Object.fromEntries(held.map(key => [key, key === 'aircraft_address' ? aircraftAddressText(reply[key]) : reply[key]]));
 }
 
+export function soundsOf(reply) {
+  return reply.annunciator_fitted ?? null;
+}
+
 export function goAlarmOf(reply) {
   return reply.alarm_from_go === true ? reply.alarm : null;
 }

@@ -427,7 +427,10 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
       assert_select "Alarm", selected: "Soft sound + visual", disabled: true
-      assert_text "Set on its Go"
+      assert_text "Your Go's ALARM row sets it for both units."
+      assert_equal "unit-alarm-set-on-go", find_field("Alarm", disabled: true)["aria-describedby"]
+      assert_equal "0.55", page.evaluate_script("getComputedStyle(document.getElementById('unit-alarm')).opacity")
+      assert_equal "1", page.evaluate_script("getComputedStyle(document.getElementById('unit-alarm-set-on-go')).opacity")
       screen "11c-bravo-alarm-set-on-go"
       fill_in "ADS-B address", with: "3C6586"
       click_button "Save 1 change"
@@ -436,15 +439,19 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Go with no buzzer and no haptic paired with a Bravo offers Bravo soft and Bravo loud" do
+  test "a Go with no buzzer and no haptic paired with a Bravo offers sound on Bravo, and its glass says BRAVO" do
     in_range a_go(sounds: false, bravo: "live", stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "loud" })
     on_the_shelf do
       connect_go
-      assert_select "Alarm", selected: "Bravo loud", options: [ "Off", "Visual only", "Bravo soft", "Bravo loud" ]
+      assert_select "Alarm", selected: "Loud sound on Bravo + visual",
+                             options: [ "Off", "Visual only", "Soft sound on Bravo + visual", "Loud sound on Bravo + visual" ]
+      assert_no_field "Alarm", disabled: true
       screen "11d-go-bravo-steps"
-      select "Bravo soft", from: "Alarm"
+      select "Soft sound on Bravo + visual", from: "Alarm"
+      assert_text "Default: Loud sound on Bravo + visual"
       click_button "Save 1 change"
       assert_glass "SETTINGS"
+      assert_selector ".glass-prompt canvas.glass[aria-label*='ALARM BRAVO SOFT']"
       assert_equal({ "alarm" => "soft" }, page.evaluate_script("#{unit("00012A")}.staged"))
     end
   end

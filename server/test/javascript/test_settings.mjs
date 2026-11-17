@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { goAlarmOf, heardSettings, settingsOf, statusOf } from '#skyblip/settings';
+import { goAlarmOf, heardSettings, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
 
 const GO = { aircraft_type: 1, callsign: 'F-JXYZ', aircraft_address: '', units: 'nautical' };
 const BRAVO = { alarm_enabled: true, alarm_volume: 'loud', aircraft_address: '' };
@@ -45,4 +45,10 @@ test('a paired Bravo shows its Go\'s alarm and holds no alarm of its own to send
   assert.deepEqual(settingsOf(alone), { aircraft_address: '', alarm: 'visual' });
   assert.equal(goAlarmOf(alone), null);
   assert.equal(goAlarmOf({ command: 'config', alarm: 'loud' }), null);
+});
+
+test('config says whether a Go can sound itself, and a unit that does not say leaves it unknown', () => {
+  assert.equal(soundsOf({ command: 'config', annunciator_fitted: false }), false);
+  assert.equal(soundsOf({ command: 'config', annunciator_fitted: true }), true);
+  assert.equal(soundsOf({ command: 'config', alarm: 'loud', alarm_from_go: false }), null);
 });

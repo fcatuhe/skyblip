@@ -4,7 +4,7 @@ import { FirmwareAttestation } from '#skyblip/attestation';
 import { installReportOf, landingOf } from '#skyblip/install_report';
 import { hex } from '#skyblip/link';
 import { LogReader, fetchDiagnostics } from '#skyblip/log';
-import { changedSettings, goAlarmOf, settingsFrame, settingsOf, statusOf } from '#skyblip/settings';
+import { changedSettings, goAlarmOf, settingsFrame, settingsOf, soundsOf, statusOf } from '#skyblip/settings';
 import {
   GROUP, RC, SmpClient, SmpError, SmpTimeout, SmpWriteRejected,
   dataRoom, packetBudget, probeWriteBytes, runningVersion, upload,
@@ -180,6 +180,7 @@ export class Updater {
     status: null,
     settings: null,
     goAlarm: null,
+    sounds: null,
     address: null,
     defaults: null,
     refusedOnDevice: false,
@@ -473,7 +474,7 @@ export class Updater {
 
   // INFO: fc 15nov26 the dump is asked once the settings are answered, so a small_mtu after it is the dump's own
   #configured(reply) {
-    this.#set({ settings: settingsOf(reply), goAlarm: goAlarmOf(reply), ...activationOf(reply) });
+    this.#set({ settings: settingsOf(reply), goAlarm: goAlarmOf(reply), sounds: soundsOf(reply), ...activationOf(reply) });
     if (!this.#dumpAsked) this.readDiagnostics();
   }
 
@@ -630,13 +631,13 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, address: null, defaults: null, refusedOnDevice: false,
+      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });

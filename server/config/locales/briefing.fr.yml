@@ -55,10 +55,10 @@ fr:
         visual: "Visuelle seulement"
         soft: "Son faible + visuel"
         loud: "Son fort + visuel"
-      set_on_go: "Réglée sur son Go"
+      set_on_go: "La ligne ALARM de votre Go la règle pour les deux appareils."
       bravo_alarm_names:
-        soft: "Bravo, son faible"
-        loud: "Bravo, son fort"
+        soft: "Son faible sur Bravo + visuel"
+        loud: "Son fort sur Bravo + visuel"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
       heard_setting: "Réglage"
@@ -282,7 +282,7 @@ fr:
       unknown_command: "Ce firmware est trop ancien pour changer ses réglages. Mettez-le à jour d\u2019abord."
       out_of_range: "L\u2019appareil a refusé une valeur qu\u2019il ne peut pas enregistrer. FFFFFF n\u2019est l\u2019adresse OACI d\u2019aucun aéronef. Rien n\u2019a changé."
       not_own_transponder: "Votre Bravo entend un autre transpondeur comme celui de cet aéronef. Vérifiez l\u2019adresse, ou utilisez celle que Bravo entend. Rien n\u2019a changé."
-      set_on_go: "Ce Bravo est appairé à un Go, dont la ligne Alarme règle l\u2019alarme des deux. Rien n\u2019a changé."
+      set_on_go: "Ce Bravo est associé à un Go, dont la ligne ALARM règle l\u2019alarme des deux. Rien n\u2019a changé."
     capture_notices:
       capture_armed: "Armée. Le voyant clignote deux fois toutes les 3\u00a0s jusqu\u2019à l\u2019arrêt de la capture. La capture continue en vol."
       capture_stopped: "Arrêtée. Le voyant reprend son clignotement simple."
