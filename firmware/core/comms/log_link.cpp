@@ -161,7 +161,7 @@ int format_log_count(uint8_t* out, int capacity, uint32_t sessions, bool truncat
 
 int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t count,
                        uint32_t session_id, uint32_t first, uint32_t records, bool closed,
-                       bool truncated, LogStore store) {
+                       bool truncated, bool recording, LogStore store) {
     cbor::Writer writer(out, capacity);
     writer.add_code(link::kCommandKey, link::Command::Session);
     if (!named_store(writer, link::session_key::kLog, store)) return 0;
@@ -178,6 +178,7 @@ int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t coun
     writer.add_boolean(link::session_key::kTruncated, truncated);
     // INFO: fc 17nov26 absent while 0, so an untruncated entry keeps the width it always had
     if (first > 0) writer.add_unsigned(link::session_key::kFirst, first);
+    if (recording) writer.add_boolean(link::session_key::kRecording, true);
     return writer.finish();
 }
 

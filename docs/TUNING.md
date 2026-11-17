@@ -30,9 +30,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFirstFixNoteMs` | `(7 * kFirstFixEighthMs + 9 / 2) / 9` = 117 | milliseconds | - | a note sounds 7/9 of its eighth, so a silence parts repeated notes |
 | `kFirstFixNextBeatMs` | `kFirstFixEighthMs - kFirstFixNoteMs` = 33 | milliseconds | - | - |
 | `kFirstFixSkipBeatMs` | `2 * kFirstFixEighthMs - kFirstFixNoteMs` = 183 | milliseconds | - | - |
-| `kBravoLostNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kPeerLostNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
 | `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | a tune never starts over a sounding one, so no on-span outlasts the longest call |
-| `kShortestAlarmPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs})` | milliseconds | - | the fix tune is a melody, not an alarm, so it keeps its own tempo |
+| `kShortestAlarmPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kPeerLostTune), kReannounceRestMs})` | milliseconds | - | the fix tune is a melody, not an alarm, so it keeps its own tempo |
 | `kAnnunciatorOnCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | a guard under the loop, never a tune's: an output still on past it is a bug |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
@@ -281,7 +281,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json health: once a second whatever the traffic |
-| `kAlarmRequestMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | unverified: three claim periods, so one lost claim keeps Bravo silent (#194) |
+| `kCallMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | unverified (#194): three claim periods, so one lost claim keeps the call |
 
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
 
@@ -317,7 +317,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
-| `kClaimPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: the Go writes peer_claim once a second while paired |
+| `kClaimPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json: a claim once a second, and at once when the call changes |
 | `kConnectCeilingMs` | 10000 (10 s) | milliseconds | Ceiling | unverified: a Bravo in range answers a connection in a few scan windows |
 | `kAnswerCeilingMs` | 30000 (30 s) | milliseconds | Ceiling | Bravo's 30 s press window, so the glass counts down the time Bravo allows |
 | `kPairingScanWindowUs` | 30000 (30 ms) | microseconds | Window | GAP fast scanning, 30 ms in 60 (Core 6.2 Vol 3 Part C App A), pilot waiting |

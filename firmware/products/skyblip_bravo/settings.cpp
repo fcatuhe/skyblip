@@ -29,8 +29,16 @@ struct SettingsV2 {
     bool aircraft_address_from_go{false};
 };
 
+struct SettingsV3 {
+    uint32_t aircraft_address{kAircraftAddressUnset};
+    PeerPin peer{};
+    Alarm alarm{Alarm::Loud};
+    bool aircraft_address_from_go{false};
+};
+
 constexpr uint8_t kBlobVersionV1 = 1;
 constexpr uint8_t kBlobVersionV2 = 2;
+constexpr uint8_t kBlobVersionV3 = 3;
 
 // INFO: fc 15nov26 both old offs silenced the buzzer and the haptic and kept the lamp, as visual
 // does
@@ -47,6 +55,7 @@ Status open_v1(const uint8_t* in, size_t length, Settings& out) {
     out.aircraft_address = read.aircraft_address;
     out.peer = read.peer;
     out.alarm = alarm_of(read.alarm_enabled, read.alarm_volume);
+    out.go_alarm = out.alarm;
     return Status::Ok;
 }
 
@@ -59,6 +68,21 @@ Status open_v2(const uint8_t* in, size_t length, Settings& out) {
     out.peer = read.peer;
     out.alarm = alarm_of(read.alarm_enabled, read.alarm_volume);
     out.aircraft_address_from_go = read.aircraft_address_from_go;
+    out.go_alarm = out.alarm;
+    return Status::Ok;
+}
+
+// INFO: fc 17nov26 a pinned Bravo played its own alarm before version 4, so its Go's starts there
+Status open_v3(const uint8_t* in, size_t length, Settings& out) {
+    SettingsV3 read{};
+    const Status status = settings::open(in, length, sizeof(SettingsV3), &read);
+    if (status != Status::Ok) return status;
+    out = Settings{};
+    out.aircraft_address = read.aircraft_address;
+    out.peer = read.peer;
+    out.alarm = read.alarm;
+    out.aircraft_address_from_go = read.aircraft_address_from_go;
+    out.go_alarm = read.alarm;
     return Status::Ok;
 }
 
@@ -89,7 +113,7 @@ PeerPin pin_of(const events::BluetoothAddress& address) {
 }
 
 Status validate(const Settings& settings) {
-    if (settings.alarm > Alarm::Loud) return Status::OutOfRange;
+    if (settings.alarm > Alarm::Loud || settings.go_alarm > Alarm::Loud) return Status::OutOfRange;
     if (settings.aircraft_address > settings::kAddressMask) return Status::OutOfRange;
     return Status::Ok;
 }
@@ -106,6 +130,7 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
     Settings read{};
     Status status = Status::Unsupported;
     if (version == kBlobVersion) status = settings::open(in, length, kPayload, &read);
+    if (version == kBlobVersionV3) status = open_v3(in, length, read);
     if (version == kBlobVersionV2) status = open_v2(in, length, read);
     if (version == kBlobVersionV1) status = open_v1(in, length, read);
     if (status != Status::Ok) return status;
@@ -116,14 +141,22 @@ Status from_blob(const uint8_t* in, size_t length, Settings& out) {
 
 void write_settings_fields(cbor::Writer& writer, const Settings& settings) {
     writer.add_unsigned(link::config_key::kAircraftAddress, settings.aircraft_address);
-    writer.add_code(link::config_key::kAlarm, settings.alarm);
+    writer.add_code(link::config_key::kAlarm, alarm_in_force(settings));
 }
 
-// INFO: fc 12nov26 a key Bravo does not store is ignored, as the Go ignores address
+void write_config_fields(cbor::Writer& writer, const Settings& settings) {
+    write_settings_fields(writer, settings);
+    writer.add_boolean(link::config_key::kAlarmFromGo, settings.peer.pinned);
+}
+
+// INFO: fc 12nov26 a key Bravo does not store is ignored, as the Go ignores address | 17nov26
+// alarm_from_go too
 Status apply_settings(Settings& settings, const cbor::Reader& frame) {
     Settings next = settings;
     Status status = apply_key(frame.read_unsigned(link::set_key::kAlarm), [&](uint32_t value) {
         if (value > static_cast<uint32_t>(Alarm::Loud)) return Status::OutOfRange;
+        // INFO: fc 17nov26 Unsupported answers set_on_go: a paired Go sets the alarm for both units
+        if (settings.peer.pinned) return Status::Unsupported;
         next.alarm = static_cast<Alarm>(value);
         return Status::Ok;
     });

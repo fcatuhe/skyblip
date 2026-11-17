@@ -186,6 +186,7 @@
     border-block-start: 1px solid var(--card-border);
   }
   .unit-fields:disabled .field { opacity: 0.55; }
+  .unit-fields:not(:disabled) .field :is(input, select):disabled { opacity: 0.55; }
   .unit-settings .unit-fields { gap: var(--space-l); border-block-start: 0; }
   .unit-section { display: grid; }
   .unit-section:not(:has(> .field:not([hidden]))) { display: none; }

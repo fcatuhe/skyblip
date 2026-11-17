@@ -157,6 +157,30 @@ TEST_CASE("record store: a capture is closed by its end marker and by nothing el
     CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "\"closed\":true"));
 }
 
+// A session still being written read as power cut during the trial of #293 (#366).
+TEST_CASE("record store: the session the ring is writing is listed recording until it ends") {
+    platform::host::FlashRegion flash{4};
+    StoreRig rig{flash};
+    rig.open();
+
+    rig.capture.begin_session(kCaptureSession);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession);
+    rig.capture.rebuild_index();
+    const std::string writing = rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0);
+    CHECK(says(writing, "\"closed\":false"));
+    CHECK(says(writing, "\"recording\":true"));
+
+    rig.capture.end_session();
+    rig.capture.rebuild_index();
+    CHECK_FALSE(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "recording"));
+
+    rig.capture.begin_session(kCaptureSession + 1);
+    write_diagnostics_record(rig.capture, diagnostics::Type::Gnss, kFlightSession + 1);
+    rig.capture.rebuild_index();
+    CHECK_FALSE(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 0), "recording"));
+    CHECK(says(rig.listed(rig.capture, store::SectorOwner::Diagnostics, 1), "\"recording\":true"));
+}
+
 // The record is in one place at a time: the ring or the flash, never neither.
 TEST_CASE("record store: a write the part refused is a fault the caller can retry") {
     platform::host::FlashRegion flash{4};

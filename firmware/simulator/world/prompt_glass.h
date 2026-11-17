@@ -9,8 +9,15 @@ namespace skyblip::simulator {
 
 constexpr int kPromptWordsBytes = 256;
 
+// INFO: fc 17nov26 what the page knows of the Go its prompt stands on, so it words the alarm alike
+struct PromptUnit {
+    bool sounds{true};
+    bool paired{false};
+};
+
 bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, const char* settings,
-                 uint32_t seconds_left, char* words = nullptr, int words_capacity = 0);
+                 uint32_t seconds_left, char* words = nullptr, int words_capacity = 0,
+                 PromptUnit unit = {});
 
 }  // namespace skyblip::simulator
 

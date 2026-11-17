@@ -5,22 +5,13 @@
 
 #include "protocols/common/crc.h"
 #include "protocols/common/manchester.h"
-#include "protocols/common/repair.h"
 
 namespace skyblip::adsb {
 
 namespace {
 
-constexpr uint16_t kFrameBits = kFrameBytes * 8;
 constexpr uint8_t kExtendedSquitter = 17;
 constexpr uint8_t kMessageFieldOffsetBits = 32;
-constexpr int kDoubtfulBitsRepaired = 1;
-
-constexpr auto kParitySyndromes = wire::syndromes<kFrameBits>([](uint16_t bit) {
-    uint8_t frame[kFrameBytes] = {};
-    frame[bit >> 3] = static_cast<uint8_t>(0x80u >> (bit & 7));
-    return wire::crc24_check(frame, kFrameBytes);
-});
 
 constexpr char kCharacterSet[] = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
 
@@ -53,11 +44,11 @@ uint32_t gray_to_binary(uint32_t gray) {
 }
 
 // INFO: fc 10nov26 1090 sends a 1 as the chips 10, the inverse of the ADS-L table fec decodes
-void decode_chips(const uint8_t* chips, uint8_t* frame, uint8_t* erasures) {
+void decode_chips(const uint8_t* chips, uint8_t* frame) {
     uint8_t inverted[2 * kFrameBytes];
     inverted[0] = static_cast<uint8_t>(~kSyncChips);
     for (uint8_t i = 0; i < kChipBytes; i++) inverted[i + 1] = static_cast<uint8_t>(~chips[i]);
-    wire::manchester_decode(inverted, kFrameBytes, frame, erasures);
+    wire::manchester_decode(inverted, kFrameBytes, frame, nullptr);
 }
 
 Quantity quantity_at(const uint8_t* frame, uint8_t first, uint8_t last, int32_t step) {
@@ -228,12 +219,8 @@ wire::Status receive(const uint8_t* chips, size_t chip_bytes, Reception receptio
     if (chip_bytes < kChipBytes) return wire::Status::Invalid;
 
     uint8_t frame[kFrameBytes];
-    uint8_t erasures[kFrameBytes];
-    decode_chips(chips, frame, erasures);
-    const uint32_t residue = wire::crc24_check(frame, kFrameBytes);
-    if (wire::repair(frame, erasures, residue, kParitySyndromes.check(), kDoubtfulBitsRepaired,
-                     false) < 0)
-        return wire::Status::Crc;
+    decode_chips(chips, frame);
+    if (wire::crc24_check(frame, kFrameBytes) != 0) return wire::Status::Crc;
 
     if (bits(frame, 1, 5) != kExtendedSquitter) return wire::Status::Unsupported;
     out.capability = static_cast<uint8_t>(bits(frame, 6, 8));

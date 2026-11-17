@@ -29,10 +29,10 @@ The groups are subjects, not owners. A reader wants every barometric fact in one
 | `capture` | `capture`, the diagnostics writer, read by the page that arms it |
 | `duty` | `screen` for the two panel counts and the backlight, `radio` for the armed receiver and the keyed transmitter, `alarm` for the annunciator, `config` for the BLE link |
 | `link` | `config`: a central is connected, and a prompt stands that the flight state allows |
-| `alarm_level` | `alarm` |
+| `alarm_level`, `alarm_undismissed`, `alarm_call` | `alarm` |
 | `bravo` | `bravo` |
 | `own_transponder` | `bravo` on a paired Go, `adsb` on Bravo: the transponder Bravo names on the ground, which `status` carries to a page. On the Go an aircraft address typed or `set` must match it (`../settings/README.md`, The ICAO address) |
-| `alarm_granted` | `peer` on Bravo, never written on the Go |
+| `followed_call` | `peer` on Bravo, while it plays its Go's call. Never written on the Go |
 | `panel_presented` | `screen` |
 | `started` | the product |
 

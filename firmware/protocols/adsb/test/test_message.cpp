@@ -51,12 +51,6 @@ Heard hear(const char* text) {
     return hear_chips(chips);
 }
 
-// INFO: fc 10nov26 either chip flipped makes a doubtful pair, and the decoder reads the second one
-void blur(uint8_t* chips, uint8_t frame_bit, bool decodes_wrong) {
-    const uint16_t chip = static_cast<uint16_t>(2 * (frame_bit - 4) + (decodes_wrong ? 1 : 0));
-    chips[chip >> 3] = static_cast<uint8_t>(chips[chip >> 3] ^ (0x80u >> (chip & 7)));
-}
-
 int32_t pressure_altitude_of(uint32_t field) {
     Frame frame = extended_squitter(11);
     set_message_bits(frame, 9, 20, field);
@@ -334,41 +328,6 @@ TEST_CASE("adsb: a message carries the reception it was heard with") {
     const Heard heard = hear("8d4840d6202cc371c32ce0576098");
     CHECK(heard.message.reception.at_us == kReception.at_us);
     CHECK(heard.message.reception.rssi_dbm == kReception.rssi_dbm);
-}
-
-TEST_CASE("adsb: one doubtful chip pair that broke the parity is repaired") {
-    const Frame frame = frame_of("8d40621d58c382d690c8ac2863a7");
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
-    blur(chips, 60, true);
-    const Heard heard = hear_chips(chips);
-    REQUIRE(heard.status == Status::Ok);
-    CHECK(heard.message.airborne_position.pressure_altitude_ft == 38000);
-    CHECK(heard.message.airborne_position.cpr.latitude_cpr == 93000);
-}
-
-TEST_CASE("adsb: doubtful chip pairs that still decode right pass the parity untouched") {
-    const Frame frame = frame_of("8d40621d58c382d690c8ac2863a7");
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
-    blur(chips, 40, false);
-    blur(chips, 90, false);
-    blur(chips, 100, false);
-    CHECK(hear_chips(chips).status == Status::Ok);
-}
-
-TEST_CASE("adsb: a wrong bit beside a second doubtful pair, or one no chip marked, is refused") {
-    const Frame frame = frame_of("8d40621d58c382d690c8ac2863a7");
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
-    blur(chips, 60, true);
-    blur(chips, 70, false);
-    CHECK(hear_chips(chips).status == Status::Crc);
-
-    chips_of(frame.bytes, chips);
-    blur(chips, 60, false);
-    blur(chips, 60, true);
-    CHECK(hear_chips(chips).status == Status::Crc);
 }
 
 TEST_CASE("adsb: DF16, an unparsed type code and a short report are refused") {
