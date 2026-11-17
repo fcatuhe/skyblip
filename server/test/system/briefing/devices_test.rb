@@ -82,7 +82,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a change is saved after a press on the glass, and the page shows what the device stored" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       fill_in "Callsign", with: "f-abcd"
       select "Loud sound + visual", from: "Alarm"
       assert_button "Save 2 changes"
@@ -109,7 +109,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "back to defaults fills the form with the firmware's values, and Save sends them" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       click_button "Back to defaults (3)"
       assert_select "Aircraft type", selected: "Light aircraft"
       assert_field "Callsign", with: ""
@@ -125,7 +125,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a press that refuses holds every question until a reconnect, which needs no chooser" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-prompt"
@@ -146,7 +146,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a save a press allowed trusts this browser, which then saves with no prompt and lists the trusted browsers" do
     in_range a_go(browsers: [ { id: "0102030405060708", label: "Edge on Windows" } ])
     on_the_shelf do
-      connect_go
+      connect_device
       assert_no_selector "[data-unit-target=browsers]"
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
@@ -177,7 +177,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a trusted browser changes settings in flight, and the notes say updates wait for the landing" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
@@ -196,7 +196,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a device in flight holds every change until it lands" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-facts", text: "Airborne"
       assert_selector ".unit-notes", text: "Changes are available again after landing."
@@ -230,8 +230,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Bravo asks with its lamp, since it has no glass, and is never said to need activation" do
     in_range a_bravo
     on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
+      connect_device
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
@@ -246,9 +245,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Bravo arms and stops a capture with a press on its lamp" do
     in_range a_bravo
     on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_current_path "/briefing/devices/bravo-3f2a"
+      connect_device
       select "Power run", from: "Profile"
       click_button "Arm"
       assert_selector ".glass-lamp", text: "The LED blinks green fast."
@@ -271,7 +268,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Go says what a capture costs, asks for it on its glass, and says it records" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       within("[data-unit-target=capture]") do
         assert_selector "[data-unit-target=captureState]",
           text: "Nothing is recording. A full capture keeps 32 min, a power run or a flight run 120 h. Starting one erases 3 stored flights."
@@ -289,7 +286,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a stopped capture is fetched off the device and sent to skyBlip, under the browser's support code" do
     in_range a_go(diagnostics: [ { session: 1_785_628_800, records: CAPTURE, closed: true } ])
     on_the_shelf do
-      connect_go
+      connect_device
       assert_text "a full capture 13 months and a power run or a flight run 25 months"
       click_button "Fetch and send"
       assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
@@ -302,7 +299,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a report sends the device's dump to skyBlip, and says the support code" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       click_button "Send a report"
       assert_selector ".unit-message.is-good", text: /Sent. Give your support code \w{4}-\w{4} when you write to us./
       report = journaled("device.diagnosed")
@@ -319,9 +316,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
         page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
         click_button "Connect a device"
         assert_current_path "/briefing/devices/bravo-3f2a"
-        journaled("device.read")
-
-        unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+        # INFO: fc 17nov26 the job that records the unit runs after its device.read event is saved, so the test waits for the unit
+        unit = page.document.synchronize { Unit.find_by(device_id: "5b5b5b5b5b5b5b5b") || raise(Capybara::ExpectationNotMet, "no unit was recorded") }
         assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
         assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
         assert_selector ".unit-row", text: /is out|up to date/, wait: 15
@@ -332,8 +328,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a capture refused on Bravo's button arms nothing, and asks nothing more until a reconnect" do
     in_range a_bravo
     on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
+      connect_device
       click_button "Arm"
       assert_selector ".glass-lamp"
       page.execute_script("#{unit("3F2A")}.refuse()")
@@ -346,7 +341,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "the ADS-B address is typed in hex, and half an address is never sent" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       fill_in "ADS-B address", with: "3C65"
       click_button "Save 1 change"
       assert_selector "#unit-aircraft-address:invalid"
@@ -363,9 +358,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Bravo proposes the transponder it hears as its ADS-B address, and a press stores it" do
     in_range a_bravo(heard: { own_transponder: 0x3A4B5C, own_transponder_callsign: "F-JABC", own_transponder_category: 4 })
     on_the_shelf do
-      visit "/briefing"
-      click_button "Connect a device"
-      assert_current_path "/briefing/devices/bravo-3f2a"
+      connect_device
       assert_selector ".unit-heard-title", text: "Bravo hears Glider · F-JABC · ADS-B 3A4B5C."
       assert_equal [ [ "ADS-B address", "none", "3A4B5C" ] ], heard_rows
       screen "11a-bravo-hears"
@@ -385,7 +378,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Go proposes what its Bravo hears on the ground, as its AIRCRAFT menu does, and nothing in flight" do
     in_range a_go(heard: { own_transponder: 0x3A4B5C, own_transponder_callsign: "F-JABC", own_transponder_category: 4 })
     on_the_shelf do
-      connect_go
+      connect_device
       assert_selector ".unit-heard-title", text: "Bravo hears Glider · F-JABC · ADS-B 3A4B5C."
       assert_equal [ [ "Aircraft type", "Light helicopter", "Glider" ], [ "Callsign", "F-JXYZ", "F-JABC" ], [ "ADS-B address", "none", "3A4B5C" ] ], heard_rows
 
@@ -412,7 +405,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Go with no buzzer and no haptic offers its alarm as off or visual only" do
     in_range a_go(sounds: false, stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "visual" })
     on_the_shelf do
-      connect_go
+      connect_device
       assert_select "Alarm", selected: "Visual only"
       offered = "[...document.querySelectorAll('#unit-alarm option')].filter(option => !option.disabled).map(option => option.value)"
       assert_equal %w[off visual], page.evaluate_script(offered)
@@ -442,7 +435,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Go with no buzzer and no haptic paired with a Bravo offers Bravo soft and Bravo loud, and its glass says BRAVO" do
     in_range a_go(sounds: false, bravo: "live", stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "loud" })
     on_the_shelf do
-      connect_go
+      connect_device
       assert_select "Alarm", selected: "Bravo loud + visual", options: [ "Off", "Visual only", "Bravo soft + visual", "Bravo loud + visual" ]
       assert_no_field "Alarm", disabled: true
       screen "11d-go-bravo-steps"
@@ -485,7 +478,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "forgetting a device asks first, then drops it from this browser" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       find(".unit-menu summary").click
       click_button "Forget this device"
       within("dialog[open]") do

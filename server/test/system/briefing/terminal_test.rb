@@ -4,7 +4,7 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
   test "the terminal shows every endpoint of a connected device, and follows it through a reconnect" do
     in_range a_go(mtu: 498)
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Terminal"
       assert_current_path "/briefing/devices/go-00012a/terminal"
       assert_button "Pause"
@@ -51,7 +51,7 @@ class Briefing::TerminalTest < ApplicationSystemTestCase
   test "coming back to the terminal starts on an empty tape, not paused" do
     in_range a_go(mtu: 498)
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Terminal"
       assert_button "Pause"
       page.execute_script("#{unit("00012A")}.status()")

@@ -7,7 +7,7 @@ class Briefing::AttestationTest < ApplicationSystemTestCase
     in_range a_go(vectors:)
 
     on_the_shelf do
-      connect_go
+      connect_device
       page.document.synchronize { unit.firmwares.exists? || raise(Capybara::ExpectationNotMet, "no firmware reached the server") }
     end
 

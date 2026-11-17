@@ -4,7 +4,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "a device behind the newest image of its track is offered it, and comes back on it by itself" do
     in_range a_go(mtu: 498, uploadDelayMs: 4, probationMs: 6000)
     on_the_shelf do
-      connect_go
+      connect_device
       within(".unit-banner") { click_link "Update" }
       assert_current_path "/briefing/devices/go-00012a/firmware"
       assert_button "Install 0.1.0+1765"
@@ -40,7 +40,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "a Go+ whose motion sensor holds another firmware is offered the full image, and holds the new one after" do
     in_range a_go(running: "0.1.0+1748", imu: "0123456789abcdef", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       click_button "Install 0.1.0+1765, with the motion sensor firmware"
       page.execute_script("#{unit("00012A")}.press()")
@@ -54,7 +54,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "a Go+ on the newest version whose motion sensor has no firmware is told so, and the full image of that version restores it" do
     in_range a_go(running: "0.1.0+1765", imu: "missing", mtu: 498, uploadDelayMs: 4, probationMs: 1500)
     on_the_shelf do
-      connect_go
+      connect_device
       assert_selector ".unit-banner", text: "The motion sensor has no firmware, so the slip ball is off. Your device is running 0.1.0+1765."
       assert_selector ".unit-row", text: "0.1.0+1765, development · the motion sensor needs its firmware"
       screen "27a-motion-sensor-without-firmware"
@@ -75,7 +75,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "a device behind is told what changed in every build since its own, up to the one offered" do
     in_range a_go(running: "0.1.0+1748")
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       assert_button "Install 0.1.0+1765"
       within(".firmware-changes") do
@@ -91,7 +91,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "an install that comes back on the old firmware says so, and the report reaches skyBlip by itself" do
     in_range a_go(mtu: 498, uploadDelayMs: 4, failure: { image: "confirmed" })
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       click_button "Install 0.1.0+1765"
       page.execute_script("#{unit("00012A")}.press()")
@@ -113,7 +113,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
     report = { check: "matched", swap: "test", request_error: 0, boots: 2, probation_boots: 1, proof: "started", reset: "watchdog" }
     in_range a_bravo(image: "reverted", from: "0.1.0+40", to: "0.1.0+44", installReport: report)
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       assert_selector ".unit-message", text: "The new firmware started but stopped before completing its checks. The device went back to its previous firmware."
       assert_selector ".firmware-report", text: "skyBlip received the details of this failure."
@@ -128,7 +128,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "a device on the newest image is told so, and can still install a file of its own" do
     in_range a_go(running: "0.1.0+1765")
     on_the_shelf do
-      connect_go
+      connect_device
       assert_selector ".unit-row", text: "up to date"
       assert_no_selector ".unit-banner"
       click_link "Firmware"
@@ -144,7 +144,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "Install waits for the changelog, so the list cannot push it from under a tap" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       page.execute_script(<<~JS)
         const fetchNow = window.fetch
         let release
@@ -165,7 +165,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "an install refused on the glass says so, and asks nothing more until a reconnect" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       click_button "Install 0.1.0+1765"
       assert_glass "FIRMWARE"
@@ -180,7 +180,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "the USB drive is one disclosure away, and asked on the glass" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       assert_selector ".firmware-changes", text: "0.1.0+1765"
       find(".firmware-recovery summary").click
@@ -201,7 +201,7 @@ class Briefing::FirmwareTest < ApplicationSystemTestCase
   test "the glass asks for an install even when its controller registers last" do
     in_range a_go
     on_the_shelf do
-      connect_go
+      connect_device
       click_link "Firmware"
       assert_button "Install 0.1.0+1765"
       page.execute_script(<<~JS)
