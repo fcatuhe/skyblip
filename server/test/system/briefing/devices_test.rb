@@ -319,9 +319,8 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
         page.execute_script("fakeFleet.pick = 'skyBlip Bravo 3F2A'")
         click_button "Connect a device"
         assert_current_path "/briefing/devices/bravo-3f2a"
-        journaled("device.read")
-
-        unit = Unit.find_by!(device_id: "5b5b5b5b5b5b5b5b")
+        # INFO: fc 17nov26 the job that records the unit runs after its device.read event is saved, so the test waits for the unit
+        unit = page.document.synchronize { Unit.find_by(device_id: "5b5b5b5b5b5b5b5b") || raise(Capybara::ExpectationNotMet, "no unit was recorded") }
         assert_equal [ "bravo", "bravo-3f2a", nil ], [ unit.product, unit.slug, unit.serial ]
         assert_equal [ [ "0.1.0+40", "read" ] ], unit.firmwares.pluck(:version, :source)
         assert_selector ".unit-row", text: /is out|up to date/, wait: 15
