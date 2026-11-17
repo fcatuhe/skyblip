@@ -289,10 +289,10 @@ TEST_CASE("bravo scenario: a negative track flies and is sent as the same track 
 
 // -295 fpm is 4.6 steps of 64, and 4000 ft is past the 3125 ft the field holds.
 TEST_CASE("bravo scenario: ADS-B Out rounds a velocity field to its nearest step and saturates") {
-    simulator::AdsbFrame frame = simulator::adsb_ground_velocity(0x300001, 5, 10, 10, -295, 4000);
-    simulator::adsb_seal(frame.bytes);
+    adsb::Squitter frame = adsb::ground_velocity(0x300001, 5, 10, 10, -295, 4000);
+    adsb::seal(frame.bytes);
     uint8_t chips[adsb::kChipBytes];
-    simulator::adsb_chips(frame.bytes, chips);
+    adsb::chips_of(frame.bytes, chips);
     adsb::Message message;
     REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
     CHECK(message.velocity.climb_fpm.value == -320);

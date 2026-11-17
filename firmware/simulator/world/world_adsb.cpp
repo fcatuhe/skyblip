@@ -68,18 +68,19 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
         if (out.on_ground) {
             const int32_t speed_mkt =
                 static_cast<int32_t>(aircraft.speed_mps * kKnotsPerMps * 1000);
-            AdsbFrame frame = adsb_surface_position(aircraft.address, capability, latitude,
-                                                    longitude, odd, adsb_movement_code(speed_mkt));
-            adsb_set_message_bits(frame, 13, 13, 1);
-            adsb_set_message_bits(frame, 14, 20,
-                                  static_cast<uint64_t>(aircraft.track_deg * 128 / 360) & 0x7F);
+            adsb::Squitter frame =
+                adsb::surface_position(aircraft.address, capability, latitude, longitude, odd,
+                                       adsb::movement_code(speed_mkt));
+            adsb::set_message_bits(frame, 13, 13, 1);
+            adsb::set_message_bits(frame, 14, 20,
+                                   static_cast<uint64_t>(aircraft.track_deg * 128 / 360) & 0x7F);
             send(frame, radio);
         } else {
             const double hae_mm = datum.own_hae_mm + aircraft.up_m * 1000;
             const double pressure_mm =
                 hae_mm - datum.geoid_separation_mm + datum.pressure_offset_mm;
-            send(adsb_airborne_position(aircraft.address, capability, latitude, longitude, odd,
-                                        feet_of(pressure_mm)),
+            send(adsb::airborne_position(aircraft.address, capability, latitude, longitude, odd,
+                                         feet_of(pressure_mm)),
                  radio);
         }
     }
@@ -96,9 +97,9 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
             static_cast<int32_t>(std::lround(aircraft.climb_mps * kFeetPerMinutePerMps));
         const int32_t gnss_minus_pressure_ft =
             feet_of(datum.geoid_separation_mm - datum.pressure_offset_mm);
-        AdsbFrame frame = adsb_ground_velocity(aircraft.address, capability, east_kt, north_kt,
-                                               climb_fpm, gnss_minus_pressure_ft);
-        if (out.pressure_only) adsb_set_message_bits(frame, 49, 56, 0);
+        adsb::Squitter frame = adsb::ground_velocity(aircraft.address, capability, east_kt,
+                                                     north_kt, climb_fpm, gnss_minus_pressure_ft);
+        if (out.pressure_only) adsb::set_message_bits(frame, 49, 56, 0);
         send(frame, radio);
     }
 
@@ -108,12 +109,12 @@ void Sky::squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t t
         due(from_us, to_us, identification_period_us, phase % identification_period_us);
     for (uint64_t identification = identifications.first; identification < identifications.end;
          identification++)
-        send(adsb_identification(aircraft.address, capability, out.category_type_code, out.category,
-                                 aircraft.callsign),
+        send(adsb::identification(aircraft.address, capability, out.category_type_code,
+                                  out.category, aircraft.callsign),
              radio);
 }
 
-void Sky::send(const AdsbFrame& frame, models::Lr2021& radio) {
+void Sky::send(const adsb::Squitter& frame, models::Lr2021& radio) {
     const AdsbAir air = adsb_air(frame);
     adsb_sent_++;
     if (radio.receive_air(air.chips, sizeof(air.chips), kSquitterLevelDbm)) adsb_heard_++;

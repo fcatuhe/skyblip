@@ -15,9 +15,9 @@ using skyblip::wire::Status;
 namespace {
 
 adsb::Message heard(const char* text) {
-    const AdsbFrame frame = frame_of(text);
+    const Squitter frame = frame_of(text);
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    chips_of(frame.bytes, chips);
     adsb::Message message;
     REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == Status::Ok);
     return message;
@@ -72,8 +72,8 @@ TEST_CASE("adsb cpr: the Riddle's surface pair takes the quadrant of its referen
 }
 
 TEST_CASE("adsb cpr: a surface pair in the south-west quadrant decodes beside a reference there") {
-    const adsb::Cpr even = adsb_cpr_encode(-34.8222, -58.5358, false, true);
-    const adsb::Cpr odd = adsb_cpr_encode(-34.8222, -58.5358, true, true);
+    const adsb::Cpr even = cpr_encode(-34.8222, -58.5358, false, true);
+    const adsb::Cpr odd = cpr_encode(-34.8222, -58.5358, true, true);
     adsb::CprPosition position;
     REQUIRE(adsb::cpr_global(adsb::CprFormat::Surface, even, odd, at(-34.6, -58.4), position));
     CHECK(metres_between(position, -34.8222, -58.5358) < 1.3);
@@ -115,25 +115,25 @@ TEST_CASE("adsb cpr: the longitude zones change across DO-260B Table 2-130's lat
 TEST_CASE("adsb cpr: the zone table agrees with the closed form away from its transitions") {
     for (double latitude = -89.95; latitude < 90; latitude += 0.1) {
         CAPTURE(latitude);
-        CHECK(adsb::cpr_longitude_zones(e7(latitude)) == adsb_longitude_zones(latitude));
+        CHECK(adsb::cpr_longitude_zones(e7(latitude)) == longitude_zones_closed_form(latitude));
     }
 }
 
 // A pair across a transition latitude has no common longitude zone count, so A.1.7.7 d waits.
 TEST_CASE("adsb cpr: a pair that straddles a transition latitude is not decoded") {
-    const adsb::Cpr even = adsb_cpr_encode(51.8930, 4.0, false, false);
-    const adsb::Cpr odd = adsb_cpr_encode(51.8940, 4.0, true, false);
+    const adsb::Cpr even = cpr_encode(51.8930, 4.0, false, false);
+    const adsb::Cpr odd = cpr_encode(51.8940, 4.0, true, false);
     adsb::CprPosition position;
     CHECK_FALSE(
         adsb::cpr_global(adsb::CprFormat::Airborne, odd, even, adsb::CprPosition{}, position));
 
-    const adsb::Cpr later = adsb_cpr_encode(51.8945, 4.0, false, false);
+    const adsb::Cpr later = cpr_encode(51.8945, 4.0, false, false);
     REQUIRE(adsb::cpr_global(adsb::CprFormat::Airborne, later, odd, adsb::CprPosition{}, position));
     CHECK(metres_between(position, 51.8945, 4.0) < 5.1);
 }
 
 TEST_CASE("adsb cpr: two halves of one parity are no pair") {
-    const adsb::Cpr even = adsb_cpr_encode(48.1, 8.1, false, false);
+    const adsb::Cpr even = cpr_encode(48.1, 8.1, false, false);
     adsb::CprPosition position;
     CHECK_FALSE(
         adsb::cpr_global(adsb::CprFormat::Airborne, even, even, adsb::CprPosition{}, position));
@@ -148,8 +148,8 @@ TEST_CASE("adsb cpr: positions round the globe come back within the encoding's r
         const double latitude = place[0], longitude = place[1];
         CAPTURE(latitude);
         CAPTURE(longitude);
-        const adsb::Cpr even = adsb_cpr_encode(latitude, longitude, false, false);
-        const adsb::Cpr odd = adsb_cpr_encode(latitude, longitude, true, false);
+        const adsb::Cpr even = cpr_encode(latitude, longitude, false, false);
+        const adsb::Cpr odd = cpr_encode(latitude, longitude, true, false);
         adsb::CprPosition position;
         REQUIRE(
             adsb::cpr_global(adsb::CprFormat::Airborne, odd, even, adsb::CprPosition{}, position));
@@ -162,8 +162,8 @@ TEST_CASE("adsb cpr: positions round the globe come back within the encoding's r
         CHECK(metres_between(local_of(adsb::CprFormat::Airborne, odd, near), latitude, longitude) <
               5.1);
 
-        const adsb::Cpr surface_even = adsb_cpr_encode(latitude, longitude, false, true);
-        const adsb::Cpr surface_odd = adsb_cpr_encode(latitude, longitude, true, true);
+        const adsb::Cpr surface_even = cpr_encode(latitude, longitude, false, true);
+        const adsb::Cpr surface_odd = cpr_encode(latitude, longitude, true, true);
         REQUIRE(
             adsb::cpr_global(adsb::CprFormat::Surface, surface_even, surface_odd, near, position));
         CHECK(metres_between(position, latitude, longitude) < 1.3);
@@ -189,8 +189,8 @@ TEST_CASE("adsb cpr: a global decode and the local decode of its newest frame ar
             const adsb::CprFormat format =
                 surface ? adsb::CprFormat::Surface : adsb::CprFormat::Airborne;
             for (bool odd_newest : {false, true}) {
-                const adsb::Cpr newest = adsb_cpr_encode(latitude, longitude, odd_newest, surface);
-                const adsb::Cpr other = adsb_cpr_encode(latitude, longitude, !odd_newest, surface);
+                const adsb::Cpr newest = cpr_encode(latitude, longitude, odd_newest, surface);
+                const adsb::Cpr other = cpr_encode(latitude, longitude, !odd_newest, surface);
                 adsb::CprPosition global;
                 if (!adsb::cpr_global(format, newest, other, at(latitude, longitude), global))
                     continue;

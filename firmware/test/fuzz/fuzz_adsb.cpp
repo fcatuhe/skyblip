@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "protocols/adsb/message.h"
-#include "test/support/adsb_chips.h"
+#include "protocols/adsb/squitter.h"
 
 using namespace skyblip;
 
@@ -24,11 +24,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     in.ConsumeData(frame, sizeof(frame));
     if (sealed) {
         frame[0] = static_cast<uint8_t>(kExtendedSquitterHead | (frame[0] & kCapabilityMask));
-        adsb_seal(frame);
+        adsb::seal(frame);
     }
 
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame, chips);
+    adsb::chips_of(frame, chips);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
     for (size_t i = 0; i < noise.size() && i < sizeof(chips); i++) chips[i] ^= noise[i];
 

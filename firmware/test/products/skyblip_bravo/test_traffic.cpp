@@ -105,15 +105,15 @@ TEST_CASE("bravo: a frame that fails its parity is counted as crc") {
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(1);
-    AdsbFrame frame = adsb_airborne_position(kAircraft, 0, 48.51, 8.5, false, 1800);
-    adsb_seal(frame.bytes);
+    adsb::Squitter frame = adsb::airborne_position(kAircraft, 0, 48.51, 8.5, false, 1800);
+    adsb::seal(frame.bytes);
     frame.bytes[5] ^= 0x10;
     const AdsbAir air = [&] {
         AdsbAir out;
         out.chips[0] = kAdsbPreambleAir[0];
         out.chips[1] = kAdsbPreambleAir[1];
         out.chips[2] = adsb::kSyncChips;
-        adsb_chips(frame.bytes, out.chips + 3);
+        adsb::chips_of(frame.bytes, out.chips + 3);
         return out;
     }();
     rig.platform.radio().receive_air(air.chips, sizeof(air.chips), -87);
@@ -128,7 +128,7 @@ TEST_CASE("bravo: a sound DF17 of a type the decoder skips is counted unsupporte
     BravoRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(1);
-    rig.hear(adsb_frame(kAircraft, 0, 28));
+    rig.hear(adsb::squitter(kAircraft, 0, 28));
     rig.seconds_with_fix(1);
 
     CHECK(rig.product.adsb().unsupported() == 1);
@@ -142,12 +142,12 @@ TEST_CASE(
     REQUIRE(rig.setup() == Status::Ok);
     rig.seconds_with_fix(2);
     for (bool odd : {false, true}) {
-        AdsbFrame frame = adsb_airborne_position(kAircraft, 0, 48.51, 8.5, odd, 1800);
-        adsb_seal(frame.bytes);
+        adsb::Squitter frame = adsb::airborne_position(kAircraft, 0, 48.51, 8.5, odd, 1800);
+        adsb::seal(frame.bytes);
         events::AdsbFrame heard{};
         heard.at_us = rig.platform.clock().microseconds();
         heard.rssi_valid = false;
-        adsb_chips(frame.bytes, heard.chips.data());
+        adsb::chips_of(frame.bytes, heard.chips.data());
         rig.product.adsb_frames().push(heard);
         rig.step();
     }

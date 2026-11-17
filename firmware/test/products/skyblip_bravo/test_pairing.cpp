@@ -320,7 +320,7 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     };
     for (int i = 0; i < 3; i++) second();
     tango.bravo.hear_aircraft(kAircraft, 2000);
-    tango.bravo.hear(adsb_identification(kAircraft, 5, 4, 1, "AFR123"));
+    tango.bravo.hear(adsb::identification(kAircraft, 5, 4, 1, "AFR123"));
     second();
     second();
 

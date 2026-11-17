@@ -111,7 +111,7 @@ struct BravoRig {
     }
 
     // A DF17 frame on the air at 1090 MHz, as the LR2021 model detects its preamble and sync.
-    void hear(AdsbFrame frame, int8_t rssi_dbm = -70) {
+    void hear(adsb::Squitter frame, int8_t rssi_dbm = -70) {
         const AdsbAir air = adsb_air(frame);
         platform.radio().receive_air(air.chips, sizeof(air.chips), rssi_dbm);
         step();
@@ -121,8 +121,8 @@ struct BravoRig {
     void hear_aircraft(uint32_t address, double north_m, int32_t altitude_ft = kAltitudeFt) {
         const double latitude = kLatitude1e7 / 1e7 + north_m / 111320.0;
         const double longitude = kLongitude1e7 / 1e7;
-        hear(adsb_airborne_position(address, 0, latitude, longitude, false, altitude_ft));
-        hear(adsb_airborne_position(address, 0, latitude, longitude, true, altitude_ft));
+        hear(adsb::airborne_position(address, 0, latitude, longitude, false, altitude_ft));
+        hear(adsb::airborne_position(address, 0, latitude, longitude, true, altitude_ft));
     }
 
     void press() {
