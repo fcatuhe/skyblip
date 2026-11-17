@@ -79,6 +79,7 @@
         installReport: null,
         protocols: null,
         failure: null,
+        heard: null,
         sounds: true,
       }, options);
       this.deviceId ??= this.vectors?.device_id ?? deviceIdOf(this.name);
@@ -174,6 +175,7 @@
       return this.reply({
         command: 'status', flight: this.flight, upload: this.windowOpen, battery_percent: this.battery, charging: this.charging,
         power_level: this.battery < 10 ? 'critical' : this.battery < 20 ? 'low' : 'normal', went_dark_flat: false,
+        ...(this.flight === 'ground' ? this.heard : null),
       });
     }
 

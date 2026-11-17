@@ -101,10 +101,12 @@ TEST_CASE("aircraft menu: what Bravo heard is on top, the three rows it sets und
     values.detected = heard_glider();
     const Glass focused = aircraft_menu_of(values, MenuRow::Detected);
     CHECK(reads_heading(focused, "AIRCRAFT", Heading::Opened));
-    CHECK(reads(focused, "ADS-B 3A4B5C", kMenuScale, false));
+    const int top = menu_line_top(0);
+    CHECK(reads_at(focused, kMenuLeftX, top + kDetectedTypeInset, "GLIDER", kMenuScale, false));
+    CHECK(reads_at(focused, kMenuLeftX, top + kDetectedNameInset, "F-JABC", kCallsignScale, false));
+    CHECK(reads_at(focused, kMenuLeftX, top + kDetectedAddressInset, "ADS-B 3A4B5C", kMenuScale,
+                   false));
     CHECK(reads_button_key(focused, "SET"));
-    CHECK(reads(focused, "F-JABC", kCallsignScale, false));
-    CHECK(reads(focused, "GLIDER", kMenuScale, false));
     for (int line = kDetectedLines; line < kMenuLines; line++)
         CHECK(reads_at(focused, kMenuLeftX, menu_line_text_y(line),
                        menu_row_label(aircraft_menu().rows[line - kDetectedLines + 1]),
@@ -170,8 +172,9 @@ TEST_CASE("aircraft notice: it names what Bravo heard, and says what each contac
     draw_aircraft_notice(canvas, heard_glider(), 30);
     CHECK(reads_heading(canvas, kAircraftNoticeTitle, Heading::Interrupt));
     CHECK(reads_foot_line(canvas, "CANCELS IN 30 S"));
-    // The SET key says what the press does, so the body stops at the type, clear of the countdown.
-    const BodyLine body[] = {{"F-JABC", kCallsignScale}, {"ADS-B 3A4B5C"}, {"GLIDER"}};
+    // The SET key says what the press does, so the body stops at the address, clear of the
+    // countdown.
+    const BodyLine body[] = {{"GLIDER"}, {"F-JABC", kCallsignScale}, {"ADS-B 3A4B5C"}};
     CHECK(reads_body_above(canvas, Heading::Interrupt, kFootLineY, body, 3));
     CHECK(reads_button_key(canvas, "SET"));
     CHECK(reads_pad_key(canvas, "CLOSE"));

@@ -102,7 +102,7 @@ class BravoService : public runtime::Service {
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
     void claim(uint32_t now_ms);
     bool takes_alarm() const;
-    std::optional<uint32_t> own_transponder_on_ground() const;
+    std::optional<comms::OwnTransponderHeard> own_transponder_on_ground() const;
     void ask_again(uint32_t now_ms);
     void drop_pin();
     void forget();

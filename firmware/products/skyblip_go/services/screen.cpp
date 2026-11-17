@@ -246,7 +246,7 @@ MenuValues ScreenService::menu_values() const {
     values.settings = settings_;
     values.light = backlight_;
     values.detected = detected();
-    values.own_transponder = context_.state.own_transponder;
+    values.own_transponder = comms::address_of(context_.state.own_transponder);
     values.sounds = common::can_sound(context_.roles.capabilities);
     return values;
 }

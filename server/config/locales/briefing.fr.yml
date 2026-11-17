@@ -43,18 +43,23 @@ fr:
       firmware: "Firmware"
       update: "Mettre à jour"
     settings:
+      aircraft: "Aéronef"
+      device: "Sur l\u2019appareil"
       units: "Unités"
       unit_names:
         nautical: "NM, kt"
         metric: "km, km/h"
       alarm: "Alarme"
       alarm_names:
-        "off": "Coupée"
+        "off": "Désactivée"
         visual: "Visuelle seulement"
-        soft: "Faible"
-        loud: "Forte"
+        soft: "Son faible + visuel"
+        loud: "Son fort + visuel"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
+      heard_setting: "Réglage"
+      heard_now: "Actuel"
+      heard_from: "Selon Bravo"
     capture:
       title: "Capture de diagnostic"
       profile: "Profil"
@@ -181,6 +186,11 @@ fr:
         one: "Enregistrer 1 changement"
         other: "Enregistrer %{count} changements"
       default: "D\u2019origine\u00a0: %{value}"
+      heard: "Bravo entend %{aircraft}."
+      heard_same: "Bravo entend %{aircraft}, comme saisi."
+      use_heard:
+        one: "Utiliser cette valeur"
+        other: "Utiliser ces valeurs"
       "on": "activé"
       "off": "coupé"
       none: "aucun"
@@ -267,7 +277,7 @@ fr:
       prompt_pending: "L\u2019appareil pose déjà une question. Répondez-y ou attendez trente secondes."
       unknown_command: "Ce firmware est trop ancien pour changer ses réglages. Mettez-le à jour d\u2019abord."
       out_of_range: "L\u2019appareil a refusé une valeur qu\u2019il ne peut pas enregistrer. FFFFFF n\u2019est l\u2019adresse OACI d\u2019aucun aéronef. Rien n\u2019a changé."
-      not_own_transponder: "Votre Bravo entend un autre transpondeur comme celui de cet aéronef. Vérifiez l\u2019adresse, ou prenez celle que montre le menu AIRCRAFT du Go. Rien n\u2019a changé."
+      not_own_transponder: "Votre Bravo entend un autre transpondeur comme celui de cet aéronef. Vérifiez l\u2019adresse, ou utilisez celle que Bravo entend. Rien n\u2019a changé."
     capture_notices:
       capture_armed: "Armée. Le voyant clignote deux fois toutes les 3\u00a0s jusqu\u2019à l\u2019arrêt de la capture. La capture continue en vol."
       capture_stopped: "Arrêtée. Le voyant reprend son clignotement simple."

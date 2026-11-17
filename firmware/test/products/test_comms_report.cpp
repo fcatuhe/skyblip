@@ -225,19 +225,24 @@ TEST_CASE("comms: status at its widest is this frame, byte for byte, inside 182 
     // The driver gates -50 to +125 C, the formatter does not: int16 is widest.
     config.set_die_temperature(INT16_MIN, true);
     config.set_bravo_state(BravoState::NoUtc);
+    config.set_own_transponder(OwnTransponderHeard{0xFFFFFF, "ABCDEFGH", 17});
 
     config.on_rx(config_frame("{\"command\":\"status\"}"));
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
-    // A nine-entry map; airborne and critical are 2, -3277 is the negative integer 0x0CCC, and
-    // every bravo code is one byte.
-    const uint8_t golden[] = {0xA9, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64, 0x04,
-                              0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC, 0x08, 0x05};
+    // A twelve-entry map; airborne and critical are 2, -3277 is the negative integer 0x0CCC, every
+    // bravo code is one byte, and FFFFFF lies in no nationality block, so its callsign stays as is.
+    const uint8_t golden[] = {0xAC, 0x00, 0x05, 0x01, 0x02, 0x02, 0xF4, 0x03, 0x18, 0x64,
+                              0x04, 0xF4, 0x05, 0x02, 0x06, 0xF4, 0x07, 0x39, 0x0C, 0xCC,
+                              0x08, 0x05, 0x09, 0x1A, 0x00, 0xFF, 0xFF, 0xFF, 0x0A, 0x68,
+                              0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x0B, 0x11};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
     CHECK(link_text(frame) ==
           "{\"command\":\"status\",\"flight\":\"airborne\",\"upload\":false,"
           "\"battery_percent\":100,\"charging\":false,\"power_level\":\"critical\","
-          "\"went_dark_flat\":false,\"die_temperature_c\":-3277,\"bravo\":\"no_utc\"}");
+          "\"went_dark_flat\":false,\"die_temperature_c\":-3277,\"bravo\":\"no_utc\","
+          "\"own_transponder\":16777215,\"own_transponder_callsign\":\"ABCDEFGH\","
+          "\"own_transponder_category\":17}");
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
     CHECK(config.link_drops() == 0);
 }
@@ -265,6 +270,34 @@ TEST_CASE("comms: a paired Go pushes status when its Bravo is lost and when it i
     config.set_bravo_state(BravoState::Unpaired);
     REQUIRE(link.sent.size() == 3);
     CHECK(link_text(link.last().bytes).find("bravo") == std::string::npos);
+}
+
+// A page proposes the transponder Bravo hears without polling, spelt as the glass spells it.
+TEST_CASE("comms: status pushes the transponder Bravo hears when it changes, as its registration") {
+    platform::host::Link link;
+    link.raise_link(1);
+    go::Settings settings = go::defaults();
+    go::SettingsStore store(settings, kTestActivation, kNoOwnTransponder);
+    ConfigService config(link, store);
+    config.on_link_up(events::LinkUp{1, 200, link.connection(1)});
+    link.clear();
+
+    config.set_own_transponder(std::nullopt);
+    CHECK(link.sent.empty());
+    config.set_own_transponder(OwnTransponderHeard{0x3A4B5C, "FJABC", 1});
+    REQUIRE(link.sent.size() == 1);
+    CHECK(link_text(link.last().bytes)
+              .find("\"own_transponder\":3820380,"
+                    "\"own_transponder_callsign\":\"F-JABC\","
+                    "\"own_transponder_category\":1}") != std::string::npos);
+    config.set_own_transponder(OwnTransponderHeard{0x3A4B5C, "FJABC", 1});
+    CHECK(link.sent.size() == 1);
+    config.set_own_transponder(OwnTransponderHeard{0x3A4B5C, "", 0});
+    REQUIRE(link.sent.size() == 2);
+    CHECK(link_text(link.last().bytes).find("\"own_transponder\":3820380}") != std::string::npos);
+    config.set_own_transponder(std::nullopt);
+    REQUIRE(link.sent.size() == 3);
+    CHECK(link_text(link.last().bytes).find("own_transponder") == std::string::npos);
 }
 
 TEST_CASE("comms: status says whether the unit last went dark on a flat cell") {

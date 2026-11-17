@@ -268,6 +268,8 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     held.holding = dfu::HubImage::Held;
     config.set_hub_image(held);
     config.set_bravo_state(comms::BravoState::NoUtc);
+    comms::OwnTransponderHeard heard{0x3A4B5C, "FJABC", 1};
+    config.set_own_transponder(heard);
     dfu::InstallReport report{};
     report.request = {ports::StagedCheck::Matched, -5, ports::SwapType::Test};
     report.booted(/*on_probation=*/true, power::ResetReason::Watchdog);

@@ -3,6 +3,8 @@ import { Turbo } from "@hotwired/turbo-rails"
 import { hasWebBluetooth, joinFleet, nameOf } from "#skyblip/fleet"
 import { readSetting, settingsFrame, showSetting } from "#skyblip/settings"
 import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "controllers/briefing/facts"
+import { labelOf, shownIn } from "controllers/briefing/fields"
+import { heardRow, heardView, proposedIn } from "controllers/briefing/heard"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
 import { sendCapture } from "#skyblip/capture_upload"
@@ -21,7 +23,7 @@ const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "al
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
+                    "settings", "fields", "default", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "report", "reportSend", "reportMessage",
@@ -172,6 +174,13 @@ export default class extends Controller {
     this.#settings(this.unit.state)
   }
 
+  useHeard() {
+    const { elements } = this.settingsTarget
+    const proposed = proposedIn(this.settingsTarget, this.unit.state.status.ownTransponder, this.#edited())
+    for (const [key, value] of Object.entries(proposed)) showSetting(elements[key], value)
+    this.#settings(this.unit.state)
+  }
+
   #render() {
     const unit = this.unit
     const state = unit?.state ?? null
@@ -232,7 +241,7 @@ export default class extends Controller {
     const settings = record.settings ?? {}
     const rows = [
       ...LAST_READ.filter(key => key in settings && settings[key] !== "")
-        .map(key => [this.#label(key), this.#shown(key, settings[key])]),
+        .map(key => [labelOf(this.settingsTarget, key), shownIn(this.settingsTarget, key, settings[key])]),
       [say("words.firmware"), running(record.running, record.track)],
     ].filter(([, value]) => value)
     this.lastReadTarget.hidden = away || rows.length === 0
@@ -349,6 +358,17 @@ export default class extends Controller {
     this.resetTarget.disabled = !idle
     this.resetTarget.textContent = say("words.reset_count", { count: differs.length })
     for (const note of this.defaultTargets) this.#default(note, edited, defaults)
+    this.#heard(state.status?.ownTransponder, edited)
+  }
+
+  #heard(heard, edited) {
+    const view = heard && "aircraft_address" in edited ? heardView(this.settingsTarget, heard, edited) : null
+    this.heardTarget.hidden = !view
+    if (!view) return
+    this.heardTextTarget.textContent = view.text
+    this.heardChangesTarget.hidden = this.heardUseTarget.hidden = view.rows.length === 0
+    this.heardRowsTarget.replaceChildren(...view.rows.map(heardRow))
+    this.heardUseTarget.textContent = sayCount("words.use_heard", view.rows.length)
   }
 
   #prompting(state) {
@@ -466,25 +486,9 @@ export default class extends Controller {
     const key = note.dataset.setting
     const differs = Boolean(defaults) && key in defaults && key in edited && defaults[key] !== edited[key]
     note.hidden = !differs
-    note.textContent = differs ? say("words.default", { value: this.#shown(key, defaults[key]) }) : ""
+    note.textContent = differs ? say("words.default", { value: shownIn(this.settingsTarget, key, defaults[key]) }) : ""
   }
 
-  #shown(key, value) {
-    const field = this.settingsTarget.elements[key]
-    if (field.type === "checkbox") return say(value ? "words.on" : "words.off")
-    if (field.tagName === "SELECT") return this.#optionText(key, value)
-    if (value === "") return say("words.none")
-    return String(value)
-  }
-
-  #label(key) {
-    return this.settingsTarget.querySelector(`label[for="${this.settingsTarget.elements[key]?.id}"]`)?.textContent.trim()
-  }
-
-  #optionText(key, value) {
-    const field = this.settingsTarget.elements[key]
-    return [...field.options].find(option => option.value === String(value))?.text ?? String(value)
-  }
 }
 
 // INFO: fc 15nov26 a capture keeps minutes or days, so the span is read in the unit that fits it

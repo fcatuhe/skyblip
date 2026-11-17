@@ -212,11 +212,10 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
 }
 
 // INFO: fc 14nov26 on the ground only, as the AIRCRAFT menu proposes it: aloft a wingman is as loud
-std::optional<uint32_t> BravoService::own_transponder_on_ground() const {
-    const std::optional<comms::OwnTransponderHeard> heard = own_transponder();
+std::optional<comms::OwnTransponderHeard> BravoService::own_transponder_on_ground() const {
     const bool on_ground = context_.state.bravo == comms::BravoState::Live &&
                            context_.state.flight.confirmed_state == flight::FlightState::Ground;
-    return heard && on_ground ? std::optional<uint32_t>(heard->address) : std::nullopt;
+    return on_ground ? own_transponder() : std::nullopt;
 }
 
 // INFO: fc 12nov26 health alone says lost, never quiet traffic: an empty sky is a healthy one

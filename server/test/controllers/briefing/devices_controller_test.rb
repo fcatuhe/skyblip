@@ -33,10 +33,10 @@ class Briefing::DevicesControllerTest < ActionDispatch::IntegrationTest
 
   test "each device explains its own ICAO address in its own terms" do
     get briefing_device_path(slug: "go-00012a")
-    assert_select "#unit-aircraft-address-hint", text: /The Go then broadcasts your position under that address/
+    assert_select "#unit-aircraft-address-hint", text: /The Go transmits under it/
 
     get briefing_device_path(slug: "bravo-3f2a")
-    assert_select "#unit-aircraft-address-hint", text: /Bravo then keeps your own transponder out of the traffic/
+    assert_select "#unit-aircraft-address-hint", text: /Bravo leaves it out of the traffic/
   end
 
   test "an address that names no skyBlip is not a device page" do

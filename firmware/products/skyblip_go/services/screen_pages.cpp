@@ -55,7 +55,7 @@ void ScreenService::draw_menu_page(uint32_t now_ms) {
         field.cursor = editor_.cursor();
         field.clears = callsign_press_clears(field.text, field.cursor);
         if (editor_.field() == MenuRow::AircraftAddress) {
-            field.own_transponder = context_.state.own_transponder;
+            field.own_transponder = comms::address_of(context_.state.own_transponder);
             field.refused = editor_.refused();
         }
         draw_callsign(framebuffer_, field);

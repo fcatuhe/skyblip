@@ -310,6 +310,21 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 8,
           "type": "enum",
           "enum": "bravo"
+        },
+        {
+          "name": "own_transponder",
+          "number": 9,
+          "type": "unsigned"
+        },
+        {
+          "name": "own_transponder_callsign",
+          "number": 10,
+          "type": "text"
+        },
+        {
+          "name": "own_transponder_category",
+          "number": 11,
+          "type": "unsigned"
         }
       ]
     },

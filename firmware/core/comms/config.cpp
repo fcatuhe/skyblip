@@ -142,6 +142,12 @@ void ConfigService::set_bravo_state(BravoState state) {
     if (changed && link_up()) push_status();
 }
 
+void ConfigService::set_own_transponder(const std::optional<OwnTransponderHeard>& heard) {
+    const bool changed = heard != own_transponder_;
+    own_transponder_ = heard;
+    if (changed && link_up()) push_status();
+}
+
 int ConfigService::payload_bytes() const { return static_cast<int>(link_.payload_bytes()); }
 
 int ConfigService::payload_bytes_to(uint16_t session_id) const {

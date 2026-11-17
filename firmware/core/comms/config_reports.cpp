@@ -6,6 +6,7 @@
 #include "core/util/cbor.h"
 #include "core/util/span.h"
 #include "ports/link.h"
+#include "protocols/adsb/registration.h"
 #include "protocols/adsb/version.h"
 #include "protocols/adsl/version.h"
 #include "protocols/alptas/version.h"
@@ -48,6 +49,14 @@ int ConfigService::format_status(uint8_t* out, int capacity) {
     if (diagnostics_.die_valid)
         writer.add_integer(link::status_key::kDieTemperatureC, whole_celsius(diagnostics_.die_dc));
     if (bravo_ != BravoState::Unpaired) writer.add_code(link::status_key::kBravo, bravo_);
+    const OwnTransponderHeard heard = own_transponder_.value_or(OwnTransponderHeard{});
+    char registration[kPeerCallsignBytes]{};
+    adsb::registration(registration, sizeof(registration), heard.callsign, heard.address);
+    if (own_transponder_) writer.add_unsigned(link::status_key::kOwnTransponder, heard.address);
+    if (registration[0] != 0)
+        writer.add_text(link::status_key::kOwnTransponderCallsign, registration);
+    if (heard.aircraft_category != 0)
+        writer.add_unsigned(link::status_key::kOwnTransponderCategory, heard.aircraft_category);
     return writer.finish();
 }
 

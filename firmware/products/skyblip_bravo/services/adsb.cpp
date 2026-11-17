@@ -19,6 +19,10 @@ void AdsbService::tick(uint32_t now_ms) {
     events::AdsbFrame frame{};
     while (frames_.pop(frame)) hear(frame, here, now_ms);
     own_transponder_.tick(now_ms);
+    // INFO: fc 15nov26 on the ground only, as the Go proposes it: aloft a wingman is as loud
+    state.own_transponder = state.flight.confirmed_state == flight::FlightState::Ground
+                                ? own_transponder_.heard()
+                                : std::nullopt;
     // INFO: fc 12nov26 every pass, so no time the cache holds outlives its rule across the clock's
     // wrap
     assembly_.age_out(now_ms);

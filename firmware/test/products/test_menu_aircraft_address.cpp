@@ -50,7 +50,7 @@ TEST_CASE(
     tango.bravo.health.own_transponder_fields =
         "\"own_transponder\":" + std::to_string(kHeardAddress);
     tango.run_for(2500);
-    REQUIRE(tango.go.state().own_transponder == std::optional<uint32_t>(kHeardAddress));
+    REQUIRE(comms::address_of(tango.go.state().own_transponder) == kHeardAddress);
     if (tango.go.product.screen().noticing()) tango.go.tap(tango.now_ms);
 
     uint32_t& now_ms = tango.now_ms;

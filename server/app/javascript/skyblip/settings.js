@@ -29,7 +29,22 @@ export function statusOf(reply) {
     charging: reply.charging === true,
     powerLevel: reply.power_level ?? null,
     wentDarkFlat: reply.went_dark_flat === true,
+    ownTransponder: ownTransponderOf(reply),
   };
+}
+
+function ownTransponderOf({ own_transponder: address, own_transponder_callsign: callsign, own_transponder_category: type }) {
+  if (address === undefined) return null;
+  return { aircraft_address: aircraftAddressText(address), callsign: callsign ?? '', aircraft_type: type ?? 0 };
+}
+
+// INFO: fc 15nov26 as go::adopt writes it, so another aircraft's callsign never stays beside this one's address
+export function heardSettings(heard, settings) {
+  const next = { aircraft_address: heard.aircraft_address };
+  if ('callsign' in settings && heard.callsign) next.callsign = heard.callsign;
+  else if ('callsign' in settings && heard.aircraft_address !== settings.aircraft_address) next.callsign = '';
+  if ('aircraft_type' in settings && heard.aircraft_type !== 0) next.aircraft_type = heard.aircraft_type;
+  return next;
 }
 
 export function readSetting(field) {

@@ -19,7 +19,7 @@ static_assert(comms::kPromptDetailBytes >= kSettingsChangesBytes, "the prompt ho
 class SettingsStore : public common::SettingsStore {
    public:
     SettingsStore(Settings& settings, const identity::Activation& activation,
-                  const std::optional<uint32_t>& own_transponder,
+                  const std::optional<comms::OwnTransponderHeard>& own_transponder,
                   const ports::Capabilities& fitted = kSounding)
         : settings_(settings),
           activation_(activation),
@@ -79,7 +79,7 @@ class SettingsStore : public common::SettingsStore {
     Settings fitted_defaults() const { return fitted(defaults()); }
 
     Status apply_fitted(Settings& next, const cbor::Reader& frame) const {
-        const Status applied = apply_settings(next, frame, own_transponder_);
+        const Status applied = apply_settings(next, frame, comms::address_of(own_transponder_));
         if (applied != Status::Ok) return applied;
         return common::audible(next.alarm) && !common::can_sound(fitted_) ? Status::OutOfRange
                                                                           : Status::Ok;
@@ -87,7 +87,7 @@ class SettingsStore : public common::SettingsStore {
 
     Settings& settings_;
     const identity::Activation& activation_;
-    const std::optional<uint32_t>& own_transponder_;
+    const std::optional<comms::OwnTransponderHeard>& own_transponder_;
     const ports::Capabilities& fitted_;
 };
 
