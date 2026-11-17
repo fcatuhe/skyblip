@@ -17,7 +17,7 @@ updated_on: "2026-11-13"
 <section>
   <h2 class="kicker">The stack today</h2>
   <h3>An ADS-L device speaks as a FLARM unit does.</h3>
-  <p>Today&rsquo;s electronic flight bags, or EFBs, read traffic through FLARM&rsquo;s data port format. FTD-012 section 7 combines NMEA position sentences, FLARM&rsquo;s traffic and alarm sentences, and Garmin&rsquo;s pressure-altitude sentence. skyBlip adds LK8000&rsquo;s sensor sentence because it is the only one XCSoar and LK8000 read a battery level from.</p>
+  <p>Today&rsquo;s electronic flight bags, or EFBs, read traffic through FLARM&rsquo;s data port format. It combines NMEA position sentences, FLARM&rsquo;s traffic and alarm sentences, and Garmin&rsquo;s pressure-altitude sentence. skyBlip adds LK8000&rsquo;s sensor sentence because it is the only one XCSoar and LK8000 read a battery level from.</p>
   <div class="table-scroll">
     <table>
       <thead>
@@ -34,7 +34,7 @@ updated_on: "2026-11-13"
     </table>
   </div>
   <p>skyBlip sends these sentence types on a once-per-second output pass. Its traffic table holds 48 targets. Each must reach the display within 5&nbsp;s, so a pass sends at most 10 <code>$PFLAA</code> sentences and the next pass resumes where it stopped.</p>
-  <p class="note"><code>$LK8EX1</code> is outside FTD-012 and breaks NMEA&rsquo;s proprietary naming rule. Displays still read it by name. XCSoar reads all six sentence types through its generic parser, whatever driver the pilot selects. It does not read the standard <code>$--XDR</code> sensor sentence.</p>
+  <p class="note"><code>$LK8EX1</code> is outside that format and breaks NMEA&rsquo;s proprietary naming rule. Displays still read it by name. XCSoar reads all six sentence types through its generic parser, whatever driver the pilot selects. It does not read the standard <code>$--XDR</code> sensor sentence.</p>
 </section>
 
 <section>
@@ -144,14 +144,9 @@ updated_on: "2026-11-13"
       <span class="support">F.2 addresses and relaying, G.1 Traffic, G.2 Status and G.3 Traffic Uplink.</span>
     </li>
     <li>
-      <strong>FLARM</strong> &middot;
-      <a href="https://www.flarm.com/wp-content/uploads/2024/04/FTD-012-Data-Port-Interface-Control-Document-ICD-7.19.pdf">Data Port Interface Control Document</a>, FTD-012 version 7.19.
-      <span class="support">Section 7 defines the output stack. Section 8 defines its sentences.</span>
-    </li>
-    <li>
-      <strong>FLARM</strong> &middot;
-      <a href="https://www.flarm.com/wp-content/uploads/2026/03/FTD-115-FLARM-Hub-EFB-Guide-v1.02.pdf">Hub Electronic Flight Bag Guide</a>, FTD-115 version 1.02.
-      <span class="support">Existing display connections and formats.</span>
+      <strong>XCSoar</strong> &middot;
+      <a href="https://github.com/XCSoar/XCSoar/blob/03d7f98233e4b57dc16391c00bf96ed55fc93459/src/Device/Driver/FLARM/StaticParser.cpp">FLARM sentence parser</a>, at commit 03d7f982.
+      <span class="support">How the most widely used open display reads <code>$PFLAU</code> and <code>$PFLAA</code>.</span>
     </li>
     <li>
       <strong>Garmin</strong> &middot;
