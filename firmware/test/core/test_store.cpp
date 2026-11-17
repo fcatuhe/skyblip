@@ -145,6 +145,27 @@ TEST_CASE("sector pool: a ring recycling under its own frontier counts what the 
     CHECK(other.lost_sectors(SectorOwner::Diagnostics) == 0);
 }
 
+// A read turns a record index into a sector, so it needs what left the front of the session.
+TEST_CASE("sector pool: the sectors recycled from a session's front are counted for it") {
+    store::SectorAllocator pool;
+    REQUIRE(pool.configure(3, 0));
+    fill(pool, SectorOwner::Diagnostics, 2);
+    claimed_sector(pool, SectorOwner::Diagnostics, 2);
+    claimed_sector(pool, SectorOwner::Diagnostics, 2);
+    CHECK(pool.recycled_sectors(SectorOwner::Diagnostics, kSomeSession) == 1);
+    CHECK(pool.recycled_sectors(SectorOwner::Diagnostics, 2) == 0);
+
+    REQUIRE(pool.prepare(SectorOwner::Diagnostics).granted);
+    CHECK(pool.recycled_sectors(SectorOwner::Diagnostics, kSomeSession) == 2);
+    claimed_sector(pool, SectorOwner::Diagnostics, 2);
+    claimed_sector(pool, SectorOwner::Diagnostics, 2);
+    CHECK(pool.recycled_sectors(SectorOwner::Diagnostics, 2) == 1);
+    CHECK(pool.recycled_sectors(SectorOwner::Flights, 2) == 0);
+
+    pool.release(SectorOwner::Diagnostics);
+    CHECK(pool.recycled_sectors(SectorOwner::Diagnostics, 2) == 0);
+}
+
 TEST_CASE("sector pool: flights eating a live capture sector is the capture's loss to report") {
     store::SectorAllocator pool;
     REQUIRE(pool.configure(3, 0));
