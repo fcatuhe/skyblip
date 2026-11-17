@@ -162,11 +162,12 @@ export async function load(options = {}) {
   sim.paint = (canvas) => paintFrom(canvas, sim.panel());
 
   // INFO: fc 14nov26 the briefing draws a phone's prompt with the Go's own page, not a copy of it
-  const drawPrompt = call('simulator_draw_prompt', 'number', ['string', 'string', 'string', 'number']);
+  const drawPrompt = call('simulator_draw_prompt', 'number', ['string', 'string', 'string', 'number', 'number', 'number']);
   const promptWords = call('simulator_prompt_words', 'string', noArgs);
   // INFO: fc 14nov26 null when the Go raises no such prompt, else what the page says in reading order
-  sim.paintPrompt = (canvas, { prompt, argument = '', settings = '', seconds = 0 }) => {
-    const base = drawPrompt(prompt, argument, settings, seconds);
+  // INFO: fc 17nov26 sounds and paired word a plain Go's alarm as its glass does, BRAVO SOFT and BRAVO LOUD
+  sim.paintPrompt = (canvas, { prompt, argument = '', settings = '', seconds = 0, sounds = true, paired = false }) => {
+    const base = drawPrompt(prompt, argument, settings, seconds, sounds ? 1 : 0, paired ? 1 : 0);
     if (base === 0) return null;
     paintFrom(canvas, base);
     return promptWords();

@@ -211,10 +211,12 @@ KEEPALIVE int simulator_aircraft_count() {
 // Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
 KEEPALIVE const unsigned char* simulator_panel() { return go_unit().panel().data(); }
 KEEPALIVE const unsigned char* simulator_draw_prompt(const char* prompt, const char* argument,
-                                                     const char* settings, unsigned seconds_left) {
+                                                     const char* settings, unsigned seconds_left,
+                                                     int sounds, int paired) {
     static go::Glass glass;
     return simulator::draw_prompt(glass, prompt, argument, settings, seconds_left, g_prompt_words,
-                                  simulator::kPromptWordsBytes)
+                                  simulator::kPromptWordsBytes,
+                                  simulator::PromptUnit{sounds != 0, paired != 0})
                ? glass.data()
                : nullptr;
 }

@@ -73,12 +73,18 @@ bool applied(go::Settings& settings, const char* json) {
     return go::apply_settings(settings, reader) == Status::Ok;
 }
 
-bool settings_detail(const char* set, const char* settings, char* out, int capacity) {
+// INFO: fc 17nov26 any pin stands for the pairing, since the alarm row reads only whether there is
+// one
+constexpr events::BluetoothAddress kAnyBravo{1, {1, 0, 0, 0, 0, 0xC0}};
+
+bool settings_detail(const char* set, const char* settings, PromptUnit unit, char* out,
+                     int capacity) {
     go::Settings from = go::defaults();
+    if (unit.paired) from.bravo = kAnyBravo;
     if (!applied(from, settings)) return false;
     go::Settings to = from;
     if (!applied(to, set)) return false;
-    return go::describe_settings_changes(from, to, out, capacity, true) > 0;
+    return go::describe_settings_changes(from, to, out, capacity, unit.sounds) > 0;
 }
 
 // INFO: fc 14nov26 a screen reader hears the page's words in reading order, the keys last
@@ -111,12 +117,12 @@ void say(char* out, int capacity, const char* title, const char* detail, uint32_
 }  // namespace
 
 bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, const char* settings,
-                 uint32_t seconds_left, char* words, int words_capacity) {
+                 uint32_t seconds_left, char* words, int words_capacity, PromptUnit unit) {
     const comms::Pending pending = pending_named(prompt);
     if (pending == comms::Pending::None) return false;
     char detail[comms::kPromptDetailBytes]{};
     if (pending == comms::Pending::Set) {
-        if (!settings_detail(argument, settings, detail, sizeof(detail))) return false;
+        if (!settings_detail(argument, settings, unit, detail, sizeof(detail))) return false;
     } else if (pending == comms::Pending::Dfu) {
         ports::ImageVersion version;
         if (!dfu::parse_version(argument, version)) return false;

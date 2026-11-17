@@ -14,11 +14,11 @@ export default class extends Controller {
   }
 
   // INFO: fc 11nov26 the countdown starts when the device says it asks, as the glass's own does
-  show({ title, prompt, argument = "", settings = "", product, lamp = false, remembers = false }) {
-    const asking = `${prompt}|${argument}|${settings}|${product}|${remembers}`
+  show({ title, prompt, argument = "", settings = "", product, lamp = false, remembers = false, sounds = true, paired = false }) {
+    const asking = `${prompt}|${argument}|${settings}|${product}|${remembers}|${sounds}|${paired}`
     if (this.asking === asking) return
     this.asking = asking
-    this.request = { prompt, argument, settings }
+    this.request = { prompt, argument, settings, sounds, paired }
     this.lamp = lamp
     this.element.hidden = false
     this.remembersTarget.hidden = !remembers
