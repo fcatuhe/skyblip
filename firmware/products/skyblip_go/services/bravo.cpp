@@ -198,6 +198,8 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     if (step_ == BravoStep::Waiting) {
         asking_again_ = false;
         settings_.bravo = pairing_with_;
+        // INFO: fc 17nov26 a plain Go's pair sounds out of the box, as Bravo alone does
+        if (!common::can_sound(context_.roles.capabilities)) settings_.alarm = Alarm::Loud;
         config_.note_settings_changed();
         step_ = BravoStep::Idle;
         link_ = BravoLink::Up;
@@ -256,6 +258,8 @@ void BravoService::ask_again(uint32_t now_ms) {
 
 void BravoService::drop_pin() {
     settings_.bravo = events::BluetoothAddress{};
+    if (!common::can_sound(context_.roles.capabilities) && common::audible(settings_.alarm))
+        settings_.alarm = Alarm::Visual;
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;

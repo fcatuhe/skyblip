@@ -119,6 +119,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "alarm_from_go",
           "number": 13,
           "type": "boolean"
+        },
+        {
+          "name": "annunciator_fitted",
+          "number": 14,
+          "type": "boolean"
         }
       ]
     },
@@ -189,6 +194,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "alarm_from_go",
           "number": 13,
+          "type": "boolean"
+        },
+        {
+          "name": "annunciator_fitted",
+          "number": 14,
           "type": "boolean"
         }
       ],
@@ -261,6 +271,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "alarm_from_go",
           "number": 13,
+          "type": "boolean"
+        },
+        {
+          "name": "annunciator_fitted",
+          "number": 14,
           "type": "boolean"
         }
       ],

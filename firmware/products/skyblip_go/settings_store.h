@@ -28,6 +28,7 @@ class SettingsStore : public common::SettingsStore {
 
     void write_fields(cbor::Writer& writer) const override {
         write_config_fields(writer, fitted(settings_), activation_.address());
+        writer.add_boolean(link::config_key::kAnnunciatorFitted, common::can_sound(fitted_));
     }
 
     void write_default_fields(cbor::Writer& writer) const override {
@@ -50,7 +51,7 @@ class SettingsStore : public common::SettingsStore {
         return applied;
     }
 
-    void restore_defaults() override { settings_ = fitted_defaults(); }
+    void restore_defaults() override { settings_ = fitted(defaults()); }
 
     uint8_t blob_version() const override { return kBlobVersion; }
 
@@ -79,7 +80,13 @@ class SettingsStore : public common::SettingsStore {
         return settings;
     }
 
-    Settings fitted_defaults() const { return fitted(defaults()); }
+    // INFO: fc 17nov26 a new pair sounds out of the box, so a paired plain Go defaults to BRAVO
+    // LOUD
+    Settings fitted_defaults() const {
+        Settings settings = defaults();
+        settings.bravo = settings_.bravo;
+        return fitted(settings);
+    }
 
     Status apply_fitted(Settings& next, const cbor::Reader& frame) const {
         const Status applied = apply_settings(next, frame, comms::address_of(own_transponder_));

@@ -129,6 +129,7 @@ enum : uint32_t {
     kAircraftAddress = 11,
     kAlarm = 12,
     kAlarmFromGo = 13,
+    kAnnunciatorFitted = 14,
 };
 }
 
@@ -647,7 +648,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Protocols:
         case Command::Attestation:
         case Command::Identity: return 0x1;
-        case Command::Set: return 0x3F9F;
+        case Command::Set: return 0x7F9F;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:

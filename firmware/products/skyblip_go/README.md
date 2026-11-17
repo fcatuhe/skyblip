@@ -92,7 +92,7 @@ Advertising starts after the refusal and only on a unit that flies, once `config
 
 ## Go and Go+
 
-A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three fitted, and a skyBlip Go otherwise (`product_name.h`). Fitted, not answering: a Plus whose sensor hub waits for its image is still a Go+. The word is only the Bluetooth name's: `skyBlip Go+ 00012A` once activated (`core/identity/README.md`). Sounding the alarm asks less, a buzzer or a haptic. A Go with neither sounds nothing itself: paired with a Bravo, its `ALARM` row offers `BRAVO SOFT` and `BRAVO LOUD`, which only Bravo sounds (`../../core/comms/README.md`, The alarm).
+A unit is a skyBlip Go+ when `Inclinometer`, `Buzzer` and `Haptic` are all three fitted, and a skyBlip Go otherwise (`product_name.h`). Fitted, not answering: a Plus whose sensor hub waits for its image is still a Go+. The word is only the Bluetooth name's: `skyBlip Go+ 00012A` once activated (`core/identity/README.md`). Sounding the alarm asks less, a buzzer or a haptic. A Go with neither sounds nothing itself: paired with a Bravo, its `ALARM` row offers `BRAVO SOFT` and `BRAVO LOUD`, which only Bravo sounds, and it switches to `BRAVO LOUD`, its default while paired, when it pairs (`../../core/comms/README.md`, The alarm).
 
 ## Activation
 

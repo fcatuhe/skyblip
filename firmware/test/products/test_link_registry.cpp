@@ -397,6 +397,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.frequency_trim_e1_ppm", "-5"},
         {"set.aircraft_address", "3958150"},
         {"set.alarm_from_go", "true"},
+        {"set.annunciator_fitted", "true"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},

@@ -290,3 +290,29 @@ TEST_CASE("bravo alarm: a plain Go on BRAVO LOUD out of reach in flight leaves o
     CHECK(flight.bravo_tones() == tones + 1);
     CHECK(flight.go_tones() == 0);
 }
+
+// A new pair sounds out of the box, as Bravo alone does.
+TEST_CASE("bravo alarm: a plain Go switches to BRAVO LOUD when it pairs, and to VISUAL unpaired") {
+    PairedProducts pair(kPlainGo);
+    pair.go.settings().alarm = go::Alarm::Visual;
+    pair.pair_and_store();
+    REQUIRE(pair.go_pinned());
+    CHECK(pair.go.settings().alarm == go::Alarm::Loud);
+    CHECK(pair.bravo.product.alarm().alarm_in_force() == bravo::Alarm::Loud);
+
+    pair.service().unpair();
+    pair.run_for(3000);
+    CHECK_FALSE(pair.go_pinned());
+    CHECK(pair.go.settings().alarm == go::Alarm::Visual);
+}
+
+TEST_CASE("bravo alarm: a Go+ keeps its own alarm when it pairs and when it unpairs") {
+    PairedProducts pair;
+    pair.go.settings().alarm = go::Alarm::Soft;
+    pair.pair_and_store();
+    REQUIRE(pair.go_pinned());
+    CHECK(pair.go.settings().alarm == go::Alarm::Soft);
+    pair.service().unpair();
+    pair.run_for(3000);
+    CHECK(pair.go.settings().alarm == go::Alarm::Soft);
+}

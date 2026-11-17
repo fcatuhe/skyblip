@@ -141,6 +141,45 @@ TEST_CASE("settings: a phone's soft on a paired Go that cannot sound is confirme
     CHECK(std::string(detail) == "ALARM BRAVO SOFT");
 }
 
+namespace {
+
+std::string config_fields(const SettingsStore& store) {
+    uint8_t frame[64];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Config);
+    store.write_fields(writer);
+    const int bytes = writer.finish();
+    return link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)));
+}
+
+}  // namespace
+
+// A new pair sounds out of the box, as Bravo alone does, so a paired plain Go defaults to loud.
+TEST_CASE(
+    "settings: a Go that cannot sound defaults to BRAVO LOUD while paired, VISUAL otherwise") {
+    const ports::Capabilities silent = ports::Capability::Display;
+    Settings settings = defaults();
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    store.restore_defaults();
+    CHECK(default_fields(store).find("\"alarm\":\"visual\"") != std::string::npos);
+    settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    CHECK(default_fields(store).find("\"alarm\":\"loud\"") != std::string::npos);
+}
+
+// The briefing page reads this, so it never guesses the parts from a default.
+TEST_CASE("settings: config says whether the Go can sound an alarm itself") {
+    Settings plain_settings = defaults();
+    const ports::Capabilities silent = ports::Capability::Display;
+    const SettingsStore plain(plain_settings, kTestActivation, kNoOwnTransponder, silent);
+    CHECK(config_fields(plain).find("\"annunciator_fitted\":false") != std::string::npos);
+    CHECK(default_fields(plain).find("annunciator_fitted") == std::string::npos);
+
+    Settings plus_settings = defaults();
+    const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
+    const SettingsStore plus(plus_settings, kTestActivation, kNoOwnTransponder, sounding);
+    CHECK(config_fields(plus).find("\"annunciator_fitted\":true") != std::string::npos);
+}
+
 TEST_CASE("settings: a Go+ ships on loud and takes every step") {
     const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
     Settings settings = defaults();
