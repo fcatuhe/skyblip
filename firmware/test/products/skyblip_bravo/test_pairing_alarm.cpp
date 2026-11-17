@@ -134,7 +134,7 @@ struct Flight {
 
 }  // namespace
 
-TEST_CASE("tango alarm: a Go+ and its Bravo both sound the Go's call, within the link's latency") {
+TEST_CASE("bravo alarm: a Go+ and its Bravo both sound the Go's call, within the link's latency") {
     Flight flight;
     flight.seconds(20);
     REQUIRE(flight.pair.go.state().bravo == comms::BravoState::Live);
@@ -145,7 +145,7 @@ TEST_CASE("tango alarm: a Go+ and its Bravo both sound the Go's call, within the
     CHECK(flight.pair.bravo.platform.annunciator().motor_starts() > 0);
 }
 
-TEST_CASE("tango alarm: a second aircraft under a standing alarm is called again on both units") {
+TEST_CASE("bravo alarm: a second aircraft under a standing alarm is called again on both units") {
     Flight flight;
     flight.seconds(20);
     flight.both_call();
@@ -153,7 +153,7 @@ TEST_CASE("tango alarm: a second aircraft under a standing alarm is called again
     flight.both_call(kSecondAircraft, 700);
 }
 
-TEST_CASE("tango alarm: a press on Bravo dismisses the alarm on both units") {
+TEST_CASE("bravo alarm: a press on Bravo dismisses the alarm on both units") {
     Flight flight;
     flight.seconds(20);
     flight.both_call();
@@ -171,7 +171,7 @@ TEST_CASE("tango alarm: a press on Bravo dismisses the alarm on both units") {
     CHECK(flight.bravo_standing() == traffic::Level::None);
 }
 
-TEST_CASE("tango alarm: a long touch on the Go dismisses the alarm on both units") {
+TEST_CASE("bravo alarm: a long touch on the Go dismisses the alarm on both units") {
     Flight flight;
     flight.seconds(20);
     flight.both_call();
@@ -182,7 +182,7 @@ TEST_CASE("tango alarm: a long touch on the Go dismisses the alarm on both units
     CHECK_FALSE(flight.pair.bravo.platform.annunciator().sounding());
 }
 
-TEST_CASE("tango alarm: with the link down, a press on either unit silences only that unit") {
+TEST_CASE("bravo alarm: with the link down, a press on either unit silences only that unit") {
     SUBCASE("on Bravo") {
         Flight flight;
         flight.seconds(20);
@@ -203,7 +203,7 @@ TEST_CASE("tango alarm: with the link down, a press on either unit silences only
     }
 }
 
-TEST_CASE("tango alarm: Bravo keeps the Go's alarm through a lost link and in flash, and uses it") {
+TEST_CASE("bravo alarm: Bravo keeps the Go's alarm through a lost link and in flash, and uses it") {
     Flight flight;
     flight.pair.go.settings().alarm = go::Alarm::Soft;
     flight.seconds(5);
@@ -224,7 +224,7 @@ TEST_CASE("tango alarm: Bravo keeps the Go's alarm through a lost link and in fl
     CHECK(flight.pair.bravo.platform.annunciator().loudness() == ports::Loudness::Soft);
 }
 
-TEST_CASE("tango alarm: unpairing gives Bravo back the alarm it had before the pairing") {
+TEST_CASE("bravo alarm: unpairing gives Bravo back the alarm it had before the pairing") {
     Flight flight(platform::host::Platform::kFullyFitted, bravo::Alarm::Visual);
     flight.seconds(3);
     REQUIRE(flight.pair.bravo.product.alarm().alarm_in_force() == bravo::Alarm::Loud);
@@ -257,7 +257,7 @@ TEST_CASE(
     CHECK_FALSE(flight.pair.go.product.alarm().sounding());
 }
 
-TEST_CASE("tango alarm: Bravo plays its first-fix tune only when the pair's alarm sounds") {
+TEST_CASE("bravo alarm: Bravo plays its first-fix tune only when the pair's alarm sounds") {
     SUBCASE("a plain Go on VISUAL") {
         Flight flight(kPlainGo);
         flight.pair.go.settings().alarm = go::Alarm::Visual;
@@ -279,7 +279,7 @@ TEST_CASE("tango alarm: Bravo plays its first-fix tune only when the pair's alar
 }
 
 // A plain Go has no buzzer for the lost-Bravo tone, so Bravo's own note is all its pilot hears.
-TEST_CASE("tango alarm: a plain Go on BRAVO LOUD out of reach in flight leaves one note on Bravo") {
+TEST_CASE("bravo alarm: a plain Go on BRAVO LOUD out of reach in flight leaves one note on Bravo") {
     Flight flight(kPlainGo);
     flight.pair.go.settings().alarm = go::Alarm::Loud;
     flight.seconds(20);
