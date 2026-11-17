@@ -9,7 +9,7 @@ The wire arithmetic two or more stacks share, in namespace `skyblip::wire`. None
 | `crc.h` | the 24-bit CRC of ADS-L E.3.1, whose generator 0x1FFF409 is also Mode S parity, and CRC-16 CCITT | ADS-L, ADS-B, ALP-TAS |
 | `manchester.{h,cpp}` | ADS-L C.2.1's line code, a 1 as the chips 01 and a 0 as 10, with every chip pair that is neither symbol marked, and `manchester_frame`, the whole sync word and a frame as they go on air | ADS-L, ADS-B, ALP-TAS |
 | `xxtea.{h,cpp}` | the cipher of ADS-L E.2 | ADS-L, ALP-TAS |
-| `repair.{h,cpp}` | the erasure repair every frame with a linear check shares | ADS-L, ADS-B, ALP-TAS |
+| `repair.{h,cpp}` | the erasure repair every frame with a linear check shares | ADS-L, ALP-TAS |
 | `little_endian.h` | integers least significant byte first, as ADS-L B.3 puts them on air | ADS-L, ALP-TAS |
 | `geometry.{h,cpp}` | rounded integer division, the sine table, an integer square root, longitude wrap and the flat-earth offset between two points | ADS-L, ADS-B, ALP-TAS |
 | `status.h` | `wire::Status`, the reason a stack refuses a frame | ADS-B, ADS-L, ALP-TAS |

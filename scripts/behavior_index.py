@@ -31,10 +31,12 @@ SUBJECT_SEPARATOR = ": "
 
 LAYERS = {
     "adsl": "ads-l - ADS-L 4 SRD-860 issue 2, the device read clause by clause",
+    "adsb": "ads-b - DO-260B draft 4.2, the device read clause by clause",
     "protocols/common": "protocols/common - the wire arithmetic the stacks share",
     "protocols/adsl": "protocols/adsl - the ADS-L stack",
     "protocols/adsl/conformance": "protocols/adsl conformance - ADS-L 4 SRD-860 issue 2, the component read clause by clause",
     "protocols/adsb": "protocols/adsb - the ADS-B stack",
+    "protocols/adsb/conformance": "protocols/adsb conformance - DO-260B draft 4.2, the component read clause by clause",
     "protocols/alptas": "protocols/alptas - the ALP-TAS stack",
     "core": "core - the logic the radio and the screen are built on",
     "ui": "ui - screens, widgets and input",
