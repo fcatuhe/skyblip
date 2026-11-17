@@ -24,7 +24,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/go-00012a"
       assert_selector ".unit-facts", text: "Connected · 82 % · On the ground · 0.1.0+1000, development"
       assert_field "Callsign", with: "F-JXYZ"
-      assert_select "Alarm", selected: "Visual + soft sound"
+      assert_select "Alarm", selected: "Soft sound + visual"
       assert_selector ".fleet-unit.is-linked", text: "Go 00012A"
       assert_selector ".unit-banner", text: "0.1.0+1765 is out. Your device is running 0.1.0+1000."
       screen "02-device-connected"
@@ -70,7 +70,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       assert_selector ".fleet-unit.is-linked", count: 2
       assert_no_field "Callsign"
-      assert_select "Alarm", selected: "Visual + soft sound"
+      assert_select "Alarm", selected: "Soft sound + visual"
       screen "05-go-and-bravo"
 
       click_link "Go 00012A"
@@ -84,7 +84,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       fill_in "Callsign", with: "f-abcd"
-      select "Visual + loud sound", from: "Alarm"
+      select "Loud sound + visual", from: "Alarm"
       assert_button "Save 2 changes"
       screen "06-settings-edited"
 
@@ -100,7 +100,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
       assert_field "Callsign", with: "F-ABCD"
-      assert_select "Alarm", selected: "Visual + loud sound"
+      assert_select "Alarm", selected: "Loud sound + visual"
       assert_equal({ "callsign" => "F-ABCD", "alarm" => "loud" }, page.evaluate_script("#{unit("00012A")}.staged"))
       screen "08-settings-saved"
     end
@@ -113,7 +113,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       click_button "Back to defaults (3)"
       assert_select "Aircraft type", selected: "Light aircraft"
       assert_field "Callsign", with: ""
-      assert_select "Alarm", selected: "Visual + loud sound"
+      assert_select "Alarm", selected: "Loud sound + visual"
       click_button "Save 3 changes"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector ".unit-message", text: "Saved on the device."
@@ -126,7 +126,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Visual + loud sound", from: "Alarm"
+      select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-prompt"
       page.execute_script("#{unit("00012A")}.refuse()")
@@ -148,7 +148,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     on_the_shelf do
       connect_go
       assert_no_selector "[data-unit-target=browsers]"
-      select "Visual + loud sound", from: "Alarm"
+      select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-remembers", text: "Allowing it also adds this browser to the trusted list"
       screen "15-glass-trusts"
@@ -162,7 +162,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       end
       screen "16-trusted-browsers"
 
-      select "Visual + soft sound", from: "Alarm"
+      select "Soft sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
       assert_no_selector ".glass-prompt"
@@ -178,7 +178,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     in_range a_go
     on_the_shelf do
       connect_go
-      select "Visual + loud sound", from: "Alarm"
+      select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       page.execute_script("#{unit("00012A")}.press()")
       assert_selector "[data-unit-target=browsers] li", text: "this browser"
@@ -186,7 +186,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       page.execute_script("#{unit("00012A")}.takeOff()")
       assert_selector ".unit-notes", text: "This browser can still change the device's settings. Other actions are available again after landing."
       screen "17-trusted-airborne"
-      select "Visual + soft sound", from: "Alarm"
+      select "Soft sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".unit-message", text: "Saved on the device."
       assert_equal "soft", page.evaluate_script("#{unit("00012A")}.stored.alarm")
@@ -233,7 +233,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       visit "/briefing"
       click_button "Connect a device"
       assert_current_path "/briefing/devices/bravo-3f2a"
-      select "Visual + loud sound", from: "Alarm"
+      select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
       assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
       assert_selector ".glass-press", text: "Press the Bravo's button."

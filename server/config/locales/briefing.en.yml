@@ -53,8 +53,8 @@ en:
       alarm_names:
         "off": "Off"
         visual: Visual only
-        soft: Visual + soft sound
-        loud: Visual + loud sound
+        soft: Soft sound + visual
+        loud: Loud sound + visual
       save: Save
       reset: Back to defaults
       heard_setting: Setting
