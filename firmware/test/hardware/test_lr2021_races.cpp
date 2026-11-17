@@ -46,16 +46,16 @@ Read read(Lr2021& radio) {
 
 }  // namespace
 
-// Ten frames fill the 256-byte FIFO with nine and 13 bytes of the tenth, which would shift every
-// later read.
+// Nineteen frames fill the 256-byte FIFO with eighteen and 4 bytes of the nineteenth, which would
+// shift every later read.
 TEST_CASE("lr2021: an overflowed FIFO is counted, cleared and re-armed before anything is read") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
-    for (int i = 0; i < 10; i++) hear(part, kFirst);
+    for (int i = 0; i < 19; i++) hear(part, kFirst);
     REQUIRE((part.rx_fifo_flags & models::Lr2021::kFifoOverflow) != 0);
 
     CHECK(read(radio).event.type == Lr2021EventType::None);
-    CHECK(radio.fifo_drops() == 10);
+    CHECK(radio.fifo_drops() == 19);
     CHECK(part.fifo.empty());
     CHECK(part.rx_fifo_flags == 0);
     CHECK(part.count(chip::kSetRx) == 2);

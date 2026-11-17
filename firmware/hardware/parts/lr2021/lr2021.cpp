@@ -32,6 +32,18 @@ int8_t rssi_high_dbm(const uint8_t* status) {
     return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
 }
 
+// INFO: fc 17nov26 the part decoded the bits, so they go back to the chips the decoder reads
+bool chips_of_bits(const uint8_t* bits, uint8_t* chips) {
+    if ((bits[0] & 0xF0) != 0x80) return false;
+    std::memset(chips, 0, lr2021::kChipBytes);
+    for (int bit = 4; bit < 8 * lr2021::kFifoFrameBytes; bit++) {
+        const bool one = ((bits[bit >> 3] >> (7 - (bit & 7))) & 1u) != 0;
+        const int chip = 2 * (bit - 4) + (one ? 0 : 1);
+        chips[chip >> 3] = static_cast<uint8_t>(chips[chip >> 3] | (0x80u >> (chip & 7)));
+    }
+    return true;
+}
+
 }  // namespace
 
 Status Lr2021::probe() {
@@ -75,15 +87,21 @@ Lr2021Event Lr2021::poll(uint8_t* chips, size_t capacity) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    if (frames_waiting_ == 0) return event;
-    if (read_frame(chips, event) != Status::Ok) {
-        event.type = Lr2021EventType::Fault;
-        return event;
+    // INFO: fc 17nov26 with no sync word every downlink format lands, and only DF16 and DF17 go up
+    while (frames_waiting_ != 0) {
+        const Status read = read_frame(chips, event);
+        if (read != Status::Ok && read != Status::Unsupported) {
+            event.type = Lr2021EventType::Fault;
+            return event;
+        }
+        frames_waiting_--;
+        since_frame_ms_ = 0;
+        if (read == Status::Ok) {
+            event.type = Lr2021EventType::Frame;
+            return event;
+        }
     }
-    frames_waiting_--;
-    since_frame_ms_ = 0;
-    event.type = Lr2021EventType::Frame;
-    return event;
+    return Lr2021Event{};
 }
 
 // INFO: fc 11nov26 the packet status is read on both sides of the level, and only agreement gives a
@@ -103,11 +121,12 @@ Status Lr2021::take_snapshot() {
     if (status == Status::Ok) status = read(lr2021::kGetOokPacketStatus, after, sizeof(after));
     if (status != Status::Ok) return status;
     if ((fifo_flags[0] & lr2021::kFifoOverflow) != 0) {
-        const uint32_t lost = (be16(level) + lr2021::kChipBytes - 1u) / lr2021::kChipBytes;
+        const uint32_t lost =
+            (be16(level) + lr2021::kFifoFrameBytes - 1u) / lr2021::kFifoFrameBytes;
         fifo_drops_ += lost != 0 ? lost : 1;
         return restart_receive();
     }
-    frames_waiting_ = static_cast<uint8_t>(be16(level) / lr2021::kChipBytes);
+    frames_waiting_ = static_cast<uint8_t>(be16(level) / lr2021::kFifoFrameBytes);
     newest_rssi_valid_ = std::memcmp(before, after, sizeof(before)) == 0;
     newest_rssi_dbm_ = rssi_high_dbm(after);
     return Status::Ok;
@@ -222,10 +241,12 @@ Status Lr2021::bring_up() {
     if (status == Status::Ok) status = command(lr2021::kSetDioFunction, dio, sizeof(dio));
     if (status == Status::Ok) status = command(lr2021::kCalibrate, &blocks, 1);
     if (status == Status::Ok) status = command(lr2021::kSetPacketType, &packet_type, 1);
-    if (status == Status::Ok) status = configure_ook();
     if (status == Status::Ok) status = command(lr2021::kSetRxPath, path, sizeof(path));
     if (status == Status::Ok) status = command(lr2021::kCalibFe, calibration, sizeof(calibration));
     if (status == Status::Ok) status = command(lr2021::kSetRfFrequency, frequency, 4);
+    // INFO: fc 17nov26 #293: written before CalibFE and SetRfFrequency, the threshold acted near
+    // -106 dBm, not the -90 it asked
+    if (status == Status::Ok) status = configure_ook();
     if (status == Status::Ok) status = read_errors();
     if (status != Status::Ok) return status;
     if ((device_errors_ & lr2021::kFatalErrors) != 0) return Status::Down;
@@ -244,10 +265,10 @@ Status Lr2021::configure_ook() {
     uint8_t packet[6] = {};
     put_be16(packet, lr2021::kPreambleChips);
     packet[2] = lr2021::kFixedLength;
-    put_be16(packet + 3, lr2021::kChipBytes);
-    packet[5] = lr2021::kCrcOffManchesterOff;
+    put_be16(packet + 3, lr2021::kFifoFrameBytes);
+    packet[5] = lr2021::kCrcOffManchesterInverted;
     const uint8_t whitening_off[4] = {};
-    const uint8_t syncword[5] = {0, 0, 0, lr2021::kSyncword, lr2021::kSyncwordMsbFirstBits};
+    const uint8_t syncword[5] = {0, 0, 0, 0, lr2021::kSyncwordNoneMsbFirst};
     uint8_t detector[5] = {};
     put_be16(detector, lr2021::kAdsbPreamblePattern);
     detector[2] = lr2021::kAdsbPreambleChips - 1;
@@ -372,18 +393,17 @@ Status Lr2021::read_frame(uint8_t* chips, Lr2021Event& event) {
         reset_owed_ = true;
         return Status::Timeout;
     }
-    uint8_t tx[2 + lr2021::kChipBytes] = {};
-    uint8_t rx[2 + lr2021::kChipBytes] = {};
+    uint8_t tx[2 + lr2021::kFifoFrameBytes] = {};
+    uint8_t rx[2 + lr2021::kFifoFrameBytes] = {};
     put_be16(tx, lr2021::kReadRadioRxFifo);
     spi_.select(true);
     spi_.transfer(tx, rx, sizeof(tx));
     spi_.select(false);
     note_status(rx);
     last_opcode_ = lr2021::kReadRadioRxFifo;
-    std::memcpy(chips, rx + 2, lr2021::kChipBytes);
     event.rssi_valid = frames_waiting_ == 1 && newest_rssi_valid_;
     event.rssi_dbm = event.rssi_valid ? newest_rssi_dbm_ : 0;
-    return Status::Ok;
+    return chips_of_bits(rx + 2, chips) ? Status::Ok : Status::Unsupported;
 }
 
 }  // namespace skyblip::parts

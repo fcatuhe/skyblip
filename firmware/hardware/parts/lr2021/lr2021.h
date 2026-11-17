@@ -173,9 +173,11 @@ constexpr uint8_t kRxBandwidth3076kHz = 0x00;
 constexpr uint8_t kDepthFull = 0x00;
 constexpr uint16_t kPreambleChips = 16;
 constexpr uint8_t kFixedLength = 0x00;
-constexpr uint8_t kCrcOffManchesterOff = 0x00;
-constexpr uint8_t kSyncword = 0x95;
-constexpr uint8_t kSyncwordMsbFirstBits = 0x80 | 8;
+// INFO: fc 17nov26 #293: the part's Manchester decoding passed 86% of frames strict where raw chips
+// passed 13 to 24%
+constexpr uint8_t kCrcOffManchesterInverted = 0x09;
+constexpr uint8_t kSyncwordNoneMsbFirst = 0x80;
+constexpr uint8_t kFifoFrameBytes = 14;
 // INFO: fc 11nov26 DS 16.3.8 names these for ADS-B: pattern 0x0285, no repeat, falling edge, no SFD
 constexpr uint16_t kAdsbPreamblePattern = 0x0285;
 constexpr uint8_t kAdsbPreambleChips = 16;
@@ -186,11 +188,10 @@ constexpr uint8_t kAgcAutomatic = 0x00;
 constexpr uint32_t kOokThresholdRegister = 0xF30E14;
 constexpr uint32_t kOokThresholdMask = 0x7FUL << 20;
 constexpr int16_t kOokThresholdOffsetDb = 74;
-// TODO: fc 11nov26 the field SoftRF's -80 dBm writes, -90 dBm by Semtech's formula, unverified
-// until #169
-constexpr int16_t kDetectionThresholdDbm = -90;
-// TODO: fc 11nov26 SoftRF radiolib.cpp:2359 writes it with no public source, unverified until #169
-// benches a unit
+// INFO: fc 17nov26 #293 decoded the most positions at -110 dBm, and -114 dBm let noise through
+constexpr int16_t kDetectionThresholdDbm = -110;
+// INFO: fc 17nov26 #293: 0x18, SoftRF's, decoded more than 0x75, the part's own, which blanks a
+// saturated ADC
 constexpr uint32_t kOokQuirkRegister = 0xF30150;
 constexpr uint32_t kOokQuirkMask = 0x000000FF;
 constexpr uint32_t kOokQuirkData = 0x18;
