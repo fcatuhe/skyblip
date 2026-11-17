@@ -184,7 +184,7 @@ updated_on: "2026-11-13"
     <li>
       <h3>Set your transponder address.</h3>
       <p>Only a device that transmits in ADS-L needs its own address from skyBlip&rsquo;s range in the ADS-L registry. The Go gets it at activation, while Bravo transmits nothing and needs neither activation nor an account.</p>
-      <p>If your aircraft has a Mode S or ADS-B out transponder, enter its ICAO address in Briefing. This is the transponder&rsquo;s 24-bit aircraft address, written as six characters such as <span class="mono">3C6586</span>. Briefing calls it the ADS-B address. Bravo trusts the browser that installed it, so the change needs no press. Any other browser asks for a press on Bravo. This keeps your own transponder out of the traffic and stops it setting off alarms. Without a transponder, leave the address blank.</p>
+      <p>If your aircraft has a Mode S or ADS-B out transponder, Bravo must know its ICAO address, so your own transponder stays out of the traffic and sets off no alarm. Nothing to type: in the aircraft, switch the transponder to <span class="mono">ALT</span>. With a Go paired, the Go offers the address, the callsign and the type Bravo hears, and one press on the Go takes them. With Bravo alone, open <%= link_to "Briefing", briefing_root_path %>: it offers the address Bravo hears. If you know the address already, such as <span class="mono">3C6586</span>, you can enter it at setup or later in the device&rsquo;s settings. Without a transponder, there is nothing to set.</p>
     </li>
   </ol>
   <div class="faq">
