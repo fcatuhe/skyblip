@@ -81,7 +81,7 @@ updated_on: "2026-11-13"
     </div>
     <div>
       <h3>Les mises à jour.</h3>
-      <p>Pour mettre Bravo à jour en Bluetooth, utilisez <%= link_to "le Briefing", briefing_root_path %>, l&rsquo;application web de skyblip.eu, puis validez chaque mise à jour par une pression sur Bravo.</p>
+      <p>Pour mettre Bravo à jour en Bluetooth, utilisez <%= link_to "le Briefing", briefing_root_path %>, l&rsquo;application web de skyblip.eu. Le navigateur qui l&rsquo;a installé le met à jour sans appui. Tout autre navigateur demande une pression sur Bravo.</p>
     </div>
   </div>
 </section>
@@ -90,20 +90,24 @@ updated_on: "2026-11-13"
   <h2 class="section-title">Un Bravo, prêt en trois étapes</h2>
   <ol class="steps-grid steps-grid--sequence">
     <li>
-      <h3>Branchez.</h3>
-      <p>Maintenez le bouton enfoncé, branchez le câble USB-C et gardez le bouton enfoncé jusqu&rsquo;à ce que le voyant devienne blanc, soit environ 3 secondes. Un lecteur nommé <span class="mono">X1</span> apparaît.</p>
-    </li>
-    <li>
-      <h3>Sauvegardez Meshtastic.</h3>
-      <p>Copiez d&rsquo;abord <span class="mono">CURRENT.UF2</span> du lecteur <span class="mono">X1</span> sur votre ordinateur. Pour restaurer Meshtastic, glissez ce fichier sur le lecteur.</p>
-    </li>
-    <li>
       <h3>Installez.</h3>
-      <p>Copiez le fichier .uf2 de la dernière version de skyBlip Bravo depuis la <a href="https://github.com/fcatuhe/skyblip/releases">page des versions</a> sur le lecteur <span class="mono">X1</span>.</p>
-      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans <%= link_to "le Briefing", briefing_root_path %>. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Validez la modification par une pression sur Bravo. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
-      <p>Le Briefing communique avec Bravo en Bluetooth. Utilisez Chrome ou Edge sur un ordinateur ou sur Android. Safari sur iPhone ne permet pas cette connexion.</p>
+      <p>Branchez le X1 sur un ordinateur avec un câble USB-C. Dans Chrome ou Edge, ouvrez <%= link_to "Installer un appareil", briefing_setup_path %> dans le Briefing, l&rsquo;application web de skyblip.eu, et cliquez sur Installer. Le Briefing redémarre le X1 en clé USB nommée <span class="mono">X1</span>, y écrit skyBlip, puis s&rsquo;y connecte en Bluetooth.</p>
+    </li>
+    <li>
+      <h3>Saisissez l&rsquo;adresse de votre transpondeur.</h3>
+      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans le Briefing. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Bravo fait confiance au navigateur qui l&rsquo;a installé&nbsp;: la modification ne demande aucun appui. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
+    </li>
+    <li>
+      <h3>Appairez-le avec votre Go.</h3>
+      <p>Si votre Go est installé dans le même navigateur, le Briefing propose de les appairer, sans aucun appui. Bravo fonctionne aussi seul, avec votre application de navigation.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Sans Chrome ou Edge sur un ordinateur</summary>
+      <p>Maintenez le bouton enfoncé, branchez le câble USB-C et gardez le bouton enfoncé jusqu&rsquo;à ce que le voyant devienne blanc, soit environ 3 secondes. Un lecteur nommé <span class="mono">X1</span> apparaît. Copiez d&rsquo;abord <span class="mono">CURRENT.UF2</span> sur votre ordinateur. Pour restaurer Meshtastic, glissez ce fichier sur le lecteur. Copiez ensuite le fichier .uf2 de la dernière version de skyBlip Bravo depuis la <a href="https://github.com/fcatuhe/skyblip/releases">page des versions</a> sur le lecteur <span class="mono">X1</span>.</p>
+    </details>
+  </div>
 </section>
 
 <section id="buy" class="band band--tint">

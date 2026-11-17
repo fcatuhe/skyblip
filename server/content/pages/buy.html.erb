@@ -155,13 +155,19 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Install.</h3>
-      <p>Connect the device by USB-C and press <span class="mono">RST</span> twice. Copy the .uf2 file from the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> to the <span class="mono">TECHOBOOT</span> drive that appears.</p>
+      <p>Plug the T-Echo into a computer with a USB-C cable. In Chrome or Edge, open <%= link_to "Set up a device", briefing_setup_path %> in Briefing, the skyblip.eu web app, and click Install. Briefing restarts the T-Echo as a USB drive named <span class="mono">TECHOBOOT</span>, writes skyBlip onto it, then connects to it over Bluetooth.</p>
     </li>
     <li>
       <h3>Activate.</h3>
-      <p>The Go transmits in ADS-L, so activation assigns it an address from skyBlip&rsquo;s range in the ADS-L registry. No account is needed. <%= link_to "Activate it", briefing_activation_path %> over Bluetooth in Chrome or Edge, then confirm activation with a press on the device. Until then, a new Go neither transmits nor receives. Briefing then lets you set your <a href="#type">aircraft type</a> and callsign. Both are optional. If the device needs a GPS position before saving them, it tells you. You can change both later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
+      <p>Activation runs by itself once Briefing connects. The Go transmits in ADS-L, so activation assigns it an address from skyBlip&rsquo;s range in the ADS-L registry. No account is needed. The Go trusts the browser that installed it, so it asks for no press. Until then, a new Go neither transmits nor receives. Briefing then lets you set your <a href="#type">aircraft type</a> and callsign. Both are optional. If the device needs a GPS position before saving them, it tells you. You can change both later in the device&rsquo;s menu or from <%= link_to "Briefing", briefing_root_path %>.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Without Chrome or Edge on a computer</summary>
+      <p>Connect the device by USB-C and press <span class="mono">RST</span> twice. Copy the .uf2 file from the <a href="https://github.com/fcatuhe/skyblip/releases">latest release</a> to the <span class="mono">TECHOBOOT</span> drive that appears. Then <%= link_to "activate it", briefing_activation_path %> over Bluetooth in Chrome or Edge on Android, and confirm activation with a press on the device.</p>
+    </details>
+  </div>
 </section>
 
 <section id="install-bravo" class="band">
@@ -173,17 +179,25 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Install.</h3>
-      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears. First, copy <span class="mono">CURRENT.UF2</span> from it to your computer. Dragging that file back onto the drive restores Meshtastic. Then copy the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest skyBlip Bravo release</a> onto the <span class="mono">X1</span> drive.</p>
+      <p>Plug the X1 into a computer with a USB-C cable. In Chrome or Edge, open <%= link_to "Set up a device", briefing_setup_path %> in Briefing and click Install. Briefing restarts the X1 as a USB drive named <span class="mono">X1</span>, writes skyBlip onto it, then connects to it over Bluetooth. To go back to Meshtastic, install it again with Meshtastic&rsquo;s web flasher.</p>
     </li>
     <li>
       <h3>Set your transponder address.</h3>
       <p>Only a device that transmits in ADS-L needs its own address from skyBlip&rsquo;s range in the ADS-L registry. The Go gets it at activation, while Bravo transmits nothing and needs neither activation nor an account.</p>
-      <p>If your aircraft has a Mode S or ADS-B out transponder, enter its ICAO address in <%= link_to "Briefing", briefing_root_path %>, the skyblip.eu web app for device settings and updates. This is the transponder&rsquo;s 24-bit aircraft address, written as six characters such as <span class="mono">3C6586</span>. Briefing calls it the ADS-B address. Use Chrome or Edge on a computer or Android, then approve the change with a press on Bravo. This keeps your own transponder out of the traffic and stops it setting off alarms. Without a transponder, leave the address blank.</p>
+      <p>If your aircraft has a Mode S or ADS-B out transponder, enter its ICAO address in Briefing. This is the transponder&rsquo;s 24-bit aircraft address, written as six characters such as <span class="mono">3C6586</span>. Briefing calls it the ADS-B address. Bravo trusts the browser that installed it, so the change needs no press. Any other browser asks for a press on Bravo. This keeps your own transponder out of the traffic and stops it setting off alarms. Without a transponder, leave the address blank.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Without Chrome or Edge on a computer</summary>
+      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears. First, copy <span class="mono">CURRENT.UF2</span> from it to your computer. Dragging that file back onto the drive restores Meshtastic. Then copy the .uf2 file of the <a href="https://github.com/fcatuhe/skyblip/releases">latest skyBlip Bravo release</a> onto the <span class="mono">X1</span> drive.</p>
+    </details>
+  </div>
   <p class="signature">
-    Later updates for both devices come from <%= link_to "Briefing", briefing_root_path %>
-    over Bluetooth. Each one is approved on the device: on the Go&rsquo;s screen, or with a press on Bravo.
+    A Go and a Bravo set up in the same browser pair with one click in
+    <%= link_to "Briefing", briefing_root_path %>, and with no press. Later updates for both devices
+    come from Briefing over Bluetooth. A browser that installed a device updates it with no press.
+    Any other browser asks for one: on the Go&rsquo;s screen, or on Bravo&rsquo;s button.
     The same file works on the T&#8209;Echo and the T&#8209;Echo Plus. For now,
     only development versions are published for both devices.
   </p>

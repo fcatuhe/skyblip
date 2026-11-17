@@ -157,13 +157,19 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Installez.</h3>
-      <p>Branchez l&rsquo;appareil en USB-C et appuyez deux fois sur <span class="mono">RST</span>. Copiez le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version</a> sur le lecteur <span class="mono">TECHOBOOT</span> qui apparaît.</p>
+      <p>Branchez le T-Echo sur un ordinateur avec un câble USB-C. Dans Chrome ou Edge, ouvrez <%= link_to "Installer un appareil", briefing_setup_path %> dans le Briefing, l&rsquo;application web de skyblip.eu, et cliquez sur Installer. Le Briefing redémarre le T-Echo en clé USB nommée <span class="mono">TECHOBOOT</span>, y écrit skyBlip, puis s&rsquo;y connecte en Bluetooth.</p>
     </li>
     <li>
       <h3>Activez.</h3>
-      <p>Le Go émet en ADS-L. L&rsquo;activation lui attribue donc une adresse dans la plage réservée à skyBlip par le registre ADS-L. Aucun compte n&rsquo;est nécessaire. <%= link_to "Activez-le", briefing_activation_path %> en Bluetooth depuis Chrome ou Edge, puis confirmez l&rsquo;activation par une pression sur l&rsquo;appareil. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. Le Briefing vous permet ensuite de choisir votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Si l&rsquo;appareil a besoin d&rsquo;une position GPS avant de les enregistrer, il vous le signale. Vous pourrez les modifier plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to "le Briefing", briefing_root_path %>.</p>
+      <p>L&rsquo;activation se lance d&rsquo;elle-même dès que le Briefing est connecté. Le Go émet en ADS-L. L&rsquo;activation lui attribue donc une adresse dans la plage réservée à skyBlip par le registre ADS-L. Aucun compte n&rsquo;est nécessaire. Le Go fait confiance au navigateur qui l&rsquo;a installé et ne demande donc aucun appui. Jusque-là, un Go neuf n&rsquo;émet ni ne reçoit. Le Briefing vous permet ensuite de choisir votre <a href="#type">type d&rsquo;aéronef</a> et votre indicatif. Tous deux sont facultatifs. Si l&rsquo;appareil a besoin d&rsquo;une position GPS avant de les enregistrer, il vous le signale. Vous pourrez les modifier plus tard dans le menu de l&rsquo;appareil ou depuis <%= link_to "le Briefing", briefing_root_path %>.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Sans Chrome ou Edge sur un ordinateur</summary>
+      <p>Branchez l&rsquo;appareil en USB-C et appuyez deux fois sur <span class="mono">RST</span>. Copiez le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version</a> sur le lecteur <span class="mono">TECHOBOOT</span> qui apparaît. <%= link_to "Activez-le", briefing_activation_path %> ensuite en Bluetooth depuis Chrome ou Edge sur Android, puis confirmez l&rsquo;activation par une pression sur l&rsquo;appareil.</p>
+    </details>
+  </div>
 </section>
 
 <section id="install-bravo" class="band">
@@ -175,17 +181,26 @@ updated_on: "2026-11-13"
     </li>
     <li>
       <h3>Installez.</h3>
-      <p>Maintenez le bouton enfoncé, branchez le câble USB-C et gardez le bouton enfoncé jusqu&rsquo;à ce que le voyant devienne blanc, au bout d&rsquo;environ 3 secondes. Un lecteur nommé <span class="mono">X1</span> apparaît. Copiez d&rsquo;abord le fichier <span class="mono">CURRENT.UF2</span> sur votre ordinateur. Glisser ce fichier sur le lecteur permet de restaurer Meshtastic. Copiez ensuite le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version de skyBlip Bravo</a> sur le lecteur <span class="mono">X1</span>.</p>
+      <p>Branchez le X1 sur un ordinateur avec un câble USB-C. Dans Chrome ou Edge, ouvrez <%= link_to "Installer un appareil", briefing_setup_path %> dans le Briefing et cliquez sur Installer. Le Briefing redémarre le X1 en clé USB nommée <span class="mono">X1</span>, y écrit skyBlip, puis s&rsquo;y connecte en Bluetooth. Pour revenir à Meshtastic, réinstallez-le avec l&rsquo;outil de flashage web de Meshtastic.</p>
     </li>
     <li>
       <h3>Saisissez l&rsquo;adresse de votre transpondeur.</h3>
       <p>Seul un appareil qui émet en ADS-L a besoin d&rsquo;une adresse individuelle issue de la plage attribuée à skyBlip par le registre ADS-L. Le Go reçoit la sienne à l&rsquo;activation. Bravo n&rsquo;émet rien et n&rsquo;a donc besoin ni d&rsquo;activation ni de compte.</p>
-      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans <%= link_to "le Briefing", briefing_root_path %>, l&rsquo;application web de skyblip.eu pour les réglages et les mises à jour. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Utilisez Chrome ou Edge sur un ordinateur ou sur Android, puis validez la modification par une pression sur Bravo. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
+      <p>Si votre aéronef est équipé d&rsquo;un transpondeur Mode S ou ADS-B out, saisissez son adresse OACI dans le Briefing. C&rsquo;est l&rsquo;adresse sur 24 bits de l&rsquo;aéronef, utilisée par le transpondeur et notée sur six caractères, par exemple <span class="mono">3C6586</span>. Le Briefing l&rsquo;appelle Adresse ADS-B. Bravo fait confiance au navigateur qui l&rsquo;a installé&nbsp;: la modification ne demande aucun appui. Tout autre navigateur demande une pression sur Bravo. Cela évite que votre propre transpondeur apparaisse comme un trafic ou déclenche des alarmes. Sans transpondeur, laissez ce champ vide.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Sans Chrome ou Edge sur un ordinateur</summary>
+      <p>Maintenez le bouton enfoncé, branchez le câble USB-C et gardez le bouton enfoncé jusqu&rsquo;à ce que le voyant devienne blanc, au bout d&rsquo;environ 3 secondes. Un lecteur nommé <span class="mono">X1</span> apparaît. Copiez d&rsquo;abord le fichier <span class="mono">CURRENT.UF2</span> sur votre ordinateur. Glisser ce fichier sur le lecteur permet de restaurer Meshtastic. Copiez ensuite le fichier .uf2 de la <a href="https://github.com/fcatuhe/skyblip/releases">dernière version de skyBlip Bravo</a> sur le lecteur <span class="mono">X1</span>.</p>
+    </details>
+  </div>
   <p class="signature">
-    Pour les deux appareils, les mises à jour se font ensuite depuis <%= link_to "le Briefing", briefing_root_path %>
-    en Bluetooth. Chacune est validée sur l&rsquo;appareil&nbsp;: sur l&rsquo;écran du Go, ou par une pression sur Bravo. Le même fichier fonctionne sur le T&#8209;Echo et le T&#8209;Echo Plus. Pour
+    Un Go et un Bravo installés dans le même navigateur s&rsquo;appairent d&rsquo;un clic dans
+    <%= link_to "le Briefing", briefing_root_path %>, sans aucun appui. Pour les deux appareils, les mises à jour
+    se font ensuite depuis le Briefing en Bluetooth. Le navigateur qui a installé un appareil le met à jour
+    sans appui. Tout autre navigateur en demande un&nbsp;: sur l&rsquo;écran du Go, ou sur le bouton de Bravo.
+    Le même fichier fonctionne sur le T&#8209;Echo et le T&#8209;Echo Plus. Pour
     l&rsquo;instant, seules des versions de développement sont publiées pour les deux appareils.
   </p>
 </section>
