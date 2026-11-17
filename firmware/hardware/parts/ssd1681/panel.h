@@ -4,7 +4,7 @@
 // controller pinout, and the panels do not behave the same. SoftRF fingerprints
 // them by clocking registers 0x2D (11 bytes) and 0x2E (10 bytes) out of the
 // panel over a bit-banged half-duplex SPI inside a critical section, and carries
-// the signatures it has observed on real T-Echos in a comment block
+// the IDs it has observed on real T-Echos in a comment block
 // (platform/nRF52.cpp:3775-3900, table at 3855-3878). That table is transcribed
 // below, byte for byte, including the two entries whose meaning it does not
 // establish.
@@ -20,12 +20,12 @@ constexpr uint8_t kPanelIdRegister2d = 0x2D;
 constexpr uint8_t kPanelIdRegister2e = 0x2E;
 constexpr int kPanelIdBytes2d = 11;
 constexpr int kPanelIdBytes2e = 10;
-constexpr int kPanelSignatureBytes = kPanelIdBytes2d + kPanelIdBytes2e;
+constexpr int kPanelIdBytes = kPanelIdBytes2d + kPanelIdBytes2e;
 
-struct PanelSignature {
+struct PanelId {
     uint8_t register_2d[kPanelIdBytes2d]{};
     uint8_t register_2e[kPanelIdBytes2e]{};
-    // False when the signature could not be taken at all. On silicon the read
+    // False when the ID could not be taken at all. On silicon the read
     // needs the panel's data line reversed, which only the board port can do,
     // and a board that cannot do it says so here rather than reporting a panel.
     bool valid{false};
@@ -50,24 +50,23 @@ namespace panels {
 // allowed to change what the driver does, because all-0xFF is also what an
 // unwired read line returns and this board's e-paper MISO is a placeholder - see
 // the note below the table.
-constexpr PanelSignature kGdep015Oc1{
-    {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    true};
+constexpr PanelId kGdep015Oc1{{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+                              {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                              true};
 
-constexpr PanelSignature kGdeh0154D67Syx1942{
+constexpr PanelId kGdeh0154D67Syx1942{
     {0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x40, 0x00, 0x00, 0x00, 0x01},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     true};
 
 // 2118 and 2129 are the same in 0x2D and differ only in 0x2E, which is why the
 // ident needs both registers and why a table keyed on 0x2D alone would be wrong.
-constexpr PanelSignature kGdeh0154D67Syx2118{
+constexpr PanelId kGdeh0154D67Syx2118{
     {0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00},
     {0x00, 0x05, 0x00, 0x9A, 0x00, 0x55, 0x35, 0x37, 0x14, 0x0C},
     true};
 
-constexpr PanelSignature kGdeh0154D67Syx2129{
+constexpr PanelId kGdeh0154D67Syx2129{
     {0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x40, 0x01, 0x00, 0x00, 0x00},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     true};
@@ -75,20 +74,19 @@ constexpr PanelSignature kGdeh0154D67Syx2129{
 // 0x2D: 00 x11. The one identification SoftRF's own code actually acts on
 // (nRF52.cpp:3888-3897: all-zero 0x2D means DEPG0150BN, everything else falls
 // back to D67).
-constexpr PanelSignature kDepg0150Bn{
+constexpr PanelId kDepg0150Bn{
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true};
 
 // SoftRF's table calls this one "TBD (M1)": observed in an Elecrow ThinkNode M1,
 // not named. Carried so a bench read that lands on it is recognised as a panel
 // somebody has seen rather than as noise.
-constexpr PanelSignature kElecrowM1{
-    {0x00, 0x00, 0x40, 0x20, 0x10, 0x00, 0x40, 0x03, 0x00, 0x00, 0x00},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    true};
+constexpr PanelId kElecrowM1{{0x00, 0x00, 0x40, 0x20, 0x10, 0x00, 0x40, 0x03, 0x00, 0x00, 0x00},
+                             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                             true};
 
 }  // namespace panels
 
-inline bool panel_signature_equal(const PanelSignature& left, const PanelSignature& right) {
+inline bool panel_id_equal(const PanelId& left, const PanelId& right) {
     for (int i = 0; i < kPanelIdBytes2d; i++)
         if (left.register_2d[i] != right.register_2d[i]) return false;
     for (int i = 0; i < kPanelIdBytes2e; i++)
@@ -96,17 +94,14 @@ inline bool panel_signature_equal(const PanelSignature& left, const PanelSignatu
     return true;
 }
 
-inline Panel identify_panel(const PanelSignature& signature) {
-    if (!signature.valid) return Panel::Unknown;
-    if (panel_signature_equal(signature, panels::kGdeh0154D67Syx1942))
-        return Panel::Gdeh0154D67Syx1942;
-    if (panel_signature_equal(signature, panels::kGdeh0154D67Syx2118))
-        return Panel::Gdeh0154D67Syx2118;
-    if (panel_signature_equal(signature, panels::kGdeh0154D67Syx2129))
-        return Panel::Gdeh0154D67Syx2129;
-    if (panel_signature_equal(signature, panels::kDepg0150Bn)) return Panel::Depg0150Bn;
-    if (panel_signature_equal(signature, panels::kGdep015Oc1)) return Panel::Gdep015Oc1;
-    if (panel_signature_equal(signature, panels::kElecrowM1)) return Panel::ElecrowM1;
+inline Panel identify_panel(const PanelId& id) {
+    if (!id.valid) return Panel::Unknown;
+    if (panel_id_equal(id, panels::kGdeh0154D67Syx1942)) return Panel::Gdeh0154D67Syx1942;
+    if (panel_id_equal(id, panels::kGdeh0154D67Syx2118)) return Panel::Gdeh0154D67Syx2118;
+    if (panel_id_equal(id, panels::kGdeh0154D67Syx2129)) return Panel::Gdeh0154D67Syx2129;
+    if (panel_id_equal(id, panels::kDepg0150Bn)) return Panel::Depg0150Bn;
+    if (panel_id_equal(id, panels::kGdep015Oc1)) return Panel::Gdep015Oc1;
+    if (panel_id_equal(id, panels::kElecrowM1)) return Panel::ElecrowM1;
     return Panel::Unlisted;
 }
 
@@ -127,8 +122,8 @@ constexpr const char* panel_name(Panel panel) {
 }
 
 // Deliberately absent: anything that would let an identification REFUSE to
-// drive the glass. GDEP015OC1 is a different controller and our init sequence is
-// wrong for it, but its signature is all-0xFF, which is also what an unwired
+// drive the panel. GDEP015OC1 is a different controller and our init sequence is
+// wrong for it, but its ID is all-0xFF, which is also what an unwired
 // read line returns - and this board's e-paper MISO is a placeholder. A rule
 // that withdrew the display on an all-0xFF read would blank the one page that
 // can explain a dead device. An OC1 verdict is a procurement alarm to be read on

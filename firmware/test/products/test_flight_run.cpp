@@ -146,7 +146,7 @@ TEST_CASE("flight run: the radar flies, the flight log writes nothing, the gates
     CHECK(rig.state().flight.confirmed_state == flight::FlightState::Ground);
 }
 
-TEST_CASE("flight run: the glass refreshes as a flown one does, and a parked one does not") {
+TEST_CASE("flight run: the panel refreshes as a flown one does, and a parked one does not") {
     Rig parked;
     REQUIRE(parked.setup() == Status::Ok);
     uint32_t parked_now_ms = 100;

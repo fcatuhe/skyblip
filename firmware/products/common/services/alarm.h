@@ -4,16 +4,12 @@
 #include <optional>
 
 #include "core/annunciation/annunciator.h"
-#include "core/annunciation/call.h"
-#include "core/diagnostics/payload.h"
 #include "core/indication/lamp.h"
-#include "core/indication/signature.h"
+#include "core/indication/sign.h"
 #include "core/power/duty.h"
-#include "core/traffic/alarm.h"
-#include "core/traffic/formation.h"
-#include "core/traffic/table.h"
 #include "ports/indicator.h"
 #include "products/common/alarm.h"
+#include "products/common/alarm_grader.h"
 #include "products/common/features.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
@@ -28,7 +24,11 @@ struct AlarmSettings {
     explicit AlarmSettings(Alarm&&) = delete;
     explicit AlarmSettings(const Alarm&&) = delete;
 
-    Alarm in_force() const { return paired ? go_alarm : alarm; }
+    // INFO: fc 17nov26 a unit with no buzzer and no haptic shows a soft or loud alarm
+    Alarm in_force(ports::Capabilities fitted) const {
+        const Alarm set = paired ? go_alarm : alarm;
+        return can_sound(fitted) || !audible(set) ? set : Alarm::Visual;
+    }
 
     const Alarm& alarm;
     const Alarm& go_alarm;
@@ -58,50 +58,38 @@ class AlarmService : public runtime::Service {
     // INFO: fc 13nov26 asked before the first pass, and played from it, so the sign costs bring-up
     // nothing
     void sign_on() { sign_on_pending_ = true; }
-    // INFO: fc 13nov26 the loop has stopped, so the product advances the signature and parks once
+    // INFO: fc 13nov26 the loop has stopped, so the product advances the sign and parks once
     // it ends
     void sign_off(uint32_t now_ms);
     // INFO: fc 13nov26 a sign off starts on the next pass, as the shutdown's own pass may block on
     // flash
-    void advance_signature(uint32_t now_ms);
-    bool signing() const { return sign_off_pending_ || signature_.playing(); }
+    void advance_sign(uint32_t now_ms);
+    bool signing() const { return sign_off_pending_ || sign_.playing(); }
 
-    void dismiss() {
-        tracker_.dismiss();
-        follower_.dismiss();
+    void dismiss() { grader_.dismiss(); }
+    void dismiss_announcement(uint32_t announcement) { grader_.dismiss_announcement(announcement); }
+    std::optional<uint32_t> dismissed_announcement() const {
+        return grader_.dismissed_announcement();
     }
-    // INFO: fc 17nov26 a press on the paired Bravo, honoured only for the call Bravo had heard
-    void dismiss_announcement(uint32_t announcement) {
-        if (announcement == call_.announcement) tracker_.dismiss();
-    }
-    std::optional<uint32_t> dismissed_announcement() const { return follower_.dismissed(); }
-    // INFO: fc 17nov26 a unit with no buzzer and no haptic shows a soft or loud alarm
-    Alarm alarm_in_force() const;
+    Alarm alarm_in_force() const { return settings_.in_force(context_.roles.capabilities); }
 
-    bool escalated_since_render() const { return dirty_; }
-    void clear_dirty() { dirty_ = false; }
+    int formation_members() const { return grader_.formation_members(); }
 
     traffic::Level announcing_level() const { return annunciation_.announcing_level(); }
-
-    int formation_members() const { return formation_.members(); }
     bool sounding() const { return annunciation_.sounding(); }
 
     // What the table decided, and what the lamp is showing this instant. Both,
     // because they differ in the gaps of a wink and a test has to be able to say
     // which of the two it means.
     indication::Condition indicator_condition() const { return indication_.condition(); }
-    indication::Lamp lamp() const { return shown_; }
+    indication::Colour lamp() const { return shown_; }
 
    private:
-    bool silenced(traffic::Target& target, formation::State state);
     bool lost_go();
-    void record_traffic(int slot, const traffic::Target& target,
-                        const traffic::AlarmTracker::Decision& decision, uint32_t now_ms);
-    formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
     void drive_buzzer(const annunciation::Command& command);
     void drive_motor(bool vibrating);
     void drive_lamp(uint32_t now_ms, bool running, indication::Signal signal);
-    void show(indication::Lamp lamp);
+    void show(indication::Colour colour);
     void accrue_annunciator(uint32_t now_ms);
 
     // INFO: fc 16nov26 eight passes per alarm note or gap, so an alarm sounds as written
@@ -120,36 +108,30 @@ class AlarmService : public runtime::Service {
                       indication::kShortestPhaseMs,
                   "the service loop is too coarse to resolve the shortest flash");
     static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestFlash <=
-                      indication::kSignatureShortestPhaseMs,
-                  "the service loop is too coarse to resolve the shortest signature pulse");
+                      indication::kSignShortestPhaseMs,
+                  "the service loop is too coarse to resolve the shortest sign pulse");
     static_assert(indication::kSignOn.pulse_ms < annunciation::kAnnunciatorOnCeilingMs &&
                       indication::kSignOff.pulse_ms < annunciation::kAnnunciatorOnCeilingMs,
-                  "the motor's guard would cut a signature pulse");
+                  "the motor's guard would cut a sign pulse");
     static_assert(indication::kSignOn.pulses != annunciation::calls(annunciation::kAdvisoryTune) &&
                       indication::kSignOff.pulses !=
                           annunciation::calls(annunciation::kAdvisoryTune),
-                  "a signature felt as many times as the advisory is felt as traffic");
+                  "a sign felt as many times as the advisory is felt as traffic");
 
     power::OnTime sounding_{};
     power::OnTime vibrating_{};
-    traffic::AlarmTracker tracker_{};
-    annunciation::Call call_{};
-    annunciation::Follower follower_{};
-    formation::Tracker formation_{};
-    uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
+    AlarmGrader grader_{context_};
     bool bravo_lost_{false};
     bool following_go_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
-    indication::SignaturePlayer signature_{};
-    indication::Lamp shown_{indication::Lamp::None};
+    indication::SignPlayer sign_{};
+    indication::Colour shown_{indication::Colour::None};
     bool motor_on_{false};
     bool sign_on_pending_{false};
     bool sign_off_pending_{false};
-    bool dirty_{false};
     bool running_{true};
     bool lamp_shows_link_{false};
-    bool sounds_{false};
     const Feature declared_;
     AlarmSettings settings_;
 };

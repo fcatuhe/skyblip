@@ -1,4 +1,4 @@
-// What editing on the panel cannot spend: the prompt a press answers, the hold that
+// What editing on the glass cannot spend: the prompt a press answers, the hold that
 // switches the device off, and the refusal a phone gets in the air.
 #include <string>
 
@@ -138,7 +138,7 @@ TEST_CASE("product: the alarm can be turned up in the air, where a phone is refu
     CHECK(rig.product.config_link().config().pending() == comms::Pending::None);
     CHECK(rig.settings().alarm == go::Alarm::Soft);
 
-    // The pilot, on the panel, can. Presence is the thing the phone lacks, and
+    // The pilot, on the glass, can. Presence is the thing the phone lacks, and
     // an alarm that is too quiet under a headset is a thing you find out about
     // in the air.
     open_menu(rig, now_ms);

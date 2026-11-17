@@ -159,7 +159,7 @@ void Ssd1681::power_off() {
     if (!asleep_) enter_sleep();
 }
 
-// INFO: fc 13sep26 RES# is the only abort the glass has, and only a full waveform undoes the ink
+// INFO: fc 13sep26 RES# is the only abort the panel has, and only a full waveform undoes the ink
 void Ssd1681::abort_refresh() {
     refreshing_ = false;
     if (wait_busy()) return;

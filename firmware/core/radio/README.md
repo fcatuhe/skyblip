@@ -83,7 +83,7 @@ The capacity is what one screen holds. Nothing is kept that could not be shown: 
 
 ## What the counters hold
 
-The verdicts split on 2026-09-19 and the counters followed on the same day, because until then every outcome that was not `Received` was `air.rx_bad`. A device on the apron with no fix beside a chatty target reported a climbing bad-frame count while behaving perfectly, on the panel and in every reply a companion app reads, which is the mislabelling `WAIT` and `TYPE` had just been taken out of the tape for.
+The verdicts split on 2026-09-19 and the counters followed on the same day, because until then every outcome that was not `Received` was `air.rx_bad`. A device on the apron with no fix beside a chatty target reported a climbing bad-frame count while behaving perfectly, on the glass and in every reply a companion app reads, which is the mislabelling `WAIT` and `TYPE` had just been taken out of the tape for.
 
 | | |
 |---|---|

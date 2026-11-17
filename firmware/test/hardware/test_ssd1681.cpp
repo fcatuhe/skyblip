@@ -1,6 +1,6 @@
 // SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init
 // sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the
-// glass turned or not, and the signature that names the panel, all on the host, no
+// glass turned or not, and the ID that names the panel, all on the host, no
 // panel required.
 #include <string>
 
@@ -171,7 +171,7 @@ TEST_CASE("ssd1681: a turned glass writes the same count of black pixels it was 
     CHECK(black == canvas.count_black());
 }
 
-TEST_CASE("ssd1681: the five signatures shipped in T-Echos are told apart") {
+TEST_CASE("ssd1681: the five IDs shipped in T-Echos are told apart") {
     CHECK(parts::identify_panel(parts::panels::kGdeh0154D67Syx1942) ==
           parts::Panel::Gdeh0154D67Syx1942);
     CHECK(parts::identify_panel(parts::panels::kGdeh0154D67Syx2118) ==
@@ -198,22 +198,22 @@ TEST_CASE("ssd1681: 2118 and 2129 are the same in 0x2D and only 0x2E separates t
     CHECK(register_2e_differs);
 }
 
-TEST_CASE("ssd1681: a signature nobody has recorded is unlisted, and an unread one is neither") {
+TEST_CASE("ssd1681: an ID nobody has recorded is unlisted, and an unread one is neither") {
     // The seventh row of SoftRF's table is the Plus - our own board - and it
     // carries no bytes at all, only the string "20.05.21". So this is the answer
     // this board is expected to give until somebody reads one on a bench.
-    parts::PanelSignature unrecorded{};
+    parts::PanelId unrecorded{};
     unrecorded.valid = true;
     unrecorded.register_2d[0] = 0x12;
     unrecorded.register_2e[3] = 0x34;
     CHECK(parts::identify_panel(unrecorded) == parts::Panel::Unlisted);
 
     // A fingerprint that was never taken is a different miss: nobody read it.
-    parts::PanelSignature never_taken{};
+    parts::PanelId never_taken{};
     CHECK(parts::identify_panel(never_taken) == parts::Panel::Unknown);
     // Even when the bytes would otherwise match a shipped panel: an unread
     // register file is all zeroes, and all zeroes is DEPG0150BN.
-    parts::PanelSignature zeroes = parts::panels::kDepg0150Bn;
+    parts::PanelId zeroes = parts::panels::kDepg0150Bn;
     zeroes.valid = false;
     CHECK(parts::identify_panel(zeroes) == parts::Panel::Unknown);
 }
@@ -241,7 +241,7 @@ TEST_CASE("ssd1681: a canvas that is not this glass never reaches the panel") {
     parts::Ssd1681 driver = driver_for(chip);
     driver.begin();
 
-    ui::Panel<128, 64> other;
+    ui::Bitmap<128, 64> other;
     other.clear(/*white=*/false);
     const int presents = chip.present_count;
     driver.present(other, ports::Refresh::Full, 0);

@@ -1,95 +1,20 @@
 #include "products/common/services/alarm.h"
 
-#include <algorithm>
-
 namespace skyblip::common {
-
-bool AlarmService::silenced(traffic::Target& target, formation::State state) {
-    if (state == formation::State::None) return false;
-    tracker_.withdraw(target.observation.address_mapping_table, target.observation.address);
-    target.alarm_level = traffic::Level::None;
-    target.alarm_dismissed = false;
-    return true;
-}
-
-formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t now_ms) {
-    const formation::Report report =
-        formation_.observe(context_.state.own, target.observation, target.liftoff, now_ms);
-    const bool was_in_formation = target.in_formation;
-    target.in_formation = report.state == formation::State::Together;
-    if (target.in_formation != was_in_formation) dirty_ = true;
-    return report.state;
-}
 
 Status AlarmService::setup() {
     lamp_shows_link_ =
         has_feature(supported(declared_, context_.roles.capabilities), Feature::LampShowsLink);
-    sounds_ = can_sound(context_.roles.capabilities);
     return Status::Ok;
-}
-
-Alarm AlarmService::alarm_in_force() const {
-    const Alarm alarm = settings_.in_force();
-    return sounds_ || !audible(alarm) ? alarm : Alarm::Visual;
 }
 
 void AlarmService::tick(uint32_t now_ms) {
     accrue_annunciator(now_ms);
-    traffic::Level worst = traffic::Level::None;
-    traffic::Level live = traffic::Level::None;
-    bool announced = false;
-    formation_.observe_own(context_.state.own, now_ms);
-    if (context_.state.own.fix_valid) {
-        for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
-            traffic::Target* target = context_.state.traffic.at(i);
-            if (!target || !target->used) continue;
-            const formation::State formation_state = watch_formation(*target, now_ms);
-            const traffic::AlarmTracker::Decision decision =
-                tracker_.update(context_.state.own, target->observation, now_ms);
-            target->alarm_level = decision.assessment.level;
-            target->alarm_dismissed = decision.dismissed;
-            const bool quiet = silenced(*target, formation_state);
-            record_traffic(i, *target, decision, now_ms);
-            if (quiet) continue;
-            worst = std::max(decision.assessment.level, worst);
-            if (!decision.dismissed) live = std::max(decision.assessment.level, live);
-            announced = announced || decision.notify;
-        }
-    }
-    tracker_.forget_stale(now_ms);
-    formation_.forget_stale(now_ms);
-    context_.state.formation.members = formation_.members();
-
     const Alarm alarm = alarm_in_force();
-    // INFO: fc 15nov26 off interrupts nothing, while each target keeps its level for the radar and
-    // NMEA
-    if (!interrupts(alarm)) live = traffic::Level::None;
-    if (announced) call_.announcement++;
-    // Not the raw worst: what is being announced, which the tracker already
-    // holds through a target bouncing across a ring boundary, and which falls
-    // to nothing when the target that caused it stops being heard.
-    call_.announcing = tracker_.announced_level(now_ms);
-    call_.undismissed = live;
-    context_.state.alarm_call = call_;
-
+    const Announcement announcement = grader_.grade(alarm, now_ms);
     annunciation::Situation situation{};
-    situation.level = call_.announcing;
-    situation.announced = announced;
-    // INFO: fc 17nov26 a paired Bravo plays its Go's calls, and grades its own only for NMEA
-    if (context_.state.followed_call) {
-        const annunciation::Follower::Heard heard = follower_.follow(*context_.state.followed_call);
-        situation.level = heard.level;
-        situation.announced = heard.announced;
-        live = interrupts(alarm) ? heard.undismissed : traffic::Level::None;
-    } else {
-        follower_.lose();
-    }
-    if (worst != context_.state.alarm_level || live != context_.state.alarm_undismissed) {
-        context_.state.alarm_level = worst;
-        context_.state.alarm_undismissed = live;
-        dirty_ = true;
-    }
-
+    situation.level = announcement.level;
+    situation.announced = announcement.announced;
     situation.first_fix = context_.state.own.fix_acquired;
     const bool bravo_lost = comms::lost(context_.state.bravo);
     situation.peer_lost = (bravo_lost && !bravo_lost_) || lost_go();
@@ -98,13 +23,13 @@ void AlarmService::tick(uint32_t now_ms) {
     situation.running = running_;
     if (sign_on_pending_) {
         sign_on_pending_ = false;
-        signature_.begin(indication::kSignOn, now_ms);
+        sign_.begin(indication::kSignOn, now_ms);
     }
     const annunciation::Command command = annunciation_.update(situation, now_ms);
-    if (annunciation_.voice() == annunciation::Voice::Traffic) signature_.cancel();
-    const indication::Signal signal = signature_.update(now_ms);
+    if (annunciation_.voice() == annunciation::Voice::Traffic) sign_.cancel();
+    const indication::Signal signal = sign_.update(now_ms);
     if (command.tone_changed) drive_buzzer(command);
-    drive_motor(signature_.playing() ? signal.vibrating : command.vibrating);
+    drive_motor(sign_.playing() ? signal.vibrating : command.vibrating);
     drive_lamp(now_ms, running_, signal);
 }
 
@@ -127,18 +52,18 @@ void AlarmService::sign_off(uint32_t now_ms) {
     drive_motor(false);
     // INFO: fc 13nov26 a Bravo refused to fly lit the lamp around this service, so dark is told,
     // not compared
-    shown_ = indication::Lamp::None;
-    context_.roles.indicator.show(indication::Lamp::None);
+    shown_ = indication::Colour::None;
+    context_.roles.indicator.show(indication::Colour::None);
     sign_off_pending_ = true;
 }
 
-void AlarmService::advance_signature(uint32_t now_ms) {
+void AlarmService::advance_sign(uint32_t now_ms) {
     accrue_annunciator(now_ms);
     if (sign_off_pending_) {
         sign_off_pending_ = false;
-        signature_.begin(indication::kSignOff, now_ms);
+        sign_.begin(indication::kSignOff, now_ms);
     }
-    const indication::Signal signal = signature_.update(now_ms);
+    const indication::Signal signal = sign_.update(now_ms);
     drive_motor(signal.vibrating);
     show(signal.lamp);
 }
@@ -149,39 +74,10 @@ void AlarmService::accrue_annunciator(uint32_t now_ms) {
     context_.state.duty.annunciator_ms = sounding_.on_ms() + vibrating_.on_ms();
 }
 
-// INFO: fc 20sep26 one record per reception: between two of them nothing new is known about it
-void AlarmService::record_traffic(int slot, const traffic::Target& target,
-                                  const traffic::AlarmTracker::Decision& decision,
-                                  uint32_t now_ms) {
-    if (target.observation.at_ms == recorded_observation_ms_[slot]) return;
-    recorded_observation_ms_[slot] = target.observation.at_ms;
-    if (!context_.diagnostics.armed()) return;
-
-    const traffic::AlarmAssessment& assessment = decision.assessment;
-    diagnostics::Traffic value{};
-    value.address = target.observation.address;
-    value.distance_m = clamp_uint16(assessment.relative_distance_m < 0
-                                        ? 0
-                                        : static_cast<uint32_t>(assessment.relative_distance_m));
-    value.bearing_deg = assessment.relative_bearing_deg;
-    value.relative_altitude_m = clamp_int16(assessment.relative_altitude_m);
-    value.closing_mps = clamp_int16(assessment.closing_mps);
-    value.alarm = target.alarm_level;
-    value.source = target.observation.source;
-    value.rssi_dbm = target.observation.rssi_dbm;
-    value.tracked = static_cast<uint8_t>(context_.state.traffic.count());
-    value.assessed = assessment.valid;
-    value.dismissed = decision.dismissed;
-    value.in_formation = target.in_formation;
-    value.position_valid = target.observation.position_valid;
-    value.relative_altitude_valid = assessment.relative_altitude_valid;
-    context_.diagnostics.record(value, context_.instant(now_ms));
-}
-
 void AlarmService::park(uint32_t now_ms) {
     accrue_annunciator(now_ms);
     running_ = false;
-    signature_.cancel();
+    sign_.cancel();
     sign_off_pending_ = false;
     annunciation::Situation situation{};
     situation.running = false;
@@ -198,9 +94,9 @@ void AlarmService::park(uint32_t now_ms) {
 
 // Everything the table reads is already published on bus::State by the service
 // that owns it - the cell and its level by PowerService, the fix by
-// OwnshipService, the worst standing level by this one, a few lines above. Nothing
+// OwnshipService, the worst standing level by this one's AlarmGrader. Nothing
 // is derived a second time here, which is what keeps the lamp saying LOW at
-// exactly the voltage the panel and the tablet do.
+// exactly the voltage the glass and the tablet do.
 void AlarmService::drive_lamp(uint32_t now_ms, bool running, indication::Signal signal) {
     indication::Situation situation{};
     situation.running = running;
@@ -213,13 +109,13 @@ void AlarmService::drive_lamp(uint32_t now_ms, bool running, indication::Signal 
     situation.capturing = context_.state.capture.armed;
 
     const indication::Command command = indication_.update(situation, now_ms, context_.state.clock);
-    show(signature_.playing() ? signal.lamp : command.lamp);
+    show(sign_.playing() ? signal.lamp : command.lamp);
 }
 
-void AlarmService::show(indication::Lamp lamp) {
-    if (lamp == shown_) return;
-    shown_ = lamp;
-    context_.roles.indicator.show(lamp);
+void AlarmService::show(indication::Colour colour) {
+    if (colour == shown_) return;
+    shown_ = colour;
+    context_.roles.indicator.show(colour);
 }
 
 void AlarmService::drive_buzzer(const annunciation::Command& command) {

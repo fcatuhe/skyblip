@@ -8,13 +8,13 @@
 using namespace skyblip::ui;
 
 namespace {
-using TestPanel = Panel<200, 200>;
+using TestBitmap = Bitmap<200, 200>;
 
 struct Ink {
     int left{200}, top{200}, right{-1}, bottom{-1};
 };
 
-Ink ink_of(const TestPanel& canvas) {
+Ink ink_of(const TestBitmap& canvas) {
     Ink ink;
     for (int y = 0; y < 200; y++)
         for (int x = 0; x < 200; x++)
@@ -30,7 +30,7 @@ Ink ink_of(const TestPanel& canvas) {
 
 TEST_CASE("mark: its ink starts at the corner it is given and is as large as its extent says") {
     for (const MarkSize size : {MarkSize::Small, MarkSize::Large}) {
-        TestPanel canvas;
+        TestBitmap canvas;
         canvas.clear(true);
         draw_mark(canvas, 40, 60, size, true);
         const Ink ink = ink_of(canvas);
@@ -48,7 +48,7 @@ TEST_CASE("mark: the large mark is larger, and both read as the logo, arcs over 
     CHECK(large.width > small.width);
     CHECK(large.height > small.height);
 
-    TestPanel canvas;
+    TestBitmap canvas;
     canvas.clear(true);
     draw_mark(canvas, 0, 0, MarkSize::Large, true);
     // The dot sits at the bottom centre and the outer arc's ends rise clear of it on both sides.
@@ -61,7 +61,7 @@ TEST_CASE("mark: the large mark is larger, and both read as the logo, arcs over 
 
 TEST_CASE("mark: it is symmetric about its vertical, as the logo is") {
     for (const MarkSize size : {MarkSize::Small, MarkSize::Large}) {
-        TestPanel canvas;
+        TestBitmap canvas;
         canvas.clear(true);
         draw_mark(canvas, 0, 0, size, true);
         const MarkExtent extent = mark_extent(size);
@@ -72,7 +72,7 @@ TEST_CASE("mark: it is symmetric about its vertical, as the logo is") {
 }
 
 TEST_CASE("canvas: a rounded rectangle keeps its corners clear and its sides whole") {
-    TestPanel outline;
+    TestBitmap outline;
     outline.clear(true);
     outline.rounded_rectangle(10, 10, 40, 20, 6, true, /*fill=*/false, 2);
     CHECK_FALSE(outline.get_pixel(10, 10));
@@ -83,7 +83,7 @@ TEST_CASE("canvas: a rounded rectangle keeps its corners clear and its sides who
     CHECK(outline.get_pixel(10, 20));
     CHECK_FALSE(outline.get_pixel(30, 20));
 
-    TestPanel filled;
+    TestBitmap filled;
     filled.clear(true);
     filled.rounded_rectangle(10, 10, 40, 20, 6, true, /*fill=*/true);
     CHECK(filled.get_pixel(30, 20));

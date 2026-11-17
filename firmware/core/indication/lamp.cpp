@@ -45,12 +45,12 @@ const char* to_string(Condition condition) {
     }
 }
 
-const char* to_string(indication::Lamp lamp) {
-    switch (lamp) {
-        case indication::Lamp::Green: return "green";
-        case indication::Lamp::Red: return "red";
-        case indication::Lamp::Blue: return "blue";
-        case indication::Lamp::None:
+const char* to_string(Colour colour) {
+    switch (colour) {
+        case Colour::Green: return "green";
+        case Colour::Red: return "red";
+        case Colour::Blue: return "blue";
+        case Colour::None:
         default: return "dark";
     }
 }
@@ -90,11 +90,11 @@ Command Policy::update(const Situation& situation, uint32_t now_ms,
     }
 
     const Indication& indication = indication_for(condition_);
-    const bool lit = indication.lamp != indication::Lamp::None && indication.on_ms != 0 &&
+    const bool lit = indication.lamp != Colour::None && indication.on_ms != 0 &&
                      lit_at(indication, into_cycle_ms(indication, now_ms, clock));
 
     Command command{};
-    command.lamp = lit ? indication.lamp : indication::Lamp::None;
+    command.lamp = lit ? indication.lamp : Colour::None;
     command.changed = command.lamp != shown_;
     shown_ = command.lamp;
     return command;

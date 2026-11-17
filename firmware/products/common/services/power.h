@@ -69,7 +69,7 @@ class PowerService : public runtime::Service {
 
     // Whether a reading younger than kDieStaleMs stands. tick() publishes it as
     // state.power.die_valid, beside the tenths of a degree in die_dc, where the
-    // panel, the charge window and the config link's reply read both.
+    // glass, the charge window and the config link's reply read both.
     // False on a board with no sensor for ever, which is what the reply reads to
     // decide whether the key exists at all - never a zero standing in for absent,
     // because 0.0 C is a plausible hangar morning.

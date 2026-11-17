@@ -278,7 +278,7 @@ class Product {
         power::BootCell cell{};
         if (!ports::has(board_.capabilities(), ports::Capability::Battery)) return cell;
         uint16_t raw_mv = 0;
-        cell.valid = platform_.read_battery_mv(raw_mv);
+        cell.valid = platform_.read_divider_mv(raw_mv);
         cell.cell_mv = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
         cell.external_power = platform_.external_power();
         return cell;
@@ -412,7 +412,7 @@ class Product {
 
     void finish_sign_off(uint32_t now_ms) {
         if (!alarm_.signing()) return;
-        alarm_.advance_signature(now_ms);
+        alarm_.advance_sign(now_ms);
         if (!alarm_.signing()) park_outputs(now_ms);
     }
 

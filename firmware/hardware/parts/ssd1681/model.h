@@ -119,13 +119,13 @@ class Ssd1681 : public io::Spi, public io::Gpio, public io::Delay {
         return true;
     }
 
-    // Which lot the virtual glass is from. Not served over the SPI seam, because
-    // on real hardware it is not readable there either: the signature needs the
+    // Which lot the virtual panel is from. Not served over the SPI seam, because
+    // on real hardware it is not readable there either: the ID needs the
     // panel's single data line reversed, so the board port takes it before any
-    // bus driver owns the pins and the platform hands it over. The default is a
-    // signature that was never taken, which is what this board is expected to
+    // bus driver owns the pins and the platform hands it over. The default is an
+    // ID that was never taken, which is what this board is expected to
     // report until a bench read exists.
-    parts::PanelSignature signature{};
+    parts::PanelId panel_id{};
 
     std::vector<uint8_t> commands;
     std::vector<uint8_t> ram;

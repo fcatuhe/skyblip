@@ -130,8 +130,8 @@ TEST_CASE("flash window: six rapid changes are one write") {
     CHECK(stored.alarm == go::Alarm::Off);
 }
 
-// The same, stepped by a real thumb on the panel: presses in at the pin the board polls.
-TEST_CASE("flash window: a thumb stepping the alarm on the panel writes flash once") {
+// The same, stepped by a real thumb on the glass: presses in at the pin the board polls.
+TEST_CASE("flash window: a thumb stepping the alarm on the glass writes flash once") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

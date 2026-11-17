@@ -254,7 +254,7 @@ class ConfigService {
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
-    // flight log service asks, the panel shows the prompt, and only the
+    // flight log service asks, the glass shows the prompt, and only the
     // confirmation gesture on the device itself latches it.
     void request_log_erase();
     bool log_erase_requested() const { return log_erase_requested_; }

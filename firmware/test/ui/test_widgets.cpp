@@ -11,14 +11,14 @@
 using namespace skyblip::ui;
 
 namespace {
-using TestPanel = Panel<200, 200>;
+using TestBitmap = Bitmap<200, 200>;
 constexpr int kCentreX = 100;
 constexpr int kCentreY = 100;
 constexpr int kSpan = 24;
 constexpr int kOriginRow = 5;
 
 // Inked rows of the wing band at one column: the chord the planform draws there.
-int chord_at(const TestPanel& canvas, int x) {
+int chord_at(const TestBitmap& canvas, int x) {
     int chord = 0;
     for (int y = kCentreY - 1; y <= kCentreY + 3; y++) chord += canvas.get_pixel(x, y) ? 1 : 0;
     return chord;
@@ -26,7 +26,7 @@ int chord_at(const TestPanel& canvas, int x) {
 }  // namespace
 
 TEST_CASE("skyship: the hot spot lands on the point it was given") {
-    TestPanel canvas;
+    TestBitmap canvas;
     canvas.clear(/*white=*/true);
     draw_skyship(canvas, kCentreX, kCentreY);
 
@@ -34,14 +34,14 @@ TEST_CASE("skyship: the hot spot lands on the point it was given") {
     CHECK(canvas.get_pixel(kCentreX, kCentreY));
     CHECK(canvas.get_pixel(kCentreX - 1, kCentreY));
     // And nothing may sit above the nose or below the tail.
-    for (int x = 0; x < TestPanel::kWidth; x++) {
+    for (int x = 0; x < TestBitmap::kWidth; x++) {
         CHECK_FALSE(canvas.get_pixel(x, kCentreY - kOriginRow - 1));
         CHECK_FALSE(canvas.get_pixel(x, kCentreY - kOriginRow + 16));
     }
 }
 
 TEST_CASE("skyship: the sprite is symmetric about the centre pixel pair") {
-    TestPanel canvas;
+    TestBitmap canvas;
     canvas.clear(true);
     draw_skyship(canvas, kCentreX, kCentreY);
 
@@ -53,7 +53,7 @@ TEST_CASE("skyship: the sprite is symmetric about the centre pixel pair") {
 
 // The trailing taper was once deleted as ink aft of the hot spot, leaving a slab.
 TEST_CASE("skyship: the wing is elliptic, deepest at the root") {
-    TestPanel canvas;
+    TestBitmap canvas;
     canvas.clear(true);
     draw_skyship(canvas, kCentreX, kCentreY);
 
@@ -65,7 +65,7 @@ TEST_CASE("skyship: the wing is elliptic, deepest at the root") {
 }
 
 TEST_CASE("skyship: it draws the same aircraft wherever it is asked to") {
-    TestPanel climbing, alarmed;
+    TestBitmap climbing, alarmed;
     climbing.clear(true);
     alarmed.clear(true);
     draw_skyship(climbing, kCentreX, kCentreY);
@@ -76,15 +76,15 @@ TEST_CASE("skyship: it draws the same aircraft wherever it is asked to") {
 
 // The blip says above or below, inside the advisory's window or not, and which way it is going.
 namespace {
-int ink(const TestPanel& canvas) {
+int ink(const TestBitmap& canvas) {
     int count = 0;
-    for (int y = 0; y < TestPanel::kHeight; y++)
-        for (int x = 0; x < TestPanel::kWidth; x++) count += canvas.get_pixel(x, y) ? 1 : 0;
+    for (int y = 0; y < TestBitmap::kHeight; y++)
+        for (int x = 0; x < TestBitmap::kWidth; x++) count += canvas.get_pixel(x, y) ? 1 : 0;
     return count;
 }
 
-TestPanel blip(Vertical vertical, Trend trend, bool alarm = false) {
-    TestPanel canvas;
+TestBitmap blip(Vertical vertical, Trend trend, bool alarm = false) {
+    TestBitmap canvas;
     canvas.clear(/*white=*/true);
     draw_blip(canvas, kCentreX, kCentreY, vertical, trend, alarm);
     return canvas;
@@ -98,10 +98,10 @@ TEST_CASE("blip: a blip below is the blip above, flipped about the plot point") 
             const Trend opposite = trend == Trend::Climbing  ? Trend::Sinking
                                    : trend == Trend::Sinking ? Trend::Climbing
                                                              : Trend::Steady;
-            const TestPanel up = blip(above, trend);
-            const TestPanel down = blip(below, opposite);
-            for (int y = 0; y < TestPanel::kHeight; y++)
-                for (int x = 0; x < TestPanel::kWidth; x++)
+            const TestBitmap up = blip(above, trend);
+            const TestBitmap down = blip(below, opposite);
+            for (int y = 0; y < TestBitmap::kHeight; y++)
+                for (int x = 0; x < TestBitmap::kWidth; x++)
                     CHECK(up.get_pixel(x, y) == down.get_pixel(x, 2 * kCentreY - y));
         }
     }
@@ -133,7 +133,7 @@ TEST_CASE("blip: past the advisory's window the blip is smaller, and carries no 
 
 // A target that sends no altitude has no side to point to, so its blip has no point.
 TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the diamond") {
-    const TestPanel ring = blip(Vertical::Unknown, Trend::Steady);
+    const TestBitmap ring = blip(Vertical::Unknown, Trend::Steady);
     CHECK_FALSE(ring.get_pixel(kCentreX, kCentreY));
     CHECK(ring.get_pixel(kCentreX - 5, kCentreY));
     CHECK(ring.get_pixel(kCentreX + 5, kCentreY));
@@ -141,7 +141,7 @@ TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the
     CHECK(ring.get_pixel(kCentreX, kCentreY + 5));
     CHECK_FALSE(ring.get_pixel(kCentreX - 5, kCentreY - 5));
 
-    const TestPanel filled = blip(Vertical::Unknown, Trend::Steady, /*alarm=*/true);
+    const TestBitmap filled = blip(Vertical::Unknown, Trend::Steady, /*alarm=*/true);
     CHECK(filled.get_pixel(kCentreX, kCentreY));
     CHECK(ink(filled) > ink(ring));
 
@@ -150,12 +150,12 @@ TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the
     CHECK(blip_below(Vertical::Unknown, Trend::Sinking) ==
           blip_below(Vertical::Level, Trend::Sinking));
     for (const Trend trend : {Trend::Climbing, Trend::Sinking}) {
-        const TestPanel with_caret = blip(Vertical::Unknown, trend);
+        const TestBitmap with_caret = blip(Vertical::Unknown, trend);
         const int caret_ink =
             ink(blip(Vertical::Level, trend)) - ink(blip(Vertical::Level, Trend::Steady));
         CHECK(ink(with_caret) - ink(ring) == caret_ink);
-        for (int y = 1; y < TestPanel::kHeight - 1; y++)
-            for (int x = 1; x < TestPanel::kWidth - 1; x++) {
+        for (int y = 1; y < TestBitmap::kHeight - 1; y++)
+            for (int x = 1; x < TestBitmap::kWidth - 1; x++) {
                 if (!ring.get_pixel(x, y)) continue;
                 for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++)
@@ -166,17 +166,17 @@ TEST_CASE("blip: no altitude is a ring, and the caret clears it as it clears the
 }
 
 TEST_CASE("blip: the alarm fills the blip it was already drawing") {
-    const TestPanel hollow = blip(Vertical::Level, Trend::Steady);
-    const TestPanel filled = blip(Vertical::Level, Trend::Steady, /*alarm=*/true);
+    const TestBitmap hollow = blip(Vertical::Level, Trend::Steady);
+    const TestBitmap filled = blip(Vertical::Level, Trend::Steady, /*alarm=*/true);
     CHECK_FALSE(hollow.get_pixel(kCentreX, kCentreY));
     CHECK(filled.get_pixel(kCentreX, kCentreY));
     CHECK(ink(filled) > ink(hollow));
     // Filling is ink, never reach: an advisory must not move a tag off its target.
     for (const Vertical vertical : {Vertical::Above, Vertical::Level, Vertical::Below}) {
-        const TestPanel climbing = blip(vertical, Trend::Climbing);
-        const TestPanel alarmed = blip(vertical, Trend::Climbing, /*alarm=*/true);
-        for (int y = 0; y < TestPanel::kHeight; y++)
-            for (int x = 0; x < TestPanel::kWidth; x++)
+        const TestBitmap climbing = blip(vertical, Trend::Climbing);
+        const TestBitmap alarmed = blip(vertical, Trend::Climbing, /*alarm=*/true);
+        for (int y = 0; y < TestBitmap::kHeight; y++)
+            for (int x = 0; x < TestBitmap::kWidth; x++)
                 if (climbing.get_pixel(x, y)) CHECK(alarmed.get_pixel(x, y));
     }
 }
