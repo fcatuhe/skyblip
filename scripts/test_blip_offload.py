@@ -4,7 +4,7 @@
     python3 scripts/test_blip_offload.py
 
 Run by test_blip.py as well, which is the file CI invokes. No radio, no network,
-no sleeps: the endpoint below answers a read the way core/comms/log_link.cpp
+no sleeps: the endpoint below answers a list and a read the way core/comms/log_link.cpp
 does, and fails a host that asks for a frame it did not send or sends a command
 while a reply of the last one is still queued.
 """
@@ -256,7 +256,7 @@ class TornTail(unittest.TestCase):
             out = io.StringIO()
             fetch(LogEndpoint(5, closed=False), out)
             path.write_text(out.getvalue(), encoding="utf-8")
-            self.assertEqual(records.resume_point(str(path)), (1_700_000_000, 3))
+            self.assertEqual(records.last_kept(str(path))["index"], 3)
 
 
 LINK_TYPE = 12
@@ -296,6 +296,30 @@ class ResumedFetch(unittest.TestCase):
             fetch_into(LogEndpoint(5, closed=False), path)
             fetch_into(LogEndpoint(5), path)
             self.assertEqual(kept_indices(path), list(range(5)))
+
+    # the ring wrapped between two fetches and the device numbered what was left from 0, so the resume of #367 skipped 359 s
+    def test_a_resume_into_a_session_renumbered_since_is_refused_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            renumbered = LogEndpoint(400, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 570)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("index 398", str(caught.exception))
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    # the second fetch of #367 found its resume point past the renumbered end and printed nothing to fetch
+    def test_a_resume_past_the_end_of_a_renumbered_session_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            renumbered = LogEndpoint(300, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 470)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("renumbered", str(caught.exception))
 
     def test_an_open_session_that_wrote_nothing_since_is_not_fetched_again(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -235,7 +235,12 @@ async def fetch_log(link, args):
     if args.list:
         return 0
 
-    wanted = sessions_to_fetch(sessions, args, resume_of(args))
+    kept = resume_of(args)
+    resume = None
+    if kept is not None:
+        await refuse_if_renumbered(link, args, sessions, kept)
+        resume = (kept["session"], kept["index"])
+    wanted = sessions_to_fetch(sessions, args, resume)
     if not wanted:
         print("nothing to fetch")
         return 0
@@ -252,10 +257,27 @@ async def fetch_log(link, args):
 def resume_of(args):
     if args.restart or not args.out:
         return None
-    point = records.resume_point(args.out)
-    if point:
-        print("resuming %s after session %d index %d" % (args.out, point[0], point[1]))
-    return point
+    kept = records.last_kept(args.out)
+    if kept:
+        print("resuming %s after session %d index %d" % (args.out, kept["session"], kept["index"]))
+    return kept
+
+
+async def refuse_if_renumbered(link, args, sessions, kept):
+    """An index names a record only until the ring recycles the session's oldest sector."""
+    session_id, index = kept["session"], kept["index"]
+    if session_id not in [entry["session"] for entry in sessions]:
+        return
+    chunk, = await read_window(link, args, session_id, index, window=1)
+    found = None
+    if chunk.get("from") == index and chunk.get("records"):
+        first = chunk["records"][:records.RECORD_BYTES]
+        record, = records.decode_chunk(args.log, first, session_id, index)
+        found = json.loads(json.dumps(dict(log=args.log, session=session_id, **record)))
+    if found != kept:
+        raise SystemExit("session %d no longer holds at index %d the record %s kept: the device "
+                         "renumbered the session, as it does once its ring recycles the oldest "
+                         "sector. Fetch it into a new file" % (session_id, index, args.out))
 
 
 def sessions_to_fetch(sessions, args, resume):
@@ -338,9 +360,9 @@ def line_writer(out):
     return lambda line: out.write(json.dumps(line) + "\n")
 
 
-async def read_window(link, args, session_id, at):
+async def read_window(link, args, session_id, at, window=None):
     """One read command, and exactly the chunk frames the device answers it with."""
-    asked = chunks_per_read(args.window)
+    asked = chunks_per_read(args.window if window is None else window)
     await link.write({"command": "read", "log": args.log, "session": session_id,
                       "from": at, "count": asked})
     chunks = []

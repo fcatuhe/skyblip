@@ -81,18 +81,18 @@ class Resume(unittest.TestCase):
             path.write_text("".join(
                 json.dumps({"log": "flights", "session": 200, "index": index}) + "\n"
                 for index in range(3)), encoding="utf-8")
-            self.assertEqual(records.resume_point(str(path)), (200, 2))
+            self.assertEqual(records.last_kept(str(path)), {"log": "flights", "session": 200, "index": 2})
 
     def test_a_file_truncated_mid_line_resumes_from_the_last_whole_record(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
             path.write_text('{"session": 200, "index": 0}\n{"session": 200, "ind',
                             encoding="utf-8")
-            self.assertEqual(records.resume_point(str(path)), (200, 0))
+            self.assertEqual(records.last_kept(str(path)), {"session": 200, "index": 0})
 
     def test_no_file_yet_means_no_resume_point(self):
         with tempfile.TemporaryDirectory() as directory:
-            self.assertIsNone(records.resume_point(str(pathlib.Path(directory) / "absent")))
+            self.assertIsNone(records.last_kept(str(pathlib.Path(directory) / "absent")))
 
     def test_without_a_resume_point_every_chosen_session_starts_at_zero(self):
         plan = blip.sessions_to_fetch(SESSIONS, fetch_args(all=True), None)

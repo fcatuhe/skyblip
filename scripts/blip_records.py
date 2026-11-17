@@ -479,13 +479,13 @@ def read_ndjson(path):
                 yield json.loads(line)
 
 
-def resume_point(path):
-    """The last record a previous fetch kept, as (session, index), or None."""
+def last_kept(path):
+    """The line of the last record a previous fetch kept, passing over the notes, or None."""
     last = None
     try:
         for line in read_ndjson(path):
             if not is_note(line) and "session" in line and "index" in line:
-                last = (line["session"], line["index"])
+                last = line
     except (OSError, json.JSONDecodeError):
         return last
     return last
