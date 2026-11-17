@@ -47,7 +47,7 @@ constexpr BitField kLongitudeField{108, 20};
 constexpr BitField kTurnRateField{128, 9};
 constexpr BitField kSpeedField{137, 10};
 constexpr BitField kClimbField{147, 9};
-constexpr BitField kCourseField{156, 10};
+constexpr BitField kTrackField{156, 10};
 constexpr BitField kAirborneField{166, 2};
 constexpr BitField kGnssAccuracyFirstField{168, 6};
 constexpr BitField kGnssAccuracySecondField{174, 5};
@@ -193,8 +193,8 @@ Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitud
     // INFO: fc 09mar26 without this gate a mis-framed foreign packet decodes as traffic
     if (!keyed_on(data, rx_utc_s) || !structured(data)) return Status::Invalid;
 
-    const uint32_t course_deg = read_bits(data, kCourseField) >> 1;
-    if (course_deg > 360) return Status::Invalid;
+    const uint32_t track_deg = read_bits(data, kTrackField) >> 1;
+    if (track_deg > 360) return Status::Invalid;
 
     const int32_t latitude_1e7 =
         nearest_with_low_bits(read_bits(data, kLatitudeField),
@@ -219,7 +219,7 @@ Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitud
     out.altitude_m = kAltitudeCode.decode(read_bits(data, kAltitudeField)) - kAltitudeOffsetM;
     out.speed_e1 = kSpeedCode.decode(read_bits(data, kSpeedField));
     out.climb_e1 = kVerticalCode.decode(read_bits(data, kClimbField));
-    out.course_deg = static_cast<uint16_t>(course_deg);
+    out.track_deg = static_cast<uint16_t>(track_deg);
     return Status::Ok;
 }
 
@@ -243,7 +243,7 @@ void encode(uint8_t* frame, const Position& position, uint32_t utc_s) {
     write_bits(frame, kSpeedField, kSpeedCode.encode(position.speed_e1));
     write_bits(frame, kClimbField, kVerticalCode.encode(position.climb_e1));
     write_bits(frame, kTurnRateField, kVerticalCode.encode(0));
-    write_bits(frame, kCourseField, (static_cast<uint32_t>(position.course_deg) << 1) & 0x03FFu);
+    write_bits(frame, kTrackField, (static_cast<uint32_t>(position.track_deg) << 1) & 0x03FFu);
 
     // INFO: fc 09mar26 accuracy and unknown fields carry the constants SoftRF latest_encode sends
     write_bits(frame, kGnssAccuracyFirstField, 0x12);

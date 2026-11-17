@@ -50,7 +50,7 @@ struct Position {
     int32_t altitude_m{0};
     int32_t speed_e1{0};
     int32_t climb_e1{0};
-    uint16_t course_deg{0};
+    uint16_t track_deg{0};
 };
 
 wire::Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,

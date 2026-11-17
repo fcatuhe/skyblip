@@ -6156,7 +6156,7 @@ ALP-TAS (FLARM-wire, 2024 protocol) air-frame codec. Two things are worth testin
 - encode then decode preserves the identity and motion fields
 - position round trips across the 20-bit coding wrap
 - position round trips north, south, high latitude and near zero
-- speed, climb and course come back within the step their codes name
+- speed, climb and track come back within the step their codes name
   > The speed field counts decimetres a second in 8 bits behind two exponent bits, the climb in 6.
 - the chip pairs the air destroyed are flipped back to the frame that was sent
 - the decrypt gate accepts the second it was sent in, +/-1

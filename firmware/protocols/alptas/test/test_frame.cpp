@@ -30,7 +30,7 @@ Position make_position(int32_t latitude_1e7, int32_t longitude_1e7) {
     position.altitude_m = 1234;
     position.speed_e1 = 450;  // 45 m/s
     position.climb_e1 = -55;  // -5.5 m/s
-    position.course_deg = 180;
+    position.track_deg = 180;
     return position;
 }
 
@@ -81,7 +81,7 @@ TEST_CASE("alptas: encode then decode preserves the identity and motion fields")
     CHECK(got.altitude_m == 1234);
     CHECK(got.speed_e1 == 450);
     CHECK(got.climb_e1 == -55);
-    CHECK(got.course_deg == 180);
+    CHECK(got.track_deg == 180);
 }
 
 TEST_CASE("alptas: position round trips north, south, high latitude and near zero") {
@@ -105,25 +105,25 @@ TEST_CASE("alptas: position round trips across the 20-bit coding wrap") {
 }
 
 // The speed field counts decimetres a second in 8 bits behind two exponent bits, the climb in 6.
-TEST_CASE("alptas: speed, climb and course come back within the step their codes name") {
+TEST_CASE("alptas: speed, climb and track come back within the step their codes name") {
     for (int32_t speed : {0, 10, 100, 255, 450, 1000, 2000}) {
         for (int32_t climb : {0, 10, -10, 55, -55, 100, -100, 250}) {
-            for (uint16_t course : {uint16_t(0), uint16_t(1), uint16_t(90), uint16_t(180),
-                                    uint16_t(269), uint16_t(359)}) {
+            for (uint16_t track : {uint16_t(0), uint16_t(1), uint16_t(90), uint16_t(180),
+                                   uint16_t(269), uint16_t(359)}) {
                 Position position = make_position(481234567, 87654321);
                 position.speed_e1 = speed;
                 position.climb_e1 = climb;
-                position.course_deg = course;
+                position.track_deg = track;
                 uint8_t frame[kFrameBytes];
                 encode(frame, position, kUtcS);
                 Position got;
                 REQUIRE(decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
                 CAPTURE(speed);
                 CAPTURE(climb);
-                CAPTURE(course);
+                CAPTURE(track);
                 CHECK(std::abs(got.speed_e1 - speed) <= 3);
                 CHECK(std::abs(got.climb_e1 - climb) <= 3);
-                CHECK(got.course_deg == course);
+                CHECK(got.track_deg == track);
             }
         }
     }
@@ -341,7 +341,7 @@ TEST_CASE("alptas: a frame is byte for byte the frame other receivers already re
     position.altitude_m = 3456;
     position.speed_e1 = 555;
     position.climb_e1 = 46;
-    position.course_deg = 54;
+    position.track_deg = 54;
     uint8_t frame[kFrameBytes];
     encode(frame, position, 1700000005);
     const uint8_t north[] = {0x34, 0x12, 0xDD, 0x22, 0x00, 0x00, 0x00, 0x33, 0xD2,
@@ -366,5 +366,5 @@ TEST_CASE("alptas: a frame is byte for byte the frame other receivers already re
     CHECK(got.altitude_m == -50);
     CHECK(got.speed_e1 == 2248);
     CHECK(got.climb_e1 == -496);
-    CHECK(got.course_deg == 54);
+    CHECK(got.track_deg == 54);
 }

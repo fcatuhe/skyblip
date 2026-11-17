@@ -59,8 +59,7 @@ Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_
     out.speed_q = static_cast<uint16_t>(wire::divide_rounded<int32_t>(position.speed_e1 * 2, 5));
     out.climb_e8 = static_cast<int16_t>(wire::divide_rounded<int32_t>(position.climb_e1 * 4, 5));
     out.track_c9 = static_cast<uint16_t>(
-        wire::divide_rounded<int32_t>(static_cast<int32_t>(position.course_deg) * 512, 360) &
-        0x1FF);
+        wire::divide_rounded<int32_t>(static_cast<int32_t>(position.track_deg) * 512, 360) & 0x1FF);
     out.received.at_s = rx_utc_s;
     out.source = model::Source::Alptas;
     out.speed_valid = true;
@@ -86,7 +85,7 @@ Status alptas_encode(uint8_t* frame, const model::AircraftObservation& observati
         observation.speed_valid ? wire::divide_rounded<int32_t>(observation.speed_q * 5, 2) : 0;
     position.climb_e1 =
         observation.climb_valid ? wire::divide_rounded<int32_t>(observation.climb_e8 * 5, 4) : 0;
-    position.course_deg = static_cast<uint16_t>(
+    position.track_deg = static_cast<uint16_t>(
         static_cast<uint32_t>(wire::divide_rounded<int32_t>(observation.track_c9 * 360, 512)) %
         360u);
     alptas::encode(frame, position, utc_s);
