@@ -81,12 +81,11 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     wire::RfChannel channel(12345);
     channel.apply_bit_error_rate(coded, sizeof(coded), 0.002);  // ~0.2% chip errors
 
-    adsl::Packet rx = tx;  // start from a copy; overwrite the data region
+    uint8_t frame[adsl::Packet::kDataBytes];
     uint8_t error[adsl::Packet::kDataBytes];
-    wire::manchester_decode(coded, adsl::Packet::kDataBytes, rx.data, error);
-    rx.correct(error, 6);
-    REQUIRE(rx.crc_ok());  // recovered a valid packet
-    rx.descramble();
+    wire::manchester_decode(coded, adsl::Packet::kDataBytes, frame, error);
+    adsl::Packet rx;
+    REQUIRE(adsl::receive(frame, error, rx) == wire::Status::Ok);
 
     // 4) decode -> observation -> table
     model::AircraftObservation observation;
