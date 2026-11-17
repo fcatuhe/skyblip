@@ -439,16 +439,15 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Go with no buzzer and no haptic paired with a Bravo offers sound on Bravo, and its glass says BRAVO" do
+  test "a Go with no buzzer and no haptic paired with a Bravo offers Bravo soft and Bravo loud, and its glass says BRAVO" do
     in_range a_go(sounds: false, bravo: "live", stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "loud" })
     on_the_shelf do
       connect_go
-      assert_select "Alarm", selected: "Loud sound on Bravo + visual",
-                             options: [ "Off", "Visual only", "Soft sound on Bravo + visual", "Loud sound on Bravo + visual" ]
+      assert_select "Alarm", selected: "Bravo loud + visual", options: [ "Off", "Visual only", "Bravo soft + visual", "Bravo loud + visual" ]
       assert_no_field "Alarm", disabled: true
       screen "11d-go-bravo-steps"
-      select "Soft sound on Bravo + visual", from: "Alarm"
-      assert_text "Default: Loud sound on Bravo + visual"
+      select "Bravo soft + visual", from: "Alarm"
+      assert_text "Default: Bravo loud + visual"
       click_button "Save 1 change"
       assert_glass "SETTINGS"
       assert_selector ".glass-prompt canvas.glass[aria-label*='ALARM BRAVO SOFT']"

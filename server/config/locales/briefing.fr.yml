@@ -57,8 +57,8 @@ fr:
         loud: "Son fort + visuel"
       set_on_go: "La ligne ALARM de votre Go la règle pour les deux appareils."
       bravo_alarm_names:
-        soft: "Son faible sur Bravo + visuel"
-        loud: "Son fort sur Bravo + visuel"
+        soft: "Bravo faible + visuel"
+        loud: "Bravo fort + visuel"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
       heard_setting: "Réglage"

@@ -57,8 +57,8 @@ en:
         loud: Loud sound + visual
       set_on_go: Your Go's ALARM row sets it for both units.
       bravo_alarm_names:
-        soft: Soft sound on Bravo + visual
-        loud: Loud sound on Bravo + visual
+        soft: Bravo soft + visual
+        loud: Bravo loud + visual
       save: Save
       reset: Back to defaults
       heard_setting: Setting
