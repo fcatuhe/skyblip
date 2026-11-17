@@ -162,12 +162,6 @@ bool unrated(const uint8_t* decrypted) {
            read_bits(decrypted, kNicField) == 0;
 }
 
-uint32_t address_of(const uint8_t* data, uint8_t address_type) {
-    const uint32_t base = read_bits(data, kAddressField);
-    if (address_type != kAddressTypeRandom) return base;
-    return base | (read_bits(data, kRandomHighField) << 24);
-}
-
 // INFO: fc 09mar26 15 against 0 fails | 17nov26 a rated frame, lacking the zero byte, must match
 bool keyed_on(const uint8_t* decrypted, uint32_t rx_utc_s) {
     const int32_t sent = static_cast<int32_t>(read_bits(decrypted, kTimeBitsField));
@@ -256,8 +250,6 @@ Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitud
     // INFO: fc 09mar26 without this gate a mis-framed foreign packet decodes as traffic
     if (!keyed_on(data, rx_utc_s) || !structured(data)) return Status::Invalid;
 
-    const uint32_t track_deg = read_bits(data, kTrackField) >> 1;
-
     const int32_t latitude_1e7 =
         nearest_with_low_bits(read_bits(data, kLatitudeField),
                               divide_rounded<int32_t>(reference_latitude_1e7, kLatitudeStep1e7)) *
@@ -273,9 +265,11 @@ Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitud
 
     out = Position{};
     out.address_type = static_cast<uint8_t>(read_bits(data, kAddressTypeField));
-    out.address = address_of(data, out.address_type);
-    if (out.address_type == kAddressTypeRandom)
+    out.address = read_bits(data, kAddressField);
+    if (out.address_type == kAddressTypeRandom) {
+        out.address |= read_bits(data, kRandomHighField) << 24;
         out.random = static_cast<uint8_t>(read_bits(data, kRandomField));
+    }
     if (out.address_type == kAddressTypeManufacturerExtended)
         out.address_extension = static_cast<uint16_t>(read_bits(data, kAddressExtensionField));
     out.urgency = static_cast<uint8_t>(read_bits(data, kUrgencyField));
@@ -292,7 +286,7 @@ Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitud
         kVerticalCode.decode(read_bits(data, kTurnRateField)) * kTurnRateCdpsPerStep;
     out.speed_e1 = kSpeedCode.decode(read_bits(data, kSpeedField));
     out.climb_e1 = kVerticalCode.decode(read_bits(data, kClimbField));
-    out.track_deg = static_cast<uint16_t>(track_deg);
+    out.track_deg = static_cast<uint16_t>(read_bits(data, kTrackField) >> 1);
     out.horizontal_accuracy_dm =
         kHorizontalAccuracyCode.decode(read_bits(data, kHorizontalAccuracyField));
     out.vertical_accuracy_qm =

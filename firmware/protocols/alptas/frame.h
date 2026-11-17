@@ -29,13 +29,11 @@ constexpr uint8_t kUrgencyPanPan = 2;
 constexpr uint8_t kUrgencyMayday = 3;
 
 constexpr uint8_t kVersion3 = 3;
-constexpr uint8_t kVersionCannotReceive = 0xF;
 
 constexpr uint8_t kAircraftTypeGyrocopter = 10;
 constexpr uint8_t kAircraftTypeUavCertified = 19;
 
 // INFO: fc 26sep26 SoftRF latest_encode sends 1 on ground, 2 airborne, 3 circling, and never 0
-constexpr uint8_t kAirborneUnknown = 0;
 constexpr uint8_t kAirborneOnGround = 1;
 constexpr uint8_t kAirborneFlying = 2;
 constexpr uint8_t kAirborneCircling = 3;

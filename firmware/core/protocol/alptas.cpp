@@ -98,16 +98,24 @@ bool heard_from_range(const alptas::Position& position, int32_t reference_latitu
            static_cast<uint32_t>(traffic::plausible_range_m(model::Source::Alptas));
 }
 
+Status decode_position(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,
+                       int32_t reference_longitude_1e7, alptas::Position& position) {
+    const wire::Status decoded =
+        alptas::decode(frame, rx_utc_s, reference_latitude_1e7, reference_longitude_1e7, position);
+    if (decoded != wire::Status::Ok) return status_of(decoded);
+    return heard_from_range(position, reference_latitude_1e7, reference_longitude_1e7)
+               ? Status::Ok
+               : Status::Invalid;
+}
+
 }
 
 Status alptas_decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,
                      int32_t reference_longitude_1e7, model::AircraftObservation& out) {
     alptas::Position position;
-    const wire::Status decoded =
-        alptas::decode(frame, rx_utc_s, reference_latitude_1e7, reference_longitude_1e7, position);
-    if (decoded != wire::Status::Ok) return status_of(decoded);
-    if (!heard_from_range(position, reference_latitude_1e7, reference_longitude_1e7))
-        return Status::Invalid;
+    const Status decoded =
+        decode_position(frame, rx_utc_s, reference_latitude_1e7, reference_longitude_1e7, position);
+    if (decoded != Status::Ok) return decoded;
     to_observation(position, rx_utc_s, position.address & 0xFFFFFFu, out);
     return Status::Ok;
 }
@@ -116,11 +124,9 @@ Status AlptasReceiver::decode(const uint8_t* frame, uint32_t rx_utc_s,
                               int32_t reference_latitude_1e7, int32_t reference_longitude_1e7,
                               const events::Stamp& heard, model::AircraftObservation& out) {
     alptas::Position position;
-    const wire::Status decoded =
-        alptas::decode(frame, rx_utc_s, reference_latitude_1e7, reference_longitude_1e7, position);
-    if (decoded != wire::Status::Ok) return status_of(decoded);
-    if (!heard_from_range(position, reference_latitude_1e7, reference_longitude_1e7))
-        return Status::Invalid;
+    const Status decoded =
+        decode_position(frame, rx_utc_s, reference_latitude_1e7, reference_longitude_1e7, position);
+    if (decoded != Status::Ok) return decoded;
     const uint32_t address = position.address_type == alptas::kAddressTypeRandom
                                  ? shown_address(position.address, position.random, rx_utc_s)
                                  : position.address & 0xFFFFFFu;
