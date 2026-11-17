@@ -417,7 +417,8 @@ def is_note(line):
 
 
 def session_text(session):
-    marks = ["closed" if session.get("closed") else "power cut"]
+    marks = ["closed" if session.get("closed") else "recording" if session.get("recording")
+             else "power cut"]
     if session.get("truncated"):
         marks.append("truncated")
     start = " from index %d" % session["first"] if session.get("first") else ""
@@ -426,14 +427,17 @@ def session_text(session):
 
 
 def session_note(log, session):
-    return {"type": "session", "log": log, "session": session["session"],
+    note = {"type": "session", "log": log, "session": session["session"],
             "records": session["records"], "closed": bool(session.get("closed")),
             "truncated": bool(session.get("truncated"))}
+    if session.get("recording"):
+        note["recording"] = True
+    return note
 
 
 def tail_cannot_be_vouched_for(log, session):
     # INFO: fc 20sep26 a diagnostics record carries no CRC, so a power cut leaves a plausible slot
-    return log == "diagnostics" and not session.get("closed", True)
+    return log == "diagnostics" and not session.get("closed", True) and not session.get("recording")
 
 
 class SessionSink:
@@ -582,7 +586,9 @@ def caveats_of(note):
     if note.get("truncated"):
         out.append("session %s: truncated, its first sector was evicted, so it carries no boot "
                    "and no config record" % session)
-    if not note.get("closed"):
+    if note.get("recording"):
+        out.append("session %s: still recording when fetched" % session)
+    elif not note.get("closed"):
         out.append("session %s: not closed, the device stopped without ending it" % session)
     return out
 

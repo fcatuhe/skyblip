@@ -299,9 +299,10 @@
         {"name": "of", "number": 3, "type": "unsigned", "required": true, "description": "How many entries the index holds"},
         {"name": "session", "number": 4, "type": "unsigned", "required": true, "description": "The session's id, its opening UTC second: its name, and the base every one of its records is timed against"},
         {"name": "records", "number": 5, "type": "unsigned", "required": true, "description": "Records the session holds, indexed from first"},
-        {"name": "closed", "number": 6, "type": "boolean", "required": true, "description": "The session was closed. False means the log stops where the power did, and a reader says so rather than present a cut flight as whole"},
+        {"name": "closed", "number": 6, "type": "boolean", "required": true, "description": "The session was closed. False means the log stops where the power did, unless recording says the unit is still writing it, and a reader says so rather than present a cut flight as whole"},
         {"name": "truncated", "number": 7, "type": "boolean", "required": true, "description": "The session opened in a sector the ring recycled since, so what is left is a suffix, not the whole run"},
-        {"name": "first", "number": 8, "type": "unsigned", "description": "The index of the first record the session still holds. Absent means 0. A record keeps its index while the ring recycles the sectors before it, until the unit restarts: a restart numbers what is left from 0 (firmware/core/comms/README.md, The log dialect)"}
+        {"name": "first", "number": 8, "type": "unsigned", "description": "The index of the first record the session still holds. Absent means 0. A record keeps its index while the ring recycles the sectors before it, until the unit restarts: a restart numbers what is left from 0 (firmware/core/comms/README.md, The log dialect)"},
+        {"name": "recording", "number": 9, "type": "boolean", "description": "Present and true on the session the unit is still writing, which is not closed because it has not ended yet: its last record is whole, and closed false means a power cut only without it. Absent on every other session, and on firmware before the key"}
       ]
     },
     {

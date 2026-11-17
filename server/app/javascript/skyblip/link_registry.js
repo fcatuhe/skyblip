@@ -1828,6 +1828,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "first",
           "number": 8,
           "type": "unsigned"
+        },
+        {
+          "name": "recording",
+          "number": 9,
+          "type": "boolean"
         }
       ]
     },
