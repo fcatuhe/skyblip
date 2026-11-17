@@ -377,6 +377,32 @@ class ResumedFetch(unittest.TestCase):
             self.assertEqual(path.read_text(encoding="utf-8"), before)
 
 
+class RecordingSession(unittest.TestCase):
+    # the trial of #293 read a capture still recording as a power cut and dropped its last record as torn
+    def test_a_session_the_unit_is_still_recording_keeps_its_last_record(self):
+        lines = fetched_lines(LogEndpoint(5, closed=False, recording=True))
+        self.assertEqual([line["index"] for line in of_type(lines, "pps")], [0, 1, 2, 3, 4])
+        self.assertEqual(of_type(lines, "torn"), [])
+
+    def test_the_listing_says_recording_rather_than_power_cut(self):
+        text = records.session_text(session_reply(24, closed=False, recording=True))
+        self.assertEqual(text, "session 1700000000  24 records  recording")
+
+    def test_the_header_line_and_the_summary_say_the_session_was_still_recording(self):
+        lines = fetched_lines(LogEndpoint(5, closed=False, recording=True))
+        self.assertTrue(of_type(lines, "session")[0]["recording"])
+        summary = records.summarise(lines)
+        self.assertIn("session 1700000000: still recording when fetched", summary)
+        self.assertFalse(any("stopped without ending it" in line for line in summary), summary)
+
+    def test_two_fetches_of_a_recording_session_keep_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False, recording=True), path)
+            fetch_into(LogEndpoint(9, closed=False, recording=True), path)
+            self.assertEqual(kept_indices(path), list(range(9)))
+
+
 class RotatedSession(unittest.TestCase):
     def test_a_truncated_session_is_fetched_from_the_first_record_it_holds(self):
         endpoint = LogEndpoint(300, first=SLOTS_PER_SECTOR, truncated=True)
