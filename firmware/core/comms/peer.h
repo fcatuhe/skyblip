@@ -99,7 +99,7 @@ struct PeerHealth {
     bool charging{false};
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     std::optional<uint32_t> frame_rate_hz{};
-    std::optional<uint32_t> dismissed{};
+    std::optional<uint32_t> dismissed_announcement{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

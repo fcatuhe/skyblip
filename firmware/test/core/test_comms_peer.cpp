@@ -282,22 +282,22 @@ TEST_CASE("peer frames: Bravo's health carries its state, and no last_sequence b
     CHECK(read.value().boot_epoch == 9);
     CHECK(read.value().aircraft_address_set);
     CHECK_FALSE(read.value().paired);
-    CHECK_FALSE(read.value().dismissed.has_value());
+    CHECK_FALSE(read.value().dismissed_announcement.has_value());
 }
 
 TEST_CASE("peer frames: Bravo's health names the call its press dismissed") {
     comms::PeerHealth health{};
     health.boot_epoch = 9;
-    health.dismissed = 4294967295u;
+    health.dismissed_announcement = 4294967295u;
     uint8_t frame[comms::kPeerPayloadFloorBytes];
     const int bytes = comms::write_health(health, frame, sizeof(frame));
     REQUIRE(bytes > 0);
     CHECK(link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(bytes)))
-              .find("\"dismissed\":4294967295") != std::string::npos);
+              .find("\"dismissed_announcement\":4294967295") != std::string::npos);
     const Result<comms::PeerHealth> read =
         comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
     REQUIRE(read.ok());
-    CHECK(read.value().dismissed == std::optional<uint32_t>(4294967295u));
+    CHECK(read.value().dismissed_announcement == std::optional<uint32_t>(4294967295u));
 }
 
 TEST_CASE("peer frames: Bravo's health names the transponder it takes for the aircraft's own") {

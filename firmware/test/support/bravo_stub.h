@@ -39,7 +39,7 @@ class BravoStub {
         bool paired{true};
         std::string own_transponder_fields{};
         std::string status_fields{"\"charging\":false,\"power_level\":\"normal\""};
-        std::optional<uint32_t> dismissed{};
+        std::optional<uint32_t> dismissed_announcement{};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -129,7 +129,8 @@ class BravoStub {
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         if (!health.own_transponder_fields.empty()) json += "," + health.own_transponder_fields;
         json += "," + health.status_fields;
-        if (health.dismissed) json += ",\"dismissed\":" + std::to_string(*health.dismissed);
+        if (health.dismissed_announcement)
+            json += ",\"dismissed_announcement\":" + std::to_string(*health.dismissed_announcement);
         return complete_registry_frame(json + "}");
     }
 

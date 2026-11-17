@@ -40,7 +40,7 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
       command: 'health', protocol_version: 2, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
       aircraft_address_set: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
       own_transponder_callsign: 'ABCD1234', own_transponder_category: 17, firmware: '9.99.99+99999', battery_percent: 100,
-      charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED, dismissed: WIDEST_UNSIGNED,
+      charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED, dismissed_announcement: WIDEST_UNSIGNED,
     },
     'b200181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f' +
       '11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff',

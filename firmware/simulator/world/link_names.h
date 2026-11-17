@@ -608,7 +608,7 @@ inline constexpr Key kHealthKeys[] = {
     {"charging", 18, Type::Boolean, nullptr, 0, true},
     {"power_level", 19, Type::Enum, &kPowerLevel, 0, true},
     {"frame_rate_hz", 20, Type::Unsigned, nullptr, 0, false},
-    {"dismissed", 21, Type::Unsigned, nullptr, 0, false},
+    {"dismissed_announcement", 21, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {

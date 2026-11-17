@@ -143,7 +143,7 @@ TEST_CASE("bravo peer: health goes to the pinned Go once a second, whatever the 
     CHECK(field(last, "listening") == "true");
     CHECK(field(last, "utc_valid") == "true");
     CHECK(field(last, "aircraft_address_set") == "false");
-    CHECK(field(last, "dismissed").empty());
+    CHECK(field(last, "dismissed_announcement").empty());
     CHECK(field(last, "export_reference") == "own");
     CHECK(field(last, "paired") == "true");
     CHECK(field(last, "last_sequence").empty());

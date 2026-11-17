@@ -340,7 +340,9 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     writer.add_code(link::health_key::kPowerLevel, health.power_level);
     if (health.frame_rate_hz)
         writer.add_unsigned(link::health_key::kFrameRateHz, *health.frame_rate_hz);
-    if (health.dismissed) writer.add_unsigned(link::health_key::kDismissed, *health.dismissed);
+    if (health.dismissed_announcement)
+        writer.add_unsigned(link::health_key::kDismissedAnnouncement,
+                            *health.dismissed_announcement);
     return writer.finish();
 }
 
@@ -429,9 +431,9 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
         return Status::Invalid;
     uint32_t dismissed = 0;
     bool present = false;
-    if (!take(reader.read_unsigned(link::health_key::kDismissed), dismissed, present))
+    if (!take(reader.read_unsigned(link::health_key::kDismissedAnnouncement), dismissed, present))
         return Status::Invalid;
-    if (present) health.dismissed = dismissed;
+    if (present) health.dismissed_announcement = dismissed;
     return health;
 }
 

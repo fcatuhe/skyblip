@@ -179,7 +179,7 @@ TEST_CASE("bravo follow: a press dismisses the Go's call at once and tells the G
     const Call call = advisory(5);
     pinned.second(&call);
     REQUIRE(pinned.lamp_level() == traffic::Level::Advisory);
-    CHECK(field(Pinned::last_health(pinned.to_go), "dismissed").empty());
+    CHECK(field(Pinned::last_health(pinned.to_go), "dismissed_announcement").empty());
 
     const size_t sent = pinned.to_go.size();
     pinned.rig.platform.set_button_down(true);
@@ -190,7 +190,7 @@ TEST_CASE("bravo follow: a press dismisses the Go's call at once and tells the G
     CHECK_FALSE(pinned.rig.platform.annunciator().sounding());
     const std::vector<std::string> after(pinned.to_go.begin() + static_cast<long>(sent),
                                          pinned.to_go.end());
-    CHECK(field(Pinned::last_health(after), "dismissed") == "5");
+    CHECK(field(Pinned::last_health(after), "dismissed_announcement") == "5");
 
     const uint32_t tones = pinned.tones();
     pinned.seconds(2, &call);
@@ -270,7 +270,7 @@ TEST_CASE("bravo follow: a claim from a Go Bravo has not pinned sets neither its
     pinned.run_for(150);
     pinned.rig.platform.set_button_down(false);
     pinned.run_for(1500);
-    CHECK(field(Pinned::last_health(pinned.to_stranger), "dismissed").empty());
+    CHECK(field(Pinned::last_health(pinned.to_stranger), "dismissed_announcement").empty());
 }
 
 TEST_CASE("bravo follow: the Go's last alarm comes back from flash after Bravo's reboot") {

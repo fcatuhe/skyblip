@@ -378,7 +378,7 @@
         {"name": "charging", "number": 18, "type": "boolean", "required": true, "description": "Bravo's cable is in, as the status frame's charging"},
         {"name": "power_level", "number": 19, "type": "enum", "enum": "power_level", "required": true, "description": "What Bravo's cutoff rule made of its cell, as the status frame's power_level. A Go says BRAVO BAT on its radar from low down, the step Bravo's own lamp starts winking red at"},
         {"name": "frame_rate_hz", "number": 20, "type": "unsigned", "description": "1090 MHz frames Bravo's receiver handed up over the last whole second, as diagnostics' frame_rate_hz. Absent while the receiver is not armed. A receiver that listens and hears nothing reads 0, which a sky with no transponder in range gives too"},
-        {"name": "dismissed", "number": 21, "type": "unsigned", "description": "The announcement, as the pinned Go's peer_claim numbered it, that a press of Bravo's button dismissed on this connection. Sent to the pinned Go only, and absent before the first such press. The Go dismisses its alarm as its long touch does while this equals its own announcement, so a press never dismisses a call Bravo had not played yet"}
+        {"name": "dismissed_announcement", "number": 21, "type": "unsigned", "description": "The announcement, as the pinned Go's peer_claim numbered it, that a press of Bravo's button dismissed on this connection. Sent to the pinned Go only, and absent before the first such press. The Go dismisses its alarm as its long touch does while this equals its own announcement, so a press never dismisses a call Bravo had not played yet"}
       ]
     },
     {

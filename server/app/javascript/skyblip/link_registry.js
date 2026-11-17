@@ -2156,7 +2156,7 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "dismissed",
+          "name": "dismissed_announcement",
           "number": 21,
           "type": "unsigned"
         }

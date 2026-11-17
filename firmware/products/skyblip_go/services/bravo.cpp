@@ -205,7 +205,8 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
     aircraft_address_warning_.paired(health.value().aircraft_address_set);
-    if (health.value().dismissed) alarm_.dismiss_announcement(*health.value().dismissed);
+    if (health.value().dismissed_announcement)
+        alarm_.dismiss_announcement(*health.value().dismissed_announcement);
     health_ = health.value();
     if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;

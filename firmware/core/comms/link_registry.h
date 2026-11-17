@@ -459,7 +459,7 @@ enum : uint32_t {
     kCharging = 18,
     kPowerLevel = 19,
     kFrameRateHz = 20,
-    kDismissed = 21,
+    kDismissedAnnouncement = 21,
 };
 }
 
