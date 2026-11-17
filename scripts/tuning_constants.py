@@ -51,6 +51,7 @@ UNITS = {
     "Fixes": "fixes",
     "Records": "records",
     "Reports": "reports of the aircraft's own",
+    "Bpm": "beats per minute",
 }
 
 DIMENSIONED = ("Hold", "Settle", "Period", "Window", "Damping", "MaxAge", "Stale", "Forget")

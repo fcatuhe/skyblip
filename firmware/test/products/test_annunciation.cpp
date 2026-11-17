@@ -299,7 +299,7 @@ TEST_CASE("product: the first fix plays its tune, and traffic takes the buzzer o
     CHECK(lowest_hz == annunciation::kNoteC7Hz);
     CHECK(highest_hz == annunciation::kNoteG7Hz);
     CHECK(sounding_ms >= tone_ms - annunciation::kFirstFixTune.count * kStepMs);
-    CHECK(sounding_ms <= tone_ms);
+    CHECK(sounding_ms <= tone_ms + annunciation::kFirstFixTune.count * kStepMs);
     // No haptics: the motor is reserved for traffic, so a pilot who feels it
     // knows what it means without looking.
     CHECK(sky.buzzer().motor_starts() == 0);

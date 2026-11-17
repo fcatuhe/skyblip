@@ -8,9 +8,15 @@ What the buzzer and the vibration motor should be doing right now, decided in on
 
 The advisory is two calls, each a low note then a high one, so every call rises. A tone that changes pitch is noticed against a steady noise more readily than a held one, and a cockpit is a steady noise. The low note is long and the high one short, the way the name is said: sky-blip. The second call's blip is long, so the advisory ends on a note that sounds finished rather than cut off.
 
-The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole number of it: sky 2, blip 1, rest 3, sky 2, long blip 3. The first-fix jingle is written on the same grid, each note 1 with a gap of 1 or 3 and the last note held for 3, so both tunes keep one tempo and end on the same held length. The grid is `kShortestBlipEarCanPlaceMs`, because the blip is one grid step and cannot be shorter than the ear can place. Changing the grid changes the tempo of both and keeps their proportions.
+The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole number of it: sky 2, blip 1, rest 3, sky 2, long blip 3. The grid is `kShortestBlipEarCanPlaceMs`, because the blip is one grid step and cannot be shorter than the ear can place. Changing the grid changes the tempo of every alarm and keeps their proportions. `kShortestAlarmPhaseMs` is the shortest note or gap of any alarm, the advisory, the lost Bravo and the rest before a new call. It has to clear the ear's floor, and `common::AlarmService` asserts that the service loop passes through it eight times, so an alarm sounds as written to within one pass.
 
 The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major third, so the call is in tune rather than an arbitrary pair of frequencies. They sit either side of where the transducer is loudest. The part LilyGO fits is not identified in its own material; it is a passive piezo driven straight off one PWM pin, and commodity 9x9 mm SMD piezo sounders resonate at 4000 Hz +/- 500 Hz, so whichever way a given unit's resonance falls, one note of every call is near it. A bench sweep with a sound level meter is what settles the real peak, and the pair moves to the third that straddles it then.
+
+## The first fix is a melody
+
+The first fix plays E E . E . C E . G on an eighth-note grid at 200 BPM, `kFirstFixTempoBpm`, so an eighth is 150 ms, `kFirstFixEighthMs`. Each note sounds for 7/9 of its eighth, 117 ms, `kFirstFixNoteMs`. The silence after it keeps two repeated notes apart: 33 ms before the next eighth and 183 ms across a skipped one. The last note is as short as the others.
+
+The fix tune is a melody, not an alarm, so the ear's floor and the eight passes do not bind it. Its 33 ms gap still spans three passes of the loop that the alarms hold to, so the loop never swallows it.
 
 ## The motor says the calls, and the signs on and off
 

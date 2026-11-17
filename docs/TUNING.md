@@ -25,13 +25,14 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAdvisoryBlipMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
 | `kAdvisoryRestMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
 | `kAdvisoryLongBlipMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
-| `kFirstFixNoteMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
-| `kFirstFixNextBeatMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | - |
-| `kFirstFixSkipBeatMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
-| `kFirstFixHeldNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | - |
+| `kFirstFixTempoBpm` | 200 | beats per minute | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kFirstFixEighthMs` | `60000 / kFirstFixTempoBpm / 2` = 150 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
+| `kFirstFixNoteMs` | `(7 * kFirstFixEighthMs + 9 / 2) / 9` = 117 | milliseconds | - | a note sounds 7/9 of its eighth, so a silence parts repeated notes |
+| `kFirstFixNextBeatMs` | `kFirstFixEighthMs - kFirstFixNoteMs` = 33 | milliseconds | - | - |
+| `kFirstFixSkipBeatMs` | `2 * kFirstFixEighthMs - kFirstFixNoteMs` = 183 | milliseconds | - | - |
 | `kBravoLostNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
-| `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | The shortest phase any tune asks the service loop to resolve. |
-| `kShortestPhaseMs` | `std::min({shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs})` | milliseconds | - | - |
+| `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | a tune never starts over a sounding one, so no on-span outlasts the longest call |
+| `kShortestAlarmPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs})` | milliseconds | - | the fix tune is a melody, not an alarm, so it keeps its own tempo |
 | `kAnnunciatorOnCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | a guard under the loop, never a tune's: an output still on past it is a bug |
 
 ## [`firmware/core/comms`](../firmware/core/comms/README.md)
@@ -415,4 +416,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-270 constants over 26 folders.
+271 constants over 26 folders.

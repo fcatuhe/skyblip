@@ -551,7 +551,7 @@ The annunciation policy on its own: given a level, whether an aircraft was annou
 - the buzzer and the motor are released the moment their reason goes/the device is going down, mid-pulse
 - the buzzer and the motor are released the moment their reason goes/the fix tune ends on its own clock, with nothing to release it
 - the buzzer and the motor are released the moment their reason goes/the level falls to nothing: the target has gone
-- the first fix is six notes, three pitches, and an uneven rhythm
+- the first fix is a 200 BPM melody on an eighth grid
 - the fix tune is heard and never felt
   > The motor is reserved for traffic, so a pilot who feels it knows what it means without looking.
 - the motor is felt for each advisory call, as long as the call

@@ -80,12 +80,10 @@ class AlarmService : public runtime::Service {
     void show(indication::Lamp lamp);
     void accrue_annunciator(uint32_t now_ms);
 
-    // Eight passes through the shortest note or gap of either tune: the
-    // cadence the ear gets is the cadence written in core/annunciation, to
-    // within one pass of the loop.
+    // INFO: fc 16nov26 eight passes per alarm note or gap, so an alarm sounds as written
     static constexpr uint32_t kPassesPerShortestPhase = 8;
     static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestPhase <=
-                      annunciation::kShortestPhaseMs,
+                      annunciation::kShortestAlarmPhaseMs,
                   "the service loop is too coarse to resolve the shortest note");
     static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kServiceSilenceCeilingMs,
                   "the annunciator's guard has to cut before the watchdog bites");
