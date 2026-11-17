@@ -151,7 +151,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L tr
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1WindowMs.start_ms, clock);
+    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kWindowBMs.start_ms, clock);
 
     int seen = 0;
     for (uint32_t address = 1; address < 64; address++) {
@@ -165,7 +165,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L tr
             CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
             CHECK(attempt.at_ms >= adsl::kDirectEndMs);
             CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kSlot1WindowMs.end_ms);
+                  timing::kWindowBMs.end_ms);
             CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
             CHECK(utc_s % 2 == 0);
         }

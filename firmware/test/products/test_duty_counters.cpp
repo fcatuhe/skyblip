@@ -20,8 +20,8 @@ constexpr uint32_t kPassMs = 10;
 // The three dwells: the whole second less its three 5 ms retunes.
 constexpr uint32_t kDwellMsPerSecond =
     static_cast<uint32_t>(timing::dwell_of(timing::kUplinkWindowMs).width_ms() +
-                          timing::dwell_of(timing::kSlot0WindowMs).width_ms() +
-                          timing::dwell_of(timing::kSlot1WindowMs).width_ms());
+                          timing::dwell_of(timing::kWindowAMs).width_ms() +
+                          timing::dwell_of(timing::kWindowBMs).width_ms());
 
 // The radio service alone over ports::NullRf, which answers Down to every plan.
 struct RefusingExecutor {

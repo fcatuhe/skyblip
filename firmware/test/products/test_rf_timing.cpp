@@ -84,7 +84,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
 
     const int rows_before = simulator.product().state().radio_log.count();
     const uint32_t bad_before = simulator.product().state().air.rx_bad;
-    const uint32_t at_ms = start + 2000 + timing::kSlot0WindowMs.start_ms + 150;
+    const uint32_t at_ms = start + 2000 + timing::kWindowAMs.start_ms + 150;
     simulator.step(at_ms);
     REQUIRE(simulator.platform().chips().radio.receive_air(burst, sizeof(burst),
                                                            /*crc_error=*/false,
@@ -143,7 +143,7 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
                                  ? entry.into_ms + 1000
                                  : entry.into_ms;
         // The phase is where the burst ENDED, so only a dwell it cannot have run into names one.
-        if (entry.band == model::Band::M && ended_ms < timing::kSlot0WindowMs.end_ms - 100) {
+        if (entry.band == model::Band::M && ended_ms < timing::kWindowAMs.end_ms - 100) {
             CHECK(entry.channel == 0);
             channelled++;
         }

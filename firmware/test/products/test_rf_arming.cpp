@@ -21,8 +21,8 @@ using namespace skyblip;
 
 namespace {
 
-constexpr timing::Window kSlot0Dwell = timing::dwell_of(timing::kSlot0WindowMs);
-constexpr timing::Window kSlot1Dwell = timing::dwell_of(timing::kSlot1WindowMs);
+constexpr timing::Window kSlot0Dwell = timing::dwell_of(timing::kWindowAMs);
+constexpr timing::Window kSlot1Dwell = timing::dwell_of(timing::kWindowBMs);
 
 // The PLL word the driver writes back-converts a hertz or two short of the channel it asked for.
 uint32_t tuned_khz(const models::Sx1262& chip) { return (chip.frequency_hz + 500) / 1000; }

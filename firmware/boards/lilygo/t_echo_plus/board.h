@@ -39,7 +39,7 @@ static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConver
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                       runtime::kServicePassCeilingMs <
-                  timing::dwell_of(timing::kSlot0WindowMs).start_ms,
+                  timing::dwell_of(timing::kWindowAMs).start_ms,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
 // The T-Echo Plus, assembled once. Platform is silicon or host. Swapping

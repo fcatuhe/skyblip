@@ -24,7 +24,7 @@ Transmitter transmitter_for(uint32_t serial) {
 
 SlotPlan slot_plan(int slot) {
     Scheduler scheduler;
-    return scheduler.plan(slot == 0 ? 500 : kSlot1WindowMs.start_ms, anchored());
+    return scheduler.plan(slot == 0 ? 500 : kWindowBMs.start_ms, anchored());
 }
 
 struct Burst {
@@ -122,7 +122,7 @@ TEST_CASE("transmit cycle: on the ground six bursts go at +0, +2, +4, +9, +11 an
             if (bursts[i].payload == Payload::Callsign) {
                 CHECK(bursts[i].at_ms >= adsl::kDirectEndMs);
                 CHECK(bursts[i].at_ms + static_cast<int>(Transmitter::kAirTimeMs) <=
-                      kSlot1WindowMs.end_ms);
+                      kWindowBMs.end_ms);
             } else {
                 CHECK(Scheduler::in_direct_slot(bursts[i].at_ms));
             }

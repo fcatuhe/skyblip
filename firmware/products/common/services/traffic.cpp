@@ -72,11 +72,11 @@ events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t n
                             state.traffic_now_s(now_ms));
 }
 
-// INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1WrapMs past the second its sender keyed in
+// INFO: fc 16sep26 §C.5: the B dwell reaches kWindowBSpillMs past the second its sender keyed in
 uint32_t TrafficService::keyed_utc_s(const events::Stamp& stamp, uint32_t now_s) {
     if (!stamp.phase_valid) return now_s;
-    const bool in_slot1_tail = stamp.into_ms < timing::kSlot1WrapMs;
-    return (in_slot1_tail && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
+    const bool in_spill = stamp.into_ms < timing::kWindowBSpillMs;
+    return (in_spill && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
 }
 
 void TrafficService::log(const events::RfEvent& event, const events::Stamp& stamp,

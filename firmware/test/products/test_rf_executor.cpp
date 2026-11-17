@@ -50,7 +50,7 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
     // The chip is holding a timer that expires well inside one dwell.
     const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx1262::kTimeoutStepNs / 1000000u;
     CHECK(timeout_ms > 0);
-    CHECK(timeout_ms < static_cast<uint32_t>(timing::dwell_of(timing::kSlot0WindowMs).width_ms()));
+    CHECK(timeout_ms < static_cast<uint32_t>(timing::dwell_of(timing::kWindowAMs).width_ms()));
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.

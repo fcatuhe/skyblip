@@ -73,10 +73,10 @@ The dwell map hears three windows in full. skyBlip reads ALP-TAS as sending its 
 | Window | Channel | Heard in full | In the code |
 |---|---|---|---|
 | uplink | O, 869.525 MHz | 210 to 440 ms | `kUplinkWindowMs` |
-| window 1 | A, 868.2 MHz | 450 to 820 ms | `kSlot0WindowMs` |
-| window 2 | B, 868.4 MHz | 830 to 1200 ms, and it carries the name from 1000 | `kSlot1WindowMs` |
+| window 1 | A, 868.2 MHz | 450 to 820 ms | `kWindowAMs` |
+| window 2 | B, 868.4 MHz | 830 to 1200 ms, and it carries the name from 1000 | `kWindowBMs` |
 
-The two M-band windows take one channel each, because §C.2.5 makes traffic alternate channels, so a receiver that never visits 868.4 MHz hears half of its neighbours. Window 2 runs 200 ms past the second it opened in. §C.5 sets the direct slot and not where a receiver splits it, so ADS-L does not move: our positions still go in 450 to 1000 ms.
+The two M-band windows take one channel each, because §C.2.5 makes traffic alternate channels, so a receiver that never visits 868.4 MHz hears half of its neighbours. Window 2 runs 200 ms past the second it opened in, and its dwell 202 ms (`kWindowBSpillMs`). §C.5 sets the direct slot and not where a receiver splits it, so ADS-L does not move: our positions still go in 450 to 1000 ms.
 
 Every switch between two windows is the same 10 ms, counted from T, the end of the window before it:
 

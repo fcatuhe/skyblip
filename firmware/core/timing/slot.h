@@ -21,8 +21,8 @@ struct Window {
 
 // INFO: fc 17nov26 each window is heard in full: the uplink on O, ALP-TAS's two frames on A and B
 constexpr Window kUplinkWindowMs = {210, 440};
-constexpr Window kSlot0WindowMs = {450, 820};
-constexpr Window kSlot1WindowMs = {830, 1200};
+constexpr Window kWindowAMs = {450, 820};
+constexpr Window kWindowBMs = {830, 1200};
 
 // INFO: fc 17nov26 every switch is a margin on the old channel, a retune, a lead on the new one
 constexpr int kSwitchMarginMs = 2;
@@ -45,15 +45,14 @@ constexpr int last_instant_ms(Window window, uint32_t air_us) {
 constexpr int kGroundEmitStartMs = kUplinkWindowMs.start_ms;
 // INFO: fc 05aug26 a completion deadline, not a start deadline
 constexpr int kGroundEmitEndMs = kUplinkWindowMs.end_ms - kCompletionAllowanceMs;
-constexpr int kSlot1WrapMs = dwell_of(kSlot1WindowMs).end_ms - 1000;
+constexpr int kWindowBSpillMs = dwell_of(kWindowBMs).end_ms - 1000;
 
 constexpr bool switched(Window before, Window after) {
     return (after.start_ms - before.end_ms + 1000) % 1000 ==
            kSwitchMarginMs + kSwitchRetuneMs + kSwitchLeadMs;
 }
-static_assert(switched(kUplinkWindowMs, kSlot0WindowMs) &&
-                  switched(kSlot0WindowMs, kSlot1WindowMs) &&
-                  switched(kSlot1WindowMs, kUplinkWindowMs),
+static_assert(switched(kUplinkWindowMs, kWindowAMs) && switched(kWindowAMs, kWindowBMs) &&
+                  switched(kWindowBMs, kUplinkWindowMs),
               "every switch between two windows is the same one");
 
 constexpr uint32_t kPpsHoldoverMs = 60000;
@@ -117,7 +116,7 @@ class Scheduler {
     // INFO: fc 17nov26 the M-band channel a phase plans, the retune into it included, else -1
     static int slot_of(int phase_ms);
     static uint32_t slot_frequency_hz(int slot) { return adsl::channel_hz(slot); }
-    static constexpr Window window(int slot) { return slot == 1 ? kSlot1WindowMs : kSlot0WindowMs; }
+    static constexpr Window window(int slot) { return slot == 1 ? kWindowBMs : kWindowAMs; }
     // INFO: fc 13nov26 G.2.2: the share of the direct slot heard, averaged over both channels
     static int direct_heard_permille();
 };

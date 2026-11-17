@@ -119,8 +119,8 @@ int64_t RadioService::second_origin_us() const {
 // a second that started before the clock did.
 int64_t RadioService::dwell_origin_us() const {
     const int64_t origin_us = second_origin_us();
-    const bool in_slot1_tail = phase_ms() < timing::kSlot1WrapMs;
-    return in_slot1_tail ? origin_us - static_cast<int64_t>(kSecondUs) : origin_us;
+    const bool in_spill = phase_ms() < timing::kWindowBSpillMs;
+    return in_spill ? origin_us - static_cast<int64_t>(kSecondUs) : origin_us;
 }
 
 uint64_t RadioService::at_us(int64_t origin_us, int phase_ms) {
@@ -131,12 +131,11 @@ RadioService::Upcoming RadioService::upcoming_after(const timing::SlotPlan& plan
                                                     int64_t origin_us) const {
     const timing::ClockState& clock = context_.state.clock;
     switch (timing::Scheduler::slot_of(plan.start_ms)) {
-        case 0: return {timing::Scheduler::plan(timing::kSlot1WindowMs.start_ms, clock), origin_us};
+        case 0: return {timing::Scheduler::plan(timing::kWindowBMs.start_ms, clock), origin_us};
         case 1:
             return {timing::Scheduler::plan(timing::kUplinkWindowMs.start_ms, clock),
                     origin_us + static_cast<int64_t>(kSecondUs)};
-        default:
-            return {timing::Scheduler::plan(timing::kSlot0WindowMs.start_ms, clock), origin_us};
+        default: return {timing::Scheduler::plan(timing::kWindowAMs.start_ms, clock), origin_us};
     }
 }
 
@@ -163,8 +162,8 @@ void RadioService::fly(const Armed& dwell) {
 
 uint32_t RadioService::slot_utc_s(uint32_t now_ms) const {
     const uint32_t utc_s = context_.state.traffic_now_s(now_ms);
-    const bool in_slot1_tail = phase_ms() < timing::kSlot1WrapMs;
-    return (in_slot1_tail && utc_s > 0) ? utc_s - 1 : utc_s;
+    const bool in_spill = phase_ms() < timing::kWindowBSpillMs;
+    return (in_spill && utc_s > 0) ? utc_s - 1 : utc_s;
 }
 
 ports::RfMode RadioService::mode_for(const timing::SlotPlan& plan) {

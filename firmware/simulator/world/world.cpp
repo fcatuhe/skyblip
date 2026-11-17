@@ -374,9 +374,9 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     if (slot < 0)
         slot = aircraft.phase_ms >= 0 ? (timing::Scheduler::slot_of(aircraft.phase_ms) == 1 ? 1 : 0)
                                       : static_cast<int>(aircraft.transmissions & 1u);
-    // A pinned phase inside slot 1's tail belongs to the slot that opened in the
+    // A pinned phase inside window B's spill belongs to the dwell that opened in the
     // previous second, so its burst is 830..1200 ms after that second, not this.
-    const bool tail = aircraft.phase_ms >= 0 && aircraft.phase_ms < timing::kSlot1WrapMs;
+    const bool tail = aircraft.phase_ms >= 0 && aircraft.phase_ms < timing::kWindowBSpillMs;
     int phase_ms = aircraft.phase_ms;
     if (phase_ms < 0) {
         const timing::Window window = timing::Scheduler::window(slot);

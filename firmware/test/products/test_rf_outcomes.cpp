@@ -51,7 +51,7 @@ struct Outcomes {
         for (uint32_t i = 0; i < armings.rf.handed; i++) {
             const ports::RfPlan& plan = armings.rf.plans[i];
             if (plan.tx != nullptr && plan.tx_at_us >= kSecondOneUs &&
-                plan.tx_at_us < kSecondOneUs + timing::kSlot1WrapMs * 1000)
+                plan.tx_at_us < kSecondOneUs + timing::kWindowBSpillMs * 1000)
                 return plan.tx_at_us;
         }
         return 0;
@@ -104,7 +104,7 @@ TEST_CASE("rf: a burst that never reports is counted missed once its report is o
     fly_name_second(armings, outcomes);
 
     const int overdue_ms =
-        timing::kSlot1WrapMs + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
+        timing::kWindowBSpillMs + static_cast<int>(go::RadioService::kTxOutcomeMaxAgeMs);
     for (int phase = 0; phase < overdue_ms; phase += 10) {
         armings.tick_in(1, phase);
         outcomes.report_flown();

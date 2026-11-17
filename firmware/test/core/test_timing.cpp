@@ -16,10 +16,10 @@ constexpr uint64_t kLastEdgeUs = 12'000'000;
 TEST_CASE("timing: the dwell map covers the uplink, ALP-TAS's first window and its second") {
     CHECK(kUplinkWindowMs.start_ms == 210);
     CHECK(kUplinkWindowMs.end_ms == 440);
-    CHECK(kSlot0WindowMs.start_ms == 450);
-    CHECK(kSlot0WindowMs.end_ms == 820);
-    CHECK(kSlot1WindowMs.start_ms == 830);
-    CHECK(kSlot1WindowMs.end_ms == 1200);
+    CHECK(kWindowAMs.start_ms == 450);
+    CHECK(kWindowAMs.end_ms == 820);
+    CHECK(kWindowBMs.start_ms == 830);
+    CHECK(kWindowBMs.end_ms == 1200);
 }
 
 TEST_CASE("timing: every switch is 2 ms on the old channel, a 5 ms retune, 3 ms on the new one") {
@@ -33,11 +33,11 @@ TEST_CASE("timing: every switch is 2 ms on the old channel, a 5 ms retune, 3 ms 
         SlotState after;
     };
     const Switch switches[] = {
-        {kSlot1WindowMs.end_ms - 1000, SlotState::Slot1, SlotState::SwitchMBandToOBand,
+        {kWindowBMs.end_ms - 1000, SlotState::Slot1, SlotState::SwitchMBandToOBand,
          SlotState::UplinkRxOBand},
         {kUplinkWindowMs.end_ms, SlotState::UplinkRxOBand, SlotState::SwitchOBandToMBand,
          SlotState::Slot0},
-        {kSlot0WindowMs.end_ms, SlotState::Slot0, SlotState::Hop, SlotState::Slot1},
+        {kWindowAMs.end_ms, SlotState::Slot0, SlotState::Hop, SlotState::Slot1},
     };
     for (const Switch& at : switches) {
         CAPTURE(at.from_ms);
@@ -63,7 +63,7 @@ TEST_CASE("timing: a dwell listens from its lead to its margin, and a retune pla
     // The tail is the same dwell as 900 ms.
     CHECK(Scheduler::plan(100, anchored()).start_ms == 827);
     CHECK(Scheduler::plan(201, anchored()).end_ms == 1202);
-    CHECK(kSlot1WrapMs == 202);
+    CHECK(kWindowBSpillMs == 202);
     CHECK(Scheduler::plan(204, anchored()).start_ms == 207);
     CHECK(Scheduler::plan(444, anchored()).start_ms == 447);
     CHECK(Scheduler::plan(824, anchored()).start_ms == 827);
@@ -98,7 +98,7 @@ TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
     CHECK(Scheduler::plan(824, anchored()).tx_allowed);
     // Slot 1's tail is the same dwell, and it carries the callsign burst.
     CHECK(Scheduler::plan(0, anchored()).tx_allowed);
-    CHECK(Scheduler::plan(kSlot1WrapMs - 1, anchored()).tx_allowed);
+    CHECK(Scheduler::plan(kWindowBSpillMs - 1, anchored()).tx_allowed);
     // The uplink dwell and the retune into it own no direct-slot time at all.
     CHECK_FALSE(Scheduler::plan(204, anchored()).tx_allowed);
     CHECK_FALSE(Scheduler::plan(300, anchored()).tx_allowed);

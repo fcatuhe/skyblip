@@ -21,12 +21,12 @@ struct Dwell {
 constexpr Dwell kDwells[] = {
     {SlotState::SwitchMBandToOBand, SlotState::UplinkRxOBand, Band::O, adsl::kOBandHz, -1,
      kUplinkWindowMs},
-    {SlotState::SwitchOBandToMBand, SlotState::Slot0, Band::M, adsl::kMBand0Hz, 0, kSlot0WindowMs},
-    {SlotState::Hop, SlotState::Slot1, Band::M, adsl::kMBand1Hz, 1, kSlot1WindowMs},
+    {SlotState::SwitchOBandToMBand, SlotState::Slot0, Band::M, adsl::kMBand0Hz, 0, kWindowAMs},
+    {SlotState::Hop, SlotState::Slot1, Band::M, adsl::kMBand1Hz, 1, kWindowBMs},
 };
 
-// INFO: fc 17nov26 a phase in slot 1's tail counts from the second its dwell opened in
-int unwrapped(int phase_ms) { return phase_ms < kSlot1WrapMs ? phase_ms + 1000 : phase_ms; }
+// INFO: fc 17nov26 a phase in window B's spill counts from the second its dwell opened in
+int unwrapped(int phase_ms) { return phase_ms < kWindowBSpillMs ? phase_ms + 1000 : phase_ms; }
 
 // INFO: fc 17nov26 a dwell owns the phase from the margin before it to the end of its own
 const Dwell& dwell_at(int phase_ms) {

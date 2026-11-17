@@ -62,8 +62,8 @@ TEST_CASE("transmit: a position on A goes out from 450 to 810 ms") {
     }
     CHECK(earliest == 450);
     CHECK(latest == 810);
-    CHECK(latest == kSlot0WindowMs.end_ms - static_cast<int>(Transmitter::kAirTimeMs) -
-                        kCompletionAllowanceMs);
+    CHECK(latest ==
+          kWindowAMs.end_ms - static_cast<int>(Transmitter::kAirTimeMs) - kCompletionAllowanceMs);
 }
 
 TEST_CASE("transmit: a position on B goes out from 830 to 990 ms, where the direct slot ends") {
@@ -141,7 +141,7 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
             transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(attempt.go);
         CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
-        CHECK(attempt.at_ms >= kSlot1WindowMs.start_ms);
+        CHECK(attempt.at_ms >= kWindowBMs.start_ms);
         CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) + kCompletionAllowanceMs <=
               adsl::kDirectEndMs);
     }

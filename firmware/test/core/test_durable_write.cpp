@@ -111,8 +111,8 @@ TEST_CASE("durable write: the free phase is the one the dwell map leaves") {
 // for free time: a write there delays the opening of the dwell that follows.
 TEST_CASE("durable write: the retune guards between dwells are not free time") {
     const Window uplink = dwell_of(kUplinkWindowMs);
-    for (int phase = kSlot1WrapMs; phase < uplink.start_ms; phase++) CHECK_FALSE(free_at(phase));
-    for (int phase = uplink.end_ms; phase < dwell_of(kSlot0WindowMs).start_ms; phase++)
+    for (int phase = kWindowBSpillMs; phase < uplink.start_ms; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = uplink.end_ms; phase < dwell_of(kWindowAMs).start_ms; phase++)
         CHECK_FALSE(free_at(phase));
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("durable write: the retune guards between dwells are not free time") {
 // would still be holding the core at 450, which is an instant core/timing's
 // Transmitter is allowed to have chosen to key the PA at.
 TEST_CASE("durable write: slot 0's head is refused because the direct slot follows it") {
-    for (int phase = dwell_of(kSlot0WindowMs).start_ms; phase < adsl::kDirectStartMs; phase++)
+    for (int phase = dwell_of(kWindowAMs).start_ms; phase < adsl::kDirectStartMs; phase++)
         CHECK_FALSE(free_at(phase));
     for (int phase = adsl::kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
 }
@@ -131,7 +131,7 @@ TEST_CASE("durable write: slot 0's head is refused because the direct slot follo
 // (hardware/platform/zephyr/pps.h), so a stall that spans it does not delay one
 // dwell: it moves the anchor under every dwell that follows.
 TEST_CASE("durable write: a write is never allowed to span the top of the second") {
-    CHECK(free_in_holdover_at(dwell_of(kSlot1WindowMs).start_ms));
+    CHECK(free_in_holdover_at(dwell_of(kWindowBMs).start_ms));
     // 904 is the last phase whose write still finishes a whole guard before the
     // edge: 904 + 91 = 995, and the guard runs to 1000 exactly.
     CHECK(free_in_holdover_at(904));
