@@ -100,6 +100,7 @@ void RecordStore::rebuild_index() {
             continue;
         const Tail tail = tail_of(last_sector, entry.session_id);
         entry.closed = tail.closed;
+        entry.first = first_kept(entry.session_id);
         entry.records = (entry.sectors - 1) * slots + tail.records;
 
         uint32_t first_sector = 0;
@@ -286,9 +287,10 @@ void RecordStore::answer_list(const comms::LogRequest& request) {
         return;
     }
     const SessionInfo& entry = index_[request.index];
-    reply(peer, comms::format_log_session(
-                    pool_.reply_buffer(), pool_.reply_capacity(), request.index, session_count_,
-                    entry.session_id, entry.records, entry.closed, entry.truncated, selector()));
+    reply(peer,
+          comms::format_log_session(pool_.reply_buffer(), pool_.reply_capacity(), request.index,
+                                    session_count_, entry.session_id, entry.first, entry.records,
+                                    entry.closed, entry.truncated, selector()));
 }
 
 void RecordStore::answer_read(const comms::LogRequest& request) {
@@ -313,21 +315,31 @@ void RecordStore::answer_read(const comms::LogRequest& request) {
         return;
     }
 
+    const uint32_t from = std::max(request.from, first_kept(request.session));
     const comms::LogWindow window =
-        comms::plan_log_window(request.from, request.count, per_chunk, entry->records);
+        comms::plan_log_window(from, request.count, per_chunk, entry->first + entry->records);
     if (window.chunks == 0) {
-        reply(peer,
-              comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_capacity(), request.session,
-                                      request.from, pool_.chunk_buffer(), 0, true, selector()));
+        answer_ended(peer, request.session, from);
         return;
     }
     reading_ = Reading{true, peer, request.session, window, 0};
     continue_read();
 }
 
+void RecordStore::answer_ended(const events::Peer& peer, uint32_t session_id, uint32_t from) {
+    reply(peer, comms::format_log_chunk(pool_.reply_buffer(), pool_.reply_capacity(), session_id,
+                                        from, pool_.chunk_buffer(), 0, true, selector()));
+}
+
 void RecordStore::continue_read() {
     while (reading_.active && !pool_.holding()) {
         const events::Peer peer = reading_.peer;
+        skip_recycled();
+        if (reading_.window.chunks == 0) {
+            reading_.active = false;
+            answer_ended(peer, reading_.session, first_kept(reading_.session));
+            return;
+        }
         const comms::LogChunkSpan span = reading_.window.at(reading_.next);
         if (!read_records(reading_.session, span.from, span.records)) {
             reading_.active = false;
@@ -345,13 +357,30 @@ void RecordStore::continue_read() {
     }
 }
 
+// INFO: fc 17nov26 a record keeps its index while the ring recycles the sectors before it
+uint32_t RecordStore::first_kept(uint32_t session_id) const {
+    return pool_.allocator().recycled_sectors(owner_, session_id) * ring_.slots_per_sector();
+}
+
+// INFO: fc 17nov26 a window takes several passes, and the ring may recycle its front between two
+void RecordStore::skip_recycled() {
+    const comms::LogWindow& window = reading_.window;
+    const uint32_t first = first_kept(reading_.session);
+    if (window.at(reading_.next).from >= first) return;
+    reading_.window =
+        comms::plan_log_window(first, static_cast<uint32_t>(window.chunks - reading_.next),
+                               window.records_per_chunk, window.session_end);
+    reading_.next = 0;
+}
+
 bool RecordStore::read_records(uint32_t session_id, uint32_t from, int count) {
     const uint32_t slots = ring_.slots_per_sector();
+    const uint32_t recycled = pool_.allocator().recycled_sectors(owner_, session_id);
     uint32_t sector = 0;
     for (int i = 0; i < count; i++) {
         const uint32_t index = from + static_cast<uint32_t>(i);
         if ((i == 0 || index % slots == 0) &&
-            !pool_.allocator().session_sector(owner_, session_id, index / slots, sector))
+            !pool_.allocator().session_sector(owner_, session_id, index / slots - recycled, sector))
             return false;
         if (!pool_.read_slot(sector, index % slots,
                              pool_.chunk_buffer() + static_cast<size_t>(i) * kStoreRecordBytes))

@@ -57,6 +57,7 @@ class SectorAllocator {
     uint32_t session_of(uint32_t sector) const;
     bool session_start(uint32_t sector) const;
     uint32_t lost_sectors(SectorOwner owner) const;
+    uint32_t recycled_sectors(SectorOwner owner, uint32_t session_id) const;
     bool frontier(SectorOwner owner, uint32_t& sector, uint32_t& sequence) const;
     bool oldest(SectorOwner owner, uint32_t& sector, uint32_t& sequence) const;
     bool session_run(SectorOwner owner, uint32_t above_sequence, SessionRun& run) const;
@@ -68,6 +69,11 @@ class SectorAllocator {
         uint32_t sector{0};
         bool reserved{false};
         bool erased{false};
+    };
+
+    struct Recycled {
+        uint32_t session_id{0};
+        uint32_t sectors{0};
     };
 
     struct Match {
@@ -83,6 +89,7 @@ class SectorAllocator {
     bool reserved(uint32_t sector) const;
     void take(uint32_t sector, SectorOwner owner, uint32_t session_id);
     void note_taken(uint32_t sector);
+    void note_recycled(SectorOwner owner, uint32_t session_id);
     bool owns_session(SectorOwner owner, uint32_t session_id) const;
     uint32_t matching_up_to(const Match& match, uint32_t sequence) const;
     bool lowest_above(const Match& match, uint32_t above, uint32_t& sector,
@@ -94,6 +101,7 @@ class SectorAllocator {
     uint8_t owner_of_[kMaxPoolSectors]{};
     bool session_start_[kMaxPoolSectors]{};
     uint32_t lost_sectors_[2]{};
+    Recycled recycled_[2]{};
     Spare spares_[2]{};
     uint32_t sector_count_{0};
     uint32_t floor_sectors_{0};

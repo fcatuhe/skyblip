@@ -8,6 +8,7 @@
 
 #include "core/comms/config.h"
 #include "core/comms/link_registry.h"
+#include "core/comms/log_link.h"
 #include "core/crypto/ed25519.h"
 #include "core/identity/messages.h"
 #include "core/util/cbor.h"
@@ -282,6 +283,13 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     config.set_radio_protocols(bravo::kRadioProtocols);
     for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
+    // The rig's capture never rotates, so the entry of a rotated session is formatted here.
+    uint8_t entry[comms::kLogReplyBytes];
+    const int bytes = comms::format_log_session(entry, sizeof(entry), 0, 1, 9000, 170, 340, false,
+                                                true, store::SectorOwner::Diagnostics);
+    REQUIRE(bytes > 0);
+    REQUIRE(
+        is_ok(link.send(events::Endpoint::Log, ConstByteSpan(entry, static_cast<size_t>(bytes)))));
 }
 
 }  // namespace

@@ -1793,6 +1793,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 7,
           "type": "boolean",
           "required": true
+        },
+        {
+          "name": "first",
+          "number": 8,
+          "type": "unsigned"
         }
       ]
     },
