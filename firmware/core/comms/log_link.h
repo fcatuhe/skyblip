@@ -44,7 +44,7 @@ struct LogChunkSpan {
 
 struct LogWindow {
     uint32_t from{0};
-    uint32_t session_records{0};
+    uint32_t session_end{0};
     int records_per_chunk{0};
     int chunks{0};
 
@@ -52,7 +52,7 @@ struct LogWindow {
 };
 
 LogWindow plan_log_window(uint32_t from, uint32_t count, int records_per_chunk,
-                          uint32_t session_records);
+                          uint32_t session_end);
 
 // INFO: fc 04aug26 The widest frame this dialect can be asked to build, which is
 // a buffer bound and not a promise: what actually goes out is cut to the payload
@@ -86,8 +86,8 @@ int format_log_acknowledgement(uint8_t* out, int capacity, bool accepted,
 int format_log_count(uint8_t* out, int capacity, uint32_t sessions, bool truncated,
                      LogStore store = LogStore::Flights);
 int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t count,
-                       uint32_t session_id, uint32_t records, bool closed, bool truncated,
-                       LogStore store = LogStore::Flights);
+                       uint32_t session_id, uint32_t first, uint32_t records, bool closed,
+                       bool truncated, LogStore store = LogStore::Flights);
 int format_log_chunk(uint8_t* out, int capacity, uint32_t session_id, uint32_t from,
                      const uint8_t* records, int record_count, bool ends_session,
                      LogStore store = LogStore::Flights);

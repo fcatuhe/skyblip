@@ -267,7 +267,7 @@
       "keys": [
         {"name": "log", "number": 1, "type": "enum", "enum": "log", "description": "Which store the command addresses: flights, or diagnostics. Absent is flights, and a code that is neither is refused unknown_log"},
         {"name": "session", "number": 2, "type": "unsigned", "required": true, "description": "The session to read, by its id as a session frame names it. A read without it is refused unknown_command"},
-        {"name": "from", "number": 3, "type": "unsigned", "description": "The record to start at, absent meaning 0"},
+        {"name": "from", "number": 3, "type": "unsigned", "description": "The record to start at, absent meaning 0. Below the first record the session still holds, the answer starts at that record, and its chunk says from where"},
         {"name": "count", "number": 4, "type": "unsigned", "description": "Chunks to send back to back, absent meaning 1, clamped to 1 to 8 (kMaxLogReadChunks)"}
       ]
     },
@@ -297,9 +297,10 @@
         {"name": "index", "number": 2, "type": "unsigned", "required": true, "description": "The entry this is, from 0"},
         {"name": "of", "number": 3, "type": "unsigned", "required": true, "description": "How many entries the index holds"},
         {"name": "session", "number": 4, "type": "unsigned", "required": true, "description": "The session's id, its opening UTC second: its name, and the base every one of its records is timed against"},
-        {"name": "records", "number": 5, "type": "unsigned", "required": true, "description": "Records the session holds"},
+        {"name": "records", "number": 5, "type": "unsigned", "required": true, "description": "Records the session holds, indexed from first"},
         {"name": "closed", "number": 6, "type": "boolean", "required": true, "description": "The session was closed. False means the log stops where the power did, and a reader says so rather than present a cut flight as whole"},
-        {"name": "truncated", "number": 7, "type": "boolean", "required": true, "description": "The session opened in a sector the ring recycled since, so what is left is a suffix renumbered from record 0, not the whole run"}
+        {"name": "truncated", "number": 7, "type": "boolean", "required": true, "description": "The session opened in a sector the ring recycled since, so what is left is a suffix, not the whole run"},
+        {"name": "first", "number": 8, "type": "unsigned", "description": "The index of the first record the session still holds. Absent means 0. A record keeps its index while the ring recycles the sectors before it, until the unit restarts: a restart numbers what is left from 0 (firmware/core/comms/README.md, The log dialect)"}
       ]
     },
     {

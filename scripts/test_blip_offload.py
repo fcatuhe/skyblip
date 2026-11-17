@@ -4,7 +4,7 @@
     python3 scripts/test_blip_offload.py
 
 Run by test_blip.py as well, which is the file CI invokes. No radio, no network,
-no sleeps: the endpoint below answers a read the way core/comms/log_link.cpp
+no sleeps: the endpoint below answers a list and a read the way core/comms/log_link.cpp
 does, and fails a host that asks for a frame it did not send or sends a command
 while a reply of the last one is still queued.
 """
@@ -25,6 +25,7 @@ import blip_frames as frames  # noqa: E402
 import blip_records as records  # noqa: E402
 
 RECORDS_PER_CHUNK = 19
+SLOTS_PER_SECTOR = 170
 DEVICE_CHUNKS_MAX = 8
 PPS_TYPE = 4
 INTERVAL_US_AT = records.PAYLOAD_OFFSET
@@ -77,10 +78,13 @@ class LogEndpoint:
     """A device that is only its log dialect: it plans a window, cuts chunks, marks the last one."""
 
     def __init__(self, count, log="diagnostics", closed=True, slot=slot_naming_its_index,
-                 per_chunk=RECORDS_PER_CHUNK, slots=None, **session_fields):
+                 per_chunk=RECORDS_PER_CHUNK, slots=None, first=0, **session_fields):
         self.log = log
+        if first:
+            session_fields["first"] = first
         self.session = session_reply(count, closed=closed, log=log, **session_fields)
-        self.slots = slots if slots is not None else [slot(index) for index in range(count)]
+        self.first = first
+        self.slots = slots if slots is not None else [slot(first + i) for i in range(count)]
         self.per_chunk = per_chunk
         self.pending = []
         self.counts_asked = []
@@ -90,28 +94,55 @@ class LogEndpoint:
             raise AssertionError("a read went out with %d replies of the last one unread"
                                  % len(self.pending))
         body = frames.decode_frame(frames.encode_frame(body))
+        if body["command"] == "list":
+            self.pending = [self.listing(body.get("index"))]
+            return
         self.counts_asked.append(body.get("count"))
         self.pending = self.window_from(body["from"], device_clamp(body.get("count")))
+
+    def listing(self, index):
+        if index is None:
+            return {"command": "log", "log": self.log, "acknowledge": True, "sessions": 1}
+        return self.session
 
     async def frame(self, timeout):
         if not self.pending:
             raise AssertionError("the host waited for a frame the device never sent")
         return frames.decode_frame(frames.encode_frame(self.pending.pop(0)))
 
+    def end(self):
+        return self.first + len(self.slots)
+
+    def recycle_one_sector(self):
+        self.slots = self.slots[SLOTS_PER_SECTOR:]
+        self.first += SLOTS_PER_SECTOR
+
     def window_from(self, start, chunks):
-        left = max(len(self.slots) - start, 0)
+        start = max(start, self.first)
+        left = max(self.end() - start, 0)
         to_the_end = (left + self.per_chunk - 1) // self.per_chunk
         planned = min(chunks, to_the_end)
         if planned == 0:
             return [self.chunk(start, 0)]
         return [self.chunk(start + index * self.per_chunk,
-                           min(self.per_chunk, len(self.slots) - start - index * self.per_chunk))
+                           min(self.per_chunk, self.end() - start - index * self.per_chunk))
                 for index in range(planned)]
 
     def chunk(self, start, count):
-        blob = b"".join(self.slots[start:start + count])
+        at = start - self.first
+        blob = b"".join(self.slots[at:at + count])
         return {"command": "chunk", "log": self.log, "session": self.session["session"],
-                "from": start, "ends_session": start + count >= len(self.slots), "records": blob}
+                "from": start, "ends_session": start + count >= self.end(), "records": blob}
+
+
+class RotatingEndpoint(LogEndpoint):
+    """The ring recycles the session's oldest sector once the first window has gone out."""
+
+    async def write(self, body):
+        if body["command"] == "read" and self.counts_asked:
+            if self.first == 0:
+                self.recycle_one_sector()
+        await super().write(body)
 
 
 class RefusingEndpoint(LogEndpoint):
@@ -242,16 +273,13 @@ class TornTail(unittest.TestCase):
         summary = records.summarise(fetched_lines(endpoint))
         self.assertTrue(any("5 records written, 2 dropped" in line for line in summary), summary)
 
-    def test_a_dropped_tail_does_not_send_the_next_fetch_back_for_it(self):
+    def test_a_dropped_tail_is_not_where_the_next_fetch_resumes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
             out = io.StringIO()
             fetch(LogEndpoint(5, closed=False), out)
             path.write_text(out.getvalue(), encoding="utf-8")
-            resume = records.resume_point(str(path))
-        session = session_reply(5, closed=False)
-        args = argparse.Namespace(session=None, all=True)
-        self.assertEqual(blip.sessions_to_fetch([session], args, resume), [])
+            self.assertEqual(records.last_kept(str(path))["index"], 3)
 
 
 LINK_TYPE = 12
@@ -262,6 +290,118 @@ def link_slot(connection):
     raw[0] = LINK_TYPE
     raw[records.PAYLOAD_OFFSET:records.PAYLOAD_OFFSET + 2] = connection.to_bytes(2, "little")
     return bytes(raw)
+
+
+def fetch_into(endpoint, path):
+    args = argparse.Namespace(log=endpoint.log, session=None, all=True, list=False, out=str(path),
+                              restart=False, window=DEVICE_CHUNKS_MAX, timeout=1.0)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        asyncio.run(blip.fetch_log(endpoint, args))
+    return printed.getvalue()
+
+
+def kept_indices(path):
+    return [line["index"] for line in records.read_ndjson(str(path)) if not records.is_note(line)]
+
+
+class ResumedFetch(unittest.TestCase):
+    # the resume started after the torn note, so every fetch of the trial in #366 lost the record it dropped
+    def test_two_fetches_of_an_open_session_keep_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            self.assertEqual(kept_indices(path), list(range(8)))
+
+    def test_the_summary_of_a_resumed_file_does_not_call_a_record_it_fetched_again_dropped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            summary = records.summarise(list(records.read_ndjson(str(path))))
+        self.assertFalse(any("index 4 dropped" in line for line in summary), summary)
+        self.assertTrue(any("index 8 dropped" in line for line in summary), summary)
+
+    def test_a_resume_once_the_session_closed_keeps_the_record_it_dropped_as_torn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(5), path)
+            self.assertEqual(kept_indices(path), list(range(5)))
+
+    # the ring wrapped between two fetches and the device numbered what was left from 0, so the resume of #367 skipped 359 s
+    def test_a_resume_into_a_session_renumbered_since_is_refused_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            renumbered = LogEndpoint(400, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 570)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("index 398", str(caught.exception))
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    # the second fetch of #367 found its resume point past the renumbered end and printed nothing to fetch
+    def test_a_resume_past_the_end_of_a_renumbered_session_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            renumbered = LogEndpoint(300, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 470)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("renumbered", str(caught.exception))
+
+    def test_a_resume_into_a_session_the_ring_rotated_since_keeps_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            fetch_into(LogEndpoint(430, closed=False, first=SLOTS_PER_SECTOR), path)
+            self.assertEqual(kept_indices(path), list(range(599)))
+
+    def test_a_resume_whose_last_record_the_ring_recycled_since_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(160, closed=False), path)
+            with self.assertRaises(SystemExit):
+                fetch_into(LogEndpoint(300, closed=False, first=SLOTS_PER_SECTOR), path)
+
+    def test_an_open_session_that_wrote_nothing_since_is_not_fetched_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            printed = fetch_into(LogEndpoint(5, closed=False), path)
+            self.assertIn("nothing to fetch", printed)
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+
+class RotatedSession(unittest.TestCase):
+    def test_a_truncated_session_is_fetched_from_the_first_record_it_holds(self):
+        endpoint = LogEndpoint(300, first=SLOTS_PER_SECTOR, truncated=True)
+        lines = of_type(fetched_lines(endpoint), "pps")
+        self.assertEqual([line["index"] for line in lines], list(range(170, 470)))
+        self.assertEqual([line["interval_us"] for line in lines], list(range(170, 470)))
+
+    def test_a_full_fetch_starts_a_truncated_session_at_its_first_record(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(300, first=SLOTS_PER_SECTOR, truncated=True), path)
+            self.assertEqual(kept_indices(path), list(range(170, 470)))
+
+    # the ring can recycle the oldest records between two reads of one fetch, and they are gone
+    def test_records_the_ring_recycled_before_they_were_read_are_skipped_and_named(self):
+        out = io.StringIO()
+        printed = fetch(RotatingEndpoint(400), out)
+        indices = [json.loads(line)["index"] for line in out.getvalue().splitlines()
+                   if json.loads(line)["type"] == "pps"]
+        self.assertEqual(indices, list(range(152)) + list(range(170, 400)))
+        self.assertIn("indices 152..169 recycled before they were read", printed)
+
+    def test_the_listing_says_where_a_truncated_session_starts(self):
+        text = records.session_text(session_reply(300, truncated=True, first=SLOTS_PER_SECTOR))
+        self.assertEqual(text, "session 1700000000  300 records from index 170  closed, truncated")
 
 
 class LinkRecord(unittest.TestCase):

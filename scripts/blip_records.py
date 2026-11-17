@@ -420,8 +420,9 @@ def session_text(session):
     marks = ["closed" if session.get("closed") else "power cut"]
     if session.get("truncated"):
         marks.append("truncated")
-    return "session %d  %d records  %s" % (session["session"], session["records"],
-                                           ", ".join(marks))
+    start = " from index %d" % session["first"] if session.get("first") else ""
+    return "session %d  %d records%s  %s" % (session["session"], session["records"], start,
+                                             ", ".join(marks))
 
 
 def session_note(log, session):
@@ -479,13 +480,13 @@ def read_ndjson(path):
                 yield json.loads(line)
 
 
-def resume_point(path):
-    """The last record a previous fetch kept, as (session, index), or None."""
+def last_kept(path):
+    """The line of the last record a previous fetch kept, passing over the notes, or None."""
     last = None
     try:
-        for record in read_ndjson(path):
-            if "session" in record and "index" in record:
-                last = (record["session"], record["index"])
+        for line in read_ndjson(path):
+            if not is_note(line) and "session" in line and "index" in line:
+                last = line
     except (OSError, json.JSONDecodeError):
         return last
     return last
@@ -535,7 +536,7 @@ def summarise(lines_in):
         if record.get("error"):
             unreadable.append(record)
 
-    lines = caveat_lines([line for line in lines_in if is_note(line)])
+    lines = caveat_lines([line for line in lines_in if is_note(line)], records)
     lines.append("%d records" % sum(counts.values()))
     if stamped:
         first = min(stamped, key=lambda pair: pair[0])
@@ -559,10 +560,13 @@ def summarise(lines_in):
     return lines
 
 
-def caveat_lines(notes):
+def caveat_lines(notes, records):
     """What an analysis must not assume about these records, before it is handed any count."""
+    kept = {(record.get("session"), record.get("index")) for record in records}
     out = []
     for note in notes:
+        if note["type"] == "torn" and (note["session"], note.get("index")) in kept:
+            continue
         for line in caveats_of(note):
             if line not in out:
                 out.append(line)

@@ -22,6 +22,7 @@ class RecordStore {
     struct SessionInfo {
         uint32_t session_id{0};
         uint32_t sectors{0};
+        uint32_t first{0};
         uint32_t records{0};
         bool closed{false};
         bool truncated{false};
@@ -94,6 +95,9 @@ class RecordStore {
     uint32_t append_cost_ms(bool claim_wanted, uint32_t count) const;
     void answer_list(const comms::LogRequest& request);
     void answer_read(const comms::LogRequest& request);
+    uint32_t first_kept(uint32_t session_id) const;
+    void skip_recycled();
+    void answer_ended(const events::Peer& peer, uint32_t session_id, uint32_t from);
     bool read_records(uint32_t session_id, uint32_t from, int count);
     void reply(const events::Peer& peer, int bytes);
     comms::LogStore selector() const { return owner_; }

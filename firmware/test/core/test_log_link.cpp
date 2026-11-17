@@ -126,7 +126,7 @@ TEST_CASE("log link: a reply that will not fit the frame is refused, never short
     uint8_t buffer[comms::kLogReplyBytes];
     const int tiny = ports::kMinimumLinkPayloadBytes;
     CHECK(comms::format_log_chunk(buffer, tiny, 1785628800u, 0, raw, 1, false) == 0);
-    CHECK(comms::format_log_session(buffer, 12, 0, 3, 1785628800u, 1700, false, false) == 0);
+    CHECK(comms::format_log_session(buffer, 12, 0, 3, 1785628800u, 0, 1700, false, false) == 0);
     CHECK(comms::format_log_count(buffer, 6, 3, false) == 0);
 }
 
@@ -140,11 +140,21 @@ TEST_CASE("log link: the count comes first and says whether it is the whole trut
 TEST_CASE("log link: a session line says how many records and whether the flight ended") {
     uint8_t buffer[comms::kLogReplyBytes];
     const int written =
-        comms::format_log_session(buffer, sizeof(buffer), 0, 3, 1785628800u, 1700, false, false);
+        comms::format_log_session(buffer, sizeof(buffer), 0, 3, 1785628800u, 0, 1700, false, false);
     const std::string session = text(buffer, written);
     CHECK(session.find("\"records\":1700") != std::string::npos);
     // The one thing a tablet must not hide: this flight stops where the power did.
     CHECK(session.find("\"closed\":false") != std::string::npos);
+    CHECK(session.find("\"first\"") == std::string::npos);
+}
+
+TEST_CASE("log link: a session the ring recycled under names the index its records start at") {
+    uint8_t buffer[comms::kLogReplyBytes];
+    const int written = comms::format_log_session(buffer, sizeof(buffer), 0, 1, 1785628800u, 340,
+                                                  1360, false, true);
+    const std::string session = text(buffer, written);
+    CHECK(session.find("\"records\":1360,") != std::string::npos);
+    CHECK(session.find("\"first\":340") != std::string::npos);
 }
 
 TEST_CASE("log link: a flight opened after January 2038 is read and named by its own second") {
@@ -156,7 +166,7 @@ TEST_CASE("log link: a flight opened after January 2038 is read and named by its
 
     uint8_t buffer[comms::kLogReplyBytes];
     int written =
-        comms::format_log_session(buffer, sizeof(buffer), 0, 1, kNewYear2040, 10, true, false);
+        comms::format_log_session(buffer, sizeof(buffer), 0, 1, kNewYear2040, 0, 10, true, false);
     CHECK(text(buffer, written).find("\"session\":2208988800,") != std::string::npos);
     const uint8_t raw[flight::kLogRecordBytes] = {0};
     written = comms::format_log_chunk(buffer, sizeof(buffer), kNewYear2040, 0, raw, 1, true);
@@ -267,8 +277,8 @@ TEST_CASE("log link: every reply names the store it answers for") {
         "{\"command\":\"log\",\"log\":\"diagnostics\",\"acknowledge\":false,\"reason\":\"busy\"}");
     written = comms::format_log_count(buffer, sizeof(buffer), 2, false, diagnostics);
     CHECK(text(buffer, written).find("\"log\":\"diagnostics\"") != std::string::npos);
-    written =
-        comms::format_log_session(buffer, sizeof(buffer), 0, 2, 7, 900, true, false, diagnostics);
+    written = comms::format_log_session(buffer, sizeof(buffer), 0, 2, 7, 0, 900, true, false,
+                                        diagnostics);
     CHECK(text(buffer, written).find("\"log\":\"diagnostics\"") != std::string::npos);
 
     // Absent is flights on the reply as in the request.

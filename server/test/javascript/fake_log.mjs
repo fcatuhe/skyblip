@@ -16,22 +16,30 @@ export function recordsPerChunk(payloadBytes) {
 }
 
 export class FakeLogStore {
-  constructor({ sessions = [], refuse = null, silent = false, stray = null } = {}) {
+  constructor({ sessions = [], refuse = null, silent = false, stray = null, recycleAfterFirstRead = 0 } = {}) {
     this.sessions = sessions;
     this.refuse = refuse;
     this.silent = silent;
     this.stray = stray;
+    this.recycleAfterFirstRead = recycleAfterFirstRead;
     this.reads = [];
   }
 
   answer(request, payloadBytes) {
     if (this.silent) return [];
+    if (request.command === 'read' && this.reads.length === 1 && this.recycleAfterFirstRead) this.recycle(request.session);
     const replies = this.reply(request, payloadBytes);
-    if (this.stray && request.command === 'read') {
+    if (this.stray && request.command === 'list') {
       replies.unshift(this.stray);
       this.stray = null;
     }
     return replies;
+  }
+
+  recycle(id) {
+    const entry = this.sessions.find(each => each.session === id);
+    entry.records = entry.records.slice(this.recycleAfterFirstRead * RECORD_BYTES);
+    entry.first = (entry.first ?? 0) + this.recycleAfterFirstRead;
   }
 
   reply({ command, log = 'flights', index, session, from = 0, count = 1 }, payloadBytes) {
@@ -48,23 +56,25 @@ export class FakeLogStore {
     return this.window(log, entry, from, Math.min(Math.max(count, 1), MAX_READ_CHUNKS), perChunk);
   }
 
-  window(log, { session, records }, from, count, perChunk) {
-    const total = records.length / RECORD_BYTES;
+  window(log, { session, records, first = 0 }, asked, count, perChunk) {
+    const total = first + records.length / RECORD_BYTES;
+    const from = Math.max(asked, first);
     if (from >= total) return [{ command: 'chunk', log: this.named(log), session, from, ends_session: true, records: new Uint8Array(0) }];
     const chunks = [];
     for (let at = from; at < total && chunks.length < count; at += perChunk) {
       const end = Math.min(at + perChunk, total);
       chunks.push({
         command: 'chunk', log: this.named(log), session, from: at, ends_session: end >= total,
-        records: records.slice(at * RECORD_BYTES, end * RECORD_BYTES),
+        records: records.slice((at - first) * RECORD_BYTES, (end - first) * RECORD_BYTES),
       });
     }
     return chunks;
   }
 
   entry(log, held, index) {
-    const { session, records, closed = true, truncated = false } = held[index];
-    return { command: 'session', log: this.named(log), index, of: held.length, session, records: records.length / RECORD_BYTES, closed, truncated };
+    const { session, records, first = 0, closed = true, truncated = false } = held[index];
+    const entry = { command: 'session', log: this.named(log), index, of: held.length, session, records: records.length / RECORD_BYTES, closed, truncated };
+    return first > 0 ? { ...entry, first } : entry;
   }
 
   refusal(log, reason) {

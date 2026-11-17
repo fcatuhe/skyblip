@@ -538,6 +538,7 @@ inline constexpr Key kSessionKeys[] = {
     {"records", 5, Type::Unsigned, nullptr, 0, true},
     {"closed", 6, Type::Boolean, nullptr, 0, true},
     {"truncated", 7, Type::Boolean, nullptr, 0, true},
+    {"first", 8, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kChunkKeys[] = {
@@ -731,7 +732,7 @@ inline constexpr Frame kFrames[] = {
     {"read", 19, events::Endpoint::Log, Sender::Host, kReadKeys, 5},
     {"erase", 20, events::Endpoint::Log, Sender::Host, kEraseKeys, 2},
     {"log", 21, events::Endpoint::Log, Sender::Unit, kLogKeys, 6},
-    {"session", 22, events::Endpoint::Log, Sender::Unit, kSessionKeys, 8},
+    {"session", 22, events::Endpoint::Log, Sender::Unit, kSessionKeys, 9},
     {"chunk", 23, events::Endpoint::Log, Sender::Unit, kChunkKeys, 6},
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
