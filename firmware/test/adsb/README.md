@@ -21,7 +21,7 @@ That is 282 clauses. Bravo answers to equipage class A0, the class whose 100 tra
 | `protocols/adsb/test/conformance/test_formats.cpp` | component | 2.2.3.2 to 2.2.3.2.5: the frame, positions and identification |
 | `protocols/adsb/test/conformance/test_velocity.cpp` | component | 2.2.3.2.6: the four velocity subtypes, subfield by subfield |
 | `protocols/adsb/test/conformance/test_status.cpp` | component | 2.2.3.2.7: the status and event messages |
-| `protocols/adsb/test/conformance/test_reception.cpp` | component | 2.2.4.3.4.5, 2.2.4.3.4.7.3, 2.2.4.4, 2.2.4.5, 2.2.6 and 2.2.7: what is accepted, repaired and handed on |
+| `protocols/adsb/test/conformance/test_reception.cpp` | component | 2.2.4.3.4.5, 2.2.4.3.4.7.3, 2.2.4.4, 2.2.4.5, 2.2.6 and 2.2.7: what is accepted, refused and handed on |
 | `protocols/adsb/test/conformance/test_reports.cpp` | component | 2.2.8 and 2.2.9: the reports, read as the `Track` the assembly hands out |
 | `protocols/adsb/test/conformance/test_assembly.cpp` | component | 2.2.10: report assembly |
 | `protocols/adsb/test/conformance/test_cpr.cpp` | component | A.1.7: compact position reporting |
@@ -46,7 +46,7 @@ The suite found these. Each is a skipped case.
 - **Messages not decoded.** TYPE 28, the emergency/priority status, the Mode A code and the TCAS RA. TYPE 29, the target state and status.
 - **DF18.** The LR2021 driver hands up only frames whose first four bits are `1000`, DF16 and DF17, and the decoder reads those four bits as `1000`. So Bravo drops every DF18 and hears no TIS-B and no ADS-R.
 - **The radio.** The LR2021's OOK threshold is fixed at -110 dBm, so there is no DMTL (2.2.4.3.3, 2.2.4.3.4.1 to 2.2.4.3.4.3). The part decides each bit from its chip pair and reports no pulse edges (2.2.4.3.4.7.1).
-- **The decoder.** A frame whose parity holds is accepted however many doubtful bits run in a row, where 2.2.4.3.4.7.3 refuses more than seven. The one-doubtful-bit repair was never compared with DO-185B Appendix A §A.3, which 2.2.4.5 names for class A0. On Bravo the LR2021 hands up no doubtful bit, so the decoder repairs nothing there (`hardware/parts/lr2021/README.md`).
+- **Error correction.** Bravo's LR2021 decides every bit itself and hands up no doubtful bit (`hardware/parts/lr2021/README.md`), so the decoder corrects nothing and refuses every frame whose parity fails. It cannot refuse a run of more than seven doubtful bits (2.2.4.3.4.7.3), and it applies none of DO-185B Appendix A §A.3's correction, which 2.2.4.5 names for class A0.
 - **Movement codes 2 to 8.** `kMovementBands` reads them in 0.125 kt steps from 0.125 kt, after Doc 9871 as `protocols/adsb/README.md` cites it. Table 2-18 puts code 2 under 0.125 kt and codes 3 to 8 in steps of 0.2700833 km/h above it. The two differ by less than 0.13 kt.
 - **Reports.** Nothing is estimated (2.2.8.1.4.1, 2.2.8.1.17, 2.2.8.1.18). A T 1 position keeps the instant it was received, not its 0.2 s UTC epoch. The call sign stays on the `Message` and is not carried by the `Track`. A surface message with a valid movement and no valid heading reports no ground speed.
 - **Track lifetimes.** The traffic table on Bravo and the Go forgets a target after 6 s airborne, whatever DO-260B's 25 ±5 s (2.2.10.4.1.3) says. On the ground it forgets it after 60 s, where 2.2.10.4.2.3 keeps the track 200 ±5 s. Both figures are 6 missed reports, for every source, in `core/traffic/lease.h`. The owner chose on 17 November 2026 to keep them for now. `adsb::Assembly` still keeps a position 120 s, after 2.2.10.3.1 f, but only for its own pairing.

@@ -1,4 +1,4 @@
-// DO-260B 2.2.4 to 2.2.7, the decoding half: which frames are accepted, repaired and handed on.
+// DO-260B 2.2.4 to 2.2.7, the decoding half: which frames are accepted, refused and handed on.
 #include <cstdint>
 #include <initializer_list>
 
@@ -69,7 +69,7 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.3: each bit is the comparison of its two chips, 1
     CHECK(receive_chips(chips, message) == Status::Crc);
 }
 
-// TODO: fc 17nov26 doubtful pairs serve the repair only, until the decoder refuses a run of them
+// TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
 TEST_CASE("DO-260B 2.2.4.3.4.7.3: a frame with more than seven doubtful bits in a row is refused" *
           doctest::skip()) {
     uint8_t chips[kChipBytes];
@@ -77,7 +77,9 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.3: a frame with more than seven doubtful bits in 
     for (uint8_t bit = 40; bit < 48; bit++) make_doubtful(chips, bit);
     Message message;
     CHECK(receive_chips(chips, message) != Status::Ok);
-    FAIL("not implemented: a frame whose parity holds is accepted whatever its doubtful run");
+    FAIL(
+        "not implemented: Bravo's LR2021 hands up no doubtful bit, so the decoder counts no run of "
+        "them");
 }
 
 // INFO: fc 17nov26 2.2.4.4.2 binds these to classes A1S to A3, and Bravo answers to A0
@@ -97,28 +99,18 @@ TEST_CASE("DO-260B 2.2.4.4.2: enhanced reception improves preamble, bit and erro
     FAIL("optional: the enhanced techniques bind classes A1S to A3, and Bravo's 100 tracks are A0");
 }
 
-TEST_CASE("DO-260B 2.2.4.4.3: errors are corrected only where the chips doubt the bit") {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
-    flip_bit(chips, 60);
-    make_doubtful(chips, 60);
-    Message message;
-    CHECK(receive_chips(chips, message) == Status::Ok);
-    CHECK(message.address == standard::kAddress);
+// INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
+TEST_CASE("DO-260B 2.2.4.4.3: errors are corrected by the enhanced techniques" * doctest::skip()) {
+    FAIL("optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0");
 }
 
-TEST_CASE("DO-260B 2.2.4.4.3.1: correction is conservative, one doubtful bit and never two") {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
-    flip_bit(chips, 60);
-    make_doubtful(chips, 60);
-    flip_bit(chips, 70);
-    make_doubtful(chips, 70);
-    Message message;
-    CHECK(receive_chips(chips, message) == Status::Crc);
+// INFO: fc 17nov26 2.2.4.5 c binds the enhanced error correction to classes A1S to A3
+TEST_CASE("DO-260B 2.2.4.4.3.1: correction is conservative and brute force, as Appendix I says" *
+          doctest::skip()) {
+    FAIL("optional: enhanced error correction binds classes A1S to A3, and Bravo answers to A0");
 }
 
-TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a bit the chips did not doubt") {
+TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a wrong bit, which is refused") {
     uint8_t chips[kChipBytes];
     sealed_chips(position(), chips);
     flip_bit(chips, 60);
@@ -139,10 +131,12 @@ TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is re
     }
 }
 
-// TODO: fc 17nov26 the A0 correction is unchecked, until DO-185B Appendix A is in hand
+// TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
 TEST_CASE("DO-260B 2.2.4.5: a class A0 receiver corrects errors as DO-185B Appendix A A.3 does" *
           doctest::skip()) {
-    FAIL("not implemented: the repair of one doubtful bit was not compared with DO-185B A.3");
+    FAIL(
+        "not implemented: Bravo's LR2021 hands up no doubtful bit, so a frame that fails is "
+        "refused");
 }
 
 TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded or refused") {
