@@ -68,8 +68,8 @@ test('every record type decodes to the NDJSON blip.py writes for it', () => {
     }
   }
   records.push(new Uint8Array(24).fill(0xff));
-  for (const closed of [false, true]) {
-    const session = { session: BASE_UTC_S, records: records.length, closed, truncated: !closed };
+  for (const [closed, recording] of [[false, false], [true, false], [false, true]]) {
+    const session = { session: BASE_UTC_S, records: records.length, closed, truncated: !closed, ...(recording && { recording }) };
     assert.equal(ndjson(sessionLines(session, decodeChunk(join(records), 0))), blipWrites(session, records));
   }
 });
@@ -95,6 +95,14 @@ test('a closed session keeps its last record, and an unclosed one drops it with 
   const cut = sessionLines({ session: 7, records: 2, closed: false }, records);
   assert.deepEqual(cut.map(line => line.type), ['session', 'adsb', 'torn']);
   assert.equal(cut[2].index, 1);
+});
+
+// A capture still recording read as a power cut in the trial of #293, and lost its last record as torn.
+test('a session the unit is still recording keeps its last record and says so', () => {
+  const records = decodeChunk(join([record(21, 0, [1, 0, 0]), record(21, 0, [2, 0, 0])]), 0);
+  const lines = sessionLines({ session: 7, records: 2, closed: false, recording: true }, records);
+  assert.deepEqual(lines.map(line => line.type), ['session', 'adsb', 'adsb']);
+  assert.equal(lines[0].recording, true);
 });
 
 test('each aircraft is one row, with its latest record and how many it wrote', () => {

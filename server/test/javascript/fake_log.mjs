@@ -72,9 +72,9 @@ export class FakeLogStore {
   }
 
   entry(log, held, index) {
-    const { session, records, first = 0, closed = true, truncated = false } = held[index];
+    const { session, records, first = 0, closed = true, truncated = false, recording = false } = held[index];
     const entry = { command: 'session', log: this.named(log), index, of: held.length, session, records: records.length / RECORD_BYTES, closed, truncated };
-    return first > 0 ? { ...entry, first } : entry;
+    return { ...entry, ...(first > 0 && { first }), ...(recording && { recording }) };
   }
 
   refusal(log, reason) {
