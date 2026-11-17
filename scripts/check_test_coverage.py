@@ -27,10 +27,10 @@ REQUIRED_MODULES = [
     "simulator",
 ]
 
-TEST_DIRS = ("test", "test/adsl", "test/core", "test/ui", "test/products", "test/products/pages",
+TEST_DIRS = ("test", "test/adsl", "test/adsb", "test/core", "test/ui", "test/products", "test/products/pages",
              "test/products/skyblip_bravo", "test/hardware", "test/boards",
              "protocols/common/test", "protocols/adsl/test", "protocols/adsl/test/conformance",
-             "protocols/adsb/test", "protocols/alptas/test")
+             "protocols/adsb/test", "protocols/adsb/test/conformance", "protocols/alptas/test")
 
 PART_TEST_DIR = "test/hardware"
 

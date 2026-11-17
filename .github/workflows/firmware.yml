@@ -113,6 +113,11 @@ jobs:
         run: python3 scripts/check_en300220_clauses.py
       - name: the EN 300 220 clause check refuses a case off the list
         run: python3 scripts/test_check_en300220_clauses.py
+      # RTCA's draft cannot be committed either, so the ADS-B suite is held to its committed clause list.
+      - name: every listed DO-260B clause has a case
+        run: python3 scripts/check_do260b_clauses.py
+      - name: the DO-260B clause check refuses a case off the list
+        run: python3 scripts/test_check_do260b_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
@@ -169,6 +174,9 @@ jobs:
       # The ETSI standards are fetched, not committed, so the fetcher's refusals are held offline.
       - name: the fetcher of the ETSI standards
         run: python3 scripts/test_fetch_etsi.py
+      # The DO-260B draft is fetched, not committed, so its fetcher is held offline too.
+      - name: the fetcher of the DO-260B draft
+        run: python3 scripts/test_fetch_rtca.py
       # docs/BEHAVIOR.md is generated from the test names: a rename that does not
       # land with the doc leaves the repo claiming behavior the suite dropped.
       - name: behavior index matches the suite

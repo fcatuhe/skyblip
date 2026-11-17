@@ -1,3 +1,6 @@
 # ETSI notice forbids redistribution: fetch with scripts/fetch_etsi.py
 etsi_*.pdf
 etsi_*.md
+# RTCA's copyright forbids redistribution: fetch with scripts/fetch_rtca.py
+rtca_*.pdf
+rtca_*.txt

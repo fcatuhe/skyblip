@@ -14,8 +14,9 @@ a typo, and a clause with no case is a hole in the reading.
 
 A skipped case fails with a message that opens on its kind: "not implemented:" for
 a clause the firmware should meet and does not, "prose:" for a clause with nothing
-to execute, "paperwork:" for a manufacturer's duty, and "optional:" for a clause the
-specification lets a device leave out. A skip of no kind is refused.
+to execute, "paperwork:" for a manufacturer's duty, "optional:" for a clause the
+specification lets a device leave out, and "unmeasured:" for a figure the radio has to meet
+that no bench has measured yet. A skip of no kind is refused.
 """
 import os
 import re
@@ -35,7 +36,7 @@ NAMED = re.compile(r'TEST_CASE\(\s*\n?\s*"([^"]*)')
 
 APPENDIX = "ADS-L.4.SRD860.APPENDIX"
 
-KINDS = ("not implemented", "prose", "paperwork", "optional")
+KINDS = ("not implemented", "prose", "paperwork", "optional", "unmeasured")
 SKIPPED = re.compile(r"doctest::skip\(\)\)\s*\{(.*?)\n\}", re.S)
 FAILED = re.compile(r'FAIL\(\s*((?:"[^"]*"\s*)+)\)', re.S)
 
