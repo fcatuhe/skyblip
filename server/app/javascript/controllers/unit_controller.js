@@ -364,7 +364,9 @@ export default class extends Controller {
   #heard(heard, edited) {
     const view = heard && "aircraft_address" in edited ? heardView(this.settingsTarget, heard, edited) : null
     this.heardTarget.hidden = !view
-    if (!view) return
+    const drawn = JSON.stringify(view)
+    if (!view || drawn === this.drawnHeard) return
+    this.drawnHeard = drawn
     this.heardTextTarget.textContent = view.text
     this.heardChangesTarget.hidden = this.heardUseTarget.hidden = view.rows.length === 0
     this.heardRowsTarget.replaceChildren(...view.rows.map(heardRow))
