@@ -250,7 +250,7 @@ TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go,
 
     paired.simulator.world().tap_pad();
     paired.run_until(12000);
-    CHECK(paired.reads("A 300003", go::kNearbyScale));
+    CHECK(paired.reads("L 300003", go::kNearbyScale));
     CHECK_FALSE(paired.reads("B 300003", go::kNearbyScale));
 }
 

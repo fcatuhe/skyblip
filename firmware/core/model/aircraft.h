@@ -24,7 +24,7 @@ constexpr const char* source_word(Source source) {
 
 constexpr char source_letter(Source source) {
     switch (source) {
-        case Source::AdslDirect: return 'A';
+        case Source::AdslDirect: return 'L';
         case Source::AdslUplink: return 'U';
         case Source::Alptas: return 'F';
         case Source::Own: return 'O';
