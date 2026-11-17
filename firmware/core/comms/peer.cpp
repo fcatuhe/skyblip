@@ -198,6 +198,27 @@ Status read_claim_pressure_and_icao(const cbor::Reader& reader, PeerClaim& claim
     return claim.aircraft_address > settings::kAddressMask ? Status::OutOfRange : Status::Ok;
 }
 
+bool read_level(const cbor::Reader& reader, uint32_t key, traffic::Level& out) {
+    const Result<uint32_t> level = reader.read_unsigned(key);
+    if (!level.ok() || level.value() > traffic::to_number(traffic::Level::Advisory)) return false;
+    out = static_cast<traffic::Level>(level.value());
+    return true;
+}
+
+// INFO: fc 17nov26 the alarm and the call are required, so a Go speaking version 1 is refused whole
+Status read_claim_alarm(const cbor::Reader& reader, PeerClaim& claim) {
+    const Result<uint32_t> alarm = reader.read_unsigned(link::peer_claim_key::kAlarm);
+    const Result<uint32_t> announcement = reader.read_unsigned(link::peer_claim_key::kAnnouncement);
+    if (!alarm.ok() || !announcement.ok() ||
+        !read_level(reader, link::peer_claim_key::kAnnouncing, claim.call.announcing) ||
+        !read_level(reader, link::peer_claim_key::kUndismissed, claim.call.undismissed))
+        return Status::Invalid;
+    if (alarm.value() > kAlarmCodeCeiling) return Status::OutOfRange;
+    claim.alarm = static_cast<uint8_t>(alarm.value());
+    claim.call.announcement = announcement.value();
+    return Status::Ok;
+}
+
 // INFO: fc 13nov26 a callsign or a category with no address is half a field, refused whole
 bool read_own_transponder(const cbor::Reader& reader, PeerHealth& health) {
     OwnTransponderHeard heard{};
@@ -264,8 +285,11 @@ int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
     }
     if (claim.aircraft_address != 0)
         writer.add_unsigned(link::peer_claim_key::kAircraftAddress, claim.aircraft_address);
-    writer.add_boolean(link::peer_claim_key::kAlarmRequested, claim.alarm_requested);
     writer.add_boolean(link::peer_claim_key::kPaired, claim.paired);
+    writer.add_unsigned(link::peer_claim_key::kAlarm, claim.alarm);
+    writer.add_code(link::peer_claim_key::kAnnouncing, claim.call.announcing);
+    writer.add_unsigned(link::peer_claim_key::kAnnouncement, claim.call.announcement);
+    writer.add_code(link::peer_claim_key::kUndismissed, claim.call.undismissed);
     return writer.finish();
 }
 
@@ -276,14 +300,13 @@ Result<PeerClaim> read_peer_claim(ConstByteSpan frame) {
     if (!code.ok() || code.value() != static_cast<uint32_t>(link::Command::PeerClaim))
         return Status::Invalid;
     const Result<uint32_t> epoch = reader.read_unsigned(link::peer_claim_key::kBootEpoch);
-    const Result<bool> requested = reader.read_boolean(link::peer_claim_key::kAlarmRequested);
     const Result<bool> paired = reader.read_boolean(link::peer_claim_key::kPaired);
-    if (!epoch.ok() || !requested.ok() || !paired.ok()) return Status::Invalid;
+    if (!epoch.ok() || !paired.ok()) return Status::Invalid;
     PeerClaim claim{};
     claim.boot_epoch = epoch.value();
-    claim.alarm_requested = requested.value();
     claim.paired = paired.value();
-    Status status = read_claim_instant(reader, claim);
+    Status status = read_claim_alarm(reader, claim);
+    if (status == Status::Ok) status = read_claim_instant(reader, claim);
     if (status == Status::Ok) status = read_claim_position(reader, claim);
     if (status == Status::Ok) status = read_claim_pressure_and_icao(reader, claim);
     if (status != Status::Ok) return status;
@@ -300,7 +323,6 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     if (health.last_sequence_valid)
         writer.add_unsigned(link::health_key::kLastSequence, health.last_sequence);
     writer.add_boolean(link::health_key::kAircraftAddressSet, health.aircraft_address_set);
-    writer.add_boolean(link::health_key::kAlarmGranted, health.alarm_granted);
     writer.add_code(link::health_key::kExportReference, health.export_reference);
     writer.add_boolean(link::health_key::kPaired, health.paired);
     if (health.own_transponder) {
@@ -318,6 +340,9 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     writer.add_code(link::health_key::kPowerLevel, health.power_level);
     if (health.frame_rate_hz)
         writer.add_unsigned(link::health_key::kFrameRateHz, *health.frame_rate_hz);
+    if (health.dismissed_announcement)
+        writer.add_unsigned(link::health_key::kDismissedAnnouncement,
+                            *health.dismissed_announcement);
     return writer.finish();
 }
 
@@ -404,6 +429,11 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.paired = paired.value();
     if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health))
         return Status::Invalid;
+    uint32_t dismissed = 0;
+    bool present = false;
+    if (!take(reader.read_unsigned(link::health_key::kDismissedAnnouncement), dismissed, present))
+        return Status::Invalid;
+    if (present) health.dismissed_announcement = dismissed;
     return health;
 }
 

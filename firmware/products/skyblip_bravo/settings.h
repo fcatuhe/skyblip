@@ -37,9 +37,16 @@ struct Settings {
     // INFO: fc 13nov26 aircraft_address came from the pinned Go, so that Go clearing it clears it
     // here
     bool aircraft_address_from_go{false};
+    // INFO: fc 17nov26 the pinned Go's last alarm, which Bravo plays while paired, link down
+    // included
+    Alarm go_alarm{Alarm::Loud};
 };
 
-constexpr uint8_t kBlobVersion = 3;
+constexpr uint8_t kBlobVersion = 4;
+
+constexpr Alarm alarm_in_force(const Settings& settings) {
+    return settings.peer.pinned ? settings.go_alarm : settings.alarm;
+}
 
 Settings defaults();
 
@@ -50,6 +57,7 @@ void to_blob(const Settings& settings, uint8_t* out, size_t capacity);
 Status from_blob(const uint8_t* in, size_t length, Settings& out);
 
 void write_settings_fields(cbor::Writer& writer, const Settings& settings);
+void write_config_fields(cbor::Writer& writer, const Settings& settings);
 
 Status apply_settings(Settings& settings, const cbor::Reader& frame);
 

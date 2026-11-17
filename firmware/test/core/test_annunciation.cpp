@@ -425,14 +425,14 @@ TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic c
     Buzzer buzzer;
     uint32_t now_ms = 1000;
     Situation lost{};
-    lost.bravo_lost = true;
+    lost.peer_lost = true;
     buzzer.apply(buzzer.policy.update(lost, now_ms), now_ms);
     now_ms += kStepMs;
     buzzer.run(Situation{}, now_ms, 3000);
-    CHECK(tune_for(Voice::BravoLost, Level::None).notes == kBravoLostTune.notes);
+    CHECK(tune_for(Voice::PeerLost, Level::None).notes == kPeerLostTune.notes);
     REQUIRE(buzzer.beeps == 1);
     CHECK(buzzer.hz_of[0] == kNoteC7Hz);
-    CHECK(buzzer.beep_ms_of[0] == kBravoLostNoteMs);
+    CHECK(buzzer.beep_ms_of[0] == kPeerLostNoteMs);
     CHECK(buzzer.vibrations == 0);
     CHECK(buzzer.policy.voice() == Voice::None);
 
@@ -440,7 +440,7 @@ TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic c
     uint32_t traffic_now_ms = 1000;
     under_traffic.announce(standing(Level::Advisory), traffic_now_ms, 100);
     Situation both = standing(Level::Advisory);
-    both.bravo_lost = true;
+    both.peer_lost = true;
     under_traffic.apply(under_traffic.policy.update(both, traffic_now_ms), traffic_now_ms);
     CHECK(under_traffic.policy.voice() == Voice::Traffic);
 
@@ -451,7 +451,7 @@ TEST_CASE("annunciation: a lost Bravo is one low tone, never felt, and traffic c
     Situation fix{};
     fix.first_fix = true;
     cut.apply(cut.policy.update(fix, cut_now_ms), cut_now_ms);
-    CHECK(cut.policy.voice() == Voice::BravoLost);
+    CHECK(cut.policy.voice() == Voice::PeerLost);
     cut_now_ms += kStepMs;
     cut.announce(standing(Level::Advisory), cut_now_ms, 3000);
     CHECK(cut.policy.voice() == Voice::Traffic);

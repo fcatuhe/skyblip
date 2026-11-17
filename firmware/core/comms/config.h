@@ -237,7 +237,7 @@ class ConfigService {
     void set_reset_reason(power::ResetReason reason) { diagnostics_.reset = reason; }
     power::ResetReason reset_reason() const { return diagnostics_.reset; }
     void set_went_dark_flat(bool flat) { went_dark_flat_ = flat; }
-    // INFO: fc 12nov26 a paired Go's glass says BRAVO LOST, and a page learns it without polling
+    // INFO: fc 12nov26 a paired Go's glass shows its Bravo lost, and a page learns it unpolled
     void set_bravo_state(BravoState state);
     // INFO: fc 15nov26 a page proposes the transponder Bravo hears, as the Go's AIRCRAFT menu does
     void set_own_transponder(const std::optional<OwnTransponderHeard>& heard);

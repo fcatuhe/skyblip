@@ -369,6 +369,29 @@ TEST_CASE("menu editor: a Go that cannot sound toggles its alarm between visual 
     CHECK(std::string(value) == "VISUAL");
 }
 
+// A plain Go paired with a Bravo sets the alarm for both, and only Bravo can sound it.
+TEST_CASE("menu editor: a paired Go that cannot sound steps BRAVO LOUD, BRAVO SOFT, VISUAL, OFF") {
+    Bench bench;
+    bench.values.sounds = false;
+    bench.values.settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    bench.values.settings.alarm = go::Alarm::Visual;
+    bench.focus_on(MenuRow::Alarm);
+
+    char value[kMenuValueBytes];
+    for (const char* shown : {"OFF", "BRAVO LOUD", "BRAVO SOFT", "VISUAL"}) {
+        bench.change();
+        CHECK(go::validate(bench.values.settings) == Status::Ok);
+        menu_row_value(value, MenuRow::Alarm, bench.values);
+        CHECK(std::string(value) == shown);
+    }
+    CHECK(bench.values.settings.alarm == go::Alarm::Visual);
+
+    bench.values.settings.alarm = go::Alarm::Loud;
+    bench.values.settings.bravo = events::BluetoothAddress{};
+    menu_row_value(value, MenuRow::Alarm, bench.values);
+    CHECK(std::string(value) == "VISUAL");
+}
+
 TEST_CASE("menu editor: the ring is a range a thumb can step, and the cycle closes") {
     Bench bench;
     bench.focus_on(MenuRow::Range);

@@ -12,6 +12,7 @@
 #include "core/power/reset_reason.h"
 #include "core/settings/blob.h"
 #include "core/store/sector.h"
+#include "core/traffic/alarm.h"
 #include "ports/dfu.h"
 #include "ports/gnss.h"
 #include "products/skyblip_go/settings.h"
@@ -33,6 +34,14 @@ constexpr bool on_the_wire(go::Alarm value) {
         case go::Alarm::Visual:
         case go::Alarm::Soft:
         case go::Alarm::Loud: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(traffic::Level value) {
+    switch (value) {
+        case traffic::Level::None:
+        case traffic::Level::Advisory: return true;
     }
     return false;
 }
@@ -272,6 +281,10 @@ static_assert(code(go::Alarm::Visual) == 1, "alarm visual");
 static_assert(code(go::Alarm::Soft) == 2, "alarm soft");
 static_assert(code(go::Alarm::Loud) == 3, "alarm loud");
 static_assert(on_the_wire(go::Alarm::Off), "alarm");
+
+static_assert(code(traffic::Level::None) == 0, "alarm_level none");
+static_assert(code(traffic::Level::Advisory) == 1, "alarm_level advisory");
+static_assert(on_the_wire(traffic::Level::None), "alarm_level");
 
 static_assert(code(go::Units::Nautical) == 0, "units nautical");
 static_assert(code(go::Units::Metric) == 1, "units metric");

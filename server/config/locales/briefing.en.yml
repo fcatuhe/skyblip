@@ -55,6 +55,10 @@ en:
         visual: Visual only
         soft: Soft sound + visual
         loud: Loud sound + visual
+      set_on_go: Your Go's ALARM row sets it for both units.
+      bravo_alarm_names:
+        soft: Bravo soft + visual
+        loud: Bravo loud + visual
       save: Save
       reset: Back to defaults
       heard_setting: Setting
@@ -278,6 +282,7 @@ en:
       unknown_command: This firmware is too old to change settings. Update it first.
       out_of_range: The device refused a value it cannot store. FFFFFF is no aircraft's ICAO address. Nothing changed.
       not_own_transponder: Your Bravo hears another transponder as this aircraft's own. Check the address, or use the one Bravo hears. Nothing changed.
+      set_on_go: This Bravo is paired with a Go, and the Go's ALARM row sets the alarm for both. Nothing changed.
     capture_notices:
       capture_armed: Armed. The LED blinks twice every 3 s until the capture stops. The capture continues in flight.
       capture_stopped: Stopped. The LED is back to its single blink.

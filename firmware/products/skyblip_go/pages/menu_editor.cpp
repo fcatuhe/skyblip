@@ -235,7 +235,8 @@ MenuAction MenuEditor::act(const MenuValues& current, MenuValues& next) {
             break;
         case MenuRow::Plot: next.settings.plot = next_radar_plot(current.settings.plot); break;
         case MenuRow::Alarm:
-            next.settings.alarm = next_alarm(current.settings.alarm, current.sounds);
+            next.settings.alarm =
+                next_alarm(current.settings.alarm, alarm_sounds(current.settings, current.sounds));
             break;
         default: leave(); return MenuAction::Leave;
     }
