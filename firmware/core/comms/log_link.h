@@ -87,7 +87,7 @@ int format_log_count(uint8_t* out, int capacity, uint32_t sessions, bool truncat
                      LogStore store = LogStore::Flights);
 int format_log_session(uint8_t* out, int capacity, uint32_t index, uint32_t count,
                        uint32_t session_id, uint32_t first, uint32_t records, bool closed,
-                       bool truncated, LogStore store = LogStore::Flights);
+                       bool truncated, bool recording, LogStore store = LogStore::Flights);
 int format_log_chunk(uint8_t* out, int capacity, uint32_t session_id, uint32_t from,
                      const uint8_t* records, int record_count, bool ends_session,
                      LogStore store = LogStore::Flights);

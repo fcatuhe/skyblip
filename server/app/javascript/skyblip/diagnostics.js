@@ -186,10 +186,10 @@ export function decodeChunk(raw, firstIndex) {
 export function sessionLines(session, records) {
   const lines = [{
     type: 'session', log: LOG, session: session.session, records: session.records,
-    closed: Boolean(session.closed), truncated: Boolean(session.truncated),
+    closed: Boolean(session.closed), truncated: Boolean(session.truncated), ...(session.recording && { recording: true }),
   }];
   const kept = records.map(record => ({ log: LOG, session: session.session, ...record }));
-  const torn = session.closed === false && kept.length > 0 ? kept.pop() : null;
+  const torn = session.closed === false && !session.recording && kept.length > 0 ? kept.pop() : null;
   lines.push(...kept);
   if (torn) lines.push({ type: 'torn', log: LOG, session: session.session, index: torn.index, reason: TORN_TAIL_REASON });
   return lines;

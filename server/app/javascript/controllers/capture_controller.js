@@ -151,7 +151,7 @@ export default class extends Controller {
     const records = lines.filter(line => !isNote(line)).length
     const torn = lines.find(line => line.type === "torn")
     this.sessionTarget.textContent = [
-      `Session ${session.session}: ${records} records, ${session.closed ? "closed" : "not closed"}.`,
+      `Session ${session.session}: ${records} records, ${session.closed ? "closed" : session.recording ? "still recording" : "not closed"}.`,
       torn ? `Record ${torn.index} dropped: ${torn.reason}.` : "",
       session.truncated ? "Truncated: its first sector was recycled, so it holds no boot and no config record." : "",
     ].filter(Boolean).join(" ")

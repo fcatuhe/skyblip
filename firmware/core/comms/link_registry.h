@@ -388,6 +388,7 @@ enum : uint32_t {
     kClosed = 6,
     kTruncated = 7,
     kFirst = 8,
+    kRecording = 9,
 };
 }
 
