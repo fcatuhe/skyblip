@@ -377,8 +377,16 @@ TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers al
 
     adsl::Traffic heard;
     packet.descramble();
-    REQUIRE(adsl::decode_traffic(packet, heard));
+    REQUIRE(adsl::decode_traffic(packet, heard) == wire::Status::Ok);
     CHECK(heard.address == 0x2ABCDE);
     CHECK(heard.latitude_1e7 == traffic.latitude_1e7);
     CHECK(heard.altitude_m == traffic.altitude_m);
+}
+
+TEST_CASE("adsl: a payload other than Traffic is refused as one the decoder does not read") {
+    adsl::Packet packet;
+    adsl::encode_status(packet, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    adsl::Traffic heard;
+    CHECK(adsl::decode_traffic(packet, heard) == wire::Status::Unsupported);
+    CHECK(heard.address == 0);
 }

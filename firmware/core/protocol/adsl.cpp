@@ -33,7 +33,8 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
                     model::Source source, model::AircraftObservation& out) {
     out = model::AircraftObservation{};
     adsl::Traffic traffic;
-    if (!adsl::decode_traffic(packet, traffic) || !traffic.position_valid) return false;
+    if (adsl::decode_traffic(packet, traffic) != wire::Status::Ok || !traffic.position_valid)
+        return false;
     out.address = traffic.address;
     out.address_mapping_table = packet.address_mapping_table();
     out.aircraft_category = traffic.aircraft_category;

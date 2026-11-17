@@ -6,6 +6,7 @@
 
 #include "protocols/common/bit_field.h"
 #include "protocols/common/exponential.h"
+#include "protocols/common/status.h"
 
 namespace skyblip::adsl {
 
@@ -250,7 +251,7 @@ struct Traffic {
 
 // INFO: fc 13nov26 the F.2.2 table is the integrator's registry assignment, so it has no default
 void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic& traffic);
-bool decode_traffic(const Packet& packet, Traffic& out);
+wire::Status decode_traffic(const Packet& packet, Traffic& out);
 
 enum class ReceiveClass : uint8_t { None = 0, Occasional = 1, Partial = 2, Full = 3 };
 ReceiveClass receive_class(int heard_permille);

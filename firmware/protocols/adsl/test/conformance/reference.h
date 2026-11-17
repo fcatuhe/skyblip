@@ -44,7 +44,7 @@ inline Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
 }
 
 inline bool heard(const Packet& packet, Traffic& out) {
-    return decode_traffic(packet, out) && out.position_valid;
+    return decode_traffic(packet, out) == wire::Status::Ok && out.position_valid;
 }
 
 inline uint16_t chips_of(uint8_t byte) {

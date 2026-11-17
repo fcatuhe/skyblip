@@ -222,9 +222,9 @@ void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic
                                     : lowest_version(packet));
 }
 
-bool decode_traffic(const Packet& packet, Traffic& out) {
+wire::Status decode_traffic(const Packet& packet, Traffic& out) {
     out = Traffic{};
-    if (!packet.is_position()) return false;
+    if (!packet.is_position()) return wire::Status::Unsupported;
     out.address = packet.address();
     out.timestamp = packet.timestamp;
     out.flight_state = packet.flight_state;
@@ -246,7 +246,7 @@ bool decode_traffic(const Packet& packet, Traffic& out) {
     out.integrity.horizontal_accuracy = packet.horizontal_accuracy;
     out.integrity.vertical_accuracy = packet.vertical_accuracy;
     out.integrity.velocity_accuracy = packet.velocity_accuracy;
-    return true;
+    return wire::Status::Ok;
 }
 
 }
