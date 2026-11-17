@@ -55,11 +55,10 @@ struct RadarSnapshot {
     uint8_t battery_percent{0};
     bool battery_low{false};
     comms::BravoState bravo{comms::BravoState::Unpaired};
+    bool bravo_heard{false};
     bool bravo_battery_low{false};
     std::optional<uint8_t> bravo_battery_percent{};
 };
-
-const char* bravo_loss_word(comms::BravoState state);
 
 void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot);
 

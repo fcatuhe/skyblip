@@ -50,9 +50,9 @@ void BravoService::tick(uint32_t now_ms) {
         claim(now_ms);
     }
     if (leaving_ && now_ms - farewell_ms_ >= kFarewellCeilingMs) leave();
-    // INFO: fc 12nov26 both ages are cleared once spent, so neither comes back 49.7 days on
+    // INFO: fc 12nov26 the health age is cleared once spent, so it never comes back 49.7 days on
     if (health_heard_ && now_ms - health_heard_ms_ > kHealthMaxAgeMs) health_heard_ = false;
-    if (health_heard_ || now_ms - started_ms_ >= kBootSettleMs) settled_ = true;
+    if (context_.state.flight.rolling && now_ms - started_ms_ >= kBootSettleMs) rolled_ = true;
     context_.state.bravo = state_now();
     context_.state.own_transponder = own_transponder_on_ground();
 }
@@ -224,9 +224,9 @@ comms::BravoState BravoService::state_now() const {
     if (health_heard_) {
         if (!health_.listening) return comms::BravoState::ReceiverDown;
         if (health_.utc_valid) return comms::BravoState::Live;
-        return utc_heard_ ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
+        return counted_on() ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
     }
-    return settled_ ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
+    return counted_on() ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
 }
 
 // INFO: fc 11nov26 another protocol is never pinned, and a pinned Bravo on one waits for a boot
@@ -258,6 +258,7 @@ void BravoService::drop_pin() {
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
+    rolled_ = false;
     aircraft_address_warning_.unpaired();
 }
 

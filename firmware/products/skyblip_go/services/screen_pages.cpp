@@ -137,6 +137,7 @@ void ScreenService::render(uint32_t now_ms) {
             snapshot.battery_percent = context_.state.power.battery.percent;
             snapshot.battery_low = battery_low();
             snapshot.bravo = context_.state.bravo;
+            snapshot.bravo_heard = bravo_.health() != nullptr;
             if (const comms::PeerHealth* health = bravo_health_live()) {
                 snapshot.bravo_battery_low = power::needs_charge(health->power_level);
                 snapshot.bravo_battery_percent = health->battery_percent;

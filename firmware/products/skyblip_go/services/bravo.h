@@ -107,6 +107,8 @@ class BravoService : public runtime::Service {
     void drop_pin();
     void forget();
     void leave();
+    // INFO: fc 17nov26 Bravo was live, or the Go has taxied: the pilot counts on Bravo from then on
+    bool counted_on() const { return utc_heard_ || rolled_; }
     bool linked() const {
         return up_ &&
                (step_ == BravoStep::Waiting || (step_ == BravoStep::Idle && paired(settings_)));
@@ -136,8 +138,8 @@ class BravoService : public runtime::Service {
     bool health_heard_{false};
     // INFO: fc 12nov26 the pinned Bravo sent UTC since the Go booted, so no UTC from now is lost
     bool utc_heard_{false};
+    bool rolled_{false};
     bool started_{false};
-    bool settled_{false};
     uint32_t farewell_ms_{0};
     bool connecting_{false};
     bool up_{false};
