@@ -114,7 +114,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile 
     CHECK(status_field(wire::BitField{50, 2}) == 0);
 }
 
-// Bit 0 is the FLARM-generation wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
+// Bit 0 is the ALP-TAS wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
 TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
     CHECK(status_field(wire::BitField{52, 8}) == 0x01);
 

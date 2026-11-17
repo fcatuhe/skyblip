@@ -330,8 +330,6 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     return wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 }
 
-// An ALP-TAS aircraft carries a FLARM-taxonomy address, so the address type says
-// so and the receiver reports it as one.
 size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altitude_m,
                     int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
     model::AircraftObservation observation{};

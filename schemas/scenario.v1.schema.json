@@ -20,7 +20,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "system": {"type": "string", "enum": ["adsl_direct", "alptas", "adsl_uplink"], "description": "What reaches us from this aircraft: its own ADS-L or FLARM-generation burst on the M band, or a skyPost ground station's O-band relay of it, which is what 'adsl_uplink' means. An 'adsl_uplink' aircraft never transmits itself. The system is the only thing that decides whether our shared sync window frames this aircraft's bursts."},
+          "system": {"type": "string", "enum": ["adsl_direct", "alptas", "adsl_uplink"], "description": "What reaches us from this aircraft: its own ADS-L or ALP-TAS burst on the M band, or a skyPost ground station's O-band relay of it, which is what 'adsl_uplink' means. An 'adsl_uplink' aircraft never transmits itself. The system is the only thing that decides whether our shared sync window frames this aircraft's bursts."},
           "north_m": {"type": "integer"},
           "east_m": {"type": "integer"},
           "up_m": {"type": "integer"},

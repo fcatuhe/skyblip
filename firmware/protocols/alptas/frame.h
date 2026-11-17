@@ -18,10 +18,24 @@ constexpr uint8_t kMessageTypePosition = 2;
 // INFO: fc 09mar26 the CRC is seeded with the CRC of the three sync bytes, which are not data
 constexpr uint16_t kCrcInit = 0x051E;
 
+constexpr uint8_t kAddressTypeRandom = 0;
 constexpr uint8_t kAddressTypeIcao = 1;
-constexpr uint8_t kAddressTypeFlarm = 2;
+constexpr uint8_t kAddressTypeManufacturer = 2;
+constexpr uint8_t kAddressTypeManufacturerExtended = 3;
+
+constexpr uint8_t kUrgencyNormal = 0;
+constexpr uint8_t kUrgencyHigh = 1;
+constexpr uint8_t kUrgencyPanPan = 2;
+constexpr uint8_t kUrgencyMayday = 3;
+
+constexpr uint8_t kVersion3 = 3;
+constexpr uint8_t kVersionCannotReceive = 0xF;
+
+constexpr uint8_t kAircraftTypeGyrocopter = 10;
+constexpr uint8_t kAircraftTypeUavCertified = 19;
 
 // INFO: fc 26sep26 SoftRF latest_encode sends 1 on ground, 2 airborne, 3 circling, and never 0
+constexpr uint8_t kAirborneUnknown = 0;
 constexpr uint8_t kAirborneOnGround = 1;
 constexpr uint8_t kAirborneFlying = 2;
 constexpr uint8_t kAirborneCircling = 3;
@@ -40,19 +54,37 @@ wire::Status keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& key
 
 // INFO: fc 09mar26 the address word is sent in clear, readable before anything is decrypted
 uint32_t address(const uint8_t* frame);
+bool no_track(const uint8_t* frame);
 
+// INFO: fc 17nov26 a random address is 32 bits, the others 24, and an extended one adds 16
 struct Position {
     uint32_t address{0};
     uint8_t address_type{0};
+    uint8_t random{0};
+    uint16_t address_extension{0};
+    uint8_t urgency{kUrgencyNormal};
+    bool stealth{false};
+    bool no_track{false};
+    uint8_t max_version{kVersion3};
+    uint8_t fix_quarters{0};
     uint8_t aircraft_type{0};
     uint8_t airborne{0};
     int32_t latitude_1e7{0};
     int32_t longitude_1e7{0};
     int32_t altitude_m{0};
+    int32_t turn_rate_cdps{0};
     int32_t speed_e1{0};
     int32_t climb_e1{0};
     uint16_t track_deg{0};
+    int32_t horizontal_accuracy_dm{0};
+    int32_t vertical_accuracy_qm{0};
+    int32_t velocity_accuracy_dmps{0};
+    uint8_t sil{0};
+    uint8_t sda{0};
+    uint8_t nic{0};
 };
+
+uint32_t random_address_after(uint32_t address, uint8_t random);
 
 wire::Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,
                     int32_t reference_longitude_1e7, Position& out);
