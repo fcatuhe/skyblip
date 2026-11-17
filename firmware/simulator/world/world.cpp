@@ -223,6 +223,17 @@ int16_t climb_e8_of(const VirtualAircraft& aircraft) {
     return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
 }
 
+// INFO: fc 17nov26 redrawn every burst, so two aircraft never share an offset for good
+uint32_t drawn(uint32_t address, uint32_t transmissions) {
+    uint32_t value = address ^ (transmissions * 0x9E3779B9u);
+    value ^= value >> 16;
+    value *= 0x7feb352du;
+    value ^= value >> 15;
+    value *= 0x846ca68bu;
+    value ^= value >> 16;
+    return value;
+}
+
 }  // namespace
 
 // What the ground station heard of one aircraft, which G.3 forwards as a whole
@@ -382,10 +393,8 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
         const timing::Window window = timing::Scheduler::window(slot);
         const int first_ms = window.start_ms;
         const int last_ms = timing::last_instant_ms(window, Air::kAirTimeUs);
-        phase_ms =
-            first_ms +
-            static_cast<int>((aircraft.address * 2654435761u + aircraft.transmissions * 40503u) %
-                             static_cast<uint32_t>(last_ms - first_ms));
+        phase_ms = first_ms + static_cast<int>(drawn(aircraft.address, aircraft.transmissions) %
+                                               static_cast<uint32_t>(last_ms - first_ms));
     }
     aircraft.transmissions++;
 
