@@ -98,6 +98,49 @@ TEST_CASE("settings: a Go that cannot sound ships on visual, reads loud as visua
     CHECK(settings.alarm == Alarm::Off);
 }
 
+// A paired Go that cannot sound sets BRAVO SOFT and BRAVO LOUD, which only its Bravo sounds.
+TEST_CASE("settings: a Go that cannot sound takes soft and loud only while paired with a Bravo") {
+    const ports::Capabilities silent = ports::Capability::Display;
+    Settings settings = defaults();
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    store.restore_defaults();
+    settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"soft\"}") == Status::Ok);
+    CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"loud\"}") == Status::Ok);
+    CHECK(settings.alarm == Alarm::Loud);
+
+    uint8_t blob[128] = {0};
+    const size_t bytes = store.to_blob(blob, sizeof(blob));
+    REQUIRE(bytes > 0);
+    Settings read = defaults();
+    SettingsStore reread(read, kTestActivation, kNoOwnTransponder, silent);
+    REQUIRE(reread.adopt(blob, bytes) == Status::Ok);
+    CHECK(read.alarm == Alarm::Loud);
+
+    settings.bravo = events::BluetoothAddress{};
+    uint8_t frame[64];
+    cbor::Writer writer(frame, sizeof(frame));
+    writer.add_code(link::kCommandKey, link::Command::Config);
+    store.write_fields(writer);
+    const int written = writer.finish();
+    CHECK(link_text(std::string(reinterpret_cast<const char*>(frame), static_cast<size_t>(written)))
+              .find("\"alarm\":\"visual\"") != std::string::npos);
+    CHECK(apply_json(store, "{\"command\":\"set\",\"alarm\":\"soft\"}") == Status::OutOfRange);
+}
+
+TEST_CASE("settings: a phone's soft on a paired Go that cannot sound is confirmed as BRAVO SOFT") {
+    const ports::Capabilities silent = ports::Capability::Display;
+    Settings settings = defaults();
+    SettingsStore store(settings, kTestActivation, kNoOwnTransponder, silent);
+    store.restore_defaults();
+    settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    const events::RxFrame frame = config_frame("{\"command\":\"set\",\"alarm\":\"soft\"}");
+    char detail[comms::kPromptDetailBytes]{};
+    REQUIRE(store.describe_changes(cbor::Reader(ConstByteSpan(frame.data.data(), frame.bytes)),
+                                   detail, sizeof(detail)) == Status::Ok);
+    CHECK(std::string(detail) == "ALARM BRAVO SOFT");
+}
+
 TEST_CASE("settings: a Go+ ships on loud and takes every step") {
     const ports::Capabilities sounding = ports::Capability::Buzzer | ports::Capability::Haptic;
     Settings settings = defaults();

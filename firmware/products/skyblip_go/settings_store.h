@@ -27,7 +27,7 @@ class SettingsStore : public common::SettingsStore {
           fitted_(fitted) {}
 
     void write_fields(cbor::Writer& writer) const override {
-        write_config_fields(writer, settings_, activation_.address());
+        write_config_fields(writer, fitted(settings_), activation_.address());
     }
 
     void write_default_fields(cbor::Writer& writer) const override {
@@ -44,7 +44,9 @@ class SettingsStore : public common::SettingsStore {
     Status describe_changes(const cbor::Reader& frame, char* out, int capacity) const override {
         Settings next = settings_;
         const Status applied = apply_fitted(next, frame);
-        if (applied == Status::Ok) (void)describe_settings_changes(settings_, next, out, capacity);
+        if (applied == Status::Ok)
+            (void)describe_settings_changes(settings_, next, out, capacity,
+                                            common::can_sound(fitted_));
         return applied;
     }
 
@@ -69,9 +71,10 @@ class SettingsStore : public common::SettingsStore {
     static constexpr ports::Capabilities kSounding =
         ports::Capability::Buzzer | ports::Capability::Haptic;
 
-    // INFO: fc 15nov26 a Go with no buzzer and no haptic can only show an alarm, never sound it
+    // INFO: fc 15nov26 a Go with no buzzer and no haptic can only show an alarm, never sound it |
+    // 17nov26 unless paired, when soft and loud sound on its Bravo
     Settings fitted(Settings settings) const {
-        if (!common::can_sound(fitted_) && common::audible(settings.alarm))
+        if (!alarm_sounds(settings, common::can_sound(fitted_)) && common::audible(settings.alarm))
             settings.alarm = Alarm::Visual;
         return settings;
     }
@@ -81,8 +84,9 @@ class SettingsStore : public common::SettingsStore {
     Status apply_fitted(Settings& next, const cbor::Reader& frame) const {
         const Status applied = apply_settings(next, frame, comms::address_of(own_transponder_));
         if (applied != Status::Ok) return applied;
-        return common::audible(next.alarm) && !common::can_sound(fitted_) ? Status::OutOfRange
-                                                                          : Status::Ok;
+        return common::audible(next.alarm) && !alarm_sounds(next, common::can_sound(fitted_))
+                   ? Status::OutOfRange
+                   : Status::Ok;
     }
 
     Settings& settings_;

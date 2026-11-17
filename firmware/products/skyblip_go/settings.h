@@ -98,6 +98,11 @@ inline bool paired(const Settings& settings) {
     return settings.bravo != events::BluetoothAddress{};
 }
 
+// INFO: fc 17nov26 soft and loud sound on the Go's own parts, or on Bravo's alone for a plain Go
+inline bool alarm_sounds(const Settings& settings, bool sounds) {
+    return sounds || paired(settings);
+}
+
 Status validate(const Settings& settings);
 
 // INFO: fc 14nov26 ADS-L F.2.3 inconsistency: an aircraft address other than the transponder Bravo

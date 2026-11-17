@@ -23,9 +23,12 @@ constexpr Menu menu_of(const MenuRow (&rows)[Count]) {
 // CALLSIGN at double height is eight cells, and the row holds fifteen.
 constexpr int kCallsignRowCharacters = 6;
 
-const char* alarm_name(go::Alarm alarm, bool sounds) {
+// INFO: fc 17nov26 a plain Go's soft and loud sound on its Bravo alone, so the row says so
+const char* alarm_name(const go::Settings& settings, bool sounds) {
+    const go::Alarm alarm = settings.alarm;
     if (alarm == go::Alarm::Off) return "OFF";
-    if (alarm == go::Alarm::Visual || !sounds) return "VISUAL";
+    if (alarm == go::Alarm::Visual || !go::alarm_sounds(settings, sounds)) return "VISUAL";
+    if (!sounds) return alarm == go::Alarm::Soft ? "BRAVO SOFT" : "BRAVO LOUD";
     return alarm == go::Alarm::Soft ? "SOFT" : "LOUD";
 }
 
@@ -236,7 +239,7 @@ int menu_row_value(char* out, MenuRow row, const MenuValues& values) {
                           : format_string(out, "NONE");
             break;
         case MenuRow::Alarm:
-            written = format_string(out, alarm_name(values.settings.alarm, values.sounds));
+            written = format_string(out, alarm_name(values.settings, values.sounds));
             break;
         default: break;
     }

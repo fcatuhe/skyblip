@@ -78,7 +78,7 @@ bool settings_detail(const char* set, const char* settings, char* out, int capac
     if (!applied(from, settings)) return false;
     go::Settings to = from;
     if (!applied(to, set)) return false;
-    return go::describe_settings_changes(from, to, out, capacity) > 0;
+    return go::describe_settings_changes(from, to, out, capacity, true) > 0;
 }
 
 // INFO: fc 14nov26 a screen reader hears the page's words in reading order, the keys last
