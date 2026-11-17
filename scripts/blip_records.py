@@ -420,8 +420,9 @@ def session_text(session):
     marks = ["closed" if session.get("closed") else "power cut"]
     if session.get("truncated"):
         marks.append("truncated")
-    return "session %d  %d records  %s" % (session["session"], session["records"],
-                                           ", ".join(marks))
+    start = " from index %d" % session["first"] if session.get("first") else ""
+    return "session %d  %d records%s  %s" % (session["session"], session["records"], start,
+                                             ", ".join(marks))
 
 
 def session_note(log, session):

@@ -25,6 +25,7 @@ import blip_frames as frames  # noqa: E402
 import blip_records as records  # noqa: E402
 
 RECORDS_PER_CHUNK = 19
+SLOTS_PER_SECTOR = 170
 DEVICE_CHUNKS_MAX = 8
 PPS_TYPE = 4
 INTERVAL_US_AT = records.PAYLOAD_OFFSET
@@ -77,10 +78,13 @@ class LogEndpoint:
     """A device that is only its log dialect: it plans a window, cuts chunks, marks the last one."""
 
     def __init__(self, count, log="diagnostics", closed=True, slot=slot_naming_its_index,
-                 per_chunk=RECORDS_PER_CHUNK, slots=None, **session_fields):
+                 per_chunk=RECORDS_PER_CHUNK, slots=None, first=0, **session_fields):
         self.log = log
+        if first:
+            session_fields["first"] = first
         self.session = session_reply(count, closed=closed, log=log, **session_fields)
-        self.slots = slots if slots is not None else [slot(index) for index in range(count)]
+        self.first = first
+        self.slots = slots if slots is not None else [slot(first + i) for i in range(count)]
         self.per_chunk = per_chunk
         self.pending = []
         self.counts_asked = []
@@ -106,20 +110,39 @@ class LogEndpoint:
             raise AssertionError("the host waited for a frame the device never sent")
         return frames.decode_frame(frames.encode_frame(self.pending.pop(0)))
 
+    def end(self):
+        return self.first + len(self.slots)
+
+    def recycle_one_sector(self):
+        self.slots = self.slots[SLOTS_PER_SECTOR:]
+        self.first += SLOTS_PER_SECTOR
+
     def window_from(self, start, chunks):
-        left = max(len(self.slots) - start, 0)
+        start = max(start, self.first)
+        left = max(self.end() - start, 0)
         to_the_end = (left + self.per_chunk - 1) // self.per_chunk
         planned = min(chunks, to_the_end)
         if planned == 0:
             return [self.chunk(start, 0)]
         return [self.chunk(start + index * self.per_chunk,
-                           min(self.per_chunk, len(self.slots) - start - index * self.per_chunk))
+                           min(self.per_chunk, self.end() - start - index * self.per_chunk))
                 for index in range(planned)]
 
     def chunk(self, start, count):
-        blob = b"".join(self.slots[start:start + count])
+        at = start - self.first
+        blob = b"".join(self.slots[at:at + count])
         return {"command": "chunk", "log": self.log, "session": self.session["session"],
-                "from": start, "ends_session": start + count >= len(self.slots), "records": blob}
+                "from": start, "ends_session": start + count >= self.end(), "records": blob}
+
+
+class RotatingEndpoint(LogEndpoint):
+    """The ring recycles the session's oldest sector once the first window has gone out."""
+
+    async def write(self, body):
+        if body["command"] == "read" and self.counts_asked:
+            if self.first == 0:
+                self.recycle_one_sector()
+        await super().write(body)
 
 
 class RefusingEndpoint(LogEndpoint):
@@ -330,6 +353,20 @@ class ResumedFetch(unittest.TestCase):
                 fetch_into(renumbered, path)
             self.assertIn("renumbered", str(caught.exception))
 
+    def test_a_resume_into_a_session_the_ring_rotated_since_keeps_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            fetch_into(LogEndpoint(430, closed=False, first=SLOTS_PER_SECTOR), path)
+            self.assertEqual(kept_indices(path), list(range(599)))
+
+    def test_a_resume_whose_last_record_the_ring_recycled_since_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(160, closed=False), path)
+            with self.assertRaises(SystemExit):
+                fetch_into(LogEndpoint(300, closed=False, first=SLOTS_PER_SECTOR), path)
+
     def test_an_open_session_that_wrote_nothing_since_is_not_fetched_again(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
@@ -338,6 +375,33 @@ class ResumedFetch(unittest.TestCase):
             printed = fetch_into(LogEndpoint(5, closed=False), path)
             self.assertIn("nothing to fetch", printed)
             self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+
+class RotatedSession(unittest.TestCase):
+    def test_a_truncated_session_is_fetched_from_the_first_record_it_holds(self):
+        endpoint = LogEndpoint(300, first=SLOTS_PER_SECTOR, truncated=True)
+        lines = of_type(fetched_lines(endpoint), "pps")
+        self.assertEqual([line["index"] for line in lines], list(range(170, 470)))
+        self.assertEqual([line["interval_us"] for line in lines], list(range(170, 470)))
+
+    def test_a_full_fetch_starts_a_truncated_session_at_its_first_record(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(300, first=SLOTS_PER_SECTOR, truncated=True), path)
+            self.assertEqual(kept_indices(path), list(range(170, 470)))
+
+    # the ring can recycle the oldest records between two reads of one fetch, and they are gone
+    def test_records_the_ring_recycled_before_they_were_read_are_skipped_and_named(self):
+        out = io.StringIO()
+        printed = fetch(RotatingEndpoint(400), out)
+        indices = [json.loads(line)["index"] for line in out.getvalue().splitlines()
+                   if json.loads(line)["type"] == "pps"]
+        self.assertEqual(indices, list(range(152)) + list(range(170, 400)))
+        self.assertIn("indices 152..169 recycled before they were read", printed)
+
+    def test_the_listing_says_where_a_truncated_session_starts(self):
+        text = records.session_text(session_reply(300, truncated=True, first=SLOTS_PER_SECTOR))
+        self.assertEqual(text, "session 1700000000  300 records from index 170  closed, truncated")
 
 
 class LinkRecord(unittest.TestCase):
