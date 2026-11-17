@@ -94,6 +94,7 @@ class AlarmService : public runtime::Service {
 
    private:
     bool silenced(traffic::Target& target, formation::State state);
+    bool lost_go();
     void record_traffic(int slot, const traffic::Target& target,
                         const traffic::AlarmTracker::Decision& decision, uint32_t now_ms);
     formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
@@ -137,6 +138,7 @@ class AlarmService : public runtime::Service {
     formation::Tracker formation_{};
     uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
     bool bravo_lost_{false};
+    bool following_go_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     indication::SignaturePlayer signature_{};

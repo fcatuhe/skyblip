@@ -92,7 +92,7 @@ void AlarmService::tick(uint32_t now_ms) {
 
     situation.first_fix = context_.state.own.fix_acquired;
     const bool bravo_lost = comms::lost(context_.state.bravo);
-    situation.bravo_lost = bravo_lost && !bravo_lost_;
+    situation.peer_lost = (bravo_lost && !bravo_lost_) || lost_go();
     bravo_lost_ = bravo_lost;
     situation.enabled = audible(alarm);
     situation.running = running_;
@@ -106,6 +106,15 @@ void AlarmService::tick(uint32_t now_ms) {
     if (command.tone_changed) drive_buzzer(command);
     drive_motor(signature_.playing() ? signal.vibrating : command.vibrating);
     drive_lamp(now_ms, running_, signal);
+}
+
+// INFO: fc 17nov26 a plain Go plays no lost-Bravo tone, so a Bravo in flight says it lost its Go
+bool AlarmService::lost_go() {
+    const bool following = context_.state.followed_call.has_value();
+    const bool airborne = context_.state.flight.confirmed_state == flight::FlightState::Airborne;
+    const bool lost = following_go_ && !following && settings_.paired && airborne;
+    following_go_ = following;
+    return lost;
 }
 
 void AlarmService::sign_off(uint32_t now_ms) {

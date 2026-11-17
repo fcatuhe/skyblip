@@ -290,3 +290,63 @@ TEST_CASE("bravo follow: the Go's last alarm comes back from flash after Bravo's
     CHECK(second.alarm().alarm_in_force() == bravo::Alarm::Soft);
 }
 
+// A plain Go cannot play the lost-Bravo tone, so Bravo says the pair came apart in the air.
+TEST_CASE("bravo follow: in flight, a paired Bravo that loses its Go plays one low note") {
+    Pinned pinned;
+    pinned.seconds(20, &kQuiet);
+    REQUIRE(pinned.rig.state().flight.confirmed_state == flight::FlightState::Airborne);
+    const uint32_t tones = pinned.tones();
+    pinned.go.drop();
+    pinned.run_for(100);
+    CHECK(pinned.tones() == tones + 1);
+    CHECK(pinned.rig.platform.annunciator().pitch_hz() == annunciation::kNoteC7Hz);
+    CHECK(pinned.motor_starts() == 0);
+    pinned.run_for(annunciation::kPeerLostNoteMs + 100);
+    CHECK_FALSE(pinned.rig.platform.annunciator().sounding());
+    pinned.seconds(5, nullptr);
+    CHECK(pinned.tones() == tones + 1);
+}
+
+TEST_CASE("bravo follow: claims that stop in flight are a lost Go too, said once") {
+    Pinned pinned;
+    pinned.seconds(20, &kQuiet);
+    const uint32_t tones = pinned.tones();
+    pinned.seconds(5, nullptr);
+    CHECK_FALSE(pinned.rig.state().followed_call.has_value());
+    CHECK(pinned.tones() == tones + 1);
+}
+
+TEST_CASE("bravo follow: no note for a lost Go on the ground, at a silent alarm, or on unpairing") {
+    SUBCASE("on the ground") {
+        Pinned pinned;
+        pinned.speed_mm_s = 0;
+        pinned.seconds(20, &kQuiet);
+        REQUIRE(pinned.rig.state().flight.confirmed_state != flight::FlightState::Airborne);
+        const uint32_t tones = pinned.tones();
+        pinned.go.drop();
+        pinned.run_for(1000);
+        CHECK(pinned.tones() == tones);
+    }
+    SUBCASE("at visual") {
+        Pinned pinned;
+        const Call visual{"visual"};
+        pinned.seconds(20, &visual);
+        const uint32_t tones = pinned.tones();
+        pinned.go.drop();
+        pinned.run_for(1000);
+        CHECK(pinned.tones() == tones);
+    }
+    SUBCASE("on unpairing") {
+        Pinned pinned;
+        pinned.seconds(20, &kQuiet);
+        const uint32_t tones = pinned.tones();
+        Call farewell = kQuiet;
+        farewell.paired = false;
+        pinned.claim(farewell);
+        pinned.run_for(100);
+        REQUIRE_FALSE(pinned.rig.product.peer().paired());
+        pinned.go.drop();
+        pinned.run_for(1000);
+        CHECK(pinned.tones() == tones);
+    }
+}

@@ -278,3 +278,15 @@ TEST_CASE("tango alarm: Bravo plays its first-fix tune only when the pair's alar
     }
 }
 
+// A plain Go has no buzzer for the lost-Bravo tone, so Bravo's own note is all its pilot hears.
+TEST_CASE("tango alarm: a plain Go on BRAVO LOUD out of reach in flight leaves one note on Bravo") {
+    Flight flight(kPlainGo);
+    flight.pair.go.settings().alarm = go::Alarm::Loud;
+    flight.seconds(20);
+    REQUIRE(flight.pair.bravo.state().flight.confirmed_state == flight::FlightState::Airborne);
+    const uint32_t tones = flight.bravo_tones();
+    flight.out_of_reach();
+    flight.seconds(3);
+    CHECK(flight.bravo_tones() == tones + 1);
+    CHECK(flight.go_tones() == 0);
+}

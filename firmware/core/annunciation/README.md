@@ -26,9 +26,11 @@ The ERM on the T-Echo Plus takes time to spin up and to stop. Whether a 270 ms p
 
 Bravo never calibrates the X1's LRA, because the calibration drives the motor for about a second outside any call (`hardware/parts/drv2605/README.md`).
 
-## A lost Bravo is one low note
+## A lost peer is one low note
 
-A paired Go whose alarm sounds and that loses its Bravo plays `kBravoLostTune`, one C7, 2093 Hz, held `kBravoLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::bravo_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `NO BRAVO` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic and the signs on and off. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
+A paired Go whose alarm sounds and that loses its Bravo plays `kPeerLostTune`, one C7, 2093 Hz, held `kPeerLostNoteMs`, three steps of the grid. `common::AlarmService` raises `Situation::peer_lost` on the one pass `bus::State::bravo` turns lost, so a Bravo that stays lost, or changes reason while lost, is not said again, and one that comes back says nothing. One note and not a call: it is a fact about the equipment, not about the sky, and the glass's `NO BRAVO` carries the reason. It sits a sixth below the advisory's A7, on C7, the lowest pitch any tune plays, which the first-fix jingle shares, so it is never heard as traffic. It is never felt, since the motor is reserved for traffic and the signs on and off. Traffic outranks it and cuts it as it cuts the fix tune, and it outranks the fix tune.
+
+A paired Bravo plays the same note on the pass it stops playing its Go's calls, because the link dropped or the claims stopped, while its own flight state is airborne and its alarm in force sounds. A plain Go has no buzzer for its own tone, so Bravo's note is all its pilot hears when the pair comes apart. On the ground it says nothing, so switching the Go off after landing is silent, and an unpairing says nothing either, because the pin goes before the link.
 
 ## A paired Bravo plays its Go's calls
 
