@@ -90,6 +90,15 @@ class Slots(unittest.TestCase):
         self.assertIn("A -90 dBm, gain agc, boost 0, 0x18, chips | B -98 dBm, gain agc, boost 0, "
                       "0x18, chips: 2, +60.0, +60.0 to +60.0, 2 of 2", out)
 
+    def test_a_screening_plan_compares_each_candidate_against_its_first_profile(self):
+        lines = [slot(0, -98, 29), slot(1, -90, 58), slot(2, -98, 29), slot(3, -80, 10),
+                 slot(3, -80, 10), slot(2, -98, 29)]
+        out = adsb_trial.report(lines, "positions")
+        self.assertIn("A -98 dBm, gain agc, boost 0, 0x18, chips | B -90 dBm, gain agc, boost 0, "
+                      "0x18, chips: 2, +60.0, +60.0 to +60.0, 2 of 2", out)
+        self.assertIn("A -98 dBm, gain agc, boost 0, 0x18, chips | B -80 dBm, gain agc, boost 0, "
+                      "0x18, chips: 2, -39.3, -39.3 to -39.3, 0 of 2", out)
+
     def test_a_short_slot_and_a_new_session_break_the_pairs(self):
         lines = [slot(0, -90, 29), slot(1, -98, 5, counted=5), slot(0, -90, 29),
                  slot(1, -98, 58, session=2)]

@@ -109,16 +109,17 @@ def report(lines, metric):
 
 def paired(slots, metric):
     """B less A in metric per minute, over each two adjacent slots of one session."""
+    baseline = next((slot["label"] for slot in slots if slot["trial_profile"] == 0), None)
     diffs = collections.defaultdict(list)
     for first, second in zip(slots, slots[1:]):
         if first["session"] != second["session"] or first["label"] == second["label"]:
             continue
-        a, b = sorted((first, second), key=lambda slot: slot["label"])
+        a, b = sorted((first, second), key=lambda slot: (slot["label"] != baseline, slot["label"]))
         diffs[(a["label"], b["label"])].append(b[metric + "_per_min"] - a[metric + "_per_min"])
     if not diffs:
         return ["no two adjacent slots ran different profiles, so nothing compares"]
-    out = ["%s per minute, B less A over adjacent slots: pairs, mean, 95%% interval, B ahead"
-           % metric]
+    out = ["%s per minute, B less A over adjacent slots, A the plan's first profile when the pair "
+           "holds it: pairs, mean, 95%% interval, B ahead" % metric]
     for (a, b), values in sorted(diffs.items()):
         mean = statistics.mean(values)
         spread = (Z_95 * statistics.stdev(values) / math.sqrt(len(values))

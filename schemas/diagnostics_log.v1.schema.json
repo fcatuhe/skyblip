@@ -344,7 +344,7 @@
     "pressure_relative_altitude_m": {"type": "integer", "minimum": -32768, "maximum": 32767,
                                      "description": "adsb. The target's pressure altitude less own-ship's, metres, positive above, saturated, payload bytes 14-15. Neither side is carried to a common instant. Absent unless pressure_relative_altitude_valid"},
     "pressure_relative_altitude_valid": {"type": "boolean", "description": "adsb. Flag bit 7: the target had a pressure altitude and own-ship a barometer that published one"},
-    "trial_profile": {"type": "integer", "minimum": 0, "maximum": 7,
+    "trial_profile": {"type": "integer", "minimum": 0, "maximum": 9,
                       "description": "adsb_slot. Which profile of the trial's plan the slot ran, from 0, payload byte 0. The record is written when the slot ends, so the adsb_chips records before it, back to the adsb_slot before them, were heard under it"},
     "threshold_dbm": {"type": "integer", "minimum": -128, "maximum": -11,
                       "description": "adsb_slot. The profile's OOK detection threshold in dBm, payload byte 1"},

@@ -80,6 +80,18 @@ TEST_CASE(
     CHECK(part.listening_for_adsb());
 }
 
+// Ten profiles fit a screening run: the baseline between each of five candidates.
+TEST_CASE("adsb trial link: a plan of ten profiles is taken, and the eleventh is refused") {
+    TrialRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    CHECK(rig.say("{\"command\":\"adsb_trial\",\"slot_s\":15,"
+                  "\"thresholds_dbm\":[90,98,90,90,90,90,90,90,90,90],"
+                  "\"gain_steps\":[0,0,0,0,0,0,0,13,0,0],\"boosts\":[0,0,0,0,0,0,0,0,0,7],"
+                  "\"front_ends\":[1,1,1,1,1,0,1,1,1,1],\"layouts\":[0,0,0,1,0,0,0,0,0,0]}") ==
+          kRunning);
+    CHECK(rig.product.adsb_trial().running());
+}
+
 TEST_CASE("adsb trial link: a plan it cannot run is refused, and nothing changes") {
     TrialRig rig;
     REQUIRE(rig.setup() == Status::Ok);
@@ -98,7 +110,8 @@ TEST_CASE("adsb trial link: a plan it cannot run is refused, and nothing changes
          "out_of_range"},
         {"{\"command\":\"adsb_trial\",\"slot_s\":30,\"thresholds_dbm\":[90],\"boosts\":[8]}",
          "out_of_range"},
-        {"{\"command\":\"adsb_trial\",\"slot_s\":30,\"thresholds_dbm\":[90,90,90,90,90,90,90,90,90]"
+        {"{\"command\":\"adsb_trial\",\"slot_s\":30,\"thresholds_dbm\":[90,90,90,90,90,90,90,90,90,"
+         "90,90]"
          "}",
          "out_of_range"},
     };

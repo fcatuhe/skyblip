@@ -215,7 +215,7 @@ The `adsb` group of the status dump follows a frame from the antenna to the tabl
 
 ## The reception trial
 
-A development image runs a temporary trial of the LR2021's 1090 MHz settings (#293). A laptop sends `adsb_trial` with up to eight receiver profiles, and Bravo switches between them slot by slot on the clock and records each slot in a running capture. `services/adsb_trial.md` says how to run it, how to read it, and how to remove it once it has picked the settings. A release image answers `adsb_trial` with `unknown_command`.
+A development image runs a temporary trial of the LR2021's 1090 MHz settings (#293). A laptop sends `adsb_trial` with up to ten receiver profiles, and Bravo switches between them slot by slot on the clock and records each slot in a running capture. `services/adsb_trial.md` says how to run it, how to read it, and how to remove it once it has picked the settings. A release image answers `adsb_trial` with `unknown_command`.
 
 ## The cell
 

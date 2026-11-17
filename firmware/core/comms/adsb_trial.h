@@ -18,7 +18,8 @@ struct AdsbTrialProfile {
     bool manchester{false};
 };
 
-constexpr int kAdsbTrialProfiles = 8;
+// INFO: fc 16nov26 ten, so a screening run can put the baseline between each of five candidates
+constexpr int kAdsbTrialProfiles = 10;
 constexpr uint32_t kAdsbTrialSlotFloorS = 5;
 constexpr uint32_t kAdsbTrialSlotCeilingS = 255;
 // INFO: fc 13nov26 the LR2021's seven-bit threshold field, read as a signed value plus 74 dB

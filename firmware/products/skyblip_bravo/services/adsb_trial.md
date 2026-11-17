@@ -20,7 +20,7 @@ In the Manchester layout the part decodes the bits, and the driver turns them ba
 
 ## How Bravo runs it
 
-`adsb_trial` (`schemas/link.v1.json`) carries up to eight profiles and a slot length of 5 to 255 s. A development image answers it at once with `adsb_trial`, with no prompt, on the ground and in flight. A release image and the Go answer `unknown_command`, because only `main.cpp` under `CONFIG_SKYBLIP_BRAVO_ADSB_TRIAL` calls `serve_adsb_trial()`. A frame with no key but the command stops the trial and puts SoftRF's tuning back. The plan lives in RAM, so a restart ends it.
+`adsb_trial` (`schemas/link.v1.json`) carries up to ten profiles and a slot length of 5 to 255 s. A development image answers it at once with `adsb_trial`, with no prompt, on the ground and in flight. A release image and the Go answer `unknown_command`, because only `main.cpp` under `CONFIG_SKYBLIP_BRAVO_ADSB_TRIAL` calls `serve_adsb_trial()`. A frame with no key but the command stops the trial and puts SoftRF's tuning back. The plan lives in RAM, so a restart ends it.
 
 `AdsbTrial` (`adsb_trial.h`) cuts the clock into slots of `slot_s` seconds: UTC seconds once the unit has a fix, seconds since boot before that. Each slot runs one profile. The order turns back on itself every cycle, so two profiles run A B B A, and three run A B C C B A. A drift in traffic then lands on every profile alike. At each slot's start the product retunes the receiver (`run_adsb_trial` in `../product.h`), and the slot counts nothing for `AdsbTrial::kRetuneSettleMs`, one second, so frames queued under the last profile are not charged to this one.
 
@@ -48,6 +48,19 @@ The capture asks for two presses on the button, and the trial asks for none. Two
 python3 scripts/adsb_trial.py trial.ndjson
 python3 scripts/adsb_trial.py trial.ndjson --metric aircraft --replay
 ```
+
+A screening round tests five changes in one hour. It puts the baseline, SoftRF's tuning, between each candidate, so every slot of a candidate sits next to a baseline slot. The order turns back each cycle, so the last candidate meets the baseline on its other side:
+
+```
+{"command":"adsb_trial","slot_s":15,
+ "thresholds_dbm":[90,98,90,90,90,90,90,90,90,90],
+ "layouts":[0,0,0,1,0,0,0,0,0,0],
+ "front_ends":[1,1,1,1,1,0,1,1,1,1],
+ "gain_steps":[0,0,0,0,0,0,0,13,0,0],
+ "boosts":[0,0,0,0,0,0,0,0,0,7]}
+```
+
+That compares -98 dBm, the Manchester layout, 0x75, gain step 13 and boost 7 each against the baseline, about 10 minutes of each in the hour. A second round then runs the winners together against the baseline, in two profiles.
 
 Before the next round, send a new plan. The capture keeps running, and each slot record names its own profile. Stop the trial with `{"command":"adsb_trial"}`, then stop the capture with `capture stop` and two presses.
 
