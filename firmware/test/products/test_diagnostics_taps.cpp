@@ -191,7 +191,8 @@ TEST_CASE("diagnostics dwell: every dwell the radio arms is a record, band edges
         uplink = uplink || dwell.frequency_hz == adsl::kOBandHz;
         slot0 = slot0 || dwell.frequency_hz == adsl::kMBand0Hz;
         slot1 = slot1 || dwell.frequency_hz == adsl::kMBand1Hz;
-        if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1EndMs);
+        if (dwell.state == timing::SlotState::Slot1)
+            CHECK(dwell.end_ms == timing::dwell_of(timing::kSlot1WindowMs).end_ms);
     }
     CHECK(uplink);
     CHECK(slot0);

@@ -84,10 +84,10 @@ void run_bench(timing::SlotTimingStatistics& statistics) {
 // Every timing field at 65536 or more, which CBOR writes in five bytes as it writes UINT32_MAX.
 void run_widest_bench(timing::SlotTimingStatistics& statistics) {
     using Statistics = timing::SlotTimingStatistics;
-    const int64_t past_the_guard = Statistics::kJitterGuardUs + 70000;
+    const int64_t past_the_guard = Statistics::kSwitchRetuneUs + 70000;
     const int64_t one_per_bucket[Statistics::kBuckets] = {
-        -past_the_guard,       -Statistics::kHopGuardUs, -Statistics::kRetuneUs, 0,
-        Statistics::kRetuneUs, Statistics::kHopGuardUs,  past_the_guard};
+        -past_the_guard,       -Statistics::kSwitchMarginUs, -Statistics::kRetuneUs, 0,
+        Statistics::kRetuneUs, Statistics::kSwitchMarginUs,  past_the_guard};
     const uint32_t samples = Statistics::kBuckets * 65536u;
     uint64_t edge_us = Statistics::kNominalSecondUs;
     statistics.record_edge(edge_us, true);

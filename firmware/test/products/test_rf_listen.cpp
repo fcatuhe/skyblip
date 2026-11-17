@@ -91,8 +91,9 @@ ports::RfPlan last_with_burst(const Armings& armings) {
 
 // Which dwell a burst went out in: slot 0 or slot 1 of the second each opens in.
 uint64_t dwell_of(uint64_t at_us) {
-    const uint64_t from_slot0_ms = at_us / 1000 - timing::kSlot0StartMs;
-    return from_slot0_ms / 1000 * 2 + (from_slot0_ms % 1000 >= 400 ? 1 : 0);
+    const uint64_t from_slot0_ms = at_us / 1000 - timing::kSlot0WindowMs.start_ms;
+    const uint64_t slot0_ms = timing::kSlot1WindowMs.start_ms - timing::kSlot0WindowMs.start_ms;
+    return from_slot0_ms / 1000 * 2 + (from_slot0_ms % 1000 >= slot0_ms ? 1 : 0);
 }
 
 }  // namespace

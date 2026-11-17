@@ -35,7 +35,7 @@ void TimingReport::add(uint32_t key, Kind kind, int64_t value, const uint32_t* b
 }
 
 // pps_us and dwell_us are the two histograms in kBuckets order: the SX1262's own
-// retune time, core/timing::kHopGuardMs and core/timing::kJitterGuardMs on each
+// retune time, core/timing::kSwitchMarginMs and core/timing::kSwitchRetuneMs on each
 // side of the centre bucket (core/timing/slot_timing_statistics.h). holdover_events, missed and
 // refused are counted apart from both, on purpose: a fault a histogram cannot
 // bound must not be folded into one that can.

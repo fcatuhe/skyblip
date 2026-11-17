@@ -36,15 +36,15 @@ TEST_CASE("timing statistics: polling between edges never inflates the sample co
 
 // The three named edges, in order: inside the SX1262's own retune time (still
 // the centre bucket - that error is the chip doing what its datasheet
-// promises), past it but inside the hop guard, past that but inside the
-// jitter guard, and past the whole budget.
+// promises), past it but inside the switch margin, past that but inside the
+// retune, and past the whole budget.
 TEST_CASE("timing statistics: a drifting edge walks the buckets outward, one guard at a time") {
     SlotTimingStatistics statistics;
     uint64_t edge_us = 0;
     statistics.record_edge(edge_us, true);
 
     const int64_t between_guards =
-        (SlotTimingStatistics::kHopGuardUs + SlotTimingStatistics::kJitterGuardUs) / 2;
+        (SlotTimingStatistics::kSwitchMarginUs + SlotTimingStatistics::kSwitchRetuneUs) / 2;
     const int64_t errors[] = {10, 200, between_guards, 8000};
     const int expect_late[] = {3, 4, 5, 6};
     for (int64_t error : errors) {
@@ -105,7 +105,7 @@ TEST_CASE("timing statistics: an edge gap while still reporting locked is holdov
     CHECK(statistics.pps_samples() == 0);
 }
 
-// Slot 1's dwell opens at 800 ms and its tail runs to 200 ms past the second
+// Slot 1's dwell opens at 827 ms and its tail runs to 202 ms past the second
 // it started in (core/timing/slot.h kSlot1WrapMs). An armed deadline just before
 // the wrap and a landed instant just after it are still only a few thousand
 // microseconds apart - not a second, and not undefined, because nothing here

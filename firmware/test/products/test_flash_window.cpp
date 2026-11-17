@@ -60,8 +60,9 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     rig.product.config_link().tick(now_ms);
     REQUIRE(rig.product.config_link().durable_writes().pending());
 
-    // The last phase of the uplink dwell a worst-case write still clears a guard before its end.
-    constexpr int kLastWritePhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
+    // The last phase of the uplink dwell a worst-case write still clears a retune before its end.
+    constexpr int kLastWritePhaseMs = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
+                                      timing::kSwitchRetuneMs -
                                       static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
     constexpr int kRanLongMs = 50;
     constexpr int kPassPhaseMs = kLastWritePhaseMs - kRanLongMs;

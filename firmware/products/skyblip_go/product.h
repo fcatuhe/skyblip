@@ -43,8 +43,8 @@ constexpr ports::Capabilities kOptional =
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
 
-// INFO: fc 08nov26 at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms
-// against 2 s (zephyr/rf.h:221, slot.h:42-45)
+// INFO: fc 08nov26 at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms
+// against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of)
 constexpr uint32_t kRadioParkCeilingMs = 2000;
 
 // skyBlip Go: one board, one service list. The shell around it only decides how

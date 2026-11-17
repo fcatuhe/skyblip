@@ -61,7 +61,7 @@ void RadioService::record_dwell(const timing::SlotPlan& slot,
     value.refusal = refusal_of(slot, attempt, armed, carries_tx);
     value.noise_dbm = noise_floor_.level_dbm();
     value.tx_allowed = slot.tx_allowed;
-    value.own_tx_dwell = slot.own_tx_dwell;
+    value.own_tx_dwell = slot.band == timing::Band::M;
     value.listen_only = slot.listen_only;
     value.armed = armed;
     value.burst_armed = carries_tx;

@@ -30,10 +30,10 @@ updated_on: "2026-11-14"
         <tr><th>Time since the start of the second</th><th>Tuned to</th><th>What is on the channel</th></tr>
       </thead>
       <tbody>
-        <tr><th>0 to 200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 800&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
-        <tr><th>205 to 395&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
-        <tr><th>400 to 800&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
-        <tr><th>800 to 1200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 200&nbsp;ms into the next second</td></tr>
+        <tr><th>0 to 202&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 827&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
+        <tr><th>207 to 442&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
+        <tr><th>447 to 822&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
+        <tr><th>827 to 1202&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 202&nbsp;ms into the next second</td></tr>
       </tbody>
     </table>
   </div>
@@ -50,10 +50,12 @@ updated_on: "2026-11-14"
     the FLARM-generation format both precede their frames with a 32-bit sync word,
     a signal pattern. The two words share their first eighteen chips, or signal elements.
     The receiver detects this shared sequence, and the software identifies the system
-    from the chips that follow. The few milliseconds either side of the 869.525&nbsp;MHz slot are
-    the margin a band change needs, because the two bands are two modulations
-    and not two frequencies: 100&nbsp;kbit/s Manchester FSK below,
-    200&nbsp;kbit/s GMSK above.
+    from the chips that follow. Each change from one time slot to the next takes
+    10&nbsp;ms: 2&nbsp;ms still listening on the old channel for a late burst,
+    5&nbsp;ms to retune, and 3&nbsp;ms listening on the new channel before
+    its traffic starts. The same 5&nbsp;ms retune covers the change between
+    the two bands, which are two modulations and not two frequencies:
+    100&nbsp;kbit/s Manchester FSK below, 200&nbsp;kbit/s GMSK above.
   </p>
   <p class="lede">
     The transmit window is shorter. Positions and Status messages, which report
@@ -62,7 +64,7 @@ updated_on: "2026-11-14"
     868.4&nbsp;MHz in an odd one. They are scheduled every second airborne,
     and 9 then 11&nbsp;s apart on the ground. Status goes twice per 20&nbsp;s
     cycle, on the other channel from that second&rsquo;s position. The callsign
-    is the exception: every 10&nbsp;s, it goes between 1000 and 1193&nbsp;ms
+    is the exception: every 10&nbsp;s, it goes between 1000 and 1190&nbsp;ms
     on 868.4&nbsp;MHz, in the tail that falls in the next second.
     The device sends ADS-L frames, including its own callsign record:
     the FLARM-generation format is received, never transmitted.
@@ -76,8 +78,8 @@ updated_on: "2026-11-14"
 
   <ul class="points">
     <li>GPS aligns four time slots a second to the microsecond</li>
-    <li>The device uses 868.200 and 868.400&nbsp;MHz for 400&nbsp;ms each</li>
-    <li>It listens for the ground station on 869.525&nbsp;MHz for 190&nbsp;ms</li>
+    <li>The device uses 868.200 and 868.400&nbsp;MHz for 375&nbsp;ms each</li>
+    <li>It listens for the ground station on 869.525&nbsp;MHz for 235&nbsp;ms</li>
     <li>It decodes two systems within one synchronisation window</li>
     <li>Each burst lasts about 5&nbsp;ms. A busy channel can delay it</li>
     <li>It may transmit for 1&nbsp;% of any hour and uses about 0.6&nbsp;% airborne or 0.15&nbsp;% on the ground. The firmware enforces the limit</li>

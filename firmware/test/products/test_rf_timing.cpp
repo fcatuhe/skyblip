@@ -84,7 +84,7 @@ TEST_CASE("rf: a window the band's own noise walked through is counted, never pu
 
     const int rows_before = simulator.product().state().radio_log.count();
     const uint32_t bad_before = simulator.product().state().air.rx_bad;
-    const uint32_t at_ms = start + 2000 + timing::kSlot0StartMs + 200;
+    const uint32_t at_ms = start + 2000 + timing::kSlot0WindowMs.start_ms + 150;
     simulator.step(at_ms);
     REQUIRE(simulator.platform().chips().radio.receive_air(burst, sizeof(burst),
                                                            /*crc_error=*/false,
@@ -143,7 +143,7 @@ TEST_CASE("rf: the log dates a burst to the millisecond of the second it landed 
                                  ? entry.into_ms + 1000
                                  : entry.into_ms;
         // The phase is where the burst ENDED, so only a dwell it cannot have run into names one.
-        if (entry.band == model::Band::M && ended_ms < timing::kSlot0EndMs - 100) {
+        if (entry.band == model::Band::M && ended_ms < timing::kSlot0WindowMs.end_ms - 100) {
             CHECK(entry.channel == 0);
             channelled++;
         }
@@ -225,20 +225,19 @@ TEST_CASE("rf: a burst is heard only inside the dwell that owns its channel") {
         int slot;
         bool heard;
     };
-    // The O-band dwell runs 205..395 (framed on our ground station's burst), the
-    // M-band dwells 400..800 on 868.2 and 800..1000 on 868.4. 400..450 is the
-    // slice we listen to but do not transmit in: FLARM-generation traffic lives
-    // there.
+    // O band 207..442, then 868.2 MHz 447..822 and 868.4 MHz 827..1202, and we send from 450.
     const Case cases[] = {
         {50, 0, false},
         {150, 0, false},
         {300, 0, false},
         {390, 0, false},
-        {420, 0, true},
+        {430, 0, false},
+        {450, 0, true},
         {470, 0, true},
         {600, 0, true},
         {780, 0, true},
-        {820, 1, true},
+        {815, 0, true},
+        {835, 1, true},
         {900, 1, true},
         {990, 1, true},
         // The second dwell reaches 1200 ms: its tail is heard on 868.4, not

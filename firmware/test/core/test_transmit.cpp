@@ -47,7 +47,8 @@ bool bursts_overlap(int one_ms, int other_ms) {
 
 }  // namespace
 
-TEST_CASE("transmit: the instant is inside the direct slot, with room for the burst") {
+// A burst's first instant is its window's start, its last the window's end less air time and 5 ms.
+TEST_CASE("transmit: a position on A goes out from 450 to 810 ms") {
     Transmitter transmitter = airborne_transmitter();
     int earliest = 1000, latest = 0;
     // Every other second is the lower channel's: §C.2.5's alternation is the clock's.
@@ -55,26 +56,17 @@ TEST_CASE("transmit: the instant is inside the direct slot, with room for the bu
         const Transmitter::Attempt attempt =
             transmitter.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0);
         REQUIRE(attempt.go);
-        // Not from kSlot0StartMs: the dwell opens at 400, the direct slot at 450.
-        CHECK(attempt.at_ms >= adsl::kDirectStartMs);
-        // The burst also has to end before the dwell closes for the channel hop, not just
-        // before the direct slot ends at 1000.
-        CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionGuardMs <=
-              Scheduler::dwell_end(0));
         CHECK(attempt.frequency_hz == adsl::kMBand0Hz);
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
         if (attempt.at_ms > latest) latest = attempt.at_ms;
     }
-    // The whole slot is usable: an open dwell is a tuned dwell, so 450 itself is
-    // a legal instant and no guard is owed at the front.
-    CHECK(earliest == adsl::kDirectStartMs);
-    CHECK(latest == Scheduler::dwell_end(0) - Transmitter::kCompletionGuardMs -
-                        static_cast<int>(Transmitter::kAirTimeMs));
+    CHECK(earliest == 450);
+    CHECK(latest == 810);
+    CHECK(latest == kSlot0WindowMs.end_ms - static_cast<int>(Transmitter::kAirTimeMs) -
+                        kCompletionAllowanceMs);
 }
 
-// The upper channel's dwell opens at 800 already tuned, and the CCA before a burst listens on it.
-TEST_CASE("transmit: the first instant of a dwell leaves the clear channel assessment its lead") {
+TEST_CASE("transmit: a position on B goes out from 830 to 990 ms, where the direct slot ends") {
     Transmitter transmitter = airborne_transmitter();
     int earliest = 2000, latest = 0;
     for (uint32_t utc_s = 1; utc_s < 5000; utc_s += 2) {
@@ -84,9 +76,26 @@ TEST_CASE("transmit: the first instant of a dwell leaves the clear channel asses
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
         if (attempt.at_ms > latest) latest = attempt.at_ms;
     }
-    CHECK(earliest == kSlot1StartMs + static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000));
-    CHECK(latest == adsl::kDirectEndMs - Transmitter::kCompletionGuardMs -
-                        static_cast<int>(Transmitter::kAirTimeMs));
+    CHECK(earliest == 830);
+    CHECK(latest == 990);
+    CHECK(latest ==
+          adsl::kDirectEndMs - static_cast<int>(Transmitter::kAirTimeMs) - kCompletionAllowanceMs);
+}
+
+TEST_CASE("transmit: each burst type's first and last instants are its window's") {
+    using Payload = Transmitter::Payload;
+    CHECK(Transmitter::window_of(Payload::Status, 0).start_ms == 450);
+    CHECK(Transmitter::last_instant(Payload::Status, 0) == 810);
+    CHECK(Transmitter::window_of(Payload::Status, 1).start_ms == 830);
+    CHECK(Transmitter::last_instant(Payload::Status, 1) == 990);
+    CHECK(Transmitter::window_of(Payload::Callsign, 1).start_ms == 1000);
+    CHECK(Transmitter::last_instant(Payload::Callsign, 1) == 1190);
+}
+
+// The 2.2 ms channel check before a burst at a window's start falls in the switch's 3 ms lead.
+TEST_CASE("transmit: the channel check before a window's first instant listens on its channel") {
+    CHECK(PoliteAccess::kCcaLeadUs == 2200);
+    CHECK(PoliteAccess::kCcaLeadUs <= static_cast<uint32_t>(kSwitchLeadMs) * 1000);
 }
 
 TEST_CASE("transmit: two devices do not pick the same instant every second") {
@@ -104,10 +113,10 @@ TEST_CASE("transmit: two devices do not pick the same instant every second") {
 // Two addresses differ by a fixed XOR delta forever: a mixer that carried it would marry the pair.
 TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next") {
     constexpr uint32_t kOwnAddress = 0x5B7E57;
-    constexpr uint32_t kPeerAddress = 0x5B0554;
+    constexpr uint32_t kPeerAddress = 0x5B003B;
     CHECK(instant_at(kOwnAddress, 1) == instant_at(kPeerAddress, 1));
-    // 532 and 565, over six burst lengths apart, from the pair that shared 906 ms a second earlier.
-    CHECK(instant_at(kOwnAddress, 2) - instant_at(kPeerAddress, 2) == -33);
+    // 570 and 752, far more than a burst apart, from the pair that shared 850 ms a second earlier.
+    CHECK(instant_at(kOwnAddress, 2) - instant_at(kPeerAddress, 2) == -182);
 
     const int shared_ms = instant_at(kOwnAddress, 1);
     const int own_next_ms = instant_at(kOwnAddress, 2);
@@ -118,7 +127,7 @@ TEST_CASE("transmit: a shared instant in one second is a fresh draw in the next"
         if (bursts_overlap(own_next_ms, instant_at(address, 2))) still_overlapping++;
     }
     REQUIRE(shared > 100);
-    // 9 of 329, the odds of two 5 ms bursts meeting in a 342 ms slot. A carried delta keeps 329.
+    // About the odds of two 5 ms bursts meeting in a 361 ms slot. A carried delta keeps them all.
     CHECK(still_overlapping * 10 < shared);
 }
 
@@ -132,9 +141,8 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
             transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
         REQUIRE(attempt.go);
         CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
-        CHECK(attempt.at_ms >= kSlot1StartMs);
-        CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) +
-                  Transmitter::kCompletionGuardMs <=
+        CHECK(attempt.at_ms >= kSlot1WindowMs.start_ms);
+        CHECK(attempt.at_ms + static_cast<int>(Transmitter::kAirTimeMs) + kCompletionAllowanceMs <=
               adsl::kDirectEndMs);
     }
     // And the tail is not a position opportunity, however anchored the clock is.
@@ -177,9 +185,9 @@ TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     ClockState no_pps{true, false, 0};
     CHECK_FALSE(transmitter.attempt(scheduler.plan(500, no_pps), 10, 10000, true, 0).go);
     CHECK_FALSE(transmitter.attempt(scheduler.plan(300, anchored()), 10, 10000, true, 0).go);
-    // Claimed from 400, but the instant is what waits for the direct slot to open at 450.
+    // Claimed from the retune at 442, but the instant is what waits for the window to open at 450.
     const Transmitter::Attempt early =
-        transmitter.attempt(scheduler.plan(420, anchored()), 10, 10000, true, 0);
+        transmitter.attempt(scheduler.plan(444, anchored()), 10, 10000, true, 0);
     CHECK(early.go);
     CHECK(early.at_ms >= adsl::kDirectStartMs);
 }

@@ -93,10 +93,10 @@ TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version th
     CHECK(status_field(wire::BitField{40, 4}) == 1);
 }
 
-// The dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, of the direct slot's
+// The dwells hear 868.2 MHz from 450 to 822 ms and 868.4 MHz from 827 to 1000, of the direct slot's
 // 550.
 TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class") {
-    CHECK(timing::Scheduler::direct_heard_permille() == (348 + 200) * 1000 / 1100);
+    CHECK(timing::Scheduler::direct_heard_permille() == (372 + 173) * 1000 / 1100);
     CHECK(status_field(wire::BitField{44, 2}) == 2);
 }
 
@@ -106,7 +106,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.3: the Status payload declares the O-band LDR rece
 
 // The O-band dwell sits in the uplink slot, which the clause says does not count.
 TEST_CASE("ADS-L.4.SRD860.G.2.4: the Status payload declares the O-band HDR receive class") {
-    CHECK(timing::kUplinkRxEndMs <= adsl::kDirectStartMs);
+    CHECK(timing::dwell_of(timing::kUplinkWindowMs).end_ms <= adsl::kDirectStartMs);
     CHECK(status_field(wire::BitField{48, 2}) == 0);
 }
 
@@ -170,9 +170,9 @@ TEST_CASE(
     "ADS-L.4.SRD860.G.3: the Traffic Uplink rides the O-band HDR channel in the Uplink slot") {
     CHECK(adsl::kOBandHz == 869525000u);
     CHECK(adsl::kUplinkChipRateBps == 200000u);
-    CHECK(timing::kUplinkRxStartMs >= 200);
-    CHECK(timing::kUplinkRxEndMs <= 450);
-    // A whole burst fits the slot it is transmitted in, with the dwell's guard either side.
+    CHECK(timing::dwell_of(timing::kUplinkWindowMs).start_ms >= adsl::kUplinkSlotStartMs);
+    CHECK(timing::dwell_of(timing::kUplinkWindowMs).end_ms <= adsl::kUplinkSlotEndMs);
+    // A whole burst fits the window it is transmitted in.
     CHECK(timing::kGroundEmitStartMs + static_cast<int>(adsl::kUplinkBurstUs / 1000) <=
           timing::kGroundEmitEndMs);
 }
