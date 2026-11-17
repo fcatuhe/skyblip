@@ -173,24 +173,24 @@ TEST_CASE("product: the settings page reaches the glass, drawn from what the dev
     CHECK(expected.count_black() > 200);
 }
 
-TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that survives a boot") {
+TEST_CASE("product: the alarm a pilot sets on the panel is the one that survives a boot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
-    REQUIRE(rig.settings().alarm_volume == go::AlarmVolume::Loud);
+    REQUIRE(rig.settings().alarm == go::Alarm::Loud);
 
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
     change(rig, now_ms);
     rig.run(now_ms, now_ms + 500);
     now_ms += 500;
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
 
     // The screen did not write the flash: it said the settings had changed and
     // the service that owns the blob wrote it, exactly as it does for a phone.
     go::Settings stored{};
     REQUIRE(stored_settings(rig, stored));
-    CHECK(stored.alarm_volume == go::AlarmVolume::Soft);
+    CHECK(stored.alarm == go::Alarm::Soft);
 
     // And the blob is one a device coming up cold accepts as itself.
     Rig again;
@@ -199,7 +199,7 @@ TEST_CASE("product: the alarm volume a pilot sets on the panel is the one that s
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     REQUIRE(again.platform.key_value().write("settings", blob, count) == Status::Ok);
     REQUIRE(again.setup() == Status::Ok);
-    CHECK(again.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(again.settings().alarm == go::Alarm::Soft);
 }
 
 TEST_CASE("product: the range and the plot a pilot picks on the panel survive a boot") {
@@ -365,7 +365,7 @@ TEST_CASE("product: walking the rows without changing one writes nothing at all"
     CHECK(rig.product.screen().page() == go::Page::Radar);
     CHECK_FALSE(rig.product.screen().editor().active());
     CHECK(rig.settings().aircraft_type == before.aircraft_type);
-    CHECK(rig.settings().alarm_volume == before.alarm_volume);
+    CHECK(rig.settings().alarm == before.alarm);
 
     // Nothing was staged, so there was nothing to write: the flash has never
     // been touched and the device cannot be half edited.
@@ -381,7 +381,7 @@ TEST_CASE("product: a page nobody presses gives the traffic picture back on its 
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
 
     rig.run(now_ms, now_ms + go::MenuEditor::kIdleReturnHoldMs + 2000);
     now_ms += go::MenuEditor::kIdleReturnHoldMs + 2000;
@@ -395,7 +395,7 @@ TEST_CASE("product: the pad walks out of a menu onto the page that opened it") {
     uint32_t now_ms = 100;
 
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
     move(rig, now_ms);
     CHECK(rig.product.screen().page() == go::Page::Radar);
 }
@@ -409,12 +409,12 @@ TEST_CASE("product: an invalid setting is never written by the page that could n
     REQUIRE(go::validate(rig.settings()) != Status::Ok);
 
     open_menu(rig, now_ms);
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
     change(rig, now_ms);
     change(rig, now_ms);
     rig.run(now_ms, now_ms + 500);
 
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Loud);
+    CHECK(rig.settings().alarm == go::Alarm::Loud);
     go::Settings stored{};
     CHECK_FALSE(stored_settings(rig, stored));
 }
@@ -434,14 +434,14 @@ TEST_CASE("product: a screen change wipes the glass, and no keypress asks for a 
     CHECK_FALSE(rig.platform.chips().epd.last_full);
     CHECK(rig.platform.chips().epd.present_count >= 3);  // boot, the black frame, then the page
 
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
     change(rig, now_ms);
     change(rig, now_ms);
     rig.run(now_ms, now_ms + 2000);
     now_ms += 2000;
     CHECK_FALSE(rig.platform.chips().epd.last_full);
 
-    focus_on(rig, now_ms, go::MenuRow::Volume);
+    focus_on(rig, now_ms, go::MenuRow::Alarm);
     move(rig, now_ms);
     REQUIRE(rig.product.screen().page() == go::Page::Radar);
     rig.run(now_ms, now_ms + 4000);

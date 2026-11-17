@@ -10,7 +10,7 @@
 #include "core/traffic/formation.h"
 #include "core/traffic/table.h"
 #include "ports/indicator.h"
-#include "products/common/alarm_volume.h"
+#include "products/common/alarm.h"
 #include "products/common/features.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
@@ -18,17 +18,11 @@
 namespace skyblip::common {
 
 struct AlarmSettings {
-    AlarmSettings(const bool& enabled_by, const AlarmVolume& volume_of)
-        : enabled(enabled_by), volume(volume_of) {}
-    AlarmSettings(bool&&, const AlarmVolume&) = delete;
-    AlarmSettings(const bool&, AlarmVolume&&) = delete;
-    AlarmSettings(bool&&, AlarmVolume&&) = delete;
-    AlarmSettings(const bool&&, const AlarmVolume&) = delete;
-    AlarmSettings(const bool&, const AlarmVolume&&) = delete;
-    AlarmSettings(const bool&&, const AlarmVolume&&) = delete;
+    explicit AlarmSettings(const Alarm& alarm_of) : alarm(alarm_of) {}
+    explicit AlarmSettings(Alarm&&) = delete;
+    explicit AlarmSettings(const Alarm&&) = delete;
 
-    const bool& enabled;
-    const AlarmVolume& volume;
+    const Alarm& alarm;
 };
 
 // The lamp lives here rather than in PowerService, whose state most of it reads,
@@ -86,12 +80,10 @@ class AlarmService : public runtime::Service {
     void show(indication::Lamp lamp);
     void accrue_annunciator(uint32_t now_ms);
 
-    // Eight passes through the shortest note or gap of either tune: the
-    // cadence the ear gets is the cadence written in core/annunciation, to
-    // within one pass of the loop.
+    // INFO: fc 16nov26 eight passes per alarm note or gap, so an alarm sounds as written
     static constexpr uint32_t kPassesPerShortestPhase = 8;
     static_assert(runtime::kServicePassCeilingMs * kPassesPerShortestPhase <=
-                      annunciation::kShortestPhaseMs,
+                      annunciation::kShortestAlarmPhaseMs,
                   "the service loop is too coarse to resolve the shortest note");
     static_assert(annunciation::kAnnunciatorOnCeilingMs < runtime::kServiceSilenceCeilingMs,
                   "the annunciator's guard has to cut before the watchdog bites");

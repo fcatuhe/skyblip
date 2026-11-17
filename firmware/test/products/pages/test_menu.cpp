@@ -76,7 +76,7 @@ Drawn aircraft_of(const MenuValues& values, MenuRow focus) {
 TEST_CASE("radar menu: every row names what it holds, and the focused one is reversed out") {
     MenuValues values = default_menu_values();
     std::strcpy(values.settings.callsign, "F-JABCDEF");
-    values.settings.alarm_volume = go::AlarmVolume::Soft;
+    values.settings.alarm = go::Alarm::Soft;
 
     const Drawn drawn = page_of(Page::Radar, values, MenuRow::Alarm);
 
@@ -90,7 +90,7 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
 
     // The focused row is white ink on a filled bar, told apart by shape before a word is read.
     CHECK(row_label_reads(drawn, MenuRow::Alarm, true));
-    CHECK(row_value_reads(drawn, MenuRow::Alarm, "ON", true));
+    CHECK(row_value_reads(drawn, MenuRow::Alarm, "SOFT", true));
     CHECK_FALSE(row_label_reads(drawn, MenuRow::Alarm, false));
 
     // Exactly one bar, and the keys say what each contact does to it.
@@ -109,29 +109,26 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
-// Eight rows and seven lines: the rows slide up under the focus, one line at a time.
-TEST_CASE("radar menu: the focus past the last line slides the rows up and keeps the hint") {
+// Seven rows and seven lines: the radar menu fits, and only a longer one slides under the focus.
+TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up under the focus") {
     MenuValues values = default_menu_values();
-    values.settings.alarm_volume = go::AlarmVolume::Soft;
+    values.settings.alarm = go::Alarm::Visual;
     const Menu menu = menu_for(Page::Radar);
-    REQUIRE(menu.row_count == kMenuLines + 1);
-
-    const Drawn top = page_of(Page::Radar, values, MenuRow::Light);
-    CHECK(line_of(top, MenuRow::Light) == 0);
-    CHECK(line_of(top, MenuRow::Volume) == kMenuLines - 1);
-    CHECK(line_of(top, MenuRow::Bravo) == kMenuLines);
-    CHECK(row_value_reads(top, MenuRow::Alarm, "ON", false));
-    CHECK(reads_pad_key(top.canvas, "NEXT"));
+    REQUIRE(menu.row_count == kMenuLines);
 
     const Drawn last = page_of(Page::Radar, values, MenuRow::Bravo);
+    CHECK(line_of(last, MenuRow::Light) == 0);
     CHECK(line_of(last, MenuRow::Bravo) == kMenuLines - 1);
     CHECK(row_label_reads(last, MenuRow::Bravo, true));
-    CHECK(row_value_reads(last, MenuRow::Bravo, "NONE", true));
-    CHECK(row_value_reads(last, MenuRow::Volume, "SOFT", false));
-    CHECK(row_label_reads(last, MenuRow::Aircraft, false));
-    CHECK(line_of(last, MenuRow::Aircraft) == 0);
+    CHECK(row_value_reads(last, MenuRow::Alarm, "VISUAL", false));
     // Off the last row the pad hands the glass back, and the key says so.
     CHECK(reads_pad_key(last.canvas, "BACK"));
+
+    const MenuRow longer[] = {MenuRow::Light, MenuRow::Aircraft, MenuRow::Units, MenuRow::Range,
+                              MenuRow::Plot,  MenuRow::Alarm,    MenuRow::Bravo, MenuRow::Status};
+    const Menu eight{longer, kMenuLines + 1};
+    CHECK(menu_first_row(eight, MenuRow::Bravo) == 0);
+    CHECK(menu_first_row(eight, MenuRow::Status) == 1);
 }
 
 TEST_CASE("menu page: the button's key names what a press does to the focused row") {

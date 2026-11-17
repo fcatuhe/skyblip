@@ -19,7 +19,7 @@
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "core/util/result.h"
-#include "products/common/alarm_volume.h"
+#include "products/common/alarm.h"
 
 namespace skyblip::go {
 
@@ -27,7 +27,7 @@ enum class Units : uint8_t { Nautical = 0, Metric = 1 };
 
 enum class RadarPlot : uint8_t { All = 0, ToScale = 1 };
 
-using common::AlarmVolume;
+using common::Alarm;
 
 constexpr int kRangeStepCount = 4;
 constexpr int kDefaultRangeStep = 2;
@@ -75,8 +75,7 @@ struct Settings {
     // INFO: fc 05oct26 every trim is a person's since the charger learner went, kept for the blob
     bool battery_offset_manual{false};
     uint8_t aircraft_type{kAircraftTypeLight};
-    bool alarm_enabled{true};
-    AlarmVolume alarm_volume{AlarmVolume::Loud};
+    Alarm alarm{Alarm::Loud};
     Units units{Units::Nautical};
     uint8_t range_step{kDefaultRangeStep};
     RadarPlot plot{RadarPlot::All};
@@ -91,7 +90,7 @@ struct Settings {
     static constexpr uint8_t kCurrentVersion = 1;
 };
 
-constexpr uint8_t kBlobVersion = 13;
+constexpr uint8_t kBlobVersion = 14;
 
 Settings defaults();
 

@@ -47,12 +47,12 @@ fr:
       unit_names:
         nautical: "NM, kt"
         metric: "km, km/h"
-      alarm_enabled: "Son des alarmes"
-      alarm_volume: "Volume des alarmes"
-      volume_names:
-        "off": "Coupé"
-        soft: "Doux"
-        loud: "Fort"
+      alarm: "Alarme"
+      alarm_names:
+        "off": "Coupée"
+        visual: "Visuelle seulement"
+        soft: "Faible"
+        loud: "Forte"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
     capture:

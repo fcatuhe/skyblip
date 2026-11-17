@@ -39,9 +39,10 @@ struct Boot {
     bool profile_recorded{false};
 };
 
-constexpr uint8_t kConfigFlagAlarmEnabled = 1u << 2;
+// INFO: fc 15nov26 bit 2 was alarm_enabled until alarm_setting replaced it, so it stays clear
 constexpr uint8_t kConfigFlagMetric = 1u << 3;
 constexpr uint8_t kConfigFlagBatteryTrimManual = 1u << 4;
+constexpr uint8_t kConfigFlagAlarmSettingRecorded = 1u << 5;
 
 struct Config {
     uint32_t address{0};
@@ -49,11 +50,11 @@ struct Config {
     int16_t frequency_trim_e1_ppm{0};
     uint8_t aircraft_type{0};
     uint8_t address_mapping_table{0};
-    uint8_t alarm_volume{0};
     uint8_t settings_version{0};
     int8_t tx_power_dbm{0};
     int8_t pa_rated_dbm{0};
-    bool alarm_enabled{false};
+    uint8_t alarm_setting{0};
+    bool alarm_setting_recorded{false};
     bool metric{false};
     bool battery_trim_manual{false};
 };

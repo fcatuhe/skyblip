@@ -85,7 +85,7 @@ test('text comes back byte for byte, a leading byte order mark included, as the 
 });
 
 test('a set and a defaults reply share one key table', () => {
-  const defaults = { command: 'defaults', aircraft_type: 1, alarm_enabled: true, alarm_volume: 'loud', units: 'nautical', callsign: '' };
+  const defaults = { command: 'defaults', aircraft_type: 1, units: 'nautical', callsign: '', alarm: 'loud' };
   assert.deepEqual(encodeFrame(defaults).slice(3), encodeFrame({ ...defaults, command: 'set' }).slice(3));
 });
 
@@ -109,7 +109,8 @@ test('what the registry does not hold is refused before anything is sent', () =>
     { command: 'set', region: 3 },
     { command: 'set', units: 'imperial' },
     { command: 'set', aircraft_type: -1 },
-    { command: 'set', alarm_enabled: 1 },
+    { command: 'set', alarm_enabled: false },
+    { command: 'set', alarm: 'quiet' },
     { command: 'unlock', serial: 1, signature: '00' },
     { command: 'register', server_nonce: 'not hex' },
   ]) {

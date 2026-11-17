@@ -54,6 +54,9 @@ void AlarmService::tick(uint32_t now_ms) {
     formation_.forget_stale(now_ms);
     context_.state.formation.members = formation_.members();
 
+    // INFO: fc 15nov26 off interrupts nothing, while each target keeps its level for the radar and
+    // NMEA
+    if (!interrupts(settings_.alarm)) live = traffic::Level::None;
     if (worst != context_.state.alarm_level || live != context_.state.alarm_undismissed) {
         context_.state.alarm_level = worst;
         context_.state.alarm_undismissed = live;
@@ -70,8 +73,7 @@ void AlarmService::tick(uint32_t now_ms) {
     const bool bravo_lost = comms::lost(context_.state.bravo);
     situation.bravo_lost = bravo_lost && !bravo_lost_;
     bravo_lost_ = bravo_lost;
-    situation.enabled =
-        settings_.enabled && settings_.volume != AlarmVolume::Off && !context_.state.alarm_granted;
+    situation.enabled = audible(settings_.alarm) && !context_.state.alarm_granted;
     situation.running = running_;
     if (sign_on_pending_) {
         sign_on_pending_ = false;
@@ -193,7 +195,7 @@ void AlarmService::show(indication::Lamp lamp) {
 void AlarmService::drive_buzzer(const annunciation::Command& command) {
     if (command.tone_on) {
         const ports::Loudness loudness =
-            settings_.volume == AlarmVolume::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
+            settings_.alarm == Alarm::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
         context_.roles.annunciator.tone(command.tone_hz, loudness);
     } else {
         context_.roles.annunciator.silence();

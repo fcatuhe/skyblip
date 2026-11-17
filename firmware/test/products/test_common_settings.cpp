@@ -17,16 +17,6 @@ static_assert(std::is_constructible_v<common::PowerSettings, const int16_t&>);
 static_assert(!std::is_constructible_v<common::PowerSettings, int16_t>);
 static_assert(!std::is_constructible_v<common::PowerSettings, const int16_t>);
 
-static_assert(
-    std::is_constructible_v<common::AlarmSettings, const bool&, const common::AlarmVolume&>);
-static_assert(!std::is_constructible_v<common::AlarmSettings, bool, const common::AlarmVolume&>);
-static_assert(
-    !std::is_constructible_v<common::AlarmSettings, const bool, const common::AlarmVolume&>);
-static_assert(!std::is_constructible_v<common::AlarmSettings, const bool&, common::AlarmVolume>);
-static_assert(
-    !std::is_constructible_v<common::AlarmSettings, const bool&, const common::AlarmVolume>);
-static_assert(!std::is_constructible_v<common::AlarmSettings, bool, common::AlarmVolume>);
-static_assert(!std::is_constructible_v<common::AlarmSettings, bool, const common::AlarmVolume>);
-static_assert(!std::is_constructible_v<common::AlarmSettings, const bool, common::AlarmVolume>);
-static_assert(
-    !std::is_constructible_v<common::AlarmSettings, const bool, const common::AlarmVolume>);
+static_assert(std::is_constructible_v<common::AlarmSettings, const common::Alarm&>);
+static_assert(!std::is_constructible_v<common::AlarmSettings, common::Alarm>);
+static_assert(!std::is_constructible_v<common::AlarmSettings, const common::Alarm>);

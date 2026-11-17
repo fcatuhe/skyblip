@@ -18,9 +18,9 @@ class CaptureSettings final : public common::CaptureSettings {
         record.frequency_trim_e1_ppm = settings_.frequency_trim_e1_ppm;
         record.aircraft_type = settings_.aircraft_type;
         record.address_mapping_table = settings::kSkyblipAddressMappingTable;
-        record.alarm_volume = static_cast<uint8_t>(settings_.alarm_volume);
         record.settings_version = settings_.version;
-        record.alarm_enabled = settings_.alarm_enabled;
+        record.alarm_setting = static_cast<uint8_t>(settings_.alarm);
+        record.alarm_setting_recorded = true;
         record.metric = settings_.units == Units::Metric;
         record.battery_trim_manual = settings_.battery_offset_manual;
     }

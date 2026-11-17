@@ -54,10 +54,12 @@ constexpr uint16_t kNoteC7Hz = 2093;
 constexpr uint16_t kNoteE7Hz = 2637;
 constexpr uint16_t kNoteG7Hz = 3136;
 
-constexpr uint16_t kFirstFixNoteMs = kTuneSixteenthMs;
-constexpr uint16_t kFirstFixNextBeatMs = kTuneSixteenthMs;
-constexpr uint16_t kFirstFixSkipBeatMs = 3 * kTuneSixteenthMs;
-constexpr uint16_t kFirstFixHeldNoteMs = 3 * kTuneSixteenthMs;
+constexpr uint16_t kFirstFixTempoBpm = 200;
+constexpr uint16_t kFirstFixEighthMs = 60000 / kFirstFixTempoBpm / 2;
+// INFO: fc 16nov26 a note sounds 7/9 of its eighth, so a silence parts repeated notes
+constexpr uint16_t kFirstFixNoteMs = (7 * kFirstFixEighthMs + 9 / 2) / 9;
+constexpr uint16_t kFirstFixNextBeatMs = kFirstFixEighthMs - kFirstFixNoteMs;
+constexpr uint16_t kFirstFixSkipBeatMs = 2 * kFirstFixEighthMs - kFirstFixNoteMs;
 
 inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
@@ -65,7 +67,7 @@ inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
     {kNoteC7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
-    {kNoteG7Hz, kFirstFixHeldNoteMs, 0},
+    {kNoteG7Hz, kFirstFixNoteMs, 0},
 };
 inline constexpr Tune kFirstFixTune = tune_of(kFirstFixJingle);
 
@@ -83,17 +85,13 @@ constexpr uint16_t shortest_phase_ms(Tune tune) {
     return shortest;
 }
 
-// The shortest phase any tune asks the service loop to resolve. The loop
-// cadence has to divide into this several times over or the tune the ear gets
-// is not the tune written above; products assert that against their own step
-// rate.
 // INFO: fc 17oct26 a tune never starts over a sounding one, so no on-span outlasts the longest call
 constexpr uint16_t kReannounceRestMs = kTuneSixteenthMs;
 
-constexpr uint16_t kShortestPhaseMs =
-    std::min({shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kFirstFixTune),
-              shortest_phase_ms(kBravoLostTune), kReannounceRestMs});
-static_assert(kShortestPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
+// INFO: fc 16nov26 the fix tune is a melody, not an alarm, so it keeps its own tempo
+constexpr uint16_t kShortestAlarmPhaseMs = std::min(
+    {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs});
+static_assert(kShortestAlarmPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
 
 constexpr uint16_t longest_call_ms(Tune tune) {
     uint16_t longest = 0;
@@ -138,7 +136,7 @@ struct Situation {
     bool first_fix{false};
     // A paired Bravo was lost on this pass.
     bool bravo_lost{false};
-    // settings.alarm_enabled, and a volume that is not off.
+    // An alarm setting of soft or loud.
     bool enabled{true};
     // False from the moment the device starts going down.
     bool running{true};

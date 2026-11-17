@@ -30,6 +30,7 @@ const flagField = (shift, mask, names) => (raw, flags) => names[(flags >> shift)
 const RESET = ['UNKNOWN', 'POWER ON', 'RESET PIN', 'BROWNOUT', 'SOFT RESET', 'WATCHDOG', 'CPU LOCKUP', 'CHARGER WAKE', 'BUTTON WAKE', 'DEBUGGER'];
 const IMAGE_STATE = ['confirmed', 'probation', 'reverted', 'refused'];
 const PROFILE = ['full', 'power_run', 'flight_run'];
+const ALARM_SETTING = ['off', 'visual', 'soft', 'loud'];
 const REJECT = ['NONE', 'NO SOLUTION', 'NO RMC', 'NO GGA', 'STALE', 'NO DATE', 'JUMP'];
 const STAGE = ['silent', 'blind', 'solving', 'fixed'];
 const VERDICT = ['transmitted', 'lost', 'held', 'unarmed', 'received', 'named', 'bad_crc', 'unframed', 'miskeyed', 'undecoded', 'unsupported', 'unattempted', 'declared', 'deferred', 'forced', 'busy'];
@@ -59,7 +60,8 @@ const TYPES = {
     ['address', uint32(0)], ['battery_offset_mv', int16(4)], ['frequency_trim_e1_ppm', int16(6)],
     ['aircraft_type', uint8(8)], ['address_mapping_table', uint8(9)], ['alarm_volume', uint8(10)],
     ['settings_version', uint8(11)], ['tx_power_dbm', int8(12)], ['pa_rated_dbm', int8(13)],
-    ['alarm_enabled', flag(2)], ['metric', flag(3)], ['battery_trim_manual', flag(4)]]],
+    ['alarm_setting', vouchedEnum8(14, 5, ALARM_SETTING)], ['alarm_enabled', flag(2)], ['metric', flag(3)],
+    ['battery_trim_manual', flag(4)]]],
   3: ['gnss', [
     ['solution_phase_ms', uint16(0)], ['residual_m', uint16(2)], ['hdop_e2', uint16(4)], ['vdop_e2', uint16(6)],
     ['stage_s', uint16(8)], ['satellites', uint8(10)], ['satellites_in_view', uint8(11)], ['fix_mode', uint8(12)],

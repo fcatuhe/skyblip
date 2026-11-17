@@ -77,13 +77,13 @@ TEST_CASE("product: the e-paper refreshes on change, not on cadence") {
 TEST_CASE("product: persisted settings are loaded on setup") {
     Rig rig;
     go::Settings settings = go::defaults();
-    settings.alarm_volume = go::AlarmVolume::Soft;
+    settings.alarm = go::Alarm::Soft;
     uint8_t blob[64];
     go::to_blob(settings, blob, sizeof(blob));
     REQUIRE(rig.platform.key_value().write("settings", blob, go::blob_size()) == Status::Ok);
 
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(rig.settings().alarm_volume == go::AlarmVolume::Soft);
+    CHECK(rig.settings().alarm == go::Alarm::Soft);
 }
 
 // Issue #126: the unlock code is the only thing that knows the address, and this wiring carries it.
@@ -147,13 +147,13 @@ TEST_CASE("product: a board with no battery sense says so instead of reporting e
 TEST_CASE("product: settings changed over the link are persisted") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     // The only way the device can be told it is on the ground: one stationary
     // solution, which core/flight answers Ground to and the link's gate reads.
     rig.push_fix(/*altitude_m=*/0, /*updates=*/1);
     rig.run(0, 100);
 
-    rig.send("{\"command\":\"set\",\"alarm_volume\":\"loud\"}");
+    rig.send("{\"command\":\"set\",\"alarm\":\"loud\"}");
     rig.run(100, 300);
     rig.product.config_link().config().confirm();
     // The write is a request now, not a call: it coalesces for
@@ -166,7 +166,7 @@ TEST_CASE("product: settings changed over the link are persisted") {
     REQUIRE(rig.platform.key_value().read("settings", blob, sizeof(blob), count) == Status::Ok);
     go::Settings stored{};
     REQUIRE(go::from_blob(blob, count, stored) == Status::Ok);
-    CHECK(stored.alarm_volume == go::AlarmVolume::Loud);
+    CHECK(stored.alarm == go::Alarm::Loud);
 }
 
 TEST_CASE("product: the reset reason is read once at boot and kept") {

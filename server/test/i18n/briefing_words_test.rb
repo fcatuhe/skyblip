@@ -63,9 +63,9 @@ class BriefingWordsTest < ActiveSupport::TestCase
       assert_empty keys - words(locale, :activation_notices)
     end
 
-    test "the units and the alarm volumes are offered under the registry's names in #{locale}" do
+    test "the units and the alarm steps are offered under the registry's names in #{locale}" do
       assert_equal enum("units"), I18n.t("briefing.settings.unit_names", locale:).keys.map(&:to_s)
-      assert_equal enum("alarm_volume"), I18n.t("briefing.settings.volume_names", locale:).keys.map(&:to_s)
+      assert_equal enum("alarm"), I18n.t("briefing.settings.alarm_names", locale:).keys.map(&:to_s)
     end
   end
 

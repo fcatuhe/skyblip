@@ -58,7 +58,7 @@ TEST_CASE("diagnostics config: arming names the settings every other record was 
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
     rig.settings().aircraft_type = 9;
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.settings().battery_offset_mv = -30;
     rig.settings().battery_offset_manual = true;
     rig.settings().units = go::Units::Metric;
@@ -74,11 +74,11 @@ TEST_CASE("diagnostics config: arming names the settings every other record was 
     CHECK(config.address == settings::address_of(platform::host::Identity::kSerial));
     CHECK(config.address_mapping_table == settings::kSkyblipAddressMappingTable);
     CHECK(config.aircraft_type == 9);
-    CHECK(config.alarm_volume == 1);
+    CHECK(config.alarm_setting == static_cast<uint8_t>(go::Alarm::Soft));
+    CHECK(config.alarm_setting_recorded);
     CHECK(config.battery_offset_mv == -30);
     CHECK(config.battery_trim_manual);
     CHECK(config.metric);
-    CHECK(config.alarm_enabled);
     CHECK(config.settings_version == go::Settings::kCurrentVersion);
 }
 
@@ -396,7 +396,7 @@ TEST_CASE(
     uint32_t now_ms = 100;
     taxi(rig, now_ms, 3);
     arm(rig, now_ms);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.product.config_link().config().note_settings_changed();
     taxi(rig, now_ms, 6);
     stop(rig, now_ms);
@@ -473,7 +473,7 @@ TEST_CASE("diagnostics: a device nobody armed records nothing at all") {
     taxi(rig, now_ms, 3);
     rig.raise_link(3);
     rig.press(now_ms);
-    rig.settings().alarm_volume = go::AlarmVolume::Soft;
+    rig.settings().alarm = go::Alarm::Soft;
     rig.product.config_link().config().note_settings_changed();
     taxi(rig, now_ms, 6);
 

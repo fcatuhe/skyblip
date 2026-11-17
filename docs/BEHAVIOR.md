@@ -2992,7 +2992,6 @@ The menu behind each page as drawn: the focused row, what each row reads, the ca
 - the aircraft address row shows the six hex digits stored, or NONE
   > The address a controller reads off the aircraft's papers, six hex digits as they are written.
 - the focus past the last line slides the rows up and keeps the hint
-  > Eight rows and seven lines: the rows slide up under the focus, one line at a time.
 
 ### test/products/pages/test_menu_editor.cpp
 
@@ -3026,7 +3025,6 @@ The menu editor: what the pad moves, what the button changes, and what a pilot t
 - the plot starts on all, and one press each way flips it to scale
 - the ring is a range a thumb can step, and the cycle closes
 - the volume steps down from loud through soft to off, and round
-  > One press from the default is still heard: silent takes a second press.
 
 **nearby menu**
 
@@ -4172,7 +4170,6 @@ The settings write through the whole product: a change goes in where a pilot or 
   > Work earlier in the pass left the settings write deciding on the phase the pass began at.
 - a store that did not mount is never written, and nothing is owed to it
 - a thumb stepping the volume on the panel writes flash once
-  > The same, stepped by a real thumb on the panel: presses in at the pin the board polls.
 - a write the store refused is retried until it lands
   > A refused write was counted as written, and the pilot's change was gone at the next boot.
 - six rapid changes are one write
@@ -4394,7 +4391,6 @@ The status lamp through the whole product: the cell, the fix, real ADS-L frames,
 - a running device with no fix winks blue, and green once it has one
 - a unit with no status LED flies and lights nothing
 - alarms or volume switched off still sign off in the hand, and sound nothing
-  > The signs say the unit is on or off, which is not an alarm the pilot switched off.
 - an urgent target takes the lamp off the wink
 - switching alarms off silences the buzzer and does not darken the lamp
 - with a PPS lock the wink falls on the UTC grid, not on when the fix came
@@ -5454,7 +5450,6 @@ A stored blob is a data format, so every version a firmware ever wrote comes bac
 - a blob written by version-1 firmware comes back as itself
   > B4. A stored blob is a data format: deleting a field is expand, migrate, contract, and the migration is the part a device in the field depends on.
 - a blob written by version-10 firmware comes back on three volumes
-  > Until version 11 the volume ran 0 to 5, and every step from 3 up drove the piezo the same.
 - a blob written by version-11 firmware comes back whole, with no aircraft address
   > Until version 12 a unit held no aircraft address, so the transponder it filters is none.
 - a blob written by version-2 firmware comes back as itself, untrimmed
@@ -6497,7 +6492,6 @@ Bravo's own blob, version 1, and the three keys of the link's table it stores (#
 - a version 1 blob is read whole, the pin kept and the aircraft address a phone's
   > Version 2 adds where the aircraft address came from, and must not cost a Bravo its pin.
 - blob version 2 carries the peer pin whole, and refuses any other version
-  > #192 stores the pinned Go from the first image, and version 2 keeps it.
 - config answers alarm_enabled, alarm_volume and aircraft_address, and nothing else
 - defaults name the same three keys, as a new unit ships them
 - the settings come back from flash after a reboot

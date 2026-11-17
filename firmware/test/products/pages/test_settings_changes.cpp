@@ -27,8 +27,8 @@ TEST_CASE("settings changes page: each change is a row in the menu's words, and 
 
     to = from;
     to.aircraft_type = 4;
-    to.alarm_volume = AlarmVolume::Soft;
-    CHECK(described(from, to) == "TYPE GLIDER\nVOLUME SOFT");
+    to.alarm = Alarm::Soft;
+    CHECK(described(from, to) == "TYPE GLIDER\nALARM SOFT");
 }
 
 TEST_CASE(
@@ -37,7 +37,7 @@ TEST_CASE(
     std::strcpy(from.callsign, "F-JABCDEF");
     Settings to = from;
     to.callsign[0] = 0;
-    to.alarm_enabled = false;
+    to.alarm = Alarm::Off;
     to.battery_offset_mv = -20;
     to.frequency_trim_e1_ppm = 15;
     CHECK(described(from, to) == "CALLSIGN NONE\nALARM OFF\nAND 2 MORE");
@@ -71,11 +71,10 @@ TEST_CASE("settings changes page: every key a set may change at once still count
     std::strcpy(to.callsign, "F-JXYZ");
     to.aircraft_address = 0x3C6586;
     to.units = Units::Metric;
-    to.alarm_enabled = false;
-    to.alarm_volume = AlarmVolume::Off;
+    to.alarm = Alarm::Off;
     to.battery_offset_mv = -20;
     to.frequency_trim_e1_ppm = 15;
-    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nAND 6 MORE");
+    CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nAND 5 MORE");
 }
 
 TEST_CASE("settings changes page: past three rows the last one counts the rest") {
@@ -84,8 +83,8 @@ TEST_CASE("settings changes page: past three rows the last one counts the rest")
     to.aircraft_type = 7;
     std::strcpy(to.callsign, "F-JXYZ");
     to.units = Units::Metric;
-    to.alarm_enabled = false;
-    to.alarm_volume = AlarmVolume::Off;
+    to.alarm = Alarm::Off;
+    to.aircraft_address = 0x3C6586;
     CHECK(described(from, to) == "TYPE PARAGLIDER\nCALLSIGN F-JXYZ\nAND 3 MORE");
 }
 
@@ -96,7 +95,7 @@ TEST_CASE("settings changes page: a callsign too long for one line takes two, an
     std::strcpy(to.callsign, "F-JXYZ123");
     to.units = Units::Metric;
     CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nUNITS METRIC");
-    to.alarm_enabled = false;
+    to.alarm = Alarm::Visual;
     CHECK(described(from, to) == "CALLSIGN F-JXYZ123\nAND 2 MORE");
 }
 
