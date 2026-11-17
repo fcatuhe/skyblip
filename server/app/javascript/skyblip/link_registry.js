@@ -114,6 +114,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "enum",
           "enum": "alarm"
+        },
+        {
+          "name": "alarm_from_go",
+          "number": 13,
+          "type": "boolean"
         }
       ]
     },
@@ -180,6 +185,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "enum",
           "enum": "alarm"
+        },
+        {
+          "name": "alarm_from_go",
+          "number": 13,
+          "type": "boolean"
         }
       ],
       "keys_of": "config"
@@ -247,6 +257,11 @@ export const LINK_REGISTRY = Object.freeze({
           "number": 12,
           "type": "enum",
           "enum": "alarm"
+        },
+        {
+          "name": "alarm_from_go",
+          "number": 13,
+          "type": "boolean"
         }
       ],
       "keys_of": "config"
@@ -2080,12 +2095,6 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         },
         {
-          "name": "alarm_granted",
-          "number": 7,
-          "type": "boolean",
-          "required": true
-        },
-        {
           "name": "export_reference",
           "number": 11,
           "type": "enum",
@@ -2139,6 +2148,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "frame_rate_hz",
           "number": 20,
+          "type": "unsigned"
+        },
+        {
+          "name": "dismissed",
+          "number": 21,
           "type": "unsigned"
         }
       ]
@@ -2212,15 +2226,36 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
-          "name": "alarm_requested",
-          "number": 12,
+          "name": "paired",
+          "number": 18,
           "type": "boolean",
           "required": true
         },
         {
-          "name": "paired",
-          "number": 18,
-          "type": "boolean",
+          "name": "alarm",
+          "number": 19,
+          "type": "enum",
+          "enum": "alarm",
+          "required": true
+        },
+        {
+          "name": "announcing",
+          "number": 20,
+          "type": "enum",
+          "enum": "alarm_level",
+          "required": true
+        },
+        {
+          "name": "announcement",
+          "number": 21,
+          "type": "unsigned",
+          "required": true
+        },
+        {
+          "name": "undismissed",
+          "number": 22,
+          "type": "enum",
+          "enum": "alarm_level",
           "required": true
         }
       ]
@@ -2812,6 +2847,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "not_own_transponder",
           "code": 52
+        },
+        {
+          "name": "set_on_go",
+          "code": 53
         }
       ]
     },
@@ -2840,6 +2879,24 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "loud",
           "code": 3,
           "mirrors": "Loud"
+        }
+      ]
+    },
+    "alarm_level": {
+      "mirrors": {
+        "type": "traffic::Level",
+        "header": "core/traffic/alarm.h"
+      },
+      "values": [
+        {
+          "name": "none",
+          "code": 0,
+          "mirrors": "None"
+        },
+        {
+          "name": "advisory",
+          "code": 1,
+          "mirrors": "Advisory"
         }
       ]
     },

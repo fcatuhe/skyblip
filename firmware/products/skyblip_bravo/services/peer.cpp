@@ -32,9 +32,12 @@ void PeerService::tick(uint32_t now_ms) {
     while (context_.bus.peer_rx.pop(frame)) take(frame, now_ms);
     pairing_.tick(now_ms);
     keep_pin();
-    expire_alarm_request(now_ms);
+    expire_call(now_ms);
     context_.state.link.pairing_standing = pairing_.requested();
-    context_.state.alarm_granted = alarm_request_.has_value();
+    context_.state.followed_call =
+        following_ ? std::optional<annunciation::Call>(following_->call) : std::nullopt;
+    // INFO: fc 17nov26 a press on Bravo reaches its Go at once, not on the next health period
+    if (alarm_.dismissed_announcement() != dismissed_told_) health_owed_ = true;
 
     const GateChoice choice = gate_.choose(context_.state.own, now_ms);
     const bool utc_valid = context_.instant(now_ms).utc_dated;
@@ -54,7 +57,7 @@ void PeerService::forget_gone() {
         events::BluetoothAddress live{};
         if (!go.used || context_.roles.link.central_of(go.peer, live)) continue;
         if (pairing_.pinned_to(go.address)) gate_.lose_link();
-        if (grants_alarm_to(go.address)) alarm_request_.reset();
+        if (follows(go.address)) following_.reset();
         if (go.asked) pairing_.withdraw(go.address);
         go = Go{};
         pacer_.forget(static_cast<int>(&go - gos_.data()));
@@ -83,7 +86,7 @@ void PeerService::take(const events::RxFrame& frame, uint32_t now_ms) {
         case Heard::Committed:
             gate_.hear(claim.value(), context_.instant(now_ms), now_ms);
             adopt_aircraft_address(claim.value().aircraft_address);
-            hear_alarm_request(go->address, claim.value().alarm_requested, now_ms);
+            follow(go->address, claim.value(), now_ms);
             break;
         // INFO: fc 11nov26 a Go that unpaired is answered at once, and may be asking to pair again
         case Heard::Unpinned:
@@ -123,23 +126,24 @@ void PeerService::adopt_aircraft_address(uint32_t aircraft_address) {
     health_owed_ = true;
 }
 
-// INFO: fc 12nov26 only the pinned Go's claims reach here, so a stranger never silences Bravo
-void PeerService::hear_alarm_request(const events::BluetoothAddress& go, bool requested,
-                                     uint32_t now_ms) {
-    if (requested)
-        alarm_request_ = AlarmRequest{go, now_ms};
-    else
-        alarm_request_.reset();
+// INFO: fc 12nov26 only the pinned Go's claims reach here, so a stranger never sets Bravo's alarm
+void PeerService::follow(const events::BluetoothAddress& go, const comms::PeerClaim& claim,
+                         uint32_t now_ms) {
+    following_ = Following{go, claim.call, now_ms};
+    const Alarm alarm = static_cast<Alarm>(claim.alarm);
+    if (settings_.go_alarm == alarm) return;
+    settings_.go_alarm = alarm;
+    config_.note_settings_changed();
 }
 
-void PeerService::expire_alarm_request(uint32_t now_ms) {
-    if (alarm_request_ && (!pairing_.pinned_to(alarm_request_->go) ||
-                           now_ms - alarm_request_->heard_ms >= kAlarmRequestMaxAgeMs))
-        alarm_request_.reset();
+void PeerService::expire_call(uint32_t now_ms) {
+    if (following_ &&
+        (!pairing_.pinned_to(following_->go) || now_ms - following_->heard_ms >= kCallMaxAgeMs))
+        following_.reset();
 }
 
-bool PeerService::grants_alarm_to(const events::BluetoothAddress& go) const {
-    return alarm_request_ && alarm_request_->go == go;
+bool PeerService::follows(const events::BluetoothAddress& go) const {
+    return following_ && following_->go == go;
 }
 
 // INFO: fc 11nov26 a Go is known from its first claim on a connection, by the address it came from
@@ -196,11 +200,12 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     health.export_reference = choice.reference;
     health.own_transponder = own_transponder_.heard();
     describe_self(health);
+    dismissed_told_ = alarm_.dismissed_announcement();
     bool blocked = false;
     for (const Go& go : gos_) {
         if (!go.used) continue;
         health.paired = pairing_.holds(go.address);
-        health.alarm_granted = grants_alarm_to(go.address);
+        health.dismissed = pairing_.pinned_to(go.address) ? dismissed_told_ : std::nullopt;
         uint8_t frame[comms::kPeerPayloadFloorBytes];
         const int bytes = comms::write_health(health, frame, sizeof(frame));
         const Status sent = context_.roles.link.send_to(

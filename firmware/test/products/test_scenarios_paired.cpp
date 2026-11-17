@@ -42,7 +42,7 @@ traffic::Level level_of(const bus::State& state, uint32_t address) {
 
 struct Onset {
     uint32_t at_ms{0};
-    bool granted{false};
+    bool followed{false};
     int other_onsets{0};
     uint32_t go_sounds{0};
     uint32_t bravo_sounds{0};
@@ -79,7 +79,7 @@ struct Paired {
     }
     uint32_t go_sounds() { return sounds_of(simulator.go().platform().annunciator()); }
     uint32_t bravo_sounds() { return sounds_of(simulator.bravo_platform().annunciator()); }
-    bool bravo_silent_for_go() { return simulator.bravo().state().alarm_granted; }
+    bool bravo_follows_go() { return simulator.bravo().state().followed_call.has_value(); }
 
     // INFO: fc 14nov26 what each unit sounded in the kOnsetApartMs from the Go's advisory onset
     Onset fly_to_onset(uint32_t address) {
@@ -111,7 +111,7 @@ struct Paired {
             }
             if (onset.at_ms == 0 && level_of(go(), address) == traffic::Level::Advisory) {
                 onset.at_ms = step_ms;
-                onset.granted = bravo_silent_for_go();
+                onset.followed = bravo_follows_go();
                 const traffic::Target* target = target_of(go(), address);
                 onset.source = target->observation.source;
                 if (other_onset_ms != 0 && step_ms - other_onset_ms < kOnsetApartMs)
@@ -377,62 +377,57 @@ TEST_CASE("paired scenario: a dense sky reaches the Go through Bravo, all of it 
     }
 }
 
-TEST_CASE("paired scenario: the Go+ takes the alarm within a claim period of reading Bravo live") {
+TEST_CASE("paired scenario: Bravo plays the Go's calls within a claim period of the link") {
     Paired paired("scenarios/paired.json");
     REQUIRE(ports::has(paired.simulator.product().capabilities(), ports::Capability::Buzzer));
-    uint32_t live_ms = 0;
-    uint32_t granted_ms = 0;
-    uint32_t bravo_sounded_ms = 0;
+    uint32_t linked_ms = 0;
+    uint32_t followed_ms = 0;
     bool given_back = false;
     while (paired.now_ms <= paired.simulator.scenario().duration_ms) {
         const uint32_t now_ms = paired.now_ms;
-        const uint32_t bravo_sounds = paired.bravo_sounds();
         paired.run_until(now_ms);
-        if (live_ms == 0 && paired.go().own.fix_valid && paired.bravo() == comms::BravoState::Live)
-            live_ms = now_ms;
-        if (granted_ms == 0 && paired.bravo_silent_for_go()) granted_ms = now_ms;
-        given_back = given_back || (granted_ms != 0 && !paired.bravo_silent_for_go());
-        if (paired.bravo_sounds() != bravo_sounds) bravo_sounded_ms = now_ms;
+        if (linked_ms == 0 && paired.simulator.product().bravo().link() == go::BravoLink::Up)
+            linked_ms = now_ms;
+        if (followed_ms == 0 && paired.bravo_follows_go()) followed_ms = now_ms;
+        given_back = given_back || (followed_ms != 0 && !paired.bravo_follows_go());
     }
-    REQUIRE(live_ms != 0);
-    REQUIRE(granted_ms >= live_ms);
-    CHECK(granted_ms - live_ms <= go::BravoService::kClaimPeriodMs);
+    REQUIRE(linked_ms != 0);
+    REQUIRE(followed_ms != 0);
+    CHECK(followed_ms <= linked_ms + go::BravoService::kClaimPeriodMs);
     CHECK_FALSE(given_back);
-    CHECK(bravo_sounded_ms < granted_ms);
 }
 
-TEST_CASE("paired scenario: an ADS-B threat after the grant sounds on the Go+ and not on Bravo") {
+TEST_CASE("paired scenario: an ADS-B threat sounds on the Go+ and on Bravo, at one onset") {
     Paired paired("scenarios/paired.json");
     const Onset onset = paired.fly_to_onset(kLateThreat);
     REQUIRE(onset.at_ms != 0);
-    CHECK(onset.granted);
+    CHECK(onset.followed);
     CHECK(onset.other_onsets == 0);
     CHECK(onset.go_sounds > 0);
-    CHECK(onset.bravo_sounds == 0);
+    CHECK(onset.bravo_sounds > 0);
     CHECK(onset.bravo_level == traffic::Level::Advisory);
     CHECK(onset.source == model::Source::Adsb);
 }
 
 TEST_CASE(
-    "paired scenario: Bravo sounds while the link is lost, and keeps silent once it is back") {
+    "paired scenario: Bravo grades its own while the link is lost, and plays the Go's once back") {
     Paired paired("scenarios/paired_link_lost.json");
     paired.run_until(11900);
     REQUIRE(paired.simulator.bravo().state().alarm_level == traffic::Level::Advisory);
-    CHECK(paired.bravo_silent_for_go());
-    const uint32_t before_loss = paired.bravo_sounds();
+    CHECK(paired.bravo_follows_go());
 
     paired.run_until(12000 + go::BravoService::kClaimPeriodMs);
-    CHECK_FALSE(paired.bravo_silent_for_go());
-    CHECK(paired.bravo_sounds() > before_loss);
+    CHECK_FALSE(paired.bravo_follows_go());
+    CHECK(paired.simulator.bravo().state().alarm_undismissed == traffic::Level::Advisory);
 
     paired.run_until(26000 + 2 * go::BravoService::kClaimPeriodMs);
     REQUIRE(paired.bravo() == comms::BravoState::Live);
     const Onset onset = paired.fly_to_onset(kThreatAfterReturn);
     REQUIRE(onset.at_ms != 0);
-    CHECK(onset.granted);
+    CHECK(onset.followed);
     CHECK(onset.other_onsets == 0);
     CHECK(onset.go_sounds > 0);
-    CHECK(onset.bravo_sounds == 0);
+    CHECK(onset.bravo_sounds > 0);
     CHECK(onset.bravo_level == traffic::Level::Advisory);
     CHECK(onset.source == model::Source::Adsb);
 }

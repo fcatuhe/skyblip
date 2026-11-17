@@ -24,7 +24,13 @@ formation::State AlarmService::watch_formation(traffic::Target& target, uint32_t
 Status AlarmService::setup() {
     lamp_shows_link_ =
         has_feature(supported(declared_, context_.roles.capabilities), Feature::LampShowsLink);
+    sounds_ = can_sound(context_.roles.capabilities);
     return Status::Ok;
+}
+
+Alarm AlarmService::alarm_in_force() const {
+    const Alarm alarm = settings_.in_force();
+    return sounds_ || !audible(alarm) ? alarm : Alarm::Visual;
 }
 
 void AlarmService::tick(uint32_t now_ms) {
@@ -54,26 +60,41 @@ void AlarmService::tick(uint32_t now_ms) {
     formation_.forget_stale(now_ms);
     context_.state.formation.members = formation_.members();
 
+    const Alarm alarm = alarm_in_force();
     // INFO: fc 15nov26 off interrupts nothing, while each target keeps its level for the radar and
     // NMEA
-    if (!interrupts(settings_.alarm)) live = traffic::Level::None;
+    if (!interrupts(alarm)) live = traffic::Level::None;
+    if (announced) call_.announcement++;
+    // Not the raw worst: what is being announced, which the tracker already
+    // holds through a target bouncing across a ring boundary, and which falls
+    // to nothing when the target that caused it stops being heard.
+    call_.announcing = tracker_.announced_level(now_ms);
+    call_.undismissed = live;
+    context_.state.alarm_call = call_;
+
+    annunciation::Situation situation{};
+    situation.level = call_.announcing;
+    situation.announced = announced;
+    // INFO: fc 17nov26 a paired Bravo plays its Go's calls, and grades its own only for NMEA
+    if (context_.state.followed_call) {
+        const annunciation::Follower::Heard heard = follower_.follow(*context_.state.followed_call);
+        situation.level = heard.level;
+        situation.announced = heard.announced;
+        live = interrupts(alarm) ? heard.undismissed : traffic::Level::None;
+    } else {
+        follower_.lose();
+    }
     if (worst != context_.state.alarm_level || live != context_.state.alarm_undismissed) {
         context_.state.alarm_level = worst;
         context_.state.alarm_undismissed = live;
         dirty_ = true;
     }
 
-    annunciation::Situation situation{};
-    // Not the raw worst: what is being announced, which the tracker already
-    // holds through a target bouncing across a ring boundary, and which falls
-    // to nothing when the target that caused it stops being heard.
-    situation.level = tracker_.announced_level(now_ms);
-    situation.announced = announced;
     situation.first_fix = context_.state.own.fix_acquired;
     const bool bravo_lost = comms::lost(context_.state.bravo);
     situation.bravo_lost = bravo_lost && !bravo_lost_;
     bravo_lost_ = bravo_lost;
-    situation.enabled = audible(settings_.alarm) && !context_.state.alarm_granted;
+    situation.enabled = audible(alarm);
     situation.running = running_;
     if (sign_on_pending_) {
         sign_on_pending_ = false;
@@ -195,7 +216,7 @@ void AlarmService::show(indication::Lamp lamp) {
 void AlarmService::drive_buzzer(const annunciation::Command& command) {
     if (command.tone_on) {
         const ports::Loudness loudness =
-            settings_.alarm == Alarm::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
+            alarm_in_force() == Alarm::Soft ? ports::Loudness::Soft : ports::Loudness::Loud;
         context_.roles.annunciator.tone(command.tone_hz, loudness);
     } else {
         context_.roles.annunciator.silence();

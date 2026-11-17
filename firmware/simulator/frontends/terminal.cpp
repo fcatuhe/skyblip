@@ -260,7 +260,7 @@ void render_aboard(simulator::PairedSimulator& paired) {
     std::printf("  squitters on air/heard:%u/%u  aircraft:%d  traffic:%d  alarm:%s\n",
                 paired.world().adsb_sent(), paired.world().adsb_heard(),
                 paired.bravo().adsb().assembly().count(), paired.bravo().state().traffic.count(),
-                paired.bravo().state().alarm_granted ? "silent for the Go+" : "its own");
+                paired.bravo().state().followed_call ? "the Go's" : "its own");
     std::printf(" bravo: [l]ink lost or back  [v] Bravo's fix\n");
     std::fflush(stdout);
 }

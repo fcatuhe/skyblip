@@ -43,15 +43,16 @@ const std::vector<BravoStub::Recorded> kRecording = {
 std::string peer_claim(uint32_t epoch) {
     return complete_registry_frame(
         "{\"command\":\"peer_claim\",\"boot_epoch\":" + std::to_string(epoch) +
-        ",\"alarm_requested\":false,\"paired\":false}");
+        ",\"paired\":false,\"alarm\":\"loud\",\"announcing\":\"none\",\"announcement\":0,"
+        "\"undismissed\":\"none\"}");
 }
 
 std::string peer_claim_with_position() {
     return complete_registry_frame(
         "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"at_s\":1785628800,\"into_ms\":250,"
         "\"latitude_1e7\":485000000,\"longitude_1e7\":85000000,\"position_age_ms\":200,"
-        "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,\"alarm_requested\":false,"
-        "\"paired\":false}");
+        "\"altitude_hae_mm\":1250000,\"altitude_hae_age_ms\":200,\"paired\":false,"
+        "\"alarm\":\"loud\",\"announcing\":\"none\",\"announcement\":0,\"undismissed\":\"none\"}");
 }
 
 struct Pair {
@@ -91,9 +92,9 @@ TEST_CASE("paired link: Bravo's recorded observations and its health reach the c
     REQUIRE(commands(frames) ==
             std::vector<std::string>{"health", "observation", "health", "observation"});
     const std::string epoch = std::to_string(pair.bravo.boot_epoch());
-    CHECK(frames[0] == "{\"command\":\"health\",\"protocol_version\":1,\"boot_epoch\":" + epoch +
+    CHECK(frames[0] == "{\"command\":\"health\",\"protocol_version\":2,\"boot_epoch\":" + epoch +
                            ",\"listening\":true,\"utc_valid\":true,\"aircraft_address_set\":false,"
-                           "\"alarm_granted\":false,\"export_reference\":\"own\",\"paired\":true,"
+                           "\"export_reference\":\"own\",\"paired\":true,"
                            "\"charging\":false,\"power_level\":\"normal\"}");
     CHECK(frames[1] == "{\"command\":\"observation\",\"address\":4479337,\"boot_epoch\":" + epoch +
                            ",\"sequence\":0,\"at_s\":1785628800,\"into_ms\":250,"
@@ -112,8 +113,8 @@ TEST_CASE("paired link: the central's peer_claim reaches Bravo on the peer endpo
 
     REQUIRE(pair.bravo.claims.size() == 1);
     CHECK(pair.bravo.claims[0] ==
-          "{\"command\":\"peer_claim\",\"boot_epoch\":12,\"alarm_requested\":false,"
-          "\"paired\":false}");
+          "{\"command\":\"peer_claim\",\"boot_epoch\":12,\"paired\":false,\"alarm\":\"loud\","
+          "\"announcing\":\"none\",\"announcement\":0,\"undismissed\":\"none\"}");
     CHECK(pair.link.delivered(Direction::ToPeripheral) == 1);
 }
 

@@ -69,22 +69,24 @@ PEER_FRAMES_AT_THEIR_WIDEST = (
      "b81900181a011a00ffffff021affffffff031affffffff041affffffff051903e7063a35a4e8ff073a6b49d1"
      "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff"
      "1002113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"),
-    ({"command": "health", "protocol_version": 1, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
+    ({"command": "health", "protocol_version": 2, "boot_epoch": WIDEST_UNSIGNED, "listening": True,
       "utc_valid": True, "last_sequence": WIDEST_UNSIGNED, "aircraft_address_set": True,
-      "alarm_granted": True, "export_reference": "own", "paired": True,
+      "export_reference": "own", "paired": True,
       "own_transponder": 0xFFFFFF, "own_transponder_callsign": "ABCD1234",
       "own_transponder_category": 17, "firmware": "9.99.99+99999", "battery_percent": 100,
-      "charging": True, "power_level": "low", "frame_rate_hz": WIDEST_UNSIGNED},
-     "b200181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334"
-     "0f11106d392e39392e39392b393939393911186412f51304141affffffff"),
+      "charging": True, "power_level": "low", "frame_rate_hz": WIDEST_UNSIGNED,
+      "dismissed": WIDEST_UNSIGNED},
+     "b200181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f"
+     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff"),
     ({"command": "peer_claim", "boot_epoch": WIDEST_UNSIGNED, "at_s": WIDEST_UNSIGNED,
       "into_ms": 999, "latitude_1e7": -900000000, "longitude_1e7": -1800000000,
       "position_age_ms": WIDEST_UNSIGNED, "altitude_hae_mm": WIDEST_INTEGER,
       "altitude_hae_age_ms": WIDEST_UNSIGNED, "pressure_altitude_mm": WIDEST_INTEGER,
-      "pressure_altitude_age_ms": WIDEST_UNSIGNED, "aircraft_address": 0xFFFFFF, "alarm_requested": True,
-      "paired": True},
-     "ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
-     "081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf512f5"),
+      "pressure_altitude_age_ms": WIDEST_UNSIGNED, "aircraft_address": 0xFFFFFF, "paired": True,
+      "alarm": "loud", "announcing": "advisory", "announcement": WIDEST_UNSIGNED,
+      "undismissed": "advisory"},
+     "b100181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
+     "081affffffff093a7fffffff0a1affffffff0b1a00ffffff12f513031401151affffffff1601"),
 )
 
 

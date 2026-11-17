@@ -15,7 +15,7 @@ class CaptureSettings final : public common::CaptureSettings {
 
     void describe(diagnostics::Config& record) const override {
         record.settings_version = kBlobVersion;
-        record.alarm_setting = static_cast<uint8_t>(settings_.alarm);
+        record.alarm_setting = static_cast<uint8_t>(alarm_in_force(settings_));
         record.alarm_setting_recorded = true;
     }
 
