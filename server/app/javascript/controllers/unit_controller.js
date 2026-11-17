@@ -23,7 +23,7 @@ const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "al
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
+                    "settings", "fields", "default", "setOnGo", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "report", "reportSend", "reportMessage",
@@ -337,9 +337,15 @@ export default class extends Controller {
     this.settingsMessageTarget.classList.toggle("is-good", state?.notice?.key === "saved")
     if (!linked || !settings) return
     if (settings !== this.shown) this.#fill(settings)
+    this.#setOnGo(state.goAlarm ?? null)
     // INFO: fc 15nov26 a Go with no buzzer and no haptic ships on visual, so its defaults say it cannot sound
     const sounds = state.defaults?.alarm !== "visual"
-    for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) option.hidden = option.disabled = !sounds
+    // INFO: fc 17nov26 a status naming a Bravo says it is paired, and then soft and loud sound on Bravo
+    const onBravo = !sounds && Boolean(state.status?.bravo)
+    for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) {
+      option.hidden = option.disabled = !sounds && !onBravo
+      option.textContent = onBravo ? option.dataset.onBravo : option.dataset.label
+    }
     const edited = this.#edited()
     const changed = Object.keys(edited).filter(key => edited[key] !== settings[key])
     const airborne = state.status?.flight === "airborne" && state.trust !== "trusted"
@@ -477,6 +483,16 @@ export default class extends Controller {
     for (const [key, value] of Object.entries(settings)) {
       if (elements[key]) showSetting(elements[key], value)
     }
+  }
+
+  // INFO: fc 17nov26 a paired Bravo's alarm is its Go's ALARM row, so the field shows it and stays shut
+  #setOnGo(goAlarm) {
+    const field = this.settingsTarget.elements.alarm
+    this.setOnGoTarget.hidden = goAlarm === null
+    if (!field || goAlarm === null) return
+    field.closest(".field").hidden = false
+    field.disabled = true
+    showSetting(field, goAlarm)
   }
 
   #edited() {

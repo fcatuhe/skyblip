@@ -48,11 +48,16 @@
 
       <div class="field">
         <label for="unit-alarm"><%= t("briefing.settings.alarm") %></label>
-        <select id="unit-alarm" name="alarm">
+        <select id="unit-alarm" name="alarm" aria-describedby="unit-alarm-set-on-go">
           <% t("briefing.settings.alarm_names").each do |value, name| %>
-            <option value="<%= value %>" <%= "data-sounds" if %i[soft loud].include?(value) %>><%= name %></option>
+            <% if %i[soft loud].include?(value) %>
+              <option value="<%= value %>" data-sounds data-label="<%= name %>" data-on-bravo="<%= t("briefing.settings.bravo_alarm_names.#{value}") %>"><%= name %></option>
+            <% else %>
+              <option value="<%= value %>"><%= name %></option>
+            <% end %>
           <% end %>
         </select>
+        <p class="field-hint" id="unit-alarm-set-on-go" data-unit-target="setOnGo" hidden><%= t("briefing.settings.set_on_go") %></p>
         <p class="field-default" data-unit-target="default" data-setting="alarm" hidden></p>
       </div>
 

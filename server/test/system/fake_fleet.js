@@ -81,6 +81,8 @@
         failure: null,
         heard: null,
         sounds: true,
+        goAlarm: null,
+        bravo: null,
       }, options);
       this.deviceId ??= this.vectors?.device_id ?? deviceIdOf(this.name);
       this.connected = false;
@@ -175,6 +177,7 @@
       return this.reply({
         command: 'status', flight: this.flight, upload: this.windowOpen, battery_percent: this.battery, charging: this.charging,
         power_level: this.battery < 10 ? 'critical' : this.battery < 20 ? 'low' : 'normal', went_dark_flat: false,
+        ...(this.bravo === null ? null : { bravo: this.bravo }),
         ...(this.flight === 'ground' ? this.heard : null),
       });
     }
@@ -198,8 +201,9 @@
 
     config() {
       const address = this.address === null ? {} : { address: this.address };
+      const paired = this.goAlarm !== null;
       const stored = this.product === 'bravo'
-        ? { aircraft_address: this.stored.aircraft_address, alarm: this.stored.alarm }
+        ? { aircraft_address: this.stored.aircraft_address, alarm: paired ? this.goAlarm : this.stored.alarm, alarm_from_go: paired }
         : this.stored;
       return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored });
     }

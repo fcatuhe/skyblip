@@ -3,8 +3,14 @@ export const SETTING_KEYS = ['aircraft_type', 'units', 'callsign', 'aircraft_add
 const NUMBERS = new Set(['aircraft_type']);
 const AIRCRAFT_ADDRESS = /^[0-9A-F]{6}$/;
 
+// INFO: fc 17nov26 a paired Bravo's alarm is its Go's, so the form shows it and never sends it
 export function settingsOf(reply, keys = SETTING_KEYS) {
-  return Object.fromEntries(keys.filter(key => key in reply).map(key => [key, key === 'aircraft_address' ? aircraftAddressText(reply[key]) : reply[key]]));
+  const held = keys.filter(key => key in reply && !(key === 'alarm' && reply.alarm_from_go === true));
+  return Object.fromEntries(held.map(key => [key, key === 'aircraft_address' ? aircraftAddressText(reply[key]) : reply[key]]));
+}
+
+export function goAlarmOf(reply) {
+  return reply.alarm_from_go === true ? reply.alarm : null;
 }
 
 export function settingsFrame(settings) {
@@ -29,6 +35,7 @@ export function statusOf(reply) {
     charging: reply.charging === true,
     powerLevel: reply.power_level ?? null,
     wentDarkFlat: reply.went_dark_flat === true,
+    bravo: reply.bravo ?? null,
     ownTransponder: ownTransponderOf(reply),
   };
 }
