@@ -225,23 +225,27 @@ def report_spread(label, values, unit):
 
 async def run_fetch(args):
     async with await connect(args, log=True) as link:
-        sessions = await list_sessions(link, args)
-        for session in sessions:
-            print(records.session_text(session))
-        if args.list:
-            return 0
+        return await fetch_log(link, args)
 
-        wanted = sessions_to_fetch(sessions, args, resume_of(args))
-        if not wanted:
-            print("nothing to fetch")
-            return 0
-        out = open(args.out, "a", encoding="utf-8") if args.out else None
-        try:
-            for session, start in wanted:
-                await fetch_session(link, args, session, start, out)
-        finally:
-            if out:
-                out.close()
+
+async def fetch_log(link, args):
+    sessions = await list_sessions(link, args)
+    for session in sessions:
+        print(records.session_text(session))
+    if args.list:
+        return 0
+
+    wanted = sessions_to_fetch(sessions, args, resume_of(args))
+    if not wanted:
+        print("nothing to fetch")
+        return 0
+    out = open(args.out, "a", encoding="utf-8") if args.out else None
+    try:
+        for session, start in wanted:
+            await fetch_session(link, args, session, start, out)
+    finally:
+        if out:
+            out.close()
     return 0
 
 
@@ -270,11 +274,16 @@ def sessions_to_fetch(sessions, args, resume):
     for entry in chosen:
         if entry["session"] == session_id:
             reached = True
-            if index + 1 < entry["records"]:
+            if index + 1 < entry["records"] - held_back(args, entry):
                 plan.append((entry, index + 1))
         elif reached:
             plan.append((entry, 0))
     return plan if reached else [(entry, 0) for entry in chosen]
+
+
+def held_back(args, session):
+    """The tail a fetch would drop as torn again, so a resume with nothing past it fetches nothing."""
+    return 1 if records.tail_cannot_be_vouched_for(args.log, session) else 0
 
 
 def sessions_from(sessions, resume):

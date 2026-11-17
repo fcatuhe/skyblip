@@ -90,8 +90,16 @@ class LogEndpoint:
             raise AssertionError("a read went out with %d replies of the last one unread"
                                  % len(self.pending))
         body = frames.decode_frame(frames.encode_frame(body))
+        if body["command"] == "list":
+            self.pending = [self.listing(body.get("index"))]
+            return
         self.counts_asked.append(body.get("count"))
         self.pending = self.window_from(body["from"], device_clamp(body.get("count")))
+
+    def listing(self, index):
+        if index is None:
+            return {"command": "log", "log": self.log, "acknowledge": True, "sessions": 1}
+        return self.session
 
     async def frame(self, timeout):
         if not self.pending:
@@ -242,16 +250,13 @@ class TornTail(unittest.TestCase):
         summary = records.summarise(fetched_lines(endpoint))
         self.assertTrue(any("5 records written, 2 dropped" in line for line in summary), summary)
 
-    def test_a_dropped_tail_does_not_send_the_next_fetch_back_for_it(self):
+    def test_a_dropped_tail_is_not_where_the_next_fetch_resumes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
             out = io.StringIO()
             fetch(LogEndpoint(5, closed=False), out)
             path.write_text(out.getvalue(), encoding="utf-8")
-            resume = records.resume_point(str(path))
-        session = session_reply(5, closed=False)
-        args = argparse.Namespace(session=None, all=True)
-        self.assertEqual(blip.sessions_to_fetch([session], args, resume), [])
+            self.assertEqual(records.resume_point(str(path)), (1_700_000_000, 3))
 
 
 LINK_TYPE = 12
@@ -262,6 +267,44 @@ def link_slot(connection):
     raw[0] = LINK_TYPE
     raw[records.PAYLOAD_OFFSET:records.PAYLOAD_OFFSET + 2] = connection.to_bytes(2, "little")
     return bytes(raw)
+
+
+def fetch_into(endpoint, path):
+    args = argparse.Namespace(log=endpoint.log, session=None, all=True, list=False, out=str(path),
+                              restart=False, window=DEVICE_CHUNKS_MAX, timeout=1.0)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        asyncio.run(blip.fetch_log(endpoint, args))
+    return printed.getvalue()
+
+
+def kept_indices(path):
+    return [line["index"] for line in records.read_ndjson(str(path)) if not records.is_note(line)]
+
+
+class ResumedFetch(unittest.TestCase):
+    # the resume started after the torn note, so every fetch of the trial in #366 lost the record it dropped
+    def test_two_fetches_of_an_open_session_keep_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            self.assertEqual(kept_indices(path), list(range(8)))
+
+    def test_a_resume_once_the_session_closed_keeps_the_record_it_dropped_as_torn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(5), path)
+            self.assertEqual(kept_indices(path), list(range(5)))
+
+    def test_an_open_session_that_wrote_nothing_since_is_not_fetched_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            printed = fetch_into(LogEndpoint(5, closed=False), path)
+            self.assertIn("nothing to fetch", printed)
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
 
 
 class LinkRecord(unittest.TestCase):

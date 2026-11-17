@@ -483,9 +483,9 @@ def resume_point(path):
     """The last record a previous fetch kept, as (session, index), or None."""
     last = None
     try:
-        for record in read_ndjson(path):
-            if "session" in record and "index" in record:
-                last = (record["session"], record["index"])
+        for line in read_ndjson(path):
+            if not is_note(line) and "session" in line and "index" in line:
+                last = (line["session"], line["index"])
     except (OSError, json.JSONDecodeError):
         return last
     return last
