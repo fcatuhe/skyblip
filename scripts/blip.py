@@ -288,7 +288,7 @@ def sessions_to_fetch(sessions, args, resume):
     elif not args.all:
         chosen = sessions_from(sessions, resume) or sessions[-1:]
     if resume is None:
-        return [(entry, 0) for entry in chosen]
+        return [(entry, first_of(entry)) for entry in chosen]
 
     session_id, index = resume
     plan = []
@@ -296,11 +296,20 @@ def sessions_to_fetch(sessions, args, resume):
     for entry in chosen:
         if entry["session"] == session_id:
             reached = True
-            if index + 1 < entry["records"] - held_back(args, entry):
+            if index + 1 < end_of(entry) - held_back(args, entry):
                 plan.append((entry, index + 1))
         elif reached:
-            plan.append((entry, 0))
-    return plan if reached else [(entry, 0) for entry in chosen]
+            plan.append((entry, first_of(entry)))
+    return plan if reached else [(entry, first_of(entry)) for entry in chosen]
+
+
+def first_of(session):
+    """The index of the first record the session still holds: absent before the device kept it."""
+    return session.get("first", 0)
+
+
+def end_of(session):
+    return first_of(session) + session["records"]
 
 
 def held_back(args, session):
@@ -319,7 +328,7 @@ def sessions_from(sessions, resume):
 
 async def fetch_session(link, args, session, start, out):
     session_id = session["session"]
-    total = session["records"]
+    total = end_of(session)
     began = time.monotonic()
     sink = records.SessionSink(args.log, session, line_writer(out))
     raw_bytes = 0
@@ -327,9 +336,14 @@ async def fetch_session(link, args, session, start, out):
     while at < total:
         for chunk in await read_window(link, args, session_id, at):
             raw = chunk.get("records", b"")
-            if chunk.get("from") != at or (not raw and not chunk.get("ends_session")):
+            start_at = chunk.get("from")
+            if start_at is None or start_at < at or (not raw and not chunk.get("ends_session")):
                 raise SystemExit("session %d was asked for index %d and answered %s"
                                  % (session_id, at, frames.printable(chunk)))
+            if start_at > at:
+                print("session %d: indices %d..%d recycled before they were read"
+                      % (session_id, at, start_at - 1))
+                at = start_at
             raw_bytes += len(raw)
             decoded = records.decode_chunk(args.log, raw, session_id, at)
             for record in decoded:
@@ -350,8 +364,8 @@ async def fetch_session(link, args, session, start, out):
     if sink.torn is not None:
         print("session %d: index %d dropped, %s" % (session_id, sink.torn["index"],
                                                     records.TORN_TAIL_REASON))
-    if at < session["records"]:
-        print("session %d: stopped at %d of %d" % (session_id, at, session["records"]))
+    if at < end_of(session):
+        print("session %d: stopped at %d of %d" % (session_id, at, end_of(session)))
 
 
 def line_writer(out):

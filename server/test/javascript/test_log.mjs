@@ -68,7 +68,27 @@ test('a unit that never answers fails the fetch rather than hang it', async () =
   link.disconnect();
 });
 
-// The console keeps its link between fetches, so a chunk of a window a timeout abandoned can land in the next fetch.
+test('a truncated session is fetched from the first record it still holds', async () => {
+  const { link, reader } = await bravoWith(new FakeLogStore({ sessions: [sessionOf(200, 20, { first: 170, truncated: true })] }));
+  const progress = [];
+  const { lines } = await fetchDiagnostics(reader, { onProgress: (at, total) => progress.push([at, total]) });
+  assert.deepEqual(lines.slice(1).map(line => line.index), Array.from({ length: 20 }, (_, at) => 170 + at));
+  assert.deepEqual(progress.at(-1), [20, 20]);
+  link.disconnect();
+});
+
+// The ring recycled the oldest sector between two reads of the trial in #368, and each fetch lost one.
+test('records the ring recycles between two reads are skipped, and every other keeps its index', async () => {
+  const store = new FakeLogStore({ sessions: [sessionOf(200, 400, { closed: true })], recycleAfterFirstRead: 170 });
+  const { link, reader } = await bravoWith(store);
+  const { lines } = await fetchDiagnostics(reader);
+  const kept = lines.slice(1);
+  assert.deepEqual(kept.map(line => line.index), [...Array.from({ length: 48 }, (_, at) => at), ...Array.from({ length: 230 }, (_, at) => 170 + at)]);
+  assert.ok(kept.every(line => line.address === 0x3c0000 + line.index));
+  link.disconnect();
+});
+
+// The unit answers no command while a window goes out, so a chunk a timeout abandoned lands before the next list's answer.
 test('a chunk left over from an earlier read is passed over, not taken for the answer', async () => {
   const stray = { command: 'chunk', log: 'diagnostics', session: 200, from: 1, ends_session: false, records: new Uint8Array(24) };
   const { link, reader } = await bravoWith(new FakeLogStore({ sessions: [sessionOf(100, 3), sessionOf(200, 2, { closed: true })], stray }));

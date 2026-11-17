@@ -78,20 +78,23 @@ export async function fetchDiagnostics(reader, { onProgress = () => {} } = {}) {
 
 async function readSession(reader, session, onProgress) {
   const records = [];
-  let total = session.records;
-  let at = 0;
+  const first = session.first ?? 0;
+  let total = first + session.records;
+  let at = first;
   while (at < total) {
     await reader.ask({ command: 'read', log: LOG, session: session.session, from: at, count: LOG_READ_CHUNKS_MAX });
     for (let chunks = 0; chunks < LOG_READ_CHUNKS_MAX; chunks++) {
-      const chunk = await reader.next('chunk', ({ session: id, from }) => id === session.session && from === at);
+      // INFO: fc 17nov26 a chunk past the index asked starts at the first record the ring has not recycled
+      const chunk = await reader.next('chunk', ({ session: id, from }) => id === session.session && from >= at);
       if (chunk.records.length === 0 && !chunk.ends_session) {
         throw new LogError(`session ${session.session} was asked for index ${at} and answered a chunk from ${chunk.from}`);
       }
+      at = chunk.from;
       const decoded = decodeChunk(chunk.records, at);
       records.push(...decoded);
       at += decoded.length;
       if (chunk.ends_session) total = at;
-      onProgress(at, total);
+      onProgress(at - first, total - first);
       if (chunk.ends_session) break;
     }
   }

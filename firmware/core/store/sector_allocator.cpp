@@ -32,6 +32,8 @@ void SectorAllocator::reset() {
     spares_[1] = Spare{};
     lost_sectors_[0] = 0;
     lost_sectors_[1] = 0;
+    recycled_[0] = Recycled{};
+    recycled_[1] = Recycled{};
     sequence_ = 0;
     newest_ = 0;
     claimed_ = false;
@@ -89,6 +91,7 @@ void SectorAllocator::note_taken(uint32_t sector) {
     const uint8_t code = owner_of_[sector];
     if (code == kFree || code == kQuarantined) return;
     const SectorOwner owner = static_cast<SectorOwner>(code);
+    note_recycled(owner, session_id_of_[sector]);
     uint32_t frontier_sector = 0;
     uint32_t frontier_sequence = 0;
     if (!frontier(owner, frontier_sector, frontier_sequence)) return;
@@ -96,8 +99,21 @@ void SectorAllocator::note_taken(uint32_t sector) {
     lost_sectors_[ring_of(owner)]++;
 }
 
+// INFO: fc 17nov26 a ring gives up only its oldest sector, so one session per ring loses its front
+void SectorAllocator::note_recycled(SectorOwner owner, uint32_t session_id) {
+    Recycled& recycled = recycled_[ring_of(owner)];
+    if (recycled.session_id != session_id) recycled = Recycled{session_id, 0};
+    recycled.sectors++;
+}
+
 uint32_t SectorAllocator::lost_sectors(SectorOwner owner) const {
     return owner == SectorOwner::None ? 0 : lost_sectors_[ring_of(owner)];
+}
+
+uint32_t SectorAllocator::recycled_sectors(SectorOwner owner, uint32_t session_id) const {
+    if (owner == SectorOwner::None) return 0;
+    const Recycled& recycled = recycled_[ring_of(owner)];
+    return recycled.session_id == session_id ? recycled.sectors : 0;
 }
 
 Claim SectorAllocator::prepare(SectorOwner owner) {
@@ -137,6 +153,7 @@ void SectorAllocator::release(SectorOwner owner) {
         session_start_[sector] = false;
     }
     spare_of(owner) = Spare{};
+    recycled_[ring_of(owner)] = Recycled{};
 }
 
 void SectorAllocator::quarantine(uint32_t sector) {
