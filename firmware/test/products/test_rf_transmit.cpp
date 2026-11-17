@@ -331,7 +331,7 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         adsl::Packet packet{};
         packet.reset();
         std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-        REQUIRE(packet.check_crc() == 0);
+        REQUIRE(packet.crc_ok());
         packet.descramble();
         REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         if (!packet.is_position()) continue;

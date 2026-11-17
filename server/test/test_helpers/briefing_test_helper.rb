@@ -56,7 +56,7 @@ module BriefingTestHelper
     end
 
     # INFO: fc 12nov26 the page moves once it has read the newest image, so a test waits for that before it clicks anything
-    def connect_go
+    def connect_device
       visit "/briefing"
       click_button "Connect a device"
       assert_selector ".unit-row", text: /is out|up to date|needs its firmware/, wait: 15

@@ -41,8 +41,8 @@ inline double metres_from(const model::AircraftObservation& heard, double latitu
     return std::hypot(north, east);
 }
 
-inline AdsbFrame frame_of(const char* text) {
-    AdsbFrame frame;
+inline adsb::Squitter frame_of(const char* text) {
+    adsb::Squitter frame;
     REQUIRE(hex::read(text, ByteSpan(frame.bytes)));
     return frame;
 }
@@ -52,7 +52,7 @@ struct Bravo {
     adsb::Reference reference = reference_at(kHomeLatitude, kHomeLongitude);
     model::AircraftObservation heard{};
 
-    bool hear(const AdsbFrame& frame, uint32_t at_ms) {
+    bool hear(const adsb::Squitter& frame, uint32_t at_ms) {
         adsb::Message message;
         REQUIRE(adsb_hear(frame, message) == Status::Ok);
         events::Stamp received;
@@ -64,7 +64,7 @@ struct Bravo {
     bool hear_raw(const char* text, uint32_t at_ms) {
         adsb::Message message;
         uint8_t chips[adsb::kChipBytes];
-        adsb_chips(frame_of(text).bytes, chips);
+        adsb::chips_of(frame_of(text).bytes, chips);
         REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) ==
                 wire::Status::Ok);
         return protocol::adsb_fold(assembly, message, at_ms, events::Stamp{}, reference, heard);
@@ -73,7 +73,7 @@ struct Bravo {
     void fly(double latitude, double longitude, uint32_t at_ms, bool odd,
              int32_t altitude_ft = 3000, uint32_t address = kAddress) {
         REQUIRE(hear(
-            adsb_airborne_position(address, kNoCapability, latitude, longitude, odd, altitude_ft),
+            adsb::airborne_position(address, kNoCapability, latitude, longitude, odd, altitude_ft),
             at_ms));
     }
 };

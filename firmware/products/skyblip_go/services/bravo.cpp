@@ -73,16 +73,16 @@ void BravoService::tick(uint32_t now_ms) {
         !up_)
         connect(settings_.bravo, kReconnectScanWindowUs, kReconnectScanPeriodUs);
 
-    if (linked() && now_ms - claimed_ms_ >= kClaimPeriodMs) claim(now_ms);
+    if (linked() && (now_ms - claimed_ms_ >= kClaimPeriodMs || call_changed())) claim(now_ms);
     if (leaving_ && farewell_owed_) {
         farewell_owed_ = false;
         farewell_ms_ = now_ms;
         claim(now_ms);
     }
     if (leaving_ && now_ms - farewell_ms_ >= kFarewellCeilingMs) leave();
-    // INFO: fc 12nov26 both ages are cleared once spent, so neither comes back 49.7 days on
+    // INFO: fc 12nov26 the health age is cleared once spent, so it never comes back 49.7 days on
     if (health_heard_ && now_ms - health_heard_ms_ > kHealthMaxAgeMs) health_heard_ = false;
-    if (health_heard_ || now_ms - started_ms_ >= kBootSettleMs) settled_ = true;
+    if (context_.state.flight.rolling && now_ms - started_ms_ >= kBootSettleMs) rolled_ = true;
     context_.state.bravo = state_now();
     context_.state.own_transponder = own_transponder_on_ground();
     config_.set_paired_tag(paired(settings_)
@@ -283,6 +283,8 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     if (step_ == BravoStep::Waiting) {
         asking_again_ = false;
         settings_.bravo = pairing_with_;
+        // INFO: fc 17nov26 a plain Go's pair sounds out of the box, as Bravo alone does
+        if (!common::can_sound(context_.roles.capabilities)) settings_.alarm = Alarm::Loud;
         config_.note_settings_changed();
         step_ = BravoStep::Idle;
         link_ = BravoLink::Up;
@@ -291,6 +293,8 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
     aircraft_address_warning_.paired(health.value().aircraft_address_set);
+    if (health.value().dismissed_announcement)
+        alarm_.dismiss_announcement(*health.value().dismissed_announcement);
     health_ = health.value();
     if (health_.utc_valid) utc_heard_ = true;
     health_heard_ = true;
@@ -310,9 +314,9 @@ comms::BravoState BravoService::state_now() const {
     if (health_heard_) {
         if (!health_.listening) return comms::BravoState::ReceiverDown;
         if (health_.utc_valid) return comms::BravoState::Live;
-        return utc_heard_ ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
+        return counted_on() ? comms::BravoState::NoUtc : comms::BravoState::Waiting;
     }
-    return settled_ ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
+    return counted_on() ? comms::BravoState::LinkDown : comms::BravoState::Waiting;
 }
 
 // INFO: fc 11nov26 another protocol is never pinned, and a pinned Bravo on one waits for a boot
@@ -340,10 +344,13 @@ void BravoService::ask_again(uint32_t now_ms) {
 
 void BravoService::drop_pin() {
     settings_.bravo = events::BluetoothAddress{};
+    if (!common::can_sound(context_.roles.capabilities) && common::audible(settings_.alarm))
+        settings_.alarm = Alarm::Visual;
     config_.note_settings_changed();
     link_ = BravoLink::Down;
     health_heard_ = false;
     utc_heard_ = false;
+    rolled_ = false;
     aircraft_address_warning_.unpaired();
 }
 
@@ -422,20 +429,22 @@ void BravoService::claim(uint32_t now_ms) {
     claim.pressure_altitude_mm = own.pressure_altitude_mm;
     claim.pressure_altitude_age_ms = now_ms - own.pressure_altitude_at_ms;
     claim.aircraft_address = settings_.aircraft_address;
-    claim.alarm_requested = takes_alarm();
+    claim.alarm = static_cast<uint8_t>(settings_.alarm);
+    claim.call = context_.state.alarm_call;
     claim.paired = paired(settings_);
     uint8_t frame[comms::kPeerClaimWidestBytes];
     const int bytes = comms::write_peer_claim(claim, frame, sizeof(frame));
-    // INFO: fc 11nov26 a refused claim is dropped, and the next one leaves kClaimPeriodMs later
-    if (bytes > 0) (void)central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    // INFO: fc 11nov26 a refused claim is dropped, and the next one leaves kClaimPeriodMs later |
+    // 17nov26 a changed call is written again on the next pass
+    if (bytes == 0 ||
+        central_.write(ConstByteSpan(frame, static_cast<size_t>(bytes))) != Status::Ok)
+        return;
+    claimed_call_ = claim.call;
+    claimed_alarm_ = settings_.alarm;
 }
 
-// INFO: fc 12nov26 a Go+ sounds for both units whatever its volume, so off on it silences the pair
-bool BravoService::takes_alarm() const {
-    const ports::Capabilities fitted = context_.roles.capabilities;
-    const bool sounds = ports::has(fitted, ports::Capability::Buzzer) ||
-                        ports::has(fitted, ports::Capability::Haptic);
-    return sounds && context_.state.own.fix_valid && state_now() == comms::BravoState::Live;
+bool BravoService::call_changed() const {
+    return context_.state.alarm_call != claimed_call_ || settings_.alarm != claimed_alarm_;
 }
 
 }  // namespace skyblip::go

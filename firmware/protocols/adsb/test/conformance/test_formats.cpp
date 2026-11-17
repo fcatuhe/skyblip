@@ -15,8 +15,8 @@ using skyblip::wire::Status;
 
 namespace {
 
-AdsbFrame airborne(uint8_t type_code, uint32_t altitude_field) {
-    AdsbFrame frame = squitter(type_code);
+adsb::Squitter airborne(uint8_t type_code, uint32_t altitude_field) {
+    adsb::Squitter frame = squitter(type_code);
     put(frame, 9, 20, altitude_field);
     put(frame, 21, 21, 1);
     put(frame, 22, 22, 1);
@@ -25,8 +25,8 @@ AdsbFrame airborne(uint8_t type_code, uint32_t altitude_field) {
     return frame;
 }
 
-AdsbFrame surface(uint8_t type_code, uint8_t movement) {
-    AdsbFrame frame = squitter(type_code);
+adsb::Squitter surface(uint8_t type_code, uint8_t movement) {
+    adsb::Squitter frame = squitter(type_code);
     put(frame, 6, 12, movement);
     put(frame, 13, 13, 1);
     put(frame, 14, 20, 64);
@@ -37,8 +37,8 @@ AdsbFrame surface(uint8_t type_code, uint8_t movement) {
     return frame;
 }
 
-AdsbFrame identification(uint8_t type_code, uint8_t category, const char* callsign) {
-    return adsb_identification(kAddress, kAirborneCapability, type_code, category, callsign);
+adsb::Squitter identification(uint8_t type_code, uint8_t category, const char* callsign) {
+    return adsb::identification(kAddress, kAirborneCapability, type_code, category, callsign);
 }
 
 // INFO: fc 17nov26 Annex 10's Gray steps written apart from the decoder, 100 ft counts reflected
@@ -70,7 +70,7 @@ uint32_t q_field(uint32_t n) { return ((n >> 4) << 5) | 0x10u | (n & 0xFu); }
 }
 
 TEST_CASE("DO-260B 2.2.3.2: a DF17 frame is DF, CA, AA, a 56-bit ME and the PI parity") {
-    AdsbFrame frame = airborne(11, q_field(1000));
+    adsb::Squitter frame = airborne(11, q_field(1000));
     frame.bytes[0] = static_cast<uint8_t>((17 << 3) | 6);
     const Message message = heard_ok(frame);
     CHECK(message.capability == 6);
@@ -80,7 +80,7 @@ TEST_CASE("DO-260B 2.2.3.2: a DF17 frame is DF, CA, AA, a 56-bit ME and the PI p
 }
 
 TEST_CASE("DO-260B 2.2.3.2.1: the baseline fields sit at message bits 1, 6, 9, 33 and 89") {
-    const AdsbFrame frame = airborne(11, q_field(1000));
+    const adsb::Squitter frame = airborne(11, q_field(1000));
     CHECK((frame.bytes[0] >> 3) == 17);
     CHECK((frame.bytes[0] & 7) == kAirborneCapability);
     const uint32_t address =
@@ -95,18 +95,18 @@ TEST_CASE(
     "DO-260B 2.2.3.2.1.1: DF17 is read and DF11, DF16, DF18 and DF19 are never read as DF17") {
     CHECK(hear(airborne(11, q_field(1000))).status == Status::Ok);
     for (uint8_t df : {11, 16, 18, 19}) {
-        AdsbFrame frame = airborne(11, q_field(1000));
+        adsb::Squitter frame = airborne(11, q_field(1000));
         frame.bytes[0] = static_cast<uint8_t>((df << 3) | 5);
         CHECK(hear(frame).status != Status::Ok);
     }
-    AdsbFrame df16 = airborne(11, q_field(1000));
+    adsb::Squitter df16 = airborne(11, q_field(1000));
     df16.bytes[0] = static_cast<uint8_t>(16 << 3);
     CHECK(hear(df16).status == Status::Unsupported);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.1.2: every CA code of Table 2-8 is carried as sent") {
     for (uint8_t capability = 0; capability < 8; capability++) {
-        AdsbFrame frame = airborne(11, q_field(1000));
+        adsb::Squitter frame = airborne(11, q_field(1000));
         frame.bytes[0] = static_cast<uint8_t>((17 << 3) | capability);
         CHECK(heard_ok(frame).capability == capability);
     }
@@ -114,7 +114,7 @@ TEST_CASE("DO-260B 2.2.3.2.1.2: every CA code of Table 2-8 is carried as sent") 
 
 TEST_CASE("DO-260B 2.2.3.2.1.5: the AA field is the sender's 24-bit ICAO address") {
     for (uint32_t address : {0x000001u, 0x3C4D5Eu, 0xFFFFFEu}) {
-        AdsbFrame frame = adsb_airborne_position(address, 5, 48.0, 8.0, false, 3000);
+        adsb::Squitter frame = adsb::airborne_position(address, 5, 48.0, 8.0, false, 3000);
         CHECK(heard_ok(frame).address == address);
     }
 }
@@ -124,12 +124,12 @@ TEST_CASE("DO-260B 2.2.3.2.1.6: the ME field's TYPE code picks the message its b
     CHECK(heard_ok(surface(7, 10)).kind == Kind::SurfacePosition);
     CHECK(heard_ok(airborne(11, q_field(1000))).kind == Kind::AirbornePosition);
     CHECK(heard_ok(velocity(1)).kind == Kind::Velocity);
-    CHECK(heard_ok(adsb_operational_status(kAddress, 5, 2, 2)).kind == Kind::OperationalStatus);
+    CHECK(heard_ok(adsb::operational_status(kAddress, 5, 2, 2)).kind == Kind::OperationalStatus);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.1.7: the PI field is the parity over an all-zero overlay") {
-    AdsbFrame frame = airborne(11, q_field(1000));
-    adsb_seal(frame.bytes);
+    adsb::Squitter frame = airborne(11, q_field(1000));
+    adsb::seal(frame.bytes);
     CHECK(wire::crc24_check(frame.bytes, kFrameBytes) == 0);
     CHECK(hear_as_sent(frame).status == Status::Ok);
     frame.bytes[13] ^= 0x01;
@@ -184,7 +184,7 @@ TEST_CASE("DO-260B 2.2.3.2.3.1.3: a TYPE 0 message is never read as a position")
 
 TEST_CASE(
     "DO-260B 2.2.3.2.3.1.3.1: TYPE 0 means no position, so its zero CPR fields place nothing") {
-    AdsbFrame frame = squitter(0);
+    adsb::Squitter frame = squitter(0);
     CHECK(hear(frame).status == Status::Unsupported);
     put(frame, 9, 20, q_field(1440));
     CHECK(hear(frame).status == Status::Unsupported);
@@ -203,7 +203,7 @@ TEST_CASE("DO-260B 2.2.3.2.3.3: NIC supplement B and the TYPE code give the posi
 }
 
 TEST_CASE("DO-260B 2.2.3.2.3.4: the altitude is the 12 bits of ME 9 to 20") {
-    AdsbFrame frame = airborne(11, 0);
+    adsb::Squitter frame = airborne(11, 0);
     put(frame, 9, 20, q_field(40));
     CHECK(heard_ok(frame).airborne_position.pressure_altitude_ft == 0);
     put(frame, 8, 8, 1);
@@ -237,21 +237,21 @@ TEST_CASE("DO-260B 2.2.3.2.3.4.3: Q 1 counts 25 ft from -1000, Q 0 is Gillham, z
 }
 
 TEST_CASE("DO-260B 2.2.3.2.3.5: the T bit says the position is on an exact 0.2 s UTC epoch") {
-    AdsbFrame frame = airborne(11, q_field(1440));
+    adsb::Squitter frame = airborne(11, q_field(1440));
     CHECK(heard_ok(frame).airborne_position.utc_synchronized);
     put(frame, 21, 21, 0);
     CHECK_FALSE(heard_ok(frame).airborne_position.utc_synchronized);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.3.6: the F bit is 0 for an even encoding and 1 for an odd one") {
-    AdsbFrame frame = airborne(11, q_field(1440));
+    adsb::Squitter frame = airborne(11, q_field(1440));
     CHECK(heard_ok(frame).airborne_position.cpr.odd);
     put(frame, 22, 22, 0);
     CHECK_FALSE(heard_ok(frame).airborne_position.cpr.odd);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.3.7: the encoded latitude is the 17 bits of ME 23 to 39") {
-    AdsbFrame frame = airborne(11, q_field(1440));
+    adsb::Squitter frame = airborne(11, q_field(1440));
     put(frame, 23, 39, 0x1FFFF);
     CHECK(heard_ok(frame).airborne_position.cpr.latitude_cpr == 0x1FFFF);
     put(frame, 23, 39, 0x00001);
@@ -260,7 +260,7 @@ TEST_CASE("DO-260B 2.2.3.2.3.7: the encoded latitude is the 17 bits of ME 23 to 
 }
 
 TEST_CASE("DO-260B 2.2.3.2.3.8: the encoded longitude is the 17 bits of ME 40 to 56") {
-    AdsbFrame frame = airborne(11, q_field(1440));
+    adsb::Squitter frame = airborne(11, q_field(1440));
     put(frame, 40, 56, 0x1FFFF);
     CHECK(heard_ok(frame).airborne_position.cpr.longitude_cpr == 0x1FFFF);
     put(frame, 40, 56, 0x10000);
@@ -290,7 +290,7 @@ TEST_CASE("DO-260B 2.2.3.2.4.1.3: a TYPE 0 message is never read as a surface po
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.1.3.1: TYPE 0 means no position, whatever its movement says") {
-    AdsbFrame frame = squitter(0);
+    adsb::Squitter frame = squitter(0);
     put(frame, 6, 12, 1);
     CHECK(hear(frame).status == Status::Unsupported);
 }
@@ -324,14 +324,14 @@ TEST_CASE("DO-260B 2.2.3.2.4.2: movement code 2 is under 0.125 kt and 3 to 8 ste
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.3: the status bit says whether the heading or track is valid") {
-    AdsbFrame frame = surface(7, 10);
+    adsb::Squitter frame = surface(7, 10);
     CHECK(heard_ok(frame).surface_position.track_valid);
     put(frame, 13, 13, 0);
     CHECK_FALSE(heard_ok(frame).surface_position.track_valid);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.4: the heading or track counts 360/128 degree steps from north") {
-    AdsbFrame frame = surface(7, 10);
+    adsb::Squitter frame = surface(7, 10);
     for (uint8_t code : {0, 1, 64, 127}) {
         put(frame, 14, 20, code);
         CHECK(heard_ok(frame).surface_position.track_c7 == code);
@@ -339,28 +339,28 @@ TEST_CASE("DO-260B 2.2.3.2.4.4: the heading or track counts 360/128 degree steps
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.5: the surface T bit says the position is on a 0.2 s UTC epoch") {
-    AdsbFrame frame = surface(5, 10);
+    adsb::Squitter frame = surface(5, 10);
     CHECK(heard_ok(frame).surface_position.utc_synchronized);
     put(frame, 21, 21, 0);
     CHECK_FALSE(heard_ok(frame).surface_position.utc_synchronized);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.6: the surface F bit is 0 even and 1 odd") {
-    AdsbFrame frame = surface(5, 10);
+    adsb::Squitter frame = surface(5, 10);
     CHECK_FALSE(heard_ok(frame).surface_position.cpr.odd);
     put(frame, 22, 22, 1);
     CHECK(heard_ok(frame).surface_position.cpr.odd);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.7: the surface encoded latitude is the 17 bits of ME 23 to 39") {
-    AdsbFrame frame = surface(5, 10);
+    adsb::Squitter frame = surface(5, 10);
     put(frame, 23, 39, 0x1FFFF);
     CHECK(heard_ok(frame).surface_position.cpr.latitude_cpr == 0x1FFFF);
     CHECK(heard_ok(frame).surface_position.cpr.longitude_cpr == 0x0F0F0);
 }
 
 TEST_CASE("DO-260B 2.2.3.2.4.8: the surface encoded longitude is the 17 bits of ME 40 to 56") {
-    AdsbFrame frame = surface(5, 10);
+    adsb::Squitter frame = surface(5, 10);
     put(frame, 40, 56, 0x1FFFF);
     CHECK(heard_ok(frame).surface_position.cpr.longitude_cpr == 0x1FFFF);
     CHECK(heard_ok(frame).surface_position.cpr.latitude_cpr == 0x12345);
@@ -390,7 +390,7 @@ TEST_CASE("DO-260B 2.2.3.2.5.3: eight 6-bit IA-5 characters, A to Z, 0 to 9 and 
     const Message message = heard_ok(identification(4, 0, "AZ09 X"));
     CHECK(message.identification.callsign_valid);
     CHECK(std::strcmp(message.identification.callsign, "AZ09 X") == 0);
-    AdsbFrame frame = identification(4, 0, "ABCDEFGH");
+    adsb::Squitter frame = identification(4, 0, "ABCDEFGH");
     put(frame, 9, 14, 0);
     CHECK_FALSE(heard_ok(frame).identification.callsign_valid);
 }

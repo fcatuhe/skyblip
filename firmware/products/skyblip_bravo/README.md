@@ -1,6 +1,6 @@
 # products/skyblip_bravo
 
-skyBlip Bravo: a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B full time and feeds one phone EFB over FLARM NMEA, alarming on its own buzzer and motor. It transmits nothing. `product.h` wires it over `boards/seeed/meshtracker_x1/board.h`, and `main.cpp` is the shell on silicon. The host suite runs the same product on the X1's part models (`hardware/platform/host/meshtracker_x1.h`), and the simulator flies it among ADS-B traffic, with a phone reading its NMEA (`../../simulator/README.md`).
+skyBlip Bravo: a Seeed SenseCAP MeshTracker X1 that receives 1090 MHz ADS-B full time and feeds one phone EFB over FLARM NMEA, alarming on its own buzzer and motor, or playing the alarm of the Go it is paired with. It transmits nothing. `product.h` wires it over `boards/seeed/meshtracker_x1/board.h`, and `main.cpp` is the shell on silicon. The host suite runs the same product on the X1's part models (`hardware/platform/host/meshtracker_x1.h`), and the simulator flies it among ADS-B traffic, with a phone reading its NMEA (`../../simulator/README.md`).
 
 It runs on the X1. The factory bootloader it installs under is read in `../../boards/seeed/meshtracker_x1/factory/README.md`, and the pins, timings and part behaviours #169 still benches are listed at the end.
 
@@ -19,7 +19,7 @@ It runs on the X1. The factory bootloader it installs under is read in `../../bo
 | `nmea` | the FLARM sentences to the phone (`common::NmeaService`) |
 | `flight_log` | the flights ring and the Log endpoint (`common::FlightLogService`) |
 | `capture` | the diagnostics ring (`common::CaptureService`) |
-| `peer` | the pin of one Go, the peer endpoint and the reference Bravo places traffic against (`services/peer.h`) |
+| `peer` | the pin of one Go, the peer endpoint, the reference Bravo places traffic against and the Go's call Bravo plays (`services/peer.h`) |
 
 `ownship` runs before `adsb`, so a frame is folded against this pass's fix. `alarm` runs before `button`, so a press is read against the lamp the pilot is looking at. `peer` runs last, so the loop codes of the nine before it hold. It sends what `adsb` folded in the same pass, and `adsb` places traffic against the claims `peer` read in the pass before.
 
@@ -35,9 +35,9 @@ A fix that comes back does not make an old observation fresh. Each assembly fiel
 
 ## Settings
 
-`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 3. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. The pin is in version 1, so the first image already carried it. Version 2 added `aircraft_address_from_go`, and `from_blob` reads a version 1 blob whole, pin included, with `aircraft_address_from_go` false. Version 3 replaced `alarm_enabled` and `alarm_volume` with `alarm`, and either old off comes back `visual` (`../common/README.md`).
+`settings.h` is Bravo's struct, sealed by `core/settings/blob.h` as blob version 4. It holds `aircraft_address`, `aircraft_address_from_go`, `alarm`, `go_alarm`, and `peer`: the Bluetooth address and type of the Go Bravo pinned, and whether one is pinned. `alarm` is Bravo's own, which a phone sets and Bravo plays while it is not paired. `go_alarm` is the last alarm its pinned Go's `peer_claim` gave, which Bravo plays while paired, link down and restart included (The alarm). Paired with a Go says when the pin is written and cleared, and when `aircraft_address_from_go` is set. The pin is in version 1, so the first image already carried it. Version 2 added `aircraft_address_from_go`, and `from_blob` reads a version 1 blob whole, pin included, with `aircraft_address_from_go` false. Version 3 replaced `alarm_enabled` and `alarm_volume` with `alarm`, and either old off comes back `visual` (`../common/README.md`). Version 4 added `go_alarm` at the end, in what was padding, and an older blob comes back with `go_alarm` equal to `alarm`, the alarm a pinned Bravo played until then.
 
-Bravo answers `config` and `defaults` with `aircraft_address` and `alarm` only, and ignores every other key of a `set`, as the Go ignores `address`. `schemas/link.v1.json` says which product stores each key. A `set` on Bravo stands as a prompt like any other, and `describe_changes` writes no rows, because there is no glass to show them on.
+Bravo answers `config` and `defaults` with `aircraft_address` and `alarm` only, `config` with `alarm_from_go` too, and ignores every other key of a `set`, as the Go ignores `address`. While paired, `config` carries its Go's alarm with `alarm_from_go` true, and a `set` that carries `alarm` is refused `set_on_go` at the door, so a phone never leaves Bravo disagreeing with its Go and Bravo's own alarm stays as it was before the pairing. The Briefing page shows that alarm read-only, `Set on its Go`. `schemas/link.v1.json` says which product stores each key. A `set` on Bravo stands as a prompt like any other, and `describe_changes` writes no rows, because there is no glass to show them on.
 
 Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps ADS-L G.1.3 category 0, no emitter category, and the power service reads the divider untrimmed.
 
@@ -75,7 +75,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 | Press | Meaning |
 |---|---|
 | a press from off | on: the button is the wake pin |
-| a press with an advisory standing | dismiss, as the Go's long touch does |
+| a press with an advisory standing | dismiss, as the Go's long touch does, on its Go too while the link is up |
 | a press with a prompt on the lamp | allow the prompt |
 | one press with a Go's pairing request on the lamp | pair with that Go |
 | one press while an upload window is open | close it, once the press that opened it has settled |
@@ -112,7 +112,7 @@ So a pin on the Go alone lasts until the Go next reaches Bravo, and is cleared o
 
 A Go that unpairs while connected says so: it writes one `peer_claim` with `paired` false and keeps the link until Bravo's `health` answers `paired` false, at most `BravoService::kFarewellCeilingMs`, 2 s. Bravo drops its pin and frees the kept connection on that claim. A Go unpaired while away from Bravo cannot say so, and Bravo keeps its pin until that Go asks it again or another Go replaces it. A farewell lost on the link ends the same way, since the Go drops the link after 2 s whether Bravo answered or not. A Go that asks to pair while Bravo holds its pin has unpaired, so Bravo drops its pin and shows the request. Another Go's request answered with a press replaces the pin, and the old Go's next claim is answered `paired` false, so it drops its own.
 
-`PeerService::paired()` is true only while the pin is stored, which is after both sides confirmed. Bravo gives the alarm only to that Go (The alarm).
+`PeerService::paired()` is true only while the pin is stored, which is after both sides confirmed. Bravo plays only that Go's calls and alarm (The alarm).
 
 ### The connection
 
@@ -120,9 +120,9 @@ While a Go is pinned, `reserve_peer_connection_for()` keeps one of Bravo's three
 
 ### What Bravo serves
 
-`peer_claim` is read from any Go for its `paired` flag. Its own-ship and aircraft address are taken only from the pinned Go. A frame that is not a well-formed claim, or carries half a field, is refused whole and counted in `PeerService::refused()`, and its sender is not taken for a Go.
+`peer_claim` is read from any Go for its `paired` flag. Its own-ship, aircraft address, alarm and call are taken only from the pinned Go. A frame that is not a well-formed claim, or carries half a field, is refused whole and counted in `PeerService::refused()`, and its sender is not taken for a Go.
 
-`health` goes once a second, `PeerService::kHealthPeriodMs`, whatever the traffic, to every Go that has written a valid claim on its connection, and at once to a Go new on a connection, to a Go that unpaired, and to a Go claiming a pin Bravo does not hold. Its `paired` is true only for the pinned Go and an offered one. It says whether the receiver listens, whether Bravo holds UTC, the last observation sequence, whether Bravo's aircraft address is set, the reference, and the transponder Bravo takes for the aircraft's own (Own transponder). It also says what a pilot would read on a glass Bravo does not have: the image it runs as `firmware`, its cell as `battery_percent`, `charging` and `power_level`, the same readings the `status` frame gives a phone, and `frame_rate_hz`, the 1090 MHz frames its receiver handed up in the last second. The Go shows them on its `BRAVO LOG` page and says `BRAVO BAT` on its radar from `Low` down (`../skyblip_go/pages/README.md`). A Go reads a `health` without them, from a Bravo built before them, as no reading.
+`health` goes once a second, `PeerService::kHealthPeriodMs`, whatever the traffic, to every Go that has written a valid claim on its connection, and at once to a Go new on a connection, to a Go that unpaired, to a Go claiming a pin Bravo does not hold, and when a press dismissed its Go's call. Its `paired` is true only for the pinned Go and an offered one. It says whether the receiver listens, whether Bravo holds UTC, the last observation sequence, whether Bravo's aircraft address is set, the reference, and the transponder Bravo takes for the aircraft's own (Own transponder). It also says what a pilot would read on a glass Bravo does not have: the image it runs as `firmware`, its cell as `battery_percent`, `charging` and `power_level`, the same readings the `status` frame gives a phone, and `frame_rate_hz`, the 1090 MHz frames its receiver handed up in the last second. The Go shows them on its `BRAVO LOG` page and says `BRAVO BAT` on its radar from `Low` down (`../skyblip_go/pages/README.md`). A Go reads a `health` without them, from a Bravo built before them, as no reading.
 
 `observation` goes to every Go that has written a `peer_claim` on its connection, each by `send_to()`, so a phone's narrow payload never refuses it. One target is one frame, from the traffic table, with its callsign and the second the callsign table heard it. A frame goes only when the table took news of the target or its callsign moved, at most once in `ObservationPacer::kTargetUpdateFloorMs`, 500 ms, so two a second. What Bravo hears in between is folded into the next. A frame carries each field's own instant, so a frame sent late, or after the link came back, never makes a target fresher. A callsign moves no time of the position. Each Go is owed each target on its own, so a Go whose link refuses a frame for now keeps it owed and gets it on a later pass, while a Go that took it waits for news and the floor. Slots are served in rotation, not nearest first. With no ADS-B gate a full table owes each Go up to 96 frames a second, 48 targets at two a second, so on a busy sky a near target's frame can wait behind far ones while the link refuses. Nobody has measured that wait yet.
 
@@ -142,19 +142,15 @@ The CPR reference is the same position, so a Bravo with no fix still decodes loc
 
 ### The alarm
 
-Only Bravo silences itself, and only for a Go+ that sounds for both units (#179). The Go+ takes the alarm with `alarm_requested` true in its claim (`../../core/comms/README.md`, The Go's link to its Bravo). Bravo keeps its buzzer and motor silent while all of these hold:
+While Bravo is paired, its Go's `ALARM` row sets the alarm for both units, and Bravo's own `alarm` waits for the unpairing (`../../core/comms/README.md`, The alarm). `common::AlarmService` reads it through `AlarmSettings::in_force()`: `go_alarm` while a pin is stored, `alarm` otherwise. `PeerService` stores each claim's `alarm` as `go_alarm` when it differs, under the same durable-write window as any settings change, so Bravo keeps its Go's alarm through a lost link and a restart.
 
-- it holds the pin of that Go, and that Go's connection is up;
-- the last claim it read from that Go said `alarm_requested` true;
-- that claim is younger than `PeerService::kAlarmRequestMaxAgeMs`, 3 s, three claim periods, so one lost claim keeps it silent. #194 sets the figure on the bench.
+While the pinned Go's connection is up and its last claim is younger than `PeerService::kCallMaxAgeMs`, three claim periods, `PeerService` publishes the claim's call as `bus::State::followed_call`, and the alarm service plays it: the Go's level on the buzzer and the motor, the Go's standing level on the lamp, and a new call each time the Go's announcement moves. Bravo still grades its own ADS-B, so its `$PFLAU` and `$PFLAA` keep their alarm levels for an EFB (#184), but that grading sounds nothing while Bravo plays the Go's call. A press with the call standing silences Bravo at once and sends `health` at once with `dismissed_announcement`, the announcement it heard, and the Go dismisses its own alarm while that is still its announcement. A Go that was not pinned never sets Bravo's call or its alarm.
 
-`health.alarm_granted` says so to that Go, and is false to every other Go. A claim from a Go Bravo has not pinned never silences it.
+Bravo grades its own ADS-B again, at `go_alarm`, on the pass after any of these: the Go's connection drops, or no claim arrived for 3 s with the link up. A press then silences Bravo alone, and a long touch on the Go silences the Go alone. A call that stands when the link drops is not called again, and one a press on Bravo dismissed stays dismissed. One the Go's long touch dismissed is called once more on Bravo if Bravo hears that aircraft itself, because its own grading never heard that dismissal, and a call heard twice is the safer loss. After the Go unpairs, Bravo plays its own `alarm` again, the one from before the pairing. After a boot, Bravo grades its own at `go_alarm` until its Go's first claim arrives.
 
-Bravo sounds again by its own `alarm`, on the pass after any of these: the Go's connection drops, a claim says `alarm_requested` false, the Go unpairs, or no requesting claim arrived for 3 s with the link up. An advisory that stands is announced again at once. After a boot Bravo sounds until a requesting claim arrives.
+In the air, Bravo plays one low note on the pass it stops playing its Go's calls, at its alarm in force, the note a Go plays for a lost Bravo (`../../core/annunciation/README.md`, A lost peer is one low note). It says nothing on the ground, at `off` or `visual`, or when the Go unpairs.
 
-`PeerService` publishes the decision as `bus::State::alarm_granted`, and `common::AlarmService` reads it with the alarm settings, so the traffic call, the first-fix tune and the motor all fall silent the way `visual` silences them. Nothing else changes: the lamp still flickers on an advisory, a press still dismisses it, and the `$PFLAU` and `$PFLAA` to a phone keep their alarm levels, because an EFB's alarm follows its own stream (#184).
-
-Two costs are accepted rather than built around. At a handover, a Go+ that loses its fix stops asking only on its next claim, so up to about a claim period passes with no unit sounding. While the link fails one way, both units may sound. Two longer gaps are bounded by the ages above. A Go+ that switches off or stops in flight leaves Bravo silent until its connection drops or its last claim ages out, at most 3 s. Bravo's frames lost on the way to a Go+ whose claims still arrive leave Bravo silent until the Go+ reads `NO BRAVO`, at most the Go's `kHealthMaxAgeMs` and one claim period, 4 s, while the Go+ keeps alarming on the targets it already holds.
+A Go+ and Bravo both sound at `SOFT` and `LOUD`, the same call within the link's latency. A plain Go sounds nothing, and its `BRAVO SOFT` and `BRAVO LOUD` sound on Bravo alone, its own ADS-L traffic included. Bravo plays its own first-fix tune when its alarm in force sounds.
 
 The aircraft address is the pinned Go's `aircraft_address` when its last claim carried one, else Bravo's own setting. The assembly and the table drop that address. Bravo also stores the pinned Go's `aircraft_address` as its own setting when it differs, with `aircraft_address_from_go` set, so it keeps filtering the aircraft's transponder without its Go. A claim with no `aircraft_address` clears the setting only when the Go gave it, so a Go cleared on its glass clears Bravo too, and a Go that never held one leaves what a phone set. A phone's `set` of `aircraft_address` clears `aircraft_address_from_go`.
 
@@ -236,5 +232,6 @@ The host suite runs every service above on the part models. On an X1, a Go has p
 - both sides of a pairing keep the pin across a power cycle of either;
 - with two phones on Bravo and its Go away, a third phone is refused, and the Go reconnects;
 - the Go's BRAVO page reads `CONNECTED`, and an aircraft Bravo hears reaches the Go as `observation` frames, at most two a second;
-- paired with a Go+ that has a fix, an advisory sounds on the Go+ alone, and Bravo sounds again within 3 s of the Go+ switching off;
+- paired with a Go+, an advisory sounds on both units at once, a press on either silences both, and Bravo grades its own within 3 s of the Go+ switching off;
+- paired with a plain Go on `BRAVO LOUD`, the Go's ADS-L traffic sounds on Bravo;
 - endurance from full to cutoff, with the conditions, published as measured.

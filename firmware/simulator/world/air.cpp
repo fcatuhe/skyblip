@@ -206,7 +206,7 @@ int Air::format(int index, char* out, int capacity) const {
     adsl::Packet packet{};
     packet.reset();
     std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    const bool crc_ok = packet.check_crc() == 0;
+    const bool crc_ok = packet.crc_ok();
     packet.descramble();
     return head + std::snprintf(out + head, left, "ADS-L %06X %+.5f,%+.5f %5d m %s",
                                 packet.address(), packet.latitude_1e7() / 1e7,

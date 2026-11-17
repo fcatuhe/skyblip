@@ -21,13 +21,13 @@ struct Heard {
     adsb::Message message;
 };
 
-using Frame = AdsbFrame;
+using Frame = Squitter;
 
 Frame extended_squitter(uint8_t type_code) {
     Frame frame = frame_of(
         "8d4840d6"
         "00000000000000000000");
-    adsb_set_message_bits(frame, 1, 5, type_code);
+    set_message_bits(frame, 1, 5, type_code);
     return frame;
 }
 
@@ -38,22 +38,22 @@ Heard hear_chips(const uint8_t* chips) {
 }
 
 Heard hear_sealed(Frame frame) {
-    adsb_seal(frame.bytes);
+    seal(frame.bytes);
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    chips_of(frame.bytes, chips);
     return hear_chips(chips);
 }
 
 Heard hear(const char* text) {
     const Frame frame = frame_of(text);
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    chips_of(frame.bytes, chips);
     return hear_chips(chips);
 }
 
 int32_t pressure_altitude_of(uint32_t field) {
     Frame frame = extended_squitter(11);
-    adsb_set_message_bits(frame, 9, 20, field);
+    set_message_bits(frame, 9, 20, field);
     const Heard heard = hear_sealed(frame);
     REQUIRE(heard.status == Status::Ok);
     REQUIRE(heard.message.airborne_position.pressure_altitude_valid);
@@ -97,12 +97,12 @@ TEST_CASE("adsb: dump1090's identifications name their callsign and category") {
 
 TEST_CASE("adsb: the type code names the category set, D at 1 up to A at 4") {
     Frame frame = extended_squitter(3);
-    adsb_set_message_bits(frame, 6, 8, 1);
-    adsb_set_message_bits(frame, 9, 14, 7);
-    adsb_set_message_bits(frame, 15, 56, 0);
+    set_message_bits(frame, 6, 8, 1);
+    set_message_bits(frame, 9, 14, 7);
+    set_message_bits(frame, 15, 56, 0);
     for (uint8_t i = 1; i < adsb::kCallsignCharacters; i++)
-        adsb_set_message_bits(frame, static_cast<uint8_t>(9 + 6 * i),
-                              static_cast<uint8_t>(14 + 6 * i), 32);
+        set_message_bits(frame, static_cast<uint8_t>(9 + 6 * i), static_cast<uint8_t>(14 + 6 * i),
+                         32);
     const Heard glider = hear_sealed(frame);
     REQUIRE(glider.status == Status::Ok);
     CHECK(glider.message.identification.category_set == 'B');
@@ -112,8 +112,8 @@ TEST_CASE("adsb: the type code names the category set, D at 1 up to A at 4") {
 
 TEST_CASE("adsb: a callsign with a code outside the character set is refused whole") {
     Frame frame = extended_squitter(4);
-    adsb_set_message_bits(frame, 9, 14, 11);
-    adsb_set_message_bits(frame, 15, 20, 0);
+    set_message_bits(frame, 9, 14, 11);
+    set_message_bits(frame, 15, 20, 0);
     const Heard heard = hear_sealed(frame);
     REQUIRE(heard.status == Status::Ok);
     CHECK_FALSE(heard.message.identification.callsign_valid);
@@ -158,12 +158,12 @@ TEST_CASE("adsb: Gillham codes decode in 100 ft steps, reflected when the 500 ft
 
 TEST_CASE("adsb: an altitude of all zeros, or a Gillham code no encoder sends, is no altitude") {
     Frame frame = extended_squitter(11);
-    adsb_set_message_bits(frame, 23, 39, 0x12345);
+    set_message_bits(frame, 23, 39, 0x12345);
     const Heard zero = hear_sealed(frame);
     REQUIRE(zero.status == Status::Ok);
     CHECK_FALSE(zero.message.airborne_position.pressure_altitude_valid);
 
-    adsb_set_message_bits(frame, 9, 20, gillham_field("000000011000"));
+    set_message_bits(frame, 9, 20, gillham_field("000000011000"));
     const Heard unused = hear_sealed(frame);
     REQUIRE(unused.status == Status::Ok);
     CHECK_FALSE(unused.message.airborne_position.pressure_altitude_valid);
@@ -172,7 +172,7 @@ TEST_CASE("adsb: an altitude of all zeros, or a Gillham code no encoder sends, i
 // DO-260B draft 4.2 2.2.3.2.3.4.2 codes GNSS height by 2.2.3.2.3.4.3, as pressure altitude is.
 TEST_CASE("adsb: a GNSS height uses the pressure altitude's coding and is no pressure altitude") {
     Frame frame = extended_squitter(20);
-    adsb_set_message_bits(frame, 9, 20, 0xB50);
+    set_message_bits(frame, 9, 20, 0xB50);
     const Heard height = hear_sealed(frame);
     REQUIRE(height.status == Status::Ok);
     CHECK(height.message.type_code == 20);
@@ -180,7 +180,7 @@ TEST_CASE("adsb: a GNSS height uses the pressure altitude's coding and is no pre
     CHECK(height.message.airborne_position.gnss_height_ft == 35000);
     CHECK_FALSE(height.message.airborne_position.pressure_altitude_valid);
 
-    adsb_set_message_bits(frame, 9, 20, 0);
+    set_message_bits(frame, 9, 20, 0);
     const Heard none = hear_sealed(frame);
     REQUIRE(none.status == Status::Ok);
     CHECK_FALSE(none.message.airborne_position.gnss_height_valid);
@@ -202,7 +202,7 @@ TEST_CASE("adsb: the Riddle's surface frame moves at 17 kt on a track of 33 step
 TEST_CASE("adsb: movement codes read the floor of their band, none, stopped and 175 kt or more") {
     auto speed_of = [](uint32_t code) {
         Frame frame = extended_squitter(7);
-        adsb_set_message_bits(frame, 6, 12, code);
+        set_message_bits(frame, 6, 12, code);
         const Heard heard = hear_sealed(frame);
         REQUIRE(heard.status == Status::Ok);
         return heard.message.surface_position.speed_mkt;
@@ -264,16 +264,16 @@ TEST_CASE("adsb: dump1090's velocities read the speed, rate and GNSS difference 
 
 TEST_CASE("adsb: velocity zeros mean nothing sent and top codes saturate") {
     Frame frame = extended_squitter(19);
-    adsb_set_message_bits(frame, 6, 8, 1);
+    set_message_bits(frame, 6, 8, 1);
     const Heard zeros = hear_sealed(frame);
     REQUIRE(zeros.status == Status::Ok);
     CHECK_FALSE(zeros.message.velocity.east_kt.valid);
     CHECK_FALSE(zeros.message.velocity.climb_fpm.valid);
     CHECK_FALSE(zeros.message.velocity.gnss_minus_pressure_ft.valid);
 
-    adsb_set_message_bits(frame, 15, 24, 1023);
-    adsb_set_message_bits(frame, 37, 46, 0x200 | 511);
-    adsb_set_message_bits(frame, 50, 56, 127);
+    set_message_bits(frame, 15, 24, 1023);
+    set_message_bits(frame, 37, 46, 0x200 | 511);
+    set_message_bits(frame, 50, 56, 127);
     const adsb::Velocity top = hear_sealed(frame).message.velocity;
     CHECK(top.east_kt.saturated);
     CHECK(top.east_kt.value == 1022);
@@ -285,11 +285,11 @@ TEST_CASE("adsb: velocity zeros mean nothing sent and top codes saturate") {
 
 TEST_CASE("adsb: supersonic subtypes count speed in 4 kt steps") {
     Frame frame = extended_squitter(19);
-    adsb_set_message_bits(frame, 6, 8, 2);
-    adsb_set_message_bits(frame, 26, 35, 101);
+    set_message_bits(frame, 6, 8, 2);
+    set_message_bits(frame, 26, 35, 101);
     CHECK(hear_sealed(frame).message.velocity.north_kt.value == 400);
 
-    adsb_set_message_bits(frame, 6, 8, 4);
+    set_message_bits(frame, 6, 8, 4);
     CHECK(hear_sealed(frame).message.velocity.airspeed_kt.value == 400);
 }
 
@@ -308,17 +308,17 @@ TEST_CASE("adsb: dump1090's operational status frames read version 2 and their G
 
 TEST_CASE("adsb: GVA is read only from an airborne version 2 status") {
     Frame frame = extended_squitter(31);
-    adsb_set_message_bits(frame, 49, 50, 3);
+    set_message_bits(frame, 49, 50, 3);
     const Heard zero = hear_sealed(frame);
     REQUIRE(zero.status == Status::Ok);
     CHECK(zero.message.operational_status.version == 0);
     CHECK_FALSE(zero.message.operational_status.gva_valid);
 
-    adsb_set_message_bits(frame, 41, 43, 1);
+    set_message_bits(frame, 41, 43, 1);
     CHECK_FALSE(hear_sealed(frame).message.operational_status.gva_valid);
 
-    adsb_set_message_bits(frame, 41, 43, 2);
-    adsb_set_message_bits(frame, 6, 8, 1);
+    set_message_bits(frame, 41, 43, 2);
+    set_message_bits(frame, 6, 8, 1);
     const Heard surface = hear_sealed(frame);
     CHECK(surface.message.operational_status.subtype == 1);
     CHECK_FALSE(surface.message.operational_status.gva_valid);
@@ -354,7 +354,7 @@ TEST_CASE("adsb: Bravo's README example fails its parity and reads KLM1023 once 
 
     // Bit 61 is the FIFO chips 112 and 113, the high two bits of chip byte 14.
     uint8_t sound[adsb::kChipBytes];
-    adsb_chips(frame_of("8d4840d6202cc371c32ce0576098").bytes, sound);
+    chips_of(frame_of("8d4840d6202cc371c32ce0576098").bytes, sound);
     chips[14] = static_cast<uint8_t>((chips[14] & 0x3F) | (sound[14] & 0xC0));
     const Heard heard = hear_chips(chips);
     REQUIRE(heard.status == Status::Ok);

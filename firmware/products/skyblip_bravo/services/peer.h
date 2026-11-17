@@ -10,6 +10,7 @@
 #include "core/comms/peer.h"
 #include "core/events/central.h"
 #include "ports/adsb_receiver.h"
+#include "products/common/services/alarm.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/observation_pacer.h"
 #include "products/skyblip_bravo/own_transponder.h"
@@ -26,18 +27,19 @@ class PeerService : public runtime::Service {
     static constexpr uint32_t kHealthPeriodMs = 1000;
     // INFO: fc 16nov26 unverified: a page turns from Bravo to the Go through the browser's chooser
     static constexpr uint32_t kAcceptanceWindowMs = 60000;
-    // INFO: fc 12nov26 unverified: three claim periods, so one lost claim keeps Bravo silent (#194)
-    static constexpr uint32_t kAlarmRequestMaxAgeMs = 3000;
+    // INFO: fc 17nov26 unverified (#194): three claim periods, so one lost claim keeps the call
+    static constexpr uint32_t kCallMaxAgeMs = 3000;
 
     PeerService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
                 const ports::AdsbReceiver& receiver, GateReference& gate,
-                const OwnTransponder& own_transponder)
+                const OwnTransponder& own_transponder, const common::AlarmService& alarm)
         : runtime::Service(context),
           settings_(settings),
           config_(config),
           receiver_(receiver),
           gate_(gate),
-          own_transponder_(own_transponder) {}
+          own_transponder_(own_transponder),
+          alarm_(alarm) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -48,7 +50,7 @@ class PeerService : public runtime::Service {
         return acceptance_ ? std::optional<uint16_t>(acceptance_->tag) : std::nullopt;
     }
     bool requested() const { return pairing_.requested(); }
-    // INFO: fc 11nov26 both sides hold the pin, the one state a Go+ may take the alarm in (#179)
+    // INFO: fc 11nov26 both sides hold the pin, the one state Bravo plays its Go's calls in
     bool paired() const { return pairing_.pinned(); }
     uint32_t boot_epoch() const { return boot_epoch_; }
     uint32_t refused() const { return refused_; }
@@ -68,8 +70,9 @@ class PeerService : public runtime::Service {
         uint32_t since_ms{0};
     };
 
-    struct AlarmRequest {
+    struct Following {
         events::BluetoothAddress go{};
+        annunciation::Call call{};
         uint32_t heard_ms{0};
     };
 
@@ -77,9 +80,9 @@ class PeerService : public runtime::Service {
     void accept(uint32_t now_ms);
     void ask(Go& go, uint32_t now_ms);
     bool pinned_go_connected() const;
-    void hear_alarm_request(const events::BluetoothAddress& go, bool requested, uint32_t now_ms);
-    void expire_alarm_request(uint32_t now_ms);
-    bool grants_alarm_to(const events::BluetoothAddress& go) const;
+    void follow(const events::BluetoothAddress& go, const comms::PeerClaim& claim, uint32_t now_ms);
+    void expire_call(uint32_t now_ms);
+    bool follows(const events::BluetoothAddress& go) const;
     void take(const events::RxFrame& frame, uint32_t now_ms);
     Go* go_of(const events::RxFrame& frame, bool& new_connection);
     void keep_pin();
@@ -95,11 +98,13 @@ class PeerService : public runtime::Service {
     const ports::AdsbReceiver& receiver_;
     GateReference& gate_;
     const OwnTransponder& own_transponder_;
+    const common::AlarmService& alarm_;
     Pairing pairing_{settings_.peer};
     ObservationPacer pacer_{};
     std::array<Go, ObservationPacer::kRecipients> gos_{};
     PeerPin kept_{};
-    std::optional<AlarmRequest> alarm_request_{};
+    std::optional<Following> following_{};
+    std::optional<uint32_t> dismissed_told_{};
     std::optional<Acceptance> acceptance_{};
     uint32_t boot_epoch_{0};
     uint32_t sequence_{0};

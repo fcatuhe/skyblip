@@ -25,7 +25,7 @@ const LAST_READ = ["aircraft_type", "callsign", "aircraft_address", "units", "al
 
 export default class extends Controller {
   static targets = ["name", "facts", "protocols", "menu", "disconnect", "notes", "banner", "bannerText", "bannerAction", "offline", "lastRead", "connect", "reconnect",
-                    "settings", "fields", "default", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
+                    "settings", "fields", "default", "setOnGo", "heard", "heardText", "heardChanges", "heardRows", "heardUse", "save", "reset", "settingsMessage", "firmwareRow", "firmware", "terminalRow",
                     "capture", "captureState", "captureFields", "captureProfile", "captureArm", "captureStop", "captureMessage",
                     "captureSendSection", "captureSend", "captureProgress", "captureProgressBar", "captureProgressText", "captureSendMessage",
                     "report", "reportSend", "reportMessage",
@@ -327,7 +327,9 @@ export default class extends Controller {
     const remembers = ["set", "pair"].includes(unit?.state?.task) && unit.state.trust === "proven"
     if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
+    const { sounds, onBravo } = this.#alarmOn(unit.state)
     this.glass.show({
+      sounds, paired: onBravo,
       title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "bravo", remembers,
       argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : task === "pair" ? tagText(asked.tag) : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
@@ -344,9 +346,12 @@ export default class extends Controller {
     this.settingsMessageTarget.classList.toggle("is-good", state?.notice?.key === "saved")
     if (!linked || !settings) return
     if (settings !== this.shown) this.#fill(settings)
-    // INFO: fc 15nov26 a Go with no buzzer and no haptic ships on visual, so its defaults say it cannot sound
-    const sounds = state.defaults?.alarm !== "visual"
-    for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) option.hidden = option.disabled = !sounds
+    this.#setOnGo(state.goAlarm ?? null)
+    const { sounds, onBravo } = this.#alarmOn(state)
+    for (const option of this.settingsTarget.querySelectorAll("option[data-sounds]")) {
+      option.hidden = option.disabled = !sounds && !onBravo
+      option.textContent = onBravo ? option.dataset.onBravo : option.dataset.label
+    }
     const edited = this.#edited()
     const changed = Object.keys(edited).filter(key => edited[key] !== settings[key])
     const airborne = state.status?.flight === "airborne" && state.trust !== "trusted"
@@ -471,6 +476,24 @@ export default class extends Controller {
     for (const [key, value] of Object.entries(settings)) {
       if (elements[key]) showSetting(elements[key], value)
     }
+  }
+
+  // INFO: fc 17nov26 config says whether a Go has a buzzer or a haptic, and a status naming a Bravo that it is paired
+  #alarmOn(state) {
+    const sounds = state?.sounds !== false
+    return { sounds, onBravo: !sounds && Boolean(state?.status?.bravo) }
+  }
+
+  // INFO: fc 17nov26 a paired Bravo's alarm is its Go's ALARM row, so the field shows it and stays shut
+  #setOnGo(goAlarm) {
+    const field = this.settingsTarget.elements.alarm
+    this.setOnGoTarget.hidden = goAlarm === null
+    if (field && goAlarm === null) field.removeAttribute("aria-describedby")
+    if (!field || goAlarm === null) return
+    field.setAttribute("aria-describedby", this.setOnGoTarget.id)
+    field.closest(".field").hidden = false
+    field.disabled = true
+    showSetting(field, goAlarm)
   }
 
   #edited() {

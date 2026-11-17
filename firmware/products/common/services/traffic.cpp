@@ -10,7 +10,7 @@
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
-#include "protocols/adsl/versioning.h"
+#include "protocols/adsl/soft_versioning.h"
 #include "protocols/alptas/frame.h"
 
 namespace skyblip::common {
@@ -237,12 +237,9 @@ bool TrafficService::names_its_sender(radio::Verdict outcome) {
 radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_s,
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
-    adsl::Packet packet{};
-    packet.reset();
-    __builtin_memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
+    adsl::Packet packet;
+    if (adsl::receive(frame.data, frame.erasures, packet) != wire::Status::Ok)
         return radio::Verdict::BadCrc;
-    packet.descramble();
     if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
     if (packet.payload_type == adsl::Packet::kPayloadTypeStatus)
         return learn_status(packet, observation);
@@ -286,7 +283,8 @@ radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t ut
                                              int8_t& key_offset_s) const {
     const model::Ownship& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Verdict::Unattempted;
-    if (alptas::correct(frame.data, frame.erasures) < 0) return radio::Verdict::BadCrc;
+    if (alptas::receive(frame.data, frame.erasures) != wire::Status::Ok)
+        return radio::Verdict::BadCrc;
     observation.address = alptas::address(frame.data);
     observation.source = model::Source::Alptas;
     const int32_t latitude = own.latitude_1e7;

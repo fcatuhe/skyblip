@@ -6,11 +6,11 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 
 | File | Clauses | What it holds |
 |---|---|---|
-| `packet.{h,cpp}` | E, F.2, G.1, G.2 | `Packet`, the 24 bytes the CRC covers: the network header, the F.2 header and its sender address, the G.1 Traffic and G.2 Status fields at the offsets the tables print, XXTEA scrambling (E.2), the CRC-24 (E.3.1) and the erasure repair a receiver runs before it. `Traffic` and `encode_traffic()`, `decode_traffic()` are the Traffic payload as plain values. `StatusReport` and `encode_status()` are the Status payload. `timestamp_code()` is G.1.1, `hfom_cm()` is G.1.14's HFOM, and the NACp and GVA tables are G.1.14 and G.1.15. The F.2.2 address tables and G.1.4's "no emergency" are named constants |
+| `packet.{h,cpp}` | E, F.2, G.1, G.2 | `Packet`, the 24 bytes the CRC covers: the network header, the F.2 header and its sender address, the G.1 Traffic and G.2 Status fields at the offsets the tables print, XXTEA scrambling (E.2), the CRC-24 (E.3.1) and the erasure repair a receiver runs before it. `receive()` runs that repair on a frame off the air and descrambles it, or refuses it with `wire::Status::Crc`. `Traffic` and `encode_traffic()`, `decode_traffic()` are the Traffic payload as plain values. `StatusReport` and `encode_status()` are the Status payload. `timestamp_code()` is G.1.1, `hfom_cm()` is G.1.14's HFOM, and the NACp and GVA tables are G.1.14 and G.1.15. The F.2.2 address tables and G.1.4's "no emergency" are named constants |
 | `physical.h` | C.2, C.4, D.1.1 | the two M-band channels and the O band, the M-band modulation and its 14 dBm e.r.p. ceiling, and the sync word with D.1.1's length byte behind it |
 | `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation, sync and burst, the G.3 Traffic Uplink packet with up to ten verbatim Traffic payloads and its 10 s age rule, and E.3.2's RS(255,223) code with its roots and zero prefix |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
-| `versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
+| `soft_versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
 | `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the airborne and ground report periods, the 500 ms nav age and the Status period |
 | `media_access.{h,cpp}` | D.3 | `media_access()`, the media access rule: a clear channel transmits, a busy one defers by a random whole number of units, never more than the caller declares and never past the packet's window, is missed past them, may be forced 3000 ms after the initial attempt, and silences the device for 2000 ms after a forced transmission ends. The deferral floor is EN 300 220-1's, from `protocols/common/en300220.h` |
 | `version.h` | | `kVersion` and `kSpecification` |
@@ -53,7 +53,7 @@ Nothing in this directory names skyBlip, and nothing in it picks an address tabl
 Everything is in namespace `skyblip::adsl`.
 
 - `kAddressTableRandom` to `kAddressTableManufacturerLast`, `manufacturer_page_table()`, `kEmergencyNone`, `kUereCm`, `hfom_cm()`
-- `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `check_crc()` and `correct()`, and `kSyncWord`, `kFrameBytes`
+- `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `crc_ok()` and `correct()`, the free `receive()`, and `kSyncWord`, `kFrameBytes`
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`

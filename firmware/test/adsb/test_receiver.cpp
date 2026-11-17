@@ -19,11 +19,11 @@ namespace {
 
 constexpr uint32_t kAddress = 0x4840D6;
 
-AdsbAir identification() { return adsb_air(adsb_frame(kAddress, 5, 4)); }
+AdsbAir identification() { return adsb_air(adsb::squitter(kAddress, 5, 4)); }
 
 // INFO: fc 17nov26 the air of a DF18, whose first four bits 1001 are not the 1000 the driver keeps
 AdsbAir df18_air() {
-    AdsbFrame frame = adsb_frame(kAddress, 0, 4);
+    adsb::Squitter frame = adsb::squitter(kAddress, 0, 4);
     frame.bytes[0] = static_cast<uint8_t>(18 << 3);
     AdsbAir air = adsb_air(frame);
     uint8_t coded[2 * adsb::kFrameBytes];
@@ -197,10 +197,10 @@ TEST_CASE(
     CHECK_FALSE(unlocked.phase_valid);
     adsb::Assembly assembly;
     adsb::Message message{};
-    AdsbFrame frame = adsb_frame(kAddress, 5, 4);
-    adsb_seal(frame.bytes);
+    adsb::Squitter frame = adsb::squitter(kAddress, 5, 4);
+    adsb::seal(frame.bytes);
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    adsb::chips_of(frame.bytes, chips);
     REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
     adsb::Track track;
     REQUIRE(assembly.fold(message, static_cast<uint32_t>(12345678 / 1000), adsb::Receipt{},

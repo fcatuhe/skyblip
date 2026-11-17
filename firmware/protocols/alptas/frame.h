@@ -31,6 +31,7 @@ void set_crc(uint8_t* frame);
 bool crc_ok(const uint8_t* frame);
 
 int correct(uint8_t* frame, const uint8_t* erasures, int max_erasures = 6);
+wire::Status receive(uint8_t* frame, const uint8_t* erasures);
 
 // INFO: fc 19sep26 GPS-UTC is 18 s, the widest a receiver holding a fix can be wrong by
 constexpr int32_t kKeyWindowS = 18;
@@ -50,7 +51,7 @@ struct Position {
     int32_t altitude_m{0};
     int32_t speed_e1{0};
     int32_t climb_e1{0};
-    uint16_t course_deg{0};
+    uint16_t track_deg{0};
 };
 
 wire::Status decode(const uint8_t* frame, uint32_t rx_utc_s, int32_t reference_latitude_1e7,

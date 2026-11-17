@@ -9,6 +9,7 @@
 #include "core/events/central.h"
 #include "ports/central.h"
 #include "products/common/services/adsb_capture.h"
+#include "products/common/services/alarm.h"
 #include "products/skyblip_go/aircraft_address_warning.h"
 #include "products/skyblip_go/bravo_log.h"
 #include "products/skyblip_go/pairing.h"
@@ -19,7 +20,8 @@ namespace skyblip::go {
 
 class BravoService : public runtime::Service {
    public:
-    // INFO: fc 11nov26 schemas/link.v1.json: the Go writes peer_claim once a second while paired
+    // INFO: fc 17nov26 schemas/link.v1.json: a claim once a second, and at once when the call
+    // changes
     static constexpr uint32_t kClaimPeriodMs = 1000;
     // INFO: fc 11nov26 unverified: a Bravo in range answers a connection in a few scan windows
     static constexpr uint32_t kConnectCeilingMs = 10000;
@@ -43,8 +45,12 @@ class BravoService : public runtime::Service {
     static constexpr uint32_t kFarewellCeilingMs = 2000;
 
     BravoService(runtime::Context& context, Settings& settings, comms::ConfigService& config,
-                 ports::Central& central)
-        : runtime::Service(context), settings_(settings), config_(config), central_(central) {}
+                 ports::Central& central, common::AlarmService& alarm)
+        : runtime::Service(context),
+          settings_(settings),
+          config_(config),
+          central_(central),
+          alarm_(alarm) {}
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
@@ -110,12 +116,14 @@ class BravoService : public runtime::Service {
     void release_unless_paired();
     void connect(const events::BluetoothAddress& address, uint32_t window_us, uint32_t period_us);
     void claim(uint32_t now_ms);
-    bool takes_alarm() const;
+    bool call_changed() const;
     std::optional<comms::OwnTransponderHeard> own_transponder_on_ground() const;
     void ask_again(uint32_t now_ms);
     void drop_pin();
     void forget();
     void leave();
+    // INFO: fc 17nov26 Bravo was live, or the Go has taxied: the pilot counts on Bravo from then on
+    bool counted_on() const { return utc_heard_ || rolled_; }
     bool linked() const {
         return up_ &&
                (step_ == BravoStep::Waiting || (step_ == BravoStep::Idle && paired(settings_)));
@@ -124,6 +132,7 @@ class BravoService : public runtime::Service {
     Settings& settings_;
     comms::ConfigService& config_;
     ports::Central& central_;
+    common::AlarmService& alarm_;
     AircraftAddressWarning aircraft_address_warning_{};
     common::AdsbCapture adsb_capture_{context_};
     comms::PeerHealth health_{};
@@ -135,6 +144,8 @@ class BravoService : public runtime::Service {
     BravoLink link_{BravoLink::Down};
     uint32_t step_since_ms_{0};
     uint32_t claimed_ms_{0};
+    annunciation::Call claimed_call_{};
+    Alarm claimed_alarm_{Alarm::Off};
     uint32_t boot_epoch_{0};
     uint32_t health_heard_ms_{0};
     uint32_t started_ms_{0};
@@ -145,8 +156,8 @@ class BravoService : public runtime::Service {
     bool health_heard_{false};
     // INFO: fc 12nov26 the pinned Bravo sent UTC since the Go booted, so no UTC from now is lost
     bool utc_heard_{false};
+    bool rolled_{false};
     bool started_{false};
-    bool settled_{false};
     uint32_t farewell_ms_{0};
     bool connecting_{false};
     bool up_{false};

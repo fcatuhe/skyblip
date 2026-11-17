@@ -29,7 +29,7 @@ uint32_t address_in(const uint8_t* chips) {
 }
 
 void hear(models::Lr2021& part, uint32_t address, int8_t rssi_dbm = -70) {
-    const AdsbAir air = adsb_air(adsb_frame(address, 5, 4));
+    const AdsbAir air = adsb_air(adsb::squitter(address, 5, 4));
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), rssi_dbm));
 }
 

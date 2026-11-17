@@ -223,6 +223,12 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('tape').replaceChildren(...(out.length ? out : ['-']));
   }
 
+  // TODO: fc 17nov26 a release before simulator_bravo_follows says bravoSilent: drop that branch once Release.simulator serves one that exports it
+  function bravoAlarm() {
+    if (!f.bravoFollows) return f.bravoSilent() === 1 ? 'Bravo keeps silent: the Go+ sounds for both.' : 'Bravo sounds by its own settings.';
+    return f.bravoFollows() === 1 ? "Bravo plays the Go's calls." : 'Bravo grades its own ADS-B.';
+  }
+
   function drawPhone() {
     const n = f.nmeaCount(), out = [];
     for (let i = Math.max(0, n - 12); i < n; i++) out.push(f.nmeaLine(i) + '\n');
@@ -235,8 +241,7 @@ export async function mountSimulator(element, src, manifest, signal) {
     $('bravo_lamp_name').textContent = lamp;
     if (element.dataset.product !== 'paired') return;
     $('bravo_state').textContent = BRAVO_STATE[f.bravoState()];
-    $('bravo_silent').textContent = f.bravoSilent() === 1
-      ? 'Bravo keeps silent: the Go+ sounds for both.' : 'Bravo sounds by its own settings.';
+    $('bravo_alarm').textContent = bravoAlarm();
     $('bravolinkbtn').textContent = 'Link to the Go: ' + (f.bravoLinkUp() === 1 ? 'UP' : 'LOST');
   }
 

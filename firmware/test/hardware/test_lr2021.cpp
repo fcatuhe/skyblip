@@ -27,7 +27,7 @@ uint32_t address_in(const uint8_t* chips) {
     return message.address;
 }
 
-AdsbAir identification(uint32_t address) { return adsb_air(adsb_frame(address, 5, 4)); }
+AdsbAir identification(uint32_t address) { return adsb_air(adsb::squitter(address, 5, 4)); }
 
 }  // namespace
 

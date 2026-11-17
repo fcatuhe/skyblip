@@ -164,7 +164,7 @@ TEST_CASE("pair: a unit already paired with that tag answers paired, and its con
     desk.config.set_paired_tag(std::nullopt);
     CHECK(desk.say("{\"command\":\"get\"}").find("paired_tag") == std::string::npos);
     const size_t unpaired_bytes = desk.link.last().bytes.size();
-    // Key 15 and a tag past 255 cost a byte and three, so the widest reply goes from 35 to 39.
+    // Key 15 and a tag past 255 cost a byte and three, so the widest reply goes from 37 to 41.
     desk.config.set_paired_tag(0xFFFF);
     desk.say("{\"command\":\"get\"}");
     CHECK(desk.link.last().bytes.size() == unpaired_bytes + 4);

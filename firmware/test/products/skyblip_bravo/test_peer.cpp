@@ -82,7 +82,9 @@ struct Served {
         }
         if (aircraft_address != 0)
             json += ",\"aircraft_address\":" + std::to_string(aircraft_address);
-        json += ",\"alarm_requested\":false,";
+        json +=
+            ",\"alarm\":\"loud\",\"announcing\":\"none\",\"announcement\":0,\"undismissed\":"
+            "\"none\",";
         json += std::string("\"paired\":") + (paired ? "true" : "false") + "}";
         return complete_registry_frame(json);
     }
@@ -136,12 +138,12 @@ TEST_CASE("bravo peer: health goes to the pinned Go once a second, whatever the 
     CHECK(health.size() <= 6);
     CHECK(served.sent("observation").empty());
     const std::string& last = health.back();
-    CHECK(field(last, "protocol_version") == "1");
+    CHECK(field(last, "protocol_version") == "2");
     CHECK(field(last, "boot_epoch") == std::to_string(served.rig.product.peer().boot_epoch()));
     CHECK(field(last, "listening") == "true");
     CHECK(field(last, "utc_valid") == "true");
     CHECK(field(last, "aircraft_address_set") == "false");
-    CHECK(field(last, "alarm_granted") == "false");
+    CHECK(field(last, "dismissed_announcement").empty());
     CHECK(field(last, "export_reference") == "own");
     CHECK(field(last, "paired") == "true");
     CHECK(field(last, "last_sequence").empty());
@@ -317,7 +319,7 @@ TEST_CASE("bravo peer: a central whose peer frame is refused is never sent obser
     cbor::Writer writer(claim, sizeof(claim));
     writer.add_code(link::kCommandKey, link::Command::PeerClaim);
     writer.add_unsigned(link::peer_claim_key::kBootEpoch, 7);
-    writer.add_boolean(link::peer_claim_key::kAlarmRequested, false);
+    writer.add_unsigned(link::peer_claim_key::kAlarm, 3);
     const int bytes = writer.finish();
     REQUIRE(bytes > 0);
     REQUIRE(stranger.write(std::string(reinterpret_cast<const char*>(claim),
@@ -366,7 +368,7 @@ TEST_CASE("bravo peer: a callsign reaches the Go without moving the position's t
     CHECK(field(position, "callsign").empty());
 
     served.seconds(2, true, nullptr);
-    served.rig.hear(adsb_identification(kAircraft, 5, 4, 1, "AFR123"));
+    served.rig.hear(adsb::identification(kAircraft, 5, 4, 1, "AFR123"));
     served.seconds(1, true, nullptr);
     const std::vector<std::string> observed = served.observations_of(kAircraft);
     REQUIRE(observed.size() == 2);
@@ -442,9 +444,9 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
         constexpr int8_t kCockpitDbm = -12;
         const double latitude = BravoRig::kLatitude1e7 / 1e7;
         const double longitude = BravoRig::kLongitude1e7 / 1e7;
-        served.rig.hear(adsb_identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
+        served.rig.hear(adsb::identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
         for (const bool odd : {false, true, false, true})
-            served.rig.hear(adsb_airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
+            served.rig.hear(adsb::airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
                             kCockpitDbm);
         served.rig.push_fix();
         served.claim(nullptr, aircraft_address);
@@ -511,7 +513,8 @@ TEST_CASE("bravo peer: a malformed claim is refused and counted, and changes not
     Served served;
     REQUIRE(served.go.write(complete_registry_frame(
                 "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"latitude_1e7\":485000000,"
-                "\"alarm_requested\":false,"
+                "\"alarm\":\"loud\",\"announcing\":\"none\",\"announcement\":0,\"undismissed\":"
+                "\"none\","
                 "\"paired\":true}")) == Status::Ok);
     served.run_for(200);
     CHECK(served.rig.product.peer().refused() == 1);

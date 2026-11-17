@@ -6,6 +6,7 @@
 #include "products/skyblip_go/pages/self_test.h"
 #include "test/support/glass_text.h"
 #include "test/support/paired_products.h"
+#include "test/support/radar_rig.h"
 
 using namespace skyblip;
 
@@ -31,10 +32,7 @@ struct Booted {
     comms::BravoState bravo() { return tango.go.state().bravo; }
     uint32_t tones_since_boot() { return tango.go.platform.annunciator().tone_commands() - tones; }
 
-    bool reads(const char* text, int scale = 1) {
-        return reads_in(tango.go.product.screen().framebuffer(), text, 0, 0, go::kGlassWidth,
-                        go::kGlassHeight, scale);
-    }
+    const ui::Canvas& glass() { return tango.go.product.screen().framebuffer(); }
 };
 
 }  // namespace
@@ -45,9 +43,8 @@ TEST_CASE("tango boot: Bravo's first health without UTC reads waiting, with no t
     REQUIRE(booted.tango.service().link() == go::BravoLink::Up);
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
-    CHECK(booted.reads("WAIT FOR BRAVO"));
-    CHECK_FALSE(booted.reads("NO BRAVO", 2));
-    CHECK_FALSE(booted.reads("NO BRAVO"));
+    CHECK(go::corner_reads(booted.glass(), "BRAVO"));
+    CHECK(go::corner_reads(booted.glass(), "OUTDOORS"));
 }
 
 TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar and the self-test") {
@@ -55,10 +52,28 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
     booted.tango.run_for(3 * go::BravoService::kBootSettleMs);
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
-    CHECK(booted.reads("WAIT FOR BRAVO"));
+    CHECK(go::corner_reads(booted.glass(), "OUTDOORS"));
 
     booted.tango.go.show(booted.tango.now_ms, go::Page::SelfTest);
     booted.tango.run_for(1100);
     CHECK(reads_in(booted.tango.go.product.screen().framebuffer(), "WAIT", 0,
                    go::kSelfTestFirstRowY, go::kGlassWidth, go::kGlassHeight));
+}
+
+// The pilot can still fix a Bravo on the taxiway, so that is where the Go starts counting on it.
+TEST_CASE("tango boot: a Bravo still without UTC when the Go taxis is lost, with one tone") {
+    Booted booted;
+    booted.tango.run_for(go::BravoService::kBootSettleMs);
+    booted.tango.go.seconds(booted.tango.now_ms, 3, 0, 900);
+    REQUIRE(booted.bravo() == comms::BravoState::Waiting);
+    const uint32_t parked_tones = booted.tones_since_boot();
+
+    booted.tango.go.seconds(booted.tango.now_ms, 2, 5000, 900);
+    CHECK(booted.bravo() == comms::BravoState::NoUtc);
+    CHECK(booted.tones_since_boot() == parked_tones + 1);
+    CHECK(go::corner_reads(booted.glass(), "OUTDOORS", false));
+
+    booted.tango.go.seconds(booted.tango.now_ms, 3, 0, 900);
+    CHECK(booted.bravo() == comms::BravoState::NoUtc);
+    CHECK(booted.tones_since_boot() == parked_tones + 1);
 }

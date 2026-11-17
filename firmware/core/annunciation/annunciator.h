@@ -71,10 +71,10 @@ inline constexpr Note kFirstFixJingle[] = {
 };
 inline constexpr Tune kFirstFixTune = tune_of(kFirstFixJingle);
 
-constexpr uint16_t kBravoLostNoteMs = 3 * kTuneSixteenthMs;
+constexpr uint16_t kPeerLostNoteMs = 3 * kTuneSixteenthMs;
 
-inline constexpr Note kBravoLostTone[] = {{kNoteC7Hz, kBravoLostNoteMs, 0}};
-inline constexpr Tune kBravoLostTune = tune_of(kBravoLostTone);
+inline constexpr Note kPeerLostTone[] = {{kNoteC7Hz, kPeerLostNoteMs, 0}};
+inline constexpr Tune kPeerLostTune = tune_of(kPeerLostTone);
 
 constexpr uint16_t shortest_phase_ms(Tune tune) {
     uint16_t shortest = 0xFFFF;
@@ -90,7 +90,7 @@ constexpr uint16_t kReannounceRestMs = kTuneSixteenthMs;
 
 // INFO: fc 16nov26 the fix tune is a melody, not an alarm, so it keeps its own tempo
 constexpr uint16_t kShortestAlarmPhaseMs = std::min(
-    {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kBravoLostTune), kReannounceRestMs});
+    {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kPeerLostTune), kReannounceRestMs});
 static_assert(kShortestAlarmPhaseMs >= kShortestBlipEarCanPlaceMs, "a phase the ear cannot place");
 
 constexpr uint16_t longest_call_ms(Tune tune) {
@@ -115,12 +115,12 @@ constexpr uint8_t calls(Tune tune) {
 constexpr uint16_t kAnnunciatorOnCeilingMs = 2000;
 static_assert(longest_call_ms(kAdvisoryTune) < kAnnunciatorOnCeilingMs &&
                   longest_call_ms(kFirstFixTune) < kAnnunciatorOnCeilingMs &&
-                  longest_call_ms(kBravoLostTune) < kAnnunciatorOnCeilingMs,
+                  longest_call_ms(kPeerLostTune) < kAnnunciatorOnCeilingMs,
               "the guard would cut a call the policy means to play");
 
-// Who is holding the buzzer. Traffic outranks a lost Bravo, which outranks the
+// Who is holding the buzzer. Traffic outranks a lost peer, which outranks the
 // fix chirp, always: the rule is written here and nowhere else.
-enum class Voice : uint8_t { None, FirstFix, BravoLost, Traffic };
+enum class Voice : uint8_t { None, FirstFix, PeerLost, Traffic };
 
 constexpr bool felt(Voice voice) { return voice == Voice::Traffic; }
 
@@ -134,8 +134,8 @@ struct Situation {
     bool announced{false};
     // The first fix landed on this pass.
     bool first_fix{false};
-    // A paired Bravo was lost on this pass.
-    bool bravo_lost{false};
+    // INFO: fc 17nov26 a Go lost its Bravo on this pass, or a Bravo in flight lost its Go
+    bool peer_lost{false};
     // An alarm setting of soft or loud.
     bool enabled{true};
     // False from the moment the device starts going down.

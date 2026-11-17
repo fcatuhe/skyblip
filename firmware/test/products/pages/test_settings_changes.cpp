@@ -10,9 +10,9 @@ using namespace skyblip::go;
 
 namespace {
 
-std::string described(const Settings& from, const Settings& to) {
+std::string described(const Settings& from, const Settings& to, bool sounds = true) {
     char out[kSettingsChangesBytes];
-    const int written = describe_settings_changes(from, to, out, sizeof(out));
+    const int written = describe_settings_changes(from, to, out, sizeof(out), sounds);
     return written == 0 ? std::string() : std::string(out, static_cast<size_t>(written));
 }
 
@@ -29,6 +29,20 @@ TEST_CASE("settings changes page: each change is a row in the menu's words, and 
     to.aircraft_type = 4;
     to.alarm = Alarm::Soft;
     CHECK(described(from, to) == "TYPE GLIDER\nALARM SOFT");
+}
+
+// A plain Go's soft and loud sound on its Bravo alone, so its glass confirms them as its row reads.
+TEST_CASE(
+    "settings changes page: a paired Go that cannot sound confirms BRAVO SOFT and BRAVO LOUD") {
+    Settings from = defaults();
+    from.alarm = Alarm::Visual;
+    from.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    Settings to = from;
+    to.alarm = Alarm::Soft;
+    CHECK(described(from, to, false) == "ALARM BRAVO SOFT");
+    to.alarm = Alarm::Loud;
+    CHECK(described(from, to, false) == "ALARM BRAVO LOUD");
+    CHECK(described(from, to, true) == "ALARM LOUD");
 }
 
 TEST_CASE(
@@ -103,11 +117,11 @@ TEST_CASE(
     "settings changes page: nothing changed writes nothing, and neither does a short buffer") {
     const Settings from = defaults();
     char out[kSettingsChangesBytes] = "untouched";
-    CHECK(describe_settings_changes(from, from, out, sizeof(out)) == 0);
+    CHECK(describe_settings_changes(from, from, out, sizeof(out), true) == 0);
     CHECK(std::string(out) == "untouched");
 
     Settings to = from;
     to.units = Units::Metric;
-    CHECK(describe_settings_changes(from, to, out, kSettingsChangesBytes - 1) == 0);
+    CHECK(describe_settings_changes(from, to, out, kSettingsChangesBytes - 1, true) == 0);
     CHECK(std::string(out) == "untouched");
 }

@@ -64,7 +64,8 @@ TEST_CASE("bravo pairing: the BRAVO page scans, lists the tag, and pairs on two 
     CHECK_FALSE(tango.go.platform.central().scanning());
     REQUIRE_FALSE(tango.bravo.claims.empty());
     CHECK(field(tango.bravo.claims[0], "command") == "peer_claim");
-    CHECK(field(tango.bravo.claims[0], "alarm_requested") == "false");
+    CHECK(field(tango.bravo.claims[0], "alarm") == "loud");
+    CHECK(field(tango.bravo.claims[0], "announcing") == "none");
 }
 
 TEST_CASE("bravo pairing: the pin survives a reboot, and the Go reconnects to it alone") {

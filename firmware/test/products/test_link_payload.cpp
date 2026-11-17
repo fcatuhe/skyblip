@@ -186,14 +186,14 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     REQUIRE(link.sent.size() == 1);
     const std::string frame = link.last().bytes;
     CHECK(frame.size() <= static_cast<size_t>(kSmallestSupportedPayloadBytes));
-    // A nine-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
-    // the aircraft address 0xFFFFFE behind a 4-byte head, and every alarm code one byte.
-    const uint8_t golden[] = {0xA9, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF,
-                              0x03, 0x18, 0x3A, 0x04, 0x11, 0x07, 0x00, 0x08, 0x69,
-                              'A',  'B',  'C',  'D',  'E',  'F',  'G',  'H',  'I',
-                              0x0B, 0x1A, 0x00, 0xFF, 0xFF, 0xFE, 0x0C, 0x03};
+    // A ten-entry map: address 65535 behind a 2-byte head, 58 and 17 behind one, nine letters,
+    // the aircraft address 0xFFFFFE behind a 4-byte head, every alarm code one byte, and a boolean.
+    const uint8_t golden[] = {0xAA, 0x00, 0x02, 0x01, 0x01, 0x02, 0x19, 0xFF, 0xFF, 0x03,
+                              0x18, 0x3A, 0x04, 0x11, 0x07, 0x00, 0x08, 0x69, 'A',  'B',
+                              'C',  'D',  'E',  'F',  'G',  'H',  'I',  0x0B, 0x1A, 0x00,
+                              0xFF, 0xFF, 0xFE, 0x0C, 0x03, 0x0E, 0xF5};
     CHECK(frame == std::string(reinterpret_cast<const char*>(golden), sizeof(golden)));
-    CHECK(frame.size() == 35);
+    CHECK(frame.size() == 37);
     CHECK(config.link_drops() == 0);
 
     const std::string body = link_text(frame);
@@ -204,7 +204,7 @@ TEST_CASE("comms: the config reply fits it too, as one flat map, byte for byte")
     CHECK(body.find("\"callsign\":\"ABCDEFGHI\"") != std::string::npos);
     CHECK(body.find("\"aircraft_address\":16777214") != std::string::npos);
     // The last field written, so its presence is the proof nothing was dropped.
-    CHECK(body.find("\"alarm\":\"loud\"}") != std::string::npos);
+    CHECK(body.find("\"annunciator_fitted\":true}") != std::string::npos);
 }
 
 // A link that never exchanged its MTU reassembles a write from prj.conf's two Prepare Writes.

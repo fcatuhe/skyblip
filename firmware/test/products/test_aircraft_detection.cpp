@@ -30,7 +30,7 @@ std::string heard_fields(uint32_t address, int category = 4) {
 int own_category_heard(uint8_t type_code, uint8_t emitter) {
     bravo::OwnTransponder own{};
     adsb::Message identification{};
-    REQUIRE(adsb_hear(adsb_identification(kHeardAddress, 0, type_code, emitter, "FJABC"),
+    REQUIRE(adsb_hear(adsb::identification(kHeardAddress, 0, type_code, emitter, "FJABC"),
                       identification) == Status::Ok);
     identification.reception.rssi_dbm = -12;
     identification.reception.rssi_valid = true;
@@ -38,7 +38,7 @@ int own_category_heard(uint8_t type_code, uint8_t emitter) {
     own.hear(identification, now_ms);
     for (uint32_t spent = 0; spent <= 2 * bravo::OwnTransponder::kLeadHoldMs; spent += 200) {
         adsb::Message position{};
-        REQUIRE(adsb_hear(adsb_airborne_position(kHeardAddress, 0, 48.5, 8.5, false, 1500),
+        REQUIRE(adsb_hear(adsb::airborne_position(kHeardAddress, 0, 48.5, 8.5, false, 1500),
                           position) == Status::Ok);
         position.reception.rssi_dbm = -12;
         position.reception.rssi_valid = true;

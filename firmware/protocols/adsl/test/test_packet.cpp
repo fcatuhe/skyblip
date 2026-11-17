@@ -63,7 +63,7 @@ TEST_CASE("adsl: scramble+crc, then descramble+check round-trip is lossless (BER
     packet.scramble();
     packet.set_crc();
     // On air these 21 bytes ride. The RX recomputes.
-    CHECK(packet.check_crc() == 0);
+    CHECK(packet.crc_ok());
     packet.descramble();
     // payload identical to golden (compare the scrambled region bytes)
     CHECK(std::memcmp(packet.payload, golden.payload, 20) == 0);
@@ -78,10 +78,10 @@ TEST_CASE("adsl: single-bit error is corrected via CRC syndrome") {
     uint8_t error[adsl::Packet::kDataBytes] = {0};
     // flip a data bit (in the CRC-covered region)
     packet.data[7] ^= 0x08;
-    CHECK(packet.check_crc() != 0);
+    CHECK_FALSE(packet.crc_ok());
     int corrected = packet.correct(error, 6);
     CHECK(corrected == 1);
-    CHECK(packet.check_crc() == 0);
+    CHECK(packet.crc_ok());
 }
 
 TEST_CASE("adsl: multi-bit errors within flagged (weak) bits are corrected") {
@@ -99,10 +99,10 @@ TEST_CASE("adsl: multi-bit errors within flagged (weak) bits are corrected") {
         data[location.byte] ^= location.mask;
         error[location.byte] |= location.mask;
     }
-    CHECK(packet.check_crc() != 0);
+    CHECK_FALSE(packet.crc_ok());
     int corrected = packet.correct(error, 6);
     CHECK(corrected >= 0);
-    CHECK(packet.check_crc() == 0);
+    CHECK(packet.crc_ok());
 }
 
 TEST_CASE("adsl: a flagged bit past the eighth is searched, not wrapped back onto the first") {
@@ -113,7 +113,7 @@ TEST_CASE("adsl: a flagged bit past the eighth is searched, not wrapped back ont
     uint8_t error[adsl::Packet::kDataBytes] = {0};
     for (int byte = 2; byte < 12; byte++) error[byte] = 0x10;
     for (int byte : {9, 10, 11}) packet.data[byte] ^= 0x10;
-    REQUIRE(packet.check_crc() != 0);
+    REQUIRE_FALSE(packet.crc_ok());
 
     CHECK(packet.correct(error, 16) == 3);
     CHECK(std::memcmp(packet.data, sent.data, adsl::Packet::kDataBytes) == 0);
@@ -127,7 +127,7 @@ TEST_CASE("adsl: one unmarked error is repaired even when more bits are marked t
     uint8_t error[adsl::Packet::kDataBytes] = {0};
     error[0] = 0xFE;
     packet.data[6] ^= 0x20;
-    REQUIRE(packet.check_crc() != 0);
+    REQUIRE_FALSE(packet.crc_ok());
 
     adsl::Packet no_cap = packet;
     CHECK(packet.correct(error, 6) == 1);
@@ -151,6 +151,27 @@ TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
     CHECK(std::memcmp(packet.data, arrived.data, adsl::Packet::kDataBytes) == 0);
 }
 
+TEST_CASE("adsl: receive repairs the frame the air delivered and hands back the clear packet") {
+    const adsl::Packet clear = make_reference();
+    adsl::Packet sent = clear;
+    sent.scramble();
+    sent.set_crc();
+    uint8_t frame[adsl::Packet::kDataBytes];
+    std::memcpy(frame, sent.data, sizeof(frame));
+    uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    frame[3] ^= 0x40;
+    frame[9] ^= 0x02;
+    erasures[3] = 0x40;
+    erasures[9] = 0x02;
+
+    adsl::Packet heard;
+    REQUIRE(adsl::receive(frame, erasures, heard) == wire::Status::Ok);
+    CHECK(std::memcmp(heard.data, clear.data, adsl::Packet::kCrcCoverBytes) == 0);
+
+    for (int byte : {4, 14}) frame[byte] ^= 0x03;
+    CHECK(adsl::receive(frame, erasures, heard) == wire::Status::Crc);
+}
+
 // G.1.5 steps: 93206 to a degree of latitude, 46603 of longitude. A position takes the nearest.
 TEST_CASE("adsl: a position goes out as the nearest whole G.1.5 step") {
     adsl::Packet packet{};
@@ -166,8 +187,8 @@ TEST_CASE("adsl: a position goes out as the nearest whole G.1.5 step") {
 TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") {
     // Push random-ish bit errors, some flagged (weak) and some not, and count:
     //   good      = decoded to the exact original codeword
-    //   detected  = check_crc != 0 after correct() (safe: we know it failed)
-    //   silent    = check_crc == 0 but payload != original (the DANGER mode)
+    //   detected  = !crc_ok() after correct() (safe: we know it failed)
+    //   silent    = crc_ok() but payload != original (the DANGER mode)
     // We assert silent miscorrection stays rare and is *counted*, never hidden.
     wire::Random random(0xC0FFEE);
     const int kTrials = 20000;
@@ -194,7 +215,7 @@ TEST_CASE("adsl: Monte-Carlo BER, detected vs silent miscorrection accounting") 
         }
 
         rx.correct(error, 6);
-        bool crc_ok = (rx.check_crc() == 0);
+        bool crc_ok = rx.crc_ok();
         bool same = (std::memcmp(rx.payload, tx.payload, 20) == 0) && rx.version == tx.version;
 
         if (crc_ok && same)
@@ -377,8 +398,16 @@ TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers al
 
     adsl::Traffic heard;
     packet.descramble();
-    REQUIRE(adsl::decode_traffic(packet, heard));
+    REQUIRE(adsl::decode_traffic(packet, heard) == wire::Status::Ok);
     CHECK(heard.address == 0x2ABCDE);
     CHECK(heard.latitude_1e7 == traffic.latitude_1e7);
     CHECK(heard.altitude_m == traffic.altitude_m);
+}
+
+TEST_CASE("adsl: a payload other than Traffic is refused as one the decoder does not read") {
+    adsl::Packet packet;
+    adsl::encode_status(packet, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    adsl::Traffic heard;
+    CHECK(adsl::decode_traffic(packet, heard) == wire::Status::Unsupported);
+    CHECK(heard.address == 0);
 }

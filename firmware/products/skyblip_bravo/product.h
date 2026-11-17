@@ -323,9 +323,16 @@ class Product {
     common::OwnshipService ownship_{context_, aircraft_category_};
     GateReference gate_{};
     AdsbService adsb_{context_, adsb_frames_, settings_.aircraft_address, gate_};
-    common::AlarmService alarm_{context_, kFeatures, common::AlarmSettings{settings_.alarm}};
-    PeerService peer_{context_,          settings_, config_link_.config(),
-                      board_.receiver(), gate_,     adsb_.own_transponder()};
+    common::AlarmService alarm_{
+        context_, kFeatures,
+        common::AlarmSettings{settings_.alarm, settings_.go_alarm, settings_.peer.pinned}};
+    PeerService peer_{context_,
+                      settings_,
+                      config_link_.config(),
+                      board_.receiver(),
+                      gate_,
+                      adsb_.own_transponder(),
+                      alarm_};
     ButtonService button_{context_, config_link_.config(), alarm_, peer_};
     common::NmeaService nmea_{context_, kFeatures, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,

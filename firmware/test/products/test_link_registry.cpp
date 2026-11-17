@@ -18,6 +18,7 @@
 #include "hardware/platform/host/link.h"
 #include "hardware/platform/host/platform.h"
 #include "products/skyblip_bravo/radio_protocols.h"
+#include "products/skyblip_bravo/settings_store.h"
 #include "products/skyblip_go/services/diagnostics.h"
 #include "products/skyblip_go/settings_store.h"
 #include "simulator/world/link_names.h"
@@ -295,6 +296,15 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
         is_ok(link.send(events::Endpoint::Log, ConstByteSpan(entry, static_cast<size_t>(bytes)))));
 }
 
+// INFO: fc 17nov26 alarm_from_go is Bravo's alone, so a Bravo's store answers get here
+void speak_bravo_config(platform::host::Link& link) {
+    bravo::Settings settings = bravo::defaults();
+    bravo::SettingsStore store(settings);
+    comms::ConfigService config(link, store);
+    link.raise_link(1);
+    config.on_rx(config_frame("{\"command\":\"get\"}"));
+}
+
 }  // namespace
 
 // The registry's keys and flags were written from the code: this holds them to what it writes.
@@ -306,6 +316,9 @@ TEST_CASE("link registry: every frame the unit sends carries its keys, types and
     platform::host::Link desk;
     speak_every_key_the_rig_leaves_out(desk);
     witness.hold(desk);
+    platform::host::Link bench;
+    speak_bravo_config(bench);
+    witness.hold(bench);
     CHECK(witness.unheard() == std::vector<std::string>{});
 }
 
@@ -387,6 +400,8 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.battery_offset_mv", "10"},
         {"set.frequency_trim_e1_ppm", "-5"},
         {"set.aircraft_address", "3958150"},
+        {"set.alarm_from_go", "true"},
+        {"set.annunciator_fitted", "true"},
         {"set.paired_tag", "16170"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",

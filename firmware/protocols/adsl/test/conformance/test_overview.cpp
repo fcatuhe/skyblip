@@ -4,8 +4,8 @@
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
+#include "protocols/adsl/soft_versioning.h"
 #include "protocols/adsl/test/conformance/reference.h"
-#include "protocols/adsl/versioning.h"
 #include "protocols/common/little_endian.h"
 #include "protocols/common/manchester.h"
 

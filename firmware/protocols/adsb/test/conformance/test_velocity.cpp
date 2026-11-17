@@ -14,7 +14,7 @@ using skyblip::wire::Status;
 
 namespace {
 
-Velocity heard_velocity(const AdsbFrame& frame) { return heard_ok(frame).velocity; }
+Velocity heard_velocity(const adsb::Squitter& frame) { return heard_ok(frame).velocity; }
 
 int32_t step_kt(uint8_t subtype) { return subtype == 2 || subtype == 4 ? 4 : 1; }
 
@@ -35,21 +35,21 @@ void check_subtype(uint8_t subtype) {
 
 void check_type_code(uint8_t subtype) {
     CHECK(heard_ok(velocity(subtype)).type_code == 19);
-    AdsbFrame other = velocity(subtype);
+    adsb::Squitter other = velocity(subtype);
     put(other, 1, 5, 18);
     CHECK(heard_ok(other).kind == Kind::AirbornePosition);
 }
 
 void check_subtype_code(uint8_t subtype) {
     CHECK(heard_velocity(velocity(subtype)).subtype == subtype);
-    AdsbFrame reserved = velocity(subtype);
+    adsb::Squitter reserved = velocity(subtype);
     put(reserved, 6, 8, 0);
     CHECK(hear(reserved).status == Status::Unsupported);
 }
 
 void check_ignored(uint8_t subtype, uint8_t first, uint8_t last) {
     const Velocity plain = heard_velocity(velocity(subtype));
-    AdsbFrame set = velocity(subtype);
+    adsb::Squitter set = velocity(subtype);
     put(set, first, last, (1u << (last - first + 1)) - 1);
     const Velocity read = heard_velocity(set);
     CHECK(read.east_kt.value == plain.east_kt.value);
@@ -61,21 +61,21 @@ void check_ignored(uint8_t subtype, uint8_t first, uint8_t last) {
 }
 
 void check_east_sign(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).east_kt.value > 0);
     put(frame, 14, 14, 1);
     CHECK(heard_velocity(frame).east_kt.value < 0);
 }
 
 void check_north_sign(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).north_kt.value < 0);
     put(frame, 25, 25, 0);
     CHECK(heard_velocity(frame).north_kt.value > 0);
 }
 
 Quantity speed_component(uint8_t subtype, uint8_t first, uint16_t code) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     put(frame, first, static_cast<uint8_t>(first + 9), code);
     if (subtype <= 2) put(frame, 25, 25, 0);
     const Velocity read = heard_velocity(frame);
@@ -96,14 +96,14 @@ void check_speed(uint8_t subtype, uint8_t first) {
 }
 
 void check_heading_status(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).heading_valid);
     put(frame, 14, 14, 0);
     CHECK_FALSE(heard_velocity(frame).heading_valid);
 }
 
 void check_heading(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     for (uint16_t code : {0, 1, 512, 1023}) {
         put(frame, 15, 24, code);
         CHECK(heard_velocity(frame).heading_c10 == code);
@@ -111,28 +111,28 @@ void check_heading(uint8_t subtype) {
 }
 
 void check_airspeed_type(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).airspeed_type == Airspeed::True);
     put(frame, 25, 25, 0);
     CHECK(heard_velocity(frame).airspeed_type == Airspeed::Indicated);
 }
 
 void check_climb_source(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).climb_source == HeightSource::Pressure);
     put(frame, 36, 36, 0);
     CHECK(heard_velocity(frame).climb_source == HeightSource::Gnss);
 }
 
 void check_climb_sign(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).climb_fpm.value == -640);
     put(frame, 37, 37, 0);
     CHECK(heard_velocity(frame).climb_fpm.value == 640);
 }
 
 Quantity climb(uint8_t subtype, uint16_t code) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     put(frame, 37, 37, 0);
     put(frame, 38, 46, code);
     return heard_velocity(frame).climb_fpm;
@@ -148,14 +148,14 @@ void check_climb(uint8_t subtype) {
 }
 
 void check_difference_sign(uint8_t subtype) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     CHECK(heard_velocity(frame).gnss_minus_pressure_ft.value == 100);
     put(frame, 49, 49, 1);
     CHECK(heard_velocity(frame).gnss_minus_pressure_ft.value == -100);
 }
 
 Quantity difference(uint8_t subtype, uint8_t code) {
-    AdsbFrame frame = velocity(subtype);
+    adsb::Squitter frame = velocity(subtype);
     put(frame, 50, 56, code);
     return heard_velocity(frame).gnss_minus_pressure_ft;
 }

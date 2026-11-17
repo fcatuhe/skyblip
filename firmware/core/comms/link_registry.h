@@ -105,6 +105,7 @@ enum class Reason : uint8_t {
     Forgotten = 50,
     UnknownBrowser = 51,
     NotOwnTransponder = 52,
+    SetOnGo = 53,
     ConfirmPair = 54,
     Pair = 55,
     Paired = 56,
@@ -137,6 +138,8 @@ enum : uint32_t {
     kFrequencyTrimE1Ppm = 10,
     kAircraftAddress = 11,
     kAlarm = 12,
+    kAlarmFromGo = 13,
+    kAnnunciatorFitted = 14,
     kPairedTag = 15,
 };
 }
@@ -459,7 +462,6 @@ enum : uint32_t {
     kUtcValid = 4,
     kLastSequence = 5,
     kAircraftAddressSet = 6,
-    kAlarmGranted = 7,
     kExportReference = 11,
     kPaired = 12,
     kOwnTransponder = 13,
@@ -470,6 +472,7 @@ enum : uint32_t {
     kCharging = 18,
     kPowerLevel = 19,
     kFrameRateHz = 20,
+    kDismissedAnnouncement = 21,
 };
 }
 
@@ -486,8 +489,11 @@ enum : uint32_t {
     kPressureAltitudeMm = 9,
     kPressureAltitudeAgeMs = 10,
     kAircraftAddress = 11,
-    kAlarmRequested = 12,
     kPaired = 18,
+    kAlarm = 19,
+    kAnnouncing = 20,
+    kAnnouncement = 21,
+    kUndismissed = 22,
 };
 }
 
@@ -660,7 +666,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Protocols:
         case Command::Attestation:
         case Command::Identity: return 0x1;
-        case Command::Set: return 0x9F9F;
+        case Command::Set: return 0xFF9F;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:
@@ -673,7 +679,7 @@ constexpr uint64_t host_keys(Command command) {
         case Command::List: return 0x7;
         case Command::Read:
         case Command::Ownship: return 0x1F;
-        case Command::PeerClaim: return 0x41FFF;
+        case Command::PeerClaim: return 0x7C0FFF;
         case Command::TrustBrowser: return 0xF;
     }
     return 0;

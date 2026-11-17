@@ -19,7 +19,7 @@ constexpr uint8_t kSetB = 3;
 constexpr uint8_t kSetA = 4;
 constexpr uint8_t kFirstEmitter = 1;
 
-adsb::Message heard(AdsbFrame frame, int8_t rssi_dbm) {
+adsb::Message heard(adsb::Squitter frame, int8_t rssi_dbm) {
     adsb::Message message{};
     REQUIRE(adsb_hear(frame, message) == Status::Ok);
     message.reception.rssi_dbm = rssi_dbm;
@@ -28,7 +28,7 @@ adsb::Message heard(AdsbFrame frame, int8_t rssi_dbm) {
 }
 
 adsb::Message position_of(uint32_t address, int8_t rssi_dbm) {
-    return heard(adsb_airborne_position(address, 0, 48.5, 8.5, false, 1500), rssi_dbm);
+    return heard(adsb::airborne_position(address, 0, 48.5, 8.5, false, 1500), rssi_dbm);
 }
 
 struct Cockpit {
@@ -51,7 +51,7 @@ struct Cockpit {
 TEST_CASE("own transponder: the loudest by a clear lead, held, is named with what it identifies") {
     Cockpit cockpit;
     cockpit.own.hear(
-        heard(adsb_identification(kOwn, 0, kSetA, kFirstEmitter, "FJABC"), kCockpitDbm),
+        heard(adsb::identification(kOwn, 0, kSetA, kFirstEmitter, "FJABC"), kCockpitDbm),
         cockpit.now_ms);
     cockpit.listen(OwnTransponder::kLeadHoldMs - kSquitterMs, kCockpitDbm, -60);
     CHECK_FALSE(cockpit.own.heard().has_value());
@@ -67,7 +67,7 @@ TEST_CASE("own transponder: the loudest by a clear lead, held, is named with wha
 TEST_CASE("own transponder: the identification sets the category the emitter set names") {
     Cockpit cockpit;
     cockpit.own.hear(
-        heard(adsb_identification(kOwn, 0, kSetB, kFirstEmitter, "D1234"), kCockpitDbm),
+        heard(adsb::identification(kOwn, 0, kSetB, kFirstEmitter, "D1234"), kCockpitDbm),
         cockpit.now_ms);
     cockpit.listen(OwnTransponder::kLeadHoldMs + kSquitterMs, kCockpitDbm);
     REQUIRE(cockpit.own.heard().has_value());

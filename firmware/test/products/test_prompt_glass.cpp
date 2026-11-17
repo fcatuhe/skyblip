@@ -44,6 +44,18 @@ TEST_CASE("prompt glass: a set reads its changes against the unit's settings, as
     CHECK(same(glass, confirm(comms::Pending::Set, "UNITS METRIC", 27)));
 }
 
+// A plain Go paired with a Bravo confirms soft and loud as its ALARM row reads them.
+TEST_CASE("prompt glass: a paired plain Go's soft and loud read BRAVO SOFT and BRAVO LOUD") {
+    go::Glass glass;
+    const char* set = "{\"command\":\"set\",\"alarm\":\"soft\"}";
+    const char* settings = "{\"command\":\"set\",\"alarm\":\"visual\"}";
+    REQUIRE(simulator::draw_prompt(glass, "set", set, settings, 27, nullptr, 0,
+                                   simulator::PromptUnit{false, true}));
+    CHECK(same(glass, confirm(comms::Pending::Set, "ALARM BRAVO SOFT", 27)));
+    REQUIRE(simulator::draw_prompt(glass, "set", set, settings, 27));
+    CHECK(same(glass, confirm(comms::Pending::Set, "ALARM SOFT", 27)));
+}
+
 TEST_CASE("prompt glass: a dfu names the version the phone sends, as the Go does") {
     go::Glass glass;
     REQUIRE(simulator::draw_prompt(glass, "dfu", "0.2.0+15", "", 30));

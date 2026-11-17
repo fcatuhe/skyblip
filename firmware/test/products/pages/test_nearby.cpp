@@ -85,7 +85,7 @@ TEST_CASE("nearby page: a row names the system that was heard and the whole addr
     Glass canvas;
     draw_nearby(canvas, listing(rows, 3, go::Units::Nautical));
 
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "A 3FA21C", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L 3FA21C", kNearbyScale));
     CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "F 3FA21C", kNearbyScale));
     CHECK(reads_at(canvas, kNearbyIdX, row_y(2), "U 3FA21C", kNearbyScale));
 }
@@ -98,8 +98,8 @@ TEST_CASE("nearby page: a row wears the callsign in place of the address once on
     Glass canvas;
     draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
 
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "A D-KXYZ", kNearbyScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "A 3FA21C", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L D-KXYZ", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "L 3FA21C", kNearbyScale));
 }
 
 // The column ends where DIST begins, and a name that would run into it is cut, not wrapped.
@@ -110,7 +110,7 @@ TEST_CASE("nearby page: a callsign wider than the column is drawn as far as the 
     Glass canvas;
     draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
 
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "A ABCDEF", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L ABCDEF", kNearbyScale));
     CHECK(reads_right_of(canvas, kNearbyDistanceEnd, row_y(0), "0.2", kNearbyScale));
 }
 
@@ -157,7 +157,7 @@ TEST_CASE("nearby page: the top line is own address, and nothing stands in front
     draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
 
     CHECK(reads_at(canvas, kNearbyIdX, kNearbyTitleY, "4B1F07", kNearbyTitleScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "A 3FA21C", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L 3FA21C", kNearbyScale));
 }
 
 // The name is what own-ship is called on the radio, the address is what it transmits under.

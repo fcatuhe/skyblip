@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -20,7 +21,7 @@ class BravoStub {
    public:
     // INFO: fc 10nov26 schemas/link.v1.json, health: once a second whatever the traffic
     static constexpr uint32_t kHealthPeriodMs = 1000;
-    static constexpr uint32_t kProtocolVersion = 1;
+    static constexpr uint32_t kProtocolVersion = 2;
     // INFO: fc 11nov26 the name Bravo must advertise (products/common/README.md), tag 3F2A
     static constexpr const char* kAdvertisedName = "skyBlip Bravo 3F2A";
 
@@ -38,6 +39,7 @@ class BravoStub {
         bool paired{true};
         std::string own_transponder_fields{};
         std::string status_fields{"\"charging\":false,\"power_level\":\"normal\""};
+        std::optional<uint32_t> dismissed_announcement{};
     };
 
     explicit BravoStub(std::vector<Recorded> recording, uint32_t seed = 1)
@@ -122,11 +124,13 @@ class BravoStub {
                            ",\"listening\":" + text_of(health.listening) +
                            ",\"utc_valid\":" + text_of(health.utc_valid) +
                            ",\"aircraft_address_set\":" + text_of(health.aircraft_address_set) +
-                           ",\"alarm_granted\":false,\"export_reference\":\"" +
-                           health.export_reference + "\",\"paired\":" + text_of(health.paired);
+                           ",\"export_reference\":\"" + health.export_reference +
+                           "\",\"paired\":" + text_of(health.paired);
         if (sent_observation_) json += ",\"last_sequence\":" + std::to_string(sequence_ - 1);
         if (!health.own_transponder_fields.empty()) json += "," + health.own_transponder_fields;
         json += "," + health.status_fields;
+        if (health.dismissed_announcement)
+            json += ",\"dismissed_announcement\":" + std::to_string(*health.dismissed_announcement);
         return complete_registry_frame(json + "}");
     }
 

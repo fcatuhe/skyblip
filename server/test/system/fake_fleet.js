@@ -82,6 +82,8 @@
         failure: null,
         heard: null,
         sounds: true,
+        goAlarm: null,
+        bravo: null,
         pairedTag: null,
         pairDelayMs: 300,
       }, options);
@@ -178,6 +180,7 @@
       return this.reply({
         command: 'status', flight: this.flight, upload: this.windowOpen, battery_percent: this.battery, charging: this.charging,
         power_level: this.battery < 10 ? 'critical' : this.battery < 20 ? 'low' : 'normal', went_dark_flat: false,
+        ...(this.bravo === null ? null : { bravo: this.bravo }),
         ...(this.flight === 'ground' ? this.heard : null),
       });
     }
@@ -201,11 +204,12 @@
 
     config() {
       const address = this.address === null ? {} : { address: this.address };
-      const paired = this.pairedTag === null ? {} : { paired_tag: this.pairedTag };
+      const paired = this.goAlarm !== null;
+      const pairedTag = this.pairedTag === null ? {} : { paired_tag: this.pairedTag };
       const stored = this.product === 'bravo'
-        ? { aircraft_address: this.stored.aircraft_address, alarm: this.stored.alarm }
-        : this.stored;
-      return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored, ...paired });
+        ? { aircraft_address: this.stored.aircraft_address, alarm: paired ? this.goAlarm : this.stored.alarm, alarm_from_go: paired }
+        : { ...this.stored, annunciator_fitted: this.sounds };
+      return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored, ...pairedTag });
     }
 
     ask(task, reason) {
@@ -225,7 +229,7 @@
       if (command === 'identity') return this.sendIdentity();
       if (command === 'update') return this.sendUpdate();
       if (command === 'get') return this.config();
-      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds ? {} : { alarm: 'visual' }) });
+      if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS, ...(this.sounds || this.bravo !== null ? {} : { alarm: 'visual' }) });
       if (command === 'install_report') return this.reply({ command, ...this.installReport });
       if (command === 'protocols') return this.reply({ command, ...(this.protocols ?? this.stacks()) });
       if (command === 'set') {

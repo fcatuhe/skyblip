@@ -50,15 +50,15 @@ TEST_CASE("ADS-L.4.SRD860.D.2: data, then scrambling, then parity over the netwo
     packet.scramble();
     packet.set_crc();
     CHECK(std::memcmp(packet.payload, plain.payload, 20) != 0);
-    CHECK(packet.check_crc() == 0);
+    CHECK(packet.crc_ok());
 
     adsl::Packet flipped = packet;
     flipped.version ^= 0x01;
-    CHECK(flipped.check_crc() != 0);
+    CHECK_FALSE(flipped.crc_ok());
 
     adsl::Packet descrambled = packet;
     descrambled.descramble();
-    CHECK(descrambled.check_crc() != 0);
+    CHECK_FALSE(descrambled.crc_ok());
     CHECK(std::memcmp(descrambled.payload, plain.payload, 20) == 0);
 }
 

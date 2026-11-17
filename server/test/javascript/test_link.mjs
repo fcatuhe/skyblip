@@ -37,23 +37,23 @@ const PEER_FRAMES_AT_THEIR_WIDEST = [
   ],
   [
     {
-      command: 'health', protocol_version: 1, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
-      aircraft_address_set: true, alarm_granted: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
+      command: 'health', protocol_version: 2, boot_epoch: WIDEST_UNSIGNED, listening: true, utc_valid: true, last_sequence: WIDEST_UNSIGNED,
+      aircraft_address_set: true, export_reference: 'own', paired: true, own_transponder: 0xffffff,
       own_transponder_callsign: 'ABCD1234', own_transponder_category: 17, firmware: '9.99.99+99999', battery_percent: 100,
-      charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED,
+      charging: true, power_level: 'low', frame_rate_hz: WIDEST_UNSIGNED, dismissed_announcement: WIDEST_UNSIGNED,
     },
-    'b200181b0101021affffffff03f504f5051affffffff06f507f50b020cf50d1a00ffffff0e684142434431323334' +
-      '0f11106d392e39392e39392b393939393911186412f51304141affffffff',
+    'b200181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f' +
+      '11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff',
   ],
   [
     {
       command: 'peer_claim', boot_epoch: WIDEST_UNSIGNED, at_s: WIDEST_UNSIGNED, into_ms: 999, latitude_1e7: -900000000,
       longitude_1e7: -1800000000, position_age_ms: WIDEST_UNSIGNED, altitude_hae_mm: WIDEST_INTEGER, altitude_hae_age_ms: WIDEST_UNSIGNED,
-      pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, aircraft_address: 0xffffff, alarm_requested: true,
-      paired: true,
+      pressure_altitude_mm: WIDEST_INTEGER, pressure_altitude_age_ms: WIDEST_UNSIGNED, aircraft_address: 0xffffff, paired: true,
+      alarm: 'loud', announcing: 'advisory', announcement: WIDEST_UNSIGNED, undismissed: 'advisory',
     },
-    'ae00181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +
-      '081affffffff093a7fffffff0a1affffffff0b1a00ffffff0cf512f5',
+    'b100181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff' +
+      '081affffffff093a7fffffff0a1affffffff0b1a00ffffff12f513031401151affffffff1601',
   ],
 ];
 
