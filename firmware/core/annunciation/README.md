@@ -8,7 +8,7 @@ What the buzzer and the vibration motor should be doing right now, decided in on
 
 The advisory is two calls, each a low note then a high one, so every call rises. A tone that changes pitch is noticed against a steady noise more readily than a held one, and a cockpit is a steady noise. The low note is long and the high one short, the way the name is said: sky-blip. The second call's blip is long, so the advisory ends on a note that sounds finished rather than cut off.
 
-The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole number of it: sky 2, blip 1, rest 3, sky 2, long blip 3. The grid is `kShortestBlipEarCanPlaceMs`, because the blip is one grid step and cannot be shorter than the ear can place. Changing the grid changes the tempo of every alarm and keeps their proportions. `kShortestAlarmPhaseMs` is the shortest note or gap of any alarm, the advisory, the lost Bravo and the rest before a new call. It has to clear the ear's floor, and `common::AlarmService` asserts that the service loop passes through it eight times, so an alarm sounds as written to within one pass.
+The rhythm is written on a grid, `kTuneSixteenthMs`, and every length is a whole number of it: sky 2, blip 1, rest 3, sky 2, long blip 3. The grid is `kShortestBlipEarCanPlaceMs`, because the blip is one grid step and cannot be shorter than the ear can place. Changing the grid changes the tempo of every alarm and keeps their proportions. `kShortestAlarmPhaseMs` is the shortest note or gap of any alarm, the advisory, the lost-peer note and the rest before a new call. It has to clear the ear's floor, and `common::AlarmService` asserts that the service loop passes through it eight times, so an alarm sounds as written to within one pass.
 
 The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major third, so the call is in tune rather than an arbitrary pair of frequencies. They sit either side of where the transducer is loudest. The part LilyGO fits is not identified in its own material; it is a passive piezo driven straight off one PWM pin, and commodity 9x9 mm SMD piezo sounders resonate at 4000 Hz +/- 500 Hz, so whichever way a given unit's resonance falls, one note of every call is near it. A bench sweep with a sound level meter is what settles the real peak, and the pair moves to the third that straddles it then.
 
@@ -38,7 +38,7 @@ A Go paired with a Bravo grades the traffic for both, and Bravo plays what the G
 
 A press on the follower dismisses the call it heard: `dismiss()` holds the number, and `follow()` answers no level for as long as the leader still sends that number. The leader learns which call was dismissed and dismisses it too, and a new number ends the hold, so the press silences the follower at once and never outlasts the call it answered. `lose()` forgets the leader and the hold together, and the follower grades its own traffic again.
 
-The policy is the same on both units, so arbitration stays here: traffic outranks the lost Bravo, which outranks the fix tune, whichever unit graded the traffic. The fix tune and the lost-Bravo tone are each unit's own and never travel.
+The policy is the same on both units, so arbitration stays here: traffic outranks the lost peer, which outranks the fix tune, whichever unit graded the traffic. The fix tune and the lost-peer note are each unit's own and never travel.
 
 ## Loudness is the port's, the tune is not
 
