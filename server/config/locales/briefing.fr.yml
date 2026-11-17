@@ -53,7 +53,7 @@ fr:
       alarm_names:
         "off": "Coupée"
         visual: "Visuelle seulement"
-        soft: "Son doux + visuel"
+        soft: "Son faible + visuel"
         loud: "Son fort + visuel"
       save: "Enregistrer"
       reset: "Valeurs d\u2019origine"
