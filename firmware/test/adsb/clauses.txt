@@ -1,0 +1,283 @@
+# The receive-side clauses of DO-260B draft version 4.2 that test/adsb/ and protocols/adsb/test/conformance/ read, each by number and heading. scripts/check_do260b_clauses.py holds the suite to this list, and the list to the fetched draft's headings when it is present.
+DO-260B A.1.7 Latitude/Longitude Coding Using Compact Position Reporting (CPR)
+DO-260B A.1.7.1 Principle of the CPR algorithm
+DO-260B A.1.7.2 CPR Algorithm Parameters and Internal Functions
+DO-260B A.1.7.3 CPR Encoding Process
+DO-260B A.1.7.4 Locally Unambiguous CPR Decoding
+DO-260B A.1.7.5 Locally Unambiguous CPR Decoding for Airborne, TIS-B and Intent Lat/Lon
+DO-260B A.1.7.6 Locally Unambiguous Decoding for Surface Position
+DO-260B A.1.7.7 Globally Unambiguous Airborne Position Decoding
+DO-260B A.1.7.8 Globally Unambiguous CPR Decoding of Surface Position
+DO-260B A.1.7.9 CPR Decoding of Received Position Reports
+DO-260B A.1.7.9.1 Overview
+DO-260B A.1.7.9.2 Emitter Centered Local Decoding
+DO-260B A.1.7.10 Reasonableness Test for CPR Decoding of Received Position Messages
+DO-260B A.1.7.10.1 Overview
+DO-260B A.1.7.10.2 Reasonableness Test Applied to Position Determined from Globally Unambiguous Decoding
+DO-260B A.1.7.10.3 Reasonableness Test Applied to Position Determined from Locally Unambiguous Decoding
+DO-260B 2.2.3.2 ADS-B and TIS-B Message Baseline Format and Structures
+DO-260B 2.2.3.2.1 ADS-B Message Baseline Field Descriptions
+DO-260B 2.2.3.2.1.1 "DF" Downlink Format Field
+DO-260B 2.2.3.2.1.2 "CA" Capability Field (used in DF=17)
+DO-260B 2.2.3.2.1.5 "AA" Address Field, Announced
+DO-260B 2.2.3.2.1.6 "ME" Message, Extended Squitter
+DO-260B 2.2.3.2.1.7 "PI" Parity / Identity
+DO-260B 2.2.3.2.2 Determining ADS-B and TIS-B Message Types
+DO-260B 2.2.3.2.3 ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.1 "TYPE" Code Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.1.3 Special Processing for TYPE Code Equal to ZERO
+DO-260B 2.2.3.2.3.1.3.1 Significance of TYPE Code Equal to ZERO
+DO-260B 2.2.3.2.3.2 "Surveillance Status" Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.3 "NIC Supplement-B" Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.4 "Altitude" Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.4.1 "Barometric Altitude" in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.4.2 "GNSS Height Above the Ellipsoid (HAE)" in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.4.3 "Altitude Encoding" in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.5 "TIME" (T) Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.6 "CPR Format" (F) Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.7 "CPR Encoded Latitude" Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.3.8 "CPR Encoded Longitude" Subfield in ADS-B Airborne Position Messages
+DO-260B 2.2.3.2.4 ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.1 "TYPE" Code Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.1.3 Special Processing for TYPE Code Equal to ZERO
+DO-260B 2.2.3.2.4.1.3.1 Significance of TYPE Code Equal to ZERO
+DO-260B 2.2.3.2.4.2 "Movement" Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.3 "Status Bit for Heading/Ground Track" Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.4 "Heading/Ground Track" Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.5 "TIME" (T) Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.6 "CPR Format" (F) Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.7 "CPR Encoded Latitude" Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.4.8 "CPR Encoded Longitude" Subfield in ADS-B Surface Position Messages
+DO-260B 2.2.3.2.5 ADS-B Aircraft Identification and Category Messages
+DO-260B 2.2.3.2.5.1 "TYPE" Code Subfield in ADS-B Aircraft Identification and Category Message
+DO-260B 2.2.3.2.5.2 "ADS-B Emitter Category" Subfield in ADS-B Aircraft Identification and Category Message
+DO-260B 2.2.3.2.5.3 "ID Character" Subfield in ADS-B Aircraft Identification and Category Message
+DO-260B 2.2.3.2.6 ADS-B Airborne Velocity Messages
+DO-260B 2.2.3.2.6.1 ADS-B Airborne Velocity Message - Subtype=1
+DO-260B 2.2.3.2.6.1.1 "TYPE" Code Subfield in Airborne Velocity Message - Subtype=1
+DO-260B 2.2.3.2.6.1.2 "Subtype" Code Subfield in Airborne Velocity Message - Subtype=1
+DO-260B 2.2.3.2.6.1.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.6 "East/West Direction Bit" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.7 "East/West Velocity" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.8 "North/South Direction Bit" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.9 "North/South Velocity" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.10 "Source Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.11 "Sign Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.12 "Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.13 "Reserved Bits-B" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.14 "Difference From Barometric Altitude Sign Bit" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.1.15 "Difference From Barometric Altitude" Subfield in Airborne Velocity Messages - Subtype=1
+DO-260B 2.2.3.2.6.2 ADS-B Airborne Velocity Message - Subtype=2
+DO-260B 2.2.3.2.6.2.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.6 "East/West Direction Bit" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.7 "East/West Velocity" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.8 "North/South Direction Bit" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.9 "North/South Velocity" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.10 "Source Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.11 "Sign Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.12 "Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.13 "Reserved Bits-B" Subfield in Airborne Velocity - Subtype=2 Messages
+DO-260B 2.2.3.2.6.2.14 "Difference From Barometric Altitude Sign Bit" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.2.15 "Difference From Barometric Altitude" Subfield in Airborne Velocity Messages - Subtype=2
+DO-260B 2.2.3.2.6.3 ADS-B Airborne Velocity Message - Subtype=3
+DO-260B 2.2.3.2.6.3.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.6 "Heading Status Bit" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.7 "Heading" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.8 "Airspeed Type" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.9 "Airspeed" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.10 "Source Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.11 "Sign Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.12 "Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.13 "Reserved Bits-B" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.14 "Difference From Barometric Altitude Sign Bit" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.3.15 "Difference From Barometric Altitude" Subfield in Airborne Velocity Messages - Subtype=3
+DO-260B 2.2.3.2.6.4 ADS-B Airborne Velocity Message - Subtype=4
+DO-260B 2.2.3.2.6.4.1 "TYPE" Code Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.2 "Subtype" Code Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.3 "Intent Change Flag" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.4 "Reserved Bit-A" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.5 "NACV" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.6 "Heading Status Bit" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.7 "Heading" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.8 "Airspeed Type" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.9 "Airspeed" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.10 "Source Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.11 "Sign Bit for Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.12 "Vertical Rate" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.13 "Reserved Bits-B" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.14 "Difference From Barometric Altitude Sign Bit" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.4.15 "Difference From Barometric Altitude" Subfield in Airborne Velocity Messages - Subtype=4
+DO-260B 2.2.3.2.6.5 ADS-B Airborne Velocity Messages - Subtypes "5, 6, & 7"
+DO-260B 2.2.3.2.7 ADS-B Periodic Status and Event-Driven Messages
+DO-260B 2.2.3.2.7.1 "Target State and Status" Messages
+DO-260B 2.2.3.2.7.2 "Aircraft Operational Status" Messages
+DO-260B 2.2.3.2.7.2.1 "TYPE" Code Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.2 "Subtype" Code Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.3 "CAPABILITY CLASS (CC)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.4 "OPERATIONAL MODE (OM)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.5 ADS-B "Version Number" Subfield in Aircraft Operational Status Message
+DO-260B 2.2.3.2.7.2.6 "NIC Supplement-A" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.7 "Navigation Accuracy Category for Position (NACP)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.8 "Geometric Vertical Accuracy (GVA)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.9 "Source Integrity Level (SIL)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.10 "Barometric Altitude Integrity Code (NICBARO) Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.11 "Aircraft/Vehicle Length and Width Code" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.12 "Track Angle/Heading" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.13 "Horizontal Reference Direction (HRD)" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.14 "SIL Supplement" Subfield in Aircraft Operational Status Messages
+DO-260B 2.2.3.2.7.2.15 "Reserved" Subfield in Aircraft Operational Status Message
+DO-260B 2.2.3.2.7.3 TYPE Code "23" ADS-B Messages for "TEST"
+DO-260B 2.2.3.2.7.4 Surface System Status Messages with TYPE Code=24
+DO-260B 2.2.3.2.7.5 RESERVED TYPE Code "25" ADS-B Messages
+DO-260B 2.2.3.2.7.6 RESERVED TYPE Code "26" ADS-B Messages
+DO-260B 2.2.3.2.7.7 RESERVED TYPE Code "27" ADS-B Messages
+DO-260B 2.2.3.2.7.8 Extended Squitter Aircraft Status Messages with TYPE Code=28
+DO-260B 2.2.3.2.7.9 RESERVED TYPE Code "30" ADS-B Messages
+DO-260B 2.2.4 ADS-B Receiver Characteristics
+DO-260B 2.2.4.1 Minimum Triggering Level (MTL) Definition
+DO-260B 2.2.4.3 Receivers Not Shared With TCAS
+DO-260B 2.2.4.3.1 In-Band Acceptance and Re-Triggerable Capability
+DO-260B 2.2.4.3.1.1 In-Band Acceptance
+DO-260B 2.2.4.3.1.2 Re-Triggerable Capability
+DO-260B 2.2.4.3.2 Out-of-Band Rejection
+DO-260B 2.2.4.3.3 Dynamic Minimum Trigger Level (DMTL)
+DO-260B 2.2.4.3.4 1090 MHz ADS-B Message Reception Techniques
+DO-260B 2.2.4.3.4.1 ADS-B Message Reception
+DO-260B 2.2.4.3.4.2 Narrow Pulse Discrimination
+DO-260B 2.2.4.3.4.3 TACAN and DME Discrimination
+DO-260B 2.2.4.3.4.4 Pulse Characteristics of Received ADS-B Messages
+DO-260B 2.2.4.3.4.5 Message Formats
+DO-260B 2.2.4.3.4.6 Description of 1090 MHz ADS-B Message Received Signals
+DO-260B 2.2.4.3.4.7 ADS-B Signal Reception
+DO-260B 2.2.4.3.4.7.1 Criteria for ADS-B Message Transmission Pulse Detection
+DO-260B 2.2.4.3.4.7.2 Criteria for Preamble Acceptance
+DO-260B 2.2.4.3.4.7.3 Criteria for Data Block Acceptance in ADS-B Message Signals
+DO-260B 2.2.4.3.5 ADS-B Receiver Duty Factor
+DO-260B 2.2.4.4 Enhanced Squitter Reception Techniques
+DO-260B 2.2.4.4.1 Need for Enhanced Techniques
+DO-260B 2.2.4.4.2 Enhanced Squitter Reception Technique Overview
+DO-260B 2.2.4.4.3 Error Correction
+DO-260B 2.2.4.4.3.1 Error Correction Requirements
+DO-260B 2.2.4.4.3.2 Error Correction Restrictions
+DO-260B 2.2.4.5 ADS-B Received Message Error Protection
+DO-260B 2.2.6 ADS-B Receiving Device Message Processor Characteristics
+DO-260B 2.2.6.1 ADS-B Message Reception Function Requirements
+DO-260B 2.2.6.1.1 ADS-B Message Reception Function Output Message Structure Requirements
+DO-260B 2.2.6.1.2 ADS-B and TIS-B Message Reception Function Output Message Delivery Requirements
+DO-260B 2.2.7 ADS-B Message Processor Characteristics
+DO-260B 2.2.7.1 ADS-B Receiving Device Message Reception
+DO-260B 2.2.7.1.1 Receipt of TYPE Code Equal to ZERO
+DO-260B 2.2.8 ADS-B Report Characteristics
+DO-260B 2.2.8.1 ADS-B State Vector Report Characteristics
+DO-260B 2.2.8.1.1 State Vector Report Type and Structure Identification and Validity Flags
+DO-260B 2.2.8.1.1.1 State Vector Report Type and Structure Identification
+DO-260B 2.2.8.1.1.2 State Vector Report Validity Flags
+DO-260B 2.2.8.1.2 Participant Address
+DO-260B 2.2.8.1.3 Address Qualifier
+DO-260B 2.2.8.1.4 Report Time of Applicability
+DO-260B 2.2.8.1.4.1 Time of Applicability for Estimated Position/Velocity
+DO-260B 2.2.8.1.4.2 Position Time of Applicability
+DO-260B 2.2.8.1.4.2.1 Position Time of Applicability when "TIME" (T)=0
+DO-260B 2.2.8.1.4.2.2 Position Time of Applicability when "TIME" (T)=1 and UTC Time of Message Receipt is Available
+DO-260B 2.2.8.1.4.2.3 Position Time of Applicability when "TIME" (T)=1 and UTC Time of Message Receipt is NOT Available
+DO-260B 2.2.8.1.4.3 Velocity Time of Applicability
+DO-260B 2.2.8.1.5 Latitude (WGS-84)
+DO-260B 2.2.8.1.6 Longitude (WGS-84)
+DO-260B 2.2.8.1.7 Altitude, Geometric (WGS-84)
+DO-260B 2.2.8.1.8 North/South Velocity
+DO-260B 2.2.8.1.9 East/West Velocity
+DO-260B 2.2.8.1.10 Ground Speed While on the Surface
+DO-260B 2.2.8.1.11 Heading While on the Surface
+DO-260B 2.2.8.1.12 Altitude, Barometric (Pressure Altitude)
+DO-260B 2.2.8.1.13 Vertical Rate, Geometric/Barometric
+DO-260B 2.2.8.1.14 Vertical Rate, Geometric (WGS-84)
+DO-260B 2.2.8.1.15 Barometric Altitude Rate
+DO-260B 2.2.8.1.16 Navigation Integrity Category (NIC)
+DO-260B 2.2.8.1.17 Estimated Latitude (WGS-84)
+DO-260B 2.2.8.1.18 Estimated Longitude (WGS-84)
+DO-260B 2.2.8.1.19 Estimated North/South Velocity
+DO-260B 2.2.8.1.20 Estimated East/West Velocity
+DO-260B 2.2.8.1.21 Surveillance Status / Discretes
+DO-260B 2.2.8.1.22 Report Mode
+DO-260B 2.2.8.2 ADS-B Mode Status Report Characteristics
+DO-260B 2.2.8.2.1 Mode Status Report Type and Structure Identification and Validity Flags
+DO-260B 2.2.8.2.1.1 Mode Status Report Type and Structure Identification
+DO-260B 2.2.8.2.1.2 Mode Status Report Validity Flags
+DO-260B 2.2.8.2.2 Paritcipant Address
+DO-260B 2.2.8.2.3 Address Qualifier
+DO-260B 2.2.8.2.4 Report Time of Applicability
+DO-260B 2.2.8.2.5 Version Number
+DO-260B 2.2.8.2.6 Call Sign
+DO-260B 2.2.8.2.7 Emitter Category
+DO-260B 2.2.8.2.8 Aircraft/Vehicle (A/V) Length and Width Code
+DO-260B 2.2.8.2.9 Emergency / Priority Status
+DO-260B 2.2.8.2.10 Capability Class Codes
+DO-260B 2.2.8.2.11 Operational Mode
+DO-260B 2.2.8.2.12 SV Quality - NACP
+DO-260B 2.2.8.2.13 SV Quality - NACV
+DO-260B 2.2.8.2.14 SV Quality - SIL, SIL Supplement, SDA
+DO-260B 2.2.8.2.14.1 SV Quality - Source Integrity Level (SIL)
+DO-260B 2.2.8.2.14.2 SV Quality - SIL Supplement
+DO-260B 2.2.8.2.14.3 SV Quality - System Design Assurance (SDA)
+DO-260B 2.2.8.2.15 SV Quality - GVA
+DO-260B 2.2.8.2.16 SV Quality - NICBARO
+DO-260B 2.2.8.2.17 Track/Heading and Horizontal Reference Direction (HRD)
+DO-260B 2.2.8.2.18 Vertical Rate Type
+DO-260B 2.2.8.2.19 (Reserved for) Flight Mode Specific Data
+DO-260B 2.2.8.3 ADS-B On-Condition Report Characteristics
+DO-260B 2.2.8.3.1 ADS-B Target State Report
+DO-260B 2.2.8.3.2 Air Referenced Velocity (ARV) Report
+DO-260B 2.2.8.4 Processing of Reserved Message TYPE Codes
+DO-260B 2.2.8.5 Receiving Installation Time Processing
+DO-260B 2.2.8.5.1 Precision Installations
+DO-260B 2.2.8.5.2 Non-Precision Installations
+DO-260B 2.2.9 ADS-B Report Type Requirements
+DO-260B 2.2.9.1 ADS-B Receiver Reporting Requirements for Class A Equipage
+DO-260B 2.2.9.1.1 ADS-B State Vector Reports for Class A Equipage
+DO-260B 2.2.9.1.2 ADS-B Mode Status Reports for Class A Equipage
+DO-260B 2.2.9.1.3 ADS-B Target State Reports for Class A Equipage
+DO-260B 2.2.9.1.4 ADS-B Air Referenced Velocity Reports for Class A Equipage
+DO-260B 2.2.9.2 ADS-B Receiver Report Content Requirements for Class B Equipage
+DO-260B 2.2.10 ADS-B Receiver Report Assembly and Delivery
+DO-260B 2.2.10.1 Fundamental Principals of Report Assembly and Delivery
+DO-260B 2.2.10.1.1 General Data Flow
+DO-260B 2.2.10.1.2 ADS-B Report Organization
+DO-260B 2.2.10.1.3 ADS-B Message Temporary Retention
+DO-260B 2.2.10.1.4 Participant ADS-B Track Files
+DO-260B 2.2.10.2 Report Assembly Initialization State
+DO-260B 2.2.10.3 Report Assembly Acquisition State
+DO-260B 2.2.10.3.1 Report Assembly Acquisition State --- Airborne Participant
+DO-260B 2.2.10.3.1.1 Latency, Report Assembly Acquisition State --- Airborne Participant
+DO-260B 2.2.10.3.2 Report Assembly Acquisition State --- Surface Participant
+DO-260B 2.2.10.3.2.1 Latency, Report Assembly Acquisition State --- Surface Participant
+DO-260B 2.2.10.3.3 Acquisition State Data Retention
+DO-260B 2.2.10.4 Report Assembly Track State
+DO-260B 2.2.10.4.1 Report Assembly Track State --- Airborne Participant
+DO-260B 2.2.10.4.1.1 Report Assembly Track State Initialization --- Airborne Participant
+DO-260B 2.2.10.4.1.2 Report Assembly Track State Maintenance --- Airborne Participant
+DO-260B 2.2.10.4.1.3 Report Assembly Track State Termination --- Airborne Participant
+DO-260B 2.2.10.4.2 Report Assembly Track State --- Surface Participant
+DO-260B 2.2.10.4.2.1 Report Assembly Track State Initialization --- Surface Participant
+DO-260B 2.2.10.4.2.2 Report Assembly Track State Maintenance --- Surface Participant
+DO-260B 2.2.10.4.2.3 Report Assembly Track State Termination --- Surface Participant
+DO-260B 2.2.10.5 Minimum Number of Participant Track Files
+DO-260B 2.2.10.6 Reasonableness Tests for CPR Decoding of Received Position Messages
+DO-260B 2.2.10.6.1 Reasonableness Test Overview
+DO-260B 2.2.10.6.2 Reasonableness Test Applied to Positions Determined from Globally Unambiguous CPR Decoding
+DO-260B 2.2.10.6.3 Reasonableness Test Applied to Positions Determined from Locally Unambiguous CPR Decoding
+DO-260B 2.2.10.7 Duplicate Address Processing
+DO-260B 2.2.10.7.1 Candidate Duplicate Address Report
+DO-260B 2.2.10.7.2 Duplicate Address Condition
+DO-260B 2.2.17.4 TIS-B Message Processing and Report Generation
+DO-260B 2.2.18.4 ADS-R Message Processing
+DO-260B 2.2.18.5 ADS-R Report Processing

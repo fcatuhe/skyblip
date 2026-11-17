@@ -36,6 +36,8 @@ Where the firmware does not satisfy a clause, the case is still written as the c
 | F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
 | G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
+The checker knows a fifth kind, `unmeasured:`, a figure the radio has to meet that no bench has measured yet. No ADS-L case uses it. The ADS-B suite does (`test/adsb/README.md`).
+
 Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks.
 
 ## EN 300 220

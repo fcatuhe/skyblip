@@ -46,6 +46,16 @@ Part 2 of the same standard: the harmonised standard for access to radio spectru
 - SHA-256 `f7b46ac8b50e2befd976dc5fd76d2994c3f371a97f7b24303f6769deec064373`
 - `etsi_en_300_220-2_v3.3.1.md` is the text conversion. Neither file is committed
 
+## RTCA DO-260B, draft version 4.2
+
+The MOPS for 1090 MHz Extended Squitter ADS-B and TIS-B, which `firmware/protocols/adsb/` reads. 1188 pages, dated 14 August 2009: working paper 1090-WP30-18, the draft of DO-260B that merges DO-260A, its Changes 1 and 2, the changes of meeting 23 and those its change matrix had agreed. It is the latest free text of DO-260B. RTCA sells the published DO-260B with Corrigendum 1 (2011) and its successor DO-260C with Change 1 (2022), and neither has been bought, so the clause numbers here are the draft's. The draft's page headers call it "DRAFT Version 4.2 of DO-282B", a typo in the working paper: its title page and content are DO-260B.
+
+RTCA holds the copyright, so neither file is committed. `python3 scripts/fetch_rtca.py` downloads it, refuses a PDF whose SHA-256 differs, and writes the `pdftotext -layout` text beside it, which `scripts/check_do260b_clauses.py` reads the headings from.
+
+- `rtca_do-260b_draft_v4.2.pdf`, fetched from https://www.anteni.net/adsb/Doc/1090-WP30-18-DRAFT_DO-260B-V42.pdf
+- SHA-256 `bbb44e33359f1f03053d8733776f4dc8b922b2a60de824fec80b9869502247cf`
+- `rtca_do-260b_draft_v4.2.txt` is the text extraction. Neither file is committed
+
 ## The conformance suite
 
 Issue 2 is read clause by clause by [`firmware/protocols/adsl/test/conformance/`](../../firmware/protocols/adsl/test/conformance), the cases the ADS-L component satisfies alone, and [`firmware/test/adsl/`](../../firmware/test/adsl), the cases that need the device around it, one file per subpart, every case named after the clause it checks: `ADS-L.4.SRD860.G.1.7: the altitude encodes the clause's worked examples`. Every heading of the document has a case, including the clauses this firmware does not satisfy, which are written as the clause requires and skipped over a `TODO:` naming the gap.
@@ -53,6 +63,8 @@ Issue 2 is read clause by clause by [`firmware/protocols/adsl/test/conformance/`
 `scripts/check_adsl_clauses.py` is what keeps the two lists equal: it reads the clause headings out of the markdown beside this file and the case subjects out of the suite, and fails on either a clause nobody read or a case naming a clause that does not exist. The suite's own README says how a gap is written.
 
 The EN 300 220 clauses the device answers to have a suite of their own, [`firmware/test/en300220/`](../../firmware/test/en300220), named `EN 300 220-1 5.21.1: what holds`. Since the standards are not committed, `firmware/test/en300220/clauses.txt` lists the clauses it reads by number and heading, and `scripts/check_en300220_clauses.py` holds the suite to that list, and the list to the fetched documents' headings when they are here.
+
+DO-260B's receive-side clauses are read the same way, by [`firmware/protocols/adsb/test/conformance/`](../../firmware/protocols/adsb/test/conformance) and [`firmware/test/adsb/`](../../firmware/test/adsb), named `DO-260B 2.2.10.3.1: what holds`. `firmware/test/adsb/clauses.txt` lists the 282 clauses they read, and `scripts/check_do260b_clauses.py` holds the two halves to it, and the list to the fetched draft's headings when it is here.
 
 ## The conversions
 
