@@ -1,0 +1,78 @@
+<% content_for :title, t("briefing.setup.title") %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: "setup") %>
+<%= tag.div class: "unit unit--setup", data: {
+      controller: "setup",
+      setup_devices_value: "#{briefing_root_path}/devices",
+      setup_activation_value: briefing_activation_path,
+      setup_partner_value: @partner,
+      setup_challenges_value: activation_challenges_path,
+      setup_registrations_value: activation_registrations_path,
+      setup_glass_outlet: ".glass-prompt"
+    } do %>
+  <header class="unit-head">
+    <h1 class="unit-name" data-setup-target="title"><%= t("briefing.setup.title") %></h1>
+  </header>
+
+  <ol class="setup-steps" data-setup-target="steps">
+    <li data-step="install"><%= t("briefing.setup.steps.install") %></li>
+    <li data-step="connect"><%= t("briefing.setup.steps.connect") %></li>
+    <li data-step="finish"><%= t("briefing.setup.steps.finish") %></li>
+  </ol>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="start">
+    <p class="unit-lede"><%= t("briefing.setup.start") %></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="install" data-action="setup#restart"><%= t("briefing.setup.install") %></button>
+    </div>
+    <ul class="setup-alternatives">
+      <li><%= t("briefing.setup.shows_drive") %> <button type="button" class="button-app button-app--small button-app--quiet" data-action="setup#skipToDrive"><%= t("briefing.setup.use_drive") %></button></li>
+      <li><%= t("briefing.setup.running_skyblip") %> <button type="button" class="button-app button-app--small button-app--quiet" data-action="setup#connectRunning"><%= t("briefing.setup.connect_running") %></button></li>
+    </ul>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="drive" hidden>
+    <p class="unit-lede" data-setup-target="driveText"></p>
+    <ul class="setup-by-hand" data-setup-target="byHand" hidden>
+      <li data-product="go"><%= t("briefing.setup.by_hand.go") %></li>
+      <li data-product="bravo"><%= t("briefing.setup.by_hand.bravo") %></li>
+    </ul>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="chooseDrive" data-action="setup#install"><%= t("briefing.setup.choose_drive") %></button>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="writing" hidden>
+    <p class="unit-lede" data-setup-target="writingText"></p>
+    <progress class="setup-progress" aria-labelledby="setup-writing"></progress>
+    <p class="note" id="setup-writing"><%= t("briefing.setup.keep_plugged") %></p>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="connect" hidden>
+    <p class="unit-lede" data-setup-target="connectText"></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="connect" data-action="setup#connectInstalled"><%= t("briefing.setup.connect") %></button>
+    </div>
+    <p class="note" data-setup-target="connectHint"></p>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="activate" hidden>
+    <p class="unit-lede" data-setup-target="activateText"></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="retry" data-action="setup#activate" hidden><%= t("briefing.activation.activate") %></button>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="unsupported" hidden>
+    <p class="unit-lede" data-setup-target="unsupportedText"></p>
+    <p class="note"><%= link_to_page "buy", label: t("briefing.setup.by_hand_link"), anchor: "install" %></p>
+    <div class="app-actions" data-setup-target="bluetoothOnly" hidden>
+      <button type="button" class="button-app button-app--quiet" data-action="setup#connectRunning"><%= t("briefing.setup.connect_running") %></button>
+    </div>
+  </section>
+
+  <p class="unit-message" role="status" data-setup-target="message" hidden></p>
+
+  <%= render "briefing/glass" %>
+
+  <%= turbo_frame_tag :installers, src: briefing_installer_path, loading: :eager, data: { setup_target: "installers" } %>
+<% end %>

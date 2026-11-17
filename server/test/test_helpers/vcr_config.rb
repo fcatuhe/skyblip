@@ -9,15 +9,17 @@ VCR.configure do |config|
 
   # INFO: fc 17oct26 GitHub redirects a download to a signed URL that expires, so the recording keeps only the file's name | 15nov26 one per asset
   signed_assets = "https://release-assets.githubusercontent.com/"
+  # INFO: fc 17nov26 a cassette that records new episodes runs this again over interactions it already rewrote
+  signed = ->(url) { url&.start_with?(signed_assets) && !url.start_with?("#{signed_assets}recorded-asset/") }
   recorded_asset = ->(signed_url) do
     file = URI.decode_www_form(URI(signed_url).query.to_s).to_h.fetch("rscd")[/filename=([^;]+)/, 1]
     "#{signed_assets}recorded-asset/#{file}"
   end
   config.before_record do |interaction|
     location = interaction.response.headers["Location"]&.first
-    if location&.start_with?(signed_assets)
+    if signed.(location)
       interaction.response.headers["Location"] = [ recorded_asset.(location) ]
-    elsif interaction.request.uri.start_with?(signed_assets)
+    elsif signed.(interaction.request.uri)
       interaction.request.uri = recorded_asset.(interaction.request.uri)
     end
   end

@@ -6,16 +6,18 @@ import { factsOf, newsOf, productWord, protocolsLine, running, trackOf } from "c
 import { labelOf, shownIn } from "controllers/briefing/fields"
 import { heardRow, heardView, proposedIn } from "controllers/briefing/heard"
 import { offerNewest, shelfIn } from "controllers/briefing/shelf"
+import { browserRow } from "controllers/briefing/browsers"
+import { span } from "controllers/briefing/span"
 import { say, sayCount, sayNotice } from "controllers/briefing/words"
 import { sendCapture } from "#skyblip/capture_upload"
 import { sharedJournal } from "#skyblip/journal"
+import { tagText } from "#skyblip/tango"
 
 const SET_NOTICES = ["set_notices", "notices"]
 const CAPTURE_NOTICES = ["capture_notices", "notices"]
 const BROWSER_NOTICES = ["browsers_notices", "notices"]
 const CAPTURE_DONE = new Set(["capture_armed", "capture_stopped"])
-const PROMPTS = { set: "SETTINGS", capture: "CAPTURE" }
-const HOUR_S = 3600
+const PROMPTS = { set: "SETTINGS", capture: "CAPTURE", pair: "PAIR BRAVO" }
 const LINK_NOTICES = new Set(["link_lost", "not_back", "timeout", "claimed", "small_mtu", "no_bluetooth", "not_skyblip", "failed", "no_params"])
 const REFUSALS = new Set(["cancelled", "refused_on_device"])
 const WORKING = new Set(["asking", "confirming", "uploading", "installing", "rebooting"])
@@ -164,6 +166,10 @@ export default class extends Controller {
     return new URLSearchParams(location.search).has("activated")
   }
 
+  #installed() {
+    return new URLSearchParams(location.search).has("installed")
+  }
+
   // INFO: fc 11nov26 the defaults fill the form, and Save sends them, so the pilot sees what will change before the glass asks
   reset() {
     const { defaults } = this.unit.state
@@ -259,6 +265,7 @@ export default class extends Controller {
   #notes(unit, state, page, activated) {
     const notes = []
     if (activated) notes.push([say("words.activated", { name: unit.name }), null, "is-good"])
+    if (page && unit?.linked && this.#installed()) notes.push([say("words.installed", { name: unit.name }), null, "is-good"])
     if (unit?.needsActivation) notes.push([say("notices.not_activated"), "activate"])
     if (state?.status?.flight === "airborne") notes.push([say(state.trust === "trusted" ? "words.in_flight_lock_trusted" : "words.in_flight_lock")])
     if (state?.refusedOnDevice) notes.push([say("words.reconnect_needed")])
@@ -317,12 +324,12 @@ export default class extends Controller {
 
   #glass(unit, asking) {
     if (!this.glass) return
-    const remembers = unit?.state?.task === "set" && unit.state.trust === "proven"
+    const remembers = ["set", "pair"].includes(unit?.state?.task) && unit.state.trust === "proven"
     if (!asking) return this.glass.hide()
     const { task, asked, settings } = unit.state
     this.glass.show({
       title: PROMPTS[task], prompt: task, product: productWord(unit), lamp: unit.product === "bravo", remembers,
-      argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : "",
+      argument: task === "set" ? JSON.stringify(asked) : task === "capture" ? `${asked.profile}:${unit.state.capture?.evictsFlights ?? 0}` : task === "pair" ? tagText(asked.tag) : "",
       settings: task === "set" ? JSON.stringify({ command: "set", ...settingsFrame(settings ?? {}) }) : ""
     })
   }
@@ -442,23 +449,10 @@ export default class extends Controller {
     const drawn = JSON.stringify([state.browsers, idle])
     if (drawn !== this.drawnBrowsers) {
       this.drawnBrowsers = drawn
-      this.browserListTarget.replaceChildren(...state.browsers.map(browser => this.#browser(browser, idle)))
+      this.browserListTarget.replaceChildren(...state.browsers.map(browser => browserRow(browser, idle)))
     }
     this.forgetOthersTarget.hidden = !state.browsers.some(browser => !browser.self)
     this.forgetOthersTarget.disabled = !idle
-  }
-
-  #browser({ id, label, self }, idle) {
-    const row = document.createElement("li")
-    const shown = label || say("browsers.unnamed")
-    const name = Object.assign(document.createElement("span"), { textContent: shown })
-    if (self) name.append(Object.assign(document.createElement("span"), { className: "is-self", textContent: ` · ${say("browsers.this_browser")}` }))
-    const forget = Object.assign(document.createElement("button"), { type: "button", className: "button-app button-app--small", textContent: say("browsers.forget"), disabled: !idle })
-    forget.setAttribute("aria-label", say("browsers.forget_named", { name: shown }))
-    forget.dataset.action = "unit#forgetBrowser"
-    forget.dataset.unitIdParam = id
-    row.append(name, forget)
-    return row
   }
 
   #refusedHere({ notice, refusedOnDevice }) {
@@ -491,9 +485,4 @@ export default class extends Controller {
     note.textContent = differs ? say("words.default", { value: shownIn(this.settingsTarget, key, defaults[key]) }) : ""
   }
 
-}
-
-// INFO: fc 15nov26 a capture keeps minutes or days, so the span is read in the unit that fits it
-function span(seconds) {
-  return seconds >= 2 * HOUR_S ? `${Math.round(seconds / HOUR_S)} h` : `${Math.round(seconds / 60)} min`
 }

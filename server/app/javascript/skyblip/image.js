@@ -64,6 +64,18 @@ function protectedOf(view) {
   return found;
 }
 
+// INFO: fc 17nov26 header, image, protected TLVs and TLVs: where MCUboot stops reading slot0, and the install trust record may start
+export function imageEnd(bytes) {
+  if (bytes.length < HEADER_BYTES) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(0, true) !== MCUBOOT_MAGIC) return null;
+  let at = view.getUint16(HEADER_SIZE_OFFSET, true) + view.getUint32(IMAGE_SIZE_OFFSET, true);
+  if (at + TLV_INFO_BYTES <= view.byteLength && view.getUint16(at, true) === PROTECTED_TLV_MAGIC) at += view.getUint16(at + 2, true);
+  if (at + TLV_INFO_BYTES > view.byteLength || view.getUint16(at, true) !== TLV_MAGIC) return null;
+  const end = at + view.getUint16(at + 2, true);
+  return end <= view.byteLength ? end : null;
+}
+
 export function fullImageNeeded(deviceImu, pin) {
   if (deviceImu === 'none') return false;
   const verified = DIGEST_PREFIX.test(deviceImu ?? '');

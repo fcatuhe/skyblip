@@ -38,6 +38,18 @@ class ReleaseTest < ActiveSupport::TestCase
     assert_nil Release.product_of("embed.js")
   end
 
+  test "a USB install takes the newest stable release holding the product's .uf2, else the newest main build, never a branch's" do
+    main = release("dev-1005", prerelease: true, published_at: "2026-10-14T00:00:00Z", assets: %w[skyblip-go-dev-1005.uf2 skyblip-bravo-dev-1005.uf2])
+    branch = release("dev-1010-feat-x", prerelease: true, published_at: "2026-10-15T00:00:00Z", assets: %w[skyblip-go-dev-1010-feat-x.uf2])
+    stable = release("v0.1.0", published_at: "2026-10-01T00:00:00Z", assets: %w[skyblip-go-0.1.0.uf2 skyblip-go-0.1.0.signed.bin])
+
+    installers = Release.installers([ main, branch, stable ])
+
+    assert_equal [ "v0.1.0", "skyblip-go-0.1.0.uf2" ], installers.fetch("go").then { |release, file| [ release.tag, file ] }
+    assert_equal [ "dev-1005", "skyblip-bravo-dev-1005.uf2" ], installers.fetch("bravo").then { |release, file| [ release.tag, file ] }
+    assert_empty Release.installers([ branch ])
+  end
+
   # Each product had its own pre-releases, tagged bravo-dev-*, before one release carried them all.
   test "a tag naming a product is no release" do
     assert Release::TAG.match?("dev-1010-bravo-fix")

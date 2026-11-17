@@ -89,6 +89,8 @@ Rails.application.routes.draw do
       resources :captures, only: :create, module: :devices
     end
     resource :activation, only: :show, path: "activate"
+    resource :setup, only: :show
+    resource :installer, only: :show
     resource :preferences, only: %i[show update]
     resource :tools, only: :show
     resource :firmwares, only: :show

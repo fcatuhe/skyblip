@@ -12,6 +12,16 @@ class Releases::AssetsControllerTest < ActionDispatch::IntegrationTest
     assert response.body.bytesize > 1000
   end
 
+  test "a release's .uf2 is fetched through our origin, for a USB install to write" do
+    VCR.use_cassette("github/installers") do
+      get "/releases/dev-1860/skyblip-bravo-dev-1860.uf2"
+    end
+
+    assert_response :success
+    assert_equal "application/octet-stream", response.media_type
+    assert_equal 0, response.body.bytesize % 512
+  end
+
   test "stable release tags, whose names hold dots, route to the proxy" do
     route = Rails.application.routes.recognize_path("/releases/v0.1.0/skyblip_simulator.wasm", method: :get)
 

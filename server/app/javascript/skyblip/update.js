@@ -34,7 +34,7 @@ const RETURN_WITHIN_MS = 120_000;
 export const RETURN_EVERY_MS = 3_000;
 const EXPECTED_DROP = new Set(['installing', 'rebooting', 'recovering']);
 const BUSY = new Set(['asking', 'confirming', 'uploading']);
-const NOTED_TASKS = new Set(['set', 'capture']);
+const NOTED_TASKS = new Set(['set', 'capture', 'pair']);
 const LANDING_REFUSALS = new Set(['nothing_staged', 'not_approved', 'wrong_key']);
 export const PROTOCOL_NAMES = { adsb: 'ADS-B', adsl: 'ADS-L', alptas: 'ALP-TAS' };
 const IDENTITY_REFUSALS = new Set(['unknown_command', 'small_mtu', 'no_version']);
@@ -180,6 +180,7 @@ export class Updater {
     status: null,
     settings: null,
     address: null,
+    pairedTag: null,
     defaults: null,
     refusedOnDevice: false,
     file: null,
@@ -347,6 +348,19 @@ export class Updater {
     return this.#ask('set', settingsFrame(changed));
   }
 
+  readSettings() {
+    return this.#send({ command: 'get' });
+  }
+
+  // INFO: fc 17nov26 a Go answers pair once it starts and paired once both sides hold the pin, a Bravo only pair
+  pair(tag) {
+    if (this.inFlight) return this.#set({ notice: { key: 'in_flight', during: 'pair' } });
+    // INFO: fc 17nov26 an untrusted Bravo is paired by its own press, and its untrusted refusal would read as a trust verdict
+    if (productOf(this.#state) === 'bravo' && !this.#trust.trusted) return this.#set({ notice: { key: 'untrusted', during: 'pair' } });
+    this.#set({ notice: null });
+    return this.#ask('pair', { tag });
+  }
+
   resetSettings() {
     if (this.#state.defaults) return this.saveSettings(this.#state.defaults);
   }
@@ -472,7 +486,7 @@ export class Updater {
 
   // INFO: fc 15nov26 the dump is asked once the settings are answered, so a small_mtu after it is the dump's own
   #configured(reply) {
-    this.#set({ settings: settingsOf(reply), ...activationOf(reply) });
+    this.#set({ settings: settingsOf(reply), pairedTag: reply.paired_tag ?? null, ...activationOf(reply) });
     if (!this.#dumpAsked) this.readDiagnostics();
   }
 
@@ -514,6 +528,7 @@ export class Updater {
     if (phase !== 'asking' && phase !== 'confirming' && phase !== 'uploading') return;
     if (reply.pending) return this.#set({ phase: 'confirming' });
     if (reply.acknowledge && task === 'set' && !reply.reason) return this.#saved();
+    if (reply.acknowledge && task === 'pair' && reply.reason === 'paired') return this.#paired();
     if (reply.acknowledge && reply.reason === task) return this.#granted(task);
     if (task === 'install') this.#windowOpen = false;
     const refusedOnDevice = this.#state.refusedOnDevice || reply.reason === 'refused_on_device' || (reply.reason === 'cancelled' && phase === 'confirming');
@@ -533,6 +548,7 @@ export class Updater {
       this.#set({ phase: 'ready', task: null, notice: { key, during: 'capture' } });
       return this.readDiagnostics();
     }
+    if (task === 'pair') return this.#pairing();
     if (task === 'dfu') {
       this.#trust.confirmed();
       this.#windowOpen = true;
@@ -540,6 +556,17 @@ export class Updater {
     }
     this.#windowOpen = false;
     return this.#set({ phase: task === 'install' ? 'installing' : 'recovering', task: null });
+  }
+
+  #pairing() {
+    this.#trust.confirmed();
+    if (productOf(this.#state) === 'go') return this.#set({ phase: 'asking', task: 'pair' });
+    this.#set({ phase: 'ready', task: null, notice: { key: 'pair_armed', during: 'pair' } });
+  }
+
+  async #paired() {
+    this.#set({ phase: 'ready', task: null, notice: { key: 'paired', during: 'pair' } });
+    await this.#send({ command: 'get' });
   }
 
   async #saved() {
@@ -629,13 +656,13 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
     const notice = BUSY.has(phase) && !leaving ? { key: 'link_lost' } : this.#state.notice;
     this.#set({
-      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, defaults: null, refusedOnDevice: false,
+      phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
       notice,
     });

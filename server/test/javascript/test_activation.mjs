@@ -80,6 +80,20 @@ test('activating asks the server, then the glass, then stores the unlock code an
   assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
 });
 
+test('a unit that trusts this browser signs its registration with no press, and activation runs to the end', async () => {
+  const { unit, server, activator, until } = await connected({ trustsBrowser: true });
+  const phases = [];
+  const done = until(state => {
+    phases.push(state.phase);
+    return state.notice?.key === 'activated' && state.address;
+  });
+  activator.activate();
+  assert.equal((await done).address, '000001');
+  assert.ok(!phases.includes('confirming'));
+  assert.deepEqual(server.requests, ['challenge', 'register']);
+  assert.deepEqual(unit.commands, ['get', 'challenge', 'register', 'unlock', 'get']);
+});
+
 test('a unit activated again keeps its serial', async () => {
   const server = new FakeServer();
   for (let round = 0; round < 2; round++) {

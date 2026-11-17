@@ -109,10 +109,12 @@ export class FakeSkyblip {
     installReport = {},
     protocols = product === 'bravo' ? { adsb_version: '0.1.0' } : { adsl_version: '0.1.0', alptas_version: '0.1.0' },
     evictsFlights = 3,
+    pairedTag = null,
+    pairVerdict = 'paired',
   } = {}) {
     Object.assign(this, { running, image, from, to, settings, imu, flight, swapPowered, bufSize, mtu, claimedBy });
     Object.assign(this, { stored: { ...stored }, key, downgrade, bootloaderKeys, address, product, variant, deviceId, bluetoothTag, release, identity });
-    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights });
+    Object.assign(this, { echo, writeCeiling, oversize, verdictFirst, name, logStore, installReport, protocols, evictsFlights, pairedTag, pairVerdict });
     this.hasSmp = smp;
     this.writesInPacket = 0;
     this.uploadWrites = [];
@@ -274,7 +276,8 @@ export class FakeSkyblip {
     if (command === 'identity' && this.identity) return this.sendIdentity();
     if (command === 'update') return this.sendUpdate();
     if (command === 'status') return this.sendStatus();
-    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored });
+    if (command === 'get') return this.reply({ command: 'config', version: 1, ...this.addressFields(), ...this.stored, ...(this.pairedTag === null ? {} : { paired_tag: this.pairedTag }) });
+    if (command === 'pair') return this.askToPair(fields);
     if (command === 'defaults') return this.reply({ command: 'defaults', ...DEFAULTS });
     if (command === 'capture') return this.stageCapture(fields);
     if (command === 'diagnostics') return this.sendDiagnostics();
@@ -331,6 +334,21 @@ export class FakeSkyblip {
     if (this.trustedBrowsers.some(({ id }) => id === browser.id)) return;
     this.trustedBrowsers = [...this.trustedBrowsers, browser].slice(-8);
     this.sessionTrusted = true;
+  }
+
+  // INFO: fc 17nov26 config.cpp's pair: the prompt guards and the flight, then a Bravo arms for a trusted page and a Go asks or starts
+  askToPair({ tag }) {
+    if (this.refusedOnDevice) return this.acknowledge(false, 'refused_on_device');
+    if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+    if (this.product === 'bravo') {
+      if (!this.sessionTrusted) return this.acknowledge(false, 'untrusted');
+      this.armedFor = tag;
+      return this.acknowledge(true, 'pair');
+    }
+    this.pending = 'pair';
+    this.staged = tag;
+    if (this.sessionTrusted) return this.carryOut();
+    this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_pair' });
   }
 
   // INFO: fc 12nov26 capture_request.cpp's order: the prompt guards, the flight, then the capture's state
@@ -439,7 +457,7 @@ export class FakeSkyblip {
   }
 
   press() {
-    const remembers = ['set', 'dfu'].includes(this.pending) && this.proven;
+    const remembers = ['set', 'dfu', 'pair'].includes(this.pending) && this.proven;
     this.carryOut();
     if (remembers) this.trust(this.proven);
   }
@@ -454,6 +472,13 @@ export class FakeSkyblip {
     if (task === 'capture') {
       this.capturing = this.staged !== 'stop';
       return this.acknowledge(true, 'capture');
+    }
+    if (task === 'pair') {
+      this.acknowledge(true, 'pair');
+      return setImmediate(() => {
+        if (this.pairVerdict === 'paired') this.pairedTag = this.staged;
+        this.acknowledge(this.pairVerdict === 'paired', this.pairVerdict);
+      });
     }
     if (task === 'dfu') {
       this.windowOpen = true;

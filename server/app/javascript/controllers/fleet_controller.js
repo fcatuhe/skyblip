@@ -8,8 +8,8 @@ import { say, sayNotice } from "controllers/briefing/words"
 let started = false
 
 export default class extends Controller {
-  static targets = ["list", "row", "unsupported", "first", "title", "connectNew", "activate", "notice"]
-  static values = { variant: String, current: String, devices: String, activation: String }
+  static targets = ["list", "row", "unsupported", "first", "title", "connectNew", "setUp", "notice"]
+  static values = { variant: String, current: String, devices: String, activation: String, setup: String }
 
   connect() {
     this.session = joinFleet(() => this.#render())
@@ -72,10 +72,12 @@ export default class extends Controller {
       this.drawn = drawn
       this.listTarget.replaceChildren(...rows)
     }
-    this.connectNewTarget.hidden = !bluetooth || this.currentValue === "activate"
-    this.connectNewTarget.classList.toggle("button-app--quiet", known && this.variantValue === "home")
-    // INFO: fc 11nov26 a browser that already knows a device mostly comes back to it, so activation moves to the menu
-    this.activateTarget.hidden = !bluetooth || known || this.currentValue === "activate"
+    const settingUp = ["activate", "setup"].includes(this.currentValue)
+    this.connectNewTarget.hidden = !bluetooth || settingUp
+    // INFO: fc 17nov26 a browser that knows no device most likely holds a new one, so setting it up comes first
+    this.connectNewTarget.classList.toggle("button-app--quiet", this.variantValue === "home")
+    this.setUpTarget.hidden = !bluetooth || settingUp || this.variantValue !== "home"
+    this.setUpTarget.classList.toggle("button-app--quiet", known)
     if (this.variantValue === "home") {
       this.unsupportedTarget.hidden = bluetooth
       this.firstTarget.hidden = !bluetooth || units.length > 0

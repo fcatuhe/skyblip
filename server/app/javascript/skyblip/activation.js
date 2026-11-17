@@ -109,7 +109,7 @@ export class Activator {
     if (!reply) return;
     if (reply.command === 'config') this.#set({ address: addressOf(reply), read: true });
     else if (reply.command === 'challenge' && this.#state.phase === 'asking') return this.#challenge(reply);
-    else if (reply.command === 'registration' && this.#state.phase === 'confirming') return this.#register(reply);
+    else if (reply.command === 'registration' && ['asking', 'confirming'].includes(this.#state.phase)) return this.#register(reply);
     else if (reply.command === 'acknowledgement') this.#acked(reply);
   }
 

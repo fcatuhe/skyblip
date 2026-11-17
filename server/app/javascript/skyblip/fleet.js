@@ -29,6 +29,23 @@ export function namesOf(slug) {
   return [];
 }
 
+// INFO: fc 17nov26 a Bravo and a Go not yet activated are named by their Bluetooth tag, an activated Go by its address
+function tagOfSlug(slug) {
+  const [, kind, tag] = slug.match(SLUG) ?? [];
+  return kind === 'bravo' || kind === 'activate' ? Number.parseInt(tag, 16) : null;
+}
+
+function productOfSlug(slug) {
+  const [, kind] = slug.match(SLUG) ?? [];
+  return kind === 'activate' ? 'go' : kind ?? null;
+}
+
+export function installedNames(product, tag) {
+  const code = tag?.toString(16).toUpperCase().padStart(4, '0');
+  if (product === 'go') return code ? { names: [`activate ${code} skyBlip`] } : { namePrefix: 'activate' };
+  return code ? { names: [`skyBlip Bravo ${code}`] } : { namePrefix: 'skyBlip Bravo' };
+}
+
 export function nameOf(slug) {
   return namesOf(slug)[0] ?? slug;
 }
@@ -45,6 +62,7 @@ function recordOf(slug, state, before = {}) {
     slug,
     name: slugOf(device) === slug ? device : before.name ?? nameOf(slug),
     product: productOf(state) ?? before.product ?? null,
+    tag: state.identity?.bluetoothTag ?? before.tag ?? null,
     address: address ?? before.address ?? null,
     running: running ?? before.running ?? null,
     newest: newestOf(state, before),
@@ -82,7 +100,11 @@ export class Unit {
   }
 
   get product() {
-    return (this.state && productOf(this.state)) ?? this.record.product;
+    return (this.state && productOf(this.state)) ?? this.record.product ?? productOfSlug(this.slug);
+  }
+
+  get tag() {
+    return this.state?.identity?.bluetoothTag ?? this.record.tag ?? tagOfSlug(this.slug);
   }
 
   get remembered() {
@@ -173,8 +195,9 @@ export class Fleet {
   }
 
   // INFO: fc 11nov26 the browser's chooser is the only way to a device it never granted, so a new one always passes through it
-  async connectNew({ activation = false } = {}) {
-    const device = await this.#choose(activation ? { namePrefix: 'activate' } : {}, activation ? 'activation' : 'new');
+  async connectNew({ activation = false, names = [], namePrefix = null } = {}) {
+    const options = activation ? { namePrefix: 'activate' } : { names, namePrefix };
+    const device = await this.#choose(options, activation ? 'activation' : names.length > 0 || namePrefix ? 'installed' : 'new');
     if (!device) return null;
     const unit = this.#unitFor(device);
     if (!unit.linked) await unit.connect();
