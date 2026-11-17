@@ -435,7 +435,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
   test "a Go with no buzzer and no haptic paired with a Bravo offers Bravo soft and Bravo loud, and its glass says BRAVO" do
     in_range a_go(sounds: false, bravo: "live", stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "loud" })
     on_the_shelf do
-      connect_go
+      connect_device
       assert_select "Alarm", selected: "Bravo loud + visual", options: [ "Off", "Visual only", "Bravo soft + visual", "Bravo loud + visual" ]
       assert_no_field "Alarm", disabled: true
       screen "11d-go-bravo-steps"
