@@ -151,6 +151,27 @@ TEST_CASE("adsl: a frame no repair fits is left as it arrived") {
     CHECK(std::memcmp(packet.data, arrived.data, adsl::Packet::kDataBytes) == 0);
 }
 
+TEST_CASE("adsl: receive repairs the frame the air delivered and hands back the clear packet") {
+    const adsl::Packet clear = make_reference();
+    adsl::Packet sent = clear;
+    sent.scramble();
+    sent.set_crc();
+    uint8_t frame[adsl::Packet::kDataBytes];
+    std::memcpy(frame, sent.data, sizeof(frame));
+    uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    frame[3] ^= 0x40;
+    frame[9] ^= 0x02;
+    erasures[3] = 0x40;
+    erasures[9] = 0x02;
+
+    adsl::Packet heard;
+    REQUIRE(adsl::receive(frame, erasures, heard) == wire::Status::Ok);
+    CHECK(std::memcmp(heard.data, clear.data, adsl::Packet::kCrcCoverBytes) == 0);
+
+    for (int byte : {4, 14}) frame[byte] ^= 0x03;
+    CHECK(adsl::receive(frame, erasures, heard) == wire::Status::Crc);
+}
+
 // G.1.5 steps: 93206 to a degree of latitude, 46603 of longitude. A position takes the nearest.
 TEST_CASE("adsl: a position goes out as the nearest whole G.1.5 step") {
     adsl::Packet packet{};

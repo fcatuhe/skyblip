@@ -104,6 +104,14 @@ int Packet::correct(const uint8_t* erasures, int max_erasures) {
                         std::min(max_erasures, kMostErasures), true);
 }
 
+wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out) {
+    out.reset();
+    __builtin_memcpy(out.data, frame, Packet::kDataBytes);
+    if (out.correct(erasures) < 0) return wire::Status::Crc;
+    out.descramble();
+    return wire::Status::Ok;
+}
+
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
 uint8_t Packet::horizontal_accuracy_code(uint32_t hfom_cm) {
     static constexpr uint32_t kLimitCm[] = {300, 1000, 3000, 9260, 18520, 55560, 92600};

@@ -291,6 +291,24 @@ TEST_CASE("alptas: damage nothing flagged, or too much of it, leaves the frame a
     CHECK(correct(sent, none) == 0);  // a frame that arrived whole is not touched
 }
 
+TEST_CASE("alptas: receive repairs a frame the erasures cover and refuses one they do not") {
+    uint8_t sent[kFrameBytes];
+    encoded(sent);
+    uint8_t erasures[kFrameBytes] = {0};
+
+    uint8_t covered[kFrameBytes];
+    std::memcpy(covered, sent, sizeof(covered));
+    covered[5] ^= 0x21;
+    erasures[5] = 0x21;
+    CHECK(receive(covered, erasures) == Status::Ok);
+    CHECK(std::memcmp(covered, sent, sizeof(covered)) == 0);
+
+    uint8_t uncovered[kFrameBytes];
+    std::memcpy(uncovered, sent, sizeof(uncovered));
+    uncovered[9] ^= 0x10;
+    CHECK(receive(uncovered, erasures) == Status::Crc);
+}
+
 // The whole of skyblip#2026-09-19: an hour of DEC that was two clocks disagreeing.
 TEST_CASE("alptas: a frame our second refuses names the second its sender keyed") {
     for (int32_t offset : {-18, -2, -1, 0, 1, 5, 16, 18}) {

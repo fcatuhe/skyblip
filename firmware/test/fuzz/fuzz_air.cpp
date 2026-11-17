@@ -117,11 +117,8 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
 }
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
-    adsl::Packet packet{};
-    packet.reset();
-    std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    if (!packet.crc_ok() && (packet.correct(frame.erasures) < 0 || !packet.crc_ok())) return;
-    packet.descramble();
+    adsl::Packet packet;
+    if (adsl::receive(frame.data, frame.erasures, packet) != wire::Status::Ok) return;
 
     if (protocol::is_registration(packet)) {
         char callsign[traffic::CallsignTable::kTextBytes];
@@ -135,7 +132,7 @@ void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
 }
 
 void hear_alptas(protocol::Frame& frame, const Receiver& receiver) {
-    if (alptas::correct(frame.data, frame.erasures) < 0) return;
+    if (alptas::receive(frame.data, frame.erasures) != wire::Status::Ok) return;
     alptas::address(frame.data);
     model::AircraftObservation observation{};
     if (protocol::alptas_decode(frame.data, receiver.utc_s, receiver.latitude_1e7,

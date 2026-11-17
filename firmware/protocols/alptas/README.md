@@ -6,7 +6,7 @@ The FLARM-generation air frame this project calls ALP-TAS, 2024 protocol, messag
 
 ## Public API
 
-Everything is in namespace `skyblip::alptas`: `kSyncWord`, `kFrameBytes`, `crc()`, `set_crc()`, `crc_ok()`, `correct()`, `keyed_second()`, `address()`, `Position`, `decode()`, `encode()`, and `kVersion`, `kSpecification`.
+Everything is in namespace `skyblip::alptas`: `kSyncWord`, `kFrameBytes`, `crc()`, `set_crc()`, `crc_ok()`, `correct()`, `receive()`, `keyed_second()`, `address()`, `Position`, `decode()`, `encode()`, and `kVersion`, `kSpecification`.
 
 ## Where the ALP-TAS frame comes from
 

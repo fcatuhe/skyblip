@@ -160,6 +160,10 @@ int correct(uint8_t* frame, const uint8_t* erasures, int max_erasures) {
                         std::min(max_erasures, kMostErasures), false);
 }
 
+Status receive(uint8_t* frame, const uint8_t* erasures) {
+    return correct(frame, erasures) < 0 ? Status::Crc : Status::Ok;
+}
+
 Status keyed_second(const uint8_t* frame, uint32_t rx_utc_s, uint32_t& keyed_utc_s) {
     if (!crc_ok(frame)) return Status::Crc;
     if (read_bits(frame, kMessageTypeField) != kMessageTypePosition) return Status::Unsupported;

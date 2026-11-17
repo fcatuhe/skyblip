@@ -206,6 +206,8 @@ struct __attribute__((packed)) Packet {
 
 static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC covers");
 
+wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out);
+
 // The timestamp field is quarter seconds inside a 15 s cycle, so the instant a
 // burst claims is expressible to 250 ms - and the position it carries has to
 // belong to that instant rather than to whenever the receiver last spoke.
