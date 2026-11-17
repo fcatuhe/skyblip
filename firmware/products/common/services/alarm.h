@@ -1,7 +1,10 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SERVICES_ALARM_H
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_ALARM_H
 
+#include <optional>
+
 #include "core/annunciation/annunciator.h"
+#include "core/annunciation/call.h"
 #include "core/diagnostics/payload.h"
 #include "core/indication/lamp.h"
 #include "core/indication/signature.h"
@@ -18,11 +21,21 @@
 namespace skyblip::common {
 
 struct AlarmSettings {
-    explicit AlarmSettings(const Alarm& alarm_of) : alarm(alarm_of) {}
+    explicit AlarmSettings(const Alarm& alarm_of) : AlarmSettings(alarm_of, alarm_of, kUnpaired) {}
+    // INFO: fc 17nov26 Bravo plays its Go's alarm while paired, link down included
+    AlarmSettings(const Alarm& alarm_of, const Alarm& go_alarm_of, const bool& paired_of)
+        : alarm(alarm_of), go_alarm(go_alarm_of), paired(paired_of) {}
     explicit AlarmSettings(Alarm&&) = delete;
     explicit AlarmSettings(const Alarm&&) = delete;
 
+    Alarm in_force() const { return paired ? go_alarm : alarm; }
+
     const Alarm& alarm;
+    const Alarm& go_alarm;
+    const bool& paired;
+
+   private:
+    static constexpr bool kUnpaired = false;
 };
 
 // The lamp lives here rather than in PowerService, whose state most of it reads,
@@ -53,7 +66,17 @@ class AlarmService : public runtime::Service {
     void advance_signature(uint32_t now_ms);
     bool signing() const { return sign_off_pending_ || signature_.playing(); }
 
-    void dismiss() { tracker_.dismiss(); }
+    void dismiss() {
+        tracker_.dismiss();
+        follower_.dismiss();
+    }
+    // INFO: fc 17nov26 a press on the paired Bravo, honoured only for the call Bravo had heard
+    void dismiss_announcement(uint32_t announcement) {
+        if (announcement == call_.announcement) tracker_.dismiss();
+    }
+    std::optional<uint32_t> dismissed_announcement() const { return follower_.dismissed(); }
+    // INFO: fc 17nov26 a unit with no buzzer and no haptic shows a soft or loud alarm
+    Alarm alarm_in_force() const;
 
     bool escalated_since_render() const { return dirty_; }
     void clear_dirty() { dirty_ = false; }
@@ -71,6 +94,7 @@ class AlarmService : public runtime::Service {
 
    private:
     bool silenced(traffic::Target& target, formation::State state);
+    bool lost_go();
     void record_traffic(int slot, const traffic::Target& target,
                         const traffic::AlarmTracker::Decision& decision, uint32_t now_ms);
     formation::State watch_formation(traffic::Target& target, uint32_t now_ms);
@@ -109,9 +133,12 @@ class AlarmService : public runtime::Service {
     power::OnTime sounding_{};
     power::OnTime vibrating_{};
     traffic::AlarmTracker tracker_{};
+    annunciation::Call call_{};
+    annunciation::Follower follower_{};
     formation::Tracker formation_{};
     uint32_t recorded_observation_ms_[traffic::TrafficTable::kMaxTargets]{};
     bool bravo_lost_{false};
+    bool following_go_{false};
     annunciation::Policy annunciation_{};
     indication::Policy indication_{};
     indication::SignaturePlayer signature_{};
@@ -122,6 +149,7 @@ class AlarmService : public runtime::Service {
     bool dirty_{false};
     bool running_{true};
     bool lamp_shows_link_{false};
+    bool sounds_{false};
     const Feature declared_;
     AlarmSettings settings_;
 };

@@ -11,7 +11,7 @@ class SettingsStore : public common::SettingsStore {
     explicit SettingsStore(Settings& settings) : settings_(settings) {}
 
     void write_fields(cbor::Writer& writer) const override {
-        write_settings_fields(writer, settings_);
+        write_config_fields(writer, settings_);
     }
 
     void write_default_fields(cbor::Writer& writer) const override {

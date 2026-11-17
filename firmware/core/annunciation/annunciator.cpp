@@ -6,7 +6,7 @@ Tune tune_for(Voice voice, traffic::Level level) {
     switch (voice) {
         case Voice::None: return Tune{};
         case Voice::FirstFix: return kFirstFixTune;
-        case Voice::BravoLost: return kBravoLostTune;
+        case Voice::PeerLost: return kPeerLostTune;
         case Voice::Traffic:
             switch (level) {
                 case traffic::Level::None: return Tune{};
@@ -29,9 +29,9 @@ Command Policy::update(const Situation& situation, uint32_t now_ms) {
         release();
     }
 
-    if (situation.bravo_lost && voice_ != Voice::Traffic)
-        begin(Voice::BravoLost, traffic::Level::None, now_ms);
-    if (situation.first_fix && voice_ != Voice::Traffic && voice_ != Voice::BravoLost)
+    if (situation.peer_lost && voice_ != Voice::Traffic)
+        begin(Voice::PeerLost, traffic::Level::None, now_ms);
+    if (situation.first_fix && voice_ != Voice::Traffic && voice_ != Voice::PeerLost)
         begin(Voice::FirstFix, traffic::Level::None, now_ms);
 
     advance(now_ms);

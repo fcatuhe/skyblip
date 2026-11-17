@@ -12,7 +12,9 @@ constexpr int kSettingsChangesBytes = kConfirmDetailRows * (kConfirmDetailColumn
 // Rows joined by '\n', at most kConfirmDetailRows of them: past that, the last row counts the
 // rest. Writes nothing and returns 0 when nothing differs, or when `capacity` is under
 // kSettingsChangesBytes.
-int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity);
+// INFO: fc 17nov26 sounds is whether the Go has a buzzer or a haptic, as the menu row reads it
+int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity,
+                              bool sounds);
 
 }  // namespace skyblip::go
 

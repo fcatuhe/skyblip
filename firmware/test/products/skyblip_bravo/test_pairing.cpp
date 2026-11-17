@@ -43,7 +43,8 @@ struct Asked {
         rig.seconds_with_fix(2);
         REQUIRE(go.connect());
         REQUIRE(go.write(complete_registry_frame(
-                    "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
+                    "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm\":\"loud\","
+                    "\"announcing\":\"none\",\"announcement\":0,\"undismissed\":\"none\","
                     "\"paired\":false}")) == Status::Ok);
         run_for(30);
         REQUIRE(rig.product.peer().requested());
@@ -174,7 +175,8 @@ TEST_CASE("bravo pairing: an advisory outranks the request, and its press only d
     rig.seconds_with_fix(20, 25000);
     rig.hear_aircraft(0x3C6586, 800);
     REQUIRE(go.write(complete_registry_frame(
-                "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm_requested\":false,"
+                "{\"command\":\"peer_claim\",\"boot_epoch\":7,\"alarm\":\"loud\",\"announcing\":"
+                "\"none\",\"announcement\":0,\"undismissed\":\"none\","
                 "\"paired\":false}")) == Status::Ok);
     rig.push_fix(25000);
     run_for(1000);
@@ -341,50 +343,25 @@ TEST_CASE("bravo pairing: an aircraft Bravo hears reaches the Go with Bravo's ti
     CHECK(std::string(callsign) == "AFR123");
 }
 
-// #179 hands the alarm over only once both sides hold the pin, to a Go+ with a fix.
-TEST_CASE("bravo pairing: no peer is paired, and no health grants, before both sides confirm") {
+// Bravo plays a Go's alarm only once both sides hold the pin.
+TEST_CASE("bravo pairing: Bravo plays no Go's call, nor its alarm, before both sides confirm") {
     PairedProducts tango;
-    const std::function<void(uint32_t)> world = tango.go.world;
-    uint32_t next_fix_ms = 0;
-    tango.go.world = [&](uint32_t at_ms) {
-        if (at_ms >= next_fix_ms) {
-            tango.go.push_timed_fix(0, 0);
-            tango.bravo.push_fix();
-            tango.go.utc_offset_s++;
-            tango.bravo.utc_offset_s++;
-            next_fix_ms = at_ms + 1000;
-        }
-        world(at_ms);
-    };
-    const auto healths = [&tango](size_t from, size_t to) {
-        std::vector<std::string> out;
-        const auto& sent = tango.bravo.platform.link().sent;
-        for (size_t i = from; i < to; i++) {
-            if (sent[i].endpoint != events::Endpoint::Peer) continue;
-            const std::string text = link_text(sent[i].bytes);
-            if (field(text, "command") == "health") out.push_back(text);
-        }
-        return out;
-    };
-
+    tango.go.settings().alarm = go::Alarm::Soft;
     tango.ask();
     tango.air.set_flow(Direction::ToPeripheral, Flow::Stalled);
     tango.press_bravo();
     tango.run_for(1000);
     CHECK(tango.go_pinned());
     CHECK_FALSE(tango.peer().paired());
-    const size_t confirmed_at = tango.bravo.platform.link().sent.size();
-    const std::vector<std::string> before = healths(0, confirmed_at);
-    CHECK_FALSE(before.empty());
-    for (const std::string& health : before) CHECK(field(health, "alarm_granted") == "false");
+    CHECK_FALSE(tango.bravo.state().followed_call.has_value());
+    CHECK(tango.bravo.product.settings().go_alarm == bravo::Alarm::Loud);
 
     tango.air.set_flow(Flow::Flowing);
     tango.run_for(3000);
     CHECK(tango.peer().paired());
-    const std::vector<std::string> after =
-        healths(confirmed_at, tango.bravo.platform.link().sent.size());
-    REQUIRE_FALSE(after.empty());
-    CHECK(field(after.back(), "alarm_granted") == "true");
+    CHECK(tango.bravo.state().followed_call.has_value());
+    CHECK(tango.bravo.product.settings().go_alarm == bravo::Alarm::Soft);
+    CHECK(tango.bravo.product.alarm().alarm_in_force() == bravo::Alarm::Soft);
 }
 
 TEST_CASE("bravo pairing: the pin survives Bravo's reboot, with its connection kept from phones") {

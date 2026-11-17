@@ -211,10 +211,12 @@ KEEPALIVE int simulator_aircraft_count() {
 // Layout: byte = panel[y*stride + (x>>3)], black if (byte & (0x80 >> (x&7))).
 KEEPALIVE const unsigned char* simulator_panel() { return go_unit().panel().data(); }
 KEEPALIVE const unsigned char* simulator_draw_prompt(const char* prompt, const char* argument,
-                                                     const char* settings, unsigned seconds_left) {
+                                                     const char* settings, unsigned seconds_left,
+                                                     int sounds, int paired) {
     static go::Glass glass;
     return simulator::draw_prompt(glass, prompt, argument, settings, seconds_left, g_prompt_words,
-                                  simulator::kPromptWordsBytes)
+                                  simulator::kPromptWordsBytes,
+                                  simulator::PromptUnit{sounds != 0, paired != 0})
                ? glass.data()
                : nullptr;
 }
@@ -338,8 +340,8 @@ KEEPALIVE const char* simulator_bravo_lamp() {
 KEEPALIVE int simulator_bravo_state() {
     return static_cast<int>(go_unit().product().state().bravo);
 }
-// INFO: fc 14nov26 Bravo's bus::State::alarm_granted: it keeps silent while its Go+ sounds for both
-KEEPALIVE int simulator_bravo_silent() { return g_paired.bravo().state().alarm_granted ? 1 : 0; }
+// INFO: fc 17nov26 Bravo's bus::State::followed_call: it plays its Go's calls rather than its own
+KEEPALIVE int simulator_bravo_follows() { return g_paired.bravo().state().followed_call ? 1 : 0; }
 KEEPALIVE void simulator_set_bravo_link(int up) { g_paired.aboard().set_link(up != 0); }
 KEEPALIVE int simulator_bravo_link_up() { return g_paired.aboard().link_up() ? 1 : 0; }
 KEEPALIVE int simulator_failures() {
