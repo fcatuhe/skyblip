@@ -1,4 +1,4 @@
-// A Go paired with the Bravo stub folds Bravo's targets in, and says NO BRAVO on health alone.
+// A Go paired with the Bravo stub folds Bravo's targets in, and says Bravo is lost on health alone.
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -15,6 +15,7 @@
 #include "test/support/bravo_flight.h"
 #include "test/support/glass_text.h"
 #include "test/support/nmea_stream.h"
+#include "test/support/radar_rig.h"
 #include "test/support/tango.h"
 
 using namespace skyblip;
@@ -93,8 +94,7 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     Flight flight(named_target_every_second(2, 8));
     flight.fly(3);
     CHECK(flight.state().bravo == comms::BravoState::Live);
-    CHECK(flight.reads("BRAVO"));
-    CHECK_FALSE(flight.reads("NO BRAVO", 2));
+    CHECK(go::marks_bravo_live(flight.glass()));
 
     flight.go().tap(flight.tango.now_ms);
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
@@ -121,18 +121,19 @@ TEST_CASE("bravo traffic: BRAVO LOG lists each frame Bravo forwards, under what 
 }
 
 // An empty sky is a healthy one: Bravo's health, not its traffic, says it is there.
-TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming is no NO BRAVO and no tone") {
+TEST_CASE("bravo traffic: a quiet sky with Bravo's health coming keeps Bravo live, with no tone") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
     flight.fly(17);
     CHECK(flight.state().bravo == comms::BravoState::Live);
-    CHECK_FALSE(flight.reads("NO BRAVO", 2));
+    CHECK(go::marks_bravo_live(flight.glass()));
     CHECK(flight.tones.empty());
     CHECK(last_status(flight.go()).find("\"bravo\":\"live\"") != std::string::npos);
 }
 
-TEST_CASE("bravo traffic: a lost health says NO BRAVO once, with one tone, until it comes back") {
+TEST_CASE(
+    "bravo traffic: a lost health says NO LINK reversed, with one tone, until it comes back") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
@@ -143,36 +144,35 @@ TEST_CASE("bravo traffic: a lost health says NO BRAVO once, with one tone, until
 
     flight.fly(4);
     CHECK(flight.state().bravo == comms::BravoState::LinkDown);
-    CHECK(flight.reads("NO BRAVO", 2));
-    CHECK(flight.reads("LINK DOWN"));
-    CHECK_FALSE(flight.reads("BRAVO"));
+    CHECK(go::corner_reads(flight.glass(), "BRAVO", false));
+    CHECK(go::corner_reads(flight.glass(), "NO LINK", false));
+    CHECK_FALSE(go::marks_bravo_live(flight.glass()));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
     CHECK(last_status(flight.go()).find("\"bravo\":\"link_down\"") != std::string::npos);
 
     flight.tango.air.set_in_range(true);
     flight.fly(5);
     CHECK(flight.state().bravo == comms::BravoState::Live);
-    CHECK_FALSE(flight.reads("NO BRAVO", 2));
+    CHECK(go::marks_bravo_live(flight.glass()));
     CHECK(flight.tones.size() == 1);
     CHECK(last_status(flight.go()).find("\"bravo\":\"live\"") != std::string::npos);
 }
 
-TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are NO BRAVO, and say which") {
+TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are lost, and say which") {
     Flight flight;
     flight.fly(3);
     flight.tones.clear();
     flight.tango.bravo.health.listening = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::ReceiverDown);
-    CHECK(flight.reads("NO BRAVO", 2));
-    CHECK(flight.reads("RECEIVER DOWN"));
+    CHECK(go::corner_reads(flight.glass(), "RX DOWN", false));
     CHECK(last_status(flight.go()).find("\"bravo\":\"receiver_down\"") != std::string::npos);
 
     flight.tango.bravo.health.listening = true;
     flight.tango.bravo.health.utc_valid = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(flight.reads("NO UTC"));
+    CHECK(go::corner_reads(flight.glass(), "OUTDOORS", false));
     CHECK(flight.tones.size() == 1);
 
     flight.go().show(flight.tango.now_ms, go::Page::SelfTest);
@@ -187,18 +187,19 @@ TEST_CASE("bravo traffic: a live Bravo whose health says its cell is low says so
     Flight flight;
     flight.fly(3);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
-    CHECK_FALSE(flight.reads("BAT", 2));
+    CHECK_FALSE(go::corner_reads(flight.glass(), "BAT"));
     flight.tango.bravo.health.status_fields =
         "\"battery_percent\":9,\"charging\":false,\"power_level\":\"low\"";
     flight.fly(2);
-    CHECK(flight.reads("BAT 9%", 2));
+    CHECK(go::corner_reads(flight.glass(), "BAT 9%"));
 
     flight.tango.bravo.health.status_fields = "\"charging\":true,\"power_level\":\"normal\"";
     flight.fly(2);
-    CHECK_FALSE(flight.reads("BAT 9%", 2));
+    CHECK_FALSE(go::corner_reads(flight.glass(), "BAT 9%"));
+    CHECK(go::marks_bravo_live(flight.glass()));
 }
 
-TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is NO BRAVO, with one tone") {
+TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is lost, with one tone") {
     Flight flight;
     flight.fly(3);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
@@ -206,8 +207,7 @@ TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is NO BRAVO, with on
     flight.tango.bravo.health.utc_valid = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(flight.reads("NO BRAVO", 2));
-    CHECK(flight.reads("NO UTC"));
+    CHECK(go::corner_reads(flight.glass(), "OUTDOORS", false));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
 }
 
@@ -222,7 +222,7 @@ TEST_CASE("bravo traffic: a Bravo that reboots after having UTC is lost until it
     flight.fly(5);
     REQUIRE(flight.tango.service().link() == go::BravoLink::Up);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(flight.reads("NO BRAVO", 2));
+    CHECK(go::corner_reads(flight.glass(), "BRAVO", false));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
 
     flight.tango.bravo.health.utc_valid = true;
@@ -230,9 +230,12 @@ TEST_CASE("bravo traffic: a Bravo that reboots after having UTC is lost until it
     CHECK(flight.state().bravo == comms::BravoState::Live);
 }
 
-TEST_CASE("bravo traffic: a dropped pin forgets Bravo's UTC, so the next Bravo without it waits") {
+// Landed and parked, the pilot pairs another Bravo, which has its own time to come up.
+TEST_CASE(
+    "bravo traffic: a dropped pin forgets Bravo's UTC and the taxi, so the next Bravo waits") {
     Flight flight;
     flight.fly(3);
+    flight.go().seconds(flight.tango.now_ms, 3, 0, kAltitudeMslM);
     REQUIRE(flight.state().bravo == comms::BravoState::Live);
     SUBCASE("unpaired on the Go") {
         flight.go().show(flight.tango.now_ms, go::Page::Bravo);
@@ -260,14 +263,14 @@ TEST_CASE("bravo traffic: a dropped pin forgets Bravo's UTC, so the next Bravo w
     CHECK(flight.tones.empty());
 }
 
-TEST_CASE("bravo traffic: an unpaired Go never says NO BRAVO, nor sends a bravo key") {
+TEST_CASE("bravo traffic: an unpaired Go never says BRAVO, nor sends a bravo key") {
     Flight flight({}, /*paired=*/false);
     flight.fly(3);
     flight.tones.clear();
     flight.fly(17);
     CHECK(flight.state().bravo == comms::BravoState::Unpaired);
-    CHECK_FALSE(flight.reads("NO BRAVO", 2));
     CHECK_FALSE(flight.reads("BRAVO"));
+    CHECK_FALSE(go::marks_bravo_live(flight.glass()));
     CHECK(flight.tones.empty());
     CHECK(last_status(flight.go()).find("bravo") == std::string::npos);
 }
@@ -334,7 +337,7 @@ TEST_CASE("bravo traffic: a pressure-only target has a height while the baromete
     CHECK_FALSE(rows[0].up_valid);
 }
 
-TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, then says it is lost") {
+TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, and loses it once it taxis") {
     Tango tango;
     tango.pair_and_store();
     uint8_t blob[64] = {};
@@ -348,7 +351,33 @@ TEST_CASE("bravo traffic: a paired Go waits for its Bravo after boot, then says 
     REQUIRE(go::paired(rebooted.settings()));
     rebooted.run(0, go::BravoService::kBootSettleMs - 100);
     CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
-    rebooted.run(go::BravoService::kBootSettleMs, go::BravoService::kBootSettleMs + 100);
+    rebooted.run(go::BravoService::kBootSettleMs, 3 * go::BravoService::kBootSettleMs);
+    CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
+    uint32_t now_ms = 3 * go::BravoService::kBootSettleMs + 50;
+    rebooted.seconds(now_ms, 3, 0, kAltitudeMslM);
+    CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
+    rebooted.seconds(now_ms, 2, 5000, kAltitudeMslM);
+    CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
+    rebooted.seconds(now_ms, 3, 0, kAltitudeMslM);
+    CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
+}
+
+// A Go switched on in a rolling aircraft gives its Bravo the connection ceiling first.
+TEST_CASE("bravo traffic: rolling counts only from the boot settle on") {
+    Tango tango;
+    tango.pair_and_store();
+    uint8_t blob[64] = {};
+    size_t bytes = 0;
+    REQUIRE(tango.go.platform.key_value().read("settings", blob, sizeof(blob), bytes) ==
+            Status::Ok);
+
+    Rig rebooted;
+    REQUIRE(rebooted.platform.key_value().write("settings", blob, bytes) == Status::Ok);
+    REQUIRE(rebooted.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    rebooted.seconds(now_ms, go::BravoService::kBootSettleMs / 1000 - 2, 5000, kAltitudeMslM);
+    CHECK(rebooted.state().bravo == comms::BravoState::Waiting);
+    rebooted.seconds(now_ms, 4, 5000, kAltitudeMslM);
     CHECK(rebooted.state().bravo == comms::BravoState::LinkDown);
 }
 

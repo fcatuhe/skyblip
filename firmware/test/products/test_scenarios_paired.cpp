@@ -13,6 +13,7 @@
 #include "products/skyblip_go/pages/nearby.h"
 #include "simulator/paired_simulator.h"
 #include "test/support/glass_text.h"
+#include "test/support/radar_rig.h"
 
 using namespace skyblip;
 
@@ -71,8 +72,10 @@ struct Paired {
         return reads_in(simulator.product().screen().framebuffer(), text, 0, 0, go::kGlassWidth,
                         go::kGlassHeight, scale);
     }
-    bool reads_lost() { return reads("NO BRAVO", 2); }
-    bool reads_waiting() { return reads("WAIT FOR BRAVO") || reads("WAIT FOR", 2); }
+    const ui::Canvas& glass() { return simulator.product().screen().framebuffer(); }
+    bool reads_lost() { return go::corner_reads(glass(), "BRAVO", false); }
+    bool reads_waiting() { return go::corner_reads(glass(), "BRAVO"); }
+    bool reads_live() { return go::marks_bravo_live(glass()); }
 
     static uint32_t sounds_of(const platform::host::Annunciator& annunciator) {
         return annunciator.tone_commands() + annunciator.motor_starts();
@@ -226,8 +229,7 @@ TEST_CASE("paired scenario: the Go shows Bravo's ADS-B as B targets, the airline
     const traffic::Target* airliner = target_of(paired.go(), kAirliner);
     REQUIRE(airliner != nullptr);
     CHECK(airliner->observation.source == model::Source::Adsb);
-    CHECK(paired.reads("BRAVO"));
-    CHECK_FALSE(paired.reads_lost());
+    CHECK(paired.reads_live());
 
     paired.simulator.world().tap_pad();
     paired.run_until(12000);
@@ -254,7 +256,7 @@ TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go,
     CHECK_FALSE(paired.reads("B 300003", go::kNearbyScale));
 }
 
-TEST_CASE("paired scenario: a lost link says NO BRAVO, keeps the ADS-L target, and comes back") {
+TEST_CASE("paired scenario: a lost link reverses BRAVO, keeps the ADS-L target, and comes back") {
     Paired paired("scenarios/paired_link_lost.json");
     paired.run_until(11900);
     CHECK(paired.bravo() == comms::BravoState::Live);
@@ -265,7 +267,7 @@ TEST_CASE("paired scenario: a lost link says NO BRAVO, keeps the ADS-L target, a
     CHECK(paired.bravo() == comms::BravoState::LinkDown);
     CHECK_FALSE(paired.simulator.aboard().link().up(simulator::PairedLink::Side::Central));
     CHECK(paired.reads_lost());
-    CHECK(paired.reads("LINK DOWN"));
+    CHECK(go::corner_reads(paired.glass(), "NO LINK", false));
 
     paired.run_until(25000);
     CHECK(paired.reads_lost());
@@ -281,7 +283,7 @@ TEST_CASE("paired scenario: a lost link says NO BRAVO, keeps the ADS-L target, a
     CHECK(paired.go().traffic.count() == 3);
 }
 
-TEST_CASE("paired scenario: NO BRAVO shows only where the link is lost, from boot on") {
+TEST_CASE("paired scenario: Bravo reads lost only where the link is lost, from boot on") {
     for (const char* file :
          {"scenarios/paired.json", "scenarios/paired_bravo_without_fix.json",
           "scenarios/paired_quiet_sky.json", "scenarios/paired_dense_sky.json"}) {
@@ -317,7 +319,7 @@ TEST_CASE("paired scenario: NO BRAVO shows only where the link is lost, from boo
     }
 }
 
-TEST_CASE("paired scenario: the Go reads WAIT FOR BRAVO until Bravo has UTC, then live") {
+TEST_CASE("paired scenario: the Go reads BRAVO on white until Bravo has UTC, then live") {
     Paired paired("scenarios/paired_quiet_sky.json");
     paired.run_until(500);
     CHECK(paired.bravo() == comms::BravoState::Waiting);
@@ -361,7 +363,7 @@ TEST_CASE("paired scenario: a quiet sky is a live Bravo with nothing to show") {
     paired.run_until(20000);
     CHECK(paired.bravo() == comms::BravoState::Live);
     CHECK(paired.go().traffic.count() == 0);
-    CHECK(paired.reads("BRAVO"));
+    CHECK(paired.reads_live());
     CHECK(paired.simulator.product().bravo().unplaced() == 0);
 }
 

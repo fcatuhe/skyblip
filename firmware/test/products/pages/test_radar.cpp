@@ -247,7 +247,7 @@ TEST_CASE(
     CHECK(reads_in(canvas, "FLIGHT", 0, 168, 50, 182));
     CHECK(reads_in(canvas, "0:42", 0, 176, 60, 198, 2));
     CHECK(reads_in(canvas, "4", 170, 170, 200, 200, 3));
-    CHECK(reads_in(canvas, "TFC", 140, 175, 190, 200));
+    CHECK(reads_in(canvas, "TRAFFIC", 120, 175, 190, 200));
 
     RadarSnapshot closer = flying(0);
     closer.range_step = 1;
@@ -263,13 +263,29 @@ TEST_CASE("radar page: a radio not yet listening counts no aircraft, it dashes")
 
     CHECK(reads_in(canvas, "-", 170, 170, 200, 200, 3));
     CHECK_FALSE(reads_in(canvas, "0", 170, 170, 200, 200, 3));
-    CHECK(reads_in(canvas, "TFC", 140, 175, 190, 200));
+    CHECK(reads_in(canvas, "TRAFFIC", 120, 175, 190, 200));
 
     RadarSnapshot no_position = flying(0);
     no_position.fix_valid = false;
     CHECK(reads_in(radar(no_position), "-", 170, 170, 200, 200, 3));
 
     CHECK(reads_in(radar(flying(0)), "0", 170, 170, 200, 200, 3));
+}
+
+// TRAFFIC in full beside two digits crosses the larger TO SCALE ring by the range.
+TEST_CASE("radar page: the count says TRAFFIC, and TFC where the word would touch the ring") {
+    RadarSnapshot one_digit = flying(0);
+    one_digit.heard_count = 4;
+    CHECK(reads_in(radar(one_digit), "TRAFFIC", 120, 175, 190, 200));
+
+    RadarSnapshot two_digits = flying(0);
+    two_digits.heard_count = 12;
+    const Glass to_scale = radar(two_digits);
+    CHECK(reads_in(to_scale, "TFC", 120, 175, 190, 200));
+    CHECK_FALSE(reads_in(to_scale, "TRAFFIC", 0, 0, 200, 200));
+
+    two_digits.plot = RadarPlot::All;
+    CHECK(reads_in(radar(two_digits), "TRAFFIC", 100, 175, 190, 200));
 }
 
 TEST_CASE("radar page: the footer sits on one baseline, a margin clear of the glass edge") {

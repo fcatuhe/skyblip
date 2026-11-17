@@ -33,7 +33,7 @@ constexpr int kBannerScale = 2;
 constexpr int kOwnshipTail = kNear - ui::kSkyshipRowsToNose + ui::kSkyshipRows;
 constexpr int kNoteScale = 1;
 constexpr int kNoteGap = 5;
-constexpr int kBannerLinePitch = kCharacterHeight * kBannerScale + 4;
+constexpr int kLiveMarkPad = 3;
 
 struct Layout {
     int outer_radius;
@@ -175,8 +175,7 @@ void flight_word(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     canvas.draw_text(kMargin, kStateY, state, true, kStateScale);
 }
 
-const char* state_word(const RadarSnapshot& snapshot) {
-    if (!snapshot.fix_valid) return "NO FIX";
+const char* ground_word(const RadarSnapshot& snapshot) {
     if (snapshot.flight_running) return nullptr;
     return snapshot.taxiing ? "TAXI" : "GROUND";
 }
@@ -199,59 +198,66 @@ const char* cell_word(const RadarSnapshot& snapshot, char* out) {
     return out;
 }
 
-constexpr char kBravoPrefix[] = "BRAVO ";
-constexpr int kBravoPrefixLength = sizeof(kBravoPrefix) - 1;
-
-// INFO: fc 15nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
-const char* bravo_cell_word(const RadarSnapshot& snapshot, char* out) {
-    if (!snapshot.bravo_battery_low) return nullptr;
-    const int written = format_string(out, kBravoPrefix);
-    format_cell(out + written, snapshot.bravo_battery_percent);
-    return out;
-}
-
-// INFO: fc 14nov26 a banner too long for a line goes on at its size, a second message goes small
 struct RingWords {
     const char* banner{nullptr};
     const char* note{nullptr};
-    bool continued{false};
 };
 
-// INFO: fc 12nov26 the banner and the note are the first two words standing, in this order
-RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer, char* bravo_buffer) {
-    const char* words[5] = {};
-    int count = 0;
-    bool continued = false;
-    if (const char* cell = cell_word(snapshot, cell_buffer)) words[count++] = cell;
-    if (!snapshot.fix_valid) words[count++] = "NO FIX";
-    if (const char* loss = bravo_loss_word(snapshot.bravo)) {
-        words[count++] = "NO BRAVO";
-        if (count == 1) words[count++] = loss;
-    } else if (snapshot.bravo == comms::BravoState::Waiting) {
-        // INFO: fc 12nov26 WAIT FOR BRAVO overruns the ALL ring as a banner, so the banner splits
-        if (count == 0) {
-            words[count++] = "WAIT FOR";
-            words[count++] = "BRAVO";
-            continued = true;
-        } else {
-            words[count++] = "WAIT FOR BRAVO";
-        }
-    } else if (const char* bravo_cell = bravo_cell_word(snapshot, bravo_buffer)) {
-        // INFO: fc 15nov26 BRAVO BAT 12% overruns the ALL ring as a banner, so the banner splits
-        if (count == 0) {
-            words[count++] = "BRAVO";
-            words[count++] = bravo_cell + kBravoPrefixLength;
-            continued = true;
-        } else {
-            words[count++] = bravo_cell;
-        }
+// INFO: fc 17nov26 the ring speaks for the Go alone, its first two words standing in this order
+RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
+    const char* state = snapshot.fix_valid ? ground_word(snapshot) : "NO FIX";
+    const char* stage = snapshot.fix_valid ? nullptr : gnss::stage_name(snapshot.stage);
+    if (const char* cell = cell_word(snapshot, cell_buffer)) return {cell, state};
+    return {state, stage};
+}
+
+// INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
+const char* bravo_reason(const RadarSnapshot& snapshot, char* cell_buffer) {
+    switch (snapshot.bravo) {
+        case comms::BravoState::Waiting: return snapshot.bravo_heard ? "OUTDOORS" : "NO LINK";
+        case comms::BravoState::LinkDown: return "NO LINK";
+        case comms::BravoState::NoUtc: return "OUTDOORS";
+        case comms::BravoState::ReceiverDown: return "RX DOWN";
+        case comms::BravoState::Live:
+            if (!snapshot.bravo_battery_low) return nullptr;
+            format_cell(cell_buffer, snapshot.bravo_battery_percent);
+            return cell_buffer;
+        case comms::BravoState::Unpaired: break;
     }
-    if (snapshot.fix_valid) {
-        if (const char* state = state_word(snapshot)) words[count++] = state;
-    } else {
-        words[count++] = gnss::stage_name(snapshot.stage);
+    return nullptr;
+}
+
+void bravo_live_mark(ui::Canvas& canvas) {
+    const Box box = padded(kGlassWidth - kMargin - kLiveMarkPad - kCharacterWidth,
+                           kMargin + kLiveMarkPad, kCharacterWidth, kCharacterHeight, kLiveMarkPad);
+    canvas.rectangle(box.x, box.y, box.width, box.height, true);
+    canvas.draw_text(box.x + kLiveMarkPad, box.y + kLiveMarkPad, "B", true, 1);
+}
+
+Box bravo_corner(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
+    if (snapshot.bravo == comms::BravoState::Unpaired) return {};
+    char cell_buffer[12];
+    const char* reason = bravo_reason(snapshot, cell_buffer);
+    if (!reason) {
+        bravo_live_mark(canvas);
+        return {};
     }
-    return {words[0], words[1], continued};
+    const int name_width = text_width("BRAVO", 1), reason_width = text_width(reason, 1);
+    const int width = name_width > reason_width ? name_width : reason_width;
+    const int right = kGlassWidth - kMargin;
+    const int reason_y = kMargin + kCharacterHeight + kStackGap;
+    const Box box = padded(right - width, kMargin, width, reason_y + kCharacterHeight - kMargin);
+    canvas.rectangle(box.x, box.y, box.width, box.height, false, true);
+    canvas.draw_text(right - name_width, kMargin, "BRAVO", true, 1);
+    canvas.draw_text(right - reason_width, reason_y, reason, true, 1);
+    return box;
+}
+
+// INFO: fc 17nov26 reversed after the plot, so traffic over a lost Bravo's corner stays readable
+void reverse(ui::Canvas& canvas, const Box& box) {
+    for (int y = box.y; y < box.y + box.height; y++)
+        for (int x = box.x; x < box.x + box.width; x++)
+            canvas.set_pixel(x, y, !canvas.get_pixel(x, y));
 }
 
 Box note_box(const char* note, int y) {
@@ -265,24 +271,18 @@ void state_note(ui::Canvas& canvas, const char* note, int y) {
     canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, kNoteScale);
 }
 
-// INFO: fc 12nov26 over the count, as FLIGHT stands over the clock: the count holds Bravo's too
-void bravo_word(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
-    if (snapshot.bravo != comms::BravoState::Live) return;
-    const char* word = "BRAVO";
-    const int y = kFooterBottom - kCharacterHeight * kTrafficScale - kStackGap - kCharacterHeight;
-    canvas.draw_text(kGlassWidth - kMargin - text_width(word, 1), y, word, true, 1);
-}
-
-void traffic_count(ui::Canvas& canvas, int heard_count, bool counting) {
+void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     char text[4];
-    if (counting)
-        text[format_unsigned(text, static_cast<uint32_t>(heard_count))] = 0;
+    if (snapshot.fix_valid && snapshot.receiver_listening)
+        text[format_unsigned(text, static_cast<uint32_t>(snapshot.heard_count))] = 0;
     else
         text[format_string(text, "-")] = 0;
     const int x = kGlassWidth - kMargin - text_width(text, kTrafficScale);
     canvas.draw_text(x, kFooterBottom - kCharacterHeight * kTrafficScale, text, true,
                      kTrafficScale);
-    canvas.draw_text(x - kUnitGap - text_width("TFC", 1), kFooterY, "TFC", true, 1);
+    // INFO: fc 17nov26 TRAFFIC beside two digits crosses the TO SCALE ring, so it shortens to TFC
+    const char* word = snapshot.plot == RadarPlot::ToScale && text[1] ? "TFC" : "TRAFFIC";
+    canvas.draw_text(x - kUnitGap - text_width(word, 1), kFooterY, word, true, 1);
 }
 
 Box banner_box(const char* word, int y) {
@@ -434,18 +434,6 @@ void invert_wedges(ui::Canvas& canvas, int outer_radius, const Wedge* wedges, in
 
 }  // namespace
 
-const char* bravo_loss_word(comms::BravoState state) {
-    switch (state) {
-        case comms::BravoState::LinkDown: return "LINK DOWN";
-        case comms::BravoState::ReceiverDown: return "RECEIVER DOWN";
-        case comms::BravoState::NoUtc: return "NO UTC";
-        case comms::BravoState::Unpaired:
-        case comms::BravoState::Waiting:
-        case comms::BravoState::Live: break;
-    }
-    return nullptr;
-}
-
 void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     canvas.clear(true);
 
@@ -455,27 +443,20 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     flight_clock(canvas, snapshot);
     flight_word(canvas, snapshot);
     range_label(canvas, snapshot);
-    traffic_count(canvas, snapshot.heard_count, snapshot.fix_valid && snapshot.receiver_listening);
-    bravo_word(canvas, snapshot);
+    traffic_count(canvas, snapshot);
+    const Box corner = bravo_corner(canvas, snapshot);
 
     Box readings[4] = {range_box(snapshot), clock_box(snapshot)};
     int reading_count = 2;
     char cell_buffer[12];
-    char bravo_buffer[20];
-    const RingWords ring = ring_words(snapshot, cell_buffer, bravo_buffer);
+    const RingWords ring = ring_words(snapshot, cell_buffer);
     const int banner_y = ring.banner ? banner_y_inside(ring.banner, layout) : layout.banner_y;
     const int note_y = layout.note_y - layout.banner_y + banner_y;
-    if (ring.continued) {
-        const int top = banner_y - kBannerLinePitch / 2;
-        state_banner(canvas, ring.banner, top);
-        readings[reading_count++] = banner_box(ring.banner, top);
-        state_banner(canvas, ring.note, top + kBannerLinePitch);
-        readings[reading_count++] = banner_box(ring.note, top + kBannerLinePitch);
-    } else if (ring.banner) {
+    if (ring.banner) {
         state_banner(canvas, ring.banner, banner_y);
         readings[reading_count++] = banner_box(ring.banner, banner_y);
     }
-    if (ring.note && !ring.continued) {
+    if (ring.note) {
         state_note(canvas, ring.note, note_y);
         readings[reading_count++] = note_box(ring.note, note_y);
     }
@@ -505,6 +486,7 @@ void draw_radar(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
         plot_rim(canvas, snapshot, track_angle16,
                  {label.x, label.y, label.x + label.width - 1, label.y + label.height - 1});
     }
+    if (comms::lost(snapshot.bravo)) reverse(canvas, corner);
 }
 
 }  // namespace skyblip::go

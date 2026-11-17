@@ -1,5 +1,6 @@
-// What the radar says of a paired Bravo: its mark while live, NO BRAVO and why, or that it waits.
+// What the radar says of a paired Bravo: a framed B while live, else BRAVO and why.
 #include "core/comms/peer.h"
+#include "core/gnss/acquisition.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/radar.h"
@@ -10,90 +11,67 @@ using namespace skyblip::go;
 using skyblip::reads_in;
 using skyblip::comms::BravoState;
 
-TEST_CASE("radar page: a live Bravo stands over the count, in both plots, and nothing else does") {
-    RadarSnapshot live = flying(0);
-    live.bravo = BravoState::Live;
-    live.heard_count = 7;
-    const Glass to_scale = radar(live);
-    CHECK(reads_in(to_scale, "BRAVO", 160, 160, 200, 178));
-    CHECK(reads_in(to_scale, "7", 170, 170, 200, 200, 3));
-
-    live.plot = RadarPlot::All;
-    CHECK(reads_in(radar(live), "BRAVO", 160, 160, 200, 178));
-
-    for (const BravoState state : {BravoState::Unpaired, BravoState::LinkDown}) {
-        RadarSnapshot other = flying(0);
-        other.bravo = state;
-        CHECK_FALSE(reads_in(radar(other), "BRAVO", 0, 0, 200, 199));
+TEST_CASE("radar page: a live Bravo is a B in the top-right corner, in both plots") {
+    for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
+        RadarSnapshot live = flying(0);
+        live.plot = plot;
+        live.bravo = BravoState::Live;
+        live.bravo_heard = true;
+        const Glass canvas = radar(live);
+        CHECK(marks_bravo_live(canvas));
+        CHECK_FALSE(reads_in(canvas, "BRAVO", 0, 0, 200, 200));
     }
+
+    RadarSnapshot unpaired = flying(0);
+    CHECK_FALSE(marks_bravo_live(radar(unpaired)));
+    CHECK_FALSE(reads_in(radar(unpaired), "BRAVO", 0, 0, 200, 200));
 }
 
-TEST_CASE("radar page: a lost Bravo takes the ring's banner, and the line under it says why") {
-    struct Loss {
+// White while Bravo comes up by itself, reversed once the pilot counts on it.
+TEST_CASE("radar page: a Bravo not live says BRAVO and why in the corner, reversed when lost") {
+    struct Case {
         BravoState state;
+        bool heard;
         const char* why;
+        bool lost;
     };
-    for (const Loss loss :
-         {Loss{BravoState::LinkDown, "LINK DOWN"}, Loss{BravoState::ReceiverDown, "RECEIVER DOWN"},
-          Loss{BravoState::NoUtc, "NO UTC"}}) {
-        CAPTURE(loss.why);
+    for (const Case each : {Case{BravoState::Waiting, false, "NO LINK", false},
+                            Case{BravoState::Waiting, true, "OUTDOORS", false},
+                            Case{BravoState::LinkDown, false, "NO LINK", true},
+                            Case{BravoState::NoUtc, true, "OUTDOORS", true},
+                            Case{BravoState::ReceiverDown, true, "RX DOWN", true}}) {
+        CAPTURE(each.why);
+        CAPTURE(each.lost);
         for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
-            RadarSnapshot lost = flying(0);
-            lost.plot = plot;
-            lost.bravo = loss.state;
-            const Glass canvas = radar(lost);
-            CHECK(reads_in(canvas, "NO BRAVO", 20, 110, 180, 165, 2));
-            CHECK(reads_in(canvas, loss.why, 20, 130, 180, 175));
+            RadarSnapshot snapshot = flying(0);
+            snapshot.plot = plot;
+            snapshot.bravo = each.state;
+            snapshot.bravo_heard = each.heard;
+            const Glass canvas = radar(snapshot);
+            CHECK(corner_reads(canvas, "BRAVO", !each.lost));
+            CHECK(corner_reads(canvas, each.why, !each.lost));
+            CHECK_FALSE(corner_reads(canvas, "BRAVO", each.lost));
+            CHECK_FALSE(marks_bravo_live(canvas));
         }
     }
-    RadarSnapshot waiting = flying(0);
-    waiting.bravo = BravoState::Waiting;
-    CHECK_FALSE(reads_in(radar(waiting), "NO BRAVO", 0, 0, 200, 199, 2));
 }
 
-TEST_CASE("radar page: a waiting Bravo takes the loss's place, WAIT FOR over BRAVO at one size") {
-    for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
-        RadarSnapshot waiting = flying(0);
-        waiting.plot = plot;
-        waiting.bravo = BravoState::Waiting;
-        const Glass canvas = radar(waiting);
-        CHECK(reads_in(canvas, "WAIT FOR", 20, 100, 180, 165, 2));
-        // One message on two lines keeps one size: the small line is for a second message.
-        CHECK(reads_in(canvas, "BRAVO", 20, 110, 180, 180, 2));
-        CHECK_FALSE(reads_in(canvas, "BRAVO", 0, 0, 200, 200, 1));
-    }
-
-    RadarSnapshot blind = flying(0);
-    blind.fix_valid = false;
-    blind.bravo = BravoState::Waiting;
-    const Glass searching = radar(blind);
-    CHECK(reads_in(searching, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(searching, "WAIT FOR BRAVO", 20, 140, 180, 175));
-}
-
-// The ring's two slots read top down: the cell, NO FIX, NO BRAVO and its reason, then the rest.
-TEST_CASE("radar page: a lost Bravo yields the banner to a warned cell and to NO FIX") {
+TEST_CASE("radar page: the ring speaks for the Go alone, whatever Bravo says") {
     RadarSnapshot parked = flying(0);
     parked.flight_running = false;
     parked.bravo = BravoState::LinkDown;
     const Glass ground = radar(parked);
-    CHECK(reads_in(ground, "NO BRAVO", 20, 110, 180, 165, 2));
-    CHECK_FALSE(reads_in(ground, "GROUND", 0, 0, 200, 199, 2));
-    CHECK_FALSE(reads_in(ground, "GROUND", 0, 0, 200, 199));
-
-    RadarSnapshot low = parked;
-    low.battery_low = true;
-    low.battery_percent = 4;
-    const Glass warned = radar(low);
-    CHECK(reads_in(warned, "BAT 4%", 40, 120, 160, 160, 2));
-    CHECK(reads_in(warned, "NO BRAVO", 20, 140, 180, 175));
-    CHECK_FALSE(reads_in(warned, "LINK DOWN", 0, 0, 200, 199));
+    CHECK(reads_in(ground, "GROUND", 20, 110, 180, 165, 2));
+    CHECK_FALSE(reads_in(ground, "BRAVO", 0, 30, 200, 200, 2));
 
     RadarSnapshot blind = parked;
     blind.fix_valid = false;
+    blind.stage = skyblip::gnss::Stage::Blind;
+    blind.bravo = BravoState::Waiting;
     const Glass searching = radar(blind);
     CHECK(reads_in(searching, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(searching, "NO BRAVO", 20, 140, 180, 175));
+    CHECK(reads_in(searching, "OUTDOORS", 20, 140, 180, 175));
+    CHECK(corner_reads(searching, "NO LINK"));
 }
 
 // Bravo's lamp winks red from its knee, and a Bravo in a flight bag shows it to nobody.
@@ -105,22 +83,35 @@ TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its ch
         low.bravo_battery_low = true;
         low.bravo_battery_percent = 9;
         const Glass canvas = radar(low);
-        CHECK(reads_in(canvas, "BRAVO", 20, 100, 180, 165, 2));
-        CHECK(reads_in(canvas, "BAT 9%", 20, 110, 180, 180, 2));
+        CHECK(corner_reads(canvas, "BRAVO"));
+        CHECK(corner_reads(canvas, "BAT 9%"));
     }
 
     RadarSnapshot unread = flying(0);
     unread.bravo = BravoState::Live;
     unread.bravo_battery_low = true;
-    CHECK(reads_in(radar(unread), "BAT LOW", 20, 110, 180, 180, 2));
+    CHECK(corner_reads(radar(unread), "BAT LOW"));
 
-    RadarSnapshot both = flying(0);
-    both.bravo = BravoState::Live;
+    RadarSnapshot both = unread;
     both.battery_low = true;
     both.battery_percent = 4;
-    both.bravo_battery_low = true;
-    both.bravo_battery_percent = 9;
     const Glass warned = radar(both);
     CHECK(reads_in(warned, "BAT 4%", 40, 120, 160, 160, 2));
-    CHECK(reads_in(warned, "BRAVO BAT 9%", 20, 140, 180, 175));
+    CHECK(corner_reads(warned, "BAT LOW"));
+}
+
+// The block is reversed after the plot, so an aircraft over it is not lost in the black.
+TEST_CASE("radar page: traffic over a lost Bravo's corner still shows, white on black") {
+    RadarTarget corner_target[1] = {{7085, 6040, 0, skyblip::traffic::Level::None}};
+    RadarSnapshot lost = flying(0);
+    lost.bravo = BravoState::LinkDown;
+    const Glass empty = radar(lost);
+    lost.target_count = 1;
+    lost.targets = corner_target;
+    const Glass busy = radar(lost);
+    int differ = 0;
+    for (int y = 2; y < 22; y++)
+        for (int x = 150; x < 198; x++)
+            if (empty.get_pixel(x, y) != busy.get_pixel(x, y)) differ++;
+    CHECK(differ > 10);
 }
