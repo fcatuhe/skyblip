@@ -205,7 +205,8 @@ void PeerService::send_health(const GateChoice& choice, bool utc_valid, uint32_t
     for (const Go& go : gos_) {
         if (!go.used) continue;
         health.paired = pairing_.holds(go.address);
-        health.dismissed_announcement = pairing_.pinned_to(go.address) ? dismissed_told_ : std::nullopt;
+        health.dismissed_announcement =
+            pairing_.pinned_to(go.address) ? dismissed_told_ : std::nullopt;
         uint8_t frame[comms::kPeerPayloadFloorBytes];
         const int bytes = comms::write_health(health, frame, sizeof(frame));
         const Status sent = context_.roles.link.send_to(
