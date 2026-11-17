@@ -10,7 +10,7 @@
 #include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
-#include "protocols/adsl/versioning.h"
+#include "protocols/adsl/soft_versioning.h"
 #include "protocols/alptas/frame.h"
 
 namespace skyblip::common {

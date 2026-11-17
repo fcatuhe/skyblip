@@ -10,7 +10,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 | `physical.h` | C.2, C.4, D.1.1 | the two M-band channels and the O band, the M-band modulation and its 14 dBm e.r.p. ceiling, and the sync word with D.1.1's length byte behind it |
 | `uplink.{h,cpp}`, `reed_solomon.{h,cpp}` | C.4, D.1.1, E.3.2, G.3 | the O-band HDR modulation, sync and burst, the G.3 Traffic Uplink packet with up to ten verbatim Traffic payloads and its 10 s age rule, and E.3.2's RS(255,223) code with its roots and zero prefix |
 | `flight_state.{h,cpp}` | G.1.2, G.1.16 | the flight state codes, the Undefined a craft able to hover announces on the ground, and the report period each state asks for |
-| `versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
+| `soft_versioning.{h,cpp}` | B.5, G.2.1 | the Max. Protocol Version a packet declares, and the test that makes a client close enough to write for |
 | `transmit.h` | C.2, C.2.5, C.5, G.1.16, G.2.11 | the rules a transmitter keeps: the uplink and direct slots, a frame's air time, the airborne and ground report periods, the 500 ms nav age and the Status period |
 | `media_access.{h,cpp}` | D.3 | `media_access()`, the media access rule: a clear channel transmits, a busy one defers by a random whole number of units, never more than the caller declares and never past the packet's window, is missed past them, may be forced 3000 ms after the initial attempt, and silences the device for 2000 ms after a forced transmission ends. The deferral floor is EN 300 220-1's, from `protocols/common/en300220.h` |
 | `version.h` | | `kVersion` and `kSpecification` |

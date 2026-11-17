@@ -9,7 +9,7 @@
 #include "core/settings/address.h"
 #include "core/units/units.h"
 #include "protocols/adsl/flight_state.h"
-#include "protocols/adsl/versioning.h"
+#include "protocols/adsl/soft_versioning.h"
 #include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
