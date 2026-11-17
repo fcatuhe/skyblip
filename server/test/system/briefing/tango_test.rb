@@ -62,7 +62,7 @@ class Briefing::TangoTest < ApplicationSystemTestCase
   test "a Go with no Bravo known offers to set one up, or to connect one already running skyBlip" do
     in_range a_go(bluetoothTag: 0x1b2c), a_bravo(name: "skyBlip Bravo 5C1D", bluetoothTag: 0x5c1d)
     on_the_shelf do
-      connect_go
+      connect_device
       assert_selector ".tango", text: "Have a Bravo?"
       assert_link "Set up a Bravo", href: "/briefing/setup?for=go-00012a"
       screen "67-no-bravo-known"
@@ -75,7 +75,7 @@ class Briefing::TangoTest < ApplicationSystemTestCase
 
   private
     def connect_both
-      connect_go
+      connect_device
       page.execute_script("fakeFleet.pick = 'Bravo 5C1D'")
       find(".fleet-connect-new").click
       assert_current_path "/briefing/devices/bravo-5c1d"

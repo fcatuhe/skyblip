@@ -33,6 +33,14 @@
   .setup-by-hand { display: grid; gap: var(--space-2xs); margin: 0; padding-inline-start: var(--space-inline-l); }
   .setup-by-hand [hidden] { display: none; }
 
+  .setup-aircraft { display: grid; gap: var(--space-m); }
+  .setup-fields { display: grid; gap: var(--space-xs); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+  .setup-fields:not(:has(> [data-setting]:not([hidden]))) { display: none; }
+  .setup-fields [hidden] { display: none; }
+  .setup-transponder summary { cursor: pointer; font-size: var(--text-s); color: var(--ink-muted); }
+  .setup-transponder summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .setup-transponder[open] summary { margin-block-end: var(--space-xs); }
+
   .setup-progress { inline-size: 100%; block-size: 0.5rem; accent-color: var(--signal); }
 
   .tango {

@@ -166,10 +166,6 @@ export default class extends Controller {
     return new URLSearchParams(location.search).has("activated")
   }
 
-  #installed() {
-    return new URLSearchParams(location.search).has("installed")
-  }
-
   // INFO: fc 11nov26 the defaults fill the form, and Save sends them, so the pilot sees what will change before the glass asks
   reset() {
     const { defaults } = this.unit.state
@@ -265,7 +261,6 @@ export default class extends Controller {
   #notes(unit, state, page, activated) {
     const notes = []
     if (activated) notes.push([say("words.activated", { name: unit.name }), null, "is-good"])
-    if (page && unit?.linked && this.#installed()) notes.push([say("words.installed", { name: unit.name }), null, "is-good"])
     if (unit?.needsActivation) notes.push([say("notices.not_activated"), "activate"])
     if (state?.status?.flight === "airborne") notes.push([say(state.trust === "trusted" ? "words.in_flight_lock_trusted" : "words.in_flight_lock")])
     if (state?.refusedOnDevice) notes.push([say("words.reconnect_needed")])

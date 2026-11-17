@@ -1,7 +1,7 @@
 require "application_system_test_case"
 
 class Briefing::SetupTest < ApplicationSystemTestCase
-  test "a Go running Meshtastic is installed over USB and activated with no press, because it trusts the browser that installed it" do
+  test "a Go running Meshtastic is installed, activated with no press and named, because it trusts the browser that installed it" do
     in_range
     plugged_in a_meshtastic_go
     with_installers do
@@ -24,22 +24,32 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_text "Installed. Last step: connect Go 3F2A over Bluetooth. It trusts this browser, so it asks for no button press."
       assert_text "Choose activate 3F2A skyBlip in the list."
       assert_selector ".setup-steps [aria-current=step]", text: "Connect"
-      assert page.evaluate_script("fakeUsb.trusted !== null")
       screen "13-go-installed-connect"
 
       click_button "Connect"
-      assert_current_path "/briefing/devices/go-000003?activated=1"
-      assert_selector ".unit-notes .is-good", text: "Activated: skyBlip Go 000003."
+      assert_text "Name your aircraft. Other pilots see its callsign and type."
+      assert_selector ".setup-steps [aria-current=step]", text: "Your aircraft"
       assert_no_selector ".glass-prompt:not([hidden])"
-      assert_equal [ [ { "name" => "activate 3F2A skyBlip" } ] ], page.evaluate_script("fakeFleet.asked")
       assert_equal 3, Unit.find_by!(device_id: vectors["device_id"]).serial
-      assert_selector ".tango", text: "Have a Bravo?"
+      assert_button "Done"
+      screen "14-go-aircraft"
+
+      select "Glider", from: "Aircraft type"
+      fill_in "Callsign", with: "F-CABC"
+      click_button "Save"
+      assert_text "Go 000003 is ready. Its settings stay on its page."
       assert_link "Set up a Bravo", href: "/briefing/setup?for=go-000003"
-      screen "14-go-activated"
+      assert_equal({ "aircraft_type" => 4, "callsign" => "F-CABC" }, page.evaluate_script("#{unit("Go 000003")}.stored").slice("aircraft_type", "callsign"))
+      screen "15-go-ready"
+
+      click_link "Open Go 000003"
+      assert_current_path "/briefing/devices/go-000003"
+      assert_field "Callsign", with: "F-CABC"
+      assert_selector ".tango", text: "Have a Bravo?"
     end
   end
 
-  test "a Bravo running Meshtastic is installed over USB and opens on its transponder address, offering a Go" do
+  test "a Bravo running Meshtastic is installed, and its transponder address waits for the aircraft" do
     in_range
     plugged_in a_meshtastic_bravo
     with_installers do
@@ -51,91 +61,101 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Choose the drive"
       assert_text "Choose skyBlip Bravo 5C1D in the list."
       click_button "Connect"
-      assert_current_path "/briefing/devices/bravo-5c1d?installed=1"
-      assert_selector ".unit-notes .is-good", text: "skyBlip Bravo 5C1D runs skyBlip. If your aircraft has a transponder, add its address."
-      assert_field "ADS-B address"
-      assert_selector ".tango", text: "Have a Go?"
+      assert_text "In the aircraft, switch the transponder to ALT and open Briefing: it offers the address Bravo hears"
+      assert_no_field "Callsign"
+      screen "21-bravo-aircraft"
+
+      click_button "Done"
+      assert_text "Bravo 5C1D is ready."
       assert_link "Set up a Go", href: "/briefing/setup?for=bravo-5c1d"
-      screen "21-bravo-installed"
+      screen "22-bravo-ready"
     end
   end
 
-  test "a Go set up first, then its Bravo, pair by themselves with no press" do
+  test "a Go set up first, then its Bravo, pair with no press, and the Go names the aircraft from its transponder later" do
     in_range
     plugged_in a_meshtastic_go
     with_installers do
       install_and_connect
-      assert_current_path "/briefing/devices/go-000003?activated=1"
+      click_button "Done"
       click_link "Set up a Bravo"
       assert_current_path "/briefing/setup?for=go-000003"
 
       page.execute_script("fakeUsb.plug(#{a_meshtastic_bravo.to_json})")
       install_and_connect
-      assert_current_path "/briefing/devices/bravo-5c1d?installed=1&pair=go-000003"
-      assert_selector ".tango", text: "Pairing Go 000003 with Bravo 5C1D. Keep both close."
+      assert_text "Pairing Go 000003 with Bravo 5C1D. Keep both close."
       screen "30-go-then-bravo-pairing"
 
-      assert_selector ".tango", text: "Paired. Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
+      assert_text "Nothing to type. In the aircraft, switch the transponder to ALT: the Go offers its address, callsign and type from what Bravo hears"
       assert_equal 0x5c1d, page.evaluate_script("#{unit("Go 000003")}.pairedTag")
       assert_equal 0x3f2a, page.evaluate_script("#{unit("Bravo 5C1D")}.pairedTag")
-      screen "31-go-then-bravo-paired"
+      screen "31-tango-aircraft"
 
-      click_link "Go 000003"
+      click_button "Done"
+      assert_text "Your Tango is ready: Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
+      assert_no_link "Set up a Go"
+      screen "32-tango-ready"
+
+      click_link "Open Go 000003"
       assert_selector ".tango", text: "Paired with Bravo 5C1D."
-      screen "32-go-paired"
     end
   end
 
-  test "a Bravo set up first, then its Go, pair by themselves once the Go is activated" do
+  test "a Bravo set up first, then its Go, pair once the Go is activated, and the aircraft can still be named at once" do
     in_range
     plugged_in a_meshtastic_bravo
     with_installers do
       install_and_connect
+      click_button "Done"
       click_link "Set up a Go"
       assert_current_path "/briefing/setup?for=bravo-5c1d"
 
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go.to_json})")
       install_and_connect
-      assert_current_path "/briefing/devices/go-000003?activated=1&pair=bravo-5c1d"
-      assert_selector ".tango", text: "Paired. Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
-      screen "40-bravo-then-go-paired"
+      assert_text "Nothing to type."
+      click_button "Set them now"
+      fill_in "Callsign", with: "F-CABC"
+      fill_in "ADS-B address", with: "3c6586"
+      screen "40-bravo-then-go-set-now"
+
+      click_button "Save"
+      assert_text "Your Tango is ready: Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
+      assert_equal 0x3c6586, page.evaluate_script("#{unit("Go 000003")}.stored.aircraft_address")
     end
   end
 
-  test "a unit that does not answer as Meshtastic is restarted by hand, with the gesture of each product" do
+  test "a unit that does not answer as Meshtastic gets the drive by hand, with the gesture of each product" do
     in_range
     plugged_in a_meshtastic_go(mode: "silent")
     with_installers do
       visit "/briefing/setup"
       click_button "Install"
-      assert_selector ".unit-message", text: "It did not answer as Meshtastic, so it did not restart by itself.", wait: 6
+      assert_text "If it shows a USB drive named TECHOBOOT or X1, choose it. If not, start its installer by hand first:", wait: 6
       assert_text "Go: press RST twice, quickly."
       assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white."
+      assert_no_selector ".unit-message"
       screen "50-not-meshtastic"
 
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
       click_button "Choose the drive"
       assert_text "Choose activate … skyBlip in the list."
       click_button "Connect"
-      assert_current_path "/briefing/devices/go-000003?activated=1"
+      assert_text "Name your aircraft."
       assert_equal [ [ { "namePrefix" => "activate" } ] ], page.evaluate_script("fakeFleet.asked")
     end
   end
 
-  test "a closed port chooser says what to check, and a unit already in its bootloader skips the restart" do
-    in_range
+  test "a closed port chooser says what to check, and offers Bluetooth for a unit already running skyBlip" do
+    in_range a_go
     plugged_in a_meshtastic_go(mode: "skyblip")
     with_installers do
       visit "/briefing/setup"
       click_button "Install"
-      assert_selector ".unit-message", text: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge."
+      assert_selector ".unit-message", text: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       screen "51-port-closed"
 
-      page.execute_script("fakeUsb.plug(#{a_meshtastic_bravo(mode: "bootloader").to_json})")
-      click_button "Use the drive"
-      assert_text "Start its installer by hand. It shows up as a USB drive named TECHOBOOT or X1."
-      click_button "Choose the drive"
-      assert_text "Installed. Last step: connect Bravo over Bluetooth."
+      click_button "Connect it over Bluetooth"
+      assert_current_path "/briefing/devices/go-00012a"
     end
   end
 

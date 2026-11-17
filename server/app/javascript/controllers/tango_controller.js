@@ -15,7 +15,6 @@ export default class extends Controller {
   connect() {
     this.session = joinFleet(() => this.#render())
     this.fleet = this.session.fleet
-    this.asked = new URLSearchParams(location.search).get("pair")
     this.#render()
   }
 
@@ -85,10 +84,6 @@ export default class extends Controller {
     const notice = pairing?.failure ? sayNotice(pairing.failure, ...PAIR_NOTICES) : this.failure ? sayNotice(this.failure, "notices") : ""
     this.messageTarget.hidden = !notice
     this.messageTarget.textContent = notice
-    if (view?.kind === "pair" && this.asked === view.partner.slug && !pairing) {
-      this.asked = null
-      this.pair()
-    }
   }
 
   #offer(unit, view, other) {

@@ -131,7 +131,7 @@ test('a port another program holds is said', async () => {
 
 test('a drive that is not the bootloader is refused before anything is written', async () => {
   const { unit, drive } = installer({ drive: new FakeDrive(null) });
-  unit.skipToDrive();
+  await unit.restart();
   await unit.install();
   assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'drive', notice: { key: 'not_drive', detail: null } });
   assert.equal(drive.files.has(DRIVE_FILE), false);
@@ -139,19 +139,19 @@ test('a drive that is not the bootloader is refused before anything is written',
 
 test('a UF2 drive of another board is refused, and named', async () => {
   const { unit } = installer({ drive: new FakeDrive('Board-ID: nRF52840-Feather-v1\n') });
-  unit.skipToDrive();
+  await unit.restart();
   await unit.install();
   assert.deepEqual(unit.state.notice, { key: 'other_board', detail: 'nRF52840-Feather-v1' });
 });
 
 test('closing the folder chooser says nothing, and a refused permission says why', async () => {
   const closed = installer({ drive: namedError('AbortError', 'The user aborted a request.') });
-  closed.unit.skipToDrive();
+  await closed.unit.restart();
   await closed.unit.install();
   assert.equal(closed.unit.state.notice, null);
 
   const denied = installer({ drive: namedError('NotAllowedError', 'Permission denied.') });
-  denied.unit.skipToDrive();
+  await denied.unit.restart();
   await denied.unit.install();
   assert.equal(denied.unit.state.notice.key, 'drive_denied');
 });
@@ -159,7 +159,7 @@ test('closing the folder chooser says nothing, and a refused permission says why
 test('a browser with no key writes the release as published, and the unit will ask for its presses', async () => {
   const release = releaseUf2('go');
   const { unit, drive } = installer({ key: null, release });
-  unit.skipToDrive();
+  await unit.restart();
   await unit.install();
   assert.equal(unit.state.trusted, false);
   assert.deepEqual(drive.files.get(DRIVE_FILE), release.bytes);
@@ -167,7 +167,7 @@ test('a browser with no key writes the release as published, and the unit will a
 
 test('an image of the other product is never written', async () => {
   const { unit, drive } = installer({ release: releaseUf2('go', { imageProduct: 'bravo' }) });
-  unit.skipToDrive();
+  await unit.restart();
   await unit.install();
   assert.equal(unit.state.notice.key, 'image_wrong_product');
   assert.equal(drive.files.has(DRIVE_FILE), false);
@@ -175,12 +175,12 @@ test('an image of the other product is never written', async () => {
 
 test('a write the drive refuses is said, and a close the restart cuts is not', async () => {
   const refused = installer({ drive: new FakeDrive(T_ECHO_INFO, { failWrite: true }) });
-  refused.unit.skipToDrive();
+  await refused.unit.restart();
   await refused.unit.install();
   assert.deepEqual({ phase: refused.unit.state.phase, key: refused.unit.state.notice.key }, { phase: 'drive', key: 'write_failed' });
 
   const restarted = installer({ drive: new FakeDrive(T_ECHO_INFO, { failClose: true }) });
-  restarted.unit.skipToDrive();
+  await restarted.unit.restart();
   await restarted.unit.install();
   assert.equal(restarted.unit.state.phase, 'installed');
 });

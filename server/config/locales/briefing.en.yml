@@ -141,15 +141,12 @@ en:
       steps:
         install: Install
         connect: Connect
-        finish: Activate
+        aircraft: Your aircraft
       start: "Plug your Go or Bravo into this computer with a USB cable. Briefing replaces Meshtastic with skyBlip, then connects to it."
       install: Install
-      shows_drive: Already showing a USB drive named TECHOBOOT or X1?
-      use_drive: Use the drive
-      running_skyblip: Already running skyBlip?
       connect_running: Connect it over Bluetooth
       drive: "%{name} restarted as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
-      drive_by_hand: "Start its installer by hand. It shows up as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
+      drive_by_hand: "If it shows a USB drive named %{drive}, choose it. If not, start its installer by hand first:"
       or: " or "
       by_hand:
         go: "Go: press RST twice, quickly."
@@ -168,9 +165,23 @@ en:
       unsupported_phone: "Install from a computer first, in Chrome or Edge. This phone then sets up and updates your devices over Bluetooth."
       unsupported_other: Installing over USB needs Chrome or Edge on a computer.
       by_hand_link: Install it by hand instead
+      try_again: Try again
+      save: Save
+      later: Later
+      done: Done
+      set_now: Set them now
+      aircraft_go: "Name your aircraft. Other pilots see its callsign and type. You can change both later, on the Go or in Briefing."
+      aircraft_tango: "Nothing to type. In the aircraft, switch the transponder to ALT: the Go offers its address, callsign and type from what Bravo hears, and one press on the Go takes them."
+      aircraft_bravo: "In the aircraft, switch the transponder to ALT and open Briefing: it offers the address Bravo hears, so Bravo leaves your own transponder out of the traffic. Without a transponder, there is nothing to set."
+      transponder_go: Has a transponder? Its address, if you know it
+      transponder_known: Know its address already? Enter it now
+      done_go: "%{name} is ready. Its settings stay on its page."
+      done_tango: "Your Tango is ready: %{name} shows the ADS-B traffic %{partner} hears."
+      done_bravo: "%{name} is ready."
+      open: "Open %{name}"
       images_unavailable: The skyBlip images did not load. Check the connection, then reload the page.
     setup_notices:
-      port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge."
+      port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       port_failed: "The USB port could not be opened:"
       port_busy: "Another program is using the device. Close Meshtastic's app or flasher, then click Install again."
       no_meshtastic: "It did not answer as Meshtastic, so it did not restart by itself."
@@ -254,7 +265,6 @@ en:
       reconnect: "Reconnect"
       firmware: "Firmware"
       activated: "Activated: %{name}. Its radio is on. Add your callsign and aircraft type."
-      installed: "%{name} runs skyBlip. If your aircraft has a transponder, add its address."
       connected: Connected
       protocols: "Radio protocols: %{protocols}"
       not_connected: Not connected

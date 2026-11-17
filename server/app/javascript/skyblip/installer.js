@@ -79,10 +79,6 @@ export class Installer {
     this.#set({ phase: 'drive', product: identity.product, tag: identity.tag, meshtastic: identity, notice: null });
   }
 
-  skipToDrive() {
-    this.#set({ phase: 'drive', notice: { key: 'by_hand' } });
-  }
-
   async install() {
     this.#set({ phase: 'choosing_drive', notice: null });
     let drive;
