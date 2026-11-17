@@ -131,12 +131,12 @@ TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is re
     }
 }
 
-// TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
+// TODO: fc 17nov26 no frame is corrected, until #373 measures a single-bit flip on Bravo
 TEST_CASE("DO-260B 2.2.4.5: a class A0 receiver corrects errors as DO-185B Appendix A A.3 does" *
           doctest::skip()) {
     FAIL(
         "not implemented: Bravo's LR2021 hands up no doubtful bit, so a frame that fails is "
-        "refused");
+        "refused, until issue #373 measures a single-bit flip");
 }
 
 TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded or refused") {
