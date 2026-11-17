@@ -115,6 +115,7 @@ class ScreenService : public runtime::Service {
     }
     void act_on_bravo(BravoAction action, uint32_t now_ms);
     void step_bravo(uint32_t now_ms);
+    void show_link_pairing(uint32_t now_ms);
     void sync_notice(uint32_t now_ms);
     bool close_notice();
     Detected detected() const;

@@ -1,6 +1,9 @@
 #include "products/skyblip_go/services/bravo.h"
 
+#include <cstring>
+
 #include "core/comms/peer.h"
+#include "core/util/format.h"
 #include "ports/capabilities.h"
 
 namespace skyblip::go {
@@ -9,10 +12,33 @@ namespace {
 
 // INFO: fc 11nov26 Bravo advertises "skyBlip Bravo 3F2A" (products/common/README.md, Settings)
 constexpr char kBravoNamePrefix[] = "skyBlip Bravo ";
+constexpr int kTagDigits = 4;
+
+// INFO: fc 16nov26 the name carries the tag Bravo reads off FICR DEVICEADDR, its address's low bits
+bool named(const events::CentralEvent& event, uint16_t tag) {
+    char name[sizeof(kBravoNamePrefix) + kTagDigits]{};
+    const int written = format_string(name, kBravoNamePrefix);
+    name[written + format_hex(name + written, tag, kTagDigits)] = 0;
+    return std::strcmp(event.name, name) == 0 && events::bluetooth_tag(event.address) == tag;
+}
+
+link::Reason verdict_of(BravoRefusal refusal) {
+    switch (refusal) {
+        case BravoRefusal::PhonesConnected: return link::Reason::PhonesConnected;
+        case BravoRefusal::NarrowLink: return link::Reason::NarrowLink;
+        case BravoRefusal::NoAnswer: return link::Reason::NoAnswer;
+        case BravoRefusal::UnknownProtocol: return link::Reason::UnknownProtocol;
+        case BravoRefusal::NotFound: return link::Reason::NotFound;
+        case BravoRefusal::LinkLost:
+        case BravoRefusal::None: break;
+    }
+    return link::Reason::LinkLost;
+}
 
 }  // namespace
 
 Status BravoService::setup() {
+    config_.serve_pairing(comms::PairingSide::Go);
     const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
     if (!epoch) return Status::Down;
     boot_epoch_ = *epoch;
@@ -26,12 +52,16 @@ void BravoService::tick(uint32_t now_ms) {
         started_ = true;
         started_ms_ = now_ms;
     }
+    if (const std::optional<uint16_t> tag = config_.take_pair_request()) pair_with(*tag, now_ms);
+    if (seek_due_ && !leaving_) seek(now_ms);
     events::CentralEvent event{};
     while (context_.bus.central_events.pop(event)) take_event(event, now_ms);
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take_frame(frame, now_ms);
 
     if (step_ == BravoStep::Refused && refusal_ == BravoRefusal::PhonesConnected) start_scan();
+    if (step_ == BravoStep::Scanning && wanted_ && now_ms - wanted_since_ms_ >= kConnectCeilingMs)
+        refuse(BravoRefusal::NotFound);
     if (step_ == BravoStep::Connecting && now_ms - step_since_ms_ >= kConnectCeilingMs)
         refuse(BravoRefusal::LinkLost);
     if (step_ == BravoStep::Waiting && now_ms - step_since_ms_ >= kAnswerCeilingMs)
@@ -55,6 +85,9 @@ void BravoService::tick(uint32_t now_ms) {
     if (health_heard_ || now_ms - started_ms_ >= kBootSettleMs) settled_ = true;
     context_.state.bravo = state_now();
     context_.state.own_transponder = own_transponder_on_ground();
+    config_.set_paired_tag(paired(settings_)
+                               ? std::optional<uint16_t>(events::bluetooth_tag(settings_.bravo))
+                               : std::nullopt);
 }
 
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
@@ -71,6 +104,9 @@ void BravoService::end_pairing() {
     step_ = BravoStep::Idle;
     refusal_ = BravoRefusal::None;
     release_unless_paired();
+    wanted_.reset();
+    seek_due_ = false;
+    answer_link(link::Reason::Cancelled);
 }
 
 // INFO: fc 15nov26 the link to the Bravo just unpaired is the central's one, so a pairing waits for
@@ -78,11 +114,56 @@ void BravoService::end_pairing() {
 void BravoService::pair(int found_index, uint32_t now_ms) {
     if (step_ != BravoStep::Scanning || leaving_ || found_index < 0 || found_index >= found_count_)
         return;
+    pick(found_[found_index], now_ms);
+}
+
+void BravoService::pick(const events::BluetoothAddress& address, uint32_t now_ms) {
     central_.stop_scan();
-    pairing_with_ = found_[found_index];
+    wanted_.reset();
+    pairing_with_ = address;
     step_ = BravoStep::Connecting;
     step_since_ms_ = now_ms;
     connect(pairing_with_, kPairingScanWindowUs, kPairingScanPeriodUs);
+}
+
+// INFO: fc 16nov26 the link already told an earlier browser cancelled, so only this one is owed
+void BravoService::pair_with(uint16_t tag, uint32_t now_ms) {
+    link_answer_owed_ = false;
+    if (paired(settings_) && events::bluetooth_tag(settings_.bravo) == tag) {
+        link_answer_owed_ = true;
+        answer_link(link::Reason::Paired);
+        return;
+    }
+    end_pairing();
+    unpair();
+    link_answer_owed_ = true;
+    link_pairing_noticed_ = true;
+    wanted_ = tag;
+    wanted_since_ms_ = now_ms;
+    seek_due_ = true;
+}
+
+bool BravoService::take_link_pairing_notice() {
+    const bool noticed = link_pairing_noticed_;
+    link_pairing_noticed_ = false;
+    return noticed;
+}
+
+void BravoService::seek(uint32_t now_ms) {
+    seek_due_ = false;
+    found_count_ = 0;
+    wanted_since_ms_ = now_ms;
+    start_scan();
+    if (step_ == BravoStep::Refused) {
+        wanted_.reset();
+        answer_link(verdict_of(refusal_));
+    }
+}
+
+void BravoService::answer_link(link::Reason verdict) {
+    if (!link_answer_owed_) return;
+    link_answer_owed_ = false;
+    config_.pairing_ended(verdict);
 }
 
 // INFO: fc 11nov26 a connected Go says it unpaired, so Bravo drops its pin and frees its connection
@@ -113,14 +194,18 @@ bool BravoService::take_asking_notice() {
 
 void BravoService::take_event(const events::CentralEvent& event, uint32_t now_ms) {
     switch (event.type) {
-        case events::CentralEventType::Found: hear(event); return;
+        case events::CentralEventType::Found: hear(event, now_ms); return;
         case events::CentralEventType::Up: came_up(event.payload_bytes, now_ms); return;
         case events::CentralEventType::Down: went_down(); return;
     }
 }
 
-void BravoService::hear(const events::CentralEvent& event) {
+void BravoService::hear(const events::CentralEvent& event, uint32_t now_ms) {
     if (step_ != BravoStep::Scanning) return;
+    if (wanted_) {
+        if (named(event, *wanted_)) pick(event.address, now_ms);
+        return;
+    }
     for (int i = 0; i < found_count_; i++)
         if (found_[i] == event.address) return;
     if (found_count_ < kBravoFoundRows) found_[found_count_++] = event.address;
@@ -201,6 +286,7 @@ void BravoService::take_health(ConstByteSpan bytes, uint32_t now_ms) {
         config_.note_settings_changed();
         step_ = BravoStep::Idle;
         link_ = BravoLink::Up;
+        answer_link(link::Reason::Paired);
     }
     if (!paired(settings_) || !up_) return;
     link_ = BravoLink::Up;
@@ -295,6 +381,8 @@ void BravoService::start_scan() {
 void BravoService::refuse(BravoRefusal refusal) {
     if (step_ == BravoStep::Scanning) central_.stop_scan();
     if (connecting_ || up_) central_.disconnect();
+    wanted_.reset();
+    answer_link(verdict_of(refusal));
     if (asking_again_) {
         forget();
         return;

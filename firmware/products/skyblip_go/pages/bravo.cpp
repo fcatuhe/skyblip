@@ -89,7 +89,7 @@ void draw_list(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
 void draw_pairing(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
     draw_heading(canvas, "PAIRING", Heading::Opened);
     const Tag tag(snapshot.view.pairing_tag);
-    if (snapshot.view.step == BravoStep::Connecting) {
+    if (snapshot.view.step != BravoStep::Waiting) {
         const BodyLine body[] = {{tag.text, kTagScale}, {""}, {"WAIT"}};
         draw_body(canvas, Heading::Opened, /*keys=*/true, body, 3);
     } else {
@@ -110,6 +110,7 @@ Reason reason_of(BravoRefusal refusal) {
         case BravoRefusal::NarrowLink: return {"LINK TOO", "SMALL"};
         case BravoRefusal::NoAnswer: return {"NO DATA", "FROM BRAVO"};
         case BravoRefusal::UnknownProtocol: return {"UNKNOWN", "PROTOCOL"};
+        case BravoRefusal::NotFound: return {"NOT FOUND", ""};
         case BravoRefusal::LinkLost:
         case BravoRefusal::None: break;
     }
@@ -126,6 +127,7 @@ int reason_detail(char* out, BravoRefusal refusal) {
         }
         case BravoRefusal::NoAnswer: return format_string(out, "PUSH THE BUTTON ON BRAVO");
         case BravoRefusal::UnknownProtocol: return format_string(out, "UPDATE THE GO OR BRAVO");
+        case BravoRefusal::NotFound: return format_string(out, "START THE BRAVO NEAR THIS GO");
         case BravoRefusal::LinkLost:
         case BravoRefusal::None: break;
     }
@@ -171,6 +173,10 @@ void draw_bravo(ui::Canvas& canvas, const BravoSnapshot& snapshot) {
         draw_paired(canvas, snapshot);
         return;
     }
+    if (snapshot.view.seeking) {
+        draw_pairing(canvas, snapshot);
+        return;
+    }
     switch (snapshot.view.step) {
         case BravoStep::Connecting:
         case BravoStep::Waiting: draw_pairing(canvas, snapshot); return;
@@ -205,6 +211,7 @@ void BravoPage::open(uint32_t now_ms) {
 BravoAction BravoPage::pad(const BravoView& view, uint32_t now_ms) {
     idle_since_ms_ = now_ms;
     if (view.paired) return pad_paired();
+    if (view.seeking) return BravoAction::Cancel;
     switch (view.step) {
         case BravoStep::Connecting:
         case BravoStep::Waiting: return BravoAction::Cancel;
@@ -218,6 +225,7 @@ BravoAction BravoPage::pad(const BravoView& view, uint32_t now_ms) {
 BravoAction BravoPage::button(const BravoView& view, uint32_t now_ms) {
     idle_since_ms_ = now_ms;
     if (view.paired) return button_paired();
+    if (view.seeking) return BravoAction::None;
     switch (view.step) {
         case BravoStep::Scanning: return button_scanning(view);
         case BravoStep::Refused:
@@ -237,8 +245,8 @@ BravoAction BravoPage::idle(const BravoView& view, uint32_t now_ms) {
         unpairing_ = false;
         return BravoAction::Redraw;
     }
-    const bool waiting =
-        !view.paired && (view.step == BravoStep::Connecting || view.step == BravoStep::Waiting);
+    const bool waiting = !view.paired && (view.seeking || view.step == BravoStep::Connecting ||
+                                          view.step == BravoStep::Waiting);
     if (waiting || now_ms - idle_since_ms_ < MenuEditor::kIdleReturnHoldMs)
         return BravoAction::None;
     return BravoAction::Leave;

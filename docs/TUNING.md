@@ -281,6 +281,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kHealthPeriodMs` | 1000 (1 s) | milliseconds | Period | schemas/link.v1.json health: once a second whatever the traffic |
+| `kAcceptanceWindowMs` | 60000 (1 min) | milliseconds | Window | unverified: a page turns from Bravo to the Go through the browser's chooser |
 | `kAlarmRequestMaxAgeMs` | 3000 (3 s) | milliseconds | MaxAge | unverified: three claim periods, so one lost claim keeps Bravo silent (#194) |
 
 ## [`firmware/products/skyblip_go`](../firmware/products/skyblip_go/README.md)
@@ -416,4 +417,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-271 constants over 26 folders.
+272 constants over 26 folders.

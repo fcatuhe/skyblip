@@ -95,6 +95,10 @@ void ConfigService::register_unit(const cbor::Reader& frame) {
         return;
     }
     identity_->hold_server_nonce(server_nonce);
+    if (trusted_browser()) {
+        send_registration();
+        return;
+    }
     stage(Pending::Register, link::Reason::ConfirmRegister);
 }
 

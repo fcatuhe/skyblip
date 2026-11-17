@@ -43,7 +43,7 @@ Bravo stores no aircraft type, battery trim or frequency trim. Own-ship stamps A
 
 ## Prompts without a screen
 
-A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds. A browser Bravo trusts changes the settings and starts an update with no press (`core/comms/README.md`, Trusted browsers). Bravo holds no key, and draws the challenge's nonce from its RNG.
+A phone's `set`, `dfu`, `recovery`, `power_off`, `gnss_cold_start`, `capture` or log erase stands as a prompt, as on the Go (`core/comms/README.md`). The lamp shows it as a fast green blink, and one press allows it. Bravo has no second contact to refuse with, so a prompt nobody allows expires after thirty seconds. A browser Bravo trusts changes the settings, starts an update and arms a pairing with no press (`core/comms/README.md`, Trusted browsers). Bravo holds no key, and draws the challenge's nonce from its RNG.
 
 `common::PromptAnswer` (`../common/prompt_answer.h`) arms the answer only once the lamp shows the prompt, the button is up, and it has been up for `kAnswerSettleMs` since its last release and since the prompt arrived. A contact that began before it armed is never spent on it, so a button already held when a phone asks cannot answer the prompt with its release. A prompt replaced by another of the same kind disarms it as a new prompt does. A traffic advisory outranks the prompt on the lamp, so while one stands the answer stays disarmed and a press dismisses the advisory.
 
@@ -92,6 +92,8 @@ A Go paired with a Bravo is a Tango. The Go's half is `products/skyblip_go/servi
 A Go asks to pair with `peer_claim` frames whose `paired` is false. The first one on a connection stands as a pairing request for `Pairing::kRequestWindowMs`, 30 s, as long as the Go's `kAnswerCeilingMs` waits for it. A Go that gives up drops the link, and the request goes with it. One request stands at a time, and a connection asks once, so a Go left connected cannot hold the lamp. The request goes when its Go's connection goes. The lamp shows it as a fast blue blink, below an advisory and a phone's prompt and above the cell.
 
 One press pairs. The press arms by the prompt's rule, read off the same `common::PromptAnswer` (`../common/README.md`): only once the lamp shows the request, with the button up for `kAnswerSettleMs` since its last release and since the request arrived. A down that began at or before the instant it armed, dated by the debounce, disarms it. So a press begun before the request never pairs, an advisory takes the press to dismiss it, and a hold is the shutdown's. The gesture differs from the others by what stands on the lamp: dismiss needs an advisory, confirmation a prompt, and off a hold.
+
+A trusted browser can stand in for the press: its `pair`, naming the Go's tag, arms Bravo for `PeerService::kAcceptanceWindowMs`, 60 s, and that Go's request is answered as a press would answer it, in the pass it arrives, so the lamp never blinks for it (`core/comms/README.md`, Pairing from a browser). A browser Bravo does not trust is refused `untrusted`, and the pilot presses the button.
 
 ### The pin
 

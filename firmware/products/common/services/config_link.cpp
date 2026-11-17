@@ -13,6 +13,7 @@ static_assert(comms::TrustedBrowsers::kBlobBytes + 64 <=
 Status ConfigLinkService::setup() {
     load();
     load_browsers();
+    adopt_install_trust();
     return Status::Ok;
 }
 
@@ -59,6 +60,7 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     publish_link();
     drain_settings(now_ms);
     drain_browsers(now_ms);
+    drain_install_trust(now_ms);
     spend_gnss_cold_start();
     confirm_image_once_healthy();
     watch_claim(now_ms);
@@ -290,9 +292,35 @@ void ConfigLinkService::write_browsers(uint32_t now_ms, bool forced) {
     const size_t blob_bytes = config_.trusted_browsers().to_blob(blob, sizeof(blob));
     if (!storable() || is_ok(context_.roles.key_value.write(kBrowsersKey, blob, blob_bytes))) {
         browser_writes_.placed(now_ms, forced);
+        install_trust_.landed();
     } else {
         failed_++;
         browser_writes_.refused(now_ms, forced);
+    }
+}
+
+// INFO: fc 16nov26 only a unit that can store the list trusts the browser that installed it
+void ConfigLinkService::adopt_install_trust() {
+    if (!storable() || !install_trust_.adopt(context_.roles.dfu, config_.trusted_browsers()))
+        return;
+    config_.note_browsers_changed();
+}
+
+// INFO: fc 16nov26 a page erase stalls the core like a settings write, so it is placed like one
+void ConfigLinkService::drain_install_trust(uint32_t now_ms) {
+    if (!install_trust_.erase_due() || !may_persist()) return;
+    if (!trust_page_erases_.pending()) trust_page_erases_.request(now_ms);
+    const timing::DurableWriteVerdict verdict = trust_page_erases_.decide(
+        context_.state.rf.plan, context_.state.rf.dwell, context_.roles.clock.milliseconds());
+    if (verdict != timing::DurableWriteVerdict::Place &&
+        verdict != timing::DurableWriteVerdict::Forced)
+        return;
+    const bool forced = verdict == timing::DurableWriteVerdict::Forced;
+    if (install_trust_.erase(context_.roles.dfu)) {
+        trust_page_erases_.placed(now_ms, forced);
+    } else {
+        failed_++;
+        trust_page_erases_.refused(now_ms, forced);
     }
 }
 

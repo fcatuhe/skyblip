@@ -28,7 +28,8 @@ constexpr Named kPrompts[] = {{"set", comms::Pending::Set},
                               {"erase_log", comms::Pending::EraseLog},
                               {"gnss_cold_start", comms::Pending::GnssColdStart},
                               {"register", comms::Pending::Register},
-                              {"capture", comms::Pending::Capture}};
+                              {"capture", comms::Pending::Capture},
+                              {"pair", comms::Pending::Pair}};
 
 comms::Pending pending_named(const char* name) {
     for (const Named& named : kPrompts)
@@ -63,6 +64,22 @@ bool capture_detail(const char* argument, char* out) {
         return true;
     }
     return false;
+}
+
+// INFO: fc 16nov26 the page names the Bravo as it advertises it, four upper hex digits
+bool pair_detail(const char* argument, char* out) {
+    constexpr size_t kTagDigits = 4;
+    if (std::strlen(argument) != kTagDigits) return false;
+    uint16_t tag = 0;
+    for (size_t i = 0; i < kTagDigits; i++) {
+        const char digit = argument[i];
+        const bool decimal = digit >= '0' && digit <= '9';
+        const bool letter = digit >= 'A' && digit <= 'F';
+        if (!decimal && !letter) return false;
+        tag = static_cast<uint16_t>(tag << 4 | (decimal ? digit - '0' : digit - 'A' + 10));
+    }
+    (void)comms::format_pair_detail(out, tag);
+    return true;
 }
 
 bool applied(go::Settings& settings, const char* json) {
@@ -123,6 +140,8 @@ bool draw_prompt(go::Glass& glass, const char* prompt, const char* argument, con
         (void)comms::format_dfu_detail(detail, sizeof(detail), version);
     } else if (pending == comms::Pending::Capture && argument[0] != 0) {
         if (!capture_detail(argument, detail)) return false;
+    } else if (pending == comms::Pending::Pair) {
+        if (!pair_detail(argument, detail)) return false;
     } else {
         std::strncpy(detail, comms::pending_detail(pending), sizeof(detail) - 1);
     }

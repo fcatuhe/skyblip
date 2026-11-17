@@ -11,10 +11,12 @@ bool ProductCheck::begin(const uint8_t* chunk, size_t bytes, size_t upload_bytes
     ImageHeader header;
     if (running && read_header(chunk, bytes, header) && header.protected_tlv_bytes > 0 &&
         header.protected_tlv_bytes <= kProtectedAreaBytes &&
-        size_t{header.tlv_offset()} + header.protected_tlv_bytes <= upload_bytes) {
+        size_t{header.unprotected_tlv_offset()} + kTlvInfoBytes <= upload_bytes) {
         expected_ = running;
+        header_ = header;
+        upload_bytes_ = upload_bytes;
         area_offset_ = header.tlv_offset();
-        area_bytes_ = header.protected_tlv_bytes;
+        area_bytes_ = header.protected_tlv_bytes + kTlvInfoBytes;
     }
     return admits(0, chunk, bytes);
 }
@@ -27,10 +29,19 @@ bool ProductCheck::admits(size_t offset, const uint8_t* chunk, size_t bytes) {
     const size_t to = std::min(offset + bytes, area_end);
     if (from < to) std::memcpy(area_ + (from - area_offset_), chunk + (from - offset), to - from);
     if (offset + bytes < area_end) return true;
-    ImageClass incoming;
-    verified_ = find_image_class(area_, area_bytes_, incoming) && incoming == *expected_;
+    verified_ = verify();
     refused_ = !verified_;
     return verified_;
+}
+
+// INFO: fc 16nov26 an upload ends where its image ends, so no swap carries forged bytes onto the
+// trust page
+bool ProductCheck::verify() const {
+    ImageClass incoming;
+    const std::optional<uint32_t> end =
+        image_end(header_, area_ + header_.protected_tlv_bytes, kTlvInfoBytes);
+    return expected_ && find_image_class(area_, header_.protected_tlv_bytes, incoming) &&
+           incoming == *expected_ && end == upload_bytes_;
 }
 
 }  // namespace skyblip::dfu

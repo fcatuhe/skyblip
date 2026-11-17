@@ -281,7 +281,9 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dfu.finished_upload = true;
     config.tick(0);
     config.set_radio_protocols(bravo::kRadioProtocols);
-    for (const char* command : {"status", "diagnostics", "update", "install_report", "protocols"})
+    config.set_paired_tag(0x3F2A);
+    for (const char* command :
+         {"status", "diagnostics", "update", "install_report", "protocols", "get"})
         config.on_rx(config_frame((std::string("{\"command\":\"") + command + "\"}").c_str()));
     // The rig's capture stops before it is listed and never rotates, so this entry is formatted
     // here.
@@ -356,6 +358,7 @@ const std::vector<Answer> kAnswers = {
      "{\"command\":\"acknowledgement\",\"acknowledge\":false,\"reason\":\"unknown_command\"}",
      "unknown_command"},
     {"capture", kConfig, prompt("confirm_capture"), "invalid"},
+    {"pair", kConfig, prompt("confirm_pair"), "invalid"},
     {"attest", kConfig, reply("attestation"), "invalid"},
     {"browser_challenge", kConfig, reply("browser_challenge"), "invalid"},
     {"trust_browser", kConfig,
@@ -384,6 +387,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"set.battery_offset_mv", "10"},
         {"set.frequency_trim_e1_ppm", "-5"},
         {"set.aircraft_address", "3958150"},
+        {"set.paired_tag", "16170"},
         {"dfu.version", "\"0.4.0+1\""},
         {"register.server_nonce",
          "\"" + hex_text(ConstByteSpan(kServerNonce.data(), kServerNonce.size())) + "\""},
@@ -404,6 +408,7 @@ std::map<std::string, std::string> samples(const GroundedUnitWithLogs& unit) {
         {"ownship.hot_spot", "2"},
         {"ownship.rows", "\"00ff00ff\""},
         {"capture.profile", "\"full\""},
+        {"pair.tag", "16170"},
         {"trust_browser.key", "\"" + browser_key() + "\""},
         {"trust_browser.signature", "\"" + browser_signature() + "\""},
         {"trust_browser.label", "\"Chrome on Android\""},

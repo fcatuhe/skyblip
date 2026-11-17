@@ -34,7 +34,8 @@ bool stages_prompt(link::Command command) {
         case link::Command::PowerOff:
         case link::Command::GnssColdStart:
         case link::Command::Register:
-        case link::Command::Capture: return true;
+        case link::Command::Capture:
+        case link::Command::Pair: return true;
         default: return false;
     }
 }
@@ -108,6 +109,7 @@ void ConfigService::on_link_down(const events::LinkDown& event) {
     note_disconnected(event.session_id);
     if (identity_ != nullptr) identity_->forget(event.session_id);
     browsers_.forget(event.session_id);
+    if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();
     if (!claim_.holds(event.session_id)) return;
     claim_.release();
     refused_on_device_ = false;
@@ -224,20 +226,6 @@ void ConfigService::refuse_unclaimed(const events::Peer& peer) {
 
 void ConfigService::refuse_too_wide() { acknowledge(false, link::Reason::SmallMtu); }
 
-// INFO: fc 10nov26 the link has no pairing: no command renews a prompt, and one press ends prompts
-// for that link
-bool ConfigService::prompt_refused() {
-    if (pending_ != Pending::None) {
-        acknowledge(false, link::Reason::PromptPending);
-        return true;
-    }
-    if (refused_on_device_) {
-        acknowledge(false, link::Reason::RefusedOnDevice);
-        return true;
-    }
-    return false;
-}
-
 void ConfigService::stage(Pending pending, link::Reason reason) {
     pending_ = pending;
     pending_since_ms_ = now_ms_;
@@ -253,22 +241,17 @@ void ConfigService::stage(Pending pending, link::Reason reason) {
 }
 
 void ConfigService::acknowledge(bool accepted, std::optional<link::Reason> reason) {
+    acknowledge_to(claim_.peer(), accepted, reason);
+}
+
+void ConfigService::acknowledge_to(const events::Peer& peer, bool accepted,
+                                   std::optional<link::Reason> reason) {
     uint8_t frame[kAcknowledgementFrameBytes];
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Acknowledgement);
     writer.add_boolean(link::acknowledgement_key::kAcknowledge, accepted);
     if (reason) writer.add_code(link::acknowledgement_key::kReason, *reason);
-    (void)reply(frame, writer.finish());
-}
-
-const char* ConfigService::prompt_detail() const {
-    return prompt_detail_[0] != 0 ? prompt_detail_ : pending_detail(pending_);
-}
-
-uint32_t ConfigService::prompt_seconds_left(uint32_t now_ms) const {
-    const uint32_t standing_ms = now_ms - pending_since_ms_;
-    if (pending_ == Pending::None || standing_ms >= kPromptCeilingMs) return 0;
-    return (kPromptCeilingMs - standing_ms + 999u) / 1000u;
+    (void)reply_to(peer, frame, writer.finish());
 }
 
 // INFO: fc 03oct26 the version is what the press authorises, so the slot must hold that one
@@ -377,6 +360,7 @@ void ConfigService::on_rx(const events::RxFrame& frame) {
         case link::Command::Unlock: unlock(reader); return;
         case link::Command::Attest: attest(reader); return;
         case link::Command::Capture: request_capture(reader); return;
+        case link::Command::Pair: request_pairing(reader); return;
         case link::Command::BrowserChallenge: browser_challenge(); return;
         case link::Command::TrustBrowser: trust_browser(reader); return;
         case link::Command::Browsers: send_browser(reader); return;
@@ -415,6 +399,7 @@ bool ConfigService::answers(link::Command command) const {
         case link::Command::ForgetBrowser: return identity_ != nullptr;
         case link::Command::Capture: return serves_captures_;
         case link::Command::Protocols: return !radio_protocols_.empty();
+        case link::Command::Pair: return pairing_side_ != PairingSide::None;
         case link::Command::Acknowledgement:
         case link::Command::Config:
         case link::Command::Registration:
@@ -440,6 +425,7 @@ void ConfigService::send_config() {
     cbor::Writer writer(frame, sizeof(frame));
     writer.add_code(link::kCommandKey, link::Command::Config);
     store_.write_fields(writer);
+    if (paired_tag_) writer.add_unsigned(link::config_key::kPairedTag, *paired_tag_);
     const int bytes = writer.finish();
     if (bytes == 0) {
         diagnostics_.link_drops++;
@@ -476,102 +462,6 @@ void ConfigService::stage_settings(const events::RxFrame& frame) {
     std::memcpy(prompt_detail_, detail, sizeof(detail));
 }
 
-// INFO: fc 03oct26 the dfu image travels over SMP, not this channel (simulator/README.md)
-void ConfigService::answer_prompt_request(link::Command command, const cbor::Reader& frame) {
-    if (in_flight()) {
-        acknowledge(false, link::Reason::InFlight);
-        return;
-    }
-    switch (command) {
-        case link::Command::Dfu:
-            if (!swap_powered()) {
-                acknowledge(false, link::Reason::LowPower);
-                return;
-            }
-            request_firmware(frame);
-            return;
-        case link::Command::Recovery:
-            stage(Pending::Recovery, link::Reason::ConfirmRecovery);
-            return;
-        case link::Command::PowerOff:
-            stage(Pending::PowerOff, link::Reason::ConfirmPowerOff);
-            return;
-        case link::Command::GnssColdStart:
-            stage(Pending::GnssColdStart, link::Reason::ConfirmGnssColdStart);
-            return;
-        default: return;
-    }
-}
-
-void ConfigService::request_log_erase() {
-    if (prompt_refused()) return;
-    if (in_flight()) {
-        acknowledge(false, link::Reason::InFlight);
-        return;
-    }
-    stage(Pending::EraseLog, link::Reason::ConfirmEraseLog);
-}
-
-void ConfigService::confirm() {
-    if (!prompt_allowed()) {
-        pending_ = Pending::None;
-        pending_set_bytes_ = 0;
-        acknowledge(false, link::Reason::InFlight);
-        return;
-    }
-    if (pending_ == Pending::Register) {
-        pending_ = Pending::None;
-        send_registration();
-        return;
-    }
-    if (pending_ == Pending::Set) {
-        // Asked again: the confirmation window is kPromptCeilingMs wide and a cell
-        // can cross the warning inside it.
-        if (!settings_writable()) {
-            pending_ = Pending::None;
-            pending_set_bytes_ = 0;
-            acknowledge(false, link::Reason::LowPower);
-            return;
-        }
-        const cbor::Reader staged = pending_set();
-        pending_ = Pending::None;
-        pending_set_bytes_ = 0;
-        apply_settings(staged);
-    } else if (pending_ == Pending::Dfu && !swap_powered()) {
-        pending_ = Pending::None;
-        upload_window_open_ = false;
-        acknowledge(false, link::Reason::LowPower);
-    } else if (pending_ == Pending::Dfu) {
-        pending_ = Pending::None;
-        remember_browser();
-        open_upload_window();
-        acknowledge(true, link::Reason::Dfu);
-    } else if (pending_ == Pending::Recovery) {
-        pending_ = Pending::None;
-        upload_window_open_ = false;
-        recovery_requested_ = true;
-        acknowledge(true, link::Reason::Recovery);
-    } else if (pending_ == Pending::PowerOff) {
-        pending_ = Pending::None;
-        upload_window_open_ = false;
-        power_off_requested_ = true;
-        acknowledge(true, link::Reason::PowerOff);
-    } else if (pending_ == Pending::EraseLog) {
-        pending_ = Pending::None;
-        log_erase_requested_ = true;
-        log_erase_peer_ = claim_.peer();
-        acknowledge(true, link::Reason::EraseLog);
-    } else if (pending_ == Pending::GnssColdStart) {
-        pending_ = Pending::None;
-        gnss_cold_start_requested_ = true;
-        acknowledge(true, link::Reason::GnssColdStart);
-    } else if (pending_ == Pending::Capture) {
-        pending_ = Pending::None;
-        capture_requested_ = staged_capture_;
-        acknowledge(true, link::Reason::Capture);
-    }
-}
-
 void ConfigService::apply_settings(const cbor::Reader& frame) {
     const Status applied = store_.apply(frame);
     if (applied != Status::Ok) {
@@ -590,12 +480,4 @@ void ConfigService::open_upload_window() {
     if (dfu_) dfu_->forget_upload();
 }
 
-void ConfigService::cancel() {
-    if (pending_ != Pending::None) refused_on_device_ = true;
-    pending_ = Pending::None;
-    pending_set_bytes_ = 0;
-    upload_window_open_ = false;
-    acknowledge(false, link::Reason::Cancelled);
-}
-
-}
+}  // namespace skyblip::comms

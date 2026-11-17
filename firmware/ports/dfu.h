@@ -110,6 +110,13 @@ class Dfu {
     virtual RecoveryPath recovery_path() const { return RecoveryPath::Rebooted; }
     virtual RecoveryPath enter_recovery() { return recovery_path(); }
 
+    // INFO: fc 16nov26 slot0, where a .uf2 from Briefing leaves its install trust record
+    virtual uint32_t running_slot_bytes() { return 0; }
+    virtual bool read_running_slot(uint32_t /*offset*/, uint8_t* /*out*/, size_t /*bytes*/) {
+        return false;
+    }
+    virtual bool erase_running_slot_page(uint32_t /*offset*/) { return false; }
+
     // INFO: fc 26sep26 the SMP hook runs on another thread and reads only what was published
     virtual void publish_upload_allowed(bool) {}
     virtual bool upload_finished() { return false; }

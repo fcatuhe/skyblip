@@ -2,6 +2,7 @@
 #define SKYBLIP_PRODUCTS_COMMON_SERVICES_CONFIG_LINK_H
 
 #include "core/comms/config.h"
+#include "core/comms/install_trust.h"
 #include "core/dfu/install_report.h"
 #include "core/dfu/update.h"
 #include "core/diagnostics/payload.h"
@@ -62,6 +63,7 @@ class ConfigLinkService : public runtime::Service {
     Status setup() override;
     void load();
     void load_browsers();
+    void adopt_install_trust();
     void load_identity();
     void tick(uint32_t now_ms) override;
 
@@ -120,6 +122,7 @@ class ConfigLinkService : public runtime::Service {
     void write_settings(uint32_t now_ms, bool forced);
     void drain_browsers(uint32_t now_ms);
     void write_browsers(uint32_t now_ms, bool forced);
+    void drain_install_trust(uint32_t now_ms);
     bool persist();
     bool newer_layout(const uint8_t* blob, size_t blob_bytes) const;
     static bool blob_fits(size_t blob_bytes) { return blob_bytes > 0 && blob_bytes <= kBlobBytes; }
@@ -165,6 +168,8 @@ class ConfigLinkService : public runtime::Service {
     timing::DurableWriteWindow unlock_writes_{};
     timing::DurableWriteWindow writes_{};
     timing::DurableWriteWindow browser_writes_{};
+    timing::DurableWriteWindow trust_page_erases_{};
+    comms::InstallTrust install_trust_{};
     power::OnTime connected_{};
     uint16_t recorded_holder_{0};
     bool recorded_claim_held_{false};

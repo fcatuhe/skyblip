@@ -166,12 +166,30 @@ TEST_CASE("dfu: a protected area wider than the check holds is refused, not read
 // img_mgmt never holds the declared length to the header, and leaves the slot past it as it was.
 TEST_CASE("dfu: an upload declared to end before the image's class is refused at its first chunk") {
     const std::vector<uint8_t> bravo = image(kBravo);
-    const size_t area_end = kImageHeaderBytes + kBodyBytes + protected_area(kBravo).size();
+    const size_t area_end =
+        kImageHeaderBytes + kBodyBytes + protected_area(kBravo).size() + kTlvInfoBytes;
     ProductCheck short_of_it;
     CHECK_FALSE(short_of_it.begin(bravo.data(), 64, area_end - 1, kGo));
     CHECK_FALSE(short_of_it.admits(64, bravo.data() + 64, 64));
     ProductCheck to_its_end;
     CHECK(to_its_end.begin(bravo.data(), 64, area_end, kGo));
+}
+
+// A swap carries slot1 past a shorter image onto slot0's trust page (core/comms/README.md).
+TEST_CASE("dfu: an upload declared longer or shorter than its image is refused before its tail") {
+    std::vector<uint8_t> longer = image(kGo);
+    const size_t image_bytes = longer.size();
+    longer.resize(image_bytes + 4096, 0x5a);
+    ProductCheck check;
+    const std::vector<bool> verdicts = upload(check, longer, 64, kGo);
+    // The TLV info ends at 32 + 300 + 85 + 4 = 421 bytes, inside the seventh 64-byte chunk.
+    CHECK(first_refused(verdicts) == 6);
+    CHECK(first_refused(verdicts) * 64 < image_bytes);
+
+    const std::vector<uint8_t> go = image(kGo);
+    const std::vector<uint8_t> truncated(go.begin(), go.end() - 1);
+    ProductCheck shorter;
+    CHECK(first_refused(upload(shorter, truncated, 64, kGo)) == 6);
 }
 
 TEST_CASE("dfu: a chunk with no first chunk before it is refused") {

@@ -24,6 +24,8 @@ class PeerService : public runtime::Service {
    public:
     // INFO: fc 11nov26 schemas/link.v1.json health: once a second whatever the traffic
     static constexpr uint32_t kHealthPeriodMs = 1000;
+    // INFO: fc 16nov26 unverified: a page turns from Bravo to the Go through the browser's chooser
+    static constexpr uint32_t kAcceptanceWindowMs = 60000;
     // INFO: fc 12nov26 unverified: three claim periods, so one lost claim keeps Bravo silent (#194)
     static constexpr uint32_t kAlarmRequestMaxAgeMs = 3000;
 
@@ -41,6 +43,10 @@ class PeerService : public runtime::Service {
     void tick(uint32_t now_ms) override;
 
     bool answer(uint32_t now_ms);
+    // INFO: fc 16nov26 the Go a trusted browser named, whose request Bravo answers as a press would
+    std::optional<uint16_t> accepting() const {
+        return acceptance_ ? std::optional<uint16_t>(acceptance_->tag) : std::nullopt;
+    }
     bool requested() const { return pairing_.requested(); }
     // INFO: fc 11nov26 both sides hold the pin, the one state a Go+ may take the alarm in (#179)
     bool paired() const { return pairing_.pinned(); }
@@ -57,12 +63,18 @@ class PeerService : public runtime::Service {
         bool claimed_pin{false};
     };
 
+    struct Acceptance {
+        uint16_t tag{0};
+        uint32_t since_ms{0};
+    };
+
     struct AlarmRequest {
         events::BluetoothAddress go{};
         uint32_t heard_ms{0};
     };
 
     void forget_gone();
+    void accept(uint32_t now_ms);
     void ask(Go& go, uint32_t now_ms);
     bool pinned_go_connected() const;
     void hear_alarm_request(const events::BluetoothAddress& go, bool requested, uint32_t now_ms);
@@ -88,6 +100,7 @@ class PeerService : public runtime::Service {
     std::array<Go, ObservationPacer::kRecipients> gos_{};
     PeerPin kept_{};
     std::optional<AlarmRequest> alarm_request_{};
+    std::optional<Acceptance> acceptance_{};
     uint32_t boot_epoch_{0};
     uint32_t sequence_{0};
     int next_target_{0};

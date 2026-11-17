@@ -19,6 +19,7 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
+    config_.serve_pairing(comms::PairingSide::Bravo);
     const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
     if (!epoch) return Status::Down;
     boot_epoch_ = *epoch;
@@ -28,10 +29,16 @@ Status PeerService::setup() {
 
 void PeerService::tick(uint32_t now_ms) {
     forget_gone();
+    if (const std::optional<uint16_t> tag = config_.take_pair_request())
+        acceptance_ = Acceptance{*tag, now_ms};
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take(frame, now_ms);
     pairing_.tick(now_ms);
+    accept(now_ms);
     keep_pin();
+    config_.set_paired_tag(settings_.peer.pinned ? std::optional<uint16_t>(events::bluetooth_tag(
+                                                       address_of(settings_.peer)))
+                                                 : std::nullopt);
     expire_alarm_request(now_ms);
     context_.state.link.pairing_standing = pairing_.requested();
     context_.state.alarm_granted = alarm_request_.has_value();
@@ -47,6 +54,12 @@ bool PeerService::answer(uint32_t now_ms) {
     health_owed_ = true;
     context_.state.link.pairing_standing = false;
     return true;
+}
+
+void PeerService::accept(uint32_t now_ms) {
+    if (!acceptance_) return;
+    const bool expired = now_ms - acceptance_->since_ms >= kAcceptanceWindowMs;
+    if (expired || (pairing_.requested_by(acceptance_->tag) && answer(now_ms))) acceptance_.reset();
 }
 
 void PeerService::forget_gone() {

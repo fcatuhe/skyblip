@@ -49,6 +49,7 @@ enum class Command : uint8_t {
     Attest = 37,
     Attestation = 38,
     Identity = 39,
+    Pair = 40,
 };
 
 enum class Reason : uint8_t {
@@ -104,6 +105,15 @@ enum class Reason : uint8_t {
     Forgotten = 50,
     UnknownBrowser = 51,
     NotOwnTransponder = 52,
+    ConfirmPair = 54,
+    Pair = 55,
+    Paired = 56,
+    NotFound = 57,
+    PhonesConnected = 58,
+    NarrowLink = 59,
+    NoAnswer = 60,
+    LinkLost = 61,
+    UnknownProtocol = 62,
 };
 
 namespace acknowledgement_key {
@@ -127,6 +137,7 @@ enum : uint32_t {
     kFrequencyTrimE1Ppm = 10,
     kAircraftAddress = 11,
     kAlarm = 12,
+    kPairedTag = 15,
 };
 }
 
@@ -609,6 +620,12 @@ namespace identity_bytes {
 constexpr size_t kDeviceId = 8;
 }
 
+namespace pair_key {
+enum : uint32_t {
+    kTag = 1,
+};
+}
+
 namespace defaults_key = config_key;
 
 namespace set_key = config_key;
@@ -643,13 +660,14 @@ constexpr uint64_t host_keys(Command command) {
         case Command::Protocols:
         case Command::Attestation:
         case Command::Identity: return 0x1;
-        case Command::Set: return 0x1F9F;
+        case Command::Set: return 0x9F9F;
         case Command::Dfu:
         case Command::Erase:
         case Command::Capture:
         case Command::Browsers:
         case Command::ForgetBrowser:
-        case Command::Attest: return 0x3;
+        case Command::Attest:
+        case Command::Pair: return 0x3;
         case Command::Register:
         case Command::Unlock:
         case Command::List: return 0x7;
