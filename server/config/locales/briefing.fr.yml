@@ -51,7 +51,7 @@ fr:
         metric: "km, km/h"
       alarm: "Alarme"
       alarm_names:
-        "off": "Coupée"
+        "off": "Désactivée"
         visual: "Visuelle seulement"
         soft: "Son faible + visuel"
         loud: "Son fort + visuel"
