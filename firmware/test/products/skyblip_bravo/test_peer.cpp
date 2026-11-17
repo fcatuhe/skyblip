@@ -368,7 +368,7 @@ TEST_CASE("bravo peer: a callsign reaches the Go without moving the position's t
     CHECK(field(position, "callsign").empty());
 
     served.seconds(2, true, nullptr);
-    served.rig.hear(adsb_identification(kAircraft, 5, 4, 1, "AFR123"));
+    served.rig.hear(adsb::identification(kAircraft, 5, 4, 1, "AFR123"));
     served.seconds(1, true, nullptr);
     const std::vector<std::string> observed = served.observations_of(kAircraft);
     REQUIRE(observed.size() == 2);
@@ -444,9 +444,9 @@ TEST_CASE("bravo peer: health names the transponder Bravo hears loudest, filtere
         constexpr int8_t kCockpitDbm = -12;
         const double latitude = BravoRig::kLatitude1e7 / 1e7;
         const double longitude = BravoRig::kLongitude1e7 / 1e7;
-        served.rig.hear(adsb_identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
+        served.rig.hear(adsb::identification(kAircraft, 0, 4, 1, "FJABC"), kCockpitDbm);
         for (const bool odd : {false, true, false, true})
-            served.rig.hear(adsb_airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
+            served.rig.hear(adsb::airborne_position(kAircraft, 0, latitude, longitude, odd, 1500),
                             kCockpitDbm);
         served.rig.push_fix();
         served.claim(nullptr, aircraft_address);

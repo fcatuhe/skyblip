@@ -14,13 +14,13 @@ using skyblip::wire::Status;
 
 namespace {
 
-AdsbFrame status(uint8_t subtype, uint8_t version, uint8_t gva) {
-    AdsbFrame frame = adsb_operational_status(kAddress, kAirborneCapability, version, gva);
+adsb::Squitter status(uint8_t subtype, uint8_t version, uint8_t gva) {
+    adsb::Squitter frame = adsb::operational_status(kAddress, kAirborneCapability, version, gva);
     put(frame, 6, 8, subtype);
     return frame;
 }
 
-OperationalStatus heard_status(const AdsbFrame& frame) {
+OperationalStatus heard_status(const adsb::Squitter& frame) {
     return heard_ok(frame).operational_status;
 }
 
@@ -51,7 +51,7 @@ TEST_CASE("DO-260B 2.2.3.2.7.2: the operational status reads its subtype, versio
 
 TEST_CASE("DO-260B 2.2.3.2.7.2.1: the operational status is TYPE 31") {
     CHECK(heard_ok(status(0, 2, 1)).type_code == 31);
-    AdsbFrame other = status(0, 2, 1);
+    adsb::Squitter other = status(0, 2, 1);
     put(other, 1, 5, 30);
     CHECK(hear(other).status == Status::Unsupported);
 }
@@ -141,12 +141,12 @@ TEST_CASE(
 }
 
 TEST_CASE("DO-260B 2.2.3.2.7.2.15: the reserved bits change nothing read") {
-    AdsbFrame surface = status(1, 2, 3);
+    adsb::Squitter surface = status(1, 2, 3);
     put(surface, 56, 56, 1);
     const OperationalStatus read = heard_status(surface);
     CHECK(read.version == 2);
     CHECK_FALSE(read.gva_valid);
-    AdsbFrame airborne = status(0, 2, 1);
+    adsb::Squitter airborne = status(0, 2, 1);
     put(airborne, 56, 56, 1);
     CHECK(heard_status(airborne).gva == 1);
 }

@@ -21,18 +21,18 @@ Bravo tracking(uint32_t at_ms = 1000) {
     return bravo;
 }
 
-AdsbFrame air_velocity(int32_t east_kt, int32_t north_kt, int32_t climb_fpm, bool barometric) {
-    AdsbFrame frame =
-        adsb_ground_velocity(kAddress, kNoCapability, east_kt, north_kt, climb_fpm, 75);
-    adsb_set_message_bits(frame, 36, 36, barometric ? 1 : 0);
+adsb::Squitter air_velocity(int32_t east_kt, int32_t north_kt, int32_t climb_fpm, bool barometric) {
+    adsb::Squitter frame =
+        adsb::ground_velocity(kAddress, kNoCapability, east_kt, north_kt, climb_fpm, 75);
+    adsb::set_message_bits(frame, 36, 36, barometric ? 1 : 0);
     return frame;
 }
 
-AdsbFrame surface_at(bool odd, uint8_t movement, bool track_valid, uint8_t track) {
-    AdsbFrame frame = adsb_surface_position(kAddress, kNoCapability, kHomeLatitude, kHomeLongitude,
-                                            odd, movement);
-    adsb_set_message_bits(frame, 13, 13, track_valid ? 1 : 0);
-    adsb_set_message_bits(frame, 14, 20, track);
+adsb::Squitter surface_at(bool odd, uint8_t movement, bool track_valid, uint8_t track) {
+    adsb::Squitter frame = adsb::surface_position(kAddress, kNoCapability, kHomeLatitude,
+                                                  kHomeLongitude, odd, movement);
+    adsb::set_message_bits(frame, 13, 13, track_valid ? 1 : 0);
+    adsb::set_message_bits(frame, 14, 20, track);
     return frame;
 }
 
@@ -41,8 +41,8 @@ AdsbFrame surface_at(bool odd, uint8_t movement, bool track_valid, uint8_t track
 TEST_CASE("DO-260B 2.2.8: a Track carries the report parameters in a structure of its own") {
     Bravo bravo = tracking();
     REQUIRE(bravo.hear(air_velocity(100, -50, 640, false), 1500));
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "DLH4AB"), 1600));
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 1700));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "DLH4AB"), 1600));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 1700));
     const Track& track = bravo.heard;
     CHECK(track.address == kAddress);
     CHECK(track.position_valid);
@@ -65,7 +65,7 @@ TEST_CASE("DO-260B 2.2.8.1: the state vector is position, altitudes, velocity an
 
 TEST_CASE("DO-260B 2.2.8.1.1: every state vector element the Track carries has its validity") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "DLH4AB"), 0));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "DLH4AB"), 0));
     CHECK_FALSE(bravo.heard.position_valid);
     CHECK_FALSE(bravo.heard.pressure_altitude_valid);
     CHECK_FALSE(bravo.heard.gnss_height_valid);
@@ -90,7 +90,7 @@ TEST_CASE("DO-260B 2.2.8.1.1.2: the validity flags are bytes 3 and 4" * doctest:
 TEST_CASE("DO-260B 2.2.8.1.2: the participant address is the AA field") {
     const uint32_t other = 0x3C6586;
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(other, kNoCapability, 4, 1, "A"), 0));
+    REQUIRE(bravo.hear(adsb::identification(other, kNoCapability, 4, 1, "A"), 0));
     CHECK(bravo.heard.address == other);
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("DO-260B 2.2.8.1.4.2: the position's instant is set by the message tha
     Bravo bravo = tracking(1000);
     bravo.fly(kLatitude, kLongitude, 1800, false, 3000);
     CHECK(bravo.heard.at_ms == 1800);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 2500));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 2500));
     CHECK(bravo.heard.at_ms == 1800);
 }
 
@@ -143,16 +143,16 @@ TEST_CASE(
 
 TEST_CASE("DO-260B 2.2.8.1.4.2.3: with T 1 and no UTC the position is as of its receipt") {
     Bravo bravo;
-    AdsbFrame even =
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000);
-    AdsbFrame odd =
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 3000);
-    adsb_set_message_bits(even, 21, 21, 1);
-    adsb_set_message_bits(odd, 21, 21, 1);
+    adsb::Squitter even =
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000);
+    adsb::Squitter odd =
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 3000);
+    adsb::set_message_bits(even, 21, 21, 1);
+    adsb::set_message_bits(odd, 21, 21, 1);
     Message message;
-    REQUIRE(adsb_hear(even, message) == wire::Status::Ok);
+    REQUIRE(receive_sealed(even, message) == wire::Status::Ok);
     REQUIRE(bravo.assembly.fold(message, 400, Receipt{}, bravo.reference, bravo.heard));
-    REQUIRE(adsb_hear(odd, message) == wire::Status::Ok);
+    REQUIRE(receive_sealed(odd, message) == wire::Status::Ok);
     REQUIRE(bravo.assembly.fold(message, 1300, Receipt{}, bravo.reference, bravo.heard));
     REQUIRE(bravo.heard.position_valid);
     CHECK(bravo.heard.at_ms == 1300);
@@ -195,7 +195,7 @@ TEST_CASE(
     CHECK(bravo.heard.gnss_height_ft == 3075);
     Bravo direct;
     REQUIRE(direct.hear(
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 5000, true),
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 5000, true),
         0));
     CHECK(direct.heard.gnss_height_valid);
     CHECK(direct.heard.gnss_height_ft == 5000);
@@ -248,9 +248,9 @@ TEST_CASE(
     CHECK(bravo.heard.pressure_altitude_valid);
     CHECK(bravo.heard.pressure_altitude_ft == 3000);
     Bravo none;
-    AdsbFrame frame =
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000);
-    adsb_set_message_bits(frame, 9, 20, 0);
+    adsb::Squitter frame =
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000);
+    adsb::set_message_bits(frame, 9, 20, 0);
     REQUIRE(none.hear(frame, 0));
     CHECK_FALSE(none.heard.pressure_altitude_valid);
 }
@@ -321,8 +321,8 @@ TEST_CASE("DO-260B 2.2.8.1.22: the report mode says acquisition or track" * doct
 
 TEST_CASE("DO-260B 2.2.8.2: the mode status is version, call sign, category and GVA") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 100));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 100));
     CHECK(bravo.heard.identified);
     CHECK(bravo.heard.emitter_type_code == 3);
     CHECK(bravo.heard.emitter_category == 1);
@@ -333,7 +333,7 @@ TEST_CASE("DO-260B 2.2.8.2: the mode status is version, call sign, category and 
 TEST_CASE("DO-260B 2.2.8.2.1: the mode status elements carry their validity") {
     Bravo bravo;
     REQUIRE(bravo.hear(
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000), 0));
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000), 0));
     CHECK_FALSE(bravo.heard.identified);
     CHECK_FALSE(bravo.heard.version_valid);
     CHECK_FALSE(bravo.heard.gva_valid);
@@ -354,29 +354,29 @@ TEST_CASE("DO-260B 2.2.8.2.1.2: the mode status validity flags are byte 3" * doc
 
 TEST_CASE("DO-260B 2.2.8.2.2: the mode status names the AA field's address") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(0x3C6586, kNoCapability, 2, 1), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(0x3C6586, kNoCapability, 2, 1), 0));
     CHECK(bravo.heard.address == 0x3C6586);
 }
 
 TEST_CASE("DO-260B 2.2.8.2.3: the mode status address is ICAO, as every DF17 AA is") {
     CHECK(kSyncChips == 0x95);
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 0));
     CHECK(bravo.heard.address == kAddress);
 }
 
 TEST_CASE("DO-260B 2.2.8.2.4: a mode status update keeps the instant of the message that made it") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 700));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 700));
     CHECK(bravo.heard.at_ms == 700);
 }
 
 TEST_CASE("DO-260B 2.2.8.2.5: the version comes from the operational status, zeros until heard") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 0));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 0));
     CHECK_FALSE(bravo.heard.version_valid);
     CHECK(bravo.heard.version == 0);
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 1, 0), 100));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 1, 0), 100));
     CHECK(bravo.heard.version_valid);
     CHECK(bravo.heard.version == 1);
 }
@@ -391,10 +391,10 @@ TEST_CASE("DO-260B 2.2.8.2.6: the call sign is the eight identification characte
 
 TEST_CASE("DO-260B 2.2.8.2.7: the emitter category is the TYPE code's set and the category") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 7, "A"), 0));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 7, "A"), 0));
     CHECK(bravo.heard.emitter_type_code == 4);
     CHECK(bravo.heard.emitter_category == 7);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 4, "A"), 100));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 3, 4, "A"), 100));
     CHECK(bravo.heard.emitter_type_code == 3);
     CHECK(bravo.heard.emitter_category == 4);
 }
@@ -457,7 +457,7 @@ TEST_CASE("DO-260B 2.2.8.2.14.3: the SDA comes from the operational mode" * doct
 
 TEST_CASE("DO-260B 2.2.8.2.15: the GVA comes from the operational status") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 0));
     CHECK(bravo.heard.gva_valid);
     CHECK(bravo.heard.gva == 1);
 }
@@ -517,8 +517,8 @@ TEST_CASE("DO-260B 2.2.8.4: a reserved TYPE code between two positions changes n
     bravo.fly(kLatitude, kLongitude, 0, false, 3000);
     for (uint8_t type_code : {0, 23, 24, 25, 26, 27, 28, 29, 30}) {
         Message message;
-        AdsbFrame frame = adsb_frame(kAddress, kNoCapability, type_code);
-        CHECK(adsb_hear(frame, message) == wire::Status::Unsupported);
+        adsb::Squitter frame = adsb::squitter(kAddress, kNoCapability, type_code);
+        CHECK(receive_sealed(frame, message) == wire::Status::Unsupported);
     }
     bravo.fly(kLatitude, kLongitude, 1000, true, 3000);
     CHECK(bravo.heard.position_valid);
@@ -534,7 +534,7 @@ TEST_CASE("DO-260B 2.2.9: the Track is the report set of the least class, A0") {
 TEST_CASE(
     "DO-260B 2.2.9.1: a class A0 receiver reports state vector and mode status, airborne or not") {
     Bravo bravo = tracking();
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 1500));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 1500));
     CHECK(bravo.heard.position_valid);
     CHECK(bravo.heard.version_valid);
     Bravo ground;
@@ -552,8 +552,8 @@ TEST_CASE("DO-260B 2.2.9.1.1: every class A receiver gives state vectors") {
 
 TEST_CASE("DO-260B 2.2.9.1.2: every class A receiver gives mode status") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 0));
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 100));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 100));
     CHECK(bravo.heard.identified);
     CHECK(bravo.heard.version_valid);
 }

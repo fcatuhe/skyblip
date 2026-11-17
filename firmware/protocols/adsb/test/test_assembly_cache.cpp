@@ -19,9 +19,9 @@ TEST_CASE("adsb assembly: 300 aircraft leave the nearest 100 tracked and count w
     const auto address_of = [](int i) { return 0x400000u + static_cast<uint32_t>(i); };
     for (int i = 299; i >= 0; i--) {
         adsb::Message message;
-        REQUIRE(adsb_hear(adsb_airborne_position(address_of(i), 5, latitude_of(i), kHomeLongitude,
+        REQUIRE(receive_sealed(airborne_position(address_of(i), 5, latitude_of(i), kHomeLongitude,
                                                  false, 3000),
-                          message) == Status::Ok);
+                               message) == Status::Ok);
         bravo.assembly.fold(message, static_cast<uint32_t>(300 - i), Receipt{}, bravo.reference,
                             bravo.heard);
     }
@@ -31,9 +31,9 @@ TEST_CASE("adsb assembly: 300 aircraft leave the nearest 100 tracked and count w
     int tracked = 0;
     for (int i = 299; i >= 0; i--) {
         adsb::Message message;
-        REQUIRE(adsb_hear(adsb_airborne_position(address_of(i), 5, latitude_of(i), kHomeLongitude,
-                                                 true, 3000),
-                          message) == Status::Ok);
+        REQUIRE(receive_sealed(
+                    airborne_position(address_of(i), 5, latitude_of(i), kHomeLongitude, true, 3000),
+                    message) == Status::Ok);
         const bool kept = bravo.assembly.fold(message, static_cast<uint32_t>(1000 - i), Receipt{},
                                               bravo.reference, bravo.heard);
         CHECK(kept == (i < 100));
@@ -48,7 +48,7 @@ TEST_CASE("adsb assembly: an aircraft silent for 250 s is forgotten, and its pla
     Bravo bravo;
     for (uint32_t i = 0; i < adsb::Assembly::kMaxAircraft; i++)
         bravo.fly(kLatitude, kLongitude, 0, false, 3000, 0x400000u + i);
-    REQUIRE(bravo.hear(adsb_identification(0x400000u, kNoCapability, 3, 1, "DGLID"), 0));
+    REQUIRE(bravo.hear(identification(0x400000u, kNoCapability, 3, 1, "DGLID"), 0));
     REQUIRE(bravo.heard.identified);
 
     bravo.fly(kLatitude, kLongitude, adsb::kAdsbAircraftForgetMs + 1, false, 3000, 0x500000u);
@@ -57,7 +57,7 @@ TEST_CASE("adsb assembly: an aircraft silent for 250 s is forgotten, and its pla
     CHECK(bravo.assembly.refusals() == 0);
 
     bravo.fly(kLatitude, kLongitude, adsb::kAdsbAircraftForgetMs + 2, false, 3000, 0x400001u);
-    REQUIRE(bravo.hear(adsb_ground_velocity(0x400000u, kNoCapability, 0, 80, 0, 0),
+    REQUIRE(bravo.hear(ground_velocity(0x400000u, kNoCapability, 0, 80, 0, 0),
                        adsb::kAdsbAircraftForgetMs + 3));
     CHECK_FALSE(bravo.heard.identified);
 }
@@ -71,18 +71,18 @@ TEST_CASE("adsb assembly: a receiver that moves ranks the cache from where it is
     for (uint32_t i = 1; i < adsb::Assembly::kMaxAircraft; i++)
         bravo.fly(48.03, 8.0, i, false, 3000, beside + i);
     adsb::Message far;
-    REQUIRE(adsb_hear(adsb_airborne_position(0x500000u, kNoCapability, 48.05, 8.0, false, 3000),
-                      far) == Status::Ok);
+    REQUIRE(receive_sealed(airborne_position(0x500000u, kNoCapability, 48.05, 8.0, false, 3000),
+                           far) == Status::Ok);
     REQUIRE_FALSE(bravo.assembly.fold(far, 1000, Receipt{}, bravo.reference, bravo.heard));
 
     bravo.reference = reference_at(48.06, 8.0);
     adsb::Message near;
-    REQUIRE(adsb_hear(adsb_airborne_position(0x500001u, kNoCapability, 48.06, 8.0, false, 3000),
-                      near) == Status::Ok);
+    REQUIRE(receive_sealed(airborne_position(0x500001u, kNoCapability, 48.06, 8.0, false, 3000),
+                           near) == Status::Ok);
     REQUIRE(bravo.assembly.fold(near, 2000, Receipt{}, bravo.reference, bravo.heard));
     CHECK(bravo.assembly.evictions() == 1);
-    CHECK_FALSE(bravo.hear(adsb_ground_velocity(beside, kNoCapability, 0, 80, 0, 0), 3000));
-    CHECK(bravo.hear(adsb_ground_velocity(beside + 1, kNoCapability, 0, 80, 0, 0), 3000));
+    CHECK_FALSE(bravo.hear(ground_velocity(beside, kNoCapability, 0, 80, 0, 0), 3000));
+    CHECK(bravo.hear(ground_velocity(beside + 1, kNoCapability, 0, 80, 0, 0), 3000));
 }
 
 TEST_CASE("adsb assembly: with no reference a full cache gives the newcomer the quietest place") {
@@ -91,9 +91,9 @@ TEST_CASE("adsb assembly: with no reference a full cache gives the newcomer the 
         bravo.fly(kLatitude, kLongitude, i, false, 3000, 0x400000u + i);
     bravo.reference = adsb::Reference{};
     for (uint32_t i = 0; i < 50; i++)
-        CHECK(bravo.hear(adsb_airborne_position(0x500000u + i, kNoCapability, kLatitude, kLongitude,
-                                                false, 3000),
-                         1000 + i));
+        CHECK(bravo.hear(
+            airborne_position(0x500000u + i, kNoCapability, kLatitude, kLongitude, false, 3000),
+            1000 + i));
     CHECK(bravo.assembly.evictions() == 50);
     CHECK(bravo.assembly.refusals() == 0);
 }
@@ -107,8 +107,8 @@ TEST_CASE("adsb assembly: a half never heard is no newer than a held one, across
         for (uint32_t i = 0; i < adsb::Assembly::kMaxAircraft; i++)
             bravo.fly(48.01, 8.0, base_ms + i, false, 3000, 0x400000u + i);
         adsb::Message message;
-        REQUIRE(adsb_hear(adsb_airborne_position(0x500000u, kNoCapability, 49.0, 8.0, false, 3000),
-                          message) == Status::Ok);
+        REQUIRE(receive_sealed(airborne_position(0x500000u, kNoCapability, 49.0, 8.0, false, 3000),
+                               message) == Status::Ok);
         CHECK_FALSE(
             bravo.assembly.fold(message, base_ms + 1000, Receipt{}, bravo.reference, bravo.heard));
         CHECK(bravo.assembly.evictions() == 0);
@@ -137,8 +137,8 @@ TEST_CASE("adsb assembly: an aircraft that flies away is ranked from where it is
         bravo.fly(48.01, 8.0, i, false, 3000, 0x400000u + i);
     bravo.fly(48.001, 8.0, 100, false, 3000, 0x400000u);
     adsb::Message far;
-    REQUIRE(adsb_hear(adsb_airborne_position(0x500001u, kNoCapability, 49.0, 8.0, false, 3000),
-                      far) == Status::Ok);
+    REQUIRE(receive_sealed(airborne_position(0x500001u, kNoCapability, 49.0, 8.0, false, 3000),
+                           far) == Status::Ok);
     REQUIRE_FALSE(bravo.assembly.fold(far, 200, Receipt{}, bravo.reference, bravo.heard));
     for (uint32_t step = 0; step <= 5; step++) {
         bravo.fly(48.001 + step * 0.009, 8.0, 100 + step * 10000, false, 3000, 0x400000u);
@@ -146,8 +146,8 @@ TEST_CASE("adsb assembly: an aircraft that flies away is ranked from where it is
     }
     REQUIRE(metres_from(bravo.heard, 48.046, 8.0) < 5.1);
     adsb::Message message;
-    REQUIRE(adsb_hear(adsb_airborne_position(0x500000u, kNoCapability, 48.02, 8.0, false, 3000),
-                      message) == Status::Ok);
+    REQUIRE(receive_sealed(airborne_position(0x500000u, kNoCapability, 48.02, 8.0, false, 3000),
+                           message) == Status::Ok);
     CHECK(bravo.assembly.fold(message, 60000, Receipt{}, bravo.reference, bravo.heard));
     CHECK(bravo.assembly.evictions() == 1);
 }
@@ -156,11 +156,11 @@ TEST_CASE("adsb assembly: an aircraft that flies away is ranked from where it is
 TEST_CASE("adsb assembly: an aircraft heard across the whole clock keeps no time from its start") {
     Bravo bravo;
     bravo.fly(kLatitude, kLongitude, 0, false);
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 640, 150), 0));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 640, 150), 0));
     uint32_t at_ms = 0;
     for (uint64_t elapsed_ms = 200000; elapsed_ms < (uint64_t{1} << 32); elapsed_ms += 200000) {
         at_ms = static_cast<uint32_t>(elapsed_ms);
-        REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), at_ms));
+        REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), at_ms));
         bravo.assembly.age_out(at_ms);
     }
     at_ms = 1000;

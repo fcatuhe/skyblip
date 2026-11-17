@@ -114,7 +114,7 @@ class Sky {
                                           const model::Ownship& own) const;
     void squitter(const VirtualAircraft& aircraft, uint64_t from_us, uint64_t to_us,
                   const AdsbDatum& datum, models::Lr2021& radio);
-    void send(const AdsbFrame& frame, models::Lr2021& radio);
+    void send(const adsb::Squitter& frame, models::Lr2021& radio);
     static int8_t rssi_at(double range_m);
 
     static constexpr double kThreatSinkMps = -3;

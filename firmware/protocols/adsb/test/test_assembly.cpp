@@ -43,24 +43,24 @@ TEST_CASE("adsb assembly: a callsign or a velocity does not refresh the position
     REQUIRE(bravo.heard.position_valid);
     const Receipt received = bravo.heard.received;
 
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 4000));
+    REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), 4000));
     CHECK(bravo.heard.at_ms == 1500);
     CHECK(bravo.heard.received.utc_s == received.utc_s);
     CHECK(bravo.heard.received.utc_ms == received.utc_ms);
     CHECK(bravo.heard.identified);
 
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, 0), 4000));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 0, 0), 4000));
     CHECK(bravo.heard.at_ms == 1500);
     CHECK(bravo.heard.motion_age_ms == -2500);
 }
 
 TEST_CASE("adsb assembly: without a position the observation is as recent as its newest message") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 640, 0), 2000));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 640, 0), 2000));
     CHECK_FALSE(bravo.heard.position_valid);
     CHECK(bravo.heard.at_ms == 2000);
     CHECK(bravo.heard.climb_age_ms == 0);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 3000));
+    REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), 3000));
     CHECK(bravo.heard.at_ms == 3000);
     CHECK(bravo.heard.climb_age_ms == 1000);
 }
@@ -68,7 +68,7 @@ TEST_CASE("adsb assembly: without a position the observation is as recent as its
 // The difference rides on the velocity message, so the height derived from it is as old as it is.
 TEST_CASE("adsb assembly: a GNSS height derives from a fresh difference and stops on a stale one") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, 150), 0));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 0, 150), 0));
     bravo.fly(kLatitude, kLongitude, 1000, false, 3000);
     REQUIRE(bravo.heard.pressure_altitude_valid);
     CHECK(bravo.heard.pressure_altitude_ft == 3000);
@@ -85,7 +85,7 @@ TEST_CASE("adsb assembly: a GNSS height derives from a fresh difference and stop
 
 TEST_CASE("adsb assembly: the GNSS-baro difference rides on the observation with its own age") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), 0));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), 0));
     CHECK(bravo.heard.height_difference_valid);
     CHECK(bravo.heard.height_difference_ft == -275);
     CHECK(bravo.heard.height_difference_age_ms == 0);
@@ -100,11 +100,10 @@ TEST_CASE("adsb assembly: the GNSS-baro difference rides on the observation with
 
 TEST_CASE("adsb assembly: a GNSS height sent in the position wins over an older derived one") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, 150), 0));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 0, 150), 0));
     bravo.fly(kLatitude, kLongitude, 500, false, 3000);
     REQUIRE(bravo.hear(
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 3500, true),
-        1000));
+        airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 3500, true), 1000));
     CHECK(bravo.heard.gnss_height_ft == 3500);
     CHECK(bravo.heard.gnss_height_age_ms == 0);
     CHECK(bravo.heard.pressure_altitude_ft == 3000);
@@ -135,44 +134,41 @@ TEST_CASE("adsb assembly: the Riddle's surface pair decodes near its airfield an
 // A.1.7.8 gives a surface pair 50 s, or 25 s when either half may pass 25 kt or sends no speed.
 TEST_CASE("adsb assembly: a surface pair waits 50 s when slow and 25 s when fast or unknown") {
     Bravo slow;
-    REQUIRE(slow.hear(
-        adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 9), 0));
     REQUIRE(
-        slow.hear(adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 9),
-                  adsb::kSlowSurfacePairMaxAgeMs));
+        slow.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 9), 0));
+    REQUIRE(slow.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 9),
+                      adsb::kSlowSurfacePairMaxAgeMs));
     CHECK(slow.heard.position_valid);
 
     Bravo fast;
-    REQUIRE(fast.hear(
-        adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 49), 0));
     REQUIRE(
-        fast.hear(adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 9),
-                  adsb::kSurfacePairMaxAgeMs + 1));
+        fast.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 49), 0));
+    REQUIRE(fast.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 9),
+                      adsb::kSurfacePairMaxAgeMs + 1));
     CHECK_FALSE(fast.heard.position_valid);
 
     Bravo silent;
-    REQUIRE(silent.hear(
-        adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 0), 0));
     REQUIRE(
-        silent.hear(adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 0),
-                    adsb::kSurfacePairMaxAgeMs));
+        silent.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 0), 0));
+    REQUIRE(silent.hear(surface_position(kAddress, kNoCapability, kLatitude, kLongitude, true, 0),
+                        adsb::kSurfacePairMaxAgeMs));
     CHECK(silent.heard.position_valid);
 }
 
 TEST_CASE("adsb assembly: an airspeed and a heading never fill the ground speed and track") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_air_velocity(kAddress, kNoCapability, 256, 120, -640), 0));
+    REQUIRE(bravo.hear(air_velocity(kAddress, kNoCapability, 256, 120, -640), 0));
     CHECK(bravo.heard.motion.source == MotionSource::None);
     CHECK(bravo.heard.climb_valid);
     CHECK(bravo.heard.climb_source == HeightSource::Pressure);
 
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 100, 0, 640, 0), 1000));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 100, 0, 640, 0), 1000));
     REQUIRE(bravo.heard.motion.source == MotionSource::Velocity);
     CHECK(bravo.heard.motion.east_kt == 100);
     CHECK(bravo.heard.motion.north_kt == 0);
     CHECK(bravo.heard.climb_source == HeightSource::Gnss);
 
-    REQUIRE(bravo.hear(adsb_air_velocity(kAddress, kNoCapability, 0, 300, -1280), 3000));
+    REQUIRE(bravo.hear(air_velocity(kAddress, kNoCapability, 0, 300, -1280), 3000));
     CHECK(bravo.heard.motion.source == MotionSource::Velocity);
     CHECK(bravo.heard.motion.east_kt == 100);
     CHECK(bravo.heard.motion_age_ms == 2000);
@@ -182,10 +178,9 @@ TEST_CASE("adsb assembly: an airspeed and a heading never fill the ground speed 
 
 TEST_CASE("adsb assembly: a surface position carries a ground speed and a track, and no climb") {
     Bravo bravo;
-    AdsbFrame frame =
-        adsb_surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 49);
-    adsb_set_message_bits(frame, 13, 13, 1);
-    adsb_set_message_bits(frame, 14, 20, 32);
+    Squitter frame = surface_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 49);
+    set_message_bits(frame, 13, 13, 1);
+    set_message_bits(frame, 14, 20, 32);
     REQUIRE(bravo.hear(frame, 0));
     CHECK(bravo.heard.motion.source == MotionSource::Surface);
     CHECK(bravo.heard.motion.speed_mkt == 25000);
@@ -196,21 +191,21 @@ TEST_CASE("adsb assembly: a surface position carries a ground speed and a track,
 
 TEST_CASE("adsb assembly: the type code, else the capability, says where it is, and stays said") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
+    REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
     CHECK(bravo.heard.air_ground == AirGround::Unknown);
 
-    REQUIRE(bravo.hear(adsb_identification(kAddress, 4, 3, 1, "DGLID"), 1000));
+    REQUIRE(bravo.hear(identification(kAddress, 4, 3, 1, "DGLID"), 1000));
     CHECK(bravo.heard.air_ground == AirGround::Ground);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, 5, 3, 1, "DGLID"), 1500));
+    REQUIRE(bravo.hear(identification(kAddress, 5, 3, 1, "DGLID"), 1500));
     CHECK(bravo.heard.air_ground == AirGround::Airborne);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, 4, 3, 1, "DGLID"), 1800));
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, 0), 2000));
+    REQUIRE(bravo.hear(identification(kAddress, 4, 3, 1, "DGLID"), 1800));
+    REQUIRE(bravo.hear(ground_velocity(kAddress, kNoCapability, 0, 80, 0, 0), 2000));
     CHECK(bravo.heard.air_ground == AirGround::Airborne);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 5000));
+    REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), 5000));
     CHECK(bravo.heard.air_ground == AirGround::Airborne);
     CHECK(bravo.heard.air_ground_age_ms == 3000);
 
-    REQUIRE(bravo.hear(adsb_surface_position(kAddress, 5, kLatitude, kLongitude, false), 6000));
+    REQUIRE(bravo.hear(surface_position(kAddress, 5, kLatitude, kLongitude, false), 6000));
     CHECK(bravo.heard.air_ground == AirGround::Ground);
     bravo.fly(kLatitude, kLongitude, 7000, true);
     CHECK(bravo.heard.air_ground == AirGround::Airborne);
@@ -218,12 +213,12 @@ TEST_CASE("adsb assembly: the type code, else the capability, says where it is, 
 
 TEST_CASE("adsb assembly: the operational status names the version and, from version 2, the GVA") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 0, 3), 0));
+    REQUIRE(bravo.hear(operational_status(kAddress, kNoCapability, 0, 3), 0));
     CHECK(bravo.heard.version_valid);
     CHECK(bravo.heard.version == 0);
     CHECK_FALSE(bravo.heard.gva_valid);
 
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 2), 1000));
+    REQUIRE(bravo.hear(operational_status(kAddress, kNoCapability, 2, 2), 1000));
     CHECK(bravo.heard.version == 2);
     CHECK(bravo.heard.gva_valid);
     CHECK(bravo.heard.gva == 2);
@@ -233,8 +228,8 @@ TEST_CASE("adsb assembly: the aircraft's own address never becomes an observatio
     Bravo bravo;
     bravo.assembly.set_own_address(kAddress);
     adsb::Message message;
-    REQUIRE(adsb_hear(adsb_airborne_position(kAddress, 5, kLatitude, kLongitude, false, 3000),
-                      message) == Status::Ok);
+    REQUIRE(receive_sealed(airborne_position(kAddress, 5, kLatitude, kLongitude, false, 3000),
+                           message) == Status::Ok);
     CHECK_FALSE(bravo.assembly.fold(message, 0, Receipt{}, bravo.reference, bravo.heard));
     CHECK(bravo.assembly.count() == 0);
     bravo.fly(kLatitude, kLongitude, 0, false, 3000, kAddress + 1);
@@ -296,7 +291,7 @@ TEST_CASE("adsb assembly: a track continues on single frames, and on landing and
     CHECK(metres_from(bravo.heard, moved_latitude, kLongitude) < 5.1);
 
     REQUIRE(bravo.hear(
-        adsb_surface_position(kAddress, kNoCapability, moved_latitude + 0.01, kLongitude, false),
+        surface_position(kAddress, kNoCapability, moved_latitude + 0.01, kLongitude, false),
         20000));
     CHECK(metres_from(bravo.heard, moved_latitude + 0.01, kLongitude) < 1.3);
     CHECK(bravo.heard.air_ground == AirGround::Ground);
@@ -359,8 +354,8 @@ TEST_CASE("adsb assembly: an aircraft parked at 62.147250 N 46.582038 W keeps it
     Bravo bravo;
     bravo.reference = reference_at(62.1, -46.5);
     for (uint32_t at_ms = 0; at_ms <= 20000; at_ms += 500) {
-        REQUIRE(bravo.hear(adsb_surface_position(kAddress, kNoCapability, 62.147250, -46.582038,
-                                                 (at_ms / 500) % 2 == 1),
+        REQUIRE(bravo.hear(surface_position(kAddress, kNoCapability, 62.147250, -46.582038,
+                                            (at_ms / 500) % 2 == 1),
                            at_ms));
         if (at_ms > 0) CHECK(bravo.heard.position_valid);
     }
@@ -387,7 +382,7 @@ TEST_CASE("adsb assembly: a message heard a millisecond out of order keeps the a
     bravo.fly(kLatitude, kLongitude, 1000, false);
     bravo.fly(kLatitude, kLongitude, 1500, true);
     REQUIRE(bravo.heard.position_valid);
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 1499));
+    REQUIRE(bravo.hear(identification(kAddress, kNoCapability, 3, 1, "DGLID"), 1499));
     CHECK(bravo.heard.position_valid);
     CHECK(bravo.heard.at_ms == 1500);
     CHECK(bravo.heard.identified);

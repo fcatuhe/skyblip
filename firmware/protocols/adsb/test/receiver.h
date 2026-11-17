@@ -11,10 +11,10 @@
 
 namespace skyblip::adsb {
 
-inline wire::Status adsb_hear(AdsbFrame frame, Message& message) {
-    adsb_seal(frame.bytes);
+inline wire::Status receive_sealed(Squitter frame, Message& message) {
+    seal(frame.bytes);
     uint8_t chips[kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    chips_of(frame.bytes, chips);
     return receive(chips, sizeof(chips), Reception{0, -70}, message);
 }
 
@@ -25,8 +25,8 @@ inline int hex_value(char digit) {
     return -1;
 }
 
-inline AdsbFrame frame_of(const char* text) {
-    AdsbFrame frame;
+inline Squitter frame_of(const char* text) {
+    Squitter frame;
     for (uint8_t i = 0; i < kFrameBytes; i++) {
         const int high = hex_value(text[2 * i]);
         REQUIRE(high >= 0);
@@ -69,9 +69,9 @@ struct Bravo {
     Reference reference = reference_at(kHomeLatitude, kHomeLongitude);
     Track heard{};
 
-    bool hear(const AdsbFrame& frame, uint32_t at_ms) {
+    bool hear(const Squitter& frame, uint32_t at_ms) {
         Message message;
-        REQUIRE(adsb_hear(frame, message) == wire::Status::Ok);
+        REQUIRE(receive_sealed(frame, message) == wire::Status::Ok);
         Receipt received;
         received.utc_s = kUtcS + at_ms / 1000;
         received.utc_ms = static_cast<uint16_t>(at_ms % 1000);
@@ -81,16 +81,16 @@ struct Bravo {
     bool hear_raw(const char* text, uint32_t at_ms) {
         Message message;
         uint8_t chips[kChipBytes];
-        adsb_chips(frame_of(text).bytes, chips);
+        chips_of(frame_of(text).bytes, chips);
         REQUIRE(receive(chips, sizeof(chips), Reception{}, message) == wire::Status::Ok);
         return assembly.fold(message, at_ms, Receipt{}, reference, heard);
     }
 
     void fly(double latitude, double longitude, uint32_t at_ms, bool odd,
              int32_t altitude_ft = 3000, uint32_t address = kAddress) {
-        REQUIRE(hear(
-            adsb_airborne_position(address, kNoCapability, latitude, longitude, odd, altitude_ft),
-            at_ms));
+        REQUIRE(
+            hear(airborne_position(address, kNoCapability, latitude, longitude, odd, altitude_ft),
+                 at_ms));
     }
 };
 

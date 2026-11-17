@@ -125,14 +125,14 @@ model::AircraftObservation over_adsb(const model::AircraftObservation& sent) {
     const int32_t altitude_ft = to_feet(Metres(sent.altitude_m)).value;
     const bool parked = flight::on_ground(sent.flight_state);
     const uint8_t capability = parked ? 4 : 5;
-    AdsbFrame frames[4] = {adsb_identification(sent.address, capability, 3, 1, "D1234")};
+    adsb::Squitter frames[4] = {adsb::identification(sent.address, capability, 3, 1, "D1234")};
     int count = 1;
     for (bool odd : {false, true})
         frames[count++] =
-            parked ? adsb_surface_position(sent.address, capability, latitude, longitude, odd)
-                   : adsb_airborne_position(sent.address, capability, latitude, longitude, odd,
-                                            altitude_ft, true);
-    if (!parked) frames[count++] = adsb_ground_velocity(sent.address, capability, 0, 0, 0, 0);
+            parked ? adsb::surface_position(sent.address, capability, latitude, longitude, odd)
+                   : adsb::airborne_position(sent.address, capability, latitude, longitude, odd,
+                                             altitude_ft, true);
+    if (!parked) frames[count++] = adsb::ground_velocity(sent.address, capability, 0, 0, 0, 0);
 
     adsb::Assembly assembly;
     adsb::Reference reference;

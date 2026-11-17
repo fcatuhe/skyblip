@@ -93,8 +93,8 @@ TEST_CASE(
     std::vector<uint32_t> accepted_ms;
     for (uint32_t at_ms = 0; at_ms <= 10100; at_ms += 10) {
         const uint32_t address = 0x100000 + (at_ms / 10) % kAircraft;
-        if (!bravo.hear(adsb_airborne_position(address, kNoCapability, kLatitude, kLongitude,
-                                               (at_ms / 10) % 2 == 1, 3000),
+        if (!bravo.hear(adsb::airborne_position(address, kNoCapability, kLatitude, kLongitude,
+                                                (at_ms / 10) % 2 == 1, 3000),
                         at_ms))
             continue;
         if (!bench.writer.capture.record(bravo.heard, at_ms)) continue;
@@ -173,8 +173,8 @@ TEST_CASE("adsb capture: DF17 frames folded, recorded, drained to flash and read
     Bravo bravo;
     const uint32_t at_ms = now_ms;
     REQUIRE(
-        bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), at_ms - 1200));
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 2), at_ms - 1100));
+        bravo.hear(adsb::ground_velocity(kAddress, kNoCapability, 0, 80, 0, -275), at_ms - 1200));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 2), at_ms - 1100));
     bravo.fly(kLatitude, kLongitude, at_ms - 700, false, 3000);
     bravo.fly(kLatitude, kLongitude, at_ms - 200, true, 3000);
     REQUIRE(bravo.heard.altitude_valid);

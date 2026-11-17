@@ -367,6 +367,9 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAltitudeOffsetM` | 320 | metres | - | - |
 | `kTimestampCycleS` | 15 | seconds | - | The timestamp field is quarter seconds inside a 15 s cycle, so the instant a burst claims is expressible to 250 ms - and the position it carries has to belong to that instant rather than to whenever the receiver last spoke. |
 | `kTimestampQuarterMs` | 250 | milliseconds | - | - |
+| `kCloseHorizontalM` | 1000 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kCloseVerticalM` | 800 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
+| `kCloseTcpaS` | 30 | seconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kUplinkSlotStartMs` | 200 | milliseconds | - | §C.5 gives the ground stations 200 to 450 ms and the aircraft 450 to 1000 |
 | `kUplinkSlotEndMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kDirectStartMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
@@ -376,9 +379,6 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kUplinkRecordMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | G.3: a relayed Traffic payload no older than 10 s and not from the future |
-| `kCloseHorizontalM` | 1000 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
-| `kCloseVerticalM` | 800 | metres | - | [README](../firmware/protocols/adsl/README.md) argues it |
-| `kCloseTcpaS` | 30 | seconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 
 ## [`firmware/protocols/alptas`](../firmware/protocols/alptas/README.md)
 

@@ -7,29 +7,13 @@
 #include "core/util/result.h"
 #include "protocols/adsb/message.h"
 #include "simulator/world/adsb_out.h"
-#include "test/support/adsb_chips.h"
 
 namespace skyblip {
 
-using simulator::adsb_air_velocity;
-using simulator::adsb_airborne_position;
-using simulator::adsb_altitude_field;
-using simulator::adsb_cpr_encode;
-using simulator::adsb_frame;
-using simulator::adsb_ground_velocity;
-using simulator::adsb_identification;
-using simulator::adsb_longitude_zones;
-using simulator::adsb_operational_status;
-using simulator::adsb_set_cpr;
-using simulator::adsb_set_message_bits;
-using simulator::adsb_signed_field;
-using simulator::adsb_surface_position;
-using simulator::AdsbFrame;
-
-inline Status adsb_hear(AdsbFrame frame, adsb::Message& message) {
-    adsb_seal(frame.bytes);
+inline Status adsb_hear(adsb::Squitter frame, adsb::Message& message) {
+    adsb::seal(frame.bytes);
     uint8_t chips[adsb::kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    adsb::chips_of(frame.bytes, chips);
     return status_of(adsb::receive(chips, sizeof(chips), adsb::Reception{0, -70}, message));
 }
 

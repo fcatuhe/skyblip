@@ -22,8 +22,8 @@ Bravo tracking() {
     return bravo;
 }
 
-AdsbFrame surface(double latitude, bool odd, uint8_t movement = 9) {
-    return adsb_surface_position(kAddress, kNoCapability, latitude, kHomeLongitude, odd, movement);
+adsb::Squitter surface(double latitude, bool odd, uint8_t movement = 9) {
+    return adsb::surface_position(kAddress, kNoCapability, latitude, kHomeLongitude, odd, movement);
 }
 
 Bravo on_ground() {
@@ -58,21 +58,21 @@ TEST_CASE("DO-260B 2.2.10.1.1: messages flow from reception to assembly to the r
 
 TEST_CASE("DO-260B 2.2.10.1.2: receptions and reports are indexed by the participant address") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 0));
-    REQUIRE(bravo.hear(adsb_identification(0x3C6586, kNoCapability, 4, 2, "B"), 100));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 0));
+    REQUIRE(bravo.hear(adsb::identification(0x3C6586, kNoCapability, 4, 2, "B"), 100));
     CHECK(bravo.heard.address == 0x3C6586);
     CHECK(bravo.heard.emitter_category == 2);
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 200));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 200));
     CHECK(bravo.heard.address == kAddress);
     CHECK(bravo.heard.emitter_category == 1);
 }
 
 TEST_CASE("DO-260B 2.2.10.1.3: a record is kept 200 s and forgotten after 250 s of silence") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 0));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 0));
     bravo.assembly.age_out(200000);
     CHECK(bravo.assembly.count() == 1);
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 200000));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 200000));
     CHECK(bravo.heard.identified);
     bravo.assembly.age_out(200000 + kAdsbAircraftForgetMs + 1);
     CHECK(bravo.assembly.count() == 0);
@@ -80,22 +80,22 @@ TEST_CASE("DO-260B 2.2.10.1.3: a record is kept 200 s and forgotten after 250 s 
 
 TEST_CASE("DO-260B 2.2.10.1.4: one participant has one track file") {
     Bravo bravo = tracking();
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 600));
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 100, 0, 0, 0), 700));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 600));
+    REQUIRE(bravo.hear(adsb::ground_velocity(kAddress, kNoCapability, 100, 0, 0, 0), 700));
     CHECK(bravo.assembly.count() == 1);
     CHECK(bravo.heard.position_valid);
     CHECK(bravo.heard.identified);
 }
 
 TEST_CASE("DO-260B 2.2.10.2: any of the six messages opens a record for an unknown participant") {
-    const AdsbFrame openers[] = {
-        adsb_airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000),
-        adsb_surface_position(kAddress, kNoCapability, kHomeLatitude, kHomeLongitude, false),
-        adsb_identification(kAddress, kNoCapability, 4, 1, "A"),
-        adsb_ground_velocity(kAddress, kNoCapability, 100, 0, 0, 0),
-        adsb_operational_status(kAddress, kNoCapability, 2, 1),
+    const adsb::Squitter openers[] = {
+        adsb::airborne_position(kAddress, kNoCapability, kLatitude, kLongitude, false, 3000),
+        adsb::surface_position(kAddress, kNoCapability, kHomeLatitude, kHomeLongitude, false),
+        adsb::identification(kAddress, kNoCapability, 4, 1, "A"),
+        adsb::ground_velocity(kAddress, kNoCapability, 100, 0, 0, 0),
+        adsb::operational_status(kAddress, kNoCapability, 2, 1),
     };
-    for (const AdsbFrame& frame : openers) {
+    for (const adsb::Squitter& frame : openers) {
         Bravo bravo;
         REQUIRE(bravo.hear(frame, 0));
         CHECK(bravo.assembly.count() == 1);
@@ -158,8 +158,8 @@ TEST_CASE(
 
 TEST_CASE("DO-260B 2.2.10.3.3: a message before the pair is kept and shows once the track does") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
-    REQUIRE(bravo.hear(adsb_operational_status(kAddress, kNoCapability, 2, 1), 100));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 100));
     bravo.fly(kLatitude, kLongitude, 200, false);
     bravo.fly(kLatitude, kLongitude, 700, true);
     CHECK(bravo.heard.position_valid);
@@ -176,7 +176,7 @@ TEST_CASE("DO-260B 2.2.10.4: a tracked participant moves on single positions") {
 
 TEST_CASE("DO-260B 2.2.10.4.1: an airborne track takes position and velocity messages") {
     Bravo bravo = tracking();
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 120, 0, 0, 0), 900));
+    REQUIRE(bravo.hear(adsb::ground_velocity(kAddress, kNoCapability, 120, 0, 0, 0), 900));
     bravo.fly(kLatitude, kLongitude + 0.01, 1500, false);
     CHECK(bravo.heard.motion.east_kt == 120);
     CHECK(metres_from(bravo.heard, kLatitude, kLongitude + 0.01) < 5.1);
@@ -184,7 +184,7 @@ TEST_CASE("DO-260B 2.2.10.4.1: an airborne track takes position and velocity mes
 
 TEST_CASE("DO-260B 2.2.10.4.1.1: a velocity after acquisition completes the airborne track") {
     Bravo bravo = tracking();
-    REQUIRE(bravo.hear(adsb_ground_velocity(kAddress, kNoCapability, 120, -30, 640, 50), 900));
+    REQUIRE(bravo.hear(adsb::ground_velocity(kAddress, kNoCapability, 120, -30, 640, 50), 900));
     CHECK(bravo.heard.position_valid);
     CHECK(bravo.heard.motion.source == MotionSource::Velocity);
     CHECK(bravo.heard.climb_fpm == 640);
@@ -204,7 +204,7 @@ TEST_CASE("DO-260B 2.2.10.4.1.2: a single airborne position moves the track 6 NM
 TEST_CASE("DO-260B 2.2.10.4.1.3: an airborne track silent for 25 s, +/-5, is terminated" *
           doctest::skip()) {
     Bravo bravo = tracking();
-    REQUIRE(bravo.hear(adsb_identification(kAddress, kNoCapability, 4, 1, "A"), 500 + 30001));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 4, 1, "A"), 500 + 30001));
     CHECK_FALSE(bravo.heard.position_valid);
     FAIL(
         "not implemented: the traffic table forgets the target after 6 s, the owner's choice, and "
@@ -219,7 +219,7 @@ TEST_CASE("DO-260B 2.2.10.4.2: a surface track takes surface positions") {
 
 TEST_CASE("DO-260B 2.2.10.4.2.1: the surface track starts with the pair that acquired it") {
     Bravo bravo;
-    REQUIRE(bravo.hear(adsb_identification(kAddress, 4, 2, 1, "FIRE1"), 0));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, 4, 2, 1, "FIRE1"), 0));
     REQUIRE(bravo.hear(surface(kHomeLatitude, false), 100));
     REQUIRE(bravo.hear(surface(kHomeLatitude, true), 600));
     CHECK(bravo.heard.position_valid);
@@ -242,7 +242,7 @@ TEST_CASE(
 TEST_CASE("DO-260B 2.2.10.4.2.3: a surface track is terminated after 200 s, +/-5, of silence" *
           doctest::skip()) {
     Bravo bravo = on_ground();
-    REQUIRE(bravo.hear(adsb_identification(kAddress, 4, 2, 1, "A"), 500 + 190000));
+    REQUIRE(bravo.hear(adsb::identification(kAddress, 4, 2, 1, "A"), 500 + 190000));
     CHECK(bravo.heard.position_valid);
     FAIL(
         "not implemented: the traffic table forgets the target after 60 s on the ground, the "
@@ -255,9 +255,9 @@ TEST_CASE("DO-260B 2.2.10.5: a class A0 receiver keeps 100 track files, and drop
     for (int i = 0; i < 101; i++) {
         Message message;
         const double latitude = kHomeLatitude + (i + 1) * 0.009;
-        REQUIRE(adsb_hear(adsb_airborne_position(0x400000u + static_cast<uint32_t>(i), 5, latitude,
-                                                 kHomeLongitude, false, 3000),
-                          message) == wire::Status::Ok);
+        REQUIRE(receive_sealed(adsb::airborne_position(0x400000u + static_cast<uint32_t>(i), 5,
+                                                       latitude, kHomeLongitude, false, 3000),
+                               message) == wire::Status::Ok);
         bravo.assembly.fold(message, static_cast<uint32_t>(i), Receipt{}, bravo.reference,
                             bravo.heard);
     }

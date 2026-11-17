@@ -6673,6 +6673,7 @@ The ADS-L position packet end to end, a radio protocol checked with no RF hardwa
 - a field reads back the middle of the step its code names
 - a flagged bit past the eighth is searched, not wrapped back onto the first
 - a frame no repair fits is left as it arrived
+- a payload other than Traffic is refused as one the decoder does not read
 - a position goes out as the nearest whole G.1.5 step
   > G.1.5 steps: 93206 to a degree of latitude, 46603 of longitude. A position takes the nearest.
 - an over-range altitude encodes the limit, not 'unavailable'
@@ -6683,6 +6684,7 @@ The ADS-L position packet end to end, a radio protocol checked with no RF hardwa
   > G.1.14 NACp boundaries, in metres of horizontal figure of merit: 7 is under 3 m, 6 under 10 m, 5 under 30 m, 4 under 0.05 NM (92.6 m), and 0 is 0.5 NM or worse, which is the same code as "no fix".
 - multi-bit errors within flagged (weak) bits are corrected
 - one unmarked error is repaired even when more bits are marked than the cap
+- receive repairs the frame the air delivered and hands back the clear packet
 - scramble+crc, then descramble+check round-trip is lossless (BER 0)
 - single-bit error is corrected via CRC syndrome
 - the invalid codes are reachable on purpose and round-trip
@@ -7036,7 +7038,8 @@ ALP-TAS (FLARM-wire, 2024 protocol) air-frame codec. Two things are worth testin
 - encode then decode preserves the identity and motion fields
 - position round trips across the 20-bit coding wrap
 - position round trips north, south, high latitude and near zero
-- speed, climb and course come back within the step their codes name
+- receive repairs a frame the erasures cover and refuses one they do not
+- speed, climb and track come back within the step their codes name
   > The speed field counts decimetres a second in 8 bits behind two exponent bits, the climb in 6.
 - the chip pairs the air destroyed are flipped back to the frame that was sent
 - the decrypt gate accepts the second it was sent in, +/-1

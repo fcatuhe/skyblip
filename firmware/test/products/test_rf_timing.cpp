@@ -178,7 +178,7 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
         adsl::Packet packet{};
         packet.reset();
         std::memcpy(packet.data, heard.data, adsl::kFrameBytes);
-        REQUIRE(packet.check_crc() == 0);
+        REQUIRE(packet.crc_ok());
         packet.descramble();
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         framed++;
@@ -330,7 +330,7 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         adsl::Packet packet{};
         packet.reset();
         std::memcpy(packet.data, sent.data, adsl::kFrameBytes);
-        REQUIRE(packet.check_crc() == 0);
+        REQUIRE(packet.crc_ok());
         packet.descramble();
         // Every burst we put on air is ours, by address: a relayed frame would
         // carry the neighbour's.

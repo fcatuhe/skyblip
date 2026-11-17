@@ -17,14 +17,14 @@ namespace {
 
 namespace standard = skyblip::adsb::conformance;
 
-AdsbFrame position() {
-    return adsb_airborne_position(standard::kAddress, standard::kAirborneCapability, 48.2, 8.2,
-                                  false, 3000);
+adsb::Squitter position() {
+    return adsb::airborne_position(standard::kAddress, standard::kAirborneCapability, 48.2, 8.2,
+                                   false, 3000);
 }
 
-void sealed_chips(AdsbFrame frame, uint8_t* chips) {
-    adsb_seal(frame.bytes);
-    adsb_chips(frame.bytes, chips);
+void sealed_chips(adsb::Squitter frame, uint8_t* chips) {
+    adsb::seal(frame.bytes);
+    adsb::chips_of(frame.bytes, chips);
 }
 
 // INFO: fc 17nov26 bit b rides chips 2b-10 and 2b-9, and a doubtful pair reads its second chip
@@ -50,11 +50,11 @@ Status receive_chips(const uint8_t* chips, Message& message) {
 }
 
 TEST_CASE("DO-260B 2.2.4.3.4.5: every valid DF17 message with a zero PI overlay is decoded") {
-    for (const AdsbFrame& frame :
+    for (const adsb::Squitter& frame :
          {position(), standard::velocity(1), standard::velocity(3),
-          adsb_identification(standard::kAddress, 5, 4, 1, "KLM1023"),
-          adsb_operational_status(standard::kAddress, 5, 2, 1),
-          adsb_surface_position(standard::kAddress, 4, 48.1, 8.1, true, 20)})
+          adsb::identification(standard::kAddress, 5, 4, 1, "KLM1023"),
+          adsb::operational_status(standard::kAddress, 5, 2, 1),
+          adsb::surface_position(standard::kAddress, 4, 48.1, 8.1, true, 20)})
         CHECK(standard::hear(frame).status == Status::Ok);
 }
 
@@ -149,13 +149,13 @@ TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded 
 
 TEST_CASE("DO-260B 2.2.6.1: version 0, 1 and 2 formats decode, and a target keeps its version") {
     receiver::Bravo bravo;
-    REQUIRE(bravo.hear(adsb_operational_status(receiver::kAddress, 0, 0, 0), 0));
+    REQUIRE(bravo.hear(adsb::operational_status(receiver::kAddress, 0, 0, 0), 0));
     CHECK(bravo.heard.version_valid);
     CHECK(bravo.heard.version == 0);
-    REQUIRE(bravo.hear(adsb_ground_velocity(receiver::kAddress, 0, 100, 0, 0, 0), 100));
+    REQUIRE(bravo.hear(adsb::ground_velocity(receiver::kAddress, 0, 100, 0, 0, 0), 100));
     CHECK(bravo.heard.version == 0);
-    REQUIRE(bravo.hear(adsb_operational_status(receiver::kAddress, 0, 2, 1), 200));
-    REQUIRE(bravo.hear(adsb_ground_velocity(receiver::kAddress, 0, 100, 0, 0, 0), 300));
+    REQUIRE(bravo.hear(adsb::operational_status(receiver::kAddress, 0, 2, 1), 200));
+    REQUIRE(bravo.hear(adsb::ground_velocity(receiver::kAddress, 0, 100, 0, 0, 0), 300));
     CHECK(bravo.heard.version == 2);
     CHECK(bravo.heard.gva == 1);
 }
@@ -176,17 +176,17 @@ TEST_CASE("DO-260B 2.2.7: the message processor turns messages into a track") {
 
 TEST_CASE("DO-260B 2.2.7.1: a reserved version is valid, and reserved bits are never read") {
     const Message reserved =
-        standard::heard_ok(adsb_operational_status(standard::kAddress, 5, 5, 1));
+        standard::heard_ok(adsb::operational_status(standard::kAddress, 5, 5, 1));
     CHECK(reserved.operational_status.version == 5);
     CHECK_FALSE(reserved.operational_status.gva_valid);
-    AdsbFrame frame = standard::velocity(1);
+    adsb::Squitter frame = standard::velocity(1);
     standard::put(frame, 47, 48, 3);
     CHECK(standard::heard_ok(frame).velocity.east_kt.value == 100);
 }
 
 TEST_CASE("DO-260B 2.2.7.1.1: a TYPE 0 message with no altitude is discarded") {
     Message message;
-    CHECK(adsb_hear(adsb_frame(receiver::kAddress, 0, 0), message) == Status::Unsupported);
+    CHECK(receive_sealed(adsb::squitter(receiver::kAddress, 0, 0), message) == Status::Unsupported);
 }
 
 // INFO: fc 17nov26 item b says may, and TYPE 0 is refused whole

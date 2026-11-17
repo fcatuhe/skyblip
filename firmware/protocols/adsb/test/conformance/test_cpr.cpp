@@ -32,8 +32,8 @@ double metres_between(const CprPosition& one, double latitude, double longitude)
 bool global(CprFormat format, double latitude, double longitude, const CprPosition& near,
             CprPosition& out) {
     const bool surface = format == CprFormat::Surface;
-    const Cpr even = adsb_cpr_encode(latitude, longitude, false, surface);
-    const Cpr odd = adsb_cpr_encode(latitude, longitude, true, surface);
+    const Cpr even = adsb::cpr_encode(latitude, longitude, false, surface);
+    const Cpr odd = adsb::cpr_encode(latitude, longitude, true, surface);
     return cpr_global(format, odd, even, near, out);
 }
 
@@ -48,9 +48,9 @@ TEST_CASE("DO-260B A.1.7: an even and an odd encoding name one place on the glob
 }
 
 TEST_CASE("DO-260B A.1.7.1: each encoding alone repeats every 360 NM, and the pair does not") {
-    const Cpr even = adsb_cpr_encode(48.2, 8.2, false, false);
+    const Cpr even = adsb::cpr_encode(48.2, 8.2, false, false);
     const double zone_degrees = 360.0 / 60;
-    const Cpr shifted = adsb_cpr_encode(48.2 + zone_degrees, 8.2, false, false);
+    const Cpr shifted = adsb::cpr_encode(48.2 + zone_degrees, 8.2, false, false);
     CHECK(even.latitude_cpr == shifted.latitude_cpr);
     CprPosition position;
     REQUIRE(global(CprFormat::Airborne, 48.2, 8.2, CprPosition{}, position));
@@ -64,7 +64,7 @@ TEST_CASE(
     CHECK(cpr_longitude_zones(e7(87.5)) == 1);
     CHECK(cpr_longitude_zones(e7(-87.5)) == 1);
     for (double latitude : {10.0, 30.0, 45.0, 48.2, 60.0, 75.0, 86.0})
-        CHECK(cpr_longitude_zones(e7(latitude)) == adsb_longitude_zones(latitude));
+        CHECK(cpr_longitude_zones(e7(latitude)) == adsb::longitude_zones_closed_form(latitude));
     CHECK(4 * 15 == 60);
 }
 
@@ -78,17 +78,17 @@ TEST_CASE("DO-260B A.1.7.3: a position encoded as A.1.7.3 says decodes to within
 
 TEST_CASE("DO-260B A.1.7.4: a single encoding decodes beside a reference within 180 NM, or 45 NM") {
     CprPosition position;
-    const Cpr airborne = adsb_cpr_encode(48.2, 8.2, true, false);
+    const Cpr airborne = adsb::cpr_encode(48.2, 8.2, true, false);
     REQUIRE(cpr_local(CprFormat::Airborne, airborne, at(48.2 + 170 * kNmDegrees, 8.2), position));
     CHECK(metres_between(position, 48.2, 8.2) < 5.1);
-    const Cpr surface = adsb_cpr_encode(48.2, 8.2, false, true);
+    const Cpr surface = adsb::cpr_encode(48.2, 8.2, false, true);
     REQUIRE(cpr_local(CprFormat::Surface, surface, at(48.2 + 40 * kNmDegrees, 8.2), position));
     CHECK(metres_between(position, 48.2, 8.2) < 1.3);
 }
 
 TEST_CASE("DO-260B A.1.7.5: the airborne local decode takes the zone nearest the reference") {
     for (bool odd : {false, true}) {
-        const Cpr cpr = adsb_cpr_encode(-33.9, 151.2, odd, false);
+        const Cpr cpr = adsb::cpr_encode(-33.9, 151.2, odd, false);
         CprPosition position;
         REQUIRE(cpr_local(CprFormat::Airborne, cpr, at(-33.0, 150.0), position));
         CHECK(metres_between(position, -33.9, 151.2) < 5.1);
@@ -97,7 +97,7 @@ TEST_CASE("DO-260B A.1.7.5: the airborne local decode takes the zone nearest the
 
 TEST_CASE("DO-260B A.1.7.6: the surface local decode works in 90-degree zones") {
     for (bool odd : {false, true}) {
-        const Cpr cpr = adsb_cpr_encode(40.64, -73.78, odd, true);
+        const Cpr cpr = adsb::cpr_encode(40.64, -73.78, odd, true);
         CprPosition position;
         REQUIRE(cpr_local(CprFormat::Surface, cpr, at(40.6, -73.7), position));
         CHECK(metres_between(position, 40.64, -73.78) < 1.3);
@@ -108,8 +108,8 @@ TEST_CASE("DO-260B A.1.7.7: an airborne pair decodes globally, unless its halves
     CprPosition position;
     REQUIRE(global(CprFormat::Airborne, 52.2572, 3.9194, CprPosition{}, position));
     CHECK(metres_between(position, 52.2572, 3.9194) < 5.1);
-    const Cpr even = adsb_cpr_encode(51.8930, 4.0, false, false);
-    const Cpr odd = adsb_cpr_encode(51.8940, 4.0, true, false);
+    const Cpr even = adsb::cpr_encode(51.8930, 4.0, false, false);
+    const Cpr odd = adsb::cpr_encode(51.8940, 4.0, true, false);
     CHECK(cpr_longitude_zones(e7(51.8930)) != cpr_longitude_zones(e7(51.8940)));
     CHECK_FALSE(cpr_global(CprFormat::Airborne, odd, even, CprPosition{}, position));
 }
@@ -188,8 +188,8 @@ TEST_CASE("DO-260B A.1.7.10.3: a local decode moves 6, 2.5 or 0.75 NM at most in
     bravo.fly(receiver::kLatitude, receiver::kLongitude, 0, false);
     bravo.fly(receiver::kLatitude, receiver::kLongitude, 500, true);
     REQUIRE(bravo.hear(
-        adsb_surface_position(receiver::kAddress, 0, receiver::kLatitude + 3 * kNmDegrees,
-                              receiver::kLongitude, false),
+        adsb::surface_position(receiver::kAddress, 0, receiver::kLatitude + 3 * kNmDegrees,
+                               receiver::kLongitude, false),
         1500));
     CHECK(receiver::metres_from(bravo.heard, receiver::kLatitude, receiver::kLongitude) < 5.1);
 }

@@ -20,9 +20,9 @@ constexpr int32_t kCruiseMmS = 25000;
 void cockpit_second(BravoRig& rig, int32_t speed_mm_s) {
     const double latitude = BravoRig::kLatitude1e7 / 1e7;
     const double longitude = BravoRig::kLongitude1e7 / 1e7;
-    rig.hear(adsb_identification(kOwn, 0, 4, 1, "FJABC"), kCockpitDbm);
+    rig.hear(adsb::identification(kOwn, 0, 4, 1, "FJABC"), kCockpitDbm);
     for (const bool odd : {false, true, false, true})
-        rig.hear(adsb_airborne_position(kOwn, 0, latitude, longitude, odd, 1500), kCockpitDbm);
+        rig.hear(adsb::airborne_position(kOwn, 0, latitude, longitude, odd, 1500), kCockpitDbm);
     rig.seconds_with_fix(1, speed_mm_s);
 }
 

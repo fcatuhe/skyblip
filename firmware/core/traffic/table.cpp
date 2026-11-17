@@ -5,7 +5,7 @@
 #include "core/model/aircraft.h"
 #include "core/settings/address.h"
 #include "protocols/adsl/packet.h"
-#include "protocols/adsl/versioning.h"
+#include "protocols/adsl/soft_versioning.h"
 
 namespace skyblip::traffic {
 

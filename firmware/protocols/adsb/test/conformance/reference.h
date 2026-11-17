@@ -18,37 +18,37 @@ struct Heard {
     Message message;
 };
 
-inline AdsbFrame squitter(uint8_t type_code, uint8_t subtype = 0) {
-    AdsbFrame frame = adsb_frame(kAddress, kAirborneCapability, type_code);
-    adsb_set_message_bits(frame, 6, 8, subtype);
+inline adsb::Squitter squitter(uint8_t type_code, uint8_t subtype = 0) {
+    adsb::Squitter frame = adsb::squitter(kAddress, kAirborneCapability, type_code);
+    adsb::set_message_bits(frame, 6, 8, subtype);
     return frame;
 }
 
-inline void put(AdsbFrame& frame, uint8_t first, uint8_t last, uint64_t value) {
-    adsb_set_message_bits(frame, first, last, value);
+inline void put(adsb::Squitter& frame, uint8_t first, uint8_t last, uint64_t value) {
+    adsb::set_message_bits(frame, first, last, value);
 }
 
-inline Heard hear_as_sent(const AdsbFrame& frame) {
+inline Heard hear_as_sent(const adsb::Squitter& frame) {
     uint8_t chips[kChipBytes];
-    adsb_chips(frame.bytes, chips);
+    adsb::chips_of(frame.bytes, chips);
     Heard heard;
     heard.status = receive(chips, sizeof(chips), Reception{1000, -70, true}, heard.message);
     return heard;
 }
 
-inline Heard hear(AdsbFrame frame) {
-    adsb_seal(frame.bytes);
+inline Heard hear(adsb::Squitter frame) {
+    adsb::seal(frame.bytes);
     return hear_as_sent(frame);
 }
 
-inline Message heard_ok(const AdsbFrame& frame) {
+inline Message heard_ok(const adsb::Squitter& frame) {
     const Heard heard = hear(frame);
     REQUIRE(heard.status == wire::Status::Ok);
     return heard.message;
 }
 
-inline AdsbFrame velocity(uint8_t subtype) {
-    AdsbFrame frame = squitter(19, subtype);
+inline adsb::Squitter velocity(uint8_t subtype) {
+    adsb::Squitter frame = squitter(19, subtype);
     if (subtype <= 2) {
         put(frame, 14, 14, 0);
         put(frame, 15, 24, 101);

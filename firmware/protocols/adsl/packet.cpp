@@ -97,11 +97,19 @@ void Packet::set_crc() {
     crc_bytes[1] = static_cast<uint8_t>(crc >> 8);
     crc_bytes[2] = static_cast<uint8_t>(crc);
 }
-uint32_t Packet::check_crc() const { return wire::crc24_check(data, kDataBytes); }
+bool Packet::crc_ok() const { return wire::crc24_check(data, kDataBytes) == 0; }
 
 int Packet::correct(const uint8_t* erasures, int max_erasures) {
-    return wire::repair(data, erasures, check_crc(), kCrcSyndromes.check(),
+    return wire::repair(data, erasures, wire::crc24_check(data, kDataBytes), kCrcSyndromes.check(),
                         std::min(max_erasures, kMostErasures), true);
+}
+
+wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out) {
+    out.reset();
+    __builtin_memcpy(out.data, frame, Packet::kDataBytes);
+    if (out.correct(erasures) < 0) return wire::Status::Crc;
+    out.descramble();
+    return wire::Status::Ok;
 }
 
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
@@ -222,9 +230,9 @@ void encode_traffic(Packet& packet, uint8_t address_mapping_table, const Traffic
                                     : lowest_version(packet));
 }
 
-bool decode_traffic(const Packet& packet, Traffic& out) {
+wire::Status decode_traffic(const Packet& packet, Traffic& out) {
     out = Traffic{};
-    if (!packet.is_position()) return false;
+    if (!packet.is_position()) return wire::Status::Unsupported;
     out.address = packet.address();
     out.timestamp = packet.timestamp;
     out.flight_state = packet.flight_state;
@@ -246,7 +254,7 @@ bool decode_traffic(const Packet& packet, Traffic& out) {
     out.integrity.horizontal_accuracy = packet.horizontal_accuracy;
     out.integrity.vertical_accuracy = packet.vertical_accuracy;
     out.integrity.velocity_accuracy = packet.velocity_accuracy;
-    return true;
+    return wire::Status::Ok;
 }
 
 }
