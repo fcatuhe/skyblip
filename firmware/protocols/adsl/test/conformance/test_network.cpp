@@ -246,7 +246,7 @@ TEST_CASE("ADS-L.4.SRD860.E.3.1: the parity is the 24-bit CRC the clause prints"
     CHECK(packet.crc_bytes[0] == static_cast<uint8_t>(expected >> 16));
     CHECK(packet.crc_bytes[1] == static_cast<uint8_t>(expected >> 8));
     CHECK(packet.crc_bytes[2] == static_cast<uint8_t>(expected));
-    CHECK(packet.check_crc() == 0);
+    CHECK(packet.crc_ok());
     CHECK(adsl::Packet::kCrcCoverBytes == 21);
 }
 

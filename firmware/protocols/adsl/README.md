@@ -53,7 +53,7 @@ Nothing in this directory names skyBlip, and nothing in it picks an address tabl
 Everything is in namespace `skyblip::adsl`.
 
 - `kAddressTableRandom` to `kAddressTableManufacturerLast`, `manufacturer_page_table()`, `kEmergencyNone`, `kUereCm`, `hfom_cm()`
-- `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `check_crc()` and `correct()`, and `kSyncWord`, `kFrameBytes`
+- `Packet` with `reset()`, the field accessors, `scramble()`, `descramble()`, `set_crc()`, `crc_ok()` and `correct()`, and `kSyncWord`, `kFrameBytes`
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`

@@ -199,7 +199,7 @@ struct __attribute__((packed)) Packet {
     void scramble();
     void descramble();
     void set_crc();
-    uint32_t check_crc() const;
+    bool crc_ok() const;
 
     int correct(const uint8_t* erasures, int max_erasures = 6);
 };

@@ -240,7 +240,7 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
     adsl::Packet packet{};
     packet.reset();
     __builtin_memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
+    if (!packet.crc_ok() && (packet.correct(frame.erasures) < 0 || !packet.crc_ok()))
         return radio::Verdict::BadCrc;
     packet.descramble();
     if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);

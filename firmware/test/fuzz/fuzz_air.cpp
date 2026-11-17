@@ -120,8 +120,7 @@ void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
     adsl::Packet packet{};
     packet.reset();
     std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    if (packet.check_crc() != 0 && (packet.correct(frame.erasures) < 0 || packet.check_crc() != 0))
-        return;
+    if (!packet.crc_ok() && (packet.correct(frame.erasures) < 0 || !packet.crc_ok())) return;
     packet.descramble();
 
     if (protocol::is_registration(packet)) {

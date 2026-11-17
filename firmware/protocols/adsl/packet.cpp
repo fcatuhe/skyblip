@@ -97,10 +97,10 @@ void Packet::set_crc() {
     crc_bytes[1] = static_cast<uint8_t>(crc >> 8);
     crc_bytes[2] = static_cast<uint8_t>(crc);
 }
-uint32_t Packet::check_crc() const { return wire::crc24_check(data, kDataBytes); }
+bool Packet::crc_ok() const { return wire::crc24_check(data, kDataBytes) == 0; }
 
 int Packet::correct(const uint8_t* erasures, int max_erasures) {
-    return wire::repair(data, erasures, check_crc(), kCrcSyndromes.check(),
+    return wire::repair(data, erasures, wire::crc24_check(data, kDataBytes), kCrcSyndromes.check(),
                         std::min(max_erasures, kMostErasures), true);
 }
 

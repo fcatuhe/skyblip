@@ -85,7 +85,7 @@ TEST_CASE("scenario: GNSS -> own, direct ADS-L RX over BER channel -> alarm -> N
     uint8_t error[adsl::Packet::kDataBytes];
     wire::manchester_decode(coded, adsl::Packet::kDataBytes, rx.data, error);
     rx.correct(error, 6);
-    REQUIRE(rx.check_crc() == 0);  // recovered a valid packet
+    REQUIRE(rx.crc_ok());  // recovered a valid packet
     rx.descramble();
 
     // 4) decode -> observation -> table
