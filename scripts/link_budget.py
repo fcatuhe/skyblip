@@ -203,7 +203,7 @@ def caveats(sides, out):
     out("caveats")
     for side in sides:
         for run in side.runs:
-            lines = records.caveat_lines(run.notes) + records.missing_index_lines(run.records)
+            lines = records.caveat_lines(run.notes, run.records) + records.missing_index_lines(run.records)
             lines += ["unreadable at index %d: %s" % (record["index"], record["error"])
                       for record in run.unreadable]
             lines += ["a gap record: %d records the ring had to refuse, over %.1f s"

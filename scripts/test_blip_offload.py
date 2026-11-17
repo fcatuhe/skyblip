@@ -4,7 +4,7 @@
     python3 scripts/test_blip_offload.py
 
 Run by test_blip.py as well, which is the file CI invokes. No radio, no network,
-no sleeps: the endpoint below answers a read the way core/comms/log_link.cpp
+no sleeps: the endpoint below answers a list and a read the way core/comms/log_link.cpp
 does, and fails a host that asks for a frame it did not send or sends a command
 while a reply of the last one is still queued.
 """
@@ -90,8 +90,16 @@ class LogEndpoint:
             raise AssertionError("a read went out with %d replies of the last one unread"
                                  % len(self.pending))
         body = frames.decode_frame(frames.encode_frame(body))
+        if body["command"] == "list":
+            self.pending = [self.listing(body.get("index"))]
+            return
         self.counts_asked.append(body.get("count"))
         self.pending = self.window_from(body["from"], device_clamp(body.get("count")))
+
+    def listing(self, index):
+        if index is None:
+            return {"command": "log", "log": self.log, "acknowledge": True, "sessions": 1}
+        return self.session
 
     async def frame(self, timeout):
         if not self.pending:
@@ -242,16 +250,13 @@ class TornTail(unittest.TestCase):
         summary = records.summarise(fetched_lines(endpoint))
         self.assertTrue(any("5 records written, 2 dropped" in line for line in summary), summary)
 
-    def test_a_dropped_tail_does_not_send_the_next_fetch_back_for_it(self):
+    def test_a_dropped_tail_is_not_where_the_next_fetch_resumes(self):
         with tempfile.TemporaryDirectory() as directory:
             path = pathlib.Path(directory) / "capture.ndjson"
             out = io.StringIO()
             fetch(LogEndpoint(5, closed=False), out)
             path.write_text(out.getvalue(), encoding="utf-8")
-            resume = records.resume_point(str(path))
-        session = session_reply(5, closed=False)
-        args = argparse.Namespace(session=None, all=True)
-        self.assertEqual(blip.sessions_to_fetch([session], args, resume), [])
+            self.assertEqual(records.last_kept(str(path))["index"], 3)
 
 
 LINK_TYPE = 12
@@ -262,6 +267,77 @@ def link_slot(connection):
     raw[0] = LINK_TYPE
     raw[records.PAYLOAD_OFFSET:records.PAYLOAD_OFFSET + 2] = connection.to_bytes(2, "little")
     return bytes(raw)
+
+
+def fetch_into(endpoint, path):
+    args = argparse.Namespace(log=endpoint.log, session=None, all=True, list=False, out=str(path),
+                              restart=False, window=DEVICE_CHUNKS_MAX, timeout=1.0)
+    with contextlib.redirect_stdout(io.StringIO()) as printed:
+        asyncio.run(blip.fetch_log(endpoint, args))
+    return printed.getvalue()
+
+
+def kept_indices(path):
+    return [line["index"] for line in records.read_ndjson(str(path)) if not records.is_note(line)]
+
+
+class ResumedFetch(unittest.TestCase):
+    # the resume started after the torn note, so every fetch of the trial in #366 lost the record it dropped
+    def test_two_fetches_of_an_open_session_keep_every_record_once(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            self.assertEqual(kept_indices(path), list(range(8)))
+
+    def test_the_summary_of_a_resumed_file_does_not_call_a_record_it_fetched_again_dropped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(9, closed=False), path)
+            summary = records.summarise(list(records.read_ndjson(str(path))))
+        self.assertFalse(any("index 4 dropped" in line for line in summary), summary)
+        self.assertTrue(any("index 8 dropped" in line for line in summary), summary)
+
+    def test_a_resume_once_the_session_closed_keeps_the_record_it_dropped_as_torn(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            fetch_into(LogEndpoint(5), path)
+            self.assertEqual(kept_indices(path), list(range(5)))
+
+    # the ring wrapped between two fetches and the device numbered what was left from 0, so the resume of #367 skipped 359 s
+    def test_a_resume_into_a_session_renumbered_since_is_refused_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            renumbered = LogEndpoint(400, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 570)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("index 398", str(caught.exception))
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
+
+    # the second fetch of #367 found its resume point past the renumbered end and printed nothing to fetch
+    def test_a_resume_past_the_end_of_a_renumbered_session_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(400, closed=False), path)
+            renumbered = LogEndpoint(300, closed=False, slots=[
+                slot_naming_its_index(index) for index in range(170, 470)])
+            with self.assertRaises(SystemExit) as caught:
+                fetch_into(renumbered, path)
+            self.assertIn("renumbered", str(caught.exception))
+
+    def test_an_open_session_that_wrote_nothing_since_is_not_fetched_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = pathlib.Path(directory) / "capture.ndjson"
+            fetch_into(LogEndpoint(5, closed=False), path)
+            before = path.read_text(encoding="utf-8")
+            printed = fetch_into(LogEndpoint(5, closed=False), path)
+            self.assertIn("nothing to fetch", printed)
+            self.assertEqual(path.read_text(encoding="utf-8"), before)
 
 
 class LinkRecord(unittest.TestCase):
