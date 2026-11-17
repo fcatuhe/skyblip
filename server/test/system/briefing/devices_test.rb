@@ -413,6 +413,41 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo paired with a Go shows its alarm as set on its Go, and never sends it" do
+    in_range a_bravo(goAlarm: "soft")
+    on_the_shelf do
+      visit "/briefing"
+      click_button "Connect a device"
+      assert_current_path "/briefing/devices/bravo-3f2a"
+      assert_select "Alarm", selected: "Soft sound + visual", disabled: true
+      assert_text "Your Go's ALARM row sets it for both units."
+      assert_equal "unit-alarm-set-on-go", find_field("Alarm", disabled: true)["aria-describedby"]
+      assert_equal "0.55", page.evaluate_script("getComputedStyle(document.getElementById('unit-alarm')).opacity")
+      assert_equal "1", page.evaluate_script("getComputedStyle(document.getElementById('unit-alarm-set-on-go')).opacity")
+      screen "11c-bravo-alarm-set-on-go"
+      fill_in "ADS-B address", with: "3C6586"
+      click_button "Save 1 change"
+      assert_selector ".glass-press", text: "Press the Bravo's button."
+      assert_equal({ "aircraft_address" => 0x3C6586 }, page.evaluate_script("#{unit("3F2A")}.staged"))
+    end
+  end
+
+  test "a Go with no buzzer and no haptic paired with a Bravo offers Bravo soft and Bravo loud, and its glass says BRAVO" do
+    in_range a_go(sounds: false, bravo: "live", stored: { aircraft_type: 3, units: "nautical", callsign: "F-JXYZ", aircraft_address: 0, alarm: "loud" })
+    on_the_shelf do
+      connect_go
+      assert_select "Alarm", selected: "Bravo loud + visual", options: [ "Off", "Visual only", "Bravo soft + visual", "Bravo loud + visual" ]
+      assert_no_field "Alarm", disabled: true
+      screen "11d-go-bravo-steps"
+      select "Bravo soft + visual", from: "Alarm"
+      assert_text "Default: Bravo loud + visual"
+      click_button "Save 1 change"
+      assert_glass "SETTINGS"
+      assert_selector ".glass-prompt canvas.glass[aria-label*='ALARM BRAVO SOFT']"
+      assert_equal({ "alarm" => "soft" }, page.evaluate_script("#{unit("00012A")}.staged"))
+    end
+  end
+
   test "a Go that holds no address yet is sent to its activation from its own page" do
     in_range a_go(address: nil)
     on_the_shelf do

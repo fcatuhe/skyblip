@@ -5,6 +5,7 @@
 #include <cstring>
 #include <optional>
 
+#include "core/annunciation/call.h"
 #include "core/comms/link_registry.h"
 #include "core/events/stamp.h"
 #include "core/model/aircraft.h"
@@ -18,10 +19,14 @@ namespace skyblip::comms {
 // INFO: fc 11nov26 the observation at its widest, the widest peer frame (#177)
 constexpr uint16_t kPeerPayloadFloorBytes = 126;
 
-constexpr int kPeerClaimWidestBytes = 72;
+constexpr int kPeerClaimWidestBytes = 82;
 
-// INFO: fc 11nov26 schemas/link.v1.json: protocol_version 1 is the three peer frames as written
-constexpr uint32_t kPeerProtocolVersion = 1;
+// INFO: fc 17nov26 schemas/link.v1.json: protocol_version 2, the Go grading traffic for both units
+constexpr uint32_t kPeerProtocolVersion = 2;
+
+// INFO: fc 17nov26 schemas/link.v1.json alarm: off to loud, common::Alarm's codes, which core
+// cannot name
+constexpr uint8_t kAlarmCodeCeiling = 3;
 
 std::optional<uint32_t> draw_boot_epoch(ports::Random& random);
 
@@ -42,7 +47,8 @@ struct PeerClaim {
     int32_t pressure_altitude_mm{0};
     uint32_t pressure_altitude_age_ms{0};
     uint32_t aircraft_address{0};
-    bool alarm_requested{false};
+    uint8_t alarm{0};
+    annunciation::Call call{};
     bool paired{false};
 };
 
@@ -85,7 +91,6 @@ struct PeerHealth {
     bool aircraft_address_set{false};
     bool last_sequence_valid{false};
     uint32_t last_sequence{0};
-    bool alarm_granted{false};
     ExportReference export_reference{ExportReference::None};
     bool paired{false};
     std::optional<OwnTransponderHeard> own_transponder{};
@@ -94,6 +99,7 @@ struct PeerHealth {
     bool charging{false};
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     std::optional<uint32_t> frame_rate_hz{};
+    std::optional<uint32_t> dismissed_announcement{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

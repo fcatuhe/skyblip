@@ -17,11 +17,12 @@ static_assert(
     "every acknowledgement, small_mtu above all, fits a link that never exchanged its MTU");
 
 // INFO: fc 14nov26 Conflict is the Go's aircraft address against its Bravo's transponder, ADS-L
-// F.2.3
+// F.2.3 | 17nov26 Unsupported is a paired Bravo's alarm, which its Go sets
 link::Reason settings_refusal(Status status) {
     switch (status) {
         case Status::OutOfRange: return link::Reason::OutOfRange;
         case Status::Conflict: return link::Reason::NotOwnTransponder;
+        case Status::Unsupported: return link::Reason::SetOnGo;
         default: return link::Reason::Invalid;
     }
 }

@@ -22,12 +22,13 @@ struct Rows {
     char* next() { return text[count++]; }
 };
 
-void menu_row(Rows& rows, MenuRow row, const Settings& to) {
+void menu_row(Rows& rows, MenuRow row, const Settings& to, bool sounds = true) {
     char* out = rows.next();
     int written = format_string(out, menu_row_label(row));
     out[written++] = ' ';
     MenuValues values;
     values.settings = to;
+    values.sounds = sounds;
     menu_row_value(out + written, row, values);
 }
 
@@ -75,14 +76,15 @@ int join(const Rows& rows, char* out) {
 
 }  // namespace
 
-int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity) {
+int describe_settings_changes(const Settings& from, const Settings& to, char* out, int capacity,
+                              bool sounds) {
     if (capacity < kSettingsChangesBytes) return 0;
     Rows rows;
     if (to.aircraft_type != from.aircraft_type) menu_row(rows, MenuRow::AircraftType, to);
     if (std::strncmp(to.callsign, from.callsign, kCallsignBytes) != 0) callsign_row(rows, to);
     if (to.aircraft_address != from.aircraft_address) menu_row(rows, MenuRow::AircraftAddress, to);
     if (to.units != from.units) menu_row(rows, MenuRow::Units, to);
-    if (to.alarm != from.alarm) menu_row(rows, MenuRow::Alarm, to);
+    if (to.alarm != from.alarm) menu_row(rows, MenuRow::Alarm, to, sounds);
     if (to.battery_offset_mv != from.battery_offset_mv)
         signed_row(rows, "BATTERY", to.battery_offset_mv, 0, " MV");
     if (to.frequency_trim_e1_ppm != from.frequency_trim_e1_ppm)

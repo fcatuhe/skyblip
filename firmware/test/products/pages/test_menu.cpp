@@ -109,6 +109,17 @@ TEST_CASE("radar menu: every row names what it holds, and the focused one is rev
     CHECK(2 * kMenuTextInset + kCharacterHeight * kMenuScale == kMenuBarHeight);
 }
 
+// ALARM and BRAVO LOUD fill the fifteen characters a row holds, as TYPE and HANG GLIDER do.
+TEST_CASE("radar menu: a paired Go that cannot sound reads BRAVO LOUD whole on its alarm row") {
+    MenuValues values = default_menu_values();
+    values.sounds = false;
+    values.settings.bravo = events::BluetoothAddress{1, {0x2A, 0x3F, 0x11, 0x22, 0x33, 0xC4}};
+    values.settings.alarm = go::Alarm::Loud;
+    const Drawn drawn = page_of(Page::Radar, values, MenuRow::Alarm);
+    CHECK(row_label_reads(drawn, MenuRow::Alarm, true));
+    CHECK(row_value_reads(drawn, MenuRow::Alarm, "BRAVO LOUD", true));
+}
+
 // Seven rows and seven lines: the radar menu fits, and only a longer one slides under the focus.
 TEST_CASE("radar menu: the seven rows fit the glass, and a longer menu slides up under the focus") {
     MenuValues values = default_menu_values();

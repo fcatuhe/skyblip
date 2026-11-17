@@ -92,8 +92,9 @@ inline constexpr Value kReasonValues[] = {
     {"forgotten", 50},
     {"unknown_browser", 51},
     {"not_own_transponder", 52},
+    {"set_on_go", 53},
 };
-inline constexpr Enumeration kReason{kReasonValues, 52};
+inline constexpr Enumeration kReason{kReasonValues, 53};
 
 inline constexpr Value kAlarmValues[] = {
     {"off", 0},
@@ -102,6 +103,12 @@ inline constexpr Value kAlarmValues[] = {
     {"loud", 3},
 };
 inline constexpr Enumeration kAlarm{kAlarmValues, 4};
+
+inline constexpr Value kAlarmLevelValues[] = {
+    {"none", 0},
+    {"advisory", 1},
+};
+inline constexpr Enumeration kAlarmLevel{kAlarmLevelValues, 2};
 
 inline constexpr Value kUnitsValues[] = {
     {"nautical", 0},
@@ -303,6 +310,8 @@ inline constexpr Key kConfigKeys[] = {
     {"frequency_trim_e1_ppm", 10, Type::Integer, nullptr, 0, false},
     {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
     {"alarm", 12, Type::Enum, &kAlarm, 0, false},
+    {"alarm_from_go", 13, Type::Boolean, nullptr, 0, false},
+    {"annunciator_fitted", 14, Type::Boolean, nullptr, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -591,7 +600,6 @@ inline constexpr Key kHealthKeys[] = {
     {"utc_valid", 4, Type::Boolean, nullptr, 0, true},
     {"last_sequence", 5, Type::Unsigned, nullptr, 0, false},
     {"aircraft_address_set", 6, Type::Boolean, nullptr, 0, true},
-    {"alarm_granted", 7, Type::Boolean, nullptr, 0, true},
     {"export_reference", 11, Type::Enum, &kExportReference, 0, true},
     {"paired", 12, Type::Boolean, nullptr, 0, true},
     {"own_transponder", 13, Type::Unsigned, nullptr, 0, false},
@@ -602,6 +610,7 @@ inline constexpr Key kHealthKeys[] = {
     {"charging", 18, Type::Boolean, nullptr, 0, true},
     {"power_level", 19, Type::Enum, &kPowerLevel, 0, true},
     {"frame_rate_hz", 20, Type::Unsigned, nullptr, 0, false},
+    {"dismissed_announcement", 21, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -617,8 +626,11 @@ inline constexpr Key kPeerClaimKeys[] = {
     {"pressure_altitude_mm", 9, Type::Integer, nullptr, 0, false},
     {"pressure_altitude_age_ms", 10, Type::Unsigned, nullptr, 0, false},
     {"aircraft_address", 11, Type::Unsigned, nullptr, 0, false},
-    {"alarm_requested", 12, Type::Boolean, nullptr, 0, true},
     {"paired", 18, Type::Boolean, nullptr, 0, true},
+    {"alarm", 19, Type::Enum, &kAlarm, 0, true},
+    {"announcing", 20, Type::Enum, &kAlarmLevel, 0, true},
+    {"announcement", 21, Type::Unsigned, nullptr, 0, true},
+    {"undismissed", 22, Type::Enum, &kAlarmLevel, 0, true},
 };
 
 inline constexpr Key kCaptureKeys[] = {
@@ -702,9 +714,9 @@ inline constexpr Key kIdentityKeys[] = {
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 11},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 11},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 11},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 13},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 13},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 13},
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
@@ -728,7 +740,7 @@ inline constexpr Frame kFrames[] = {
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
     {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 18},
-    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 14},
+    {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 17},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
     {"browser_challenge", 30, events::Endpoint::Config, Sender::Both, kBrowserChallengeKeys, 2},
     {"trust_browser", 31, events::Endpoint::Config, Sender::Host, kTrustBrowserKeys, 4},

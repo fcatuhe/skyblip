@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "core/annunciation/call.h"
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/events/rf.h"
@@ -233,8 +234,10 @@ struct State {
     comms::BravoState bravo{comms::BravoState::Unpaired};
     // INFO: fc 14nov26 the transponder a live Bravo names, on the ground | 15nov26 on Bravo too
     std::optional<comms::OwnTransponderHeard> own_transponder{};
-    // INFO: fc 12nov26 written by Bravo's peer service alone, true while its Go+ sounds for both
-    bool alarm_granted{false};
+    // INFO: fc 17nov26 what this unit announces, which a paired Go sends its Bravo to play
+    annunciation::Call alarm_call{};
+    // INFO: fc 17nov26 written by Bravo's peer service alone: its Go's call while it plays it
+    std::optional<annunciation::Call> followed_call{};
 
     struct AirCounts {
         uint32_t rx_ok{0};
