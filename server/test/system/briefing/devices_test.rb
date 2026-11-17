@@ -388,6 +388,12 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       connect_go
       assert_selector ".unit-heard-title", text: "Bravo hears Glider · F-JABC · ADS-B 3A4B5C."
       assert_equal [ [ "Aircraft type", "Light helicopter", "Glider" ], [ "Callsign", "F-JXYZ", "F-JABC" ], [ "ADS-B address", "none", "3A4B5C" ] ], heard_rows
+
+      # A status push redraws the page, and the rows Bravo heard stay the same elements.
+      page.execute_script("window.heardRow = document.querySelector('.unit-heard-changes tbody tr')")
+      page.execute_script("Object.assign(#{unit("00012A")}, { battery: 83 }).status()")
+      assert_selector ".unit-facts", text: "83 %"
+      assert page.evaluate_script("window.heardRow.isConnected")
       screen "11c-go-hears"
 
       click_button "Use these values"
@@ -502,6 +508,6 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
 
   private
     def heard_rows
-      all(".unit-heard-changes tbody tr").map { |row| row.all("th, td").map(&:text) }
+      page.evaluate_script("[...document.querySelectorAll('.unit-heard-changes tbody tr')].map(row => [...row.cells].map(cell => cell.textContent))")
     end
 end
