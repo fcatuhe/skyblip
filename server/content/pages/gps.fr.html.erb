@@ -30,14 +30,14 @@ updated_on: "2026-11-18"
         <tr><th>Mot</th><th>Ce que voit le Go</th><th>Que faire</th></tr>
       </thead>
       <tbody>
-        <tr><th>NO DATA</th><td>aucune phrase récente du récepteur</td><td>passez l&rsquo;appareil au banc. Un ciel plus dégagé ne fera pas parler le récepteur</td></tr>
-        <tr><th>OUTDOORS</th><td>des solutions arrivent sans date exploitable</td><td>déplacez l&rsquo;appareil pour dégager la vue de l&rsquo;antenne sur le ciel</td></tr>
-        <tr><th>WAIT</th><td>une date exploitable a été décodée</td><td>laissez l&rsquo;appareil en place. Le récepteur a lu le message de navigation d&rsquo;un satellite, mais la géométrie ne suffit pas encore pour un point</td></tr>
+        <tr><th>GPS OFF</th><td>aucune phrase récente du récepteur</td><td>passez l&rsquo;appareil au banc. Un ciel plus dégagé ne fera pas parler le récepteur</td></tr>
+        <tr><th>MOVE OUT</th><td>des solutions arrivent sans date exploitable</td><td>déplacez l&rsquo;appareil pour dégager la vue de l&rsquo;antenne sur le ciel</td></tr>
+        <tr><th>FINDS FIX</th><td>une date exploitable a été décodée</td><td>laissez l&rsquo;appareil en place. Le récepteur a lu le message de navigation d&rsquo;un satellite, mais la géométrie ne suffit pas encore pour un point</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="lede"><span class="mono">WAIT</span> indique que patienter peut servir. La date vient du message de navigation des satellites. Son décodage marque donc un progrès par rapport à l&rsquo;absence de signal exploitable. La page d&rsquo;état ajoute le temps passé à l&rsquo;étape en cours. L&rsquo;anneau du radar n&rsquo;affiche que le mot, pour éviter de redessiner une partie de l&rsquo;écran chaque seconde tant que l&rsquo;appareil n&rsquo;a pas de point.</p>
+  <p class="lede"><span class="mono">FINDS FIX</span> indique que patienter peut servir. La date vient du message de navigation des satellites. Son décodage marque donc un progrès par rapport à l&rsquo;absence de signal exploitable. La page d&rsquo;état ajoute le temps passé à l&rsquo;étape en cours, jusqu&rsquo;à 9:59. L&rsquo;anneau du radar et la liste nearby n&rsquo;affichent que le mot, pour éviter de redessiner une partie de l&rsquo;écran chaque seconde tant que l&rsquo;appareil n&rsquo;a pas de point.</p>
 
   <figure class="shot">
     <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : l'anneau vide affiche NO FIX et, en dessous, l'avancée du récepteur vers un point" %>
@@ -114,7 +114,7 @@ updated_on: "2026-11-18"
 
   <ul class="points">
     <li>Le Go contrôle chaque point au lieu d&rsquo;accepter l&rsquo;indicateur de validité du récepteur</li>
-    <li>NO DATA, OUTDOORS et WAIT disent s&rsquo;il faut examiner l&rsquo;appareil, le déplacer ou attendre</li>
+    <li>GPS OFF, MOVE OUT et FINDS FIX disent s&rsquo;il faut examiner l&rsquo;appareil, le déplacer ou attendre</li>
     <li>L&rsquo;émission commence après trois prédictions à moins de 12&nbsp;m, avec une attente plafonnée à 20&nbsp;s après le premier point</li>
     <li>115200&nbsp;bauds font arriver le point avant la première émission possible</li>
     <li>Le Go déclare le décollage à 12&nbsp;m/s et l&rsquo;atterrissage sous 1&nbsp;m/s ou après 10&nbsp;s sous 8&nbsp;m/s</li>

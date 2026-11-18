@@ -29,14 +29,14 @@ updated_on: "2026-11-18"
         <tr><th>Word</th><th>What the Go sees</th><th>What to do</th></tr>
       </thead>
       <tbody>
-        <tr><th>NO DATA</th><td>no recent sentence from the receiver</td><td>take the unit to the bench. Waiting for a clearer sky will not make the receiver talk</td></tr>
-        <tr><th>OUTDOORS</th><td>solutions arrive without a usable date</td><td>move the unit where the antenna has a clearer view of the sky</td></tr>
-        <tr><th>WAIT</th><td>a usable date has been decoded</td><td>leave the unit where it is. The receiver has read a satellite&rsquo;s navigation message but still lacks the geometry for a fix</td></tr>
+        <tr><th>GPS OFF</th><td>no recent sentence from the receiver</td><td>take the unit to the bench. Waiting for a clearer sky will not make the receiver talk</td></tr>
+        <tr><th>MOVE OUT</th><td>solutions arrive without a usable date</td><td>move the unit where the antenna has a clearer view of the sky</td></tr>
+        <tr><th>FINDS FIX</th><td>a usable date has been decoded</td><td>leave the unit where it is. The receiver has read a satellite&rsquo;s navigation message but still lacks the geometry for a fix</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p class="lede"><span class="mono">WAIT</span> tells you that waiting can help. The date comes from the satellites&rsquo; navigation message, so decoding it marks progress beyond receiving no usable signal. The status page adds the time spent at the current stage. The radar ring shows only the word, to avoid redrawing part of the screen every second while the unit has no fix.</p>
+  <p class="lede"><span class="mono">FINDS FIX</span> tells you that waiting can help. The date comes from the satellites&rsquo; navigation message, so decoding it marks progress beyond receiving no usable signal. The status page adds the time spent at the current stage, up to 9:59. The radar ring and the nearby list show only the word, to avoid redrawing part of the screen every second while the unit has no fix.</p>
 
   <figure class="shot">
     <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring shows NO FIX and, below it, the receiver's progress towards a position fix" %>
@@ -113,7 +113,7 @@ updated_on: "2026-11-18"
 
   <ul class="points">
     <li>The Go checks each fix rather than accepting the receiver&rsquo;s validity flag</li>
-    <li>NO DATA, OUTDOORS and WAIT tell you whether to investigate, move or wait</li>
+    <li>GPS OFF, MOVE OUT and FINDS FIX tell you whether to investigate, move or wait</li>
     <li>Transmission starts after three predictions within 12&nbsp;m, with a ceiling of 20&nbsp;s after the first fix</li>
     <li>115200&nbsp;baud brings the fix in before the first possible transmission</li>
     <li>The Go declares takeoff at 12&nbsp;m/s and landing under 1&nbsp;m/s or after 10&nbsp;s under 8&nbsp;m/s</li>
