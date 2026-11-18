@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>skyBlip Go ADS-L declaration of conformity</title>
+    <%= stylesheet_link_tag "reset", "_global", "base", "wordmark" %>
+    <link rel="stylesheet" href="/declaration.css">
+  </head>
+  <body class="declaration">
+    <header class="declaration-header">
+      <%= render "layouts/wordmark", css: "declaration-wordmark" %>
+      <p class="declaration-draft">Draft of <%= Date.current.strftime("%-d %B %Y") %>, not signed</p>
+    </header>
+
+    <h1>Declaration of Conformity</h1>
+    <p class="declaration-basis">in accordance with ED Decision 2022/024/R and the attached Technical Specification for ADS-L transmissions using the SRD-860 frequency band (&ldquo;ADS-L 4 SRD 860&rdquo;)</p>
+
+    <p>The undersigned, representing the manufacturer:</p>
+    <p class="declaration-indent">François Catuhe EI<br>23 cours de Verdun, 33000 Bordeaux, France</p>
+
+    <p>declares under sole responsibility that the following product:</p>
+    <dl class="declaration-indent">
+      <dt>Product Name</dt>
+      <dd>skyBlip Go</dd>
+      <dt>Hardware</dt>
+      <dd>LilyGO T-Echo</dd>
+      <dt>Device P/N</dt>
+      <dd>skyBlipGo</dd>
+      <dt>Firmware Version</dt>
+      <dd>skyBlip 1.0.0, with ADS-L implementation 1.0.0</dd>
+    </dl>
+    <p>is in conformity with the ADS-L 4 SRD860 Standard Issue 2</p>
+    <div class="declaration-scope">
+      <p>The manufacturer supplies the firmware. This declaration covers it on one hardware, the LilyGO T-Echo, which has passed CE testing. The manufacturer will revise this declaration before supporting any other hardware.</p>
+      <p>At every start-up the firmware checks that the radio and the barometer answer. If either does not, the unit does not run: it neither transmits nor receives, and it cannot be activated.</p>
+    </div>
+
+    <p>The device operates on the following transmission parameters:</p>
+    <dl class="declaration-indent">
+      <dt>Transmission Bands and Power Levels</dt>
+      <dd>M-band only, on 868.2&nbsp;MHz and 868.4&nbsp;MHz, at 12.95&nbsp;dBm e.r.p. This value is computed from the radio&rsquo;s nominal +14&nbsp;dBm conducted power (&plusmn;2&nbsp;dB), a 0.5&nbsp;dB feed loss and the antenna&rsquo;s datasheet gain of 1.6&nbsp;dBi. Nothing is transmitted on the O-band.</dd>
+      <dt>Optional Parameters Transmitted (ADS-L)</dt>
+      <dd>None. The Traffic and Status payloads carry no optional parameters, and no secure signature (E.4) is appended. The device also transmits a callsign record every 10&nbsp;s, as payload type 66, which F.2.1 assigns to OGN Diagnostics.</dd>
+      <dt>Receive capabilities</dt>
+      <dd>M-band, 868.2 and 868.4&nbsp;MHz, 400&nbsp;ms on each channel every second. O-band HDR, 869.525&nbsp;MHz, 190&nbsp;ms every second, for the Traffic Uplink. O-band LDR is not received.</dd>
+    </dl>
+
+    <p>The manufacturer additionally declares that:</p>
+    <ul class="declaration-statements">
+      <li>Robust design processes and production controls are in place during manufacturing to ensure consistent quality and compliance with the applicable standard,</li>
+      <li>The product&rsquo;s hardware, the LilyGO T-Echo, has passed CE testing for radio, EMC, safety and health under the Radio Equipment Directive 2014/53/EU (attestation of conformity SZ1220803-35313E-RF, BACL Shenzhen, 18 November 2022),</li>
+      <li>The product uses an approved address range (Section ADS-L.4.SRD860.F.2.2)</li>
+      <li>The product nominally transmits at least the &ldquo;Traffic&rdquo; and &ldquo;Status&rdquo; payloads (Subpart G)</li>
+    </ul>
+
+    <div class="declaration-signoff">
+      <dl class="declaration-signature">
+        <dt>Date</dt>
+        <dd></dd>
+        <dt>Authorized Representative</dt>
+        <dd>François Catuhe</dd>
+        <dt>Position</dt>
+        <dd>Entrepreneur individuel</dd>
+      </dl>
+      <dl class="declaration-signature declaration-signature--stamp">
+        <dt>Signature and Company Stamp</dt>
+        <dd></dd>
+      </dl>
+    </div>
+  </body>
+</html>

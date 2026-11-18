@@ -1,0 +1,80 @@
+@layer declaration {
+  @page {
+    size: A4;
+    margin: 10mm 20mm 12mm;
+  }
+
+  html { font-size: 9.5pt; }
+
+  .declaration { line-height: 1.4; print-color-adjust: exact; }
+  .declaration p { margin-block: 0 var(--space-s); }
+
+  .declaration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-block: var(--space-l) var(--space-s);
+    border-block-end: 1px solid var(--card-border);
+    margin-block-end: var(--space-m);
+  }
+  .declaration-wordmark { font-size: 1.75rem; }
+  .declaration .declaration-draft {
+    margin: 0;
+    font-weight: 700;
+    color: var(--blip-text);
+  }
+
+  .declaration h1 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin-block: 0 var(--space-xs);
+  }
+  .declaration .declaration-basis {
+    color: var(--ink-soft);
+    margin-block-end: var(--space-m);
+  }
+
+  .declaration-scope {
+    margin-block: 0 var(--space-s);
+    padding: var(--space-xs) var(--space-inline-m);
+    border-inline-start: 2px solid var(--blip);
+  }
+  .declaration .declaration-scope p:last-child { margin-block-end: 0; }
+
+  .declaration-indent {
+    margin-block: 0 var(--space-s);
+    margin-inline-start: var(--space-inline-2xl);
+  }
+
+  dl.declaration-indent, .declaration-signature {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    gap: var(--space-2xs) var(--space-inline-m);
+  }
+  .declaration dt { font-weight: 700; }
+  .declaration dd { margin: 0; }
+
+  .declaration-statements {
+    margin-block: 0 var(--space-m);
+    padding-inline-start: var(--space-inline-2xl);
+    list-style: "-  ";
+  }
+  .declaration-statements li { margin-block-end: var(--space-2xs); }
+
+  .declaration-signoff {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: var(--space-inline-2xl);
+    break-inside: avoid;
+  }
+  .declaration-signature {
+    margin: 0;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-s) var(--space-inline-m);
+  }
+  .declaration-signature dd { border-block-end: 1px solid var(--sky); min-block-size: 1.4em; }
+  .declaration-signature--stamp { grid-template-columns: 1fr; }
+  .declaration-signature--stamp dd { min-block-size: 6rem; }
+}
