@@ -42,6 +42,7 @@ module Skyblip
     config.assets.paths << Rails.root.join("content_images")
     config.x.public_url = "https://skyblip.eu"
     config.x.repository_url = "https://github.com/fcatuhe/skyblip"
+    config.x.contact_email = "contact@skyblip.eu"
     config.x.theme_color = "#F4F1EA"
     config.x.seeed.promo_code = "5GO3A5DD"
     # INFO: fc 14nov26 an unset config.x key reads as an empty OrderedOptions, which is truthy, so environments without a simulator build need these defaults

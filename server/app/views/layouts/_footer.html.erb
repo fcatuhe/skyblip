@@ -40,7 +40,7 @@
 
   <p class="site-footer-contact">
     <%= t "footer.question" %>
-    <%= link_to t("footer.write"), "https://github.com/fcatuhe/skyblip/issues" %>
+    <%= t "footer.write_html", email: mail_to(Rails.configuration.x.contact_email), github: link_to("GitHub", Rails.configuration.x.repository_url) %>
   </p>
   <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= t "footer.license" %> &middot; <%= link_to t("footer.notices"), "https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md" %></p>
 </footer>
