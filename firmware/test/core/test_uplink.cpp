@@ -30,40 +30,21 @@ model::AircraftObservation make_target(uint32_t address) {
 }
 }  // namespace
 
-// Where the burst sits in the second, which is the fourth thing a dwell and a
-// transmitter have to agree on after the sync word, the length and the rate.
-//
-// The longest packet, ten records, is 9.4 ms of air at §C.4's 200 kbps, and core/timing/slot.h
-// cuts the O-band dwell at 205..395 because our own skyPost is on air from 210
-// and "completes by 390". These are the sums behind that sentence.
-TEST_CASE("uplink: a frame fits the window the dwell map is cut against") {
+// The uplink gives up its edges: §C.5's slot is 200 to 450 ms, the dwell hears 210 to 440 in full.
+TEST_CASE("uplink: skyPost starts its longest frame from 210 to 425 ms, done by 435") {
     CHECK(adsl::kUplinkBurstUs == 9400);
+    CHECK(timing::kGroundEmitStartMs == 210);
+    // 440 - 9.4 - 5, rounded down.
+    CHECK(timing::last_instant_ms(timing::kUplinkWindowMs, adsl::kUplinkBurstUs) == 425);
+    CHECK(timing::kGroundEmitEndMs == 435);
+    CHECK(425 * 1000u + adsl::kUplinkBurstUs <= timing::kGroundEmitEndMs * 1000u);
 
-    // Our own ground station: on air at 210, done at 219.4, and the dwell that
-    // was listening for it opened at 205 and closes at 395.
-    const uint32_t ours_start_us = timing::kGroundEmitStartMs * 1000u;
-    CHECK(ours_start_us > timing::kUplinkRxStartMs * 1000u);
-    CHECK(ours_start_us + adsl::kUplinkBurstUs < timing::kUplinkRxEndMs * 1000u);
-
-    // kGroundEmitEndMs is a completion deadline and not a start deadline, and the
-    // difference is 9.4 ms: a burst BEGUN at 390 would still be on air at 399.4,
-    // where the radio has already retuned to the M band.
-    CHECK(timing::kGroundEmitEndMs * 1000u + adsl::kUplinkBurstUs > timing::kUplinkRxEndMs * 1000u);
-    const uint32_t last_start_us = timing::kGroundEmitEndMs * 1000u - adsl::kUplinkBurstUs;
-    CHECK(last_start_us > timing::kUplinkRxStartMs * 1000u);
-
-    // And the limit this dwell has, stated rather than discovered: §C.5 gives
-    // the uplink slot 200..450 ms and only requires a transmission to complete
-    // before it ends, so a ground station that is not ours may legally begin one
-    // as late as 440.6 ms. One radio cannot be on two bands at once and the
-    // M-band dwell opens at 400 (§C.2.5 costs half the neighbours if we skip a
-    // channel), so a third-party uplink transmitted in the second half of its
-    // slot is one we do not hear. skyPost transmits at 210 for exactly this
-    // reason, and hearing our own network is the capability we ship; a
-    // third-party station that starts late is a known and accepted deaf spot.
-    const uint32_t conforming_last_start_us = adsl::kUplinkSlotEndMs * 1000u - adsl::kUplinkBurstUs;
-    CHECK(conforming_last_start_us > timing::kUplinkRxEndMs * 1000u);
-    CHECK(adsl::kUplinkSlotStartMs < timing::kUplinkRxStartMs);
+    const timing::Window dwell = timing::dwell_of(timing::kUplinkWindowMs);
+    CHECK(dwell.start_ms < timing::kGroundEmitStartMs);
+    CHECK(dwell.end_ms > timing::kGroundEmitEndMs);
+    // A station that is not ours may start at 440.6 ms, and that frame ends after the dwell does.
+    CHECK(adsl::kUplinkSlotEndMs * 1000u > static_cast<uint32_t>(dwell.end_ms) * 1000u);
+    CHECK(adsl::kUplinkSlotStartMs < dwell.start_ms);
 }
 
 TEST_CASE("uplink: a relayed record is an uplink observation, with a speed only when it has one") {

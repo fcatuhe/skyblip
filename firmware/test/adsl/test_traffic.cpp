@@ -264,7 +264,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 50
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
-    const timing::SlotPlan plan = timing::Scheduler::plan(timing::kSlot0StartMs, clock);
+    const timing::SlotPlan plan = timing::Scheduler::plan(timing::kWindowAMs.start_ms, clock);
 
     timing::Transmitter tx;
     tx.configure(0x123456);

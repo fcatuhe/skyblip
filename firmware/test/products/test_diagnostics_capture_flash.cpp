@@ -422,8 +422,9 @@ TEST_CASE("capture: a window that closes mid-drain commits only the records the 
     queue_numbered(rig, 15);
 
     // Room for one page program and not for the two the straddling write needs after it.
-    constexpr int kPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
-                             static_cast<int>(store::kSlotWriteCostMs) - 1;
+    constexpr int kPhaseMs = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
+                             timing::kSwitchRetuneMs - static_cast<int>(store::kSlotWriteCostMs) -
+                             1;
     now_ms = 20'000 + kPhaseMs;
     timing::ClockState anchored{};
     anchored.utc_valid = true;

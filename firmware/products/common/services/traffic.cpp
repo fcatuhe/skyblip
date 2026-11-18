@@ -72,11 +72,11 @@ events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t n
                             state.traffic_now_s(now_ms));
 }
 
-// INFO: fc 16sep26 §C.5: slot 1 reaches kSlot1WrapMs past the second its sender keyed in
+// INFO: fc 16sep26 §C.5: the B dwell reaches kWindowBSpillMs past the second its sender keyed in
 uint32_t TrafficService::keyed_utc_s(const events::Stamp& stamp, uint32_t now_s) {
     if (!stamp.phase_valid) return now_s;
-    const bool in_slot1_tail = stamp.into_ms < timing::kSlot1WrapMs;
-    return (in_slot1_tail && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
+    const bool in_spill = stamp.into_ms < timing::kWindowBSpillMs;
+    return (in_spill && stamp.at_s > 0) ? stamp.at_s - 1 : stamp.at_s;
 }
 
 void TrafficService::log(const events::RfEvent& event, const events::Stamp& stamp,
@@ -110,8 +110,9 @@ void TrafficService::log(const events::RfEvent& event, const events::Stamp& stam
     entry.key_offset_s = key_offset_s;
     if (observation != nullptr) {
         entry.source = observation->source;
-        entry.address = observation->address;
-        entry.address_valid = observation->source != model::Source::AdslUplink;
+        entry.address = observation->no_track ? 0 : observation->address;
+        entry.address_valid =
+            observation->source != model::Source::AdslUplink && !observation->no_track;
     }
     context_.state.radio_log.record(entry);
     context_.diagnostics.record(entry);
@@ -142,7 +143,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
     const bool alptas = system == protocol::System::Alptas;
     int8_t key_offset_s = 0;
     const radio::Verdict outcome =
-        alptas ? decode_alptas(frame, keyed, stamp.phase_valid, observation, key_offset_s)
+        alptas ? decode_alptas(frame, keyed, stamp, observation, key_offset_s)
                : decode_adsl(frame, keyed, stamp, observation);
     if (outcome == radio::Verdict::Named) {
         context_.state.air.rx_named++;
@@ -163,7 +164,7 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
 
     observation.received.into_ms = stamp.into_ms;
     observation.received.phase_valid = stamp.phase_valid;
-    observation.at_ms = now_ms;
+    observation.at_ms = now_ms - static_cast<uint32_t>(observation.fix_age_ms);
     observation.rssi_dbm = event.rssi_dbm;
     context_.state.traffic.update(observation, utc_s);
     context_.state.air.rx_ok++;
@@ -278,22 +279,24 @@ radio::Verdict TrafficService::learn_callsign(const adsl::Packet& packet, uint32
 }
 
 // INFO: fc 16sep26 ALP-TAS keys on the second its sender keyed in, so an undated burst is a guess
-radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
+radio::Verdict TrafficService::decode_alptas(protocol::Frame& frame, uint32_t utc_s,
+                                             const events::Stamp& stamp,
                                              model::AircraftObservation& observation,
-                                             int8_t& key_offset_s) const {
+                                             int8_t& key_offset_s) {
     const model::Ownship& own = context_.state.own;
     if (!own.fix_valid || !own.utc_valid) return radio::Verdict::Unattempted;
     if (alptas::receive(frame.data, frame.erasures) != wire::Status::Ok)
         return radio::Verdict::BadCrc;
     observation.address = alptas::address(frame.data);
+    observation.no_track = alptas::no_track(frame.data);
     observation.source = model::Source::Alptas;
     const int32_t latitude = own.latitude_1e7;
     const int32_t longitude = own.longitude_1e7;
-    radio::Verdict verdict =
-        verdict_of(protocol::alptas_decode(frame.data, utc_s, latitude, longitude, observation));
-    if (verdict == radio::Verdict::Undecoded && !dated && utc_s != 0)
-        verdict = verdict_of(
-            protocol::alptas_decode(frame.data, utc_s - 1, latitude, longitude, observation));
+    radio::Verdict verdict = verdict_of(
+        alptas_receiver_.decode(frame.data, utc_s, latitude, longitude, stamp, observation));
+    if (verdict == radio::Verdict::Undecoded && !stamp.phase_valid && utc_s != 0)
+        verdict = verdict_of(alptas_receiver_.decode(frame.data, utc_s - 1, latitude, longitude,
+                                                     stamp, observation));
     if (verdict != radio::Verdict::Undecoded) return verdict;
 
     uint32_t keyed = 0;

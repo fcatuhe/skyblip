@@ -39,7 +39,7 @@ static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConver
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                       runtime::kServicePassCeilingMs <
-                  timing::kSlot0StartMs,
+                  timing::dwell_of(timing::kWindowAMs).start_ms,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
 // The T-Echo Plus, assembled once. Platform is silicon or host. Swapping
@@ -287,7 +287,7 @@ class TEchoPlus {
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding
         // it from the millisecond phase threw away up to a millisecond of the
-        // 5 ms jitter guard before the plan was even armed.
+        // 5 ms retune before the plan was even armed.
         timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
         // The one place the PPS edge is owned: the bench's interval-error
         // histogram is fed here rather than by a second reader of the pin.

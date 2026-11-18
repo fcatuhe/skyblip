@@ -17,55 +17,23 @@ uint32_t hash(uint32_t value) {
 }
 }  // namespace
 
-// The M-band dwells are wider than the direct slot at both ends: they open at
-// 400 ms to catch traffic that transmits from 405, and the second one runs to
-// 1200 ms to hear traffic still using its own slot there. Our own burst lives
-// inside the direct slot, 450..1000 (§C.5), and completes inside both: the slot,
-// because the standard says so, and the dwell, because hopping channels mid-burst
-// would truncate it on air.
-int Transmitter::first_instant_in(int slot) {
-    constexpr int kCcaLeadMs = static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000);
-    const int opens = Scheduler::slot_start(slot) + kCcaLeadMs;
-    return opens > adsl::kDirectStartMs ? opens : adsl::kDirectStartMs;
-}
-
-int Transmitter::last_instant_in(int slot) {
-    const int dwell_end = Scheduler::dwell_end(slot);
-    const int closes = dwell_end < adsl::kDirectEndMs ? dwell_end : adsl::kDirectEndMs;
-    const int last = closes - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
-    const int first = first_instant_in(slot);
-    return last > first ? last : first;
-}
-
-int Transmitter::instant_in(int slot, uint32_t utc_s) const {
-    const int first = first_instant_in(slot);
-    const int last = last_instant_in(slot);
-    if (last <= first) return first;
-    // Inclusive of last: a burst starting there still ends inside the slack.
-    return first +
-           static_cast<int>(hash(address_ ^ hash(utc_s)) % static_cast<uint32_t>(last - first + 1));
-}
-
-// INFO: fc 13nov26 one hash round more for a Status, two for a name, so no two extras share a draw
-int Transmitter::extra_instant_in(int slot, uint32_t utc_s, Payload payload) const {
-    uint32_t drawn = hash(hash(address_ ^ hash(utc_s)));
-    int first = first_instant_in(slot);
-    int last = last_instant_in(slot);
-    if (payload == Payload::Callsign) {
-        drawn = hash(drawn);
-        first = kCallsignStartMs;
-        last = last_callsign_instant();
-    }
-    if (last <= first) return first;
-    return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
-}
-
-int Transmitter::last_callsign_instant() {
-    return kCallsignEndMs - kCompletionGuardMs - static_cast<int>(kAirTimeMs);
+Window Transmitter::window_of(Payload payload, int slot) {
+    const Window window = Scheduler::window(slot);
+    if (payload == Payload::Callsign) return {adsl::kDirectEndMs, window.end_ms};
+    return {window.start_ms, std::min(window.end_ms, adsl::kDirectEndMs)};
 }
 
 int Transmitter::last_instant(Payload payload, int slot) {
-    return payload == Payload::Callsign ? last_callsign_instant() : last_instant_in(slot);
+    return last_instant_ms(window_of(payload, slot), kAirTimeMs * 1000);
+}
+
+// INFO: fc 13nov26 one hash round more for a Status, two for a name, so no two bursts share a draw
+int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
+    uint32_t drawn = hash(address_ ^ hash(utc_s));
+    for (int round = 0; round < static_cast<int>(payload); round++) drawn = hash(drawn);
+    const int first = window_of(payload, slot).start_ms;
+    const int last = last_instant(payload, slot);
+    return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
 }
 
 uint32_t Transmitter::deferral_draw(uint64_t busy_at_us) const {
@@ -190,11 +158,7 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
 
     attempt.go = true;
     attempt.frequency_hz = Scheduler::slot_frequency_hz(dwell_slot);
-    switch (payload) {
-        case Payload::Position: attempt.at_ms = instant_in(dwell_slot, utc_s); break;
-        case Payload::Status:
-        case Payload::Callsign: attempt.at_ms = extra_instant_in(dwell_slot, utc_s, payload); break;
-    }
+    attempt.at_ms = instant_in(payload, dwell_slot, utc_s);
     return attempt;
 }
 

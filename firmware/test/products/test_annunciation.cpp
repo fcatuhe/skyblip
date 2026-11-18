@@ -71,7 +71,7 @@ TEST_CASE("product: an advisory is two calls, and the target standing says nothi
     // The calls are one PWM start per note and not one more, however many passes
     // the loop makes: a tone re-armed on every pass is a click, not a tone.
     const uint32_t before = sky.tone_commands();
-    sky.run(now_ms, now_ms + 20000);
+    sky.run(now_ms + kStepMs, now_ms + 20000);
     now_ms += 20000;
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.sounding_level()) == 0);
@@ -95,7 +95,7 @@ TEST_CASE("product: an empty sky releases the buzzer and does not re-announce an
     CHECK(int(sky.sounding_level()) == 0);
 
     const uint32_t before = sky.tone_commands();
-    sky.run(now_ms, now_ms + 20000);
+    sky.run(now_ms + kStepMs, now_ms + 20000);
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.sounding_level()) == 0);
 }
@@ -147,7 +147,7 @@ TEST_CASE(
 
     // Silent while it only shows, with the threat still closing.
     const uint32_t before = sky.tone_commands();
-    sky.run(now_ms, now_ms + 10000);
+    sky.run(now_ms + kStepMs, now_ms + 10000);
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.announcing_level()) == 0);
 
@@ -222,7 +222,7 @@ TEST_CASE("product: a device on its way down does not leave the buzzer sounding"
     CHECK_FALSE(sky.simulator.product().alarm().sounding());
 
     const uint32_t before = sky.tone_commands();
-    sky.run(now_ms, now_ms + 20000);
+    sky.run(now_ms + kStepMs, now_ms + 20000);
     CHECK(sky.tone_commands() == before);
     CHECK(int(sky.sounding_level()) == 0);
     CHECK(int(sky.announcing_level()) == 0);

@@ -194,7 +194,7 @@ TEST_CASE("rf: on the ground the name goes out in slot 1's tail, two seconds cle
         if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
             names++;
             CAPTURE(record.at_us);
-            CHECK(record.phase_ms < timing::kSlot1WrapMs);
+            CHECK(record.phase_ms < timing::kWindowBSpillMs);
             CHECK(record.at_us - last_at_us > 2000000);
         }
         if (payload_type != 0) last_at_us = record.at_us;
@@ -212,7 +212,7 @@ TEST_CASE("rf: on the ground the name goes out in slot 1's tail, two seconds cle
         const int step_ms = static_cast<int>(simulator::Simulator::kStepMs);
         if (entry.callsign) {
             CHECK(entry.channel == 1);
-            CHECK(entry.into_ms <= timing::kSlot1WrapMs + step_ms);
+            CHECK(entry.into_ms <= timing::kWindowBSpillMs + step_ms);
         } else {
             CHECK((entry.into_ms >= adsl::kDirectStartMs || entry.into_ms <= step_ms));
         }

@@ -3,9 +3,9 @@
 //
 // The thing being pinned down is that 1-ARCHITECTURE.md §5.1's "no flash work
 // inside a dwell" has to be read as a statement about deadlines, because the
-// dwell map leaves no unarmed phase to write in: 205..395 is the uplink dwell,
-// 400..1200 the two M-band dwells own-ship keys the PA inside, and the only two
-// gaps are the 5 ms retune guards, which are the worst place in the second for an
+// dwell map leaves no unarmed phase to write in: 207..442 is the uplink dwell,
+// 447..1202 the two M-band dwells own-ship keys the PA inside, and the only three
+// gaps are the 5 ms retunes, which are the worst place in the second for an
 // 85 ms stall. So the cases below say where the stall IS allowed, and prove that
 // the set is the one stretch the map's own numbers leave.
 #include "core/timing/durable_write.h"
@@ -70,13 +70,13 @@ TEST_CASE("durable write: the cost is the nRF52840's own page erase plus the cop
     // The whole worst case fits inside a free stretch, which is what makes
     // deferring a sufficient answer rather than only half of one. The other half is
     // the partial-erase slice, which bounds the longest SINGLE stall to less than
-    // the guard the slot map already absorbs.
-    CHECK(DurableWriteWindow::kPartialEraseMs < static_cast<uint32_t>(kJitterGuardMs));
+    // the retune every switch keeps.
+    CHECK(DurableWriteWindow::kPartialEraseMs < static_cast<uint32_t>(kSwitchRetuneMs));
 }
 
 // The whole second, phase by phase. One stretch and no others:
-//   205..299 the uplink dwell, which closes at 395 - the write finishes by 390 and
-//            the guard in front of the safety-critical O->M edge is still whole.
+//   207..346 the uplink dwell, which closes at 442 - the write finishes by 437, a
+//            retune's width before the dwell ends.
 // Slot 1's tail was the second one until the callsign burst was placed there
 // (core/timing/README.md), and a write inside it now stalls the core through an
 // instant own-ship may have keyed the PA at.
@@ -95,30 +95,32 @@ TEST_CASE("durable write: the free phase is the one the dwell map leaves") {
         was_free = free;
     }
     CHECK(stretches == 1);
-    CHECK(first_free == 205);
-    CHECK(last_free == 299);
+    CHECK(first_free == 207);
+    CHECK(last_free == 346);
 
     // Named, so a moved constant fails here and not in a product case.
     CHECK_FALSE(free_at(0));
     CHECK_FALSE(free_at(109));
-    CHECK(free_at(205));
-    CHECK(free_at(299));
-    CHECK_FALSE(free_at(300));
+    CHECK(free_at(207));
+    CHECK(free_at(346));
+    CHECK_FALSE(free_at(347));
 }
 
-// The two retune guards, 200..204 and 395..399, are the gaps between dwells. They
+// The retunes, 202..206 and 442..446, are the gaps between dwells. They
 // are also where the next dwell gets armed, so they are refused rather than taken
 // for free time: a write there delays the opening of the dwell that follows.
 TEST_CASE("durable write: the retune guards between dwells are not free time") {
-    for (int phase = kSlot1WrapMs; phase < kUplinkRxStartMs; phase++) CHECK_FALSE(free_at(phase));
-    for (int phase = kUplinkRxEndMs; phase < kSlot0StartMs; phase++) CHECK_FALSE(free_at(phase));
+    const Window uplink = dwell_of(kUplinkWindowMs);
+    for (int phase = kWindowBSpillMs; phase < uplink.start_ms; phase++) CHECK_FALSE(free_at(phase));
+    for (int phase = uplink.end_ms; phase < dwell_of(kWindowAMs).start_ms; phase++)
+        CHECK_FALSE(free_at(phase));
 }
 
-// Slot 0 opens at 400 and the direct slot at 450: a write placed in slot 0's head
+// Slot 0 opens at 447 and the direct slot at 450: a write placed in slot 0's head
 // would still be holding the core at 450, which is an instant core/timing's
 // Transmitter is allowed to have chosen to key the PA at.
 TEST_CASE("durable write: slot 0's head is refused because the direct slot follows it") {
-    for (int phase = kSlot0StartMs; phase < adsl::kDirectStartMs; phase++)
+    for (int phase = dwell_of(kWindowAMs).start_ms; phase < adsl::kDirectStartMs; phase++)
         CHECK_FALSE(free_at(phase));
     for (int phase = adsl::kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
 }
@@ -129,7 +131,7 @@ TEST_CASE("durable write: slot 0's head is refused because the direct slot follo
 // (hardware/platform/zephyr/pps.h), so a stall that spans it does not delay one
 // dwell: it moves the anchor under every dwell that follows.
 TEST_CASE("durable write: a write is never allowed to span the top of the second") {
-    CHECK(free_in_holdover_at(800));
+    CHECK(free_in_holdover_at(dwell_of(kWindowBMs).start_ms));
     // 904 is the last phase whose write still finishes a whole guard before the
     // edge: 904 + 91 = 995, and the guard runs to 1000 exactly.
     CHECK(free_in_holdover_at(904));

@@ -19,26 +19,21 @@ bool DurableWriteWindow::free_at(const SlotPlan& plan, int phase_ms, uint32_t co
     if (phase_ms < 0) return false;
     if (phase_ms >= kSecondMs) phase_ms -= kSecondMs;
 
-    // Slot 1 opened 800 ms into the previous second and closes 200 ms into this
-    // one, so inside its tail the phase, the dwell's end and the next PPS edge
-    // are all counted in the frame the dwell started in.
+    // INFO: fc 17nov26 in slot 1's tail, phase, dwell end and next edge count from its own second
     int at_ms = phase_ms;
     if (plan.end_ms > kSecondMs && at_ms < plan.end_ms - kSecondMs) at_ms += kSecondMs;
     const int done_ms = at_ms + static_cast<int>(cost_ms);
 
-    // A dwell that has not opened yet is a dwell the core still has to arm, and
-    // the two 5 ms retune guards the map leaves between dwells are exactly where
-    // that arming happens. So a write goes inside a dwell that is already running,
-    // never in the gap before one.
+    // INFO: fc 17nov26 a write goes inside a running dwell, never in the retune before one
     if (at_ms < plan.start_ms) return false;
-    if (done_ms + kJitterGuardMs > plan.end_ms) return false;
+    if (done_ms + kSwitchRetuneMs > plan.end_ms) return false;
     // §C.5's direct slot is narrower than the M-band dwells at both ends, so a
     // write placed in slot 0's head would still be holding the core at 450 ms,
     // which is an instant core/timing::Transmitter is allowed to have chosen.
-    if (at_ms < adsl::kDirectStartMs && done_ms + kJitterGuardMs > adsl::kDirectStartMs)
+    if (at_ms < adsl::kDirectStartMs && done_ms + kSwitchRetuneMs > adsl::kDirectStartMs)
         return false;
     const int next_edge_ms = at_ms < kSecondMs ? kSecondMs : 2 * kSecondMs;
-    return done_ms + kJitterGuardMs <= next_edge_ms;
+    return done_ms + kSwitchRetuneMs <= next_edge_ms;
 }
 
 void DurableWriteWindow::request(uint32_t now_ms) {

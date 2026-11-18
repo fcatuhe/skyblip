@@ -32,8 +32,6 @@ class Transmitter {
     // INFO: fc 13nov26 a burst that missed its second tries the same channel two seconds on
     static constexpr uint32_t kRetryStepS = 2;
     static constexpr int32_t kFixMaxAgeMs = adsl::kFixMaxAgeMs;
-    // INFO: fc 29sep26 §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left
-    static constexpr int kCompletionGuardMs = 2;
 
     enum class Payload : uint8_t { Position, Status, Callsign };
     static constexpr int kPayloads = 3;
@@ -71,8 +69,8 @@ class Transmitter {
     bool retry(Payload payload, uint32_t utc_s, bool airborne) const;
     // INFO: fc 13nov26 turns that ended unsent as utc_s opens, each counted once
     uint32_t give_up(uint32_t utc_s, bool airborne, bool named);
-    static int last_callsign_instant();
-    // INFO: fc 14nov26 the last start in a burst's window, which for the name is slot 1's tail
+    // INFO: fc 17nov26 the dwell's window cut to the direct slot, or past it for the name
+    static Window window_of(Payload payload, int slot);
     static int last_instant(Payload payload, int slot);
     // INFO: fc 13nov26 the turn utc_s acts for: its own, or the one a retry in it is for
     uint32_t turn_of(Payload payload, uint32_t utc_s, bool airborne) const;
@@ -87,13 +85,10 @@ class Transmitter {
     bool scheduled_on(int slot, uint32_t utc_s, bool airborne) const;
     bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
              int32_t fix_lag_ms) const;
-    static int first_instant_in(int slot);
-    static int last_instant_in(int slot);
     // Uniform over the slot's usable width and decorrelated between devices:
     // two aircraft with different addresses do not collide every second, and
     // one aircraft's instant is reproducible in a test.
-    int instant_in(int slot, uint32_t utc_s) const;
-    int extra_instant_in(int slot, uint32_t utc_s, Payload payload) const;
+    int instant_in(Payload payload, int slot, uint32_t utc_s) const;
 
     AirTime air_time_{};
     uint32_t address_{0};
@@ -106,6 +101,8 @@ class Transmitter {
     bool started_{false};
 };
 
+static_assert(PoliteAccess::kCcaLeadUs <= static_cast<uint32_t>(kSwitchLeadMs) * 1000,
+              "the channel check before a window's first instant listens in the switch's lead");
 static_assert(Transmitter::kCycleS == Transmitter::kStatusPeriodS &&
                   Transmitter::kCycleS == 2 * adsl::kGroundReportPeriodS,
               "one cycle holds G.2.11's Status period and two of G.1.16's ground periods");

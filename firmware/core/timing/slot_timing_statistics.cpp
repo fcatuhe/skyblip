@@ -9,8 +9,8 @@ namespace skyblip::timing {
 int SlotTimingStatistics::bucket_of(int64_t error_us) {
     const int64_t magnitude = error_us < 0 ? -error_us : error_us;
     if (magnitude < kRetuneUs) return 3;
-    if (magnitude < kHopGuardUs) return error_us < 0 ? 2 : 4;
-    if (magnitude < kJitterGuardUs) return error_us < 0 ? 1 : 5;
+    if (magnitude < kSwitchMarginUs) return error_us < 0 ? 2 : 4;
+    if (magnitude < kSwitchRetuneUs) return error_us < 0 ? 1 : 5;
     return error_us < 0 ? 0 : 6;
 }
 
