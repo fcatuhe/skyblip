@@ -140,7 +140,8 @@ void OwnshipService::apply_second(uint32_t now_ms) {
     first_fix_.observe(convergence_of(own), now_ms);
     own.tx_settled = first_fix_.settled(now_ms);
     second_ = own;
-    context_.state.own_second = own;
+    // INFO: fc 18nov26 a second whose .000 was lost has no whole-second solution to log or send
+    if (own.utc_ms == 0) context_.state.own_second = own;
 }
 
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {

@@ -82,8 +82,10 @@ LogAction LogSession::update(const model::Ownship& own, bool rolling, uint32_t n
     }
 
     if (!usable) return LogAction::Idle;
-    if (sampled_ && now_ms - last_sample_ms_ < kLogRecordPeriodMs) return LogAction::Idle;
+    if (sampled_ && (now_ms - last_sample_ms_ < kLogRecordPeriodMs || own.utc_s == last_sample_s_))
+        return LogAction::Idle;
     last_sample_ms_ = now_ms;
+    last_sample_s_ = own.utc_s;
     sampled_ = true;
 
     const LogRecord record = log_record_from(own);

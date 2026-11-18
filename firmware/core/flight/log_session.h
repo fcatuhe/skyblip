@@ -65,6 +65,8 @@ class LogSession {
     uint32_t dropped_{0};
     uint32_t session_id_{0};
     uint32_t last_sample_ms_{0};
+    // INFO: fc 18nov26 one record per UTC second, so a second own-ship never solved writes none
+    uint32_t last_sample_s_{0};
     uint32_t last_rolled_ms_{0};
     bool sampled_{false};
     bool open_{false};
