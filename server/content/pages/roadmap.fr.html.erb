@@ -22,10 +22,10 @@ updated_on: "2026-11-18"
 
 <section id="on-the-ground" class="band">
   <h2 class="section-title">Au sol : relayer le trafic et la météo autour d&rsquo;un terrain</h2>
-  <p>Une station skyPost recevra l&rsquo;ADS-B, les positions que les aéronefs équipés émettent par radio. Elle ajoutera le trafic de l&rsquo;Open Glider Network (OGN) et les données météo du terrain : le calage altimétrique (QNH), le dernier bulletin d&rsquo;observation (METAR) et les prévisions (TAF). Elle relaiera le tout en ADS-L aux skyBlip Go à portée.</p>
+  <p>Une station skyPost recevra l&rsquo;ADS-B. Elle ajoutera le trafic de l&rsquo;Open Glider Network (OGN) et les données météo du terrain : le calage altimétrique (QNH), le dernier bulletin d&rsquo;observation (METAR) et les prévisions (TAF). Elle relaiera le tout en ADS-L aux skyBlip Go à portée.</p>
   <h3 id="helio">skyPost Helio</h3>
   <p>Helio s&rsquo;installera sur un mât dans un boîtier résistant aux intempéries. Elle fonctionnera à l&rsquo;énergie solaire et recevra l&rsquo;ADS-B, l&rsquo;ADS-L et le FLARM, un système de partage de position courant en planeur. Elle utilisera une carte LilyGO T-Beam Supreme, un récepteur Ebyte E80-900MBL et un kit solaire LilyGO T-Solar.</p>
   <h3 id="bridge">skyPost Bridge</h3>
   <p>Bridge complétera les stations OGN, PiAware ou adsb.lol existantes. Elle relaiera en ADS-L le trafic qu&rsquo;elles reçoivent déjà sans modifier leurs flux de données. Elle utilisera une carte LilyGO T-Beam Supreme.</p>
-  <p><%= link_to_page "buy", label: "Voir les appareils que vous pouvez utiliser aujourd'hui" %></p>
+  <p><%= link_to_page "buy", label: "Voir les appareils que vous pouvez utiliser aujourd'hui" %> · <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo", id: "bravo" %> · <%= link_to_page "skyblip-tango", label: "skyBlip Tango", id: "tango" %></p>
 </section>

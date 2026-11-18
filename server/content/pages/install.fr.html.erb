@@ -11,49 +11,53 @@ updated_on: "2026-11-18"
   <p class="page-hero-subtitle">Prenez un ordinateur avec Chrome ou Edge et un câble USB-C qui transmet les données. Un câble qui ne sert qu&rsquo;à charger ne suffit pas.</p>
 </header>
 
-<section id="steps" class="band">
+<section id="steps" class="band band--tint">
   <h2 class="section-title">Installez en quatre étapes</h2>
-  <ol class="steps-grid">
-    <li>
-      <h3>Branchez le boîtier</h3>
-      <p>Reliez-le à l&rsquo;ordinateur avec le câble USB-C.</p>
-    </li>
-    <li>
-      <h3>Cliquez sur Installer</h3>
-      <p>Dans le Briefing, choisissez le boîtier, puis le lecteur USB indiqué. Le Briefing installe le bon logiciel.</p>
-    </li>
-    <li>
-      <h3>Connectez l&rsquo;appareil</h3>
-      <p>Utilisez le Bluetooth quand le Briefing vous le propose.</p>
-    </li>
-    <li>
-      <h3>Ouvrez le guide Premiers pas</h3>
-      <p>Le Briefing indique quand l&rsquo;appareil est prêt.</p>
-    </li>
-  </ol>
-  <p class="signature"><%= link_to "Installer un appareil dans le Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
-  <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_hold"), marks: { button: t("briefing.figures.hold"), led: t("devices.led"), usb: t("briefing.figures.plug") }, lamp: %i[white steady], caption: t("briefing.figures.white") %>
-  <p>Si le Briefing vous demande un geste sur le boîtier, il vous montre quoi faire. Vous n&rsquo;avez rien à ouvrir ni à souder.</p>
+  <div class="install-steps">
+    <ol class="steps-grid steps-grid--sequence">
+      <li>
+        <h3>Branchez le boîtier à l&rsquo;ordinateur.</h3>
+      </li>
+      <li>
+        <h3>Cliquez sur Installer dans le Briefing.</h3>
+        <p>Choisissez le boîtier, puis le lecteur USB indiqué. Le Briefing installe le bon logiciel.</p>
+        <p>Pour garder le logiciel d&rsquo;origine de Bravo, copiez <code>CURRENT.UF2</code> du lecteur <strong>X1</strong> vers votre ordinateur dès que le lecteur apparaît et avant de le sélectionner dans le Briefing.</p>
+      </li>
+      <li>
+        <h3>Connectez l&rsquo;appareil en Bluetooth quand le Briefing vous le propose.</h3>
+      </li>
+      <li>
+        <h3>Ouvrez le guide Premiers pas quand le Briefing vous indique que l&rsquo;appareil est prêt.</h3>
+      </li>
+    </ol>
+    <p class="install-start"><%= link_to "Installer un appareil dans le Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
+    <div class="install-gesture">
+      <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_hold"), marks: { button: t("briefing.figures.hold"), led: t("devices.led"), usb: t("briefing.figures.plug") }, lamp: %i[white steady], caption: t("briefing.figures.white") %>
+      <p>Si le Briefing vous demande un geste sur le boîtier, il vous montre quoi faire. Vous n&rsquo;avez rien à ouvrir ni à souder.</p>
+    </div>
+  </div>
 </section>
 
-<section id="connected" class="band band--tint">
+<section id="connected" class="band">
   <h2 class="section-title">Une fois l&rsquo;appareil connecté</h2>
-  <p>Le Briefing lance l&rsquo;activation d&rsquo;un Go neuf. Elle lui donne l&rsquo;adresse dont il a besoin pour émettre sa position. Vous n&rsquo;avez pas besoin de compte. Vous pouvez choisir votre type d&rsquo;aéronef et saisir votre indicatif à cette étape ou <%= link_to_page "go-first-steps", label: "les régler plus tard" %>. Bravo reçoit le trafic et n&rsquo;a pas besoin d&rsquo;activation.</p>
+  <p>Le Briefing lance l&rsquo;activation d&rsquo;un Go neuf. Elle lui donne l&rsquo;adresse dont il a besoin pour diffuser sa position. Vous n&rsquo;avez pas besoin de compte. Vous pouvez choisir votre type d&rsquo;aéronef et saisir votre indicatif à cette étape ou <%= link_to_page "go-first-steps", label: "les régler plus tard" %>. Bravo reçoit le trafic et n&rsquo;a pas besoin d&rsquo;activation.</p>
   <p>Pour former un Tango, allumez les deux appareils au sol. Dans le <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, ouvrez la page du premier appareil connecté. Elle propose d&rsquo;installer ou de connecter le second, puis de les associer.</p>
   <p>Votre boîtier utilise déjà skyBlip ? <%= link_to "Connectez-le dans le Briefing", briefing_root_path(locale: I18n.locale) %> en Bluetooth. Les réglages et les mises à jour se font ensuite depuis le Briefing dans Chrome ou Edge sur ordinateur ou Android.</p>
 </section>
 
-<section id="si-quelque-chose-bloque" class="band">
-  <h2 class="section-title">Si quelque chose bloque</h2>
-  <h3 id="not-found">Le boîtier n&rsquo;apparaît pas</h3>
-  <p>Allumez-le et essayez un câble USB-C qui transmet les données. Pour l&rsquo;installation guidée par USB, utilisez Chrome ou Edge sur un ordinateur. Si vous ne pouvez pas utiliser ce parcours, vous pouvez copier le logiciel à la main.</p>
-  <h3 id="manual">Installer le logiciel à la main</h3>
-  <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil sur la <%= link_to "page des versions de skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
-  <ul>
-    <li><strong>Go ou Go+ :</strong> branchez le boîtier et appuyez deux fois rapidement sur le bouton RESET, en haut sur le côté gauche. Copiez le fichier du Go sur le lecteur <strong>TECHOBOOT</strong>. S&rsquo;il s&rsquo;agit d&rsquo;un Go neuf, <%= link_to "activez-le ensuite en Bluetooth", briefing_activation_path(locale: I18n.locale) %> dans Chrome ou Edge sur ordinateur ou Android. Suivez la demande affichée sur le Go.</li>
-    <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Sur le lecteur <strong>X1</strong>, copiez d&rsquo;abord <code>CURRENT.UF2</code> vers votre ordinateur pour garder une copie du logiciel d&rsquo;origine. Copiez ensuite le fichier skyBlip Bravo vers le lecteur <strong>X1</strong>. Pour revenir au logiciel d&rsquo;origine, recopiez le fichier sauvegardé vers ce lecteur.</li>
-  </ul>
-  <h3 id="transponder">Votre propre transpondeur apparaît comme un trafic</h3>
-  <p>Au sol, mettez votre transpondeur sur ALT. Bravo peut alors proposer son adresse, qu&rsquo;il soit Mode S ou ADS-B. Un aéronef équipé ADS-B émet sa position par radio. Retrouvez l&rsquo;adresse proposée dans le Briefing avec Bravo seul, sur l&rsquo;écran du Go avec un Tango. Vérifiez qu&rsquo;il s&rsquo;agit de votre aéronef avant de l&rsquo;accepter. Si vous connaissez déjà son adresse, vous pouvez la saisir dans le réglage « Adresse ADS-B ». Sans transpondeur, vous n&rsquo;avez rien à renseigner.</p>
-  <p><%= link_to "Demander de l'aide sur GitHub", "https://github.com/fcatuhe/skyblip/issues" %></p>
+<section id="si-quelque-chose-bloque" class="band band--tint">
+  <div class="troubleshooting">
+    <h2>Si quelque chose bloque</h2>
+    <h3 id="not-found">Le boîtier n&rsquo;apparaît pas</h3>
+    <p>Allumez-le et essayez un câble USB-C qui transmet les données. Pour l&rsquo;installation guidée par USB, utilisez Chrome ou Edge sur un ordinateur. Si vous ne pouvez pas utiliser ce parcours, vous pouvez copier le logiciel à la main.</p>
+    <h3 id="manual">Installer le logiciel à la main</h3>
+    <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil sur la <%= link_to "page des versions de skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
+    <ul>
+      <li><strong>Go ou Go+ :</strong> branchez le boîtier et appuyez deux fois rapidement sur le bouton RESET, en haut sur le côté gauche. Copiez le fichier du Go sur le lecteur <strong>TECHOBOOT</strong>. S&rsquo;il s&rsquo;agit d&rsquo;un Go neuf, <%= link_to "activez-le ensuite en Bluetooth", briefing_activation_path(locale: I18n.locale) %> dans Chrome ou Edge sur ordinateur ou Android. Suivez la demande affichée sur le Go.</li>
+      <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Sur le lecteur <strong>X1</strong>, copiez d&rsquo;abord <code>CURRENT.UF2</code> vers votre ordinateur pour garder une copie du logiciel d&rsquo;origine. Copiez ensuite le fichier skyBlip Bravo vers le lecteur <strong>X1</strong>. Pour revenir au logiciel d&rsquo;origine, recopiez le fichier sauvegardé vers ce lecteur.</li>
+    </ul>
+    <h3 id="transponder">Votre propre transpondeur apparaît comme un trafic</h3>
+    <p>Au sol, mettez votre transpondeur sur ALT. Bravo peut alors proposer son adresse, qu&rsquo;il soit Mode S ou ADS-B : dans le Briefing avec Bravo seul, sur l&rsquo;écran du Go avec un Tango. Vérifiez qu&rsquo;il s&rsquo;agit de votre aéronef avant de l&rsquo;accepter. Si vous connaissez déjà son adresse, vous pouvez la saisir dans le réglage « Adresse ADS-B ». Sans transpondeur, vous n&rsquo;avez rien à renseigner.</p>
+    <p><%= link_to "Demander de l'aide sur GitHub", "https://github.com/fcatuhe/skyblip/issues" %></p>
+  </div>
 </section>

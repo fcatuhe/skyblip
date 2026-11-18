@@ -47,6 +47,7 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "link[rel=alternate][href=?]", Content.canonical_url(translation)
       assert_select "main a[href=?]", briefing_setup_path(locale:)
+      assert_select "#steps ol > li:nth-child(2) code", text: "CURRENT.UF2"
       assert_select "#si-quelque-chose-bloque a[href=?]", briefing_activation_path(locale:)
       assert_select "#si-quelque-chose-bloque #transponder"
 
@@ -66,6 +67,14 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
 
       get "#{prefix}/tango"
       assert_select "#buy"
+
+      get "#{prefix}/go"
+      assert_select "a#controls[href=?]", prefix.empty? ? "/controls#two-contacts" : "/fr/commandes#two-contacts"
+      assert_select "a#power[href=?]", prefix.empty? ? "/power" : "/fr/alimentation"
+
+      get prefix.empty? ? "/roadmap" : "/fr/a-venir"
+      assert_select "a#bravo[href=?]", "#{prefix}/bravo"
+      assert_select "a#tango[href=?]", "#{prefix}/tango"
     end
   end
 end

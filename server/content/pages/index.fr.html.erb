@@ -6,37 +6,44 @@ updated_on: "2026-11-18"
 
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
 
-<header class="page-hero">
-  <h1>Le trafic alentour, dans votre poche.</h1>
-  <p class="page-hero-subtitle">skyBlip Go émet votre position en ADS-L et affiche le trafic ADS-L et FLARM. skyBlip Bravo détecte les transpondeurs Mode S et ADS-B. Ensemble, ils forment skyBlip Tango. Les aéronefs équipés ADS-B émettent leur position par radio.</p>
+<header class="page-hero page-hero--home">
+  <div>
+    <h1>Le trafic alentour, dans votre poche.</h1>
+    <p class="page-hero-subtitle">skyBlip Go émet votre position en ADS&#8209;L et affiche le trafic ADS&#8209;L et FLARM. skyBlip Bravo détecte les transpondeurs Mode S et ADS&#8209;B. Ensemble, ils forment skyBlip Tango.</p>
+  </div>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "" %>
+  </figure>
 </header>
 
 <section id="journey" class="band band--tint">
   <h2 class="section-title">De l&rsquo;essai à votre premier vol</h2>
   <p class="section-intro">Que vous voliez en avion léger, en ULM, en planeur ou en parapente, on vous guide à chaque étape.</p>
-  <ol class="steps-grid steps-grid--journey">
-    <li>
-      <h3><%= link_to_page "skyblip-go", label: "Découvrez" %></h3>
-      <p>Lisez le trafic d&rsquo;un coup d&rsquo;œil. Essayez le radar et son alerte dans le simulateur.</p>
-    </li>
-    <li>
-      <h3><%= link_to_page "buy", label: "Achetez" %></h3>
-      <p>Choisissez un boîtier du commerce. Le logiciel skyBlip est gratuit, sans abonnement.</p>
-    </li>
-    <li>
-      <h3><%= link_to_page "install", label: "Installez" %></h3>
-      <p>Branchez le boîtier à votre ordinateur. Le Briefing vous guide et, s&rsquo;il vous demande un appui, vous montre sur une photo ou à l&rsquo;écran où appuyer.</p>
-    </li>
-  </ol>
-  <%= render "shared/device", device: :go, label: t("briefing.figures.go_reset"), marks: { reset: t("briefing.figures.reset_twice") } %>
-  <p class="signature"><strong>Vous êtes prêt à voler.</strong> Le <%= link_to_page "guides", label: "guide Premiers pas de votre appareil" %> vous montre quoi vérifier avant de partir.</p>
+  <div class="journey">
+    <ol class="journey-steps">
+      <li>
+        <h3><%= link_to_page "skyblip-go", label: "Découvrez" %></h3>
+        <p>Lisez le trafic d&rsquo;un coup d&rsquo;œil. Essayez le radar et son alerte dans le simulateur.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "buy", label: "Achetez" %></h3>
+        <p>Choisissez un boîtier du commerce. Le logiciel skyBlip est gratuit, sans abonnement.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "install", label: "Installez" %></h3>
+        <p>Branchez le boîtier à votre ordinateur. Le Briefing vous guide et, s&rsquo;il vous demande un appui, vous montre sur une photo ou à l&rsquo;écran où appuyer.</p>
+      </li>
+    </ol>
+    <%= render "shared/device", device: :go, label: t("briefing.figures.go_reset"), marks: { reset: t("briefing.figures.reset_twice") } %>
+    <p class="journey-end"><strong>Vous êtes prêt à voler.</strong> Le <%= link_to_page "guides", label: "guide Premiers pas de votre appareil" %> vous montre quoi vérifier avant de partir.</p>
+  </div>
 </section>
 
 <section id="where-to-look" class="band">
   <h2 class="section-title">Où regarder</h2>
   <p>Sur le radar, vous lisez d&rsquo;un coup d&rsquo;œil où chercher un autre aéronef. Vous êtes au centre et la direction dans laquelle vous avancez est en haut. Un symbole en haut à droite indique un trafic devant vous, sur votre droite.</p>
   <p>Une pointe vers le haut indique un aéronef au-dessus de vous. Une pointe vers le bas indique un aéronef en dessous. Un losange indique qu&rsquo;il vole à peu près à votre hauteur. Le trait au bout du symbole montre la trajectoire prévue pour la minute qui vient.</p>
-  <div class="columns">
+  <div class="blip-legend">
     <div>
       <%= screen_image_tag "blips/above-steady.png", alt: "" %>
       <p>Au-dessus</p>
@@ -53,12 +60,12 @@ updated_on: "2026-11-18"
   <p>Quand une alerte se déclenche, une partie de l&rsquo;écran clignote du côté du trafic. Elle vous indique où regarder. Elle ne vous dit ni de monter ni de descendre.</p>
 </section>
 
-<section id="simulator" class="band band--tint">
+<section id="simulator" class="band band--tint try-radar">
   <h2 class="section-title">Essayez le radar</h2>
+  <p class="section-intro">Repérez un aéronef. Sa forme indique s&rsquo;il est au-dessus, à votre niveau ou en dessous. Suivez le trait de sa trajectoire.</p>
   <%= render "shared/simulator_loader", loading: :lazy %>
-  <p>Repérez un aéronef. Sa forme indique s&rsquo;il est au-dessus, à votre niveau ou en dessous. Suivez le trait de sa trajectoire.</p>
-  <p>Cochez « Avec Bravo (skyBlip Tango) » pour relancer le simulateur et voir aussi des avions qui émettent en ADS-B plus loin.</p>
-  <p class="signature"><%= link_to_page "skyblip-go", label: "Plus de place pour essayer", class: "button button--primary" %></p>
+  <p class="try-radar-bravo">Cochez « Avec Bravo (skyBlip Tango) » pour relancer le simulateur et voir aussi des avions équipés ADS-B plus loin.</p>
+  <p class="try-radar-more"><%= link_to_page "skyblip-go", label: "Plus de place pour essayer", class: "button button--primary" %></p>
 </section>
 
 <section id="devices" class="band">
@@ -69,7 +76,7 @@ updated_on: "2026-11-18"
     <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo : le Seeed SenseCAP MeshTracker X1, un boîtier noir au format carte.", class: "photo-x1" %>
   </figure>
   <ul>
-    <li><%= link_to_page "features", label: "Go" %> émet votre position en ADS-L, le standard européen de partage de position par radio. Il affiche le trafic ADS-L et FLARM, un système de partage de position utilisé notamment en planeur.</li>
+    <li><%= link_to_page "features", label: "Go" %> émet votre position en ADS-L et affiche le trafic ADS-L et FLARM. Le Go affiche les planeurs équipés de FLARM, mais il n&rsquo;émet pas en FLARM et ne remplace pas votre FLARM.</li>
     <li><%= link_to_page "skyblip-bravo", label: "Bravo" %> détecte les transpondeurs Mode S et ADS-B, et envoie le trafic ADS-B à votre application de navigation. Il n&rsquo;émet pas votre position.</li>
     <li><%= link_to_page "skyblip-tango", label: "Tango" %> associe un Go et un Bravo. Vous voyez les trois types de trafic sur le radar du Go, qui continue d&rsquo;émettre votre position en ADS-L.</li>
   </ul>
@@ -95,7 +102,7 @@ updated_on: "2026-11-18"
     </details>
     <details>
       <summary>Est-ce que je vois les avions à transpondeur ?</summary>
-      <p>Oui, avec Bravo. Il détecte les transpondeurs Mode S et ADS-B. Les avions en ADS-B s&rsquo;affichent avec leur position, dans votre application de navigation ou sur le radar d&rsquo;un Go associé. Un transpondeur Mode S seul ne donne pas sa position. Bravo le détecte, et nous sommes encore en phase de collecte pour apprendre comment le signaler au mieux, sur le Go et dans les applications de navigation.</p>
+      <p>Oui pour les avions équipés ADS-B. Avec Bravo, leur position s&rsquo;affiche dans votre application de navigation ou sur le radar d&rsquo;un Go associé. Un transpondeur Mode S seul ne donne pas sa position. Bravo le détecte, et nous sommes encore en phase de collecte pour apprendre comment le signaler au mieux, sur le Go et dans les applications de navigation.</p>
     </details>
     <details>
       <summary>Faut-il un abonnement ?</summary>
@@ -111,7 +118,7 @@ updated_on: "2026-11-18"
     </details>
     <details>
       <summary>Puis-je revenir au logiciel d&rsquo;origine ?</summary>
-      <p>Oui. Sur le T-Echo, skyBlip laisse intact le programme qui sert à installer le logiciel. Sur le X1, <%= link_to_page "install", label: "gardez une copie du logiciel d'origine", anchor: "si-quelque-chose-bloque" %> avant de le remplacer.</p>
+      <p>Sur le T-Echo, skyBlip laisse intact le programme qui sert à installer le logiciel. Sur le X1, le Briefing ne sauvegarde pas le logiciel d&rsquo;origine. Vous pouvez le réinstaller si vous avez <%= link_to_page "install", label: "copié CURRENT.UF2 sur votre ordinateur avant l'installation", anchor: "steps" %>.</p>
     </details>
   </div>
 </section>

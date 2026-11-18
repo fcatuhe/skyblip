@@ -8,11 +8,12 @@ updated_on: "2026-11-18"
 <header class="page-hero">
   <h1>Choose the right hardware for you</h1>
   <p class="page-hero-subtitle">Buy the hardware from the seller of your choice. The skyBlip software and its updates are free, with no subscription.</p>
+  <p>To <%= link_to_page "install", label: "install skyBlip" %>, you&rsquo;ll need a computer with Chrome or Edge and a USB-C data cable.</p>
 </header>
 
 <section id="choose" class="band band--tint">
   <h2 class="section-title">Go, Go+, Bravo or Tango?</h2>
-  <p>Go transmits your position in ADS-L, the European standard for sharing position by radio. It shows ADS-L and FLARM traffic. FLARM is a position-sharing system widely used in gliding. Bravo detects Mode S and ADS-B transponders. Aircraft with ADS-B transmit their position by radio.</p>
+  <p>Go transmits your position in ADS-L and shows ADS-L and FLARM traffic. Bravo detects Mode S and ADS-B transponders.</p>
   <div class="table-scroll">
     <table class="compare">
       <thead>
@@ -24,25 +25,16 @@ updated_on: "2026-11-18"
         <tr><th scope="row">See ADS-B traffic in a compatible navigation app.</th><td><%= link_to_page "skyblip-bravo", label: "Bravo" %></td><td>MeshTracker X1</td></tr>
         <tr><th scope="row">Add ADS-B traffic to the radar on Go or Go+.</th><td><%= link_to_page "skyblip-tango", label: "Tango" %></td><td>A T-Echo or T-Echo Plus and a MeshTracker X1, bought separately</td></tr>
       </tbody>
+      <tfoot>
+        <tr><td colspan="3">Go shows gliders equipped with FLARM, but it doesn&rsquo;t transmit FLARM or replace your FLARM.</td></tr>
+      </tfoot>
     </table>
   </div>
-  <p><strong>For Go and Go+, check that the listing says 868 MHz and BME280 barometer.</strong> Some variants aren&rsquo;t suitable for skyBlip. The BME280 is required for skyBlip compliance.</p>
-  <div class="columns">
-    <div>
-      <figure class="shot shot--photo">
-        <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "LilyGO T-Echo" %>
-      </figure>
-    </div>
-    <div>
-      <figure class="shot shot--photo">
-        <%= content_image_tag "pages/buy/skyblip-go-plus.avif", alt: "LilyGO T-Echo Plus" %>
-      </figure>
-    </div>
-    <div>
-      <figure class="shot shot--photo">
-        <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "Seeed SenseCAP MeshTracker X1" %>
-      </figure>
-    </div>
+  <p><strong>For Go and Go+, check that the listing says 868 MHz and BME280 barometer.</strong> Some variants aren&rsquo;t suitable for skyBlip. The Go needs the BME280 barometer.</p>
+  <div class="photo-row">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "LilyGO T-Echo" %>
+    <%= content_image_tag "pages/buy/skyblip-go-plus.avif", alt: "LilyGO T-Echo Plus" %>
+    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "Seeed SenseCAP MeshTracker X1", class: "photo-x1" %>
   </div>
 </section>
 
@@ -74,15 +66,15 @@ updated_on: "2026-11-18"
 <section id="where" class="band band--tint">
   <h2 class="section-title">Where to buy</h2>
   <div class="table-scroll">
-    <table class="compare">
-      <thead>
-        <tr><th scope="col">Seller</th><th scope="col">Go: T-Echo 868 MHz with BME280</th><th scope="col">Go+: T-Echo Plus 868 MHz with BME280</th><th scope="col">Bravo: MeshTracker X1</th></tr>
+    <table class="compare sellers" role="table">
+      <thead role="rowgroup">
+        <tr role="row"><th scope="col" role="columnheader">Seller</th><th scope="col" role="columnheader">Go: T-Echo 868 MHz with BME280</th><th scope="col" role="columnheader">Go+: T-Echo Plus 868 MHz with BME280</th><th scope="col" role="columnheader">Bravo: MeshTracker X1</th></tr>
       </thead>
-      <tbody>
-        <tr><th scope="row">Amazon</th><td><%= link_to "T-Echo, €68", "https://link.amazon/B00EaKI0W", target: "_blank", rel: "sponsored" %></td><td><%= link_to "T-Echo Plus, €84", "https://link.amazon/B05es09aX", target: "_blank", rel: "sponsored" %></td><td></td></tr>
-        <tr><th scope="row">LilyGO</th><td><%= link_to "T-Echo, $59.84", "https://www.lilygo.cc/skyblip-go", target: "_blank", rel: "sponsored" %>, including $13.80 shipping</td><td><%= link_to "T-Echo Plus, $81.91", "https://www.lilygo.cc/skyblip-go-plus", target: "_blank", rel: "sponsored" %>, including $15.60 shipping</td><td></td></tr>
-        <tr><th scope="row">AliExpress</th><td><%= link_to "T-Echo", "https://s.click.aliexpress.com/e/_c4nyUpy1", target: "_blank", rel: "sponsored" %></td><td></td><td></td></tr>
-        <tr><th scope="row">Seeed Studio</th><td></td><td></td><td><%= link_to "MeshTracker X1", "https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&referring_service=link", target: "_blank", rel: "sponsored" %>: <s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span> $44.91 with code <%= seeed_promo_code %>, or $55.95 including $11.04 shipping to France</td></tr>
+      <tbody role="rowgroup">
+        <tr role="row"><th scope="row" role="rowheader">Amazon</th><td role="cell"><%= link_to "T-Echo, €68", "https://link.amazon/B00EaKI0W", target: "_blank", rel: "sponsored" %></td><td role="cell"><%= link_to "T-Echo Plus, €84", "https://link.amazon/B05es09aX", target: "_blank", rel: "sponsored" %></td><td role="cell"></td></tr>
+        <tr role="row"><th scope="row" role="rowheader">LilyGO</th><td role="cell"><%= link_to "T-Echo, $59.84", "https://www.lilygo.cc/skyblip-go", target: "_blank", rel: "sponsored" %>, including $13.80 shipping</td><td role="cell"><%= link_to "T-Echo Plus, $81.91", "https://www.lilygo.cc/skyblip-go-plus", target: "_blank", rel: "sponsored" %>, including $15.60 shipping</td><td role="cell"></td></tr>
+        <tr role="row"><th scope="row" role="rowheader">AliExpress</th><td role="cell"><%= link_to "T-Echo", "https://s.click.aliexpress.com/e/_c4nyUpy1", target: "_blank", rel: "sponsored" %></td><td role="cell"></td><td role="cell"></td></tr>
+        <tr role="row"><th scope="row" role="rowheader">Seeed Studio</th><td role="cell"></td><td role="cell"></td><td role="cell"><%= link_to "MeshTracker X1", "https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&referring_service=link", target: "_blank", rel: "sponsored" %>: <s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span> $44.91 with code <%= seeed_promo_code %>, or $55.95 including $11.04 shipping to France</td></tr>
       </tbody>
     </table>
   </div>

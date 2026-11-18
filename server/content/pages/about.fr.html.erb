@@ -8,7 +8,8 @@ updated_on: "2026-11-18"
 
 <header class="page-hero">
   <h1>Aider plus de pilotes à voir le trafic et à être vus</h1>
-  <p class="page-hero-subtitle">En vol, repérer un autre aéronef à l&rsquo;œil n&rsquo;est pas toujours facile. Avec le radar du Go, vous savez de quel côté regarder. Le Go émet aussi votre position en ADS-L, le standard européen de partage de position par radio. Les pilotes équipés pour la recevoir peuvent vous repérer plus facilement.</p>
+  <p class="page-hero-subtitle">En vol, repérer un autre aéronef à l&rsquo;œil n&rsquo;est pas toujours facile. Avec le radar du Go, vous savez de quel côté regarder. Le Go émet aussi votre position en ADS-L. Les pilotes équipés pour la recevoir peuvent vous repérer plus facilement.</p>
+  <p><%= link_to_page "see-and-avoid", label: "Comprendre les limites du « voir et éviter »" %></p>
 </header>
 
 <section id="pledge" class="band band--tint">
@@ -18,6 +19,6 @@ updated_on: "2026-11-18"
 
 <section id="thanks" class="band">
   <h2 class="section-title">Remercier les personnes qui ont ouvert la voie</h2>
-  <p>François Catuhe développe skyBlip en s&rsquo;appuyant sur les travaux de la communauté. Merci à Paweł Jałocha pour le code de référence ADS-L et <%= link_to "nrf52-ogn-tracker", "https://github.com/pjalocha/nrf52-ogn-tracker" %>, à Linar Yusupov pour <%= link_to "SoftRF", "https://github.com/lyusupov/SoftRF" %>, à Moshe Braner pour sa <%= link_to "version adaptée de SoftRF", "https://github.com/moshe-braner/SoftRF" %> et à Perry Casson pour <%= link_to "cb-tfc", "https://github.com/perryc/cb-tfc" %> et son travail sur le MeshTracker X1 pour recevoir les positions que les aéronefs équipés émettent par radio en ADS-B.</p>
+  <p>François Catuhe développe skyBlip en s&rsquo;appuyant sur les travaux de la communauté. Merci à Paweł Jałocha pour le code de référence ADS-L et <%= link_to "nrf52-ogn-tracker", "https://github.com/pjalocha/nrf52-ogn-tracker" %>, à Linar Yusupov pour <%= link_to "SoftRF", "https://github.com/lyusupov/SoftRF" %>, à Moshe Braner pour sa <%= link_to "version adaptée de SoftRF", "https://github.com/moshe-braner/SoftRF" %> et à Perry Casson pour <%= link_to "cb-tfc", "https://github.com/perryc/cb-tfc" %> et son travail sur le MeshTracker X1 pour recevoir les positions que les aéronefs émettent en ADS-B.</p>
   <p><%= link_to "Consulter le code de skyBlip", "https://github.com/fcatuhe/skyblip" %> · <%= link_to_page "roadmap", label: "Découvrir les projets à venir" %></p>
 </section>

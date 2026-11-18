@@ -15,7 +15,7 @@ updated_on: "2026-11-18"
 
 <header class="page-hero">
   <h1>A pocket radar to see and be seen</h1>
-  <p class="page-hero-subtitle">skyBlip Go transmits your position in ADS-L, the European standard for sharing position by radio. It shows ADS-L and FLARM traffic. FLARM is a position-sharing system widely used in gliding.</p>
+  <p class="page-hero-subtitle">skyBlip Go transmits your position in ADS-L and shows ADS-L and FLARM traffic.</p>
   <figure class="hero-figure">
     <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, a white device with its antenna and traffic radar on the screen." %>
   </figure>
@@ -27,7 +27,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="radar">Your track at the top, traffic around you</h3>
       <p>A symbol at the top right tells you to look ahead and to your right. The point tells you whether the aircraft is above or below you. A diamond means it&rsquo;s roughly at your level. The line shows where it will be in a minute if it keeps flying the same track. Choose a radar circle of 1, 2, 4 or 8 nautical miles (NM).</p>
-      <p class="feature-guide"><%= link_to_page "radar", label: "Read the radar", anchor: "heading-up" %> <small>From the guide &quot;Radar and traffic&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read the radar", anchor: "heading-up" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "radar.png", alt: "Three aircraft on the radar: one above, one below and one climbing at your level. Each has a line to its position in one minute. Your track is dashed." %>
@@ -37,7 +37,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="every-aircraft">Traffic stays visible beyond the circle</h3>
       <p>In PLOT ALL, the default setting, the edge of the circle doesn&rsquo;t cut off traffic. Go puts traffic it receives beyond the circle in a band around the outside, in the direction it&rsquo;s coming from. See where it&rsquo;s coming from without changing the scale. If you want positions drawn to scale, choose PLOT TO SCALE.</p>
-      <p class="feature-guide"><%= link_to_page "displays", label: "Compare the two radar modes", anchor: "both-ways" %> <small>From the guide &quot;Every screen&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "displays", label: "Compare the two radar modes", anchor: "both-ways" %> <small>(From the guide &quot;Every screen&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "far-all.png", alt: "PLOT ALL shows two aircraft inside the circle and others in the outer band: one ahead, three at the top right and one to the left." %>
@@ -47,7 +47,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="alarm">An alert tells you where to look</h3>
       <p>When traffic triggers an alert, Go returns to the radar. A quarter of the screen flashes in the direction of the traffic. Look that way. Go doesn&rsquo;t tell you to climb or descend.</p>
-      <p class="feature-guide"><%= link_to_page "radar", label: "Read an alert", anchor: "alarm" %> <small>From the guide &quot;Radar and traffic&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read an alert", anchor: "alarm" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "alarm.png", alt: "During an alert, the 90-degree sector on the radar pointing towards the traffic turns black." %>
@@ -57,7 +57,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="nearby">Nearby: who&rsquo;s there and how far away?</h3>
       <p>The list puts alerts first, then aircraft near your altitude. Each line shows the source, the callsign if received, the horizontal distance and the difference in altitude if known.</p>
-      <p class="feature-guide"><%= link_to_page "radar", label: "Read the Nearby list", anchor: "nearby" %> <small>From the guide &quot;Radar and traffic&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read the Nearby list", anchor: "nearby" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "nearby.png", alt: "The Nearby screen lists five aircraft, closest to your altitude first, with their source, callsign, distance and relative altitude." %>
@@ -70,7 +70,7 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <p>In flight, Go transmits your position in ADS-L every second. It also sends your callsign in a separate message if you&rsquo;ve set one. Pilots whose equipment receives those messages can see and identify you on their screen.</p>
-      <p class="feature-guide"><%= link_to_page "radio", label: "Where the second goes", anchor: "second" %> <small>From the guide &quot;The radio second&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "radio", label: "Where the second goes", anchor: "second" %> <small>(From the guide &quot;The radio second&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "radio-log.png", alt: "The radio log shows one line per message sent or received, with its time, channel, address and signal level." %>
@@ -80,7 +80,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="callsign">Set your callsign on Go or in Briefing</h3>
       <p id="asked">Change your aircraft type or callsign in Go&rsquo;s menu or over Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
-      <p class="feature-guide"><%= link_to_page "controls", label: "Enter your callsign", anchor: "callsign" %> <small>From the guide &quot;Controls and menus&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "controls", label: "Enter your callsign", anchor: "callsign" %> <small>(From the guide &quot;Controls and menus&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "menu-callsign.png", alt: "The callsign field shows S-BLIP in large type. A bar marks the third character. The controls say NEXT for the button and CHANGE for the pad." %>
@@ -93,7 +93,7 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <p>Choose your Go in SDVFR Next, SkyDemon or ForeFlight. Go sends traffic over Bluetooth to three devices at once. Your tablet, your phone and your passenger&rsquo;s phone can all receive the same traffic.</p>
-      <p class="feature-guide"><%= link_to_page "phone", label: "Connect your app", anchor: "by-name" %> <small>From the guide &quot;Phone and firmware&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "phone", label: "Connect your app", anchor: "by-name" %> <small>(From the guide &quot;Phone and firmware&quot;)</small></p>
     </div>
     <figure class="shot shot--photo shot--app">
       <%= content_image_tag "pages/index/sdvfr-next-traffic.avif", alt: "The SDVFR Next map shows traffic from skyBlip Go, with a callsign beside each aircraft." %>
@@ -108,7 +108,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="six-pack">Readings from the GPS and barometer</h3>
       <p>The six dials show ground speed, horizon, altitude, turn, track and vertical speed. Treat these readings as a guide. They don&rsquo;t replace your flight instruments.</p>
-      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the six dials", anchor: "six-pack" %> <small>From the guide &quot;Instruments&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the six dials", anchor: "six-pack" %> <small>(From the guide &quot;Instruments&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "sixpack.png", alt: "The six-pack screen shows ground speed, horizon, altimeter, slip ball, track and vertical speed." %>
@@ -118,7 +118,7 @@ updated_on: "2026-11-18"
     <div>
       <h3 id="g-meter">The Go+ g-meter keeps the highest and lowest readings</h3>
       <p>The g-meter shows the loads measured by Go+&rsquo;s accelerometer. Read the current load and see the extremes reached during your flight. Go+ also adds sound and vibration to the on-screen alert.</p>
-      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the g-meter", anchor: "g-meter" %> <small>From the guide &quot;Instruments&quot;</small></p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the g-meter", anchor: "g-meter" %> <small>(From the guide &quot;Instruments&quot;)</small></p>
     </div>
     <figure class="shot">
       <%= screen_image_tag "gmeter.png", alt: "The g-meter marks normal and lateral loads, frames the extremes from the flight and shows fore-aft load in a strip." %>
@@ -128,7 +128,8 @@ updated_on: "2026-11-18"
 
 <section id="try" class="band band--tint">
   <h2 class="section-title">Try the radar, then choose your hardware</h2>
-  <p>Go and Go+ share the same radar. Pair either with a Bravo to also see aircraft that transmit their position by radio in ADS-B.</p>
+  <p>Go and Go+ share the same radar. Pair either with a Bravo to also see aircraft that transmit their position in ADS-B.</p>
   <p>Go is an uncertified aid to visual lookout. It doesn&rsquo;t replace FLARM equipment or a transponder required for your flight.</p>
+  <p><%= link_to_page "controls", label: "Go controls", anchor: "two-contacts", id: "controls" %> · <%= link_to_page "power", label: "Power and battery", id: "power" %></p>
   <p class="signature"><%= link_to_page "skyblip-go", label: "Try the radar", class: "button button--primary" %> · <%= link_to_page "buy", label: "Compare Go and Go+", anchor: "compare" %></p>
 </section>

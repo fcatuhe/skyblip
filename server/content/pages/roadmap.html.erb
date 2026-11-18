@@ -21,10 +21,10 @@ updated_on: "2026-11-18"
 
 <section id="on-the-ground" class="band">
   <h2 class="section-title">On the ground: relay traffic and weather around an airfield</h2>
-  <p>A skyPost station will receive ADS-B, the position data that equipped aircraft transmit by radio. It will add traffic from the Open Glider Network (OGN) and airfield weather: the altimeter setting (QNH), the latest observation (METAR) and the forecast (TAF). It will relay these over ADS-L to skyBlip Go devices in range.</p>
+  <p>A skyPost station will receive ADS-B. It will add traffic from the Open Glider Network (OGN) and airfield weather: the altimeter setting (QNH), the latest observation (METAR) and the forecast (TAF). It will relay these over ADS-L to skyBlip Go devices in range.</p>
   <h3 id="helio">skyPost Helio</h3>
   <p>Helio will mount on a mast in a weatherproof case. It will run on solar power and receive ADS-B, ADS-L and FLARM, a position-sharing system widely used in gliding. It will use a LilyGO T-Beam Supreme board, an Ebyte E80-900MBL receiver and a LilyGO T-Solar kit.</p>
   <h3 id="bridge">skyPost Bridge</h3>
   <p>Bridge will work alongside existing OGN, PiAware or adsb.lol stations. It will relay the traffic they already receive in ADS-L without changing their data feeds. It will use a LilyGO T-Beam Supreme board.</p>
-  <p><%= link_to_page "buy", label: "See the hardware you can use today" %></p>
+  <p><%= link_to_page "buy", label: "See the hardware you can use today" %> · <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo", id: "bravo" %> · <%= link_to_page "skyblip-tango", label: "skyBlip Tango", id: "tango" %></p>
 </section>

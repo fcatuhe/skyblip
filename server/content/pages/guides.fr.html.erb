@@ -16,12 +16,12 @@ updated_on: "2026-11-18"
   <h2 class="section-title">Commencez par votre appareil</h2>
   <div class="guide-cards">
     <article>
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go avec son antenne et le radar de trafic sur son écran à papier électronique" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go avec son antenne et le radar de trafic sur son écran à papier électronique", class: "guide-photo" %>
       <h3><%= link_to_page "go-first-steps", label_type: :nav %></h3>
       <p>Allumez le Go, lisez son radar et réglez votre type d&rsquo;aéronef ou votre indicatif.</p>
     </article>
     <article>
-      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, un boîtier noir avec un bouton rond" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, un boîtier noir avec un bouton rond", class: "guide-photo photo-x1" %>
       <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
       <p>Repérez le bouton et le voyant. Retrouvez le trafic dans votre application de navigation ou sur le Go associé.</p>
     </article>
@@ -65,7 +65,7 @@ updated_on: "2026-11-18"
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation à l'écran" %>
-      <h3><%= link_to_page "phone" %></h3>
+      <h3><%= link_to_page "phone", label_type: :nav %></h3>
       <p>Retrouvez le trafic dans votre application de navigation. Utilisez le Briefing pour modifier des réglages ou mettre skyBlip à jour.</p>
     </article>
   </div>
@@ -105,7 +105,7 @@ updated_on: "2026-11-18"
       <p>Les chiffres publiés sur le principe «&nbsp;voir et éviter&nbsp;» portent sur le champ de vision, le secteur balayé, la taille apparente d&rsquo;un aéronef et le temps de réaction.</p>
     </article>
     <article>
-      <h3><%= link_to_page "roadmap" %></h3>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
       <p>Découvrez le projet skyBlip Panel pour les écrans de bord et les stations skyPost pour relayer du trafic autour d&rsquo;un terrain.</p>
     </article>
   </div>
