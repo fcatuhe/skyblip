@@ -1,5 +1,7 @@
 #include "products/common/services/ownship.h"
 
+#include <optional>
+
 #include "core/diagnostics/payload.h"
 #include "core/diagnostics/profile.h"
 #include "core/events/sensor.h"
@@ -108,12 +110,21 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
         if (!height_fixed) withdraw_climb();
     }
 
-    const bool whole_second = solution.utc_ms == 0;
+    const bool whole_second = opens_second(solution);
     if (whole_second || !own.fix_valid) apply_second(now_ms);
     if (whole_second) {
         record_gnss(solution, now_ms);
         record_flight(now_ms);
     }
+}
+
+// INFO: fc 18nov26 the first solution of each UTC second is its whole second, on .000 or not
+bool OwnshipService::opens_second(const gnss::GnssSolution& solution) {
+    if (!solution.utc_valid) return solution.utc_ms == 0;
+    const bool opens = !second_opened_ || solution.utc_s != opened_s_;
+    second_opened_ = true;
+    opened_s_ = solution.utc_s;
+    return opens;
 }
 
 // INFO: fc 18nov26 the flight model reads the receiver's whole second, as it did at 1 Hz
@@ -254,9 +265,15 @@ void OwnshipService::publish_solution_phase(uint32_t now_ms) {
 }
 
 // INFO: fc 13sep26 the latched edge dates the solution exactly, the estimate only when it is lost
-uint32_t OwnshipService::solution_instant(const gnss::GnssSolution& solution,
-                                          uint32_t now_ms) const {
-    const timing::ClockState& clock = context_.state.clock;
+// | 18nov26 an anchored second dates it by its own, and one the anchor cannot date drops it
+uint32_t OwnshipService::solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) {
+    timing::ClockState& clock = context_.state.clock;
+    if (clock.utc_s != 0) {
+        const std::optional<uint32_t> anchored = gnss::anchored_instant_ms(
+            solution, now_ms, static_cast<uint32_t>(clock.utc_edge_us / 1000), clock.utc_s);
+        if (anchored) return *anchored;
+        if (solution.utc_valid) clock.utc_s = 0;
+    }
     return gnss::solution_instant_ms(
         solution, now_ms, static_cast<uint32_t>(clock.pps_edge_us / 1000), clock.pps_locked);
 }

@@ -14,26 +14,37 @@ constexpr uint32_t kBaseUtcS = Rig::kBaseUtcS;
 constexpr uint32_t kQuarterMs = 250;
 constexpr uint32_t kLatencyMs = 70;
 
-// One solution, landing kLatencyMs after the quarter it names, as the L76K delivers it.
-void solve(Rig& rig, uint32_t second, uint32_t quarter, int32_t speed_mm_s, uint32_t& updates) {
+struct Solution {
+    uint32_t second{0};
+    uint32_t utc_ms{0};
+    int32_t speed_mm_s{0};
+    uint32_t late_ms{kLatencyMs};
+};
+
+// One solution, landing late_ms after the instant it names, as the L76K delivers it.
+void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
     gnss::GnssSolution solution{};
     solution.fix_valid = true;
     solution.utc_valid = true;
-    solution.utc_s = kBaseUtcS + second;
-    solution.utc_ms = static_cast<uint16_t>(quarter * kQuarterMs);
-    solution.latitude_1e7 = 485000000 + static_cast<int32_t>(second * 4 + quarter) * 100;
+    solution.utc_s = kBaseUtcS + delivered.second;
+    solution.utc_ms = static_cast<uint16_t>(delivered.utc_ms);
+    solution.latitude_1e7 = 485000000 + static_cast<int32_t>(updates) * 100;
     solution.longitude_1e7 = 85000000;
     solution.altitude_hae_mm = 1000000;
     solution.altitude_msl_valid = true;
-    solution.speed_mm_s = speed_mm_s;
+    solution.speed_mm_s = delivered.speed_mm_s;
     solution.track_cdeg = 0;
     solution.hdop_e2 = 100;
     solution.vdop_e2 = 150;
     solution.satellites = 10;
     solution.sentences = ++updates;
     rig.product.bus().gnss.push(solution);
-    const uint32_t at_ms = second * 1000 + quarter * kQuarterMs + kLatencyMs;
+    const uint32_t at_ms = delivered.second * 1000 + delivered.utc_ms + delivered.late_ms;
     rig.run(at_ms, at_ms);
+}
+
+void solve(Rig& rig, uint32_t second, uint32_t quarter, int32_t speed_mm_s, uint32_t& updates) {
+    deliver(rig, Solution{second, quarter * kQuarterMs, speed_mm_s}, updates);
 }
 
 }  // namespace
@@ -50,6 +61,34 @@ TEST_CASE("product: a quarter solution is dated at its quarter, not at its arriv
     CHECK(rig.state().own.utc_ms == 750);
     CHECK(rig.state().own.fix_at_ms == 3750);
     CHECK(rig.state().gnss.solution_phase_ms == kLatencyMs);
+}
+
+// The pinned case: a whole second a second late was dated at the next edge and anchored it.
+TEST_CASE("product: a solution that lands a second late keeps its own second, and anchors none") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    for (uint32_t second = 1; second <= 3; second++) solve(rig, second, 0, 0, updates);
+    REQUIRE(rig.state().clock.utc_s == kBaseUtcS + 3);
+
+    deliver(rig, Solution{4, 0, 0, 1000 + kLatencyMs}, updates);
+    CHECK(rig.state().own.fix_at_ms == 4000);
+    CHECK(rig.state().clock.utc_s == kBaseUtcS + 5);
+
+    deliver(rig, Solution{5, 250, 0, 1000 + kLatencyMs}, updates);
+    CHECK(rig.state().own.fix_at_ms == 5250);
+}
+
+// A quarter not on its own ms of .000 still opens the second: the flight model must not stall.
+TEST_CASE("product: the first solution of each UTC second is its whole second, stamp or not") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    constexpr int32_t kFlyingMmS = 30000;
+    for (uint32_t second = 1; second <= 3; second++)
+        for (uint32_t quarter = 0; quarter < 4; quarter++)
+            deliver(rig, Solution{second, quarter * kQuarterMs + 4, kFlyingMmS}, updates);
+    CHECK(flight::airborne(rig.state().own.flight_state));
 }
 
 // A quarter speed spike is position for ADS-L, never a takeoff: the flight model reads the second.

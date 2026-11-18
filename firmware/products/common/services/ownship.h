@@ -58,7 +58,8 @@ class OwnshipService : public runtime::Service {
     void record_barometer(const events::BarometerSample& sample, int32_t altitude_mm,
                           int32_t climb_mm_s, bool adopted, uint32_t now_ms);
     void record_motion(uint32_t now_ms);
-    uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) const;
+    uint32_t solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms);
+    bool opens_second(const gnss::GnssSolution& solution);
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc_s(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
@@ -89,6 +90,8 @@ class OwnshipService : public runtime::Service {
     gnss::FirstFix first_fix_{};
     gnss::Acquisition acquisition_{};
     model::Ownship second_{};
+    uint32_t opened_s_{0};
+    bool second_opened_{false};
     int32_t gnss_reference_altitude_mm_{0};
     uint32_t gnss_reference_ms_{0};
     int32_t barometer_reference_altitude_mm_{0};

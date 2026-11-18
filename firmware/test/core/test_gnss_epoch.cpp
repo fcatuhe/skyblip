@@ -76,3 +76,41 @@ TEST_CASE("gnss: a locked PPS edge and the solution's milliseconds date a quarte
     CHECK(solution_instant_ms(solution, 11'070, 11'000, true) == 10'750);
     CHECK(solution_instant_ms(solution, 10'830, 10'000, true) == 10'750);
 }
+
+// The anchored pair names the second an edge opened, so a late solution keeps its own second.
+TEST_CASE("gnss: an anchored solution is dated by its own UTC second, however late it lands") {
+    GnssSolution solution{};
+    solution.utc_valid = true;
+    solution.utc_s = 1000;
+    CHECK(anchored_instant_ms(solution, 11'070, 10'000, 1000) == 10'000u);
+
+    solution.utc_ms = 250;
+    CHECK(anchored_instant_ms(solution, 11'320, 10'000, 1000) == 10'250u);
+
+    // The edge that opened second 1001 was missed, and the anchor still names it.
+    solution.utc_s = 1001;
+    CHECK(anchored_instant_ms(solution, 11'320, 10'000, 1000) == 11'250u);
+}
+
+// An anchor that puts a solution after its arrival is wrong, and one far behind it is stale.
+TEST_CASE("gnss: an anchor dates nothing it puts after its arrival, and an old solution old") {
+    GnssSolution solution{};
+    solution.utc_valid = true;
+    solution.utc_s = 1002;
+    CHECK_FALSE(anchored_instant_ms(solution, 11'070, 10'000, 1000).has_value());
+    solution.utc_s = 990;
+    CHECK(anchored_instant_ms(solution, 11'070, 10'000, 1000) == 0u);
+    solution.utc_s = 1000;
+    CHECK_FALSE(anchored_instant_ms(solution, 11'070, 10'000, 0).has_value());
+    solution.utc_valid = false;
+    CHECK_FALSE(anchored_instant_ms(solution, 11'070, 10'000, 1000).has_value());
+}
+
+// The pinned case: past a missed edge every quarter was dated arrival less latency, 56 ms young.
+TEST_CASE("gnss: past a missed edge a solution keeps the phase its stamp names") {
+    GnssSolution solution{};
+    solution.pps_latency_ms = 28;
+    solution.utc_ms = 250;
+    CHECK(solution_instant_ms(solution, 11'320, 10'000, true) == 11'250u);
+    CHECK(solution_instant_ms(solution, 12'300, 10'000, true) == 12'250u);
+}

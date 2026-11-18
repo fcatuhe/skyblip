@@ -3,6 +3,7 @@
 #define SKYBLIP_CORE_GNSS_NMEA_H
 
 #include <cstdint>
+#include <optional>
 
 #include "core/gnss/sky.h"
 
@@ -112,6 +113,7 @@ class NmeaParser {
 
     // INFO: fc 18nov26 the last GGA and RMC carry one UTC stamp, so height and position are one fix
     bool same_epoch() const { return gga_stamp_ms_ == rmc_stamp_ms_; }
+    int32_t stamp_ms() const { return rmc_stamp_ms_; }
 
    private:
     static constexpr int kVersionBytes = 24;
@@ -142,15 +144,28 @@ inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arriv
 }
 
 // INFO: fc 13sep26 a locked PPS edge IS the top of the second the burst describes
-// | 18nov26 and the solution's milliseconds are its offset from that edge, or from the one before
+// | 18nov26 and the stamp's milliseconds the phase, the latest instant with it not after arrival
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms,
                                     uint32_t pps_edge_ms, bool pps_locked) {
-    if (!pps_locked || arrival_ms - pps_edge_ms >= 1000)
-        return solution_instant_ms(solution, arrival_ms);
-    const uint32_t this_second_ms = pps_edge_ms + solution.utc_ms;
-    return arrival_ms - this_second_ms < 1000 ? this_second_ms : this_second_ms - 1000;
+    if (!pps_locked) return solution_instant_ms(solution, arrival_ms);
+    const uint32_t first_ms = pps_edge_ms + solution.utc_ms;
+    const int32_t since_ms = static_cast<int32_t>(arrival_ms - first_ms);
+    const int32_t seconds = since_ms >= 0 ? since_ms / 1000 : -((999 - since_ms) / 1000);
+    return first_ms + static_cast<uint32_t>(seconds * 1000);
 }
 
+// INFO: fc 18nov26 an anchored edge names its UTC second, so a late solution keeps its own, and old
+inline std::optional<uint32_t> anchored_instant_ms(const GnssSolution& solution,
+                                                   uint32_t arrival_ms, uint32_t anchor_edge_ms,
+                                                   uint32_t anchor_utc_s) {
+    if (!solution.utc_valid || anchor_utc_s == 0) return std::nullopt;
+    const int64_t offset_ms =
+        (static_cast<int64_t>(solution.utc_s) - anchor_utc_s) * 1000 + solution.utc_ms;
+    const int64_t late_ms =
+        static_cast<int64_t>(static_cast<int32_t>(arrival_ms - anchor_edge_ms)) - offset_ms;
+    if (late_ms < 0 || late_ms > INT32_MAX) return std::nullopt;
+    return arrival_ms - static_cast<uint32_t>(late_ms);
+}
 }
 
 #endif
