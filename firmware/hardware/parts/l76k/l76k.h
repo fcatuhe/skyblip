@@ -82,6 +82,15 @@ class L76k : public ports::Gnss {
         "$PCAS02,250*18\r\n",
         "$PCAS03,,,4,,,,,,,,,,,*36\r\n",
     };
+    // INFO: fc 18nov26 2 Hz solves on .000 and .500, both quarters, for a part that refuses 4 Hz
+    static constexpr uint32_t kHalfSolutionPeriodMs = 500;
+    static constexpr const char* kHalfRateCommands[kQuarterRateCommandCount] = {
+        "$PCAS02,500*1A\r\n",
+        "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
+    };
+    static constexpr uint32_t kQuarterRetryMs = 300000;
+    // INFO: fc 18nov26 two pairs nearer than this are a backlog draining, never the part's cadence
+    static constexpr uint32_t kPairSpacingFloorMs = kSolutionPeriodMs / 2;
     // INFO: fc 18nov26 the second $PCAS03 above keeps GSA, and the VDOP it carries, once a second
     static constexpr uint8_t kGsaPeriodSolutions = 4;
     static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
@@ -118,17 +127,16 @@ class L76k : public ports::Gnss {
         "$PCAS10,3*1F\r\n",
     };
 
-    // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 4 Hz, the solution count
+    // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 4 or 2 Hz, its cadence
     static constexpr uint32_t kVerifyWindowMs = 3000;
     static constexpr uint32_t kMinVerifySentences = 2;
-    // INFO: fc 18nov26 a part with no time yet is judged on pairs: eight at 4 Hz, three at 1 Hz
     static constexpr uint32_t kQuarterVerifyWindowMs = 2000;
-    static constexpr uint32_t kMinVerifySolutions = 5;
-    static_assert(kMinVerifySolutions > kQuarterVerifyWindowMs / kFactorySolutionPeriodMs + 1 &&
-                      kMinVerifySolutions < kQuarterVerifyWindowMs / kSolutionPeriodMs,
-                  "the count tells a receiver at 4 Hz from one left at 1 Hz");
-    // INFO: fc 18nov26 4 Hz makes eight quarter steps in the window, and any other cadence none
+    // INFO: fc 18nov26 4 Hz makes eight quarter steps a window, 2 Hz four half steps, others none
     static constexpr uint32_t kMinQuarterSteps = 3;
+    static constexpr uint32_t kMinHalfSteps = 2;
+    static_assert(kMinQuarterSteps < kQuarterVerifyWindowMs / kSolutionPeriodMs &&
+                      kMinHalfSteps < kQuarterVerifyWindowMs / kHalfSolutionPeriodMs,
+                  "a part at the asked rate passes with steps to spare");
     static constexpr int32_t kDayMs = 86400000;
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
@@ -137,7 +145,12 @@ class L76k : public ports::Gnss {
     void service(uint32_t now_ms);
 
     ConfigStage config_stage() const { return stage_; }
-    bool solving_quarters() const { return stage_ == ConfigStage::Ready && quarter_rate_; }
+    enum class Cadence : uint8_t { Second, Half, Quarter };
+    bool solving_quarters() const {
+        return stage_ == ConfigStage::Ready && cadence_ == Cadence::Quarter;
+    }
+    Cadence cadence() const { return cadence_; }
+    uint32_t solution_period_ms() const;
     bool configured() const { return stage_ == ConfigStage::Ready; }
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
 
@@ -217,7 +230,9 @@ class L76k : public ports::Gnss {
     static constexpr uint8_t kNoRestart = 0xFF;
 
     void start_sequence(uint32_t now_ms);
-    void start_quarter_rate(uint32_t now_ms);
+    void start_rate(Cadence cadence, uint32_t now_ms);
+    void seek_quarters(uint32_t now_ms);
+    void flush();
     void settle(uint32_t now_ms);
     void send_next(uint32_t now_ms);
     void begin_wake(uint32_t now_ms);
@@ -233,10 +248,10 @@ class L76k : public ports::Gnss {
     uint8_t satellites_in_view_every() const;
     static const char* satellites_in_view_command(uint8_t every);
     bool verified() const;
-    bool on_quarters() const;
+    bool on_cadence() const;
     void observe_cadence();
     void watch_cadence(uint32_t now_ms);
-    void quarter_failed(uint32_t now_ms);
+    void rate_failed(uint32_t now_ms);
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -256,16 +271,17 @@ class L76k : public ports::Gnss {
     const char* const* sequence_{kCommands};
     int sequence_count_{kCommandCount};
     int next_command_{0};
-    bool quarter_rate_{false};
+    Cadence cadence_{Cadence::Second};
     bool quarter_refused_{false};
-    uint8_t quarter_attempts_{0};
+    uint32_t refused_at_ms_{0};
+    uint8_t rate_attempts_{0};
     int32_t last_stamp_ms_{-1};
-    uint32_t pairs_{0};
-    uint32_t stamped_{0};
-    uint32_t quarter_steps_{0};
-    uint32_t verify_pairs_{0};
-    uint32_t verify_stamped_{0};
-    uint32_t verify_quarter_steps_{0};
+    uint32_t unstamped_{0};
+    uint32_t cadence_steps_{0};
+    uint32_t verify_unstamped_{0};
+    uint32_t verify_steps_{0};
+    uint32_t paired_at_ms_{0};
+    bool paired_before_{false};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};

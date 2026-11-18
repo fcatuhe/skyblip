@@ -62,6 +62,10 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     bool refuses_quarter_rate{false};
     // INFO: fc 18nov26 a part answering $PCAS02,250 at another interval, which only its stamps show
     uint32_t quarter_rate_runs_at_ms{0};
+    // INFO: fc 18nov26 the shortest $PCAS02 interval the part takes, so 500 passes where 250 fails
+    uint32_t fastest_interval_ms{100};
+    // INFO: fc 18nov26 a part that lost UTC sends a no-time GGA and RMC, LilyGO-Modem-Series #95
+    bool time_lost{false};
 
     // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner. A
     // clone that takes $PCAS sentences but never introduces itself is exactly
@@ -358,7 +362,8 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
             interval_ms != 100)
             return;
         if (interval_ms < kFactoryPeriodMs &&
-            (baud != parts::L76k::kTargetBaudRate || refuses_quarter_rate))
+            (baud != parts::L76k::kTargetBaudRate || refuses_quarter_rate ||
+             interval_ms < fastest_interval_ms))
             return;
         if (interval_ms < kFactoryPeriodMs && quarter_rate_runs_at_ms != 0)
             interval_ms = quarter_rate_runs_at_ms;

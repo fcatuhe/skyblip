@@ -2,6 +2,8 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_SENTENCES_H
 
+#include <cstring>
+
 #include "core/protocol/nmea_out.h"
 #include "core/util/format.h"
 #include "hardware/parts/l76k/model.h"
@@ -10,6 +12,13 @@ namespace skyblip::models {
 
 // INFO: fc 13sep26 the part emits the cycle in $PCAS03's own field order, so RMC closes a burst
 inline void L76k::emit_burst() {
+    if (time_lost) {
+        const char* gga = "$GNGGA,,,,,,0,00,25.5,,,,,,*64\r\n";
+        const char* rmc = "$GNRMC,,V,,,,,,,,,,N,V*37\r\n";
+        say(gga, static_cast<int>(std::strlen(gga)));
+        say(rmc, static_cast<int>(std::strlen(rmc)));
+        return;
+    }
     step_walk();
     const bool gsa_due = gsa_enabled() && solutions_ % gsa_every == 0;
     const bool gsv_due = gsv_enabled() && solutions_ % gsv_every == 0;

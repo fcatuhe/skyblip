@@ -13,31 +13,44 @@ void L76k::start_sequence(uint32_t now_ms) {
     sequence_ = kCommands;
     sequence_count_ = kCommandCount;
     next_command_ = 0;
-    quarter_rate_ = false;
+    cadence_ = Cadence::Second;
     satellites_in_view_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
     levels_heard_ = false;
     stage_ = ConfigStage::Sending;
     send_next(now_ms);
 }
 
-// INFO: fc 18nov26 only a receiver proven at 115200 is asked for 4 Hz, which V1.1 SS2.3.2 requires
-void L76k::start_quarter_rate(uint32_t now_ms) {
-    sequence_ = kQuarterRateCommands;
+// INFO: fc 18nov26 only a part proven at 115200 is asked for 4 or 2 Hz, as V1.1 SS2.3.2 wants
+void L76k::start_rate(Cadence cadence, uint32_t now_ms) {
+    sequence_ = cadence == Cadence::Quarter ? kQuarterRateCommands : kHalfRateCommands;
     sequence_count_ = kQuarterRateCommandCount;
     next_command_ = 0;
-    quarter_rate_ = true;
+    cadence_ = cadence;
     stage_ = ConfigStage::Sending;
     send_next(now_ms);
 }
 
 void L76k::settle(uint32_t now_ms) {
-    if (!quarter_rate_ && !quarter_refused_ && baud_rate() == kTargetBaudRate) {
-        quarter_attempts_ = 1;
-        start_quarter_rate(now_ms);
-        return;
-    }
     stage_ = ConfigStage::Ready;
     begin_verify(now_ms);
+}
+
+// INFO: fc 18nov26 a refused 4 Hz is asked again every kQuarterRetryMs, and after a restart
+void L76k::seek_quarters(uint32_t now_ms) {
+    if (cadence_ == Cadence::Quarter || baud_rate() != kTargetBaudRate) return;
+    if (quarter_refused_ && now_ms - refused_at_ms_ < kQuarterRetryMs) return;
+    quarter_refused_ = false;
+    rate_attempts_ = 1;
+    start_rate(Cadence::Quarter, now_ms);
+}
+
+uint32_t L76k::solution_period_ms() const {
+    switch (cadence_) {
+        case Cadence::Quarter: return kSolutionPeriodMs;
+        case Cadence::Half: return kHalfSolutionPeriodMs;
+        case Cadence::Second: break;
+    }
+    return kFactorySolutionPeriodMs;
 }
 
 void L76k::send_next(uint32_t now_ms) {
@@ -50,60 +63,71 @@ void L76k::send_next(uint32_t now_ms) {
 void L76k::begin_verify(uint32_t now_ms) {
     verify_start_ms_ = now_ms;
     verify_sentences_ = parser_.solution().sentences;
-    verify_pairs_ = pairs_;
-    verify_stamped_ = stamped_;
-    verify_quarter_steps_ = quarter_steps_;
+    verify_unstamped_ = unstamped_;
+    verify_steps_ = cadence_steps_;
     unrequested_at_verify_ = parser_.unrequested();
 }
 
 bool L76k::verified() const {
     if (parser_.solution().sentences - verify_sentences_ < kMinVerifySentences || !obeying())
         return false;
-    return !quarter_rate_ || on_quarters();
+    return cadence_ == Cadence::Second || on_cadence();
 }
 
-// INFO: fc 18nov26 a part with no time yet stamps nothing, so its cadence is the count of pairs
-bool L76k::on_quarters() const {
-    if (stamped_ == verify_stamped_) return pairs_ - verify_pairs_ >= kMinVerifySolutions;
-    return quarter_steps_ - verify_quarter_steps_ >= kMinQuarterSteps;
+// INFO: fc 18nov26 a pair with no time is no solution to judge, so it never reads as off cadence
+bool L76k::on_cadence() const {
+    const uint32_t needed = cadence_ == Cadence::Quarter ? kMinQuarterSteps : kMinHalfSteps;
+    return cadence_steps_ - verify_steps_ >= needed || unstamped_ != verify_unstamped_;
 }
 
-// INFO: fc 18nov26 a quarter step is two pairs stamped 250 ms apart, each on a quarter second
+// INFO: fc 18nov26 a step is two pairs stamped one period apart, each on that period's grid
 void L76k::observe_cadence() {
-    pairs_++;
     const int32_t stamp_ms = parser_.stamp_ms();
     if (stamp_ms < 0) {
+        unstamped_++;
         last_stamp_ms_ = -1;
         return;
     }
-    stamped_++;
+    const int32_t period_ms = static_cast<int32_t>(solution_period_ms());
     const int32_t step_ms = (stamp_ms - last_stamp_ms_ + kDayMs) % kDayMs;
-    if (last_stamp_ms_ >= 0 && step_ms == static_cast<int32_t>(kSolutionPeriodMs) &&
-        stamp_ms % static_cast<int32_t>(kSolutionPeriodMs) == 0)
-        quarter_steps_++;
+    if (last_stamp_ms_ >= 0 && step_ms == period_ms && stamp_ms % period_ms == 0) cadence_steps_++;
     last_stamp_ms_ = stamp_ms;
 }
 
-// INFO: fc 18nov26 a part that drifts off the quarters while ready is asked for them again
+// INFO: fc 18nov26 a part that drifts off its rate while ready is asked for it again
 void L76k::watch_cadence(uint32_t now_ms) {
     if (now_ms - verify_start_ms_ < kQuarterVerifyWindowMs) return;
     const bool heard = parser_.solution().sentences != verify_sentences_;
-    const bool steady = on_quarters();
+    const bool steady = on_cadence();
     begin_verify(now_ms);
     if (!heard || steady) return;
-    quarter_attempts_ = 1;
-    start_quarter_rate(now_ms);
+    rate_attempts_ = 1;
+    start_rate(cadence_, now_ms);
 }
 
-// INFO: fc 18nov26 kCommands put the whole 1 Hz set back, so a refused 4 Hz is not half set
-void L76k::quarter_failed(uint32_t now_ms) {
-    if (quarter_attempts_ < kMaxConfigAttempts) {
-        quarter_attempts_++;
-        start_quarter_rate(now_ms);
+// INFO: fc 18nov26 4 Hz refused is 2 Hz tried, then kCommands put the whole 1 Hz set back
+void L76k::rate_failed(uint32_t now_ms) {
+    if (rate_attempts_ < kMaxConfigAttempts) {
+        rate_attempts_++;
+        start_rate(cadence_, now_ms);
         return;
     }
-    quarter_refused_ = true;
+    rate_attempts_ = 1;
+    if (cadence_ == Cadence::Quarter) {
+        quarter_refused_ = true;
+        refused_at_ms_ = now_ms;
+        start_rate(Cadence::Half, now_ms);
+        return;
+    }
     start_sequence(now_ms);
+}
+
+// INFO: fc 18nov26 what waited in the port before a configuration is no solution of this one
+void L76k::flush() {
+    uint8_t buffer[kReadChunkBytes];
+    while (uart_.read(buffer, sizeof(buffer)) == sizeof(buffer)) {
+    }
+    parser_.reset();
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -132,6 +156,7 @@ bool L76k::adopt_baud(uint32_t baud) {
 // up. Every attempt starts here, including the ones after a baud change: a
 // receiver we could not hear may also have been asleep.
 void L76k::begin_wake(uint32_t now_ms) {
+    flush();
     const uint8_t wake = kWakeByte;
     uart_.write(&wake, 1);
     last_command_ms_ = now_ms;
@@ -148,8 +173,8 @@ bool L76k::next_baud() {
 }
 
 void L76k::verify_failed(uint32_t now_ms) {
-    if (quarter_rate_ && parser_.solution().sentences != verify_sentences_) {
-        quarter_failed(now_ms);
+    if (cadence_ != Cadence::Second && parser_.solution().sentences != verify_sentences_) {
+        rate_failed(now_ms);
         return;
     }
     // Two different failures wearing one face. A receiver that answered nothing
@@ -170,7 +195,10 @@ void L76k::verify_failed(uint32_t now_ms) {
     begin_wake(now_ms);
 }
 
-void L76k::request_restart(ports::Restart kind) { pending_restart_ = static_cast<uint8_t>(kind); }
+void L76k::request_restart(ports::Restart kind) {
+    pending_restart_ = static_cast<uint8_t>(kind);
+    if (kind != ports::Restart::Hot) quarter_refused_ = false;
+}
 
 void L76k::service(uint32_t now_ms) {
     serviced_ms_ = now_ms;
@@ -185,7 +213,6 @@ void L76k::service(uint32_t now_ms) {
         // orbit data, which is the whole point of asking for one.
         if (factory) {
             validity_.reset();
-            quarter_refused_ = false;
             adopt_baud(kFactoryBaudRate);
             stage_ = ConfigStage::Restarting;
         }
@@ -219,7 +246,7 @@ void L76k::service(uint32_t now_ms) {
             break;
         case ConfigStage::Verifying:
             if (now_ms - verify_start_ms_ <
-                (quarter_rate_ ? kQuarterVerifyWindowMs : kVerifyWindowMs))
+                (cadence_ != Cadence::Second ? kQuarterVerifyWindowMs : kVerifyWindowMs))
                 break;
             if (!verified()) {
                 verify_failed(now_ms);
@@ -244,7 +271,8 @@ void L76k::service(uint32_t now_ms) {
             stage_ = ConfigStage::Ready;
             break;
         case ConfigStage::Ready:
-            if (quarter_rate_) watch_cadence(now_ms);
+            seek_quarters(now_ms);
+            if (stage_ == ConfigStage::Ready && cadence_ != Cadence::Second) watch_cadence(now_ms);
             break;
         case ConfigStage::Degraded: break;
     }
@@ -264,8 +292,8 @@ void L76k::pace_satellites_in_view(uint32_t now_ms) {
 uint8_t L76k::satellites_in_view_every() const {
     if (!satellites_in_view_wanted_) return 0;
     if (!levels_heard_) return 1;
-    return quarter_rate_ ? kQuarterSatellitesInViewPeriodSolutions
-                         : kSatellitesInViewPeriodSolutions;
+    return cadence_ == Cadence::Second ? kSatellitesInViewPeriodSolutions
+                                       : kQuarterSatellitesInViewPeriodSolutions;
 }
 
 const char* L76k::satellites_in_view_command(uint8_t every) {
@@ -295,10 +323,14 @@ bool L76k::poll(uint32_t now_ms) {
             burst_levels_ = burst_levels_ ||
                             (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
             if (sentence != kBurstClosingSentence || !parser_.same_epoch()) continue;
-            closed = true;
+            observe_cadence();
+            const bool in_step = !paired_before_ || now_ms - paired_at_ms_ >= kPairSpacingFloorMs;
+            paired_before_ = true;
+            paired_at_ms_ = now_ms;
+            closed = in_step;
+            if (!in_step) continue;
             paired = parser_.solution();
             paired_valid = validity_.evaluate(now_ms) == gnss::FixReject::None;
-            observe_cadence();
         }
         if (received < sizeof(buffer)) break;  // drained
     }

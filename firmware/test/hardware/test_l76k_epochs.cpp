@@ -132,3 +132,99 @@ TEST_CASE("l76k: a part that will not solve at 4 Hz is stepped back to a whole 1
     CHECK(chip.gsa_every == 1);
     CHECK(gnss.solution().fix_valid);
 }
+
+// The pinned case: no time read as off the quarters, and three tries left the part at 1 Hz for
+// good.
+TEST_CASE("l76k: a part that loses its time stays at 4 Hz, and its fix comes back with the time") {
+    models::L76k chip;
+    parts::L76k gnss(chip, chip);
+    run(gnss, chip, 0, kConfiguredMs);
+    REQUIRE(gnss.solving_quarters());
+    const uint32_t commands = chip.commands_seen;
+
+    chip.time_lost = true;
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 15000);
+    CHECK_FALSE(gnss.solution().fix_valid);
+    CHECK(gnss.solving_quarters());
+    CHECK(chip.commands_seen == commands);
+
+    chip.time_lost = false;
+    run(gnss, chip, kConfiguredMs + 15010, kConfiguredMs + 20000);
+    CHECK(gnss.solution().fix_valid);
+    CHECK(gnss.solving_quarters());
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+}
+
+// 2 Hz solves on two quarters, so a part that will not take 4 Hz still keeps most bursts.
+TEST_CASE("l76k: a part that refuses 4 Hz is asked for 2 Hz before 1 Hz") {
+    models::L76k chip;
+    chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
+    parts::L76k gnss(chip, chip);
+
+    run(gnss, chip, 0, 60000);
+
+    CHECK(gnss.configured());
+    CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
+    CHECK(chip.solution_period_ms == parts::L76k::kHalfSolutionPeriodMs);
+    CHECK(chip.gsa_every == 2);
+    CHECK_FALSE(gnss.solving_quarters());
+}
+
+// A refusal is not for the session: 4 Hz is asked again every five minutes.
+TEST_CASE("l76k: a part that refused 4 Hz is asked again after kQuarterRetryMs") {
+    models::L76k chip;
+    chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
+    parts::L76k gnss(chip, chip);
+    run(gnss, chip, 0, 60000);
+    REQUIRE(gnss.cadence() == parts::L76k::Cadence::Half);
+
+    chip.fastest_interval_ms = 100;
+    run(gnss, chip, 60010, 120000);
+    CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
+    run(gnss, chip, 120010, 60000 + parts::L76k::kQuarterRetryMs + 20000);
+    CHECK(gnss.solving_quarters());
+}
+
+// A cold or warm start can be what the part needed, so it clears the refusal at once.
+TEST_CASE("l76k: a cold start asks a part that refused 4 Hz for it again") {
+    models::L76k chip;
+    chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
+    parts::L76k gnss(chip, chip);
+    run(gnss, chip, 0, 60000);
+    REQUIRE(gnss.cadence() == parts::L76k::Cadence::Half);
+
+    chip.fastest_interval_ms = 100;
+    gnss.request_restart(ports::Restart::Cold);
+    run(gnss, chip, 60010, 80000);
+    CHECK(gnss.solving_quarters());
+}
+
+// The pinned case: a backlog drained at once dates its last pair by the drain, a second young.
+TEST_CASE("l76k: pairs drained closer than a quarter apart are a backlog and publish nothing") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.250", 1005) +
+             rmc("123520.250"));
+    gnss.poll(1000);
+    CHECK_FALSE(gnss.solution().fix_valid);
+
+    wire.say(gga("123520.500", 1010) + rmc("123520.500"));
+    gnss.poll(1010);
+    CHECK_FALSE(gnss.solution().fix_valid);
+
+    wire.say(gga("123520.750", 1015) + rmc("123520.750"));
+    REQUIRE(gnss.poll(1260));
+    CHECK(gnss.solution().fix_valid);
+    CHECK(gnss.solution().utc_ms == 750);
+}
+
+// What sat in the port before bring-up belongs to no solution the driver asked for.
+TEST_CASE("l76k: what waited in the port before bring-up is thrown away") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.000", 1000) + rmc("123520.000"));
+    gnss.service(0);
+    gnss.poll(0);
+    CHECK_FALSE(gnss.solution().fix_valid);
+    CHECK(gnss.sentences() == 0);
+}
