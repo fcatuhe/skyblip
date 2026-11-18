@@ -123,7 +123,7 @@ class AdsbReceiver : public ports::AdsbReceiver {
         const uint64_t woke_us = clock_.microseconds();
         for (;;) {
             events::AdsbFrame frame{};
-            const parts::Lr2021Event event = radio_.poll(frame.chips.data(), frame.chips.size());
+            const parts::Lr2021Event event = radio_.poll(frame.bytes.data(), frame.bytes.size());
             if (event.type != parts::Lr2021EventType::Frame) return;
             frame.at_us = woke_us;
             frame.rssi_dbm = event.rssi_dbm;

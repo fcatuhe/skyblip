@@ -13,9 +13,7 @@ namespace skyblip::adsb {
 
 inline wire::Status receive_sealed(Squitter frame, Message& message) {
     seal(frame.bytes);
-    uint8_t chips[kChipBytes];
-    chips_of(frame.bytes, chips);
-    return receive(chips, sizeof(chips), Reception{0, -70}, message);
+    return receive(frame.bytes, kFrameBytes, Reception{0, -70}, message);
 }
 
 inline int hex_value(char digit) {
@@ -80,9 +78,8 @@ struct Bravo {
 
     bool hear_raw(const char* text, uint32_t at_ms) {
         Message message;
-        uint8_t chips[kChipBytes];
-        chips_of(frame_of(text).bytes, chips);
-        REQUIRE(receive(chips, sizeof(chips), Reception{}, message) == wire::Status::Ok);
+        REQUIRE(receive(frame_of(text).bytes, kFrameBytes, Reception{}, message) ==
+                wire::Status::Ok);
         return assembly.fold(message, at_ms, Receipt{}, reference, heard);
     }
 

@@ -32,18 +32,6 @@ int8_t rssi_high_dbm(const uint8_t* status) {
     return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
 }
 
-// INFO: fc 17nov26 the part decoded the bits, so they go back to the chips the decoder reads
-bool chips_of_bits(const uint8_t* bits, uint8_t* chips) {
-    if ((bits[0] & 0xF0) != 0x80) return false;
-    std::memset(chips, 0, lr2021::kChipBytes);
-    for (int bit = 4; bit < 8 * lr2021::kFifoFrameBytes; bit++) {
-        const bool one = ((bits[bit >> 3] >> (7 - (bit & 7))) & 1u) != 0;
-        const int chip = 2 * (bit - 4) + (one ? 0 : 1);
-        chips[chip >> 3] = static_cast<uint8_t>(chips[chip >> 3] | (0x80u >> (chip & 7)));
-    }
-    return true;
-}
-
 }  // namespace
 
 Status Lr2021::probe() {
@@ -80,28 +68,22 @@ Status Lr2021::start_receive() {
 }
 
 // INFO: fc 11nov26 RxDone can fire twice before a read, so whole frames are drained by FIFO level
-Lr2021Event Lr2021::poll(uint8_t* chips, size_t capacity) {
+Lr2021Event Lr2021::poll(uint8_t* frame, size_t capacity) {
     Lr2021Event event{};
-    if (mode_ != Lr2021Mode::Receive || capacity < lr2021::kChipBytes) return event;
+    if (mode_ != Lr2021Mode::Receive || capacity < lr2021::kFifoFrameBytes) return event;
     if (frames_waiting_ == 0 && take_snapshot() != Status::Ok) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    // INFO: fc 17nov26 with no sync word every downlink format lands, and only DF16 and DF17 go up
-    while (frames_waiting_ != 0) {
-        const Status read = read_frame(chips, event);
-        if (read != Status::Ok && read != Status::Unsupported) {
-            event.type = Lr2021EventType::Fault;
-            return event;
-        }
-        frames_waiting_--;
-        since_frame_ms_ = 0;
-        if (read == Status::Ok) {
-            event.type = Lr2021EventType::Frame;
-            return event;
-        }
+    if (frames_waiting_ == 0) return event;
+    if (read_frame(frame, event) != Status::Ok) {
+        event.type = Lr2021EventType::Fault;
+        return event;
     }
-    return Lr2021Event{};
+    frames_waiting_--;
+    since_frame_ms_ = 0;
+    event.type = Lr2021EventType::Frame;
+    return event;
 }
 
 // INFO: fc 11nov26 the packet status is read on both sides of the level, and only agreement gives a
@@ -388,7 +370,7 @@ Status Lr2021::read_errors() {
 }
 
 // INFO: fc 11nov26 DS 5.4.1.3: the FIFO is the one read answered in its own frame
-Status Lr2021::read_frame(uint8_t* chips, Lr2021Event& event) {
+Status Lr2021::read_frame(uint8_t* frame, Lr2021Event& event) {
     if (wait_busy_low(lr2021::kCommandBusyCeilingUs) != Status::Ok) {
         reset_owed_ = true;
         return Status::Timeout;
@@ -403,7 +385,8 @@ Status Lr2021::read_frame(uint8_t* chips, Lr2021Event& event) {
     last_opcode_ = lr2021::kReadRadioRxFifo;
     event.rssi_valid = frames_waiting_ == 1 && newest_rssi_valid_;
     event.rssi_dbm = event.rssi_valid ? newest_rssi_dbm_ : 0;
-    return chips_of_bits(rx + 2, chips) ? Status::Ok : Status::Unsupported;
+    std::memcpy(frame, rx + 2, lr2021::kFifoFrameBytes);
+    return Status::Ok;
 }
 
 }  // namespace skyblip::parts

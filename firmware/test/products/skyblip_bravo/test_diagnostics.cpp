@@ -24,3 +24,25 @@ TEST_CASE("bravo: the adsb group splits refused frames from the aircraft folded 
     CHECK(read.adsb_folded == 4);
     CHECK(read.adsb_aircraft == 2);
 }
+
+TEST_CASE("bravo: the adsb group counts frames by format and the Mode S transponders heard") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(1);
+    rig.hear_mode_s(adsb::all_call(0x3A0001, 5));
+    rig.hear_mode_s(adsb::altitude_reply(0x3A0001, 4500));
+    rig.hear_mode_s(adsb::altitude_reply(0x3A0009, 4500));
+    rig.hear_aircraft(0x4CA2B1, 3000);
+    rig.seconds_with_fix(1);
+
+    bravo::DiagnosticsCollector<Bravo>().step(rig.product, rig.now_ms);
+    const comms::Diagnostics& read = rig.product.config_link().config().diagnostics();
+    CHECK(read.adsb_formats[11] == 1);
+    CHECK(read.adsb_formats[4] == 2);
+    CHECK(read.adsb_formats[17] == 2);
+    CHECK(read.adsb_transponders == 2);
+    CHECK(read.adsb_mode_s == 1);
+    CHECK(read.adsb_mode_s_altitude == 1);
+    CHECK(read.adsb_unmatched == 1);
+    CHECK(read.adsb_aircraft == 1);
+}

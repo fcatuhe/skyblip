@@ -4,13 +4,21 @@
 #include <initializer_list>
 
 #include "protocols/common/crc.h"
-#include "protocols/common/manchester.h"
 
 namespace skyblip::adsb {
 
 namespace {
 
 constexpr uint8_t kExtendedSquitter = 17;
+constexpr uint8_t kAllCallReply = 11;
+constexpr uint8_t kShortAirAir = 0;
+constexpr uint8_t kAltitudeReply = 4;
+constexpr uint8_t kIdentityReply = 5;
+constexpr uint8_t kLongAirAir = 16;
+constexpr uint8_t kCommBAltitudeReply = 20;
+constexpr uint8_t kCommBIdentityReply = 21;
+// INFO: fc 18nov26 an all-call reply to an interrogator code leaves it in the parity's low 7 bits
+constexpr uint32_t kInterrogatorCodeCeiling = 0x7F;
 constexpr uint8_t kMessageFieldOffsetBits = 32;
 
 constexpr char kCharacterSet[] = "?ABCDEFGHIJKLMNOPQRSTUVWXYZ????? ???????????????0123456789??????";
@@ -22,6 +30,7 @@ constexpr int32_t kSupersonicStepKt = 4;
 constexpr int32_t kQAltitudeStepFt = 25;
 constexpr int32_t kQAltitudeFloorFt = -1000;
 constexpr uint32_t kQBit = 0x010;
+constexpr uint32_t kMBit = 0x040;
 constexpr uint8_t kVersionWithGva = 2;
 
 uint32_t bits(const uint8_t* frame, uint8_t first, uint8_t last) {
@@ -41,14 +50,6 @@ uint32_t message_bits(const uint8_t* frame, uint8_t first, uint8_t last) {
 uint32_t gray_to_binary(uint32_t gray) {
     for (uint32_t shifted = gray >> 1; shifted != 0; shifted >>= 1) gray ^= shifted;
     return gray;
-}
-
-// INFO: fc 10nov26 1090 sends a 1 as the chips 10, the inverse of the ADS-L table fec decodes
-void decode_chips(const uint8_t* chips, uint8_t* frame) {
-    uint8_t inverted[2 * kFrameBytes];
-    inverted[0] = static_cast<uint8_t>(~kSyncChips);
-    for (uint8_t i = 0; i < kChipBytes; i++) inverted[i + 1] = static_cast<uint8_t>(~chips[i]);
-    wire::manchester_decode(inverted, kFrameBytes, frame, nullptr);
 }
 
 Quantity quantity_at(const uint8_t* frame, uint8_t first, uint8_t last, int32_t step) {
@@ -89,6 +90,12 @@ bool altitude_ft_of(uint32_t field, int32_t& feet) {
     const uint32_t steps = ((field >> 5) << 4) | (field & 0x00Fu);
     feet = static_cast<int32_t>(steps) * kQAltitudeStepFt + kQAltitudeFloorFt;
     return true;
+}
+
+// INFO: fc 18nov26 the AC field is the ES altitude with an M bit after A4, and M set is metres
+bool altitude_code_ft_of(uint32_t field, int32_t& feet) {
+    if (field & kMBit) return false;
+    return altitude_ft_of(((field >> 7) << 6) | (field & 0x3Fu), feet);
 }
 
 Cpr cpr_of(const uint8_t* frame) {
@@ -211,22 +218,54 @@ wire::Status parse(const uint8_t* frame, Message& out) {
     return wire::Status::Ok;
 }
 
-}
-
-wire::Status receive(const uint8_t* chips, size_t chip_bytes, Reception reception, Message& out) {
-    out = Message{};
-    out.reception = reception;
-    if (chip_bytes < kChipBytes) return wire::Status::Invalid;
-
-    uint8_t frame[kFrameBytes];
-    decode_chips(chips, frame);
+wire::Status extended_squitter(const uint8_t* frame, Message& out) {
     if (wire::crc24_check(frame, kFrameBytes) != 0) return wire::Status::Crc;
-
-    if (bits(frame, 1, 5) != kExtendedSquitter) return wire::Status::Unsupported;
     out.capability = static_cast<uint8_t>(bits(frame, 6, 8));
     out.address = bits(frame, 9, 32);
+    out.address_verified = true;
     out.type_code = static_cast<uint8_t>(message_bits(frame, 1, 5));
     return parse(frame, out);
+}
+
+wire::Status all_call(const uint8_t* frame, Message& out) {
+    const uint32_t interrogator = wire::crc24_check(frame, kShortFrameBytes);
+    if (interrogator > kInterrogatorCodeCeiling) return wire::Status::Crc;
+    out.kind = Kind::AllCall;
+    out.capability = static_cast<uint8_t>(bits(frame, 6, 8));
+    out.address = bits(frame, 9, 32);
+    out.address_verified = interrogator == 0;
+    return wire::Status::Ok;
+}
+
+wire::Status reply(const uint8_t* frame, Message& out, bool altitude) {
+    const size_t bytes = out.downlink_format >= kLongAirAir ? kFrameBytes : kShortFrameBytes;
+    out.kind = Kind::Reply;
+    out.address = wire::crc24_check(frame, bytes);
+    if (altitude)
+        out.reply.pressure_altitude_valid =
+            altitude_code_ft_of(bits(frame, 20, 32), out.reply.pressure_altitude_ft);
+    return wire::Status::Ok;
+}
+
+}
+
+wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out) {
+    out = Message{};
+    out.reception = reception;
+    if (frame_bytes < kFrameBytes) return wire::Status::Invalid;
+
+    out.downlink_format = static_cast<uint8_t>(bits(frame, 1, 5));
+    switch (out.downlink_format) {
+        case kExtendedSquitter: return extended_squitter(frame, out);
+        case kAllCallReply: return all_call(frame, out);
+        case kShortAirAir:
+        case kAltitudeReply:
+        case kLongAirAir:
+        case kCommBAltitudeReply: return reply(frame, out, true);
+        case kIdentityReply:
+        case kCommBIdentityReply: return reply(frame, out, false);
+        default: return wire::Status::Unsupported;
+    }
 }
 
 }

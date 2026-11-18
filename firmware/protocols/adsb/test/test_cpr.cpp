@@ -16,10 +16,8 @@ namespace {
 
 adsb::Message heard(const char* text) {
     const Squitter frame = frame_of(text);
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
     adsb::Message message;
-    REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == Status::Ok);
+    REQUIRE(adsb::receive(frame.bytes, kFrameBytes, adsb::Reception{}, message) == Status::Ok);
     return message;
 }
 

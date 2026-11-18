@@ -45,11 +45,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         frame[1] = kCrowdAddressHigh;
         frame[2] = 0;
         adsb::seal(frame);
-        uint8_t chips[adsb::kChipBytes];
-        adsb::chips_of(frame, chips);
 
         adsb::Message message;
-        if (adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) != wire::Status::Ok)
+        if (adsb::receive(frame, sizeof(frame), adsb::Reception{}, message) != wire::Status::Ok)
             continue;
         model::AircraftObservation observation;
         const bool folded =

@@ -20,9 +20,9 @@ constexpr uint32_t kFirst = 0x4840D6;
 constexpr uint32_t kSecond = 0x3C6586;
 constexpr uint32_t kThird = 0x40621D;
 
-uint32_t address_in(const uint8_t* chips) {
+uint32_t address_in(const uint8_t* frame) {
     adsb::Message message{};
-    if (adsb::receive(chips, adsb::kChipBytes, adsb::Reception{0, -70}, message) !=
+    if (adsb::receive(frame, adsb::kFrameBytes, adsb::Reception{0, -70}, message) !=
         wire::Status::Ok)
         return 0;
     return message.address;
@@ -39,9 +39,9 @@ struct Read {
 };
 
 Read read(Lr2021& radio) {
-    uint8_t chips[adsb::kChipBytes]{};
-    const parts::Lr2021Event event = radio.poll(chips, sizeof(chips));
-    return {event, event.type == Lr2021EventType::Frame ? address_in(chips) : 0};
+    uint8_t frame[adsb::kFrameBytes]{};
+    const parts::Lr2021Event event = radio.poll(frame, sizeof(frame));
+    return {event, event.type == Lr2021EventType::Frame ? address_in(frame) : 0};
 }
 
 }  // namespace

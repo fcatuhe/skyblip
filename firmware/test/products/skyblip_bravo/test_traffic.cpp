@@ -1,4 +1,6 @@
 // Bravo alone: what 1090 MHz becomes on a phone's map, with and without its own fix.
+#include <algorithm>
+#include <iterator>
 #include <string>
 
 #include "doctest/doctest.h"
@@ -112,8 +114,7 @@ TEST_CASE("bravo: a frame that fails its parity is counted as crc") {
         AdsbAir out;
         out.chips[0] = kAdsbPreambleAir[0];
         out.chips[1] = kAdsbPreambleAir[1];
-        out.chips[2] = adsb::kSyncChips;
-        adsb::chips_of(frame.bytes, out.chips + 3);
+        adsb::chips_of(frame.bytes, out.chips + sizeof(kAdsbPreambleAir));
         return out;
     }();
     rig.platform.radio().receive_air(air.chips, sizeof(air.chips), -87);
@@ -147,7 +148,7 @@ TEST_CASE(
         events::AdsbFrame heard{};
         heard.at_us = rig.platform.clock().microseconds();
         heard.rssi_valid = false;
-        adsb::chips_of(frame.bytes, heard.chips.data());
+        std::copy(std::begin(frame.bytes), std::end(frame.bytes), heard.bytes.begin());
         rig.product.adsb_frames().push(heard);
         rig.step();
     }

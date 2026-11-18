@@ -90,18 +90,23 @@ TEST_CASE("DO-260B 2.2.3.2.1: the baseline fields sit at message bits 1, 6, 9, 3
     CHECK(heard_ok(frame).address == kAddress);
 }
 
-// The decoder puts the chips of 1000 back in front, so a DF that opens otherwise fails parity.
+// Each DF is read by its own rule, so no other format becomes a DF17 message.
 TEST_CASE(
     "DO-260B 2.2.3.2.1.1: DF17 is read and DF11, DF16, DF18 and DF19 are never read as DF17") {
     CHECK(hear(airborne(11, q_field(1000))).status == Status::Ok);
     for (uint8_t df : {11, 16, 18, 19}) {
         adsb::Squitter frame = airborne(11, q_field(1000));
         frame.bytes[0] = static_cast<uint8_t>((df << 3) | 5);
-        CHECK(hear(frame).status != Status::Ok);
+        const Heard heard = hear(frame);
+        CHECK(heard.message.downlink_format == df);
+        CHECK((heard.status != Status::Ok || heard.message.kind == Kind::AllCall ||
+               heard.message.kind == Kind::Reply));
     }
-    adsb::Squitter df16 = airborne(11, q_field(1000));
-    df16.bytes[0] = static_cast<uint8_t>(16 << 3);
-    CHECK(hear(df16).status == Status::Unsupported);
+    for (uint8_t df : {18, 19}) {
+        adsb::Squitter frame = airborne(11, q_field(1000));
+        frame.bytes[0] = static_cast<uint8_t>(df << 3);
+        CHECK(hear(frame).status == Status::Unsupported);
+    }
 }
 
 TEST_CASE("DO-260B 2.2.3.2.1.2: every CA code of Table 2-8 is carried as sent") {

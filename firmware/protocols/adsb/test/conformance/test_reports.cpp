@@ -21,6 +21,13 @@ Bravo tracking(uint32_t at_ms = 1000) {
     return bravo;
 }
 
+bool only_df17_read() {
+    adsb::Squitter frame = adsb::operational_status(kAddress, kNoCapability, 2, 1);
+    frame.bytes[0] = static_cast<uint8_t>(18 << 3);
+    Message message;
+    return receive_sealed(frame, message) == wire::Status::Unsupported;
+}
+
 adsb::Squitter air_velocity(int32_t east_kt, int32_t north_kt, int32_t climb_fpm, bool barometric) {
     adsb::Squitter frame =
         adsb::ground_velocity(kAddress, kNoCapability, east_kt, north_kt, climb_fpm, 75);
@@ -95,7 +102,7 @@ TEST_CASE("DO-260B 2.2.8.1.2: the participant address is the AA field") {
 }
 
 TEST_CASE("DO-260B 2.2.8.1.3: every Track is from DF17, whose AA is an ICAO address") {
-    CHECK(kSyncChips == 0x95);
+    CHECK(only_df17_read());
     Bravo bravo = tracking();
     CHECK(bravo.heard.address == kAddress);
 }
@@ -359,7 +366,7 @@ TEST_CASE("DO-260B 2.2.8.2.2: the mode status names the AA field's address") {
 }
 
 TEST_CASE("DO-260B 2.2.8.2.3: the mode status address is ICAO, as every DF17 AA is") {
-    CHECK(kSyncChips == 0x95);
+    CHECK(only_df17_read());
     Bravo bravo;
     REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 0));
     CHECK(bravo.heard.address == kAddress);

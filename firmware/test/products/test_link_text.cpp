@@ -44,7 +44,7 @@ TEST_CASE("link text: every frame and every key the registry lists survives the 
         json += "}";
         CAPTURE(json);
 
-        uint8_t encoded[512];
+        uint8_t encoded[1024];
         const int bytes =
             link_text::frame_from_text(json.c_str(), encoded, static_cast<int>(sizeof(encoded)));
         REQUIRE(bytes > 0);

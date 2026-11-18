@@ -173,7 +173,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             receiver.command_errors);
         add(Group::Adsb, link::diagnostics_key::kErrors, Kind::Unsigned, receiver.device_errors);
         std::copy(std::begin(receiver.rssi), std::end(receiver.rssi), std::begin(adsb_rssi_));
-        add(Group::Adsb, link::diagnostics_key::kRssiDbm, Kind::UnsignedArray, 0);
+        add_array(Group::Adsb, link::diagnostics_key::kRssiDbm, Array::AdsbRssi);
         // INFO: fc 12nov26 after rssi_dbm, because a frame's keys ascend and these came later
         add(Group::Adsb, link::diagnostics_key::kCrc, Kind::Unsigned, diagnostics.adsb_crc);
         add(Group::Adsb, link::diagnostics_key::kUnsupported, Kind::Unsigned,
@@ -181,6 +181,16 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Adsb, link::diagnostics_key::kFolded, Kind::Unsigned, diagnostics.adsb_folded);
         add(Group::Adsb, link::diagnostics_key::kAircraft, Kind::Unsigned,
             diagnostics.adsb_aircraft);
+        std::copy(std::begin(diagnostics.adsb_formats), std::end(diagnostics.adsb_formats),
+                  std::begin(adsb_formats_));
+        add_array(Group::Adsb, link::diagnostics_key::kFormats, Array::AdsbFormats);
+        add(Group::Adsb, link::diagnostics_key::kTransponders, Kind::Unsigned,
+            diagnostics.adsb_transponders);
+        add(Group::Adsb, link::diagnostics_key::kModeS, Kind::Unsigned, diagnostics.adsb_mode_s);
+        add(Group::Adsb, link::diagnostics_key::kModeSAltitude, Kind::Unsigned,
+            diagnostics.adsb_mode_s_altitude);
+        add(Group::Adsb, link::diagnostics_key::kUnmatched, Kind::Unsigned,
+            diagnostics.adsb_unmatched);
     }
 
     if (capture && diagnostics.capture_available) add_capture(diagnostics);
@@ -219,6 +229,20 @@ void DiagnosticsReport::add(Group group, uint32_t key, Kind kind, int64_t value,
     fields_[count_++] = Field{key, text, value, kind, group};
 }
 
+// INFO: fc 18nov26 a field names its array, not its address, so a copied report reads its own
+void DiagnosticsReport::add_array(Group group, uint32_t key, Array array) {
+    add(group, key, Kind::UnsignedArray, static_cast<int64_t>(array));
+}
+
+const uint32_t* DiagnosticsReport::values_of(const Field& field, int& count) const {
+    if (static_cast<Array>(field.value) == Array::AdsbFormats) {
+        count = adsb::kDownlinkFormats;
+        return adsb_formats_;
+    }
+    count = kAdsbRssiCount;
+    return adsb_rssi_;
+}
+
 int DiagnosticsReport::field_bytes(const Field& field) const {
     switch (field.kind) {
         case Kind::Unsigned:
@@ -226,8 +250,11 @@ int DiagnosticsReport::field_bytes(const Field& field) const {
         case Kind::Integer: return cbor::integer_entry_bytes(field.key, field.value);
         case Kind::Boolean: return cbor::boolean_entry_bytes(field.key);
         case Kind::Text: return cbor::text_entry_bytes(field.key, field.text);
-        case Kind::UnsignedArray:
-            return cbor::unsigned_array_entry_bytes(field.key, adsb_rssi_, kAdsbRssiCount);
+        case Kind::UnsignedArray: {
+            int count = 0;
+            const uint32_t* values = values_of(field, count);
+            return cbor::unsigned_array_entry_bytes(field.key, values, count);
+        }
     }
     return 0;
 }
@@ -280,9 +307,12 @@ int DiagnosticsReport::next_frame(int payload_bytes, uint8_t* out, int capacity)
             case Kind::Integer: writer.add_integer(field.key, field.value); break;
             case Kind::Boolean: writer.add_boolean(field.key, field.value != 0); break;
             case Kind::Text: writer.add_text(field.key, field.text); break;
-            case Kind::UnsignedArray:
-                writer.add_unsigned_array(field.key, adsb_rssi_, kAdsbRssiCount);
+            case Kind::UnsignedArray: {
+                int count = 0;
+                const uint32_t* values = values_of(field, count);
+                writer.add_unsigned_array(field.key, values, count);
                 break;
+            }
         }
     }
     const int bytes = writer.finish();

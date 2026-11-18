@@ -1,10 +1,14 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SERVICES_DIAGNOSTICS_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SERVICES_DIAGNOSTICS_H
 
+#include <algorithm>
+#include <iterator>
+
 #include "core/bus/state.h"
 #include "core/comms/diagnostics.h"
 #include "hardware/parts/ag3335/ag3335.h"
 #include "ports/capabilities.h"
+#include "products/skyblip_bravo/transponders.h"
 
 namespace skyblip::bravo {
 
@@ -58,6 +62,14 @@ class DiagnosticsCollector {
         snapshot.adsb_unsupported = product.adsb().unsupported();
         snapshot.adsb_folded = product.adsb().folded();
         snapshot.adsb_aircraft = static_cast<uint32_t>(product.adsb().assembly().count());
+        const auto& formats = product.adsb().formats();
+        std::copy(formats.begin(), formats.end(), std::begin(snapshot.adsb_formats));
+        const Transponders& transponders = product.adsb().transponders();
+        snapshot.adsb_transponders = static_cast<uint32_t>(transponders.count());
+        snapshot.adsb_mode_s = static_cast<uint32_t>(transponders.mode_s_only());
+        snapshot.adsb_mode_s_altitude =
+            static_cast<uint32_t>(transponders.mode_s_only_with_altitude(now_ms));
+        snapshot.adsb_unmatched = transponders.unmatched();
 
         product.capture().describe(snapshot);
 
