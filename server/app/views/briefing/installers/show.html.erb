@@ -1,0 +1,9 @@
+<%= turbo_frame_tag :installers do %>
+  <% if @unavailable %>
+    <p class="note" role="status" data-installers-unavailable><%= t("briefing.setup.images_unavailable") %></p>
+  <% else %>
+    <% @installers.each do |product, (release, file)| %>
+      <%= link_to file, release_asset_path(release.tag, file), hidden: true, data: { installer: product, version: release.version } %>
+    <% end %>
+  <% end %>
+<% end %>

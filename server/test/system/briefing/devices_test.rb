@@ -48,7 +48,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       find(".app-bar-brand").click
       assert_selector "h1", text: "Your devices"
       assert_selector ".fleet-unit", text: /Go 00012A\s*F-JXYZ · Not connected · seen [^\n]*\n0.1.0\+1765 is out/
-      assert_no_selector ".fleet-activate"
+      assert_selector ".fleet-set-up.button-app--quiet", text: "Set up a device"
       screen "03-home-remembered"
 
       click_link "Go 00012A"

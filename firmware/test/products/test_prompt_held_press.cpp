@@ -21,7 +21,7 @@ constexpr uint32_t kHeldThroughPromptMs = 1500;
 constexpr comms::Pending kPrompts[] = {
     comms::Pending::Set,      comms::Pending::Dfu,           comms::Pending::Recovery,
     comms::Pending::PowerOff, comms::Pending::GnssColdStart, comms::Pending::Register,
-    comms::Pending::EraseLog,
+    comms::Pending::EraseLog, comms::Pending::Pair,
 };
 
 std::optional<uint16_t> serial_for(comms::Pending pending) {
@@ -68,6 +68,7 @@ struct Unit {
                 return;
             }
             case comms::Pending::EraseLog: rig.send_log("{\"command\":\"erase\"}"); return;
+            case comms::Pending::Pair: rig.send("{\"command\":\"pair\",\"tag\":16170}"); return;
             case comms::Pending::Capture:
             case comms::Pending::None: return;
         }

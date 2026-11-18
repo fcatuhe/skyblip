@@ -25,6 +25,8 @@ constexpr int kMaxEntries = 255;
 
 int head_bytes(uint64_t argument);
 int text_bytes(const char* text);
+// INFO: fc 16nov26 what text the link carries: no overlong form, surrogate or code past U+10FFFF
+bool valid_utf8(ConstByteSpan text);
 
 int unsigned_entry_bytes(uint32_t key, uint64_t value);
 int integer_entry_bytes(uint32_t key, int64_t value);

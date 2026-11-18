@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 #define SKYBLIP_HARDWARE_PLATFORM_HOST_PLATFORM_H
 
+#include <cstring>
+#include <vector>
+
 #include "core/power/battery.h"
 #include "core/util/sha256.h"
 #include "core/util/span.h"
@@ -97,7 +100,25 @@ class Dfu : public ports::Dfu {
     void publish_upload_allowed(bool allowed) override { upload_allowed_published = allowed; }
     bool upload_finished() override { return finished_upload; }
     void forget_upload() override { finished_upload = false; }
+    uint32_t running_slot_bytes() override { return static_cast<uint32_t>(running_slot.size()); }
+    bool read_running_slot(uint32_t offset, uint8_t* out, size_t bytes) override {
+        if (size_t{offset} + bytes > running_slot.size()) return false;
+        std::memcpy(out, running_slot.data() + offset, bytes);
+        return true;
+    }
+    bool erase_running_slot_page(uint32_t offset) override {
+        if (page_erase_fails || offset % kPageBytes != 0 ||
+            offset + kPageBytes > running_slot.size())
+            return false;
+        std::memset(running_slot.data() + offset, 0xFF, kPageBytes);
+        page_erases++;
+        return true;
+    }
 
+    static constexpr uint32_t kPageBytes = 4096;
+    std::vector<uint8_t> running_slot{};
+    int page_erases{0};
+    bool page_erase_fails{false};
     ports::SwapRequest swap_request{ports::StagedCheck::Matched, 0, ports::SwapType::Test};
     int swap_requests{0};
     ports::StagedCheck staged_check{ports::StagedCheck::Matched};

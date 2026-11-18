@@ -81,7 +81,7 @@ updated_on: "2026-11-13"
     </div>
     <div>
       <h3>Updates.</h3>
-      <p>Update Bravo over Bluetooth from <%= link_to "Briefing", briefing_root_path %>, the skyblip.eu web app, and approve each update with a press on Bravo.</p>
+      <p>Update Bravo over Bluetooth from <%= link_to "Briefing", briefing_root_path %>, the skyblip.eu web app. The browser that installed it updates it with no press. Any other browser asks for a press on Bravo.</p>
     </div>
   </div>
 </section>
@@ -90,20 +90,24 @@ updated_on: "2026-11-13"
   <h2 class="section-title">A Bravo, ready in three steps</h2>
   <ol class="steps-grid steps-grid--sequence">
     <li>
-      <h3>Connect.</h3>
-      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears.</p>
-    </li>
-    <li>
-      <h3>Save Meshtastic.</h3>
-      <p>Copy <span class="mono">CURRENT.UF2</span> from the <span class="mono">X1</span> drive to your computer first. Dragging that file back onto the drive restores Meshtastic.</p>
-    </li>
-    <li>
       <h3>Install.</h3>
-      <p>Copy the .uf2 file of the latest skyBlip Bravo release from the <a href="https://github.com/fcatuhe/skyblip/releases">releases page</a> to the <span class="mono">X1</span> drive.</p>
-      <p>If your aircraft has a Mode S or ADS-B out transponder, enter its ICAO address in <%= link_to "Briefing", briefing_root_path %>. This is the transponder&rsquo;s 24-bit aircraft address, written as six characters such as <span class="mono">3C6586</span>. Briefing calls it the ADS-B address. Approve the change with a press on Bravo. This keeps your own transponder out of the traffic and stops it setting off alarms. Without a transponder, leave the address blank.</p>
-      <p>Briefing connects over Bluetooth. Use Chrome or Edge on a computer or Android. Safari on iPhone cannot connect.</p>
+      <p>Plug the X1 into a computer with a USB-C cable. In Chrome or Edge, open <%= link_to "Set up a device", briefing_setup_path %> in Briefing, the skyblip.eu web app, and click Install. Briefing restarts the X1 as a USB drive named <span class="mono">X1</span>, writes skyBlip onto it, then connects to it over Bluetooth.</p>
+    </li>
+    <li>
+      <h3>Set your transponder address.</h3>
+      <p>If your aircraft has a Mode S or ADS-B out transponder, switch it to <span class="mono">ALT</span> in the aircraft. Briefing, or your paired Go, then offers the address Bravo hears, so your own transponder stays out of the traffic and sets off no alarm. If you know the address already, such as <span class="mono">3C6586</span>, you can enter it at setup. Without a transponder, there is nothing to set.</p>
+    </li>
+    <li>
+      <h3>Pair it with your Go.</h3>
+      <p>With your Go set up in the same browser, Briefing offers to pair them, with no press. Bravo also works alone, with your navigation app.</p>
     </li>
   </ol>
+  <div class="faq">
+    <details>
+      <summary>Without Chrome or Edge on a computer</summary>
+      <p>Hold the button, plug in the USB-C cable and keep holding until the LED turns white, about 3 seconds. A drive named <span class="mono">X1</span> appears. First, copy <span class="mono">CURRENT.UF2</span> from it to your computer. Dragging that file back onto the drive restores the firmware the X1 shipped with. Then copy the .uf2 file of the latest skyBlip Bravo release from the <a href="https://github.com/fcatuhe/skyblip/releases">releases page</a> to the <span class="mono">X1</span> drive.</p>
+    </details>
+  </div>
 </section>
 
 <section id="buy" class="band band--tint">

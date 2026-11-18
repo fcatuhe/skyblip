@@ -1,0 +1,118 @@
+<% content_for :title, t("briefing.setup.title") %>
+<% content_for :rail, render("briefing/rail", variant: "rail", current: "setup") %>
+<%= tag.div class: "unit unit--setup", data: {
+      controller: "setup",
+      setup_devices_value: "#{briefing_root_path}/devices",
+      setup_activation_value: briefing_activation_path,
+      setup_setup_value: briefing_setup_path,
+      setup_partner_value: @partner,
+      setup_challenges_value: activation_challenges_path,
+      setup_registrations_value: activation_registrations_path,
+      setup_glass_outlet: ".glass-prompt"
+    } do %>
+  <header class="unit-head">
+    <h1 class="unit-name" data-setup-target="title"><%= t("briefing.setup.title") %></h1>
+  </header>
+
+  <ol class="setup-steps" data-setup-target="steps">
+    <li data-step="install"><%= t("briefing.setup.steps.install") %></li>
+    <li data-step="connect"><%= t("briefing.setup.steps.connect") %></li>
+    <li data-step="aircraft"><%= t("briefing.setup.steps.aircraft") %></li>
+  </ol>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="start">
+    <p class="unit-lede"><%= t("briefing.setup.start") %></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="install" data-action="setup#restart"><%= t("briefing.setup.install") %></button>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="drive" hidden>
+    <p class="unit-lede" data-setup-target="driveText"></p>
+    <ul class="setup-by-hand" data-setup-target="byHand" hidden>
+      <li data-product="go"><%= t("briefing.setup.by_hand.go") %></li>
+      <li data-product="bravo"><%= t("briefing.setup.by_hand.bravo") %></li>
+    </ul>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="chooseDrive" data-action="setup#install"><%= t("briefing.setup.choose_drive") %></button>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="writing" hidden>
+    <p class="unit-lede" data-setup-target="writingText"></p>
+    <progress class="setup-progress" aria-labelledby="setup-writing"></progress>
+    <p class="note" id="setup-writing"><%= t("briefing.setup.keep_plugged") %></p>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="connect" hidden>
+    <p class="unit-lede" data-setup-target="connectText"></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="connect" data-action="setup#connectInstalled"><%= t("briefing.setup.connect") %></button>
+    </div>
+    <p class="note" data-setup-target="connectHint"></p>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="finish" hidden>
+    <p class="unit-lede" data-setup-target="finishText"></p>
+    <div class="app-actions">
+      <button type="button" class="button-app" data-setup-target="retry" data-action="setup#retry" hidden><%= t("briefing.setup.try_again") %></button>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="aircraft" hidden>
+    <p class="unit-lede" data-setup-target="aircraftText"></p>
+    <form class="setup-aircraft" data-setup-target="aircraftForm" data-action="submit->setup#saveAircraft input->setup#edited change->setup#edited">
+      <fieldset class="setup-fields" data-setup-target="aircraftFields">
+        <legend class="visually-hidden"><%= t("briefing.settings.aircraft") %></legend>
+        <div class="field" data-setting="aircraft_type">
+          <label for="setup-aircraft-type"><%= t("settings.aircraft_type") %></label>
+          <select id="setup-aircraft-type" name="aircraft_type">
+            <% Ownship::AircraftType.all.each do |type| %>
+              <option value="<%= type.code %>"><%= type.name %></option>
+            <% end %>
+          </select>
+        </div>
+        <div class="field" data-setting="callsign">
+          <label for="setup-callsign"><%= t("settings.callsign") %></label>
+          <input type="text" id="setup-callsign" name="callsign" maxlength="9" pattern="[A-Za-z0-9 \-]*"
+                 autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="F-JXYZ">
+        </div>
+        <details class="setup-transponder" data-setting="aircraft_address" data-setup-target="transponder">
+          <summary data-setup-target="transponderSummary"></summary>
+          <div class="field">
+            <label for="setup-aircraft-address"><%= t("settings.aircraft_address") %></label>
+            <input type="text" id="setup-aircraft-address" name="aircraft_address" maxlength="6" pattern="[0-9A-Fa-f]{6}"
+                   autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="3C6586">
+          </div>
+        </details>
+      </fieldset>
+      <div class="app-actions">
+        <button type="submit" class="button-app" data-setup-target="save"><%= t("briefing.setup.save") %></button>
+        <button type="button" class="button-app button-app--quiet" data-setup-target="editNow" data-action="setup#editNow" hidden><%= t("briefing.setup.set_now") %></button>
+        <button type="button" class="button-app button-app--quiet" data-setup-target="later" data-action="setup#skipAircraft"><%= t("briefing.setup.later") %></button>
+      </div>
+    </form>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="done" hidden>
+    <p class="unit-lede" data-setup-target="doneText"></p>
+    <div class="app-actions">
+      <a class="button-app" data-setup-target="open"></a>
+      <a class="button-app button-app--quiet" data-setup-target="setUpPartner" hidden></a>
+    </div>
+  </section>
+
+  <section class="setup-step" data-setup-target="panel" data-panel="unsupported" hidden>
+    <p class="unit-lede" data-setup-target="unsupportedText"></p>
+    <p class="note"><%= link_to_page "buy", label: t("briefing.setup.by_hand_link"), anchor: "install" %></p>
+  </section>
+
+  <div class="unit-message" role="status" data-setup-target="message" hidden>
+    <p data-setup-target="messageText"></p>
+    <button type="button" class="button-app button-app--small button-app--quiet" data-setup-target="connectRunning" data-action="setup#connectRunning" hidden><%= t("briefing.setup.connect_running") %></button>
+  </div>
+
+  <%= render "briefing/glass" %>
+
+  <%= turbo_frame_tag :installers, src: briefing_installer_path, loading: :eager, data: { setup_target: "installers" } %>
+<% end %>

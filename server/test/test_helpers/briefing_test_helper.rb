@@ -9,7 +9,17 @@ module BriefingTestHelper
       page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
     end
 
+    # INFO: fc 17nov26 a unit on a USB cable, whose fleet unit appears once the UF2 it is given lands, as fake_usb.js does
+    def plugged_in(device)
+      script = Rails.root.join("test/system/fake_usb.js").read << "\nfakeUsb.plug(#{device.to_json});"
+      page.driver.browser.page.command("Page.addScriptToEvaluateOnNewDocument", source: script)
+    end
+
+    def a_meshtastic_go(**options) = { product: "go", nodeNum: 0x9a3f2a, hwModel: 7, unit: a_new_go, **options }
+    def a_meshtastic_bravo(**options) = { product: "bravo", nodeNum: 0xd55c1d, hwModel: 128, unit: a_new_bravo, **options }
+
     def a_new_go(**options) = { name: "activate 3F2A skyBlip", address: nil, vectors:, stored: NEW_SETTINGS, **options }
+    def a_new_bravo(**options) = a_bravo(name: "skyBlip Bravo 5C1D", bluetoothTag: 0x5c1d, stored: NEW_SETTINGS, **options)
     def a_go(**options) = { name: "skyBlip Go 00012A", **options }
     def a_bravo(**options) = { name: "skyBlip Bravo 3F2A", product: "bravo", address: nil, running: "0.1.0+40", key: "212602F2", imu: nil, **options }
 
@@ -20,6 +30,15 @@ module BriefingTestHelper
           yield
           assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all
         end
+      end
+    end
+
+    # INFO: fc 17nov26 the newest images GitHub held when the cassette was recorded, the .uf2 a USB install writes among them
+    def with_installers
+      VCR.use_cassette("github/installers", allow_playback_repeats: true) do
+        yield
+        assert_no_selector "turbo-frame#installers:not([complete])", visible: :all
+        assert_no_selector "turbo-frame#firmware_shelf:not([complete])", visible: :all
       end
     end
 

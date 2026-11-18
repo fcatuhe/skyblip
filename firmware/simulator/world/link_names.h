@@ -93,8 +93,17 @@ inline constexpr Value kReasonValues[] = {
     {"unknown_browser", 51},
     {"not_own_transponder", 52},
     {"set_on_go", 53},
+    {"confirm_pair", 54},
+    {"pair", 55},
+    {"paired", 56},
+    {"not_found", 57},
+    {"phones_connected", 58},
+    {"narrow_link", 59},
+    {"no_answer", 60},
+    {"link_lost", 61},
+    {"unknown_protocol", 62},
 };
-inline constexpr Enumeration kReason{kReasonValues, 53};
+inline constexpr Enumeration kReason{kReasonValues, 62};
 
 inline constexpr Value kAlarmValues[] = {
     {"off", 0},
@@ -283,8 +292,9 @@ inline constexpr Value kCommandValues[] = {
     {"attest", 37},
     {"attestation", 38},
     {"identity", 39},
+    {"pair", 40},
 };
-inline constexpr Enumeration kCommand{kCommandValues, 40};
+inline constexpr Enumeration kCommand{kCommandValues, 41};
 
 inline constexpr Key kAcknowledgementKeys[] = {
     {"command", 0, Type::Enum, &kCommand, 0, false},
@@ -312,6 +322,7 @@ inline constexpr Key kConfigKeys[] = {
     {"alarm", 12, Type::Enum, &kAlarm, 0, false},
     {"alarm_from_go", 13, Type::Boolean, nullptr, 0, false},
     {"annunciator_fitted", 14, Type::Boolean, nullptr, 0, false},
+    {"paired_tag", 15, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kStatusKeys[] = {
@@ -711,12 +722,17 @@ inline constexpr Key kIdentityKeys[] = {
     {"bluetooth_tag", 6, Type::Unsigned, nullptr, 0, true},
 };
 
+inline constexpr Key kPairKeys[] = {
+    {"command", 0, Type::Enum, &kCommand, 0, false},
+    {"tag", 1, Type::Unsigned, nullptr, 0, true},
+};
+
 inline constexpr Frame kFrames[] = {
     {"acknowledgement", 0, events::Endpoint::Config, Sender::Unit, kAcknowledgementKeys, 5},
     {"get", 1, events::Endpoint::Config, Sender::Host, kGetKeys, 1},
-    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 13},
-    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 13},
-    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 13},
+    {"config", 2, events::Endpoint::Config, Sender::Unit, kConfigKeys, 14},
+    {"defaults", 3, events::Endpoint::Config, Sender::Both, kConfigKeys, 14},
+    {"set", 4, events::Endpoint::Config, Sender::Host, kConfigKeys, 14},
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
@@ -752,6 +768,7 @@ inline constexpr Frame kFrames[] = {
     {"attest", 37, events::Endpoint::Config, Sender::Host, kAttestKeys, 2},
     {"attestation", 38, events::Endpoint::Config, Sender::Unit, kAttestationKeys, 7},
     {"identity", 39, events::Endpoint::Config, Sender::Both, kIdentityKeys, 7},
+    {"pair", 40, events::Endpoint::Config, Sender::Host, kPairKeys, 2},
 };
 
 }

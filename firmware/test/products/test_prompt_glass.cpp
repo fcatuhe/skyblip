@@ -79,6 +79,16 @@ TEST_CASE(
     CHECK_FALSE(simulator::draw_prompt(glass, "capture", "full:many", "", 30));
 }
 
+TEST_CASE("prompt glass: a pair names the Bravo by the tag the page sends, as the Go does") {
+    go::Glass glass;
+    REQUIRE(simulator::draw_prompt(glass, "pair", "3F2A", "", 30));
+    CHECK(same(glass, confirm(comms::Pending::Pair, "PAIR WITH BRAVO 3F2A", 30)));
+    CHECK(reads_heading(glass, "PAIR BRAVO", go::Heading::Interrupt));
+    CHECK_FALSE(simulator::draw_prompt(glass, "pair", "3f2a", "", 30));
+    CHECK_FALSE(simulator::draw_prompt(glass, "pair", "3F2", "", 30));
+    CHECK_FALSE(simulator::draw_prompt(glass, "pair", "", "", 30));
+}
+
 TEST_CASE("prompt glass: every other prompt is the Go's title and detail for it") {
     const struct {
         const char* name;

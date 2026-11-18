@@ -2,7 +2,7 @@ require "test_helper"
 
 class Event::CatalogTest < ActiveSupport::TestCase
   NOTIFIED = /(?:Rails\.event\.notify|record_now)[ (]"([a-z_.]+)"/
-  RECORDED = /["']((?:browser|bluetooth|device|activation)\.[a-z_]+)["']/
+  RECORDED = /["']((?:browser|bluetooth|device|activation|installer)\.[a-z_]+)["']/
   RAISED_ELSEWHERE = %w[Traces].freeze
 
   # The Events page and the agents explain every event by its entry, so an event added without one would go unexplained.

@@ -59,6 +59,12 @@ class BravoService : public runtime::Service {
     void end_pairing();
     void pair(int found_index, uint32_t now_ms);
     void unpair();
+    // INFO: fc 16nov26 a browser names the Bravo by its tag and hears the verdict once it is
+    // settled
+    void pair_with(uint16_t tag, uint32_t now_ms);
+    std::optional<uint16_t> seeking() const { return wanted_; }
+    // INFO: fc 16nov26 true once when a browser starts a pairing, so the glass shows the BRAVO page
+    bool take_link_pairing_notice();
 
     BravoStep step() const { return step_; }
     uint32_t step_since_ms() const { return step_since_ms_; }
@@ -100,7 +106,10 @@ class BravoService : public runtime::Service {
     comms::BravoState state_now() const;
     void came_up(uint16_t payload_bytes, uint32_t now_ms);
     void went_down();
-    void hear(const events::CentralEvent& event);
+    void hear(const events::CentralEvent& event, uint32_t now_ms);
+    void pick(const events::BluetoothAddress& address, uint32_t now_ms);
+    void seek(uint32_t now_ms);
+    void answer_link(link::Reason verdict);
     void start_scan();
     void refuse(BravoRefusal refusal);
     void refuse_protocol();
@@ -157,6 +166,11 @@ class BravoService : public runtime::Service {
     bool forgotten_{false};
     bool asking_again_{false};
     bool asking_noticed_{false};
+    std::optional<uint16_t> wanted_{};
+    uint32_t wanted_since_ms_{0};
+    bool seek_due_{false};
+    bool link_answer_owed_{false};
+    bool link_pairing_noticed_{false};
 };
 
 }  // namespace skyblip::go

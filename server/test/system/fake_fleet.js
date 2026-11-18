@@ -17,6 +17,7 @@
   const MAX_RECORDS_PER_CHUNK = 19;
   const MAX_READ_CHUNKS = 8;
   const BROWSER_COMMANDS = ['browser_challenge', 'trust_browser', 'browsers', 'forget_browser'];
+  const TRUSTED_TASKS = ['set', 'dfu', 'register', 'pair'];
   const DEFAULTS = { aircraft_type: 1, units: 'nautical', callsign: '', aircraft_address: 0, alarm: 'loud' };
   const encoder = new TextEncoder();
   const modules = () => Promise.all([import('#skyblip/link'), import('#skyblip/cbor'), import('#skyblip/image')]);
@@ -83,6 +84,8 @@
         sounds: true,
         goAlarm: null,
         bravo: null,
+        pairedTag: null,
+        pairDelayMs: 300,
       }, options);
       this.deviceId ??= this.vectors?.device_id ?? deviceIdOf(this.name);
       this.connected = false;
@@ -202,10 +205,11 @@
     config() {
       const address = this.address === null ? {} : { address: this.address };
       const paired = this.goAlarm !== null;
+      const pairedTag = this.pairedTag === null ? {} : { paired_tag: this.pairedTag };
       const stored = this.product === 'bravo'
         ? { aircraft_address: this.stored.aircraft_address, alarm: paired ? this.goAlarm : this.stored.alarm, alarm_from_go: paired }
         : { ...this.stored, annunciator_fitted: this.sounds };
-      return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored });
+      return this.reply({ command: 'config', version: 1, ...address, address_mapping_table: 58, ...stored, ...pairedTag });
     }
 
     ask(task, reason) {
@@ -213,7 +217,7 @@
       const trustedSet = task === 'set' && this.trusted;
       if (this.flight === 'airborne' && task !== 'register' && !trustedSet) return this.acknowledge(false, 'in_flight');
       this.pending = task;
-      if (this.trusted && ['set', 'dfu'].includes(task)) return this.press();
+      if (this.trusted && TRUSTED_TASKS.includes(task)) return this.press();
       this.acknowledge(false, reason, true);
       if (this.pressAfterMs !== null) later(() => this.pending === task && this.press(), this.pressAfterMs);
     }
@@ -237,6 +241,7 @@
         return this.ask('dfu', 'confirm_dfu');
       }
       if (command === 'recovery') return this.ask('recovery', 'confirm_recovery');
+      if (command === 'pair') return this.askToPair(fields.tag);
       if (command === 'capture') return this.orderCapture(fields.profile);
       if (command === 'diagnostics') return this.dump();
       if (command === 'challenge') {
@@ -344,7 +349,7 @@
     async press() {
       const task = this.pending;
       this.pending = null;
-      if (['set', 'dfu'].includes(task) && this.proven && !this.trusted) {
+      if (TRUSTED_TASKS.includes(task) && this.proven && !this.trusted) {
         this.browsers = [...this.browsers, this.proven];
         this.trusted = true;
       }
@@ -365,6 +370,41 @@
         return later(() => this.drop(), 50);
       }
       if (task === 'register') return this.register();
+      if (task === 'pair') {
+        this.acknowledge(true, 'pair');
+        return this.pairWith(this.pairing);
+      }
+    }
+
+    // INFO: fc 17nov26 config.cpp's pair: a Bravo arms for a trusted page only, a Go asks or starts
+    askToPair(tag) {
+      if (this.flight === 'airborne') return this.acknowledge(false, 'in_flight');
+      if (this.product === 'go') {
+        this.pairing = tag;
+        return this.ask('pair', 'confirm_pair');
+      }
+      if (!this.trusted) return this.acknowledge(false, 'untrusted');
+      this.armedFor = tag;
+      return this.acknowledge(true, 'pair');
+    }
+
+    pairWith(tag) {
+      const bravo = fleet.units.find(unit => unit.product === 'bravo' && unit.bluetoothTag === tag && !unit.rebooting);
+      if (!bravo) return later(() => this.acknowledge(false, 'not_found'), this.pairDelayMs);
+      bravo.requestFrom = this;
+      if (bravo.armedFor === this.bluetoothTag) later(() => bravo.pressPairing(), this.pairDelayMs);
+    }
+
+    // INFO: fc 17nov26 one press on Bravo's blue blink, or its armed acceptance, offers it to the Go, and both pin
+    pressPairing() {
+      const go = this.requestFrom;
+      if (!go) return;
+      this.requestFrom = null;
+      this.armedFor = null;
+      for (const other of fleet.units.filter(unit => unit.product === 'go' && unit.pairedTag === this.bluetoothTag)) other.pairedTag = null;
+      this.pairedTag = go.bluetoothTag;
+      go.pairedTag = this.bluetoothTag;
+      go.acknowledge(true, 'paired');
     }
 
     refuse() {

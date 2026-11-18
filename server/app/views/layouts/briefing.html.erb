@@ -16,6 +16,7 @@
       <details class="app-menu" data-controller="install">
         <summary><%= t("briefing.menu.open") %></summary>
         <ul>
+          <li><%= link_to t("briefing.menu.set_up"), briefing_setup_path %></li>
           <li><%= link_to t("briefing.menu.activate"), briefing_activation_path %></li>
           <li><%= link_to t("briefing.menu.tools"), briefing_tools_path %></li>
           <li><%= link_to t("briefing.menu.preferences"), briefing_preferences_path %></li>

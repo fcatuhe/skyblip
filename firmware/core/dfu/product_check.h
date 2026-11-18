@@ -20,12 +20,16 @@ class ProductCheck {
     bool admits(size_t offset, const uint8_t* chunk, size_t bytes);
 
    private:
+    bool verify() const;
+
     std::optional<ImageClass> expected_;
+    ImageHeader header_{};
+    size_t upload_bytes_{0};
     bool refused_{false};
     bool verified_{false};
     size_t area_offset_{0};
     size_t area_bytes_{0};
-    uint8_t area_[kProtectedAreaBytes]{};
+    uint8_t area_[kProtectedAreaBytes + kTlvInfoBytes]{};
 };
 
 }  // namespace skyblip::dfu

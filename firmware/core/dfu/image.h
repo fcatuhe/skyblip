@@ -4,6 +4,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 #include "core/util/sha256.h"
 #include "ports/dfu.h"
@@ -11,6 +12,7 @@
 namespace skyblip::dfu {
 
 constexpr size_t kImageHeaderBytes = 32;
+constexpr size_t kTlvInfoBytes = 4;
 
 using ImageClass = std::array<uint8_t, 16>;
 
@@ -21,9 +23,13 @@ struct ImageHeader {
     uint32_t body_bytes{0};
 
     uint32_t tlv_offset() const { return header_bytes + body_bytes; }
+    uint32_t unprotected_tlv_offset() const { return tlv_offset() + protected_tlv_bytes; }
 };
 
 bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out);
+
+// INFO: fc 16nov26 MCUboot's boot_read_image_size: the image ends with the TLV area this info opens
+std::optional<uint32_t> image_end(const ImageHeader& header, const uint8_t* tlv_info, size_t bytes);
 
 bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out);
 

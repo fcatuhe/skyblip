@@ -41,8 +41,12 @@ enum class Pending : uint8_t {
     EraseLog = 6,
     GnssColdStart = 7,
     Register = 8,
-    Capture = 9
+    Capture = 9,
+    Pair = 10
 };
+
+// INFO: fc 16nov26 a Go asks an untrusted browser's pair on its glass, Bravo has none to ask on
+enum class PairingSide : uint8_t { None, Go, Bravo };
 
 // What a prompt says it is, and what confirming it will do. The panel and the
 // phone read the same two strings, so a pilot pressing the button and a pilot
@@ -52,6 +56,7 @@ const char* pending_title(Pending pending);
 const char* pending_detail(Pending pending);
 int format_dfu_detail(char* out, size_t capacity, const ports::ImageVersion& version);
 int format_capture_detail(char* out, CaptureProfile profile, uint32_t evicts_flights);
+int format_pair_detail(char* out, uint16_t tag);
 
 // INFO: cf 02aug26 A prompt is an open authorisation standing on the glass, so
 // it is not allowed to stand there forever: a device left on a wing with an
@@ -104,6 +109,7 @@ class ConfigService {
 
     TrustedBrowsers& trusted_browsers() { return browsers_.trusted(); }
     bool browsers_dirty() const { return browsers_dirty_; }
+    void note_browsers_changed() { browsers_dirty_ = true; }
     void clear_browsers_dirty() { browsers_dirty_ = false; }
 
     // Drives the upload-window timeout. Called once per App::step().
@@ -222,7 +228,8 @@ class ConfigService {
     const char* prompt_detail() const;
     // INFO: fc 15nov26 the press on this prompt also stores the browser's proven key
     bool prompt_trusts_browser() const {
-        return (pending_ == Pending::Set || pending_ == Pending::Dfu) &&
+        return (pending_ == Pending::Set || pending_ == Pending::Dfu ||
+                pending_ == Pending::Register || pending_ == Pending::Pair) &&
                browsers_.enrolls(claim_.peer());
     }
     uint32_t prompt_seconds_left(uint32_t now_ms) const;
@@ -251,6 +258,14 @@ class ConfigService {
     }
     std::optional<CaptureProfile> capture_requested() const { return capture_requested_; }
     void clear_capture_request() { capture_requested_.reset(); }
+
+    // INFO: fc 16nov26 a Go and a Bravo answer pair, each told the tag of the other (README.md)
+    void serve_pairing(PairingSide side) { pairing_side_ = side; }
+    void set_paired_tag(std::optional<uint16_t> tag) { paired_tag_ = tag; }
+    std::optional<uint16_t> take_pair_request();
+    // INFO: fc 16nov26 the Go's verdict goes unasked to the browser that asked, while it is
+    // connected
+    void pairing_ended(link::Reason verdict);
 
     // Erasing the flight log destroys evidence a pilot may need for a claim or
     // an incident, so it knocks on the same door a firmware upload does: the
@@ -303,6 +318,8 @@ class ConfigService {
     bool prompt_refused();
     void stage(Pending pending, link::Reason reason);
     void acknowledge(bool accepted, std::optional<link::Reason> reason = std::nullopt);
+    void acknowledge_to(const events::Peer& peer, bool accepted,
+                        std::optional<link::Reason> reason);
     void send_config();
     void send_status();
     void send_defaults();
@@ -359,6 +376,8 @@ class ConfigService {
     void stage_settings(const events::RxFrame& frame);
     void answer_prompt_request(link::Command command, const cbor::Reader& frame);
     void request_capture(const cbor::Reader& frame);
+    void request_pairing(const cbor::Reader& frame);
+    void start_pairing(uint16_t tag);
     void install_received_image();
     void refuse_landing(link::Reason reason);
     void open_upload_window();
@@ -399,6 +418,11 @@ class ConfigService {
     bool capture_armed_{false};
     CaptureProfile staged_capture_{CaptureProfile::Stop};
     std::optional<CaptureProfile> capture_requested_{};
+    PairingSide pairing_side_{PairingSide::None};
+    std::optional<uint16_t> paired_tag_{};
+    std::optional<uint16_t> pair_requested_{};
+    uint16_t staged_pair_tag_{0};
+    std::optional<events::Peer> pairing_peer_{};
     Pending pending_{Pending::None};
     bool refused_on_device_{false};
     bool settings_dirty_{false};
