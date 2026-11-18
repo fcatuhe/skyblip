@@ -1,15 +1,15 @@
 ---
 title: "ADS-L declaration of conformity"
 nav_title: ADS-L conformity
-description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go and Go+, and the CE, installation and user documents the standard asks a manufacturer for."
+description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go, with the CE, installation and user documents the standard asks for."
 published_on: "2026-11-12"
 parent: ads-l
-updated_on: "2026-11-14"
+updated_on: "2026-11-18"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
-  <h1>The declaration skyBlip Go and Go+ need, and the documents that go with it.</h1>
+  <h1>The declaration skyBlip Go needs, and the documents that go with it.</h1>
   <p class="lede">
     ADS-L has no ETSO and no MOPS. Under <strong>ADS-L.4.SRD860.A.4</strong>
     the manufacturer verifies its equipment against the specification and
@@ -19,10 +19,10 @@ updated_on: "2026-11-14"
     installation manual and a user manual.
   </p>
   <p>
-    This page holds the declaration for skyBlip Go and Go+, filled in as far as
-    the facts allow, and links each of the four documents. It will be signed
-    in November or December 2026. Two of the four statements the manufacturer
-    must make do not hold yet, and the tables below say which. The firmware
+    This page holds the declaration for skyBlip Go, filled in as far as the
+    facts allow, and links each of the four documents. It will be signed in
+    November or December 2026. The four statements the manufacturer must make
+    hold, and the last table below gives the grounds for each. The firmware
     now transmits the configured ICAO address under F.2.3. Our reading that
     this overrides the manufacturer&rsquo;s address on every payload remains
     subject to confirmation by EASA, as recorded on the
@@ -31,18 +31,24 @@ updated_on: "2026-11-14"
 </section>
 
 <section>
-  <h2 class="kicker">Go and Go+</h2>
-  <h3>One product for ADS-L: a Go+ is a Go with accessories.</h3>
+  <h2 class="kicker">Firmware and hardware</h2>
+  <h3>skyBlip supplies the firmware, declared on one hardware: the LilyGO T-Echo.</h3>
 
   <p>
-    A skyBlip Go runs on a LilyGO T-Echo, and a skyBlip Go+ on a LilyGO T-Echo
-    Plus. Everything ADS-L depends on is the same in both: the nRF52840
-    processor, the Quectel L76K GNSS receiver and its PPS, the Semtech SX1262
-    868&nbsp;MHz radio and the antenna. Both run the same firmware image, built
-    for one board definition. The T-Echo Plus adds an inertial unit, a buzzer,
-    a vibration motor and a larger battery. None of them transmits, receives
-    or feeds the ADS-L payload, so one declaration covers both under one part
-    number.
+    skyBlip Go is skyBlip&rsquo;s firmware on a LilyGO T-Echo. LilyGO builds
+    the hardware, and the T-Echo has passed CE testing. The declaration
+    covers the firmware on the T-Echo. skyBlip will revise it before it
+    supports any other hardware.
+  </p>
+  <p>
+    The firmware checks the hardware it runs on. At every start-up it probes
+    the SX1262 radio by a register written and read back, and the BME280
+    barometer by its chip id. Without either, the unit does not run: it shows
+    its self-test page, neither transmits nor receives, and cannot be
+    activated, because no service runs to answer the activation. A part that
+    fails or is removed after activation stops the unit at its next
+    start-up. A compile-time check rejects a build whose programmed power,
+    with the declared antenna, would exceed 14&nbsp;dBm e.r.p.
   </p>
 </section>
 
@@ -53,18 +59,17 @@ updated_on: "2026-11-14"
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Document</th><th>Device</th><th>Where it stands</th></tr>
+        <tr><th>Document</th><th>Where it stands</th></tr>
       </thead>
       <tbody>
         <tr>
           <th>ADS-L declaration of conformity</th>
-          <td>Go, Go+</td>
-          <td>drafted <a href="#declaration">below</a>, not signed</td>
+          <td>drafted <a href="#declaration">below</a> and as a <a href="<%= asset_path "pages/ads-l/skyblip-go-ads-l-declaration.pdf" %>">PDF to sign</a>, not signed</td>
         </tr>
         <tr>
           <th>CE: radio, EMC, safety, health</th>
-          <td>Go, a LilyGO T-Echo</td>
           <td>
+            skyBlip Go runs on a LilyGO T-Echo, which holds the
             <a href="https://cdn.shopify.com/s/files/1/0617/7190/7253/files/T-ECHO_CE.pdf?v=1691478157">attestation of conformity SZ1220803-35313E-RF</a>,
             issued by BACL Shenzhen on 18 Nov 2022 to LilyGO for model T-Echo,
             under the Radio Equipment Directive 2014/53/EU. It is a test
@@ -75,18 +80,19 @@ updated_on: "2026-11-14"
           </td>
         </tr>
         <tr>
-          <th>CE: radio, EMC, safety, health</th>
-          <td>Go+, a LilyGO T-Echo Plus</td>
-          <td>missing. The radio is the T-Echo&rsquo;s, but LilyGO sells the T-Echo Plus as its own model, and the T-Echo attestation names model T-Echo only. LilyGO publishes none for the T-Echo Plus.</td>
-        </tr>
-        <tr>
           <th>Installation manual</th>
-          <td>Go, Go+</td>
-          <td>not written. It has to cover where to mount the device and its antenna for range, vertical polarisation and an omnidirectional pattern.</td>
+          <td>
+            the <%= link_to_page "guides", label: "Install section", anchor: "install" %>
+            of the guides. <%= link_to_page "install", label: "Install" %> puts
+            the firmware on the device, and
+            <%= link_to_page "mount", label: "Cockpit mount" %> fixes it to the
+            glareshield and places its antenna upright, clear of metal, carbon
+            fibre and the pilot, for vertical polarisation and an omnidirectional
+            pattern.
+          </td>
         </tr>
         <tr>
           <th>User manual</th>
-          <td>Go, Go+</td>
           <td>
             the <%= link_to_page "guides", label: "guides" %>. The ADS-L parts
             are <%= link_to_page "radio", label: "Radio" %>, on channels,
@@ -131,27 +137,34 @@ updated_on: "2026-11-14"
 
 <section>
   <h2 class="kicker">The declaration</h2>
-  <h3 id="declaration">The appendix template, filled in for skyBlip Go and Go+.</h3>
+  <h3 id="declaration">The appendix template, filled in for skyBlip Go.</h3>
 
   <p>
     In accordance with ED Decision 2022/024/R and the attached Technical
     Specification for ADS-L transmissions using the SRD-860 frequency band
     (&ldquo;ADS-L 4 SRD 860&rdquo;).
   </p>
+  <p>
+    The <a href="<%= asset_path "pages/ads-l/skyblip-go-ads-l-declaration.pdf" %>">PDF to sign</a>
+    lays out the same declaration in the appendix&rsquo;s wording, with a
+    shorter answer in each field. The tables below give the reasons behind
+    each answer.
+  </p>
 
   <div class="table-scroll">
     <table>
       <tbody>
         <tr><th>Manufacturer</th><td>François Catuhe EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
-        <tr><th>Product name</th><td>skyBlip Go, on a LilyGO T-Echo. skyBlip Go+, on a LilyGO T-Echo Plus, is the same product with accessories.</td></tr>
+        <tr><th>Product name</th><td>skyBlip Go</td></tr>
+        <tr><th>Hardware</th><td>LilyGO T-Echo</td></tr>
         <tr><th>Device P/N</th><td>skyBlipGo</td></tr>
-        <tr><th>Firmware version</th><td>skyBlip 0.1.0</td></tr>
+        <tr><th>Firmware version</th><td>skyBlip 1.0.0, with ADS-L implementation 1.0.0</td></tr>
         <tr><th>Standard</th><td>ADS-L 4 SRD860 Issue 2</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>This draft names firmware 0.1.0 and skyBlip&rsquo;s ADS-L implementation 0.1.0, for ADS-L 4 SRD-860 Issue 2. No production release of firmware 0.1.0 exists yet. The ADS-L implementation version is separate from the packet&rsquo;s Protocol Version field in E.1.1. It stays at 0.1.0 until ready for production. After that, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
+  <p>The declaration names firmware 1.0.0, the first production release, and skyBlip&rsquo;s ADS-L implementation 1.0.0, for ADS-L 4 SRD-860 Issue 2. Development builds carry 0.1.0 until that release. The ADS-L implementation version is separate from the packet&rsquo;s Protocol Version field in E.1.1. After 1.0.0, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
 
   <h3>Transmission parameters</h3>
   <div class="table-scroll">
@@ -206,13 +219,13 @@ updated_on: "2026-11-14"
       <tbody>
         <tr>
           <th>Design processes and production controls</th>
-          <td>to write</td>
-          <td>LilyGO builds the hardware. skyBlip builds the firmware. CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. These software checks do not replace measurements on a unit. The statement still has to say how hardware and firmware design and production are controlled.</td>
+          <td>yes</td>
+          <td>LilyGO manufactures the T-Echo under its own production controls, and the model passed BACL Shenzhen&rsquo;s CE tests. skyBlip designs the firmware, and CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. Each unit is checked again where it is used: at every start-up the firmware refuses to run without its radio and barometer, and skyblip.eu activates each unit on its own, signing its serial against its chip id. These software checks do not replace measurements on a unit.</td>
         </tr>
         <tr>
-          <th>CE marked and documented</th>
-          <td>Go only</td>
-          <td>the T-Echo has LilyGO&rsquo;s RED attestation. The T-Echo Plus has no published CE document.</td>
+          <th>Hardware has passed CE</th>
+          <td>yes</td>
+          <td>the T-Echo passed BACL Shenzhen&rsquo;s tests for radio, EMC, safety and health under the Radio Equipment Directive. The declaration states this in place of the template&rsquo;s wording, which says the product is CE marked.</td>
         </tr>
         <tr>
           <th>Approved address range, F.2.2</th>
@@ -232,7 +245,7 @@ updated_on: "2026-11-14"
     <table>
       <tbody>
         <tr><th>Date</th><td>to be signed in November or December 2026</td></tr>
-        <tr><th>Authorized representative</th><td>François Catuhe, [position]</td></tr>
+        <tr><th>Authorized representative</th><td>François Catuhe, Entrepreneur individuel</td></tr>
         <tr><th>Signature and company stamp</th><td>not signed</td></tr>
       </tbody>
     </table>
