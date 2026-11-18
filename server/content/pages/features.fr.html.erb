@@ -33,6 +33,20 @@ updated_on: "2026-11-18"
       <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant sa position dans une minute, et votre route en pointillés." %>
     </figure>
   </div>
+  <div class="blip-legend">
+    <div>
+      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
+      <p>Au-dessus</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
+      <p>À votre niveau</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
+      <p>En dessous</p>
+    </div>
+  </div>
   <div class="feature feature--reverse">
     <div>
       <h3 id="every-aircraft">Le trafic reste visible au-delà du cercle</h3>

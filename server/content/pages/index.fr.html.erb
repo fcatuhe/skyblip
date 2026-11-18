@@ -39,24 +39,63 @@ updated_on: "2026-11-18"
 </section>
 
 <section id="where-to-look" class="band">
-  <h2 class="section-title">Où regarder</h2>
-  <p>Sur le radar, vous lisez d&rsquo;un coup d&rsquo;œil où chercher un autre aéronef. Vous êtes au centre et la direction dans laquelle vous avancez est en haut. Un symbole en haut à droite indique un trafic devant vous, sur votre droite.</p>
-  <p>Une pointe vers le haut indique un aéronef au-dessus de vous. Une pointe vers le bas indique un aéronef en dessous. Un losange indique qu&rsquo;il vole à peu près à votre hauteur. Le trait au bout du symbole montre la trajectoire prévue pour la minute qui vient.</p>
-  <div class="blip-legend">
+  <h2 class="section-title">Voir et être vu, <span class="highlight">avec un Go</span></h2>
+
+  <div class="feature">
     <div>
-      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
-      <p>Au-dessus</p>
+      <h3>Un radar <span class="highlight">lisible d&rsquo;un coup d&rsquo;œil</span>.</h3>
+      <p>
+        Vous êtes au centre, route en haut. Chaque icône indique si l&rsquo;aéronef
+        est au-dessus, à votre niveau ou en dessous. Son trait indique
+        où il sera dans une minute.
+      </p>
     </div>
-    <div>
-      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
-      <p>À votre niveau</p>
-    </div>
-    <div>
-      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
-      <p>En dessous</p>
-    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant où il sera dans une minute" %>
+    </figure>
   </div>
-  <p>Quand une alerte se déclenche, une partie de l&rsquo;écran clignote du côté du trafic. Elle vous indique où regarder. Elle ne vous dit ni de monter ni de descendre.</p>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Une alarme <span class="highlight">qui donne la direction</span>.</h3>
+      <p>
+        À moins de 3&nbsp;km et 300&nbsp;m, un quart de l&rsquo;écran clignote
+        du côté du trafic.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : le quart de l'écran du côté du trafic est devenu noir" %>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3>Votre position <span class="highlight">émise chaque seconde</span>.</h3>
+      <p>
+        En vol, le Go émet votre position en ADS-L chaque seconde. Tout aéronef
+        équipé pour recevoir l&rsquo;ADS-L vous voit, avec votre indicatif.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs, à votre hauteur d'abord, avec leur source ADS-L ou FLARM, leur indicatif, leur distance et leur différence d'altitude par rapport à vous" %>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Le trafic <span class="highlight">dans votre application</span>.</h3>
+      <p>
+        En Bluetooth, le trafic s&rsquo;affiche dans SDVFR Next, SkyDemon,
+        ForeFlight et d&rsquo;autres applications.
+      </p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next : la carte avec le trafic reçu de skyBlip Go, chaque aéronef accompagné de son indicatif" %>
+      <figcaption>SkyDreamSoft SDVFR Next <a href="https://skydreamsoft.fr">skydreamsoft.fr</a></figcaption>
+    </figure>
+  </div>
+
+  <p class="signature"><%= link_to_page "features", label: "Voir toutes les fonctionnalités" %></p>
 </section>
 
 <section id="simulator" class="band band--tint try-radar">

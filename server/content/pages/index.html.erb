@@ -39,24 +39,62 @@ updated_on: "2026-11-18"
 </section>
 
 <section id="where-to-look" class="band">
-  <h2 class="section-title">Where to look</h2>
-  <p>The radar shows you where to look for another aircraft. You&rsquo;re at the centre and the direction you&rsquo;re travelling is at the top. A symbol at the top right means traffic ahead and to your right.</p>
-  <p>An upward point means the aircraft is above you. A downward point means it&rsquo;s below you. A diamond means it&rsquo;s roughly at your level. The line from the symbol shows its projected track over the next minute.</p>
-  <div class="blip-legend">
+  <h2 class="section-title">See and be seen, <span class="highlight">with a Go</span></h2>
+
+  <div class="feature">
     <div>
-      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
-      <p>Above you</p>
+      <h3>A radar <span class="highlight">you can read at a glance</span>.</h3>
+      <p>
+        You are in the centre, track up. Each traffic icon shows whether the aircraft
+        is above, level with you or below. Its line shows where it will be in a minute.
+      </p>
     </div>
-    <div>
-      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
-      <p>At your level</p>
-    </div>
-    <div>
-      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
-      <p>Below you</p>
-    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "The radar page: three aircraft, one above, one below, one level and climbing, each with a line showing where it will be in a minute" %>
+    </figure>
   </div>
-  <p>When an alert triggers, part of the screen flashes in the direction of the traffic. It shows you where to look. It doesn&rsquo;t tell you to climb or descend.</p>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>An alarm <span class="highlight">that gives the direction</span>.</h3>
+      <p>
+        Within 3&nbsp;km and 300&nbsp;m, a quarter of the screen flashes on the
+        side of the traffic.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "The radar page during an alarm: the quarter of the screen facing the traffic has turned black" %>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3>Your position <span class="highlight">broadcast every second</span>.</h3>
+      <p>
+        In flight, the Go broadcasts your position in ADS-L every second. Any
+        aircraft fitted with ADS-L sees you and your callsign.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "The Nearby page: five aircraft, those at your height first, with their source ADS-L or FLARM, their callsign, their distance and their height above or below you" %>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>The traffic <span class="highlight">in your app</span>.</h3>
+      <p>
+        Over Bluetooth, the traffic shows up in SDVFR Next, SkyDemon,
+        ForeFlight and other apps.
+      </p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next: the map with the traffic received from skyBlip Go, each aircraft labelled with its callsign" %>
+      <figcaption>SkyDreamSoft SDVFR Next <a href="https://skydreamsoft.fr">skydreamsoft.fr</a></figcaption>
+    </figure>
+  </div>
+
+  <p class="signature"><%= link_to_page "features", label: "See every feature" %></p>
 </section>
 
 <section id="simulator" class="band band--tint try-radar">

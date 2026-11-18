@@ -33,6 +33,20 @@ updated_on: "2026-11-18"
       <%= screen_image_tag "radar.png", alt: "Three aircraft on the radar: one above, one below and one climbing at your level. Each has a line to its position in one minute. Your track is dashed." %>
     </figure>
   </div>
+  <div class="blip-legend">
+    <div>
+      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
+      <p>Above you</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
+      <p>At your level</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
+      <p>Below you</p>
+    </div>
+  </div>
   <div class="feature feature--reverse">
     <div>
       <h3 id="every-aircraft">Traffic stays visible beyond the circle</h3>
