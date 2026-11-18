@@ -962,6 +962,31 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "uplink_targets",
           "number": 84,
           "type": "unsigned"
+        },
+        {
+          "name": "formats",
+          "number": 85,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "transponders",
+          "number": 86,
+          "type": "unsigned"
+        },
+        {
+          "name": "mode_s",
+          "number": 87,
+          "type": "unsigned"
+        },
+        {
+          "name": "mode_s_altitude",
+          "number": 88,
+          "type": "unsigned"
+        },
+        {
+          "name": "unmatched",
+          "number": 89,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1401,6 +1426,31 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "uplink_targets",
           "number": 84,
+          "type": "unsigned"
+        },
+        {
+          "name": "formats",
+          "number": 85,
+          "type": "unsigned_array"
+        },
+        {
+          "name": "transponders",
+          "number": 86,
+          "type": "unsigned"
+        },
+        {
+          "name": "mode_s",
+          "number": 87,
+          "type": "unsigned"
+        },
+        {
+          "name": "mode_s_altitude",
+          "number": 88,
+          "type": "unsigned"
+        },
+        {
+          "name": "unmatched",
+          "number": 89,
           "type": "unsigned"
         }
       ]

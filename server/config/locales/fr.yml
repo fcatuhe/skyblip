@@ -127,7 +127,7 @@ fr:
     guides: "Guides"
     project: "skyBlip"
     question: "Une question ? Une remarque ?"
-    write: "Écrivez-nous sur GitHub"
+    write_html: "Écrivez-nous à %{email} ou sur %{github}."
     license: "Code sous licence MIT"
     notices: "Licences tierces"
   share:

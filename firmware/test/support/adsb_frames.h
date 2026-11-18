@@ -12,9 +12,8 @@ namespace skyblip {
 
 inline Status adsb_hear(adsb::Squitter frame, adsb::Message& message) {
     adsb::seal(frame.bytes);
-    uint8_t chips[adsb::kChipBytes];
-    adsb::chips_of(frame.bytes, chips);
-    return status_of(adsb::receive(chips, sizeof(chips), adsb::Reception{0, -70}, message));
+    return status_of(
+        adsb::receive(frame.bytes, adsb::kFrameBytes, adsb::Reception{0, -70}, message));
 }
 
 }

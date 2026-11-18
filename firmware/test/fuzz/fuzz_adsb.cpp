@@ -1,4 +1,4 @@
-// A 1090 transmitter's frame as the LR2021's chips after the sync, then noise over them.
+// A 1090 transmitter's frame as the LR2021 decodes it, then noise over its bits.
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include <cstddef>
@@ -27,12 +27,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         adsb::seal(frame);
     }
 
-    uint8_t chips[adsb::kChipBytes];
-    adsb::chips_of(frame, chips);
     const std::vector<uint8_t> noise = in.ConsumeRemainingBytes<uint8_t>();
-    for (size_t i = 0; i < noise.size() && i < sizeof(chips); i++) chips[i] ^= noise[i];
+    for (size_t i = 0; i < noise.size() && i < sizeof(frame); i++) frame[i] ^= noise[i];
 
     adsb::Message message;
-    (void)adsb::receive(chips, sizeof(chips), adsb::Reception{}, message);
+    (void)adsb::receive(frame, sizeof(frame), adsb::Reception{}, message);
     return 0;
 }

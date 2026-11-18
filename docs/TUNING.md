@@ -30,6 +30,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kFirstFixNoteMs` | `(7 * kFirstFixEighthMs + 9 / 2) / 9` = 117 | milliseconds | - | a note sounds 7/9 of its eighth, so a silence parts repeated notes |
 | `kFirstFixNextBeatMs` | `kFirstFixEighthMs - kFirstFixNoteMs` = 33 | milliseconds | - | - |
 | `kFirstFixSkipBeatMs` | `2 * kFirstFixEighthMs - kFirstFixNoteMs` = 183 | milliseconds | - | - |
+| `kFirstFixLastNoteMs` | `2 * kFirstFixEighthMs` = 300 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
 | `kPeerLostNoteMs` | `3 * kTuneSixteenthMs` = 270 | milliseconds | - | [README](../firmware/core/annunciation/README.md) argues it |
 | `kReannounceRestMs` | `kTuneSixteenthMs` = 90 | milliseconds | - | a tune never starts over a sounding one, so no on-span outlasts the longest call |
 | `kShortestAlarmPhaseMs` | `std::min( {shortest_phase_ms(kAdvisoryTune), shortest_phase_ms(kPeerLostTune), kReannounceRestMs})` | milliseconds | - | the fix tune is a melody, not an alarm, so it keeps its own tempo |
@@ -271,6 +272,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs waits as long |
 | `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
+| `kTransponderForgetMs` | 30000 (30 s) | milliseconds | Forget | 30 s misses a dozen squitters 2.4 s apart, unverified until #239 benches it |
+| `kAltitudeMaxAgeMs` | `kTransponderForgetMs` = 30000 (30 s) | milliseconds | MaxAge | an altitude reply counts as long as a silent transponder is kept |
 
 ## `firmware/products/skyblip_bravo/services`
 
@@ -414,4 +417,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-269 constants over 26 folders.
+272 constants over 26 folders.

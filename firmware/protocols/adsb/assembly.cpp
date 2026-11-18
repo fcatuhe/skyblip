@@ -79,6 +79,8 @@ int32_t state_code(AirGround state) { return static_cast<int32_t>(state); }
 bool Assembly::fold(const Message& message, uint32_t at_ms, const Receipt& received,
                     const Reference& reference, Track& out) {
     if (own_address_ != 0 && message.address == own_address_) return false;
+    // INFO: fc 18nov26 a Mode S reply has no position to assemble, so only DF17 is folded
+    if (message.kind == Kind::AllCall || message.kind == Kind::Reply) return false;
     Aircraft* aircraft = admit(message, at_ms, reference);
     if (aircraft == nullptr) return false;
 
@@ -131,6 +133,8 @@ bool Assembly::fold(const Message& message, uint32_t at_ms, const Receipt& recei
             }
             break;
         }
+        case Kind::AllCall:
+        case Kind::Reply: break;
     }
     const bool says_where = message.kind == Kind::SurfacePosition ||
                             message.kind == Kind::AirbornePosition ||

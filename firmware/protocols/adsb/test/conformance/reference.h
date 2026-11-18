@@ -29,10 +29,8 @@ inline void put(adsb::Squitter& frame, uint8_t first, uint8_t last, uint64_t val
 }
 
 inline Heard hear_as_sent(const adsb::Squitter& frame) {
-    uint8_t chips[kChipBytes];
-    adsb::chips_of(frame.bytes, chips);
     Heard heard;
-    heard.status = receive(chips, sizeof(chips), Reception{1000, -70, true}, heard.message);
+    heard.status = receive(frame.bytes, kFrameBytes, Reception{1000, -70, true}, heard.message);
     return heard;
 }
 

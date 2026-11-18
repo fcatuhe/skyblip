@@ -6,7 +6,9 @@ class Briefing::ManifestsController < Briefing::ApplicationController
       short_name: "skyBlip",
       icons: [
         { src: "/icon.png", type: "image/png", sizes: "512x512" },
-        { src: "/icon.svg", type: "image/svg+xml", sizes: "any" }
+        { src: "/icon.svg", type: "image/svg+xml", sizes: "any" },
+        { src: "/icon-maskable.png", type: "image/png", sizes: "512x512", purpose: "maskable" },
+        { src: "/icon-maskable.svg", type: "image/svg+xml", sizes: "any", purpose: "maskable" }
       ],
       start_url: briefing_root_path,
       scope: briefing_root_path,

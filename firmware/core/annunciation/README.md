@@ -14,7 +14,7 @@ The two pitches are A7 and C#8, 3520 Hz and 4435 Hz, an equal-tempered major thi
 
 ## The first fix is a melody
 
-The first fix plays E E . E . C E . G on an eighth-note grid at 200 BPM, `kFirstFixTempoBpm`, so an eighth is 150 ms, `kFirstFixEighthMs`. Each note sounds for 7/9 of its eighth, 117 ms, `kFirstFixNoteMs`. The silence after it keeps two repeated notes apart: 33 ms before the next eighth and 183 ms across a skipped one. The last note is as short as the others.
+The first fix plays E E . E . C E . G on an eighth-note grid at 200 BPM, `kFirstFixTempoBpm`, so an eighth is 150 ms, `kFirstFixEighthMs`. Each note sounds for 7/9 of its eighth, 117 ms, `kFirstFixNoteMs`. The silence after it keeps two repeated notes apart: 33 ms before the next eighth and 183 ms across a skipped one. The last note, G, is a quarter and sounds the whole of it, 300 ms, `kFirstFixLastNoteMs`, because no note follows it to be kept apart from.
 
 The fix tune is a melody, not an alarm, so the ear's floor and the eight passes do not bind it. Its 33 ms gap still spans three passes of the loop that the alarms hold to, so the loop never swallows it.
 

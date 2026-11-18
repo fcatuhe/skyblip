@@ -1,5 +1,5 @@
-// DF17 from the LR2021's chips to typed messages, pinned to the decodes protocols/adsb/README
-// names.
+// DF17 from the frame the LR2021 decodes to typed messages, pinned to the decodes
+// protocols/adsb/README names.
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -7,6 +7,7 @@
 #include "doctest/doctest.h"
 #include "protocols/adsb/message.h"
 #include "protocols/adsb/test/receiver.h"
+#include "protocols/common/manchester.h"
 
 using namespace skyblip;
 using namespace skyblip::adsb;
@@ -31,25 +32,18 @@ Frame extended_squitter(uint8_t type_code) {
     return frame;
 }
 
-Heard hear_chips(const uint8_t* chips) {
+Heard hear_frame(const uint8_t* frame) {
     Heard heard{Status::Ok, {}};
-    heard.status = adsb::receive(chips, adsb::kChipBytes, kReception, heard.message);
+    heard.status = adsb::receive(frame, adsb::kFrameBytes, kReception, heard.message);
     return heard;
 }
 
 Heard hear_sealed(Frame frame) {
     seal(frame.bytes);
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
-    return hear_chips(chips);
+    return hear_frame(frame.bytes);
 }
 
-Heard hear(const char* text) {
-    const Frame frame = frame_of(text);
-    uint8_t chips[adsb::kChipBytes];
-    chips_of(frame.bytes, chips);
-    return hear_chips(chips);
-}
+Heard hear(const char* text) { return hear_frame(frame_of(text).bytes); }
 
 int32_t pressure_altitude_of(uint32_t field) {
     Frame frame = extended_squitter(11);
@@ -330,33 +324,33 @@ TEST_CASE("adsb: a message carries the reception it was heard with") {
     CHECK(heard.message.reception.rssi_dbm == kReception.rssi_dbm);
 }
 
-TEST_CASE("adsb: DF16, an unparsed type code and a short report are refused") {
-    Frame acas = frame_of("8d4840d6202cc371c32ce0576098");
-    acas.bytes[0] = 0x85;
-    CHECK(hear_sealed(acas).status == Status::Unsupported);
-
+TEST_CASE("adsb: an unparsed type code and a short report are refused") {
     const Heard no_position = hear_sealed(extended_squitter(0));
     CHECK(no_position.status == Status::Unsupported);
     CHECK(no_position.message.address == 0x4840D6);
 
-    uint8_t chips[adsb::kChipBytes]{};
+    uint8_t frame[adsb::kFrameBytes]{};
     adsb::Message message;
-    CHECK(adsb::receive(chips, adsb::kChipBytes - 1, kReception, message) == Status::Invalid);
+    CHECK(adsb::receive(frame, adsb::kFrameBytes - 1, kReception, message) == Status::Invalid);
 }
 
 TEST_CASE("adsb: Bravo's README example fails its parity and reads KLM1023 once mended") {
-    uint8_t chips[adsb::kChipBytes];
+    // Bravo reported the 27 chips behind a 0x95 sync, the layout the LR2021 read before #293: the
+    // sync and the chips, inverted, are the Manchester of the frame.
     const char* reported = "a665956555a669595559a5a55a6a16a55a59a5a955666a69579695";
-    for (uint8_t i = 0; i < adsb::kChipBytes; i++)
-        chips[i] =
-            static_cast<uint8_t>(hex_value(reported[2 * i]) << 4 | hex_value(reported[2 * i + 1]));
-    CHECK(hear_chips(chips).status == Status::Crc);
+    uint8_t coded[2 * adsb::kFrameBytes];
+    coded[0] = static_cast<uint8_t>(~0x95);
+    for (uint8_t i = 1; i < sizeof(coded); i++)
+        coded[i] = static_cast<uint8_t>(
+            ~(hex_value(reported[2 * i - 2]) << 4 | hex_value(reported[2 * i - 1])));
+    uint8_t frame[adsb::kFrameBytes];
+    wire::manchester_decode(coded, adsb::kFrameBytes, frame, nullptr);
+    CHECK(hear_frame(frame).status == Status::Crc);
 
-    // Bit 61 is the FIFO chips 112 and 113, the high two bits of chip byte 14.
-    uint8_t sound[adsb::kChipBytes];
-    chips_of(frame_of("8d4840d6202cc371c32ce0576098").bytes, sound);
-    chips[14] = static_cast<uint8_t>((chips[14] & 0x3F) | (sound[14] & 0xC0));
-    const Heard heard = hear_chips(chips);
+    // Bit 61 is the fifth bit of byte 7, mask 0x08.
+    frame[7] = static_cast<uint8_t>(frame[7] ^ 0x08);
+    REQUIRE(frame[7] == frame_of("8d4840d6202cc371c32ce0576098").bytes[7]);
+    const Heard heard = hear_frame(frame);
     REQUIRE(heard.status == Status::Ok);
     CHECK(std::strcmp(heard.message.identification.callsign, "KLM1023") == 0);
 }

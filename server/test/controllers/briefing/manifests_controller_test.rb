@@ -21,6 +21,15 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "fr", manifest["lang"]
   end
 
+  # Without a maskable icon, Android shrinks ours into a white circle on the home screen.
+  test "the app gives Android a full-bleed icon to crop" do
+    get briefing_manifest_path(format: :json)
+
+    maskable = response.parsed_body["icons"].select { it["purpose"] == "maskable" }
+    assert_equal %w[/icon-maskable.png /icon-maskable.svg], maskable.pluck("src")
+    maskable.each { assert Rails.public_path.join(it["src"].delete_prefix("/")).file?, it["src"] }
+  end
+
   test "no public page offers the app" do
     Content::Page.all.each do |page|
       get page.url_path
