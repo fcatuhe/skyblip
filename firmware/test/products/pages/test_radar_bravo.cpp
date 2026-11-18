@@ -1,4 +1,4 @@
-// What the radar says of a paired Bravo: a framed B while live, else BRAVO and why.
+// What the radar says of a paired Bravo: a framed B by the count while live, else BRAVO and why.
 #include "core/comms/peer.h"
 #include "core/gnss/acquisition.h"
 #include "doctest/doctest.h"
@@ -11,7 +11,7 @@ using namespace skyblip::go;
 using skyblip::reads_in;
 using skyblip::comms::BravoState;
 
-TEST_CASE("radar page: a live Bravo is a B in the top-right corner, in both plots") {
+TEST_CASE("radar page: a live Bravo is a B by the traffic count, and the corner stays empty") {
     for (const RadarPlot plot : {RadarPlot::ToScale, RadarPlot::All}) {
         RadarSnapshot live = flying(0);
         live.plot = plot;
@@ -19,12 +19,60 @@ TEST_CASE("radar page: a live Bravo is a B in the top-right corner, in both plot
         live.bravo_heard = true;
         const Glass canvas = radar(live);
         CHECK(marks_bravo_live(canvas));
+        CHECK_FALSE(corner_reads(canvas, "B"));
         CHECK_FALSE(reads_in(canvas, "BRAVO", 0, 0, 200, 200));
     }
 
     RadarSnapshot unpaired = flying(0);
     CHECK_FALSE(marks_bravo_live(radar(unpaired)));
     CHECK_FALSE(reads_in(radar(unpaired), "BRAVO", 0, 0, 200, 200));
+}
+
+// The B is drawn with no patch cleared under it, so it has to land on empty glass.
+TEST_CASE("radar page: a live Bravo's B stands over TRAFFIC, or over the digits beside TFC") {
+    struct Case {
+        RadarPlot plot;
+        int heard;
+        const char* word;
+        bool over_digits;
+    };
+    for (const Case each :
+         {Case{RadarPlot::ToScale, 3, "TRAFFIC", false}, Case{RadarPlot::ToScale, 12, "TFC", true},
+          Case{RadarPlot::All, 3, "TRAFFIC", false}, Case{RadarPlot::All, 12, "TRAFFIC", false}}) {
+        CAPTURE(each.heard);
+        CAPTURE(each.word);
+        RadarSnapshot unpaired = flying(0);
+        unpaired.plot = each.plot;
+        unpaired.heard_count = each.heard;
+        RadarSnapshot live = unpaired;
+        live.bravo = BravoState::Live;
+        live.bravo_heard = true;
+        const Glass bare = radar(unpaired), marked = radar(live);
+
+        const int digits_x = each.heard > 9 ? 163 : 181;
+        const int footer_y = 189, digits_top = 175;
+        CHECK(reads_in(marked, each.word, 100, footer_y, digits_x, kGlassHeight));
+        if (each.over_digits)
+            CHECK(reads_in(marked, "B", digits_x, 150, kGlassWidth, digits_top));
+        else
+            CHECK(reads_in(marked, "B", digits_x - 16, 165, digits_x, footer_y));
+
+        int left = kGlassWidth, top = kGlassHeight, right = -1, bottom = -1;
+        for (int y = 0; y < kGlassHeight; y++)
+            for (int x = 0; x < kGlassWidth; x++)
+                if (bare.get_pixel(x, y) != marked.get_pixel(x, y)) {
+                    left = x < left ? x : left;
+                    right = x > right ? x : right;
+                    top = y < top ? y : top;
+                    bottom = y > bottom ? y : bottom;
+                }
+        CHECK(right - left + 1 == 11);
+        CHECK(bottom - top + 1 == 13);
+        int under = 0;
+        for (int y = top - 1; y <= bottom + 1; y++)
+            for (int x = left - 1; x <= right + 1; x++) under += bare.get_pixel(x, y) ? 1 : 0;
+        CHECK(under == 0);
+    }
 }
 
 // White while Bravo comes up by itself, reversed once the pilot counts on it.
@@ -85,6 +133,7 @@ TEST_CASE("radar page: a live Bravo on a low cell says BRAVO over BAT and its ch
         const Glass canvas = radar(low);
         CHECK(corner_reads(canvas, "BRAVO"));
         CHECK(corner_reads(canvas, "BAT 9%"));
+        CHECK(marks_bravo_live(canvas));
     }
 
     RadarSnapshot unread = flying(0);
