@@ -50,7 +50,7 @@ fr:
     press: "Appuyer"
     pad: "Pavé"
     button: "Bouton"
-    rst: "RST"
+    reset: "RESET"
     lights: "Voyants"
     led: "Voyant"
     usb: "USB-C"

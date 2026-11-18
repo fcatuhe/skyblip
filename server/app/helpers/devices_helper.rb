@@ -23,14 +23,14 @@ module DevicesHelper
   end
 
   PHOTOS = {
-    go: Photo.new(path: "pages/index/skyblip-go-techo.avif", width: 419, height: 933, top: 440, margins: { left: 250, right: 200 }),
+    go: Photo.new(path: "pages/index/skyblip-go-techo.avif", width: 419, height: 933, top: 440, margins: { left: 290, right: 200 }),
     bravo: Photo.new(path: "pages/skyblip-bravo/seeed-x1.avif", width: 440, height: 356, top: 0, margins: { left: 0, right: 0 })
   }.freeze
 
-  # INFO: fc 18nov26 RST is the upper and the button the lower contact on the T-Echo's left side, out of view, Plus included, as the owner confirmed
+  # INFO: fc 18nov26 RESET is the upper and the button the lower contact on the T-Echo's left side, out of view, Plus included, as the owner confirmed
   SPOTS = {
     go: {
-      rst: Spot.new(x: 24, y: 648, radius: 0, from: [ -60, 648 ], text: [ -70, 658 ], anchor: :end, margin: :left),
+      reset: Spot.new(x: 24, y: 648, radius: 0, from: [ -60, 648 ], text: [ -70, 658 ], anchor: :end, margin: :left),
       button: Spot.new(x: 24, y: 862, radius: 0, from: [ -60, 862 ], text: [ -70, 872 ], anchor: :end, margin: :left),
       pad: Spot.new(x: 108, y: 551, radius: 0, from: [ 108, 486 ], text: [ 100, 474 ], anchor: :middle, margin: nil),
       lights: Spot.new(x: 281, y: 741, radius: 20, from: [ 470, 741 ], text: [ 480, 751 ], anchor: :start, margin: :right),

@@ -19,10 +19,10 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <h3 id="controls">Repérez le pavé, <span class="highlight">puis le bouton</span>.</h3>
-      <p>Le pavé tactile est sur le bord supérieur. Sur le côté gauche, le bouton est la commande du bas. RST est au-dessus. Le port USB-C est à droite. Deux voyants sont près de l&rsquo;écran&nbsp;: celui de skyBlip, rouge, vert ou bleu, et celui du chargeur, rouge.</p>
+      <p>Le pavé tactile est sur le bord supérieur. Sur le côté gauche, le bouton est la commande du bas. RESET est au-dessus. Le port USB-C est à droite. Deux voyants sont près de l&rsquo;écran&nbsp;: celui de skyBlip, rouge, vert ou bleu, et celui du chargeur, rouge.</p>
       <p>Le papier électronique garde son image sans courant. Le logo signifie que le Go est éteint.</p>
     </div>
-    <%= render "shared/device", device: :go, label: "skyBlip Go avec les repères du pavé, du bouton, de RST, des voyants et du port USB-C", marks: { pad: t("devices.pad"), button: t("devices.button"), rst: t("devices.rst"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+    <%= render "shared/device", device: :go, label: "skyBlip Go avec les repères du pavé, du bouton, de RESET, des voyants et du port USB-C", marks: { pad: t("devices.pad"), button: t("devices.button"), reset: t("devices.reset"), lights: t("devices.lights"), usb: t("devices.usb") } %>
   </div>
 
   <div class="table-scroll">
@@ -35,8 +35,8 @@ updated_on: "2026-11-18"
         <tr><th>Bouton maintenu, 2&nbsp;s</th><td>Éteint le Go. Le logo reste affiché.</td></tr>
         <tr><th>Même appui, doigt sur le pavé</th><td>Éteint avec l&rsquo;écran vierge, pour le rangement. Une image laissée tout un hiver laisse une trace.</td></tr>
         <tr><th>Bouton maintenu, puis chargeur branché</th><td>Démarre et charge. Le chargeur seul recharge sans allumer.</td></tr>
-        <tr><th>Appui sur RST</th><td>Redémarre le Go.</td></tr>
-        <tr><th>Deux appuis sur RST en moins d&rsquo;une demi-seconde</th><td>Ouvre TECHOBOOT, un lecteur USB pour installer le firmware. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer le Go lui-même.</td></tr>
+        <tr><th>Appui sur RESET</th><td>Redémarre le Go.</td></tr>
+        <tr><th>Deux appuis sur RESET en moins d&rsquo;une demi-seconde</th><td>Ouvre TECHOBOOT, un lecteur USB pour installer le firmware. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer le Go lui-même.</td></tr>
       </tbody>
     </table>
   </div>

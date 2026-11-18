@@ -112,7 +112,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       assert_selector ".tango", text: "Paired with Bravo 5C1D."
 
       visit "/go-first-steps"
-      assert_selector ".device-figure--go svg[role=img]", text: /Pad\s+Button\s+RST\s+LEDs\s+USB-C/
+      assert_selector ".device-figure--go svg[role=img]", text: /Pad\s+Button\s+RESET\s+LEDs\s+USB-C/
       screen "33-go-first-steps"
     end
   end
@@ -147,8 +147,8 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand, then choose the USB drive named TECHOBOOT in the next window:", wait: 6
-      assert_text "Go: press RST twice, quickly. It is the upper button on its left side."
-      assert_selector ".setup-by-hand svg[role=img][aria-label^='A skyBlip Go seen from the front, an arrow on its left side pointing at RST']", text: "RST, twice"
+      assert_text "Go: press RESET twice, quickly. It is the upper button on its left side."
+      assert_selector ".setup-by-hand svg[role=img][aria-label^='A skyBlip Go seen from the front, an arrow on its left side pointing at RESET']", text: "RESET, twice"
       assert_no_text "Bravo: unplug it"
       assert_no_selector ".setup-by-hand .device-figure--bravo"
       assert_no_selector ".unit-message"
@@ -175,7 +175,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
         assert_selector ".lamp.lamp--white.lamp--steady"
         assert_text "Release once the LED above the button turns white."
       end
-      assert_no_text "Go: press RST twice"
+      assert_no_text "Go: press RESET twice"
       screen "55-bravo-gesture"
     end
   end
@@ -187,14 +187,14 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand", wait: 1
-      assert_text "Go: press RST twice, quickly. It is the upper button on its left side."
+      assert_text "Go: press RESET twice, quickly. It is the upper button on its left side."
       screen "53-softrf-gesture"
 
       visit "/briefing/setup"
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
       click_button "Install"
       assert_text "Go shows a USB drive named TECHOBOOT. Choose that drive in the next window, then let Briefing save to it.", wait: 1
-      assert_no_text "press RST"
+      assert_no_text "press RESET"
       screen "54-already-bootloader"
       assert_equal 0, page.evaluate_script("fakeUsb.restarts")
     end

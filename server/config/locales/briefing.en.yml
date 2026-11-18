@@ -114,7 +114,7 @@ en:
       release: Release notes and the .uf2
       changes: What changed since your version
       recovery: Firmware will not take?
-      recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
+      recovery_hint: "Without Bluetooth: plug the device into a computer and press RESET twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
       recover: Restart into the USB drive
       report_received_html: "skyBlip received the details of this failure. If you write to us, tell us what you did and give your support code %{code}."
     terminal:
@@ -151,7 +151,7 @@ en:
       drive_gesture: "Start the installer of %{name} by hand, then choose the USB drive named %{drive} in the next window:"
       or: " or "
       by_hand:
-        go: "Go: press RST twice, quickly. It is the upper button on its left side."
+        go: "Go: press RESET twice, quickly. It is the upper button on its left side."
         bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white."
       choose_drive: Choose the drive
       downloading: "Downloading skyBlip for %{name}."
@@ -244,8 +244,8 @@ en:
       lamp: The LED above the button blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
     figures:
-      go_rst: "A skyBlip Go seen from the front, an arrow on its left side pointing at RST, the upper of its two side buttons."
-      rst_twice: RST, twice
+      go_reset: "A skyBlip Go seen from the front, an arrow on its left side pointing at RESET, the upper of its two side buttons."
+      reset_twice: RESET, twice
       bravo_hold: A skyBlip Bravo, its round button marked hold, the LED just above it marked, and its USB-C port marked plug in.
       hold: Hold
       plug: Plug in

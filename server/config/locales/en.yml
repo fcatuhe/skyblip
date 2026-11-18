@@ -50,7 +50,7 @@ en:
     press: Press
     pad: Pad
     button: Button
-    rst: RST
+    reset: RESET
     lights: LEDs
     led: LED
     usb: USB-C

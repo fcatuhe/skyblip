@@ -18,10 +18,10 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <h3 id="controls">Find the pad, <span class="highlight">then the button</span>.</h3>
-      <p>The pad is touch-sensitive, on the top edge. On the left side, the button is the lower of the two controls. RST is above it. The USB-C port is on the right. Two lights sit beside the screen: skyBlip's red, green or blue light and the charger's red light.</p>
+      <p>The pad is touch-sensitive, on the top edge. On the left side, the button is the lower of the two controls. RESET is above it. The USB-C port is on the right. Two lights sit beside the screen: skyBlip's red, green or blue light and the charger's red light.</p>
       <p>The e-paper screen keeps its image without power. The logo means the Go is off.</p>
     </div>
-    <%= render "shared/device", device: :go, label: "skyBlip Go with its pad, button, RST, lights and USB-C port marked", marks: { pad: t("devices.pad"), button: t("devices.button"), rst: t("devices.rst"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+    <%= render "shared/device", device: :go, label: "skyBlip Go with its pad, button, RESET, lights and USB-C port marked", marks: { pad: t("devices.pad"), button: t("devices.button"), reset: t("devices.reset"), lights: t("devices.lights"), usb: t("devices.usb") } %>
   </div>
 
   <div class="table-scroll">
@@ -34,8 +34,8 @@ updated_on: "2026-11-18"
         <tr><th>Hold the button, 2&nbsp;s</th><td>Switches off. The logo stays on the screen.</td></tr>
         <tr><th>The same hold, finger on the pad</th><td>Switches off with a blank screen, for storage. An image left all winter leaves a shadow.</td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>Starts and charges. Plugging in alone charges and leaves it off.</td></tr>
-        <tr><th>Press RST</th><td>Restarts the Go.</td></tr>
-        <tr><th>Press RST twice within half a second</th><td>Opens TECHOBOOT, a USB drive for installing firmware. Briefing asks for this only if it cannot restart the Go itself.</td></tr>
+        <tr><th>Press RESET</th><td>Restarts the Go.</td></tr>
+        <tr><th>Press RESET twice within half a second</th><td>Opens TECHOBOOT, a USB drive for installing firmware. Briefing asks for this only if it cannot restart the Go itself.</td></tr>
       </tbody>
     </table>
   </div>
