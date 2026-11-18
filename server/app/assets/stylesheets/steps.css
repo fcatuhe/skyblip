@@ -186,21 +186,6 @@
     margin: var(--space-2xs) 0 0;
   }
 
-  .journey > .device-figure {
-    position: relative;
-    justify-self: start;
-    inline-size: min(100% - var(--journey-mark) - var(--space-inline-m), 22rem);
-    margin: 0 0 var(--space-2xl) calc(var(--journey-mark) + var(--space-inline-m));
-  }
-
-  .journey > .device-figure::before {
-    content: "";
-    position: absolute;
-    inset-block: 0 calc(-1 * var(--space-2xl) + var(--space-xs));
-    inset-inline-start: calc(-1 * var(--space-inline-m) - var(--journey-mark) / 2 - 1px);
-    border-inline-start: 3px dotted var(--sky);
-  }
-
   .journey-end {
     margin: 0;
     padding-block-start: var(--space-s);
@@ -249,13 +234,5 @@
 
     .journey-end { grid-area: 1 / 4; }
 
-    .journey > .device-figure {
-      grid-area: 2 / 2 / auto / span 3;
-      justify-self: center;
-      inline-size: 22rem;
-      margin: var(--space-l) 0 0;
-    }
-
-    .journey > .device-figure::before { content: none; }
   }
 }

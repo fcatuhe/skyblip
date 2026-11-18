@@ -23,19 +23,18 @@ updated_on: "2026-11-18"
     <ol class="journey-steps">
       <li>
         <h3><%= link_to_page "skyblip-go", label: "Try it" %></h3>
-        <p>Read the traffic at a glance. Try the radar and its alert in the simulator.</p>
+        <p>Try the radar in the simulator.</p>
       </li>
       <li>
         <h3><%= link_to_page "buy", label: "Get one" %></h3>
-        <p>Choose an off-the-shelf device. The skyBlip software is free, with no subscription.</p>
+        <p>An off-the-shelf device. The software is free.</p>
       </li>
       <li>
         <h3><%= link_to_page "install", label: "Install it" %></h3>
-        <p>Plug the device into your computer. Briefing guides you and shows you where to press, on a photo or on the device&rsquo;s screen.</p>
+        <p>From your browser, with Briefing.</p>
       </li>
     </ol>
-    <%= render "shared/device", device: :go, label: t("briefing.figures.go_reset"), marks: { reset: t("briefing.figures.reset_twice") } %>
-    <p class="journey-end"><strong>You&rsquo;re ready to fly.</strong> The <%= link_to_page "guides", label: "first steps guide for your device" %> shows you what to check before you set off.</p>
+    <p class="journey-end"><strong>You&rsquo;re ready to fly.</strong> The <%= link_to_page "guides", label: "first steps guide" %> shows you the essentials.</p>
   </div>
 </section>
 
