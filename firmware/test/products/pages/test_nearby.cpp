@@ -1,11 +1,14 @@
 // The list a pilot reads when the plot says something is there: who, how far, how much above.
 #include <cstring>
+#include <optional>
+#include <utility>
 
 #include "core/model/aircraft.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/glass.h"
 #include "products/skyblip_go/pages/nearby.h"
 #include "test/support/glass_text.h"
+#include "test/support/nearby_glass.h"
 
 using namespace skyblip;
 using namespace skyblip::go;
@@ -15,6 +18,8 @@ namespace {
 constexpr int kRowHeight = 7 * kNearbyScale;
 
 int row_y(int index) { return kNearbyFirstRowY + index * kNearbyLineHeight; }
+
+constexpr int kBravoY = kNearbyUnitY + kNearbyLineHeight;
 
 // Ink inside one row band, so a drawn row is told from an empty one without asserting on glyphs.
 int ink_in_row(const Glass& canvas, int index) {
@@ -39,19 +44,35 @@ bool banner_reads(const Glass& canvas, const char* text) {
     return reads_at(canvas, (Glass::kWidth - width) / 2, kNearbyBannerY, text, kNearbyScale);
 }
 
-// Where the small address lands: after the name it stands beside, on the same bottom.
-int own_address_x() {
-    return kNearbyIdX + kNearbyOwnNameCharacters * 6 * kNearbyTitleScale + kNearbyWordGap;
+// A unit's figure ends where its column does, and the unit beside it stands on its baseline.
+bool figure_reads(const Glass& canvas, int x_end, int y, const char* value, const char* unit) {
+    const int unit_x = x_end - static_cast<int>(std::strlen(unit)) * ui::kCellWidth;
+    return reads_at(canvas, unit_x, y + 7, unit, 1) &&
+           reads_right_of(canvas, unit_x - 1, y, value, kNearbyScale);
 }
 
 NearbySnapshot listing(const traffic::RangeRow* rows, int count, go::Units units) {
     NearbySnapshot snapshot;
-    snapshot.own_address = 0x4B1F07;
+    snapshot.go.battery_percent = 87;
+    snapshot.go.stage = gnss::Stage::Fixed;
+    snapshot.go.satellites = 11;
+    snapshot.go.transmitting = true;
+    snapshot.go.traffic = count;
     snapshot.fix_valid = true;
     snapshot.units = units;
-    snapshot.heard_count = count;
     snapshot.row_count = count;
     snapshot.rows = rows;
+    return snapshot;
+}
+
+NearbySnapshot paired(const traffic::RangeRow* rows, int count) {
+    NearbySnapshot snapshot = listing(rows, count, go::Units::Nautical);
+    snapshot.bravo.state = comms::BravoState::Live;
+    snapshot.bravo.heard = true;
+    snapshot.bravo.battery_percent = 64;
+    snapshot.bravo.stage = gnss::Stage::Fixed;
+    snapshot.bravo.satellites = 9;
+    snapshot.bravo.traffic = 3;
     return snapshot;
 }
 
@@ -76,8 +97,8 @@ TEST_CASE("nearby page: one row per emitter heard, and none for the rest") {
     CHECK(ink_in_row(canvas, 3) == 0);
 }
 
-// The address is what a pilot reads back to a controller or matches against a club list.
-TEST_CASE("nearby page: a row names the system that was heard and the whole address") {
+// The small font says the aircraft gave no name, so a callsign of six hex digits is not an address.
+TEST_CASE("nearby page: a row names the system at full height and the address in the small font") {
     traffic::RangeRow rows[3] = {row_at(400, 0), row_at(900, 0), row_at(1400, 0)};
     rows[1].source = model::Source::Alptas;
     rows[2].source = model::Source::AdslUplink;
@@ -85,9 +106,11 @@ TEST_CASE("nearby page: a row names the system that was heard and the whole addr
     Glass canvas;
     draw_nearby(canvas, listing(rows, 3, go::Units::Nautical));
 
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L 3FA21C", kNearbyScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "F 3FA21C", kNearbyScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(2), "U 3FA21C", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyAddressX, row_y(0) + kNearbyAddressDrop, "3FA21C", 1));
+    CHECK(nearby_lists(canvas, 'F', "3FA21C"));
+    CHECK(nearby_lists(canvas, 'U', "3FA21C"));
+    CHECK_FALSE(reads_in(canvas, "3FA21C", 0, row_y(0), kGlassWidth, kGlassHeight, kNearbyScale));
 }
 
 // ADS-L carries no name, so one only reaches this column from a Type 66 burst.
@@ -99,7 +122,7 @@ TEST_CASE("nearby page: a row wears the callsign in place of the address once on
     draw_nearby(canvas, listing(rows, 2, go::Units::Nautical));
 
     CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L D-KXYZ", kNearbyScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "L 3FA21C", kNearbyScale));
+    CHECK(reads_at(canvas, kNearbyAddressX, row_y(1) + kNearbyAddressDrop, "3FA21C", 1));
 }
 
 // The column ends where DIST begins, and a name that would run into it is cut, not wrapped.
@@ -118,7 +141,7 @@ TEST_CASE("nearby page: no fix means no range, and the page says so instead of l
     traffic::RangeRow rows[1] = {row_at(4300, 120)};
     NearbySnapshot snapshot = listing(rows, 1, go::Units::Nautical);
     snapshot.fix_valid = false;
-    snapshot.heard_count = 4;
+    snapshot.go.stage = gnss::Stage::Blind;
 
     Glass canvas;
     draw_nearby(canvas, snapshot);
@@ -131,57 +154,6 @@ TEST_CASE("nearby page: an empty sky is a word on the second row, not an empty l
     Glass canvas;
     draw_nearby(canvas, listing(nullptr, 0, go::Units::Nautical));
     CHECK(banner_reads(canvas, "NO TRAFFIC"));
-}
-
-TEST_CASE("nearby page: the header counts what was heard, not what fits") {
-    NearbySnapshot snapshot;
-    snapshot.fix_valid = true;
-    snapshot.heard_count = 26;
-    snapshot.row_count = 0;
-    snapshot.rows = nullptr;
-
-    Glass canvas;
-    draw_nearby(canvas, snapshot);
-    // The figure is read, the word only says what was counted: the radar's own ACT arrangement.
-    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyTitleY, "26", 2));
-    CHECK(
-        reads_in(canvas, "TRAFFIC", 0, kNearbyTitleY, kNearbyRelativeAltitudeEnd, kNearbyHeadY, 1));
-    CHECK(ink_in_row(canvas, 0) == 0);
-}
-
-// Own address is read back on the radio, and this is the page a pilot is already on to find it.
-TEST_CASE("nearby page: the top line is own address, and nothing stands in front of it") {
-    traffic::RangeRow rows[1] = {row_at(900, 0)};
-
-    Glass canvas;
-    draw_nearby(canvas, listing(rows, 1, go::Units::Nautical));
-
-    CHECK(reads_at(canvas, kNearbyIdX, kNearbyTitleY, "4B1F07", kNearbyTitleScale));
-    CHECK(reads_at(canvas, kNearbyIdX, row_y(0), "L 3FA21C", kNearbyScale));
-}
-
-// The name is what own-ship is called on the radio, the address is what it transmits under.
-TEST_CASE("nearby page: a named own-ship reads its callsign, with the address still beside it") {
-    NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
-    snapshot.own_callsign = "S-BLIP";
-
-    Glass canvas;
-    draw_nearby(canvas, snapshot);
-
-    CHECK(reads_at(canvas, kNearbyIdX, kNearbyTitleY, "S-BLIP", kNearbyTitleScale));
-    CHECK(reads_at(canvas, own_address_x(), kNearbyTitleY + 7, "4B1F07", 1));
-}
-
-// The count owns the right of that line, so a long name is cut where the row column cuts one.
-TEST_CASE("nearby page: own callsign is cut to the six characters a registration is known by") {
-    NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
-    snapshot.own_callsign = "ABCDEFGHI";
-
-    Glass canvas;
-    draw_nearby(canvas, snapshot);
-
-    CHECK(reads_at(canvas, kNearbyIdX, kNearbyTitleY, "ABCDEF", kNearbyTitleScale));
-    CHECK(reads_at(canvas, own_address_x(), kNearbyTitleY + 7, "4B1F07", 1));
 }
 
 // The letter in front of the address is the source the report arrived by, and nothing said so.
@@ -285,6 +257,138 @@ TEST_CASE("nearby page: more emitters than rows are cut, never overdrawn") {
     draw_nearby(canvas, listing(rows, kNearbyRows + 4, go::Units::Nautical));
 
     for (int i = 0; i < kNearbyRows; i++) CHECK(ink_in_row(canvas, i) > 20);
+    for (int y = row_y(kNearbyRows - 1) + kRowHeight; y < Glass::kHeight; y++)
+        for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
+}
+
+// What a pilot checks before taxiing: each unit's cell, its receiver, and what its radio hears.
+TEST_CASE("nearby page: the Go's row reads its cell, its satellites and the traffic it heard") {
+    Glass canvas;
+    draw_nearby(canvas, listing(nullptr, 0, go::Units::Nautical));
+
+    CHECK(reads_at(canvas, kNearbyIdX, kNearbyUnitY, "GO", kNearbyScale));
+    CHECK(figure_reads(canvas, kNearbyBatteryEnd, kNearbyUnitY, "87", "%"));
+    CHECK(figure_reads(canvas, kNearbySatellitesEnd, kNearbyUnitY, "11", "SAT"));
+    CHECK(figure_reads(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, "0", "TFC"));
+}
+
+TEST_CASE(
+    "nearby page: a Go with no fix says its receiver's rung in place of satellites and traffic") {
+    for (const auto& [stage, word] :
+         {std::pair{gnss::Stage::Silent, "GPS OFF"}, std::pair{gnss::Stage::Blind, "MOVE OUT"},
+          std::pair{gnss::Stage::Solving, "FINDS FIX"}}) {
+        CAPTURE(word);
+        NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
+        snapshot.fix_valid = false;
+        snapshot.go.stage = stage;
+        Glass canvas;
+        draw_nearby(canvas, snapshot);
+        CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, word, kNearbyScale));
+        CHECK(figure_reads(canvas, kNearbyBatteryEnd, kNearbyUnitY, "87", "%"));
+        CHECK_FALSE(reads_in(canvas, "SAT", 0, kNearbyUnitY, kGlassWidth, kNearbyHeadY));
+    }
+}
+
+// FINDS FIX is the widest word, and a full cell is the widest figure in front of it.
+TEST_CASE("nearby page: the widest word clears a full cell with air between them") {
+    NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
+    snapshot.fix_valid = false;
+    snapshot.go.stage = gnss::Stage::Solving;
+    snapshot.go.battery_percent = 100;
+    Glass canvas;
+    draw_nearby(canvas, snapshot);
+    CHECK(figure_reads(canvas, kNearbyBatteryEnd, kNearbyUnitY, "100", "%"));
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, "FINDS FIX",
+                         kNearbyScale));
+}
+
+TEST_CASE("nearby page: a Go that does not transmit says TX OFF, and one on the cable CHG") {
+    NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
+    snapshot.go.transmitting = false;
+    snapshot.go.charging = true;
+    snapshot.go.battery_percent.reset();
+    Glass canvas;
+    draw_nearby(canvas, snapshot);
+    CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, "TX OFF", kNearbyScale));
+    CHECK(reads_right_of(canvas, kNearbyBatteryEnd, kNearbyUnitY, "CHG", kNearbyScale));
+}
+
+// The two TFC figures add up to every emitter heard, so neither unit's radio hides behind the
+// other.
+TEST_CASE("nearby page: a paired Go reads Bravo's row under its own, and the list a row lower") {
+    traffic::RangeRow rows[1] = {row_at(400, 0)};
+    Glass canvas;
+    draw_nearby(canvas, paired(rows, 1));
+
+    CHECK(reads_at(canvas, kNearbyIdX, kBravoY, "B", kNearbyScale));
+    CHECK(figure_reads(canvas, kNearbyBatteryEnd, kBravoY, "64", "%"));
+    CHECK(figure_reads(canvas, kNearbySatellitesEnd, kBravoY, "9", "SAT"));
+    CHECK(figure_reads(canvas, kNearbyRelativeAltitudeEnd, kBravoY, "3", "TFC"));
+    CHECK(reads_at(canvas, kNearbyIdX, kNearbyHeadY + kNearbyLineHeight, "SRC ID", 1));
+    CHECK(nearby_lists(canvas, 'L', "3FA21C"));
+    CHECK(reads_at(canvas, kNearbyIdX, row_y(1), "L", kNearbyScale));
+}
+
+TEST_CASE("nearby page: Bravo's row says why it is not live in place of satellites and traffic") {
+    struct Case {
+        comms::BravoState state;
+        bool heard;
+        std::optional<gnss::Stage> stage;
+        const char* word;
+    };
+    for (const Case each :
+         {Case{comms::BravoState::Waiting, false, std::nullopt, "NO LINK"},
+          Case{comms::BravoState::LinkDown, true, gnss::Stage::Fixed, "NO LINK"},
+          Case{comms::BravoState::ReceiverDown, true, gnss::Stage::Fixed, "RX DOWN"},
+          Case{comms::BravoState::NoUtc, true, gnss::Stage::Blind, "MOVE OUT"},
+          Case{comms::BravoState::Waiting, true, gnss::Stage::Silent, "GPS OFF"},
+          Case{comms::BravoState::Live, true, gnss::Stage::Solving, "FINDS FIX"},
+          Case{comms::BravoState::NoUtc, true, std::nullopt, "MOVE OUT"}}) {
+        CAPTURE(each.word);
+        NearbySnapshot snapshot = paired(nullptr, 0);
+        snapshot.bravo.state = each.state;
+        snapshot.bravo.heard = each.heard;
+        snapshot.bravo.stage = each.stage;
+        Glass canvas;
+        draw_nearby(canvas, snapshot);
+        CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kBravoY, each.word, kNearbyScale));
+        CHECK_FALSE(reads_in(canvas, "TFC", 0, kBravoY, kGlassWidth, kBravoY + kNearbyLineHeight));
+    }
+}
+
+// A cell read before the link went is a figure that stopped moving, so the row shows none.
+TEST_CASE("nearby page: a Bravo with no link reads no cell, and one on its cable CHG") {
+    NearbySnapshot lost = paired(nullptr, 0);
+    lost.bravo.state = comms::BravoState::LinkDown;
+    Glass gone;
+    draw_nearby(gone, lost);
+    CHECK(reads_right_of(gone, kNearbyBatteryEnd, kBravoY, "--", kNearbyScale));
+
+    NearbySnapshot cabled = paired(nullptr, 0);
+    cabled.bravo.charging = true;
+    Glass charging;
+    draw_nearby(charging, cabled);
+    CHECK(reads_right_of(charging, kNearbyBatteryEnd, kBravoY, "CHG", kNearbyScale));
+}
+
+TEST_CASE("nearby page: a live Bravo from before gnss_stage reads no satellites, not a word") {
+    NearbySnapshot snapshot = paired(nullptr, 0);
+    snapshot.bravo.stage.reset();
+    snapshot.bravo.satellites.reset();
+    Glass canvas;
+    draw_nearby(canvas, snapshot);
+    CHECK(figure_reads(canvas, kNearbySatellitesEnd, kBravoY, "--", "SAT"));
+    CHECK(figure_reads(canvas, kNearbyRelativeAltitudeEnd, kBravoY, "3", "TFC"));
+}
+
+TEST_CASE("nearby page: a paired Go lists one row fewer, and never draws past the glass") {
+    traffic::RangeRow rows[kNearbyRows + 2];
+    for (int i = 0; i < kNearbyRows + 2; i++) rows[i] = row_at(500 + 100 * i, 30 * i);
+
+    Glass canvas;
+    draw_nearby(canvas, paired(rows, kNearbyRows + 2));
+
+    for (int i = 1; i < kNearbyRows; i++) CHECK(ink_in_row(canvas, i) > 20);
     for (int y = row_y(kNearbyRows - 1) + kRowHeight; y < Glass::kHeight; y++)
         for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(canvas.get_pixel(x, y));
 }

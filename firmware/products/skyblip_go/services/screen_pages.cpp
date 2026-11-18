@@ -20,6 +20,10 @@ PpsState pps_state(const timing::ClockState& clock) {
     return timing::in_pps_holdover(clock) ? PpsState::Holdover : PpsState::None;
 }
 
+std::optional<uint8_t> battery_percent(const power::BatteryState& battery) {
+    return battery.valid ? std::optional<uint8_t>(battery.percent) : std::nullopt;
+}
+
 int traffic_outside_formation(const traffic::TrafficTable& table) {
     int count = 0;
     for (int i = 0; i < traffic::TrafficTable::kMaxTargets; i++) {
@@ -224,13 +228,10 @@ void ScreenService::render(uint32_t now_ms) {
         }
         case Page::Nearby: {
             NearbySnapshot snapshot;
-            snapshot.own_address =
-                settings::on_air(context_.state.activation.address(), settings.aircraft_address)
-                    .address;
-            snapshot.own_callsign = settings.callsign;
+            snapshot.go = nearby_go();
+            snapshot.bravo = nearby_bravo();
             snapshot.fix_valid = own.fix_valid;
             snapshot.units = settings.units;
-            snapshot.heard_count = context_.state.traffic.count();
             snapshot.row_count = traffic::rank_by_relevance(
                 context_.state.traffic, context_.state.callsigns, own, nearby_rows_, kNearbyRows);
             snapshot.rows = nearby_rows_;
@@ -347,6 +348,35 @@ void ScreenService::render(uint32_t now_ms) {
             break;
         }
     }
+}
+
+NearbyGo ScreenService::nearby_go() const {
+    const model::Ownship& own = context_.state.own;
+    const traffic::TrafficTable& table = context_.state.traffic;
+    NearbyGo go;
+    go.battery_percent = battery_percent(context_.state.power.battery);
+    go.charging = context_.state.power.battery.charging;
+    go.stage = context_.state.gnss.stage;
+    go.satellites = own.satellites;
+    go.transmitting =
+        timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address());
+    go.traffic = table.count() - table.count_of(model::Source::Adsb);
+    return go;
+}
+
+NearbyBravo ScreenService::nearby_bravo() const {
+    NearbyBravo bravo;
+    bravo.state = context_.state.bravo;
+    bravo.traffic = context_.state.traffic.count_of(model::Source::Adsb);
+    const comms::PeerHealth* health = bravo_.health();
+    bravo.heard = health != nullptr;
+    if (health != nullptr) {
+        bravo.battery_percent = health->battery_percent;
+        bravo.charging = health->charging;
+        bravo.stage = health->gnss_stage;
+        bravo.satellites = health->satellites;
+    }
+    return bravo;
 }
 
 }  // namespace skyblip::go

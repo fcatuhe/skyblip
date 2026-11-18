@@ -165,20 +165,16 @@ TEST_CASE(
     CHECK(rig.product.radio().transmitter().sent_count() == 0);
 }
 
-// Nearby is the page open when somebody asks who you are, and they now see the ICAO address.
-TEST_CASE(
-    "product: nearby and status name the address on air, the aircraft address once it is set") {
+// Status is the page that names this aircraft, and it names the ICAO address once one is set.
+TEST_CASE("product: status names the address on air, the aircraft address once it is set") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.settings().aircraft_address = kAircraftAddress;
     uint32_t now_ms = 100;
-    for (const go::Page page : {go::Page::Nearby, go::Page::Status}) {
-        rig.show(now_ms, page);
-        rig.run(now_ms, now_ms + 4000);
-        now_ms += 4000;
-        CHECK(reads_in(rig.product.screen().framebuffer(), "3C6586", 0, 0, go::kGlassWidth,
-                       go::kGlassHeight, 2));
-        CHECK_FALSE(reads_in(rig.product.screen().framebuffer(), "005AFE", 0, 0, go::kGlassWidth,
-                             go::kGlassHeight, 2));
-    }
+    rig.show(now_ms, go::Page::Status);
+    rig.run(now_ms, now_ms + 4000);
+    CHECK(reads_in(rig.product.screen().framebuffer(), "3C6586", 0, 0, go::kGlassWidth,
+                   go::kGlassHeight, 2));
+    CHECK_FALSE(reads_in(rig.product.screen().framebuffer(), "005AFE", 0, 0, go::kGlassWidth,
+                         go::kGlassHeight, 2));
 }
