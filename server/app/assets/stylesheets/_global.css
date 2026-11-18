@@ -61,6 +61,12 @@
   --glass: #C9C9C4;
   --glass-bezel: #F2F2EF;
 
+  --lamp-green: #12A03F;
+  --lamp-blue: #2F6FE8;
+  --lamp-red: #E8401F;
+  --lamp-white: #FFFFFF;
+  --photo: #FFFFFF;
+
   --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: "Fira Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: "B612 Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;

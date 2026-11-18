@@ -151,7 +151,7 @@ en:
       drive_gesture: "Start the installer of %{name} by hand, then choose the USB drive named %{drive} in the next window:"
       or: " or "
       by_hand:
-        go: "Go: press RST twice, quickly."
+        go: "Go: press RST twice, quickly. It is the upper button on its left side."
         bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white."
       choose_drive: Choose the drive
       downloading: "Downloading skyBlip for %{name}."
@@ -241,6 +241,15 @@ en:
     glass:
       lamp: The LED blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
+    figures:
+      go_rst: "A skyBlip Go seen from the front, an arrow on its left side pointing at RST, the upper of its two side buttons."
+      rst_twice: RST, twice
+      bravo_hold: A skyBlip Bravo, its round button marked hold and its USB-C port marked plug in.
+      hold: Hold
+      plug: Plug in
+      white: Release once the LED turns white.
+      bravo_press: A skyBlip Bravo, its round button marked press.
+      blue: The LED blinks blue fast.
     tools:
       back: Back to your devices
       title: Developer tools

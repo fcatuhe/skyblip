@@ -151,7 +151,7 @@ fr:
       drive_gesture: "Lancez à la main l\u2019installateur de %{name}, puis choisissez la clé USB nommée %{drive} dans la fenêtre qui s\u2019ouvre\u00a0:"
       or: " ou "
       by_hand:
-        go: "Go\u00a0: appuyez deux fois rapidement sur RST."
+        go: "Go\u00a0: appuyez deux fois rapidement sur RST, le bouton du haut sur son côté gauche."
         bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant devient blanc."
       choose_drive: "Choisir la clé"
       downloading: "Téléchargement de skyBlip pour %{name}."
@@ -241,6 +241,15 @@ fr:
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
       lamp: "Le voyant clignote vite en vert."
+    figures:
+      go_rst: "Un skyBlip Go vu de face, une flèche sur son côté gauche pointant RST, le plus haut de ses deux boutons latéraux."
+      rst_twice: "RST, 2 fois"
+      bravo_hold: "Un skyBlip Bravo, son bouton rond marqué Maintenir et sa prise USB-C marquée Brancher."
+      hold: "Maintenir"
+      plug: "Brancher"
+      white: "Relâchez quand le voyant devient blanc."
+      bravo_press: "Un skyBlip Bravo, son bouton rond marqué Appuyer."
+      blue: "Le voyant clignote vite en bleu."
     tools:
       back: "Retour à vos appareils"
       title: "Outils de développement"

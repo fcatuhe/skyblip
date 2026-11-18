@@ -46,6 +46,13 @@ en:
     app: "navigation app"
     received: "received"
     transmitted: "transmitted"
+  devices:
+    press: Press
+    pad: Pad
+    button: Button
+    rst: RST
+    lights: LEDs
+    usb: USB-C
   settings:
     aircraft_type: "Aircraft type"
     callsign: "Callsign"

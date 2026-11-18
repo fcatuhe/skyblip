@@ -46,6 +46,13 @@ fr:
     app: "application de navigation"
     received: "reçu"
     transmitted: "émis"
+  devices:
+    press: "Appuyer"
+    pad: "Pavé"
+    button: "Bouton"
+    rst: "RST"
+    lights: "Voyants"
+    usb: "USB-C"
   settings:
     aircraft_type: "Type d\u2019aéronef"
     callsign: "Indicatif"

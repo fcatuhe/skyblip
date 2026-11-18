@@ -131,8 +131,10 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand, then choose the USB drive named TECHOBOOT in the next window:", wait: 6
-      assert_text "Go: press RST twice, quickly."
+      assert_text "Go: press RST twice, quickly. It is the upper button on its left side."
+      assert_selector ".setup-by-hand svg[role=img][aria-label^='A skyBlip Go seen from the front, an arrow on its left side pointing at RST']", text: "RST, twice"
       assert_no_text "Bravo: unplug it"
+      assert_no_selector ".setup-by-hand .device-figure--bravo"
       assert_no_selector ".unit-message"
       screen "50-not-answering"
 
@@ -145,6 +147,23 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo that does not answer over USB gets its button pictured, held while the cable goes in until the LED turns white" do
+    in_range
+    plugged_in a_meshtastic_bravo(mode: "silent")
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white.", wait: 6
+      within ".setup-by-hand .device-figure--bravo" do
+        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked hold and its USB-C port marked plug in.']", text: /Hold\s+Plug in/
+        assert_selector ".lamp.lamp--white.lamp--steady"
+        assert_text "Release once the LED turns white."
+      end
+      assert_no_text "Go: press RST twice"
+      screen "55-bravo-gesture"
+    end
+  end
+
   test "a T-Echo on a firmware that cannot restart into its drive gets the gesture at once, and one already in its bootloader goes straight to the drive" do
     in_range
     plugged_in a_meshtastic_go(mode: "softrf")
@@ -152,7 +171,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand", wait: 1
-      assert_text "Go: press RST twice, quickly."
+      assert_text "Go: press RST twice, quickly. It is the upper button on its left side."
       screen "53-softrf-gesture"
 
       visit "/briefing/setup"

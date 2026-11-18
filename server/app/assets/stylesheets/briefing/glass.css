@@ -1,5 +1,6 @@
 @layer components {
   .glass-prompt {
+    --pixel: 0.075rem;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
@@ -13,7 +14,6 @@
 
   .glass {
     grid-area: glass;
-    --pixel: 0.075rem;
     box-sizing: content-box;
     inline-size: calc(200 * var(--pixel));
     aspect-ratio: 1;
@@ -33,24 +33,9 @@
     font-size: calc(15 * var(--pixel));
   }
 
-  .glass-lamp { grid-area: glass; display: flex; align-items: center; gap: var(--space-inline-s); }
-  .glass-lamp p { margin: 0; }
-  .lamp {
-    flex: none;
-    inline-size: 2rem;
-    block-size: 2rem;
-    border-radius: 50%;
-    border: 2px solid var(--coverage);
-    background: var(--coverage);
-    background-clip: content-box;
-    padding: 3px;
-    animation: lamp-blink 500ms steps(1, end) infinite;
-  }
-  @keyframes lamp-blink {
-    0% { background-color: var(--coverage); }
-    50% { background-color: transparent; }
-  }
-
+  .glass-lamp { grid-area: glass; display: grid; gap: var(--space-xs); inline-size: calc(220 * var(--pixel)); }
+  .glass-lamp[hidden] { display: none; }
+  .glass-lamp p { margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
   .glass-press { grid-area: press; margin: 0; font-weight: 700; font-size: var(--text-m); }
   .glass-remembers { grid-area: remembers; margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
   .glass-remembers[hidden] { display: none; }
@@ -67,16 +52,13 @@
 
   @media (max-width: 30rem) {
     .glass-prompt {
+      --pixel: 0.08rem;
       grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
         "glass glass"
         "press seconds"
         "remembers remembers";
     }
-    .glass { justify-self: center; --pixel: 0.08rem; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .lamp { animation: none; }
+    .glass, .glass-lamp { justify-self: center; }
   }
 }

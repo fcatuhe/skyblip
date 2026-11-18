@@ -234,7 +234,9 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
-      assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
+      assert_selector ".glass-lamp", text: /The LED blinks green fast.\s+With no press, it refuses after thirty seconds./
+      assert_selector ".glass-lamp svg[role=img][aria-label='A skyBlip Bravo, its round button marked press.']", text: "Press"
+      assert_selector ".glass-lamp .lamp.lamp--green"
       assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_selector ".glass"
       assert_no_text "Not activated"
