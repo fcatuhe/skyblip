@@ -58,7 +58,7 @@
                      "description": "config. The output the PA configuration is rated for, in dBm: the row of SX1262 DS table 13-21 the executor writes. With tx_power_dbm it says which way the part was asked for its power, and a nominal conducted figure is the lower of the two. 0 on a device with no radio, and on a capture older than the field"},
 
     "solution_phase_ms": {"type": "integer", "minimum": 0, "maximum": 65535,
-               "description": "gnss. How far into its own second the navigation solution landed, from the PPS edge. ADS-L G.1.16 refuses a solution older than 500 ms at the transmit instant, so this is the figure the whole transmit schedule stands on."},
+               "description": "gnss. How long after its own instant the navigation solution landed, from the PPS edge and the quarter second the solution names. ADS-L G.1.16 refuses a solution older than 500 ms at the instant a burst goes on air, and the receiver solves every 250 ms, so a solution that lands within 250 ms keeps every airborne burst. This is the figure the whole transmit schedule stands on."},
     "residual_m": {"type": "integer", "minimum": 0, "maximum": 65535,
                 "description": "gnss. The extrapolation residual in metres: the model the transmitter applies, run over the interval that just elapsed and measured against the fix that closed it. Meaningless unless residual_valid, because 0 m is what a perfect prediction reports."},
     "residual_valid": {"type": "boolean", "description": "gnss. There was a pair of consecutive fixes to measure the residual over."},
@@ -75,7 +75,7 @@
     "geoid_measured": {"type": "boolean",
                        "description": "gnss. The geoid separation behind the altitude came from the receiver rather than from a regional constant"},
     "tx_settled": {"type": "boolean", "description": "gnss, flight. The fix had settled far enough for this device to be allowed to transmit"},
-    "levels_fresh": {"type": "boolean", "description": "gnss. The burst this solution closed carried a GSV set, which puts its RMC and so solution_phase_ms later in the second. One solution in five while the sats page is up, none otherwise"},
+    "levels_fresh": {"type": "boolean", "description": "gnss. The burst this solution closed carried a GSV set, which puts its RMC and so solution_phase_ms later in the second. One solution in nine at 4 Hz, or in five at 1 Hz, while the sats page is up, none otherwise"},
     "pps_locked": {"type": "boolean", "description": "gnss. A PPS lock stood when the solution arrived"},
     "hdop_e2": {"type": "integer", "minimum": 0, "maximum": 65535,
                 "description": "gnss, flight. Horizontal dilution of precision in hundredths. Zero means the receiver did not report it, which is not the same as a good one"},

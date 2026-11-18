@@ -33,12 +33,14 @@ struct Ownship {
     // standard rate turn of error there.
     int32_t track_cdeg;
     // Rate of turn in hundredths of a degree a second, positive to the right.
-    // The extrapolation to the transmit instant needs it, so it is own-ship
-    // state and not a display value. Zero when nothing measured it.
+    // The residual and the alarm carry own-ship by it, so it is own-ship state
+    // and not a display value. Zero when nothing measured it.
     int16_t turn_cdps;
     uint32_t utc_s;
-    // When the fix that made this state arrived. ADS-L G.1.16 refuses to
-    // transmit a navigation solution older than 500 ms.
+    // INFO: fc 18nov26 milliseconds into utc_s: at 4 Hz the quarter the G.1.1 timestamp names
+    uint16_t utc_ms;
+    // When the solution behind this state was solved, on the millisecond clock.
+    // ADS-L G.1.16 refuses a Traffic burst whose solution is over 500 ms old on air.
     uint32_t fix_at_ms;
     // Horizontal dilution of precision in hundredths. Zero means the receiver
     // did not report it, which is not the same as a good one.

@@ -71,7 +71,6 @@ bool OwnshipService::simulating_flight() const {
 
 void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms) {
     model::Ownship& own = context_.state.own;
-    const model::Ownship previous = own;
     context_.state.flight.gnss_solutions++;
     acquisition_.observe(solution, now_ms);
     context_.state.gnss.fix_mode = solution.fix_mode;
@@ -88,6 +87,7 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.hdop_e2 = solution.hdop_e2;
     own.vdop_e2 = solution.vdop_e2;
     own.utc_s = solution.utc_s;
+    own.utc_ms = solution.utc_ms;
     own.fix_at_ms = solution_instant(solution, now_ms);
     own.satellites = solution.satellites;
     own.aircraft_category = settings_.aircraft_type;
@@ -108,15 +108,25 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
         if (!height_fixed) withdraw_climb();
     }
 
+    const bool whole_second = solution.utc_ms == 0;
+    if (whole_second || !own.fix_valid) apply_second(now_ms);
+    if (whole_second) {
+        record_gnss(solution, now_ms);
+        record_flight(now_ms);
+    }
+}
+
+// INFO: fc 18nov26 the flight model reads the receiver's whole second, as it did at 1 Hz
+void OwnshipService::apply_second(uint32_t now_ms) {
+    model::Ownship& own = context_.state.own;
     const flight::FlightState declared = flight_state_from(own, now_ms);
     own.flight_state = static_cast<uint8_t>(declared);
     ground_.update(declared);
     update_turn_rate(now_ms);
-    update_residual(previous);
+    update_residual(second_);
     first_fix_.observe(convergence_of(own), now_ms);
     own.tx_settled = first_fix_.settled(now_ms);
-    record_gnss(solution, now_ms);
-    record_flight(now_ms);
+    second_ = own;
 }
 
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {
@@ -233,14 +243,14 @@ bool OwnshipService::dates_the_edge(const gnss::GnssSolution& solution,
     return solution.fix_valid || clock.utc_s == 0;
 }
 
-// INFO: fc 19sep26 a pass late at worst, and the deadline it is read against is 450 ms wide
+// INFO: fc 19sep26 a pass late at worst | 18nov26 from the solution's own quarter, 250 ms wide
 void OwnshipService::publish_solution_phase(uint32_t now_ms) {
     const timing::ClockState& clock = context_.state.clock;
     bus::GnssState& status = context_.state.gnss;
     status.solution_phase_valid = clock.pps_locked;
     if (!status.solution_phase_valid) return;
-    const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);
-    status.solution_phase_ms = static_cast<uint16_t>((now_ms - edge_ms) % 1000);
+    status.solution_phase_ms =
+        static_cast<uint16_t>((now_ms - context_.state.own.fix_at_ms) % 1000);
 }
 
 // INFO: fc 13sep26 the latched edge dates the solution exactly, the estimate only when it is lost

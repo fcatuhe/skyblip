@@ -51,6 +51,7 @@ class OwnshipService : public runtime::Service {
     const flight::FlightTimer& timer_on_glass(uint32_t now_ms);
     bool simulating_flight() const;
     void apply_solution(const gnss::GnssSolution& solution, uint32_t now_ms);
+    void apply_second(uint32_t now_ms);
     void record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms);
     void record_flight(uint32_t now_ms);
     void record_pps(uint32_t now_ms);
@@ -87,6 +88,7 @@ class OwnshipService : public runtime::Service {
     flight::GroundLatch ground_{};
     gnss::FirstFix first_fix_{};
     gnss::Acquisition acquisition_{};
+    model::Ownship second_{};
     int32_t gnss_reference_altitude_mm_{0};
     uint32_t gnss_reference_ms_{0};
     int32_t barometer_reference_altitude_mm_{0};

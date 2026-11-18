@@ -25,6 +25,7 @@ constexpr uint32_t kLandingHoldMs = 10000;
 constexpr uint16_t kDopUnityE2 = 100;
 
 // INFO: fc 18sep26 moshe-braner's jerk gate: a speed jumping 4x between solutions is noise
+// | 18nov26 the monitor reads one solution a second at 4 Hz too, so the gate keeps its reading
 constexpr int32_t kJerkSpeedRatio = 4;
 
 struct Liftoff {
