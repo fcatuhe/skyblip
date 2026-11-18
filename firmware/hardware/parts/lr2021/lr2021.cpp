@@ -32,9 +32,6 @@ int8_t rssi_high_dbm(const uint8_t* status) {
     return static_cast<int8_t>(dbm < -128 ? -128 : dbm);
 }
 
-// INFO: fc 17nov26 the bits 1000 open DF16 and DF17, the two the decoder reads
-bool extended_length(const uint8_t* frame) { return (frame[0] & 0xF0) == 0x80; }
-
 }  // namespace
 
 Status Lr2021::probe() {
@@ -78,21 +75,15 @@ Lr2021Event Lr2021::poll(uint8_t* frame, size_t capacity) {
         event.type = Lr2021EventType::Fault;
         return event;
     }
-    // INFO: fc 17nov26 with no sync word every downlink format lands, and only DF16 and DF17 go up
-    while (frames_waiting_ != 0) {
-        const Status read = read_frame(frame, event);
-        if (read != Status::Ok && read != Status::Unsupported) {
-            event.type = Lr2021EventType::Fault;
-            return event;
-        }
-        frames_waiting_--;
-        since_frame_ms_ = 0;
-        if (read == Status::Ok) {
-            event.type = Lr2021EventType::Frame;
-            return event;
-        }
+    if (frames_waiting_ == 0) return event;
+    if (read_frame(frame, event) != Status::Ok) {
+        event.type = Lr2021EventType::Fault;
+        return event;
     }
-    return Lr2021Event{};
+    frames_waiting_--;
+    since_frame_ms_ = 0;
+    event.type = Lr2021EventType::Frame;
+    return event;
 }
 
 // INFO: fc 11nov26 the packet status is read on both sides of the level, and only agreement gives a
@@ -394,7 +385,6 @@ Status Lr2021::read_frame(uint8_t* frame, Lr2021Event& event) {
     last_opcode_ = lr2021::kReadRadioRxFifo;
     event.rssi_valid = frames_waiting_ == 1 && newest_rssi_valid_;
     event.rssi_dbm = event.rssi_valid ? newest_rssi_dbm_ : 0;
-    if (!extended_length(rx + 2)) return Status::Unsupported;
     std::memcpy(frame, rx + 2, lr2021::kFifoFrameBytes);
     return Status::Ok;
 }

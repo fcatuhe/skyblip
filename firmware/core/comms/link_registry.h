@@ -267,6 +267,11 @@ enum : uint32_t {
     kUplinkFrames = 82,
     kUplinkBad = 83,
     kUplinkTargets = 84,
+    kFormats = 85,
+    kTransponders = 86,
+    kModeS = 87,
+    kModeSAltitude = 88,
+    kUnmatched = 89,
 };
 }
 

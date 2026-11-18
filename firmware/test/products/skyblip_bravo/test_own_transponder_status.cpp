@@ -74,3 +74,21 @@ TEST_CASE("bravo: in flight status names no transponder, however loud") {
     CHECK(field(rig.last_on(events::Endpoint::Config), "command") == "status");
     CHECK(field(rig.last_on(events::Endpoint::Config), "own_transponder").empty());
 }
+
+// Most light aircraft carry Mode S with no ADS-B out, so all Bravo hears of its own is replies.
+TEST_CASE("bravo: a transponder without ADS-B out is named from its replies alone") {
+    BravoRig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    rig.seconds_with_fix(5, kTaxiMmS);
+    REQUIRE(rig.state().flight.confirmed_state == flight::FlightState::Ground);
+
+    for (uint32_t second = 0; second * 1000 <= bravo::OwnTransponder::kLeadHoldMs + 1000;
+         second++) {
+        rig.hear_mode_s(adsb::all_call(kOwn, 5), kCockpitDbm);
+        rig.hear_mode_s(adsb::altitude_reply(kOwn, 1500), kCockpitDbm);
+        rig.seconds_with_fix(1, kTaxiMmS);
+    }
+    REQUIRE(rig.state().own_transponder.has_value());
+    CHECK(rig.state().own_transponder->address == kOwn);
+    CHECK(std::string(rig.state().own_transponder->callsign).empty());
+}

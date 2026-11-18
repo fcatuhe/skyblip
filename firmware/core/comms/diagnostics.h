@@ -17,6 +17,7 @@
 #include "core/timing/channel.h"
 #include "ports/adsb_receiver.h"
 #include "ports/gnss.h"
+#include "protocols/adsb/message.h"
 
 namespace skyblip::comms {
 
@@ -102,6 +103,11 @@ struct Diagnostics {
     uint32_t adsb_unsupported{0};
     uint32_t adsb_folded{0};
     uint32_t adsb_aircraft{0};
+    uint32_t adsb_formats[adsb::kDownlinkFormats]{};
+    uint32_t adsb_transponders{0};
+    uint32_t adsb_mode_s{0};
+    uint32_t adsb_mode_s_altitude{0};
+    uint32_t adsb_unmatched{0};
 
     bool capture_available{false};
     bool capture_armed{false};
@@ -156,6 +162,7 @@ class DiagnosticsReport {
 
    private:
     enum class Kind : uint8_t { Unsigned, Integer, Boolean, Text, UnsignedArray };
+    enum class Array : uint8_t { AdsbRssi, AdsbFormats };
 
     struct Field {
         uint32_t key;
@@ -165,18 +172,21 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 80;
+    static constexpr int kMaxFields = 85;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);
     void add(Group group, uint32_t key, Kind kind, int64_t value, const char* text = nullptr);
+    void add_array(Group group, uint32_t key, Array array);
+    const uint32_t* values_of(const Field& field, int& count) const;
     int field_bytes(const Field& field) const;
 
     link::Command command_;
-    // INFO: fc 11nov26 the one array field reads this copy, so a refresh never changes a dump in
+    // INFO: fc 11nov26 the array fields read these copies, so a refresh never changes a dump in
     // flight
     static constexpr int kAdsbRssiCount = ports::AdsbReceiverStatistics::kRssiBuckets;
     uint32_t adsb_rssi_[kAdsbRssiCount]{};
+    uint32_t adsb_formats_[adsb::kDownlinkFormats]{};
     Field fields_[kMaxFields]{};
     int count_{0};
     int at_{0};

@@ -19,6 +19,7 @@ void AdsbService::tick(uint32_t now_ms) {
     events::AdsbFrame frame{};
     while (frames_.pop(frame)) hear(frame, here, now_ms);
     own_transponder_.tick(now_ms);
+    transponders_.age_out(now_ms);
     // INFO: fc 15nov26 on the ground only, as the Go proposes it: aloft a wingman is as loud
     state.own_transponder = state.flight.confirmed_state == flight::FlightState::Ground
                                 ? own_transponder_.heard()
@@ -45,15 +46,16 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     const adsb::Reception reception{frame.at_us, frame.rssi_dbm, frame.rssi_valid};
     const Status status =
         status_of(adsb::receive(frame.bytes.data(), frame.bytes.size(), reception, message));
+    count_format(message.downlink_format);
     if (status != Status::Ok) {
         refuse(status);
         return;
     }
-    // INFO: fc 18nov26 nothing believes a Mode S reply's address yet, so it goes no further
-    if (message.kind == adsb::Kind::AllCall || message.kind == adsb::Kind::Reply) return;
+    if (!transponders_.hear(message, now_ms)) return;
     // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as
     // heard
     own_transponder_.hear(message, now_ms);
+    if (message.kind == adsb::Kind::AllCall || message.kind == adsb::Kind::Reply) return;
     const bus::State& state = context_.state;
     const uint32_t now_s = state.traffic_now_s(now_ms);
     const events::Stamp received =
@@ -67,6 +69,11 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     (void)capture_.record(observation_, now_ms);
     if (!observation_.position_valid) return;
     context_.state.traffic.update(observation_, now_s);
+}
+
+void AdsbService::count_format(uint8_t downlink_format) {
+    const uint8_t last = adsb::kDownlinkFormats - 1;
+    formats_[downlink_format < last ? downlink_format : last]++;
 }
 
 // INFO: fc 12nov26 a whole 14-byte frame is never Invalid, so any refusal but Unsupported is parity

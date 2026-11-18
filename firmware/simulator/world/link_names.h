@@ -445,6 +445,11 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"uplink_frames", 82, Type::Unsigned, nullptr, 0, false},
     {"uplink_bad", 83, Type::Unsigned, nullptr, 0, false},
     {"uplink_targets", 84, Type::Unsigned, nullptr, 0, false},
+    {"formats", 85, Type::UnsignedArray, nullptr, 0, false},
+    {"transponders", 86, Type::Unsigned, nullptr, 0, false},
+    {"mode_s", 87, Type::Unsigned, nullptr, 0, false},
+    {"mode_s_altitude", 88, Type::Unsigned, nullptr, 0, false},
+    {"unmatched", 89, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -720,8 +725,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 84},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 84},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 89},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 89},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

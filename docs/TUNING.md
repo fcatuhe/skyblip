@@ -271,6 +271,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRequestWindowMs` | 30000 (30 s) | milliseconds | Window | #192's proposal, a press within 30 s | 14nov26 the Go's kAnswerCeilingMs waits as long |
 | `kOfferWindowMs` | 30000 (30 s) | milliseconds | Window | room for a Go that pinned on the health and lost the link to reconnect |
 | `kReceiverParkCeilingMs` | `(parts::lr2021::kCommandBusyCeilingUs + parts::lr2021::kBootBusyCeilingUs + parts::lr2021::kSleepSettleUs) / 1000` | milliseconds | Ceiling | the LR2021's worst sleep: a stuck standby, the reset after it, then the settle |
+| `kTransponderForgetMs` | 30000 (30 s) | milliseconds | Forget | 30 s misses a dozen squitters 2.4 s apart, unverified until #239 benches it |
+| `kAltitudeMaxAgeMs` | `kTransponderForgetMs` = 30000 (30 s) | milliseconds | MaxAge | an altitude reply counts as long as a silent transponder is kept |
 
 ## `firmware/products/skyblip_bravo/services`
 
@@ -412,4 +414,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-267 constants over 26 folders.
+269 constants over 26 folders.

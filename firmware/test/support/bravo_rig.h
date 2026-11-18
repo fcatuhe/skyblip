@@ -117,6 +117,13 @@ struct BravoRig {
         step();
     }
 
+    // A Mode S reply on the air, its parity already overlaid by its builder.
+    void hear_mode_s(const adsb::Squitter& frame, int8_t rssi_dbm = -70) {
+        const AdsbAir air = mode_s_air(frame);
+        platform.radio().receive_air(air.chips, sizeof(air.chips), rssi_dbm);
+        step();
+    }
+
     // The two halves of a position the assembly needs, north of the rig's own fix.
     void hear_aircraft(uint32_t address, double north_m, int32_t altitude_ft = kAltitudeFt) {
         const double latitude = kLatitude1e7 / 1e7 + north_m / 111320.0;

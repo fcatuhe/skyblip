@@ -17,13 +17,18 @@ struct AdsbAir {
     uint8_t chips[sizeof(kAdsbPreambleAir) + adsb::kFrameChipBytes + 1]{};
 };
 
-inline AdsbAir adsb_air(adsb::Squitter frame) {
-    adsb::seal(frame.bytes);
+// INFO: fc 18nov26 a Mode S reply's builder overlays its parity, which sealing would overwrite
+inline AdsbAir mode_s_air(const adsb::Squitter& frame) {
     AdsbAir air;
     air.chips[0] = kAdsbPreambleAir[0];
     air.chips[1] = kAdsbPreambleAir[1];
     adsb::chips_of(frame.bytes, air.chips + sizeof(kAdsbPreambleAir));
     return air;
+}
+
+inline AdsbAir adsb_air(adsb::Squitter frame) {
+    adsb::seal(frame.bytes);
+    return mode_s_air(frame);
 }
 
 }  // namespace skyblip::simulator

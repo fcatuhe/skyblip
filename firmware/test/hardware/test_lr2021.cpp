@@ -189,18 +189,21 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
 }
 
-// With no sync word, DF11 replies land too, and only DF16 and DF17 go up to the decoder.
-TEST_CASE("lr2021: a frame of another downlink format is read and dropped") {
+// With no sync word, every downlink format lands, and the decoder tells them apart.
+TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them") {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
-    AdsbAir reply = identification(kAddress);
-    // The chips of the bits 0101, so the frame opens on DF 01011, an all-call reply.
-    reply.chips[2] = 0x66;
+    const AdsbAir reply = mode_s_air(adsb::all_call(kAddress, 5));
     const AdsbAir squitter = identification(kOtherAddress);
     REQUIRE(part.receive_air(reply.chips, sizeof(reply.chips)));
     REQUIRE(part.receive_air(squitter.chips, sizeof(squitter.chips)));
 
     uint8_t frame[adsb::kFrameBytes]{};
+    REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
+    adsb::Message message{};
+    REQUIRE(adsb::receive(frame, sizeof(frame), adsb::Reception{}, message) == wire::Status::Ok);
+    CHECK(message.kind == adsb::Kind::AllCall);
+    CHECK(message.address == kAddress);
     REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
     CHECK(address_in(frame) == kOtherAddress);
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);

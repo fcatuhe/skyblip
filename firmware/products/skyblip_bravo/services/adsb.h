@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SERVICES_ADSB_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_BRAVO_SERVICES_ADSB_H
 
+#include <array>
 #include <cstdint>
 
 #include "core/bus/bus.h"
@@ -9,6 +10,7 @@
 #include "products/common/services/traffic.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/own_transponder.h"
+#include "products/skyblip_bravo/transponders.h"
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
 #include "runtime/service.h"
@@ -31,14 +33,17 @@ class AdsbService : public runtime::Service {
     uint32_t crc() const { return crc_; }
     uint32_t unsupported() const { return unsupported_; }
     uint32_t folded() const { return folded_; }
+    const std::array<uint32_t, adsb::kDownlinkFormats>& formats() const { return formats_; }
     const adsb::Assembly& assembly() const { return assembly_; }
     const common::AdsbCapture& capture() const { return capture_; }
     const OwnTransponder& own_transponder() const { return own_transponder_; }
+    const Transponders& transponders() const { return transponders_; }
 
    private:
     static adsb::Reference reference(const model::Ownship& own);
     void hear(const events::AdsbFrame& frame, const adsb::Reference& here, uint32_t now_ms);
     void refuse(Status status);
+    void count_format(uint8_t downlink_format);
 
     bus::AdsbQueue& frames_;
     common::TrafficSettings settings_;
@@ -46,10 +51,12 @@ class AdsbService : public runtime::Service {
     common::AdsbCapture capture_;
     adsb::Assembly assembly_{};
     OwnTransponder own_transponder_{};
+    Transponders transponders_{};
     model::AircraftObservation observation_{};
     uint32_t crc_{0};
     uint32_t unsupported_{0};
     uint32_t folded_{0};
+    std::array<uint32_t, adsb::kDownlinkFormats> formats_{};
 };
 
 }  // namespace skyblip::bravo

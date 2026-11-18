@@ -20,13 +20,6 @@ constexpr uint32_t kAddress = 0x4840D6;
 
 AdsbAir identification() { return adsb_air(adsb::squitter(kAddress, 5, 4)); }
 
-// INFO: fc 17nov26 the air of a DF18, whose first four bits 1001 are not the 1000 the driver keeps
-AdsbAir df18_air() {
-    adsb::Squitter frame = adsb::squitter(kAddress, 0, 4);
-    frame.bytes[0] = static_cast<uint8_t>(18 << 3);
-    return adsb_air(frame);
-}
-
 bool framed(const AdsbAir& air) {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
@@ -202,20 +195,17 @@ TEST_CASE(
     CHECK(track.at_ms == 12345);
 }
 
-// TODO: fc 17nov26 the driver hands up DF16 and DF17 only, until the decoder reads DF18
+// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads TIS-B
 TEST_CASE("DO-260B 2.2.17.4: TIS-B messages are decoded into reports" * doctest::skip()) {
-    CHECK_FALSE(framed(df18_air()));
-    FAIL("not implemented: TIS-B rides DF18, which the LR2021 driver drops before the decoder");
+    FAIL("not implemented: TIS-B rides DF18, which the decoder refuses as unsupported");
 }
 
-// TODO: fc 17nov26 the driver hands up DF16 and DF17 only, until the decoder reads DF18
+// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
 TEST_CASE("DO-260B 2.2.18.4: ADS-R messages are decoded" * doctest::skip()) {
-    CHECK_FALSE(framed(df18_air()));
-    FAIL(
-        "not implemented: ADS-R rides DF18 CF 6, which the LR2021 driver drops before the decoder");
+    FAIL("not implemented: ADS-R rides DF18 CF 6, which the decoder refuses as unsupported");
 }
 
-// TODO: fc 17nov26 the driver hands up DF16 and DF17 only, until the decoder reads DF18
+// TODO: fc 18nov26 the decoder refuses DF18 as unsupported, until it reads ADS-R
 TEST_CASE("DO-260B 2.2.18.5: ADS-R reports are kept apart from ADS-B reports" * doctest::skip()) {
     FAIL("not implemented: no ADS-R message is ever heard, so no ADS-R report is kept");
 }
