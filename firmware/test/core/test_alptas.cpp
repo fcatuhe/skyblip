@@ -8,6 +8,7 @@
 #include "core/protocol/alptas.h"
 #include "core/protocol/nmea_out.h"
 #include "doctest/doctest.h"
+#include "protocols/adsl/packet.h"
 #include "protocols/alptas/frame.h"
 
 using namespace skyblip;
@@ -136,10 +137,10 @@ TEST_CASE("alptas: encoding refuses to claim a position it does not have") {
     CHECK(alptas_encode(frame, observation, kUtcS) == Status::Invalid);
 }
 
-// core/protocol/README.md argues each row against FTD-012 section 8.2 and ADS-L G.1.3.
-TEST_CASE("alptas: every FLARM aircraft type is read as the ADS-L category it names") {
-    const uint8_t expected[16] = {0, 4, 1, 3, 8, 1, 16, 7, 1, 2, 0, 5, 5, 11, 0, 0};
-    for (uint8_t type = 0; type < 16; type++) {
+// core/protocol/README.md argues each row against the frame's type table and ADS-L G.1.3.
+TEST_CASE("alptas: every ALP-TAS aircraft type is read as the ADS-L category it names") {
+    const uint8_t expected[20] = {0, 4, 1, 3, 8, 1, 16, 7, 1, 2, 10, 5, 5, 11, 0, 0, 9, 11, 12, 13};
+    for (uint8_t type = 0; type < 20; type++) {
         CAPTURE(int(type));
         CHECK(int(alptas_type_to_adsl_category(type)) == int(expected[type]));
     }
@@ -148,7 +149,7 @@ TEST_CASE("alptas: every FLARM aircraft type is read as the ADS-L category it na
 
 TEST_CASE("alptas: aircraft type maps back to the ADS-L category it came from") {
     // Invertible both ways: unknown, glider, rotorcraft, skydiver, hang glider,
-    // paraglider, powered, jet, balloon, UAV. The rest of the FLARM taxonomy is
+    // paraglider, powered, jet, balloon, UAV. The rest of the type table is
     // many-to-one into ADS-L (tow plane and drop plane are both "light", airship
     // is "balloon"), so only one representative survives.
     static const uint8_t kInvertible[] = {0x0, 0x1, 0x3, 0x4, 0x6, 0x7, 0x8, 0x9, 0xB, 0xD};
@@ -232,4 +233,104 @@ TEST_CASE("alptas: a heavy rotorcraft goes out as a helicopter and comes back as
     REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87000000, got) == Status::Ok);
     CHECK(int(adsl_category_to_alptas_type(15)) == 0x3);
     CHECK(int(got.aircraft_category) == 3);
+}
+
+TEST_CASE("alptas: types 16 to 19, eVTOL and the three UAS classes, are not read as gliders") {
+    CHECK(int(alptas_type_to_adsl_category(alptas::kAircraftTypeGyrocopter)) == 10);
+    CHECK(int(alptas_type_to_adsl_category(16)) == 9);
+    CHECK(int(alptas_type_to_adsl_category(17)) == 11);
+    CHECK(int(alptas_type_to_adsl_category(18)) == 12);
+    CHECK(int(alptas_type_to_adsl_category(19)) == 13);
+    CHECK(int(alptas_type_to_adsl_category(20)) == 0);
+}
+
+TEST_CASE("alptas: Pan-Pan and Mayday are an emergency, a high urgency is not") {
+    CHECK(int(alptas_urgency_to_emergency(alptas::kUrgencyNormal)) == adsl::kEmergencyNone);
+    CHECK(int(alptas_urgency_to_emergency(alptas::kUrgencyHigh)) == adsl::kEmergencyNone);
+    CHECK(int(alptas_urgency_to_emergency(alptas::kUrgencyPanPan)) == adsl::kEmergencyGeneral);
+    CHECK(int(alptas_urgency_to_emergency(alptas::kUrgencyMayday)) == adsl::kEmergencyGeneral);
+}
+
+// The fix counts quarters modulo 16 s, 1700000000 s is quarter 0, so 1700000001.3 s is 1.3 s on.
+TEST_CASE("alptas: a frame's fix is as old as the quarters since it, counted from the reception") {
+    events::Stamp heard{kUtcS + 1, 300, true};
+    CHECK(alptas_fix_age_ms(0, heard) == 1300);
+    CHECK(alptas_fix_age_ms(4, heard) == 300);
+    heard.at_s = kUtcS + 16;
+    heard.into_ms = 150;
+    CHECK(alptas_fix_age_ms(63, heard) == 400);
+    heard.phase_valid = false;
+    CHECK(alptas_fix_age_ms(0, heard) == 0);
+    heard = events::Stamp{kUtcS + 5, 0, true};
+    CHECK(alptas_fix_age_ms(0, heard) == 0);
+}
+
+TEST_CASE("alptas: a sender in privacy mode keeps the address it was first heard with") {
+    model::AircraftObservation observation = make_observation(481234567, 87654321);
+    observation.address_mapping_table = 0;
+    AlptasReceiver receiver;
+    const events::Stamp heard{kUtcS, 900, true};
+    uint32_t address = 0xCDDD966Fu;
+    model::AircraftObservation got{};
+    for (uint8_t step = 0; step < 4; step++) {
+        alptas::Position position;
+        position.address = address;
+        position.address_type = alptas::kAddressTypeRandom;
+        position.random = static_cast<uint8_t>(step + 1);
+        position.latitude_1e7 = observation.latitude_1e7;
+        position.longitude_1e7 = observation.longitude_1e7;
+        position.altitude_m = 1000;
+        uint8_t frame[alptas::kFrameBytes];
+        alptas::encode(frame, position, kUtcS);
+        REQUIRE(receiver.decode(frame, kUtcS, 481000000, 87000000, heard, got) == Status::Ok);
+        CHECK(got.address == 0xDD966Fu);
+        address = alptas::random_address_after(address, position.random);
+    }
+
+    alptas::Position stranger;
+    stranger.address = 0x12345678u;
+    stranger.address_type = alptas::kAddressTypeRandom;
+    stranger.latitude_1e7 = observation.latitude_1e7;
+    stranger.longitude_1e7 = observation.longitude_1e7;
+    uint8_t frame[alptas::kFrameBytes];
+    alptas::encode(frame, stranger, kUtcS);
+    REQUIRE(receiver.decode(frame, kUtcS, 481000000, 87000000, heard, got) == Status::Ok);
+    CHECK(got.address == 0x345678u);
+}
+
+// A wrong key decrypts to a rated frame most of the time, so a rated frame has to be within range.
+TEST_CASE("alptas: a rated frame is believed within radio range and refused beyond it") {
+    alptas::Position position;
+    position.address = 0x3C1234;
+    position.address_type = alptas::kAddressTypeIcao;
+    position.latitude_1e7 = 481234567;
+    position.longitude_1e7 = 87654321;
+    position.sil = 3;
+    position.nic = 8;
+    uint8_t frame[alptas::kFrameBytes];
+    alptas::encode(frame, position, kUtcS);
+    model::AircraftObservation got{};
+    CHECK(alptas_decode(frame, kUtcS, 481000000, 87500000, got) == Status::Ok);
+    CHECK(alptas_decode(frame, kUtcS, 478000000, 87500000, got) == Status::Invalid);
+}
+
+TEST_CASE("alptas: stealth, no-track, urgency and turn rate reach the observation") {
+    alptas::Position position;
+    position.address = 0x3C1234;
+    position.address_type = alptas::kAddressTypeManufacturer;
+    position.latitude_1e7 = 481234567;
+    position.longitude_1e7 = 87654321;
+    position.urgency = alptas::kUrgencyMayday;
+    position.stealth = true;
+    position.no_track = true;
+    position.turn_rate_cdps = -1500;
+    uint8_t frame[alptas::kFrameBytes];
+    alptas::encode(frame, position, kUtcS);
+    model::AircraftObservation got{};
+    REQUIRE(alptas_decode(frame, kUtcS, 481000000, 87500000, got) == Status::Ok);
+    CHECK(got.stealth);
+    CHECK(got.no_track);
+    CHECK(int(got.emergency) == adsl::kEmergencyGeneral);
+    CHECK(got.turn_valid);
+    CHECK(got.turn_cdps == -1500);
 }

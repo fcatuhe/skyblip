@@ -24,7 +24,7 @@ namespace skyblip::common {
 // The persist half is why core/timing::DurableWriteWindow exists. A settings
 // change is now a request, not a call: this service is the only writer of the
 // blob, so it is also the only place that has to place the NVMC stall somewhere
-// the radio can afford it. The pilot's side of that is invisible - the panel has
+// the radio can afford it. The pilot's side of that is invisible - the glass has
 // already shown the new value, because state.settings changed when they changed
 // it; what waits is the flash.
 //

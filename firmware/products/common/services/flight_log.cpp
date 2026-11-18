@@ -54,7 +54,7 @@ void FlightLogService::watch(uint32_t now_ms) {
                   own.utc_s);
     for (int slot = 0; slot < traffic::TrafficTable::kMaxTargets; slot++) {
         const traffic::Target* target = context_.state.traffic.at(slot);
-        if (target == nullptr || !target->used) {
+        if (target == nullptr || !target->used || target->observation.no_track) {
             events_.vacant(slot);
             continue;
         }

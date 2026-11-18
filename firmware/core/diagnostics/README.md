@@ -76,7 +76,7 @@ Every field below is read off `bus::State` or off an `events::` value as it stan
 | `Gap` 16 | records dropped, the span they cover, the total since arming, the ring capacity | nothing. It is the hole itself, written where the hole is |
 | `End` 17 | records written in the session, records dropped | nothing. It is the one record that says the session stopped rather than was stopped |
 | `Duty` 18 | panel partial and full refreshes, backlight ms, receiver armed ms, transmit keyed ms, BLE connected ms, annunciator ms | what each consumer cost over a flight, on a board that cannot measure current: time in state is the only half of a power budget this device holds |
-| `Switch` 19 | the change (hop, M to O, O to M, retune, wake), the frequency tuned to, how long the retune took, the gap from the previous dwell's end, the margin to the dwell's start, armed ahead, late | whether `kHopGuardMs` and `kJitterGuardMs` can shrink, from every change rather than the worst since boot, and when a slow one happened |
+| `Switch` 19 | the change (hop, M to O, O to M, retune, wake), the frequency tuned to, how long the retune took, the gap from the previous dwell's end, the margin to the dwell's start, armed ahead, late | whether `kSwitchRetuneMs` can shrink, from every change rather than the worst since boot, and when a slow one happened |
 | `Loop` 20 | over the second before it: service passes, milliseconds spent in them, the longest pass and its phase, the longest start-to-start gap and its phase, the slowest service and its longest tick | whether the loop is late because one pass is long or because nothing ran it, and which service holds it |
 | `Adsb` 21 | ICAO address, ADS-B version, GVA, pressure altitude, the GNSS-baro difference and its age, the relative altitude on GNSS height and on pressure altitude, each with its own validity | the ADS-B altitude questions of #183: which datum each installation's difference is on, how far the two relative altitudes disagree, and which versions and GVA values are heard |
 
@@ -181,7 +181,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Motion` | `products/common/services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
-| `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
+| `Traffic` | `products/common/alarm_grader.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, at most once per aircraft each `AdsbCapture::kRecordPeriodMs` and ten in any second. Bravo's `AdsbService` calls it after each `protocol::adsb_fold`, and a paired Go's `BravoService` after each `observation` frame it folds. Nothing arms a capture on Bravo yet (#247) |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |

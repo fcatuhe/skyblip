@@ -66,7 +66,7 @@
       "keys": [
         {"name": "part", "number": 1, "type": "unsigned", "required": true, "description": "Frame index within one answer, from 0"},
         {"name": "more", "number": 2, "type": "boolean", "required": true, "description": "Another frame follows. Exactly one frame per answer carries false"},
-        {"name": "pps_us", "number": 3, "type": "unsigned_array", "description": "Counts of PPS interval errors in seven buckets, signed and symmetric about zero, edged at kRetuneUs (30 us), kHopGuardUs and kJitterGuardUs (core/timing/slot_timing_statistics.h). An error past the widest edge lands in the outermost bucket"},
+        {"name": "pps_us", "number": 3, "type": "unsigned_array", "description": "Counts of PPS interval errors in seven buckets, signed and symmetric about zero, edged at kRetuneUs (30 us), kSwitchMarginUs and kSwitchRetuneUs (core/timing/slot_timing_statistics.h). An error past the widest edge lands in the outermost bucket"},
         {"name": "pps_worst_us", "number": 4, "type": "integer", "description": "The PPS interval error of the largest magnitude since boot, signed, in microseconds"},
         {"name": "pps_samples", "number": 5, "type": "unsigned", "description": "PPS intervals counted in pps_us"},
         {"name": "dwell_us", "number": 6, "type": "unsigned_array", "description": "Counts of dwell phase errors, from the armed instant to the burst keying, in the seven buckets of pps_us"},
@@ -75,7 +75,7 @@
         {"name": "holdover_events", "number": 9, "type": "unsigned", "description": "Times the PPS stream broke since boot: a lost lock, or two edges more than 1.5 s apart or out of order. Such an interval is not a sample for pps_us"},
         {"name": "missed", "number": 10, "type": "unsigned", "description": "Dwells that carried a plan and closed without the outcome they were armed for"},
         {"name": "refused", "number": 11, "type": "unsigned", "description": "Plans never armed because the hour's air-time budget was spent (core/timing/transmit.h)"},
-        {"name": "switch_hop_us", "number": 12, "type": "unsigned", "description": "The executor's slowest M-band channel hop since boot, in microseconds, the figure the hop guard is sized from"},
+        {"name": "switch_hop_us", "number": 12, "type": "unsigned", "description": "The executor's slowest M-band channel hop since boot, in microseconds, the figure kSwitchRetuneMs is sized from"},
         {"name": "switch_to_o_band_us", "number": 13, "type": "unsigned", "description": "The executor's slowest change from the M band to the O band since boot, in microseconds"},
         {"name": "switch_to_m_band_us", "number": 14, "type": "unsigned", "description": "The executor's slowest change from the O band back to the M band since boot, in microseconds"},
         {"name": "late_dwells", "number": 15, "type": "unsigned", "description": "Dwells armed ahead that were still not listening at their start"}

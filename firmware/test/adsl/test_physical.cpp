@@ -77,7 +77,7 @@ TEST_CASE(
         tx.give_up(utc_s, false, true);
         for (int slot = 0; slot < 2; slot++) {
             const timing::SlotPlan plan =
-                timing::Scheduler::plan(timing::Scheduler::slot_start(slot), clock);
+                timing::Scheduler::plan(timing::Scheduler::window(slot).start_ms, clock);
             const timing::Transmitter::Attempt attempt = tx.attempt(
                 plan, utc_s, utc_s * 1000, false, 0, timing::Transmitter::Payload::Position);
             if (!attempt.go || utc_s == c) continue;
@@ -130,7 +130,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
         for (uint32_t utc_s = 0; utc_s < 40; utc_s++) {
             for (int slot = 0; slot < 2; slot++) {
                 const timing::SlotPlan plan =
-                    timing::Scheduler::plan(timing::Scheduler::slot_start(slot), clock);
+                    timing::Scheduler::plan(timing::Scheduler::window(slot).start_ms, clock);
                 for (const timing::Transmitter::Payload payload :
                      {timing::Transmitter::Payload::Position,
                       timing::Transmitter::Payload::Status}) {
@@ -151,7 +151,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L tr
     timing::ClockState clock{};
     clock.utc_valid = true;
     clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kSlot1StartMs, clock);
+    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kWindowBMs.start_ms, clock);
 
     int seen = 0;
     for (uint32_t address = 1; address < 64; address++) {
@@ -163,9 +163,9 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L tr
             if (!attempt.go) continue;
             seen++;
             CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
-            CHECK(attempt.at_ms >= timing::kCallsignStartMs);
+            CHECK(attempt.at_ms >= adsl::kDirectEndMs);
             CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kCallsignEndMs);
+                  timing::kWindowBMs.end_ms);
             CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
             CHECK(utc_s % 2 == 0);
         }
@@ -174,11 +174,13 @@ TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L tr
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {
-    CHECK(timing::kUplinkRxStartMs >= 200);
-    CHECK(timing::kUplinkRxEndMs <= 450);
-    for (int phase = timing::kUplinkRxStartMs; phase < timing::kUplinkRxEndMs; phase++) {
-        CHECK(timing::Scheduler::band_at(phase) == timing::Band::O);
-        CHECK(timing::Scheduler::frequency_hz_at(phase) == adsl::kOBandHz);
+    const timing::Window dwell = timing::dwell_of(timing::kUplinkWindowMs);
+    CHECK(dwell.start_ms >= adsl::kUplinkSlotStartMs);
+    CHECK(dwell.end_ms <= adsl::kUplinkSlotEndMs);
+    for (int phase = dwell.start_ms; phase < dwell.end_ms; phase++) {
+        const timing::SlotPlan plan = timing::Scheduler::plan(phase, timing::ClockState{});
+        CHECK(plan.band == timing::Band::O);
+        CHECK(plan.frequency_hz == adsl::kOBandHz);
     }
     for (int phase = 0; phase < 200; phase++) CHECK_FALSE(timing::Scheduler::in_direct_slot(phase));
 }

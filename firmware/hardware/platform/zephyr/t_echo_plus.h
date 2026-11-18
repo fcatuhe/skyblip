@@ -37,7 +37,7 @@
 
 // Two questions only the board port can answer, because on this SoC they have to
 // be asked BEFORE the bus drivers claim the pins at POST_KERNEL: the e-paper's
-// signature (its one data line has to be reversed, and the SPIM owns MOSI and
+// ID (its one data line has to be reversed, and the SPIM owns MOSI and
 // SCK from init onwards) and the buzzer pin read high-Z against a pull-up (the
 // PWM peripheral drives it from init onwards). Both are taken once, at
 // PRE_KERNEL_1, by boards/<board>/board.c, and read back here.
@@ -47,7 +47,7 @@
 // driver: a driver that could only be called during board init would be a driver
 // nothing could call.
 extern "C" {
-size_t board_panel_signature(uint8_t* out, size_t capacity);
+size_t board_panel_id(uint8_t* out, size_t capacity);
 int board_buzzer_pin_held_low(void);
 }
 
@@ -130,9 +130,9 @@ class TEchoPlus {
 
     // The 21 bytes the board port clocked out of the panel, or false if it could
     // not take them at all.
-    bool read_panel_signature(parts::PanelSignature& out) {
-        uint8_t raw[parts::kPanelSignatureBytes] = {0};
-        if (board_panel_signature(raw, sizeof(raw)) != sizeof(raw)) return false;
+    bool read_panel_id(parts::PanelId& out) {
+        uint8_t raw[parts::kPanelIdBytes] = {0};
+        if (board_panel_id(raw, sizeof(raw)) != sizeof(raw)) return false;
         for (int i = 0; i < parts::kPanelIdBytes2d; i++) out.register_2d[i] = raw[i];
         for (int i = 0; i < parts::kPanelIdBytes2e; i++)
             out.register_2e[i] = raw[parts::kPanelIdBytes2d + i];
@@ -154,7 +154,7 @@ class TEchoPlus {
         out.temperature_valid = true;
         return true;
     }
-    bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
+    bool read_divider_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() { return zephyr::Battery::external_power(); }
 
     // INFO: fc 11nov26 asks no part: a global's constructor calls it before the watchdog

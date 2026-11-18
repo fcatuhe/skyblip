@@ -47,10 +47,10 @@ TEST_CASE("rf: the SetTx timeout is the transmit watchdog, and the next dwell is
 
     uint8_t frame[adsl::kFrameBytes] = {0};
     REQUIRE(radio.transmit(frame, sizeof(frame)) == Status::Ok);
-    // The chip is holding a timer that expires well inside one 400 ms dwell.
+    // The chip is holding a timer that expires well inside one dwell.
     const uint32_t timeout_ms = chip.tx_timeout_ticks * parts::sx1262::kTimeoutStepNs / 1000000u;
     CHECK(timeout_ms > 0);
-    CHECK(timeout_ms < timing::kSlot0EndMs - timing::kSlot0StartMs);
+    CHECK(timeout_ms < static_cast<uint32_t>(timing::dwell_of(timing::kWindowAMs).width_ms()));
 
     // And a TxDone that never came and a timeout nobody polled still leave the
     // transmitter off before the next channel opens.
@@ -87,7 +87,7 @@ TEST_CASE("rf: a radio that will not answer over SPI is an absent capability, no
 // B3. The phase used to be whatever the board sampled at the top of the pass,
 // combined with a clock read at the bottom of it. Everything the service list
 // does in between - parsing a GNSS burst, painting a panel - moved the transmit
-// instant that far late, on top of the 5 ms the jitter guard already allows for.
+// instant that far late, on top of the 5 ms the retune already allows for.
 TEST_CASE("rf: the transmit instant is measured from the latched edge, not from a stale phase") {
     for (uint32_t lag_ms : {0u, 4u, 9u}) {
         Pass pass;
@@ -114,7 +114,7 @@ TEST_CASE("rf: the transmit instant is measured from the latched edge, not from 
         CAPTURE(lag_ms);
         CAPTURE(error_us);
         CHECK(error_us >= 0);
-        CHECK(error_us < timing::kJitterGuardMs * 1000);
+        CHECK(error_us < timing::kSwitchRetuneMs * 1000);
         // And in fact inside the millisecond the PPS surface is quantised to,
         // whatever the pass costs: the edge is an instant, not a phase.
         CHECK(error_us < 1000);

@@ -27,7 +27,8 @@ int deliver(char* out, size_t capacity, char* sentence, int body_bytes) {
     return written;
 }
 
-int format_pflaa_tail(char* out, const model::AircraftObservation& target, bool with_rssi) {
+int format_pflaa_tail(char* out, const model::AircraftObservation& target, bool with_rssi,
+                      bool concealed) {
     int written = 0;
     out[written++] = ',';
     if (!flight::on_ground(target.flight_state)) {
@@ -39,7 +40,7 @@ int format_pflaa_tail(char* out, const model::AircraftObservation& target, bool 
     if (target.speed_valid)
         written += format_unsigned(out + written, (static_cast<uint32_t>(target.speed_q) + 2) / 4);
     out[written++] = ',';
-    if (target.climb_valid) {
+    if (target.climb_valid && !concealed) {
         int32_t climb_dm = (static_cast<int32_t>(target.climb_e8) * 10 + 4) / 8;
         written += format_signed(out + written, climb_dm, 1, 1, false);
     } else {
@@ -118,11 +119,13 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
                                address_mapping_table_to_id_type(target.address_mapping_table));
     sentence[written++] = ',';
     written += format_hex(sentence + written, target.address, 6);
+    const bool concealed = target.stealth && alarm_level == 0;
+    if (concealed) callsign = nullptr;
     char tail[kPflaaTailBytes];
-    int tail_bytes = format_pflaa_tail(tail, target, true);
+    int tail_bytes = format_pflaa_tail(tail, target, true, concealed);
     const int whole_callsign_bytes = callsign_bytes(callsign);
     if (written + whole_callsign_bytes + tail_bytes + kNmeaFinishBytes > kNmeaSentenceCeilingBytes)
-        tail_bytes = format_pflaa_tail(tail, target, false);
+        tail_bytes = format_pflaa_tail(tail, target, false, concealed);
     const int callsign_room = kNmeaSentenceCeilingBytes - kNmeaFinishBytes - written - tail_bytes;
     written += format_callsign_suffix(sentence + written, callsign, callsign_room);
     std::memcpy(sentence + written, tail, static_cast<size_t>(tail_bytes));

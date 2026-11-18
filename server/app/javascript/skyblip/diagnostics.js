@@ -46,7 +46,7 @@ const ENDPOINT = ['config', 'nmea', 'log', 'peer'];
 const PLACEMENT = ['idle', 'hold', 'place', 'forced'];
 const WRITE_KIND = ['settings', 'flight_record'];
 const CHANGE = ['retune', 'hop', 'to_o_band', 'to_m_band', 'wake'];
-const SERVICE = ['config', 'ownship', 'power', 'radio', 'traffic', 'alarm', 'nmea', 'flight_log', 'capture', 'screen', 'board_poll', 'bravo'];
+const SERVICE = ['config', 'ownship', 'power', 'radio', 'traffic', 'alarm', 'nmea', 'flight_log', 'capture', 'screen', 'board_poll', 'bravo', 'adsb', 'button', 'peer'];
 
 const TYPES = {
   1: ['boot', [

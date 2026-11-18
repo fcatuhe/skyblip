@@ -60,8 +60,9 @@ TEST_CASE("flash window: a settings write is placed at the instant it starts, no
     rig.product.config_link().tick(now_ms);
     REQUIRE(rig.product.config_link().durable_writes().pending());
 
-    // The last phase of the uplink dwell a worst-case write still clears a guard before its end.
-    constexpr int kLastWritePhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs -
+    // The last phase of the uplink dwell a worst-case write still clears a retune before its end.
+    constexpr int kLastWritePhaseMs = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
+                                      timing::kSwitchRetuneMs -
                                       static_cast<int>(timing::DurableWriteWindow::kWorstWriteMs);
     constexpr int kRanLongMs = 50;
     constexpr int kPassPhaseMs = kLastWritePhaseMs - kRanLongMs;
@@ -130,8 +131,8 @@ TEST_CASE("flash window: six rapid changes are one write") {
     CHECK(stored.alarm == go::Alarm::Off);
 }
 
-// The same, stepped by a real thumb on the panel: presses in at the pin the board polls.
-TEST_CASE("flash window: a thumb stepping the alarm on the panel writes flash once") {
+// The same, stepped by a real thumb on the glass: presses in at the pin the board polls.
+TEST_CASE("flash window: a thumb stepping the alarm on the glass writes flash once") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

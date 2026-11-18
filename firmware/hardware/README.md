@@ -29,11 +29,11 @@ The producers the board polls, which are not ports because nothing calls them on
 |---|---|
 | `trigger_barometer()`, `read_barometer(platform::BarometerReading&)` | `events::BarometerSample` |
 | `imu_firmware()` | the image `parts::Bhi260` uploads, which becomes `events::AccelerometerSample` |
-| `read_battery_mv(uint16_t&)`, `external_power()` | `events::BatterySample` |
+| `read_divider_mv(uint16_t&)`, `external_power()` | `events::BatterySample` |
 | `button_down()`, `pad_down()` | `events::ContactEvent` |
 | `pps()` | the PPS edge on `bus::State::clock` |
 
-And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `barometer_answers()`, `identity()`, `glass_rotation()`, `read_panel_signature()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`. `capabilities()` asks no part, because the board's constructor calls it, before `main()` arms the watchdog. `barometer_answers()` reads the BME280's chip id over I2C, so the board calls it from `probe()`.
+And what the board asks about the unit it is running on: `begin()`, `capabilities()`, `barometer_answers()`, `identity()`, `glass_rotation()`, `read_panel_id()`, `buzzer_pin_held_low()`, `watchdog()`, `system_power()`. `capabilities()` asks no part, because the board's constructor calls it, before `main()` arms the watchdog. `barometer_answers()` reads the BME280's chip id over I2C, so the board calls it from `probe()`.
 
 `read_barometer()` is one fetch because the BME280 measures pressure and ambient temperature in the same conversion, and asking twice would pay for two. The temperature carries its own validity beside it: a part that answers with a pressure and no temperature is still a pressure, and the `$LK8EX1` a tablet reads has a sentinel for the field that is missing. What the sensor reads is what goes out - it sits inside the case, so it reads warm, and no correction is invented for it.
 
@@ -64,10 +64,10 @@ The header does not `#error` without the Kconfig. The platform header reaches su
 
 ## The two questions a pin and a register answer
 
-`buzzer_pin_held_low()` and `read_panel_signature()` are the two facts only the board port can take, before any driver owns the pins, and both are read rather than declared because LilyGO fits more than one thing behind the same footprint.
+`buzzer_pin_held_low()` and `read_panel_id()` are the two facts only the board port can take, before any driver owns the pins, and both are read rather than declared because LilyGO fits more than one thing behind the same footprint.
 
 The buzzer pin is read high-Z and then against the internal pull-up. Held down both times, something on the board is pulling it to ground, and on this hardware that something is the piezo's drive stage: our T-Echo Plus reads it low and sounds, our plain T-Echo has an empty pad, follows the pull-up up and has no buzzer to sound. The board concludes `Capability::Buzzer` from that reading alone (`boards/lilygo/t_echo_plus/board.h`), the same way it concludes `Capability::Haptic` from a DRV2605 answering at 0x5A. Until September 2026 the rule ran the other way round - a fitted buzzer was read as an empty pad - which is how a Plus flew silent while a plain T-Echo reported a buzzer it does not have.
 
-The panel signature has two ways of missing, and `parts/ssd1681/panel.h` keeps them apart because different people fix them. `Panel::Unknown`, printed `NO ID`, is a signature that could not be clocked out at all: the board port did not run, or the pins were not ready, and nothing was read. `Panel::Unlisted`, printed `UNLISTED`, is a signature that was read and matches no row of SoftRF's table - which is the honest answer for a T-Echo Plus, whose row in that table carries a date string and no bytes. A bench that sees `UNLISTED` has a panel worth writing down; a bench that sees `NO ID` has a board that answered nothing.
+The panel ID has two ways of missing, and `parts/ssd1681/panel.h` keeps them apart because different people fix them. `Panel::Unknown`, printed `NO ID`, is an ID that could not be clocked out at all: the board port did not run, or the pins were not ready, and nothing was read. `Panel::Unlisted`, printed `UNLISTED`, is an ID that was read and matches no row of SoftRF's table - which is the honest answer for a T-Echo Plus, whose row in that table carries a date string and no bytes. A bench that sees `UNLISTED` has a panel worth writing down; a bench that sees `NO ID` has a board that answered nothing.
 
 A platform that is missing one of these fails at `platform/contract.h`, which both platforms assert themselves against at the bottom of their own header: the error names the member and points at the platform rather than at whichever call in `boards/` happened to need it first. No vtable is involved, the assertions are compile time and the table above is what the file spells out.

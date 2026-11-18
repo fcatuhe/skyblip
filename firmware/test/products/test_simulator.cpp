@@ -542,8 +542,8 @@ TEST_CASE("simulator: a wink that starts and ends between two looks is still see
 
     REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/true));
     REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/false));
-    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
-    CHECK(simulator.lamp_since_last_look() == indication::Lamp::None);
+    CHECK(simulator.lamp_since_last_look() == indication::Colour::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Colour::None);
 }
 
 TEST_CASE("simulator: a lamp still lit is seen at every look") {
@@ -553,6 +553,6 @@ TEST_CASE("simulator: a lamp still lit is seen at every look") {
     REQUIRE(simulator.product().alarm().indicator_condition() == indication::Condition::Alive);
 
     REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/true));
-    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
-    CHECK(simulator.lamp_since_last_look() == indication::Lamp::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Colour::Green);
+    CHECK(simulator.lamp_since_last_look() == indication::Colour::Green);
 }

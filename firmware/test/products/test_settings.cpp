@@ -321,7 +321,7 @@ TEST_CASE("settings: the config reply offers nothing the firmware does not read"
     CHECK(settings.alarm == Alarm::Soft);
 }
 
-TEST_CASE("settings: a callsign is what a panel can draw, and a patch that is not is refused") {
+TEST_CASE("settings: a callsign is what the glass can draw, and a patch that is not is refused") {
     Settings settings = defaults();
     const char* ok = "{\"callsign\":\"G-ABCD\"}";
     CHECK(apply_patch(settings, ok) == Status::Ok);

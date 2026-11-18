@@ -15,16 +15,16 @@ class LampLook {
         if (indicator_.lit()) lit_since_look_ = indicator_.lamp();
     }
 
-    indication::Lamp since_last_look() {
-        const indication::Lamp seen =
-            lit_since_look_ != indication::Lamp::None ? lit_since_look_ : indicator_.lamp();
-        lit_since_look_ = indication::Lamp::None;
+    indication::Colour since_last_look() {
+        const indication::Colour seen =
+            lit_since_look_ != indication::Colour::None ? lit_since_look_ : indicator_.lamp();
+        lit_since_look_ = indication::Colour::None;
         return seen;
     }
 
    private:
     const platform::host::Indicator& indicator_;
-    indication::Lamp lit_since_look_{indication::Lamp::None};
+    indication::Colour lit_since_look_{indication::Colour::None};
 };
 
 }  // namespace skyblip::simulator

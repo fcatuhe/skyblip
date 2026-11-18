@@ -77,7 +77,7 @@ TEST_CASE("comms: timing reports the accumulator's buckets and counters") {
     timing::SlotTimingStatistics statistics;
     statistics.record_edge(0, true);
     statistics.record_edge(1000000, true);  // one clean second: centre bucket
-    statistics.record_dwell_phase(200);     // inside the hop guard
+    statistics.record_dwell_phase(200);     // inside the switch margin
     statistics.record_missed();
     statistics.record_refused();
     statistics.record_refused();

@@ -43,8 +43,8 @@ constexpr ports::Capabilities kOptional =
 // INFO: fc 21sep26 a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two
 constexpr uint32_t kRefusalParkCeilingMs = 6000;
 
-// INFO: fc 08nov26 at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms
-// against 2 s (zephyr/rf.h:221, slot.h:42-45)
+// INFO: fc 08nov26 at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms
+// against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of)
 constexpr uint32_t kRadioParkCeilingMs = 2000;
 
 // skyBlip Go: one board, one service list. The shell around it only decides how
@@ -111,7 +111,8 @@ class Product {
             const bool metered = diagnostics_.armed();
             if (metered) {
                 meter_.begin_pass(context_.instant(now_ms).into_ms);
-                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+                meter_.timed(diagnostics::LoopService::BoardPoll,
+                             [&] { board_.poll(state_, now_ms); });
             } else {
                 meter_.rest();
                 board_.poll(state_, now_ms);
@@ -278,7 +279,7 @@ class Product {
         power::BootCell cell{};
         if (!ports::has(board_.capabilities(), ports::Capability::Battery)) return cell;
         uint16_t raw_mv = 0;
-        cell.valid = platform_.read_battery_mv(raw_mv);
+        cell.valid = platform_.read_divider_mv(raw_mv);
         cell.cell_mv = power::calibrated_mv(raw_mv, settings_.battery_offset_mv);
         cell.external_power = platform_.external_power();
         return cell;
@@ -412,7 +413,7 @@ class Product {
 
     void finish_sign_off(uint32_t now_ms) {
         if (!alarm_.signing()) return;
-        alarm_.advance_signature(now_ms);
+        alarm_.advance_sign(now_ms);
         if (!alarm_.signing()) park_outputs(now_ms);
     }
 
@@ -500,11 +501,19 @@ class Product {
     // The tablet is told after the table and the levels for this pass are
     // settled and after the config service has drained the connection, and
     // before the two services that may spend a pass on flash or on pixels.
-    // INFO: fc 11nov26 the Bravo link goes last, so the diagnostics codes of the ten before it hold
     static constexpr int kServiceCount = 11;
-    runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &radio_,
-                                               &traffic_,     &alarm_,   &nmea_,  &flight_log_,
-                                               &capture_,     &screen_,  &bravo_};
+    const runtime::Loop::Entry services_[kServiceCount]{
+        {&config_link_, diagnostics::LoopService::Config},
+        {&ownship_, diagnostics::LoopService::Ownship},
+        {&power_, diagnostics::LoopService::Power},
+        {&radio_, diagnostics::LoopService::Radio},
+        {&traffic_, diagnostics::LoopService::Traffic},
+        {&alarm_, diagnostics::LoopService::Alarm},
+        {&nmea_, diagnostics::LoopService::Nmea},
+        {&flight_log_, diagnostics::LoopService::FlightLog},
+        {&capture_, diagnostics::LoopService::Capture},
+        {&screen_, diagnostics::LoopService::Screen},
+        {&bravo_, diagnostics::LoopService::Bravo}};
     runtime::Loop loop_{services_, kServiceCount};
 
     SelfTestPart self_test_parts_[kSelfTestPartCount]{};

@@ -9,7 +9,7 @@ namespace skyblip::go {
 constexpr int kGlassWidth = boards::t_echo_plus::kGlassWidth;
 constexpr int kGlassHeight = boards::t_echo_plus::kGlassHeight;
 
-using Glass = ui::Panel<kGlassWidth, kGlassHeight>;
+using Glass = ui::Bitmap<kGlassWidth, kGlassHeight>;
 
 }  // namespace skyblip::go
 

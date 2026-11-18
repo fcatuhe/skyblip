@@ -77,6 +77,11 @@ struct AircraftObservation {
     uint8_t gva;
     bool gva_valid;
     bool height_difference_valid;
+    int32_t fix_age_ms{0};
+    int16_t turn_cdps{0};
+    bool turn_valid{false};
+    bool stealth{false};
+    bool no_track{false};
 };
 
 }  // namespace skyblip::model

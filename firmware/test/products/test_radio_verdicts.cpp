@@ -351,3 +351,27 @@ TEST_CASE("radio verdicts: a burst the air damaged is corrected, not counted as 
     CHECK(rig.state().air.rx_bad == bad_before);
     CHECK(rig.state().traffic.count() == 1);
 }
+
+// A sender that asks not to be tracked may be shown, but is not stored with its address.
+TEST_CASE("radio verdicts: a no-track sender is drawn but its address stays off the radio log") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+
+    const model::Ownship& own = rig.state().own;
+    model::AircraftObservation observation = target(own);
+    observation.no_track = true;
+    uint8_t frame[alptas::kFrameBytes];
+    REQUIRE(protocol::alptas_encode(frame, observation, own.utc_s) == Status::Ok);
+
+    hear_alptas(rig, frame);
+    settle(rig, now_ms);
+
+    const radio::Entry* entry = heard_entry(rig);
+    REQUIRE(entry != nullptr);
+    CHECK(entry->verdict == radio::Verdict::Received);
+    CHECK_FALSE(entry->address_valid);
+    CHECK(entry->address == 0u);
+    CHECK(rig.state().traffic.count() == 1);
+}

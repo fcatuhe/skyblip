@@ -171,7 +171,7 @@ TEST_CASE("board: a Plus with no haptic driver does not claim a vibration motor"
 
 TEST_CASE("board: the panel it identified is on the inventory by name") {
     platform::host::Platform platform;
-    platform.chips().epd.signature = parts::panels::kGdeh0154D67Syx2118;
+    platform.chips().epd.panel_id = parts::panels::kGdeh0154D67Syx2118;
     bus::Bus bus;
     Board board{platform, bus};
     board.probe();
@@ -191,7 +191,7 @@ TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
     CHECK(board.display().panel() == parts::Panel::Unknown);
     CHECK(std::string(board.inventory().panel_name) == "NO ID");
     // And the display is still a capability. An identification that could refuse
-    // to drive the glass would blank the one page that explains a dead device.
+    // to drive the panel would blank the one page that explains a dead device.
     CHECK(ports::has(board.capabilities(), ports::Capability::Display));
 }
 

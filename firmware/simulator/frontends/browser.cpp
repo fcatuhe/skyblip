@@ -331,7 +331,7 @@ KEEPALIVE int simulator_adsb_heard() {
 }
 KEEPALIVE int simulator_adsb_aircraft() { return bravo_unit().adsb().assembly().count(); }
 KEEPALIVE const char* simulator_bravo_lamp() {
-    if (g_flying == simulator::Product::Go) return indication::to_string(indication::Lamp::None);
+    if (g_flying == simulator::Product::Go) return indication::to_string(indication::Colour::None);
     return indication::to_string(g_flying == simulator::Product::Paired
                                      ? g_paired.bravo_lamp_since_last_look()
                                      : g_bravo.lamp_since_last_look());

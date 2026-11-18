@@ -159,7 +159,7 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
     }
 }
 
-// NoTrack is FTD-012's data port version 8, Source and RSSI version 9 (sections 6.4, 6.5 and 8.2).
+// NoTrack came with data port version 8, Source and RSSI with 9, as XCSoar's ParsePFLAA reads them.
 TEST_CASE(
     "nmea: PFLAA marks an ADS-B target with NoTrack 0, Source 1 and the level that placed it") {
     const auto own = own_at(481000000, 81000000, 1000);
@@ -258,7 +258,7 @@ TEST_CASE("nmea: PFLAU reports the receive count, the GPS state and the threat")
     CHECK(checksum_ok(sentence));
 }
 
-// FTD-012 defines the GPS field as 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving.
+// The GPS field is 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving.
 TEST_CASE("nmea: PFLAU's GPS field is the flight state, as FLARM defines it") {
     auto own = own_at(481000000, 81000000, 1000);
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
@@ -291,7 +291,7 @@ TEST_CASE("nmea: PFLAU GPS 1 on the ground reads as a 2D fix on XCSoar, and is s
 }
 
 // SoftRF sends the tenth field empty rather than dropping it: "$PFLAU,0,1,2,1,0,,0,,,*4C".
-TEST_CASE("nmea: PFLAU carries all ten FTD-012 fields, empty sky or not") {
+TEST_CASE("nmea: PFLAU carries all ten fields, empty sky or not") {
     auto own = own_at(481000000, 81000000, 1000);
     own.flight_state = static_cast<uint8_t>(flight::FlightState::Airborne);
     char buffer[128];
@@ -325,7 +325,7 @@ TEST_CASE("nmea: PFLAU's TX field follows the transmitter's own gate, not the cl
     CHECK(std::string(buffer, sending).rfind("$PFLAU,2,1,2,1,0,", 0) == 0);
 }
 
-// core/protocol/README.md argues each row against ADS-L G.1.3 and FTD-012 section 8.2.
+// core/protocol/README.md argues each row against ADS-L G.1.3 and the $PFLAA AcftType field.
 TEST_CASE("nmea: every ADS-L category reaches PFLAA as the FLARM aircraft type it names") {
     const uint8_t expected[18] = {0x0, 0x8, 0x9, 0x3, 0x1, 0xB, 0x8, 0x7, 0x4,
                                   0x3, 0x3, 0xD, 0xD, 0xD, 0xD, 0x3, 0x6, 0x7};
@@ -470,4 +470,33 @@ TEST_CASE("nmea: the widest sentence these can produce still fits the narrowest 
     const int lk8ex1_written = format_lk8ex1(buffer, sizeof(buffer), widest);
     CHECK(lk8ex1_written > 0);
     CHECK(lk8ex1_written <= comms::kSmallestSupportedPayloadBytes);
+}
+
+// A competitor in stealth shows no name and no climb, until it is the threat.
+TEST_CASE("nmea: PFLAA hides a stealth target's name and climb unless it is the alarm") {
+    auto own = own_at(481000000, 81000000, 1000);
+    model::AircraftObservation observation{};
+    observation.position_valid = true;
+    observation.address = 0xC5D804;
+    observation.address_mapping_table = 0x06;
+    observation.latitude_1e7 = own.latitude_1e7 + 100000;
+    observation.longitude_1e7 = own.longitude_1e7;
+    observation.altitude_m = 1000;
+    observation.climb_valid = true;
+    observation.climb_e8 = 40;
+    observation.stealth = true;
+
+    char buffer[128];
+    int written = format_pflaa(buffer, sizeof(buffer), own, observation, 0, "D-KXYZ");
+    REQUIRE(written > 0);
+    std::string hidden(buffer, written);
+    CHECK(hidden.find("D-KXYZ") == std::string::npos);
+    CHECK(hidden.find(",5.0,") == std::string::npos);
+    CHECK(checksum_ok(hidden));
+
+    written = format_pflaa(buffer, sizeof(buffer), own, observation, 1, "D-KXYZ");
+    REQUIRE(written > 0);
+    std::string alarm(buffer, written);
+    CHECK(alarm.find("!D-KXYZ") != std::string::npos);
+    CHECK(alarm.find(",5.0,") != std::string::npos);
 }

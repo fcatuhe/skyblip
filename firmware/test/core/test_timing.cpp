@@ -12,104 +12,96 @@ using namespace skyblip::timing;
 
 constexpr uint64_t kLastEdgeUs = 12'000'000;
 
-// Our cut of the second: two 400 ms M-band dwells, one channel each, so slot 1
-// runs 800..1200 and its tail is the head of the next second. The uplink dwell
-// is framed on the window our own ground station transmits in (210..390 ms, a
-// burst that completes by 390). The M-band dwell opens at 400 to catch
-// FLARM-generation traffic that starts around 405, earlier than the ADS-L direct
-// slot our own bursts respect.
-TEST_CASE("timing: dwell map matches the decided band split") {
+// The owner's rule of 17nov26: three windows heard in full, one switch between each two.
+TEST_CASE("timing: the dwell map covers the uplink, ALP-TAS's first window and its second") {
+    CHECK(kUplinkWindowMs.start_ms == 210);
+    CHECK(kUplinkWindowMs.end_ms == 440);
+    CHECK(kWindowAMs.start_ms == 450);
+    CHECK(kWindowAMs.end_ms == 820);
+    CHECK(kWindowBMs.start_ms == 830);
+    CHECK(kWindowBMs.end_ms == 1200);
+}
+
+TEST_CASE("timing: every switch is 2 ms on the old channel, a 5 ms retune, 3 ms on the new one") {
+    CHECK(kSwitchMarginMs == 2);
+    CHECK(kSwitchRetuneMs == 5);
+    CHECK(kSwitchLeadMs == 3);
+    struct Switch {
+        int from_ms;
+        SlotState before;
+        SlotState retune;
+        SlotState after;
+    };
+    const Switch switches[] = {
+        {kWindowBMs.end_ms - 1000, SlotState::Slot1, SlotState::SwitchMBandToOBand,
+         SlotState::UplinkRxOBand},
+        {kUplinkWindowMs.end_ms, SlotState::UplinkRxOBand, SlotState::SwitchOBandToMBand,
+         SlotState::Slot0},
+        {kWindowAMs.end_ms, SlotState::Slot0, SlotState::Hop, SlotState::Slot1},
+    };
+    for (const Switch& at : switches) {
+        CAPTURE(at.from_ms);
+        CHECK(Scheduler::state_at(at.from_ms - 1) == at.before);
+        CHECK(Scheduler::state_at(at.from_ms + 1) == at.before);
+        CHECK(Scheduler::state_at(at.from_ms + 2) == at.retune);
+        CHECK(Scheduler::state_at(at.from_ms + 6) == at.retune);
+        CHECK(Scheduler::state_at(at.from_ms + 7) == at.after);
+        CHECK(Scheduler::state_at(at.from_ms + 10) == at.after);
+    }
     CHECK(Scheduler::state_at(0) == SlotState::Slot1);
-    CHECK(Scheduler::state_at(199) == SlotState::Slot1);
-    CHECK(Scheduler::state_at(200) == SlotState::SwitchMBandToOBand);
-    CHECK(Scheduler::state_at(204) == SlotState::SwitchMBandToOBand);
-    CHECK(Scheduler::state_at(205) == SlotState::UplinkRxOBand);
-    CHECK(Scheduler::state_at(390) == SlotState::UplinkRxOBand);
-    CHECK(Scheduler::state_at(394) == SlotState::UplinkRxOBand);
-    CHECK(Scheduler::state_at(395) == SlotState::SwitchOBandToMBand);
-    CHECK(Scheduler::state_at(399) == SlotState::SwitchOBandToMBand);
-    CHECK(Scheduler::state_at(400) == SlotState::Slot0);
-    CHECK(Scheduler::state_at(797) == SlotState::Slot0);
-    CHECK(Scheduler::state_at(798) == SlotState::Hop);
-    CHECK(Scheduler::state_at(799) == SlotState::Hop);
-    CHECK(Scheduler::state_at(800) == SlotState::Slot1);
     CHECK(Scheduler::state_at(999) == SlotState::Slot1);
 }
 
-TEST_CASE("timing: every band edge keeps its guard") {
-    CHECK(kUplinkRxStartMs <= kGroundEmitStartMs - kJitterGuardMs);
-    CHECK(kUplinkRxEndMs >= kGroundEmitEndMs + kJitterGuardMs);
-    // M->O after slot 1's tail, then O->M before slot 0.
-    CHECK(kUplinkRxStartMs - kSlot1WrapMs == kJitterGuardMs);
-    CHECK(kSlot0StartMs - kUplinkRxEndMs == kJitterGuardMs);
-    // Two equal M-band dwells, one channel each.
-    CHECK(kSlot0EndMs - kSlot0StartMs == kSlot1EndMs - kSlot1StartMs);
+// 200-202 B, 202-207 retune, 207-442 O, 442-447 retune, 447-822 A, 822-827 retune, 827-1202 B.
+TEST_CASE("timing: a dwell listens from its lead to its margin, and a retune plans the next one") {
+    CHECK(Scheduler::plan(300, anchored()).start_ms == 207);
+    CHECK(Scheduler::plan(300, anchored()).end_ms == 442);
+    CHECK(Scheduler::plan(500, anchored()).start_ms == 447);
+    CHECK(Scheduler::plan(500, anchored()).end_ms == 822);
+    CHECK(Scheduler::plan(900, anchored()).start_ms == 827);
+    CHECK(Scheduler::plan(900, anchored()).end_ms == 1202);
+    // The tail is the same dwell as 900 ms.
+    CHECK(Scheduler::plan(100, anchored()).start_ms == 827);
+    CHECK(Scheduler::plan(201, anchored()).end_ms == 1202);
+    CHECK(kWindowBSpillMs == 202);
+    CHECK(Scheduler::plan(204, anchored()).start_ms == 207);
+    CHECK(Scheduler::plan(444, anchored()).start_ms == 447);
+    CHECK(Scheduler::plan(824, anchored()).start_ms == 827);
 }
 
 TEST_CASE("timing: band and channel per dwell") {
-    CHECK(Scheduler::band_at(300) == Band::O);
+    CHECK(Scheduler::plan(300, anchored()).band == Band::O);
+    CHECK(Scheduler::plan(300, anchored()).frequency_hz == adsl::kOBandHz);
     // The tail of slot 1: still M-band, still the second channel.
-    CHECK(Scheduler::band_at(100) == Band::M);
-    CHECK(Scheduler::frequency_hz_at(100) == adsl::kMBand1Hz);
+    CHECK(Scheduler::plan(100, anchored()).frequency_hz == adsl::kMBand1Hz);
     CHECK(Scheduler::slot_of(100) == 1);
-    CHECK(Scheduler::band_at(420) == Band::M);
-    CHECK(Scheduler::band_at(500) == Band::M);
-    CHECK(Scheduler::band_at(900) == Band::M);
     // §C.2: two M-band channels, one per direct half, so a receiver visits both.
-    CHECK(Scheduler::frequency_hz_at(300) == adsl::kOBandHz);
-    CHECK(Scheduler::frequency_hz_at(420) == adsl::kMBand0Hz);
-    CHECK(Scheduler::frequency_hz_at(500) == adsl::kMBand0Hz);
-    CHECK(Scheduler::frequency_hz_at(900) == adsl::kMBand1Hz);
-}
-
-TEST_CASE("timing: uplink window and direct slot predicates") {
-    CHECK(Scheduler::in_uplink_rx(205));
-    CHECK(Scheduler::in_uplink_rx(394));
-    CHECK_FALSE(Scheduler::in_uplink_rx(395));
-    // The dwells are wider than the direct slot at both ends: we listen from
-    // 400 and to 1200, we transmit only inside 450..1000.
-    CHECK_FALSE(Scheduler::in_direct_slot(420));
-    CHECK(Scheduler::in_direct_slot(450));
-    CHECK(Scheduler::in_direct_slot(999));
-    CHECK_FALSE(Scheduler::in_direct_slot(100));
-    CHECK_FALSE(Scheduler::in_direct_slot(300));
-    CHECK(Scheduler::slot_of(420) == 0);
+    CHECK(Scheduler::plan(500, anchored()).frequency_hz == adsl::kMBand0Hz);
+    CHECK(Scheduler::plan(900, anchored()).frequency_hz == adsl::kMBand1Hz);
     CHECK(Scheduler::slot_of(500) == 0);
     CHECK(Scheduler::slot_of(900) == 1);
     CHECK(Scheduler::slot_of(300) == -1);
 }
 
-// The executor cannot be handed a burst mid-dwell: a plan queues behind the one it is flying.
-TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
-    Scheduler scheduler;
-    // Slot 0 opens at 400 and places its burst from 450, so 400 is where the plan must carry it.
-    CHECK_FALSE(Scheduler::in_direct_slot(kSlot0StartMs));
-    CHECK(Scheduler::in_own_tx_dwell(kSlot0StartMs));
-    CHECK(scheduler.plan(kSlot0StartMs, anchored()).tx_allowed);
-    CHECK(Scheduler::in_own_tx_dwell(kSlot1StartMs));
-    CHECK(scheduler.plan(kSlot1StartMs, anchored()).tx_allowed);
-    // Slot 1's tail is the same dwell, and it carries the callsign burst.
-    CHECK(Scheduler::in_own_tx_dwell(0));
-    CHECK(Scheduler::in_own_tx_dwell(kSlot1WrapMs - 1));
-    CHECK(scheduler.plan(100, anchored()).tx_allowed);
-    // The uplink dwell and both band edges own no direct-slot time at all.
-    CHECK_FALSE(Scheduler::in_own_tx_dwell(202));
-    CHECK_FALSE(Scheduler::in_own_tx_dwell(300));
-    CHECK_FALSE(Scheduler::in_own_tx_dwell(397));
+TEST_CASE("timing: the direct slot is narrower than the M-band dwells") {
+    CHECK_FALSE(Scheduler::in_direct_slot(447));
+    CHECK(Scheduler::in_direct_slot(450));
+    CHECK(Scheduler::in_direct_slot(999));
+    CHECK_FALSE(Scheduler::in_direct_slot(100));
+    CHECK_FALSE(Scheduler::in_direct_slot(300));
 }
 
-TEST_CASE("timing: a dwell stops early enough to retune before the next one") {
-    Scheduler scheduler;
-    // The O->M edge is the safety-critical one: 5 ms of guard, then M-band at 400.
-    CHECK(scheduler.plan(300, anchored()).start_ms == kUplinkRxStartMs);
-    CHECK(scheduler.plan(300, anchored()).end_ms == kUplinkRxEndMs);
-    // The tail is the same dwell as 900 ms: one plan, 800..1200.
-    CHECK(scheduler.plan(100, anchored()).start_ms == kSlot1StartMs);
-    CHECK(scheduler.plan(100, anchored()).end_ms == kSlot1EndMs);
-    CHECK(scheduler.plan(500, anchored()).start_ms == kSlot0StartMs);
-    CHECK(scheduler.plan(500, anchored()).end_ms == kSlot0EndMs - kHopGuardMs);
-    CHECK(scheduler.plan(900, anchored()).end_ms == kSlot1EndMs);
-    CHECK(scheduler.plan(900, anchored()).start_ms == kSlot1StartMs);
+// The executor cannot be handed a burst mid-dwell: a plan queues behind the one it is flying.
+TEST_CASE("timing: the dwell owns its burst from the instant it opens") {
+    CHECK(Scheduler::plan(444, anchored()).tx_allowed);
+    CHECK(Scheduler::plan(447, anchored()).tx_allowed);
+    CHECK(Scheduler::plan(824, anchored()).tx_allowed);
+    // Slot 1's tail is the same dwell, and it carries the callsign burst.
+    CHECK(Scheduler::plan(0, anchored()).tx_allowed);
+    CHECK(Scheduler::plan(kWindowBSpillMs - 1, anchored()).tx_allowed);
+    // The uplink dwell and the retune into it own no direct-slot time at all.
+    CHECK_FALSE(Scheduler::plan(204, anchored()).tx_allowed);
+    CHECK_FALSE(Scheduler::plan(300, anchored()).tx_allowed);
 }
 
 TEST_CASE("timing: TX only in M-band direct slots when clock is anchored") {
@@ -177,8 +169,7 @@ namespace {
 bool same_dwell(const SlotPlan& first, const SlotPlan& second) {
     return first.state == second.state && first.band == second.band &&
            first.frequency_hz == second.frequency_hz && first.start_ms == second.start_ms &&
-           first.end_ms == second.end_ms && first.tx_allowed == second.tx_allowed &&
-           first.own_tx_dwell == second.own_tx_dwell;
+           first.end_ms == second.end_ms && first.tx_allowed == second.tx_allowed;
 }
 
 }  // namespace

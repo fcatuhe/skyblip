@@ -5,8 +5,7 @@ namespace skyblip::alptas {
 
 inline constexpr char kVersion[] = "0.1.0";
 inline constexpr char kSpecification[] =
-    "ALP-TAS 2024 FLARM-generation frame, after the community description (no published "
-    "specification)";
+    "ALP-TAS 2024 frame, version 3, skyBlip's reading of public sources";
 
 }
 

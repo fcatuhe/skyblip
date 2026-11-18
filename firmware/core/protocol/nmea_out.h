@@ -1,4 +1,3 @@
-// core/protocol/nmea_out.h: ALP-TAS (FLARM-wire-compatible) NMEA output for
 #ifndef SKYBLIP_CORE_PROTOCOL_NMEA_OUT_H
 #define SKYBLIP_CORE_PROTOCOL_NMEA_OUT_H
 
@@ -10,7 +9,7 @@
 
 namespace skyblip::protocol {
 
-// INFO: fc 10nov26 NMEA 0183 and FLARM's FTD-014 cap a sentence at 82 characters, $ to CRLF
+// INFO: fc 10nov26 NMEA 0183 caps a sentence at 82 characters, $ to CRLF
 constexpr int kNmeaSentenceCeilingBytes = 82;
 
 int nmea_finish(char* sentence, int body_bytes);
@@ -27,7 +26,7 @@ int format_pflaa(char* out, size_t capacity, const model::Ownship& own,
 // relative_bearing_deg is SIGNED, half a turn either way: the field is, and a value
 // pushed through an unsigned parameter puts a threat off the left wing at 340
 // degrees on an app that reads it as written.
-// INFO: fc 19sep26 FTD-012's GPS field: 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving
+// INFO: fc 19sep26 the GPS field: 0 no fix, 1 a 3D fix on the ground, 2 a 3D fix moving
 uint8_t pflau_gps(const model::Ownship& own);
 
 // INFO: fc 19sep26 the TX field is whether a burst can leave now: core/timing/transmit.h
@@ -64,7 +63,7 @@ constexpr uint32_t kLk8NoBattery = 999;
 // instead of volts as an integer, percent+1000" (MB src/driver/Baro.cpp:406-407,
 // and again at src/protocol/data/NMEA.cpp:1399-1400); GXAirCom sends
 // Clamp(percent,0,100)+1000 (src/main.cpp:4382). The percentage is also the
-// figure our own panel draws, and a device that says 38% while the tablet says
+// figure our own glass draws, and a device that says 38% while the tablet says
 // something else is a support call. Sending 38 in the voltage half of this field
 // would put 38 volts in front of a pilot.
 constexpr uint32_t kLk8BatteryPercentBase = 1000;

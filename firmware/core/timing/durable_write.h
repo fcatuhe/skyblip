@@ -7,11 +7,11 @@
 // there - the PPS latch (hardware/platform/zephyr/pps.h timestamps the edge
 // inside the GPIO callback) and the SX1262's DIO1 among them - on the core that
 // arms PPS-anchored deadlines. The dwell map (core/timing/slot.h) leaves no
-// unarmed phase in the second: 205..395 is the uplink dwell, 400..1200 the two
-// M-band dwells own-ship keys the PA inside, and the only gaps are the two 5 ms
-// retune guards, which are the last place a stall belongs. So this does not look
+// unarmed phase in the second: 207..442 is the uplink dwell, 447..1202 the two
+// M-band dwells own-ship keys the PA inside, and the only gaps are the three 5 ms
+// retunes, which are the last place a stall belongs. So this does not look
 // for a phase with no dwell in it. It places the whole stall where the CPU owes
-// the radio nothing: inside an armed RECEIVE dwell, finishing a guard's width
+// the radio nothing: inside an armed RECEIVE dwell, finishing a retune's width
 // before that dwell has to be re-armed, clear of the window own-ship may key the
 // PA in, and clear of the top of the second the anchor is latched on.
 //
@@ -75,14 +75,12 @@ class DurableWriteWindow {
     // products/skyblip_go/prj.conf). kWorstWriteMs of wall clock still passes;
     // what shrinks is how long the core is held at once, and the static_assert
     // below is what that buys - a write that had to go outside its window cannot
-    // move a dwell edge further than kJitterGuardMs, the guard both band edges
-    // keep, already absorbs. It is NOT under kHopGuardMs, and cannot be: the
-    // Kconfig floor for a slice is 2 ms and the M-band hop guard is 1. That is
-    // one more reason a forced write is counted as the fault it is.
+    // move a dwell edge further than kSwitchRetuneMs, the retune every switch
+    // keeps, already absorbs.
     static constexpr uint32_t kPartialEraseMs = 4;
 
     // How long the policy waits for a stream of changes to stop before it writes
-    // the one blob they add up to. The panel steps a value on every tap that
+    // the one blob they add up to. The glass steps a value on every tap that
     // lands inside common::PromptAnswer::kAnswerSettleMs (600 ms), so a settle
     // shorter than that window would put a pilot's six taps on flash six times.
     // This is that window plus a service pass and a little.
@@ -107,11 +105,11 @@ class DurableWriteWindow {
 
     // The one stretch the second offers, proved against the map it is cut from
     // rather than restated: the uplink dwell (core/timing/README.md).
-    static_assert(kWorstWriteMs + static_cast<uint32_t>(kJitterGuardMs) <
-                      static_cast<uint32_t>(kUplinkRxEndMs - kUplinkRxStartMs),
+    static_assert(kWorstWriteMs + static_cast<uint32_t>(kSwitchRetuneMs) <
+                      static_cast<uint32_t>(dwell_of(kUplinkWindowMs).width_ms()),
                   "one settings write no longer fits inside the uplink dwell");
-    static_assert(kPartialEraseMs < static_cast<uint32_t>(kJitterGuardMs),
-                  "a forced write could move a dwell edge past the slot map's guard");
+    static_assert(kPartialEraseMs < static_cast<uint32_t>(kSwitchRetuneMs),
+                  "a forced write could move a dwell edge past the retune a switch keeps");
     static_assert(kDeferCeilingMs > kSettleMs + 1000,
                   "the settle and one whole second could spend the bound between them");
 

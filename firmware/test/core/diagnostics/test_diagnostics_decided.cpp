@@ -295,7 +295,7 @@ TEST_CASE(
     in.worst_pass_phase_ms = 203;
     in.worst_gap_ms = 201;
     in.worst_gap_phase_ms = 394;
-    in.worst_service = 9;
+    in.worst_service = diagnostics::LoopService::Peer;
     in.worst_tick_ms = 190;
 
     const diagnostics::Loop out = diagnostics_round_trip(in);

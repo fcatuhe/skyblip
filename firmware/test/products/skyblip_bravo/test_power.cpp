@@ -1,5 +1,5 @@
 // The ways a Bravo goes dark, every part parked on each: the X1 items #170 moved to #176.
-#include "core/indication/signature.h"
+#include "core/indication/sign.h"
 #include "doctest/doctest.h"
 #include "test/support/bravo_rig.h"
 
@@ -41,7 +41,7 @@ TEST_CASE("bravo: a long press signs off with three red pulses under the thumb, 
     rig.platform.set_button_down(true);
     rig.run_for(power::kLongPressHoldMs + indication::kSignOff.lead_ms + 100);
     REQUIRE(rig.product.shutdown().reason() == power::ShutdownReason::LongPress);
-    CHECK(rig.platform.indicator().lamp() == indication::Lamp::Red);
+    CHECK(rig.platform.indicator().lamp() == indication::Colour::Red);
     CHECK(rig.platform.annunciator().vibrating());
 
     rig.run_for(indication::length_ms(indication::kSignOff));
@@ -99,7 +99,7 @@ TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp 
     rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run_for(100);
-    CHECK(rig.platform.indicator().lamp() == indication::Lamp::Green);
+    CHECK(rig.platform.indicator().lamp() == indication::Colour::Green);
     CHECK(rig.platform.annunciator().vibrating());
 
     rig.run_for(indication::kSignOnPulseMs);
@@ -108,7 +108,7 @@ TEST_CASE("bravo: a press from off signs on with one green pulse, then the lamp 
     bool winked_blue = false;
     for (int i = 0; i < 300 && !winked_blue; i++) {
         rig.run_for(10);
-        winked_blue = rig.platform.indicator().lamp() == indication::Lamp::Blue;
+        winked_blue = rig.platform.indicator().lamp() == indication::Colour::Blue;
     }
     CHECK(winked_blue);
 }
@@ -200,7 +200,7 @@ TEST_CASE("bravo: a unit refused to fly goes dark before it signs off") {
     BravoRig rig([](platform::host::MeshtrackerX1& x1) { x1.radio().version_major = 2; });
     REQUIRE(rig.setup() == Status::Down);
     for (int i = 0; i < 100 && !rig.platform.indicator().lit(); i++) rig.run_for(10);
-    REQUIRE(rig.platform.indicator().lamp() == indication::Lamp::Red);
+    REQUIRE(rig.platform.indicator().lamp() == indication::Colour::Red);
 
     rig.product.shutdown().request(power::ShutdownReason::LongPress, rig.now_ms);
     rig.run_for(indication::kSignOff.lead_ms / 2);

@@ -47,22 +47,22 @@ class Canvas {
 };
 
 template <int Width, int Height>
-class Panel : public Canvas {
+class Bitmap : public Canvas {
    public:
     static constexpr int kWidth = Width;
     static constexpr int kHeight = Height;
     static constexpr int kStride = (Width + 7) / 8;
     static constexpr size_t kBytes = static_cast<size_t>(kStride) * static_cast<size_t>(Height);
 
-    Panel() : Canvas(store_, Width, Height) {}
-    Panel(const Panel& other) : Canvas(store_, Width, Height) { assign(other); }
-    Panel& operator=(const Panel& other) {
+    Bitmap() : Canvas(store_, Width, Height) {}
+    Bitmap(const Bitmap& other) : Canvas(store_, Width, Height) { assign(other); }
+    Bitmap& operator=(const Bitmap& other) {
         if (this != &other) assign(other);
         return *this;
     }
 
    private:
-    void assign(const Panel& other) {
+    void assign(const Bitmap& other) {
         for (size_t i = 0; i < kBytes; i++) store_[i] = other.store_[i];
     }
 

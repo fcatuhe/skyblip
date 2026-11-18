@@ -320,8 +320,9 @@
                            "description": "loop. Where in the second the pass that ended the longest gap began"},
     "worst_service": {"type": "string",
                       "enum": ["config", "ownship", "power", "radio", "traffic", "alarm", "nmea",
-                               "flight_log", "capture", "screen", "board_poll", "bravo"],
-                      "description": "loop. The service with the longest single tick in the window, by its place in the loop, or the board poll that runs before them. Codes: 0 config to 9 screen, 10 board_poll, 11 bravo, the service placed after screen, which skips the board poll's code"},
+                               "flight_log", "capture", "screen", "board_poll", "bravo", "adsb",
+                               "button", "peer"],
+                      "description": "loop. The service with the longest single tick in the window, or the board poll that runs before them, named by the code each service carries in every product: diagnostics::LoopService. A Bravo capture written before that code existed named its services by their place in Bravo's loop, so its 3 to 5 and 9 there were adsb, alarm, button and peer"},
     "worst_tick_ms": {"type": "integer", "minimum": 0, "maximum": 255,
                       "description": "loop. That longest tick, saturated"},
 

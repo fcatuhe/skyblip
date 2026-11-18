@@ -25,6 +25,7 @@ constexpr uint8_t manufacturer_page_table(uint8_t page) {
 
 // INFO: fc 13nov26 G.1.4 codes "no emergency" as 1, so 0 is "undefined", not "all well"
 constexpr uint8_t kEmergencyNone = 1;
+constexpr uint8_t kEmergencyGeneral = 2;
 
 // INFO: fc 13nov26 G.1.14 prints HFOM = 2 * HDOP * UERE with a UERE of 6 m
 constexpr uint32_t kUereCm = 600;

@@ -191,7 +191,8 @@ TEST_CASE("diagnostics dwell: every dwell the radio arms is a record, band edges
         uplink = uplink || dwell.frequency_hz == adsl::kOBandHz;
         slot0 = slot0 || dwell.frequency_hz == adsl::kMBand0Hz;
         slot1 = slot1 || dwell.frequency_hz == adsl::kMBand1Hz;
-        if (dwell.state == timing::SlotState::Slot1) CHECK(dwell.end_ms == timing::kSlot1EndMs);
+        if (dwell.state == timing::SlotState::Slot1)
+            CHECK(dwell.end_ms == timing::dwell_of(timing::kWindowBMs).end_ms);
     }
     CHECK(uplink);
     CHECK(slot0);
@@ -446,7 +447,7 @@ TEST_CASE(
     diagnostics::Loop window{};
     REQUIRE(last_of(records, window));
     CHECK(window.passes > 0);
-    CHECK(window.worst_service <= diagnostics::kLoopBoardPoll);
+    CHECK(window.worst_service <= diagnostics::LoopService::Bravo);
 }
 
 // The page turns this into the hours a partition lasts, so it is a claim about the taps.

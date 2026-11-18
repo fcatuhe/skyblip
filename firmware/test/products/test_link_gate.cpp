@@ -100,7 +100,7 @@ TEST_CASE("product: a press on the ground is what opens the upload window") {
     CHECK(rig.config().pending() == comms::Pending::None);
 }
 
-TEST_CASE("product: the panel names the operation while it waits, and stops cycling pages") {
+TEST_CASE("product: the glass names the operation while it waits, and stops cycling pages") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -126,7 +126,7 @@ TEST_CASE("product: the panel names the operation while it waits, and stops cycl
     CHECK(rig.platform.chips().epd.framebuffer().count_black() == expected.count_black());
 }
 
-TEST_CASE("product: the panel counts down the seconds the prompt has left, once a second") {
+TEST_CASE("product: the glass counts down the seconds the prompt has left, once a second") {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

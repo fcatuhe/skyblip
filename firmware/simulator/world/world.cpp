@@ -223,6 +223,17 @@ int16_t climb_e8_of(const VirtualAircraft& aircraft) {
     return static_cast<int16_t>(std::lround(aircraft.climb_mps * kEighthsPerMps));
 }
 
+// INFO: fc 17nov26 redrawn every burst, so two aircraft never share an offset for good
+uint32_t drawn(uint32_t address, uint32_t transmissions) {
+    uint32_t value = address ^ (transmissions * 0x9E3779B9u);
+    value ^= value >> 16;
+    value *= 0x7feb352du;
+    value ^= value >> 15;
+    value *= 0x846ca68bu;
+    value ^= value >> 16;
+    return value;
+}
+
 }  // namespace
 
 // What the ground station heard of one aircraft, which G.3 forwards as a whole
@@ -250,7 +261,7 @@ model::AircraftObservation Sky::as_relayed(const VirtualAircraft& aircraft,
 
 // One skyPost, one frame a second, carrying every aircraft it heard: §C.5's
 // uplink slot is 200..450 ms and our own ground station is on air from 210,
-// finishing well before the dwell closes at 395 (core/timing/slot.h). A relay
+// finishing well before the dwell closes at 442 (core/timing/slot.h). A relay
 // costs the aircraft nothing - it never transmits on the O band - so this is
 // scheduled apart from the direct transmitters rather than per aircraft.
 void Sky::relay(uint64_t epoch_us, const model::Ownship& own) {
@@ -330,8 +341,6 @@ size_t adsl_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altit
     return wire::manchester_frame(adsl::kSyncWord, packet.data, adsl::kFrameBytes, chips);
 }
 
-// An ALP-TAS aircraft carries a FLARM-taxonomy address, so the address type says
-// so and the receiver reports it as one.
 size_t alptas_burst(const VirtualAircraft& aircraft, uint32_t utc_s, int32_t altitude_m,
                     int32_t latitude_1e7, int32_t longitude_1e7, uint8_t* chips) {
     model::AircraftObservation observation{};
@@ -376,18 +385,16 @@ void Sky::transmit(VirtualAircraft& aircraft, uint64_t epoch_us, const model::Ow
     if (slot < 0)
         slot = aircraft.phase_ms >= 0 ? (timing::Scheduler::slot_of(aircraft.phase_ms) == 1 ? 1 : 0)
                                       : static_cast<int>(aircraft.transmissions & 1u);
-    // A pinned phase inside slot 1's tail belongs to the slot that opened in the
-    // previous second, so its burst is 800..1200 ms after that second, not this.
-    const bool tail = aircraft.phase_ms >= 0 && aircraft.phase_ms < timing::kSlot1WrapMs;
+    // A pinned phase inside window B's spill belongs to the dwell that opened in the
+    // previous second, so its burst is 830..1200 ms after that second, not this.
+    const bool tail = aircraft.phase_ms >= 0 && aircraft.phase_ms < timing::kWindowBSpillMs;
     int phase_ms = aircraft.phase_ms;
     if (phase_ms < 0) {
-        const int first_ms = timing::Scheduler::slot_start(slot) + timing::kJitterGuardMs;
-        const int last_ms = timing::Scheduler::slot_end(slot) - timing::kJitterGuardMs -
-                            static_cast<int>(Air::kAirTimeUs / 1000);
-        phase_ms =
-            first_ms +
-            static_cast<int>((aircraft.address * 2654435761u + aircraft.transmissions * 40503u) %
-                             static_cast<uint32_t>(last_ms - first_ms));
+        const timing::Window window = timing::Scheduler::window(slot);
+        const int first_ms = window.start_ms;
+        const int last_ms = timing::last_instant_ms(window, Air::kAirTimeUs);
+        phase_ms = first_ms + static_cast<int>(drawn(aircraft.address, aircraft.transmissions) %
+                                               static_cast<uint32_t>(last_ms - first_ms));
     }
     aircraft.transmissions++;
 
@@ -410,9 +417,10 @@ void Sky::name_itself(const VirtualAircraft& aircraft, uint64_t epoch_us, uint32
     uint8_t chips[protocol::kTxChipBytes] = {0};
     const size_t chip_bytes = callsign_burst(aircraft, chips);
     if (chip_bytes == 0) return;
-    const int first_ms = timing::kCallsignStartMs;
-    const int last_ms =
-        timing::kCallsignEndMs - timing::kJitterGuardMs - static_cast<int>(Air::kAirTimeUs / 1000);
+    const timing::Window window =
+        timing::Transmitter::window_of(timing::Transmitter::Payload::Callsign, 1);
+    const int first_ms = window.start_ms;
+    const int last_ms = timing::last_instant_ms(window, Air::kAirTimeUs);
     const int phase_ms = first_ms + static_cast<int>((aircraft.address * 2654435761u) %
                                                      static_cast<uint32_t>(last_ms - first_ms));
     air_.emit(epoch_us + static_cast<uint64_t>(phase_ms) * 1000, adsl::kMBand1Hz, chips,

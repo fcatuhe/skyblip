@@ -234,7 +234,7 @@ TEST_CASE(
     draw_status(cable, on_cable);
     CHECK_FALSE(reads_in(cable, "LOW", 0, 160, 200, 194));
 
-    // The row is the last one on the panel: it has to fit inside it.
+    // The row is the last one on the glass: it has to fit inside it.
     for (int y = 194; y < Glass::kHeight; y++)
         for (int x = 0; x < Glass::kWidth; x++) CHECK_FALSE(charging.get_pixel(x, y));
 }

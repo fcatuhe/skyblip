@@ -136,7 +136,7 @@ static_assert(step_order(PowerDownStep::GnssLinesReleased) <
               "a GNSS line left driven high back-feeds the receiver through its protection diodes");
 static_assert(step_order(PowerDownStep::PanelLinesReleased) <
                   step_order(PowerDownStep::PeripheralRailOff),
-              "a panel line left driven high back-feeds the glass through its protection diodes");
+              "a panel line left driven high back-feeds the panel through its protection diodes");
 static_assert(step_order(PowerDownStep::ExternalFlashLinesReleased) <
                   step_order(PowerDownStep::PeripheralRailOff),
               "a flash line left driven high back-feeds the flash through its protection diodes");

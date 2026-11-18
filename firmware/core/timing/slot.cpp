@@ -8,6 +8,33 @@ namespace skyblip::timing {
 namespace {
 constexpr uint64_t kSecondUs = 1000000;
 constexpr uint64_t kHalfSecondUs = 500000;
+
+struct Dwell {
+    SlotState retune;
+    SlotState state;
+    Band band;
+    uint32_t frequency_hz;
+    int slot;
+    Window window;
+};
+
+constexpr Dwell kDwells[] = {
+    {SlotState::SwitchMBandToOBand, SlotState::UplinkRxOBand, Band::O, adsl::kOBandHz, -1,
+     kUplinkWindowMs},
+    {SlotState::SwitchOBandToMBand, SlotState::Slot0, Band::M, adsl::kMBand0Hz, 0, kWindowAMs},
+    {SlotState::Hop, SlotState::Slot1, Band::M, adsl::kMBand1Hz, 1, kWindowBMs},
+};
+
+// INFO: fc 17nov26 a phase in window B's spill counts from the second its dwell opened in
+int unwrapped(int phase_ms) { return phase_ms < kWindowBSpillMs ? phase_ms + 1000 : phase_ms; }
+
+// INFO: fc 17nov26 a dwell owns the phase from the margin before it to the end of its own
+const Dwell& dwell_at(int phase_ms) {
+    const int at_ms = unwrapped(phase_ms);
+    for (const Dwell& dwell : kDwells)
+        if (at_ms < dwell_of(dwell.window).end_ms) return dwell;
+    return kDwells[2];
+}
 }  // namespace
 
 void carry_utc_to_edge(ClockState& clock, uint64_t edge_us) {
@@ -31,96 +58,36 @@ std::optional<uint64_t> utc_ms(const ClockState& clock) {
 }
 
 SlotState Scheduler::state_at(int phase_ms) {
-    // The tail first: before anything else in a second, the radio is still in
-    // the slot 1 that opened 800 ms into the previous one.
-    if (phase_ms < kSlot1WrapMs) return SlotState::Slot1;
-    if (phase_ms >= kUplinkRxStartMs && phase_ms < kUplinkRxEndMs) return SlotState::UplinkRxOBand;
-    if (phase_ms >= kUplinkRxEndMs && phase_ms < kSlot0StartMs)
-        return SlotState::SwitchOBandToMBand;
-    if (phase_ms >= kSlot0StartMs && phase_ms < kSlot0EndMs - kHopGuardMs) return SlotState::Slot0;
-    if (phase_ms >= kSlot0EndMs - kHopGuardMs && phase_ms < kSlot1StartMs) return SlotState::Hop;
-    if (phase_ms >= kSlot1StartMs) return SlotState::Slot1;
-    return SlotState::SwitchMBandToOBand;
+    const Dwell& dwell = dwell_at(phase_ms);
+    return unwrapped(phase_ms) < dwell_of(dwell.window).start_ms ? dwell.retune : dwell.state;
 }
+
+int Scheduler::slot_of(int phase_ms) { return dwell_at(phase_ms).slot; }
 
 int Scheduler::direct_heard_permille() {
     int heard_ms = 0;
     for (const int slot : {0, 1}) {
-        const int from = std::max(slot_start(slot), adsl::kDirectStartMs);
-        const int to = std::min(dwell_end(slot), adsl::kDirectEndMs);
-        heard_ms += std::max(to - from, 0);
+        const Window dwell = dwell_of(window(slot));
+        heard_ms += std::min(dwell.end_ms, adsl::kDirectEndMs) -
+                    std::max(dwell.start_ms, adsl::kDirectStartMs);
     }
     return heard_ms * 1000 / (2 * (adsl::kDirectEndMs - adsl::kDirectStartMs));
 }
 
-Band Scheduler::band_at(int phase_ms) {
-    const SlotState state = state_at(phase_ms);
-    return (state == SlotState::Slot0 || state == SlotState::Hop || state == SlotState::Slot1)
-               ? Band::M
-               : Band::O;
-}
-
-uint32_t Scheduler::frequency_hz_at(int phase_ms) {
-    switch (state_at(phase_ms)) {
-        case SlotState::Slot0:
-        case SlotState::Hop: return adsl::kMBand0Hz;
-        case SlotState::Slot1: return adsl::kMBand1Hz;
-        default: return adsl::kOBandHz;
-    }
-}
-
-bool Scheduler::in_own_tx_dwell(int phase_ms) {
-    const SlotState state = state_at(phase_ms);
-    return state == SlotState::Slot0 || state == SlotState::Hop || state == SlotState::Slot1;
-}
-
-int Scheduler::slot_of(int phase_ms) {
-    if (phase_ms < kSlot1WrapMs) return 1;
-    if (phase_ms >= kSlot0StartMs && phase_ms < kSlot0EndMs) return 0;
-    if (phase_ms >= kSlot1StartMs) return 1;
-    return -1;
-}
-
 SlotPlan Scheduler::plan(int phase_ms, const ClockState& clock) {
-    phase_ms = std::max(phase_ms, 0);
-    if (phase_ms >= 1000) phase_ms %= 1000;
+    phase_ms = std::max(phase_ms, 0) % 1000;
+    const Dwell& dwell = dwell_at(phase_ms);
+    const Window span = dwell_of(dwell.window);
+    const bool anchored = clock.utc_valid && clock.pps_locked;
 
     SlotPlan slot_plan{};
     slot_plan.state = state_at(phase_ms);
-    slot_plan.band = band_at(phase_ms);
-    slot_plan.frequency_hz = frequency_hz_at(phase_ms);
-    slot_plan.own_tx_dwell = in_own_tx_dwell(phase_ms);
-
-    switch (slot_plan.state) {
-        case SlotState::Slot0:
-        case SlotState::Hop:
-            slot_plan.start_ms = kSlot0StartMs;
-            slot_plan.end_ms = dwell_end(0);
-            break;
-        case SlotState::Slot1:
-            slot_plan.start_ms = kSlot1StartMs;
-            slot_plan.end_ms = dwell_end(1);
-            break;
-        default:
-            // One O-band dwell, framed 5 ms either side of the window our own
-            // ground station transmits in.
-            slot_plan.start_ms = kUplinkRxStartMs;
-            slot_plan.end_ms = kUplinkRxEndMs;
-            break;
-    }
-
-    const bool anchored = clock.utc_valid && clock.pps_locked;
-
-    if (anchored) {
-        slot_plan.listen_only = false;
-        slot_plan.tx_allowed = (slot_plan.band == Band::M) && slot_plan.own_tx_dwell;
-    } else if (in_pps_holdover(clock)) {
-        slot_plan.listen_only = false;
-        slot_plan.tx_allowed = false;
-    } else {
-        slot_plan.listen_only = true;
-        slot_plan.tx_allowed = false;
-    }
+    slot_plan.band = dwell.band;
+    slot_plan.frequency_hz = dwell.frequency_hz;
+    slot_plan.start_ms = span.start_ms;
+    slot_plan.end_ms = span.end_ms;
+    slot_plan.tx_allowed = anchored && dwell.band == Band::M;
+    slot_plan.listen_only = !anchored && !in_pps_holdover(clock);
     return slot_plan;
 }
 

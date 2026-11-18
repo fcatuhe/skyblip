@@ -143,7 +143,7 @@
 	/*
 	 * The pins board.c has to ask a question BEFORE any bus driver claims them,
 	 * and the only place on this SoC where that is possible: the e-paper's
-	 * signature needs its single data line reversed (the SPIM owns MOSI and SCK
+	 * ID needs its single data line reversed (the SPIM owns MOSI and SCK
 	 * from POST_KERNEL onwards, and this board's SPI MISO is a placeholder), and
 	 * the buzzer pin has to be read high-Z against a pull-up before the PWM
 	 * peripheral starts driving it.
@@ -156,7 +156,7 @@
 		status = "disabled";
 
 		/* SSD1681 control lines. DC and RST are plain GPIOs in normal
-		 * operation too; MOSI and SCK are bit-banged for the signature read
+		 * operation too; MOSI and SCK are bit-banged for the ID read
 		 * and belong to spi2's pinctrl for everything else. */
 		epd_dc_gpio: epd_dc {
 			gpios = <&gpio0 28 GPIO_ACTIVE_HIGH>;
@@ -232,7 +232,7 @@
 
 		/* P1.11 is the e-paper's front light (SoftRF iomap/LilyGO_TEcho.h:78
 		 * SOC_GPIO_PIN_EPD_BLGT), not a panel enable: nothing raises it at boot and
-		 * the glass refreshes all the same. */
+		 * the panel refreshes all the same. */
 		epd_backlight_gpio: epd_backlight {
 			gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
 			label = "epd-backlight";
@@ -275,7 +275,7 @@
 	 * LED_STATE_ON is LOW on every nRF52 T-Echo in both references (SoftRF
 	 * platform/nRF52.h:53, nrf52-ogn-tracker variants/t_echo/variant.h:23), which
 	 * is the GPIO_ACTIVE_LOW below, and why the way down releases these lines
-	 * instead of leaving them driven into a rail that has gone (hal/indicator.h
+	 * instead of leaving them driven into a rail that has gone (ports/indicator.h
 	 * park()).
 	 *
 	 * `gpio-leds`, NOT the disabled `gpio-keys` trick that board_power_gpios,
@@ -294,7 +294,7 @@
 	 *
 	 * These sit on the P0.12 peripheral rail - SoftRF's comment on that pin reads
 	 * "Power: EINK, RGB, CN1" - so they go dark on their own when the rail drops.
-	 * That is not licence to leave them driven: see hal/indicator.h park().
+	 * That is not licence to leave them driven: see ports/indicator.h park().
 	 */
 	leds {
 		compatible = "gpio-leds";

@@ -121,11 +121,12 @@ Offload offload(Rig& rig, uint32_t& now_ms, uint32_t session) {
 }
 
 // One second of flight with a glider parked in the sky north of own-ship, at this range.
-void fly_past(Rig& rig, uint32_t& now_ms, int north_m) {
+void fly_past(Rig& rig, uint32_t& now_ms, int north_m, bool no_track = false) {
     fly(rig, now_ms, 1);
     const model::Ownship& own = rig.state().own;
     model::AircraftObservation glider = target_at(own, north_m, 0, 0, 0, 0, now_ms);
     glider.address = 0xDD5EED;
+    glider.no_track = no_track;
     const uint32_t now_s = rig.state().traffic_now_s(now_ms);
     glider.received.at_s = now_s;
     rig.state().traffic.update(glider, now_s);
@@ -175,6 +176,25 @@ TEST_CASE("flight log: a neighbour's alarm and closest pass, and the cell, ride 
     // Placed 200 m north at its closest; own-ship's second of flight since the fix moves that.
     CHECK(pass->target.distance_m < 300);
     CHECK(pass->target.heard_s >= 30);
+}
+
+// A sender that asks not to be tracked may be shown, but leaves nothing in the log.
+TEST_CASE("flight log: a no-track neighbour close enough to alarm is never written to the flight") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    taxi(rig, now_ms, 20);
+    fly(rig, now_ms, 20);
+    for (int i = 0; i <= 38; i++)
+        fly_past(rig, now_ms, i <= 19 ? 4000 - 200 * i : 200 * (i - 18), true);
+    fly(rig, now_ms, 20);
+    taxi(rig, now_ms, 40);
+
+    const Offload walk = offload(rig, now_ms, rig.product.flight_log().session_id());
+    CHECK(walk.decoded);
+    CHECK(first_of(walk, flight::LogKind::Alarm) == nullptr);
+    CHECK(first_of(walk, flight::LogKind::Encounter) == nullptr);
+    CHECK(first_of(walk, flight::LogKind::Status) != nullptr);
 }
 
 TEST_CASE("flight log: the tablet lists a flight and reads it back nine records at a time") {
@@ -418,7 +438,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     // Long enough for the question to have reached the glass: a press only
-    // counts towards an answer once the prompt is on the panel and the thumb
+    // counts towards an answer once the prompt is on the glass and the thumb
     // has stopped (products/common/prompt_answer.h), which is what makes a pilot stepping a
     // value on the settings page unable to authorise anything by accident.
     rig.send_log("{\"command\":\"erase\"}");

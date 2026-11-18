@@ -24,7 +24,7 @@ Clause numbers without another document name refer to ADS-L 4 SRD-860 Issue 2. F
 
 ## The current stack loses ADS-L fields
 
-FTD-012 version 7.19, section 7, defines a FLARM unit's output as NMEA 0183 `$GPRMC`, `$GPGGA` and `$GPTXT`, FLARM's proprietary `$PFLA` sentences, and Garmin's proprietary `$PGRMZ`. Section 8.10 adopts `$PGRMZ` for barometric altitude. `FLA` is FLARM's NMEA-assigned manufacturer code.
+A FLARM unit's output, as displays read it, is NMEA 0183 `$GPRMC`, `$GPGGA` and `$GPTXT`, FLARM's proprietary `$PFLA` sentences, and Garmin's proprietary `$PGRMZ` for barometric altitude. XCSoar's FLARM parser reads all of them. `FLA` is FLARM's NMEA-assigned manufacturer code.
 
 skyBlip sends these six sentence types on its once-per-second output pass:
 
@@ -32,10 +32,10 @@ skyBlip sends these six sentence types on its once-per-second output pass:
 |---|---|---|---|
 | `$GPRMC` | NMEA 0183 | own position, ground speed, track, date and time | 1 Hz with a fix and UTC |
 | `$GPGGA` | NMEA 0183 | own position, GNSS altitude and fix | 1 Hz with a fix and UTC |
-| `$PFLAU` | FLARM, FTD-012 | targets heard, fix, transmitting and the one worst threat | 1 Hz |
-| `$PFLAA` | FLARM, FTD-012 | one target relative to own-ship | at most 10 sentences per second |
-| `$PGRMZ` | Garmin, adopted by FTD-012 section 8.10 | own pressure altitude on 1013.25 hPa, in feet | 1 Hz, only with a barometer |
-| `$LK8EX1` | LK8000, outside FTD-012 | pressure, pressure altitude, vertical speed, temperature and battery | 1 Hz |
+| `$PFLAU` | FLARM | targets heard, fix, transmitting and the one worst threat | 1 Hz |
+| `$PFLAA` | FLARM | one target relative to own-ship | at most 10 sentences per second |
+| `$PGRMZ` | Garmin | own pressure altitude on 1013.25 hPa, in feet | 1 Hz, only with a barometer |
+| `$LK8EX1` | LK8000 | pressure, pressure altitude, vertical speed, temperature and battery | 1 Hz |
 
 skyBlip adds `$LK8EX1` because it is the only sentence XCSoar and LK8000 read a battery level from. Its name breaks NMEA 0183's proprietary naming rule: `P` followed by a registered three-letter manufacturer code. Displays match sentence names as strings, so they still read it.
 
@@ -73,7 +73,7 @@ An unavailable measurement is an empty field, never a substituted zero. A table 
 
 Every sentence uses the NMEA checksum and ends in CR LF. The checksum is the XOR of the ASCII bytes between `$` and `*`, written as two hexadecimal digits after `*`. The maximum sentence length is 82 characters, including `$`, checksum and CR LF.
 
-Later fields may only be appended. Existing fields do not move. This follows the extension pattern used for `$PFLAA`: NoTrack was appended in data port version 8, then Source and RSSI in version 9 (FTD-012 sections 6.4, 6.5 and 8.2).
+Later fields may only be appended. Existing fields do not move. This follows the extension pattern used for `$PFLAA`: NoTrack was appended in data port version 8, then Source and RSSI in version 9 (XCSoar's `ParsePFLAA`).
 
 ## The display opts in on its connection
 
@@ -323,14 +323,14 @@ Unregistered use is not a substitute for assignment. SoftRF writes `$PSRF`, alth
 
 GDL 90 is Garmin's binary display interface. It carries FIS-B and ForeFlight reads it. It does not provide ADS-L's address space, category distinctions or full set of quality indicators.
 
-GDL 90 section references below are to 560-1058-00 Rev A, 5 June 2007. FLARM references are to FTD-012 version 7.19.
+GDL 90 section references below are to 560-1058-00 Rev A, 5 June 2007.
 
 | Element | ADS-L Issue 2 | FLARM stack | ADS-L NMEA | GDL 90 |
 |---|---|---|---|---|
 | Encoding | binary radio payload | ASCII lines of 82 characters | ASCII lines of 82 characters | binary frames between 0x7E flags, byte stuffing, CRC-16-CCITT (2.2) |
 | Time of fix | per target, quarter seconds (G.1.1) | none | per target, as G.1.1 | the Heartbeat's UTC second for every report of that second (3.1.3, 3.5) |
 | Address | 64 AMT entries and 24 bits (F.2.2) | ID type 0 to 2 and 24 bits | as ADS-L | 6 address types, ADS-B or TIS-B, and 24 bits (3.5.1.2) |
-| Source | the radio it came on | FLARM, ADS-B, ADS-R, TIS-B, Mode S (FTD-012 version 9) | ADS-L direct or relayed, FLARM, PilotAware, FANET, OGN, ADS-L 4 Mobile, ADS-B, ADS-R, TIS-B | ADS-B or TIS-B, through the address type |
+| Source | the radio it came on | FLARM, ADS-B, ADS-R, TIS-B, Mode S (`$PFLAA` Source) | ADS-L direct or relayed, FLARM, PilotAware, FANET, OGN, ADS-L 4 Mobile, ADS-B, ADS-R, TIS-B | ADS-B or TIS-B, through the address type |
 | Position | absolute, 1.2 m north and 2.4 m east at the equator (G.1.5) | relative, metres | absolute, 5 places | absolute, 2.4 m at the equator (3.5.1.3) |
 | Altitude | above the ellipsoid (G.1.7) | relative, metres | with its reference, ellipsoid or pressure | pressure altitude, 25 ft (3.5.1.4) |
 | Speed, track, vertical rate | 0.25 m/s, 0.7 degree, 0.125 m/s (G.1.8 to G.1.10) | m/s, degrees, m/s | as ADS-L | 1 kt, 1.4 degrees, 64 ft/min (3.5.1.7 to 3.5.1.9) |
@@ -360,13 +360,13 @@ The following records existing formats. No display reads the proposed family yet
 |---|---|---|
 | XCSoar | yes, all six sentences with any driver | a driver over serial or UDP in 7.47, not released (XCSoar `NEWS.txt`) |
 | LK8000 | yes, on HM-10 | not checked |
-| SkyDemon | yes, "NMEA (FLARM or GPS)" (FLARM FTD-115 v1.02) | not checked |
-| SeeYou Navigator | yes (FTD-115) | not checked |
-| Enroute | yes (FTD-115) | Wi-Fi, UDP port 4000 (FTD-115) |
+| SkyDemon | yes, tested in flight by GA/TAS (rvt/openace README) | not checked |
+| SeeYou Navigator | yes, traffic shown with GA/TAS (rvt/openace README) | not checked |
+| Enroute | yes, it parses `$PFLAA` (`processFLARMMessagePFLAA`) | not checked |
 | ForeFlight | not checked | Wi-Fi, UDP port 4000 |
-| EasyVFR, Airmate, Helios Horizon | not checked | Wi-Fi (FTD-115) |
+| EasyVFR, Airmate, Helios Horizon | not checked | not checked |
 
-FTD-115 is FLARM's Hub Electronic Flight Bag Guide, version 1.02, 19 March 2026. XCSoar source and release information were read on 13 November 2026.
+XCSoar source and release information were read on 13 November 2026.
 
 ## We ask the governing body to adopt the family
 
@@ -383,8 +383,7 @@ The repository, including the firmware, has been MIT-licensed since November 202
 ## References identify the source of each layer
 
 - EASA, ADS-L 4 SRD-860 Issue 2, ED Decision 2022/024/R: https://www.easa.europa.eu/en/document-library/agency-decisions/ed-decision-2022024r. Local transcription: `docs/reference/ads-l_4_srd860_issue_2.md`.
-- FLARM, Data Port Interface Control Document, FTD-012 version 7.19: https://www.flarm.com/wp-content/uploads/2024/04/FTD-012-Data-Port-Interface-Control-Document-ICD-7.19.pdf
-- FLARM, Hub Electronic Flight Bag Guide, FTD-115 version 1.02, 19 March 2026: https://www.flarm.com/wp-content/uploads/2026/03/FTD-115-FLARM-Hub-EFB-Guide-v1.02.pdf
+- XCSoar, FLARM sentence parser, commit 03d7f982: https://github.com/XCSoar/XCSoar/blob/03d7f98233e4b57dc16391c00bf96ed55fc93459/src/Device/Driver/FLARM/StaticParser.cpp
 - Garmin, GDL 90 Data Interface Specification, 560-1058-00 Rev A, 5 June 2007: https://www.faa.gov/sites/faa.gov/files/air_traffic/technology/adsb/archival/GDL90_Public_ICD_RevA.PDF
 - ForeFlight, GDL 90 extended specification: https://www.foreflight.com/connect/spec/
 - NMEA, NMEA 0183, read 13 November 2026: https://www.nmea.org/nmea-0183.html

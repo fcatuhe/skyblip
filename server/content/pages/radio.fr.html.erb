@@ -32,10 +32,10 @@ updated_on: "2026-11-14"
         <tr><th>Depuis le début de la seconde</th><th>Accordée sur</th><th>Ce qui passe sur le canal</th></tr>
       </thead>
       <tbody>
-        <tr><th>0 à 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fin de la plage commencée à 800&nbsp;ms dans la seconde précédente. Des appareils de génération FLARM émettent encore sur ce canal. L&rsquo;appareil continue donc d&rsquo;écouter. Il y émet aussi son indicatif toutes les 10&nbsp;s</td></tr>
-        <tr><th>205 à 395&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>la liaison montante skyPost, depuis la station sol&nbsp;: le trafic ADS-B reçu par la station et les données météo dont elle dispose, à 200&nbsp;kbit/s. En réception seule, toujours</td></tr>
-        <tr><th>400 à 800&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>le trafic direct sur le canal bas, ADS-L et génération FLARM ensemble</td></tr>
-        <tr><th>800 à 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la même chose sur le canal haut, jusqu&rsquo;à 200&nbsp;ms dans la seconde suivante</td></tr>
+        <tr><th>0 à 202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fin de la plage commencée à 827&nbsp;ms dans la seconde précédente. Des appareils de génération FLARM émettent encore sur ce canal. L&rsquo;appareil continue donc d&rsquo;écouter. Il y émet aussi son indicatif toutes les 10&nbsp;s</td></tr>
+        <tr><th>207 à 442&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>la liaison montante skyPost, depuis la station sol&nbsp;: le trafic ADS-B reçu par la station et les données météo dont elle dispose, à 200&nbsp;kbit/s. En réception seule, toujours</td></tr>
+        <tr><th>447 à 822&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>le trafic direct sur le canal bas, ADS-L et génération FLARM ensemble</td></tr>
+        <tr><th>827 à 1202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la même chose sur le canal haut, jusqu&rsquo;à 202&nbsp;ms dans la seconde suivante</td></tr>
       </tbody>
     </table>
   </div>
@@ -53,9 +53,12 @@ updated_on: "2026-11-14"
     trames un mot de synchronisation de 32 bits, un repère dans le signal.
     Les deux mots partagent leurs dix-huit premiers chips, ou éléments du signal.
     Le récepteur détecte cette séquence commune, et le logiciel identifie le
-    système d&rsquo;après les chips qui suivent. Les quelques millisecondes de part
-    et d&rsquo;autre de la plage 869,525&nbsp;MHz sont la marge qu&rsquo;exige
-    un changement de bande, parce que les deux bandes sont deux modulations et
+    système d&rsquo;après les chips qui suivent. Chaque passage d&rsquo;une
+    plage à la suivante prend 10&nbsp;ms&nbsp;: 2&nbsp;ms encore à
+    l&rsquo;écoute de l&rsquo;ancien canal pour une émission tardive,
+    5&nbsp;ms pour changer de fréquence, puis 3&nbsp;ms à l&rsquo;écoute du
+    nouveau canal avant que son trafic commence. Ces mêmes 5&nbsp;ms couvrent
+    le changement de bande, alors que les deux bandes sont deux modulations et
     non deux fréquences&nbsp;: 100&nbsp;kbit/s Manchester FSK en bas,
     200&nbsp;kbit/s GMSK en haut.
   </p>
@@ -68,7 +71,7 @@ updated_on: "2026-11-14"
     et espacées de 9 puis 11&nbsp;s au sol. Les messages Status partent deux
     fois par cycle de 20&nbsp;s, sur le canal opposé à celui de la position
     de cette seconde. L&rsquo;indicatif fait exception&nbsp;: toutes les
-    10&nbsp;s, il part entre 1000 et 1193&nbsp;ms sur 868,4&nbsp;MHz, dans
+    10&nbsp;s, il part entre 1000 et 1190&nbsp;ms sur 868,4&nbsp;MHz, dans
     la fin de plage qui déborde sur la seconde suivante.
     L&rsquo;appareil émet des trames ADS-L, y compris son propre message
     d&rsquo;indicatif&nbsp;: le format de génération FLARM est reçu, jamais émis.
@@ -83,8 +86,8 @@ updated_on: "2026-11-14"
 
   <ul class="points">
     <li>Le GPS cale quatre plages par seconde à la microseconde près</li>
-    <li>L&rsquo;appareil utilise 868,200 et 868,400&nbsp;MHz pendant 400&nbsp;ms chacune</li>
-    <li>Il écoute la station sol sur 869,525&nbsp;MHz pendant 190&nbsp;ms</li>
+    <li>L&rsquo;appareil utilise 868,200 et 868,400&nbsp;MHz pendant 375&nbsp;ms chacune</li>
+    <li>Il écoute la station sol sur 869,525&nbsp;MHz pendant 235&nbsp;ms</li>
     <li>Il décode deux systèmes dans une seule fenêtre de synchronisation</li>
     <li>Chaque émission dure environ 5&nbsp;ms. Un canal occupé peut la retarder</li>
     <li>Il est autorisé à émettre pendant 1&nbsp;% de toute période d&rsquo;une heure et en utilise environ 0,6&nbsp;% en vol ou 0,15&nbsp;% au sol. Le firmware fait respecter cette limite</li>

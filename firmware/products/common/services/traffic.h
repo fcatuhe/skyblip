@@ -8,6 +8,7 @@
 #include "core/protocol/adsl.h"
 #include "core/protocol/adsl_uplink.h"
 #include "core/protocol/air.h"
+#include "core/protocol/alptas.h"
 #include "core/radio/log.h"
 #include "core/traffic/callsigns.h"
 #include "products/common/features.h"
@@ -53,13 +54,13 @@ class TrafficService : public runtime::Service {
                                 model::AircraftObservation& observation);
     radio::Verdict learn_callsign(const adsl::Packet& packet, uint32_t utc_s,
                                   model::AircraftObservation& observation);
-    radio::Verdict decode_alptas(protocol::Frame& frame, uint32_t utc_s, bool dated,
-                                 model::AircraftObservation& observation,
-                                 int8_t& key_offset_s) const;
+    radio::Verdict decode_alptas(protocol::Frame& frame, uint32_t utc_s, const events::Stamp& stamp,
+                                 model::AircraftObservation& observation, int8_t& key_offset_s);
     static bool names_its_sender(radio::Verdict outcome);
     static radio::Verdict verdict_of(Status decoded);
 
     protocol::AdslUplink uplink_codec_{};
+    protocol::AlptasReceiver alptas_receiver_{};
     const Feature declared_;
     TrafficSettings settings_;
     bool uplink_enabled_{false};

@@ -30,7 +30,7 @@ inline void stand_on_the_ground(Rig& rig, uint32_t& now_ms) {
 
 inline void fly(Rig& rig, uint32_t& now_ms) { rig.seconds(now_ms, 16, /*speed_mm_s=*/50000, 1200); }
 
-// The change a pilot makes on the panel, and the one a phone makes over the link,
+// The change a pilot makes on the glass, and the one a phone makes over the link,
 // arrive at the same flag: comms::ConfigService is the single writer of the blob
 // and this is how both editors say the struct moved.
 inline void change_alarm(Rig& rig, go::Alarm to) {

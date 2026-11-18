@@ -2,7 +2,7 @@
 
 One file per page, each one a pure function from a snapshot struct to pixels. A page reads nothing, owns nothing and decides nothing: `go::ScreenService` fills the snapshot and the page draws it, which is what lets every page be tested without a device, a bus or a clock.
 
-These pages are what a skyBlip Go is, which is why they live with the product rather than in `ui/`: `radar`, `nearby`, `sixpack` and the rest map one for one onto `go::Page`, and none of them is a thing a ground station would draw. What they draw on is `go::Glass`, the 200x200 the T-Echo Plus carries (`boards/lilygo/t_echo_plus/glass.h`), and every figure below is measured for that panel at arm's length in sunlight rather than scaled to it. Another glass re-measures them; it does not divide them.
+These pages are what a skyBlip Go is, which is why they live with the product rather than in `ui/`: `radar`, `nearby`, `sixpack` and the rest map one for one onto `go::Page`, and none of them is a thing a ground station would draw. What they draw on is `go::Glass`, the 200x200 the T-Echo Plus carries (`boards/lilygo/t_echo_plus/glass.h`), and every figure below is measured for that glass at arm's length in sunlight rather than scaled to it. Another glass re-measures them; it does not divide them.
 
 ## The unit every page reads in
 
@@ -48,7 +48,7 @@ Own ship gets the minute too, and the one after it, as a line out of the nose wi
 
 It is only struck when there is an aircraft inside the ring. The run is a scale, and a scale is read against something: on an empty ring there is nothing to measure, and a dashed line standing off the nose with no traffic anywhere would be ink a pilot learns to ignore, on a page whose whole job is that ink means an aeroplane. Traffic out in the corners or on the rim does not bring it back: the ring is what the page is graduated in. The moment one crosses it, so does the run. A member of the formation does not bring it back either: it is drawn as the square around own ship and not as traffic, and a run struck for the aircraft on the wing is a scale with nothing on it to read.
 
-It is the only mark on the page driven by own speed alone, so it is also the one that can refresh the glass with nothing else happening. The first ball steps a pixel every 0.65 kt per mile of range, 2.6 kt on the 4 NM ring, and the second at half that, and the panel is only presented when the frame actually differs and at most once a second, so a pixel of drift costs one partial refresh. There is none without a fix, without a ground speed, or where both minutes fall inside the propeller.
+It is the only mark on the page driven by own speed alone, so it is also the one that can refresh the panel with nothing else happening. The first ball steps a pixel every 0.65 kt per mile of range, 2.6 kt on the 4 NM ring, and the second at half that, and the panel is only presented when the frame actually differs and at most once a second, so a pixel of drift costs one partial refresh. There is none without a fix, without a ground speed, or where both minutes fall inside the propeller.
 
 Nothing is written across the top of the glass but a paired Bravo's corner (Bravo has its corner). The sector a pilot is flying into is the one a target has to be seen in, so the half of the picture above the ship carries the plot and nothing else - which is also why there is no compass rose: four 5x7 letters are not read at arm's length in daylight, they each cost the plot a patch of cleared glass, and a pilot reading a nose-up picture is not steering by them.
 
@@ -98,7 +98,7 @@ The range sits in the middle of the footer, on the bottom of the ring, with a cl
 
 The plot is drawn one of two ways, and `PLOT` on the menu picks which (`menu`): `ALL`, where every aircraft with a position is drawn whatever its distance, and `TO SCALE`, where every mark on the glass stands where the ring's scale puts it and what does not fit is not drawn. `ALL` is first on the row and what a new unit ships on, because an aircraft the page leaves off is an aircraft a pilot was not told about. The choice is stored with the other settings.
 
-To scale, the glass is wider than the ring and the plot uses all of it. The circle is 92 px for the range in the footer, and the panel reaches 99 px abeam and 141 px into a corner, so traffic keeps being drawn out to about 4.3 NM beside and 6.1 NM diagonally on the 4 NM setting. Those corners are peripheral vision: something is out there, in that direction, further than the ring. Down in the bottom corners that puts traffic on the clock and the count, and it is drawn over them like over every other reading: an aircraft that vanished as it slid onto the footer and came back as it left would read as reception, not layout. Past the glass an aircraft is not drawn at all, and `nearby` is where it is listed.
+To scale, the glass is wider than the ring and the plot uses all of it. The circle is 92 px for the range in the footer, and the glass reaches 99 px abeam and 141 px into a corner, so traffic keeps being drawn out to about 4.3 NM beside and 6.1 NM diagonally on the 4 NM setting. Those corners are peripheral vision: something is out there, in that direction, further than the ring. Down in the bottom corners that puts traffic on the clock and the count, and it is drawn over them like over every other reading: an aircraft that vanished as it slid onto the footer and came back as it left would read as reception, not layout. Past the glass an aircraft is not drawn at all, and `nearby` is where it is listed.
 
 ### Bravo has its corner
 
@@ -270,7 +270,7 @@ The cell is the other exception, and a stronger one: it is not a GNSS reading in
 
 A track due north reads `360`, not `000`. It is what a pilot says on the radio and what every other instrument in the cockpit shows, and `000` is nobody's heading.
 
-The page reads outward from the middle. The six faces are a block: 66 px between centres in both axes, so the same 3 px of glass between two dials side by side and between the two rows, so the panel reads as one instrument rather than as two shelves. Each row's numbers and labels are stacked off its outer edge: number first at double size, label above or below it in the small font. Nothing is written between the rows, which is what pays for both the larger faces and that spacing, and the number a pilot glances at is then the biggest thing on the panel rather than a line of 5x7 text wedged under a needle.
+The page reads outward from the middle. The six faces are a block: 66 px between centres in both axes, so the same 3 px of glass between two dials side by side and between the two rows, so the glass reads as one instrument rather than as two shelves. Each row's numbers and labels are stacked off its outer edge: number first at double size, label above or below it in the small font. Nothing is written between the rows, which is what pays for both the larger faces and that spacing, and the number a pilot glances at is then the biggest thing on the glass rather than a line of 5x7 text wedged under a needle.
 
 `settings::units` decides the speed dial and nothing else here: knots, the unit the scale below is graduated in and the one this page is designed around. Altitude stays in feet and vertical speed in feet per minute, so the speed is the one place on this page a habit is asked for, which is the rule the section at the top of this file states for the device.
 
@@ -339,7 +339,7 @@ Then one row per part, each reading left to right as *what it is*, *which part a
 | `RADIO` | the SX1262 transceiver, answered by a register round-trip: no radio, no flight |
 | `GNSS` | the L76K receiver on its UART: no receiver, no flight |
 | `BARO` | the BME280, with the address that answered, ours at 0x76 and LilyGO's at 0x77: no barometer, no flight and no activation |
-| `PANEL` | the e-paper, by the lot its signature names (`hardware/README.md`) |
+| `PANEL` | the e-paper, by the lot its ID names (`hardware/README.md`) |
 | `IMU` | the BHI260AP sensor hub, which is what puts the ball in the turn coordinator |
 | `TEMP` | the nRF52840's own die sensor, which is what the thermal charge limits read |
 | `BATTERY` | the resistor divider into the SAADC the cell voltage is measured on |
@@ -391,7 +391,7 @@ The download that follows an accepted `FIRMWARE` prompt reads `DOWNLOAD`, with t
 
 ## menu
 
-The panel half of "a pilot with no phone can change the things that matter". The button opens the menu of the page a pilot is standing on, and two pages have one. One file draws both, because a menu row is a label and a value whichever page it belongs to.
+The glass half of "a pilot with no phone can change the things that matter". The button opens the menu of the page a pilot is standing on, and two pages have one. One file draws both, because a menu row is a label and a value whichever page it belongs to.
 
 | Menu | Rows |
 |---|---|
@@ -409,7 +409,7 @@ Seven is `kMenuLines`, and the radar's menu has eight rows. The eighth did not t
 
 Every row is at that height too, label and value both, which is the size the rest of the device prints a reading at: a menu is read in the same cockpit as the pages it sets up, and the small font was the one thing here a pilot had to stop and look for. The rows are spread down the glass rather than stacked under the rule with a void beneath them, and the focused row's bar grows with them. The keys at the foot say what each contact does to the row the bar is on: the button `CHANGE`, or `OPEN` on a row that opens a page or a menu, and the pad `NEXT`, or `BACK` on the last row, where the tap hands the page back.
 
-What double height cost is one label. `AIRCRAFT` and `GYROCOPTER` together are eighteen characters where a row holds fifteen, so the label is `TYPE`, which is what the row is under a heading that already says `AIRCRAFT`, and the ADS-L names stay whole where they fit. Issue 2 split the helicopter by weight into light rotorcraft, 3, and heavy rotorcraft, 15, and no eleven characters spell either whole, so they read `LIGHT HELI` and `HEAVY HELI`, which keep the word a pilot would say. `HANG GLIDER`, 16, is the longest value at eleven characters, and `TYPE` with it still fits the row. The list is G.1.3's codes 0 to 10 and then 15 to 17, the categories a person flies seated in: 11 to 14 are drones and a model plane, which nobody carries a skyBlip in. A category the panel has no name for prints as `CODE 12`, since `TYPE 12` beside a label reading `TYPE` says the same word twice.
+What double height cost is one label. `AIRCRAFT` and `GYROCOPTER` together are eighteen characters where a row holds fifteen, so the label is `TYPE`, which is what the row is under a heading that already says `AIRCRAFT`, and the ADS-L names stay whole where they fit. Issue 2 split the helicopter by weight into light rotorcraft, 3, and heavy rotorcraft, 15, and no eleven characters spell either whole, so they read `LIGHT HELI` and `HEAVY HELI`, which keep the word a pilot would say. `HANG GLIDER`, 16, is the longest value at eleven characters, and `TYPE` with it still fits the row. The list is G.1.3's codes 0 to 10 and then 15 to 17, the categories a person flies seated in: 11 to 14 are drones and a model plane, which nobody carries a skyBlip in. A category the glass has no name for prints as `CODE 12`, since `TYPE 12` beside a label reading `TYPE` says the same word twice.
 
 The radar's menu is every setting a pilot can change on the glass, three of them through `AIRCRAFT`, and the front light: the first screen is where a device is set up, so its rows live under it rather than being spread over the pages they happen to affect. What a row is not is a reading - the device address was the first row of this menu and it is a figure, unchangeable, that `nearby` already prints in its identity column.
 

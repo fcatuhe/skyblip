@@ -150,8 +150,8 @@ class Rf : public ports::Rf {
     }
 
     void fly(uint64_t now_us) {
-        const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
-        if (armed_ && !started_ && now_us + lead_us >= flying_plan_.start_us && !start(now_us))
+        const uint64_t retune_us = static_cast<uint64_t>(timing::kSwitchRetuneMs) * 1000;
+        if (armed_ && !started_ && now_us + retune_us >= flying_plan_.start_us && !start(now_us))
             abandon(now_us);
         while (armed_ && started_ && !keying() && keyed_ < flying_bursts_.count) {
             const ports::RfBurst burst = flying_bursts_.burst[keyed_];

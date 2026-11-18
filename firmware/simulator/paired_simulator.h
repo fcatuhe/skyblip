@@ -70,13 +70,13 @@ class PairedSimulator {
     Simulator& go() { return go_; }
     Simulator::Product& product() { return go_.product(); }
     World<platform::host::Platform>& world() { return go_.world(); }
-    indication::Lamp lamp_since_last_look() { return go_.lamp_since_last_look(); }
+    indication::Colour lamp_since_last_look() { return go_.lamp_since_last_look(); }
 
     Bravo& bravo() { return bravo_; }
     platform::host::MeshtrackerX1& bravo_platform() { return bravo_platform_; }
     BravoAboard& aboard() { return aboard_; }
     const PhoneStream& phone() const { return phone_; }
-    indication::Lamp bravo_lamp_since_last_look() { return bravo_lamp_.since_last_look(); }
+    indication::Colour bravo_lamp_since_last_look() { return bravo_lamp_.since_last_look(); }
 
    private:
     // INFO: fc 14nov26 settings are what a device was found with, so both pins are on flash at boot

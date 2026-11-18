@@ -1,6 +1,6 @@
 # parts/ssd1681
 
-The GDEH0154D67 e-paper on its SSD1681 controller, driven over `io::Spi` and `io::Gpio` by `Ssd1681`, with `model.h` standing in for the glass on the host. Which panel lot is glued on is `panel.h`'s question, answered from a signature the board port reads before any driver owns the pins (`hardware/README.md`).
+The GDEH0154D67 e-paper on its SSD1681 controller, driven over `io::Spi` and `io::Gpio` by `Ssd1681`, with `model.h` standing in for the glass on the host. Which panel lot is glued on is `panel.h`'s question, answered from an ID the board port reads before any driver owns the pins (`hardware/README.md`).
 
 ## Names
 

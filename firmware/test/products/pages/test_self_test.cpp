@@ -90,7 +90,7 @@ TEST_CASE("self-test page: the reset reason and the identity share the header") 
     CHECK_FALSE(reads_right_aligned(fresh, kSelfTestHeaderY, "WATCHDOG"));
 }
 
-TEST_CASE("self-test page: a full inventory still fits the panel") {
+TEST_CASE("self-test page: a full inventory still fits the glass") {
     SelfTestPart parts[kSelfTestRows];
     for (int i = 0; i < kSelfTestRows; i++) {
         parts[i].name = "PART";

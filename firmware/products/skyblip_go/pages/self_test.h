@@ -21,7 +21,7 @@ struct SelfTestPart {
     const char* name{""};
     PartState state{PartState::Absent};
     // Which part answered, when the footprint takes more than one: the barometer
-    // address that replied, the e-paper lot the glass is from, whether the haptic
+    // address that replied, the e-paper lot the panel is from, whether the haptic
     // is a waveform driver or a pin. Optional, short (the row has to hold a name,
     // this, and a verdict inside 200 pixels), and never a second verdict.
     const char* detail{nullptr};
@@ -34,7 +34,7 @@ struct SelfTestSnapshot {
     const SelfTestPart* parts{nullptr};
     int part_count{0};
     // False when a required part is missing. The device stays up and keeps this
-    // page: a panel naming the failure is worth more than a reboot loop.
+    // page: a glass naming the failure is worth more than a reboot loop.
     bool flyable{true};
     bool battery_valid{false};
     uint16_t battery_mv{0};
@@ -51,7 +51,7 @@ struct SelfTestSnapshot {
     uint16_t bravo_tag{0};
 };
 
-// The most rows the page can carry before the last one falls off the panel. The
+// The most rows the page can carry before the last one falls off the glass. The
 // bus scan's row is one of them, and the paired Bravo's another, which the
 // aircraft-address warning takes while the Bravo is not lost.
 constexpr int kSelfTestRows = 16;

@@ -39,7 +39,7 @@ static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerConver
 
 static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
                       runtime::kServicePassCeilingMs <
-                  timing::kSlot0StartMs,
+                  timing::dwell_of(timing::kWindowAMs).start_ms,
               "a solution at the receiver's target rate is parsed before slot 0 arms its burst");
 
 // The T-Echo Plus, assembled once. Platform is silicon or host. Swapping
@@ -106,7 +106,7 @@ class TEchoPlus {
 
     // What answered, by name and address, behind the capability bits. The
     // self-test page reads it: two BME280 addresses, five shipped e-paper
-    // signatures and a haptic that may or may not be a waveform driver are
+    // IDs and a haptic that may or may not be a waveform driver are
     // exactly the facts a PASS does not say.
     const ports::Inventory& inventory() const { return inventory_; }
 
@@ -231,7 +231,7 @@ class TEchoPlus {
         last_battery_ms_ = now_ms;
         uint16_t divider_mv = 0;
         // INFO: fc 05oct26 refused or not, the reading and VBUS go out: core/power judges it
-        platform_.read_battery_mv(divider_mv);
+        platform_.read_divider_mv(divider_mv);
         bus_.battery.push(events::BatterySample{divider_mv, platform_.external_power()});
     }
 
@@ -287,7 +287,7 @@ class TEchoPlus {
         // The edge itself, as the surface latched it: whoever reads it later
         // reads an instant that has not gone stale in the meantime. Rebuilding
         // it from the millisecond phase threw away up to a millisecond of the
-        // 5 ms jitter guard before the plan was even armed.
+        // 5 ms retune before the plan was even armed.
         timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
         // The one place the PPS edge is owned: the bench's interval-error
         // histogram is fed here rather than by a second reader of the pin.
@@ -322,15 +322,15 @@ class TEchoPlus {
         return ports::without(capabilities_, bit);
     }
 
-    // The signature is taken where the pins are free, which on silicon is the
+    // The ID is taken where the pins are free, which on silicon is the
     // board port at PRE_KERNEL_1 and on the host is the panel model. Either way
-    // the driver is told once, before begin(), and an unread signature leaves
+    // the driver is told once, before begin(), and an unread ID leaves
     // the panel Unknown - which is the safest refresh policy and, until somebody
     // reads a Plus on a bench, the honest answer for this board.
     void identify_panel() {
-        parts::PanelSignature signature{};
-        platform_.read_panel_signature(signature);
-        display_.adopt(signature);
+        parts::PanelId panel_id{};
+        platform_.read_panel_id(panel_id);
+        display_.adopt(panel_id);
         inventory_.panel_name = display_.panel_name();
     }
 

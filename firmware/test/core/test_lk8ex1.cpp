@@ -41,7 +41,7 @@ TEST_CASE("nmea: LK8EX1 carries pressure, altitude, vario, temperature and the c
 // fork corrected itself to this one with the reason in the code ("LK8000 specs
 // say send percent instead of volts as an integer, percent+1000",
 // MB src/driver/Baro.cpp:406-407); we send the percentage, because it is also
-// the number our own panel draws and the two must not disagree.
+// the number our own glass draws and the two must not disagree.
 TEST_CASE("nmea: LK8EX1 battery is a percentage plus 1000, never a bare percentage") {
     char buffer[128];
     Lk8Ex1 lk8ex1{};

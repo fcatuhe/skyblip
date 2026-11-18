@@ -8,7 +8,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | `callsign.{h,cpp}` | OGN's payload 66, the name ADS-L has no field for (below) |
 | `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's G.3 uplink over observations. `decode` counts a record older than 10 s, or dated ahead of the second it was heard in, as stale and does not draw it. `encode` re-encodes each target and dates it the instant the station sends, which G.3 allows only for traffic from systems other than ADS-L: an ADS-L payload must be forwarded verbatim. It serves the simulated skyPost and the tests, and a real ground station forwarding ADS-L would call `adsl::Uplink` with the payloads as heard |
 | `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window, names the system from the sync tail, and lays out the M-band buffer the SX1262 sends |
-| `alptas.{h,cpp}` | an ALP-TAS position as an observation and back: the ADS-L category, address table and flight state its fields map to |
+| `alptas.{h,cpp}` | an ALP-TAS position as an observation and back: the ADS-L category, address table, flight state and emergency its fields map to, the fix age, and `AlptasReceiver`, which follows a random address from step to step |
 | `adsb_observation.{h,cpp}` | an ADS-B track as an observation, in ADS-L units |
 | `adsb_category.{h,cpp}` | what an ADS-B emitter category is in ADS-L's terms (below) |
 | `nmea_out.{h,cpp}` | the `$PFLAU` and `$PFLAA` sentences a tablet reads |
@@ -22,11 +22,11 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | Field | Value | Why |
 |---|---|---|
 | Max. Protocol Version | 1 | this device reads Issue 2 payloads (`protocols/adsl/README.md`, Which issue a payload is) |
-| M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 798 ms and 868.4 MHz from 800 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
+| M-band receive | 2, Partial | the dwells hear 868.2 MHz from 450 to 822 ms and 868.4 MHz from 827 to 1000, about half the direct slot averaged over both channels (`timing::Scheduler::direct_heard_permille()`) |
 | O-band LDR receive | 0 | not received |
 | O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
 | ADS-L 4 Mobile | 0 | none |
-| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the FLARM-generation wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
+| E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the ALP-TAS wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
 | E-conspicuity transmit | 0 | nothing but ADS-L goes out |
 | XPDR | 0 | no transponder is known |
 | Traffic Uplink client | 1 | the uplink is decoded and drawn |
@@ -75,7 +75,7 @@ What that costs: this device's own table, 58 (`settings::kSkyblipAddressMappingT
 
 ## Where a target came from
 
-`format_pflaa` appends three fields to an ADS-B target and to no other: NoTrack 0, Source 1 and the RSSI. FLARM's Data Port ICD, FTD-012 (ICD 7.19, document revision 1.1, [flarm.com](https://www.flarm.com/wp-content/uploads/2024/04/FTD-012-Data-Port-Interface-Control-Document-ICD-7.19.pdf)), adds NoTrack in data port protocol version 8 and Source and RSSI in version 9 (§6.4 and §6.5). Its §8.2 puts them after AcftType as `[,<NoTrack>[,<Source>,<RSSI>]]`, and numbers the sources 0 FLARM, 1 ADS-B, 3 ADS-R, 4 TIS-B and 6 Mode-S. ADS-B has no no-track flag, so NoTrack is 0. RSSI is "Empty if unknown" in §8.2. Bravo fills it with the level in dBm of the 1090 MHz message that last placed the target, and leaves it empty when the LR2021 gave that message none, since it levels only the newest frame of a FIFO read (`hardware/parts/lr2021/README.md`). A Go leaves it empty for a target Bravo relays, because the `observation` frame carries no RSSI. A Bluetooth RSSI never goes there. Within 82 characters the RSSI gives way first, then the callsign shortens, and no other field ever does. Lyusupov's SoftRF sends its radio's RSSI in the same field on ESP32 and nRF52 (`PFLAA_EXT1_ARGS`), and nothing on the STM32 of a Retro.
+`format_pflaa` appends three fields to an ADS-B target and to no other: NoTrack 0, Source 1 and the RSSI. The data port added NoTrack in its protocol version 8 and Source and RSSI in version 9, after AcftType as `[,<NoTrack>[,<Source>,<RSSI>]]`, and XCSoar numbers the sources 0 FLARM, 1 ADS-B, 3 ADS-R, 4 TIS-B and 6 Mode-S (`ParsePFLAA` in `src/Device/Driver/FLARM/StaticParser.cpp` and `SourceType` in `src/FLARM/Traffic.hpp`, at XCSoar `03d7f982`). ADS-B has no no-track flag, so NoTrack is 0. An RSSI left empty is read as unknown. Bravo fills it with the level in dBm of the 1090 MHz message that last placed the target, and leaves it empty when the LR2021 gave that message none, since it levels only the newest frame of a FIFO read (`hardware/parts/lr2021/README.md`). A Go leaves it empty for a target Bravo relays, because the `observation` frame carries no RSSI. A Bluetooth RSSI never goes there. Within 82 characters the RSSI gives way first, then the callsign shortens, and no other field ever does. Lyusupov's SoftRF sends its radio's RSSI in the same field on ESP32 and nRF52 (`PFLAA_EXT1_ARGS`), and nothing on the STM32 of a Retro.
 
 Every other source keeps the eleven fields it has always sent. Source has no code for ADS-L or the uplink. XCSoar's parser reads a missing Source and an empty one the same way, as FLARM, so it shows a FLARM target as FLARM without a 0 (`ParsePFLAA` in `src/Device/Driver/FLARM/StaticParser.cpp` at XCSoar `6e0c8328`). No sender we found writes an empty Source, and SkyDemon drops the connection on a field value it does not expect: "If we encountered a 3 we would indeed abort the connection", of IDType (Tim Dawson, SkyDemon forum topic 32592, 16 December 2020). So the bytes a Go sends for ADS-L, FLARM and uplink targets do not change.
 
@@ -83,7 +83,7 @@ The ADS-B form is the one GA/TAS sends on every `$PFLAA`: NoTrack, Source, and a
 
 ## 82 characters
 
-NMEA 0183 caps a sentence at 82 characters from the `$` to the CRLF. FLARM's Configuration Specification says the same (FTD-014 revision 1.18, footnote to §3.1.3 BAUD: "any sentence can consist of 82 characters maximum"). FTD-012 §7 allows 83, with 80 between the `$` and the CRLF. `kNmeaSentenceCeilingBytes` keeps the stricter figure.
+NMEA 0183 caps a sentence at 82 characters from the `$` to the CRLF, and `kNmeaSentenceCeilingBytes` keeps that figure.
 
 In a `$PFLAA` only the callsign is free text, so the callsign gives way. When the sentence would pass 82 characters, the callsign loses characters from its end, and the `!` goes when none fits. With alarm level 3, a 6-character height, and speed, climb and track at their widest, a 14-character ADS-L callsign and an 8-character ADS-B one fit whole while north and east each stay under 1000 km. Past that, under the same bounds, ADS-L loses up to 3 characters and ADS-B up to 2, far beyond any range `core/traffic/sanity.h` keeps a target at. At the widest the parameter types allow, an alarm level of 255 and an 11-character height, an ADS-B sentence is 82 characters with no callsign at all, so the fields alone never pass the cap. `test/core/test_nmea_length.cpp` pins each case. XCSoar copies 15 characters of the ID field and parses the hex address out of them, and it still steps over the whole field, so a callsign of any length leaves the fields after it where they were (`CSVLine::Read` in `src/io/CSVLine.cpp`).
 
@@ -93,7 +93,7 @@ Every formatter here builds its sentence in its own buffer and copies it out onl
 
 `adsb_emitter_to_adsl_category` reads the emitter category of an ADS-B identification message, a type code from 1 to 4 and a 3-bit category, into ADS-L G.1.3, which is the one category the tree holds. `adsl_category_to_alptas_type` takes it on to `$PFLAA` from there. The type code and category pairs are those of The 1090 Megahertz Riddle, table "Wake vortex in ADS-B identification and category message" ([mode-s.org](https://mode-s.org/1090mhz/content/ads-b/2-identification.html)). The rows below use the usual A0 to D7 shorthand, a letter for the type code (A is 4, B is 3, C is 2, D is 1, which is all reserved) and a digit for the category. Neither the Riddle nor the GDL 90 table below prints those letters. The Riddle rounds the type code 4 weights to kilograms. The pounds below are Table 11 of the GDL 90 Data Interface Specification, 560-1058-00 Rev A, which lists the same three groups in order ([faa.gov](https://www.faa.gov/sites/faa.gov/files/air_traffic/technology/adsb/archival/GDL90_Public_ICD_RevA.PDF)).
 
-Where an ADS-B emitter category or a FLARM aircraft type covers G.1.3 categories that split one kind of aircraft by weight, ADS-B reads as the heavier one and FLARM as the lighter one, because ADS-B equipage is typical of heavier aircraft and FLARM of lighter ones. That rule decides only between the rotorcraft, 3 and 15, and the UAS, 11, 12 and 13, and the rows it decides say so. Every other row has its own reason.
+Where an ADS-B emitter category or an ALP-TAS aircraft type covers G.1.3 categories that split one kind of aircraft by weight, ADS-B reads as the heavier one and ALP-TAS as the lighter one, because ADS-B equipage is typical of heavier aircraft and ALP-TAS of lighter ones. That rule decides only between the rotorcraft, 3 and 15, and the UAS, 11, 12 and 13, and the rows it decides say so. Every other row has its own reason.
 
 | ADS-B | Kind | G.1.3 | Why |
 |---|---|---|---|
@@ -105,19 +105,19 @@ Where an ADS-B emitter category or a FLARM aircraft type covers G.1.3 categories
 | B2 | lighter-than-air | 5 | |
 | B3 | parachutist, skydiver | 8 | |
 | B4 | ultralight, hang-glider, paraglider | 6 | it spans G.1.3's 6, 7, 16 and 17, and 6 is the one that names an ultralight, the first kind the category lists and the one most likely to carry a transponder |
-| B6 | unmanned aerial vehicle | 12 | the rule: ADS-B carries no EU operational category, so the specific category, heavier than FLARM's open 11 |
+| B6 | unmanned aerial vehicle | 12 | the rule: ADS-B carries no EU operational category, so the specific category, heavier than ALP-TAS's open 11 |
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
-Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the panel.
+Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the glass.
 
 ## The type a tablet draws
 
-`adsl_category_to_alptas_type` turns the G.1.3 category of a target, from any source, into the AcftType field of `$PFLAA`. FTD-012 §8.2 lists that field from 0 to F, and the tablet draws the target with the icon of its type. G.1.3 is the table in `docs/reference/ads-l_4_srd860_issue_2.md`. G.1.3 splits fixed wing by weight at 7031 kg, and AcftType splits it by engine, so a light jet or turboprop reaches the tablet as a piston aircraft and a heavy piston aircraft as a jet. Before #216 the table sent category 2 as a piston aircraft, so every airliner Bravo heard was drawn as one, and it sent category 6 as an airship and 14 to 17 as no type.
+`adsl_category_to_alptas_type` turns the G.1.3 category of a target, from any source, into the AcftType field of `$PFLAA`. The field runs from 0 to F (`AircraftType` in XCSoar's `src/FLARM/Traffic.hpp`), and the tablet draws the target with the icon of its type. G.1.3 is the table in `docs/reference/ads-l_4_srd860_issue_2.md`. G.1.3 splits fixed wing by weight at 7031 kg, and AcftType splits it by engine, so a light jet or turboprop reaches the tablet as a piston aircraft and a heavy piston aircraft as a jet. Before #216 the table sent category 2 as a piston aircraft, so every airliner Bravo heard was drawn as one, and it sent category 6 as an airship and 14 to 17 as no type.
 
 | G.1.3 | Kind | AcftType | Why |
 |---|---|---|---|
-| 0 | no information | 0 | FTD-012 reserves 0 and names A unknown. XCSoar reads 0 as unknown and A as a flying saucer (`AircraftType` in `src/FLARM/Traffic.hpp` at XCSoar `71cd8bca`). The tree has always sent 0 |
+| 0 | no information | 0 | XCSoar reads 0 as unknown and A as a flying saucer (`AircraftType` in `src/FLARM/Traffic.hpp` at XCSoar `71cd8bca`). The tree has always sent 0 |
 | 1 | light fixed wing, under 7031 kg | 8, reciprocating engines | most aircraft under 7031 kg have piston engines, though light turboprops and jets fly there too. Tow planes, AcftType 2, and drop planes, AcftType 5, fall here as well, but G.1.3 does not mark them |
 | 2 | small to heavy fixed wing, 7031 kg and over | 9, jet or turboprop | nearly every aircraft that heavy is a jet or a turboprop |
 | 3 | light rotorcraft | 3, helicopter, gyrocopter, rotorcraft | |
@@ -127,35 +127,50 @@ Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, bec
 | 7 | paraglider | 7, paraglider | |
 | 8 | parachutist, skydiver, wingsuit | 4, skydiver | |
 | 9 | eVTOL, UAM | 3, rotorcraft | it carries people, takes off on its rotors and hovers like a helicopter. D would tell the pilot it is a drone. An electric aircraft carries little mass, so wherever skyBlip groups categories by weight it goes with light rotorcraft. Today nothing on the glass, the own-ship drawings or the alarm groups them |
-| 10 | gyrocopter | 3 | FTD-012 names the gyrocopter in 3 |
+| 10 | gyrocopter | 3 | XCSoar names 3 helicopter or rotorcraft, and a gyrocopter is a rotorcraft |
 | 11 to 13 | UAS open, specific and certified | D, UAV | |
 | 14 | model plane | D, UAV | a model plane flies with no one on board, which is what D names |
 | 15 | heavy rotorcraft | 3 | |
 | 16 | hang-glider | 6, hang glider | |
-| 17 | paramotor | 7, paraglider | it flies a paraglider wing, and FTD-012 has no powered paraglider |
+| 17 | paramotor | 7, paraglider | it flies a paraglider wing, and the field has no powered paraglider |
 | 18 and over | outside G.1.3 | 0 | |
 
-`alptas_type_to_adsl_category` goes the other way, from the AcftType of an ALP-TAS frame to G.1.3. An AcftType names an engine or a kind of wing and gives no weight. Where the table above sends one category to a type, that category is the one read back. Where it sends several, the rows below say which one is read.
+`alptas_type_to_adsl_category` goes the other way, from the aircraft type of an ALP-TAS frame to G.1.3. The frame's type is 5 bits, from 0 to 19, and it agrees with the `$PFLAA` AcftType from 0 to 9. Past 9 they part: the frame names 10 a gyrocopter and 14 an airfield, and adds 16 to 19 for eVTOL and the three UAS classes, which map onto G.1.3's own 9 and 11 to 13. An AcftType names an engine or a kind of wing and gives no weight. Where the table above sends one category to a type, that category is the one read back. Where it sends several, the rows below say which one is read.
 
-| AcftType | Kind | G.1.3 | Why |
+| Type | Kind | G.1.3 | Why |
 |---|---|---|---|
-| 0, A, E | reserved, unknown, reserved | 0 | |
+| 0, 14 | undefined, airfield | 0 | |
 | 1 | glider, motor glider | 4 | |
 | 2, 5 | tow plane, drop plane | 1 | tow and drop planes nearly all weigh under 7031 kg. A turboprop drop plane, such as a Caravan or a Twin Otter, then reaches `$PFLAA` as AcftType 8 |
-| 3 | helicopter, gyrocopter, rotorcraft | 3 | the rule decides between 3 and 15, the light and heavy rotorcraft: FLARM reads the lighter. It is also sent for 9 and 10, and light rotorcraft is the commonest of the four |
+| 3 | helicopter, rotorcraft | 3 | the rule decides between 3 and 15, the light and heavy rotorcraft: ALP-TAS reads the lighter. It is also sent for 9 and 10, and light rotorcraft is the commonest of the four |
 | 4 | skydiver | 8 | |
 | 6 | hang glider | 16 | 16 is the one category sent as 6. Issue 1 put the hang glider with the paraglider in 7 |
 | 7 | paraglider | 7 | it is sent for 7 and 17, and a paramotor is the rarer of the two |
 | 8 | reciprocating engines | 1 | it is sent for 1 and 6, and most piston aircraft are light fixed wing. An ultralight is a light aircraft too |
 | 9 | jet or turboprop | 2 | 2 is the one category sent as 9, so a jet reaches `$PFLAA` as a jet again. A light jet or turboprop lands in the heavier weight class |
-| B, C | balloon, airship | 5 | |
-| D | UAV | 11 | the rule: it is sent for 11 to 14, and FLARM reads the lighter, the open category |
-| F | static obstacle | 0 | G.1.3 has no value for it |
-| past F | outside FTD-012's table | 0 | |
+| 10 | gyrocopter | 10 | |
+| 11, 12 | balloon, airship | 5 | |
+| 13 | UAV | 11 | the rule: it is sent for 11 to 14, and ALP-TAS reads the lighter, the open category |
+| 15 | static obstacle | 0 | G.1.3 has no value for it |
+| 16 | eVTOL or UAM | 9 | |
+| 17, 18, 19 | UAS open, specific, certified | 11, 12, 13 | |
+| past 19 | outside the frame's table | 0 | |
+
+## What else an ALP-TAS frame says
+
+The frame's urgency becomes G.1.4's emergency: Pan-Pan and Mayday both read as a general emergency, since G.1.4 has nothing short of distress, and a high urgency, used for a strong sink, reads as none. The turn rate the sender reports goes to the traffic table, which takes it as the target's turn at once instead of waiting for two tracks (`core/traffic/table.cpp`).
+
+A frame describes its sender's fix, and goes out up to 1.2 s later, in the second of ALP-TAS's two windows. `alptas_fix_age_ms()` counts the quarter seconds between the fix field and the reception, and `TrafficService` dates the position that much earlier, so the extrapolation starts from the instant it was true. Without a PPS there is no reception instant to count from, and the age is 0. An age past 2.5 s is a clock disagreement, not a late frame, and is read as 0 too.
+
+A sender in privacy mode draws a 32-bit address and moves it every 2 to 10 s, sending in each frame the random byte the next address is made from. `AlptasReceiver` keeps the next address of each of 16 random senders for 20 s, and shows a sender under the 24 bits of the first address it heard, so the target does not restart every few seconds.
+
+The stealth flag asks that the sender's identity and performance not reach airborne receivers. A stealth target that is not the alarm reaches `$PFLAA` with no name and no climb, and the radar draws it with no climb. Its track and speed stay, because the collision geometry needs them. The no-track flag asks that the sender not be stored or forwarded. The target is shown, and the flight log and the radio log keep nothing that names it.
+
+A frame whose SIL, SDA or NIC is set has no byte of zeros to check its key with (`protocols/alptas/README.md`), so `alptas_decode` refuses one that places its sender beyond `traffic::plausible_range_m()`. A wrong key lands within 30 km about once in 130 frames.
 
 ## The flight state every decoder owes
 
 Every adapter here writes `AircraftObservation::flight_state` as an ADS-L G.1.2 code, and `Unknown` (0) when its wire carries no state, because that field is all `core/traffic` reads to decide what the ground means (`core/traffic/README.md`). ADS-L and the uplink record carry G.1.2 itself, and an ADS-B track's `AirGround` maps onto it in `adsb_observation.cpp`.
 
-ALP-TAS carries a two-bit state of its own, with no public specification and one reference: SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) sends 1 on the ground, 2 airborne, 3 airborne and circling, and never 0 (`protocols/alptas/frame.h`). `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
+ALP-TAS carries a two-bit movement mode of its own: 0 undefined, 1 on the ground, 2 flying, 3 circling or manoeuvring. SoftRF's `latest_encode` (moshe-braner, `Legacy.cpp`) never sends 0 (`protocols/alptas/frame.h`). `alptas_flight_state` reads 0 as `Unknown`. It used to read it as on the ground, and an aircraft on the ground is never graded, so the one value no sender uses was the one that silenced the alarm.
 

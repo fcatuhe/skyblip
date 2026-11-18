@@ -168,8 +168,8 @@ class Rf : public ports::Rf {
                 mailbox_.land();
                 continue;
             }
-            const uint64_t lead_us = static_cast<uint64_t>(timing::kSwitchLeadMs) * 1000;
-            if (plan.start_us > lead_us) sleep_until(plan.start_us - lead_us);
+            const uint64_t retune_us = static_cast<uint64_t>(timing::kSwitchRetuneMs) * 1000;
+            if (plan.start_us > retune_us) sleep_until(plan.start_us - retune_us);
             if (abort_) {
                 mailbox_.land();
                 continue;

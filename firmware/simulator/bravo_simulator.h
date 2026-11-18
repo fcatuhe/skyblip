@@ -65,7 +65,7 @@ class BravoSimulator {
     uint32_t sentences_read() const { return phone_.sentences_read(); }
     const PhoneStream& phone() const { return phone_; }
 
-    indication::Lamp lamp_since_last_look() { return lamp_.since_last_look(); }
+    indication::Colour lamp_since_last_look() { return lamp_.since_last_look(); }
 
    private:
     platform::host::MeshtrackerX1 platform_{};

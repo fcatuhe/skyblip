@@ -167,13 +167,13 @@ TEST_CASE("product: the settings page reaches the glass, drawn from what the dev
     const go::Glass expected = expected_page(rig);
     CHECK(std::memcmp(rig.product.screen().framebuffer().data(), expected.data(),
                       go::Glass::kBytes) == 0);
-    // Not just in the buffer: on the panel, which is the only place a pilot
+    // Not just in the buffer: on the glass, which is the only place a pilot
     // with no phone can read it.
     CHECK(rig.platform.chips().epd.framebuffer().count_black() == expected.count_black());
     CHECK(expected.count_black() > 200);
 }
 
-TEST_CASE("product: the alarm a pilot sets on the panel is the one that survives a boot") {
+TEST_CASE("product: the alarm a pilot sets on the glass is the one that survives a boot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -202,7 +202,7 @@ TEST_CASE("product: the alarm a pilot sets on the panel is the one that survives
     CHECK(again.settings().alarm == go::Alarm::Soft);
 }
 
-TEST_CASE("product: the range and the plot a pilot picks on the panel survive a boot") {
+TEST_CASE("product: the range and the plot a pilot picks on the glass survive a boot") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -232,7 +232,7 @@ TEST_CASE("product: the range and the plot a pilot picks on the panel survive a 
     CHECK(again.settings().plot == go::RadarPlot::ToScale);
 }
 
-TEST_CASE("product: the aircraft type set on the panel is the one that goes on the air") {
+TEST_CASE("product: the aircraft type set on the glass is the one that goes on the air") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -259,7 +259,7 @@ TEST_CASE("product: the aircraft type set on the panel is the one that goes on t
 
 // G3 again, for the one setting that is text: a pilot with no phone can name
 // their own aircraft, on the glass, with a pad and a button.
-TEST_CASE("product: a callsign typed on the panel is stored and put on the air") {
+TEST_CASE("product: a callsign typed on the glass is stored and put on the air") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 100;
@@ -289,7 +289,7 @@ TEST_CASE("product: a callsign typed on the panel is stored and put on the air")
 }
 
 TEST_CASE(
-    "product: an aircraft address typed on the panel is stored, drawn, and cleared only when "
+    "product: an aircraft address typed on the glass is stored, drawn, and cleared only when "
     "confirmed") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
