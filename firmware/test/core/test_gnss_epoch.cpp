@@ -114,3 +114,26 @@ TEST_CASE("gnss: past a missed edge a solution keeps the phase its stamp names")
     CHECK(solution_instant_ms(solution, 11'320, 10'000, true) == 11'250u);
     CHECK(solution_instant_ms(solution, 12'300, 10'000, true) == 12'250u);
 }
+
+// The pinned case: the L76K's 31-byte no-time GGA stopped at the length floor, its stamp unread.
+TEST_CASE("gnss: a GGA and an RMC that name no time are one pair with no solution") {
+    NmeaParser parser;
+    REQUIRE(parse(parser, gga_at("123519.750")));
+    REQUIRE(parse(parser, rmc_at("123519.750")));
+    const char* gga = "$GNGGA,,,,,,0,00,25.5,,,,,,*64";
+    const char* rmc = "$GNRMC,,V,,,,,,,,,,N,V*37";
+    parser.parse_line(gga, static_cast<int>(strlen(gga)));
+    REQUIRE(parser.parse_line(rmc, static_cast<int>(strlen(rmc))));
+    CHECK(parser.same_epoch());
+    CHECK(parser.stamp_ms() == -1);
+    CHECK_FALSE(parser.solution().fix_valid);
+}
+
+// A GGA cut short still checksums, and its RMC must not pair with the height it never carried.
+TEST_CASE("gnss: a torn GGA that names a time pairs with no RMC") {
+    NmeaParser parser;
+    const std::string torn = checksummed("GPGGA,123520.000,4807.038,N,0113");
+    parser.parse_line(torn.c_str(), static_cast<int>(torn.size()));
+    REQUIRE(parse(parser, rmc_at("123520.000")));
+    CHECK_FALSE(parser.same_epoch());
+}

@@ -99,6 +99,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kRefixSettleMs` | 5000 (5 s) | milliseconds | Settle | [README](../firmware/core/gnss/README.md) argues it |
 | `kSettleResidualM` | `flight::kFlightSpeedMmS / 1000` = 12 | metres | Settle | the takeoff speed over the second a residual spans, so no smaller error invents a flight |
 | `kConvergedFixes` | 3 | fixes | Fixes | - |
+| `kTornStampMs` | -2 | milliseconds | - | - |
 | `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
 | `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
@@ -419,4 +420,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-274 constants over 26 folders.
+275 constants over 26 folders.

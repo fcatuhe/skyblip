@@ -32,6 +32,7 @@ bool all_digits(const char* text, int count) {
 constexpr int64_t kMillimetresPerSecondPerKnotE3 = 514444;
 constexpr int kRmcStampDigits = 6;
 constexpr int kStampFractionDigits = 3;
+constexpr int32_t kTornStampMs = -2;
 
 uint16_t stamp_fraction_ms(const char* stamp) {
     if (stamp[kRmcStampDigits] != '.') return 0;
@@ -324,9 +325,14 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
 bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
     // A sentence that stopped early still checksums: length is the only thing
     // that catches it, which is why moshe-braner measures it.
-    if (field_count < 10 || bytes < kGgaLengthFloorBytes) return false;
+    const int32_t stamp_ms = field_count > 1 ? stamp_ms_of_day(fields[1]) : -1;
+    // INFO: fc 18nov26 a 31-byte no-time GGA pairs with its no-time RMC, a torn timed one never
+    if (field_count < 10 || bytes < kGgaLengthFloorBytes) {
+        gga_stamp_ms_ = stamp_ms < 0 ? stamp_ms : kTornStampMs;
+        return false;
+    }
+    gga_stamp_ms_ = stamp_ms;
     last_sentence_ = Sentence::Gga;
-    gga_stamp_ms_ = stamp_ms_of_day(fields[1]);
     solution_marks_stale_ = true;
     solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
     solution_.satellites = static_cast<uint8_t>(parse_long(fields[7], 2));
