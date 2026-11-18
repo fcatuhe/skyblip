@@ -1,7 +1,7 @@
 ---
 title: "skyBlip Bravo first steps: button, light and flight"
 nav_title: Bravo first steps
-description: "Use skyBlip Bravo's button, read its light, approve requests and silence alarms. Prepare your navigation app and transponder for the next flight."
+description: "Switch on Bravo, read its light and see ADS-B traffic in your app or on Go's radar."
 parent: guides
 share_image: bravo
 updated_on: "2026-11-18"
@@ -10,7 +10,7 @@ updated_on: "2026-11-18"
 <section>
   <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
   <h1>Bravo, one button and a light.</h1>
-  <p class="lede">skyBlip Bravo warns you of approaching ADS-B traffic and sends it to your navigation app. It only receives. It does not broadcast your position.</p>
+  <p class="lede">skyBlip Bravo warns you of approaching ADS-B traffic and sends it to your navigation app. Bravo only receives. It does not transmit your position.</p>
 </section>
 
 <section>
@@ -70,13 +70,14 @@ updated_on: "2026-11-18"
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title">In flight</h2>
-  <ol class="steps-grid steps-grid--sequence">
-    <li><h3>Wait for green.</h3><p>Press to start. Without a position, Bravo listens but sends no traffic to your app. With a position, it sends ADS-B traffic over Bluetooth to one app, such as SDVFR or SkyDemon. It receives neither ADS-L nor FLARM. Read <%= link_to_page "skyblip-bravo", label: "how Bravo works" %>.</p></li>
-    <li><h3>Exclude your own transponder.</h3><p>In the aircraft, switch it to ALT. With Bravo alone, open <%= link_to "Briefing", briefing_root_path %> and take the address it offers. With a paired Go, the Go offers the address, callsign and type Bravo hears. Press the Go's button to take them. See <%= link_to_page "skyblip-bravo", label: "the transponder setup", anchor: "install" %>.</p></li>
-    <li><h3>Use both as a Tango.</h3><p>A paired Go displays Bravo's ADS-B traffic. Its ALARM row sets both units. While linked, a press on Bravo or a one-second touch on the Go's pad silences both. Read <%= link_to_page "skyblip-tango", label: "the Tango guide" %>.</p></li>
-    <li><h3>Switch off after landing.</h3><p>Hold for two seconds. Later updates come over Bluetooth from Briefing. See <%= link_to_page "skyblip-bravo", label: "Bravo's update guide", anchor: "status" %>.</p></li>
-  </ol>
+  <h2 class="section-title">Before you set off</h2>
+  <p>Switch on Bravo in the open. When the light flashes green, Bravo knows its position. With Bravo on its own, connect your compatible navigation app over Bluetooth. With Tango, check on Go's radar that Bravo is connected. ADS-B traffic then appears on Go. It shows the positions that equipped aircraft transmit by radio.</p>
+  <p>If your own transponder shows up as another aircraft, <%= link_to_page "install", label: "check its address on the ground", anchor: "si-quelque-chose-bloque" %>.</p>
+</section>
+
+<section class="band">
+  <h2 class="section-title">After the flight</h2>
+  <p>Hold the button for two seconds to switch Bravo off. To update it, switch it back on and open its page in <%= link_to "Briefing", briefing_root_path %>. Follow the instructions on screen.</p>
 </section>
 
 <section class="band">

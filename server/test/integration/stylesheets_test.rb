@@ -2,7 +2,7 @@ require "test_helper"
 
 class StylesheetsTest < ActionDispatch::IntegrationTest
   test "a public page links the site's stylesheets and only the areas it uses" do
-    areas_by_page = { "skyblip-go" => %w[simulator] }
+    areas_by_page = { "index" => %w[simulator], "skyblip-go" => %w[simulator] }
 
     Content::Page.all.each do |page|
       get page.url_path

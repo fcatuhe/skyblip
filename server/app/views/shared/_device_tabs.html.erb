@@ -1,0 +1,5 @@
+<nav class="device-tabs" aria-label="<%= t "nav.devices" %>">
+  <% %w[features skyblip-bravo skyblip-tango].each do |slug| %>
+    <%= link_to_page slug, label_type: :nav, "aria-current": ("page" if on_page?(slug)) %>
+  <% end %>
+</nav>

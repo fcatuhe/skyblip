@@ -1,28 +1,28 @@
 ---
-title: "skyBlip Go and Bravo user guides"
+title: "skyBlip Go and Bravo guides and first steps"
 nav_title: Guides
-description: "First steps for skyBlip Go and Bravo, six guides to using the Go and four on how it works, from its radio to traffic alarms."
+description: "Install your Go or Bravo, then find the controls, read the lights and set up your device for your first flight."
 share_image: radar
 updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Get to know your Go or Bravo.</h1>
-  <p class="page-hero-subtitle">Start with your device, then read six guides to using the Go and four on how it works, with screens drawn by the firmware.</p>
+  <h1>Find the right guide for your Go or Bravo</h1>
+  <p class="page-hero-subtitle">Just got your device? <%= link_to_page "install", label: "Start by installing it" %>. If Briefing says the device is ready, open its guide.</p>
 </header>
 
 <section class="band">
   <h2 class="section-title">Start with your device</h2>
   <div class="guide-cards">
     <article>
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go with its antenna and traffic radar on the e-paper screen" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go with its antenna and traffic radar on the e-paper screen", class: "guide-photo" %>
       <h3><%= link_to_page "go-first-steps", label_type: :nav %></h3>
-      <p>Find the pad and button, read the lights and learn the gestures for your next flight.</p>
+      <p>Switch on Go, read its radar and set your aircraft type or callsign.</p>
     </article>
     <article>
-      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo on a Seeed SenseCAP MeshTracker X1, a black case with one round button" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo on a Seeed SenseCAP MeshTracker X1, a black case with one round button", class: "guide-photo photo-x1" %>
       <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
-      <p>Read the light, answer requests with the button and use Bravo with your navigation app or a Go.</p>
+      <p>Find the button and light. See traffic in your navigation app or on the paired Go.</p>
     </article>
     <article>
       <%= content_image_tag "pages/buy/skyblip-go-plus.avif", alt: "skyBlip Go+ on a white LilyGO T-Echo Plus, with its antenna and the traffic radar on screen" %>
@@ -30,6 +30,7 @@ updated_on: "2026-11-18"
       <p>Click a Go or a Go+ onto a ball joint clamped to the glareshield, with the parts we tested, and hang Bravo by its lanyard.</p>
     </article>
   </div>
+  <p class="signature">With a Tango, open both guides. Go shows the traffic and Bravo adds to what it receives.</p>
 </section>
 
 <section class="band band--tint">
@@ -68,8 +69,8 @@ updated_on: "2026-11-18"
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "The authorisation prompt on the screen" %>
-      <h3><%= link_to_page "phone" %></h3>
-      <p>Three apps with no pairing, every change asked on the screen, and firmware from the browser.</p>
+      <h3><%= link_to_page "phone", label_type: :nav %></h3>
+      <p>See traffic in your navigation app. Use Briefing to change settings or update skyBlip.</p>
     </article>
   </div>
 </section>
@@ -108,8 +109,8 @@ updated_on: "2026-11-18"
       <p>The published figures for see and avoid cover field of view, the sector scanned, an aircraft's apparent size and reaction time.</p>
     </article>
     <article>
-      <h3><%= link_to_page "roadmap" %></h3>
-      <p>Read about <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> and <%= link_to_page "skyblip-tango", label: "Tango" %> for ADS-B on board, the skyBlip Panel for glass cockpits, and the skyPost ground stations.</p>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
+      <p>Read about skyBlip Panel for cockpit displays and skyPost stations for relaying traffic around an airfield.</p>
     </article>
   </div>
 </section>

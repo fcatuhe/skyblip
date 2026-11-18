@@ -1,29 +1,29 @@
 ---
-title: "Guides de skyBlip Go et Bravo"
+title: "Guides et premiers pas avec skyBlip Go et Bravo"
 nav_title: Guides
 slug: guides
-description: "Les premiers pas avec skyBlip Go et Bravo, six guides pour utiliser le Go et quatre sur son fonctionnement, de la radio aux alarmes."
+description: "Installez votre Go ou Bravo, puis repérez les commandes, lisez les voyants et retrouvez les réglages utiles pour votre premier vol."
 share_image: radar
 updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Prenez en main votre Go ou Bravo.</h1>
-  <p class="page-hero-subtitle">Commencez par votre appareil, puis découvrez six guides pour utiliser le Go et quatre sur son fonctionnement, avec les écrans du firmware.</p>
+  <h1>Trouvez le bon guide pour votre Go ou votre Bravo</h1>
+  <p class="page-hero-subtitle">Vous venez de recevoir votre boîtier&nbsp;? <%= link_to_page "install", label: "Commencez par l'installer" %>. Si le Briefing vous indique que l&rsquo;appareil est prêt, ouvrez le guide pour votre appareil.</p>
 </header>
 
 <section class="band">
   <h2 class="section-title">Commencez par votre appareil</h2>
   <div class="guide-cards">
     <article>
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go avec son antenne et le radar de trafic sur son écran à papier électronique" %>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go avec son antenne et le radar de trafic sur son écran à papier électronique", class: "guide-photo" %>
       <h3><%= link_to_page "go-first-steps", label_type: :nav %></h3>
-      <p>Repérez le pavé et le bouton, lisez les voyants et apprenez les gestes du prochain vol.</p>
+      <p>Allumez le Go, lisez son radar et réglez votre type d&rsquo;aéronef ou votre indicatif.</p>
     </article>
     <article>
-      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, un boîtier noir avec un bouton rond" %>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, un boîtier noir avec un bouton rond", class: "guide-photo photo-x1" %>
       <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
-      <p>Lisez le voyant, répondez aux demandes avec le bouton et utilisez Bravo avec votre application de navigation ou un Go.</p>
+      <p>Repérez le bouton et le voyant. Retrouvez le trafic dans votre application de navigation ou sur le Go associé.</p>
     </article>
     <article>
       <%= content_image_tag "pages/buy/skyblip-go-plus.avif", alt: "skyBlip Go+ sur un LilyGO T-Echo Plus blanc, avec son antenne et le radar de trafic à l'écran" %>
@@ -31,6 +31,7 @@ updated_on: "2026-11-18"
       <p>Clipsez un Go ou un Go+ sur une rotule fixée à l&rsquo;auvent, avec les pièces que nous avons testées, et suspendez Bravo à sa dragonne.</p>
     </article>
   </div>
+  <p class="signature">Avec un Tango, ouvrez les deux guides. Le Go affiche le trafic et Bravo complète ce qu&rsquo;il reçoit.</p>
 </section>
 
 <section class="band band--tint">
@@ -69,8 +70,8 @@ updated_on: "2026-11-18"
     </article>
     <article>
       <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation à l'écran" %>
-      <h3><%= link_to_page "phone" %></h3>
-      <p>Trois applications sans appairage, chaque changement demandé à l&rsquo;écran, et le firmware depuis le navigateur.</p>
+      <h3><%= link_to_page "phone", label_type: :nav %></h3>
+      <p>Retrouvez le trafic dans votre application de navigation. Utilisez le Briefing pour modifier des réglages ou mettre skyBlip à jour.</p>
     </article>
   </div>
 </section>
@@ -109,8 +110,8 @@ updated_on: "2026-11-18"
       <p>Les chiffres publiés sur le principe «&nbsp;voir et éviter&nbsp;» portent sur le champ de vision, le secteur balayé, la taille apparente d&rsquo;un aéronef et le temps de réaction.</p>
     </article>
     <article>
-      <h3><%= link_to_page "roadmap" %></h3>
-      <p>Découvrez <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo" %> et <%= link_to_page "skyblip-tango", label: "Tango" %> pour l&rsquo;ADS-B à bord, le skyBlip Panel pour les tableaux de bord à écrans, et les stations sol skyPost.</p>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
+      <p>Découvrez le projet skyBlip Panel pour les écrans de bord et les stations skyPost pour relayer du trafic autour d&rsquo;un terrain.</p>
     </article>
   </div>
 </section>

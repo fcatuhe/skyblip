@@ -1,169 +1,49 @@
 ---
-title: "skyBlip Tango, ADS-B, ADS-L and FLARM display"
+title: "skyBlip Tango, three types of traffic on one radar"
 nav_title: Tango
 slug: tango
-description: "A Go paired with a Bravo shows ADS-B, ADS-L and FLARM on one display. Go and Bravo are available."
 share_image: tango
-updated_on: "2026-11-13"
+description: "Pair a Go and a Bravo to see ADS-L, FLARM and ADS-B traffic on one radar. Go keeps transmitting your position in ADS-L."
+updated_on: "2026-11-18"
 ---
 
-<header class="page-hero">
-  <p class="kicker">skyBlip Go + skyBlip Bravo</p>
-  <h1>skyBlip Tan<span class="highlight">go</span>. Three kinds of traffic, one radar.</h1>
-  <p class="page-hero-subtitle">
-    A Go paired with a Bravo. Bravo receives ADS-B. The Go receives ADS&#8209;L and
-    FLARM, broadcasts your position, and shows all three on its radar.
-  </p>
-  <figure class="pair">
-    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo with its antenna, the traffic radar on its screen" %>
-    <span class="pair-plus" aria-hidden="true">+</span>
-    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1, a black card-sized case", class: "photo-x1" %>
-  </figure>
-  <p class="pair-caption">To scale. X1 photo Seeed Studio.</p>
-  <p class="page-hero-audience">
-    The Go and Bravo are available today. The MeshTracker X1 is on
-    sale. The skyBlip Bravo firmware is on GitHub.
-  </p>
+<%= render "shared/device_tabs" %>
 
-  <div class="cta-pair">
-    <div class="cta-pair-buttons">
-      <div>
-        <a href="#buy" class="button button--primary">What to buy</a>
-        <small>a Go and an X1, bought separately</small>
-      </div>
-    </div>
-  </div>
+<header class="page-hero">
+  <h1>Add ADS-B traffic to your Go&rsquo;s radar</h1>
+  <p class="page-hero-subtitle">A Go and a Bravo make a Tango. Go transmits your position in ADS-L and shows ADS-L and FLARM traffic. Bravo detects Mode S and ADS-B transponders and sends ADS-B traffic to Go over Bluetooth. Go shows ADS-B traffic alongside ADS-L and FLARM traffic on the same radar.</p>
+  <figure class="pair">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, a white LilyGO T-Echo with an antenna and traffic radar on its screen." %>
+    <span class="pair-plus" aria-hidden="true">+</span>
+    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo, a black Seeed SenseCAP MeshTracker X1 about the size of a card.", class: "photo-x1" %>
+  </figure>
+  <p class="pair-caption">Shown to scale. X1 photo: Seeed Studio.</p>
 </header>
 
-<section class="band band--tint">
-  <h2 class="section-title">What a Tango does</h2>
-  <div class="feature">
-    <div>
-      <p>
-        Bravo receives ADS-B and passes it to the Go over Bluetooth. The Go
-        shows it on its radar with the ADS-L and FLARM traffic. The pair warns
-        you about traffic from all three.
-      </p>
-      <p>
-        Your phone connects to the Go and gets all the traffic in one
-        data stream, in FLARM NMEA format.
-      </p>
-      <p>The Go keeps broadcasting your position in ADS-L. Bravo adds aircraft fitted with ADS-B to the traffic you see.</p>
-    </div>
-    <%= render "shared/tango" %>
-  </div>
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Three types of traffic on one radar</h2>
+  <p>On the same screen, see the glider fitted with FLARM, the microlight transmitting ADS-L and the aeroplane transmitting ADS-B. It could be a newer aeroplane or an older one upgraded with a glass cockpit connected to an ADS-B transmitter or with a new ADS-B transponder. Near an airfield you also see airliners and business jets transmitting ADS-B.</p>
+  <%= render "shared/tango" %>
+  <p>Go still transmits your position in ADS-L only. Connect your navigation app to Go to see the combined traffic. Bravo uses one Bluetooth connection on Go. That leaves two for your devices.</p>
 </section>
 
-<section class="band">
-  <h2 class="section-title">Who you see</h2>
-  <p class="section-intro">
-    An aircraft that transmits none of the three signals does not appear on the radar. Keep
-    looking out.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>ADS-B.</h3>
-      <p>Other aircraft fitted with ADS-B that share your altitudes and airspace. They include newer aircraft, and older ones whose owners installed a glass cockpit or a new ADS-B transponder.</p>
-      <p>Also airliners, business jets and helicopters fitted with ADS-B, which you may meet in controlled airspace around airfields and airports.</p>
-      <p class="note">Received by Bravo.</p>
-    </div>
-    <div>
-      <h3>FLARM.</h3>
-      <p>Gliders, tow planes and other aircraft fitted with FLARM.</p>
-      <p class="note">Received by the Go.</p>
-    </div>
-    <div>
-      <h3>ADS-L.</h3>
-      <p>Microlights, paragliders and other aircraft fitted with ADS-L, skyBlip Go included.</p>
-      <p class="note">Received and transmitted by the Go.</p>
-    </div>
-  </div>
+<section id="alarm" class="band">
+  <h2 class="section-title">The screen shows you where to look</h2>
+  <p>When an alert triggers, part of Go&rsquo;s screen flashes in the direction of the traffic. If Go loses its link to Bravo, it shows <strong>BRAVO / NO LINK</strong> at the top right of the radar. Go still shows ADS-L and FLARM traffic. Bravo still receives ADS-B traffic and alerts on its own. To silence an alert, use the device reporting it.</p>
+  <p>Tango is an uncertified aid to visual lookout. Keep looking outside, even when the screen is empty.</p>
 </section>
 
-<section class="band band--tint">
+<section id="versions" class="band band--tint">
   <h2 class="section-title">Tango or Tango+?</h2>
-  <div class="columns">
-    <div>
-      <h3>skyBlip Tango.</h3>
-      <p>A Go and a Bravo. The Go has no buzzer or vibration motor: Bravo sounds and vibrates, while the Go displays the alarm. Its ALARM row offers loud or soft sound on Bravo and starts on loud once the two are paired. In either pair, the Go decides which ADS-B, ADS-L and FLARM traffic triggers an alarm.</p>
-      <p class="note">LilyGO T-Echo and MeshTracker X1.</p>
-    </div>
-    <div>
-      <h3>skyBlip Tango+.</h3>
-      <p>A Go+ and a Bravo. At soft or loud, the Go+ and Bravo sound and vibrate the same alarm at the same time. In either pair, the Go&rsquo;s ALARM row sets both units. Press Bravo&rsquo;s button or touch the Go&rsquo;s pad for a second to silence both.</p>
-      <p class="note">LilyGO T-Echo Plus and MeshTracker X1.</p>
-    </div>
-  </div>
+  <ul>
+    <li><strong>Tango</strong>, with a Go and a Bravo: Go shows the alert. With sound on, Bravo sounds and vibrates.</li>
+    <li><strong>Tango+</strong>, with a Go+ and a Bravo: Go+ shows the alert. With sound on, both devices sound and vibrate for the same alert.</li>
+  </ul>
+  <p>While the devices are linked, the ALARM setting on Go controls both. Press Bravo&rsquo;s button or hold Go&rsquo;s pad for one second to silence the alert on both devices.</p>
 </section>
 
 <section id="buy" class="band">
-  <h2 class="section-title">What to buy</h2>
-  <p class="section-intro">
-    A Tango is two devices, bought separately. There is no bundle.
-  </p>
-  <div class="offers">
-    <article class="offer">
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go: a white LilyGO T-Echo, the traffic radar on the screen" %>
-      <h2>skyBlip Go</h2>
-      <p class="offer-price"><small>from</small> €68</p>
-      <p class="offer-tagline">LilyGO T-Echo</p>
-      <ul class="points">
-        <li>Available today</li>
-        <li>Or a Go+ from €84, for a Tango+</li>
-      </ul>
-      <p class="offer-buy">
-        <%= link_to_page "buy", label: "See where to buy", anchor: "where", class: "button button--primary" %>
-        <small>The Go firmware supports pairing with Bravo.</small>
-      </p>
-    </article>
-
-    <article class="offer">
-      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo: the Seeed SenseCAP MeshTracker X1", class: "photo-x1" %>
-      <h2>skyBlip Bravo</h2>
-      <p class="offer-price"><s><span class="visually-hidden">Without code: </span>$49.90</s> <span class="visually-hidden">With code: </span>$44.91<small class="offer-code">with code <%= seeed_promo_code %></small><small class="offer-code">$55.95 with $11.04 shipping to France</small></p>
-      <p class="offer-tagline">MeshTracker X1</p>
-      <ul class="points">
-        <li>Hardware on sale today</li>
-        <li>Firmware available on GitHub</li>
-      </ul>
-      <p class="offer-buy">
-        <a href="https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&amp;referring_service=link" target="_blank" rel="sponsored" class="button button--primary">Buy at Seeed Studio</a>
-      </p>
-    </article>
-  </div>
-  <p class="signature">
-    Code <%= seeed_promo_code %> gives you 10% off at Seeed&rsquo;s
-    checkout. The Seeed link is an affiliate link: skyBlip earns a commission.
-    X1 prices checked on 9 November 2026, as a guide only.
-  </p>
-</section>
-
-<section class="band band--tint">
-  <h2 class="section-title">Your questions, answered</h2>
-  <div class="faq">
-    <details>
-      <summary>Does my phone connect to the Go or to Bravo?</summary>
-      <p>To the Go, which sends all the traffic in one data stream. A Go supports three Bluetooth connections. When paired with a Bravo, it uses one connection for Bravo. That leaves room for two phones or apps.</p>
-    </details>
-    <details>
-      <summary>What if the link between the two drops?</summary>
-      <p>The Go loses ADS-B traffic, keeps ADS-L and FLARM, and shows BRAVO above NO LINK in white on black in the top-right corner of its radar. Each unit then warns about its own traffic: ADS-L and FLARM for the Go, ADS-B for Bravo. Bravo keeps the Go&rsquo;s last ALARM setting. Press Bravo&rsquo;s button or touch the Go&rsquo;s pad for a second to silence only that unit.</p>
-    </details>
-    <details>
-      <summary>Does my own transponder show as traffic?</summary>
-      <p>Not once you set your aircraft&rsquo;s ICAO address on Bravo or on the paired Go. Without it, your own transponder can show as traffic.</p>
-    </details>
-    <details>
-      <summary>Can one aircraft show twice?</summary>
-      <p>Yes, in the first version. An aircraft that carries both a Go and an ADS-B transponder can show once in ADS-L and once in ADS-B.</p>
-    </details>
-    <details>
-      <summary>Does a Tango transmit ADS-B?</summary>
-      <p>No. It transmits your position in ADS-L only, through the Go.</p>
-    </details>
-    <details>
-      <summary>Does a Tango need a ground station?</summary>
-      <p>No. Bravo receives ADS-B in the aircraft. A skyPost station will add traffic and weather around its airfield: <%= link_to_page "roadmap", label: "what comes next" %>.</p>
-    </details>
-  </div>
+  <h2 class="section-title">Put together a Tango with two devices</h2>
+  <p>You buy the devices separately. If you already have a Go or Go+, get a MeshTracker X1 for Bravo. If you have both, Briefing helps you pair them on the ground.</p>
+  <p class="signature"><%= link_to_page "buy", label: "See where to buy the hardware", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Install or pair your devices" %></p>
 </section>

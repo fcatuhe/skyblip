@@ -1,102 +1,23 @@
 ---
-title: "skyBlip's commitment to recreational flying and air sports"
+title: "Why we build skyBlip"
 nav_title: About
-description: "For recreational flying and air sports, skyBlip's safety features will stay open source and free, with no subscription."
-updated_on: "2026-11-16"
+description: "skyBlip's safety features stay free for recreational pilots. Anyone can read the code that receives traffic and shares your position."
+updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Safety is not a premium option.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip helps you see and be seen. For recreational flying and air sports,
-    its safety features will always be open source and free.
-  </p>
+  <h1>Help more pilots see traffic and be seen</h1>
+  <p class="page-hero-subtitle">Spotting another aircraft by eye isn&rsquo;t always easy. Go&rsquo;s radar shows you where to look. Go also transmits your position in ADS-L. Pilots with equipment that can receive it can spot you more easily.</p>
+  <p><%= link_to_page "see-and-avoid", label: "Understand the limits of see and avoid" %></p>
 </header>
 
-<section class="band band--tint">
-  <h2 class="section-title">The problem</h2>
-  <p class="section-intro">
-    Mid-air collisions remain among the most serious accidents in light
-    aviation, and among the most avoidable. Making yourself visible has been
-    possible for years. But it is expensive, the systems do not talk to each
-    other, and it often requires a subscription.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Affordable.</h3>
-      <p>Equipment only helps if it is on board. We use mass-produced consumer hardware. For recreational flying and air sports, the firmware and updates stay free.</p>
-    </div>
-    <div>
-      <h3>Open source.</h3>
-      <p>The code that broadcasts your position, receives traffic data and sounds the alarm is public. Anyone can read it, check it and fix it.</p>
-    </div>
-    <div>
-      <h3>Compatible.</h3>
-      <p>ADS-L is the open standard published by EASA. skyBlip also receives FLARM traffic, rather than going its own way.</p>
-    </div>
-  </div>
+<section id="pledge" class="band band--tint">
+  <h2 class="section-title">Keep safety features within reach</h2>
+  <p>skyBlip software runs on off-the-shelf hardware. For recreational flying and air sports, position transmissions, traffic reception and alerts stay free, with no subscription. That pledge also covers future ground relays. The code is open. Anyone can read it, check it and help improve it.</p>
 </section>
 
-<section class="band">
-  <h2 class="section-title">The vision: <span class="highlight">every flight visible to all</span></h2>
-  <ol class="steps-grid">
-    <li>
-      <h3>Aircraft to aircraft.</h3>
-      <p>Two skyBlip Go devices see each other with no infrastructure at all. Every ADS-L transmitter makes the sky easier to read for the others.</p>
-    </li>
-    <li>
-      <h3>With the gliders.</h3>
-      <p>They already fly with FLARM, tracked by the Open Glider Network (OGN). skyBlip receives their signals, and skyPost stations will exchange data with OGN.</p>
-    </li>
-    <li>
-      <h3>ADS&#8209;B on board.</h3>
-      <p>A Go paired with <%= link_to_page "skyblip-bravo", label: "Bravo" %> forms a <%= link_to_page "skyblip-tango", label: "Tango" %>. It adds aircraft fitted with ADS-B to the ADS-L and FLARM traffic on its radar while continuing to broadcast your position in ADS-L. Bravo also sends ADS-B traffic directly to your navigation app without a Go.</p>
-    </li>
-    <li>
-      <h3>Every flight.</h3>
-      <p>From light aircraft to paramotors, broadcast your position in ADS-L. Not because it is mandatory, but because it is useful from the first flight.</p>
-    </li>
-  </ol>
-  <p class="more"><%= link_to_page "roadmap", label: "What comes next" %></p>
-</section>
-
-<section class="band band--blip quote">
-  <blockquote>
-    &ldquo;For recreational flying and air sports, position broadcasts, traffic reception, alarms and
-    transmissions from the ground will always be <span class="highlight">open source</span>
-    and free, with <span class="highlight">no subscription</span>.&rdquo;
-  </blockquote>
-  <p>skyBlip&rsquo;s commitment</p>
-</section>
-
-<section class="band">
-  <h2 class="section-title">Thanks</h2>
-  <p class="section-intro">
-    skyBlip builds on ten years of open-source work by the recreational flying and air sports communities.
-    Thanks to the authors of the projects we learned from.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Paweł Jałocha</h3>
-      <p>The reference code for ADS-L and <a href="https://github.com/pjalocha/nrf52-ogn-tracker">nrf52-ogn-tracker</a>.</p>
-    </div>
-    <div>
-      <h3>Linar Yusupov</h3>
-      <p><a href="https://github.com/lyusupov/SoftRF">SoftRF</a>.</p>
-    </div>
-    <div>
-      <h3>Moshe Braner</h3>
-      <p>The <a href="https://github.com/moshe-braner/SoftRF">adapted version of SoftRF</a>.</p>
-    </div>
-    <div>
-      <h3>Perry Casson</h3>
-      <p><a href="https://github.com/perryc/cb-tfc">cb-tfc</a>, ADS-B reception on the MeshTracker X1.</p>
-    </div>
-  </div>
-  <p class="signature">
-    skyBlip is developed by François Catuhe, open source
-    <a href="https://github.com/fcatuhe/skyblip">on GitHub</a>.
-  </p>
-
-  <%= render "shared/cta" %>
+<section id="thanks" class="band">
+  <h2 class="section-title">Thank the people who made it possible</h2>
+  <p>François Catuhe builds skyBlip on the work of the community. Thanks to Paweł Jałocha for the ADS-L reference code and <%= link_to "nrf52-ogn-tracker", "https://github.com/pjalocha/nrf52-ogn-tracker" %>, to Linar Yusupov for <%= link_to "SoftRF", "https://github.com/lyusupov/SoftRF" %>, to Moshe Braner for his <%= link_to "adaptation of SoftRF", "https://github.com/moshe-braner/SoftRF" %>, and to Perry Casson for <%= link_to "cb-tfc", "https://github.com/perryc/cb-tfc" %> and his work on the MeshTracker X1 to receive the positions aircraft transmit in ADS-B.</p>
+  <p><%= link_to "Read the skyBlip code", "https://github.com/fcatuhe/skyblip" %> · <%= link_to_page "roadmap", label: "See what's next" %></p>
 </section>

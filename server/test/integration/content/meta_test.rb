@@ -33,7 +33,7 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
   test "the homepage describes the organization and the site" do
     get "/fr"
 
-    assert_equal "ADS-L et visibilité électronique pour pilotes · skyBlip", css_select("head > title").text
+    assert_equal "Le trafic alentour, dans votre poche · skyBlip", css_select("head > title").text
     assert_equal "https://github.com/fcatuhe/skyblip", structured_data("Organization")["sameAs"].first
     assert_equal %w[en fr], structured_data("WebSite")["inLanguage"]
   end
