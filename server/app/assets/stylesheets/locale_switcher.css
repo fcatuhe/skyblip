@@ -7,7 +7,7 @@
 
   .locale-switcher summary {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--space-inline-2xs);
     padding: var(--space-2xs) var(--space-inline-2xs);
     color: var(--ink);
@@ -39,9 +39,9 @@
 
   .locale-switcher li > * {
     display: flex;
-    align-items: center;
-    gap: var(--space-inline-xs);
-    padding: var(--space-2xs) var(--space-inline-s);
+    align-items: baseline;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-s);
     border-radius: var(--space-inline-2xs);
     color: var(--ink-soft);
     font-size: var(--text-s);

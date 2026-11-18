@@ -54,7 +54,7 @@
 
   .country-tabs label {
     display: inline-flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--space-inline-xs);
     padding: var(--space-2xs) var(--space-inline-s);
     border: 1px solid var(--card-border);

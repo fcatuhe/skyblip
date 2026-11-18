@@ -3,7 +3,7 @@
     <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-nav"), class: "site-nav-brand" %>
     <ul class="site-nav-links">
       <% %w[skyblip-go features buy install guides].each do |slug| %>
-        <li><%= link_to_page slug, label: (t("nav.devices") if slug == "features"), label_type: :nav, "aria-current": ("page" if on_page?(slug)) %></li>
+        <li><%= link_to_page slug, label: (t("nav.devices") if slug == "features"), label_type: :nav, "aria-current": nav_current(slug) %></li>
       <% end %>
     </ul>
     <div class="site-nav-actions">

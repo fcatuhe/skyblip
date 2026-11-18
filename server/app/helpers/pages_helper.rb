@@ -1,4 +1,6 @@
 module PagesHelper
+  DEVICE_PAGES = %w[features skyblip-bravo skyblip-tango].freeze
+
   def link_to_page(slug, label: nil, label_type: :title, anchor: nil, **html_options)
     page = find_page(slug)
     label ||= label_type == :nav ? page.nav_label : page.title
@@ -11,6 +13,14 @@ module PagesHelper
 
   def on_page?(slug)
     @page&.base_slug == slug
+  end
+
+  def nav_current(slug)
+    if on_page?(slug)
+      "page"
+    elsif slug == DEVICE_PAGES.first && DEVICE_PAGES.include?(@page&.base_slug)
+      "true"
+    end
   end
 
   def pages_image_tag(path, options = {})
