@@ -245,7 +245,7 @@ Record record_of(const Loop& value, const Instant& at) {
     wire::put_uint16(record.payload + 8, value.worst_pass_phase_ms);
     wire::put_uint16(record.payload + 10, value.worst_gap_ms);
     wire::put_uint16(record.payload + 12, value.worst_gap_phase_ms);
-    record.payload[14] = value.worst_service;
+    record.payload[14] = static_cast<uint8_t>(value.worst_service);
     record.payload[15] = value.worst_tick_ms;
     return record;
 }
@@ -259,7 +259,7 @@ bool read(const Record& record, Loop& out) {
     out.worst_pass_phase_ms = wire::get_uint16(record.payload + 8);
     out.worst_gap_ms = wire::get_uint16(record.payload + 10);
     out.worst_gap_phase_ms = wire::get_uint16(record.payload + 12);
-    out.worst_service = record.payload[14];
+    out.worst_service = static_cast<LoopService>(record.payload[14]);
     out.worst_tick_ms = record.payload[15];
     return true;
 }

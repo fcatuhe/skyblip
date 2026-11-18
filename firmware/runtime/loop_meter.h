@@ -32,7 +32,7 @@ class LoopMeter {
     void rest() { began_ = false; }
 
     template <class Work>
-    void timed(uint8_t service, Work&& work) {
+    void timed(diagnostics::LoopService service, Work&& work) {
         const uint64_t began_us = clock_.microseconds();
         work();
         const uint64_t took_us = clock_.microseconds() - began_us;

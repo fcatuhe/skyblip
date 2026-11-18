@@ -93,7 +93,8 @@ class Product {
             const bool metered = diagnostics_.armed();
             if (metered) {
                 meter_.begin_pass(context_.instant(now_ms).into_ms);
-                meter_.timed(diagnostics::kLoopBoardPoll, [&] { board_.poll(state_, now_ms); });
+                meter_.timed(diagnostics::LoopService::BoardPoll,
+                             [&] { board_.poll(state_, now_ms); });
             } else {
                 meter_.rest();
                 board_.poll(state_, now_ms);
@@ -342,11 +343,18 @@ class Product {
 
     // INFO: fc 12nov26 ownship fixes before adsb folds, and the lamp's prompt before the button
     // answers
-    // INFO: fc 11nov26 peer goes last, so the loop codes of the nine services before it hold
     static constexpr int kServiceCount = 10;
-    runtime::Service* services_[kServiceCount]{&config_link_, &ownship_, &power_, &adsb_,
-                                               &alarm_,       &button_,  &nmea_,  &flight_log_,
-                                               &capture_,     &peer_};
+    const runtime::Loop::Entry services_[kServiceCount]{
+        {&config_link_, diagnostics::LoopService::Config},
+        {&ownship_, diagnostics::LoopService::Ownship},
+        {&power_, diagnostics::LoopService::Power},
+        {&adsb_, diagnostics::LoopService::Adsb},
+        {&alarm_, diagnostics::LoopService::Alarm},
+        {&button_, diagnostics::LoopService::Button},
+        {&nmea_, diagnostics::LoopService::Nmea},
+        {&flight_log_, diagnostics::LoopService::FlightLog},
+        {&capture_, diagnostics::LoopService::Capture},
+        {&peer_, diagnostics::LoopService::Peer}};
     runtime::Loop loop_{services_, kServiceCount};
 
     power::ShutdownSequencer shutdown_{};

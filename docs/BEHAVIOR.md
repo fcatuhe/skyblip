@@ -5314,11 +5314,11 @@ The loop is what every shell drives, so setup failure reporting and tick order a
 
 **runtime**
 
+- a loop code names the service, and the Go's codes keep their numbers
+  > Captures already in the field name the Go's services by these numbers.
 - a meter that rested measures no gap across the rest
   > The products meter only while a capture records, so the passes before an arm are no wait.
 - a null role accepts every call and reports nothing works
-- a service placed past the board poll's code takes the next, none renumbered
-  > A capture names its slowest service by code, and the eleventh service came after the board poll's.
 - setup reports the first failure but still sets up the rest
 - the loop meter names the slowest service and dates the longest wait
   > The bench saw the fix processed later every second, and only this says which wait it was.

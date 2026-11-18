@@ -10,14 +10,19 @@ namespace skyblip::runtime {
 
 class Loop {
    public:
-    Loop(Service* const* services, int count) : services_(services), count_(count) {
+    struct Entry {
+        Service* service;
+        diagnostics::LoopService code;
+    };
+
+    Loop(const Entry* entries, int count) : entries_(entries), count_(count) {
         for (int i = 0; i < count_; i++) feed_decision_.add(kServiceSilenceCeilingMs);
     }
 
     Status setup() {
         Status first = Status::Ok;
         for (int i = 0; i < count_; i++) {
-            const Status status = services_[i]->setup();
+            const Status status = entries_[i].service->setup();
             if (status != Status::Ok && first == Status::Ok) first = status;
         }
         return first;
@@ -28,12 +33,12 @@ class Loop {
         // stamp, so the deadlines start counting from the first pass.
         if (!feed_decision_.started()) feed_decision_.begin(now_ms);
         for (int i = 0; i < count_; i++) {
+            Service& service = *entries_[i].service;
             if (meter != nullptr)
-                meter->timed(diagnostics::loop_service_code(i),
-                             [&] { services_[i]->tick(now_ms); });
+                meter->timed(entries_[i].code, [&] { service.tick(now_ms); });
             else
-                services_[i]->tick(now_ms);
-            if (services_[i]->progressing(now_ms)) feed_decision_.check_in(i, now_ms);
+                service.tick(now_ms);
+            if (service.progressing(now_ms)) feed_decision_.check_in(i, now_ms);
         }
     }
 
@@ -41,7 +46,7 @@ class Loop {
     int stalled_service(uint32_t now_ms) const { return feed_decision_.stalled_service(now_ms); }
 
    private:
-    Service* const* services_;
+    const Entry* entries_;
     int count_;
     FeedDecision feed_decision_{};
 };

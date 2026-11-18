@@ -446,7 +446,7 @@ TEST_CASE(
     diagnostics::Loop window{};
     REQUIRE(last_of(records, window));
     CHECK(window.passes > 0);
-    CHECK(window.worst_service <= diagnostics::kLoopBoardPoll);
+    CHECK(window.worst_service <= diagnostics::LoopService::Bravo);
 }
 
 // The page turns this into the hours a partition lasts, so it is a claim about the taps.
