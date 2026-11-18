@@ -22,6 +22,15 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
     assert_select ".locale-switcher a[href='/about']", text: "EN"
   end
 
+  test "the footer offers the contact email first, then the repository on GitHub" do
+    get "/fr/a-propos"
+
+    assert_select ".site-footer-contact", text: /Écrivez-nous à contact@skyblip\.eu ou sur GitHub\./
+    assert_select ".site-footer-contact a" do |links|
+      assert_equal [ "mailto:contact@skyblip.eu", "https://github.com/fcatuhe/skyblip" ], links.map { it["href"] }
+    end
+  end
+
   test "untranslated content does not advertise a missing French alternate" do
     get "/ads-l/nmea"
 
