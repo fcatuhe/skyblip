@@ -12,7 +12,23 @@ updated_on: "2026-11-18"
   <p class="page-hero-subtitle">Vous venez de recevoir votre boîtier&nbsp;? <%= link_to_page "install", label: "Commencez par l'installer" %>. Si le Briefing vous indique que l&rsquo;appareil est prêt, ouvrez le guide pour votre appareil.</p>
 </header>
 
-<section class="band">
+<section id="install" class="band">
+  <h2 class="section-title">Installer</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "self-test.png", alt: "La page autotest, chaque composant de l'appareil marqué PASS" %>
+      <h3><%= link_to_page "install", label_type: :nav %></h3>
+      <p>Installez skyBlip sur votre Go ou votre Bravo depuis votre navigateur. À chaque démarrage, le Go vérifie sa radio, son GPS et son baromètre, et ne fonctionne pas sans eux.</p>
+    </article>
+    <article>
+      <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ sur un LilyGO T-Echo Plus blanc, à côté de la pince crabe à poignée orange qui le tient sur l'auvent", class: "guide-photo" %>
+      <h3><%= link_to_page "mount", label_type: :nav %></h3>
+      <p>Clipsez un Go ou un Go+ sur une rotule fixée à l&rsquo;auvent, avec les pièces que nous avons testées, placez son antenne, et suspendez Bravo à sa dragonne.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
   <h2 class="section-title">Commencez par votre appareil</h2>
   <div class="guide-cards">
     <article>
@@ -25,16 +41,11 @@ updated_on: "2026-11-18"
       <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
       <p>Repérez le bouton et le voyant. Retrouvez le trafic dans votre application de navigation ou sur le Go associé.</p>
     </article>
-    <article>
-      <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ sur un LilyGO T-Echo Plus blanc, à côté de la pince crabe à poignée orange qui le tient sur l'auvent", class: "guide-photo" %>
-      <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Clipsez un Go ou un Go+ sur une rotule fixée à l&rsquo;auvent, avec les pièces que nous avons testées, et suspendez Bravo à sa dragonne.</p>
-    </article>
   </div>
   <p class="signature">Avec un Tango, ouvrez les deux guides. Le Go affiche le trafic et Bravo complète ce qu&rsquo;il reçoit.</p>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">En vol</h2>
   <div class="guide-cards">
     <article>
@@ -55,7 +66,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">Au sol</h2>
   <div class="guide-cards">
     <article>
@@ -76,7 +87,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Comment ça marche</h2>
   <div class="guide-cards">
     <article>
@@ -102,7 +113,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">Pour les curieux</h2>
   <div class="resource-cards">
     <article>
