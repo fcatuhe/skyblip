@@ -1,6 +1,7 @@
 @layer base {
   html { font-size: 100%; }
   html:has(.site-header) { scroll-padding-block-start: calc(var(--site-header-block-size) + var(--space-s)); }
+  html:has(.site-header .device-tabs) { scroll-padding-block-start: calc(var(--site-header-block-size) + var(--space-2xl) + var(--space-s)); }
   @media (min-width: 100ch) {
     html { font-size: 112.5%; }
   }
