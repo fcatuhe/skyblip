@@ -248,6 +248,7 @@ TEST_CASE("rf: a burst whose gates clear inside the dwell is armed into that dwe
     armings.state.own.utc_valid = true;
     armings.state.own.tx_settled = true;
     armings.state.own.flight_state = 2;
+    armings.state.own.fix_dated = true;
     armings.solving = true;
 
     armings.tick_at(kSlot0Dwell.start_ms);

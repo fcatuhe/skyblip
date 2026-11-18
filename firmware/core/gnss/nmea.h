@@ -139,6 +139,9 @@ class NmeaParser {
 bool nmea_checksum_ok(const char* line, int bytes);
 bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t& out_1e7);
 
+// INFO: fc 18nov26 the stated assumption: the L76K delivers a solution within a quarter
+constexpr uint32_t kSolutionLatencyCeilingMs = 250;
+
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms) {
     return arrival_ms - solution.pps_latency_ms;
 }

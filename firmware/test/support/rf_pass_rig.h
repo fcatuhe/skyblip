@@ -57,6 +57,7 @@ struct Pass {
         state.own.fix_valid = true;
         state.own.utc_valid = true;
         state.own.tx_settled = true;
+        state.own.fix_dated = true;
         state.own.flight_state = 2;
         state.clock.utc_valid = true;
         state.activation.serial = 0x7E57;

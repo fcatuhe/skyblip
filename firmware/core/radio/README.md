@@ -105,7 +105,7 @@ The verdicts split on 2026-09-19 and the counters followed on the same day, beca
 | `tx_deferred` | bursts of ours the clear channel assessment found busy, armed again a random 5 to 40 ms later inside their own window (D.3, `core/timing/README.md`) |
 | `tx_forced` | bursts keyed on a busy channel on the ground 3000 ms after their first attempt, each followed by 2000 ms from its end with nothing of ours on air (D.3) |
 | `tx_busy_missed` | bursts found busy that could not be armed again inside their window, which the 2 s retry then takes (D.3) |
-| `tx_held_for_fix` | seconds own-ship held an owed position because its solution would have been over 500 ms old on air, less the frame and the key's slack (G.1.16), or named no quarter second to within 10 ms (G.1.1, `core/timing/README.md`, The age of a position) |
+| `tx_held_for_fix` | seconds own-ship held an owed position because its solution would have been over 500 ms old on air, less the frame and the key's slack (G.1.16), or named no quarter second to within 10 ms (G.1.1), or no fix delivered inside its quarter had anchored the clock (`core/timing/README.md`, The age of a position) |
 
 `rx_status`, `uplink_stale`, `tx_held_for_b5`, `tx_given_up`, `tx_deferred`, `tx_forced`, `tx_busy_missed` and `tx_held_for_fix` reach the diagnostics dump's radio group like the rest, and the RAW page prints the first three as `ST` on the verdict row, the fourth figure of `UPLINK`, and `B5` on the `DUTY` row. The other five are the dump's only.
 

@@ -90,12 +90,14 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.vdop_e2 = solution.vdop_e2;
     own.utc_s = solution.utc_s;
     own.utc_ms = solution.utc_ms;
-    own.fix_at_ms = solution_instant(solution, now_ms);
+    const Dated dated = solution_instant(solution, now_ms);
+    own.fix_at_ms = dated.at_ms;
+    own.fix_dated = dated.trusted;
     own.satellites = solution.satellites;
     own.aircraft_category = settings_.aircraft_type;
 
     context_.state.clock.utc_valid = solution.utc_valid;
-    anchor_utc_s(solution);
+    anchor_utc_s(solution, now_ms);
     publish_solution_phase(now_ms);
 
     int32_t climb_mm_s = 0;
@@ -241,12 +243,17 @@ void OwnshipService::update_residual(const model::Ownship& previous) {
 }
 
 // INFO: fc 16sep26 a sentence names the second its own edge opened, and only that edge dates it
-void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution) {
+// | 18nov26 and an anchor a timely fix set is replaced only by another
+void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms) {
     timing::ClockState& clock = context_.state.clock;
     if (!dates_the_edge(solution, clock)) return;
-    if (context_.state.own.fix_at_ms != static_cast<uint32_t>(clock.pps_edge_us / 1000)) return;
+    const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);
+    if (context_.state.own.fix_at_ms != edge_ms) return;
+    const bool fixed = solution.fix_valid && now_ms - edge_ms < gnss::kSolutionLatencyCeilingMs;
+    if (clock.utc_anchor_fixed && !fixed) return;
     clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
+    clock.utc_anchor_fixed = fixed;
 }
 
 bool OwnshipService::dates_the_edge(const gnss::GnssSolution& solution,
@@ -266,17 +273,23 @@ void OwnshipService::publish_solution_phase(uint32_t now_ms) {
 }
 
 // INFO: fc 13sep26 the latched edge dates the solution exactly, the estimate only when it is lost
-// | 18nov26 an anchored second dates it by its own, and one the anchor cannot date drops it
-uint32_t OwnshipService::solution_instant(const gnss::GnssSolution& solution, uint32_t now_ms) {
+// | 18nov26 an anchored second dates it by its own, and a fix never by an anchor no fix set
+OwnshipService::Dated OwnshipService::solution_instant(const gnss::GnssSolution& solution,
+                                                       uint32_t now_ms) {
     timing::ClockState& clock = context_.state.clock;
-    if (clock.utc_s != 0) {
+    if (clock.utc_s != 0 && (clock.utc_anchor_fixed || !solution.fix_valid)) {
         const std::optional<uint32_t> anchored = gnss::anchored_instant_ms(
             solution, now_ms, static_cast<uint32_t>(clock.utc_edge_us / 1000), clock.utc_s);
-        if (anchored) return *anchored;
-        if (solution.utc_valid) clock.utc_s = 0;
+        if (anchored) return Dated{*anchored, clock.utc_anchor_fixed};
+        if (solution.utc_valid) {
+            clock.utc_s = 0;
+            clock.utc_anchor_fixed = false;
+        }
     }
-    return gnss::solution_instant_ms(
-        solution, now_ms, static_cast<uint32_t>(clock.pps_edge_us / 1000), clock.pps_locked);
+    return Dated{
+        gnss::solution_instant_ms(solution, now_ms, static_cast<uint32_t>(clock.pps_edge_us / 1000),
+                                  clock.pps_locked),
+        false};
 }
 
 void OwnshipService::apply_barometer(const events::BarometerSample& sample, uint32_t now_ms) {

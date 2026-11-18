@@ -104,6 +104,28 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a solution that lands a second late never goes
     CHECK(simulator.product().state().air.tx_held_for_fix > held_before + 10);
 }
 
+// The host's side of a cold start: three seconds of sentences waiting in the port, drained at once.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a backlog of old sentences at a cold start never goes on air") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    fly_measured(simulator);
+    models::L76k& chip = simulator.world().gnss();
+    chip.stall_period_ms = 1000000000;
+    chip.stall_from_ms = 0;
+    chip.stall_until_ms = 3000;
+    run_on(simulator, past_settling(simulator), 20000);
+
+    CHECK(simulator.product().state().clock.utc_anchor_fixed);
+    CHECK(check_every_position(simulator) >= 15);
+}
+
+// TODO: fc 18nov26 a receiver late by a second from power-up is unmeasured, until the PPS bench
+// item
+TEST_CASE("ADS-L.4.SRD860.G.1.16: an L76K that delivers every solution a second late is refused" *
+          doctest::skip()) {
+    FAIL("unmeasured: no bench has shown the L76K delivers each solution within 250 ms of it");
+}
+
 // The pinned case: a part at 5 Hz passed as 4 Hz and a .600 solution went out named .500.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: a receiver solving off the quarters never names a fix wrongly") {
     simulator::Simulator simulator;

@@ -226,11 +226,13 @@ void RadioService::queue_next(const timing::SlotPlan& plan, int64_t origin_us, u
 
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan, int64_t origin_us,
                                                    uint32_t now_ms) const {
+    timing::Transmitter::Attempt held{};
     for (const Payload payload : kEveryPayload) {
         const timing::Transmitter::Attempt owed = attempt(plan, origin_us, now_ms, payload);
         if (owed.go || owed.over_budget) return owed;
+        if (owed.stale) held = owed;
     }
-    return timing::Transmitter::Attempt{};
+    return held;
 }
 
 timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan, int64_t origin_us,
@@ -243,8 +245,14 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
         return timing::Transmitter::Attempt{};
     if (payload == Payload::Callsign && settings_.callsign[0] == 0)
         return timing::Transmitter::Attempt{};
-    return transmitter_.attempt(plan, slot_utc_s(now_ms), now_ms, full_rate(),
-                                fix_lag_ms(origin_us), payload);
+    timing::Transmitter::Attempt owed = transmitter_.attempt(
+        plan, slot_utc_s(now_ms), now_ms, full_rate(), fix_lag_ms(origin_us), payload);
+    // INFO: fc 18nov26 a fix no timely fix anchored has no age a position can be judged by
+    if (payload == Payload::Position && owed.go && !own.fix_dated) {
+        owed.go = false;
+        owed.stale = true;
+    }
+    return owed;
 }
 
 bool RadioService::full_rate() const {

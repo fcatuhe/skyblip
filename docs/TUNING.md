@@ -103,6 +103,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
 | `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
+| `kSolutionLatencyCeilingMs` | 250 | milliseconds | Ceiling | the stated assumption: the L76K delivers a solution within a quarter |
 | `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 14 bursts at 4 Hz |
 
 ## [`firmware/core/indication`](../firmware/core/indication/README.md)
@@ -420,4 +421,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-275 constants over 26 folders.
+276 constants over 26 folders.

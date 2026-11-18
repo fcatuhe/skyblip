@@ -122,6 +122,7 @@ struct Armings {
         state.own.tx_settled = true;
         state.own.flight_state = 2;
         state.own.utc_s = utc_s;
+        state.own.fix_dated = true;
         solving = true;
     }
 

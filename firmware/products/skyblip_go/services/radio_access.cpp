@@ -80,7 +80,8 @@ bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool 
     if (silenced(tx_at_us)) return false;
     const int32_t fix_age_ms =
         static_cast<int32_t>(static_cast<uint32_t>(tx_at_us / 1000) - own.fix_at_ms);
-    if (payload == Payload::Position && !timing::Transmitter::fresh(fix_age_ms)) return false;
+    if (payload == Payload::Position && (!own.fix_dated || !timing::Transmitter::fresh(fix_age_ms)))
+        return false;
 
     timing::Transmitter::Attempt attempt{};
     attempt.go = true;

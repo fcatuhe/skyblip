@@ -42,6 +42,8 @@ struct Ownship {
     // When the solution behind this state was solved, on the millisecond clock.
     // ADS-L G.1.16 refuses a Traffic burst whose solution is over 500 ms old on air.
     uint32_t fix_at_ms;
+    // INFO: fc 18nov26 fix_at_ms mapped through an anchor a fix set, the dating positions trust
+    bool fix_dated;
     // Horizontal dilution of precision in hundredths. Zero means the receiver
     // did not report it, which is not the same as a good one.
     uint16_t hdop_e2;

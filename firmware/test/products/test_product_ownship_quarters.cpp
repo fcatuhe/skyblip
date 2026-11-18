@@ -5,48 +5,14 @@
 #include "core/gnss/nmea.h"
 #include "doctest/doctest.h"
 #include "test/support/product_rig.h"
+#include "test/support/quarter_feed.h"
 
 using namespace skyblip;
 
 namespace {
-
 constexpr uint32_t kBaseUtcS = Rig::kBaseUtcS;
-constexpr uint32_t kQuarterMs = 250;
-constexpr uint32_t kLatencyMs = 70;
-
-struct Solution {
-    uint32_t second{0};
-    uint32_t utc_ms{0};
-    int32_t speed_mm_s{0};
-    uint32_t late_ms{kLatencyMs};
-};
-
-// One solution, landing late_ms after the instant it names, as the L76K delivers it.
-void deliver(Rig& rig, const Solution& delivered, uint32_t& updates) {
-    gnss::GnssSolution solution{};
-    solution.fix_valid = true;
-    solution.utc_valid = true;
-    solution.utc_s = kBaseUtcS + delivered.second;
-    solution.utc_ms = static_cast<uint16_t>(delivered.utc_ms);
-    solution.latitude_1e7 = 485000000 + static_cast<int32_t>(updates) * 100;
-    solution.longitude_1e7 = 85000000;
-    solution.altitude_hae_mm = 1000000;
-    solution.altitude_msl_valid = true;
-    solution.speed_mm_s = delivered.speed_mm_s;
-    solution.track_cdeg = 0;
-    solution.hdop_e2 = 100;
-    solution.vdop_e2 = 150;
-    solution.satellites = 10;
-    solution.sentences = ++updates;
-    rig.product.bus().gnss.push(solution);
-    const uint32_t at_ms = delivered.second * 1000 + delivered.utc_ms + delivered.late_ms;
-    rig.run(at_ms, at_ms);
-}
-
-void solve(Rig& rig, uint32_t second, uint32_t quarter, int32_t speed_mm_s, uint32_t& updates) {
-    deliver(rig, Solution{second, quarter * kQuarterMs, speed_mm_s}, updates);
-}
-
+constexpr uint32_t kQuarterMs = kQuarterFeedMs;
+constexpr uint32_t kLatencyMs = kQuarterFeedLatencyMs;
 }  // namespace
 
 // The fix's instant is its own quarter, from the PPS edge, so G.1.16 can age it to the burst.
@@ -126,4 +92,39 @@ TEST_CASE("product: own-ship's whole second stands while the quarters after it m
     CHECK(rig.state().own_second.latitude_1e7 == whole_latitude_1e7);
     CHECK(rig.state().own_second.utc_s == kBaseUtcS + 2);
     CHECK(rig.state().own_second.utc_ms == 0);
+}
+
+// A whole second delivered later than a quarter breaks the receiver's stated latency: it anchors
+// nothing a position may be dated by, and the next one inside the quarter does.
+TEST_CASE("product: only a fix delivered inside its quarter anchors the clock positions trust") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    deliver(rig, Solution{1, 0, 0, 300}, updates);
+    deliver(rig, Solution{1, 250, 0, 320}, updates);
+    CHECK_FALSE(rig.state().clock.utc_anchor_fixed);
+    CHECK_FALSE(rig.state().own.fix_dated);
+
+    solve(rig, 2, 0, 0, updates);
+    solve(rig, 2, 1, 0, updates);
+    CHECK(rig.state().clock.utc_anchor_fixed);
+    CHECK(rig.state().own.fix_dated);
+    CHECK(rig.state().own.fix_at_ms == 2250);
+}
+
+// The pinned case: an unfixed stamp a second ahead anchored the clock, and every fix looked stale.
+TEST_CASE("product: the first fix re-anchors a clock an unfixed stamp anchored a second off") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    for (uint32_t second = 1; second <= 3; second++)
+        deliver(rig, Solution{second, 0, 0, kLatencyMs, false, 1}, updates);
+    REQUIRE(rig.state().clock.utc_s == kBaseUtcS + 4);
+
+    for (uint32_t second = 4; second <= 5; second++)
+        for (uint32_t quarter = 0; quarter < 4; quarter++) solve(rig, second, quarter, 0, updates);
+    CHECK(rig.state().clock.utc_s == kBaseUtcS + 5);
+    CHECK(rig.state().clock.utc_anchor_fixed);
+    CHECK(rig.state().own.fix_at_ms == 5750);
+    CHECK(rig.state().own.fix_dated);
 }
