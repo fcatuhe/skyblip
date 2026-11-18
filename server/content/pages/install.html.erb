@@ -20,7 +20,6 @@ updated_on: "2026-11-18"
       <li>
         <h3>Click Install in Briefing.</h3>
         <p>Choose your device, then select the USB drive it names. Briefing installs the right software.</p>
-        <p>To keep Bravo&rsquo;s original software, copy <code>CURRENT.UF2</code> from the <strong>X1</strong> drive to your computer as soon as the drive appears and before you select it in Briefing.</p>
       </li>
       <li>
         <h3>Connect the device over Bluetooth when Briefing asks.</h3>
@@ -53,7 +52,7 @@ updated_on: "2026-11-18"
     <p>Download the <code>.uf2</code> file for your device from the <%= link_to "skyBlip releases page", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
     <ul>
       <li><strong>Go or Go+:</strong> Plug in the device and quickly press RESET twice. It&rsquo;s near the top on the left side. Copy the Go file to the <strong>TECHOBOOT</strong> drive. For a new Go, <%= link_to "activate it over Bluetooth", briefing_activation_path(locale: I18n.locale) %> in Chrome or Edge on a computer or Android. Follow the request on Go&rsquo;s screen.</li>
-      <li><strong>Bravo:</strong> Unplug the device. Hold its button down as you plug it back in. Release it when the light turns white. From the <strong>X1</strong> drive, first copy <code>CURRENT.UF2</code> to your computer to save the original software. Then copy the skyBlip Bravo file to the <strong>X1</strong> drive. To go back to the original software, copy the saved file back to that drive.</li>
+      <li><strong>Bravo:</strong> Unplug the device. Hold its button down as you plug it back in. Release it when the light turns white. Copy the skyBlip Bravo file to the <strong>X1</strong> drive.</li>
     </ul>
     <h3 id="transponder">Your own transponder shows up as traffic</h3>
     <p>On the ground, set your transponder to ALT. Bravo can suggest its address for Mode S or ADS-B. Look in Briefing for a Bravo on its own, or on Go&rsquo;s screen for a Tango. Check that it&rsquo;s your aircraft before accepting. If you already know the address, enter it under &quot;ADS-B address&quot;. If you don&rsquo;t have a transponder, leave it blank.</p>

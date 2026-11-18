@@ -21,7 +21,6 @@ updated_on: "2026-11-18"
       <li>
         <h3>Cliquez sur Installer dans le Briefing.</h3>
         <p>Choisissez le boîtier, puis le lecteur USB indiqué. Le Briefing installe le bon logiciel.</p>
-        <p>Pour garder le logiciel d&rsquo;origine de Bravo, copiez <code>CURRENT.UF2</code> du lecteur <strong>X1</strong> vers votre ordinateur dès que le lecteur apparaît et avant de le sélectionner dans le Briefing.</p>
       </li>
       <li>
         <h3>Connectez l&rsquo;appareil en Bluetooth quand le Briefing vous le propose.</h3>
@@ -54,7 +53,7 @@ updated_on: "2026-11-18"
     <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil sur la <%= link_to "page des versions de skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
     <ul>
       <li><strong>Go ou Go+ :</strong> branchez le boîtier et appuyez deux fois rapidement sur le bouton RESET, en haut sur le côté gauche. Copiez le fichier du Go sur le lecteur <strong>TECHOBOOT</strong>. S&rsquo;il s&rsquo;agit d&rsquo;un Go neuf, <%= link_to "activez-le ensuite en Bluetooth", briefing_activation_path(locale: I18n.locale) %> dans Chrome ou Edge sur ordinateur ou Android. Suivez la demande affichée sur le Go.</li>
-      <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Sur le lecteur <strong>X1</strong>, copiez d&rsquo;abord <code>CURRENT.UF2</code> vers votre ordinateur pour garder une copie du logiciel d&rsquo;origine. Copiez ensuite le fichier skyBlip Bravo vers le lecteur <strong>X1</strong>. Pour revenir au logiciel d&rsquo;origine, recopiez le fichier sauvegardé vers ce lecteur.</li>
+      <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Copiez le fichier skyBlip Bravo sur le lecteur <strong>X1</strong>.</li>
     </ul>
     <h3 id="transponder">Votre propre transpondeur apparaît comme un trafic</h3>
     <p>Au sol, mettez votre transpondeur sur ALT. Bravo peut alors proposer son adresse, qu&rsquo;il soit Mode S ou ADS-B : dans le Briefing avec Bravo seul, sur l&rsquo;écran du Go avec un Tango. Vérifiez qu&rsquo;il s&rsquo;agit de votre aéronef avant de l&rsquo;accepter. Si vous connaissez déjà son adresse, vous pouvez la saisir dans le réglage « Adresse ADS-B ». Sans transpondeur, vous n&rsquo;avez rien à renseigner.</p>

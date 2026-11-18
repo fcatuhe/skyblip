@@ -47,7 +47,7 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
       assert_response :success
       assert_select "link[rel=alternate][href=?]", Content.canonical_url(translation)
       assert_select "main a[href=?]", briefing_setup_path(locale:)
-      assert_select "#steps ol > li:nth-child(2) code", text: "CURRENT.UF2"
+      assert_no_match "CURRENT.UF2", response.body
       assert_select "#si-quelque-chose-bloque a[href=?]", briefing_activation_path(locale:)
       assert_select "#si-quelque-chose-bloque #transponder"
 
