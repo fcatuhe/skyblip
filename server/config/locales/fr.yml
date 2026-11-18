@@ -9,6 +9,7 @@ fr:
     get: "S'équiper"
     get_note: "un Go à partir de 68 €, sans abonnement"
   simulator:
+    with_bravo: "Avec Bravo (skyBlip Tango)"
     keys:
       pitch: "monter, descendre"
       turn: "tourner à gauche, à droite"
@@ -31,6 +32,8 @@ fr:
       capture: "Capture"
       self test: "Autotest"
       menu: "Menu"
+      bravo: "Bravo"
+      bravo log: "Journal Bravo"
   promo_code:
     copy: "copier"
     copied: "copié"

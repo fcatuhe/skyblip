@@ -2,9 +2,9 @@
 title: "Simulateur skyBlip Go dans votre navigateur"
 nav_title: Essayer
 slug: essayer
-description: "Essayez le firmware skyBlip Go dans votre navigateur. Ajoutez jusqu'à huit trafics ADS-L, testez le radar, les touches et l'alarme."
+description: "Essayez le skyBlip Go dans votre navigateur. Ajoutez un Bravo pour voir des aéronefs ADS-B plus éloignés. Testez le radar, les touches et l'alarme."
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-18"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
 
@@ -17,10 +17,7 @@ updated_on: "2026-11-09"
   <%= render "shared/simulator_loader" %>
 
   <p class="note">
-    Un à huit aéronefs vont et viennent, chacun émettant de vrais messages ADS-L.
-    Ils s&rsquo;affichent comme en vol. Le voyant de gauche clignote toutes les
-    3&nbsp;secondes, en bleu tant que l&rsquo;appareil cherche sa position GPS, puis en vert.
-    Il clignote rapidement en rouge quand un aéronef déclenche l&rsquo;alarme.
+    Les aéronefs ADS-L et FLARM vont et viennent sur le radar. Cochez <strong><%= t "simulator.with_bravo" %></strong> pour redémarrer avec un Bravo appairé et voir des aéronefs ADS-B plus éloignés. Le voyant de gauche clignote toutes les 3&nbsp;secondes, en bleu tant que l&rsquo;appareil cherche sa position GPS, puis en vert. Il clignote rapidement en rouge quand un aéronef déclenche l&rsquo;alarme.
   </p>
 
   <%= render "shared/cta", prompt: false, try: false %>

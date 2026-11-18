@@ -2,7 +2,9 @@ The Rails app serves the simulator, the Bluetooth console and the traffic compar
 
 Reusable browser modules live here and their Node tests live in `server/test/javascript/`. Rails importmap pins `#skyblip/*` to digested assets, and `server/package.json` maps those same module names for Node's native test runner. Serving the app needs no Node runtime, package install, or bundler.
 
-The simulator loads `embed.js`, its generated JavaScript module, and WASM from same-origin `/releases/:tag/:file` URLs after a lazy Turbo frame selects a release. Its case styling is app-owned in `server/app/assets/stylesheets/simulator/device.css`. The firmware's own `firmware/simulator/web/embed.js` remains usable by `server/bin/screenshots` without Rails.
+The simulator loads `embed.js`, its generated JavaScript module, and WASM from same-origin `/releases/:tag/:file` URLs after a Turbo Frame selects a release. When a local browser build exists, `/try` and `/fr/essayer` use it instead. The simulator's case styling is app-owned in `server/app/assets/stylesheets/simulator/device.css`. The firmware's own `firmware/simulator/web/embed.js` remains usable by `server/bin/screenshots` without Rails.
+
+On the public simulator, the Bravo checkbox starts a fresh Go alone or loads the firmware's `paired` scenario. It appears only on builds that support the pair. Both modes generate ADS-L and FLARM traffic 0.8 to 4.8 km away. Paired mode adds a separate group of ADS-B aircraft 8 to 30 km away. The simulated Bravo receives those messages on 1090 MHz and relays the traffic to the Go over the firmware's peer link.
 
 ## The console
 

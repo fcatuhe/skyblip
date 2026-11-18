@@ -2,9 +2,9 @@
 title: "skyBlip Go simulator in your browser"
 nav_title: Try it
 slug: try
-description: "Try skyBlip Go firmware in your browser. Add up to eight ADS-L aircraft and test the traffic display, buttons and alarm before buying hardware."
+description: "Try skyBlip Go in your browser. Add Bravo to see more distant ADS-B aircraft, and test the radar, buttons and alarm."
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-18"
 ---
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
 
@@ -17,10 +17,7 @@ updated_on: "2026-11-09"
   <%= render "shared/simulator_loader" %>
 
   <p class="note">
-    One to eight aircraft come and go on the display as they would in flight. Each sends
-    real ADS-L messages. The LED on the left blinks every 3&nbsp;seconds. It is blue until the
-    device has a GPS position, then green. The LED flickers red when an aircraft triggers
-    the alarm.
+    ADS-L and FLARM aircraft come and go on the radar. Check <strong><%= t "simulator.with_bravo" %></strong> to restart with Bravo paired and see ADS-B aircraft from farther away. The LED on the left blinks every 3&nbsp;seconds. It is blue until the device has a GPS position, then green. The LED flickers red when an aircraft triggers the alarm.
   </p>
 
   <%= render "shared/cta", prompt: false, try: false %>

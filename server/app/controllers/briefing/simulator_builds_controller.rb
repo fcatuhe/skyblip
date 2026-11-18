@@ -1,7 +1,11 @@
 class Briefing::SimulatorBuildsController < Briefing::ApplicationController
   def show
-    @release = Release.simulator
     @workbench = params[:mode] == "workbench"
+    if !@workbench && Release.local_simulator
+      @tag = Release::LOCAL_TAG
+    elsif (@release = Release.simulator)
+      @tag = @release.tag
+    end
   rescue Release::Unavailable => error
     Rails.logger.warn(error.message)
     @unavailable = true

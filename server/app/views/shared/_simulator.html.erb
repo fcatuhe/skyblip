@@ -45,6 +45,10 @@
     <p class="simulator-wake"><%= wake %></p>
     <button class="simulator-traffic button button--secondary button--small" type="button"
             data-action="simulator#addTraffic"><%= traffic %></button>
+    <label class="simulator-bravo" data-simulator-target="bravoControl" hidden>
+      <input type="checkbox" data-simulator-target="bravo" data-action="change->simulator#restart">
+      <%= t "simulator.with_bravo" %>
+    </label>
   </div>
 
   <div class="simulator-panel">

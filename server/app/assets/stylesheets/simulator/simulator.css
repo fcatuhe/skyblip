@@ -102,6 +102,14 @@
   }
   .simulator-traffic::before { content: "+ " / ""; }
 
+  .simulator-bravo:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-inline-2xs);
+    font-size: var(--text-s);
+    cursor: pointer;
+  }
+
   .simulator-wake {
     display: none;
     margin: 0;
