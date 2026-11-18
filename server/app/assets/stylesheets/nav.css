@@ -54,7 +54,7 @@
   .site-nav-links a:hover,
   .site-nav-manage:hover { color: var(--ink); }
 
-  .site-nav-links a[aria-current="page"],
+  .site-nav-links a[aria-current],
   .site-nav-manage[aria-current="page"] {
     color: var(--ink);
     border-block-end-color: var(--blip);
