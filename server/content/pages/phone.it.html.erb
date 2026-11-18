@@ -1,0 +1,137 @@
+---
+title: "Il traffico in SDVFR, SkyDemon e ForeFlight"
+nav_title: Telefono
+slug: telefono
+description: "Vedi il traffico di skyBlip Go in SDVFR Next, SkyDemon o ForeFlight via Bluetooth. Tre connessioni alla volta, senza abbinamento."
+parent: guides
+share_image: radar
+updated_on: "2026-11-15"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Con il tuo telefono, senza fidarsi di lui.</h1>
+  <p class="lede">
+    Cosa può vedere un&rsquo;app, cosa può chiedere e lo schermo del dispositivo che ha l&rsquo;ultima parola.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="by-name">Appare con il suo nome e <span class="highlight">tre schermi</span> vedono il suo traffico contemporaneamente.</h3>
+      <p>
+        <span class="mono">skyBlip Go+ 00012A</span>: il prodotto, poi
+        l&rsquo;indirizzo a 24 bit ricevuto quando è stato <%= link_to "attivato", briefing_activation_path %>.
+        Niente da abbinare, nessun codice da digitare. Invia il traffico come flusso di dati NMEA
+        FLARM su entrambi i tipi di connessione seriale Bluetooth cercati dai software di navigazione,
+        così l&rsquo;app con cui voli già lo trova.
+      </p>
+      <p>
+        Il tablet sul volantino, il telefono in tasca e l&rsquo;iPad del passeggero
+        vedono lo stesso traffico. Solo un&rsquo;app alla volta può modificare
+        le impostazioni: la prima che salva le impostazioni mantiene questo diritto finché
+        non si scollega. La seconda viene informata di quale app lo detiene.
+      </p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "Uno skyBlip Go bianco con la sua antenna e il radar del traffico sullo schermo e-paper" %>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Collegati senza abbinamento, codice o account</li>
+    <li>Usa tre connessioni contemporaneamente</li>
+    <li>Collegati tramite i profili Nordic UART o di tipo FLARM</li>
+    <li>Usa SDVFR Next, SkyDemon, ForeFlight e le altre app</li>
+    <li>Il dispositivo conserva i tuoi ultimi voli</li>
+    <li>Scaricali a terra tramite lo stesso collegamento</li>
+  </ul>
+
+  <h3 id="asked">Una pressione autorizza, <span class="highlight">un tocco rifiuta</span>.</h3>
+  <p class="lede">
+    Quando un&rsquo;app chiede qualcosa che riguarda il dispositivo che hai a bordo,
+    un nuovo firmware, un riavvio nel bootloader USB, il salvataggio delle impostazioni, la cancellazione
+    dei voli o lo spegnimento, il dispositivo non si fida della parola del telefono.
+    Mostra la domanda sul proprio schermo, indica la richiesta e aspetta trenta
+    secondi. Una pressione sul tasto <span class="mono">ACCEPT</span> la autorizza,
+    un tocco sul tasto <span class="mono">CANCEL</span> del pad la rifiuta. Lo
+    schermo mostra il conto alla rovescia, <span class="mono">CANCELS IN 30 S</span>, e se non rispondi
+    entro quel tempo la richiesta viene rifiutata.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "confirm.png", alt: "La richiesta di autorizzazione per le impostazioni inviate dal telefono: SETTINGS sotto il grande simbolo, la modifica richiesta, CANCELS IN con i secondi rimanenti, il tasto ACCEPT del pulsante e il tasto CANCEL del pad" %>
+    <figcaption>Lo schermo chiede il permesso prima di salvare le impostazioni</figcaption>
+  </figure>
+
+  <p class="lede">
+    Il nominativo è una di queste impostazioni. L&rsquo;app lo invia. Lo schermo chiede
+    il permesso. Una volta approvato, appare sulla pagina di stato, viene trasmesso
+    una volta ogni dieci secondi e compare sugli schermi degli aeromobili nelle vicinanze. Puoi anche inserirlo sul
+    dispositivo stesso, nel <%= link_to_page "controls", label: "campo del nominativo", anchor: "callsign" %>,
+    o impostarlo da un browser in <%= link_to "Briefing", briefing_root_path %>, accanto
+    al tipo di aeromobile, alle unità e all&rsquo;allarme.
+  </p>
+  <p class="lede">
+    Una pressione conta solo dopo che la domanda è apparsa sullo schermo e hai smesso
+    di premere: una serie di pressioni usate per modificare un&rsquo;impostazione non può anche
+    autorizzare una richiesta.
+  </p>
+
+  <h3 id="firmware">Il nuovo firmware arriva <span class="highlight">da una pagina web</span>.</h3>
+  <p class="lede">
+    <%= link_to "Briefing", briefing_root_path %> invia un file di
+    firmware firmato sullo stesso collegamento Bluetooth, da Chrome o Edge. Lo schermo chiede il permesso
+    una volta e indica la versione prima che il dispositivo accetti il file e lo installi. Il nuovo
+    firmware deve poi avviare la radio, ricevere dati dal ricevitore e aggiornare lo
+    schermo prima di essere mantenuto. Se non ci riesce, il dispositivo torna al
+    firmware precedente e alle impostazioni che avevi quando è iniziato l&rsquo;aggiornamento.
+  </p>
+  <p class="lede">
+    Se il dispositivo non riesce a leggere le tue impostazioni, te lo dice. Usa
+    i valori predefiniti. La riga <span class="mono">STORAGE</span> dell&rsquo;autotest
+    mostra <span class="mono">NVS+NOR DEFAULTS</span>. Il telefono viene avvisato:
+    controlla il nominativo e il tipo di aeromobile prima di volare.
+  </p>
+  <p class="lede">
+    Quando il firmware non si installa affatto, la stessa pagina passa il dispositivo
+    al suo bootloader USB, dopo la stessa pressione. Il dispositivo si spegne
+    con la schermata qui sotto. La pressione successiva avvia il bootloader: collegato con un cavo
+    USB, il dispositivo appare come un&rsquo;unità chiamata <span class="mono">TECHOBOOT</span>.
+    Copia un file <span class="mono">.uf2</span> su questa unità per installare un nuovo firmware.
+    <span class="mono">RESET</span> riporta a skyBlip. Non viene trasmesso nulla
+    durante il ripristino. Due pressioni di <span class="mono">RESET</span> aprono la stessa
+    unità senza telefono.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "recovery.png", alt: "La pagina di ripristino: RECOVERY sotto il grande simbolo, il nome dell'unità USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET e il tasto START del pulsante" %>
+    <figcaption>Il dispositivo è pronto per il ripristino via USB</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Note tecniche</h2>
+
+  <h3 id="no-pairing">Perché non serve abbinamento.</h3>
+  <p class="lede">
+    L&rsquo;abbinamento Bluetooth cifra i campi di dati chiamati caratteristiche GATT. Questo
+    causa un problema noto di Web Bluetooth su Windows e impedirebbe il funzionamento della
+    <%= link_to "pagina del browser che installa il firmware", briefing_root_path %>.
+    La sicurezza si basa quindi sulla verifica del file firmware, non sulla protezione del collegamento.
+  </p>
+
+  <ul class="points">
+    <li>Il bootloader verifica la firma del firmware con la nostra chiave</li>
+    <li>Rifiuta firmware più vecchi della versione installata</li>
+    <li>Un canale di trasporto aperto non basta per installare il firmware</li>
+    <li>Tutte le altre richieste possono essere eseguite solo a terra</li>
+    <li>Il dispositivo le rifiuta senza una conferma sul proprio schermo</li>
+    <li>La tua presenza davanti al dispositivo sostituisce un codice di abbinamento</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

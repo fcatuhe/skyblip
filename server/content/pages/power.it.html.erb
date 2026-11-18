@@ -1,0 +1,170 @@
+---
+title: "Batteria del Go, ricarica USB-C e alimentazione"
+nav_title: Alimentazione
+slug: alimentazione
+description: "Ricarica skyBlip Go via USB-C. Scopri gli avvisi di batteria, BATTERY EMPTY, lo spegnimento e perché lo schermo e-paper mantiene la sua immagine da spento."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Dice cosa sta facendo, anche da spento.</h1>
+  <p class="lede">
+    Cosa dice il dispositivo prima di avere una posizione, quando è spento e quando la batteria si esaurisce.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Sul piazzale e nella borsa</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="waiting">Dice <span class="highlight">cosa sta aspettando</span>.</h3>
+      <p>
+        Una pressione lo accende e apre la schermata del traffico. Finché non ha una
+        posizione, il cerchio lo segnala. La scritta sotto ti dice a che punto è
+        il ricevitore: <span class="mono">GPS OFF</span> quando non invia dati,
+        <span class="mono">MOVE OUT</span> quando invia soluzioni di posizione
+        ancora prive di data e <span class="mono">FINDS FIX</span>
+        quando legge una data da un satellite.
+      </p>
+      <p>
+        Così sai se aspettare o portare il dispositivo all&rsquo;aperto.
+        Annuncia la sua prima posizione e lo schermo
+        comincia a mostrare il cielo intorno a te.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "La pagina radar senza posizione: il cerchio vuoto mostra NO FIX e, sotto, lo stato di avanzamento del ricevitore" %>
+      <figcaption>In attesa del cielo</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="off">Il logo sullo schermo <span class="highlight">significa spento</span>.</h3>
+      <p>
+        Tieni premuto il pulsante per due secondi per spegnerlo. La radio si ferma, lo schermo
+        ha tre secondi per disegnare il logo e l&rsquo;alimentazione viene interrotta quando
+        rilasci il pulsante. Lo schermo e-paper mantiene la sua immagine senza alimentazione, quindi il logo resta
+        sullo schermo mentre il dispositivo è spento.
+      </p>
+      <p>
+        Esegui la stessa pressione con un dito appoggiato sul pad per lasciare invece lo schermo vuoto.
+        Un&rsquo;immagine lasciata sullo schermo e-paper per un inverno lascia un&rsquo;ombra permanente.
+        Lascia lo schermo vuoto quando riponi il dispositivo
+        per conservarlo.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "Lo schermo di un dispositivo spento: il logo skyBlip resta sullo schermo e-paper senza alimentazione" %>
+      <figcaption>Spento</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="flat-battery">Quando la batteria si esaurisce, <span class="highlight">lo schermo lo dice</span>.</h3>
+      <p>
+        A 3,2&nbsp;V il dispositivo si spegne da solo. Il suo ultimo messaggio ti dice perché.
+        Non hai premuto nulla, quindi solo lo schermo può spiegare lo spegnimento.
+        Senza quel messaggio, sembrerebbe che il dispositivo si sia bloccato o
+        guastato. Il pulsante smette di funzionare nello stesso momento, perché una pressione
+        riporterebbe soltanto la batteria alla stessa tensione di interruzione.
+      </p>
+      <p>
+        Collega il cavo per usare di nuovo il dispositivo. Questo solo gesto
+        risveglia l&rsquo;elettronica senza avviare il dispositivo e ripristina il logo:
+        il dispositivo è di nuovo spento e in carica. La pressione successiva lo avvia.
+        Se la batteria si è esaurita su uno scaffale, il dispositivo non ha lasciato messaggi.
+        In quel caso, premere il pulsante mostra lo stesso messaggio di batteria scarica.
+      </p>
+      <p>
+        Il dispositivo lo ricorda al successivo avvio. Il suo autotest mostra
+        <span class="mono">WAS EMPTY</span> accanto alla tensione. Un telefono che
+        si collega durante questo avvio riceve la stessa informazione, così un dispositivo
+        che si è spento non torna come se nulla fosse successo.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "Lo schermo di un dispositivo che si è spento da solo per batteria scarica: il logo skyBlip con la scritta BATTERY EMPTY sotto" %>
+      <figcaption>Batteria esaurita</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Da spento</th><th>Cosa succede</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Premi il pulsante</th><td>si avvia, tranne se la batteria è sotto 3,4&nbsp;V senza caricabatterie collegato. In quel caso, lo schermo mostra <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Premi dopo uno spegnimento per batteria scarica</th><td>non fa nulla. Lo schermo dice già perché si è fermato. Collega il cavo per usare di nuovo il dispositivo</td></tr>
+        <tr><th>Collega il caricabatterie</th><td>si ricarica e resta spento. Collegare un cavo nella borsa di volo non è un comando di trasmissione</td></tr>
+        <tr><th>Collega il caricabatterie a un dispositivo con batteria scarica</th><td>si ricarica e resta spento. Il logo sostituisce <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Tieni premuto il pulsante e collega il caricabatterie</th><td>si avvia e si ricarica</td></tr>
+        <tr><th>Premi <span class="mono">RESET</span></th><td>si riavvia. Premi due volte in mezzo secondo per avviare il bootloader USB, che permette di installare il firmware via USB</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Note tecniche</h2>
+
+  <h3 id="cell">Perché la batteria dura tutta la giornata.</h3>
+  <p class="lede">
+    Lo spegnimento segue una sequenza di passaggi, non un taglio improvviso della corrente. Il loro ordine
+    conta. La memoria flash esterna riceve il comando di riposo mentre è ancora
+    alimentata e può riceverlo. Dopo il taglio della corrente, quel comando non
+    ha effetto. La memoria assorbirebbe quindi tutta la sua corrente di standby per tutta la notte
+    mentre il dispositivo sembra spento nella borsa.
+  </p>
+  <p class="lede">
+    Il resto del consumo viene dalla radio e dai sensori. In volo, il dispositivo trasmette una volta al
+    secondo. A terra, trasmette una volta ogni dieci secondi. Il suo indirizzo determina quale dei dieci
+    secondi usa, così gli aeromobili sullo stesso campo distribuiscono le loro trasmissioni nel tempo.
+  </p>
+
+  <ul class="points">
+    <li>La radio viene messa a riposo prima di azionare la sua linea di reset</li>
+    <li>Lo spegnimento segue questo ordine: memoria flash, ricevitore, alimentazioni, pin</li>
+    <li>Il dispositivo trasmette a 1&nbsp;Hz in volo, a 0,1&nbsp;Hz a terra</li>
+    <li>Il giroscopio dell&rsquo;hub dei sensori non viene mai letto: assorbe un milliampere</li>
+    <li>La ricarica è rifiutata al di fuori dell&rsquo;intervallo da 5 a 60&nbsp;&deg;C</li>
+    <li>La spia lampeggia e non resta mai accesa in modo continuo</li>
+  </ul>
+
+  <h3 id="gauge">Cosa non farà l&rsquo;indicatore.</h3>
+  <p class="lede">
+    Usa due curve di tensione, non una. Durante la carica, la tensione ai morsetti supera
+    quella della sola batteria. La stessa lettura indica quindi una batteria molto più scarica
+    e la percentuale mostra quale curva è stata letta.
+  </p>
+  <p class="lede">
+    Non torna mai indietro e una trasmissione a 22&nbsp;dBm che abbassa brevemente la tensione non lo
+    sposta. Un pilota smette di fidarsi di un indicatore che salta
+    ogni volta che la radio trasmette.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Soglia</th><th>Cosa fa</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>3,60&nbsp;V</th><td>la batteria è quasi scarica, circa al 12%: la spia lampeggia in rosso, il radar mostra BAT e la percentuale, e lo spegnimento lascia CHARGE THE BATTERY sullo schermo</td></tr>
+        <tr><th>3,50&nbsp;V</th><td>la batteria è a livello critico, circa al 5%: la spia lampeggia ogni 600&nbsp;ms. Da questo momento, il dispositivo non salva nulla nella memoria permanente tranne la registrazione del volo, che documenta il volo che sta finendo</td></tr>
+        <tr><th>3,40&nbsp;V</th><td>il dispositivo rifiuta di avviarsi con una batteria così scarica. Il pulsante resta disabilitato per impedire che le pressioni nella borsa causino tentativi ripetuti</td></tr>
+        <tr><th>3,20&nbsp;V</th><td>la batteria è scarica: il dispositivo si spegne da solo e lascia BATTERY EMPTY sullo schermo. Ogni soglia richiede tre letture consecutive per essere superata in un senso e tre nel senso opposto. Un breve calo di tensione durante una trasmissione non può causare un cambiamento e una batteria vicina a una soglia non può far alternare gli stati</td></tr>
+        <tr><th>1,80&nbsp;V</th><td>al di sotto, la lettura viene da un partitore di tensione flottante, non da una batteria scarica. Il dispositivo non ne tiene conto</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

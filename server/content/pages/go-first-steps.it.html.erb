@@ -1,0 +1,106 @@
+---
+title: "Primi passi con skyBlip Go: comandi, spie e volo"
+nav_title: Primi passi con Go
+slug: primi-passi-go
+description: "Accendi Go, verifica che abbia una posizione e impara a leggere il radar. Scegli il tipo di aeromobile e imposta il nominativo."
+parent: guides
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Il tuo Go, dalla prima pressione.</h1>
+  <p class="lede">Una pressione accende skyBlip Go. Due secondi lo spengono. Nel frattempo, il pad scorre le pagine e silenzia gli allarmi.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In mano</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Trova il pad, <span class="highlight">poi il pulsante</span>.</h3>
+      <p>Il pad è sensibile al tocco e si trova sul bordo superiore. Sul lato sinistro, il pulsante è il più basso dei due comandi. RESET si trova sopra. La porta USB-C è a destra. Accanto allo schermo ci sono due spie: quella di skyBlip, rossa, verde o blu, e quella rossa del caricabatterie.</p>
+      <p>Lo schermo e-paper mantiene la sua immagine senza alimentazione. Il logo significa che il Go è spento.</p>
+    </div>
+    <%= render "shared/device", device: :go, label: "skyBlip Go con indicati pad, pulsante, RESET, spie e porta USB-C", marks: { pad: t("devices.pad"), button: t("devices.button"), reset: t("devices.reset"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Gesto</th><th>Cosa fa</th></tr></thead>
+      <tbody>
+        <tr><th>Tocca brevemente il pad</th><td>Apre la pagina successiva. In presenza di una richiesta, la rifiuta: è il tasto CANCEL dello schermo.</td></tr>
+        <tr><th>Tocca il pad per 1&nbsp;s</th><td>Silenzia un allarme attivo. Se non ci sono allarmi, torna al radar.</td></tr>
+        <tr><th>Premi il pulsante</th><td>Da spento, avvia il radar. Su una pagina, ne apre il menu. In un menu, modifica il valore selezionato. In presenza di una richiesta, la accetta.</td></tr>
+        <tr><th>Tieni premuto il pulsante per 2&nbsp;s</th><td>Spegne il Go. Il logo resta sullo schermo.</td></tr>
+        <tr><th>Stessa pressione, con un dito sul pad</th><td>Lo spegne con lo schermo vuoto, per riporlo. Un&rsquo;immagine lasciata per tutto l&rsquo;inverno lascia un&rsquo;ombra.</td></tr>
+        <tr><th>Tieni premuto il pulsante e collega il caricabatterie</th><td>Si avvia e si ricarica. Collegarlo senza premere lo ricarica e lo lascia spento.</td></tr>
+        <tr><th>Premi RESET</th><td>Riavvia il Go.</td></tr>
+        <tr><th>Premi RESET due volte in mezzo secondo</th><td>Apre TECHOBOOT, un&rsquo;unità USB per installare il firmware. Briefing lo richiede solo se non riesce a riavviare il Go da solo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Leggi il colore <span class="highlight">e il ritmo</span>.</h3>
+      <p>La spia skyBlip emette solo brevi lampi per risparmiare la batteria. Una posizione significa che il ricevitore satellitare ha trovato dove sei.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Spia</th><th>Significato</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Verde, ogni 3&nbsp;s</th><td>In funzione, con una posizione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blu, ogni 3&nbsp;s</th><td>In funzione, ancora senza posizione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Due brevi lampi ogni 3&nbsp;s</th><td>È in corso una registrazione diagnostica avviata da Briefing. Il colore continua a indicare lo stato della posizione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, tremolio rapido</th><td>È attivo un allarme di traffico.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 3&nbsp;s</th><td>Batteria quasi scarica.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 600&nbsp;ms</th><td>Batteria a livello critico. Atterra e ricarica.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Un impulso verde di 400&nbsp;ms</th><td>Si è appena acceso. Su skyBlip Go+, senti anche una vibrazione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Tre brevi impulsi rossi</th><td>Si sta spegnendo. Sul Go+, senti anche tre vibrazioni.</td></tr>
+        <tr><th>Spia spenta</th><td>Dispositivo spento.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>La spia rossa separata del caricabatterie resta accesa durante la carica, lampeggia se la batteria manca o è difettosa e si spegne quando è carica.</p>
+</section>
+
+<section id="type" class="band band--tint">
+  <h2 class="section-title">Scegli il tipo di aeromobile</h2>
+  <p>Scegli il tipo di aeromobile e il nominativo durante l&rsquo;installazione, oppure impostali più tardi. In <%= link_to "Briefing", briefing_root_path %>, apri la pagina del tuo Go. Sul Go, premi il pulsante dalla pagina radar e apri il menu <code>AIRCRAFT</code>. <code>TYPE</code> imposta il tipo di aeromobile. <code>CALLSIGN</code> imposta <%= link_to_page "controls", label: "il tuo nominativo", anchor: "callsign" %>.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead><tr><th scope="col">Nome in Briefing</th><th scope="col">Nome sul Go</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Aereo leggero</th><td><code>LIGHT</code></td></tr>
+        <tr><th scope="row">Aereo pesante</th><td><code>HEAVY</code></td></tr>
+        <tr><th scope="row">Elicottero leggero</th><td><code>LIGHT HELI</code></td></tr>
+        <tr><th scope="row">Elicottero pesante</th><td><code>HEAVY HELI</code></td></tr>
+        <tr><th scope="row">Aliante</th><td><code>GLIDER</code></td></tr>
+        <tr><th scope="row">Mongolfiera</th><td><code>BALLOON</code></td></tr>
+        <tr><th scope="row">Ultraleggero</th><td><code>MICROLIGHT</code></td></tr>
+        <tr><th scope="row">Parapendio</th><td><code>PARAGLIDER</code></td></tr>
+        <tr><th scope="row">Paracadutista</th><td><code>SKYDIVER</code></td></tr>
+        <tr><th scope="row">VTOL</th><td><code>VTOL</code></td></tr>
+        <tr><th scope="row">Autogiro</th><td><code>GYROCOPTER</code></td></tr>
+        <tr><th scope="row">Deltaplano</th><td><code>HANG GLIDER</code></td></tr>
+        <tr><th scope="row">Paramotore</th><td><code>PARAMOTOR</code></td></tr>
+        <tr><th scope="row">Sconosciuto</th><td><code>UNKNOWN</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Prima di partire</h2>
+  <p>Accendi Go all&rsquo;aperto e aspetta che la spia skyBlip lampeggi in verde. Significa che Go conosce la sua posizione. <%= link_to_page "radar", label: "Impara a leggere il radar" %>, poi <%= link_to_page "phone", label: "collega la tua app di navigazione" %> se ne usi una. Leggi la <%= link_to_page "power", label: "guida all'alimentazione" %> per la ricarica e la conservazione.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Dopo il volo</h2>
+  <p>Tieni premuto il pulsante per due secondi, poi ricarica via USB-C. Prima di riporlo per l&rsquo;inverno, lascia lo schermo vuoto. Vedi <%= link_to_page "power", label: "la guida alla ricarica e alla conservazione" %>.</p>
+  <%= render "shared/cta" %>
+</section>

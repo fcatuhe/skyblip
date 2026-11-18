@@ -1,0 +1,445 @@
+it:
+  briefing:
+    title: Briefing
+    app:
+      name: skyBlip Briefing
+      title: Briefing
+      description: Attiva, configura e aggiorna il tuo skyBlip via Bluetooth.
+    menu:
+      open: Menu
+      set_up: Configura un dispositivo
+      activate: Attiva un nuovo Go
+      tools: Strumenti per sviluppatori
+      preferences: Impostazioni
+      install: Installa l'app
+      site: skyblip.eu
+    preferences:
+      title: Impostazioni
+      language: Lingua
+      support_code: Codice di assistenza
+      support_code_hint: "Quando chiedi aiuto, comunica questo codice. Ci permette di leggere cosa è successo tra questo browser e i tuoi dispositivi: connessioni, rifiuti, installazioni ed errori. Non contiene nulla di ciò che hai digitato."
+    devices:
+      attention: Richiede attenzione
+      no_bluetooth_title: Apri su Android o su un computer
+      no_bluetooth_tools: Il simulatore e l'editor del tuo aeromobile funzionano qui.
+      title: I tuoi dispositivi
+      first_title: Il tuo skyBlip
+      first_hint: "Dispositivo nuovo? Configuralo via USB. Ha già skyBlip? Accendilo e collegalo."
+      connect_new: Collega un dispositivo
+      set_up: Configura un dispositivo
+      no_bluetooth: "Questo browser non può collegarsi a dispositivi Bluetooth. Chrome ed Edge supportano il Bluetooth su Android, Windows, macOS e Linux."
+      copy_link: Copia il link
+      copied: Copiato
+    unit:
+      menu: Scollega o dimentica
+      connect: Collega
+      reconnect: Ricollega
+      disconnect: Scollega
+      forget: Dimentica questo dispositivo
+      forget_detail: Questo browser lo dimentica. Il dispositivo conserva le sue impostazioni.
+      keep: Mantieni
+      last_read: All'ultima lettura
+      settings: Impostazioni
+      firmware: Firmware
+      update: Aggiorna
+    settings:
+      aircraft: Aeromobile
+      device: Sul dispositivo
+      units: Unità di misura
+      unit_names:
+        nautical: "NM, kt"
+        metric: "km, km/h"
+      alarm: Allarme
+      alarm_names:
+        "off": "Disattivato"
+        visual: Solo visivo
+        soft: Suono basso + visivo
+        loud: Suono forte + visivo
+      set_on_go: La riga ALARM del tuo Go lo imposta per entrambi i dispositivi.
+      bravo_alarm_names:
+        soft: Bravo basso + visivo
+        loud: Bravo forte + visivo
+      save: Salva
+      reset: Ripristina i valori predefiniti
+      heard_setting: Impostazione
+      heard_now: Ora
+      heard_from: Da Bravo
+    capture:
+      title: Acquisizione diagnostica
+      profile: Profilo
+      profile_names:
+        full: Completo
+        power_run: Test dei consumi
+        flight_run: Test in volo
+      hint: "Completo registra tutti i tipi di dati. Test dei consumi registra il consumo energetico e il ciclo di lavoro. Test in volo registra gli stessi dati con il timer di volo in funzione. Il dispositivo chiede di premere prima di iniziare e registra da solo finché non lo fermi."
+      arm: Prepara
+      stop: Ferma l'acquisizione
+      idle: Nessuna registrazione in corso.
+      running: "Acquisizione in corso (%{profile}): %{records} record finora. Il dispositivo ne conserva gli ultimi %{keeps}."
+      price: "Un'acquisizione completa conserva %{full}, un test dei consumi o in volo %{run}."
+      erases:
+        one: "Avviarne una cancella 1 volo memorizzato."
+        other: "Avviarne una cancella %{count} voli memorizzati."
+      months:
+        one: 1 mese
+        other: "%{count} mesi"
+      send: Recupera e invia
+      send_hint: "Ferma l'acquisizione, poi inviala a skyBlip da qui. Contiene le tue posizioni e gli aeromobili ricevuti. Conserviamo un'acquisizione completa per %{full} e un test dei consumi o in volo per %{run}, poi li eliminiamo."
+      fetching: "Lettura dell'acquisizione: %{at} di %{total} record."
+      uploading: Invio dell'acquisizione.
+      sent: "Inviata. Comunica il codice di assistenza %{code} quando ci scrivi."
+      empty: Il dispositivo non contiene acquisizioni.
+      not_sent: "Impossibile inviare l'acquisizione: %{detail}. Riprova più tardi."
+    report:
+      title: Invia una segnalazione
+      hint: "Invia a skyBlip i contatori del dispositivo, senza posizione né indirizzo. Usalo quando il dispositivo non funziona bene."
+      send: Invia una segnalazione
+      sent: "Inviata. Comunica il codice di assistenza %{code} quando ci scrivi."
+      not_sent: "La segnalazione resta in attesa in questo browser e viene inviata appena torna online. Il tuo codice di assistenza è %{code}."
+    browsers:
+      title: Browser autorizzati
+      hint: "Questi browser possono cambiare le impostazioni del dispositivo e avviare aggiornamenti senza premere un pulsante sul dispositivo. Un browser entra nell'elenco quando premi per autorizzare il suo primo salvataggio o aggiornamento."
+      this_browser: questo browser
+      unnamed: Un browser senza nome
+      forget: Dimentica
+      forget_named: "Dimentica %{name}"
+      forget_others: Dimentica gli altri browser
+    firmware:
+      title: Firmware
+      back: "Torna a %{name}"
+      install: Installa
+      other: Un'altra immagine
+      file: Oppure un file che termina in .signed.bin
+      release: Note di rilascio e file .uf2
+      changes: Cosa è cambiato dalla tua versione
+      recovery: Il firmware non si installa?
+      recovery_hint: "Senza Bluetooth: collega il dispositivo a un computer e premi RESET due volte entro mezzo secondo. Compare come unità USB chiamata TECHOBOOT: copiaci il file .uf2 di una versione."
+      recover: Riavvia come unità USB
+      report_received_html: "skyBlip ha ricevuto i dettagli di questo errore. Se ci scrivi, dicci cosa hai fatto e comunica il codice di assistenza %{code}."
+    terminal:
+      title: Terminale
+      row: Ogni frame Bluetooth
+      hint: "Ogni frame Bluetooth appare mentre questo browser lo scambia con il dispositivo. > significa inviato da questo browser. < significa ricevuto dal dispositivo."
+      endpoints: Endpoint
+      pause: Pausa
+      resume: "Riprendi (%{count} nuovi)"
+      clear: Cancella
+      tape: Frame Bluetooth
+      opened: collegamento aperto
+      closed: collegamento chiuso
+      failed: non riuscito
+    activation:
+      title: Attiva un nuovo Go
+      hint: Lo schermo mostra NOT ACTIVATED e un codice come 3F2A. Scegli quel codice nell'elenco.
+      find: Cerca il nuovo Go
+      activate: Attiva
+      kept_summary: Cosa conserva skyblip.eu
+      kept: skyblip.eu conserva l'identificativo di fabbrica del dispositivo, la chiave pubblica, il numero di serie e il firmware. Il Go trasmette in ADS-L, quindi l'attivazione gli assegna un indirizzo nell'intervallo di skyBlip nel registro ADS-L. Non serve un account.
+    setup:
+      title: Configura un dispositivo
+      steps:
+        install: Installa
+        connect: Collega
+        aircraft: Il tuo aeromobile
+      start: "Collega il tuo Go o Bravo a questo computer con un cavo USB. Briefing ci installa skyBlip, poi si collega al dispositivo."
+      install: Installa
+      connect_running: Collegalo via Bluetooth
+      drive: "%{name} si è riavviato come unità USB chiamata %{drive}. Scegli quell'unità nella finestra successiva, poi consenti a Briefing di salvarci i file."
+      drive_by_hand: "Se mostra un'unità USB chiamata %{drive}, sceglila. Altrimenti, avvia prima il programma di installazione a mano:"
+      drive_ready: "%{name} mostra un'unità USB chiamata %{drive}. Scegli quell'unità nella finestra successiva, poi consenti a Briefing di salvarci i file."
+      drive_gesture: "Avvia a mano il programma di installazione di %{name}, poi scegli l'unità USB chiamata %{drive} nella finestra successiva:"
+      or: " oppure "
+      by_hand:
+        go: "Go: premi RESET due volte, rapidamente. È il pulsante superiore sul lato sinistro."
+        bravo: "Bravo: scollegalo, tieni premuto il pulsante, ricollegalo e rilascia quando il LED sopra il pulsante diventa bianco."
+      choose_drive: Scegli l'unità
+      downloading: "Scaricamento di skyBlip per %{name}."
+      writing: "Installazione di skyBlip %{version} su %{name}."
+      keep_plugged: Lascialo collegato. Ci vogliono pochi secondi.
+      installed: "Installato. Ultimo passo: collega %{name} via Bluetooth."
+      installed_trusted: "Installato. Ultimo passo: collega %{name} via Bluetooth. Questo browser è autorizzato, quindi non serve premere il pulsante."
+      connect: Collega
+      choose_in_list: "Scegli %{name} nell'elenco."
+      activating: "Attivazione di %{name}."
+      confirm_activation: Premi il pulsante del Go per attivarlo.
+      the_device: il dispositivo
+      unsupported_phone: "Installa prima da un computer, con Chrome o Edge. Poi questo telefono potrà configurare e aggiornare i tuoi dispositivi via Bluetooth."
+      unsupported_other: Per installare via USB serve Chrome o Edge su un computer.
+      by_hand_link: Installalo a mano
+      guide_go: È il tuo primo Go? Leggi la guida ai primi passi.
+      guide_bravo: È il tuo primo Bravo? Leggi la guida ai primi passi.
+      try_again: Riprova
+      save: Salva
+      later: Più tardi
+      done: Fatto
+      set_now: Imposta ora
+      aircraft_go: "Dai un nome al tuo aeromobile. Gli altri piloti ne vedono il nominativo e il tipo. Puoi cambiarli entrambi in seguito, sul Go o in Briefing."
+      aircraft_tango: "Nulla da digitare. A bordo, metti il transponder su ALT: il Go propone indirizzo, nominativo e tipo ricevuti da Bravo. Basta premere una volta sul Go per accettarli."
+      aircraft_bravo: "A bordo, metti il transponder su ALT e apri Briefing: propone l'indirizzo ricevuto da Bravo, così Bravo esclude il tuo transponder dal traffico. Senza transponder, non c'è nulla da impostare."
+      transponder_go: Ha un transponder? Il suo indirizzo, se lo conosci
+      transponder_known: Conosci già il suo indirizzo? Inseriscilo ora
+      done_go: "%{name} è pronto. Le sue impostazioni restano sulla sua pagina."
+      done_tango: "Il tuo Tango è pronto: %{name} mostra il traffico ADS-B ricevuto da %{partner}."
+      done_bravo: "%{name} è pronto."
+      open: "Apri %{name}"
+      images_unavailable: Le immagini skyBlip non sono state caricate. Controlla la connessione, poi ricarica la pagina.
+    setup_notices:
+      port_closed: "Nessun dispositivo nell'elenco? Accendilo e prova un altro cavo: molti cavi USB-C servono solo a ricaricare. Un dispositivo che ha già skyBlip non mostra una porta USB: collegalo via Bluetooth."
+      port_failed: "Impossibile aprire la porta USB:"
+      port_busy: "Un altro programma sta usando il dispositivo. Chiudilo, poi fai di nuovo clic su Installa."
+      other_board: "Questa scheda non supporta skyBlip. skyBlip funziona su LilyGO T-Echo o T-Echo Plus e su Seeed MeshTracker X1."
+      not_drive: "Non è l'unità giusta. Scegli l'unità chiamata TECHOBOOT o X1."
+      drive_denied: "Briefing richiede il permesso di salvare sull'unità. Sceglila di nuovo e fai clic su Consenti o Salva modifiche."
+      drive_failed: "Impossibile aprire l'unità:"
+      download_failed: "L'immagine skyBlip non è stata scaricata. Controlla la connessione, poi scegli di nuovo l'unità."
+      no_image: Non è ancora stata pubblicata un'immagine skyBlip per questo dispositivo.
+      image_not_uf2: Il file pubblicato non è un'immagine UF2. Segnalacelo.
+      image_wrong_product: L'immagine pubblicata è per l'altro prodotto. Segnalacelo.
+      image_no_image: Il file pubblicato non contiene un'immagine skyBlip. Segnalacelo.
+      image_no_room: "L'immagine non lascia spazio per la chiave di questo browser, quindi il dispositivo chiederà di premere il pulsante."
+      write_failed: "L'unità ha rifiutato il file. Scollega il dispositivo, ricollegalo e riprova:"
+      failed: "Qualcosa non ha funzionato:"
+    tango:
+      title_go: Bravo
+      title_bravo: Go
+      offer_go: "%{partner} è collegato. Abbinalo a questo Go per vedere sul Go il traffico ADS-B che riceve."
+      offer_bravo: "%{partner} è collegato. Abbinalo a questo Bravo per vedere sul Go il traffico ADS-B ricevuto da questo Bravo."
+      leaves_bravo: Si scollega dal Go a cui era abbinato.
+      leaves_go: Si scollega dal Bravo a cui era abbinato.
+      pair: "Abbina a %{partner}"
+      replace: "Abbinato a %{current}. Vuoi abbinarlo a %{partner}?"
+      pair_instead: "Abbina invece a %{partner}"
+      paired: "Abbinato a %{partner}."
+      away: "%{partner} può abbinarsi a questo %{kind}. Accendilo, poi collegalo."
+      connect: "Collega %{partner}"
+      none_go: Hai un Bravo? Abbinato a questo Go, aggiunge al suo schermo il traffico ADS-B che riceve.
+      none_bravo: Hai un Go? Abbinato a questo Bravo, mostra il traffico ADS-B ricevuto da questo Bravo.
+      set_up: "Configura un %{other}"
+      connect_running: "Collega un %{other} con skyBlip già installato"
+      not_paired: Non abbinato.
+      try_again: Riprova
+      steps:
+        arming: "Preparazione di %{bravo}."
+        pairing: "Abbinamento di %{go} a %{bravo}. Tienili vicini."
+        press_bravo: "Premi il pulsante di %{bravo} quando il LED sopra il pulsante lampeggia in blu."
+        confirm_go: "Premi il pulsante di %{go} per confermare."
+        paired: "Abbinati. %{go} mostra il traffico ADS-B ricevuto da %{bravo}."
+    pair_notices:
+      not_found: Il Go non ha trovato Bravo. Tieni Bravo acceso a pochi metri e riprova.
+      phones_connected: Tre telefoni sono collegati al Go. Scollegane uno e riprova.
+      narrow_link: "Il collegamento tra Go e Bravo ha una capacità troppo bassa. Riavvia entrambi e riprova."
+      no_answer: Nessuno ha premuto il pulsante di Bravo entro trenta secondi. Riprova.
+      link_lost: Il Go ha perso il collegamento con Bravo durante l'abbinamento. Tienili vicini e riprova.
+      unknown_protocol: Bravo ha un firmware che questo Go non può abbinare. Aggiorna entrambi e riprova.
+      in_flight: Esegui l'abbinamento a terra.
+      timeout: "Il Go non ha comunicato come si è concluso l'abbinamento. Leggi il suo schermo e riprova."
+      expired: Nessuno ha premuto entro trenta secondi. Riprova.
+      cancelled: Rifiutato sul Go. Ricollega e riprova.
+      refused_on_device: Rifiutato sul Go. Ricollega e riprova.
+      prompt_pending: Il Go sta già facendo una domanda. Rispondi o attendi trenta secondi.
+      unknown_command: "Questo firmware è troppo vecchio per abbinare da Briefing. Aggiorna entrambi i dispositivi o esegui l'abbinamento dal menu BRAVO del Go."
+      refused: "Il dispositivo ha rifiutato:"
+    glass:
+      lamp: Il LED sopra il pulsante lampeggia rapidamente in verde.
+      remembers: "L'autorizzazione aggiunge anche questo browser all'elenco di quelli autorizzati. I prossimi salvataggi e aggiornamenti non richiederanno di premere il pulsante. Puoi dimenticare il browser da questa pagina."
+    figures:
+      go_reset: "Uno skyBlip Go visto di fronte, una freccia sul lato sinistro indica RESET, il più alto dei due pulsanti laterali."
+      reset_twice: RESET, due volte
+      bravo_hold: Uno skyBlip Bravo, con il pulsante rotondo indicato da tieni premuto, il LED subito sopra contrassegnato e la porta USB-C indicata da collega.
+      hold: Tieni premuto
+      plug: Collega
+      white: Rilascia quando il LED sopra il pulsante diventa bianco.
+      bravo_press: Uno skyBlip Bravo, con il pulsante rotondo indicato da premi e il LED subito sopra contrassegnato.
+      blue: Il LED sopra il pulsante lampeggia rapidamente in blu.
+    tools:
+      back: Torna ai tuoi dispositivi
+      title: Strumenti per sviluppatori
+      console: Console Bluetooth
+      console_hint: Leggi ogni frame inviato dal dispositivo e invia qualsiasi comando.
+      comparison: Confronto del traffico
+      comparison_hint: Un SoftRF via USB accanto a uno skyBlip via Bluetooth, sulla carta OACI.
+      simulator: Simulatore
+      simulator_hint: Il firmware nel tuo browser, con un cielo modificabile.
+      ownship: Editor del tuo aeromobile
+      ownship_hint: L'aeromobile al centro del radar, uno per tipo.
+    words:
+      done_setting_up: Fatto
+      forget_question: "Dimenticare %{name}?"
+      sending_short: "Invio, %{percent} %"
+      activate_now: Attiva
+      glass_refuse: Se non premi, rifiuta dopo trenta secondi.
+      locked: Bloccato in volo
+      reconnect_needed: Rifiutato sul dispositivo. Nulla è cambiato. Ricollega prima che il dispositivo possa chiedere di nuovo.
+      reset_count: "Ripristina i valori predefiniti (%{count})"
+      back_to_settings: Torna alle impostazioni
+      activate_unit: "Attiva %{name}"
+      reconnect: "Ricollega"
+      firmware: "Firmware"
+      activated: "Attivato: %{name}. La radio è accesa. Aggiungi il nominativo e il tipo di aeromobile."
+      connected: Collegato
+      protocols: "Protocolli radio: %{protocols}"
+      not_connected: Non collegato
+      connecting: Collegamento in corso
+      restarting: Riavvio in corso
+      not_activated: Non attivato
+      seen: "visto %{date}"
+      not_met: Mai visto in questo browser
+      battery: "%{percent} %"
+      charging: "%{percent} %, in carica"
+      flight:
+        ground: A terra
+        airborne: In volo
+        unknown: Nessun fix GPS ancora
+      track:
+        release: rilascio
+        development: sviluppo
+      running: "%{version}, %{track}"
+      firmware_current: aggiornato
+      firmware_out: "%{version} è disponibile"
+      update_banner: "%{version} è disponibile. Il tuo dispositivo usa %{running}."
+      motion_sensor_needs: il sensore di movimento richiede il suo firmware
+      motion_sensor_banner: "Il sensore di movimento non ha il firmware, quindi la pallina dello sbandometro è disattivata. Il tuo dispositivo usa %{running}."
+      save_count:
+        one: Salva 1 modifica
+        other: "Salva %{count} modifiche"
+      default: "Valore predefinito: %{value}"
+      heard: "Bravo riceve %{aircraft}."
+      heard_same: "Bravo riceve %{aircraft}, come impostato."
+      use_heard:
+        one: Usa questo valore
+        other: Usa questi valori
+      "on": "attivo"
+      "off": "disattivato"
+      none: nessuno
+      in_flight_lock: Le modifiche saranno di nuovo disponibili dopo l'atterraggio.
+      in_flight_lock_trusted: Questo browser può ancora cambiare le impostazioni del dispositivo. Le altre azioni saranno di nuovo disponibili dopo l'atterraggio.
+      glass_press: "Premi il pulsante di %{product}."
+      glass_waiting: In attesa della sua risposta.
+      install_version: "Installa %{version}"
+      install_full: "Installa %{version}, con il firmware del sensore di movimento"
+      newest: "Il tuo dispositivo usa l'immagine più recente, %{version}."
+      motion_sensor_without_firmware: "Il sensore di movimento non ha il firmware, quindi la pallina dello sbandometro è disattivata. Installa di nuovo %{version}, con il firmware del sensore di movimento."
+      no_image: Nessuna immagine ancora pubblicata per questo dispositivo. Scegli un file qui sotto.
+      no_product: Il dispositivo non ha indicato di quale prodotto si tratta, quindi non viene proposta un'immagine pubblicata. Scegli un file qui sotto o aggiornalo via USB.
+      sending: "Invio di %{version}"
+      sent: "%{percent} %, %{sent} di %{total} kB"
+      left: "circa %{minutes} min rimanenti"
+      estimating: calcolo del tempo rimanente
+      keep_close: "Tieni questa schermata aperta e %{product} vicino."
+      stops: "Premi una volta su %{product} per fermare il trasferimento."
+      stops_with_pad: "Tocca il pad di %{product} per fermare il trasferimento."
+      installing: Il dispositivo sta installando il firmware e si sta riavviando. Ci vogliono circa trenta secondi.
+      reconnecting: Si ricollega da solo.
+      probation: "%{version} si sta avviando. Controlla radio, GPS e schermo."
+      done: "%{version} in esecuzione."
+      asking_server: Richiesta a skyblip.eu
+      registering: Assegnazione del numero di serie
+    notices:
+      no_bluetooth: Questo browser non supporta Web Bluetooth. Usa Chrome o Edge su Android o su un computer.
+      not_skyblip: Questo dispositivo non ha il servizio di aggiornamento skyBlip. Non è uno skyBlip.
+      link_lost: Il collegamento si è interrotto. Avvicina il dispositivo e ricollega. Un trasferimento in corso riprende da dove si era fermato.
+      not_back: Il dispositivo non si è ricollegato dopo il riavvio. Collegalo di nuovo.
+      timeout: Il dispositivo non risponde più. Ricollega e riprova.
+      no_params: Il dispositivo non ha comunicato quanti dati può ricevere alla volta. Ricollega.
+      claimed: Un'altra app controlla le impostazioni del dispositivo. Chiudila e ricollega.
+      small_mtu: Questo telefono o browser usa il pacchetto Bluetooth più piccolo. È troppo piccolo per la risposta. Ricollega. Se succede di nuovo, aggiorna il browser o usa un altro telefono o un computer.
+      in_flight: Il dispositivo è in volo. Installa dopo l'atterraggio.
+      low_power: La batteria è troppo scarica per installare. Ricaricala prima.
+      expired: Nessuno ha premuto entro trenta secondi. Riprova.
+      cancelled: Rifiutato sul dispositivo. Ricollega prima che il dispositivo possa chiedere di nuovo.
+      refused_on_device: Rifiutato sul dispositivo. Ricollega prima che il dispositivo possa chiedere di nuovo.
+      prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.
+      nothing_staged: Il dispositivo non è riuscito a rileggere l'immagine. Installa di nuovo.
+      not_approved: L'immagine ricevuta non è la versione che hai autorizzato. Installa di nuovo.
+      window_closed: "La finestra per il trasferimento si è chiusa. Installa di nuovo. Il trasferimento riprende da dove si era fermato."
+      older: Questa immagine è più vecchia del firmware sul dispositivo. I dispositivi con firmware di rilascio non possono installare versioni precedenti.
+      wrong_key: Questa immagine è firmata per un tipo di dispositivo diverso (sviluppo o rilascio). Scegli un'immagine firmata per il tipo di questo dispositivo.
+      wrong_product: Questa immagine è per un altro prodotto skyBlip. Scegli un'immagine il cui nome file inizi con il nome del prodotto di questo dispositivo.
+      unmarked_image: Questa immagine non indica alcun prodotto. Scegline una più recente o copia il suo .uf2 sull'unità USB.
+      too_large: Questa immagine è troppo grande per il dispositivo.
+      not_image: Questa non è un'immagine firmware firmata. Scegli il file che termina in .signed.bin.
+      flash: Il dispositivo non è riuscito a scrivere l'immagine. Riprova, poi prova con l'unità USB.
+      unknown_command: Questo firmware è troppo vecchio per questa operazione. Aggiornalo via USB.
+      no_file: Nessuna immagine selezionata. Scegline prima una.
+      needs_full: Questo dispositivo richiede l'immagine con il firmware del sensore di movimento, che termina in .full.signed.bin.
+      shelf_failed: L'immagine non è stata scaricata. Controlla la connessione e sceglila di nuovo.
+      smp: "Il dispositivo ha rifiutato l'immagine:"
+      failed: "Qualcosa non ha funzionato:"
+      refused: "Il dispositivo ha rifiutato:"
+      probation: Il nuovo firmware sta eseguendo i controlli. Ci vogliono pochi secondi.
+      reverted: "Il nuovo firmware non ha superato i controlli. Il dispositivo è tornato al firmware precedente. Riprova. Se succede due volte, comunicaci la versione:"
+      image_refused: "L'immagine non ha superato la verifica. Il dispositivo non ha avviato l'aggiornamento. Ha mantenuto il firmware precedente. Scarica di nuovo l'immagine:"
+      install_report:
+        slot_damaged: Il nuovo firmware è arrivato danneggiato nella memoria del dispositivo. Il dispositivo ha mantenuto il firmware precedente. Installa di nuovo.
+        slot_unreadable: Il dispositivo non è riuscito a rileggere il nuovo firmware dalla memoria. Ha mantenuto il firmware precedente. Installa di nuovo.
+        slot_undigested: Il nuovo firmware non ha una somma di controllo. Il dispositivo ha mantenuto il firmware precedente. Scarica di nuovo l'immagine.
+        swap_not_marked: Il dispositivo non è riuscito a contrassegnare il nuovo firmware per l'installazione. Ha avviato il firmware precedente.
+        bootloader_refused: Il bootloader del dispositivo ha rifiutato il nuovo firmware senza avviarlo. Il dispositivo ha mantenuto il firmware precedente.
+        probation_failed: Il nuovo firmware si è avviato ma si è fermato prima di completare i controlli. Il dispositivo è tornato al firmware precedente.
+        no_record: "Il dispositivo si è riavviato con %{running} anziché %{attempted}. Non ha conservato traccia dell'installazione."
+      settings_prior: Le impostazioni sono quelle precedenti all'aggiornamento. Controllale.
+      settings_defaults: Ha perso le impostazioni e usa i valori predefiniti. Controlla il nominativo e il tipo di aeromobile.
+      swap_unpowered: La batteria è quasi esaurita. È troppo scarica per installare il firmware. Ricaricala prima.
+      went_dark_flat: L'ultimo spegnimento del dispositivo è stato causato dalla batteria scarica. Ricaricalo prima di installare.
+      imu_writing: Il dispositivo sta scrivendo il firmware del sensore di movimento. Può volerci fino a un minuto. Lascialo acceso.
+      not_activated: Non ancora attivato. Non trasmette e non riceve.
+      recovering: "Il dispositivo ora è un'unità USB chiamata TECHOBOOT. Se lo schermo mostra PUSH THE BUTTON TO START IT, premi una volta. Copiaci il file .uf2 o premi RESET per tornare a skyBlip. Nel frattempo non trasmette nulla."
+    set_notices:
+      saved: Salvato sul dispositivo.
+      in_flight: Il dispositivo è in volo. Nulla è cambiato. Salva dopo l'atterraggio.
+      low_power: La batteria è troppo scarica per memorizzare le impostazioni. Ricaricala prima.
+      expired: Nessuno ha premuto entro trenta secondi. Nulla è cambiato.
+      cancelled: Rifiutato sul dispositivo. Nulla è cambiato.
+      refused_on_device: Rifiutato sul dispositivo. Nulla è cambiato.
+      prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.
+      unknown_command: Questo firmware è troppo vecchio per cambiare le impostazioni. Aggiornalo prima.
+      out_of_range: Il dispositivo ha rifiutato un valore che non può memorizzare. FFFFFF non è l'indirizzo ICAO di alcun aeromobile. Nulla è cambiato.
+      not_own_transponder: Il tuo Bravo riceve un altro transponder come quello di questo aeromobile. Controlla l'indirizzo o usa quello ricevuto da Bravo. Nulla è cambiato.
+      set_on_go: Questo Bravo è abbinato a un Go e la riga ALARM del Go imposta l'allarme per entrambi. Nulla è cambiato.
+    capture_notices:
+      capture_armed: Pronta. Il LED lampeggia due volte ogni 3 s finché l'acquisizione non termina. L'acquisizione continua in volo.
+      capture_stopped: Fermata. Il LED è tornato al lampeggio singolo.
+      capturing: Un'acquisizione è già in corso. Fermala prima.
+      not_capturing: Nessuna acquisizione in corso. Non c'è nulla da fermare.
+      no_storage: Questo dispositivo non ha memoria per un'acquisizione. Comunicaci la versione del firmware.
+      in_flight: Il dispositivo è in volo. Nulla è cambiato. Riprova dopo l'atterraggio.
+      expired: Nessuno ha premuto entro trenta secondi. Nulla è cambiato.
+      cancelled: Rifiutato sul dispositivo. Nulla è cambiato.
+      refused_on_device: Rifiutato sul dispositivo. Nulla è cambiato.
+      prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.
+    browsers_notices:
+      invalid: Il dispositivo non è riuscito a identificare il browser da dimenticare. Ricarica la pagina e riprova.
+      unknown_browser: Quel browser non è più autorizzato dal dispositivo.
+      untrusted: Questo browser non è più autorizzato dal dispositivo. Ricollega.
+      timeout: Il dispositivo non risponde più. Ricollega e riprova.
+    activation_notices:
+      activated: "Attivato: %{name}. La radio è accesa. Aggiungi il nominativo e il tipo di aeromobile."
+      no_bluetooth: Questo browser non supporta Web Bluetooth. Usa Chrome o Edge su Android o su un computer.
+      not_skyblip: Quel dispositivo non ha il servizio di impostazioni skyBlip. Non è uno skyBlip.
+      link_lost: Il collegamento si è interrotto. Avvicina il dispositivo e ricollega. Attiva di nuovo.
+      failed: "Qualcosa non ha funzionato:"
+      refused: "Il dispositivo ha rifiutato:"
+      keyless: Il dispositivo non è riuscito a leggere o creare la propria chiave. Riavvialo e attiva di nuovo.
+      no_session: Il dispositivo non ha più il numero usato per avviare questa attivazione. Attiva di nuovo.
+      bad_signature: Il dispositivo non ha riconosciuto ciò che skyblip.eu ha firmato. Attiva di nuovo. Se succede due volte, comunicaci il firmware che usa.
+      small_mtu: Questo telefono o browser usa il pacchetto Bluetooth più piccolo. È troppo piccolo per la risposta. Ricollega. Se succede di nuovo, usa un altro telefono o un computer.
+      in_flight: Questo dispositivo è già attivato. È in volo. Attivalo di nuovo dopo l'atterraggio.
+      low_power: La batteria è troppo scarica per memorizzare il numero di serie. Ricaricala e poi attiva.
+      flash: Il dispositivo non è riuscito a memorizzare il numero di serie. Attiva di nuovo. Se succede ancora, segnalacelo.
+      expired: Nessuno ha premuto entro trenta secondi. Attiva di nuovo.
+      cancelled: Rifiutato sul Go. Ricollega e attiva di nuovo.
+      refused_on_device: Rifiutato sul Go. Ricollega e attiva di nuovo.
+      prompt_pending: Il dispositivo sta già facendo una domanda. Rispondi o attendi trenta secondi.
+      claimed: Un'altra app controlla le impostazioni del dispositivo. Chiudila e ricollega.
+      server_unknown_server_key: Questo firmware si fida di una chiave che skyblip.eu non ha. Installa prima una versione di rilascio.
+      server_expired: Sono passati più di cinque minuti. Attiva di nuovo.
+      server_bad_signature: skyblip.eu non è riuscito a verificare ciò che il dispositivo ha firmato. Attiva di nuovo. Se succede due volte, comunicaci il firmware che usa.
+      server_other_key: "skyblip.eu conosce questo dispositivo con una chiave diversa. Non ha assegnato un numero di serie. Scrivici con questo codice:"
+      server_revoked_key: "skyblip.eu ha revocato la chiave di questo dispositivo. Scrivici con questo codice:"
+      server_daily_cap: skyblip.eu ha raggiunto il limite giornaliero di attivazioni di nuovi dispositivi. Riprova domani.
+      server_network_cap: La tua connessione ha raggiunto il limite giornaliero di attivazioni di nuovi dispositivi. Riprova domani o scrivici per una flotta.
+      server_no_serial: Tutti i numeri di serie sono stati assegnati. Scrivici.
+      server_rate_limited: Troppe richieste dalla tua connessione. Attendi un minuto e attiva di nuovo.
+      server_invalid: skyblip.eu non è riuscito a leggere la richiesta. Ricarica la pagina e attiva di nuovo.
+      server_unreachable: skyblip.eu non ha risposto. Controlla la connessione Internet e attiva di nuovo.
+      server_failed: "skyblip.eu non è riuscito a rispondere:"

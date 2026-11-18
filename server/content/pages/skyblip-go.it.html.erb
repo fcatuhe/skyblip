@@ -1,0 +1,33 @@
+---
+title: "Prova il radar skyBlip nel browser"
+nav_title: Prova il radar
+slug: prova
+share_image: radar
+description: "Prova il radar skyBlip nella pagina dedicata. Individua un aeromobile, segui la sua traiettoria e confronta il Go da solo con Tango e il traffico ADS-B."
+updated_on: "2026-11-18"
+---
+
+<% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
+
+<header class="page-hero page-hero--compact">
+  <h1>Prendi i comandi nel simulatore</h1>
+  <p class="page-hero-subtitle">Inizia con il Go da solo. Individua un aeromobile sul radar. Se è in alto a destra, guarda avanti e a destra.</p>
+</header>
+
+<section id="simulator">
+  <%= render "shared/simulator_loader" %>
+</section>
+
+<section id="exercise" class="band band--tint">
+  <h2 class="section-title">Leggi un simbolo e segui la sua linea</h2>
+  <p>La punta indica se l&rsquo;aeromobile è sopra o sotto di te. Se vola all&rsquo;incirca alla tua quota, vedrai un rombo. La linea indica dove dovrebbe trovarsi fra un minuto se mantiene la stessa rotta al suolo. Quando un settore lampeggia, cerca il traffico in quella direzione.</p>
+  <p><%= link_to_page "radar", label: "Scopri i simboli del radar", anchor: "shapes" %></p>
+</section>
+
+<section id="compare" class="band">
+  <h2 class="section-title">Confronta il Go da solo con Tango</h2>
+  <p>Con il Go da solo vedi il traffico ADS-L e FLARM nelle vicinanze.</p>
+  <p>Seleziona «Con Bravo (skyBlip Tango)». Il simulatore riparte con un Go abbinato a un Bravo. Nelle vicinanze vedi ancora il traffico ADS-L e FLARM. Bravo aggiunge gli aeromobili che trasmettono la posizione in ADS-B. In questo scenario partono a una distanza compresa tra 8 e 30 km.</p>
+  <p>Guarda la fascia intorno al cerchio del radar. Indica la direzione del traffico oltre il cerchio.</p>
+  <p class="signature"><%= link_to_page "buy", label: "Scegli il tuo dispositivo", class: "button button--primary" %></p>
+</section>

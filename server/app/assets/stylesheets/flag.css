@@ -1,0 +1,10 @@
+@layer components {
+  .flag {
+    display: inline-block;
+    block-size: 0.75em;
+    inline-size: auto;
+    margin-inline-end: var(--space-inline-2xs);
+    vertical-align: baseline;
+    box-shadow: 0 0 0 1px var(--card-border);
+  }
+}

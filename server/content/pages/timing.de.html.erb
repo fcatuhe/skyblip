@@ -1,0 +1,157 @@
+---
+title: "Wann skyBlip Go sendet, Sekunde für Sekunde"
+nav_title: Sendezeit
+slug: sendezeit
+description: "Wann skyBlip Go sendet: Zeitfenster je Sekunde, ein Zyklus von 20 s nach Seriennummer, neu berechnete Sendezeit, Kanalprüfung und erneute Sendeversuche."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Für jede Aussendung stehen Sekunde, Kanal und Millisekunde fest.</h1>
+  <p class="lede">Ein skyBlip Go plant jede Aussendung in drei Schritten. Die Seriennummer bestimmt die Sekunden. Ob eine Sekunde gerade oder ungerade ist, bestimmt den Kanal. Eine jede Sekunde wiederholte Auslosung bestimmt die Millisekunde im Zeitfenster des Kanals.</p>
+</section>
+
+<section>
+  <h3 id="second">Drei Empfangsfenster pro Sekunde.</h3>
+  <p class="lede">GPS markiert den Beginn jeder UTC-Sekunde. Go hat ein Funkmodul und empfängt deshalb in drei Zeitfenstern auf jeweils einem anderen Kanal. <%= link_to_page "radio", label: "Der Funk-Leitfaden", anchor: "second" %> erklärt, was Go in jedem Fenster empfängt. Hier geht es darum, wann Go sendet. Alle Zeiten gelten ab Sekundenbeginn.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Fenster</th><th>Kanal</th><th>Gesamtes Empfangsfenster</th><th>Sendebeginn am Go</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Uplink</th><td>869,525&nbsp;MHz</td><td>210 bis 440&nbsp;ms</td><td>Nie: Hier sendet die Bodenstation, und Go empfängt nur</td></tr>
+        <tr><th>Fenster 1</th><td>868,2&nbsp;MHz, Kanal A</td><td>450 bis 820&nbsp;ms</td><td>Positionen und Status von 450 bis 810&nbsp;ms</td></tr>
+        <tr><th>Fenster 2</th><td>868,4&nbsp;MHz, Kanal B</td><td>830 bis 1200&nbsp;ms</td><td>Positionen und Status von 830 bis 990&nbsp;ms, Rufzeichen von 1000 bis 1190&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/second" %>
+
+  <p class="lede">Fenster 2 reicht 200&nbsp;ms in die nächste Sekunde. So empfängt Go Geräte mit FLARM-Übertragungsformat, die dort noch senden. Das direkte ADS-L-Fenster für Aussendungen zwischen Luftfahrzeugen endet bei 1000&nbsp;ms. Bis dahin müssen Positionsmeldungen abgeschlossen sein. Eine Aussendung dauert 4,64&nbsp;ms. Der späteste erlaubte Beginn lässt Platz für die eingeplante Sendezeit und 5&nbsp;ms Reserve vor dem Ende des Fensters. Auf der Werkbank vergingen im ungünstigsten Fall 5,5&nbsp;ms vom Sendebefehl bis zum Ende der Aussendung. Das lag innerhalb der Reserve.</p>
+  <p class="lede">Jeder Fensterwechsel dauert 10&nbsp;ms: 2&nbsp;ms Empfang auf dem alten Kanal für eine späte Aussendung, 5&nbsp;ms zum Abstimmen und 3&nbsp;ms Empfang auf dem neuen Kanal, bevor sein Fenster beginnt. Diese 3&nbsp;ms lassen auch Zeit, den Kanal vor einer Aussendung gleich zu Fensterbeginn zu prüfen.</p>
+
+  <h3 id="channel">Gerade oder ungerade: Die Sekunde bestimmt den Kanal.</h3>
+  <p class="lede">Eine Position nutzt in geraden UTC-Sekunden Kanal A und in ungeraden Kanal B, am Boden wie im Flug. Eine Statusmeldung gibt an, was Go empfangen kann. Sie nutzt den anderen Kanal als eine Position in derselben Sekunde. Das Rufzeichen nutzt stets Kanal B am Ende von Fenster 2.</p>
+  <p class="lede">ADS-L verlangt einen Kanalwechsel zwischen aufeinanderfolgenden Positionen und ebenso zwischen aufeinanderfolgenden Statusmeldungen. Mit der Regel für gerade und ungerade Sekunden ergibt sich der Positionskanal aus der Uhrzeit. Wer nur auf einem Kanal empfängt, kann noch jede zweite geplante Position empfangen.</p>
+
+  <h3 id="cycle">Die Seriennummer legt den Beginn des 20&nbsp;s langen Zyklus fest.</h3>
+  <p class="lede">Jeder Go folgt einem Zyklus von 20&nbsp;s. Sein Beginn c ist eine gerade Sekunde: das Doppelte der letzten Dezimalziffer der Seriennummer, also <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu vergibt die Nummer bei der <%= link_to "Aktivierung", briefing_activation_path %>. Beim Beispielgerät <span class="mono">skyBlip Go 00012A</span> entspricht die hexadezimale Seriennummer dezimal 298. Die letzte Ziffer ist 8. Der Zyklus beginnt also bei Sekunde 16.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Letzte Ziffer der Seriennummer</th><th>Zyklusbeginn</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>0</th><td>:00, :20 und :40</td></tr>
+        <tr><th>1</th><td>:02, :22 und :42</td></tr>
+        <tr><th>2</th><td>:04, :24 und :44</td></tr>
+        <tr><th>3</th><td>:06, :26 und :46</td></tr>
+        <tr><th>4</th><td>:08, :28 und :48</td></tr>
+        <tr><th>5</th><td>:10, :30 und :50</td></tr>
+        <tr><th>6</th><td>:12, :32 und :52</td></tr>
+        <tr><th>7</th><td>:14, :34 und :54</td></tr>
+        <tr><th>8</th><td>:16, :36 und :56</td></tr>
+        <tr><th>9</th><td>:18, :38 und :58</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">skyblip.eu vergibt die Seriennummern aufsteigend ab 1. So verteilen sich aufeinanderfolgende Geräte gleichmäßig auf zehn Startzeiten. Der Abstand jeder Aussendung vom eigenen Zyklusbeginn ist bei allen Geräten gleich:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Sekunde</th><th>Am Boden</th><th>Im Flug</th><th>Kanal</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>c</th><td>Position</td><td>Position</td><td>A</td></tr>
+        <tr><th>c + 2</th><td>Status</td><td>Position und Status</td><td>Status auf B, Position auf A</td></tr>
+        <tr><th>c + 4</th><td>Rufzeichen</td><td>Position und Rufzeichen</td><td>Position auf A, Rufzeichen auf B mit Beginn in den ersten 190&nbsp;ms von c + 5</td></tr>
+        <tr><th>c + 9</th><td>Position</td><td>Position</td><td>B</td></tr>
+        <tr><th>c + 11</th><td>Status</td><td>Position und Status</td><td>Status auf A, Position auf B</td></tr>
+        <tr><th>c + 14</th><td>Rufzeichen</td><td>Position und Rufzeichen</td><td>Position auf A, Rufzeichen auf B mit Beginn in den ersten 190&nbsp;ms von c + 15</td></tr>
+        <tr><th>jede andere</th><td>keine Aussendung geplant</td><td>Position</td><td>A in einer geraden Sekunde, B in einer ungeraden</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/cycle" %>
+
+  <p class="lede">Am Boden plant <span class="mono">skyBlip Go 00012A</span> in jeder Minute Positionen bei :05, :16, :25, :36, :45 und :56, Statusmeldungen bei :07, :18, :27, :38, :47 und :58 und sein Rufzeichen zu Beginn von :01, :11, :21, :31, :41 und :51. Im Flug plant er jede Sekunde eine Position. Der Zeitplan für Status und Rufzeichen bleibt bei Start und Landung gleich.</p>
+  <p class="lede">Alle möglichen Abstände wurden geprüft. Die gewählten Abstände erfüllen vier Regeln:</p>
+  <ul class="points">
+    <li>Positionsmeldungen am Boden folgen abwechselnd nach 9 und 11&nbsp;s. Mit 10&nbsp;s Abstand lägen sie auf demselben Kanal. Im Schnitt bleibt es bei einer Meldung alle 10&nbsp;s. So legt skyBlip die ADS-L-Senderate am Boden aus.</li>
+    <li>Positionen und Statusmeldungen wechseln jeweils den Kanal. Auf jedem Kanal erscheint alle 20&nbsp;s ein Status. Das Rufzeichen wird alle 10&nbsp;s gesendet.</li>
+    <li>Das Rufzeichen ist in einer geraden Sekunde eingeplant. Dann nutzt die Position A und lässt B frei.</li>
+    <li>Zwischen Aussendungen desselben Geräts auf derselben Frequenz liegen mindestens 100&nbsp;ms. Je Fenster ist nur eine eingeplant.</li>
+  </ul>
+  <p class="lede">Der Zeitplan nutzt immer die geräteeigene Adresse, auch wenn die Meldungen die ICAO-Adresse eines Luftfahrzeugs enthalten. Wird diese Adresse im Flug gesetzt oder gelöscht, ändern sich weder Kanal noch Zeitpunkt.</p>
+
+  <h3 id="instant">Go lost die Millisekunde jede Sekunde neu aus.</h3>
+  <p class="lede">Innerhalb des Fensters ergibt sich der Start aus einem Hash. Die Berechnung kombiniert Geräteadresse und UTC-Sekunde und verteilt das Ergebnis auf die verfügbaren Millisekunden. Status- und Rufzeichenmeldungen nutzen weitere Durchläufe derselben Berechnung. Jede Meldung bekommt so ihre eigene Zeit. Geräte mit derselben Sendesekunde müssen nicht gleichzeitig beginnen. Überlappen ihre Aussendungen, ergibt die nächste Sekunde neue Zeiten.</p>
+  <p class="lede">Bei einer 5&nbsp;ms langen Aussendung im direkten Fenster von 550&nbsp;ms liegt die grobe Kollisionswahrscheinlichkeit bei 1,8&nbsp;% pro Nachbargerät in Reichweite, wenn Startzeiten innerhalb von 5&nbsp;ms auseinanderliegen. Die neue Auslosung senkt das Risiko, dass dieselben beiden wiederholt zusammenfallen. Mit einem festen Zeitpunkt pro Gerät könnten zwei Luftfahrzeuge im ungünstigsten Fall während des ganzen Flugs jede Sekunde gleichzeitig senden.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "radio-log.png", alt: "Funkprotokoll: Unter Satellitenstatus, PPS-Signalstatus und Grundrauschen steht jede empfangene oder gesendete Aussendung in einer Zeile. Die jüngste steht oben, mit Zeitangabe auf die Millisekunde." %>
+    <figcaption>Das Funkprotokoll zeigt jede Aussendung mit einer Zeit auf die Millisekunde</figcaption>
+  </figure>
+
+  <h3 id="listen">Go prüft den Kanal vor dem Senden.</h3>
+  <p class="lede">ADS-L verlangt nach den Regeln für den störungsarmen Frequenzzugang in ETSI EN 300 220-1 eine Kanalprüfung vor dem Senden. Go misst den Kanal vor der geplanten Aussendung für 200&nbsp;&micro;s. Er mittelt neun Leistungswerte. Die Messung endet höchstens 2&nbsp;ms vor dem Senden. Unterhalb der Schwelle sendet Go. Ab der Schwelle wartet er zufällig 5 bis 40&nbsp;ms in Schritten von 5&nbsp;ms, der eingeplanten Dauer einer Aussendung. Dann prüft er erneut. Geräteadresse und Zeitpunkt der Belegung bestimmen die Wartezeit.</p>
+  <p class="lede">Die Schwelle stammt aus der Norm für einen Kanal mit 200&nbsp;kHz Bandbreite und berücksichtigt den Antennengewinn. Am Funkchip gilt der Kanal ab &minus;78&nbsp;dBm als belegt. Antennengewinn und Leitungsverlust stammen aus Datenblatt und Schätzung, nicht aus Messungen am Gerät.</p>
+  <p class="lede">Eine verschobene Aussendung bleibt in ihrem Fenster und auf ihrem Kanal. Eine verschobene Position wird mit dem neuesten Fix für die neue Zeit erneut kodiert. Bleibt der Kanal bis zum Fensterende belegt, entfällt die Aussendung. Am Boden darf Go nach 3&nbsp;s seit der ersten Belegtmeldung eine Aussendung ohne Kanalprüfung erzwingen. ADS-L erlaubt das. Danach sendet Go ab dem Ende der Aussendung 2&nbsp;s lang nicht. Im Flug erzwingt er keine Aussendung, weil diese Pause zwei Positionen kosten würde.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Parameter nach EN 300 220-1</th><th>Angegeben</th><th>Laut Norm zulässig</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Kürzeste Kanalprüfung</th><td>200&nbsp;&micro;s</td><td>Mindestens 160&nbsp;&micro;s</td></tr>
+        <tr><th>Größter Abstand zwischen Prüfung und Aussendung</th><td>2&nbsp;ms</td><td>Höchstens 5&nbsp;ms</td></tr>
+        <tr><th>Berechnung der zufälligen Wartezeit</th><td>Hash aus Geräteadresse und Zeitpunkt der Kanalbelegung</td><td></td></tr>
+        <tr><th>Schrittweite der Wartezeit</th><td>5&nbsp;ms, die eingeplante Dauer einer Aussendung</td><td>Mindestens so lang wie die Prüfung</td></tr>
+        <tr><th>Kürzeste und längste Wartezeit</th><td>5 und 40&nbsp;ms</td><td></td></tr>
+        <tr><th>Längste Aussendung</th><td>5&nbsp;ms</td><td>Höchstens 1&nbsp;s</td></tr>
+        <tr><th>Kürzeste Sendepause auf derselben Frequenz</th><td>100&nbsp;ms</td><td>Mindestens 100&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Die Kanalprüfung kann nicht jede Kollision verhindern. Sie erkennt nur eine bereits laufende Aussendung und misst an der Antenne des Go, nicht beim Empfänger. Ein weiteres Luftfahrzeug kann zwei überlappende Aussendungen empfangen, auch wenn sich die Sender gegenseitig nicht hören. Die Prüfung erkennt außerdem nahe, stärkere Signale eher als entfernte. Deshalb stützt sich der Zeitplan nicht allein auf die Kanalprüfung, sondern auch auf die neue Auslosung jede Sekunde und die Sendezeitgrenze von 1&nbsp;%.</p>
+
+  <h3 id="retry">Eine ausgebliebene Aussendung kann Go 2&nbsp;s später nachholen.</h3>
+  <p class="lede">Eine Aussendung kann ausfallen, weil der Fix zu alt, der Kanal durchgehend belegt oder das Sendebudget der Stunde aufgebraucht ist. Nach 2&nbsp;s ergibt sich eine neue Gelegenheit: Die Sekunde ist wieder gerade beziehungsweise ungerade, also gilt derselbe Kanal. Ist dessen Fenster schon mit einer Aussendung des Geräts belegt, wartet der Versuch auf die nächste freie Sekunde derselben Art. Alle 2&nbsp;s gibt es eine Gelegenheit, bis der Versuch gelingt oder die nächste Meldung dieses Typs fällig ist. Dann verwirft Go die alte Meldung und zählt den Ausfall. Am Boden kann Go eine bei c ausgebliebene Position bei c + 2, c + 4, c + 6 und c + 8 nachholen. Im Flug gibt es keine Wiederholung für Positionen. Die neue Position 2&nbsp;s später nutzt bereits denselben Kanal.</p>
+
+  <h3 id="callsign">Das Rufzeichen kommt am Ende.</h3>
+  <p class="lede">ADS-L Issue 2 hat kein Rufzeichenfeld. Go sendet sein Rufzeichen im Datensatzformat von OGN-Tracker. Es beginnt zwischen 1000 und 1190&nbsp;ms auf 868,4&nbsp;MHz. Das liegt am Ende von Fenster 2, außerhalb des direkten Zeitfensters für ADS-L-Meldungen. ADS-L sendet dort heute nichts. <%= link_to_page "ads-l/callsign", label: "Der Leitfaden zum Rufzeichen" %> erklärt diese Wahl und was sich ändert, sobald Issue 3 ein Feld dafür definiert.</p>
+  <p class="lede">OGN-Tracker verwirft ein Rufzeichen, wenn kein Ziel mit derselben Adresse vorliegt. Die Position muss zuerst eintreffen. Im normalen Flugzeitplan ist sie höchstens eine Sekunde alt. Am Boden folgt das Rufzeichen 4 oder 5&nbsp;s nach einer Position. Der Empfänger hält ein Bodenziel zwischen den Meldungen deutlich länger.</p>
+
+  <h3 id="budget">Die Sendezeit ist auf 1&nbsp;% jeder Stunde begrenzt.</h3>
+  <p class="lede">Go gibt für das 868-MHz-Band eine Sendezeitgrenze von 1&nbsp;% jeder Stunde an. Er führt sechzig Minutenzähler und prüft das Budget vor jeder Aussendung. Eine Position pro Sekunde plus Status und Rufzeichen alle 10&nbsp;s braucht 6&nbsp;ms pro Sekunde: 0,6&nbsp;% der Zeit im Flug beziehungsweise 0,15&nbsp;% am Boden. Der normale Zeitplan kann das Budget nicht aufbrauchen. Geschieht das durch einen Fehler, sperrt Go den Sender, statt das Band weiter zu belegen.</p>
+
+  <h3 id="clock">GPS gibt den Takt vor, der Takt gibt den Funk frei.</h3>
+  <p class="lede">Der Impuls pro Sekunde des GPS-Empfängers, kurz PPS, liefert die Flanke für die Funkzeitpunkte. Go sendet nur mit <%= link_to_page "gps", label: "stabilem Positionsfix", anchor: "settle" %>, gültiger UTC-Zeit, PPS-Synchronisierung und zugeteilter Seriennummer. Fallen die Impulse aus, hält Go die Fenster für 60&nbsp;s zum Empfang offen, sendet aber nicht.</p>
+  <p class="lede">Der GPS-Empfänger meldet die UTC-Sekunde in einem Datensatz, der Hunderte Millisekunden nach dem Impuls eintrifft. Bis dahin gilt in diesem Datensatz noch die vorige Sekunde. Ein Zeitstempel daraus könnte eine empfangene Aussendung in die falsche Sekunde legen. Zwei Go auf der Werkbank zeigten das Problem: Beim Sender stand 42:52.954, beim Empfänger 42:53.956. Empfänge erhalten jetzt die UTC-Sekunde, die der letzte Impuls begonnen hat.</p>
+  <p class="lede">Die Firmware-Dienstschleife läuft alle 10&nbsp;ms, zu selten, um jedes Funkzeitfenster selbst pünktlich zu öffnen. Frühe Messungen auf der Werkbank zeigten, dass Fenster 2 im Median 3 bis 6&nbsp;ms zu spät begann, im ungünstigsten Fall bis zu 120&nbsp;ms. Die Firmware übergibt jetzt dem Funkmodul das nächste Fenster, sobald das aktuelle beginnt. Den absoluten Zeitpunkt berechnet sie aus dem Impuls. Das Funkmodul kann wechseln, ohne auf den nächsten Schleifendurchlauf zu warten.</p>
+
+  <ul class="points">
+    <li>Die letzte Ziffer der Seriennummer bestimmt den Beginn des Zyklus von 20&nbsp;s</li>
+    <li>In geraden Sekunden geht die Position auf 868,2&nbsp;MHz hinaus, in ungeraden auf 868,4&nbsp;MHz</li>
+    <li>Am Boden plant Go alle 20&nbsp;s zwei Positionen, zwei Statusmeldungen und zwei Rufzeichen</li>
+    <li>Im Flug plant Go jede Sekunde eine Position, ohne Statusmeldungen oder Rufzeichen zu verschieben</li>
+    <li>Go lost den Zeitpunkt im Fenster jede Sekunde neu aus</li>
+    <li>Go prüft den Kanal vor normalen Aussendungen und versucht ausgebliebene Aussendungen 2&nbsp;s später erneut, außer bei Positionen im Flug</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

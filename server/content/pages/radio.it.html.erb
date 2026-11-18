@@ -1,0 +1,96 @@
+---
+title: "Radio ADS-L e FLARM su 868 MHz"
+nav_title: Radio
+slug: radio
+description: "Come skyBlip Go trasmette ADS-L e riceve ADS-L e FLARM su 868 MHz. Canali, sincronizzazione GPS e futuri collegamenti dalle stazioni a terra."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Una radio e un secondo condiviso da tutti quelli a portata.</h1>
+  <p class="lede">
+    Una radio e un&rsquo;antenna. Ogni dispositivo a portata divide ogni secondo nello stesso modo.
+  </p>
+</section>
+
+<section>
+  <h3 id="second">Come si divide il secondo.</h3>
+  <p class="lede">
+    Il dispositivo ha una radio e un&rsquo;antenna, quindi divide ogni secondo in
+    intervalli, ciascuno su una frequenza. Il GPS segna l&rsquo;inizio di ogni secondo
+    con precisione al microsecondo. Ogni skyBlip Go, ogni skyPost e ogni
+    dispositivo di generazione FLARM a portata dividono lo stesso secondo nello stesso modo.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Tempo dall&rsquo;inizio del secondo</th><th>Sintonizzato su</th><th>Cosa passa sul canale</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>da 0 a 202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fine dell&rsquo;intervallo iniziato a 827&nbsp;ms nel secondo precedente. Il traffico di generazione FLARM sta ancora trasmettendo qui, quindi il dispositivo continua ad ascoltare. Qui trasmette anche il proprio nominativo ogni 10&nbsp;s</td></tr>
+        <tr><th>da 207 a 442&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>il collegamento skyPost dalla stazione a terra: il traffico ADS-B che ha ricevuto e i dati meteo di cui dispone, a 200&nbsp;kbit/s. Sempre e solo in ricezione</td></tr>
+        <tr><th>da 447 a 822&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>il traffico diretto sul canale inferiore, ADS-L e generazione FLARM insieme</td></tr>
+        <tr><th>da 827 a 1202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>lo stesso sul canale superiore, proseguendo per 202&nbsp;ms nel secondo successivo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/second" %>
+
+  <p class="lede">
+    Ascoltare entrambi i canali 868 è importante. ADS-L alterna i canali
+    da una trasmissione alla successiva. Un dispositivo di generazione FLARM trasmette
+    sul canale inferiore nella prima metà del secondo e su quello superiore nella
+    seconda metà. Un ricevitore che restasse su un solo canale riceverebbe metà dei
+    dispositivi nelle vicinanze, senza sapere quale metà.
+  </p>
+  <p class="lede">
+    Su questi due canali il dispositivo riceve due sistemi in un solo intervallo. ADS-L e
+    il formato di generazione FLARM antepongono entrambi alle proprie trame una parola di sincronizzazione
+    a 32 bit, una sequenza del segnale. Le due parole condividono i primi diciotto chip, o elementi del segnale.
+    Il ricevitore rileva questa sequenza comune e il software identifica il sistema
+    dai chip che seguono. Ogni passaggio da un intervallo al successivo richiede
+    10&nbsp;ms: 2&nbsp;ms ancora in ascolto sul vecchio canale per una trasmissione tardiva,
+    5&nbsp;ms per risintonizzarsi e 3&nbsp;ms in ascolto sul nuovo canale prima
+    che inizi il suo traffico. Gli stessi 5&nbsp;ms di risintonizzazione coprono il cambio fra
+    le due bande, che corrispondono a due modulazioni e non a due frequenze:
+    Manchester FSK a 100&nbsp;kbit/s in basso, GMSK a 200&nbsp;kbit/s in alto.
+  </p>
+  <p class="lede">
+    La finestra di trasmissione è più breve. Le posizioni e i messaggi Status, che indicano
+    cosa può ricevere il dispositivo, partono fra 450 e 1000&nbsp;ms dall&rsquo;inizio
+    del secondo. Le posizioni usano 868,2&nbsp;MHz nei secondi UTC pari e
+    868,4&nbsp;MHz in quelli dispari. Sono programmate ogni secondo in volo
+    e a intervalli di 9 poi 11&nbsp;s a terra. I messaggi Status partono due volte per ciclo
+    di 20&nbsp;s, sul canale opposto a quello della posizione di quel secondo. Il nominativo
+    fa eccezione: ogni 10&nbsp;s parte fra 1000 e 1190&nbsp;ms
+    su 868,4&nbsp;MHz, nella coda che ricade nel secondo successivo.
+    Il dispositivo trasmette trame ADS-L, compreso il proprio messaggio di nominativo:
+    il formato di generazione FLARM viene ricevuto, mai trasmesso.
+    La stazione a terra trasmette su 869,525&nbsp;MHz. Qui il dispositivo ascolta soltanto
+    e non trasmette mai. L&rsquo;istante di trasmissione previsto
+    in ogni finestra viene calcolato dall&rsquo;indirizzo del dispositivo e dal secondo
+    corrente, poi ricalcolato ogni secondo per ridurre le sovrapposizioni ripetute.
+    Prima di ogni trasmissione ascolta il canale e, se è occupato, attende
+    e ascolta di nuovo nella stessa finestra.
+    <%= link_to_page "timing", label: "La guida alle trasmissioni" %> spiega quali secondi
+    e quali istanti usa ogni unità.
+  </p>
+
+  <ul class="points">
+    <li>Il GPS allinea quattro intervalli al secondo con precisione al microsecondo</li>
+    <li>Il dispositivo usa 868,200 e 868,400&nbsp;MHz per 375&nbsp;ms ciascuno</li>
+    <li>Ascolta la stazione a terra su 869,525&nbsp;MHz per 235&nbsp;ms</li>
+    <li>Decodifica due sistemi nella stessa finestra di sincronizzazione</li>
+    <li>Ogni trasmissione dura circa 5&nbsp;ms. Un canale occupato può ritardarla</li>
+    <li>Può trasmettere per l&rsquo;1&nbsp;% di ogni periodo di un&rsquo;ora e ne usa circa lo 0,6&nbsp;% in volo o lo 0,15&nbsp;% a terra. Il firmware fa rispettare il limite</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

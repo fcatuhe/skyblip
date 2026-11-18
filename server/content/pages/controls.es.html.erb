@@ -1,0 +1,146 @@
+---
+title: "Ajustes del Go, indicativo y mandos"
+slug: mandos
+nav_title: "Mandos"
+description: "Usa el panel táctil y el botón de skyBlip Go. Introduce tu indicativo, cambia los ajustes del radar y abre las pantallas de diagnóstico sin móvil."
+parent: guides
+share_image: radar
+updated_on: "2026-11-09"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Dos mandos, una función para cada uno.</h1>
+  <p class="lede">
+    Un panel táctil y un botón para los menús. También hay pantallas de diagnóstico para el banco de pruebas.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="two-contacts">El panel táctil te mueve <span class="highlight">y el botón ejecuta</span>.</h3>
+      <p>
+        Dos mandos, cada uno con una función. El panel táctil capacitivo del borde superior recorre las cuatro pantallas sin cambiar ajustes. El botón lateral abre el menú de la pantalla actual. Cada pulsación posterior cambia el valor de la fila seleccionada.
+      </p>
+      <p>
+        Dos pantallas tienen menú. Todos los ajustes que puedes cambiar con los mandos están en el menú del radar, la primera pantalla que usas para configurar el dispositivo. No hay que confirmar los cambios. Cada pulsación aplica el cambio al momento.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Menú de ajustes: luz, aeronave, unidades, alcance, modo de radar, alerta y Bravo. Abajo aparecen CHANGE para el botón y NEXT para el panel táctil" %>
+      <figcaption>El menú del radar</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Toca el panel táctil para pasar a la pantalla siguiente</li>
+    <li>Toca el panel táctil un segundo para volver al radar</li>
+    <li>Pulsa el botón para abrir el menú si la pantalla tiene uno</li>
+    <li>Pulsa otra vez para cambiar el valor de la fila seleccionada</li>
+    <li>Pasa de la última fila para volver a la pantalla</li>
+    <li>No toques los mandos durante un minuto para volver a la pantalla de forma automática</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Tu indicativo <span class="highlight">con dos mandos</span>.</h3>
+      <p>
+        <span class="mono">CALLSIGN</span> es la única fila que abre un campo de entrada en lugar de cambiar un valor. Dentro del campo, los mandos intercambian funciones. El panel táctil cambia el carácter sobre la barra y el botón pasa al siguiente. El ciclo pasa del espacio al guion, de la <span class="mono">A</span> a la
+        <span class="mono">Z</span>, del <span class="mono">0</span> al
+        <span class="mono">9</span> y vuelve al espacio. Si te pasas de una letra, sigue tocando hasta volver a ella.
+      </p>
+      <p>
+        Pulsa el botón en el último carácter para guardar el indicativo. Los espacios al final se eliminan. Para borrar un indicativo, cambia el primer carácter por un espacio y pulsa el botón. La tecla del botón muestra <span class="mono">ERASE</span> cuando hay un espacio sobre la barra. Si sales antes de terminar o dejas el campo sin tocar un minuto, no se guarda nada.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Campo del indicativo: S-BLIP a triple altura, una barra bajo el tercer carácter y las teclas NEXT para el botón y CHANGE para el panel táctil" %>
+      <figcaption>El campo del indicativo</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Campo del indicativo con el primer carácter en blanco, la barra debajo y ERASE para el botón" %>
+      <figcaption>El primer carácter en blanco</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Menú de aeronave tras la pulsación, con la fila CALLSIGN seleccionada y el valor NONE" %>
+      <figcaption>Una pulsación después</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="diagnostics">Cuatro pantallas en secuencia <span class="highlight">y las demás por nombre</span>.</h3>
+      <p>
+        Al tocar el panel pasas por el radar, la lista, los instrumentos y el medidor de carga. No hay más pantallas en la secuencia. Un piloto que cambia de pantalla en vuelo no debería acabar en las barras de los satélites. Si la placa no tiene sensor inercial, no hay medidor de carga que mostrar. El panel se salta esa pantalla en vez de mostrar
+        <span class="mono">NO SENSOR</span> cada cuatro toques.
+      </p>
+      <p>
+        Abre las otras pantallas por nombre desde el menú de la lista. Al cerrarlas vuelves a la pantalla anterior. Las siguientes pantallas sirven para el banco de pruebas, la plataforma y los informes de errores. No aparecen al recorrer las pantallas con el panel táctil. El registro de Bravo muestra el firmware de un skyBlip Bravo emparejado, su batería y lo que recibe. Para registrar un vuelo para un informe de errores o una prueba de descarga, inicia la captura desde la página del dispositivo en Briefing. La pantalla te dice qué se borrará. Pulsa el botón para iniciar la captura.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Menú de la lista NEARBY: estado, satélites, registro de radio, registro de Bravo y comprobación de funcionamiento, las cinco pantallas que se abren por nombre" %>
+      <figcaption>Menú de la lista</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "Pantalla de estado: posición obtenida y satélites, posición, trayectoria, número de aeronaves, estado de transmisión, módulo de sensores, presión, las dos altitudes, velocidad, velocidad vertical y batería en voltios y porcentaje" %>
+      <figcaption>Estado</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "Pantalla de satélites: una barra por satélite agrupada por constelación y una línea de referencia punteada a 40 dB-Hz" %>
+      <figcaption>Satélites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Registro de radio: bajo la posición, el estado del pulso por segundo (PPS) y el nivel de ruido de fondo, una fila por transmisión breve recibida o enviada. Las más recientes aparecen primero, con hora, sentido, canal, contenido, dirección y nivel de señal" %>
+      <figcaption>Registro de radio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "Pantalla de comprobación de funcionamiento: una fila por componente de la placa, con el componente que respondió y el resultado de la prueba" %>
+      <figcaption>Comprobación de funcionamiento</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Acción</th><th>En una pantalla</th><th>En un menú</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Toca el panel táctil</th>
+          <td>Pasa a la pantalla siguiente o rechaza una solicitud de confirmación en pantalla</td>
+          <td>Pasa a la fila siguiente o vuelve a la pantalla del menú tras la última fila</td>
+        </tr>
+        <tr>
+          <th>Toca el panel táctil 1&nbsp;s</th>
+          <td>Silencia una alerta activa o vuelve al radar si no hay ninguna</td>
+          <td>Vuelve al radar</td>
+        </tr>
+        <tr>
+          <th>Pulsa una vez el botón</th>
+          <td>Abre el menú de esta pantalla o acepta una solicitud de confirmación</td>
+          <td>Actúa en la fila seleccionada. Cada pulsación vuelve a cambiar su valor</td>
+        </tr>
+        <tr>
+          <th>Mantén pulsado el botón 2&nbsp;s</th>
+          <td colspan="2">Apaga el dispositivo</td>
+        </tr>
+        <tr>
+          <th>Haz lo mismo con el dedo en el panel táctil</th>
+          <td colspan="2">Apaga el dispositivo y deja la pantalla en blanco para guardarlo</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

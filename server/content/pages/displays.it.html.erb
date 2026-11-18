@@ -1,0 +1,264 @@
+---
+title: "Schermate del Go e modalità radar"
+nav_title: Schermate
+slug: schermate
+description: "Vedi ogni schermata di skyBlip Go, dal traffico alla diagnostica. Confronta PLOT ALL e PLOT TO SCALE con le stesse scene di traffico."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Ogni schermata, come la disegna il dispositivo.</h1>
+  <p class="lede">
+    Ogni immagine mostra i 200&times;200 pixel disegnati dal
+    <%= link_to_page "skyblip-go", label: "simulatore", anchor: "simulator" %>,
+    impostato in quello stato e catturato pixel per pixel. Quando una schermata cambia
+    sul dispositivo, ne facciamo una nuova cattura.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="both-ways">Il radar, in due modi</h2>
+  <p class="lede">
+    <span class="mono">PLOT</span> nel menu delle impostazioni disegna il radar in uno di
+    due modi. <span class="mono">ALL</span>, la prima scelta e quella con cui viene
+    fornito il dispositivo, restringe il cerchio e posiziona ogni aeromobile al di fuori sulla
+    fascia esterna, al suo rilevamento. <span class="mono">TO SCALE</span> posiziona
+    ogni simbolo secondo la scala del cerchio e omette quello che non
+    entra. Tre cieli, ciascuno catturato in entrambi i modi con lo stesso firmware.
+  </p>
+
+  <div class="plot" data-controller="plot" data-plot-view-value="both">
+    <p class="plot-choices" data-plot-target="choices" hidden>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Affiancati</button>
+    </p>
+
+    <div class="plot-situation">
+      <h3 id="quiet-sky">Un cielo che entra nel cerchio.</h3>
+      <p>
+        Tre aeromobili entro quattro miglia. Con <span class="mono">ALL</span>
+        si trovano nel cerchio più piccolo e non cambia nient&rsquo;altro. In scala,
+        il cerchio è più grande.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "radar.png", alt: "La pagina radar con PLOT ALL: gli stessi tre aeromobili in un cerchio più piccolo e nulla sulla fascia esterna" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar-to-scale.png", alt: "La pagina radar in scala: tre aeromobili nel cerchio di quattro miglia, ciascuno con una linea che indica dove sarà tra un minuto" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="past-the-ring">Traffico oltre il cerchio.</h3>
+      <p>
+        Un aeromobile in avvicinamento cinque miglia davanti, un gruppo di tre otto
+        miglia davanti a destra, uno undici miglia a sinistra. Con
+        <span class="mono">ALL</span>, ciascuno appare sulla fascia. Il gruppo condivide
+        un simbolo contrassegnato da 3. Una linea che mostra la posizione tra un minuto dell&rsquo;aeromobile in avvicinamento entra già
+        nel cerchio. In scala, solo l&rsquo;aeromobile davanti appare sullo schermo.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "far-all.png", alt: "La pagina radar con PLOT ALL: sulla fascia, un aeromobile davanti con la traiettoria prevista che entra nel cerchio, un simbolo contrassegnato da 3 in alto a destra e un aeromobile a sinistra" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "La pagina radar in scala: l'aeromobile nel cerchio e un altro in cima allo schermo. Il gruppo e l'aeromobile a sinistra non sono disegnati" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="astern">Traffico dietro di te.</h3>
+      <p>
+        Tre aeromobili da sei a otto miglia dietro e uno dentro il cerchio. Con
+        <span class="mono">ALL</span> i tre condividono un simbolo contrassegnato da 3, posto accanto
+        all&rsquo;indicazione della portata invece di essere nascosto sotto. In scala, i tre sono fuori
+        dallo schermo.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "astern-all.png", alt: "La pagina radar con PLOT ALL: lo stesso aeromobile nel cerchio e, accanto all'indicazione della portata in basso, un simbolo contrassegnato da 3 per gli aeromobili dietro di te" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "La pagina radar in scala: un aeromobile nel cerchio, dietro a sinistra, e nient'altro" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <p><%= link_to_page "radar", label: "Come leggere la fascia", anchor: "every-aircraft", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <h2 class="kicker" id="in-flight">In volo</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "La pagina radar: tre aeromobili disegnati come rombi, uno sopra di te, uno sotto e uno alla stessa quota in salita, ciascuno con una linea che indica dove sarà tra un minuto. La tua traiettoria prevista è tratteggiata, con un punto per ciascuno dei prossimi due minuti. Sono mostrati anche il cerchio di quattro miglia, il tempo di volo e il numero di aeromobili di cui sono stati ricevuti i messaggi" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "La pagina radar durante un avviso di traffico: un settore nero di 90 gradi centrato sul rilevamento del traffico, con il rombo pieno dell'aeromobile convergente e la sua traiettoria prevista a un minuto disegnati in bianco" %>
+      <figcaption>Avviso di traffico</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La pagina degli aeromobili nelle vicinanze: una riga per il Go con batteria al 92%, 9 satelliti e 5 aeromobili ricevuti, poi cinque aeromobili, prima quelli alla tua quota, ciascuno con una lettera che ne identifica la fonte, il nominativo o l'indirizzo in caratteri piccoli, la distanza al suolo e la quota relativa a te" %>
+      <figcaption>Nelle vicinanze</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "La pagina dei sei strumenti: velocità al suolo, orizzonte artificiale con il livello della batteria sopra, altimetro, coordinatore di virata con pallina, indicatore della rotta al suolo e velocità verticale" %>
+      <figcaption>I sei strumenti</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "La pagina dell'accelerometro: un indicatore mostra i fattori di carico normale e laterale su un grafico, circondato da un riquadro che segna i valori estremi di questo volo, con una barra del carico longitudinale accanto e tre righe di cifre in decimi di g" %>
+      <figcaption>Accelerometro</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "radar", label: "Radar e traffico", anchor: "heading-up", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", label: "Strumenti", anchor: "six-pack", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="settings">Impostazioni</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Il menu delle impostazioni: luce, aeromobile, unità, portata, visualizzazione, allarme e Bravo, con il tasto CHANGE del pulsante e il tasto NEXT del pad in basso" %>
+      <figcaption>Il menu radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Il campo del nominativo: S-BLIP ad altezza tripla, una barra sotto il terzo carattere e i tasti NEXT per il pulsante e CHANGE per il pad" %>
+      <figcaption>Il campo del nominativo</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Il campo del nominativo con uno spazio come primo carattere, la barra sotto e il tasto del pulsante che ora mostra ERASE" %>
+      <figcaption>Il primo carattere cancellato</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Il menu aeromobile dopo la pressione, con la riga CALLSIGN selezionata che mostra NONE" %>
+      <figcaption>Una pressione dopo</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Comandi e menu", anchor: "two-contacts", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="diagnostics">Diagnostica</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Il menu degli aeromobili nelle vicinanze: stato, satelliti, registro radio, registro Bravo e autotest, le cinque pagine aperte per nome" %>
+      <figcaption>Il menu dell&rsquo;elenco degli aeromobili nelle vicinanze</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "La pagina di stato: stato del posizionamento satellitare e satelliti, posizione, rotta al suolo, numero di aeromobili, stato di trasmissione, hub dei sensori, pressione, le due altitudini, velocità, velocità verticale e batteria in volt e percentuale" %>
+      <figcaption>Stato</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "La pagina dei satelliti: una barra per satellite raggruppata per costellazione, con una linea tratteggiata a 40 dB-Hz" %>
+      <figcaption>Satelliti</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Il registro radio: sotto lo stato del posizionamento satellitare, lo stato del segnale di sincronizzazione PPS e il livello del rumore di fondo, una riga per ogni breve trasmissione radio ricevuta o inviata, dalla più recente, con ora, direzione, canale, contenuto, indirizzo e livello del segnale" %>
+      <figcaption>Registro radio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "La pagina di autotest: una riga per componente della scheda, con il nome del componente che ha risposto e il risultato del test" %>
+      <figcaption>Autotest</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Le pagine aperte per nome", anchor: "diagnostics", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="on-the-ground">A terra e da spento</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "La pagina radar senza posizione: il cerchio vuoto mostra NO FIX e, sotto, lo stato di avanzamento del ricevitore verso il fix" %>
+      <figcaption>In attesa del cielo</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery.png", alt: "La pagina radar in volo con batteria quasi scarica: BAT e la percentuale nel cerchio al posto della parola di stato" %>
+      <figcaption>Batteria quasi scarica</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery-taxi.png", alt: "La pagina radar durante il rullaggio con batteria quasi scarica: BAT e la percentuale nel cerchio e TAXI sotto" %>
+      <figcaption>Batteria quasi scarica, in rullaggio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "Lo schermo di un dispositivo spento: il logo skyBlip resta sullo schermo e-paper senza alimentazione" %>
+      <figcaption>Spento</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "Lo schermo di un dispositivo che si è spento da solo per batteria scarica: il logo skyBlip con la scritta BATTERY EMPTY sotto" %>
+      <figcaption>Batteria esaurita</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "power", label: "Alimentazione e batteria", anchor: "waiting", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="asked">Chiede il permesso sullo schermo.</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "La richiesta di autorizzazione per le impostazioni inviate dal telefono: SETTINGS sotto il grande simbolo, la modifica richiesta, CANCELS IN con i secondi rimanenti, il tasto ACCEPT del pulsante e il tasto CANCEL del pad" %>
+      <figcaption>Chiede prima di modificare le impostazioni</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "recovery.png", alt: "La pagina di ripristino: RECOVERY sotto il grande simbolo, il nome dell'unità USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET e il tasto START del pulsante" %>
+      <figcaption>Passaggio al bootloader USB</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "phone", label: "Telefono e firmware", anchor: "asked", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Note tecniche</h2>
+
+  <h3 id="screen">Perché lo schermo si comporta così.</h3>
+  <p class="lede">
+    Lo schermo è un pannello e-paper da 1,54&Prime;, 200&times;200 pixel. Mantiene la sua ultima
+    immagine da spento e non consuma energia per conservarla. Per questo
+    il logo indica che il dispositivo è spento e lo schermo deve restare vuoto quando
+    lo riponi.
+  </p>
+  <p class="lede">
+    In volo, ogni immagine usa un aggiornamento parziale. Un aggiornamento completo, che
+    fa lampeggiare lo schermo in bianco e nero per un secondo e mezzo, avviene due volte per
+    sessione: all&rsquo;accensione e allo spegnimento. Un cambio di pagina usa invece
+    una sola cancellazione al nero. Il lampeggio dell&rsquo;allarme una volta al secondo è il
+    limite del pannello, non una frequenza che abbiamo scelto. Sono possibili aggiornamenti più rapidi,
+    ma alternare ripetutamente una grande area nera a quella velocità segna lo schermo in modo permanente.
+  </p>
+
+  <ul class="points">
+    <li>Ogni immagine usa un aggiornamento parziale</li>
+    <li>Lo schermo si aggiorna completamente due volte per sessione</li>
+    <li>Un cambio di pagina è una sola cancellazione al nero, di un terzo di secondo</li>
+    <li>Un&rsquo;immagine identica alla precedente non viene mai inviata</li>
+    <li>Lo schermo resta a riposo sopra 50&nbsp;&deg;C, il limite del produttore</li>
+    <li>Lo schermo viene lasciato bianco al taglio della corrente, mai a metà immagine</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

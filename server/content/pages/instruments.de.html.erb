@@ -1,0 +1,45 @@
+---
+title: "GPS-Anzeigen und der g-Messer des Go+"
+nav_title: Instrumente
+slug: instrumente
+description: "Sechs Rundanzeigen zeigen GPS- und Barometerwerte. Beim Go+ hält ein g-Messer die Spitzenwerte des Flugs fest. Die Anzeigen sind nicht zugelassen."
+parent: guides
+share_image: radar
+updated_on: "2026-11-09"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Sechs Rundanzeigen und die Belastung der Flugzeugzelle.</h1>
+  <p class="lede">Sechs Rundanzeigen stellen GPS- und Barometerwerte spielerisch dar. Der Go+ hat zusätzlich einen g-Messer.</p>
+</section>
+
+<section>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="six-pack">Sechs Rundanzeigen und <span class="highlight">der Akkustand</span>.</h3>
+      <p>Geschwindigkeit über Grund, Horizont, Höhe, Kurve, Kurs über Grund und Vertikalgeschwindigkeit: Die Anzeigen stellen GPS- und Barometerwerte spielerisch dar. Der Akkustand über der mittleren Anzeige verrät, wie lange das Gerät noch durchhält. Die anderen fünf können das nicht. Die Zeit seit dem Start steht für Ihr Flugbuch auf dem Radar.</p>
+      <p>Das sind keine Fluginstrumente. Der Horizont zeigt die Querneigung, die eine koordinierte Kurve bei dieser Geschwindigkeit erfordern würde. Das Gerät misst keine Querneigung. Keine dieser Anzeigen ist zugelassen. Das ist kein künstlicher Horizont für den Flug in Wolken.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "Ansicht mit sechs Rundanzeigen: Geschwindigkeit über Grund, künstlicher Horizont mit Akkustand darüber, Höhenmesser, Wendezeiger mit Kugel, Kursrose und Variometer" %>
+      <figcaption>Sechs Rundanzeigen</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="g-meter">Welche Lasten <span class="highlight">auf die Flugzeugzelle wirken</span>.</h3>
+      <p>Die vierte Seite zeigt die Messwerte des Beschleunigungssensors ohne Auswertung. Die Markierung zeigt die aktuelle Last auf der Tragfläche. Der Rahmen zeigt die bisher höchsten und niedrigsten Lasten sowie die höchsten Lasten nach links und rechts.</p>
+      <p>Die Spitzenwerte gelten für diesen Flug. Sie werden beim Start der Flugzeituhr auf null gesetzt. Längslasten nach vorn und hinten haben eine eigene Anzeige. Bremsen und eine harte Landung erzeugen keine Last in dieser Richtung an der Tragfläche.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "g-Messer: Eine Markierung zeigt die Last nach oben und unten sowie zur Seite. Ein Rahmen zeigt die Spitzenwerte dieses Flugs. Daneben stehen eine Anzeige für die Längslast und drei Zahlenzeilen in Zehntel g." %>
+      <figcaption>g-Messer</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

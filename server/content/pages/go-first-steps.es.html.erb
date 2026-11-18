@@ -1,0 +1,106 @@
+---
+title: "Primeros pasos con skyBlip Go: mandos, luces y vuelo"
+slug: primeros-pasos-go
+nav_title: "Primeros pasos con Go"
+description: "Enciende el Go, comprueba que tiene posición y aprende a leer el radar. Elige tu tipo de aeronave e introduce tu indicativo."
+parent: guides
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Tu Go, desde la primera pulsación.</h1>
+  <p class="lede">Una pulsación enciende skyBlip Go. Dos segundos lo apagan. El panel táctil cambia de pantalla y silencia las alertas.</p>
+</section>
+
+<section>
+  <h2 class="kicker">En la mano</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Localiza el panel táctil <span class="highlight">y luego el botón</span>.</h3>
+      <p>El panel táctil está en el borde superior. En el lado izquierdo, el botón es el mando inferior. RESET está encima. El puerto USB-C está a la derecha. Hay dos luces junto a la pantalla: la de skyBlip, que puede ser roja, verde o azul, y la luz roja de carga.</p>
+      <p>La pantalla de tinta electrónica conserva la imagen sin corriente. El logotipo indica que el Go está apagado.</p>
+    </div>
+    <%= render "shared/device", device: :go, label: "skyBlip Go con el panel táctil, el botón, RESET, las luces y el puerto USB-C señalados", marks: { pad: t("devices.pad"), button: t("devices.button"), reset: t("devices.reset"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Acción</th><th>Qué hace</th></tr></thead>
+      <tbody>
+        <tr><th>Toca el panel táctil</th><td>Abre la pantalla siguiente. Ante una solicitud, la rechaza: equivale a CANCEL en pantalla.</td></tr>
+        <tr><th>Toca el panel táctil durante 1&nbsp;s</th><td>Silencia una alerta activa. Si no hay alerta, vuelve al radar.</td></tr>
+        <tr><th>Pulsa el botón</th><td>Si está apagado, inicia el radar. En una pantalla, abre su menú. En un menú, cambia el valor seleccionado. Ante una solicitud, la acepta.</td></tr>
+        <tr><th>Mantén pulsado el botón 2&nbsp;s</th><td>Apaga el dispositivo. El logotipo permanece en pantalla.</td></tr>
+        <tr><th>Haz lo mismo con el dedo en el panel táctil</th><td>Apaga el dispositivo y deja la pantalla en blanco para guardarlo. Una imagen fija durante todo el invierno deja una sombra.</td></tr>
+        <tr><th>Mantén pulsado el botón y enchufa el cargador</th><td>Se enciende y se carga. Si solo lo enchufas, se carga y sigue apagado.</td></tr>
+        <tr><th>Pulsa RESET</th><td>Reinicia el Go.</td></tr>
+        <tr><th>Pulsa RESET dos veces en menos de medio segundo</th><td>Abre TECHOBOOT, una unidad USB para instalar el firmware. Briefing solo lo pide si no puede reiniciar el Go por sí mismo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Fíjate en el color <span class="highlight">y en el ritmo</span>.</h3>
+      <p>La luz de skyBlip solo da destellos breves para ahorrar batería. Si hay posición, el receptor de satélites ya ha localizado el dispositivo.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Luz</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Verde, cada 3&nbsp;s</th><td>Encendido, con posición.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Azul, cada 3&nbsp;s</th><td>Encendido, aún sin posición.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Dos destellos cada 3&nbsp;s</th><td>Hay una captura de diagnóstico iniciada desde Briefing. El color sigue indicando si hay posición.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, parpadeo rápido</th><td>Hay una alerta de tráfico activa.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, cada 3&nbsp;s</th><td>Batería baja.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Roja, cada 600&nbsp;ms</th><td>Batería crítica. Aterriza y cárgala.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Un pulso verde de 400&nbsp;ms</th><td>Acaba de encenderse. En skyBlip Go+ también notas la vibración.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Tres pulsos rojos cortos</th><td>Se está apagando. En el Go+ también notas los pulsos.</td></tr>
+        <tr><th>Sin luz</th><td>Apagado.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>La luz roja de carga permanece encendida durante la carga, parpadea si falta la batería o hay una avería y se apaga al completarse la carga.</p>
+</section>
+
+<section id="type" class="band band--tint">
+  <h2 class="section-title">Elige el tipo de aeronave</h2>
+  <p>Elige el tipo de aeronave y el indicativo durante la instalación o configúralos más tarde. En <%= link_to "Briefing", briefing_root_path %>, abre la página de tu Go. En el Go, pulsa el botón desde el radar y abre el menú <code>AIRCRAFT</code>. <code>TYPE</code> ajusta el tipo de aeronave. <code>CALLSIGN</code> ajusta <%= link_to_page "controls", label: "tu indicativo", anchor: "callsign" %>.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead><tr><th scope="col">Nombre en Briefing</th><th scope="col">Nombre en el Go</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Aeronave ligera</th><td><code>LIGHT</code></td></tr>
+        <tr><th scope="row">Aeronave pesada</th><td><code>HEAVY</code></td></tr>
+        <tr><th scope="row">Helicóptero ligero</th><td><code>LIGHT HELI</code></td></tr>
+        <tr><th scope="row">Helicóptero pesado</th><td><code>HEAVY HELI</code></td></tr>
+        <tr><th scope="row">Planeador</th><td><code>GLIDER</code></td></tr>
+        <tr><th scope="row">Globo</th><td><code>BALLOON</code></td></tr>
+        <tr><th scope="row">Ultraligero</th><td><code>MICROLIGHT</code></td></tr>
+        <tr><th scope="row">Parapente</th><td><code>PARAGLIDER</code></td></tr>
+        <tr><th scope="row">Paracaidista</th><td><code>SKYDIVER</code></td></tr>
+        <tr><th scope="row">VTOL</th><td><code>VTOL</code></td></tr>
+        <tr><th scope="row">Autogiro</th><td><code>GYROCOPTER</code></td></tr>
+        <tr><th scope="row">Ala delta</th><td><code>HANG GLIDER</code></td></tr>
+        <tr><th scope="row">Paramotor</th><td><code>PARAMOTOR</code></td></tr>
+        <tr><th scope="row">Desconocido</th><td><code>UNKNOWN</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Antes de salir</h2>
+  <p>Enciende el Go al aire libre y espera a que la luz de skyBlip parpadee en verde. El Go ya conoce su posición. <%= link_to_page "radar", label: "Aprende a leer el radar" %> y después <%= link_to_page "phone", label: "conecta tu aplicación de navegación" %> si usas una. Consulta la <%= link_to_page "power", label: "guía de alimentación" %> para cargarlo y guardarlo.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Después del vuelo</h2>
+  <p>Mantén pulsado el botón durante dos segundos y carga el Go por USB-C. Antes de guardarlo para el invierno, deja la pantalla en blanco. Consulta <%= link_to_page "power", label: "la guía de carga y almacenamiento" %>.</p>
+  <%= render "shared/cta" %>
+</section>

@@ -1,0 +1,243 @@
+---
+title: "Pantallas del Go y modos del radar"
+slug: pantallas
+nav_title: "Pantallas"
+description: "Consulta todas las pantallas de skyBlip Go, desde el tráfico hasta el diagnóstico. Compara PLOT ALL y PLOT TO SCALE con las mismas situaciones de tráfico."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Todas las pantallas tal como las dibuja el Go.</h1>
+  <p class="lede">
+    Cada imagen muestra los 200&times;200 píxeles que dibuja el
+    <%= link_to_page "skyblip-go", label: "simulador", anchor: "simulator" %>, configurado en ese estado y capturado píxel a píxel. Cuando cambia una pantalla en el dispositivo, hacemos otra captura.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="both-ways">Los dos modos del radar</h2>
+  <p class="lede">
+    <span class="mono">PLOT</span> en el menú de ajustes permite dibujar el radar de dos maneras. <span class="mono">ALL</span>, la primera opción y la predeterminada de fábrica, reduce el círculo y coloca las aeronaves que quedan fuera en la banda que lo rodea, en su dirección. <span class="mono">TO SCALE</span> coloca cada símbolo donde corresponde según la escala del círculo y omite lo que queda fuera de la pantalla. Las tres situaciones siguientes se han capturado en ambos modos con el mismo firmware.
+  </p>
+
+  <div class="plot" data-controller="plot" data-plot-view-value="both">
+    <p class="plot-choices" data-plot-target="choices" hidden>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Lado a lado</button>
+    </p>
+
+    <div class="plot-situation">
+      <h3 id="quiet-sky">Todo el tráfico cabe en el círculo.</h3>
+      <p>
+        Tres aeronaves dentro de cuatro millas. Con <span class="mono">ALL</span>
+        caben en el círculo más pequeño y nada más cambia. A escala, el círculo es más grande.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "radar.png", alt: "Pantalla del radar con PLOT ALL: las tres mismas aeronaves dentro de un círculo más pequeño, sin tráfico en la banda exterior" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar-to-scale.png", alt: "Pantalla del radar a escala: tres aeronaves dentro del círculo de cuatro millas, cada una con una línea que indica dónde estará dentro de un minuto" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="past-the-ring">Tráfico fuera del círculo.</h3>
+      <p>
+        Una aeronave se acerca desde cinco millas por delante, un grupo de tres está a ocho millas por delante y a la derecha y otra está a once millas a la izquierda. Con
+        <span class="mono">ALL</span>, todas aparecen en la banda. El grupo comparte un símbolo con el número 3. La línea que indica dónde estará en un minuto la aeronave que se acerca ya entra en el círculo. A escala, solo la aeronave de delante aparece en pantalla.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "far-all.png", alt: "Pantalla del radar con PLOT ALL: en la banda, una aeronave por delante con su trayectoria prevista entrando en el círculo, un símbolo con el número 3 arriba a la derecha y una aeronave a la izquierda" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "Pantalla del radar a escala: la aeronave del círculo y otra en el borde superior de la pantalla. No aparecen el grupo ni la aeronave de la izquierda" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="astern">Tráfico detrás de ti.</h3>
+      <p>
+        Tres aeronaves a entre seis y ocho millas por detrás y otra dentro del círculo. Con
+        <span class="mono">ALL</span>, las tres comparten un símbolo con el número 3, situado al lado de la etiqueta de alcance para que no quede tapado. A escala, las tres quedan fuera de la pantalla.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "astern-all.png", alt: "Pantalla del radar con PLOT ALL: la misma aeronave dentro del círculo y, abajo junto a la etiqueta de alcance, un símbolo con el número 3 para las aeronaves por detrás" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "Pantalla del radar a escala: una aeronave dentro del círculo, por detrás y a la izquierda. No aparece nada más" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <p><%= link_to_page "radar", label: "Cómo leer la banda exterior", anchor: "every-aircraft", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <h2 class="kicker" id="in-flight">En vuelo</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Pantalla del radar: tres aeronaves en forma de rombo, una por encima, otra por debajo y otra a tu altura en ascenso. Cada una lleva una línea que indica dónde estará dentro de un minuto. Tu propia trayectoria prevista aparece en línea discontinua, con un punto para cada uno de los dos minutos siguientes. También aparecen el círculo de cuatro millas, el tiempo de vuelo y el número de aeronaves de las que se reciben mensajes" %>
+      <figcaption>Radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Pantalla del radar durante un aviso de tráfico: un sector negro de 90 grados centrado en la dirección del tráfico. El rombo relleno de la aeronave que converge y su trayectoria prevista de un minuto se ven en blanco" %>
+      <figcaption>Aviso de tráfico</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "Pantalla NEARBY: una fila del Go con la batería al 92 %, 9 satélites y 5 aeronaves recibidas. Debajo hay cinco aeronaves, primero las que están a tu altura. Cada una muestra la letra de su fuente, su indicativo o su dirección en pequeño, la distancia horizontal y su altitud relativa" %>
+      <figcaption>NEARBY</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "Pantalla de seis instrumentos: velocidad respecto al suelo, horizonte artificial con el nivel de batería encima, altímetro, coordinador de viraje con bola, indicador de trayectoria sobre el suelo y velocidad vertical" %>
+      <figcaption>Los seis instrumentos</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "Pantalla del medidor de carga: un marcador muestra las cargas normales y laterales en un gráfico. Un recuadro marca los extremos de este vuelo. A su lado hay una franja de carga longitudinal y tres filas de cifras en décimas de g" %>
+      <figcaption>Medidor de carga</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "radar", label: "Radar y tráfico", anchor: "heading-up", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", label: "Instrumentos", anchor: "six-pack", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="settings">Ajustes</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Menú de ajustes: luz, aeronave, unidades, alcance, modo de radar, alerta y Bravo. Abajo aparecen CHANGE para el botón y NEXT para el panel táctil" %>
+      <figcaption>El menú del radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Campo del indicativo: S-BLIP a triple altura, una barra bajo el tercer carácter y las teclas NEXT para el botón y CHANGE para el panel táctil" %>
+      <figcaption>El campo del indicativo</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Campo del indicativo con el primer carácter en blanco, la barra debajo y ERASE para el botón" %>
+      <figcaption>El primer carácter en blanco</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Menú de aeronave tras la pulsación, con la fila CALLSIGN seleccionada y el valor NONE" %>
+      <figcaption>Una pulsación después</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Mandos y menús", anchor: "two-contacts", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="diagnostics">Diagnóstico</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Menú de la lista NEARBY: estado, satélites, registro de radio, registro de Bravo y comprobación de funcionamiento, las cinco pantallas que se abren por nombre" %>
+      <figcaption>El menú de la lista NEARBY</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "Pantalla de estado: estado de posición por satélite y satélites, posición, trayectoria respecto al suelo, número de aeronaves, estado de transmisión, módulo de sensores, presión, las dos altitudes, velocidad, velocidad vertical y batería en voltios y porcentaje" %>
+      <figcaption>Estado</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "Pantalla de satélites: una barra por satélite agrupada por constelación y una línea de puntos a 40 dB-Hz" %>
+      <figcaption>Satélites</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Registro de radio: bajo el estado de posición por satélite, el estado de sincronización PPS y el ruido de fondo, una fila por ráfaga recibida o enviada. Las más recientes aparecen primero, con hora, sentido, canal, contenido, dirección y nivel de señal" %>
+      <figcaption>Registro de radio</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "Pantalla de comprobación de funcionamiento: una fila por componente de la placa, con el nombre del componente que respondió y el resultado de la prueba" %>
+      <figcaption>Comprobación de funcionamiento</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Las pantallas que se abren por nombre", anchor: "diagnostics", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="on-the-ground">En tierra y con el Go apagado</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "Pantalla del radar sin posición: el círculo vacío muestra NO FIX y, debajo, el estado del receptor" %>
+      <figcaption>A la espera de señal</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery.png", alt: "Pantalla del radar en vuelo con batería baja: BAT y el porcentaje dentro del círculo, en lugar del texto de estado" %>
+      <figcaption>Batería baja</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery-taxi.png", alt: "Pantalla del radar durante el rodaje con batería baja: BAT y el porcentaje dentro del círculo, TAXI debajo" %>
+      <figcaption>Batería baja durante el rodaje</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "Pantalla de un dispositivo apagado: el logotipo de skyBlip sigue en la tinta electrónica sin corriente" %>
+      <figcaption>Apagado</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "Pantalla de un dispositivo que se apagó al agotar la batería: logotipo de skyBlip con BATTERY EMPTY debajo" %>
+      <figcaption>Batería agotada</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "power", label: "Alimentación y batería", anchor: "waiting", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="asked">Pide confirmación en pantalla.</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "Solicitud de autorización de los ajustes enviados por el móvil: SETTINGS bajo el símbolo grande, el cambio solicitado, CANCELS IN con los segundos restantes, ACCEPT para el botón y CANCEL para el panel táctil" %>
+      <figcaption>Pide permiso antes de cambiar los ajustes</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "recovery.png", alt: "Pantalla de recuperación: RECOVERY bajo el símbolo grande, el nombre de la unidad USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET y START para el botón" %>
+      <figcaption>Listo para el gestor de arranque USB</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "phone", label: "Móvil y firmware", anchor: "asked", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Notas técnicas</h2>
+
+  <h3 id="screen">Por qué funciona así la pantalla.</h3>
+  <p class="lede">
+    La pantalla es un panel de tinta electrónica de 1,54&Prime; y 200&times;200 píxeles. Conserva la última imagen sin corriente y no gasta energía en mantenerla. Por eso el logotipo indica que el dispositivo está apagado y conviene dejar la pantalla en blanco al guardarlo.
+  </p>
+  <p class="lede">
+    En vuelo, cada imagen usa una actualización parcial. Una actualización completa hace parpadear la pantalla en blanco y negro durante un segundo y medio. Ocurre dos veces por sesión, al encender y al apagar. Un cambio de pantalla usa un solo barrido negro. El parpadeo de la alerta, una vez por segundo, es el límite del panel, no un ritmo que hayamos elegido. Se puede actualizar más deprisa, pero alternar así una zona negra grande deja una marca permanente en la pantalla.
+  </p>
+
+  <ul class="points">
+    <li>Cada imagen usa una actualización parcial</li>
+    <li>La pantalla se actualiza por completo dos veces por sesión</li>
+    <li>Un cambio de pantalla usa un barrido negro de un tercio de segundo</li>
+    <li>Si una imagen es idéntica a la anterior, no se envía</li>
+    <li>La pantalla no se actualiza por encima de 50&nbsp;&deg;C, el límite del fabricante</li>
+    <li>Al cortar la corriente, la pantalla queda en blanco, nunca a media imagen</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

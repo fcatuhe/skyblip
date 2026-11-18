@@ -1,0 +1,20 @@
+es:
+  firmwares:
+    label: "Imagen publicada"
+    prompt: "Elige una imagen"
+    full: "con el firmware del sensor de movimiento"
+    loading: "Cargando el firmware publicado."
+    unavailable: "No está disponible la lista de firmware publicado. Elige un archivo."
+    empty: "Aún no hay firmware publicado. Elige un archivo."
+  simulator_builds:
+    loading: "Cargando el simulador desde GitHub."
+    unavailable: "No se ha podido cargar el simulador desde GitHub. Recarga la página para volver a intentarlo."
+    empty: "Aún no se ha publicado ninguna versión del simulador."
+    controls:
+      wake: "Mantén pulsado el botón inferior para volver a encenderlo."
+      traffic: "Añade tráfico al cielo"
+      keys: "Selecciona el Go con Tab o con un clic para volar con las flechas. Pulsa la flecha abajo para ascender."
+      glass: "Pantalla simulada de tinta electrónica de un skyBlip Go"
+      key: "Botón del dispositivo: pulsa para abrir el menú de la pantalla actual. Mantén pulsado dos segundos para apagar y otra vez para encender"
+      pad: "Panel táctil capacitivo: toca para cambiar de pantalla. Mantén el dedo un segundo para volver al radar"
+      reset: "RESET: reinicia el dispositivo"
