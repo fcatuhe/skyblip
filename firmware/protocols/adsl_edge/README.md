@@ -1,6 +1,6 @@
 # protocols/adsl_edge
 
-What the Go sends on ADS-L's frame that ADS-L 4 SRD-860 Issue 2 leaves outside its scope. It is ahead of the specification: the record is OGN's, and a later issue is expected to define the payload. It stays here, apart from `protocols/adsl/`, so the ADS-L stack and its conformance suite hold only what Issue 2 regulates, and ADS-L 1.0.0 stays frozen while this moves (`../README.md`, Versions).
+What the Go sends on ADS-L's frame that ADS-L 4 SRD-860 Issue 2 leaves outside its scope. It is ahead of the specification: the record is OGN's, and a later issue is expected to define the payload. It stays here, apart from `protocols/adsl/`, so the ADS-L stack and its conformance suite hold only what Issue 2 regulates, and the ADS-L version does not move while this does (`../README.md`, Versions).
 
 The stack builds on `protocols/adsl/`'s `Packet`, the one include the boundary allows it outside `protocols/common/`, and nothing else from skyBlip. `version.h` names what it implements in `kSpecification`.
 
