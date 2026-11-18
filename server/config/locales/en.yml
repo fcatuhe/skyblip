@@ -46,6 +46,14 @@ en:
     app: "navigation app"
     received: "received"
     transmitted: "transmitted"
+  devices:
+    press: Press
+    pad: Pad
+    button: Button
+    reset: RESET
+    lights: LEDs
+    led: LED
+    usb: USB-C
   second:
     title: "One UTC second"
     description: "One second from 0 to 1200 ms: the Go listens on the uplink from 210 to 440 ms, on channel A from 450 to 820 ms and on channel B from 830 to 1200 ms, with a 10 ms switch between windows. Its positions and Status start from 450 to 810 ms on A or 830 to 990 ms on B, its callsign from 1000 to 1190 ms on B, after ADS-L's direct slot ends at 1000 ms."

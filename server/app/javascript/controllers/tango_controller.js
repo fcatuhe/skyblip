@@ -9,7 +9,7 @@ const PAIR_NOTICES = ["pair_notices", "notices"]
 
 // INFO: fc 17nov26 the device page's offer to pair a Go with a Bravo, from either side (skyblip/README.md, Pairing from the briefing)
 export default class extends Controller {
-  static targets = ["title", "text", "actions", "pair", "connect", "setup", "connectNew", "message"]
+  static targets = ["title", "text", "pressBravo", "actions", "pair", "connect", "setup", "connectNew", "message"]
   static values = { slug: String, setup: String }
 
   connect() {
@@ -79,6 +79,7 @@ export default class extends Controller {
     const other = PARTNER[product]
     this.titleTarget.textContent = say(`tango.title_${product}`)
     for (const target of [this.pairTarget, this.connectTarget, this.setupTarget, this.connectNewTarget]) target.hidden = true
+    this.pressBravoTarget.hidden = true
     if (pairing) this.#pairing(unit, pairing)
     else this.#offer(unit, view, other)
     const notice = pairing?.failure ? sayNotice(pairing.failure, ...PAIR_NOTICES) : this.failure ? sayNotice(this.failure, "notices") : ""
@@ -115,6 +116,7 @@ export default class extends Controller {
     const { go, bravo } = sides(unit, partner)
     const values = { go: shortName(go), bravo: shortName(bravo) }
     this.textTarget.textContent = say(failure ? "tango.not_paired" : `tango.steps.${step}`, values)
+    this.pressBravoTarget.hidden = Boolean(failure) || step !== "press_bravo"
     if (failure && partner.linked) this.#button(this.pairTarget, say("tango.try_again"))
   }
 

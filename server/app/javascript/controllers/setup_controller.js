@@ -24,8 +24,8 @@ const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: [
 // INFO: fc 17nov26 one page from Meshtastic to a unit ready to fly: USB, Bluetooth, then the aircraft (skyblip/README.md, The installer)
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
-                    "finishText", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
-                    "doneText", "open", "setUpPartner", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
+                    "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
+                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
   static values = { devices: String, activation: String, setup: String, partner: String, challenges: String, registrations: String }
   static outlets = ["glass"]
 
@@ -233,6 +233,7 @@ export default class extends Controller {
     this.finishTextTarget.textContent = stage === "pairing" ? this.#pairingText() : !activator ? "" : confirming ? say("setup.confirm_activation")
       : ACTIVATING[activator.state.phase] ? say(ACTIVATING[activator.state.phase]) : say("setup.activating", { name: `Go ${tagText(unit.tag) ?? ""}`.trim() })
     if (this.glass) confirming ? this.glass.show({ title: "ACTIVATE", prompt: "register", product: "Go" }) : this.glass.hide()
+    this.pressBravoTarget.hidden = stage !== "pairing" || this.onboarding.step !== "press_bravo"
     this.retryTarget.hidden = !failure
     this.#show("finish", { notice: failure, scopes: ["activation_notices", "notices"] })
   }
@@ -317,6 +318,7 @@ export default class extends Controller {
     this.setUpPartnerTarget.hidden = known
     this.setUpPartnerTarget.href = `${this.setupValue}?for=${this.unit.slug}`
     this.setUpPartnerTarget.textContent = say("tango.set_up", { other: PRODUCT_WORDS[other] })
+    for (const item of this.guidesTarget.children) item.hidden = kind !== "tango" && item.dataset.product !== kind
     this.#show("done")
   }
 

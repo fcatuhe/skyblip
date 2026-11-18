@@ -114,7 +114,7 @@ fr:
       release: "Notes de version et le .uf2"
       changes: "Ce qui a changé depuis votre version"
       recovery: "Le firmware ne prend pas\u00a0?"
-      recovery_hint: "Sans Bluetooth\u00a0: branchez l\u2019appareil sur un ordinateur et appuyez deux fois sur RST en moins d\u2019une demi-seconde. Il apparaît comme une clé USB nommée TECHOBOOT\u00a0: déposez-y le fichier .uf2 d\u2019une version."
+      recovery_hint: "Sans Bluetooth\u00a0: branchez l\u2019appareil sur un ordinateur et appuyez deux fois sur RESET en moins d\u2019une demi-seconde. Il apparaît comme une clé USB nommée TECHOBOOT\u00a0: déposez-y le fichier .uf2 d\u2019une version."
       recover: "Redémarrer en clé USB"
       report_received_html: "skyBlip a reçu le détail de cet échec. Si vous nous écrivez, dites ce que vous avez fait et donnez votre code d\u2019assistance %{code}."
     terminal:
@@ -151,8 +151,8 @@ fr:
       drive_gesture: "Lancez à la main l\u2019installateur de %{name}, puis choisissez la clé USB nommée %{drive} dans la fenêtre qui s\u2019ouvre\u00a0:"
       or: " ou "
       by_hand:
-        go: "Go\u00a0: appuyez deux fois rapidement sur RST."
-        bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant devient blanc."
+        go: "Go\u00a0: appuyez deux fois rapidement sur RESET, le bouton du haut sur son côté gauche."
+        bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant au-dessus du bouton devient blanc."
       choose_drive: "Choisir la clé"
       downloading: "Téléchargement de skyBlip pour %{name}."
       writing: "Installation de skyBlip %{version} sur %{name}."
@@ -167,6 +167,8 @@ fr:
       unsupported_phone: "Installez d\u2019abord depuis un ordinateur, dans Chrome ou Edge. Ce téléphone règle et met ensuite à jour vos appareils en Bluetooth."
       unsupported_other: "L\u2019installation en USB demande Chrome ou Edge sur un ordinateur."
       by_hand_link: "L\u2019installer à la main"
+      guide_go: "Nouveau avec le Go\u00a0? Lisez ses premiers pas."
+      guide_bravo: "Nouveau avec Bravo\u00a0? Lisez ses premiers pas."
       try_again: "Réessayer"
       save: "Enregistrer"
       later: "Plus tard"
@@ -220,7 +222,7 @@ fr:
       steps:
         arming: "Préparation de %{bravo}."
         pairing: "Appairage de %{go} avec %{bravo}. Gardez-les près l\u2019un de l\u2019autre."
-        press_bravo: "Appuyez sur le bouton de %{bravo} quand son voyant clignote en bleu."
+        press_bravo: "Appuyez sur le bouton de %{bravo} quand le voyant au-dessus de son bouton clignote en bleu."
         confirm_go: "Appuyez sur le bouton de %{go} pour confirmer."
         paired: "Appairé. %{go} affiche le trafic ADS-B que %{bravo} reçoit."
     pair_notices:
@@ -240,7 +242,16 @@ fr:
       refused: "L\u2019appareil a refusé\u00a0:"
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
-      lamp: "Le voyant clignote vite en vert."
+      lamp: "Le voyant au-dessus du bouton clignote vite en vert."
+    figures:
+      go_reset: "Un skyBlip Go vu de face, une flèche sur son côté gauche pointant RESET, le plus haut de ses deux boutons latéraux."
+      reset_twice: "RESET, 2 fois"
+      bravo_hold: "Un skyBlip Bravo, son bouton rond marqué Maintenir, le voyant juste au-dessus repéré et sa prise USB-C marquée Brancher."
+      hold: "Maintenir"
+      plug: "Brancher"
+      white: "Relâchez quand le voyant au-dessus du bouton devient blanc."
+      bravo_press: "Un skyBlip Bravo, son bouton rond marqué Appuyer et le voyant juste au-dessus repéré."
+      blue: "Le voyant au-dessus du bouton clignote vite en bleu."
     tools:
       back: "Retour à vos appareils"
       title: "Outils de développement"
