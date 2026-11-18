@@ -52,6 +52,7 @@ en:
     button: Button
     rst: RST
     lights: LEDs
+    led: LED
     usb: USB-C
   settings:
     aircraft_type: "Aircraft type"

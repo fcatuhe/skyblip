@@ -27,7 +27,7 @@ module DevicesHelper
     bravo: Photo.new(path: "pages/skyblip-bravo/seeed-x1.avif", width: 440, height: 356, top: 0, margins: { left: 0, right: 0 })
   }.freeze
 
-  # INFO: fc 18nov26 RST is the upper and the button the lower contact on the T-Echo's left side, out of view, as LilyGO's case label draws them
+  # INFO: fc 18nov26 RST is the upper and the button the lower contact on the T-Echo's left side, out of view, Plus included, as the owner confirmed
   SPOTS = {
     go: {
       rst: Spot.new(x: 24, y: 648, radius: 0, from: [ -60, 648 ], text: [ -70, 658 ], anchor: :end, margin: :left),
@@ -37,7 +37,8 @@ module DevicesHelper
       usb: Spot.new(x: 343, y: 815, radius: 30, from: [ 470, 815 ], text: [ 480, 825 ], anchor: :start, margin: :right)
     },
     bravo: {
-      button: Spot.new(x: 257, y: 124, radius: 46, from: [ 160, 56 ], text: [ 150, 52 ], anchor: :end, margin: nil),
+      button: Spot.new(x: 257, y: 124, radius: 38, from: [ 160, 56 ], text: [ 150, 52 ], anchor: :end, margin: nil),
+      led: Spot.new(x: 291, y: 95, radius: 0, from: [ 350, 37 ], text: [ 354, 30 ], anchor: :start, margin: nil),
       usb: Spot.new(x: 98, y: 263, radius: 22, from: [ 56, 318 ], text: [ 10, 342 ], anchor: :start, margin: nil)
     }
   }.freeze

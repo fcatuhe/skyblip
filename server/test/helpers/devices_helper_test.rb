@@ -13,8 +13,8 @@ class DevicesHelperTest < ActionView::TestCase
     assert_equal [ 6.0, 648.0 ], rst.line_end
     assert_equal "24,648 6.0,657.0 6.0,639.0", rst.head
 
-    # The ring around the X1's button has a radius of 46, and the line stops 4 outside it.
+    # The ring around the X1's button has a radius of 38, and the line stops 4 outside it.
     button = device_marks(:bravo, button: "Press").first
-    assert_in_delta 50, Math.hypot(button.spot.x - button.line_end[0], button.spot.y - button.line_end[1]), 0.2
+    assert_in_delta 42, Math.hypot(button.spot.x - button.line_end[0], button.spot.y - button.line_end[1]), 0.2
   end
 end

@@ -152,7 +152,7 @@ fr:
       or: " ou "
       by_hand:
         go: "Go\u00a0: appuyez deux fois rapidement sur RST, le bouton du haut sur son côté gauche."
-        bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant devient blanc."
+        bravo: "Bravo\u00a0: débranchez-le, maintenez son bouton, rebranchez-le et relâchez quand le voyant au-dessus du bouton devient blanc."
       choose_drive: "Choisir la clé"
       downloading: "Téléchargement de skyBlip pour %{name}."
       writing: "Installation de skyBlip %{version} sur %{name}."
@@ -222,7 +222,7 @@ fr:
       steps:
         arming: "Préparation de %{bravo}."
         pairing: "Appairage de %{go} avec %{bravo}. Gardez-les près l\u2019un de l\u2019autre."
-        press_bravo: "Appuyez sur le bouton de %{bravo} quand son voyant clignote en bleu."
+        press_bravo: "Appuyez sur le bouton de %{bravo} quand le voyant au-dessus de son bouton clignote en bleu."
         confirm_go: "Appuyez sur le bouton de %{go} pour confirmer."
         paired: "Appairé. %{go} affiche le trafic ADS-B que %{bravo} reçoit."
     pair_notices:
@@ -242,16 +242,16 @@ fr:
       refused: "L\u2019appareil a refusé\u00a0:"
     glass:
       remembers: "L\u2019autorisation ajoute aussi ce navigateur à la liste de confiance\u00a0: les prochains enregistrements et mises à jour ne demandent plus d\u2019appui. Vous pouvez l\u2019oublier depuis cette page."
-      lamp: "Le voyant clignote vite en vert."
+      lamp: "Le voyant au-dessus du bouton clignote vite en vert."
     figures:
       go_rst: "Un skyBlip Go vu de face, une flèche sur son côté gauche pointant RST, le plus haut de ses deux boutons latéraux."
       rst_twice: "RST, 2 fois"
-      bravo_hold: "Un skyBlip Bravo, son bouton rond marqué Maintenir et sa prise USB-C marquée Brancher."
+      bravo_hold: "Un skyBlip Bravo, son bouton rond marqué Maintenir, le voyant juste au-dessus repéré et sa prise USB-C marquée Brancher."
       hold: "Maintenir"
       plug: "Brancher"
-      white: "Relâchez quand le voyant devient blanc."
-      bravo_press: "Un skyBlip Bravo, son bouton rond marqué Appuyer."
-      blue: "Le voyant clignote vite en bleu."
+      white: "Relâchez quand le voyant au-dessus du bouton devient blanc."
+      bravo_press: "Un skyBlip Bravo, son bouton rond marqué Appuyer et le voyant juste au-dessus repéré."
+      blue: "Le voyant au-dessus du bouton clignote vite en bleu."
     tools:
       back: "Retour à vos appareils"
       title: "Outils de développement"

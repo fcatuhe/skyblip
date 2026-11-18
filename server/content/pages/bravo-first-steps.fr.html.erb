@@ -20,9 +20,9 @@ updated_on: "2026-11-18"
   <div class="feature">
     <div>
       <h3 id="controls">Appuyez pour répondre, <span class="highlight">maintenez pour éteindre</span>.</h3>
-      <p>Bravo est un Seeed SenseCAP MeshTracker X1 équipé de skyBlip. Son bouton rond est sur la face supérieure. Le port USB-C est sur un petit côté. Il n&rsquo;a pas d&rsquo;écran. Un voyant, un avertisseur sonore et un vibreur vous renseignent.</p>
+      <p>Bravo est un Seeed SenseCAP MeshTracker X1 équipé de skyBlip. Son bouton rond est sur la face supérieure. Le port USB-C est sur un petit côté. Il n&rsquo;a pas d&rsquo;écran. Le voyant au-dessus du bouton, un avertisseur sonore et un vibreur vous renseignent.</p>
     </div>
-    <%= render "shared/device", device: :bravo, label: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, avec les repères du bouton et du port USB-C", marks: { button: t("devices.button"), usb: t("devices.usb") }, caption: "Le X1 équipé de skyBlip Bravo. Photo Seeed Studio." %>
+    <%= render "shared/device", device: :bravo, label: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, avec les repères du bouton, du voyant juste au-dessus du bouton et du port USB-C", marks: { button: t("devices.button"), led: t("devices.led"), usb: t("devices.usb") }, caption: "Le X1 équipé de skyBlip Bravo. Photo Seeed Studio." %>
   </div>
 
   <div class="table-scroll">
@@ -34,7 +34,7 @@ updated_on: "2026-11-18"
         <tr><th>Appui pendant un clignotement vert rapide</th><td>Autorise un réglage ou une mise à jour demandé par un téléphone ou Briefing. Sans appui, la demande expire après 30 secondes.</td></tr>
         <tr><th>Appui pendant un clignotement bleu rapide</th><td>Appaire Bravo avec le Go qui le demande.</td></tr>
         <tr><th>Appui maintenu, 2&nbsp;s</th><td>Éteint Bravo. Trois éclats rouges accompagnent trois vibrations.</td></tr>
-        <tr><th>Bouton maintenu, USB-C branché, sans relâcher</th><td>Après environ 3 secondes, le voyant devient blanc. Le X1 devient un lecteur USB nommé X1 pour installer le firmware manuellement. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer Bravo lui-même.</td></tr>
+        <tr><th>Bouton maintenu, USB-C branché, sans relâcher</th><td>Après environ 3 secondes, le voyant au-dessus du bouton devient blanc. Le X1 devient un lecteur USB nommé X1 pour installer le firmware manuellement. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer Bravo lui-même.</td></tr>
       </tbody>
     </table>
   </div>

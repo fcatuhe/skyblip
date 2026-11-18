@@ -76,7 +76,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_link "New to Bravo? Read its first steps."
       assert_current_path "/bravo-first-steps"
-      assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+USB-C/
+      assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+LED\s+USB-C/
       assert_selector "table .lamp--white"
       screen "23-bravo-first-steps"
     end
@@ -163,17 +163,17 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
-  test "a Bravo that does not answer over USB gets its button pictured, held while the cable goes in until the LED turns white" do
+  test "a Bravo that does not answer over USB gets its button pictured, held while the cable goes in until the LED above it turns white" do
     in_range
     plugged_in a_meshtastic_bravo(mode: "silent")
     with_installers do
       visit "/briefing/setup"
       click_button "Install"
-      assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white.", wait: 6
+      assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white.", wait: 6
       within ".setup-by-hand .device-figure--bravo" do
-        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked hold and its USB-C port marked plug in.']", text: /Hold\s+Plug in/
+        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked hold, the LED just above it marked, and its USB-C port marked plug in.']", text: /Hold\s+LED\s+Plug in/
         assert_selector ".lamp.lamp--white.lamp--steady"
-        assert_text "Release once the LED turns white."
+        assert_text "Release once the LED above the button turns white."
       end
       assert_no_text "Go: press RST twice"
       screen "55-bravo-gesture"

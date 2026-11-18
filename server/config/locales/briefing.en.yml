@@ -152,7 +152,7 @@ en:
       or: " or "
       by_hand:
         go: "Go: press RST twice, quickly. It is the upper button on its left side."
-        bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white."
+        bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white."
       choose_drive: Choose the drive
       downloading: "Downloading skyBlip for %{name}."
       writing: "Installing skyBlip %{version} on %{name}."
@@ -222,7 +222,7 @@ en:
       steps:
         arming: "Getting %{bravo} ready."
         pairing: "Pairing %{go} with %{bravo}. Keep both close."
-        press_bravo: "Press the button on %{bravo} when its light blinks blue."
+        press_bravo: "Press the button on %{bravo} when the LED above its button blinks blue."
         confirm_go: "Press the button on %{go} to confirm."
         paired: "Paired. %{go} shows the ADS-B traffic %{bravo} hears."
     pair_notices:
@@ -241,17 +241,17 @@ en:
       unknown_command: "This firmware is too old to pair from Briefing. Update both devices, or pair from the Go's BRAVO menu."
       refused: "The device refused:"
     glass:
-      lamp: The LED blinks green fast.
+      lamp: The LED above the button blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
     figures:
       go_rst: "A skyBlip Go seen from the front, an arrow on its left side pointing at RST, the upper of its two side buttons."
       rst_twice: RST, twice
-      bravo_hold: A skyBlip Bravo, its round button marked hold and its USB-C port marked plug in.
+      bravo_hold: A skyBlip Bravo, its round button marked hold, the LED just above it marked, and its USB-C port marked plug in.
       hold: Hold
       plug: Plug in
-      white: Release once the LED turns white.
-      bravo_press: A skyBlip Bravo, its round button marked press.
-      blue: The LED blinks blue fast.
+      white: Release once the LED above the button turns white.
+      bravo_press: A skyBlip Bravo, its round button marked press and the LED just above it marked.
+      blue: The LED above the button blinks blue fast.
     tools:
       back: Back to your devices
       title: Developer tools

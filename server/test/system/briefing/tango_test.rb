@@ -15,11 +15,11 @@ class Briefing::TangoTest < ApplicationSystemTestCase
       screen "61-pair-confirm-on-go"
 
       page.execute_script("#{unit("Go 00012A")}.press()")
-      assert_selector ".tango", text: "Press the button on Bravo 5C1D when its light blinks blue."
+      assert_selector ".tango", text: "Press the button on Bravo 5C1D when the LED above its button blinks blue."
       within ".tango .device-figure--bravo" do
-        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked press.']", text: "Press"
+        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked press and the LED just above it marked.']", text: /Press\s+LED/
         assert_selector ".lamp.lamp--blue"
-        assert_text "The LED blinks blue fast."
+        assert_text "The LED above the button blinks blue fast."
       end
       screen "62-pair-press-bravo"
 

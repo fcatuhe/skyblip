@@ -52,6 +52,7 @@ fr:
     button: "Bouton"
     rst: "RST"
     lights: "Voyants"
+    led: "Voyant"
     usb: "USB-C"
   settings:
     aircraft_type: "Type d\u2019aéronef"

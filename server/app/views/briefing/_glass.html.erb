@@ -2,7 +2,7 @@
   <canvas class="glass" data-glass-target="glass" width="200" height="200" role="img"></canvas>
   <p class="glass glass-words" data-glass-target="words" hidden></p>
   <div class="glass-lamp" data-glass-target="lamp" hidden>
-    <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_press"), marks: { button: t("devices.press") },
+    <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_press"), marks: { button: t("devices.press"), led: t("devices.led") },
           lamp: %i[green], caption: t("briefing.glass.lamp") %>
     <p><%= t("briefing.words.glass_refuse") %></p>
   </div>
