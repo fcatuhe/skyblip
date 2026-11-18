@@ -1,0 +1,84 @@
+---
+title: "Comment skyBlip Go juge le trafic"
+nav_title: Trafic
+slug: trafic
+description: "Comment skyBlip Go choisit les aéronefs à signaler. Un anneau de 3 km et 300 m, des règles au sol, la durée de vie d'une cible et le vol en formation."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Un seul anneau, et les aéronefs qui volent avec vous mis à part.</h1>
+  <p class="lede">skyBlip Go utilise les positions reçues pour décider quand vous alerter. Il conserve chaque position pendant une durée limitée, choisit entre plusieurs messages du même aéronef et reconnaît ceux qui volent avec vous. <%= link_to_page "radar", label: "Le guide radar" %> montre ce qui apparaît à l&rsquo;écran. Cette page explique ces décisions.</p>
+</section>
+
+<section>
+  <h3 id="ring">Un seul anneau d&rsquo;avis.</h3>
+  <p class="lede">Un aéronef à moins de 3&nbsp;km horizontalement et de 300&nbsp;m au-dessus ou en dessous de vous entre dans les limites d&rsquo;un avis de trafic. Au-delà, il peut rester affiché sur le radar sans déclencher d&rsquo;avis. Il n&rsquo;y a pas de niveau d&rsquo;alerte supérieur.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Limite</th><th>Valeur</th><th>D&rsquo;où elle vient</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Horizontale</th><td>3000&nbsp;m</td><td>choisie pour le Go. À 240&nbsp;kt de rapprochement face à face, elle laisse 24&nbsp;s, dans la plage de temps des avis de trafic du TCAS&nbsp;II à basse altitude. Cette distance est le double de celle de l&rsquo;avis FLARM</td></tr>
+        <tr><th>Verticale</th><td>300&nbsp;m</td><td>la même limite verticale que pour l&rsquo;avis de trafic FLARM</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Un avis de trafic indique où regarder. Il ne demande jamais de monter ou de descendre. Le TCAS peut aussi émettre un avis de résolution&nbsp;: une consigne coordonnée avec l&rsquo;autre aéronef. Le Go n&rsquo;a pas de liaison pour cette coordination. Il se limite donc aux avis de trafic.</p>
+  <p class="lede">Le Go prédisait auparavant les conflits. Il fallait choisir un volume de protection autour de chaque aéronef, tenir compte d&rsquo;une incertitude croissante avec l&rsquo;anticipation et fixer un horizon de prévision. Ces choix déterminaient si le pilote était averti d&rsquo;un aéronef à un kilomètre. L&rsquo;anneau se fonde sur sa position reçue. Les planeurs qui spiralent ensemble, un des cas qui motivaient la prédiction, relèvent des règles de <a href="#formation">formation</a> décrites plus bas.</p>
+  <p class="lede">Si un aéronef n&rsquo;envoie pas son altitude, le Go ne le considère pas à votre niveau. Sa hauteur est inconnue. À moins de 3&nbsp;km, il peut déclencher un avis puisqu&rsquo;il pourrait être à votre niveau. Les écrans n&rsquo;affichent aucun écart de hauteur quand cet écart est inconnu.</p>
+
+  <h3 id="ground">Aucun avis au sol.</h3>
+  <p class="lede">Un aéronef qui se déclare au sol reste affiché sur le radar et dans la liste, avec son nom s&rsquo;il est connu, mais ne déclenche jamais d&rsquo;avis. Sans cette règle, un anneau de 3&nbsp;km autour d&rsquo;un aérodrome inclurait les aéronefs du parking. La règle vaut aussi pour votre appareil&nbsp;: tant que votre Go est au sol, il ne donne aucun avis de trafic. Un appareil au point d&rsquo;attente ne signale donc pas chaque aéronef d&rsquo;un tour de piste chargé. FLARM désactive aussi ses avertissements quand son propre aéronef roule ou reste à l&rsquo;arrêt au sol.</p>
+  <p class="lede">Au décollage, les aéronefs en vol qui remplissent les conditions d&rsquo;un avis dans l&rsquo;anneau sont signalés ensemble. Le Go émet une seule alerte, pas une par aéronef. Les règles de formation ci-dessous peuvent garder silencieux ceux qui décollent avec vous. <%= link_to_page "gps", label: "Le guide GPS", anchor: "flight" %> explique comment le Go décide qu&rsquo;il vole.</p>
+
+  <h3 id="held">Six messages manqués, et une cible disparaît.</h3>
+  <p class="lede">Chaque position d&rsquo;aéronef conservée par le Go est une cible. Il la supprime après six messages attendus sans réception, selon la cadence correspondant à son état de vol. En vol, l&rsquo;intervalle est une seconde&nbsp;: la cible disparaît après 6&nbsp;s. Au sol, il est de 10&nbsp;s&nbsp;: elle disparaît après 60&nbsp;s.</p>
+  <p class="lede">Le radar garde une cible à sa dernière position reçue. Le déplacement possible avant sa disparition dépend donc de sa vitesse&nbsp;: 6&nbsp;s à 60&nbsp;m/s représentent 360&nbsp;m. Au sol, 60&nbsp;s à une vitesse de 5 à 8&nbsp;m/s représentent 300 à 480&nbsp;m. Les mêmes six messages manqués laissent ainsi un déplacement du même ordre dans les deux cas. À 1&nbsp;Hz, ce délai permet de distinguer une brève interruption de réception d&rsquo;une liaison perdue. Même avec la moitié des émissions perdues, la probabilité de six manques consécutifs est d&rsquo;environ 1,5&nbsp;%.</p>
+  <p class="lede">L&rsquo;alarme a sa propre limite de fraîcheur&nbsp;: elle n&rsquo;évalue que les positions de moins de 5&nbsp;s. À 100&nbsp;m/s de rapprochement, ce délai représente déjà 500&nbsp;m d&rsquo;incertitude. Les deux durées partent de la réception du message, pas de son arrivée au Go. Un message transmis par un Bravo appairé ne redevient donc pas récent à son arrivée.</p>
+
+  <h3 id="sources">Quel que soit le système qui l&rsquo;a entendu.</h3>
+  <p class="lede">Un Go reçoit directement les messages radio ADS-L et FLARM. Les messages ADS-B lui parviennent par un récepteur <%= link_to_page "skyblip-bravo", label: "Bravo" %> appairé. Il peut aussi recevoir du trafic relayé par une station sol. Chaque source fournit le même état de vol&nbsp;: en vol, au sol ou inconnu. Les règles utilisent cet état quelle que soit la source. Un état inconnu est traité comme en vol.</p>
+  <p class="lede">Quand le Go reçoit plusieurs copies du même aéronef, il préfère la réception directe ADS-L ou FLARM, puis l&rsquo;ADS-B, puis le relais d&rsquo;une station sol. Une copie moins prioritaire ne prend le relais que lorsque la copie préférée est devenue trop ancienne. L&rsquo;ADS-B passe après la réception directe parce que ses données arrivent dans des messages séparés, chacun avec son propre âge. ADS-L et FLARM les regroupent dans une même émission.</p>
+  <p class="lede">Deux messages ne fusionnent que si leur adresse et leur table d&rsquo;adresses sont identiques. Cette table indique le système d&rsquo;adressage utilisé. Un aéronef équipé d&rsquo;un Go et d&rsquo;un transpondeur n&rsquo;apparaît donc qu&rsquo;une fois si le Go émet l&rsquo;adresse OACI du transpondeur. Le réglage d&rsquo;adresse de l&rsquo;aéronef lui fait utiliser cette adresse. Le Go ne devine pas que des identités différentes désignent le même aéronef.</p>
+  <p class="lede">Le Go filtre sa propre identité radio et l&rsquo;adresse OACI configurée pour l&rsquo;aéronef qui le transporte. Ainsi, une station sol qui relaie sa position ou un Bravo qui reçoit son propre transpondeur ne crée pas de cible. Le réglage d&rsquo;une adresse d&rsquo;aéronef retire du radar toute cible portant cette identité dès le cycle de traitement suivant.</p>
+  <p class="lede">La table de trafic n&rsquo;applique pas de distance de coupure choisie pour l&rsquo;ADS-B, mais les contrôles de décodage et de vraisemblance restent actifs. Elle refuse une position au-delà de 1115&nbsp;km comme un mauvais décodage, d&rsquo;après l&rsquo;horizon radio entre deux aéronefs au FL600. Quand ses 48 places sont occupées, elle retire d&rsquo;abord les aéronefs au sol, puis les plus éloignés. Elle ne retire jamais une cible sous alarme pour faire de la place. La tablette reçoit jusqu&rsquo;à 10 aéronefs par seconde, à tour de rôle dans la table.</p>
+
+  <h3 id="dismiss">Un toucher fait taire les aéronefs signalés.</h3>
+  <p class="lede">Gardez le doigt une seconde sur le pavé pour acquitter le trafic que vous avez en vue. Le son, le secteur noir et le voyant s&rsquo;arrêtent pour tous les aéronefs déjà signalés. Ceux que le Go n&rsquo;a pas encore annoncés ne sont pas concernés. Chaque symbole en avis reste plein. L&rsquo;acquittement change ce que le Go vous signale, pas son évaluation de l&rsquo;aéronef.</p>
+  <p class="lede">Un aéronef qui quitte l&rsquo;anneau d&rsquo;avis pendant 2&nbsp;s puis revient est signalé à nouveau. Lorsque l&rsquo;un des deux aéronefs est au sol, ce délai de réarmement passe à une minute. Un posé-décollé ne provoque donc pas la même annonce à chaque tour de piste. L&rsquo;acquittement n&rsquo;expire pas au bout d&rsquo;une durée qui ferait sonner à nouveau pour le trafic que vous surveillez encore. Un avis est annoncé une fois et ne se répète pas tant qu&rsquo;il reste actif.</p>
+
+  <h3 id="formation">Les aéronefs qui volent avec vous sont dessinés, pas signalés.</h3>
+  <p class="lede">Une patrouille, un remorqueur et son planeur, des amis sur un circuit ou des planeurs dans le même thermique peuvent garder une position relative stable. Le Go ne connaît pas leur intention. Il cherche cette géométrie parmi les aéronefs à moins de 1000&nbsp;m horizontalement et de 100&nbsp;m verticalement. Un aéronef qui garde sa place par rapport à vous dans les virages, à 60&nbsp;m près horizontalement, pendant 6&nbsp;s peut être reconnu comme volant avec vous. Il doit aussi garder sa hauteur relative. Deux aéronefs qui spiralent ensemble peuvent remplir les mêmes conditions qu&rsquo;une patrouille.</p>
+  <p class="lede">La référence est la première position de l&rsquo;aéronef par rapport à vous, pas votre propre position. Un aéronef aperçu à 40&nbsp;m d&rsquo;une aile qui passe à 40&nbsp;m de l&rsquo;autre s&rsquo;est déplacé de 80&nbsp;m. Il n&rsquo;a pas tenu sa place.</p>
+  <p class="lede">L&rsquo;entrée en formation ne déclenche aucune annonce. Un carré se referme autour de votre symbole. Le nombre dans chaque quart indique les aéronefs qui volent avec vous dans cette direction. Ils n&rsquo;ont plus de symbole distinct sur le radar, mais restent chacun dans la liste des aéronefs proches. Trois règles encadrent ce silence&nbsp;:</p>
+  <ul class="points">
+    <li>Un aéronef qui se rapproche à 3&nbsp;m/s ou plus sur deux messages consécutifs perd le silence de formation et redevient du trafic à évaluer</li>
+    <li>Un aéronef qui quitte la formation reste silencieux pendant qu&rsquo;il s&rsquo;éloigne, parce qu&rsquo;une séparation peut ressembler à un rapprochement pour l&rsquo;alarme</li>
+    <li>La reconnaissance de formation ne s&rsquo;applique que si les deux aéronefs sont en vol. L&rsquo;atterrissage l&rsquo;efface</li>
+  </ul>
+  <p class="lede">Un aéronef reçu pour la première fois à portée de formation dans les 6&nbsp;s suivant le décollage de l&rsquo;un ou de l&rsquo;autre commence comme candidat silencieux. Une paire, ou un remorqueur et son planeur, peuvent ainsi décoller ensemble sans avis pendant que la formation s&rsquo;établit. Il en devient membre après 6&nbsp;s à tenir sa place. Un seul message hors de cette position en fait du trafic ordinaire. Un rapprochement confirmé met aussi fin au silence.</p>
+  <p class="lede">Le rapprochement lent reste une limite de ce choix. Un membre qui revient vers vous à moins de 3&nbsp;m/s reste silencieux. Combler un écart de 30&nbsp;m prend alors plus de 10&nbsp;s. Les aéronefs auront tenu leur position pendant au moins 6&nbsp;s, mais cela ne dit pas au Go si les pilotes se sont vus. La règle évite une alarme pendant tout le vol en formation. Elle ne prévient pas de chaque réduction progressive de la séparation.</p>
+
+  <h3 id="names">Les noms sont gardés à part des positions.</h3>
+  <p class="lede">Une position expire après six messages manqués. Un nom arrive au mieux toutes les 10&nbsp;s et ne change pas en vol. Le Go conserve donc les noms à part pendant 10&nbsp;minutes. Une cible qui disparaît puis revient peut ainsi retrouver son nom dès son retour. Seuls les messages d&rsquo;indicatif ADS-L fournissent ces noms. FLARM n&rsquo;en diffuse pas&nbsp;: une cible reçue uniquement par FLARM apparaît sous son adresse hexadécimale.</p>
+
+  <ul class="points">
+    <li>Le Go utilise un seul anneau d&rsquo;avis&nbsp;: 3&nbsp;km horizontalement et 300&nbsp;m verticalement</li>
+    <li>Il ne donne aucun avis pour les aéronefs au sol, ni quand votre propre aéronef est au sol</li>
+    <li>Il supprime une cible après six messages attendus sans réception</li>
+    <li>Il préfère la réception directe à l&rsquo;ADS-B, puis l&rsquo;ADS-B au relais d&rsquo;une station sol</li>
+    <li>Un contact prolongé fait taire les aéronefs déjà signalés, pas ceux qui arriveront ensuite</li>
+    <li>Il garde les membres d&rsquo;une formation silencieux, mais un rapprochement confirmé met fin à ce silence</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

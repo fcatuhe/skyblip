@@ -1,0 +1,83 @@
+---
+title: "How skyBlip Go judges traffic"
+nav_title: Traffic
+description: "How skyBlip Go decides which aircraft to warn about: one 3 km and 300 m ring, rules on the ground, how long a target is held, and aircraft flying with you."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>One ring, and the aircraft flying with you left out.</h1>
+  <p class="lede">skyBlip Go uses the aircraft positions it receives to decide when to warn you. It keeps each position for a limited time, chooses between reports of the same aircraft, and recognises aircraft flying with you. <%= link_to_page "radar", label: "The radar guide" %> shows what you see. This page explains those decisions.</p>
+</section>
+
+<section>
+  <h3 id="ring">One advisory ring.</h3>
+  <p class="lede">An aircraft within 3&nbsp;km horizontally and 300&nbsp;m above or below you qualifies for a traffic advisory. Outside those limits, it can appear on the radar without an advisory. There is no higher alert level.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Limit</th><th>Value</th><th>Where it comes from</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Horizontal</th><td>3000&nbsp;m</td><td>chosen for the Go. At 240&nbsp;kt of head-on closure, this gives 24&nbsp;s, in the low-altitude traffic-advisory time band used by TCAS&nbsp;II. The distance is twice FLARM&rsquo;s advisory distance</td></tr>
+        <tr><th>Vertical</th><td>300&nbsp;m</td><td>the same vertical limit as FLARM&rsquo;s traffic advisory</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">A traffic advisory tells you where to look, never to climb or descend. TCAS can also issue a resolution advisory: an instruction coordinated with the other aircraft. The Go has no link for that coordination, so it gives traffic advisories only.</p>
+  <p class="lede">The Go previously predicted conflicts. That meant choosing a protected volume around each aircraft, allowing for uncertainty as the prediction looked further ahead, and deciding how far ahead to look. Those choices determined whether you heard about an aircraft a kilometre away. The ring uses its reported position instead. Aircraft circling together, one reason for using prediction, are handled by the <a href="#formation">formation</a> rules below.</p>
+  <p class="lede">If an aircraft sends no altitude, the Go does not assume it is level with you. Its height is unknown. Within 3&nbsp;km, it qualifies for an advisory because it may be at your level. The screens show no height difference when none is known.</p>
+
+  <h3 id="ground">No advisories on the ground.</h3>
+  <p class="lede">An aircraft reporting itself on the ground remains on the radar and in the list, with its name if available, but never triggers an advisory. Otherwise, a 3&nbsp;km ring around an airfield would include aircraft on the apron. The same rule applies to your own aircraft: while your Go is on the ground, it issues no traffic advisories. This stops a unit at the holding point announcing every aircraft in a busy circuit. FLARM also disables its warnings while its own aircraft taxis or stands on the ground.</p>
+  <p class="lede">At liftoff, eligible airborne aircraft inside the ring become advisories together. The Go plays one alert for them, not one per aircraft. The formation rules below can keep aircraft lifting off with you quiet. <%= link_to_page "gps", label: "The GPS guide", anchor: "flight" %> explains how the Go decides that it is flying.</p>
+
+  <h3 id="held">Six missed reports, and a target is gone.</h3>
+  <p class="lede">Each aircraft position the Go keeps is a target. It drops that target after six expected reports have gone missing, using the reporting interval for its flight state. The airborne interval is a second, so the target disappears after 6&nbsp;s. The ground interval is 10&nbsp;s, so it disappears after 60&nbsp;s.</p>
+  <p class="lede">The radar keeps a target at its last reported position. Its possible displacement by the time it disappears depends on its speed: 6&nbsp;s at 60&nbsp;m/s is 360&nbsp;m. On the ground, 60&nbsp;s at 5 to 8&nbsp;m/s is 300 to 480&nbsp;m. The same six missed reports allow roughly the same displacement in either case. At 1&nbsp;Hz, the hold separates a brief reception gap from a lost link. Even with half the bursts lost, the chance of six consecutive misses is about 1.5&nbsp;%.</p>
+  <p class="lede">The alarm uses a separate freshness limit: it assesses only positions less than 5&nbsp;s old. At 100&nbsp;m/s of closure, that much time already represents 500&nbsp;m of uncertainty. Both ages start when the report was heard, not when it reached the Go. A report forwarded by a paired Bravo therefore does not become fresh again on arrival.</p>
+
+  <h3 id="sources">Whichever system heard it.</h3>
+  <p class="lede">A Go receives ADS-L and FLARM radio reports directly. It receives ADS-B reports through a paired <%= link_to_page "skyblip-bravo", label: "Bravo" %> receiver, and can receive traffic relayed by a ground station. Each source supplies the same flight state: airborne, on the ground or unknown. The rules use that state regardless of the source. Unknown is treated as airborne.</p>
+  <p class="lede">When the Go receives several copies of the same aircraft, it prefers direct ADS-L or FLARM reception, then ADS-B, then a ground-station relay. A lower-ranked copy takes over only after the preferred copy has become too old. ADS-B ranks below direct reception because it sends individual fields in separate messages, each with its own age. ADS-L and FLARM carry them together in a burst.</p>
+  <p class="lede">Reports merge only if they have the same address and the same address table, which identifies the addressing system. An aircraft carrying both a Go and a transponder therefore appears once only if the Go transmits the transponder&rsquo;s ICAO address. Setting the aircraft address makes it do that. The Go does not guess that different identities belong to the same aircraft.</p>
+  <p class="lede">The Go filters out its own radio identity and the configured ICAO address of the aircraft carrying it. This prevents a ground station relaying its own position back, or a Bravo receiving its own transponder, from creating a target. Setting the aircraft address removes any target with that identity from the radar on the next processing pass.</p>
+  <p class="lede">The traffic table does not apply a chosen distance cutoff to ADS-B, but decoding and plausibility checks still apply. It rejects a position beyond 1115&nbsp;km as a bad decode, using the radio horizon between two aircraft at FL600. When its 48 slots are full, it removes ground aircraft first, then the farthest aircraft. It never removes a target under an alarm to make room. The tablet receives up to 10 aircraft a second, taking turns through the table.</p>
+
+  <h3 id="dismiss">One touch silences the aircraft you were told about.</h3>
+  <p class="lede">Touch the pad for a second to acknowledge traffic you have in sight. This stops the tone, black sector and lamp for every aircraft already announced, but does not silence aircraft the Go has not yet announced. Each advisory symbol stays filled. Acknowledging the alert changes what the Go tells you, not its assessment of the aircraft.</p>
+  <p class="lede">An aircraft that leaves the advisory ring for 2&nbsp;s and returns is announced again. While either aircraft is on the ground, that reset takes a minute instead, so a touch-and-go does not trigger the same announcement on every circuit. Acknowledgement has no expiry timer that would sound again about traffic you are still watching. An advisory is announced once and does not repeat while it remains active.</p>
+
+  <h3 id="formation">Aircraft flying with you are drawn, not announced.</h3>
+  <p class="lede">A patrol, a tug and glider, friends flying a task or gliders sharing a thermal can all hold position relative to one another. The Go cannot know their intent, so it looks for that geometry. It watches aircraft within 1000&nbsp;m horizontally and 100&nbsp;m vertically. An aircraft that holds its relative position as you turn, within 60&nbsp;m horizontally, for 6&nbsp;s can be recognised as flying with you. It must also hold its relative height. Circling together can meet the same test as a patrol.</p>
+  <p class="lede">The reference is the aircraft&rsquo;s first position relative to you, not your own position. An aircraft first seen 40&nbsp;m off one wing that moves to 40&nbsp;m off the other has shifted 80&nbsp;m. It has not held its place.</p>
+  <p class="lede">Joining the formation makes no announcement. A square closes around your own symbol, with a count in each quarter for the aircraft flying with you in that direction. Those aircraft no longer have separate radar symbols, but each remains in the nearby list. Three rules govern the silence:</p>
+  <ul class="points">
+    <li>An aircraft closing at 3&nbsp;m/s or more on two consecutive reports loses formation silence and is assessed like other traffic</li>
+    <li>An aircraft leaving the formation stays quiet as it moves away, because a break can look like a closure to the alarm</li>
+    <li>Formation recognition applies only while both aircraft are airborne. Landing clears it</li>
+  </ul>
+  <p class="lede">An aircraft first seen within formation range during the 6&nbsp;s after either aircraft lifts off starts as a silent candidate. This lets a pair, or a tug and glider, take off together without an advisory while they establish formation. It becomes a member after 6&nbsp;s holding position. A single report outside that position makes it ordinary traffic. Confirmed closure also ends the silence.</p>
+  <p class="lede">Slow convergence remains a limit of this design. A formation member moving towards you at less than 3&nbsp;m/s stays silent. Closing a 30&nbsp;m gap then takes more than 10&nbsp;s. The aircraft will have held position for at least 6&nbsp;s, but that does not tell the Go whether either pilot has seen the other. The rule avoids an alarm throughout a formation flight. It does not warn about every gradual loss of separation.</p>
+
+  <h3 id="names">Names are kept apart from positions.</h3>
+  <p class="lede">A position expires after six missed reports. A name arrives at best every 10&nbsp;s and does not change in flight. The Go therefore keeps names separately for 10&nbsp;minutes, so a target that disappears and returns can have its name shown at once. Only ADS-L callsign records supply these names. FLARM broadcasts no name, so a target received only through FLARM is shown by its hexadecimal address.</p>
+
+  <ul class="points">
+    <li>The Go uses one advisory ring: 3&nbsp;km horizontally and 300&nbsp;m vertically</li>
+    <li>It issues no advisories for ground aircraft or while your own aircraft is on the ground</li>
+    <li>It drops a target after six expected reports are missed</li>
+    <li>It prefers direct reception over ADS-B, and ADS-B over a ground-station relay</li>
+    <li>A long touch silences aircraft already announced, not future arrivals</li>
+    <li>It keeps formation members quiet, but confirmed closure ends that silence</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

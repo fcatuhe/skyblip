@@ -5,7 +5,7 @@ slug: radio
 description: "Comment skyBlip Go émet en ADS-L et reçoit l'ADS-L et le FLARM sur 868 MHz. Canaux, fenêtres GPS et écoute des futures stations sol."
 parent: guides
 share_image: radar
-updated_on: "2026-11-14"
+updated_on: "2026-11-18"
 ---
 
 <section>
@@ -82,6 +82,8 @@ updated_on: "2026-11-14"
     recalculé chaque seconde pour limiter les chevauchements répétés.
     Avant chaque émission, il écoute le canal et, si celui-ci est occupé,
     attend puis écoute à nouveau dans la même plage.
+    <%= link_to_page "timing", label: "Le guide de la cadence" %> dit quelles
+    secondes et quels instants chaque appareil utilise.
   </p>
 
   <ul class="points">
