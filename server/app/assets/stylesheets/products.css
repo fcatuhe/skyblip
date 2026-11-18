@@ -22,11 +22,10 @@
   }
 
   .photo-row {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
     align-items: end;
-    justify-items: center;
-    gap: var(--space-inline-m);
+    justify-content: center;
+    gap: var(--space-inline-2xl);
     margin-block: var(--space-xl) 0;
     padding: var(--space-xl) var(--space-inline-m);
     background: var(--card-bg);
@@ -34,13 +33,16 @@
   }
 
   .photo-row img {
-    block-size: calc(clamp(8rem, 24vw, 14rem) * var(--photo-scale, 1));
+    block-size: calc(clamp(6rem, 28vw, 12rem) * var(--photo-scale, 1));
     inline-size: auto;
     mix-blend-mode: multiply;
   }
 
   /* INFO: fc 11nov26 the X1 photo's height in Go photos, measured off the X1's 90 mm edge and the T-Echo's 54 mm face */
   .photo-x1 { --photo-scale: 0.57; }
+
+  /* INFO: fc 18nov26 the Go+ photo's height in Go photos, measured off the radar circle both screens draw */
+  .photo-go-plus { --photo-scale: 1.77; }
 
   .hero-figure figcaption,
   .pair-caption {
