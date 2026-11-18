@@ -1,0 +1,61 @@
+<% compact = local_assigns.fetch(:compact, false) %>
+<% left = compact ? 18 : 30 %>
+<% scale = compact ? 17.6 : 26 %>
+<% x = ->(speed) { (left + speed * scale).round(1) } %>
+<% top = compact ? 34 : 60 %>
+<% bottom = compact ? 94 : 140 %>
+<% axis_y = compact ? 118 : 200 %>
+<figure class="diagram <%= compact ? "diagram--compact" : "diagram--wide" %>">
+  <svg viewBox="0 0 <%= compact ? "280 140" : "420 240" %>" role="img" aria-labelledby="flight-state-title flight-state-description">
+    <title id="flight-state-title"><%= t "flight_state.title" %></title>
+    <desc id="flight-state-description"><%= t "flight_state.description" %></desc>
+    <defs>
+      <marker id="flight-state-head" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto">
+        <path class="diagram-head diagram-head--change" d="M0,1 L10,5 L0,9 z"/>
+      </marker>
+    </defs>
+
+    <%= tag.rect class: "diagram-hold", x: x.(1), y: top, width: (x.(12) - x.(1)).round(1), height: bottom - top %>
+    <% unless compact %>
+      <text class="diagram-note diagram-note--hold" x="<%= x.(4.5) %>" y="<%= (top + bottom) / 2 - 2 %>"><%= t "flight_state.between" %></text>
+      <text class="diagram-note diagram-note--hold" x="<%= x.(4.5) %>" y="<%= (top + bottom) / 2 + 12 %>"><%= t "flight_state.holds" %></text>
+    <% end %>
+
+    <line class="diagram-state" x1="<%= x.(1) %>" y1="<%= top %>" x2="<%= x.(14) %>" y2="<%= top %>"/>
+    <line class="diagram-state" x1="<%= x.(0) %>" y1="<%= bottom %>" x2="<%= x.(12) %>" y2="<%= bottom %>"/>
+    <text class="diagram-label diagram-label--end" x="<%= x.(14) %>" y="<%= top - 8 %>"><%= t "flight_state.airborne" %></text>
+    <text class="diagram-label diagram-label--start" x="<%= x.(0) %>" y="<%= bottom + 18 %>"><%= t "flight_state.ground" %></text>
+
+    <line class="diagram-change" x1="<%= x.(12) %>" y1="<%= bottom - 2 %>" x2="<%= x.(12) %>" y2="<%= top + 3 %>" marker-end="url(#flight-state-head)"/>
+    <line class="diagram-change" x1="<%= x.(1) %>" y1="<%= top + 2 %>" x2="<%= x.(1) %>" y2="<%= bottom - 3 %>" marker-end="url(#flight-state-head)"/>
+    <line class="diagram-change diagram-change--held" x1="<%= x.(8) %>" y1="<%= top + 2 %>" x2="<%= x.(8) %>" y2="<%= bottom - 3 %>" marker-end="url(#flight-state-head)"/>
+
+    <% if compact %>
+      <text class="diagram-note diagram-note--start" x="<%= x.(8) + 5 %>" y="<%= (top + bottom) / 2 + 4 %>"><%= t "flight_state.hold" %></text>
+    <% else %>
+      <text class="diagram-note diagram-note--start diagram-note--strong" x="<%= x.(1) - 4 %>" y="<%= top - 22 %>"><%= t "flight_state.landing" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(1) - 4 %>" y="<%= top - 8 %>"><%= t "flight_state.stop" %></text>
+      <text class="diagram-note diagram-note--strong" x="<%= x.(8) %>" y="<%= top - 22 %>"><%= t "flight_state.landing" %></text>
+      <text class="diagram-note" x="<%= x.(8) %>" y="<%= top - 8 %>"><%= t "flight_state.slow" %></text>
+      <text class="diagram-note diagram-note--strong" x="<%= x.(12) %>" y="<%= bottom + 18 %>"><%= t "flight_state.takeoff" %></text>
+      <text class="diagram-note" x="<%= x.(12) %>" y="<%= bottom + 32 %>"><%= t "flight_state.fast" %></text>
+
+      <line class="diagram-axis" x1="<%= x.(1.5) %>" y1="<%= bottom - 4 %>" x2="<%= x.(1.5) %>" y2="<%= bottom + 4 %>"/>
+      <text class="diagram-screen diagram-screen--end" x="<%= x.(1.5) - 6 %>" y="<%= bottom + 36 %>">GROUND</text>
+      <text class="diagram-screen diagram-screen--start" x="<%= x.(1.5) + 6 %>" y="<%= bottom + 36 %>">TAXI</text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(1.5) + 48 %>" y="<%= bottom + 36 %>"><%= t "flight_state.taxi" %></text>
+    <% end %>
+
+    <line class="diagram-axis" x1="<%= x.(0) %>" y1="<%= axis_y %>" x2="<%= x.(14) %>" y2="<%= axis_y %>"/>
+    <% (0..14).each do |speed| %>
+      <line class="diagram-axis" x1="<%= x.(speed) %>" y1="<%= axis_y %>" x2="<%= x.(speed) %>" y2="<%= axis_y + ([ 0, 1, 8, 12 ].include?(speed) ? 6 : 3) %>"/>
+    <% end %>
+    <% [ 0, 1, 8, 12 ].each do |speed| %>
+      <text class="diagram-note" x="<%= x.(speed) %>" y="<%= axis_y + 18 %>"><%= speed %></text>
+    <% end %>
+    <text class="diagram-note diagram-note--end" x="<%= x.(14) %>" y="<%= axis_y + 18 %>">m/s</text>
+    <% unless compact %>
+      <text class="diagram-note diagram-note--start" x="<%= x.(0) %>" y="<%= axis_y + 34 %>"><%= t "flight_state.speed" %></text>
+    <% end %>
+  </svg>
+</figure>

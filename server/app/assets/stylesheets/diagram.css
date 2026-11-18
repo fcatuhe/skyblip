@@ -32,4 +32,51 @@
   .diagram-head--receive { fill: var(--sky-deep); }
   .diagram-head--transmit { fill: var(--blip-text); }
   .diagram-head--link { fill: var(--ink-muted); }
+
+  .diagram--wide svg { inline-size: min(35rem, 100%); }
+  .diagram--compact svg { inline-size: 100%; }
+  .guide-cards .diagram { margin-block-end: var(--space-m); }
+
+  .diagram .diagram-label--start { text-anchor: start; }
+  .diagram .diagram-label--end { text-anchor: end; }
+  .diagram .diagram-note--transmit { fill: var(--blip-text); font-weight: 700; }
+  .diagram .diagram-note--strong { font-weight: 700; fill: var(--ink); }
+  .diagram .diagram-note--hold { fill: var(--sky-deep); }
+  .diagram .diagram-letter { font-size: var(--text-s); font-weight: 700; fill: var(--sky-deep); }
+  .diagram .diagram-letter--quiet { fill: var(--quiet-text); }
+  .diagram .diagram-letter--end { text-anchor: end; }
+  .diagram .diagram-letter--small { font-size: var(--text-xs); }
+  .diagram .diagram-screen { font-family: var(--font-mono); font-size: var(--text-xs); fill: var(--ink); }
+  .diagram .diagram-screen--start { text-anchor: start; }
+  .diagram .diagram-screen--end { text-anchor: end; }
+
+  .diagram-axis { stroke: var(--ink-muted); stroke-width: 1; }
+  .diagram-flag { stroke: var(--sky); stroke-width: 1; }
+  .diagram-rule { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .diagram-dimension { stroke: var(--sky-deep); stroke-width: 1; stroke-dasharray: 3 2; }
+
+  .diagram-window { fill: var(--sky-soft); stroke: var(--sky-deep); stroke-width: 1.5; }
+  .diagram-window--quiet { fill: none; stroke: var(--sky); stroke-dasharray: 4 3; }
+  .diagram-burst { fill: var(--blip); }
+
+  .diagram-lane { fill: var(--sky-soft); }
+  .diagram-lane-split { stroke: var(--sky); stroke-width: 1; }
+  .diagram-second { stroke: var(--card-bg); stroke-width: 1.5; }
+  .diagram-position,
+  .diagram-status,
+  .diagram-callsign { fill: var(--blip-text); }
+  .diagram .diagram-added { fill: var(--blip-soft); stroke: var(--blip-text); stroke-width: 1.25; }
+
+  .diagram-hold { fill: var(--sky-soft); }
+  .diagram-state { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; }
+  .diagram-change { stroke: var(--ink-soft); stroke-width: 1.5; }
+  .diagram-change--held { stroke-dasharray: 4 3; }
+  .diagram-head--change { fill: var(--ink-soft); }
+
+  .diagram-ring { fill: var(--sky-soft); stroke: var(--sky-deep); stroke-width: 1.5; }
+  .diagram-ground { fill: var(--card-border); }
+  .diagram-ground-line { stroke: var(--ink-muted); stroke-width: 1.5; }
+  .diagram-own { fill: var(--ink); }
+  .diagram-traffic { fill: var(--blip); stroke: var(--blip-text); stroke-width: 1; }
+  .diagram .diagram-traffic--quiet { fill: var(--card-bg); stroke: var(--sky-deep); stroke-width: 1.5; }
 }
