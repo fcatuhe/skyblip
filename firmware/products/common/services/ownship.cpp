@@ -138,6 +138,7 @@ void OwnshipService::apply_second(uint32_t now_ms) {
     first_fix_.observe(convergence_of(own), now_ms);
     own.tx_settled = first_fix_.settled(now_ms);
     second_ = own;
+    context_.state.own_second = own;
 }
 
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {

@@ -111,3 +111,19 @@ TEST_CASE("product: the flight state is decided on whole seconds, as it was at 1
             solve(rig, second, quarter, kFlyingMmS, updates);
     CHECK(flight::airborne(rig.state().own.flight_state));
 }
+
+// The flight log and the EFB's GPRMC read own-ship as its whole second left it, dated by it.
+TEST_CASE("product: own-ship's whole second stands while the quarters after it move") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    solve(rig, 2, 0, 0, updates);
+    const int32_t whole_latitude_1e7 = rig.state().own.latitude_1e7;
+    solve(rig, 2, 1, 0, updates);
+    solve(rig, 2, 2, 0, updates);
+
+    CHECK(rig.state().own.latitude_1e7 != whole_latitude_1e7);
+    CHECK(rig.state().own_second.latitude_1e7 == whole_latitude_1e7);
+    CHECK(rig.state().own_second.utc_s == kBaseUtcS + 2);
+    CHECK(rig.state().own_second.utc_ms == 0);
+}

@@ -208,6 +208,8 @@ struct CaptureState {
 
 struct State {
     model::Ownship own{};
+    // INFO: fc 18nov26 own-ship at its last whole second, which the flight log and the EFB read
+    model::Ownship own_second{};
     timing::ClockState clock{};
     traffic::TrafficTable traffic{};
     traffic::CallsignTable callsigns{};
