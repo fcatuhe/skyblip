@@ -211,6 +211,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_button "Connect it over Bluetooth"
       assert_current_path "/briefing/devices/go-00012a"
+      assert_selector ".fleet-unit", text: /is out|up to date|needs its firmware/, wait: 15
     end
   end
 
