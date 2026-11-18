@@ -1,6 +1,6 @@
 # ADS-L questions for EASA
 
-The readings of ADS-L 4 SRD-860 Issue 2 that skyBlip's ADS-L 1.0.0 rests on and that the text does not settle. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions).
+The readings of ADS-L 4 SRD-860 Issue 2 that skyBlip's ADS-L 1.0.0 rests on and that the text does not settle. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
 
 | # | Clause | Status |
 |---|---|---|
@@ -21,7 +21,7 @@ G.1.2 says "The 'Undefined' value shall be used if no reasonable decision is pos
 
 ## 3. C.5 and F.2.1: payload 66 outside the direct slot
 
-C.5 gives aircraft the direct slot, 450 to 1000 ms of each UTC second, and says the rest "is reserved for future extensions and shall not be used for any ADS-L transmissions". F.2.1 lists payload 66 as "OGN Diagnostics" and puts its definition "outside the scope of this document". The Go sends its callsign in OGN's payload 66 registration record, on ADS-L's frame, from 0 to 200 ms of the second after its slot (`firmware/protocols/adsl_edge/README.md`). We read a payload whose definition the specification leaves out as not being an ADS-L transmission in C.5's sense. We ask whether that holds, or whether payload 66 belongs in the direct slot.
+C.5 gives aircraft the direct slot, 450 to 1000 ms of each UTC second, and says the rest "is reserved for future extensions and shall not be used for any ADS-L transmissions". F.2.1 lists payload 66 as "OGN Diagnostics" and puts its definition "outside the scope of this document". The Go sends its callsign in OGN's payload 66 registration record, on ADS-L's frame, from 0 to 200 ms of the second after its slot (`firmware/protocols/adsl_edge/README.md`). We read a payload whose definition the specification leaves out as not being an ADS-L transmission in C.5's sense. We ask whether that holds, or whether payload 66 belongs in the direct slot. The name lives in `firmware/protocols/adsl_edge/` and `firmware/core/timing/`, outside the ADS-L stack and its frozen suite, so a different answer changes those and not the ADS-L version.
 
 ## 4. G.1.1 and G.1.16: the age of the navigation data
 

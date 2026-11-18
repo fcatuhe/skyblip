@@ -37,6 +37,29 @@ constexpr bool known_length(uint8_t data_bytes) {
     return data_bytes == Packet::kDataBytes || data_bytes == Packet::kStatusDataBytes;
 }
 
+uint8_t nearer_length(uint8_t length_heard) {
+    const int to_status = __builtin_popcount(length_heard ^ Packet::kStatusDataBytes);
+    const int to_traffic = __builtin_popcount(length_heard ^ Packet::kDataBytes);
+    return to_status < to_traffic ? Packet::kStatusDataBytes : Packet::kDataBytes;
+}
+
+// INFO: fc 18nov26 past a 16-byte burst no transmitter is heard, so most of those chips are marked
+bool heard_to_full_length(const uint8_t* erasures) {
+    int marked = 0;
+    for (int i = Packet::kStatusDataBytes; i < Packet::kDataBytes; i++)
+        marked += __builtin_popcount(erasures[i]);
+    return marked <= kMostErasures;
+}
+
+wire::Status receive_at(const uint8_t* frame, const uint8_t* erasures, uint8_t data_bytes,
+                        Packet& out) {
+    if (data_bytes == Packet::kDataBytes && !heard_to_full_length(erasures)) {
+        out.reset();
+        return wire::Status::Crc;
+    }
+    return receive(frame, erasures, out, data_bytes);
+}
+
 uint32_t steps_of(int32_t degrees_1e7, int64_t steps_per_degree) {
     const int64_t steps = divide_rounded<int64_t>(degrees_1e7 * steps_per_degree, kE7PerDegree);
     return static_cast<uint32_t>(steps) & 0xFFFFFFu;
@@ -137,6 +160,16 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
     else if (out.key_index() != Packet::kKeyClear)
         return wire::Status::Unsupported;
     return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
+}
+
+wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
+                              Packet& out) {
+    const uint8_t first = nearer_length(length_heard);
+    const wire::Status heard = receive_at(frame, erasures, first, out);
+    if (heard != wire::Status::Crc) return heard;
+    const uint8_t other =
+        first == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;
+    return receive_at(frame, erasures, other, out);
 }
 
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".

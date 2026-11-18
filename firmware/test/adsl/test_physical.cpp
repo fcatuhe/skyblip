@@ -33,7 +33,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2: the transmitter stays under the M band's 14 dBm e
 // The Go holds the channel busy at a burst's instant and measures the wait to its next burst.
 TEST_CASE("ADS-L.4.SRD860.C.2: a busy burst backs off 15 to 250 ms, and stays in the direct slot") {
     const int8_t held_dbm[1] = {-50};
-    for (const uint32_t held_after_ms : {2000u, 2370u, 3150u, 4730u, 6290u}) {
+    for (const uint32_t held_after_ms :
+         {2000u, 2370u, 3150u, 4730u, 6290u, 7110u, 8520u, 9940u, 11380u, 12650u}) {
         CAPTURE(held_after_ms);
         simulator::Simulator simulator;
         REQUIRE(simulator.setup() == Status::Ok);

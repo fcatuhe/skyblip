@@ -143,6 +143,14 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and g
         }
         return sent;
     };
+    for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
+        CAPTURE(int(hovers));
+        model::Ownship parked = flying();
+        parked.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+        adsl::Packet packet{};
+        REQUIRE(protocol::from_own(packet, parked, 0x123456, 6, hovers));
+        CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Unknown));
+    }
     uint8_t paraglider_state = 3;
     CHECK(flown(7, paraglider_state) >= 14);
     CHECK(paraglider_state == static_cast<uint8_t>(flight::FlightState::Unknown));

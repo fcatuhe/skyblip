@@ -31,13 +31,13 @@ These are skyBlip's choices, built on this stack:
 
 ## What the receiver refuses
 
-The stack reads what Issue 2 defines and nothing looser, so another sender is heard only when it follows the specification too. `receive()` refuses a frame no repair fits, a header naming the FEC on a CRC frame, a version above 1, key 1 or 2, and a packet whose length is not its payload type's. `Uplink::decode()` refuses a length no whole number of records spells, a header without the FEC, a version above 1, key 1 or 2, and a payload that is not type 4. `uplink_record_current()` refuses a timestamp of 60 to 63. Issue 1's codes are read as Issue 1 defines them, because B.5 asks a client to read every version up to its own.
+The stack reads what Issue 2 defines and nothing looser, so another sender is heard only when it follows the specification too. `receive()` refuses a frame no repair fits, a header naming the FEC on a CRC frame, a version above 1, key 1 or 2, and a packet whose length is not its payload type's. `receive_as_heard()` answers for one length, never for both. `Uplink::decode()` refuses a length no whole number of records spells, a header without the FEC, a version above 1, key 1 or 2, and a payload that is not type 4. `uplink_record_current()` refuses a timestamp of 60 to 63. Issue 1's codes are read as Issue 1 defines them, because B.5 asks a client to read every version up to its own.
 
 ## What is not implemented
 
 Each clause this directory does not meet is a skipped case in the conformance suite, written as the clause requires, and the message says which kind of gap it is (`firmware/test/adsl/README.md`). `build/skyblip_tests --no-skip --test-case="ADS-L*"` prints them.
 
-Every mandatory clause is met as we read it. Where the text does not settle a reading, `docs/ADSL_EASA_QUESTIONS.md` puts it to EASA and a case in the suite pins what the Go does. §F.2.3 was the last clause met: a configured ICAO address goes on air under table 5, for every payload the unit sends, and the Go refuses the configurations it can know to be inconsistent (`core/settings/README.md`, The ICAO address). That every payload changes table, and none stays on the manufacturer's page, is our reading of "thereby overriding the address given by the manufacturer", and EASA is being asked to confirm it. Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
+Every mandatory clause is met as we read it. Where the text does not settle a reading, `docs/ADSL_EASA_QUESTIONS.md` puts it to EASA, and a frozen case pins what the Go does, but for payload 66, which `protocols/adsl_edge/` and its own cases hold. §F.2.3 was the last clause met: a configured ICAO address goes on air under table 5, for every payload the unit sends, and the Go refuses the configurations it can know to be inconsistent (`core/settings/README.md`, The ICAO address). That every payload changes table, and none stays on the manufacturer's page, is our reading of "thereby overriding the address given by the manufacturer", and EASA is being asked to confirm it. Remote Identification (G.5) is prose: it reserves a payload for drones and leaves its format to a later issue.
 
 The rest are optional, and this device does not take them:
 
@@ -57,7 +57,7 @@ Nothing in this directory names skyBlip, and nothing in it picks an address tabl
 Everything is in namespace `skyblip::adsl`.
 
 - `kAddressTableRandom` to `kAddressTableManufacturerLast`, `manufacturer_page_table()`, `kEmergencyNone`, `kUereCm`, `hfom_cm()`
-- `Packet` with `reset()`, the field accessors, `key_index()`, `scramble()`, `descramble()`, `set_crc()`, `crc_ok()` and `correct()`, the free `receive()`, and `kSyncWord`, `kFrameBytes`
+- `Packet` with `reset()`, the field accessors, `key_index()`, `data_bytes()`, `kStatusDataBytes`, `scramble()`, `descramble()`, `set_crc()`, `crc_ok()` and `correct()`, the free `receive()` and `receive_as_heard()`, and `kSyncWord`, `sync_word()`, `kFrameBytes`
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
 - `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
@@ -87,7 +87,7 @@ What the stack leaves to the integrator: the CCA interval, the dead time, the th
 
 `encode_status()` writes §G.2's payload type 3: what a device can hear and process, so a peer or a ground station can plan around it. Its network header says protocol version 1, because the Status payload first appears in Issue 2 (below). `receive_class()` turns a share of the direct slot heard into §G.2.2's classes: more than 5% is Occasional, more than 40% Partial and more than 80% Full. What skyBlip declares in each field, and why, is in `core/protocol/README.md`.
 
-The payload is 12 bytes, header included, so the packet is 16 bytes with the network header and the CRC, and its §D.1.1 length byte says 16 (`Packet::kStatusDataBytes`, `data_bytes()`). `scramble()`, `set_crc()` and `receive()` take the length, so three words are scrambled and the CRC follows them, and `sync_word()` puts the length behind §C.2.4's sync word. `receive()` takes the length the receiver read and refuses a packet whose payload type wants another, so a Status padded to Traffic's 24 bytes, or a Traffic cut to 16, is `Invalid`. The length byte rides in the receiver's sync tail, and 16 and 24 differ in one bit of it, so a receiver takes the length nearer to the byte it heard (`core/protocol/air.cpp`).
+The payload is 12 bytes, header included, so the packet is 16 bytes with the network header and the CRC, and its §D.1.1 length byte says 16 (`Packet::kStatusDataBytes`, `data_bytes()`). `scramble()`, `set_crc()` and `receive()` take the length, so three words are scrambled and the CRC follows them, and `sync_word()` puts the length behind §C.2.4's sync word. `receive()` takes a length and refuses a packet whose payload type wants another, so a Status padded to Traffic's 24 bytes, or a Traffic cut to 16, is `Invalid`. The length byte rides in the receiver's sync tail, outside the CRC, and 16 and 24 differ in one bit of it, so one misheard bit would cost the frame. `receive_as_heard()` takes the length byte as the receiver heard it and tries the nearer length first, then the other when the CRC refuses the first. It reads 24 bytes only where the chips past the 16th byte were heard as a transmitter's, so a Status followed by silence is never read as a longer frame.
 
 ## Which issue a payload is
 

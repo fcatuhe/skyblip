@@ -85,6 +85,7 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     uint8_t adsl_bytes = 0;
     out.system = system_of(out.data, adsl_bytes);
     if (out.system == System::Unknown) return false;
+    out.length_heard = out.data[kSyncTailBytes - 1];
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
     out.bytes = out.system == System::AdslDirect ? adsl_bytes : frame_bytes(out.system);

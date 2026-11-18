@@ -119,7 +119,9 @@ size_t transmit_uplink(FuzzedDataProvider& in, Sealing sealing, const Receiver& 
 
 void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
     adsl::Packet packet;
-    if (adsl::receive(frame.data, frame.erasures, packet, frame.bytes) != wire::Status::Ok) return;
+    if (adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet) !=
+        wire::Status::Ok)
+        return;
 
     if (adsl_edge::is_registration(packet)) {
         char callsign[traffic::CallsignTable::kTextBytes];

@@ -59,6 +59,8 @@ constexpr uint8_t kTxPayloadChipBytes = kSyncTailChipBytes + 2 * alptas::kFrameB
 struct Frame {
     System system{System::Unknown};
     uint8_t bytes{0};
+    // INFO: fc 18nov26 D.1.1's length byte as heard, the last of the sync tail, outside the CRC
+    uint8_t length_heard{0};
     uint16_t bad_chips{0};
     uint8_t data[kRxFrameBytes]{};
     uint8_t erasures[kRxFrameBytes]{};
@@ -77,7 +79,7 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out);
 constexpr uint8_t kNoiseWindowBytes = 12;
 constexpr uint16_t kNoiseBadChips = kNoiseWindowBytes * 8u / 4u;
 
-static_assert(kNoiseWindowBytes <= kSyncTailBytes + adsl::kFrameBytes,
+static_assert(kNoiseWindowBytes <= kSyncTailBytes + adsl::Packet::kStatusDataBytes,
               "the window has to end inside the shortest burst this band carries");
 
 bool framed_noise(const Frame& frame);

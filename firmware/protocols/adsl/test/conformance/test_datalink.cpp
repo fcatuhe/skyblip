@@ -2,6 +2,7 @@
 // access.
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/media_access.h"
@@ -80,6 +81,40 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a receiver reads a 16-byte Status built the way
     CHECK(adsl::receive(frame, erasures, heard, 20) == wire::Status::Invalid);
 }
 
+// D.1.1's length byte is outside the CRC, and 16 and 24 differ in one bit of it.
+TEST_CASE(
+    "ADS-L.4.SRD860.D.1.1: a length misheard by one bit is read at the length the CRC checks") {
+    uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    adsl::Packet heard;
+
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x000008, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.scramble(adsl::Packet::kStatusDataBytes);
+    status.set_crc(adsl::Packet::kStatusDataBytes);
+    uint8_t short_burst[adsl::Packet::kDataBytes] = {0};
+    std::memcpy(short_burst, status.data, adsl::Packet::kStatusDataBytes);
+    // Past a 16-byte burst the receiver hears no transmitter, so every chip pair there is marked.
+    for (int i = adsl::Packet::kStatusDataBytes; i < adsl::Packet::kDataBytes; i++)
+        erasures[i] = 0xFF;
+    for (const uint8_t length : {uint8_t{16}, uint8_t{24}}) {
+        CAPTURE(int(length));
+        REQUIRE(adsl::receive_as_heard(short_burst, erasures, length, heard) == wire::Status::Ok);
+        CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
+        CHECK(heard.address() == 0x000008u);
+    }
+
+    std::memset(erasures, 0, sizeof(erasures));
+    adsl::Packet traffic = traffic_packet();
+    traffic.scramble();
+    traffic.set_crc();
+    for (const uint8_t length : {uint8_t{24}, uint8_t{16}}) {
+        CAPTURE(int(length));
+        REQUIRE(adsl::receive_as_heard(traffic.data, erasures, length, heard) == wire::Status::Ok);
+        CHECK(heard.is_position());
+        CHECK(heard.address() == 0x123456u);
+    }
+}
+
 // The length byte and the payload type have to agree: a padded Status or a cut Traffic is no
 // packet.
 TEST_CASE("ADS-L.4.SRD860.D.1.1: a packet whose length is not its payload's is refused") {
@@ -88,8 +123,8 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a packet whose length is not its payload's is r
 
     adsl::Packet padded{};
     adsl::encode_status(padded, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    padded.scramble();
-    padded.set_crc();
+    padded.scramble(adsl::Packet::kDataBytes);
+    padded.set_crc(adsl::Packet::kDataBytes);
     CHECK(adsl::receive(padded.data, erasures, heard) == wire::Status::Invalid);
 
     adsl::Packet cut = traffic_packet();

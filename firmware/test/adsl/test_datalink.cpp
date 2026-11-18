@@ -122,8 +122,8 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
 
     adsl::Packet status{};
     adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
-    status.scramble();
-    status.set_crc();
+    status.scramble(adsl::Packet::kDataBytes);
+    status.set_crc(adsl::Packet::kDataBytes);
     hear_m_band(rig, adsl::kSyncWord, status.data, adsl::kFrameBytes);
     settle(rig, now_ms);
     CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
@@ -131,4 +131,32 @@ TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never f
     const int index = rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804);
     REQUIRE(index >= 0);
     CHECK_FALSE(rig.state().traffic.at(index)->version.declared);
+}
+
+// The length byte rides outside the CRC: one bit misheard there costs neither frame.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a length byte misheard by its one bit still reads either frame") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+    model::Ownship neighbour = rig.state().own;
+    neighbour.latitude_1e7 += 10000;
+    adsl::Packet traffic{};
+    REQUIRE(protocol::from_own(traffic, neighbour, 0xC5D804, adsl::kAddressTableFlarm, 4));
+    traffic.scramble();
+    traffic.set_crc();
+    hear_m_band(rig, adsl::sync_word(adsl::Packet::kStatusDataBytes), traffic.data,
+                adsl::kFrameBytes);
+    settle(rig, now_ms);
+    CHECK(heard_verdict(rig) == radio::Verdict::Received);
+    REQUIRE(rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804) >= 0);
+
+    adsl::Packet status{};
+    adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.scramble(adsl::Packet::kStatusDataBytes);
+    status.set_crc(adsl::Packet::kStatusDataBytes);
+    hear_m_band(rig, adsl::kSyncWord, status.data, adsl::Packet::kStatusDataBytes);
+    settle(rig, now_ms);
+    CHECK(heard_verdict(rig) == radio::Verdict::Declared);
+    CHECK(rig.state().air.rx_status == 1);
 }
