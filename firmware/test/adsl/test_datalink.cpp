@@ -3,10 +3,17 @@
 #include <cstring>
 #include <vector>
 
+#include "core/model/ownship.h"
+#include "core/protocol/adsl.h"
+#include "core/protocol/air.h"
+#include "core/radio/log.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "protocols/adsl/media_access.h"
+#include "protocols/adsl/physical.h"
 #include "simulator/simulator.h"
+#include "test/support/m_band_rig.h"
+#include "test/support/product_rig.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -70,4 +77,58 @@ TEST_CASE("ADS-L.4.SRD860.D.3: a held channel defers, forces after 3000 ms, then
         held_from_cycle_start(50, 9500, held_from_us, forced);
     CHECK(airborne_past_3000_ms.empty());
     CHECK(forced == 0);
+}
+
+// D.1.1's length byte is the last of the sync tail, so a receiver reads each burst's own length.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: the Go sends a Status as 16 bytes and Traffic as 24") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_speed_kt(50);
+    run_on(simulator, past_settling(simulator), 21000);
+    int statuses = 0;
+    int positions = 0;
+    const simulator::Air& air = simulator.world().air();
+    for (int i = 0; i < air.record_count(); i++) {
+        adsl::Packet packet{};
+        if (!packet_of(air.record_at(i), packet)) continue;
+        protocol::Frame frame{};
+        REQUIRE(simulator::Air::framed(air.record_at(i), frame));
+        if (packet.payload_type == adsl::Packet::kPayloadTypeStatus) {
+            statuses++;
+            CHECK(frame.bytes == 16);
+        }
+        if (packet.is_position()) {
+            positions++;
+            CHECK(frame.bytes == 24);
+        }
+    }
+    CHECK(statuses >= 1);
+    CHECK(positions >= 20);
+}
+
+// G.2 makes a Status 16 bytes, so one padded to Traffic's 24 is not read as one.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status padded to 24 bytes is refused, never filed") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t now_ms = 0;
+    fly(rig, now_ms, 3);
+    model::Ownship neighbour = rig.state().own;
+    neighbour.latitude_1e7 += 10000;
+    adsl::Packet traffic{};
+    REQUIRE(protocol::from_own(traffic, neighbour, 0xC5D804, adsl::kAddressTableFlarm, 4));
+    hear_adsl(rig, traffic);
+    settle(rig, now_ms);
+
+    adsl::Packet status{};
+    adsl::encode_status(status, 0xC5D804, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.scramble();
+    status.set_crc();
+    hear_m_band(rig, adsl::kSyncWord, status.data, adsl::kFrameBytes);
+    settle(rig, now_ms);
+    CHECK(heard_verdict(rig) == radio::Verdict::Unsupported);
+    CHECK(rig.state().air.rx_status == 0);
+    const int index = rig.state().traffic.find(adsl::kAddressTableFlarm, 0xC5D804);
+    REQUIRE(index >= 0);
+    CHECK_FALSE(rig.state().traffic.at(index)->version.declared);
 }

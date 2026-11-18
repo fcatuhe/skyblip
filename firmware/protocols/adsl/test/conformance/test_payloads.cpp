@@ -83,6 +83,8 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed Traffic payload older than 10 seconds i
     const uint32_t cycle_start_s = 1785628815;
     const adsl::Packet record = relayed_traffic(0x3C1234, 0);
     CHECK(adsl::uplink_record_current(record, cycle_start_s + 10, 0));
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 10, 1));
+    CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 10, 249));
     CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 10, 250));
     CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + 14, 750));
 }

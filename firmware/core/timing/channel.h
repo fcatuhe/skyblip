@@ -18,8 +18,9 @@ struct PoliteAccess {
     static constexpr uint32_t kDeadTimeCeilingUs = 2000;
     // INFO: fc 14nov26 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks
     static constexpr uint32_t kDeferralUnitUs = adsl::kAirTimeMs * 1000;
-    // INFO: fc 18nov26 3) and 5) Transmitter::deferral_draw picks 3 to 8 units, §C.2's 15 ms up
-    static constexpr uint32_t kDeferralUnits = 8;
+    // INFO: fc 18nov26 3) and 5) deferral_draw picks 3 to 50 units, §C.2's 15 to 250 ms, in the
+    // window
+    static constexpr uint32_t kDeferralUnits = 50;
     static constexpr uint32_t kDeferralFloorUs = adsl::kMBandBackoff.floor_us;
     static constexpr uint32_t kDeferralCeilingUs = kDeferralUnits * kDeferralUnitUs;
     // INFO: fc 14nov26 6) Ton max is one burst, under Table 48's 1 s

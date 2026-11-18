@@ -35,6 +35,8 @@ constexpr uint8_t kFrameBytes = Packet::kDataBytes;
 
 static_assert((kSyncWord & 0xFFu) == kFrameBytes, "the sync word's last byte is the length");
 
+constexpr uint32_t sync_word(uint8_t data_bytes) { return (kSyncWord & ~0xFFu) | data_bytes; }
+
 }
 
 #endif

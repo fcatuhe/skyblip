@@ -332,9 +332,9 @@ TEST_CASE("rf: the burst is dated when it leaves, and carries the position from 
         REQUIRE(simulator::Air::framed(record, frame));
         adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-        REQUIRE(packet.crc_ok());
-        packet.descramble();
+        std::memcpy(packet.data, frame.data, frame.bytes);
+        REQUIRE(packet.crc_ok(frame.bytes));
+        packet.descramble(frame.bytes);
         REQUIRE(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         if (!packet.is_position()) continue;
 

@@ -268,13 +268,13 @@ void reparity(uint8_t* packet) {
 }
 }  // namespace
 
-// E.1: a later version, a signature or a reserved key index is a packet this decoder cannot read.
-TEST_CASE("uplink: a header naming a later version, a signature or a reserved key is refused") {
+// E.1: a later version or a reserved key index is a packet this decoder cannot read.
+TEST_CASE("uplink: a header naming a later version or a reserved key is refused") {
     adsl::Packet tx[1] = {make_target(0x700001)};
     adsl::Uplink up;
     adsl::Packet rx[1];
     adsl::UplinkStatistics statistics;
-    for (const uint8_t header : {uint8_t{0x82}, uint8_t{0x91}, uint8_t{0xA1}, uint8_t{0xC1}}) {
+    for (const uint8_t header : {uint8_t{0x82}, uint8_t{0xA1}, uint8_t{0xC1}}) {
         CAPTURE(int(header));
         uint8_t packet[1 + adsl::kUplinkMaxLength];
         sent(tx, 1, packet);
@@ -282,6 +282,21 @@ TEST_CASE("uplink: a header naming a later version, a signature or a reserved ke
         reparity(packet);
         CHECK(up.decode(packet, sizeof(packet), rx, 1, statistics) == Status::Unsupported);
     }
+}
+
+// D.1.1 leaves the signature out of the length, so a simple receiver reads the packet without it.
+TEST_CASE("uplink: a signed packet is read, and its signature left unread") {
+    adsl::Packet tx[1] = {make_target(0x700001)};
+    adsl::Uplink up;
+    adsl::Packet rx[1];
+    adsl::UplinkStatistics statistics;
+    uint8_t packet[1 + adsl::kUplinkMaxLength];
+    sent(tx, 1, packet);
+    packet[1] = 0x91;
+    reparity(packet);
+    REQUIRE(up.decode(packet, sizeof(packet), rx, 1, statistics) == Status::Ok);
+    CHECK(statistics.targets == 1);
+    CHECK(rx[0].address() == 0x700001u);
 }
 
 // E.1.3's key index 3 is scrambling switched off, so the data arrives as it was written.

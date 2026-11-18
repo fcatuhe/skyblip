@@ -9,6 +9,8 @@
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/test/conformance/reference.h"
 #include "protocols/adsl/uplink.h"
+#include "protocols/common/crc.h"
+#include "protocols/common/xxtea.h"
 
 using namespace skyblip;
 using namespace skyblip::adsl::conformance;
@@ -19,8 +21,7 @@ TEST_CASE("ADS-L.4.SRD860.D.1: the data link mediates the channel, adds parity, 
     FAIL("prose: the layer's remit, specified by D.1.1, D.1.2, D.3 and E.3");
 }
 
-// The M-band length byte rides in the sync word, which is why a burst of any other length never
-// frames.
+// The M-band length byte rides at the end of the sync word, so the receiver reads it as it frames.
 TEST_CASE(
     "ADS-L.4.SRD860.D.1.1: the Packet Length field counts the message behind it, not itself") {
     const int network_header = 1;
@@ -33,6 +34,69 @@ TEST_CASE(
     const int fec_parity = 32;
     CHECK(adsl::uplink_length(1) == network_header + uplink_header + 19 + fec_parity);
     CHECK(adsl::uplink_length(10) == network_header + uplink_header + 191 + fec_parity);
+}
+
+// G.2's 56 bits behind the 40-bit header are 12 bytes of data: with the header byte and the
+// CRC, 16.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a Status goes out as 16 bytes, and its length byte says so") {
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    CHECK(status.data_bytes() == 1 + 12 + 3);
+    CHECK(int(adsl::sync_word(status.data_bytes()) & 0xFFu) == 16);
+    CHECK((adsl::sync_word(status.data_bytes()) >> 8) == (adsl::kSyncWord >> 8));
+    CHECK(traffic_packet().data_bytes() == adsl::Packet::kDataBytes);
+    CHECK(adsl::sync_word(adsl::Packet::kDataBytes) == adsl::kSyncWord);
+}
+
+// "Some payload types have variable lengths, in which case the receiver must consult this field."
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a receiver reads a 16-byte Status built the way the clauses say") {
+    adsl::Packet clear{};
+    adsl::encode_status(clear, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    uint8_t frame[16] = {0};
+    std::memcpy(frame, clear.data, 13);
+    uint32_t words[3];
+    std::memcpy(words, frame + 1, sizeof(words));
+    wire::xxtea_encrypt(words, 3, wire::kXxteaZeroKey, 6);
+    std::memcpy(frame + 1, words, sizeof(words));
+    const uint32_t crc = wire::crc24_compute(frame, 13);
+    frame[13] = static_cast<uint8_t>(crc >> 16);
+    frame[14] = static_cast<uint8_t>(crc >> 8);
+    frame[15] = static_cast<uint8_t>(crc);
+
+    const uint8_t erasures[16] = {0};
+    adsl::Packet heard;
+    REQUIRE(adsl::receive(frame, erasures, heard, 16) == wire::Status::Ok);
+    CHECK(heard.payload_type == adsl::Packet::kPayloadTypeStatus);
+    CHECK(heard.address() == 0x123456u);
+    CHECK(std::memcmp(heard.data, clear.data, 13) == 0);
+    for (int i = 13; i < adsl::Packet::kDataBytes; i++) CHECK(heard.data[i] == 0);
+
+    uint8_t sent[16];
+    adsl::Packet ours = clear;
+    ours.scramble(16);
+    ours.set_crc(16);
+    std::memcpy(sent, ours.data, 16);
+    CHECK(std::memcmp(sent, frame, 16) == 0);
+    CHECK(adsl::receive(frame, erasures, heard, 20) == wire::Status::Invalid);
+}
+
+// The length byte and the payload type have to agree: a padded Status or a cut Traffic is no
+// packet.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a packet whose length is not its payload's is refused") {
+    const uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    adsl::Packet heard;
+
+    adsl::Packet padded{};
+    adsl::encode_status(padded, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    padded.scramble();
+    padded.set_crc();
+    CHECK(adsl::receive(padded.data, erasures, heard) == wire::Status::Invalid);
+
+    adsl::Packet cut = traffic_packet();
+    cut.scramble(adsl::Packet::kStatusDataBytes);
+    cut.set_crc(adsl::Packet::kStatusDataBytes);
+    CHECK(adsl::receive(cut.data, erasures, heard, adsl::Packet::kStatusDataBytes) ==
+          wire::Status::Invalid);
 }
 
 // INFO: fc 13nov26 optional: G.2.3 lets a Status declare O-band LDR receive None, as ours does

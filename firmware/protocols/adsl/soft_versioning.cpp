@@ -50,7 +50,8 @@ bool issue1_form(Packet& packet, std::optional<uint32_t> vfom_cm) {
         packet.set_field(Packet::kLatitudeField, Packet::kIssue1PositionInvalidCode);
         packet.set_field(Packet::kLongitudeField, Packet::kIssue1PositionInvalidCode);
     }
-    if (vfom_cm) packet.vertical_accuracy = Packet::issue1_vertical_accuracy_code(*vfom_cm);
+    if (vfom_cm && packet.vertical_accuracy != 0)
+        packet.vertical_accuracy = Packet::issue1_vertical_accuracy_code(*vfom_cm);
     packet.set_protocol_version(Packet::kProtocolVersionIssue1);
     return true;
 }

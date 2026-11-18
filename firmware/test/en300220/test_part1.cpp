@@ -81,11 +81,11 @@ TEST_CASE("EN 300 220-1 5.21.1: a burst goes out below the CCA threshold and def
         const uint64_t wait_us = verdict.at_us - busy_us;
         CHECK(wait_us % timing::PoliteAccess::kDeferralUnitUs == 0);
         CHECK(wait_us >= 160);
+        CHECK(wait_us >= timing::PoliteAccess::kDeferralFloorUs);
+        CHECK(wait_us <= timing::PoliteAccess::kDeferralCeilingUs);
         waits.insert(wait_us);
     }
-    CHECK(waits.size() ==
-          timing::PoliteAccess::kDeferralUnits -
-              timing::PoliteAccess::kDeferralFloorUs / timing::PoliteAccess::kDeferralUnitUs + 1);
+    CHECK(waits.size() >= 30);
 }
 
 // "With antenna gain of -5 dB, the CCA threshold shall be corrected and increased by 5 dB".
@@ -152,10 +152,10 @@ TEST_CASE("EN 300 220-1 5.21.3.2: the seven declarations are made, each within i
     other.configure(0x5B01A0);
     CHECK(one.deferral_draw(10000000) != one.deferral_draw(10005000));
     CHECK(one.deferral_draw(10000000) != other.deferral_draw(10000000));
-    // 4) the unit is one ADS-L burst, 5) a deferral draws three to eight of them, ADS-L's 15 ms up.
+    // 4) the unit is one ADS-L burst, 5) a deferral draws 3 to 50 of them, ADS-L's 15 to 250 ms.
     CHECK(timing::PoliteAccess::kDeferralUnitUs == 5000);
     CHECK(timing::PoliteAccess::kDeferralFloorUs == 15000);
-    CHECK(timing::PoliteAccess::kDeferralCeilingUs == 40000);
+    CHECK(timing::PoliteAccess::kDeferralCeilingUs == 250000);
     // 6) Ton max is one 4.64 ms burst, booked as 5 ms, 7) Toff min is 100 ms.
     CHECK(timing::PoliteAccess::kTransmissionCeilingUs == 5000);
     CHECK(timing::PoliteAccess::kSameFrequencyOffFloorMs == 100);

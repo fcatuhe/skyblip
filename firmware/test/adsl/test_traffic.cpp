@@ -12,6 +12,8 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/menu.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
@@ -120,6 +122,33 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
         CHECK(packet.flight_state == state);
         CHECK(packet.flight_state != 3);
     }
+}
+
+// Our reading, put to EASA: with no ground speed to tell, a craft that can hover is Undefined.
+TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz") {
+    const auto flown = [](uint8_t category, uint8_t& state) {
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.product().settings().aircraft_type = category;
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(0);
+        run_on(simulator, past_settling(simulator), 15000);
+        int sent = 0;
+        for (const simulator::AirRecord& record :
+             records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+            adsl::Packet packet{};
+            REQUIRE(packet_of(record, packet));
+            state = packet.flight_state;
+            sent++;
+        }
+        return sent;
+    };
+    uint8_t paraglider_state = 3;
+    CHECK(flown(7, paraglider_state) >= 14);
+    CHECK(paraglider_state == static_cast<uint8_t>(flight::FlightState::Unknown));
+    uint8_t glider_state = 3;
+    CHECK(flown(4, glider_state) <= 2);
+    CHECK(glider_state == static_cast<uint8_t>(flight::FlightState::Ground));
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glider is 4") {

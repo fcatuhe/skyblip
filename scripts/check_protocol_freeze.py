@@ -4,7 +4,8 @@
     python3 scripts/check_protocol_freeze.py
     python3 scripts/check_protocol_freeze.py --reseal adsl
 
-A stack is frozen once firmware/protocols/<stack>/version.lock exists. The lock names the
+A stack is frozen once firmware/protocols/<stack>/version.lock exists, and a stack at 1.0.0 or
+later must have one. The lock names the
 stack's version and the roots its conformance rests on, files or directories from the
 repository root, and holds the SHA-256 of every file under them. The protocols/common/ files the
 frozen files include are frozen too, followed include by include, each header with its .cpp
@@ -34,7 +35,7 @@ def main(argv):
     if argv:
         report(__doc__)
         return 2
-    problems = []
+    problems = unlocked_stacks()
     for stack in frozen_stacks():
         problems += check(stack)
     for problem in problems:
@@ -50,6 +51,18 @@ def frozen_stacks(root=ROOT):
     base = os.path.join(root, PROTOCOLS)
     return sorted(name for name in os.listdir(base)
                   if os.path.isfile(os.path.join(base, name, "version.lock")))
+
+
+def unlocked_stacks(root=ROOT):
+    base = os.path.join(root, PROTOCOLS)
+    problems = []
+    for name in sorted(os.listdir(base)):
+        if not os.path.isfile(os.path.join(base, name, "version.h")):
+            continue
+        version = current_version(name, root)
+        if int(version.split(".")[0]) >= 1 and name not in frozen_stacks(root):
+            problems.append(f"{name}: version {version} is a release, so it needs a version.lock")
+    return problems
 
 
 def check(stack, root=ROOT):

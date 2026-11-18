@@ -12,8 +12,8 @@ using wire::Status;
 namespace {
 
 constexpr uint8_t kPayloadTypeTrafficUplink = 0x04;
-constexpr int kQuartersPerCycle = static_cast<int>(kTimestampCycleS * 1000 / kTimestampQuarterMs);
-constexpr int kMaxAgeQuarters = static_cast<int>(kUplinkRecordMaxAgeMs / kTimestampQuarterMs);
+constexpr int64_t kCycleMs = int64_t{kTimestampCycleS} * 1000;
+constexpr int kQuartersPerCycle = static_cast<int>(kCycleMs / kTimestampQuarterMs);
 constexpr uint8_t kReservedBits = 0xC0;
 
 int count_of(int length) {
@@ -46,9 +46,10 @@ void codeword_of(const uint8_t* covered, int covered_bytes, const uint8_t* parit
 
 bool uplink_record_current(const Packet& traffic, uint32_t utc_s, int32_t into_ms) {
     if (traffic.timestamp >= kQuartersPerCycle) return false;
-    const int now = timestamp_code(utc_s, into_ms);
-    const int age = (now - traffic.timestamp + kQuartersPerCycle) % kQuartersPerCycle;
-    return age <= kMaxAgeQuarters;
+    const int64_t now_ms = int64_t{utc_s % kTimestampCycleS} * 1000 + into_ms;
+    const int64_t named_ms = int64_t{traffic.timestamp} * kTimestampQuarterMs;
+    const int64_t age_ms = ((now_ms - named_ms) % kCycleMs + kCycleMs) % kCycleMs;
+    return age_ms <= kUplinkRecordMaxAgeMs;
 }
 
 Status Uplink::encode(uint32_t sender_address, uint8_t sender_table, const Packet* traffic,
@@ -108,8 +109,7 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
     uint8_t* covered = codeword + pad;
     const uint8_t header = covered[0];
     if ((header & Packet::kErrorControlFec) == 0) return Status::Invalid;
-    if ((header & Packet::kProtocolVersionMask) > Packet::kMaxProtocolVersion ||
-        (header & Packet::kSignatureFlag) != 0)
+    if ((header & Packet::kProtocolVersionMask) > Packet::kMaxProtocolVersion)
         return Status::Unsupported;
     const uint8_t key_index =
         static_cast<uint8_t>((header >> Packet::kKeyIndexShift) & Packet::kKeyIndexMask);

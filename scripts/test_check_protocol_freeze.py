@@ -46,6 +46,8 @@ def write(root, path, text):
 
 class CheckProtocolFreeze(unittest.TestCase):
     def test_the_tree_as_it_stands_matches_its_locks(self):
+        self.assertEqual(check_protocol_freeze.unlocked_stacks(), [])
+        self.assertIn("adsl", check_protocol_freeze.frozen_stacks())
         for stack in check_protocol_freeze.frozen_stacks():
             self.assertEqual(check_protocol_freeze.check(stack), [])
 
@@ -58,6 +60,16 @@ class CheckProtocolFreeze(unittest.TestCase):
             self.assertIn("firmware/protocols/common/bit_field.h", sealed)
             self.assertNotIn("firmware/protocols/common/manchester.h", sealed)
             self.assertNotIn(f"{STACK}/version.lock", sealed)
+
+    def test_a_released_stack_without_a_lock_fails_and_one_before_release_passes(self):
+        with tree() as root:
+            self.assertEqual(check_protocol_freeze.unlocked_stacks(root), [])
+            os.remove(os.path.join(root, f"{STACK}/version.lock"))
+            found = check_protocol_freeze.unlocked_stacks(root)
+            self.assertEqual(len(found), 1)
+            self.assertIn("adsl: version 1.0.0 is a release, so it needs a version.lock", found[0])
+            write(root, f"{STACK}/version.h", 'inline constexpr char kVersion[] = "0.1.0";\n')
+            self.assertEqual(check_protocol_freeze.unlocked_stacks(root), [])
 
     def test_a_changed_file_under_a_root_fails(self):
         with tree() as root:

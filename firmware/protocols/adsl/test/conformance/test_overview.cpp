@@ -172,6 +172,11 @@ TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a 12 m VFOM is GVA 3, as Is
     CHECK(packet.vertical_accuracy == 3);
     REQUIRE(adsl::issue1_form(unknown, std::nullopt));
     CHECK(unknown.vertical_accuracy == 2);
+
+    adsl::Packet unclaimed = packet;
+    unclaimed.vertical_accuracy = 0;
+    REQUIRE(adsl::issue1_form(unclaimed, 960));
+    CHECK(unclaimed.vertical_accuracy == 0);
 }
 
 // Issue 1 has no unknown code for these, so its 0x3FFF, 0xFF and 0x1FF would read as values.

@@ -177,9 +177,9 @@ TEST_CASE("rf: a burst own-ship put on air is one another skyBlip frames") {
         CHECK(heard.system == protocol::System::AdslDirect);
         adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, heard.data, adsl::kFrameBytes);
-        REQUIRE(packet.crc_ok());
-        packet.descramble();
+        std::memcpy(packet.data, heard.data, heard.bytes);
+        REQUIRE(packet.crc_ok(heard.bytes));
+        packet.descramble(heard.bytes);
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
         framed++;
     }
@@ -206,8 +206,8 @@ TEST_CASE("rf: a paraglider below the flight speed transmits every second, fligh
             REQUIRE(peer.frames(mine, heard));
             adsl::Packet packet{};
             packet.reset();
-            std::memcpy(packet.data, heard.data, adsl::kFrameBytes);
-            packet.descramble();
+            std::memcpy(packet.data, heard.data, heard.bytes);
+            packet.descramble(heard.bytes);
             if (!packet.is_position()) continue;
             positions++;
             CHECK(packet.flight_state == (type == 7 ? 0 : 1));
@@ -328,9 +328,9 @@ TEST_CASE("rf: nothing own-ship transmits is a frame own-ship received") {
         REQUIRE(simulator::Air::framed(mine, sent));
         adsl::Packet packet{};
         packet.reset();
-        std::memcpy(packet.data, sent.data, adsl::kFrameBytes);
-        REQUIRE(packet.crc_ok());
-        packet.descramble();
+        std::memcpy(packet.data, sent.data, sent.bytes);
+        REQUIRE(packet.crc_ok(sent.bytes));
+        packet.descramble(sent.bytes);
         // Every burst we put on air is ours, by address: a relayed frame would
         // carry the neighbour's.
         CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));

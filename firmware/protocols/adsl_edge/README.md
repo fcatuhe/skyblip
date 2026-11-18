@@ -19,7 +19,7 @@ What text goes in and what is refused off the air is skyBlip's, in `core/protoco
 
 ## When it goes
 
-The schedule is skyBlip's, in `core/timing/`: in window B's tail, from 1000 to 1200 ms of the cycle, on channel B, in the even second whose position goes on A, so nothing of ours is on B within 100 ms of it. That is outside the direct slot Issue 2's §C.5 gives Traffic and Status. §C.5 reserves the rest of the second and says it "shall not be used for any ADS-L transmissions". Our reading is that a payload whose definition F.2.1 puts outside the specification is not one of them. That reading is one of the questions `docs/ADSL_EASA_QUESTIONS.md` puts to EASA.
+The schedule is skyBlip's, in `core/timing/`: in window B's tail, the first 200 ms of the next UTC second, on channel B, in the even second whose position goes on A, so nothing of ours is on B within 100 ms of it. That is outside the direct slot Issue 2's §C.5 gives Traffic and Status. §C.5 reserves the rest of the second and says it "shall not be used for any ADS-L transmissions". Our reading is that a payload whose definition F.2.1 puts outside the specification is not one of them. That reading is one of the questions `docs/ADSL_EASA_QUESTIONS.md` puts to EASA.
 
 ## Tests
 

@@ -1,6 +1,7 @@
 #include "protocols/adsl/packet.h"
 
 #include <algorithm>
+#include <cstddef>
 
 #include "protocols/common/crc.h"
 #include "protocols/common/geometry.h"
@@ -25,6 +26,16 @@ constexpr auto kCrcSyndromes = wire::syndromes<kFrameBits>([](uint16_t bit) {
     frame[bit >> 3] = static_cast<uint8_t>(0x80u >> (bit & 7));
     return wire::crc24_check(frame, Packet::kDataBytes);
 });
+constexpr auto kStatusCrcSyndromes =
+    wire::syndromes<Packet::kStatusDataBytes * 8>([](uint16_t bit) {
+        uint8_t frame[Packet::kStatusDataBytes] = {};
+        frame[bit >> 3] = static_cast<uint8_t>(0x80u >> (bit & 7));
+        return wire::crc24_check(frame, Packet::kStatusDataBytes);
+    });
+
+constexpr bool known_length(uint8_t data_bytes) {
+    return data_bytes == Packet::kDataBytes || data_bytes == Packet::kStatusDataBytes;
+}
 
 uint32_t steps_of(int32_t degrees_1e7, int64_t steps_per_degree) {
     const int64_t steps = divide_rounded<int64_t>(degrees_1e7 * steps_per_degree, kE7PerDegree);
@@ -78,45 +89,54 @@ void Packet::set_climb_e8(int16_t climb) {
 }
 
 // INFO: fc 09nov26 a packed struct can sit at an odd address, so XXTEA works on an aligned copy
-void Packet::scramble() {
+void Packet::scramble(uint8_t data_bytes) {
     uint32_t words[kPayloadBytes / 4];
-    __builtin_memcpy(words, payload, sizeof(words));
-    wire::xxtea_encrypt(words, kPayloadBytes / 4, wire::kXxteaZeroKey, 6);
-    __builtin_memcpy(payload, words, sizeof(words));
+    const uint32_t count = static_cast<uint32_t>(data_bytes - 4) / 4;
+    const size_t bytes = size_t{count} * 4;
+    __builtin_memcpy(words, payload, bytes);
+    wire::xxtea_encrypt(words, count, wire::kXxteaZeroKey, 6);
+    __builtin_memcpy(payload, words, bytes);
 }
-void Packet::descramble() {
+void Packet::descramble(uint8_t data_bytes) {
     uint32_t words[kPayloadBytes / 4];
-    __builtin_memcpy(words, payload, sizeof(words));
-    wire::xxtea_decrypt(words, kPayloadBytes / 4, wire::kXxteaZeroKey, 6);
-    __builtin_memcpy(payload, words, sizeof(words));
+    const uint32_t count = static_cast<uint32_t>(data_bytes - 4) / 4;
+    const size_t bytes = size_t{count} * 4;
+    __builtin_memcpy(words, payload, bytes);
+    wire::xxtea_decrypt(words, count, wire::kXxteaZeroKey, 6);
+    __builtin_memcpy(payload, words, bytes);
 }
 
-void Packet::set_crc() {
-    const uint32_t crc = wire::crc24_compute(data, kCrcCoverBytes);
-    crc_bytes[0] = static_cast<uint8_t>(crc >> 16);
-    crc_bytes[1] = static_cast<uint8_t>(crc >> 8);
-    crc_bytes[2] = static_cast<uint8_t>(crc);
+void Packet::set_crc(uint8_t data_bytes) {
+    const uint32_t crc = wire::crc24_compute(data, data_bytes - 3u);
+    data[data_bytes - 3] = static_cast<uint8_t>(crc >> 16);
+    data[data_bytes - 2] = static_cast<uint8_t>(crc >> 8);
+    data[data_bytes - 1] = static_cast<uint8_t>(crc);
 }
-bool Packet::crc_ok() const { return wire::crc24_check(data, kDataBytes) == 0; }
+bool Packet::crc_ok(uint8_t data_bytes) const { return wire::crc24_check(data, data_bytes) == 0; }
 
-int Packet::correct(const uint8_t* erasures, int max_erasures) {
-    return wire::repair(data, erasures, wire::crc24_check(data, kDataBytes), kCrcSyndromes.check(),
+int Packet::correct(const uint8_t* erasures, int max_erasures, uint8_t data_bytes) {
+    const wire::LinearCheck check =
+        data_bytes == kStatusDataBytes ? kStatusCrcSyndromes.check() : kCrcSyndromes.check();
+    return wire::repair(data, erasures, wire::crc24_check(data, data_bytes), check,
                         std::min(max_erasures, kMostErasures), true);
 }
 
 // INFO: fc 18nov26 E.1: the CRC also covers the header, so it is read only once the frame checks
-wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out) {
+wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
+                     uint8_t data_bytes) {
     out.reset();
-    __builtin_memcpy(out.data, frame, Packet::kDataBytes);
-    if (out.correct(erasures) < 0) return wire::Status::Crc;
+    if (!known_length(data_bytes)) return wire::Status::Invalid;
+    __builtin_memcpy(out.data, frame, data_bytes);
+    if (out.correct(erasures, 6, data_bytes) < 0) return wire::Status::Crc;
+    if (data_bytes < Packet::kDataBytes)
+        for (uint8_t i = data_bytes - 3; i < data_bytes; i++) out.data[i] = 0;
     if ((out.version & Packet::kErrorControlFec) != 0) return wire::Status::Invalid;
     if (out.protocol_version() > Packet::kMaxProtocolVersion) return wire::Status::Unsupported;
-    if (out.key_index() == Packet::kKeyScrambled) {
-        out.descramble();
-        return wire::Status::Ok;
-    }
-    if (out.key_index() == Packet::kKeyClear) return wire::Status::Ok;
-    return wire::Status::Unsupported;
+    if (out.key_index() == Packet::kKeyScrambled)
+        out.descramble(data_bytes);
+    else if (out.key_index() != Packet::kKeyClear)
+        return wire::Status::Unsupported;
+    return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
 }
 
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
