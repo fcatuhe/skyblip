@@ -44,11 +44,13 @@ uint8_t nearer_length(uint8_t length_heard) {
 }
 
 // INFO: fc 18nov26 past a 16-byte burst no transmitter is heard, so most of those chips are marked
+constexpr int kTailMarkedCeiling = 16;
+
 bool heard_to_full_length(const uint8_t* erasures) {
     int marked = 0;
     for (int i = Packet::kStatusDataBytes; i < Packet::kDataBytes; i++)
         marked += __builtin_popcount(erasures[i]);
-    return marked <= kMostErasures;
+    return marked <= kTailMarkedCeiling;
 }
 
 wire::Status receive_at(const uint8_t* frame, const uint8_t* erasures, uint8_t data_bytes,
