@@ -2,8 +2,9 @@
   <canvas class="glass" data-glass-target="glass" width="200" height="200" role="img"></canvas>
   <p class="glass glass-words" data-glass-target="words" hidden></p>
   <div class="glass-lamp" data-glass-target="lamp" hidden>
-    <span class="lamp" aria-hidden="true"></span>
-    <p><%= t("briefing.glass.lamp") %> <%= t("briefing.words.glass_refuse") %></p>
+    <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_press"), marks: { button: t("devices.press"), led: t("devices.led") },
+          lamp: %i[green], caption: t("briefing.glass.lamp") %>
+    <p><%= t("briefing.words.glass_refuse") %></p>
   </div>
   <p class="glass-press" role="status" data-glass-target="press"></p>
   <p class="glass-remembers" data-glass-target="remembers" hidden><%= t("briefing.glass.remembers") %></p>

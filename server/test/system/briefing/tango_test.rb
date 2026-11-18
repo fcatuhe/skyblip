@@ -10,16 +10,23 @@ class Briefing::TangoTest < ApplicationSystemTestCase
 
       click_button "Pair with Bravo 5C1D"
       assert_selector ".tango", text: "Press the button on Go 00012A to confirm."
+      assert_no_selector ".tango .device-figure"
       assert_glass "PAIR BRAVO"
       screen "61-pair-confirm-on-go"
 
       page.execute_script("#{unit("Go 00012A")}.press()")
-      assert_selector ".tango", text: "Press the button on Bravo 5C1D when its light blinks blue."
+      assert_selector ".tango", text: "Press the button on Bravo 5C1D when the LED above its button blinks blue."
+      within ".tango .device-figure--bravo" do
+        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked press and the LED just above it marked.']", text: /Press\s+LED/
+        assert_selector ".lamp.lamp--blue"
+        assert_text "The LED above the button blinks blue fast."
+      end
       screen "62-pair-press-bravo"
 
       page.execute_script("#{unit("Bravo 5C1D")}.pressPairing()")
       assert_selector ".tango", text: "Paired. Go 00012A shows the ADS-B traffic Bravo 5C1D hears."
       assert_equal 0x5c1d, page.evaluate_script("#{unit("Go 00012A")}.pairedTag")
+      assert_no_selector ".tango .device-figure"
       screen "63-paired-after-presses"
     end
   end

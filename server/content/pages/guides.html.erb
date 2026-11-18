@@ -1,17 +1,31 @@
 ---
-title: "skyBlip Go user guides"
+title: "skyBlip Go and Bravo user guides"
 nav_title: Guides
-description: "Seven guides to skyBlip Go. Traffic display, instruments, controls, battery, phone, radio and screens, with images from the firmware."
+description: "First steps for skyBlip Go and Bravo, six guides to using the Go and four on how it works, from its radio to traffic alarms."
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>skyBlip Go, subject by subject.</h1>
-  <p class="page-hero-subtitle">
-    Seven guides, with the screens as the firmware draws them.
-  </p>
+  <h1>Get to know your Go or Bravo.</h1>
+  <p class="page-hero-subtitle">Start with your device, then read six guides to using the Go and four on how it works, with screens drawn by the firmware.</p>
 </header>
+
+<section class="band">
+  <h2 class="section-title">Start with your device</h2>
+  <div class="guide-cards">
+    <article>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go with its antenna and traffic radar on the e-paper screen" %>
+      <h3><%= link_to_page "go-first-steps", label_type: :nav %></h3>
+      <p>Find the pad and button, read the lights and learn the gestures for your next flight.</p>
+    </article>
+    <article>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo on a Seeed SenseCAP MeshTracker X1, a black case with one round button" %>
+      <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
+      <p>Read the light, answer requests with the button and use Bravo with your navigation app or a Go.</p>
+    </article>
+  </div>
+</section>
 
 <section class="band band--tint">
   <h2 class="section-title">In flight</h2>
@@ -56,12 +70,34 @@ updated_on: "2026-11-09"
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title">For the curious</h2>
-  <div class="resource-cards">
+  <h2 class="section-title">How it works</h2>
+  <div class="guide-cards">
     <article>
+      <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
       <p>One radio uses four time slots a second and receives signals from two systems in the same slot.</p>
     </article>
+    <article>
+      <%= render "shared/cycle", compact: true %>
+      <h3><%= link_to_page "timing" %></h3>
+      <p>The serial picks the seconds of a 20&nbsp;s cycle, the parity of the second picks the channel, and a draw redone every second picks the millisecond.</p>
+    </article>
+    <article>
+      <%= render "shared/flight_state", compact: true %>
+      <h3><%= link_to_page "gps" %></h3>
+      <p>A fix that must settle and land before 450&nbsp;ms, the pulse that starts each second, and flight decided from ground speed alone.</p>
+    </article>
+    <article>
+      <%= render "shared/advisory_ring", compact: true %>
+      <h3><%= link_to_page "traffic" %></h3>
+      <p>One advisory ring of 3&nbsp;km and 300&nbsp;m, no advisories on the ground, six missed reports to drop a target, and formation flying.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">For the curious</h2>
+  <div class="resource-cards">
     <article>
       <h3><%= link_to_page "see-and-avoid" %></h3>
       <p>The published figures for see and avoid cover field of view, the sector scanned, an aircraft's apparent size and reaction time.</p>

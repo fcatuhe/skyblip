@@ -1,0 +1,70 @@
+<% compact = local_assigns.fetch(:compact, false) %>
+<% left = compact ? 28 : 44 %>
+<% cell = compact ? 12.4 : 18 %>
+<% lane = compact ? 15 : 18 %>
+<% size = compact ? 3.5 : 4 %>
+<% rows = { ground: compact ? 20 : 22, airborne: compact ? 68 : 86 } %>
+<% axis_y = rows[:airborne] + 2 * lane + (compact ? 14 : 16) %>
+<% key_y = axis_y + (compact ? 20 : 22) %>
+<% scheduled = [ [ :position, 0, :a ], [ :status, 2, :b ], [ :callsign, 4, :b ], [ :position, 9, :b ], [ :status, 11, :a ], [ :callsign, 14, :b ] ] %>
+<% added = (0..19).excluding(0, 9).map { |second| [ :position, second, second.even? ? :a : :b ] } %>
+<% mark = lambda do |kind, cx, cy, extra = nil|
+     css = "diagram-#{kind} #{extra}".strip
+     case kind
+     when :position then tag.circle(class: css, cx:, cy:, r: size)
+     when :status then tag.rect(class: css, x: cx - size, y: cy - size, width: 2 * size, height: 2 * size)
+     else tag.path(class: css, d: "M#{cx},#{cy - size - 1} L#{cx + size + 1},#{cy} L#{cx},#{cy + size + 1} L#{cx - size - 1},#{cy} z")
+     end
+   end %>
+<% burst = lambda do |kind, second, channel, top, extra = nil|
+     cy = top + (channel == :a ? 0.5 : 1.5) * lane
+     cx = kind == :callsign ? left + (second + 1) * cell : left + second * cell + (channel == :a ? 0.5 : 0.7) * cell
+     mark.(kind, cx.round(1), cy.round(1), extra)
+   end %>
+<figure class="diagram <%= compact ? "diagram--compact" : "diagram--wide" %>">
+  <svg viewBox="0 0 <%= compact ? "280 140" : "420 #{key_y + 74}" %>" role="img" aria-labelledby="cycle-title cycle-description">
+    <title id="cycle-title"><%= t "cycle.title" %></title>
+    <desc id="cycle-description"><%= t "cycle.description" %></desc>
+
+    <% rows.each do |state, top| %>
+      <text class="diagram-label diagram-label--start" x="<%= left %>" y="<%= top - 6 %>"><%= t "cycle.#{state}" %></text>
+      <rect class="diagram-lane" x="<%= left %>" y="<%= top %>" width="<%= (20 * cell).round(1) %>" height="<%= 2 * lane %>"/>
+      <line class="diagram-lane-split" x1="<%= left %>" y1="<%= top + lane %>" x2="<%= (left + 20 * cell).round(1) %>" y2="<%= top + lane %>"/>
+      <% (1..19).each do |second| %>
+        <line class="diagram-second" x1="<%= (left + second * cell).round(1) %>" y1="<%= top %>" x2="<%= (left + second * cell).round(1) %>" y2="<%= top + 2 * lane %>"/>
+      <% end %>
+      <text class="diagram-letter diagram-letter--end <%= "diagram-letter--small" if compact %>" x="<%= left - 6 %>" y="<%= top + 0.5 * lane + 4 %>">A</text>
+      <text class="diagram-letter diagram-letter--end <%= "diagram-letter--small" if compact %>" x="<%= left - 6 %>" y="<%= top + 1.5 * lane + 4 %>">B</text>
+      <% if state == :airborne %>
+        <% added.each do |kind, second, channel| %>
+          <%= burst.(kind, second, channel, top, "diagram-added") %>
+        <% end %>
+      <% end %>
+      <% scheduled.each do |kind, second, channel| %>
+        <%= burst.(kind, second, channel, top) %>
+      <% end %>
+    <% end %>
+
+    <text class="diagram-note diagram-note--end" x="<%= left - 6 %>" y="<%= axis_y %>">c +</text>
+    <% (compact ? [ 0, 5, 10, 15 ] : 0..19).each do |second| %>
+      <text class="diagram-note" x="<%= (left + (second + 0.5) * cell).round(1) %>" y="<%= axis_y %>"><%= second %></text>
+    <% end %>
+
+    <% key = compact ? [ :position, :status, :callsign ] : [ :position, :status, :callsign, :added ] %>
+    <% key.each_with_index do |kind, index| %>
+      <% kx = left + 4 + index * (compact ? 82 : 86) %>
+      <%= kind == :added ? mark.(:position, kx, key_y - 4, "diagram-added") : mark.(kind, kx, key_y - 4) %>
+      <text class="diagram-note diagram-note--start" x="<%= kx + 9 %>" y="<%= key_y %>"><%= t "cycle.#{kind}" %></text>
+    <% end %>
+
+    <% unless compact %>
+      <text class="diagram-label diagram-label--start" x="<%= left %>" y="<%= key_y + 30 %>"><%= t "cycle.serial" %></text>
+      <text class="diagram-note diagram-note--end" x="<%= left + 50 %>" y="<%= key_y + 48 %>"><%= t "cycle.digit" %></text>
+      <text class="diagram-note diagram-note--end" x="<%= left + 50 %>" y="<%= key_y + 64 %>">c</text>
+      <% (0..9).each do |digit| %>
+        <text class="diagram-note" x="<%= left + 72 + digit * 31 %>" y="<%= key_y + 48 %>"><%= digit %></text>
+        <text class="diagram-note" x="<%= left + 72 + digit * 31 %>" y="<%= key_y + 64 %>">:<%= format("%02d", 2 * digit) %></text>
+      <% end %>
+    <% end %>
+  </svg>
+</figure>
