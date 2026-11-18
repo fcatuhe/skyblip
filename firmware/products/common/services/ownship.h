@@ -66,6 +66,7 @@ class OwnshipService : public runtime::Service {
     bool opens_second(const gnss::GnssSolution& solution);
     void publish_solution_phase(uint32_t now_ms);
     void anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms);
+    static uint32_t latency_ceiling_ms(const gnss::GnssSolution& solution);
     static bool dates_the_edge(const gnss::GnssSolution& solution, const timing::ClockState& clock);
     void apply_barometer(const events::BarometerSample& sample, uint32_t now_ms);
     void apply_accelerometer(const events::AccelerometerSample& sample);

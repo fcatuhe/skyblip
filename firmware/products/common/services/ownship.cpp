@@ -1,5 +1,6 @@
 #include "products/common/services/ownship.h"
 
+#include <algorithm>
 #include <optional>
 
 #include "core/diagnostics/payload.h"
@@ -97,6 +98,9 @@ void OwnshipService::apply_solution(const gnss::GnssSolution& solution, uint32_t
     own.aircraft_category = settings_.aircraft_type;
 
     context_.state.clock.utc_valid = solution.utc_valid;
+    // INFO: fc 18nov26 a withdrawal on any quarter withdraws the whole second the EFB and log read
+    if (!own.fix_valid) context_.state.own_second.fix_valid = false;
+    if (!own.utc_valid) context_.state.own_second.utc_valid = false;
     anchor_utc_s(solution, now_ms);
     publish_solution_phase(now_ms);
 
@@ -141,7 +145,7 @@ void OwnshipService::apply_second(uint32_t now_ms) {
     own.tx_settled = first_fix_.settled(now_ms);
     second_ = own;
     // INFO: fc 18nov26 a second whose .000 was lost has no whole-second solution to log or send
-    if (own.utc_ms == 0) context_.state.own_second = own;
+    if (gnss::named_quarter_ms(own.utc_ms) == 0) context_.state.own_second = own;
 }
 
 void OwnshipService::record_gnss(const gnss::GnssSolution& solution, uint32_t now_ms) {
@@ -247,14 +251,21 @@ void OwnshipService::update_residual(const model::Ownship& previous) {
 // | 18nov26 and an anchor a timely fix set is replaced only by another
 void OwnshipService::anchor_utc_s(const gnss::GnssSolution& solution, uint32_t now_ms) {
     timing::ClockState& clock = context_.state.clock;
-    if (!dates_the_edge(solution, clock)) return;
+    if (!dates_the_edge(solution, clock) || solution.backlogged) return;
+    if (gnss::named_quarter_ms(solution.utc_ms) != 0) return;
     const uint32_t edge_ms = static_cast<uint32_t>(clock.pps_edge_us / 1000);
-    if (context_.state.own.fix_at_ms != edge_ms) return;
-    const bool fixed = solution.fix_valid && now_ms - edge_ms < gnss::kSolutionLatencyCeilingMs;
+    if (context_.state.own.fix_at_ms - edge_ms != solution.utc_ms) return;
+    const bool fixed = solution.fix_valid && now_ms - edge_ms < latency_ceiling_ms(solution);
     if (clock.utc_anchor_fixed && !fixed) return;
     clock.utc_s = solution.utc_s;
     clock.utc_edge_us = clock.pps_edge_us;
     clock.utc_anchor_fixed = fixed;
+}
+
+// INFO: fc 18nov26 the stated 250 ms, or the part's own start and line time when its port is slower
+uint32_t OwnshipService::latency_ceiling_ms(const gnss::GnssSolution& solution) {
+    return std::max(gnss::kSolutionLatencyCeilingMs,
+                    solution.delivery_ms + runtime::kServicePassCeilingMs);
 }
 
 bool OwnshipService::dates_the_edge(const gnss::GnssSolution& solution,

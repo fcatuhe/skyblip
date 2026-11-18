@@ -128,3 +128,42 @@ TEST_CASE("product: the first fix re-anchors a clock an unfixed stamp anchored a
     CHECK(rig.state().own.fix_at_ms == 5750);
     CHECK(rig.state().own.fix_dated);
 }
+
+// At 9600 the fix burst alone is 333 ms of line, so a timely fix lands about 400 ms after its edge.
+TEST_CASE("product: a fix inside its part's own delivery time anchors the clock, at 9600 too") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    deliver(rig, Solution{1, 0, 0, 403, true, 0, 403}, updates);
+    CHECK(rig.state().clock.utc_anchor_fixed);
+
+    Rig fast{kBarometerByHand};
+    REQUIRE(fast.setup() == Status::Ok);
+    updates = 0;
+    deliver(fast, Solution{1, 0, 0, 300, true, 0, 98}, updates);
+    CHECK_FALSE(fast.state().clock.utc_anchor_fixed);
+}
+
+// A whole second drained behind an older pair arrived when the host got to it, not when it landed.
+TEST_CASE("product: a whole second drained behind an older pair anchors nothing") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    deliver(rig, Solution{1, 0, 0, kLatencyMs, true, 0, 0, true}, updates);
+    CHECK(rig.state().clock.utc_s == 0);
+    CHECK_FALSE(rig.state().clock.utc_anchor_fixed);
+}
+
+// The pinned case: a part stamping every quarter 4 ms late anchored nothing and logged nothing.
+TEST_CASE("product: stamps 4 ms off their quarters anchor, date and log as the quarters") {
+    Rig rig{kBarometerByHand};
+    REQUIRE(rig.setup() == Status::Ok);
+    uint32_t updates = 0;
+    for (uint32_t second = 1; second <= 3; second++)
+        for (uint32_t quarter = 0; quarter < 4; quarter++)
+            deliver(rig, Solution{second, quarter * kQuarterMs + 4, 0}, updates);
+    CHECK(rig.state().clock.utc_anchor_fixed);
+    CHECK(rig.state().own.fix_dated);
+    CHECK(rig.state().own_second.utc_s == kBaseUtcS + 3);
+    CHECK(rig.state().own_second.utc_ms == 4);
+}
