@@ -304,7 +304,7 @@ class TablesAgainstTheSchema(unittest.TestCase):
         named = [name for name, _ in
                  (records.DIAGNOSTICS_TYPES[key] for key in sorted(records.DIAGNOSTICS_TYPES))]
         self.assertEqual(named, self.schema["properties"]["type"]["enum"])
-        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 22)))
+        self.assertEqual(sorted(records.DIAGNOSTICS_TYPES), list(range(1, 23)))
 
     def test_every_enum_tuple_is_the_schema_enum_in_the_same_order(self):
         for field, names in records.enum_fields():
@@ -349,6 +349,20 @@ class GoldenVectors(unittest.TestCase):
         self.assertEqual(decoded["stage_s"], 900)
         self.assertEqual(decoded["reject"], "STALE")
         self.assertEqual(decoded["stage"], "solving")
+
+    def test_a_refused_4hz_encoded_by_the_firmware(self):
+        decoded = records.decode_diagnostics_record(
+            bytes.fromhex("163b0e0187886e6a05000405661c0000fa00e80300000004"))
+        self.assertEqual(decoded["type"], "receiver")
+        self.assertEqual(decoded["event"], "verdict")
+        self.assertEqual(decoded["verification"], "off_cadence")
+        self.assertEqual(decoded["config_stage"], "verifying")
+        self.assertEqual(decoded["baud"], 115200)
+        self.assertEqual(decoded["uptime_ms"], 7270)
+        self.assertEqual(decoded["interval_ms"], 250)
+        self.assertEqual(decoded["interval_seen_ms"], 1000)
+        self.assertEqual(decoded["stamp_ms"], 0)
+        self.assertEqual(decoded["heard"], 4)
 
     def test_a_burst_record_encoded_by_the_firmware(self):
         decoded = records.decode_diagnostics_record(

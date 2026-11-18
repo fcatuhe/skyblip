@@ -992,6 +992,64 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "tx_held_for_fix",
           "number": 90,
           "type": "unsigned"
+        },
+        {
+          "name": "interval_ms",
+          "number": 91,
+          "type": "unsigned"
+        },
+        {
+          "name": "interval_seen_ms",
+          "number": 92,
+          "type": "unsigned"
+        },
+        {
+          "name": "verdict",
+          "number": 93,
+          "type": "enum",
+          "enum": "gnss_verdict"
+        },
+        {
+          "name": "verify_steps",
+          "number": 94,
+          "type": "unsigned"
+        },
+        {
+          "name": "quarter_verdict",
+          "number": 95,
+          "type": "enum",
+          "enum": "gnss_verdict"
+        },
+        {
+          "name": "quarter_steps",
+          "number": 96,
+          "type": "unsigned"
+        },
+        {
+          "name": "commands",
+          "number": 97,
+          "type": "unsigned"
+        },
+        {
+          "name": "last_command",
+          "number": 98,
+          "type": "enum",
+          "enum": "gnss_command"
+        },
+        {
+          "name": "last_command_at_ms",
+          "number": 99,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_probes",
+          "number": 100,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_resets",
+          "number": 101,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1461,6 +1519,64 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_held_for_fix",
           "number": 90,
+          "type": "unsigned"
+        },
+        {
+          "name": "interval_ms",
+          "number": 91,
+          "type": "unsigned"
+        },
+        {
+          "name": "interval_seen_ms",
+          "number": 92,
+          "type": "unsigned"
+        },
+        {
+          "name": "verdict",
+          "number": 93,
+          "type": "enum",
+          "enum": "gnss_verdict"
+        },
+        {
+          "name": "verify_steps",
+          "number": 94,
+          "type": "unsigned"
+        },
+        {
+          "name": "quarter_verdict",
+          "number": 95,
+          "type": "enum",
+          "enum": "gnss_verdict"
+        },
+        {
+          "name": "quarter_steps",
+          "number": 96,
+          "type": "unsigned"
+        },
+        {
+          "name": "commands",
+          "number": 97,
+          "type": "unsigned"
+        },
+        {
+          "name": "last_command",
+          "number": 98,
+          "type": "enum",
+          "enum": "gnss_command"
+        },
+        {
+          "name": "last_command_at_ms",
+          "number": 99,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_probes",
+          "number": 100,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_resets",
+          "number": 101,
           "type": "unsigned"
         }
       ]
@@ -3302,6 +3418,157 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "resetting",
           "code": 10,
           "mirrors": "Resetting"
+        }
+      ]
+    },
+    "gnss_command": {
+      "mirrors": {
+        "type": "ports::GnssCommand",
+        "header": "ports/gnss.h"
+      },
+      "values": [
+        {
+          "name": "none",
+          "code": 0,
+          "mirrors": "None"
+        },
+        {
+          "name": "wake",
+          "code": 1,
+          "mirrors": "Wake"
+        },
+        {
+          "name": "identify",
+          "code": 2,
+          "mirrors": "Identify"
+        },
+        {
+          "name": "constellations",
+          "code": 3,
+          "mirrors": "Constellations"
+        },
+        {
+          "name": "sentence_set",
+          "code": 4,
+          "mirrors": "SentenceSet"
+        },
+        {
+          "name": "dynamic_model",
+          "code": 5,
+          "mirrors": "DynamicModel"
+        },
+        {
+          "name": "rate_1hz",
+          "code": 6,
+          "mirrors": "Rate1Hz"
+        },
+        {
+          "name": "baud_115200",
+          "code": 7,
+          "mirrors": "Baud115200"
+        },
+        {
+          "name": "rate_4hz",
+          "code": 8,
+          "mirrors": "Rate4Hz"
+        },
+        {
+          "name": "gsa_4",
+          "code": 9,
+          "mirrors": "Gsa4"
+        },
+        {
+          "name": "rate_2hz",
+          "code": 10,
+          "mirrors": "Rate2Hz"
+        },
+        {
+          "name": "gsa_2",
+          "code": 11,
+          "mirrors": "Gsa2"
+        },
+        {
+          "name": "gsv_off",
+          "code": 12,
+          "mirrors": "GsvOff"
+        },
+        {
+          "name": "gsv_every",
+          "code": 13,
+          "mirrors": "GsvEvery"
+        },
+        {
+          "name": "gsv_paced_5",
+          "code": 14,
+          "mirrors": "GsvPaced5"
+        },
+        {
+          "name": "gsv_paced_9",
+          "code": 15,
+          "mirrors": "GsvPaced9"
+        },
+        {
+          "name": "restart_hot",
+          "code": 16,
+          "mirrors": "RestartHot"
+        },
+        {
+          "name": "restart_warm",
+          "code": 17,
+          "mirrors": "RestartWarm"
+        },
+        {
+          "name": "restart_cold",
+          "code": 18,
+          "mirrors": "RestartCold"
+        },
+        {
+          "name": "restart_factory",
+          "code": 19,
+          "mirrors": "RestartFactory"
+        },
+        {
+          "name": "reset_pulse",
+          "code": 20,
+          "mirrors": "ResetPulse"
+        }
+      ]
+    },
+    "gnss_verdict": {
+      "mirrors": {
+        "type": "ports::GnssVerdict",
+        "header": "ports/gnss.h"
+      },
+      "values": [
+        {
+          "name": "none",
+          "code": 0,
+          "mirrors": "None"
+        },
+        {
+          "name": "passed",
+          "code": 1,
+          "mirrors": "Passed"
+        },
+        {
+          "name": "silent",
+          "code": 2,
+          "mirrors": "Silent"
+        },
+        {
+          "name": "disobeying",
+          "code": 3,
+          "mirrors": "Disobeying"
+        },
+        {
+          "name": "off_cadence",
+          "code": 4,
+          "mirrors": "OffCadence"
+        },
+        {
+          "name": "drifted",
+          "code": 5,
+          "mirrors": "Drifted"
         }
       ]
     },

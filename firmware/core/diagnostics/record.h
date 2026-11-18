@@ -38,9 +38,10 @@ enum class Type : uint8_t {
     Switch = 19,
     Loop = 20,
     Adsb = 21,
+    Receiver = 22,
 };
 
-constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Adsb);
+constexpr uint8_t kHighestType = static_cast<uint8_t>(Type::Receiver);
 
 const char* type_name(Type type);
 

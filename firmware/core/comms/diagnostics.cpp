@@ -134,6 +134,7 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         if (diagnostics.residual_valid)
             add(Group::Gnss, link::diagnostics_key::kResidualM, Kind::Unsigned,
                 diagnostics.residual_m);
+        if (diagnostics.gnss_bring_up_reported) add_bring_up(diagnostics.gnss_bring_up);
     }
 
     if (power) {
@@ -214,6 +215,23 @@ void DiagnosticsReport::add_capture(const Diagnostics& diagnostics) {
     add(Group::Capture, key::kKeepsFullS, Kind::Unsigned, diagnostics.capture_keeps_full_s);
     add(Group::Capture, key::kKeepsPowerRunS, Kind::Unsigned,
         diagnostics.capture_keeps_power_run_s);
+}
+
+void DiagnosticsReport::add_bring_up(const ports::GnssBringUp& bring_up) {
+    namespace key = link::diagnostics_key;
+    add(Group::Gnss, key::kIntervalMs, Kind::Unsigned, bring_up.interval_ms);
+    if (bring_up.interval_seen_ms != 0)
+        add(Group::Gnss, key::kIntervalSeenMs, Kind::Unsigned, bring_up.interval_seen_ms);
+    add(Group::Gnss, key::kVerdict, Kind::Unsigned, static_cast<int64_t>(bring_up.verdict));
+    add(Group::Gnss, key::kVerifySteps, Kind::Unsigned, bring_up.verify_steps);
+    add(Group::Gnss, key::kQuarterVerdict, Kind::Unsigned,
+        static_cast<int64_t>(bring_up.quarter_verdict));
+    add(Group::Gnss, key::kQuarterSteps, Kind::Unsigned, bring_up.quarter_steps);
+    add(Group::Gnss, key::kCommands, Kind::Unsigned, bring_up.commands);
+    add(Group::Gnss, key::kLastCommand, Kind::Unsigned, static_cast<int64_t>(bring_up.command));
+    add(Group::Gnss, key::kLastCommandAtMs, Kind::Unsigned, bring_up.command_at_ms);
+    add(Group::Gnss, key::kReceiverProbes, Kind::Unsigned, bring_up.probes);
+    add(Group::Gnss, key::kReceiverResets, Kind::Unsigned, bring_up.resets);
 }
 
 const char* capture_profile_word(CaptureProfile profile) {

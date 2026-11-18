@@ -259,6 +259,8 @@ void speak_every_key_the_rig_leaves_out(platform::host::Link& link) {
     dump.refreshes = 1;
     dump.gnss_solution_phase_valid = true;
     dump.residual_valid = true;
+    dump.gnss_bring_up_reported = true;
+    dump.gnss_bring_up.interval_seen_ms = 250;
     dump.charge = power::ChargeCondition::TooCold;
     dump.adsb_fitted = true;
     dump.capture_available = true;

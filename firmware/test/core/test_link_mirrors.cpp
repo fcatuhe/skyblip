@@ -121,6 +121,45 @@ constexpr bool on_the_wire(ports::GnssConfigStage value) {
     return false;
 }
 
+constexpr bool on_the_wire(ports::GnssCommand value) {
+    switch (value) {
+        case ports::GnssCommand::None:
+        case ports::GnssCommand::Wake:
+        case ports::GnssCommand::Identify:
+        case ports::GnssCommand::Constellations:
+        case ports::GnssCommand::SentenceSet:
+        case ports::GnssCommand::DynamicModel:
+        case ports::GnssCommand::Rate1Hz:
+        case ports::GnssCommand::Baud115200:
+        case ports::GnssCommand::Rate4Hz:
+        case ports::GnssCommand::Gsa4:
+        case ports::GnssCommand::Rate2Hz:
+        case ports::GnssCommand::Gsa2:
+        case ports::GnssCommand::GsvOff:
+        case ports::GnssCommand::GsvEvery:
+        case ports::GnssCommand::GsvPaced5:
+        case ports::GnssCommand::GsvPaced9:
+        case ports::GnssCommand::RestartHot:
+        case ports::GnssCommand::RestartWarm:
+        case ports::GnssCommand::RestartCold:
+        case ports::GnssCommand::RestartFactory:
+        case ports::GnssCommand::ResetPulse: return true;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(ports::GnssVerdict value) {
+    switch (value) {
+        case ports::GnssVerdict::None:
+        case ports::GnssVerdict::Passed:
+        case ports::GnssVerdict::Silent:
+        case ports::GnssVerdict::Disobeying:
+        case ports::GnssVerdict::OffCadence:
+        case ports::GnssVerdict::Drifted: return true;
+    }
+    return false;
+}
+
 constexpr bool on_the_wire(gnss::FixReject value) {
     switch (value) {
         case gnss::FixReject::None:
@@ -348,6 +387,37 @@ static_assert(code(ports::GnssConfigStage::Degraded) == 8, "gnss_config degraded
 static_assert(code(ports::GnssConfigStage::Probing) == 9, "gnss_config probing");
 static_assert(code(ports::GnssConfigStage::Resetting) == 10, "gnss_config resetting");
 static_assert(on_the_wire(ports::GnssConfigStage::Idle), "gnss_config");
+
+static_assert(code(ports::GnssCommand::None) == 0, "gnss_command none");
+static_assert(code(ports::GnssCommand::Wake) == 1, "gnss_command wake");
+static_assert(code(ports::GnssCommand::Identify) == 2, "gnss_command identify");
+static_assert(code(ports::GnssCommand::Constellations) == 3, "gnss_command constellations");
+static_assert(code(ports::GnssCommand::SentenceSet) == 4, "gnss_command sentence_set");
+static_assert(code(ports::GnssCommand::DynamicModel) == 5, "gnss_command dynamic_model");
+static_assert(code(ports::GnssCommand::Rate1Hz) == 6, "gnss_command rate_1hz");
+static_assert(code(ports::GnssCommand::Baud115200) == 7, "gnss_command baud_115200");
+static_assert(code(ports::GnssCommand::Rate4Hz) == 8, "gnss_command rate_4hz");
+static_assert(code(ports::GnssCommand::Gsa4) == 9, "gnss_command gsa_4");
+static_assert(code(ports::GnssCommand::Rate2Hz) == 10, "gnss_command rate_2hz");
+static_assert(code(ports::GnssCommand::Gsa2) == 11, "gnss_command gsa_2");
+static_assert(code(ports::GnssCommand::GsvOff) == 12, "gnss_command gsv_off");
+static_assert(code(ports::GnssCommand::GsvEvery) == 13, "gnss_command gsv_every");
+static_assert(code(ports::GnssCommand::GsvPaced5) == 14, "gnss_command gsv_paced_5");
+static_assert(code(ports::GnssCommand::GsvPaced9) == 15, "gnss_command gsv_paced_9");
+static_assert(code(ports::GnssCommand::RestartHot) == 16, "gnss_command restart_hot");
+static_assert(code(ports::GnssCommand::RestartWarm) == 17, "gnss_command restart_warm");
+static_assert(code(ports::GnssCommand::RestartCold) == 18, "gnss_command restart_cold");
+static_assert(code(ports::GnssCommand::RestartFactory) == 19, "gnss_command restart_factory");
+static_assert(code(ports::GnssCommand::ResetPulse) == 20, "gnss_command reset_pulse");
+static_assert(on_the_wire(ports::GnssCommand::None), "gnss_command");
+
+static_assert(code(ports::GnssVerdict::None) == 0, "gnss_verdict none");
+static_assert(code(ports::GnssVerdict::Passed) == 1, "gnss_verdict passed");
+static_assert(code(ports::GnssVerdict::Silent) == 2, "gnss_verdict silent");
+static_assert(code(ports::GnssVerdict::Disobeying) == 3, "gnss_verdict disobeying");
+static_assert(code(ports::GnssVerdict::OffCadence) == 4, "gnss_verdict off_cadence");
+static_assert(code(ports::GnssVerdict::Drifted) == 5, "gnss_verdict drifted");
+static_assert(on_the_wire(ports::GnssVerdict::None), "gnss_verdict");
 
 static_assert(code(gnss::FixReject::None) == 0, "reject none");
 static_assert(code(gnss::FixReject::NoSolution) == 1, "reject no_solution");

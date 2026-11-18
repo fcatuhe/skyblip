@@ -162,6 +162,20 @@ WRITE_KIND = ("settings", "flight_record")
 CHANGE = ("retune", "hop", "to_o_band", "to_m_band", "wake")
 SERVICE = ("config", "ownship", "power", "radio", "traffic", "alarm", "nmea", "flight_log",
            "capture", "screen", "board_poll", "bravo", "adsb", "button", "peer")
+RECEIVER_EVENT = ("command", "stage", "verdict")
+GNSS_COMMAND = ("none", "wake", "identify", "constellations", "sentence_set", "dynamic_model", "rate_1hz",
+                "baud_115200", "rate_4hz", "gsa_4", "rate_2hz", "gsa_2", "gsv_off", "gsv_every",
+                "gsv_paced_5", "gsv_paced_9", "restart_hot", "restart_warm", "restart_cold",
+                "restart_factory", "reset_pulse")
+GNSS_VERDICT = ("none", "passed", "silent", "disobeying", "off_cadence", "drifted")
+GNSS_CONFIG = ("idle", "restarting", "waking", "identifying", "sending", "verifying", "confirming", "ready",
+               "degraded", "probing", "resetting")
+# INFO: fc 18nov26 the receiver record stores the baud as $PCAS01's code, 0 is 4800 and 5 115200
+PCAS01_BAUD = (4800, 9600, 19200, 38400, 57600, 115200)
+
+
+def baud(at):
+    return lambda raw, flags: PCAS01_BAUD[raw[at]] if raw[at] < len(PCAS01_BAUD) else None
 
 DIAGNOSTICS_TYPES = {
     1: ("boot", (
@@ -265,6 +279,12 @@ DIAGNOSTICS_TYPES = {
         ("pressure_relative_altitude_m", valid_only(int16(14), 7)), ("adsb_version_valid", flag(2)),
         ("gva_valid", flag(3)), ("pressure_altitude_valid", flag(4)), ("height_difference_valid", flag(5)),
         ("gnss_relative_altitude_valid", flag(6)), ("pressure_relative_altitude_valid", flag(7)))),
+    22: ("receiver", (
+        ("event", flag_field(2, 0x03, RECEIVER_EVENT)), ("baud", baud(0)),
+        ("command", enum8(1, GNSS_COMMAND)), ("verification", enum8(2, GNSS_VERDICT)),
+        ("config_stage", enum8(3, GNSS_CONFIG)), ("uptime_ms", uint32(4)), ("interval_ms", uint16(8)),
+        ("interval_seen_ms", valid_only(uint16(10), 5)), ("stamp_ms", valid_only(uint16(12), 4)),
+        ("steps", uint8(14)), ("heard", uint8(15)))),
 }
 
 FLIGHT_FIELDS = (
