@@ -5,7 +5,7 @@ slug: radar
 description: "Lisez le radar de skyBlip Go, ses symboles et la liste Nearby. Comprenez l'alerte à moins de 3 km et 300 m et le mode PLOT ALL."
 parent: guides
 share_image: radar
-updated_on: "2026-11-13"
+updated_on: "2026-11-18"
 ---
 
 <section>
@@ -192,9 +192,17 @@ updated_on: "2026-11-13"
         aéronef dont la position est connue&nbsp;: son indicatif s&rsquo;il
         en émet un et son adresse radio sinon, la distance horizontale qui vous en sépare,
         et de combien il est au-dessus ou en dessous de vous, ou deux tirets
-        s&rsquo;il n&rsquo;émet pas son altitude. En haut, votre
-        propre indicatif avec l&rsquo;adresse radio sous laquelle vous émettez à côté,
-        et le nombre de tous les aéronefs reçus.
+        s&rsquo;il n&rsquo;émet pas son altitude. Une adresse radio est en
+        petits caractères, pour la distinguer d&rsquo;un indicatif.
+      </p>
+      <p>
+        Au-dessus de la liste, une ligne pour le Go et une pour un Bravo
+        appairé&nbsp;: sa batterie, les satellites de sa position et les
+        aéronefs que sa radio reçoit. Quand un appareil n&rsquo;a pas de position
+        ou ne fonctionne pas, un mot remplace les deux derniers&nbsp;:
+        <span class="mono">GPS OFF</span>, <span class="mono">MOVE OUT</span>,
+        <span class="mono">FINDS FIX</span>, <span class="mono">TX OFF</span>,
+        <span class="mono">NO LINK</span> ou <span class="mono">RX DOWN</span>.
       </p>
       <p>
         Un aéronef qui déclenche une alarme vient en premier, puis ceux à moins de
@@ -207,11 +215,12 @@ updated_on: "2026-11-13"
         <span class="mono">L</span> pour un message ADS-L reçu directement,
         <span class="mono">F</span> pour un trafic compatible FLARM,
         <span class="mono">U</span> pour un aéronef relayé par une station au
-        sol.
+        sol, <span class="mono">B</span> pour l&rsquo;ADS-B reçu par un Bravo
+        appairé.
       </p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "La page nearby : votre indicatif S-BLIP avec votre adresse radio à côté et le nombre de tous les aéronefs reçus sur la ligne du haut, puis cinq aéronefs listés à votre hauteur d'abord, chacun avec une lettre indiquant la source de l'information, son indicatif ou son adresse radio, sa distance horizontale et son altitude par rapport à vous" %>
+      <%= screen_image_tag "nearby.png", alt: "La page nearby : une ligne pour le Go avec sa batterie à 92 %, 9 satellites et 5 aéronefs reçus, puis cinq aéronefs listés à votre hauteur d'abord, chacun avec une lettre indiquant la source de l'information, son indicatif, ou son adresse radio en petits caractères, sa distance horizontale et son altitude par rapport à vous" %>
       <figcaption>Nearby</figcaption>
     </figure>
   </div>

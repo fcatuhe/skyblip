@@ -2,6 +2,7 @@
 // screen in isolation: the pages the pad walks, the unit a pilot reads an
 // instrument in, and the image an e-paper wears once its rails are down. A page
 // that is right in a widget test and never presented is a page nobody sees.
+#include "core/gnss/first_fix.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/self_test.h"
 #include "test/support/glass_text.h"
@@ -35,7 +36,7 @@ TEST_CASE("product: a pad tap switches page, and no swap costs the full waveform
     CHECK(rig.product.screen().mode() == go::Mode::Page);
 }
 
-// Every page is drawn and compared, and only a frame that differs reaches the glass.
+// Every page is drawn and compared once the first fix settles, and only a frame that differs shows.
 TEST_CASE("product: a still world leaves every picture on the walk alone") {
     for (int page_index = 0; page_index < go::kWalkedPages; page_index++) {
         const go::Page page = static_cast<go::Page>(page_index);
@@ -44,7 +45,7 @@ TEST_CASE("product: a still world leaves every picture on the walk alone") {
         REQUIRE(rig.setup() == Status::Ok);
         rig.platform.chips().imu.set_acceleration(1000, 0, 0);
         uint32_t now_ms = 0;
-        rig.seconds(now_ms, 5, 0, 300);
+        rig.seconds(now_ms, gnss::kFirstFixSettleMs / 1000, 0, 300);
         rig.show(now_ms, page);
         rig.seconds(now_ms, 5, 0, 300);
         REQUIRE(rig.product.screen().page() == page);

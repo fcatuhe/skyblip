@@ -198,6 +198,9 @@ void PeerService::describe_self(comms::PeerHealth& health) const {
     health.charging = battery.charging;
     health.power_level = context_.state.power.level;
     if (health.listening) health.frame_rate_hz = receiver_.statistics().frame_rate_hz;
+    health.gnss_stage = context_.state.gnss.stage;
+    if (context_.state.gnss.stage == gnss::Stage::Fixed)
+        health.satellites = context_.state.own.satellites;
 }
 
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it

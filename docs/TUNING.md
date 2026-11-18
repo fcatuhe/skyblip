@@ -308,7 +308,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kVsiKneeFpm` | 1000 | feet per minute | - | - |
 | `kVsiMarkFpm` | 500 | feet per minute | - | - |
 | `kStandardRateDps` | 3 | degrees per second | - | - |
-| `kElapsedCeilingS` | `99 * 60 + 59` = 5999 | seconds | Ceiling | - |
+| `kElapsedCeilingS` | `9 * 60 + 59` = 599 | seconds | Ceiling | - |
 
 ## `firmware/products/skyblip_go/services`
 

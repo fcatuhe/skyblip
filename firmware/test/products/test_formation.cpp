@@ -6,6 +6,7 @@
 #include "doctest/doctest.h"
 #include "protocols/common/geometry.h"
 #include "test/support/glass_text.h"
+#include "test/support/nearby_glass.h"
 #include "test/support/screen_rig.h"
 
 using namespace skyblip;
@@ -92,10 +93,6 @@ struct Flight {
 
     bool radar_counts(const char* figure) {
         return reads_in(rig.screen.framebuffer(), figure, 170, 170, 200, 200, 3);
-    }
-
-    bool nearby_counts(const char* figure) {
-        return reads_in(rig.screen.framebuffer(), figure, 150, 0, 200, go::kNearbyHeadY, 2);
     }
 };
 
@@ -271,5 +268,6 @@ TEST_CASE("formation: a member is not traffic on the radar's count, and is still
 
     flight.rig.show(now_ms, go::Page::Nearby);
     flight.rig.run_seconds(now_ms, 2);
-    CHECK(flight.nearby_counts("2"));
+    CHECK(go::nearby_lists(flight.rig.screen.framebuffer(), 'L', "515151"));
+    CHECK(go::nearby_lists(flight.rig.screen.framebuffer(), 'L', "626262"));
 }
