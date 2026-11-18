@@ -3,7 +3,6 @@
 
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
-#include "core/protocol/callsign.h"
 #include "doctest/doctest.h"
 
 using namespace skyblip;
@@ -50,8 +49,4 @@ TEST_CASE(
     CHECK(version_sent(no_fix) == 1);
 
     CHECK(version_sent(flying(), 15) == 1);
-
-    adsl::Packet name{};
-    REQUIRE(protocol::from_own_callsign(name, 0x123456, 58, "D-KXYZ"));
-    CHECK(name.protocol_version() == 1);
 }

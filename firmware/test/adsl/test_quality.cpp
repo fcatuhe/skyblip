@@ -114,7 +114,6 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static z
     const adsl::Packet poor = from_dop(800, 800);
     CHECK(good.horizontal_accuracy > poor.horizontal_accuracy);
     CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
-    CHECK(good.velocity_accuracy > poor.velocity_accuracy);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
@@ -124,12 +123,9 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and 
     CHECK(packet.navigation_integrity == 0);
 }
 
-// The clause's bounds are 1, 3 and 10 m/s, and no receiver here reports one, so NACp stands in.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the code follows NACp down") {
-    CHECK(protocol::velocity_accuracy_code(7) == 3);
-    CHECK(protocol::velocity_accuracy_code(6) == 2);
-    CHECK(protocol::velocity_accuracy_code(5) == 1);
-    CHECK(protocol::velocity_accuracy_code(4) == 0);
-    CHECK(protocol::velocity_accuracy_code(3) == 0);
-    CHECK(protocol::velocity_accuracy_code(0) == 0);
+// The clause's bounds are 1, 3 and 10 m/s of measured velocity error, and the L76K reports none.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: with no velocity error reported, the velocity accuracy is 0") {
+    CHECK(from_dop(90, 150).velocity_accuracy == 0);
+    CHECK(from_dop(50, 80).velocity_accuracy == 0);
+    CHECK(from_dop(800, 800).velocity_accuracy == 0);
 }

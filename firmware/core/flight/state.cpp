@@ -11,6 +11,21 @@ int32_t derated(int32_t evidence, uint16_t hdop_e2) {
     return wire::divide_rounded(evidence * kDopUnityE2, static_cast<int32_t>(hdop_e2));
 }
 
+enum class G13Category : uint8_t {
+    LightRotorcraft = 3,
+    LighterThanAir = 5,
+    Paraglider = 7,
+    Parachutist = 8,
+    Evtol = 9,
+    Gyrocopter = 10,
+    UasOpen = 11,
+    UasSpecific = 12,
+    UasCertified = 13,
+    HeavyRotorcraft = 15,
+    HangGlider = 16,
+    Paramotor = 17,
+};
+
 }  // namespace
 
 bool flight_evidence(const FlightSample& sample) {
@@ -73,6 +88,30 @@ FlightState FlightMonitor::update(const FlightSample& sample, uint32_t now_ms) {
     if (flight_evidence(sample) && !(comparable && jerky(previous_speed_mm_s, sample.speed_mm_s)))
         state_ = FlightState::Airborne;
     return state_;
+}
+
+bool flies_at_no_ground_speed(uint8_t aircraft_category) {
+    switch (static_cast<G13Category>(aircraft_category)) {
+        case G13Category::LightRotorcraft:
+        case G13Category::LighterThanAir:
+        case G13Category::Paraglider:
+        case G13Category::Parachutist:
+        case G13Category::Evtol:
+        case G13Category::Gyrocopter:
+        case G13Category::UasOpen:
+        case G13Category::UasSpecific:
+        case G13Category::UasCertified:
+        case G13Category::HeavyRotorcraft:
+        case G13Category::HangGlider:
+        case G13Category::Paramotor: return true;
+    }
+    return false;
+}
+
+uint8_t announced_state(uint8_t code, uint8_t aircraft_category) {
+    if (state_from(code) == FlightState::Ground && flies_at_no_ground_speed(aircraft_category))
+        return static_cast<uint8_t>(FlightState::Unknown);
+    return code;
 }
 
 }  // namespace skyblip::flight

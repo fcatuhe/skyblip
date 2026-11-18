@@ -99,7 +99,7 @@ TEST_CASE("adsl: from_own claims integrity from the receiver's DOP") {
     CHECK(int(packet.navigation_integrity) == 0);
     CHECK(int(packet.horizontal_accuracy) == 5);  // HFOM < 30 m
     CHECK(int(packet.vertical_accuracy) == 2);    // VFOM < 45 m
-    CHECK(int(packet.velocity_accuracy) == 1);    // < 10 m/s
+    CHECK(int(packet.velocity_accuracy) == 0);
 
     // A 2D solution reports no VDOP, and a height nothing measured the quality
     // of gets no claim at all: the horizontal half of the block still stands.
@@ -127,7 +127,7 @@ TEST_CASE("adsl: a degrading HDOP walks the accuracy claim down") {
     from_own(packet, own, 1, 6, 4);
     CHECK(int(packet.horizontal_accuracy) == 5);
     CHECK(int(packet.vertical_accuracy) == 2);
-    CHECK(int(packet.velocity_accuracy) == 1);
+    CHECK(int(packet.velocity_accuracy) == 0);
 
     own.hdop_e2 = 800;  // 96 m horizontal
     own.vdop_e2 = 800;  // 96 m vertical
@@ -163,13 +163,13 @@ TEST_CASE("adsl: a burst is byte for byte the frame other receivers already read
     REQUIRE(from_own(packet, own, 0x2ABCDE, 58, 1));
     const uint8_t clear[] = {0x00, 0x02, 0xBA, 0x37, 0xAF, 0x0A, 0x30, 0x21,
                              0x7B, 0xFA, 0xCF, 0x31, 0x8B, 0x6B, 0x8D, 0x6A,
-                             0x8A, 0xC6, 0xC2, 0x00, 0x35, 0x00, 0x00, 0x00};
+                             0x8A, 0xC6, 0xC2, 0x00, 0x15, 0x00, 0x00, 0x00};
     CHECK(std::memcmp(packet.data, clear, sizeof(clear)) == 0);
 
     packet.scramble();
     packet.set_crc();
-    const uint8_t air[] = {0x00, 0x5E, 0x6F, 0xC1, 0xDB, 0x84, 0x85, 0x87, 0xBC, 0xBF, 0x23, 0x61,
-                           0x44, 0x47, 0x51, 0xC5, 0xA3, 0x07, 0x3D, 0xE0, 0x15, 0x22, 0x93, 0x11};
+    const uint8_t air[] = {0x00, 0x3E, 0x28, 0x15, 0x13, 0x17, 0xC9, 0x0A, 0xC5, 0xAF, 0x8A, 0xB9,
+                           0x3E, 0xE1, 0xC8, 0x19, 0xA4, 0xA3, 0xFF, 0x46, 0x9E, 0x4C, 0x1F, 0x79};
     CHECK(std::memcmp(packet.data, air, sizeof(air)) == 0);
 
     adsl::Packet callsign{};

@@ -92,6 +92,16 @@ void spec_reed_solomon(const uint8_t* data, uint8_t* parity) {
     std::memcpy(parity, remainder, kParity);
 }
 
+// The reference Traffic as another sender would put it on air under this network header.
+wire::Status received_with_header(uint8_t header, adsl::Packet& out) {
+    adsl::Packet sent = traffic_packet();
+    sent.version = header;
+    if (((header >> 5) & 0x03) == 0) sent.scramble();
+    sent.set_crc();
+    const uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    return adsl::receive(sent.data, erasures, out);
+}
+
 }  // namespace
 
 TEST_CASE("ADS-L.4.SRD860.E.1: the network header is one byte, and this one claims nothing") {
@@ -185,9 +195,19 @@ TEST_CASE(
     adsl::encode_status(status, 0x123456, 6, adsl::StatusReport{});
     CHECK(status.protocol_version() == 1);
     CHECK(adsl::lowest_version(status) == 1);
-    adsl::Packet other{};
-    other.reset(adsl::Packet::kPayloadTypeOgnDiagnostics);
-    CHECK(adsl::lowest_version(other) == 1);
+    adsl::Packet remote_id{};
+    remote_id.reset(6);
+    CHECK(adsl::lowest_version(remote_id) == 1);
+}
+
+// Issue 2's own Status says 1 is the most this device reads, so a later issue's payload is not
+// read.
+TEST_CASE("ADS-L.4.SRD860.E.1.1: a version above the highest this device reads is refused") {
+    adsl::Packet packet;
+    CHECK(received_with_header(0x01, packet) == wire::Status::Ok);
+    CHECK(packet.protocol_version() == 1);
+    CHECK(received_with_header(0x02, packet) == wire::Status::Unsupported);
+    CHECK(received_with_header(0x0F, packet) == wire::Status::Unsupported);
 }
 
 // No signature promised, so the packet ends at its parity: 27 bytes of air, sync word included.
@@ -196,6 +216,34 @@ TEST_CASE("ADS-L.4.SRD860.E.1.2: no signature is promised, so nothing follows th
     CHECK(((packet.version >> 4) & 0x01) == 0);
     CHECK(adsl::Packet::kTxBytes == 27);
     CHECK(adsl::Packet::kTxBytes == 3 + adsl::Packet::kDataBytes);
+}
+
+// D.1.1 leaves the signature out of the length, so a simple receiver reads the packet without it.
+TEST_CASE("ADS-L.4.SRD860.E.1.2: a signed packet is read, and its signature left unread") {
+    adsl::Packet packet;
+    REQUIRE(received_with_header(0x10, packet) == wire::Status::Ok);
+    adsl::Traffic traffic;
+    REQUIRE(heard(packet, traffic));
+    CHECK(traffic.address == 0x123456);
+}
+
+// "Low-power or constrained ADS-L clients may optionally use key index 3", so one is still heard.
+TEST_CASE("ADS-L.4.SRD860.E.1.3: a packet sent under key 3 is read in the clear") {
+    adsl::Packet packet;
+    REQUIRE(received_with_header(0x60, packet) == wire::Status::Ok);
+    adsl::Traffic traffic;
+    REQUIRE(heard(packet, traffic));
+    adsl::Traffic sent;
+    REQUIRE(heard(traffic_packet(), sent));
+    CHECK(traffic.address == 0x123456);
+    CHECK(traffic.latitude_1e7 == sent.latitude_1e7);
+    CHECK(traffic.altitude_m == sent.altitude_m);
+}
+
+TEST_CASE("ADS-L.4.SRD860.E.1.3: a packet under a reserved key, 1 or 2, is refused") {
+    adsl::Packet packet;
+    CHECK(received_with_header(0x20, packet) == wire::Status::Unsupported);
+    CHECK(received_with_header(0x40, packet) == wire::Status::Unsupported);
 }
 
 TEST_CASE("ADS-L.4.SRD860.E.1.3: key 0 is the scrambling key, and it is the key used") {
@@ -229,10 +277,11 @@ TEST_CASE("ADS-L.4.SRD860.E.2: the scrambler is XXTEA over the ADS-L data, six r
     CHECK(std::memcmp(packet.payload, again.payload, 20) == 0);
 }
 
-// INFO: fc 18sep26 prose: the layer's remit, and the note that issue 1 defined only the CRC variant
-TEST_CASE("ADS-L.4.SRD860.E.3: error control is a CRC or an FEC, named by the header bit" *
-          doctest::skip()) {
-    FAIL("prose: the choice between E.3.1 and E.3.2, which the header's error control bit names");
+// An M-band frame is checked by its CRC, so one whose header names the FEC contradicts itself.
+TEST_CASE("ADS-L.4.SRD860.E.3: error control is the CRC unless the header bit names the FEC") {
+    adsl::Packet packet;
+    CHECK(received_with_header(0x00, packet) == wire::Status::Ok);
+    CHECK(received_with_header(0x80, packet) == wire::Status::Invalid);
 }
 
 // Four header fields in one byte, and this device sends a zero in every one of them.

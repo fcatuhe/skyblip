@@ -20,6 +20,14 @@ constexpr uint32_t kMBandChannelBandwidthHz = 200000;
 constexpr uint16_t kMBandGaussianBtE2 = 50;
 constexpr int8_t kMBandErpCeilingDbm = 14;
 
+// INFO: fc 18nov26 the "Backoff Interval (see Subpart D)" row of §C.2's and §C.4's tables
+struct Backoff {
+    uint32_t floor_us;
+    uint32_t ceiling_us;
+};
+constexpr Backoff kMBandBackoff{15000, 250000};
+constexpr Backoff kOBandBackoff{10000, 50000};
+
 // INFO: fc 13nov26 §C.2.4's 0x72 0x4B behind the preamble's last byte, then §D.1.1's length, 24
 constexpr uint32_t kSyncWord = 0xF5724B18u;
 

@@ -19,6 +19,7 @@
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/reed_solomon.h"
 #include "protocols/adsl/uplink.h"
+#include "protocols/adsl_edge/registration.h"
 
 using namespace skyblip;
 
@@ -120,7 +121,7 @@ void hear_adsl(protocol::Frame& frame, const Receiver& receiver) {
     adsl::Packet packet;
     if (adsl::receive(frame.data, frame.erasures, packet) != wire::Status::Ok) return;
 
-    if (protocol::is_registration(packet)) {
+    if (adsl_edge::is_registration(packet)) {
         char callsign[traffic::CallsignTable::kTextBytes];
         protocol::callsign_of(packet, callsign, sizeof(callsign));
         return;

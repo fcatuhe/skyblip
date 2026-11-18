@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/protocol/adsl.h"
+#include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
@@ -27,6 +28,15 @@ uint16_t chips_of(uint8_t byte) {
 // it.
 TEST_CASE("ADS-L.4.SRD860.C.2: the transmitter stays under the M band's 14 dBm e.r.p.") {
     CHECK(parts::sx1262::kResultingErpCentiDb <= adsl::kMBandErpCeilingDbm * 100);
+}
+
+// The deferral a busy channel draws as flown: 3 to 8 units of 5 ms, inside the table's 15 to 250
+// ms.
+TEST_CASE("ADS-L.4.SRD860.C.2: a busy burst backs off 15 to 40 ms, inside the M band's interval") {
+    CHECK(timing::PoliteAccess::kDeferralFloorUs == 15000u);
+    CHECK(timing::PoliteAccess::kDeferralCeilingUs == 40000u);
+    CHECK(timing::PoliteAccess::kDeferralFloorUs >= adsl::kMBandBackoff.floor_us);
+    CHECK(timing::PoliteAccess::kDeferralCeilingUs <= adsl::kMBandBackoff.ceiling_us);
 }
 
 // The radio sends eight repetitions; the last four and both 1001s are the leading sync byte.
@@ -144,33 +154,6 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
             }
         }
     }
-}
-
-// The name is skyBlip's payload, not ADS-L's, so it keeps out of the direct slot ADS-L uses.
-TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L transmits nothing") {
-    timing::ClockState clock{};
-    clock.utc_valid = true;
-    clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kWindowBMs.start_ms, clock);
-
-    int seen = 0;
-    for (uint32_t address = 1; address < 64; address++) {
-        timing::Transmitter tx;
-        tx.configure(address * 0x9E37u);
-        for (uint32_t utc_s = 0; utc_s < 40; utc_s++) {
-            const timing::Transmitter::Attempt attempt =
-                tx.attempt(slot1, utc_s, 1000, true, 0, timing::Transmitter::Payload::Callsign);
-            if (!attempt.go) continue;
-            seen++;
-            CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
-            CHECK(attempt.at_ms >= adsl::kDirectEndMs);
-            CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kWindowBMs.end_ms);
-            CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
-            CHECK(utc_s % 2 == 0);
-        }
-    }
-    CHECK(seen > 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {

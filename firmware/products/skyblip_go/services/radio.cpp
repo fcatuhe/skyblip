@@ -247,7 +247,7 @@ timing::Transmitter::Attempt RadioService::attempt(const timing::SlotPlan& plan,
 
 bool RadioService::full_rate() const {
     const model::Ownship& own = context_.state.own;
-    return !adsl::reduced_rate(adsl::announced_state(own.flight_state, own.aircraft_category));
+    return !adsl::reduced_rate(flight::announced_state(own.flight_state, own.aircraft_category));
 }
 
 void RadioService::count_given_up(uint32_t now_ms) {

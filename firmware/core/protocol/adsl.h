@@ -33,11 +33,7 @@ bool issue1_form(adsl::Packet& packet, const model::Ownship& own);
 bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
                      uint8_t address_mapping_table, const adsl::StatusReport& report);
 
-// G.1.16, NACv. A GNSS-only velocity is as good as the position fix behind it,
-// which is the relation the reference encoder uses verbatim
-// (oss/SoftRF-moshe-braner .../libraries/OGN/ads-l.h:453).
-uint8_t velocity_accuracy_code(uint8_t horizontal_code);
-
+// INFO: fc 18nov26 G.1.16: the L76K reports no velocity error, so the velocity accuracy stays 0
 adsl::Integrity integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2);
 
 }

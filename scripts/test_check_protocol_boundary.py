@@ -56,6 +56,20 @@ class CheckProtocolBoundary(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertIn("outside protocols/alptas/ and protocols/common/", found[0])
 
+    def test_adsl_edge_may_include_adsl_and_nothing_else_may_include_the_edge(self):
+        root, protocols = tree({
+            "adsl_edge/registration.h": '#include "protocols/adsl/packet.h"\n',
+            "adsl/packet.cpp": '#include "protocols/adsl_edge/registration.h"\n',
+            "alptas/frame.cpp": '#include "protocols/adsl_edge/registration.h"\n',
+            "adsb/message.cpp": '#include "protocols/adsl/packet.h"\n',
+        })
+        with root:
+            found = check_protocol_boundary.violations(protocols)
+        self.assertEqual(len(found), 3)
+        self.assertIn("protocols/adsb/message.cpp", found[0])
+        self.assertIn("protocols/adsl/packet.cpp", found[1])
+        self.assertIn("protocols/alptas/frame.cpp", found[2])
+
     def test_doctest_is_for_tests_only(self):
         root, protocols = tree({"adsb/message.cpp": '#include "doctest/doctest.h"\n'})
         with root:

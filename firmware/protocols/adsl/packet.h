@@ -46,7 +46,14 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kProtocolVersionIssue2 = 1;
     static constexpr uint8_t kMaxProtocolVersion = kProtocolVersionIssue2;
     static constexpr uint8_t kProtocolVersionMask = 0x0F;
-    static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
+    // INFO: fc 13nov26 E.1: version in bits 0-3, signature flag bit 4, key index bits 5-6, FEC bit
+    // 7
+    static constexpr uint8_t kSignatureFlag = 0x10;
+    static constexpr int kKeyIndexShift = 5;
+    static constexpr uint8_t kKeyIndexMask = 0x03;
+    static constexpr uint8_t kKeyScrambled = 0;
+    static constexpr uint8_t kKeyClear = 3;
+    static constexpr uint8_t kErrorControlFec = 0x80;
 
     union {
         uint8_t data[kDataBytes];
@@ -117,6 +124,9 @@ struct __attribute__((packed)) Packet {
 
     bool is_position() const { return payload_type == kPayloadTypePosition; }
     uint8_t protocol_version() const { return version & kProtocolVersionMask; }
+    uint8_t key_index() const {
+        return static_cast<uint8_t>((version >> kKeyIndexShift) & kKeyIndexMask);
+    }
     void set_protocol_version(uint8_t value) {
         version = static_cast<uint8_t>((version & ~kProtocolVersionMask) |
                                        (value & kProtocolVersionMask));

@@ -11,6 +11,7 @@
 #include "hardware/parts/sx1262/sx1262.h"
 #include "ports/rf.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsl_edge/registration.h"
 #include "simulator/simulator.h"
 #include "test/support/simulator_run.h"
 
@@ -191,7 +192,7 @@ TEST_CASE("rf: on the ground the name goes out in slot 1's tail, two seconds cle
         const simulator::AirRecord& record = air.record_at(i);
         const uint8_t payload_type = payload_type_of(record);
         if (payload_type == adsl::Packet::kPayloadTypePosition) position_at_us = record.at_us;
-        if (payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
+        if (payload_type == adsl_edge::kPayloadTypeOgnDiagnostics && position_at_us != 0) {
             names++;
             CAPTURE(record.at_us);
             CHECK(record.phase_ms < timing::kWindowBSpillMs);

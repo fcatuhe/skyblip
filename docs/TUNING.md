@@ -160,7 +160,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kCcaWindowUs` | 200 | microseconds | Window | 1) the CCA interval, over Table 48's 160 us floor |
 | `kDeadTimeCeilingUs` | 2000 (2 ms) | microseconds | Ceiling | 2) the dead time, CCA end to burst on air, where Table 48 allows 5 ms |
 | `kDeferralUnitUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | - | 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks |
-| `kDeferralFloorUs` | `kDeferralUnitUs` = 5000 (5 ms) | microseconds | Floor | [README](../firmware/core/timing/README.md) argues it |
+| `kDeferralFloorUs` | `adsl::kMBandBackoff.floor_us` | microseconds | Floor | [README](../firmware/core/timing/README.md) argues it |
 | `kDeferralCeilingUs` | `kDeferralUnits * kDeferralUnitUs` = 40000 (40 ms) | microseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
 | `kTransmissionCeilingUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | Ceiling | 6) Ton max is one burst, under Table 48's 1 s |
 | `kSameFrequencyOffFloorMs` | `en300220::kSameFrequencyOffFloorMs` = 100 | milliseconds | Floor | 7) Toff min on one frequency, which the schedule holds (README) |

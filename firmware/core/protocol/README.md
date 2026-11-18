@@ -5,7 +5,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | File | What it is |
 |---|---|
 | `adsl.{h,cpp}` | own-ship as an ADS-L Traffic payload, extrapolated to the instant the timestamp names, with the accuracy claimed from the receiver's DOP. A received Traffic payload as an `AircraftObservation`. The Status values this device declares |
-| `callsign.{h,cpp}` | OGN's payload 66, the name ADS-L has no field for (below) |
+| `callsign.{h,cpp}` | the name ADS-L has no field for, on the payload 66 record of `protocols/adsl_edge/` (below) |
 | `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's G.3 uplink over observations. `decode` counts a record older than 10 s, or dated ahead of the second it was heard in, as stale and does not draw it. `encode` re-encodes each target and dates it the instant the station sends, which G.3 allows only for traffic from systems other than ADS-L: an ADS-L payload must be forwarded verbatim. It serves the simulated skyPost and the tests, and a real ground station forwarding ADS-L would call `adsl::Uplink` with the payloads as heard |
 | `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window, names the system from the sync tail, and lays out the M-band buffer the SX1262 sends |
 | `alptas.{h,cpp}` | an ALP-TAS position as an observation and back: the ADS-L category, address table, flight state and emergency its fields map to, the fix age, and `AlptasReceiver`, which follows a random address from step to step |
@@ -36,18 +36,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 
 §B.5 asks own Traffic to go out in a version every close neighbour reads, and `core/traffic/README.md` says how the lowest one is found. With no close Issue 1 client, a position goes out in the lowest version whose encoding is the same (§E.1.1), so a payload carrying category 14 to 17 or an unknown field goes as version 1, exactly as it is.
 
-Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`, which re-codes it as version 0 only where Issue 1 has a truthful code for every field. This device never claims a value it does not have:
-
-| Issue 2 code | Beside an Issue 1 client | Why |
-|---|---|---|
-| category 14, model plane | 0, no category information | Issue 1 has no code for it |
-| category 15, heavy rotorcraft | 3, rotorcraft | Issue 1's rotorcraft covers every weight |
-| category 16, hang-glider | 7, hang-glider or paraglider | Issue 2 split that class |
-| category 17, paramotor | 7, hang-glider or paraglider | a powered paraglider, and Issue 1's closest wing |
-| position 0x800000, no fix | 0xFFFFFF | Issue 1's own marker for no fix |
-| a real position at 0xFFFFFF, one step south or west of zero | 0xFFFFFE | one step on, well inside any accuracy we claim, so Issue 1 does not read it as no fix |
-| GVA 2 for a VFOM from 10 to 15 m | 3 | Issue 1 G.1.15 draws code 3 at 15 m, Issue 2 at 10 m |
-| altitude, ground speed or vertical rate unknown | the position is held for that second | Issue 1 has no code for unknown, and 0x3FFF, 0xFF or 0x1FF would read as 61112 m, 238 m/s or a 119 m/s descent |
+Beside a close Issue 1 client, `RadioService` hands the packet to `issue1_form`, which passes the VFOM own-ship's VDOP gives to `adsl::issue1_form()`. The stack re-codes it as version 0 only where Issue 1 has a truthful code for every field, and answers false where it has none (`protocols/adsl/README.md`, Soft versioning). A position with no Issue 1 form is held for that second, so this device never claims a value it does not have.
 
 A held position is counted once a second in `air.tx_held_for_b5`, and like any burst that did not go out it is retried 2 s later on the same channel, until it goes out or the next position is due (`core/timing/README.md`). Status and the name are not Traffic, which §B.5 leaves free, so they go out as version 1 whoever is near.
 
@@ -55,7 +44,7 @@ A held position is counted once a second in `air.tx_held_for_b5`, and like any b
 
 An iConspicuity payload carries no callsign, so a target on the glass is six hex digits and a pilot's radio call is not. The name comes from the one payload the specification hands to somebody else: F.2.1 assigns value 66 to "OGN Diagnostics" and footnotes it "payload definition is outside the scope of this document", which makes the layout Jalocha's (`oss/nrf52-ogn-tracker/src/adsl.h:120-128`) and ours to follow rather than to invent.
 
-`from_own_callsign` in `callsign.{h,cpp}` writes the one record of it we speak, on the frame layer `adsl::Packet` exposes. Type 66, the same 6+24 sender address our position frames carry, then a header byte of telemetry type 1 and info type 5 (OGN's `TelemType` and `InfoType`), then 14 characters. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
+The record itself is `protocols/adsl_edge/`'s (`registration.h`): type 66, the same 6+24 sender address our position frames carry, then a header byte of telemetry type 1 and info type 5 (OGN's `TelemType` and `InfoType`), then 14 characters. `from_own_callsign` in `callsign.{h,cpp}` writes our name into it, cut at the first character the menu does not type. Everything around it is the frame we already build: the same sync word, Manchester coding, scramble and CRC24, which is why the radio needed no new dwell and the receiver no new configuration.
 
 `callsign_of` is the other direction, and it is a trust boundary: text off the air is refused whole when any byte of it is not a callsign character, rather than drawn with a control character in it or spliced into a `$PFLAA` ID field as a comma. `is_callsign_character` is the set the radar menu types (blank, dash, `A`-`Z`, `0`-`9`), and the pilot's own callsign is held to the same one. What it returns goes to `core/traffic/callsigns.h` keyed on the sender's table and address, never into an `AircraftObservation` - a name is an attribute of an address, a position is an observation, and the two have different lifetimes.
 

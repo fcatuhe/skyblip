@@ -104,12 +104,19 @@ int Packet::correct(const uint8_t* erasures, int max_erasures) {
                         std::min(max_erasures, kMostErasures), true);
 }
 
+// INFO: fc 18nov26 E.1: the CRC also covers the header, so it is read only once the frame checks
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out) {
     out.reset();
     __builtin_memcpy(out.data, frame, Packet::kDataBytes);
     if (out.correct(erasures) < 0) return wire::Status::Crc;
-    out.descramble();
-    return wire::Status::Ok;
+    if ((out.version & Packet::kErrorControlFec) != 0) return wire::Status::Invalid;
+    if (out.protocol_version() > Packet::kMaxProtocolVersion) return wire::Status::Unsupported;
+    if (out.key_index() == Packet::kKeyScrambled) {
+        out.descramble();
+        return wire::Status::Ok;
+    }
+    if (out.key_index() == Packet::kKeyClear) return wire::Status::Ok;
+    return wire::Status::Unsupported;
 }
 
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".

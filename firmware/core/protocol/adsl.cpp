@@ -1,9 +1,9 @@
 #include "core/protocol/adsl.h"
 
-#include <initializer_list>
 #include <optional>
 
 #include "core/flight/extrapolate.h"
+#include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
 #include "core/settings/address.h"
@@ -13,21 +13,6 @@
 #include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
-
-namespace {
-
-// INFO: fc 13nov26 Issue 2 split broader Issue 1 classes, and a model plane has no Issue 1 code
-uint8_t issue1_category(uint8_t category) {
-    switch (category) {
-        case 14: return 0;
-        case 15: return 3;
-        case 16:
-        case 17: return 7;
-        default: return category;
-    }
-}
-
-}  // namespace
 
 bool to_observation(const adsl::Packet& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out) {
@@ -59,27 +44,11 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
     return true;
 }
 
-// INFO: fc 13nov26 0xFFFFFE is one step from a real 0xFFFFFF, well inside any accuracy we claim
+// INFO: fc 18nov26 the VFOM is G.1.14's model taken to VDOP, as integrity_from_dop_e2 takes it
 bool issue1_form(adsl::Packet& packet, const model::Ownship& own) {
-    if (!packet.is_position()) return false;
-    if (!packet.has_altitude() || !packet.has_speed() || !packet.has_climb()) return false;
-    packet.aircraft_category = issue1_category(packet.aircraft_category);
-    for (const wire::BitField field : {adsl::Packet::kLatitudeField, adsl::Packet::kLongitudeField})
-        if (packet.field(field) == adsl::Packet::kIssue1PositionInvalidCode)
-            packet.set_field(field, adsl::Packet::kIssue1PositionInvalidCode - 1);
-    if (!packet.has_position()) {
-        packet.set_field(adsl::Packet::kLatitudeField, adsl::Packet::kIssue1PositionInvalidCode);
-        packet.set_field(adsl::Packet::kLongitudeField, adsl::Packet::kIssue1PositionInvalidCode);
-    }
-    if (own.vdop_e2 != 0)
-        packet.vertical_accuracy =
-            adsl::Packet::issue1_vertical_accuracy_code(adsl::hfom_cm(own.vdop_e2));
-    packet.set_protocol_version(adsl::Packet::kProtocolVersionIssue1);
-    return true;
-}
-
-uint8_t velocity_accuracy_code(uint8_t horizontal_code) {
-    return horizontal_code >= 4 ? static_cast<uint8_t>(horizontal_code - 4) : 0;
+    const std::optional<uint32_t> vfom_cm =
+        own.vdop_e2 == 0 ? std::nullopt : std::optional<uint32_t>(adsl::hfom_cm(own.vdop_e2));
+    return adsl::issue1_form(packet, vfom_cm);
 }
 
 // INFO: fc 13sep26 no VDOP is a 2D solution, whose height is not a figure to claim accuracy for
@@ -94,7 +63,6 @@ adsl::Integrity integrity_from_dop_e2(uint16_t hdop_e2, uint16_t vdop_e2) {
     integrity.vertical_accuracy_issue2_only =
         vdop_e2 != 0 &&
         integrity.vertical_accuracy != adsl::Packet::issue1_vertical_accuracy_code(vfom_cm);
-    integrity.velocity_accuracy = velocity_accuracy_code(integrity.horizontal_accuracy);
     return integrity;
 }
 
@@ -127,7 +95,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
         flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
     traffic.timestamp =
         adsl::timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
-    traffic.flight_state = adsl::announced_state(own.flight_state, aircraft_category);
+    traffic.flight_state = flight::announced_state(own.flight_state, aircraft_category);
     traffic.aircraft_category = aircraft_category;
     traffic.emergency = adsl::kEmergencyNone;
     traffic.position_valid = own.fix_valid;

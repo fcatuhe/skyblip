@@ -17,6 +17,7 @@
 #include "hardware/parts/sx1262/model.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsl_edge/registration.h"
 #include "protocols/common/test/channel.h"
 #include "simulator/simulator.h"
 #include "test/support/simulator_run.h"
@@ -116,7 +117,7 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
             timing::Scheduler::in_direct_slot(record.phase_ms))
             continue;
         named++;
-        CHECK(payload_type_of(record) == adsl::Packet::kPayloadTypeOgnDiagnostics);
+        CHECK(payload_type_of(record) == adsl_edge::kPayloadTypeOgnDiagnostics);
         CHECK(record.phase_ms < timing::kWindowBSpillMs);
         CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <=
               timing::kWindowBMs.end_ms - 1000);
@@ -144,7 +145,7 @@ TEST_CASE("rf: a device with no callsign set transmits no name") {
     REQUIRE(simulator.product().settings().callsign[0] == 0);
     run_on(simulator, past_settling(simulator), 21000);
 
-    CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypeOgnDiagnostics) == 0);
+    CHECK(count_payloads(simulator.world().air(), adsl_edge::kPayloadTypeOgnDiagnostics) == 0);
     CHECK(count_payloads(simulator.world().air(), adsl::Packet::kPayloadTypeStatus) >= 2);
 }
 

@@ -12,13 +12,6 @@ using wire::Status;
 namespace {
 
 constexpr uint8_t kPayloadTypeTrafficUplink = 0x04;
-constexpr uint8_t kErrorControlFec = 0x80;
-// INFO: fc 13nov26 E.1: version in bits 0-3, signature flag bit 4, key index bits 5-6, FEC bit 7
-constexpr uint8_t kSignatureFlag = 0x10;
-constexpr int kKeyIndexShift = 5;
-constexpr uint8_t kKeyIndexMask = 0x03;
-constexpr uint8_t kKeyScrambled = 0;
-constexpr uint8_t kKeyClear = 3;
 constexpr int kQuartersPerCycle = static_cast<int>(kTimestampCycleS * 1000 / kTimestampQuarterMs);
 constexpr int kMaxAgeQuarters = static_cast<int>(kUplinkRecordMaxAgeMs / kTimestampQuarterMs);
 constexpr uint8_t kReservedBits = 0xC0;
@@ -52,6 +45,7 @@ void codeword_of(const uint8_t* covered, int covered_bytes, const uint8_t* parit
 }  // namespace
 
 bool uplink_record_current(const Packet& traffic, uint32_t utc_s, int32_t into_ms) {
+    if (traffic.timestamp >= kQuartersPerCycle) return false;
     const int now = timestamp_code(utc_s, into_ms);
     const int age = (now - traffic.timestamp + kQuartersPerCycle) % kQuartersPerCycle;
     return age <= kMaxAgeQuarters;
@@ -65,7 +59,7 @@ Status Uplink::encode(uint32_t sender_address, uint8_t sender_table, const Packe
     const int covered_bytes = 1 + data_bytes;
 
     uint8_t covered[ReedSolomon255::kDataBytes] = {0};
-    covered[0] = static_cast<uint8_t>(Packet::kProtocolVersionIssue2 | kErrorControlFec);
+    covered[0] = static_cast<uint8_t>(Packet::kProtocolVersionIssue2 | Packet::kErrorControlFec);
     Packet header{};
     header.reset(kPayloadTypeTrafficUplink);
     header.set_address(sender_address);
@@ -113,14 +107,16 @@ Status Uplink::decode(const uint8_t* packet, size_t bytes, Packet* traffic, int 
 
     uint8_t* covered = codeword + pad;
     const uint8_t header = covered[0];
-    if ((header & kErrorControlFec) == 0) return Status::Invalid;
+    if ((header & Packet::kErrorControlFec) == 0) return Status::Invalid;
     if ((header & Packet::kProtocolVersionMask) > Packet::kMaxProtocolVersion ||
-        (header & kSignatureFlag) != 0)
+        (header & Packet::kSignatureFlag) != 0)
         return Status::Unsupported;
-    const uint8_t key_index = static_cast<uint8_t>((header >> kKeyIndexShift) & kKeyIndexMask);
-    if (key_index != kKeyScrambled && key_index != kKeyClear) return Status::Unsupported;
+    const uint8_t key_index =
+        static_cast<uint8_t>((header >> Packet::kKeyIndexShift) & Packet::kKeyIndexMask);
+    if (key_index != Packet::kKeyScrambled && key_index != Packet::kKeyClear)
+        return Status::Unsupported;
     const int data_bytes = covered_bytes - 1;
-    if (key_index == kKeyScrambled) scramble(covered + 1, data_bytes, false);
+    if (key_index == Packet::kKeyScrambled) scramble(covered + 1, data_bytes, false);
     if (covered[1] != kPayloadTypeTrafficUplink) return Status::Unsupported;
 
     int kept = 0;

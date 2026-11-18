@@ -84,7 +84,7 @@ void Sky::name_aircraft(int index, const char* callsign) {
     if (index < 0 || index >= kMaxAircraft || !aircraft_[index].used || callsign == nullptr) return;
     char* out = aircraft_[index].callsign;
     int copied = 0;
-    while (copied < protocol::kInformationTextBytes && callsign[copied] != 0) {
+    while (copied < adsl_edge::kInformationTextBytes && callsign[copied] != 0) {
         out[copied] = callsign[copied];
         copied++;
     }

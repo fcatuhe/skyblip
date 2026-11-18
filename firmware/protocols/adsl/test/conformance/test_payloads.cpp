@@ -2,6 +2,7 @@
 // does not.
 #include <cstdint>
 #include <cstring>
+#include <initializer_list>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
@@ -92,6 +93,19 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed timestamp may not be in the future") {
     CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s, 0));
     CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s, 750));
     CHECK(adsl::uplink_record_current(record, cycle_start_s + 1, 0));
+}
+
+// G.1.1: "The values 60..63 shall not be used", so such a record names no instant to age from.
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed timestamp of 60 to 63 is no age, and never current") {
+    const uint32_t cycle_start_s = 1785628815;
+    for (uint8_t timestamp = 60; timestamp < 64; timestamp++) {
+        CAPTURE(int(timestamp));
+        adsl::Packet record = relayed_traffic(0x3C1234, 0);
+        record.timestamp = timestamp;
+        for (uint32_t second = 0; second < 15; second++)
+            for (int32_t into_ms : {0, 500, 999})
+                CHECK_FALSE(adsl::uplink_record_current(record, cycle_start_s + second, into_ms));
+    }
 }
 
 // The header byte is in clear, and its error control bit says the parity is E.3.2's.

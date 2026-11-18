@@ -20,6 +20,9 @@ std::optional<uint8_t> traffic_max_version(const Packet& clear);
 // INFO: fc 13nov26 B.5: within 1 km and 800 m, or under 800 m and closing to CPA in less than 30 s
 bool close_client(int32_t horizontal_m, int32_t vertical_m, int32_t closing_mm_s);
 
+// INFO: fc 18nov26 B.5: Traffic re-coded in Issue 1's codes, or false where Issue 1 has none true
+bool issue1_form(Packet& packet, std::optional<uint32_t> vfom_cm);
+
 }
 
 #endif

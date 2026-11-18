@@ -257,8 +257,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
     CHECK(stays.longitude_1e7 == still.longitude_1e7);
 }
 
-// A fix older than half a second is replaced, not transmitted: the clause's own deadline.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 500 ms") {
+// Our reading: the age is taken at the top of the second, and the burst carries the fix forward.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent") {
     CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};

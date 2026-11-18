@@ -1,4 +1,5 @@
 // §D.3's media access, one branch a case: what a busy channel does to a packet waiting to go out.
+#include <algorithm>
 #include <cstdint>
 
 #include "doctest/doctest.h"
@@ -40,7 +41,38 @@ TEST_CASE("adsl media access: a busy channel defers by a drawn whole number of u
         const AccessVerdict verdict = media_access(busy_at(kAtUs), deferral(draw));
         REQUIRE(verdict.access == Access::Defer);
         CHECK((verdict.at_us - kAtUs) % kUnitUs == 0);
-        CHECK(verdict.at_us - kAtUs == (1 + draw % 8) * kUnitUs);
+        CHECK(verdict.at_us - kAtUs == (3 + draw % 6) * kUnitUs);
+    }
+}
+
+// C.2's 15 ms floor is three 5 ms units, so a caller declaring two never transmits after a busy
+// one.
+TEST_CASE("adsl media access: a caller whose units fall short of the band's floor misses") {
+    CHECK(media_access(busy_at(kAtUs), deferral(0, 2)).access == Access::Missed);
+    CHECK(media_access(busy_at(kAtUs), deferral(0, 3)).at_us == kAtUs + 3 * kUnitUs);
+}
+
+TEST_CASE("adsl media access: no deferral reaches past the band's ceiling, whatever is declared") {
+    ChannelAttempt attempt = busy_at(kAtUs);
+    attempt.last_us = kAtUs + 1000000;
+    uint64_t longest_us = 0;
+    for (uint32_t draw = 0; draw < 100; draw++) {
+        const AccessVerdict verdict = media_access(attempt, deferral(draw, 100));
+        REQUIRE(verdict.access == Access::Defer);
+        longest_us = std::max<uint64_t>(longest_us, verdict.at_us - kAtUs);
+    }
+    CHECK(longest_us == kMBandBackoff.ceiling_us);
+}
+
+// A ground station on the O band backs off over C.4's 10 to 50 ms instead.
+TEST_CASE("adsl media access: the O band backs off between its own 10 and 50 ms") {
+    ChannelAttempt attempt = busy_at(kAtUs);
+    attempt.backoff = kOBandBackoff;
+    for (uint32_t draw = 0; draw < 32; draw++) {
+        const AccessVerdict verdict = media_access(attempt, deferral(draw, 100));
+        REQUIRE(verdict.access == Access::Defer);
+        CHECK(verdict.at_us - kAtUs >= kOBandBackoff.floor_us);
+        CHECK(verdict.at_us - kAtUs <= kOBandBackoff.ceiling_us);
     }
 }
 
@@ -68,7 +100,7 @@ TEST_CASE("adsl media access: a deferral never waits more units than the caller 
 
 TEST_CASE("adsl media access: the draw never reaches past the window the packet must start in") {
     ChannelAttempt attempt = busy_at(kAtUs);
-    attempt.last_us = kAtUs + 2 * kUnitUs + 1;
+    attempt.last_us = kAtUs + 4 * kUnitUs + 1;
     for (uint32_t draw = 0; draw < 16; draw++) {
         const AccessVerdict verdict = media_access(attempt, deferral(draw));
         REQUIRE(verdict.access == Access::Defer);
@@ -87,12 +119,13 @@ TEST_CASE("adsl media access: a window with no whole unit left is missed") {
     CHECK(media_access(attempt, deferral(0)).access == Access::Missed);
 }
 
-TEST_CASE("adsl media access: a deferral is never shorter than EN 300 220-1's minimum period") {
+TEST_CASE("adsl media access: a unit is never shorter than EN 300 220-1's minimum period") {
     ChannelAttempt attempt = busy_at(kAtUs);
-    const AccessVerdict verdict = media_access(attempt, Deferral{0, 1, 0});
+    const AccessVerdict verdict = media_access(attempt, Deferral{0, 200, 0});
     REQUIRE(verdict.access == Access::Defer);
-    CHECK(verdict.at_us - kAtUs == en300220::kDeferralFloorUs);
-    CHECK(media_access(attempt, Deferral{kUnitUs, 0, 7}).at_us - kAtUs == kUnitUs);
+    CHECK((verdict.at_us - kAtUs) % en300220::kDeferralFloorUs == 0);
+    CHECK(verdict.at_us - kAtUs >= kMBandBackoff.floor_us);
+    CHECK(media_access(attempt, Deferral{kUnitUs, 0, 7}).access == Access::Missed);
 }
 
 TEST_CASE("adsl media access: 3000 ms after the initial attempt a busy channel is forced") {
@@ -102,7 +135,7 @@ TEST_CASE("adsl media access: 3000 ms after the initial attempt a busy channel i
     attempt.earliest_us = kAtUs + 1;
     const AccessVerdict verdict = media_access(attempt, deferral(5));
     CHECK(verdict.access == Access::Force);
-    CHECK(verdict.at_us == kAtUs + kUnitUs);
+    CHECK(verdict.at_us == kAtUs + 3 * kUnitUs);
 
     attempt.first_us = kAtUs - kForceAfterAttemptUs + 1;
     CHECK(media_access(attempt, deferral(5)).access == Access::Defer);

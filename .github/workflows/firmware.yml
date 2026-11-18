@@ -95,6 +95,10 @@ jobs:
         run: python3 scripts/check_protocol_boundary.py
       - name: the boundary check refuses an include that crosses it
         run: python3 scripts/test_check_protocol_boundary.py
+      - name: every frozen protocol stack matches its version.lock
+        run: python3 scripts/check_protocol_freeze.py
+      - name: the freeze check refuses a frozen file changed without a reseal
+        run: python3 scripts/test_check_protocol_freeze.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
       # The conformance suite reads the published specification clause by clause, and a
