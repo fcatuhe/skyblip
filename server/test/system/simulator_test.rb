@@ -22,21 +22,52 @@ class SimulatorTest < ApplicationSystemTestCase
     assert Release.local_simulator, "Run make -C firmware browser first"
 
     page.current_window.resize_to(1000, 700)
-    visit "/"
-    click_link "FR"
-    assert_current_path "/fr"
-    frame = find("#simulator_build")
-    assert_no_selector "#simulator_build .simulator", visible: :all, wait: 0
-    assert_equal 0, page.evaluate_script("performance.getEntriesByName(document.querySelector('#simulator_build').src).length")
+    page.driver.browser.cookies.set(name: "locale", value: "fr", domain: page.server.host, path: "/")
 
-    scroll_to frame, align: :center
-    using_wait_time(8) { assert_unchecked_field "Avec Bravo (skyBlip Tango)" }
-    assert_equal [ "go", "unpaired", 0, 1 ], first_arrivals(1)
+    using_wait_time(8) do
+      visit "/fr"
+      frame = find("#simulator_build[loading=lazy]")
+      assert_no_selector "#simulator_build .simulator", visible: :all, wait: 0
+      assert_equal 0, page.evaluate_script("performance.getEntriesByName(document.querySelector('#simulator_build').src).length")
 
-    check "Avec Bravo (skyBlip Tango)"
-    assert_equal [ "paired", "live", 1, 2 ], first_arrivals(2)
+      scroll_to frame, align: :center
+      assert_selector "#simulator_build[complete] .simulator--running"
+      assert_unchecked_field "Avec Bravo (skyBlip Tango)"
+      assert_equal [ "go", "unpaired", 0, 1 ], first_arrivals(1)
+
+      check "Avec Bravo (skyBlip Tango)"
+      assert_selector "#simulator_build .simulator--running"
+      assert_equal [ "paired", "live", 1, 2 ], first_arrivals(2)
+    end
   ensure
     page.current_window.resize_to(*ApplicationSystemTestCase::SCREEN_SIZE)
+  end
+
+  test "arrow keys scroll past the home simulator until its device has focus" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+
+    using_wait_time(8) do
+      visit "/"
+      scroll_to find("#simulator_build[loading=lazy]"), align: :center
+      device = find("#simulator_build[complete] .simulator--running .sb-case")
+      scroll_to device, align: :center
+      climb = find("#simulator_build [data-axis=climb]", visible: :all)
+      initial_climb = climb.value
+      initial_scroll = page.evaluate_script("window.scrollY")
+
+      page.driver.browser.keyboard.type(:down)
+      page.document.synchronize do
+        unless page.evaluate_script("window.scrollY") > initial_scroll
+          raise Capybara::ExpectationNotMet, "Arrow Down did not scroll the page"
+        end
+      end
+      assert_equal initial_climb, climb.value
+
+      device.send_keys(:down)
+      assert_selector ".sb-case:focus-visible"
+      assert_not_equal "none", page.evaluate_script("getComputedStyle(document.activeElement).outlineStyle")
+      assert_operator climb.value.to_f, :>, initial_climb.to_f
+    end
   end
 
   private

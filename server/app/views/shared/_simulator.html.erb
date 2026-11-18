@@ -1,12 +1,12 @@
 <figure class="simulator"
         data-controller="simulator"
         data-simulator-src-value="<%= module_path %>"
-        data-simulator-screens-value="<%= t("simulator.screens").to_json %>"
-        data-action="keydown@document->simulator#fly">
+        data-simulator-screens-value="<%= t("simulator.screens").to_json %>">
   <div class="simulator-device">
     <p class="simulator-status" aria-live="polite"><%= t "simulator.screen" %> <strong data-simulator-target="status"></strong></p>
 
-    <div class="sb-case">
+    <div class="sb-case" role="group" tabindex="0" aria-label="skyBlip Go" aria-describedby="simulator-keyboard-hint"
+         data-action="keydown->simulator#fly:self">
       <button class="sb-pad" type="button" aria-label="<%= pad %>"
               data-simulator-target="pad"
               data-action="pointerdown->simulator#touch
@@ -60,7 +60,7 @@
     <%= render "shared/simulator_horizon" %>
 
     <div class="simulator-legend">
-      <p class="simulator-keys"><%= keys %></p>
+      <p id="simulator-keyboard-hint" class="simulator-keys"><%= keys %></p>
       <% SimulatorHelper::SIMULATOR_KEYS.each do |binding| %>
         <span class="simulator-binding">
           <kbd><%= binding[:keys].html_safe %></kbd><%= t "simulator.keys.#{binding[:action]}" %>
