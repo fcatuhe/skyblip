@@ -3,12 +3,10 @@
 #include <cstdint>
 #include <cstring>
 #include <initializer_list>
-#include <string>
 
 #include "core/comms/link_registry.h"
 #include "core/model/ownship.h"
 #include "core/protocol/adsl.h"
-#include "core/protocol/callsign.h"
 #include "core/settings/address.h"
 #include "core/util/cbor.h"
 #include "doctest/doctest.h"
@@ -23,16 +21,15 @@ using namespace skyblip;
 
 namespace {
 int fewest_of_each_payload_from(const simulator::Air& air, uint8_t table, uint32_t address) {
-    int traffic = 0, status = 0, named = 0;
+    int traffic = 0, status = 0;
     for (int i = 0; i < air.record_count(); i++) {
         adsl::Packet packet{};
         if (!packet_of(air.record_at(i), packet)) continue;
         if (packet.address_mapping_table() != table || packet.address() != address) return 0;
         if (packet.payload_type == adsl::Packet::kPayloadTypePosition) traffic++;
         if (packet.payload_type == adsl::Packet::kPayloadTypeStatus) status++;
-        if (packet.payload_type == adsl::Packet::kPayloadTypeOgnDiagnostics) named++;
     }
-    return std::min(traffic, std::min(status, named));
+    return std::min(traffic, status);
 }
 
 adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
@@ -50,55 +47,6 @@ adsl::Packet traffic_packet(uint32_t address = 0x123456, uint8_t table = 6) {
     return packet;
 }
 }  // namespace
-
-// Payload 66 is the entry F.2.1 assigns to OGN and leaves outside its own scope.
-TEST_CASE("ADS-L.4.SRD860.F.2.1: payload 66 carries the registration ADS-L has no field for") {
-    adsl::Packet packet{};
-    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
-
-    CHECK(packet.payload_type == 0x42);
-    CHECK(packet.payload_type == 66);
-    CHECK(packet.payload_type < 0x80);
-    CHECK_FALSE(packet.is_position());
-    CHECK(protocol::is_registration(packet));
-    CHECK(protocol::telemetry_type(packet) == 1);
-    CHECK(protocol::information_type(packet) == 5);
-    // The header byte OGN reads: TelemType in the top two bits, InfoType in the low six.
-    CHECK(packet.payload[protocol::kInformationHeaderOffset] == 0x45);
-    CHECK(packet.address() == 0x123456u);
-    CHECK(packet.address_mapping_table() == 58);
-
-    char name[protocol::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 6);
-    CHECK(std::string(name) == "D-KXYZ");
-}
-
-TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration that is not printable is refused, not drawn") {
-    adsl::Packet packet{};
-    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
-    protocol::information_text(packet)[3] = 0x07;
-
-    char name[protocol::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 0);
-    CHECK(name[0] == 0);
-
-    // And a telemetry record that is not the registration one is not a name either.
-    adsl::Packet other{};
-    protocol::from_own_callsign(other, 0x123456, 58, "D-KXYZ");
-    protocol::set_information_header(other, 0, 5);
-    CHECK_FALSE(protocol::is_registration(other));
-    CHECK(protocol::callsign_of(other, name, sizeof(name)) == 0);
-}
-
-TEST_CASE("ADS-L.4.SRD860.F.2.1: a registration with a comma is refused, not split into PFLAA") {
-    adsl::Packet packet{};
-    protocol::from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
-    protocol::information_text(packet)[1] = ',';
-
-    char name[protocol::kInformationTextBytes + 1] = {0};
-    CHECK(protocol::callsign_of(packet, name, sizeof(name)) == 0);
-    CHECK(name[0] == 0);
-}
 
 TEST_CASE("ADS-L.4.SRD860.F.2.2: the sender address is a 6-bit table and 24 bits of address") {
     adsl::Packet packet{};

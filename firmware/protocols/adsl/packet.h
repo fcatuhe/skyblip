@@ -37,6 +37,9 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kPayloadBytes = 20;
     static constexpr uint8_t kCrcCoverBytes = 1 + kPayloadBytes;
     static constexpr uint8_t kDataBytes = kCrcCoverBytes + 3;
+    // INFO: fc 18nov26 G.2's 56 bits behind F.2's 40 are 12 bytes, so a Status packet is 16 with
+    // CRC
+    static constexpr uint8_t kStatusDataBytes = 1 + 12 + 3;
     // INFO: fc 09nov26 on air the two sync bytes and the length byte go ahead of the data
     static constexpr uint8_t kTxBytes = 3 + kDataBytes;
     static constexpr uint8_t kPayloadTypePosition = 0x02;
@@ -46,7 +49,14 @@ struct __attribute__((packed)) Packet {
     static constexpr uint8_t kProtocolVersionIssue2 = 1;
     static constexpr uint8_t kMaxProtocolVersion = kProtocolVersionIssue2;
     static constexpr uint8_t kProtocolVersionMask = 0x0F;
-    static constexpr uint8_t kPayloadTypeOgnDiagnostics = 0x42;
+    // INFO: fc 13nov26 E.1: version in bits 0-3, signature flag bit 4, key index bits 5-6, FEC bit
+    // 7
+    static constexpr uint8_t kSignatureFlag = 0x10;
+    static constexpr int kKeyIndexShift = 5;
+    static constexpr uint8_t kKeyIndexMask = 0x03;
+    static constexpr uint8_t kKeyScrambled = 0;
+    static constexpr uint8_t kKeyClear = 3;
+    static constexpr uint8_t kErrorControlFec = 0x80;
 
     union {
         uint8_t data[kDataBytes];
@@ -117,6 +127,9 @@ struct __attribute__((packed)) Packet {
 
     bool is_position() const { return payload_type == kPayloadTypePosition; }
     uint8_t protocol_version() const { return version & kProtocolVersionMask; }
+    uint8_t key_index() const {
+        return static_cast<uint8_t>((version >> kKeyIndexShift) & kKeyIndexMask);
+    }
     void set_protocol_version(uint8_t value) {
         version = static_cast<uint8_t>((version & ~kProtocolVersionMask) |
                                        (value & kProtocolVersionMask));
@@ -197,17 +210,26 @@ struct __attribute__((packed)) Packet {
 
     void set_integrity_unknown();
 
-    void scramble();
-    void descramble();
-    void set_crc();
-    bool crc_ok() const;
+    // INFO: fc 18nov26 D.1.1's Packet Length: 16 for a Status, 24 for Traffic and payload 66
+    uint8_t data_bytes() const {
+        return payload_type == kPayloadTypeStatus ? kStatusDataBytes : kDataBytes;
+    }
 
-    int correct(const uint8_t* erasures, int max_erasures = 6);
+    void scramble(uint8_t data_bytes = kDataBytes);
+    void descramble(uint8_t data_bytes = kDataBytes);
+    void set_crc(uint8_t data_bytes = kDataBytes);
+    bool crc_ok(uint8_t data_bytes = kDataBytes) const;
+
+    int correct(const uint8_t* erasures, int max_erasures = 6, uint8_t data_bytes = kDataBytes);
 };
 
 static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC covers");
 
-wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out);
+wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
+                     uint8_t data_bytes = Packet::kDataBytes);
+// INFO: fc 18nov26 D.1.1's length is outside the CRC, so both are read, from kDataBytes buffers
+wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
+                              Packet& out);
 
 // The timestamp field is quarter seconds inside a 15 s cycle, so the instant a
 // burst claims is expressible to 250 ms - and the position it carries has to
@@ -274,7 +296,6 @@ struct StatusReport {
     bool traffic_uplink_client{false};
 };
 
-// INFO: fc 13nov26 padded to Traffic's 24 bytes, so a receiver whose sync fixes the length hears it
 void encode_status(Packet& packet, uint32_t address, uint8_t address_mapping_table,
                    const StatusReport& report);
 

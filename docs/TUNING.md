@@ -161,8 +161,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kCcaWindowUs` | 200 | microseconds | Window | 1) the CCA interval, over Table 48's 160 us floor |
 | `kDeadTimeCeilingUs` | 2000 (2 ms) | microseconds | Ceiling | 2) the dead time, CCA end to burst on air, where Table 48 allows 5 ms |
 | `kDeferralUnitUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | - | 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks |
-| `kDeferralFloorUs` | `kDeferralUnitUs` = 5000 (5 ms) | microseconds | Floor | [README](../firmware/core/timing/README.md) argues it |
-| `kDeferralCeilingUs` | `kDeferralUnits * kDeferralUnitUs` = 40000 (40 ms) | microseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
+| `kDeferralFloorUs` | `adsl::kMBandBackoff.floor_us` | microseconds | Floor | [README](../firmware/core/timing/README.md) argues it |
+| `kDeferralCeilingUs` | `kDeferralUnits * kDeferralUnitUs` = 250000 (250 ms) | microseconds | Ceiling | [README](../firmware/core/timing/README.md) argues it |
 | `kTransmissionCeilingUs` | `adsl::kAirTimeMs * 1000` = 5000 (5 ms) | microseconds | Ceiling | 6) Ton max is one burst, under Table 48's 1 s |
 | `kSameFrequencyOffFloorMs` | `en300220::kSameFrequencyOffFloorMs` = 100 | milliseconds | Floor | 7) Toff min on one frequency, which the schedule holds (README) |
 | `kCcaLeadUs` | `kCcaWindowUs + kDeadTimeCeilingUs` = 2200 (2.2 ms) | microseconds | - | a burst starts this long into its dwell, so the CCA listens on its channel |
@@ -377,6 +377,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
 | `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
 | `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
+| `kCycleMs` | `int64_t{kTimestampCycleS} * 1000` | milliseconds | - | - |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kUplinkRecordMaxAgeMs` | 10000 (10 s) | milliseconds | MaxAge | G.3: a relayed Traffic payload no older than 10 s and not from the future |
 
@@ -416,4 +417,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-271 constants over 26 folders.
+272 constants over 26 folders.

@@ -37,9 +37,10 @@ inline void hear_m_band(Rig& rig, uint32_t sync_word, const uint8_t* frame, uint
 }
 
 inline void hear_adsl(Rig& rig, adsl::Packet& packet) {
-    packet.scramble();
-    packet.set_crc();
-    hear_m_band(rig, adsl::kSyncWord, packet.data, adsl::kFrameBytes);
+    const uint8_t bytes = packet.data_bytes();
+    packet.scramble(bytes);
+    packet.set_crc(bytes);
+    hear_m_band(rig, adsl::sync_word(bytes), packet.data, bytes);
 }
 
 inline const radio::Entry* heard_entry(Rig& rig) {

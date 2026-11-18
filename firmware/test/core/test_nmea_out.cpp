@@ -143,8 +143,8 @@ TEST_CASE("nmea: PFLAA keeps its eleven fields whatever callsign a receiver acce
     for (int character = 1; character < 256; character++) {
         adsl::Packet packet{};
         from_own_callsign(packet, 0x123456, 58, "D-KXYZ");
-        protocol::information_text(packet)[1] = static_cast<char>(character);
-        char name[protocol::kInformationTextBytes + 1] = {0};
+        adsl_edge::information_text(packet)[1] = static_cast<char>(character);
+        char name[adsl_edge::kInformationTextBytes + 1] = {0};
         if (callsign_of(packet, name, sizeof(name)) == 0) continue;
 
         CAPTURE(character);

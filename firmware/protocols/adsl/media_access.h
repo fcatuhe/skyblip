@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <optional>
 
+#include "protocols/adsl/physical.h"
+
 namespace skyblip::adsl {
 
 // INFO: fc 14nov26 §D.3: past this since the initial attempt "the device may force transmission"
@@ -21,9 +23,11 @@ struct ChannelAttempt {
     uint64_t earliest_us{0};
     uint64_t last_us{0};
     bool may_force{false};
+    Backoff backoff{kMBandBackoff};
 };
 
-// INFO: fc 14nov26 EN 300 220-1 5.21.1's random interval: 1 to `units` units after the busy instant
+// INFO: fc 18nov26 EN 300 220-1 5.21.1's random interval: up to `units` units, inside the band's
+// backoff
 struct Deferral {
     uint32_t unit_us{0};
     uint32_t units{1};

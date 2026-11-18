@@ -11,6 +11,7 @@
 #include "core/settings/address.h"
 #include "core/timing/slot.h"
 #include "protocols/adsl/soft_versioning.h"
+#include "protocols/adsl_edge/registration.h"
 #include "protocols/alptas/frame.h"
 
 namespace skyblip::common {
@@ -239,9 +240,11 @@ radio::Verdict TrafficService::decode_adsl(protocol::Frame& frame, uint32_t utc_
                                            const events::Stamp& stamp,
                                            model::AircraftObservation& observation) {
     adsl::Packet packet;
-    if (adsl::receive(frame.data, frame.erasures, packet) != wire::Status::Ok)
-        return radio::Verdict::BadCrc;
-    if (protocol::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
+    const wire::Status heard =
+        adsl::receive_as_heard(frame.data, frame.erasures, frame.length_heard, packet);
+    if (heard == wire::Status::Crc) return radio::Verdict::BadCrc;
+    if (heard != wire::Status::Ok) return radio::Verdict::Unsupported;
+    if (adsl_edge::is_registration(packet)) return learn_callsign(packet, utc_s, observation);
     if (packet.payload_type == adsl::Packet::kPayloadTypeStatus)
         return learn_status(packet, observation);
     if (!packet.is_position()) return radio::Verdict::Unsupported;

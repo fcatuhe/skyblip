@@ -12,6 +12,8 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/pages/menu.h"
+#include "simulator/simulator.h"
+#include "test/support/simulator_run.h"
 
 using namespace skyblip;
 
@@ -120,6 +122,41 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
         CHECK(packet.flight_state == state);
         CHECK(packet.flight_state != 3);
     }
+}
+
+// Our reading, put to EASA: with no ground speed to tell, a craft that can hover is Undefined.
+TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz") {
+    const auto flown = [](uint8_t category, uint8_t& state) {
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.product().settings().aircraft_type = category;
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(0);
+        run_on(simulator, past_settling(simulator), 15000);
+        int sent = 0;
+        for (const simulator::AirRecord& record :
+             records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
+            adsl::Packet packet{};
+            REQUIRE(packet_of(record, packet));
+            state = packet.flight_state;
+            sent++;
+        }
+        return sent;
+    };
+    for (const uint8_t hovers : {3, 5, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17}) {
+        CAPTURE(int(hovers));
+        model::Ownship parked = flying();
+        parked.flight_state = static_cast<uint8_t>(flight::FlightState::Ground);
+        adsl::Packet packet{};
+        REQUIRE(protocol::from_own(packet, parked, 0x123456, 6, hovers));
+        CHECK(packet.flight_state == static_cast<uint8_t>(flight::FlightState::Unknown));
+    }
+    uint8_t paraglider_state = 3;
+    CHECK(flown(7, paraglider_state) >= 14);
+    CHECK(paraglider_state == static_cast<uint8_t>(flight::FlightState::Unknown));
+    uint8_t glider_state = 3;
+    CHECK(flown(4, glider_state) <= 2);
+    CHECK(glider_state == static_cast<uint8_t>(flight::FlightState::Ground));
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glider is 4") {
@@ -257,8 +294,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.10: a target with no ground speed is never flown a
     CHECK(stays.longitude_1e7 == still.longitude_1e7);
 }
 
-// A fix older than half a second is replaced, not transmitted: the clause's own deadline.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: no burst carries navigation data older than 500 ms") {
+// Our reading: the age is taken at the top of the second, and the burst carries the fix forward.
+TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second is never sent") {
     CHECK(timing::Transmitter::kFixMaxAgeMs == 500);
 
     timing::ClockState clock{};

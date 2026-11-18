@@ -13,9 +13,12 @@ AccessVerdict media_access(const ChannelAttempt& attempt, const Deferral& deferr
     if (attempt.last_us <= attempt.at_us) return {Access::Missed, 0};
 
     const uint64_t unit_us = std::max<uint64_t>(deferral.unit_us, en300220::kDeferralFloorUs);
-    const uint64_t wait_us = std::max(attempt.earliest_us, attempt.at_us + unit_us) - attempt.at_us;
+    const uint64_t floor_us = std::max<uint64_t>(unit_us, attempt.backoff.floor_us);
+    const uint64_t wait_us =
+        std::max(attempt.earliest_us, attempt.at_us + floor_us) - attempt.at_us;
     const uint64_t first_units = (wait_us + unit_us - 1) / unit_us;
-    const uint64_t last_units = (attempt.last_us - attempt.at_us) / unit_us;
+    const uint64_t last_units =
+        std::min<uint64_t>(attempt.last_us - attempt.at_us, attempt.backoff.ceiling_us) / unit_us;
     if (last_units < first_units) return {Access::Missed, 0};
 
     const bool waited = attempt.at_us >= attempt.first_us &&

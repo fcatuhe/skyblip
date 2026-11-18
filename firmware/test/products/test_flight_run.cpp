@@ -10,6 +10,7 @@
 #include "core/timing/slot.h"
 #include "doctest/doctest.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsl_edge/registration.h"
 #include "simulator/simulator.h"
 #include "test/support/diagnostics_taps.h"
 #include "test/support/glass_text.h"
@@ -32,7 +33,7 @@ struct Said {
 Said said_on_air(const simulator::Air& air) {
     return {count_payloads(air, adsl::Packet::kPayloadTypePosition),
             count_payloads(air, adsl::Packet::kPayloadTypeStatus),
-            count_payloads(air, adsl::Packet::kPayloadTypeOgnDiagnostics)};
+            count_payloads(air, adsl_edge::kPayloadTypeOgnDiagnostics)};
 }
 
 void park_on_the_bench(simulator::Simulator& simulator) {

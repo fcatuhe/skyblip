@@ -1,5 +1,6 @@
 // ADS-L 4 SRD-860 issue 2 Subpart B, the overview: bit order, transmission sequence and versioning.
 #include <cstdint>
+#include <optional>
 
 #include "doctest/doctest.h"
 #include "protocols/adsl/packet.h"
@@ -115,10 +116,85 @@ TEST_CASE(
     traffic.set_protocol_version(1);
     CHECK(adsl::traffic_max_version(traffic) == 1);
 
-    adsl::Packet name = traffic;
-    name.payload_type = adsl::Packet::kPayloadTypeOgnDiagnostics;
-    CHECK_FALSE(adsl::traffic_max_version(name).has_value());
-    CHECK_FALSE(adsl::status_max_version(name).has_value());
+    adsl::Packet remote_id = traffic;
+    remote_id.payload_type = 6;
+    CHECK_FALSE(adsl::traffic_max_version(remote_id).has_value());
+    CHECK_FALSE(adsl::status_max_version(remote_id).has_value());
+}
+
+// Issue 2 split broader Issue 1 classes, so each new category has a truthful Issue 1 reading.
+TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a category reads as Issue 1's own class") {
+    const struct {
+        uint8_t issue2;
+        uint8_t issue1;
+    } kClasses[] = {{14, 0}, {15, 3}, {16, 7}, {17, 7}, {3, 3}, {4, 4}, {7, 7}, {13, 13}};
+    for (const auto& pair : kClasses) {
+        CAPTURE(int(pair.issue2));
+        adsl::Traffic traffic = reference_traffic();
+        traffic.aircraft_category = pair.issue2;
+        adsl::Packet packet{};
+        adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+        REQUIRE(adsl::issue1_form(packet, std::nullopt));
+        CHECK(packet.aircraft_category == pair.issue1);
+        CHECK(packet.protocol_version() == 0);
+    }
+}
+
+// Issue 1 marks no fix 0xFFFFFF, so a real 0xFFFFFF moves one step on and 0x800000 becomes it.
+TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a position keeps Issue 1's no-fix marker") {
+    adsl::Traffic south = reference_traffic();
+    south.latitude_1e7 = -100;
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, south);
+    REQUIRE(packet.field(adsl::Packet::kLatitudeField) == 0xFFFFFFu);
+    REQUIRE(adsl::issue1_form(packet, std::nullopt));
+    CHECK(packet.field(adsl::Packet::kLatitudeField) == 0xFFFFFEu);
+    CHECK(packet.has_position());
+
+    adsl::Traffic no_fix = reference_traffic();
+    no_fix.position_valid = false;
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, no_fix);
+    REQUIRE(adsl::issue1_form(packet, std::nullopt));
+    CHECK(packet.field(adsl::Packet::kLatitudeField) == 0xFFFFFFu);
+    CHECK(packet.field(adsl::Packet::kLongitudeField) == 0xFFFFFFu);
+    CHECK_FALSE(packet.has_position());
+}
+
+// Issue 1 G.1.15 draws GVA 3 at 15 m where Issue 2 draws it at 10 m.
+TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a 12 m VFOM is GVA 3, as Issue 1 codes it") {
+    adsl::Traffic traffic = reference_traffic();
+    traffic.integrity.vertical_accuracy = adsl::Packet::vertical_accuracy_code(1200);
+    adsl::Packet packet{};
+    adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+    REQUIRE(packet.vertical_accuracy == 2);
+    adsl::Packet unknown = packet;
+    REQUIRE(adsl::issue1_form(packet, 1200));
+    CHECK(packet.vertical_accuracy == 3);
+    REQUIRE(adsl::issue1_form(unknown, std::nullopt));
+    CHECK(unknown.vertical_accuracy == 2);
+
+    adsl::Packet unclaimed = packet;
+    unclaimed.vertical_accuracy = 0;
+    REQUIRE(adsl::issue1_form(unclaimed, 960));
+    CHECK(unclaimed.vertical_accuracy == 0);
+}
+
+// Issue 1 has no unknown code for these, so its 0x3FFF, 0xFF and 0x1FF would read as values.
+TEST_CASE("ADS-L.4.SRD860.B.5: for an Issue 1 client a Traffic with an unknown field is held") {
+    for (int unknown = 0; unknown < 3; unknown++) {
+        CAPTURE(unknown);
+        adsl::Traffic traffic = reference_traffic();
+        traffic.altitude_valid = unknown != 0;
+        traffic.speed_valid = unknown != 1;
+        traffic.climb_valid = unknown != 2;
+        adsl::Packet packet{};
+        adsl::encode_traffic(packet, adsl::kAddressTableFlarm, traffic);
+        CHECK_FALSE(adsl::issue1_form(packet, std::nullopt));
+        CHECK(packet.protocol_version() == 1);
+    }
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x123456, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    CHECK_FALSE(adsl::issue1_form(status, std::nullopt));
 }
 
 // Both reserved bits set: the one at header offset 38, and the one closing the payload.

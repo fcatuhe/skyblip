@@ -6,9 +6,9 @@
 Each radio protocol stack in firmware/protocols/ is copied into other projects with its tests, so
 it must build with nothing from skyBlip (firmware/protocols/README.md). Every file is read,
 whatever its extension. A quoted include names a path from firmware/, written plainly with no
-`..`: a file in protocols/<stack>/ may include protocols/<stack>/ and protocols/common/, a file
-directly under protocols/ only protocols/common/, and a test file may also include the vendored
-doctest. An angle include must be a C++ standard library header, so no Zephyr, no platform and no
+`..`: a file in protocols/<stack>/ may include protocols/<stack>/, protocols/common/ and the stack
+EXTENDS names, a file directly under protocols/ only protocols/common/, and a test file may also
+include the vendored doctest. An angle include must be a C++ standard library header, so no Zephyr, no platform and no
 vendor header gets in that way. An include that names no header in <> or "", such as one built
 from a macro, is refused, because nothing can say where it leads.
 """
@@ -22,6 +22,8 @@ PROTOCOLS = os.path.join(ROOT, "firmware", "protocols")
 DIRECTIVE = re.compile(r"^\s*#\s*include\b(.*)$", re.M)
 HEADER = re.compile(r'^\s*([<"])([^>"]+)[>"]')
 TEST_ONLY = {"doctest/doctest.h"}
+# INFO: fc 18nov26 adsl_edge carries what ADS-L Issue 2 leaves outside its scope, on ADS-L's frame
+EXTENDS = {"adsl_edge": ("protocols/adsl/",)}
 
 STANDARD = {
     "algorithm", "any", "array", "atomic", "bit", "bitset", "cassert", "cctype", "cerrno",
@@ -42,7 +44,7 @@ def violations(protocols=PROTOCOLS):
             relative = os.path.relpath(path, os.path.dirname(protocols)).replace(os.sep, "/")
             parts = relative.split("/")
             stack = parts[1] if len(parts) > 2 else None
-            allowed = ("protocols/common/",) if stack is None else (f"protocols/{stack}/", "protocols/common/")
+            allowed = ("protocols/common/",) if stack is None else (f"protocols/{stack}/", "protocols/common/") + EXTENDS.get(stack, ())
             is_test = "test" in parts[2:-1]
             try:
                 with open(path, encoding="utf-8") as source:

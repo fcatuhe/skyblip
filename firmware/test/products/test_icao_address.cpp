@@ -9,6 +9,7 @@
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
 #include "protocols/adsl/packet.h"
+#include "protocols/adsl_edge/registration.h"
 #include "simulator/simulator.h"
 #include "test/support/glass_text.h"
 #include "test/support/product_rig.h"
@@ -82,7 +83,7 @@ TEST_CASE("rf: an aircraft address puts Traffic, Status and name under table 5 a
     const std::vector<Sent> sent = sent_on(simulator.world().air());
     CHECK(count_of(sent, adsl::Packet::kPayloadTypePosition) >= 19);
     CHECK(count_of(sent, adsl::Packet::kPayloadTypeStatus) >= 2);
-    CHECK(count_of(sent, adsl::Packet::kPayloadTypeOgnDiagnostics) >= 2);
+    CHECK(count_of(sent, adsl_edge::kPayloadTypeOgnDiagnostics) >= 2);
     CHECK(all_from(sent, {adsl::kAddressTableIcao, kAircraftAddress}));
 }
 
@@ -95,7 +96,7 @@ TEST_CASE(
 
     const std::vector<Sent> sent = sent_on(simulator.world().air());
     CHECK(count_of(sent, adsl::Packet::kPayloadTypeStatus) >= 2);
-    CHECK(count_of(sent, adsl::Packet::kPayloadTypeOgnDiagnostics) >= 2);
+    CHECK(count_of(sent, adsl_edge::kPayloadTypeOgnDiagnostics) >= 2);
     CHECK(all_from(sent, {settings::kSkyblipAddressMappingTable, kSerialAddress}));
 }
 

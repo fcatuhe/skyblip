@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include "doctest/doctest.h"
+#include "protocols/adsl/media_access.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/test/conformance/reference.h"
@@ -25,6 +26,30 @@ TEST_CASE("ADS-L.4.SRD860.C.2: the M band is modulated as the table prints it") 
     CHECK(adsl::kMBandDeviationHz == 50000u);
     CHECK(adsl::kMBandGaussianBtE2 == 50u);
     CHECK(adsl::kMBandErpCeilingDbm == 14);
+    CHECK(adsl::kMBandBackoff.floor_us == 15000u);
+    CHECK(adsl::kMBandBackoff.ceiling_us == 250000u);
+}
+
+// The table's last row, read as Subpart D's deferral: whatever unit and draw the device declares.
+TEST_CASE("ADS-L.4.SRD860.C.2: a busy M band backs off 15 ms at least and 250 ms at most") {
+    adsl::ChannelAttempt attempt{};
+    attempt.at_us = 20000000;
+    attempt.first_us = attempt.at_us;
+    attempt.earliest_us = attempt.at_us;
+    attempt.last_us = attempt.at_us + 1000000;
+    uint64_t shortest_us = UINT64_MAX;
+    uint64_t longest_us = 0;
+    for (uint32_t unit_us : {1000u, 5000u, 7000u})
+        for (uint32_t draw = 0; draw < 400; draw++) {
+            const adsl::AccessVerdict verdict =
+                adsl::media_access(attempt, adsl::Deferral{unit_us, 400, draw});
+            REQUIRE(verdict.access == adsl::Access::Defer);
+            const uint64_t wait_us = verdict.at_us - attempt.at_us;
+            shortest_us = wait_us < shortest_us ? wait_us : shortest_us;
+            longest_us = wait_us > longest_us ? wait_us : longest_us;
+        }
+    CHECK(shortest_us == 15000u);
+    CHECK(longest_us == 250000u);
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.2.1: a one is sent as 01 and a zero as 10") {
@@ -80,6 +105,8 @@ TEST_CASE("ADS-L.4.SRD860.C.4: the O-band HDR channel is modulated as the table 
     CHECK(adsl::kUplinkChipRateBps == 200000u);
     CHECK(adsl::kUplinkDeviationHz == 50000u);
     CHECK(adsl::kUplinkGaussianBtE2 == 50u);
+    CHECK(adsl::kOBandBackoff.floor_us == 10000u);
+    CHECK(adsl::kOBandBackoff.ceiling_us == 50000u);
     // GMSK is GFSK at modulation index 0.5, which is what the table's implicit deviation says.
     CHECK(4u * adsl::kUplinkDeviationHz == adsl::kUplinkChipRateBps);
 }

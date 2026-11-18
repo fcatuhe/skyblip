@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "core/protocol/adsl.h"
+#include "core/timing/channel.h"
 #include "core/timing/slot.h"
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
@@ -27,6 +28,45 @@ uint16_t chips_of(uint8_t byte) {
 // it.
 TEST_CASE("ADS-L.4.SRD860.C.2: the transmitter stays under the M band's 14 dBm e.r.p.") {
     CHECK(parts::sx1262::kResultingErpCentiDb <= adsl::kMBandErpCeilingDbm * 100);
+}
+
+// The Go holds the channel busy at a burst's instant and measures the wait to its next burst.
+TEST_CASE("ADS-L.4.SRD860.C.2: a busy burst backs off 15 to 250 ms, and stays in the direct slot") {
+    const int8_t held_dbm[1] = {-50};
+    for (const uint32_t held_after_ms :
+         {2000u, 2370u, 3150u, 4730u, 6290u, 7110u, 8520u, 9940u, 11380u, 12650u}) {
+        CAPTURE(held_after_ms);
+        simulator::Simulator simulator;
+        REQUIRE(simulator.setup() == Status::Ok);
+        simulator.world().set_fix(true);
+        simulator.world().set_speed_kt(50);
+        uint32_t now_ms = past_settling(simulator);
+        run_on(simulator, now_ms + 1, held_after_ms, 1);
+        now_ms += held_after_ms;
+        const bus::State& state = simulator.product().state();
+        simulator.platform().chips().radio.set_rssi_sequence(held_dbm, 1);
+        const uint32_t until_ms = now_ms + 30000;
+        while (state.air.tx_deferred == 0 && now_ms < until_ms) simulator.step(++now_ms);
+        simulator.platform().chips().radio.set_rssi_sequence(held_dbm, 0);
+        REQUIRE(state.air.tx_deferred == 1);
+        const uint64_t busy_at_us = state.rf.busy_at(state.rf.busy_reports - 1)->tx_at_us;
+        run_on(simulator, now_ms + 1, 1000, 1);
+
+        uint64_t next_at_us = 0;
+        const simulator::Air& air = simulator.world().air();
+        for (int i = 0; i < air.record_count() && next_at_us == 0; i++)
+            if (air.record_at(i).event == simulator::AirEvent::Tx &&
+                air.record_at(i).at_us > busy_at_us)
+                next_at_us = air.record_at(i).at_us;
+        REQUIRE(next_at_us != 0);
+        CHECK(next_at_us - busy_at_us >= adsl::kMBandBackoff.floor_us);
+        CHECK(next_at_us - busy_at_us <= adsl::kMBandBackoff.ceiling_us);
+        const int phase_ms = static_cast<int>(next_at_us / 1000 % 1000);
+        CHECK(phase_ms >= adsl::kDirectStartMs);
+        CHECK(phase_ms + static_cast<int>(adsl::kAirTimeMs) <= adsl::kDirectEndMs);
+    }
+    CHECK(timing::PoliteAccess::kDeferralFloorUs == adsl::kMBandBackoff.floor_us);
+    CHECK(timing::PoliteAccess::kDeferralCeilingUs == adsl::kMBandBackoff.ceiling_us);
 }
 
 // The radio sends eight repetitions; the last four and both 1001s are the leading sync byte.
@@ -137,40 +177,13 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
                     const timing::Transmitter::Attempt owed =
                         tx.attempt(plan, utc_s, 1000, true, 0, payload);
                     if (!owed.go) continue;
-                    CHECK(timing::Scheduler::in_direct_slot(owed.at_ms));
+                    CHECK(owed.at_ms >= adsl::kDirectStartMs);
                     CHECK(owed.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
                           adsl::kDirectEndMs);
                 }
             }
         }
     }
-}
-
-// The name is skyBlip's payload, not ADS-L's, so it keeps out of the direct slot ADS-L uses.
-TEST_CASE("ADS-L.4.SRD860.C.5: the name is ours, in slot 1's tail where ADS-L transmits nothing") {
-    timing::ClockState clock{};
-    clock.utc_valid = true;
-    clock.pps_locked = true;
-    const timing::SlotPlan slot1 = timing::Scheduler::plan(timing::kWindowBMs.start_ms, clock);
-
-    int seen = 0;
-    for (uint32_t address = 1; address < 64; address++) {
-        timing::Transmitter tx;
-        tx.configure(address * 0x9E37u);
-        for (uint32_t utc_s = 0; utc_s < 40; utc_s++) {
-            const timing::Transmitter::Attempt attempt =
-                tx.attempt(slot1, utc_s, 1000, true, 0, timing::Transmitter::Payload::Callsign);
-            if (!attempt.go) continue;
-            seen++;
-            CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));
-            CHECK(attempt.at_ms >= adsl::kDirectEndMs);
-            CHECK(attempt.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=
-                  timing::kWindowBMs.end_ms);
-            CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
-            CHECK(utc_s % 2 == 0);
-        }
-    }
-    CHECK(seen > 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {

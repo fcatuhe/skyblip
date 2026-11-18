@@ -16,7 +16,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware")
 
 REQUIRED_MODULES = [
-    "protocols/common", "protocols/adsl", "protocols/adsb", "protocols/alptas",
+    "protocols/common", "protocols/adsl", "protocols/adsl_edge", "protocols/adsb", "protocols/alptas",
     "core/util", "core/fec", "core/protocol", "core/gnss", "core/timing",
     "core/traffic", "core/settings", "core/comms", "core/flight", "core/bus",
     "core/power", "core/annunciation", "core/indication", "core/dfu", "core/radio",
@@ -27,10 +27,11 @@ REQUIRED_MODULES = [
     "simulator",
 ]
 
-TEST_DIRS = ("test", "test/adsl", "test/adsb", "test/core", "test/ui", "test/products", "test/products/pages",
+TEST_DIRS = ("test", "test/adsl", "test/adsl_edge", "test/adsb", "test/core", "test/ui", "test/products", "test/products/pages",
              "test/products/skyblip_bravo", "test/hardware", "test/boards",
              "protocols/common/test", "protocols/adsl/test", "protocols/adsl/test/conformance",
-             "protocols/adsb/test", "protocols/adsb/test/conformance", "protocols/alptas/test")
+             "protocols/adsl_edge/test", "protocols/adsb/test", "protocols/adsb/test/conformance",
+             "protocols/alptas/test")
 
 PART_TEST_DIR = "test/hardware"
 

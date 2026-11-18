@@ -1,5 +1,7 @@
 #include "core/protocol/air.h"
 
+#include <algorithm>
+
 #include "core/model/band.h"
 #include "protocols/common/manchester.h"
 
@@ -19,8 +21,12 @@ int tail_errors(const uint8_t* data, uint32_t sync_word) {
     return __builtin_popcount((tail_of(data) ^ sync_tail(sync_word)) & kTailMask);
 }
 
-System system_of(const uint8_t* data) {
-    if (tail_errors(data, adsl::kSyncWord) <= kSyncTailErrorsCeiling) return System::AdslDirect;
+// INFO: fc 18nov26 D.1.1: 24 and 16 differ in one bit, so a damaged length byte is nearer to one
+System system_of(const uint8_t* data, uint8_t& adsl_bytes) {
+    const int traffic = tail_errors(data, adsl::kSyncWord);
+    const int status = tail_errors(data, adsl::sync_word(adsl::Packet::kStatusDataBytes));
+    adsl_bytes = status < traffic ? adsl::Packet::kStatusDataBytes : adsl::Packet::kDataBytes;
+    if (std::min(traffic, status) <= kSyncTailErrorsCeiling) return System::AdslDirect;
     if (tail_errors(data, alptas::kSyncWord) <= kSyncTailErrorsCeiling) return System::Alptas;
     return System::Unknown;
 }
@@ -76,11 +82,13 @@ bool receive_m_band(const uint8_t* chips, size_t chip_bytes, Frame& out) {
     out = Frame{};
     if (chip_bytes < kRxChipBytes) return false;
     wire::manchester_decode(chips, kRxFrameBytes, out.data, out.erasures);
-    out.system = system_of(out.data);
+    uint8_t adsl_bytes = 0;
+    out.system = system_of(out.data, adsl_bytes);
     if (out.system == System::Unknown) return false;
+    out.length_heard = out.data[kSyncTailBytes - 1];
     shift_left(out.data, kRxFrameBytes, kSyncTailBits);
     shift_left(out.erasures, kRxFrameBytes, kSyncTailBits);
-    out.bytes = frame_bytes(out.system);
+    out.bytes = out.system == System::AdslDirect ? adsl_bytes : frame_bytes(out.system);
     // A dwell reads for the longer of the two frames, so the shorter one is
     // followed by chips no transmitter sent. Counting those as damage would call
     // every ADS-L frame broken.

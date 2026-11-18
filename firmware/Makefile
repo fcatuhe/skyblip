@@ -122,16 +122,20 @@ test-sanitize:
 
 # Each stack is copied with protocols/common and vendor/doctest and nothing else, then built and
 # run there: an include that reaches outside fails to compile, as it would in another project.
+# A stack that extends another is copied with it, without the extended stack's tests.
 PROTOCOLS_BUILD := $(BUILD)/protocols-alone
 PROTOCOL_STACKS := $(filter-out common,$(patsubst protocols/%/,%,$(wildcard protocols/*/)))
 PROTOCOLS_CXXFLAGS := $(filter-out -I. -Ivendor -MMD -MP,$(CXXFLAGS))
+PROTOCOL_EXTENDS_adsl_edge := adsl
 
 test-protocols: $(addprefix test-protocol-,$(PROTOCOL_STACKS))
 
 test-protocol-%:
 	@rm -rf $(PROTOCOLS_BUILD)/$*
 	@mkdir -p $(PROTOCOLS_BUILD)/$*/tree/protocols $(PROTOCOLS_BUILD)/$*/tree/vendor
-	cp -R protocols/common protocols/$* $(PROTOCOLS_BUILD)/$*/tree/protocols/
+	cp -R protocols/common protocols/$* $(addprefix protocols/,$(PROTOCOL_EXTENDS_$*)) \
+	  $(PROTOCOLS_BUILD)/$*/tree/protocols/
+	$(foreach extended,$(PROTOCOL_EXTENDS_$*),rm -rf $(PROTOCOLS_BUILD)/$*/tree/protocols/$(extended)/test;)
 	cp -R vendor/doctest $(PROTOCOLS_BUILD)/$*/tree/vendor/
 	printf '#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN\n#include "doctest/doctest.h"\n' > $(PROTOCOLS_BUILD)/$*/main.cpp
 	cd $(PROTOCOLS_BUILD)/$*/tree && $(CXX) $(PROTOCOLS_CXXFLAGS) -I. -Ivendor \

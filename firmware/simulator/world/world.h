@@ -51,7 +51,7 @@ struct VirtualAircraft {
     uint32_t transmissions{0};
     // Empty for an aircraft nobody named, which is most of them: only a skyBlip
     // or an OGN tracker puts its registration on air.
-    char callsign[protocol::kInformationTextBytes + 1]{0};
+    char callsign[adsl_edge::kInformationTextBytes + 1]{0};
 };
 
 struct AdsbDatum {

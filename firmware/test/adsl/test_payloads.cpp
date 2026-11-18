@@ -197,7 +197,7 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
     for (int i = 0; i < statistics.targets; i++) CHECK(out[i].source == model::Source::AdslUplink);
 }
 
-// The device dates each relayed record by the second it heard the packet in.
+// Encoded 300 ms into a second, the timestamp names 250 ms, so the record is 10 s old at 10.250.
 TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn") {
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[2] = {target(0x300001), target(0x300002)};
@@ -207,9 +207,13 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not dra
 
     model::AircraftObservation out[2]{};
     protocol::AdslUplink::DecodeStatistics statistics{};
-    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 10, 300, out, 2, statistics) ==
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 10, 250, out, 2, statistics) ==
             Status::Ok);
     CHECK(statistics.targets == 2);
+    REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 10, 251, out, 2, statistics) ==
+            Status::Ok);
+    CHECK(statistics.targets == 0);
+    CHECK(statistics.stale == 2);
     REQUIRE(uplink.decode(packet, sizeof(packet), kUplinkUtcS + 11, 300, out, 2, statistics) ==
             Status::Ok);
     CHECK(statistics.targets == 0);

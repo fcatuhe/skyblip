@@ -48,6 +48,7 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     attempt.earliest_us = context_.roles.clock.microseconds() + timing::PoliteAccess::kCcaLeadUs;
     attempt.last_us = at_us(dwell.origin_us, timing::Transmitter::last_instant(payload, slot));
     attempt.may_force = !airborne;
+    attempt.backoff = adsl::kMBandBackoff;
     const adsl::Deferral deferral{timing::PoliteAccess::kDeferralUnitUs,
                                   timing::PoliteAccess::kDeferralUnits,
                                   transmitter_.deferral_draw(busy_at_us)};

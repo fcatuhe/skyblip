@@ -38,9 +38,10 @@ inline bool packet_of(const simulator::AirRecord& record, adsl::Packet& packet) 
         frame.system != protocol::System::AdslDirect)
         return false;
     packet.reset();
-    std::memcpy(packet.data, frame.data, adsl::kFrameBytes);
-    if (!packet.crc_ok()) return false;
-    packet.descramble();
+    std::memcpy(packet.data, frame.data, frame.bytes);
+    if (!packet.crc_ok(frame.bytes)) return false;
+    packet.descramble(frame.bytes);
+    for (uint8_t i = frame.bytes - 3; i < frame.bytes; i++) packet.data[i] = 0;
     return true;
 }
 

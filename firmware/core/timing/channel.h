@@ -18,9 +18,10 @@ struct PoliteAccess {
     static constexpr uint32_t kDeadTimeCeilingUs = 2000;
     // INFO: fc 14nov26 4) the deferral unit is one ADS-L burst, as 5.21.1's note asks
     static constexpr uint32_t kDeferralUnitUs = adsl::kAirTimeMs * 1000;
-    // INFO: fc 14nov26 3) and 5) Transmitter::deferral_draw picks 1 to 8 units at random
-    static constexpr uint32_t kDeferralUnits = 8;
-    static constexpr uint32_t kDeferralFloorUs = kDeferralUnitUs;
+    // INFO: fc 18nov26 3) and 5) deferral_draw picks 3 to 50 units, §C.2's 15 to 250 ms, in the
+    // window
+    static constexpr uint32_t kDeferralUnits = 50;
+    static constexpr uint32_t kDeferralFloorUs = adsl::kMBandBackoff.floor_us;
     static constexpr uint32_t kDeferralCeilingUs = kDeferralUnits * kDeferralUnitUs;
     // INFO: fc 14nov26 6) Ton max is one burst, under Table 48's 1 s
     static constexpr uint32_t kTransmissionCeilingUs = adsl::kAirTimeMs * 1000;
@@ -36,6 +37,10 @@ static_assert(PoliteAccess::kCcaWindowUs >= en300220::kCcaIntervalFloorUs &&
                   PoliteAccess::kDeferralFloorUs >= en300220::kDeferralFloorUs &&
                   PoliteAccess::kTransmissionCeilingUs <= en300220::kTransmissionCeilingMs * 1000,
               "EN 300 220-1 Table 48 bounds every declared parameter");
+static_assert(PoliteAccess::kDeferralFloorUs % PoliteAccess::kDeferralUnitUs == 0 &&
+                  PoliteAccess::kDeferralFloorUs <= PoliteAccess::kDeferralCeilingUs &&
+                  PoliteAccess::kDeferralCeilingUs <= adsl::kMBandBackoff.ceiling_us,
+              "ADS-L §C.2's backoff interval bounds the declared deferral");
 
 // INFO: fc 14nov26 Table 45 at the antenna connector, less the feed's loss down to the chip
 constexpr int32_t cca_threshold_centi_dbm(int32_t antenna_gain_centi_dbd,
