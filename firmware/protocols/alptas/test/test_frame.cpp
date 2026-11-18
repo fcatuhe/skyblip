@@ -1,4 +1,4 @@
-// ALP-TAS (FLARM-wire, 2024 protocol) air-frame codec. Two things are worth
+// ALP-TAS 2024 air-frame codec. Two things are worth
 // testing here and both are safety-critical: that a frame we transmit is the
 // frame the protocol says (encode -> decode round trip, at several latitudes and
 // across the 20-bit position wrap), and that a frame that is NOT ours is thrown
@@ -22,7 +22,7 @@ constexpr uint32_t kUtcS = 1700000000;  // 1700000000 % 16 == 0, so timebits == 
 Position make_position(int32_t latitude_1e7, int32_t longitude_1e7) {
     Position position;
     position.address = 0x123456;
-    position.address_type = kAddressTypeFlarm;
+    position.address_type = kAddressTypeManufacturer;
     position.aircraft_type = 0x1;  // glider
     position.airborne = kAirborneFlying;
     position.latitude_1e7 = latitude_1e7;
@@ -31,6 +31,9 @@ Position make_position(int32_t latitude_1e7, int32_t longitude_1e7) {
     position.speed_e1 = 450;  // 45 m/s
     position.climb_e1 = -55;  // -5.5 m/s
     position.track_deg = 180;
+    position.horizontal_accuracy_dm = 32;
+    position.vertical_accuracy_qm = 20;
+    position.velocity_accuracy_dmps = 14;
     return position;
 }
 
@@ -75,7 +78,7 @@ TEST_CASE("alptas: encode then decode preserves the identity and motion fields")
     REQUIRE(decode(frame, kUtcS, 480000000, 87000000, got) == Status::Ok);
 
     CHECK(got.address == 0x123456u);
-    CHECK(int(got.address_type) == kAddressTypeFlarm);
+    CHECK(int(got.address_type) == kAddressTypeManufacturer);
     CHECK(int(got.aircraft_type) == 0x1);
     CHECK(int(got.airborne) == kAirborneFlying);
     CHECK(got.altitude_m == 1234);
@@ -351,7 +354,7 @@ TEST_CASE("alptas: a second further out than a clock can plausibly be is not sea
 TEST_CASE("alptas: a frame is byte for byte the frame other receivers already read") {
     Position position;
     position.address = 0xDD1234;
-    position.address_type = kAddressTypeFlarm;
+    position.address_type = kAddressTypeManufacturer;
     position.aircraft_type = 0x3;
     position.airborne = kAirborneFlying;
     position.latitude_1e7 = 465432100;
@@ -360,6 +363,9 @@ TEST_CASE("alptas: a frame is byte for byte the frame other receivers already re
     position.speed_e1 = 555;
     position.climb_e1 = 46;
     position.track_deg = 54;
+    position.horizontal_accuracy_dm = 32;
+    position.vertical_accuracy_qm = 20;
+    position.velocity_accuracy_dmps = 14;
     uint8_t frame[kFrameBytes];
     encode(frame, position, 1700000005);
     const uint8_t north[] = {0x34, 0x12, 0xDD, 0x22, 0x00, 0x00, 0x00, 0x33, 0xD2,
@@ -385,4 +391,11 @@ TEST_CASE("alptas: a frame is byte for byte the frame other receivers already re
     CHECK(got.speed_e1 == 2248);
     CHECK(got.climb_e1 == -496);
     CHECK(got.track_deg == 54);
+}
+
+// AES's MixColumns example column, db 13 53 45 to 8e 4d a1 bc, least significant byte first.
+TEST_CASE("alptas: a random address steps by AES MixColumns of itself XOR the random byte") {
+    CHECK(random_address_after(0x455313DBu, 0) == 0xBCA14D8Eu);
+    CHECK(random_address_after(0x455313DAu, 1) == 0xBCA14D8Eu);
+    CHECK(random_address_after(0x01010101u, 0) == 0x01010101u);
 }

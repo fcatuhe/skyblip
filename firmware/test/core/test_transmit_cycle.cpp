@@ -24,7 +24,7 @@ Transmitter transmitter_for(uint32_t serial) {
 
 SlotPlan slot_plan(int slot) {
     Scheduler scheduler;
-    return scheduler.plan(slot == 0 ? 500 : kSlot1StartMs, anchored());
+    return scheduler.plan(slot == 0 ? 500 : kWindowBMs.start_ms, anchored());
 }
 
 struct Burst {
@@ -101,7 +101,7 @@ TEST_CASE("transmit cycle: a unit's cycle starts on an even second, 2 * (serial 
     }
 }
 
-// A at 0 and 11, B at 2 and 9, and the names in the tails of 4 and 14, 1000-1193 ms on.
+// A at 0 and 11, B at 2 and 9, and the names in the tails of 4 and 14, 1000-1190 ms on.
 TEST_CASE("transmit cycle: on the ground six bursts go at +0, +2, +4, +9, +11 and +14") {
     const struct {
         uint32_t offset;
@@ -120,9 +120,9 @@ TEST_CASE("transmit cycle: on the ground six bursts go at +0, +2, +4, +9, +11 an
             CHECK(bursts[i].payload == kCycle[i].payload);
             CHECK(bursts[i].slot == kCycle[i].slot);
             if (bursts[i].payload == Payload::Callsign) {
-                CHECK(bursts[i].at_ms >= kCallsignStartMs);
+                CHECK(bursts[i].at_ms >= adsl::kDirectEndMs);
                 CHECK(bursts[i].at_ms + static_cast<int>(Transmitter::kAirTimeMs) <=
-                      kCallsignEndMs);
+                      kWindowBMs.end_ms);
             } else {
                 CHECK(Scheduler::in_direct_slot(bursts[i].at_ms));
             }
@@ -302,7 +302,7 @@ TEST_CASE("transmit cycle: a missed name is retried in the tail 2 s on") {
         const std::vector<Burst> names = of_type(bursts, Payload::Callsign);
         REQUIRE(names.size() == 2);
         CHECK(names[0].utc_s == c + 6);
-        CHECK(names[0].at_ms >= kCallsignStartMs);
+        CHECK(names[0].at_ms >= adsl::kDirectEndMs);
         CHECK(names[1].utc_s == c + 14);
         check_spacing(bursts);
     }

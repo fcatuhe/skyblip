@@ -130,6 +130,8 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kAlptasFixAgeCeilingMs` | 2500 (2.5 s) | milliseconds | Ceiling | Frame 2 ends 1.2 s after the fix, and a key accepted a second off adds one |
+| `kFollowS` | 20 | seconds | - | - |
 | `kLk8NoAltitudeM` | 99999 | metres | - | - |
 | `kLk8NoVarioCmS` | 9999 | seconds | - | - |
 | `kLk8AltitudeFloorM` | -1000 | metres | Floor | - |
@@ -167,7 +169,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSamples` | 9 | samples | Samples | [README](../firmware/core/timing/README.md) argues it |
 | `kSampleSpacingUs` | `kWindowUs / (kSamples - 1)` | microseconds | - | - |
 | `kMaxSamples` | 16 | samples | Samples | - |
-| `kWindowMs` | `en300220::kDutyCycleWindowMs` = 3600000 (60 min) | milliseconds | Window | - |
+| `kWindowMs` | `en300220::kDutyCycleWindowMs` = 3600000 (60 min) | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kBucketMs` | `kWindowMs / kBuckets` = 514285 (8.57142 min) | milliseconds | - | - |
 | `kBudgetMs` | `kWindowMs / 1000 * kLimitPermille` = 36000 (36 s) | milliseconds | - | - |
 | `kWordWriteUs` | 41 | microseconds | - | nRF52840 PS v1.8, NVMC chapter, "Electrical specification": tWRITE = 41 us to write one 32-bit word, tERASEPAGE = 85 ms to erase one 4 kB page. |
@@ -177,32 +179,26 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSettleMs` | 750 | milliseconds | Settle | How long the policy waits for a stream of changes to stop before it writes the one blob they add up to. |
 | `kDeferCeilingMs` | 3000 (3 s) | milliseconds | Ceiling | The hard bound, measured from the FIRST unwritten change rather than the last: a setting a pilot changed that is still not on flash when the cell dies is a setting they will believe they changed. |
 | `kViewStaleMs` | 100 | milliseconds | Stale | A published view older than this is not evidence about where the second is any more, so it refuses rather than guesses. |
-| `kGroundEmitStartMs` | 210 | milliseconds | - | §C.5 gives the second to the bands: 200..450 ms is the uplink slot the ground infrastructure transmits in, 450..1000 the direct slot. |
-| `kGroundEmitEndMs` | 390 | milliseconds | - | - |
-| `kUplinkRxStartMs` | 205 | milliseconds | - | - |
-| `kUplinkRxEndMs` | 395 | milliseconds | - | - |
-| `kSlot0StartMs` | 400 | milliseconds | - | - |
-| `kSlot0EndMs` | 800 | milliseconds | - | - |
-| `kSlot1StartMs` | 800 | milliseconds | - | - |
-| `kSlot1EndMs` | 1200 (1.2 s) | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
-| `kSlot1WrapMs` | `kSlot1EndMs - 1000` = 200 | milliseconds | - | How far slot 1 reaches past the second it started in. |
-| `kCallsignStartMs` | `adsl::kDirectEndMs` = 1000 (1 s) | milliseconds | - | §C.5 reserves 0..200, and §C.2.5's channel 1 is what the dwell is already on |
-| `kCallsignEndMs` | `kSlot1EndMs` = 1200 (1.2 s) | milliseconds | - | - |
-| `kJitterGuardMs` | 5 | milliseconds | - | Both band edges get the same guard: slot 1 ends at 200, uplink RX starts at 205. |
-| `kHopGuardMs` | 2 | milliseconds | - | bench worst dwell end to listening 1.16 ms over 2880 hops, 2 leaves 0.84 |
-| `kSwitchLeadMs` | `kJitterGuardMs` = 5 | milliseconds | - | The executors switch into a queued dwell as soon as the one before it ends, so the guard in front of a dwell is spent retuning and the dwell listens from its start. |
+| `kUplinkWindowMs` | `{210, 440}` | milliseconds | Window | each window is heard in full: the uplink on O, ALP-TAS's two frames on A and B |
+| `kWindowAMs` | `{450, 820}` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
+| `kWindowBMs` | `{830, 1200}` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
+| `kSwitchMarginMs` | 2 | milliseconds | - | every switch is a margin on the old channel, a retune, a lead on the new one |
+| `kSwitchRetuneMs` | 5 | milliseconds | - | no band change measured, until a unit's timing command reads its worst one |
+| `kSwitchLeadMs` | 3 | milliseconds | - | [README](../firmware/core/timing/README.md) argues it |
+| `kCompletionAllowanceMs` | 5 | milliseconds | - | bench worst 5.5 ms from SetTx to TxDone, against 5 ms booked |
+| `kGroundEmitStartMs` | `kUplinkWindowMs.start_ms` | milliseconds | - | - |
+| `kGroundEmitEndMs` | `kUplinkWindowMs.end_ms - kCompletionAllowanceMs` | milliseconds | - | a completion deadline, not a start deadline |
+| `kWindowBSpillMs` | `dwell_of(kWindowBMs).end_ms - 1000` | milliseconds | Window | [README](../firmware/core/timing/README.md) argues it |
 | `kPpsHoldoverMs` | 60000 (1 min) | milliseconds | - | - |
 | `kRetuneUs` | 30 | microseconds | - | - |
-| `kHopGuardUs` | `kHopGuardMs * 1000` = 2000 (2 ms) | microseconds | - | - |
-| `kJitterGuardUs` | `kJitterGuardMs * 1000` = 5000 (5 ms) | microseconds | - | - |
+| `kSwitchMarginUs` | `kSwitchMarginMs * 1000` = 2000 (2 ms) | microseconds | - | - |
+| `kSwitchRetuneUs` | `kSwitchRetuneMs * 1000` = 5000 (5 ms) | microseconds | - | - |
 | `kHoldoverGapUs` | 1500000 (1500 ms) | microseconds | - | Less than two nominal seconds, more than any jitter this budget could ever call ordinary: a gap this wide means at least one PPS edge went missing, which is holdover, not a sample for the interval histogram. |
-| `kCcaLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | - |
 | `kAirTimeMs` | `adsl::kAirTimeMs` = 5 | milliseconds | - | - |
 | `kStatusPeriodS` | `adsl::kStatusPeriodS` = 20 | seconds | Period | - |
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
 | `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | - |
-| `kCompletionGuardMs` | 2 | milliseconds | - | §C.5: bench worst 5.5 ms, 0.33 keying + 4.94-5.37 SetTx to TxDone, 1.5 left |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -288,7 +284,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kRefusalParkCeilingMs` | 6000 (6 s) | milliseconds | Ceiling | a full frame is 2.6 s of BUSY on this panel, and a refusal waits out two |
-| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | at worst one slot asleep before a plan's start plus one 400 ms dwell, 800 ms against 2 s (zephyr/rf.h:221, slot.h:42-45) |
+| `kRadioParkCeilingMs` | 2000 (2 s) | milliseconds | Ceiling | at worst one dwell asleep before a plan's start plus one 375 ms dwell, 750 ms against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of) |
 
 ## [`firmware/products/skyblip_go/input`](../firmware/products/skyblip_go/input/README.md)
 
@@ -416,4 +412,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-271 constants over 26 folders.
+267 constants over 26 folders.

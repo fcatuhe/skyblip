@@ -334,3 +334,16 @@ TEST_CASE("alarm: a target is announced and forgotten across the 49.7-day wrap")
     tracker.forget_stale(after + lease_ms + 1u);
     CHECK(tracker.announced_level(after + lease_ms + 1u) == Level::None);
 }
+
+// An ALP-TAS frame says its turn rate, so the table takes it instead of waiting for two tracks.
+TEST_CASE("traffic: a turn rate the sender reports is the target's turn at once") {
+    TrafficTable table;
+    model::AircraftObservation circling = observation(0x111, 6, 100, model::Source::Alptas);
+    circling.speed_valid = true;
+    circling.turn_valid = true;
+    circling.turn_cdps = -1520;
+    const int index = table.update(circling, 100);
+    REQUIRE(index >= 0);
+    CHECK(table.at(index)->turn.valid);
+    CHECK(table.at(index)->turn.rate_dps == -15);
+}

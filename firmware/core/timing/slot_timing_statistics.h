@@ -21,10 +21,9 @@ namespace skyblip::timing {
 //    settles inside this bucket with room left over. An error this small is
 //    the radio doing exactly what its own datasheet promises, not a PPS or a
 //    scheduling fault.
-//  - kHopGuardMs (core/timing/slot.h), the smaller of the two slot-map
-//    guards, paid at every M-band channel change.
-//  - kJitterGuardMs (core/timing/slot.h), the guard both band edges keep, and
-//    the figure core/timing/transmit.h's kCompletionGuardMs is drawn from.
+//  - kSwitchMarginMs (core/timing/slot.h), what every switch leaves a late
+//    burst on the old channel.
+//  - kSwitchRetuneMs (core/timing/slot.h), the retune every switch keeps.
 //    Past this the error is not something the slot map budgeted for.
 // A count outside the widest pair still lands somewhere: saturated into the
 // outermost bucket, never wrapped, because a fault we cannot bound is one this
@@ -32,8 +31,8 @@ namespace skyblip::timing {
 class SlotTimingStatistics {
    public:
     static constexpr int32_t kRetuneUs = 30;
-    static constexpr int32_t kHopGuardUs = kHopGuardMs * 1000;
-    static constexpr int32_t kJitterGuardUs = kJitterGuardMs * 1000;
+    static constexpr int32_t kSwitchMarginUs = kSwitchMarginMs * 1000;
+    static constexpr int32_t kSwitchRetuneUs = kSwitchRetuneMs * 1000;
     static constexpr int kBuckets = 7;
 
     // Less than two nominal seconds, more than any jitter this budget could

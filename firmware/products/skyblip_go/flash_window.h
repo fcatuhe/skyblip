@@ -8,8 +8,8 @@
 namespace skyblip::go {
 
 static_assert(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs +
-                      static_cast<uint32_t>(timing::kJitterGuardMs) <
-                  static_cast<uint32_t>(timing::kUplinkRxEndMs - timing::kUplinkRxStartMs),
+                      static_cast<uint32_t>(timing::kSwitchRetuneMs) <
+                  static_cast<uint32_t>(timing::dwell_of(timing::kUplinkWindowMs).width_ms()),
               "claiming a sector no longer fits inside the narrowest dwell the map offers");
 
 // INFO: fc 10nov26 flash waits for a published receive dwell, never where own-ship may key the PA

@@ -117,8 +117,9 @@ TEST_CASE("rf: the callsign goes out in slot 1's tail, once every ten seconds, o
             continue;
         named++;
         CHECK(payload_type_of(record) == adsl::Packet::kPayloadTypeOgnDiagnostics);
-        CHECK(record.phase_ms < timing::kSlot1WrapMs);
-        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <= timing::kCallsignEndMs - 1000);
+        CHECK(record.phase_ms < timing::kWindowBSpillMs);
+        CHECK(record.phase_ms + timing::Transmitter::kAirTimeMs <=
+              timing::kWindowBMs.end_ms - 1000);
         CHECK(simulator::Air::tuned_to(record.frequency_hz, adsl::kMBand1Hz));
     }
     // Forty-one seconds of flight: forty-one positions, four Status bursts and four names.

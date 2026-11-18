@@ -16,8 +16,9 @@ constexpr uint32_t kFlightSession = 1785628800;
 constexpr uint32_t kCaptureSession = 9000;
 constexpr int kClaimCostMs =
     static_cast<int>(store::kSectorEraseCostMs + 2 * store::kSlotWriteCostMs);
-// The last phase of the uplink dwell a claim still finishes a guard's width before its end.
-constexpr int kLastClaimPhaseMs = timing::kUplinkRxEndMs - timing::kJitterGuardMs - kClaimCostMs;
+// The last phase of the uplink dwell a claim still finishes a retune before its end.
+constexpr int kLastClaimPhaseMs =
+    timing::dwell_of(timing::kUplinkWindowMs).end_ms - timing::kSwitchRetuneMs - kClaimCostMs;
 
 // One sector of the partition answers every read Status::Down, the boot-scan fault.
 class BlindSectorFlash : public platform::host::FlashRegion {
@@ -308,7 +309,7 @@ TEST_CASE("record store: both rings writing in one pass share the window that pa
     CHECK(append_one(rig.capture, kPassMs) == common::Append::Deferred);
     CHECK(rig.capture.sectors_owned() == 0);
 
-    rig.publish_dwell(kPassMs + 1000, timing::kUplinkRxStartMs);
+    rig.publish_dwell(kPassMs + 1000, timing::dwell_of(timing::kUplinkWindowMs).start_ms);
     CHECK(append_one(rig.capture, kPassMs + 1000) == common::Append::Ok);
 }
 
@@ -371,8 +372,9 @@ TEST_CASE("record store: a write that spans a page edge is booked as two page pr
     rig.capture.begin_session(kCaptureSession);
     advance_to_slot(rig.capture, 20);
 
-    constexpr int kOneProgramLeft =
-        timing::kUplinkRxEndMs - timing::kJitterGuardMs - static_cast<int>(store::kSlotWriteCostMs);
+    constexpr int kOneProgramLeft = timing::dwell_of(timing::kUplinkWindowMs).end_ms -
+                                    timing::kSwitchRetuneMs -
+                                    static_cast<int>(store::kSlotWriteCostMs);
     constexpr uint32_t kPassMs = 10'000;
     rig.publish_dwell(kPassMs, kOneProgramLeft);
     const uint32_t programs = flash.programs;

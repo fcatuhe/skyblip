@@ -21,6 +21,9 @@ using namespace skyblip;
 
 namespace {
 
+constexpr timing::Window kSlot0Dwell = timing::dwell_of(timing::kWindowAMs);
+constexpr timing::Window kSlot1Dwell = timing::dwell_of(timing::kWindowBMs);
+
 // The PLL word the driver writes back-converts a hertz or two short of the channel it asked for.
 uint32_t tuned_khz(const models::Sx1262& chip) { return (chip.frequency_hz + 500) / 1000; }
 
@@ -89,8 +92,8 @@ TEST_CASE("rf: a plan that could only run inside the flying dwell is refused, no
     CHECK(missed == 0);
 }
 
-// The next dwell is retuned into as soon as the one before it ends, so the guard
-// between them is spent switching and the dwell is listening at its start.
+// The next dwell is retuned into as soon as the one before it ends, so the switch's retune is
+// spent switching and the dwell is listening at its start.
 TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahead of its start") {
     models::Sx1262 chip;
     parts::Sx1262 radio(chip, chip, chip, chip.busy_pin, chip.reset_pin, chip.dio1_pin);
@@ -99,31 +102,32 @@ TEST_CASE("rf: a queued dwell is switched into when the one before it ends, ahea
     platform::host::Rf rf(radio, clock, events);
     REQUIRE(rf.begin() == Status::Ok);
 
+    const timing::Window uplink_dwell = timing::dwell_of(timing::kUplinkWindowMs);
     ports::RfPlan uplink{};
     uplink.mode = ports::RfMode::RxOBand;
     uplink.frequency_hz = adsl::kOBandHz;
-    uplink.start_us = 205000;
-    uplink.end_us = 395000;
+    uplink.start_us = static_cast<uint64_t>(uplink_dwell.start_ms) * 1000;
+    uplink.end_us = static_cast<uint64_t>(uplink_dwell.end_ms) * 1000;
     ports::RfPlan slot0 = uplink;
     slot0.mode = ports::RfMode::RxMBand;
     slot0.frequency_hz = adsl::kMBand0Hz;
-    slot0.start_us = 400000;
-    slot0.end_us = 799000;
-    clock.set_milliseconds(200);
+    slot0.start_us = static_cast<uint64_t>(kSlot0Dwell.start_ms) * 1000;
+    slot0.end_us = static_cast<uint64_t>(kSlot0Dwell.end_ms) * 1000;
+    clock.set_milliseconds(uplink_dwell.start_ms);
     REQUIRE(rf.arm(uplink) == Status::Ok);
     REQUIRE(rf.arm(slot0) == Status::Ok);
-    rf.service(200);
+    rf.service(uplink_dwell.start_ms);
     REQUIRE(tuned_khz(chip) == adsl::kOBandHz / 1000);
 
-    clock.set_milliseconds(395);
-    rf.service(395);
+    clock.set_milliseconds(uplink_dwell.end_ms);
+    rf.service(uplink_dwell.end_ms);
     CHECK(tuned_khz(chip) == adsl::kMBand0Hz / 1000);
     CHECK(chip.receiving);
     CHECK(rf.switching().late_starts == 0);
     const ports::RfSwitch& change = rf.switching().last;
     CHECK(change.from == ports::RfMode::RxOBand);
     CHECK(change.to == ports::RfMode::RxMBand);
-    CHECK(change.margin_us() == 5000);
+    CHECK(change.margin_us() == timing::kSwitchRetuneMs * 1000);
     CHECK(change.gap_us() == 0);
 }
 
@@ -184,14 +188,13 @@ TEST_CASE("rf: the next dwell is armed ahead of its edge, at the edge the latche
         CHECK((plan.start_us - Armings::kEdgeUs) % 1000 == 0);
         if (plan.frequency_hz != adsl::kMBand1Hz) continue;
         slot1_dwells++;
-        CHECK((plan.start_us - Armings::kEdgeUs) % 1000000 == 800000);
-        CHECK(plan.end_us - plan.start_us == 400000);
+        CHECK((plan.start_us - Armings::kEdgeUs) % 1000000 == kSlot1Dwell.start_ms * 1000u);
+        CHECK(plan.end_us - plan.start_us == static_cast<uint32_t>(kSlot1Dwell.width_ms()) * 1000u);
     }
     CHECK(slot1_dwells >= 2);
 }
 
-// A slot-1 burst drawn for 800 ms used to be dropped: its dwell was only armed by
-// the first pass after 800, and a burst whose instant had gone by was not armed.
+// A slot-1 burst drawn for its dwell's first instant was dropped when the dwell was armed late.
 TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwell") {
     Armings armings;
     armings.clock.set_microseconds(Armings::kEdgeUs);
@@ -200,7 +203,7 @@ TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwel
     armings.state.clock.utc_s = 1001;
     armings.state.clock.utc_edge_us = Armings::kEdgeUs;
 
-    for (int phase = 0; phase < 800; phase += 10) armings.tick_at(phase);
+    for (int phase = 0; phase < kSlot1Dwell.start_ms; phase += 10) armings.tick_at(phase);
 
     const ports::RfPlan* queued = nullptr;
     for (uint32_t i = 0; i < armings.rf.handed; i++)
@@ -208,24 +211,25 @@ TEST_CASE("rf: a slot 1 burst decided while slot 0 flies is queued with its dwel
             armings.rf.plans[i].tx != nullptr)
             queued = &armings.rf.plans[i];
     REQUIRE(queued != nullptr);
-    CHECK(queued->start_us == Armings::kEdgeUs + 800000);
+    CHECK(queued->start_us == Armings::kEdgeUs + kSlot1Dwell.start_ms * 1000u);
     CHECK(queued->tx_at_us >= queued->start_us);
     CHECK(queued->tx_at_us < Armings::kEdgeUs + 1000000);
 }
 
-// A pass read the hop plan at 799.99 ms, promoted slot 1 after 800, and aborted it in flight.
+// A pass read the hop plan 10 us before slot 1, promoted slot 1 after it, and aborted it in flight.
 TEST_CASE("rf: a pass that straddles a dwell edge keeps the dwell already queued for it") {
     Armings armings;
     armings.clock.set_microseconds(Armings::kEdgeUs);
     REQUIRE(armings.radio.setup() == Status::Ok);
-    for (int phase = 0; phase < 800; phase += 10) armings.tick_at(phase);
+    for (int phase = 0; phase < kSlot1Dwell.start_ms; phase += 10) armings.tick_at(phase);
     const uint32_t handed = armings.rf.handed;
 
-    armings.clock.set_microseconds(Armings::kEdgeUs + 799990);
+    const uint64_t straddle_us = Armings::kEdgeUs + kSlot1Dwell.start_ms * 1000u - 10;
+    armings.clock.set_microseconds(straddle_us);
     armings.clock.creep_us = 5;
-    armings.radio.tick(static_cast<uint32_t>((Armings::kEdgeUs + 799990) / 1000));
+    armings.radio.tick(static_cast<uint32_t>(straddle_us / 1000));
     armings.clock.creep_us = 0;
-    armings.tick_at(810);
+    armings.tick_at(kSlot1Dwell.start_ms + 10);
 
     CHECK(armings.rf.aborts == 0);
     REQUIRE(armings.rf.handed > handed);
@@ -246,18 +250,18 @@ TEST_CASE("rf: a burst whose gates clear inside the dwell is armed into that dwe
     armings.state.own.flight_state = 2;
     armings.state.own.fix_at_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000);
 
-    armings.tick_at(400);
+    armings.tick_at(kSlot0Dwell.start_ms);
     const uint32_t armed_at_the_edge = armings.rf.arms;
     CHECK(armings.rf.last.tx == nullptr);
 
     armings.state.own.fix_valid = true;
-    armings.tick_at(410);
+    armings.tick_at(kSlot0Dwell.start_ms + 10);
     CHECK(armings.rf.arms == armed_at_the_edge + 1);
     REQUIRE(armings.rf.last.tx != nullptr);
     CHECK(armings.rf.last.tx_at_us >= armings.rf.last.start_us);
     CHECK(armings.rf.last.tx_at_us < armings.rf.last.end_us);
 
-    for (int phase = 420; phase < 790; phase += 10) armings.tick_at(phase);
+    for (int phase = kSlot0Dwell.start_ms + 20; phase < 790; phase += 10) armings.tick_at(phase);
     CHECK(armings.rf.arms == armed_at_the_edge + 1);
 }
 
@@ -321,7 +325,7 @@ TEST_CASE("rf: a plan the radio refuses is a burst that never armed, not one tha
     armings.ready_to_transmit(1000);
     armings.rf.refuse = true;
 
-    armings.tick_at(400);
+    armings.tick_at(kSlot0Dwell.start_ms);
 
     REQUIRE(armings.rf.with_tx >= 1);
     REQUIRE(armings.state.radio_log.count() == 1);
@@ -345,7 +349,7 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
     REQUIRE(armings.state.radio_log.count() == 0);
 
     armings.state.own.utc_s += 2;  // the lower channel's second again
-    armings.tick_at(400);
+    armings.tick_at(kSlot0Dwell.start_ms);
 
     REQUIRE(armings.state.radio_log.count() == 1);
     CHECK(armings.state.radio_log.newest(0).verdict == radio::Verdict::Held);
@@ -355,7 +359,7 @@ TEST_CASE("rf: the hour's air-time budget holding a burst is said once, and coun
     armings.state.own.utc_s += 2;
     armings.state.own.fix_at_ms = static_cast<uint32_t>((Armings::kEdgeUs + 1000000) / 1000);
     armings.tick_in(1, 205);
-    armings.tick_in(1, 400);
+    armings.tick_in(1, kSlot0Dwell.start_ms);
 
     CHECK(armings.state.radio_log.count() == 1);
     CHECK(armings.state.rf.timing_statistics.refused() == 2);

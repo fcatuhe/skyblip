@@ -199,7 +199,7 @@ TEST_CASE("nmea: a target that named itself reaches the tablet with the name on 
     CHECK(values[6] == "C5D804!D-KXYZ");
 }
 
-// FTD-012's GPS field is 1 for a 3D fix on the ground, 2 for one moving, and XCSoar names 1 GPS_2D.
+// The GPS field is 1 for a 3D fix on the ground, 2 for one moving, and XCSoar names 1 GPS_2D.
 TEST_CASE("nmea: PFLAU says GPS 1 on the ground, which XCSoar draws as a 2D fix") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);

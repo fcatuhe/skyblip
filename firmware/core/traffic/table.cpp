@@ -6,6 +6,7 @@
 #include "core/settings/address.h"
 #include "protocols/adsl/packet.h"
 #include "protocols/adsl/soft_versioning.h"
+#include "protocols/common/geometry.h"
 
 namespace skyblip::traffic {
 
@@ -77,6 +78,15 @@ bool TrafficTable::prefer_new(const model::AircraftObservation& incoming,
 
 void TrafficTable::sample_turn(TargetTurn& turn, const model::AircraftObservation& observation) {
     if (!observation.speed_valid) return;
+    if (observation.turn_valid) {
+        turn.armed = true;
+        turn.valid = true;
+        turn.rate_dps =
+            static_cast<int16_t>(wire::divide_rounded<int32_t>(observation.turn_cdps, 100));
+        turn.reference_at_ms = observation.at_ms;
+        turn.reference_track_c9 = observation.track_c9;
+        return;
+    }
     const uint32_t elapsed_ms = observation.at_ms - turn.reference_at_ms;
     if (!turn.armed || elapsed_ms > kTurnMaxAgeMs) {
         turn.armed = true;

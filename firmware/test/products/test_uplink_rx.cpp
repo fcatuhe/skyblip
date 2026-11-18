@@ -90,7 +90,7 @@ bool relay(Rig& rig, uint32_t& now_ms, const model::AircraftObservation* aircraf
     const size_t burst_bytes = adsl::encode_o_band(packet, burst);
 
     // Into the dwell, not around it: the radio has to have opened the O-band
-    // window (205 ms, one jitter guard before the ground station starts) before
+    // window (207 ms, the switch's lead before the ground station starts) before
     // a burst arriving there means anything at all.
     const uint32_t at_ms = now_ms + timing::kGroundEmitStartMs;
     rig.run(now_ms, now_ms + 200);

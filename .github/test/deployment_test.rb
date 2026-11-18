@@ -243,7 +243,7 @@ class DeploymentTest < Minitest::Test
       notes = File.read(File.join(tree, "release/PROTOCOLS.md"))
       assert_includes notes, "- `skyblip-bravo`: ADS-B #{versions["adsb"]} (1090 MHz extended squitter DF17, read only, after RTCA DO-260B (draft 4.2, 1090-WP30-18))\n"
       assert_includes notes, "- `skyblip-go`: ADS-L #{versions["adsl"]} (ADS-L 4 SRD-860 Issue 2), " \
-                             "ALP-TAS #{versions["alptas"]} (ALP-TAS 2024 FLARM-generation frame, after the community description (no published specification))\n"
+                             "ALP-TAS #{versions["alptas"]} (ALP-TAS 2024 frame, version 3, skyBlip's reading of public sources)\n"
       assert_includes workflow("release").dig("jobs", "files", "needs"), "image"
     end
   end

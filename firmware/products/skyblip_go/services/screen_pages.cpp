@@ -165,7 +165,9 @@ void ScreenService::render(uint32_t now_ms) {
                     targets_[count].alarm_level = target->alarm_level;
                     targets_[count].alarm_dismissed = target->alarm_dismissed;
                     targets_[count].climb_e8 = observation.climb_e8;
-                    targets_[count].climb_valid = observation.climb_valid;
+                    targets_[count].climb_valid =
+                        observation.climb_valid &&
+                        (!observation.stealth || target->alarm_level != traffic::Level::None);
                     targets_[count].speed_mm_s =
                         observation.speed_valid
                             ? to_mm_s(QuarterMetresPerSecond(observation.speed_q)).value

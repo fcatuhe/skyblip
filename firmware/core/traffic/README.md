@@ -125,7 +125,7 @@ Both aircraft are put at FL600, 18288 m, the top of the class A airspace airline
 
 ### No gate
 
-The table holds every ADS-B target it can place, at any distance and any height. The owner decided it on 12 November 2026: all traffic, and nothing to configure for now. PowerFLARM does the same by default: its `ADSBRANGE` and `ADSBVRANGE` are unlimited (FLARM FTD-014, version 1.18 of 2024-12-19, 3.2.10 and 3.2.11).
+The table holds every ADS-B target it can place, at any distance and any height. The owner decided it on 12 November 2026: all traffic, and nothing to configure for now.
 
 Three rules still bound what the table holds. A position past `traffic::kAdsbRangeCeilingM`, the 1115 km radio horizon above, is a bad decode, and the table refuses it and counts it in `implausible()`. Before the table, `adsb::Assembly` refuses a global decode past 180 NM of the receiver's reference while it has one (`core/protocol/README.md`). A full table evicts the ground first, then the farthest slant, so a far airborne aircraft never takes a slot from a nearer airborne one, and it never evicts a slot under an alarm. The alarm keeps its own bands, and grades a far aircraft `None`.
 
