@@ -44,7 +44,7 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     adsb::Message message{};
     const adsb::Reception reception{frame.at_us, frame.rssi_dbm, frame.rssi_valid};
     const Status status =
-        status_of(adsb::receive(frame.chips.data(), frame.chips.size(), reception, message));
+        status_of(adsb::receive(frame.bytes.data(), frame.bytes.size(), reception, message));
     if (status != Status::Ok) {
         refuse(status);
         return;
@@ -67,7 +67,7 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
     context_.state.traffic.update(observation_, now_s);
 }
 
-// INFO: fc 12nov26 a whole 27-byte frame is never Invalid, so any refusal but Unsupported is parity
+// INFO: fc 12nov26 a whole 14-byte frame is never Invalid, so any refusal but Unsupported is parity
 void AdsbService::refuse(Status status) {
     if (status == Status::Unsupported) {
         unsupported_++;

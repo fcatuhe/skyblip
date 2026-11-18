@@ -22,29 +22,19 @@ adsb::Squitter position() {
                                    false, 3000);
 }
 
-void sealed_chips(adsb::Squitter frame, uint8_t* chips) {
+adsb::Squitter sealed(adsb::Squitter frame) {
     adsb::seal(frame.bytes);
-    adsb::chips_of(frame.bytes, chips);
+    return frame;
 }
 
-// INFO: fc 17nov26 bit b rides chips 2b-10 and 2b-9, and a doubtful pair reads its second chip
-void make_doubtful(uint8_t* chips, uint8_t frame_bit) {
-    const uint16_t first = static_cast<uint16_t>(2 * (frame_bit - 5));
-    const uint16_t second = static_cast<uint16_t>(first + 1);
-    const bool value = (chips[second >> 3] >> (7 - (second & 7))) & 1u;
-    const uint8_t mask = static_cast<uint8_t>(0x80u >> (first & 7));
-    chips[first >> 3] =
-        static_cast<uint8_t>(value ? chips[first >> 3] | mask : chips[first >> 3] & ~mask);
+void flip_bit(adsb::Squitter& frame, uint8_t bit) {
+    const uint8_t index = static_cast<uint8_t>(bit - 1);
+    frame.bytes[index >> 3] =
+        static_cast<uint8_t>(frame.bytes[index >> 3] ^ (0x80u >> (index & 7)));
 }
 
-void flip_bit(uint8_t* chips, uint8_t frame_bit) {
-    for (uint16_t chip : {static_cast<uint16_t>(2 * (frame_bit - 5)),
-                          static_cast<uint16_t>(2 * (frame_bit - 5) + 1)})
-        chips[chip >> 3] = static_cast<uint8_t>(chips[chip >> 3] ^ (0x80u >> (chip & 7)));
-}
-
-Status receive_chips(const uint8_t* chips, Message& message) {
-    return receive(chips, kChipBytes, Reception{}, message);
+Status receive_frame(const adsb::Squitter& frame, Message& message) {
+    return receive(frame.bytes, kFrameBytes, Reception{}, message);
 }
 
 }
@@ -58,25 +48,19 @@ TEST_CASE("DO-260B 2.2.4.3.4.5: every valid DF17 message with a zero PI overlay 
         CHECK(standard::hear(frame).status == Status::Ok);
 }
 
-TEST_CASE("DO-260B 2.2.4.3.4.7.3: each bit is the comparison of its two chips, 112 to a frame") {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
+TEST_CASE(
+    "DO-260B 2.2.4.3.4.7.3: the receiver decides 112 bits from their chips, the parity each") {
+    adsb::Squitter frame = sealed(position());
     Message message;
-    REQUIRE(receive_chips(chips, message) == Status::Ok);
+    REQUIRE(receive_frame(frame, message) == Status::Ok);
     CHECK(kFrameBytes * 8 == 112);
-    CHECK(kChipBytes * 8 + 8 == 2 * 112);
-    flip_bit(chips, 60);
-    CHECK(receive_chips(chips, message) == Status::Crc);
+    flip_bit(frame, 60);
+    CHECK(receive_frame(frame, message) == Status::Crc);
 }
 
 // TODO: fc 17nov26 no doubtful bit reaches the decoder, until a receiver hands up its chip pairs
 TEST_CASE("DO-260B 2.2.4.3.4.7.3: a frame with more than seven doubtful bits in a row is refused" *
           doctest::skip()) {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
-    for (uint8_t bit = 40; bit < 48; bit++) make_doubtful(chips, bit);
-    Message message;
-    CHECK(receive_chips(chips, message) != Status::Ok);
     FAIL(
         "not implemented: Bravo's LR2021 hands up no doubtful bit, so the decoder counts no run of "
         "them");
@@ -111,23 +95,20 @@ TEST_CASE("DO-260B 2.2.4.4.3.1: correction is conservative and brute force, as A
 }
 
 TEST_CASE("DO-260B 2.2.4.4.3.2: no sliding window repairs a wrong bit, which is refused") {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
-    flip_bit(chips, 60);
+    adsb::Squitter frame = sealed(position());
+    flip_bit(frame, 60);
     Message message;
-    CHECK(receive_chips(chips, message) == Status::Crc);
+    CHECK(receive_frame(frame, message) == Status::Crc);
 }
 
 TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is read") {
-    uint8_t chips[kChipBytes];
-    sealed_chips(position(), chips);
+    const adsb::Squitter frame = sealed(position());
     Message message;
-    REQUIRE(receive_chips(chips, message) == Status::Ok);
+    REQUIRE(receive_frame(frame, message) == Status::Ok);
     for (uint8_t bit : {5, 33, 88, 112}) {
-        uint8_t damaged[kChipBytes];
-        for (uint8_t i = 0; i < kChipBytes; i++) damaged[i] = chips[i];
+        adsb::Squitter damaged = frame;
         flip_bit(damaged, bit);
-        CHECK(receive_chips(damaged, message) == Status::Crc);
+        CHECK(receive_frame(damaged, message) == Status::Crc);
     }
 }
 
@@ -143,8 +124,8 @@ TEST_CASE("DO-260B 2.2.6: the reception function hands each message on, decoded 
     Message message;
     CHECK(standard::hear(position()).status == Status::Ok);
     CHECK(standard::hear(standard::squitter(29)).status == Status::Unsupported);
-    uint8_t chips[kChipBytes]{};
-    CHECK(receive(chips, kChipBytes - 1, Reception{}, message) == Status::Invalid);
+    uint8_t frame[kFrameBytes]{};
+    CHECK(receive(frame, kFrameBytes - 1, Reception{}, message) == Status::Invalid);
 }
 
 TEST_CASE("DO-260B 2.2.6.1: version 0, 1 and 2 formats decode, and a target keeps its version") {

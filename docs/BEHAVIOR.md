@@ -2550,7 +2550,7 @@ What the LR2021 driver asks of the part, in what order, and what it hands up fro
   > The detector matches its pattern first bit first (DS 16.3.8), and the air sends the preamble.
 - the modem is SoftRF's 1090 MHz OOK receiver, in the part's Manchester layout
 - the next frame is heard without another SetRx
-- the part's 14 Manchester bytes come up as the 27 chips the decoder reads
+- the part's 14 Manchester bytes come up as the frame the decoder reads
 - the threshold and the front end go in by masked write after the frequency
   > #293 found a threshold written before the frequency acting near -106 dBm, whatever it asked.
 - two frames read in one wake come out oldest first, the RSSI on the newest
@@ -5823,7 +5823,7 @@ CPR from DF17 positions to coordinates, pinned to the Riddle's examples and DO-2
 
 ### protocols/adsb/test/test_message.cpp
 
-DF17 from the LR2021's chips to typed messages, pinned to the decodes protocols/adsb/README names.
+DF17 from the frame the LR2021 decodes to typed messages, pinned to the decodes protocols/adsb/README names.
 
 **adsb**
 
@@ -6189,7 +6189,7 @@ DO-260B 2.2.4 to 2.2.7, the decoding half: which frames are accepted, refused an
 
 **DO-260B 2.2.4.3.4.7.3**
 
-- each bit is the comparison of its two chips, 112 to a frame
+- the receiver decides 112 bits from their chips, the parity each
 
 **DO-260B 2.2.4.4.3.2**
 

@@ -4,7 +4,6 @@
 #include <initializer_list>
 
 #include "protocols/common/crc.h"
-#include "protocols/common/manchester.h"
 
 namespace skyblip::adsb {
 
@@ -41,14 +40,6 @@ uint32_t message_bits(const uint8_t* frame, uint8_t first, uint8_t last) {
 uint32_t gray_to_binary(uint32_t gray) {
     for (uint32_t shifted = gray >> 1; shifted != 0; shifted >>= 1) gray ^= shifted;
     return gray;
-}
-
-// INFO: fc 10nov26 1090 sends a 1 as the chips 10, the inverse of the ADS-L table fec decodes
-void decode_chips(const uint8_t* chips, uint8_t* frame) {
-    uint8_t inverted[2 * kFrameBytes];
-    inverted[0] = static_cast<uint8_t>(~kSyncChips);
-    for (uint8_t i = 0; i < kChipBytes; i++) inverted[i + 1] = static_cast<uint8_t>(~chips[i]);
-    wire::manchester_decode(inverted, kFrameBytes, frame, nullptr);
 }
 
 Quantity quantity_at(const uint8_t* frame, uint8_t first, uint8_t last, int32_t step) {
@@ -213,13 +204,11 @@ wire::Status parse(const uint8_t* frame, Message& out) {
 
 }
 
-wire::Status receive(const uint8_t* chips, size_t chip_bytes, Reception reception, Message& out) {
+wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out) {
     out = Message{};
     out.reception = reception;
-    if (chip_bytes < kChipBytes) return wire::Status::Invalid;
+    if (frame_bytes < kFrameBytes) return wire::Status::Invalid;
 
-    uint8_t frame[kFrameBytes];
-    decode_chips(chips, frame);
     if (wire::crc24_check(frame, kFrameBytes) != 0) return wire::Status::Crc;
 
     if (bits(frame, 1, 5) != kExtendedSquitter) return wire::Status::Unsupported;

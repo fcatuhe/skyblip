@@ -63,10 +63,8 @@ struct Bravo {
 
     bool hear_raw(const char* text, uint32_t at_ms) {
         adsb::Message message;
-        uint8_t chips[adsb::kChipBytes];
-        adsb::chips_of(frame_of(text).bytes, chips);
-        REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) ==
-                wire::Status::Ok);
+        REQUIRE(adsb::receive(frame_of(text).bytes, adsb::kFrameBytes, adsb::Reception{},
+                              message) == wire::Status::Ok);
         return protocol::adsb_fold(assembly, message, at_ms, events::Stamp{}, reference, heard);
     }
 

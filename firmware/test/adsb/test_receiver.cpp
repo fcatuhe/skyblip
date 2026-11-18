@@ -8,7 +8,6 @@
 #include "protocols/adsb/assembly.h"
 #include "protocols/adsb/message.h"
 #include "protocols/adsb/squitter.h"
-#include "protocols/common/manchester.h"
 #include "test/support/lr2021_rig.h"
 
 using namespace skyblip;
@@ -25,19 +24,15 @@ AdsbAir identification() { return adsb_air(adsb::squitter(kAddress, 5, 4)); }
 AdsbAir df18_air() {
     adsb::Squitter frame = adsb::squitter(kAddress, 0, 4);
     frame.bytes[0] = static_cast<uint8_t>(18 << 3);
-    AdsbAir air = adsb_air(frame);
-    uint8_t coded[2 * adsb::kFrameBytes];
-    wire::manchester_encode(frame.bytes, adsb::kFrameBytes, coded);
-    air.chips[2] = static_cast<uint8_t>(~coded[0]);
-    return air;
+    return adsb_air(frame);
 }
 
 bool framed(const AdsbAir& air) {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
     if (!part.receive_air(air.chips, sizeof(air.chips))) return false;
-    uint8_t chips[adsb::kChipBytes]{};
-    return radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame;
+    uint8_t frame[adsb::kFrameBytes]{};
+    return radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame;
 }
 
 }
@@ -131,10 +126,10 @@ TEST_CASE("DO-260B 2.2.4.3.4.7: a framed burst is a message the decoder reads") 
     parts::Lr2021 radio = lr2021_receiving(part);
     const AdsbAir air = identification();
     REQUIRE(part.receive_air(air.chips, sizeof(air.chips), -61));
-    uint8_t chips[adsb::kChipBytes]{};
-    REQUIRE(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
+    uint8_t frame[adsb::kFrameBytes]{};
+    REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
     adsb::Message message{};
-    REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
+    REQUIRE(adsb::receive(frame, sizeof(frame), adsb::Reception{}, message) == wire::Status::Ok);
     CHECK(message.address == kAddress);
 }
 
@@ -159,11 +154,11 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.2: the preamble is four pulses at 0, 1, 3.5 and 4
 TEST_CASE("DO-260B 2.2.4.3.5: the receiver listens all the time, so its duty factor is 100%") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
-    uint8_t chips[adsb::kChipBytes]{};
+    uint8_t frame[adsb::kFrameBytes]{};
     for (int i = 0; i < 3; i++) {
         const AdsbAir air = identification();
         REQUIRE(part.receive_air(air.chips, sizeof(air.chips)));
-        REQUIRE(radio.poll(chips, sizeof(chips)).type == Lr2021EventType::Frame);
+        REQUIRE(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::Frame);
     }
     CHECK(part.count(chip::kSetRx) == 1);
 }
@@ -199,9 +194,8 @@ TEST_CASE(
     adsb::Message message{};
     adsb::Squitter frame = adsb::squitter(kAddress, 5, 4);
     adsb::seal(frame.bytes);
-    uint8_t chips[adsb::kChipBytes];
-    adsb::chips_of(frame.bytes, chips);
-    REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
+    REQUIRE(adsb::receive(frame.bytes, adsb::kFrameBytes, adsb::Reception{}, message) ==
+            wire::Status::Ok);
     adsb::Track track;
     REQUIRE(assembly.fold(message, static_cast<uint32_t>(12345678 / 1000), adsb::Receipt{},
                           adsb::Reference{}, track));

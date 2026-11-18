@@ -60,7 +60,6 @@ One FIFO frame is 14 bytes, the 112 bits of a Mode S long frame, bit 1 in the hi
 
 - **Bits.** The part reads each chip pair behind the preamble as one bit, inverted Manchester, so a 1 is the chips `10`, a pulse then a gap, as Mode S sends it. It hands up no doubtful pair: it has already decided every bit.
 - **Formats.** No sync word picks the format, so every downlink format the preamble detector catches lands, DF11 all-call replies included. `read_frame()` hands up only a frame whose first four bits are `1000`, DF16 or DF17, the two the decoder reads, and drops the others without a count.
-- **Chips.** `adsb::receive` takes the 27 chip bytes behind a 0x95 sync, the layout this driver read before #293. `read_frame()` writes bits 5 to 112 back as those chips, a 1 as `10` and a 0 as `01`, so the decoder is unchanged.
 - **Fields.** Bits 1 to 5 are the DF. In a DF17, bits 6 to 8 are the capability, 9 to 32 the ICAO address, 33 to 88 the message, and 89 to 112 the parity. The 112 bits divided by the generator 0x1FFF409 leave 0 for a sound DF17, and the ICAO for a DF16.
 
 The raw chips behind a 0x95 sync, SoftRF's layout, slip. cb-tfc wrote that "the chip clock slips inside a frame" and moved to the part's Manchester decoding. #293 measured the same on Bravo: replayed offline, 13 to 24% of raw chip frames passed the parity as they came, against 86 to 97% in the Manchester layout. At -106 dBm the Manchester layout decoded three times the positions raw chips did.

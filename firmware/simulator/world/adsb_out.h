@@ -1,5 +1,5 @@
-// Harness, not a test: the world's ADS-B Out on air, preamble and sync ahead of the stack's
-// squitter frames.
+// Harness, not a test: the world's ADS-B Out on air, the preamble ahead of the stack's squitter
+// frames.
 #ifndef SKYBLIP_SIMULATOR_WORLD_ADSB_OUT_H
 #define SKYBLIP_SIMULATOR_WORLD_ADSB_OUT_H
 
@@ -14,7 +14,7 @@ namespace skyblip::simulator {
 constexpr uint8_t kAdsbPreambleAir[2] = {0xA1, 0x40};
 
 struct AdsbAir {
-    uint8_t chips[sizeof(kAdsbPreambleAir) + 1 + adsb::kChipBytes + 1]{};
+    uint8_t chips[sizeof(kAdsbPreambleAir) + adsb::kFrameChipBytes + 1]{};
 };
 
 inline AdsbAir adsb_air(adsb::Squitter frame) {
@@ -22,8 +22,7 @@ inline AdsbAir adsb_air(adsb::Squitter frame) {
     AdsbAir air;
     air.chips[0] = kAdsbPreambleAir[0];
     air.chips[1] = kAdsbPreambleAir[1];
-    air.chips[2] = adsb::kSyncChips;
-    adsb::chips_of(frame.bytes, air.chips + 3);
+    adsb::chips_of(frame.bytes, air.chips + sizeof(kAdsbPreambleAir));
     return air;
 }
 

@@ -20,11 +20,12 @@ inline void seal(uint8_t* frame) {
     frame[kParityOffsetBytes + 2] = static_cast<uint8_t>(parity);
 }
 
+constexpr uint8_t kFrameChipBytes = 2 * kFrameBytes;
+
 // INFO: fc 10nov26 1090 sends a 1 as the chips 10, the inverse of manchester_encode's ADS-L table
 inline void chips_of(const uint8_t* frame, uint8_t* chips) {
-    uint8_t coded[2 * kFrameBytes];
-    wire::manchester_encode(frame, kFrameBytes, coded);
-    for (uint8_t i = 0; i < kChipBytes; i++) chips[i] = static_cast<uint8_t>(~coded[i + 1]);
+    wire::manchester_encode(frame, kFrameBytes, chips);
+    for (uint8_t i = 0; i < kFrameChipBytes; i++) chips[i] = static_cast<uint8_t>(~chips[i]);
 }
 
 struct Squitter {

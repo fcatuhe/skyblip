@@ -12,7 +12,7 @@ struct AdsbFrame {
     uint64_t at_us;
     int8_t rssi_dbm;
     bool rssi_valid;
-    std::array<uint8_t, adsb::kChipBytes> chips;
+    std::array<uint8_t, adsb::kFrameBytes> bytes;
 };
 
 // INFO: fc 11nov26 DO-260B Table 2-105 class A0, the figure adsb::Assembly::kMaxAircraft is

@@ -34,7 +34,7 @@ class Lr2021 {
     Status probe();
     Status begin(int16_t detection_threshold_dbm);
     Status start_receive();
-    Lr2021Event poll(uint8_t* chips, size_t capacity);
+    Lr2021Event poll(uint8_t* frame, size_t capacity);
     bool service(uint32_t elapsed_ms, uint32_t silence_ceiling_ms);
     Status sleep();
     void park();
@@ -64,7 +64,7 @@ class Lr2021 {
     Status write_mask(uint32_t address, uint32_t mask, uint32_t data);
     void note_status(const uint8_t* status);
     Status read_errors();
-    Status read_frame(uint8_t* chips, Lr2021Event& event);
+    Status read_frame(uint8_t* frame, Lr2021Event& event);
 
     static constexpr size_t kFrameBytes = 16;
 
@@ -195,8 +195,6 @@ constexpr int16_t kDetectionThresholdDbm = -110;
 constexpr uint32_t kOokQuirkRegister = 0xF30150;
 constexpr uint32_t kOokQuirkMask = 0x000000FF;
 constexpr uint32_t kOokQuirkData = 0x18;
-
-constexpr uint8_t kChipBytes = 27;
 
 // INFO: fc 11nov26 DS 4.2 asks NRESET low for 100 us at least
 constexpr uint32_t kResetLowUs = 100;

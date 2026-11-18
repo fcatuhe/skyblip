@@ -291,10 +291,9 @@ TEST_CASE("bravo scenario: a negative track flies and is sent as the same track 
 TEST_CASE("bravo scenario: ADS-B Out rounds a velocity field to its nearest step and saturates") {
     adsb::Squitter frame = adsb::ground_velocity(0x300001, 5, 10, 10, -295, 4000);
     adsb::seal(frame.bytes);
-    uint8_t chips[adsb::kChipBytes];
-    adsb::chips_of(frame.bytes, chips);
     adsb::Message message;
-    REQUIRE(adsb::receive(chips, sizeof(chips), adsb::Reception{}, message) == wire::Status::Ok);
+    REQUIRE(adsb::receive(frame.bytes, adsb::kFrameBytes, adsb::Reception{}, message) ==
+            wire::Status::Ok);
     CHECK(message.velocity.climb_fpm.value == -320);
     CHECK(message.velocity.gnss_minus_pressure_ft.saturated);
 }

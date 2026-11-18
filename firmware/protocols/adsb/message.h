@@ -9,9 +9,6 @@
 namespace skyblip::adsb {
 
 constexpr uint8_t kFrameBytes = 14;
-// INFO: fc 10nov26 0x95 is the chips of the bits 1000, which DF16 and DF17 share
-constexpr uint8_t kSyncChips = 0x95;
-constexpr uint8_t kChipBytes = 2 * kFrameBytes - 1;
 constexpr uint8_t kCallsignCharacters = 8;
 
 struct MovementBand {
@@ -113,7 +110,7 @@ struct Message {
     OperationalStatus operational_status;
 };
 
-wire::Status receive(const uint8_t* chips, size_t chip_bytes, Reception reception, Message& out);
+wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out);
 
 }
 
