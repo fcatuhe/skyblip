@@ -13,7 +13,7 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "each device page links to all three devices and selects itself" do
+  test "each device page links to all three devices in the sticky header and selects itself" do
     [ "", "/fr" ].each do |prefix|
       paths = %w[go bravo tango].map { |device| "#{prefix}/#{device}" }
       paths.each do |path|
@@ -22,7 +22,7 @@ class Content::JourneyTest < ActionDispatch::IntegrationTest
         assert_equal paths, css_select(".device-tabs a").map { |link| link["href"] }
         assert_select ".device-tabs a[aria-current=page]", count: 1
         assert_select ".device-tabs a[aria-current=page][href=?]", path
-        assert_select "main > .device-tabs:first-child"
+        assert_select ".site-header > .site-nav + .device-tabs"
       end
     end
   end
