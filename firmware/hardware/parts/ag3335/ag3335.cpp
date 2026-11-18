@@ -61,7 +61,9 @@ void Ag3335::service(uint32_t now_ms) {
         case ConfigStage::Verifying:
         case ConfigStage::Confirming:
         case ConfigStage::Ready:
-        case ConfigStage::Degraded: break;
+        case ConfigStage::Degraded:
+        case ConfigStage::Probing:
+        case ConfigStage::Resetting: break;
     }
 }
 

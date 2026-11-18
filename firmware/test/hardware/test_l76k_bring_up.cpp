@@ -239,9 +239,9 @@ TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
 }
 
 // Absent hardware is a capability. A platform whose UART cannot be retuned hands
-// the driver the null rate control, and the receiver at the wrong baud degrades
-// after the ordinary number of attempts instead of the driver pretending it
-// changed something.
+// the driver the null rate control, and the receiver at the wrong baud is probed
+// at the one rate the port has, instead of the driver pretending it changed
+// something.
 TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not have") {
     models::L76k chip;
     chip.baud = 38400;
@@ -251,7 +251,7 @@ TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not ha
 
     CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(chip.baud_changes == 0);
-    CHECK(gnss.degraded());
+    CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Probing);
     CHECK(gnss.sentences() == 0);
 }
 

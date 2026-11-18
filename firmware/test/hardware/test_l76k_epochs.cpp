@@ -104,18 +104,20 @@ TEST_CASE("l76k: a part solving every 200 ms is not taken for one solving on the
     CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
 }
 
-// A part that took 4 Hz and then fell back, after a restart or on its own, is asked again.
-TEST_CASE("l76k: a part that drifts off 4 Hz while ready is asked for it again") {
+// The pinned case: a part heard off 4 Hz was sent $PCAS02,250 again, on Go 000001 the suspect.
+TEST_CASE("l76k: a part that drifts off 4 Hz while ready is put at 2 Hz, never asked 250 again") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
 
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 10000);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 20000);
 
-    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
-    CHECK(gnss.solving_quarters());
+    CHECK(chip.quarter_rate_asked == 1);
+    CHECK(chip.solution_period_ms == parts::L76k::kHalfSolutionPeriodMs);
+    CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
+    CHECK(gnss.bring_up().quarter_verdict == ports::GnssVerdict::Drifted);
 }
 
 // Left at 1 Hz, the part gets the whole 1 Hz configuration back, GSA every solution included.
@@ -170,19 +172,32 @@ TEST_CASE("l76k: a part that refuses 4 Hz is asked for 2 Hz before 1 Hz") {
     CHECK_FALSE(gnss.solving_quarters());
 }
 
-// A refusal is not for the session: 4 Hz is asked again every five minutes.
-TEST_CASE("l76k: a part that refused 4 Hz is asked again after kQuarterRetryMs") {
+// The pinned case: 4 Hz was asked again every five minutes, and Go 000001 went silent after one.
+TEST_CASE("l76k: a part that refused 4 Hz is not asked for it again this session") {
+    models::L76k chip;
+    chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
+    parts::L76k gnss(chip, chip);
+
+    run(gnss, chip, 0, 20 * 60000);
+
+    CHECK(chip.quarter_rate_asked == 1);
+    CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
+    CHECK(gnss.configured());
+}
+
+// What the dump answers about the one 4 Hz attempt: refused, and the part still at 1 Hz.
+TEST_CASE("l76k: a refused 4 Hz says what cadence and how many quarter steps were seen") {
     models::L76k chip;
     chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
     parts::L76k gnss(chip, chip);
     run(gnss, chip, 0, 60000);
-    REQUIRE(gnss.cadence() == parts::L76k::Cadence::Half);
 
-    chip.fastest_interval_ms = 100;
-    run(gnss, chip, 60010, 120000);
-    CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
-    run(gnss, chip, 120010, 60000 + parts::L76k::kQuarterRetryMs + 20000);
-    CHECK(gnss.solving_quarters());
+    const ports::GnssBringUp seen = gnss.bring_up();
+    CHECK(seen.quarter_verdict == ports::GnssVerdict::OffCadence);
+    CHECK(seen.quarter_steps == 0);
+    CHECK(seen.verdict == ports::GnssVerdict::Passed);
+    CHECK(seen.interval_ms == parts::L76k::kHalfSolutionPeriodMs);
+    CHECK(seen.interval_seen_ms == parts::L76k::kHalfSolutionPeriodMs);
 }
 
 // A cold or warm start can be what the part needed, so it clears the refusal at once.

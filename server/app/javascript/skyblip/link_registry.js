@@ -3292,6 +3292,16 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "degraded",
           "code": 8,
           "mirrors": "Degraded"
+        },
+        {
+          "name": "probing",
+          "code": 9,
+          "mirrors": "Probing"
+        },
+        {
+          "name": "resetting",
+          "code": 10,
+          "mirrors": "Resetting"
         }
       ]
     },

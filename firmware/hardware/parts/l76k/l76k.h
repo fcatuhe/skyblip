@@ -18,8 +18,9 @@ namespace skyblip::parts {
 
 class L76k : public ports::Gnss {
    public:
-    explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate)
-        : uart_(uart), rate_(rate) {}
+    explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate,
+                  io::Gpio* reset = nullptr, int reset_pin = -1)
+        : uart_(uart), rate_(rate), reset_(reset), reset_pin_(reset_pin) {}
 
     using ConfigStage = ports::GnssConfigStage;
 
@@ -28,7 +29,6 @@ class L76k : public ports::Gnss {
 
     // INFO: fc 19sep26 $PCAS01 takes 0..5 for 4800..115200, L76K protocol spec V1.1 SS2.3.1
     static constexpr uint32_t kTargetBaudRate = 115200;
-    static constexpr const char* kBaudCommand = "$PCAS01,5*19\r\n";
 
     // INFO: fc 19sep26 SoftRF measures this part talking 70 ms after the second (GNSS.cpp:83-91)
     static constexpr uint32_t kBurstStartMs = 70;
@@ -63,33 +63,31 @@ class L76k : public ports::Gnss {
     // "$GPTXT,01,01,02,SW=<version>". SoftRF treats that exchange as the proof
     // the part is an AT6558 before it trusts a single $PCAS sentence
     // (.../src/driver/GNSS.cpp:981-1010), and logs the version for support.
-    static constexpr const char* kIdentifyCommand = "$PCAS06,0*1B\r\n";
     static constexpr uint32_t kIdentifyWindowMs = 1000;
 
     // INFO: gn 09jun25 SoftRF sends the first three 250 ms apart (.../driver/GNSS.cpp:1029-1057)
     static constexpr uint32_t kCommandGapMs = 250;
     static constexpr int kCommandCount = 4;
-    static constexpr const char* kCommands[kCommandCount] = {
-        "$PCAS04,7*1E\r\n",
-        "$PCAS03,1,0,1,0,1,0,0,0,0,0,,,0,0*03\r\n",
-        "$PCAS11,6*1B\r\n",
-        "$PCAS02,1000*2E\r\n",
+    static constexpr ports::GnssCommand kCommands[kCommandCount] = {
+        ports::GnssCommand::Constellations,
+        ports::GnssCommand::SentenceSet,
+        ports::GnssCommand::DynamicModel,
+        ports::GnssCommand::Rate1Hz,
     };
 
     // INFO: fc 18nov26 L76K protocol spec V1.1 SS2.3.2 allows under 1000 ms only at 115200
     static constexpr int kQuarterRateCommandCount = 2;
-    static constexpr const char* kQuarterRateCommands[kQuarterRateCommandCount] = {
-        "$PCAS02,250*18\r\n",
-        "$PCAS03,,,4,,,,,,,,,,,*36\r\n",
+    static constexpr ports::GnssCommand kQuarterRateCommands[kQuarterRateCommandCount] = {
+        ports::GnssCommand::Rate4Hz,
+        ports::GnssCommand::Gsa4,
     };
     // INFO: fc 18nov26 2 Hz solves on .000 and .500, both quarters, for a part that refuses 4 Hz
     static constexpr uint32_t kHalfSolutionPeriodMs = 500;
-    static constexpr const char* kHalfRateCommands[kQuarterRateCommandCount] = {
-        "$PCAS02,500*1A\r\n",
-        "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
+    static constexpr ports::GnssCommand kHalfRateCommands[kQuarterRateCommandCount] = {
+        ports::GnssCommand::Rate2Hz,
+        ports::GnssCommand::Gsa2,
     };
-    static constexpr uint32_t kQuarterRetryMs = 300000;
-    // INFO: fc 18nov26 the second $PCAS03 above keeps GSA, and the VDOP it carries, once a second
+    // INFO: fc 18nov26 Gsa4 keeps GSA, and the VDOP it carries, once a second
     static constexpr uint8_t kGsaPeriodSolutions = 4;
     static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
                   "GSA keeps the once a second it had at the factory rate");
@@ -97,11 +95,6 @@ class L76k : public ports::Gnss {
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
 
-    // INFO: fc 18sep26 $PCAS03 takes a null per field meaning keep, so these move nGSV alone
-    static constexpr const char* kSatellitesInViewOff = "$PCAS03,,,,0,,,,,,,,,,*32\r\n";
-    static constexpr const char* kSatellitesInViewEverySolution = "$PCAS03,,,,1,,,,,,,,,,*33\r\n";
-    static constexpr const char* kSatellitesInViewPaced = "$PCAS03,,,,5,,,,,,,,,,*37\r\n";
-    static constexpr const char* kSatellitesInViewQuarterPaced = "$PCAS03,,,,9,,,,,,,,,,*3B\r\n";
     // INFO: fc 29sep26 GSV precedes RMC: nav_ms +55-65 ms on bench 0B1B2C, so one set in five
     static constexpr uint8_t kSatellitesInViewPeriodSolutions = 5;
     // INFO: fc 18nov26 $PCAS03 counts to 9, so at 4 Hz a set every 2.25 s is the slowest pace
@@ -118,12 +111,24 @@ class L76k : public ports::Gnss {
     // $PCAS10 reboots the receiver. It answers nothing for about a second after
     // it, so the sequence behind a factory reset waits before it starts talking.
     static constexpr uint32_t kRestartSettleMs = 1000;
-    static constexpr const char* kRestartCommands[4] = {
-        "$PCAS10,0*1C\r\n",
-        "$PCAS10,1*1D\r\n",
-        "$PCAS10,2*1E\r\n",
-        "$PCAS10,3*1F\r\n",
+    static constexpr ports::GnssCommand kRestartCommands[4] = {
+        ports::GnssCommand::RestartHot,
+        ports::GnssCommand::RestartWarm,
+        ports::GnssCommand::RestartCold,
+        ports::GnssCommand::RestartFactory,
     };
+    static const char* sentence_of(ports::GnssCommand command);
+
+    // INFO: fc 18nov26 Go 000001 went silent, NMEA and PPS, and stayed so until rebooted
+    static constexpr uint32_t kSilenceMs = 3000;
+    static constexpr uint32_t kProbeListenMs = kWakeDelayMs + kFactorySolutionPeriodMs;
+    static constexpr uint32_t kProbePeriodMs = 10000;
+    static_assert(kBaudCandidateCount * kProbeListenMs < kProbePeriodMs,
+                  "a probe round hears every rate once inside its period");
+    static constexpr uint8_t kSilentRoundsBeforeReset = 3;
+    // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
+    static constexpr uint32_t kResetHoldMs = 150;
+    static constexpr int kJournalEvents = 8;
 
     // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 4 or 2 Hz, its cadence
     static constexpr uint32_t kVerifyWindowMs = 3000;
@@ -185,6 +190,10 @@ class L76k : public ports::Gnss {
     uint32_t baud_raises() const { return baud_raises_; }
     uint32_t raise_fallbacks() const { return raise_fallbacks_; }
 
+    ports::GnssBringUp bring_up() const;
+    // INFO: fc 18nov26 the board drains this every pass, a ninth event unread overwrites the oldest
+    bool take_event(ports::GnssEvent& out);
+
     ports::GnssHealth health() const override {
         ports::GnssHealth reported{};
         reported.baud = baud_rate();
@@ -229,12 +238,28 @@ class L76k : public ports::Gnss {
 
     void start_sequence(uint32_t now_ms);
     void start_rate(Cadence cadence, uint32_t now_ms);
-    void seek_quarters(uint32_t now_ms);
+    void seek_rate(uint32_t now_ms);
+    void enter(ConfigStage stage, uint32_t now_ms);
+    void note(ports::GnssEventKind kind, uint32_t now_ms);
+    void conclude(ports::GnssVerdict verdict, uint32_t now_ms);
+    ports::GnssVerdict failure() const;
+    static uint8_t saturated(uint32_t count) {
+        return static_cast<uint8_t>(count < 0xFF ? count : 0xFF);
+    }
+    uint32_t window_steps() const { return cadence_steps_ - verify_steps_; }
+    uint32_t window_sentences() const { return parser_.solution().sentences - verify_sentences_; }
+    bool silent(uint32_t now_ms) const;
+    void start_probing(uint32_t now_ms);
+    void listen(uint32_t now_ms);
+    void probe(uint32_t now_ms);
+    bool step_baud();
+    void begin_reset(uint32_t now_ms);
+    void hold_reset(uint32_t now_ms);
     void flush();
     void settle(uint32_t now_ms);
     void send_next(uint32_t now_ms);
     void begin_wake(uint32_t now_ms);
-    void send(const char* sentence, uint32_t now_ms);
+    void send(ports::GnssCommand command, uint32_t now_ms);
     void verify_failed(uint32_t now_ms);
     bool obeying() const;
     void begin_verify(uint32_t now_ms);
@@ -244,7 +269,7 @@ class L76k : public ports::Gnss {
     bool next_baud();
     void pace_satellites_in_view(uint32_t now_ms);
     uint8_t satellites_in_view_every() const;
-    static const char* satellites_in_view_command(uint8_t every);
+    static ports::GnssCommand satellites_in_view_command(uint8_t every);
     bool verified() const;
     bool on_cadence() const;
     void observe_cadence();
@@ -257,6 +282,8 @@ class L76k : public ports::Gnss {
 
     io::Uart& uart_;
     io::UartRate& rate_;
+    io::Gpio* reset_;
+    int reset_pin_;
     gnss::NmeaParser parser_{};
     gnss::FixValidity validity_{};
     gnss::GnssSolution solution_{};
@@ -267,13 +294,28 @@ class L76k : public ports::Gnss {
     uint32_t last_command_ms_{0};
     uint32_t verify_start_ms_{0};
     uint32_t verify_sentences_{0};
-    const char* const* sequence_{kCommands};
+    const ports::GnssCommand* sequence_{kCommands};
     int sequence_count_{kCommandCount};
     int next_command_{0};
     Cadence cadence_{Cadence::Second};
-    bool quarter_refused_{false};
-    uint32_t refused_at_ms_{0};
+    bool quarter_tried_{false};
+    bool half_refused_{false};
+    bool rebooting_{false};
+    uint32_t rebooted_ms_{0};
     uint8_t rate_attempts_{0};
+    uint32_t entered_ms_{0};
+    uint32_t heard_ms_{0};
+    uint32_t heard_sentences_{0};
+    uint32_t probe_round_ms_{0};
+    int probe_bauds_{0};
+    uint8_t silent_rounds_{0};
+    bool reset_released_{false};
+    uint32_t released_ms_{0};
+    uint16_t interval_seen_ms_{0};
+    ports::GnssBringUp bring_up_{};
+    ports::GnssEvent journal_[kJournalEvents]{};
+    int journal_next_{0};
+    int journal_count_{0};
     int32_t last_stamp_ms_{-1};
     uint32_t unstamped_{0};
     uint32_t cadence_steps_{0};

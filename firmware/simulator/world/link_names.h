@@ -150,10 +150,11 @@ inline constexpr Value kResetValues[] = {
 inline constexpr Enumeration kReset{kResetValues, 10};
 
 inline constexpr Value kGnssConfigValues[] = {
-    {"idle", 0},      {"restarting", 1}, {"waking", 2}, {"identifying", 3}, {"sending", 4},
-    {"verifying", 5}, {"confirming", 6}, {"ready", 7},  {"degraded", 8},
+    {"idle", 0},     {"restarting", 1}, {"waking", 2},     {"identifying", 3},
+    {"sending", 4},  {"verifying", 5},  {"confirming", 6}, {"ready", 7},
+    {"degraded", 8}, {"probing", 9},    {"resetting", 10},
 };
-inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 9};
+inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 11};
 
 inline constexpr Value kRejectValues[] = {
     {"none", 0},  {"no_solution", 1}, {"missing_rmc", 2}, {"missing_gga", 3},
