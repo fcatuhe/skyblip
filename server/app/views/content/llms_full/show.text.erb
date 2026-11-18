@@ -1,0 +1,15 @@
+# skyBlip
+
+> <%== t "footer.description", locale: :en %>
+
+Every English page of skyblip.eu, one after the other, each under the address it lives at.
+<% cache [ "llms-full", Rails.configuration.x.revision ] do %>
+<% @pages.each do |page| %>
+
+---
+
+Source: <%= Content.canonical_url(page.url_path) %>
+
+<%== page.to_markdown %>
+<% end %>
+<% end %>
