@@ -1,3 +1,4 @@
-<%= turbo_frame_tag :simulator_build, src: briefing_simulator_build_path, loading: :eager do %>
+<%# locals: (loading: :eager) %>
+<%= turbo_frame_tag :simulator_build, src: briefing_simulator_build_path(locale: I18n.locale), loading: do %>
   <p class="note" role="status"><%= t("simulator_builds.loading") %></p>
 <% end %>

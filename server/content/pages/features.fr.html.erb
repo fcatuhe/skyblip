@@ -1,315 +1,134 @@
 ---
-title: "skyBlip Go, détecteur de trafic ADS-L et FLARM"
+title: "skyBlip Go, radar de poche ADS-L et FLARM"
 nav_title: Go
 slug: go
-description: "skyBlip Go émet en ADS-L et reçoit l'ADS-L et le FLARM. Radar, alerte de trafic et liaison Bluetooth, sans téléphone ni abonnement pour voler."
-updated_on: "2026-11-13"
 product:
   name: skyBlip Go
   low_price: "68"
   currency: EUR
   image: pages/index/skyblip-go-techo.avif
+description: "Voyez le trafic ADS-L et FLARM sur le radar du Go. Émettez votre position en ADS-L. Une alerte vous indique où regarder."
+updated_on: "2026-11-18"
 ---
 
+<%= render "shared/device_tabs" %>
+
 <header class="page-hero">
-  <h1>Tout ce que fait skyBlip Go.</h1>
-  <p class="page-hero-subtitle">
-    Radar, alarme, émission ADS-L, Bluetooth.<br>
-    Dans un boîtier de poche, sans abonnement.
-  </p>
+  <h1>Un radar de poche pour voir et être vu</h1>
+  <p class="page-hero-subtitle">skyBlip Go émet votre position en ADS-L, le standard européen de partage de position par radio. Il affiche le trafic ADS-L et FLARM, un système de partage de position utilisé notamment en planeur.</p>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, boîtier blanc avec son antenne, le radar du trafic à l'écran." %>
+  </figure>
 </header>
 
-<section class="band band--tint">
-  <h2 class="section-title">Le trafic</h2>
-
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Lisez le trafic d&rsquo;un coup d&rsquo;œil</h2>
   <div class="feature">
     <div>
-      <h3 id="radar">Un radar <span class="highlight">route en haut</span>.</h3>
-      <p>
-        Vous êtes au centre, route en haut, et c&rsquo;est le ciel qui tourne
-        autour de vous. Un trafic en haut à droite se trouve à droite du nez.
-        Pas besoin de réorienter l&rsquo;image mentalement.
-      </p>
-      <p>
-        Chaque aéronef a un symbole&nbsp;: pointe en haut, il est
-        au-dessus de vous. Pointe en bas, en dessous. Un losange indique votre
-        niveau. Un chevron signale une montée ou une descente, et un
-        trait indique où il sera dans une minute.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "Lire le radar", anchor: "heading-up" %>
-        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
-      </p>
+      <h3 id="radar">Votre route en haut, le trafic autour de vous</h3>
+      <p>Un symbole en haut à droite vous dit de chercher devant vous, sur votre droite. La pointe indique si l&rsquo;aéronef est au-dessus ou en dessous. Un losange indique qu&rsquo;il est à peu près à votre niveau. Le trait montre où il sera dans une minute s&rsquo;il garde sa trajectoire. Choisissez un cercle de 1, 2, 4 ou 8 milles nautiques (NM).</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Lire le radar", anchor: "heading-up" %> <small>Extrait du guide « Radar et trafic »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant sa position dans une minute, et votre route en pointillés" %>
+      <%= screen_image_tag "radar.png", alt: "La page radar : trois aéronefs, un au-dessus, un en dessous, un à votre niveau en montée, chacun avec un trait indiquant sa position dans une minute, et votre route en pointillés." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>Route en haut, jamais le nord</li>
-    <li>Cercle de 1, 2, 4 ou 8&nbsp;NM</li>
-    <li>Au-dessus, au niveau, en dessous</li>
-    <li>Un trait indique où sera chaque aéronef dans une minute</li>
-    <li>Le nombre d&rsquo;aéronefs dont le signal est reçu</li>
-    <li>Le temps de vol, pour le carnet</li>
-  </ul>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Tous les aéronefs, <span class="highlight">aussi loin soient-ils</span>.</h3>
-      <p>
-        Avec <span class="mono">PLOT ALL</span>, le réglage d&rsquo;origine, le
-        cercle est entouré d&rsquo;une bande. Un aéronef au-delà du cercle
-        y est placé, dans sa direction, avec son symbole. Tout aéronef
-        reçu avec une position est affiché.
-      </p>
-      <p>
-        Avec <span class="mono">PLOT TO SCALE</span>, l&rsquo;image est à
-        l&rsquo;échelle du cercle et s&rsquo;arrête au bord de l&rsquo;écran.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "displays", label: "Le radar, des deux façons", anchor: "both-ways" %>
-        <small>Extrait du guide «&nbsp;Tous les écrans&nbsp;»</small>
-      </p>
+      <h3 id="every-aircraft">Le trafic reste visible au-delà du cercle</h3>
+      <p>En mode PLOT ALL, le réglage d&rsquo;origine, le bord du cercle ne coupe pas le trafic. Le Go place les aéronefs reçus au-delà du cercle sur une bande extérieure, dans leur direction. Vous voyez par où ils arrivent sans changer d&rsquo;échelle. Préférez-vous que leur position soit toujours dessinée à l&rsquo;échelle ? Choisissez PLOT TO SCALE.</p>
+      <p class="feature-guide"><%= link_to_page "displays", label: "Comparer les deux modes du radar", anchor: "both-ways" %> <small>Extrait du guide « Tous les écrans »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL : deux aéronefs dans le cercle, et sur la bande autour un aéronef devant, un groupe de trois en haut à droite et un aéronef à gauche" %>
+      <%= screen_image_tag "far-all.png", alt: "La page radar en PLOT ALL : deux aéronefs dans le cercle, et sur la bande autour un aéronef devant, un groupe de trois en haut à droite et un aéronef à gauche." %>
     </figure>
   </div>
-
   <div class="feature">
     <div>
-      <h3 id="alarm">Une alarme <span class="highlight">qui dit où regarder</span>.</h3>
-      <p>
-        Quand un trafic est à moins de 3&nbsp;km et 300&nbsp;m au-dessus ou en dessous, un quart de l&rsquo;écran centré
-        sur lui clignote une fois par seconde. Le radar remplace
-        la page affichée.
-      </p>
-      <p>
-        Le secteur est orienté dans la direction exacte du trafic. L&rsquo;appareil
-        ne dit jamais de monter ou de descendre&nbsp;: il dit de regarder.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "L&rsquo;alarme en détail".html_safe, anchor: "alarm" %>
-        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
-      </p>
+      <h3 id="alarm">L&rsquo;alerte vous dit où regarder</h3>
+      <p>Lorsqu&rsquo;un trafic déclenche une alerte, le Go revient au radar. Un quart de l&rsquo;écran clignote du côté du trafic. Regardez dans cette direction. Le Go ne vous dit ni de monter ni de descendre.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Lire une alerte", anchor: "alarm" %> <small>Extrait du guide « Radar et trafic »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : un secteur de 90° orienté vers le trafic, devenu noir" %>
+      <%= screen_image_tag "alarm.png", alt: "La page radar pendant une alarme : un secteur de 90° orienté vers le trafic, devenu noir." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>3&nbsp;km autour, 300&nbsp;m au-dessus et en dessous</li>
-    <li>Un quart d&rsquo;écran, centré sur le trafic</li>
-    <li>Un clignotement par seconde</li>
-    <li>Un appui sur le pavé la fait taire</li>
-    <li>Le radar reprend la main</li>
-    <li>Un avertissement, jamais un ordre</li>
-  </ul>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="nearby">Qui est là, <span class="highlight">à votre hauteur d&rsquo;abord</span>.</h3>
-      <p>
-        Une ligne par aéronef&nbsp;: la source, ADS-L ou FLARM, l&rsquo;indicatif
-        ou l&rsquo;adresse, la distance au sol et l&rsquo;écart d&rsquo;altitude avec vous.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "La liste Nearby", anchor: "nearby" %>
-        <small>Extrait du guide «&nbsp;Radar et trafic&nbsp;»</small>
-      </p>
+      <h3 id="nearby">Nearby : qui est là, et à quelle distance ?</h3>
+      <p>La liste place les alertes en premier, puis les aéronefs proches de votre altitude. Chaque ligne indique la source, l&rsquo;indicatif s&rsquo;il est reçu, la distance horizontale et l&rsquo;écart d&rsquo;altitude s&rsquo;il est connu.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Lire la liste Nearby", anchor: "nearby" %> <small>Extrait du guide « Radar et trafic »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs, à votre hauteur d'abord, avec leur source, leur indicatif, leur distance et leur écart d'altitude avec vous" %>
+      <%= screen_image_tag "nearby.png", alt: "La page Nearby : cinq aéronefs, à votre hauteur d'abord, avec leur source, leur indicatif, leur distance et leur écart d'altitude avec vous." %>
     </figure>
   </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band">
-  <h2 class="section-title">Être vu</h2>
-
+<section id="broadcast" class="band">
+  <h2 class="section-title">Votre position, chaque seconde en vol</h2>
   <div class="feature">
     <div>
-      <h3 id="broadcast">Votre position, <span class="highlight">chaque seconde</span>.</h3>
-      <p>
-        En vol, il émet votre position en ADS-L une fois par seconde, au sol une
-        fois toutes les dix secondes. L&rsquo;émission dure environ 5&nbsp;ms, à
-        un instant déterminé par son adresse et la seconde en cours.
-      </p>
-      <p>
-        Le reste de la seconde, il écoute les deux canaux 868&nbsp;MHz pour
-        l&rsquo;ADS-L et le FLARM, ainsi que 869,525&nbsp;MHz, réservé aux émissions
-        des futures stations sol skyPost.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radio", label: "Où passe la seconde", anchor: "second" %>
-        <small>Extrait du guide «&nbsp;La seconde radio&nbsp;»</small>
-      </p>
+      <p>En vol, le Go émet votre position en ADS-L chaque seconde. Il émet aussi votre indicatif, si vous l&rsquo;avez saisi, dans un message séparé. Les pilotes équipés pour recevoir ces données peuvent vous repérer et vous identifier sur leur écran.</p>
+      <p class="feature-guide"><%= link_to_page "radio", label: "Où passe la seconde", anchor: "second" %> <small>Extrait du guide « La seconde radio »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : une ligne par trame reçue ou émise, avec son heure, son canal, son adresse et son niveau" %>
+      <%= screen_image_tag "radio-log.png", alt: "Le journal radio : une ligne par trame reçue ou émise, avec son heure, son canal, son adresse et son niveau." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>ADS-L, le standard ouvert de l&rsquo;EASA</li>
-    <li>1&nbsp;Hz en vol, 0,1&nbsp;Hz au sol</li>
-    <li>Calé sur le GPS à la microseconde</li>
-    <li>Réception ADS-L et FLARM</li>
-    <li>À l&rsquo;écoute des futures stations sol</li>
-    <li>La moitié du temps d&rsquo;émission autorisé</li>
-  </ul>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="callsign">Votre indicatif <span class="highlight">chez les autres</span>.</h3>
-      <p>
-        Saisissez votre indicatif sur l&rsquo;appareil avec ses deux commandes, envoyez-le depuis votre
-        téléphone ou réglez-le depuis le navigateur. Il est émis une fois
-        toutes les dix secondes et s&rsquo;affiche sur les écrans des
-        aéronefs autour de vous.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "controls", label: "Taper son indicatif", anchor: "callsign" %>
-        <small>Extrait du guide «&nbsp;Commandes et menus&nbsp;»</small>
-      </p>
+      <h3 id="callsign">Réglez votre indicatif sur le Go ou dans le Briefing</h3>
+      <p id="asked">Modifiez votre type d&rsquo;aéronef ou votre indicatif dans le menu du Go ou en Bluetooth dans le <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+      <p class="feature-guide"><%= link_to_page "controls", label: "Saisir votre indicatif", anchor: "callsign" %> <small>Extrait du guide « Commandes et menus »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère, et les touches NEXT pour le bouton et CHANGE pour le pavé" %>
+      <%= screen_image_tag "menu-callsign.png", alt: "Le champ indicatif : S-BLIP en triple hauteur, une barre sous le troisième caractère et les touches NEXT pour le bouton et CHANGE pour le pavé." %>
     </figure>
   </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">Avec votre téléphone</h2>
-
+<section id="apps" class="band band--tint">
+  <h2 class="section-title">Le même trafic dans vos applications</h2>
   <div class="feature">
     <div>
-      <h3 id="apps">Trois applications, <span class="highlight">sans appairage</span>.</h3>
-      <p>
-        Il apparaît sous son nom, skyBlip Go suivi de son adresse. Il envoie les données de trafic au format FLARM
-        NMEA à SDVFR Next, SkyDemon, ForeFlight et aux autres applications. La
-        tablette, le téléphone et l&rsquo;iPad du passager voient le même trafic.
-      </p>
-      <p>
-        Ses derniers vols se téléchargent au sol par la même liaison.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "phone", label: "Avec votre téléphone", anchor: "by-name" %>
-        <small>Extrait du guide «&nbsp;Téléphone et firmware&nbsp;»</small>
-      </p>
+      <p>Choisissez votre Go dans SDVFR Next, SkyDemon ou ForeFlight. Le Go envoie le trafic en Bluetooth à trois appareils à la fois. Votre tablette, votre téléphone et celui de votre passager peuvent recevoir le même trafic.</p>
+      <p class="feature-guide"><%= link_to_page "phone", label: "Connecter votre application", anchor: "by-name" %> <small>Extrait du guide « Téléphone et firmware »</small></p>
     </div>
-    <figure class="shot shot--photo">
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, boîtier blanc avec son antenne, le radar du trafic à l'écran" %>
+    <figure class="shot shot--photo shot--app">
+      <%= content_image_tag "pages/index/sdvfr-next-traffic.avif", alt: "SDVFR Next : la carte avec le trafic reçu de skyBlip Go, chaque aéronef accompagné de son indicatif." %>
+      <figcaption>SkyDreamSoft SDVFR Next.</figcaption>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>Pas d&rsquo;appairage, pas de code, pas de compte</li>
-    <li>Trois connexions à la fois</li>
-    <li>SDVFR Next, SkyDemon, ForeFlight</li>
-    <li>Ses derniers vols en mémoire</li>
-  </ul>
-
-  <div class="feature feature--reverse">
-    <div>
-      <h3 id="asked">Chaque changement <span class="highlight">attend votre accord</span>.</h3>
-      <p>
-        Un nouveau firmware, des réglages, l&rsquo;effacement de vos vols&nbsp;:
-        l&rsquo;appareil ne croit pas le téléphone sur parole. Il pose la question
-        sur son écran. Une pression autorise, un contact sur le pavé refuse,
-        le silence vaut refus.
-      </p>
-      <p>
-        Les mises à jour passent par le navigateur, en Bluetooth. Si la nouvelle
-        version ne démarre pas, l&rsquo;appareil revient à l&rsquo;ancienne.
-      </p>
-      <p class="feature-guide">
-        <%= link_to "Mettre à jour mon skyBlip", briefing_root_path %>
-        <small>Mise à jour et réglages, depuis Chrome ou Edge</small>
-      </p>
-    </div>
-    <figure class="shot">
-      <%= screen_image_tag "confirm.png", alt: "La demande d'autorisation pour des réglages envoyés par le téléphone : SETTINGS sous le grand logo, le changement demandé, CANCELS IN avec les secondes restantes, la touche du bouton ACCEPT et la touche du pavé CANCEL" %>
-    </figure>
-  </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band">
-  <h2 class="section-title">Au quotidien</h2>
-
+<section id="instruments" class="band">
+  <h2 class="section-title">Six cadrans sur le Go, un g-mètre sur le Go+</h2>
   <div class="feature">
     <div>
-      <h3 id="instruments">Le GPS et le baromètre <span class="highlight">en six cadrans</span>.</h3>
-      <p>
-        Vitesse sol, horizon, altimètre, virage, route et vario&nbsp;: une façon
-        ludique d&rsquo;afficher les mesures du GPS et du baromètre. Le niveau de
-        batterie apparaît au-dessus du cadran central.
-      </p>
-      <p>
-        Ce ne sont pas des instruments de vol. Aucun n&rsquo;est certifié,
-        et ce n&rsquo;est pas un horizon pour voler en nuage.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "instruments", label: "Les instruments", anchor: "six-pack" %>
-        <small>Extrait du guide «&nbsp;Instruments&nbsp;»</small>
-      </p>
+      <h3 id="six-pack">Les mesures du GPS et du baromètre</h3>
+      <p>Les six cadrans affichent la vitesse sol, l&rsquo;horizon, l&rsquo;altitude, le virage, la route et le vario. Ces affichages sont indicatifs. Ils ne remplacent pas vos instruments de vol.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Lire les six cadrans", anchor: "six-pack" %> <small>Extrait du guide « Instruments »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "sixpack.png", alt: "La page des six cadrans : vitesse sol, horizon, altimètre, bille, route et vario" %>
+      <%= screen_image_tag "sixpack.png", alt: "La page des six cadrans : vitesse sol, horizon, altimètre, bille, route et vario." %>
     </figure>
   </div>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="controls">Deux commandes, <span class="highlight">sans téléphone</span>.</h3>
-      <p>
-        Un appui bref sur le pavé tactile change de page. Un appui d&rsquo;une seconde
-        ramène le radar. Le bouton ouvre le menu&nbsp;: type d&rsquo;aéronef,
-        indicatif, unités, portée, mode d&rsquo;affichage et alarme.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "controls", label: "Les commandes", anchor: "two-contacts" %>
-        <small>Extrait du guide «&nbsp;Commandes et menus&nbsp;»</small>
-      </p>
+      <h3 id="g-meter">Le g-mètre du Go+ garde les valeurs extrêmes du vol</h3>
+      <p>Le g-mètre affiche les charges mesurées par l&rsquo;accéléromètre du Go+. Vous pouvez lire la charge instantanée et retrouver les valeurs extrêmes de votre vol. Le Go+ ajoute aussi le son et la vibration à l&rsquo;alerte à l&rsquo;écran.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Lire le g-mètre", anchor: "g-meter" %> <small>Extrait du guide « Instruments »</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "Le menu des réglages : éclairage, aéronef, unités, portée, tracé, alarme et Bravo, avec la touche du bouton CHANGE et celle du pavé NEXT en bas" %>
+      <%= screen_image_tag "gmeter.png", alt: "La page G-mètre : un repère indique les charges normale et latérale, un cadre montre les extrêmes du vol et une bande affiche la charge avant-arrière." %>
     </figure>
   </div>
+</section>
 
-  <div class="feature">
-    <div>
-      <h3 id="power">Une batterie <span class="highlight">qui prévient</span>.</h3>
-      <p>
-        Tant qu&rsquo;il n&rsquo;a pas de position, il indique où en est le récepteur GPS. Éteint, l&rsquo;écran
-        à papier électronique (e-paper) garde le logo sans courant. Batterie vide, il
-        l&rsquo;écrit à l&rsquo;écran avant de s&rsquo;éteindre.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "power", label: "La batterie", anchor: "waiting" %>
-        <small>Extrait du guide «&nbsp;Alimentation et batterie&nbsp;»</small>
-      </p>
-    </div>
-    <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "L'écran d'un appareil qui s'est éteint parce que sa batterie était vide : le logo skyBlip et BATTERY EMPTY" %>
-    </figure>
-  </div>
-
-  <ul class="points points--center">
-    <li>Batterie 850&nbsp;mAh</li>
-    <li>Recharge en USB-C</li>
-    <li>Écran e-paper 200&times;200</li>
-    <li>Baromètre BME280</li>
-  </ul>
-
-  <%= render "shared/cta" %>
+<section id="try" class="band band--tint">
+  <h2 class="section-title">Essayez le radar, puis choisissez votre boîtier</h2>
+  <p>Go et Go+ partagent le même radar. Associez l&rsquo;un ou l&rsquo;autre à un Bravo pour y voir aussi les aéronefs qui émettent leur position par radio en ADS-B.</p>
+  <p>Le Go est une aide non certifiée à la veille visuelle. Il ne remplace ni votre équipement FLARM ni un transpondeur exigé pour votre vol.</p>
+  <p class="signature"><%= link_to_page "skyblip-go", label: "Essayer le radar", class: "button button--primary" %> · <%= link_to_page "buy", label: "Comparer Go et Go+", anchor: "compare" %></p>
 </section>

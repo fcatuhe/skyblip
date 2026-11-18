@@ -2,11 +2,11 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://skyblip.eu/</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/about</loc>
-    <lastmod>2026-11-16</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/ads-l</loc>
@@ -34,7 +34,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/bravo</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/bravo-first-steps</loc>
@@ -42,7 +42,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/buy</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/controls</loc>
@@ -54,15 +54,15 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/a-propos</loc>
-    <lastmod>2026-11-16</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/a-venir</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/alimentation</loc>
@@ -70,7 +70,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/bravo</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/bravo-premiers-pas</loc>
@@ -94,7 +94,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/go</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/go-premiers-pas</loc>
@@ -106,6 +106,10 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/guides</loc>
+    <lastmod>2026-11-18</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/fr/installer</loc>
     <lastmod>2026-11-18</lastmod>
   </url>
   <url>
@@ -126,11 +130,11 @@
   </url>
   <url>
     <loc>https://skyblip.eu/fr/s-equiper</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/tango</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/fr/telephone</loc>
@@ -146,7 +150,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/go</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/go-first-steps</loc>
@@ -158,6 +162,10 @@
   </url>
   <url>
     <loc>https://skyblip.eu/guides</loc>
+    <lastmod>2026-11-18</lastmod>
+  </url>
+  <url>
+    <loc>https://skyblip.eu/install</loc>
     <lastmod>2026-11-18</lastmod>
   </url>
   <url>
@@ -186,7 +194,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/roadmap</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/see-and-avoid</loc>
@@ -194,7 +202,7 @@
   </url>
   <url>
     <loc>https://skyblip.eu/tango</loc>
-    <lastmod>2026-11-13</lastmod>
+    <lastmod>2026-11-18</lastmod>
   </url>
   <url>
     <loc>https://skyblip.eu/timing</loc>

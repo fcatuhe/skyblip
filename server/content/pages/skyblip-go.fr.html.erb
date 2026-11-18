@@ -1,45 +1,33 @@
 ---
-title: "Simulateur skyBlip Go dans votre navigateur"
+title: "Essayez le radar skyBlip dans votre navigateur"
 nav_title: Essayer
 slug: essayer
-description: "Essayez le skyBlip Go dans votre navigateur. Ajoutez un Bravo pour voir des aéronefs ADS-B plus éloignés. Testez le radar, les touches et l'alarme."
 share_image: radar
+description: "Essayez le radar skyBlip en pleine page. Repérez un aéronef, suivez sa trajectoire et comparez le Go seul à un Tango avec du trafic ADS-B."
 updated_on: "2026-11-18"
 ---
+
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
 
 <header class="page-hero page-hero--compact">
-  <h1>Essayez-le.</h1>
-  <p class="page-hero-subtitle">C&rsquo;est le logiciel qui équipe skyBlip.</p>
+  <h1>Prenez les commandes du simulateur</h1>
+  <p class="page-hero-subtitle">Commencez avec le Go seul. Repérez un aéronef sur le radar. S&rsquo;il est en haut à droite, cherchez-le devant vous, sur votre droite.</p>
 </header>
 
 <section id="simulator">
   <%= render "shared/simulator_loader" %>
-
-  <p class="note">
-    Les aéronefs ADS-L et FLARM vont et viennent sur le radar. Cochez <strong><%= t "simulator.with_bravo" %></strong> pour redémarrer avec un Bravo appairé et voir des aéronefs ADS-B plus éloignés. Le voyant de gauche clignote toutes les 3&nbsp;secondes, en bleu tant que l&rsquo;appareil cherche sa position GPS, puis en vert. Il clignote rapidement en rouge quand un aéronef déclenche l&rsquo;alarme.
-  </p>
-
-  <%= render "shared/cta", prompt: false, try: false %>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">Et ensuite&nbsp;?</h2>
-  <div class="resource-cards">
-    <article>
-      <h3>Tout ce qu&rsquo;il fait.</h3>
-      <p>Découvrez le radar, l&rsquo;alarme, ce qu&rsquo;il émet, la connexion au téléphone et les instruments.</p>
-      <p><%= link_to_page "features", label: "Voir les fonctionnalités" %></p>
-    </article>
-    <article>
-      <h3>Écran par écran.</h3>
-      <p>Sept guides, un par sujet, avec les captures de ce même firmware.</p>
-      <p><%= link_to_page "guides", label: "Lire les guides" %></p>
-    </article>
-    <article>
-      <h3>Le vôtre.</h3>
-      <p>Un LilyGO T-Echo ou T-Echo Plus, le firmware skyBlip, et c&rsquo;est prêt.</p>
-      <p><%= link_to_page "buy", label: "S&rsquo;équiper".html_safe %></p>
-    </article>
-  </div>
+<section id="exercise" class="band band--tint">
+  <h2 class="section-title">Lisez un symbole, puis suivez son trait</h2>
+  <p>La pointe indique de quel côté de votre altitude se trouve l&rsquo;aéronef. S&rsquo;il vole à peu près à votre hauteur, vous voyez un losange. Le trait montre où il devrait se trouver dans une minute s&rsquo;il poursuit sa trajectoire. Quand un secteur clignote, cherchez le trafic dans cette direction.</p>
+  <p><%= link_to_page "radar", label: "Voir les symboles du radar", anchor: "shapes" %></p>
+</section>
+
+<section id="compare" class="band">
+  <h2 class="section-title">Comparez un Go seul et un Tango</h2>
+  <p>Avec le Go seul, vous voyez le trafic proche en ADS-L, le standard européen de partage de position par radio, et en FLARM, un système de partage de position utilisé notamment en planeur.</p>
+  <p>Cochez « Avec Bravo (skyBlip Tango) ». Le simulateur redémarre avec un Go associé à Bravo. Le trafic proche est toujours de l&rsquo;ADS-L et du FLARM. Bravo ajoute des avions qui émettent leur position par radio en ADS-B. Dans ce scénario, ils apparaissent entre 8 et 30 km de vous.</p>
+  <p>Regardez la bande autour du cercle du radar : elle indique la direction du trafic qui se trouve au-delà du cercle.</p>
+  <p class="signature"><%= link_to_page "buy", label: "Choisir mon boîtier", class: "button button--primary" %></p>
 </section>

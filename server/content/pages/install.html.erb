@@ -1,0 +1,58 @@
+---
+title: "Install skyBlip with Briefing"
+nav_title: Install
+description: "Plug in your Go or Bravo over USB-C. Briefing shows you what to do, installs skyBlip and tells you when your device is ready."
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Install skyBlip with Briefing</h1>
+  <p class="page-hero-subtitle">Use a computer with Chrome or Edge and a USB-C cable that carries data. A charge-only cable won&rsquo;t work.</p>
+</header>
+
+<section id="steps" class="band">
+  <h2 class="section-title">Install in four steps</h2>
+  <ol class="steps-grid">
+    <li>
+      <h3>Plug in the device</h3>
+      <p>Connect it to your computer with the USB-C cable.</p>
+    </li>
+    <li>
+      <h3>Click Install</h3>
+      <p>In Briefing, choose your device, then select the USB drive it names. Briefing installs the right software.</p>
+    </li>
+    <li>
+      <h3>Connect the device</h3>
+      <p>Use Bluetooth when Briefing asks.</p>
+    </li>
+    <li>
+      <h3>Open the first steps guide</h3>
+      <p>Briefing tells you when your device is ready.</p>
+    </li>
+  </ol>
+  <p class="signature"><%= link_to "Install a device in Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
+  <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_hold"), marks: { button: t("briefing.figures.hold"), led: t("devices.led"), usb: t("briefing.figures.plug") }, lamp: %i[white steady], caption: t("briefing.figures.white") %>
+  <p>If Briefing asks you to do something on the device, it shows you what to do. You don&rsquo;t need to open it or solder anything.</p>
+</section>
+
+<section id="connected" class="band band--tint">
+  <h2 class="section-title">Once the device is connected</h2>
+  <p>Briefing starts activation for a new Go. That gives Go the address it needs to transmit its position. You don&rsquo;t need an account. Choose your aircraft type and enter your callsign now, or <%= link_to_page "go-first-steps", label: "set them later" %>. Bravo receives traffic and needs no activation.</p>
+  <p>To make a Tango, turn on both devices on the ground. In <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, open the page for the first device you connect. It offers to install or connect the second device and then pair them.</p>
+  <p>Already running skyBlip? <%= link_to "Connect your device in Briefing", briefing_root_path(locale: I18n.locale) %> over Bluetooth. Change settings and install updates in Briefing using Chrome or Edge on a computer or Android.</p>
+</section>
+
+<section id="si-quelque-chose-bloque" class="band">
+  <h2 class="section-title">If you get stuck</h2>
+  <h3 id="not-found">The device doesn&rsquo;t show up</h3>
+  <p>Turn it on and try a USB-C cable that carries data. Use Chrome or Edge on a computer for guided USB installation. If you can&rsquo;t use it, copy the software by hand.</p>
+  <h3 id="manual">Install the software by hand</h3>
+  <p>Download the <code>.uf2</code> file for your device from the <%= link_to "skyBlip releases page", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
+  <ul>
+    <li><strong>Go or Go+:</strong> Plug in the device and quickly press RESET twice. It&rsquo;s near the top on the left side. Copy the Go file to the <strong>TECHOBOOT</strong> drive. For a new Go, <%= link_to "activate it over Bluetooth", briefing_activation_path(locale: I18n.locale) %> in Chrome or Edge on a computer or Android. Follow the request on Go&rsquo;s screen.</li>
+    <li><strong>Bravo:</strong> Unplug the device. Hold its button down as you plug it back in. Release it when the light turns white. From the <strong>X1</strong> drive, first copy <code>CURRENT.UF2</code> to your computer to save the original software. Then copy the skyBlip Bravo file to the <strong>X1</strong> drive. To go back to the original software, copy the saved file back to that drive.</li>
+  </ul>
+  <h3 id="transponder">Your own transponder shows up as traffic</h3>
+  <p>On the ground, set your transponder to ALT. Bravo can suggest its address for Mode S or ADS-B. Aircraft with ADS-B transmit their position by radio. Look in Briefing for a Bravo on its own, or on Go&rsquo;s screen for a Tango. Check that it&rsquo;s your aircraft before accepting. If you already know the address, enter it under &quot;ADS-B address&quot;. If you don&rsquo;t have a transponder, leave it blank.</p>
+  <p><%= link_to "Ask for help on GitHub", "https://github.com/fcatuhe/skyblip/issues" %></p>
+</section>

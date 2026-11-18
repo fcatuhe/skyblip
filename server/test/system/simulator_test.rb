@@ -18,6 +18,27 @@ class SimulatorTest < ApplicationSystemTestCase
     assert_equal [ "go", "unpaired", 0, 1 ], first_arrivals(1)
   end
 
+  test "the home simulator waits for the frame to scroll into view and can pair with Bravo" do
+    assert Release.local_simulator, "Run make -C firmware browser first"
+
+    page.current_window.resize_to(1000, 700)
+    visit "/"
+    click_link "FR"
+    assert_current_path "/fr"
+    frame = find("#simulator_build")
+    assert_no_selector "#simulator_build .simulator", visible: :all, wait: 0
+    assert_equal 0, page.evaluate_script("performance.getEntriesByName(document.querySelector('#simulator_build').src).length")
+
+    scroll_to frame, align: :center
+    using_wait_time(8) { assert_unchecked_field "Avec Bravo (skyBlip Tango)" }
+    assert_equal [ "go", "unpaired", 0, 1 ], first_arrivals(1)
+
+    check "Avec Bravo (skyBlip Tango)"
+    assert_equal [ "paired", "live", 1, 2 ], first_arrivals(2)
+  ensure
+    page.current_window.resize_to(*ApplicationSystemTestCase::SCREEN_SIZE)
+  end
+
   private
     def first_arrivals(expected)
       page.document.synchronize do

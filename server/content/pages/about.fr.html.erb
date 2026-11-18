@@ -1,104 +1,23 @@
 ---
-title: "Aviation de loisir et sports aériens, l'engagement skyBlip"
+title: "Pourquoi nous développons skyBlip"
 nav_title: À propos
 slug: a-propos
-description: "Pour l'aviation de loisir et les sports aériens, skyBlip offre des fonctions de sécurité qui restent open source, gratuites et sans abonnement."
-updated_on: "2026-11-16"
+description: "Les fonctions de sécurité de skyBlip restent gratuites pour les pilotes de loisir. Le code qui reçoit le trafic et partage la position est public."
+updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>La sécurité n&rsquo;est pas réservée au haut de gamme.</h1>
-  <p class="page-hero-subtitle">
-    skyBlip vous aide à voir et à être vu. Pour l&rsquo;aviation de loisir et les sports aériens,
-    ses fonctions de sécurité resteront open source et gratuites.
-  </p>
+  <h1>Aider plus de pilotes à voir le trafic et à être vus</h1>
+  <p class="page-hero-subtitle">En vol, repérer un autre aéronef à l&rsquo;œil n&rsquo;est pas toujours facile. Avec le radar du Go, vous savez de quel côté regarder. Le Go émet aussi votre position en ADS-L, le standard européen de partage de position par radio. Les pilotes équipés pour la recevoir peuvent vous repérer plus facilement.</p>
 </header>
 
-<section class="band band--tint">
-  <h2 class="section-title">Le constat</h2>
-  <p class="section-intro">
-    L&rsquo;abordage reste l&rsquo;un des accidents les plus graves de
-    l&rsquo;aviation légère, et l&rsquo;un des plus évitables. Se rendre visible
-    est possible depuis des années. Mais c&rsquo;est cher, les systèmes ne se
-    parlent pas, et il faut souvent un abonnement.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Abordable.</h3>
-      <p>Un équipement n&rsquo;aide que s&rsquo;il est à bord. Nous utilisons du matériel grand public produit en série. Pour l&rsquo;aviation de loisir et les sports aériens, le firmware et les mises à jour restent gratuits.</p>
-    </div>
-    <div>
-      <h3>Open source.</h3>
-      <p>Le code qui émet votre position, reçoit les données de trafic et déclenche l&rsquo;alarme est public. Chacun peut le lire, le vérifier et le corriger.</p>
-    </div>
-    <div>
-      <h3>Compatible.</h3>
-      <p>ADS-L est le standard ouvert publié par l&rsquo;EASA. skyBlip reçoit aussi le trafic FLARM, plutôt que de faire bande à part.</p>
-    </div>
-  </div>
+<section id="pledge" class="band band--tint">
+  <h2 class="section-title">Garder les fonctions de sécurité accessibles</h2>
+  <p>Le logiciel skyBlip fonctionne sur des boîtiers du commerce. Pour l&rsquo;aviation de loisir et les sports aériens, l&rsquo;émission de position, la réception du trafic et les alertes restent gratuites et sans abonnement. Cet engagement vaut aussi pour les futurs relais depuis le sol. Le code est public : chacun peut le lire, le vérifier et contribuer à l&rsquo;améliorer.</p>
 </section>
 
-<section class="band">
-  <h2 class="section-title">La vision&nbsp;: <span class="highlight">chaque vol visible de tous</span></h2>
-  <ol class="steps-grid">
-    <li>
-      <h3>D&rsquo;aéronef à aéronef.</h3>
-      <p>Deux skyBlip Go se voient sans aucune infrastructure. Chaque émetteur ADS-L rend le ciel plus lisible pour les autres.</p>
-    </li>
-    <li>
-      <h3>Avec les planeurs.</h3>
-      <p>Ils volent déjà avec FLARM, suivis par l&rsquo;Open Glider Network (OGN). skyBlip reçoit leurs signaux, et les stations skyPost échangeront des données avec l&rsquo;OGN.</p>
-    </li>
-    <li>
-      <h3>L&rsquo;ADS&#8209;B à bord.</h3>
-      <p>Un Go associé à <%= link_to_page "skyblip-bravo", label: "Bravo" %> forme un <%= link_to_page "skyblip-tango", label: "Tango" %>. Son radar affiche alors les aéronefs équipés ADS-B en plus du trafic ADS-L et FLARM. Le Go continue d&rsquo;émettre votre position en ADS-L. Bravo peut aussi transmettre le trafic ADS-B directement à votre application de navigation, sans Go.</p>
-    </li>
-    <li>
-      <h3>Chaque vol.</h3>
-      <p>De l&rsquo;avion léger au paramoteur, émettez votre position en ADS-L. Pas parce que c&rsquo;est obligatoire, mais parce que c&rsquo;est utile dès le premier vol.</p>
-    </li>
-  </ol>
-  <p class="more"><%= link_to_page "roadmap", label: "Ce qui vient ensuite" %></p>
-</section>
-
-<section class="band band--blip quote">
-  <blockquote>
-    «&nbsp;Pour l&rsquo;aviation de loisir et les sports aériens, l&rsquo;émission de position, la réception du trafic,
-    les alarmes et les transmissions depuis le sol resteront <span class="highlight">open source</span>,
-    gratuites et <span class="highlight">sans abonnement</span>.&nbsp;»
-  </blockquote>
-  <p>L&rsquo;engagement skyBlip</p>
-</section>
-
-<section class="band">
-  <h2 class="section-title">Merci</h2>
-  <p class="section-intro">
-    skyBlip s&rsquo;appuie sur dix ans de travail open source des communautés de
-    l&rsquo;aviation de loisir et des sports aériens. Merci aux auteurs des projets dont
-    nous avons tiré des enseignements.
-  </p>
-  <div class="columns">
-    <div>
-      <h3>Paweł Jałocha</h3>
-      <p>Le code de référence pour l&rsquo;ADS-L et <a href="https://github.com/pjalocha/nrf52-ogn-tracker">nrf52-ogn-tracker</a>.</p>
-    </div>
-    <div>
-      <h3>Linar Yusupov</h3>
-      <p><a href="https://github.com/lyusupov/SoftRF">SoftRF</a>.</p>
-    </div>
-    <div>
-      <h3>Moshe Braner</h3>
-      <p>La <a href="https://github.com/moshe-braner/SoftRF">version adaptée de SoftRF</a>.</p>
-    </div>
-    <div>
-      <h3>Perry Casson</h3>
-      <p><a href="https://github.com/perryc/cb-tfc">cb-tfc</a>, la réception ADS-B sur le MeshTracker X1.</p>
-    </div>
-  </div>
-  <p class="signature">
-    skyBlip est développé par François Catuhe, en open source
-    <a href="https://github.com/fcatuhe/skyblip">sur GitHub</a>.
-  </p>
-
-  <%= render "shared/cta" %>
+<section id="thanks" class="band">
+  <h2 class="section-title">Remercier les personnes qui ont ouvert la voie</h2>
+  <p>François Catuhe développe skyBlip en s&rsquo;appuyant sur les travaux de la communauté. Merci à Paweł Jałocha pour le code de référence ADS-L et <%= link_to "nrf52-ogn-tracker", "https://github.com/pjalocha/nrf52-ogn-tracker" %>, à Linar Yusupov pour <%= link_to "SoftRF", "https://github.com/lyusupov/SoftRF" %>, à Moshe Braner pour sa <%= link_to "version adaptée de SoftRF", "https://github.com/moshe-braner/SoftRF" %> et à Perry Casson pour <%= link_to "cb-tfc", "https://github.com/perryc/cb-tfc" %> et son travail sur le MeshTracker X1 pour recevoir les positions que les aéronefs équipés émettent par radio en ADS-B.</p>
+  <p><%= link_to "Consulter le code de skyBlip", "https://github.com/fcatuhe/skyblip" %> · <%= link_to_page "roadmap", label: "Découvrir les projets à venir" %></p>
 </section>

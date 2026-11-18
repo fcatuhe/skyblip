@@ -1,7 +1,7 @@
 fr:
   nav:
     label: "Site"
-    try: "Essayer"
+    devices: "Appareils"
   cta:
     prompt: "Envie d'essayer maintenant ou de vous équiper ?"
     try: "Essayer en ligne"
@@ -124,11 +124,12 @@ fr:
       go: "L\u2019adresse de votre transpondeur, comme 3C6586. Le Go émet sous cette adresse. Laissez vide sans transpondeur."
       bravo: "L\u2019adresse de votre transpondeur, comme 3C6586. Bravo l\u2019exclut du trafic. Laissez vide sans transpondeur."
   footer:
+    label: "Pied de page"
     description: "Visibilité électronique pour l'aviation de loisir et les sports aériens. skyBlip Go annonce votre position en ADS-L, reçoit le trafic ADS-L et FLARM et vous dit où regarder."
     open_source: "Open source, sans abonnement, sans compte."
-    product: "Appareils"
-    guides: "Guides"
-    project: "skyBlip"
+    choose: "Choisir"
+    use: "Utiliser"
+    project: "Le projet"
     question: "Une question ? Une remarque ?"
     write_html: "Écrivez-nous à %{email} ou sur %{github}."
     license: "Code sous licence MIT"

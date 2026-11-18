@@ -1,7 +1,7 @@
 ---
 title: "skyBlip Go first steps: buttons, lights and flight"
 nav_title: Go first steps
-description: "Find the skyBlip Go controls, read its lights, answer requests and silence alarms. Know what to do before and after your next flight."
+description: "Switch on Go, check it has a position and learn to read its radar. Choose your aircraft type and set your callsign."
 parent: guides
 updated_on: "2026-11-18"
 ---
@@ -67,16 +67,39 @@ updated_on: "2026-11-18"
   <p>The charger's separate red light stays lit while charging, blinks if the battery is missing or faulty, and goes out when full.</p>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">In flight</h2>
-  <ol class="steps-grid steps-grid--sequence">
-    <li><h3>Start outdoors.</h3><p>Press the button. The radar says NO FIX and shows the receiver's progress until it has a position. See <%= link_to_page "power", label: "the startup and power guide" %>.</p></li>
-    <li><h3>Look where it points.</h3><p>The Go broadcasts your position in ADS-L and receives ADS-L and FLARM traffic. The radar keeps your direction of travel at the top and projects each aircraft's next minute. An alarm tells you where to look. Touch the pad for a second to silence it. Read <%= link_to_page "radar", label: "the radar guide" %>.</p></li>
-    <li><h3>Use your usual app.</h3><p>Send traffic over Bluetooth to SDVFR, SkyDemon or ForeFlight, with three apps at once and no pairing. Set the alarm and callsign in the radar menu or in <%= link_to "Briefing", briefing_root_path %>. See <%= link_to_page "phone", label: "the phone guide" %>.</p></li>
-    <li><h3>Switch off after landing.</h3><p>Hold the button for two seconds, then charge over USB-C. Before storing it for winter, leave the screen blank. See <%= link_to_page "power", label: "the charging and storage guide" %>.</p></li>
-  </ol>
+<section id="type" class="band band--tint">
+  <h2 class="section-title">Choose your aircraft type</h2>
+  <p>Choose an aircraft type and callsign during installation, or set them later. In <%= link_to "Briefing", briefing_root_path %>, open your Go's page. On Go, press the button from the radar and open the <code>AIRCRAFT</code> menu. <code>TYPE</code> sets the aircraft type. <code>CALLSIGN</code> sets <%= link_to_page "controls", label: "your callsign", anchor: "callsign" %>.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead><tr><th scope="col">Name in Briefing</th><th scope="col">Name on Go</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Light aircraft</th><td><code>LIGHT</code></td></tr>
+        <tr><th scope="row">Heavy aircraft</th><td><code>HEAVY</code></td></tr>
+        <tr><th scope="row">Light helicopter</th><td><code>LIGHT HELI</code></td></tr>
+        <tr><th scope="row">Heavy helicopter</th><td><code>HEAVY HELI</code></td></tr>
+        <tr><th scope="row">Glider</th><td><code>GLIDER</code></td></tr>
+        <tr><th scope="row">Balloon</th><td><code>BALLOON</code></td></tr>
+        <tr><th scope="row">Microlight</th><td><code>MICROLIGHT</code></td></tr>
+        <tr><th scope="row">Paraglider</th><td><code>PARAGLIDER</code></td></tr>
+        <tr><th scope="row">Skydiver</th><td><code>SKYDIVER</code></td></tr>
+        <tr><th scope="row">VTOL</th><td><code>VTOL</code></td></tr>
+        <tr><th scope="row">Gyroplane</th><td><code>GYROCOPTER</code></td></tr>
+        <tr><th scope="row">Hang glider</th><td><code>HANG GLIDER</code></td></tr>
+        <tr><th scope="row">Paramotor</th><td><code>PARAMOTOR</code></td></tr>
+        <tr><th scope="row">Unknown</th><td><code>UNKNOWN</code></td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="band">
+  <h2 class="section-title">Before you set off</h2>
+  <p>Switch on Go in the open and wait for the skyBlip light to flash green. That means Go knows its position. <%= link_to_page "radar", label: "Learn to read the radar" %>, then <%= link_to_page "phone", label: "connect your navigation app" %> if you use one. Read the <%= link_to_page "power", label: "power guide" %> for charging and storage.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">After the flight</h2>
+  <p>Hold the button for two seconds, then charge over USB-C. Before storing it for winter, leave the screen blank. See <%= link_to_page "power", label: "the charging and storage guide" %>.</p>
   <%= render "shared/cta" %>
 </section>

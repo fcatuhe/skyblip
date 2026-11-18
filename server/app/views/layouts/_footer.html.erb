@@ -4,35 +4,33 @@
       <%= link_to_page "index", label: render("layouts/wordmark", css: "wordmark-footer"), class: "site-footer-home" %>
       <p><%= t "footer.description" %></p>
       <p><%= t "footer.open_source" %></p>
-      <p><%= link_to_page "skyblip-go", label: t("nav.try"), class: "button button--primary button--small" %></p>
     </div>
 
-    <nav class="site-footer-columns" aria-label="<%= t "footer.project" %>">
+    <nav class="site-footer-columns" aria-label="<%= t "footer.label" %>">
       <div>
-        <h2><%= t "footer.product" %></h2>
+        <h2><%= t "footer.choose" %></h2>
         <ul>
-          <% %w[features skyblip-bravo skyblip-tango buy skyblip-go].each do |slug| %>
+          <% %w[skyblip-go features skyblip-bravo skyblip-tango buy].each do |slug| %>
+            <li><%= link_to_page slug, label_type: :nav %></li>
+          <% end %>
+        </ul>
+      </div>
+      <div>
+        <h2><%= t "footer.use" %></h2>
+        <ul>
+          <% %w[install go-first-steps bravo-first-steps guides].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
           <li><%= link_to t("briefing.title"), briefing_root_path %></li>
         </ul>
       </div>
       <div>
-        <h2><%= t "footer.guides" %></h2>
-        <ul>
-          <% %w[go-first-steps bravo-first-steps radar instruments controls power phone radio displays timing gps traffic].each do |slug| %>
-            <li><%= link_to_page slug, label_type: :nav %></li>
-          <% end %>
-        </ul>
-      </div>
-      <div>
         <h2><%= t "footer.project" %></h2>
         <ul>
-          <li><%= link_to_page "about", label_type: :nav %></li>
-          <li><%= link_to "GitHub", Rails.configuration.x.repository_url %></li>
-          <% %w[roadmap see-and-avoid ads-l legal-notice].each do |slug| %>
+          <% %w[about roadmap see-and-avoid ads-l].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
+          <li><%= link_to "GitHub", Rails.configuration.x.repository_url %></li>
         </ul>
       </div>
     </nav>
@@ -42,5 +40,5 @@
     <%= t "footer.question" %>
     <%= t "footer.write_html", email: mail_to(Rails.configuration.x.contact_email), github: link_to("GitHub", Rails.configuration.x.repository_url) %>
   </p>
-  <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= t "footer.license" %> &middot; <%= link_to t("footer.notices"), "https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md" %></p>
+  <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= link_to_page "legal-notice", label_type: :nav %> &middot; <%= t "footer.license" %> &middot; <%= link_to t("footer.notices"), "https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md" %></p>
 </footer>

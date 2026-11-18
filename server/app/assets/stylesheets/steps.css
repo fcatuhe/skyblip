@@ -9,6 +9,13 @@
     counter-reset: step;
   }
 
+  .steps-grid--journey { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+  .steps-grid--journey + .device-figure {
+    margin-block-start: var(--space-xl);
+    margin-inline: auto;
+  }
+
   @media (max-width: 56rem) {
     .steps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }

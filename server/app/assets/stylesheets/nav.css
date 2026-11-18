@@ -41,8 +41,16 @@
     font-size: var(--text-s);
   }
 
+  .device-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-xs) var(--space-inline-l);
+  }
+
   .site-nav-links a,
-  .site-nav-manage {
+  .site-nav-manage,
+  .device-tabs a {
     color: var(--ink-soft);
     text-decoration: none;
     padding-block: var(--space-2xs);
@@ -50,10 +58,12 @@
   }
 
   .site-nav-links a:hover,
-  .site-nav-manage:hover { color: var(--ink); }
+  .site-nav-manage:hover,
+  .device-tabs a:hover { color: var(--ink); }
 
   .site-nav-links a[aria-current="page"],
-  .site-nav-manage[aria-current="page"] {
+  .site-nav-manage[aria-current="page"],
+  .device-tabs a[aria-current="page"] {
     color: var(--ink);
     border-block-end-color: var(--blip);
   }
