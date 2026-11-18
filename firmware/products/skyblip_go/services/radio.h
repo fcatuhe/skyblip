@@ -122,6 +122,8 @@ class RadioService : public runtime::Service {
     int32_t fix_lag_ms(int64_t origin_us) const;
     bool full_rate() const;
     void count_given_up(uint32_t now_ms);
+    void count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us, uint32_t now_ms);
+    void hold_for_fix(uint32_t utc_s);
     static ports::RfMode mode_for(const timing::SlotPlan& plan);
     static void listen_for(timing::Band band, ports::RfPlan& plan);
     timing::Transmitter::Attempt attempt(const timing::SlotPlan& plan, int64_t origin_us,
@@ -182,6 +184,8 @@ class RadioService : public runtime::Service {
     // INFO: fc 13nov26 B.5: the second a position was last held, so each held second counts once
     uint32_t held_for_b5_s_{0};
     bool held_for_b5_{false};
+    uint32_t held_for_fix_s_{0};
+    bool held_for_fix_{false};
     // INFO: fc 27sep26 per dwell and payload: queued bursts are built while the current dwell keys
     uint8_t outgoing_chips_[2][kPayloads][protocol::kTxPayloadChipBytes]{};
     Armed current_dwell_{};

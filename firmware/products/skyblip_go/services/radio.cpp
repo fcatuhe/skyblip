@@ -39,6 +39,7 @@ void RadioService::tick(uint32_t now_ms) {
         return;
     }
     const int64_t origin_us = dwell_origin_us();
+    count_held_for_fix(plan, origin_us, now_ms);
     if (!holds(current_dwell_, plan)) {
         if (current_dwell_.mode != ports::RfMode::Idle) context_.roles.rf.abort();
         next_armed_ = false;
@@ -257,6 +258,22 @@ void RadioService::count_given_up(uint32_t now_ms) {
         return;
     context_.state.air.tx_given_up +=
         transmitter_.give_up(slot_utc_s(now_ms), full_rate(), settings_.callsign[0] != 0);
+}
+
+// INFO: fc 18nov26 a position counts as held once its instant passed with its solution too old
+void RadioService::count_held_for_fix(const timing::SlotPlan& plan, int64_t origin_us,
+                                      uint32_t now_ms) {
+    const timing::Transmitter::Attempt position =
+        attempt(plan, origin_us, now_ms, Payload::Position);
+    if (position.stale && instant_us(position, origin_us) <= pass_us_)
+        hold_for_fix(slot_utc_s(now_ms));
+}
+
+void RadioService::hold_for_fix(uint32_t utc_s) {
+    if (held_for_fix_ && held_for_fix_s_ == utc_s) return;
+    context_.state.air.tx_held_for_fix++;
+    held_for_fix_ = true;
+    held_for_fix_s_ = utc_s;
 }
 
 // INFO: fc 18nov26 measured from the second the dwell is armed in, negative for a quarter inside it

@@ -88,6 +88,8 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
         add(Group::Radio, link::diagnostics_key::kTxForced, Kind::Unsigned, diagnostics.tx_forced);
         add(Group::Radio, link::diagnostics_key::kTxBusyMissed, Kind::Unsigned,
             diagnostics.tx_busy_missed);
+        add(Group::Radio, link::diagnostics_key::kTxHeldForFix, Kind::Unsigned,
+            diagnostics.tx_held_for_fix);
     }
 
     if (traffic) {

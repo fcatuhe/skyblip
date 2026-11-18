@@ -184,8 +184,17 @@ TEST_CASE("transmit: a solution is aged at the burst's instant, not at the top o
     Transmitter transmitter = airborne_transmitter();
     const int at_ms =
         transmitter.attempt(slot_plan(500), 10, 10000, true, kFixSolvedAtSecondEnd).at_ms;
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 500 - at_ms).go);
-    CHECK_FALSE(transmitter.attempt(slot_plan(500), 10, 10000, true, 501 - at_ms).go);
+    const int32_t ceiling_ms = Transmitter::kFixMaxAgeMs - Transmitter::kFixAgeAllowanceMs;
+    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, ceiling_ms - at_ms).go);
+    const Transmitter::Attempt late =
+        transmitter.attempt(slot_plan(500), 10, 10000, true, ceiling_ms + 1 - at_ms);
+    CHECK_FALSE(late.go);
+    CHECK(late.stale);
+    CHECK(late.at_ms == at_ms);
+
+    // The frame ends inside the 500 ms: its air time and the bench's SetTx slack come off it.
+    CHECK(ceiling_ms + static_cast<int32_t>(Transmitter::kAirTimeMs) + kCompletionAllowanceMs ==
+          Transmitter::kFixMaxAgeMs);
 
     // The quarter 250 ms before the instant, solved inside the second: a negative lag.
     CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 250 - at_ms).go);

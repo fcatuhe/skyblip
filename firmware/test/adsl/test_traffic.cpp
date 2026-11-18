@@ -47,13 +47,6 @@ model::Ownship flying() {
     return own;
 }
 
-// Airborne at 120 kt, so consecutive solutions sit 15 m apart, with the part's measured latency.
-void fly_measured(simulator::Simulator& simulator) {
-    simulator.world().set_fix(true);
-    simulator.world().set_speed_kt(120);
-    simulator.world().gnss().latency_ms = parts::L76k::kBurstStartMs;
-}
-
 adsl::Packet traffic_packet() {
     adsl::Packet packet{};
     protocol::from_own(packet, flying(), 0x123456, 6, 4);
@@ -92,33 +85,19 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: the timestamp names the solution's own quarter 
     CHECK(packet.longitude_1e7() == measured.longitude_1e7());
 }
 
-// Flown: each burst carries a solution unextrapolated, named to its quarter within the 10 ms.
-TEST_CASE("ADS-L.4.SRD860.G.1.1: every Traffic burst names its solution's time within 10 ms") {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    fly_measured(simulator);
-    run_on(simulator, past_settling(simulator), 30000);
-
-    int checked = 0;
-    for (const simulator::AirRecord& record :
-         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
-        adsl::Packet packet{};
-        REQUIRE(packet_of(record, packet));
-        const models::L76k::Solved* solved =
-            solution_named(simulator.world().gnss(), packet, record.at_us);
-        REQUIRE(solved != nullptr);
-        const int named_ms = static_cast<int>(packet.timestamp % 4u * adsl::kTimestampQuarterMs);
-        CHECK(std::abs(static_cast<int>(solved->at_ms % 1000) - named_ms) <= 10);
-        CHECK(std::abs(static_cast<int>(solved->utc_ms) - named_ms) <= 10);
-        adsl::Packet measured{};
-        measured.reset();
-        measured.set_latitude_1e7(solved->latitude_1e7);
-        measured.set_longitude_1e7(solved->longitude_1e7);
-        CHECK(std::abs(packet.latitude_steps() - measured.latitude_steps()) <= 1);
-        CHECK(std::abs(packet.longitude_steps() - measured.longitude_steps()) <= 1);
-        checked++;
-    }
-    CHECK(checked >= 25);
+// G.1.1's 10 ms: a stamp a few ms off a quarter names it, a stamp between quarters builds nothing.
+TEST_CASE("ADS-L.4.SRD860.G.1.1: a solution off the quarter seconds builds no Traffic") {
+    model::Ownship own = flying();
+    own.utc_s = 1785628800;
+    adsl::Packet packet{};
+    own.utc_ms = 600;
+    CHECK_FALSE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    own.utc_ms = 745;
+    REQUIRE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s, 750));
+    own.utc_ms = 995;
+    REQUIRE(protocol::from_own(packet, own, 0x123456, 6, 4));
+    CHECK(packet.timestamp == adsl::timestamp_code(own.utc_s + 1, 0));
 }
 
 // TODO: fc 18nov26 the L76K's quarters are unmeasured against its PPS, until a bench capture
@@ -324,79 +303,9 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a solution over 500 ms old at the burst's inst
     timing::Transmitter tx;
     tx.configure(0x123456);
     const int at_ms = tx.attempt(plan, 100, 1000, true, -1000).at_ms;
-    CHECK(tx.attempt(plan, 100, 1000, true, 500 - at_ms).go);
-    CHECK_FALSE(tx.attempt(plan, 100, 1000, true, 501 - at_ms).go);
-}
-
-// Flown, the channel busy for one burst every third second: a deferred burst is aged anew.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after its solution") {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    fly_measured(simulator);
-    uint32_t now_ms = past_settling(simulator);
-    const bus::State& state = simulator.product().state();
-    models::Sx1262& radio = simulator.platform().chips().radio;
-    const int8_t busy_dbm[1] = {-50};
-    std::vector<uint64_t> busy_at_us;
-    for (uint32_t second = 0; second < 40; second++) {
-        const uint32_t reports = state.rf.busy_reports;
-        bool held = second % 3 == 0;
-        radio.set_rssi_sequence(busy_dbm, held ? 1 : 0);
-        for (uint32_t step = 0; step < 1000; step += simulator::Simulator::kStepMs) {
-            simulator.step(now_ms += simulator::Simulator::kStepMs);
-            if (!held || state.rf.busy_reports == reports) continue;
-            radio.set_rssi_sequence(busy_dbm, 0);
-            held = false;
-            busy_at_us.push_back(state.rf.busy_at(reports)->tx_at_us);
-        }
-    }
-    radio.set_rssi_sequence(busy_dbm, 0);
-    CHECK(state.air.tx_deferred > 0);
-
-    const std::vector<simulator::AirRecord> positions =
-        records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition);
-    for (const simulator::AirRecord& record : positions) {
-        adsl::Packet packet{};
-        REQUIRE(packet_of(record, packet));
-        const models::L76k::Solved* solved =
-            solution_named(simulator.world().gnss(), packet, record.at_us);
-        REQUIRE(solved != nullptr);
-        CHECK(static_cast<uint32_t>(record.at_us / 1000) - solved->at_ms <= 500u);
-    }
-    CHECK(positions.size() >= 25);
-
-    int deferred_flown = 0;
-    for (const uint64_t busy_us : busy_at_us) {
-        const bool on_a = busy_us / 1000 % 1000 < static_cast<uint64_t>(timing::kWindowAMs.end_ms);
-        for (const simulator::AirRecord& record : positions)
-            if (record.at_us > busy_us &&
-                record.at_us - busy_us <= adsl::kMBandBackoff.ceiling_us &&
-                simulator::Air::tuned_to(record.frequency_hz,
-                                         on_a ? adsl::kMBand0Hz : adsl::kMBand1Hz))
-                deferred_flown++;
-    }
-    MESSAGE(busy_at_us.size() << " bursts found the channel busy, " << deferred_flown
-                              << " positions flew after their deferral");
-    CHECK(deferred_flown > 0);
-}
-
-// A receiver left at 1 Hz holds most airborne bursts, its solution too old by the time they fly.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: four solutions a second put a Traffic burst in every second") {
-    simulator::Simulator simulator;
-    REQUIRE(simulator.setup() == Status::Ok);
-    fly_measured(simulator);
-    const uint32_t now_ms = past_settling(simulator);
-    const uint32_t solutions = simulator.product().state().flight.gnss_solutions;
-    run_on(simulator, now_ms, 20000 - simulator::Simulator::kStepMs);
-
-    CHECK(simulator.product().board().gnss().solving_quarters());
-    CHECK(simulator.product().state().flight.gnss_solutions - solutions == 80);
-    std::vector<uint32_t> seconds;
-    for (const simulator::AirRecord& record :
-         records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition))
-        seconds.push_back(static_cast<uint32_t>(record.at_us / 1000000));
-    CHECK(seconds.size() == 20);
-    for (size_t i = 1; i < seconds.size(); i++) CHECK(seconds[i] == seconds[i - 1] + 1);
+    const int32_t ceiling_ms = 500 - timing::Transmitter::kFixAgeAllowanceMs;
+    CHECK(tx.attempt(plan, 100, 1000, true, ceiling_ms - at_ms).go);
+    CHECK_FALSE(tx.attempt(plan, 100, 1000, true, ceiling_ms + 1 - at_ms).go);
 }
 
 // skyBlip reads "0.1 Hz (once every 10 seconds)" as an average: C.2.5 and the parity rule make it

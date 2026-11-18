@@ -1,5 +1,6 @@
 #include "core/protocol/adsl.h"
 
+#include <cstdlib>
 #include <optional>
 
 #include "core/flight/state.h"
@@ -12,6 +13,11 @@
 #include "protocols/common/geometry.h"
 
 namespace skyblip::protocol {
+
+namespace {
+// INFO: fc 18nov26 G.1.1: the timestamp names the solution's time to within 10 ms, or names none
+constexpr int32_t kTimestampAccuracyMs = 10;
+}  // namespace
 
 bool to_observation(const adsl::Packet& packet, const events::Stamp& received, int8_t rssi_dbm,
                     model::Source source, model::AircraftObservation& out) {
@@ -75,9 +81,12 @@ bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
 bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_category) {
     if (!address) return false;
+    const int32_t quarter_ms = static_cast<int32_t>(adsl::kTimestampQuarterMs);
+    const int32_t named_ms = (own.utc_ms + quarter_ms / 2) / quarter_ms * quarter_ms;
+    if (std::abs(own.utc_ms - named_ms) > kTimestampAccuracyMs) return false;
     adsl::Traffic traffic;
     traffic.address = *address & settings::kAddressMask;
-    traffic.timestamp = adsl::timestamp_code(own.utc_s, own.utc_ms);
+    traffic.timestamp = adsl::timestamp_code(own.utc_s, named_ms);
     traffic.flight_state = flight::announced_state(own.flight_state, aircraft_category);
     traffic.aircraft_category = aircraft_category;
     traffic.emergency = adsl::kEmergencyNone;

@@ -15,7 +15,7 @@ bool to_observation(const adsl::Packet& packet, const events::Stamp& received, i
                     model::Source source, model::AircraftObservation& out);
 
 // INFO: fc 18oct26 false, packet untouched, without an address: an unactivated unit builds no frame
-// | 18nov26 G.1.1: the solution goes as measured, stamped with its own quarter second
+// | 18nov26 G.1.1: the solution goes as measured, named by a quarter within 10 ms, or not at all
 bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_category);
 

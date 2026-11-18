@@ -14,6 +14,7 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
             built = protocol::from_own(outgoing_, context_.state.own, sender.address,
                                        sender.address_mapping_table,
                                        context_.state.own.aircraft_category);
+            if (!built && sender.address) hold_for_fix(utc_s);
             if (built &&
                 outgoing_.protocol_version() >
                     context_.state.traffic.readable_version(

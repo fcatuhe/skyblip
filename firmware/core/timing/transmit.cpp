@@ -134,11 +134,13 @@ bool Transmitter::sent_in(uint32_t utc_s, Payload payload) const {
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
                                           bool airborne, int32_t fix_lag_ms) const {
+    Attempt held{};
     for (const Payload payload : {Payload::Position, Payload::Status, Payload::Callsign}) {
         const Attempt owed = attempt(plan, utc_s, now_ms, airborne, fix_lag_ms, payload);
         if (owed.go || owed.over_budget) return owed;
+        if (owed.stale) held = owed;
     }
-    return Attempt{};
+    return held;
 }
 
 Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms,
@@ -149,7 +151,13 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     if (!plan.tx_allowed) return attempt;
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
 
-    if (sent_in(utc_s, payload) || !due(payload, plan, utc_s, airborne, fix_lag_ms)) return attempt;
+    if (sent_in(utc_s, payload) || !due(payload, plan, utc_s, airborne)) return attempt;
+    if (payload == Payload::Position &&
+        !fresh(fix_lag_ms + instant_in(payload, dwell_slot, utc_s))) {
+        attempt.stale = true;
+        attempt.at_ms = instant_in(payload, dwell_slot, utc_s);
+        return attempt;
+    }
 
     if (!air_time_.may_spend(now_ms, kAirTimeMs)) {
         attempt.over_budget = true;
@@ -162,11 +170,8 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
     return attempt;
 }
 
-bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
-                      int32_t fix_lag_ms) const {
+bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne) const {
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
-    if (payload == Payload::Position && !fresh(fix_lag_ms + instant_in(payload, dwell_slot, utc_s)))
-        return false;
     if (dwell_slot != channel_of(payload, utc_s)) return false;
     return turn(payload, utc_s, airborne) || retry(payload, utc_s, airborne);
 }

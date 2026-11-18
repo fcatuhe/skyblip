@@ -131,6 +131,7 @@ in `firmware/products/skyblip_go/settings.h`.
 
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
+| `kTimestampAccuracyMs` | 10 | milliseconds | - | G.1.1: the timestamp names the solution's time to within 10 ms, or names none |
 | `kAlptasFixAgeCeilingMs` | 2500 (2.5 s) | milliseconds | Ceiling | Frame 2 ends 1.2 s after the fix, and a key accepted a second off adds one |
 | `kFollowS` | 20 | seconds | - | - |
 | `kLk8NoAltitudeM` | 99999 | metres | - | - |
@@ -200,6 +201,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
 | `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | [README](../firmware/core/timing/README.md) argues it |
+| `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
 
@@ -417,4 +419,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-272 constants over 26 folders.
+274 constants over 26 folders.

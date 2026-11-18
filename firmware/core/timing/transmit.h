@@ -43,6 +43,8 @@ class Transmitter {
         Payload payload{Payload::Position};
         // The one refusal that is not a rate rule: the hour's air time is spent.
         bool over_budget{false};
+        // INFO: fc 18nov26 a position owed here whose solution would be too old on air, at at_ms
+        bool stale{false};
     };
 
     void configure(uint32_t address) { address_ = address; }
@@ -59,8 +61,13 @@ class Transmitter {
 
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
 
+    // INFO: fc 18nov26 so the frame ends inside G.1.16's 500 ms: air time and SetTx slack
+    static constexpr int32_t kFixAgeAllowanceMs =
+        static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs;
     // INFO: fc 18nov26 G.1.16: a solution goes on air at most 500 ms after it was solved
-    static bool fresh(int32_t fix_age_ms) { return fix_age_ms <= kFixMaxAgeMs; }
+    static bool fresh(int32_t fix_age_ms) {
+        return fix_age_ms <= kFixMaxAgeMs - kFixAgeAllowanceMs;
+    }
 
     uint32_t sent_count() const { return sent_; }
     const AirTime& air_time() const { return air_time_; }
@@ -88,8 +95,7 @@ class Transmitter {
     void start(uint32_t utc_s);
     uint32_t cycle_second(uint32_t utc_s) const;
     bool scheduled_on(int slot, uint32_t utc_s, bool airborne) const;
-    bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
-             int32_t fix_lag_ms) const;
+    bool due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne) const;
     // Uniform over the slot's usable width and decorrelated between devices:
     // two aircraft with different addresses do not collide every second, and
     // one aircraft's instant is reproducible in a test.

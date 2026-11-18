@@ -59,6 +59,7 @@ struct Diagnostics {
     uint32_t tx_deferred{0};
     uint32_t tx_forced{0};
     uint32_t tx_busy_missed{0};
+    uint32_t tx_held_for_fix{0};
     uint16_t tx_keyed_us{0};
     uint16_t tx_span_us{0};
     bool dio1_armed{false};
