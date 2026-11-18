@@ -259,6 +259,23 @@ bool read_bravo_status(const cbor::Reader& reader, PeerHealth& health) {
     return true;
 }
 
+// INFO: fc 18nov26 a receiver counts the satellites in its solution, so a count without a fix is
+// refused
+bool read_bravo_gnss(const cbor::Reader& reader, PeerHealth& health) {
+    uint32_t stage = 0, satellites = 0;
+    bool staged = false, counted = false;
+    if (!take(reader.read_unsigned(link::health_key::kGnssStage), stage, staged) ||
+        !take(reader.read_unsigned(link::health_key::kSatellites), satellites, counted))
+        return false;
+    if (staged && stage > static_cast<uint32_t>(gnss::Stage::Fixed)) return false;
+    if (counted &&
+        (!staged || stage != static_cast<uint32_t>(gnss::Stage::Fixed) || satellites > UINT8_MAX))
+        return false;
+    if (staged) health.gnss_stage = static_cast<gnss::Stage>(stage);
+    if (counted) health.satellites = static_cast<uint8_t>(satellites);
+    return true;
+}
+
 }  // namespace
 
 int write_peer_claim(const PeerClaim& claim, uint8_t* out, int capacity) {
@@ -343,6 +360,8 @@ int write_health(const PeerHealth& health, uint8_t* out, int capacity) {
     if (health.dismissed_announcement)
         writer.add_unsigned(link::health_key::kDismissedAnnouncement,
                             *health.dismissed_announcement);
+    if (health.gnss_stage) writer.add_code(link::health_key::kGnssStage, *health.gnss_stage);
+    if (health.satellites) writer.add_unsigned(link::health_key::kSatellites, *health.satellites);
     return writer.finish();
 }
 
@@ -427,7 +446,8 @@ Result<PeerHealth> read_health(ConstByteSpan frame) {
     health.utc_valid = utc_valid.value();
     health.aircraft_address_set = aircraft_address_set.value();
     health.paired = paired.value();
-    if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health))
+    if (!read_own_transponder(reader, health) || !read_bravo_status(reader, health) ||
+        !read_bravo_gnss(reader, health))
         return Status::Invalid;
     uint32_t dismissed = 0;
     bool present = false;

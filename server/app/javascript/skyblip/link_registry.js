@@ -2194,6 +2194,17 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "dismissed_announcement",
           "number": 21,
           "type": "unsigned"
+        },
+        {
+          "name": "gnss_stage",
+          "number": 22,
+          "type": "enum",
+          "enum": "gnss_stage"
+        },
+        {
+          "name": "satellites",
+          "number": 23,
+          "type": "unsigned"
         }
       ]
     },
@@ -3440,6 +3451,34 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "no_utc",
           "code": 5,
           "mirrors": "NoUtc"
+        }
+      ]
+    },
+    "gnss_stage": {
+      "mirrors": {
+        "type": "gnss::Stage",
+        "header": "core/gnss/acquisition.h"
+      },
+      "values": [
+        {
+          "name": "silent",
+          "code": 0,
+          "mirrors": "Silent"
+        },
+        {
+          "name": "blind",
+          "code": 1,
+          "mirrors": "Blind"
+        },
+        {
+          "name": "solving",
+          "code": 2,
+          "mirrors": "Solving"
+        },
+        {
+          "name": "fixed",
+          "code": 3,
+          "mirrors": "Fixed"
         }
       ]
     },

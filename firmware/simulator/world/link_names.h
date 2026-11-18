@@ -201,6 +201,14 @@ inline constexpr Value kBravoValues[] = {
 };
 inline constexpr Enumeration kBravo{kBravoValues, 5};
 
+inline constexpr Value kGnssStageValues[] = {
+    {"silent", 0},
+    {"blind", 1},
+    {"solving", 2},
+    {"fixed", 3},
+};
+inline constexpr Enumeration kGnssStage{kGnssStageValues, 4};
+
 inline constexpr Value kClimbSourceValues[] = {
     {"unknown", 0},
     {"gnss", 1},
@@ -622,6 +630,8 @@ inline constexpr Key kHealthKeys[] = {
     {"power_level", 19, Type::Enum, &kPowerLevel, 0, true},
     {"frame_rate_hz", 20, Type::Unsigned, nullptr, 0, false},
     {"dismissed_announcement", 21, Type::Unsigned, nullptr, 0, false},
+    {"gnss_stage", 22, Type::Enum, &kGnssStage, 0, false},
+    {"satellites", 23, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kPeerClaimKeys[] = {
@@ -755,7 +765,7 @@ inline constexpr Frame kFrames[] = {
     {"gnss_cold_start", 24, events::Endpoint::Config, Sender::Host, kGnssColdStartKeys, 1},
     {"ownship", 25, events::Endpoint::Config, Sender::Host, kOwnshipKeys, 5},
     {"observation", 26, events::Endpoint::Peer, Sender::Unit, kObservationKeys, 25},
-    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 18},
+    {"health", 27, events::Endpoint::Peer, Sender::Unit, kHealthKeys, 20},
     {"peer_claim", 28, events::Endpoint::Peer, Sender::Host, kPeerClaimKeys, 17},
     {"capture", 29, events::Endpoint::Config, Sender::Host, kCaptureKeys, 2},
     {"browser_challenge", 30, events::Endpoint::Config, Sender::Both, kBrowserChallengeKeys, 2},

@@ -457,6 +457,37 @@ TEST_CASE("peer frames: Bravo's health carries its firmware, its cell and its re
     CHECK(read.value().frame_rate_hz == std::optional<uint32_t>(412));
 }
 
+TEST_CASE(
+    "peer frames: Bravo's health carries its receiver's stage, and its satellites once fixed") {
+    comms::PeerHealth health{};
+    health.gnss_stage = gnss::Stage::Fixed;
+    health.satellites = 9;
+    uint8_t frame[comms::kPeerPayloadFloorBytes];
+    const int bytes = comms::write_health(health, frame, sizeof(frame));
+    const Result<comms::PeerHealth> read =
+        comms::read_health(ConstByteSpan(frame, static_cast<size_t>(bytes)));
+    REQUIRE(read.ok());
+    CHECK(read.value().gnss_stage == std::optional<gnss::Stage>(gnss::Stage::Fixed));
+    CHECK(read.value().satellites == std::optional<uint8_t>(9));
+}
+
+TEST_CASE("peer frames: a satellite count without a fixed stage, or past 255, is refused") {
+    const auto health_with = [](const std::string& fields) {
+        const std::string frame = complete_registry_frame(
+            "{\"command\":\"health\",\"protocol_version\":2,\"boot_epoch\":9,\"listening\":true,"
+            "\"utc_valid\":true,\"aircraft_address_set\":false,"
+            "\"export_reference\":\"own\",\"paired\":true,\"charging\":false,"
+            "\"power_level\":\"normal\"," +
+            fields + "}");
+        return comms::read_health(bytes_of(frame)).status();
+    };
+    CHECK(health_with("\"gnss_stage\":\"blind\"") == Status::Ok);
+    CHECK(health_with("\"gnss_stage\":\"fixed\",\"satellites\":255") == Status::Ok);
+    CHECK(health_with("\"gnss_stage\":\"fixed\",\"satellites\":256") == Status::Invalid);
+    CHECK(health_with("\"gnss_stage\":\"solving\",\"satellites\":4") == Status::Invalid);
+    CHECK(health_with("\"satellites\":4") == Status::Invalid);
+}
+
 TEST_CASE("peer frames: a Bravo from before its status keys reads as no reading, not a refusal") {
     REQUIRE(health_without(0) == Status::Ok);
     uint8_t frame[64];
@@ -477,6 +508,8 @@ TEST_CASE("peer frames: a Bravo from before its status keys reads as no reading,
     CHECK_FALSE(read.value().battery_percent.has_value());
     CHECK(read.value().power_level == power::PowerLevel::Unknown);
     CHECK_FALSE(read.value().frame_rate_hz.has_value());
+    CHECK_FALSE(read.value().gnss_stage.has_value());
+    CHECK_FALSE(read.value().satellites.has_value());
 }
 
 TEST_CASE("peer frames: a health frame with a charge past 100 or an unknown level is refused") {
