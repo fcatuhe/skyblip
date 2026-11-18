@@ -115,6 +115,36 @@ TEST_CASE(
     }
 }
 
+// A repair that fits the wrong length must not hide the right one, found by a review probe.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a Traffic heard as 16 bytes is read even where 16 bytes repair") {
+    const uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    adsl::Packet traffic = traffic_packet(0x00094D);
+    traffic.scramble();
+    traffic.set_crc();
+    adsl::Packet heard;
+    REQUIRE(adsl::receive_as_heard(traffic.data, erasures, 16, heard) == wire::Status::Ok);
+    CHECK(heard.is_position());
+    CHECK(heard.address() == 0x00094Du);
+}
+
+// A clean CRC codeword stays one with zeros behind it, so a Status before 0x00 chips reads both
+// ways.
+TEST_CASE("ADS-L.4.SRD860.D.1.1: a frame that checks at both lengths is refused, never guessed") {
+    const uint8_t erasures[adsl::Packet::kDataBytes] = {0};
+    adsl::Packet status{};
+    adsl::encode_status(status, 0x000021, adsl::kAddressTableFlarm, adsl::StatusReport{});
+    status.scramble(adsl::Packet::kStatusDataBytes);
+    status.set_crc(adsl::Packet::kStatusDataBytes);
+    uint8_t frame[adsl::Packet::kDataBytes] = {0};
+    std::memcpy(frame, status.data, adsl::Packet::kStatusDataBytes);
+    adsl::Packet heard;
+    for (const uint8_t length : {uint8_t{24}, uint8_t{16}}) {
+        CAPTURE(int(length));
+        CHECK(adsl::receive_as_heard(frame, erasures, length, heard) == wire::Status::Invalid);
+        CHECK(heard.address() == 0u);
+    }
+}
+
 // The length byte and the payload type have to agree: a padded Status or a cut Traffic is no
 // packet.
 TEST_CASE("ADS-L.4.SRD860.D.1.1: a packet whose length is not its payload's is refused") {

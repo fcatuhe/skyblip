@@ -227,7 +227,7 @@ static_assert(sizeof(Packet) == Packet::kDataBytes, "Packet is the data the CRC 
 
 wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
                      uint8_t data_bytes = Packet::kDataBytes);
-// INFO: fc 18nov26 D.1.1's length is outside the CRC, so both are tried, from kDataBytes buffers
+// INFO: fc 18nov26 D.1.1's length is outside the CRC, so both are read, from kDataBytes buffers
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
                               Packet& out);
 

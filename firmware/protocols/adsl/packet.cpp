@@ -164,14 +164,25 @@ wire::Status receive(const uint8_t* frame, const uint8_t* erasures, Packet& out,
     return out.data_bytes() == data_bytes ? wire::Status::Ok : wire::Status::Invalid;
 }
 
+// INFO: fc 18nov26 a frame both lengths read is refused, since no byte under the CRC says which
 wire::Status receive_as_heard(const uint8_t* frame, const uint8_t* erasures, uint8_t length_heard,
                               Packet& out) {
-    const uint8_t first = nearer_length(length_heard);
-    const wire::Status heard = receive_at(frame, erasures, first, out);
-    if (heard != wire::Status::Crc) return heard;
+    const uint8_t nearer = nearer_length(length_heard);
     const uint8_t other =
-        first == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;
-    return receive_at(frame, erasures, other, out);
+        nearer == Packet::kDataBytes ? Packet::kStatusDataBytes : Packet::kDataBytes;
+    Packet at_other;
+    const wire::Status heard = receive_at(frame, erasures, nearer, out);
+    const wire::Status other_heard = receive_at(frame, erasures, other, at_other);
+    if (heard == wire::Status::Ok && other_heard == wire::Status::Ok) {
+        out.reset();
+        return wire::Status::Invalid;
+    }
+    if (heard == wire::Status::Ok) return heard;
+    if (other_heard == wire::Status::Ok) {
+        out = at_other;
+        return other_heard;
+    }
+    return heard;
 }
 
 // ADS-L 4 SRD860 issue 2 G.1.14, NACp. Code 0 is "unknown or HFOM >= 0.5 NM".
