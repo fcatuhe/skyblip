@@ -17,7 +17,7 @@
 
 namespace skyblip::gnss {
 
-// INFO: fc 13sep26 SoftRF's NMEA_EXP_TIME: liveness, three missed bursts, not a freshness rule
+// INFO: fc 13sep26 SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 14 bursts at 4 Hz
 constexpr uint32_t kSentenceMaxAgeMs = 3500;
 
 // moshe-braner's jump gate, in our units: 0.15 deg of latitude and 0.25 deg of

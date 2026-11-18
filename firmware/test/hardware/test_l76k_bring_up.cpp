@@ -27,7 +27,59 @@ TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model an
     CHECK(chip.constellations == 7);  // GPS + GLONASS + BeiDou
     CHECK(chip.sentence_set_applied);
     CHECK(chip.aviation_dynamic_model());
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+
+    run(gnss, chip, kBringUpLeadMs + 1010, kConfiguredMs);
+    CHECK(gnss.solving_quarters());
+    CHECK(chip.commands_seen ==
+          parts::L76k::kCommandCount + 2 + parts::L76k::kQuarterRateCommandCount);  // + $PCAS01
+    CHECK(chip.commands_rejected == 0);
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+}
+
+// L76K protocol spec V1.1 2.3.2: an interval under 1000 ms needs 115200, so 4 Hz comes last.
+TEST_CASE("l76k: 4 Hz is asked for only once the receiver answers at 115200") {
+    models::L76k chip;
+    chip.asleep = true;
+    parts::L76k gnss(chip, chip);
+
+    run(gnss, chip, 0, kConfiguredMs);
+
+    CHECK(chip.heard() == "WAKE,PCAS06,PCAS04,PCAS03,PCAS11,PCAS02,PCAS01,PCAS02,PCAS03,");
+    CHECK(chip.baud == parts::L76k::kTargetBaudRate);
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
+    CHECK(gnss.solving_quarters());
+}
+
+// GSA alone carries VDOP, so at 4 Hz it stays once a second rather than going every solution.
+TEST_CASE("l76k: at 4 Hz GGA and RMC close every solution, and GSA comes once a second") {
+    models::L76k chip;
+    parts::L76k gnss(chip, chip);
+    run(gnss, chip, 0, kConfiguredMs);
+    REQUIRE(gnss.solving_quarters());
+
+    CHECK(chip.gga_enabled);
+    CHECK(chip.rmc_enabled);
+    CHECK(chip.gsa_every == parts::L76k::kGsaPeriodSolutions);
+    CHECK_FALSE(chip.gll_enabled);
+    CHECK_FALSE(chip.vtg_enabled);
+    CHECK_FALSE(chip.gsv_enabled());
+    CHECK(gnss.solution().vdop_e2 == chip.vdop_e2);
+    CHECK(gnss.sky().in_use() > 0);
+}
+
+// A receiver that takes every other $PCAS sentence and stays at 1 Hz cannot keep G.1.16's age.
+TEST_CASE("l76k: a receiver that will not solve at 4 Hz is reported degraded") {
+    models::L76k chip;
+    chip.refuses_quarter_rate = true;
+    parts::L76k gnss(chip, chip);
+
+    run(gnss, chip, 0, 60000);
+
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+    CHECK_FALSE(gnss.solving_quarters());
+    CHECK(gnss.degraded());
+    CHECK(gnss.solution().fix_valid);  // still a fix, once a second
 }
 
 // I, rows "A wake byte before probing" and "Receiver identification", in one
@@ -84,7 +136,7 @@ TEST_CASE("l76k: an unidentified receiver is still configured, and still says so
     chip.answers_identification = false;
     parts::L76k gnss(chip, chip);
 
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
 
     CHECK_FALSE(gnss.identified());
     CHECK(gnss.firmware_version()[0] == 0);
@@ -133,7 +185,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     parts::L76k gnss(chip, chip);
     REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
-    run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
+    run(gnss, chip, 0, kConfiguredMs);
 
     CHECK(gnss.configured());
     CHECK(gnss.baud_rate() == parts::L76k::kTargetBaudRate);
@@ -160,6 +212,8 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
     CHECK(gnss.solution().fix_valid);
     CHECK(gnss.baud_raises() == 1);
     CHECK(gnss.raise_fallbacks() == 1);
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+    CHECK_FALSE(gnss.solving_quarters());
 }
 
 // Without a rate port the receiver must be left where it boots, not asked to move alone.
@@ -173,6 +227,7 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     CHECK(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
     CHECK(gnss.configured());
     CHECK(gnss.baud_raises() == 0);
+    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
 }
 
 // I, row "Baud detection and recovery". A receiver that comes up at another rate
@@ -222,12 +277,12 @@ TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not ha
 TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(chip.aviation_dynamic_model());
 
     gnss.request_restart(ports::Restart::Factory);
-    uint32_t now_ms = kBringUpLeadMs + 5010;
+    uint32_t now_ms = kConfiguredMs + 10;
     chip.tick(now_ms);
     gnss.service(now_ms);
     CHECK(chip.factory_resets == 1);
@@ -237,7 +292,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     CHECK(chip.solution_period_ms == models::L76k::kFactoryPeriodMs);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Restarting);
 
-    run(gnss, chip, now_ms + 10, now_ms + 15000);
+    run(gnss, chip, now_ms + 10, now_ms + 20000);
     CHECK(gnss.configured());
     CHECK(chip.aviation_dynamic_model());
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
@@ -245,7 +300,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
     // And the fix comes back on its own once the receiver has an almanac again,
     // which is the whole point: the pilot is told to wait, not to send it back.
     CHECK_FALSE(gnss.solution().fix_valid);
-    run(gnss, chip, now_ms + 15010, now_ms + models::L76k::kColdStartTtffMs + 3000);
+    run(gnss, chip, now_ms + 20010, now_ms + models::L76k::kColdStartTtffMs + 3000);
     CHECK(gnss.solution().fix_valid);
 }
 
@@ -255,11 +310,11 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
 TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solution().fix_valid);
 
     gnss.request_restart(ports::Restart::Cold);
-    const uint32_t now_ms = kBringUpLeadMs + 5010;
+    const uint32_t now_ms = kConfiguredMs + 10;
     chip.tick(now_ms);
     gnss.service(now_ms);
 

@@ -20,6 +20,7 @@ class Simulator {
     using Product = go::Product<platform::host::Platform>;
 
     Status setup() {
+        platform_.retune_gnss_port(true);
         const Status started = product_.setup();
         const Status armed = platform_.watchdog().arm(runtime::kHardwareWatchdogCeilingMs);
         return started == Status::Ok ? armed : started;

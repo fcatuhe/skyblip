@@ -44,8 +44,9 @@ class L76k : public ports::Gnss {
         9600, 115200, 38400, 57600, 19200, 4800,
     };
 
-    // INFO: fc 13sep26 one solution per second, transmitted extrapolated to the burst's own instant
-    static constexpr uint32_t kSolutionPeriodMs = 1000;
+    // INFO: fc 18nov26 CASIC protocol V4.2.0.3 1.6.3: 250 is 4 Hz, solutions on G.1.1's quarters
+    static constexpr uint32_t kSolutionPeriodMs = 250;
+    static constexpr uint32_t kFactorySolutionPeriodMs = 1000;
 
     // INFO: fc 13sep26 GGA + three GSA (one per constellation) + RMC, the widest burst we ask for
     static constexpr uint32_t kBurstBytes = 320;
@@ -75,6 +76,17 @@ class L76k : public ports::Gnss {
         "$PCAS02,1000*2E\r\n",
     };
 
+    // INFO: fc 18nov26 L76K protocol spec V1.1 SS2.3.2 allows under 1000 ms only at 115200
+    static constexpr int kQuarterRateCommandCount = 2;
+    static constexpr const char* kQuarterRateCommands[kQuarterRateCommandCount] = {
+        "$PCAS02,250*18\r\n",
+        "$PCAS03,,,4,,,,,,,,,,,*36\r\n",
+    };
+    // INFO: fc 18nov26 the second $PCAS03 above keeps GSA, and the VDOP it carries, once a second
+    static constexpr uint8_t kGsaPeriodSolutions = 4;
+    static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
+                  "GSA keeps the once a second it had at the factory rate");
+
     // INFO: fc 13sep26 GSA is the only sentence carrying VDOP, which G.1.15 asks us to claim
     static constexpr bool kGsaEnabled = true;
 
@@ -82,8 +94,11 @@ class L76k : public ports::Gnss {
     static constexpr const char* kSatellitesInViewOff = "$PCAS03,,,,0,,,,,,,,,,*32\r\n";
     static constexpr const char* kSatellitesInViewEverySolution = "$PCAS03,,,,1,,,,,,,,,,*33\r\n";
     static constexpr const char* kSatellitesInViewPaced = "$PCAS03,,,,5,,,,,,,,,,*37\r\n";
+    static constexpr const char* kSatellitesInViewQuarterPaced = "$PCAS03,,,,9,,,,,,,,,,*3B\r\n";
     // INFO: fc 29sep26 GSV precedes RMC: nav_ms +55-65 ms on bench 0B1B2C, so one set in five
     static constexpr uint8_t kSatellitesInViewPeriodSolutions = 5;
+    // INFO: fc 18nov26 $PCAS03 counts to 9, so at 4 Hz a set every 2.25 s is the slowest pace
+    static constexpr uint8_t kQuarterSatellitesInViewPeriodSolutions = 9;
 
     // INFO: fc 18sep26 four talkers, up to 32 satellites, four to a sentence and 72 bytes each
     static constexpr uint32_t kSatellitesInViewBytes = 648;
@@ -103,9 +118,15 @@ class L76k : public ports::Gnss {
         "$PCAS10,3*1F\r\n",
     };
 
-    // INFO: fc 13sep26 the rate we ask for is the factory rate, so obedience is the sentence set
+    // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 4 Hz, the solution count
     static constexpr uint32_t kVerifyWindowMs = 3000;
     static constexpr uint32_t kMinVerifySentences = 2;
+    // INFO: fc 18nov26 4 Hz puts eight solutions in the window, and 1 Hz three at most
+    static constexpr uint32_t kQuarterVerifyWindowMs = 2000;
+    static constexpr uint32_t kMinVerifySolutions = 5;
+    static_assert(kMinVerifySolutions > kQuarterVerifyWindowMs / kFactorySolutionPeriodMs + 1 &&
+                      kMinVerifySolutions < kQuarterVerifyWindowMs / kSolutionPeriodMs,
+                  "the count tells a receiver at 4 Hz from one left at 1 Hz");
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
     // Drive the configuration sequence. Until it has run the receiver is on its
@@ -113,6 +134,7 @@ class L76k : public ports::Gnss {
     void service(uint32_t now_ms);
 
     ConfigStage config_stage() const { return stage_; }
+    bool solving_quarters() const { return stage_ == ConfigStage::Ready && quarter_rate_; }
     bool configured() const { return stage_ == ConfigStage::Ready; }
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
 
@@ -192,6 +214,8 @@ class L76k : public ports::Gnss {
     static constexpr uint8_t kNoRestart = 0xFF;
 
     void start_sequence(uint32_t now_ms);
+    void start_quarter_rate(uint32_t now_ms);
+    void settle(uint32_t now_ms);
     void send_next(uint32_t now_ms);
     void begin_wake(uint32_t now_ms);
     void send(const char* sentence, uint32_t now_ms);
@@ -205,6 +229,7 @@ class L76k : public ports::Gnss {
     void pace_satellites_in_view(uint32_t now_ms);
     uint8_t satellites_in_view_every() const;
     static const char* satellites_in_view_command(uint8_t every);
+    bool verified() const;
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -221,7 +246,12 @@ class L76k : public ports::Gnss {
     uint32_t last_command_ms_{0};
     uint32_t verify_start_ms_{0};
     uint32_t verify_sentences_{0};
+    const char* const* sequence_{kCommands};
+    int sequence_count_{kCommandCount};
     int next_command_{0};
+    bool quarter_rate_{false};
+    uint32_t closings_{0};
+    uint32_t verify_closings_{0};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};

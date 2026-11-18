@@ -10,16 +10,37 @@ void L76k::send(const char* sentence, uint32_t now_ms) {
 }
 
 void L76k::start_sequence(uint32_t now_ms) {
+    sequence_ = kCommands;
+    sequence_count_ = kCommandCount;
     next_command_ = 0;
+    quarter_rate_ = false;
     satellites_in_view_every_ = 0;  // kCommands sets nGSV to 0, whatever the receiver was doing
     levels_heard_ = false;
     stage_ = ConfigStage::Sending;
     send_next(now_ms);
 }
 
+// INFO: fc 18nov26 only a receiver proven at 115200 is asked for 4 Hz, which V1.1 SS2.3.2 requires
+void L76k::start_quarter_rate(uint32_t now_ms) {
+    sequence_ = kQuarterRateCommands;
+    sequence_count_ = kQuarterRateCommandCount;
+    next_command_ = 0;
+    quarter_rate_ = true;
+    stage_ = ConfigStage::Sending;
+    send_next(now_ms);
+}
+
+void L76k::settle(uint32_t now_ms) {
+    if (!quarter_rate_ && baud_rate() == kTargetBaudRate) {
+        start_quarter_rate(now_ms);
+        return;
+    }
+    stage_ = ConfigStage::Ready;
+}
+
 void L76k::send_next(uint32_t now_ms) {
-    send(kCommands[next_command_++], now_ms);
-    if (next_command_ < kCommandCount) return;
+    send(sequence_[next_command_++], now_ms);
+    if (next_command_ < sequence_count_) return;
     stage_ = ConfigStage::Verifying;
     begin_verify(now_ms);
 }
@@ -27,7 +48,14 @@ void L76k::send_next(uint32_t now_ms) {
 void L76k::begin_verify(uint32_t now_ms) {
     verify_start_ms_ = now_ms;
     verify_sentences_ = parser_.solution().sentences;
+    verify_closings_ = closings_;
     unrequested_at_verify_ = parser_.unrequested();
+}
+
+bool L76k::verified() const {
+    if (parser_.solution().sentences - verify_sentences_ < kMinVerifySentences || !obeying())
+        return false;
+    return !quarter_rate_ || closings_ - verify_closings_ >= kMinVerifySolutions;
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -137,19 +165,24 @@ void L76k::service(uint32_t now_ms) {
             if (now_ms - last_command_ms_ >= kCommandGapMs) send_next(now_ms);
             break;
         case ConfigStage::Verifying:
-            if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
-            if (parser_.solution().sentences - verify_sentences_ < kMinVerifySentences ||
-                !obeying()) {
+            if (now_ms - verify_start_ms_ <
+                (quarter_rate_ ? kQuarterVerifyWindowMs : kVerifyWindowMs))
+                break;
+            if (!verified()) {
                 verify_failed(now_ms);
                 break;
             }
-            stage_ = raise_baud(now_ms) ? ConfigStage::Confirming : ConfigStage::Ready;
-            begin_verify(now_ms);
+            if (raise_baud(now_ms)) {
+                stage_ = ConfigStage::Confirming;
+                begin_verify(now_ms);
+            } else {
+                settle(now_ms);
+            }
             break;
         // INFO: fc 19sep26 a sentence that checksums at the new rate is the ack $PCAS01 never sends
         case ConfigStage::Confirming:
             if (parser_.solution().sentences != verify_sentences_) {
-                stage_ = ConfigStage::Ready;
+                settle(now_ms);
                 break;
             }
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
@@ -175,12 +208,18 @@ void L76k::pace_satellites_in_view(uint32_t now_ms) {
 // INFO: fc 29sep26 every solution until the first set lands, so the page still fills in a second
 uint8_t L76k::satellites_in_view_every() const {
     if (!satellites_in_view_wanted_) return 0;
-    return levels_heard_ ? kSatellitesInViewPeriodSolutions : 1;
+    if (!levels_heard_) return 1;
+    return quarter_rate_ ? kQuarterSatellitesInViewPeriodSolutions
+                         : kSatellitesInViewPeriodSolutions;
 }
 
 const char* L76k::satellites_in_view_command(uint8_t every) {
-    if (every == 0) return kSatellitesInViewOff;
-    return every == 1 ? kSatellitesInViewEverySolution : kSatellitesInViewPaced;
+    switch (every) {
+        case 0: return kSatellitesInViewOff;
+        case 1: return kSatellitesInViewEverySolution;
+        case kQuarterSatellitesInViewPeriodSolutions: return kSatellitesInViewQuarterPaced;
+        default: return kSatellitesInViewPaced;
+    }
 }
 
 // INFO: fc 13sep26 a $PCAS sentence is acknowledged only by what the receiver stops saying
@@ -198,7 +237,7 @@ bool L76k::poll(uint32_t now_ms) {
             validity_.observe(parser_.solution(), sentence, now_ms);
             burst_levels_ = burst_levels_ ||
                             (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
-            closed = closed || sentence == kBurstClosingSentence;
+            closed = closed || (sentence == kBurstClosingSentence && parser_.same_epoch());
         }
         if (received < sizeof(buffer)) break;  // drained
     }
@@ -213,7 +252,10 @@ bool L76k::poll(uint32_t now_ms) {
     if (!closed && valid == solution_.fix_valid) return false;
 
     levels_fresh_ = closed && burst_levels_ && satellites_in_view_every_ != 0;
-    if (closed) burst_levels_ = false;
+    if (closed) {
+        burst_levels_ = false;
+        closings_++;
+    }
     solution_ = parser_.solution();
     solution_.fix_valid = valid;
     solution_.pps_latency_ms = pps_latency_ms();

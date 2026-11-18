@@ -58,16 +58,16 @@ uint8_t in_view(const models::L76k& chip) {
 TEST_CASE("l76k: satellites in view are asked for every solution until a set lands, then paced") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE_FALSE(chip.gsv_enabled());  // the bring-up sentence set switches it off
     REQUIRE(gnss.sky().count() == 0);
 
     const uint32_t commands = chip.commands_seen;
     gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);
     CHECK(chip.commands_seen == commands + 2);
-    CHECK(chip.gsv_every == parts::L76k::kSatellitesInViewPeriodSolutions);
+    CHECK(chip.gsv_every == parts::L76k::kQuarterSatellitesInViewPeriodSolutions);
     CHECK(gnss.satellites_in_view_live());
     CHECK(gnss.sky().count() == in_view(chip));
     CHECK(gnss.sky().in_view_of(gnss::System::Gps) == chip.gps_in_view);
@@ -76,19 +76,19 @@ TEST_CASE("l76k: satellites in view are asked for every solution until a set lan
     // Nothing else in the sentence set moved: the nulls in $PCAS03 mean "keep".
     CHECK(chip.gga_enabled);
     CHECK(chip.rmc_enabled);
-    CHECK(chip.gsa_enabled);
+    CHECK(chip.gsa_enabled());
     CHECK_FALSE(chip.gll_enabled);
     CHECK_FALSE(chip.vtg_enabled);
 
     gnss.request_satellites_in_view(false);
-    run(gnss, chip, kBringUpLeadMs + 7010, kBringUpLeadMs + 9000);
+    run(gnss, chip, kConfiguredMs + 3010, kConfiguredMs + 5000);
     CHECK(chip.commands_seen == commands + 3);
     CHECK_FALSE(chip.gsv_enabled());
     CHECK_FALSE(gnss.satellites_in_view_live());
 
     // Asking again for what is already so costs nothing.
     gnss.request_satellites_in_view(false);
-    run(gnss, chip, kBringUpLeadMs + 9010, kBringUpLeadMs + 11000);
+    run(gnss, chip, kConfiguredMs + 5010, kConfiguredMs + 7000);
     CHECK(chip.commands_seen == commands + 3);
 }
 
@@ -96,41 +96,44 @@ TEST_CASE("l76k: satellites in view are asked for every solution until a set lan
 TEST_CASE("l76k: given up, the satellites in view are forgotten, not kept at the last set") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
+    run(gnss, chip, 0, kConfiguredMs);
     gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);
     REQUIRE(gnss.sky().count() == in_view(chip));
 
     gnss.request_satellites_in_view(false);
-    run(gnss, chip, kBringUpLeadMs + 7010, kBringUpLeadMs + 9000);
+    run(gnss, chip, kConfiguredMs + 3010, kConfiguredMs + 5000);
     CHECK(gnss.sky().count() == 0);
     CHECK_FALSE(gnss.levels_fresh());
     CHECK(gnss.sky().in_use() > 0);  // GSA still names the solution every second
 
     chip.gps_in_view = 4;
     gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 9010, kBringUpLeadMs + 11000);
+    run(gnss, chip, kConfiguredMs + 5010, kConfiguredMs + 7000);
     CHECK(gnss.sky().count() == in_view(chip));
 }
 
 // GSV rides between GSA and RMC, which is why the bench read nav_ms 55-65 ms late with sats up.
-TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst alone") {
+TEST_CASE("l76k: with the levels up, eight fixes in nine close on the fix burst alone") {
     models::L76k chip;
     TappedWire wire(chip);
     parts::L76k gnss(wire, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
-    REQUIRE(gnss.configured());
+    run(gnss, chip, 0, kConfiguredMs);
+    REQUIRE(gnss.solving_quarters());
     REQUIRE(gnss.baud_rate() == parts::L76k::kTargetBaudRate);
     gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
-    REQUIRE(chip.gsv_every == parts::L76k::kSatellitesInViewPeriodSolutions);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);
+    REQUIRE(chip.gsv_every == parts::L76k::kQuarterSatellitesInViewPeriodSolutions);
     wire.take();
 
     int with_levels = 0;
     int clean = 0;
     uint32_t paced_ms = 0;
-    for (uint32_t now_ms = kBringUpLeadMs + 7010; now_ms < kBringUpLeadMs + 17010; now_ms += 1000) {
-        run(gnss, chip, now_ms, now_ms + 990);
+    const uint32_t from_ms = kConfiguredMs + 3010;
+    const uint32_t solutions = 4 * parts::L76k::kQuarterSatellitesInViewPeriodSolutions;
+    for (uint32_t now_ms = from_ms; now_ms < from_ms + solutions * parts::L76k::kSolutionPeriodMs;
+         now_ms += parts::L76k::kSolutionPeriodMs) {
+        run(gnss, chip, now_ms, now_ms + parts::L76k::kSolutionPeriodMs - 10);
         const Burst burst = read_burst(wire.take());
         const uint32_t fix_ms = io::wire_ms(burst.ahead_of_fix_bytes, gnss.baud_rate());
         if (burst.carried_levels) {
@@ -143,14 +146,14 @@ TEST_CASE("l76k: with the levels up, four fixes in five close on the fix burst a
         CHECK(gnss.levels_fresh() == burst.carried_levels);
     }
 
-    CHECK(with_levels == 2);
-    CHECK(clean == 8);
+    CHECK(with_levels == 4);
+    CHECK(clean == 32);
     // The model's 21 satellites are seven GSV sentences, 413 bytes: 35 ms of 115200 ahead of RMC.
-    CHECK(paced_ms > parts::L76k::kBurstMs + 30);
+    CHECK(paced_ms > 35);
 }
 
-// At the rate the receiver boots at, the widest GSV set did not fit in the second the fix rides.
-TEST_CASE("l76k: the satellites-in-view burst fits the second only at the raised rate") {
+// At the rate the receiver boots at, the widest GSV set does not fit the period the fix rides in.
+TEST_CASE("l76k: the satellites-in-view burst fits a solution period only at the raised rate") {
     CHECK(io::wire_ms(parts::L76k::kSearchingBurstBytes, parts::L76k::kFactoryBaudRate) >
           parts::L76k::kSolutionPeriodMs);
     CHECK(parts::L76k::kSearchingBurstMs < parts::L76k::kSolutionPeriodMs);
@@ -161,9 +164,9 @@ TEST_CASE("l76k: a satellite in view with no level is not a satellite at zero dB
     models::L76k chip;
     chip.fix_valid = false;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 4000);
+    run(gnss, chip, 0, kConfiguredMs);
     gnss.request_satellites_in_view(true);
-    run(gnss, chip, kBringUpLeadMs + 4010, kBringUpLeadMs + 7000);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);
 
     REQUIRE(gnss.sky().count() > 0);
     int tracked = 0, silent = 0;

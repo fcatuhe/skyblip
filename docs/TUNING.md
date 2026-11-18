@@ -102,7 +102,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSpeedCeilingMmS` | 514444 (514.444 m/s) | millimetres per second | Ceiling | no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea |
 | `kAltitudeCeilingM` | 100000 | metres | Ceiling | - |
 | `kAltitudeFloorM` | -1000 | metres | Floor | - |
-| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, three missed bursts, not a freshness rule |
+| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 14 bursts at 4 Hz |
 
 ## [`firmware/core/indication`](../firmware/core/indication/README.md)
 

@@ -78,6 +78,10 @@ class GnssTruth {
         return written;
     }
 
+    uint32_t utc_ms() const { return seconds_of_day_ms_; }
+    // INFO: fc 18nov26 a receiver's UTC turns on its PPS edge, which the host puts on its second
+    void align_utc_ms(uint32_t ms) { seconds_of_day_ms_ = ms % 1000u; }
+
    private:
     uint32_t seconds_of_day_ms_{0};
     double climbed_m_{0};

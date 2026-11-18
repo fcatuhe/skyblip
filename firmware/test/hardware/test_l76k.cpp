@@ -99,8 +99,8 @@ TEST_CASE("l76k: GSA is asked for, and the VDOP in it is the one the fix carries
 
     CHECK(chip.gga_enabled);
     CHECK(chip.rmc_enabled);
-    CHECK(chip.gsa_enabled);
-    CHECK(parts::L76k::kGsaEnabled == chip.gsa_enabled);
+    CHECK(chip.gsa_enabled());
+    CHECK(parts::L76k::kGsaEnabled == chip.gsa_enabled());
 
     CHECK(gnss.solution().hdop_e2 == chip.hdop_e2);
     CHECK(gnss.solution().vdop_e2 == chip.vdop_e2);
@@ -121,23 +121,25 @@ TEST_CASE("l76k: a receiver reporting no VDOP leaves the fix without one") {
     CHECK(gnss.solution().vdop_e2 == 0);
 }
 
-// The rate rule refuses a MISSED solution, not the wait between the top of the second and the slot.
-TEST_CASE("l76k: one solution per second clears the transmit rate rule") {
-    CHECK(parts::L76k::kSolutionPeriodMs == 1000);
-    CHECK(static_cast<int32_t>(parts::L76k::kSolutionPeriodMs) > timing::Transmitter::kFixMaxAgeMs);
+// G.1.16 refuses a solution over 500 ms old on air, so the part has to solve faster than that.
+TEST_CASE("l76k: four solutions a second, each on the wire well inside G.1.16's 500 ms") {
+    CHECK(parts::L76k::kSolutionPeriodMs == 250);
+    CHECK(parts::L76k::kSolutionPeriodMs + parts::L76k::kBurstStartMs + parts::L76k::kBurstMs <
+          static_cast<uint32_t>(timing::Transmitter::kFixMaxAgeMs));
 
     models::L76k chip;
-    chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 1000);
+    run(gnss, chip, 0, kConfiguredMs);
+    REQUIRE(gnss.solving_quarters());
+    CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
 
     uint32_t fixes = 0;
-    for (uint32_t now_ms = kBringUpLeadMs + 1010; now_ms <= kBringUpLeadMs + 5010; now_ms += 10) {
+    for (uint32_t now_ms = kConfiguredMs + 10; now_ms <= kConfiguredMs + 4000; now_ms += 10) {
         chip.tick(now_ms);
         gnss.service(now_ms);
         if (gnss.poll()) fixes++;
     }
-    CHECK(fixes >= 4000 / parts::L76k::kSolutionPeriodMs);
+    CHECK(fixes == 4000 / parts::L76k::kSolutionPeriodMs);
 }
 
 // The pinned bug: a fix published per SENTENCE reached the bus twice, the first one half updated.
@@ -145,11 +147,11 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
     models::L76k chip;
     SentenceWire wire(chip);
     parts::L76k gnss(wire, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(gnss.solution().fix_valid);
 
-    const uint32_t at = kBringUpLeadMs + 6000;
+    const uint32_t at = kConfiguredMs + parts::L76k::kSolutionPeriodMs;
     chip.altitude_m = 1500;
     chip.tick(at);
 
@@ -278,13 +280,13 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
 TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
     models::L76k chip;
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(gnss.solution().fix_valid);
 
     // The chip is no longer ticked: powered, wired, saying nothing. The driver
     // is serviced and drained exactly as the board does it.
-    const uint32_t quiet_from = kBringUpLeadMs + 5000;
+    const uint32_t quiet_from = kConfiguredMs;
     // Bring-up has already refused one solution: the first RMC arrives before
     // the first GGA and half a burst is not a fix, which is the rule working.
     const uint32_t rejects_before = gnss.rejected();
@@ -314,7 +316,7 @@ TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     models::L76k chip;
     chip.date = "010180";
     parts::L76k gnss(chip, chip);
-    run(gnss, chip, 0, kBringUpLeadMs + 5000);
+    run(gnss, chip, 0, kConfiguredMs);
 
     CHECK(gnss.configured());                // the receiver is fine, it is being obeyed
     CHECK(gnss.sentences() > 0);             // and it is talking
@@ -324,6 +326,6 @@ TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     // The almanac lands and the date becomes real: the fix follows, with no
     // reconfiguration and no reset.
     chip.date = "010125";
-    run(gnss, chip, kBringUpLeadMs + 5010, kBringUpLeadMs + 6000);
+    run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 1000);
     CHECK(gnss.solution().fix_valid);
 }

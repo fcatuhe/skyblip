@@ -11,6 +11,8 @@ The simulator runs a real product on the host platform, inside a world that driv
 
 Each aircraft is placed north and east of where own-ship was when it was added, then flies over the ground on its own.
 
+The Go's L76K is brought up as a T-Echo brings it up: met at 9600, raised to 115200 and set to solve four times a second, on the quarter seconds of its UTC, which the host PPS puts on the clock's whole second. A product rig feeds fixes onto the bus instead, so the host platform's GNSS port retunes only once `Simulator::setup()` says a world ticks the receiver. `models::L76k::latency_ms` is how long after a solution the part starts talking, 0 unless a case asks for the 70 ms SoftRF measured, and `models::L76k::solved()` keeps what it solved and when, so a case can age a burst against its solution.
+
 ## A Go paired with a Bravo
 
 `PairedSimulator` holds a `Simulator`, whose world is the one sky, and a Bravo with `world/bravo_aboard.h` beside it. Both boot already paired, as a Tango leaves the hangar: before `setup()`, each settings blob on flash pins the other, at `PairedLink`'s two addresses. The Go's blob also sets `PairedSimulator::kAircraftAddress`, because a pilot flying a Tango sets one.
