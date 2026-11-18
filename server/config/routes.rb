@@ -102,6 +102,11 @@ Rails.application.routes.draw do
     resource :ownship, only: :show
   end
 
+  scope module: :content, as: :content, format: false, defaults: { format: :text } do
+    resource :llms, only: :show, path: "llms.txt"
+    resource :llms_full, only: :show, path: "llms-full.txt", controller: :llms_full
+  end
+
   scope "(:locale)", locale: /#{I18n.available_locales.without(I18n.default_locale).join("|")}/ do
     draw :content
   end

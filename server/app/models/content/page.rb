@@ -21,6 +21,16 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
     "/#{segments.join("/")}"
   end
 
+  def markdown_path
+    base_slug == "index" ? "#{url_path.delete_suffix("/")}/index.md" : "#{url_path}.md"
+  end
+
+  def to_markdown
+    html = I18n.with_locale(locale) { Content::PagesController.render(:show, assigns: { page: self }, layout: false, formats: :html) }
+
+    Content::Markdown.new(html).to_markdown
+  end
+
   def to_param
     frontmatter&.dig(:slug)&.to_s.presence || base_slug
   end

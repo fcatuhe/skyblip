@@ -1,0 +1,24 @@
+# skyBlip
+
+> <%== t "footer.description", locale: :en %>
+
+skyBlip is open source, with no subscription and no account. The links below lead to the Markdown version of each page. Every page of skyblip.eu answers in Markdown at its address followed by `.md`, or to a request that accepts `text/markdown`. [llms-full.txt](<%= Content.canonical_url(content_llms_full_path) %>) holds every English page in one file.
+
+## Devices
+
+<%= render partial: "page", collection: @pages.values_at("index", "features", "skyblip-bravo", "skyblip-tango", "buy", "install", "skyblip-go") %>
+## Guides
+
+<%= render partial: "page", collection: [ @pages["guides"], *@pages.values.select { it.parent&.base_slug == "guides" } ] %>
+## ADS-L
+
+<%= render partial: "page", collection: [ @pages["ads-l"], *@pages.values.select { it.parent&.base_slug == "ads-l" } ] %>
+## The project
+
+<%= render partial: "page", collection: @pages.values_at("about", "roadmap", "see-and-avoid") %>- [Source code](<%= Rails.configuration.x.repository_url %>): the firmware and this website, under the MIT license.
+
+## Other languages
+
+<% I18n.available_locales.without(I18n.default_locale).each do |locale| %>
+- [<%== t "language_name", locale: %>](<%= Content.canonical_url(Content::Page.find("index", locale:).markdown_path) %>)
+<% end %>

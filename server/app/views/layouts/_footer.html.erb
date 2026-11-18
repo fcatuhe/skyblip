@@ -40,5 +40,5 @@
     <%= t "footer.question" %>
     <%= t "footer.write_html", email: mail_to(Rails.configuration.x.contact_email), github: link_to("GitHub", Rails.configuration.x.repository_url) %>
   </p>
-  <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= link_to_page "legal-notice", label_type: :nav %> &middot; <%= t "footer.license" %> &middot; <%= link_to t("footer.notices"), "https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md" %></p>
+  <p class="site-footer-legal">&copy; skyBlip <%= Date.current.year %> &middot; <%= link_to_page "legal-notice", label_type: :nav %> &middot; <%= t "footer.license" %> &middot; <%= link_to t("footer.notices"), "https://github.com/fcatuhe/skyblip/blob/main/NOTICE.md" %> &middot; <%= link_to "llms.txt", content_llms_path %></p>
 </footer>
