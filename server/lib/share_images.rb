@@ -18,7 +18,7 @@ class ShareImages
     require "ferrum"
     FileUtils.mkdir_p(DIRECTORY)
 
-    serving do |base_url|
+    LocalServer.serving(rack_app) do |base_url|
       browser = Ferrum::Browser.new
       browser.set_viewport(width: WIDTH, height: HEIGHT, scale_factor: 1)
       CARDS.keys.map do |name|
@@ -34,15 +34,6 @@ class ShareImages
   end
 
   private
-    def serving
-      server = Puma::Server.new(rack_app)
-      port = server.add_tcp_listener("127.0.0.1", 0).addr[1]
-      server.run
-      yield "http://127.0.0.1:#{port}"
-    ensure
-      server&.stop(true)
-    end
-
     def rack_app
       card = ->(env) { [ 200, { "content-type" => "text/html; charset=utf-8" }, [ render_card(Rack::Request.new(env).params) ] ] }
       stylesheet = ->(_env) { [ 200, { "content-type" => "text/css" }, [ STYLESHEET.read ] ] }

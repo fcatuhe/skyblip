@@ -12,7 +12,23 @@ updated_on: "2026-11-18"
   <p class="page-hero-subtitle">¿Acabas de recibir el dispositivo? <%= link_to_page "install", label: "Empieza por instalarlo" %>. Si Briefing indica que está listo, abre su guía.</p>
 </header>
 
-<section class="band">
+<section id="install" class="band">
+  <h2 class="section-title">Instalar</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "self-test.png", alt: "Pantalla de comprobación de funcionamiento, con cada componente del dispositivo marcado PASS" %>
+      <h3><%= link_to_page "install", label_type: :nav %></h3>
+      <p>Instala skyBlip en tu Go o Bravo desde el navegador. En cada arranque, el Go comprueba la radio, el GPS y el barómetro, y no funciona sin ellos.</p>
+    </article>
+    <article>
+      <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ en un LilyGO T-Echo Plus blanco junto a la mordaza con palanca naranja que lo sujeta a la visera del panel", class: "guide-photo" %>
+      <h3><%= link_to_page "mount", label_type: :nav %></h3>
+      <p>Encaja un Go o Go+ en una rótula fija a la visera del panel con las piezas que hemos probado. Coloca su antena. Cuelga el Bravo por su cordón.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
   <h2 class="section-title">Empieza por tu dispositivo</h2>
   <div class="guide-cards">
     <article>
@@ -25,16 +41,11 @@ updated_on: "2026-11-18"
       <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
       <p>Localiza el botón y la luz. Ve el tráfico en tu aplicación de navegación o en el Go emparejado.</p>
     </article>
-    <article>
-      <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ en un LilyGO T-Echo Plus blanco junto a la mordaza con palanca naranja que lo sujeta a la visera del panel", class: "guide-photo" %>
-      <h3><%= link_to_page "mount", label_type: :nav %></h3>
-      <p>Encaja un Go o Go+ en una rótula fija a la visera del panel con las piezas que hemos probado. Cuelga el Bravo por su cordón.</p>
-    </article>
   </div>
   <p class="signature">Con un Tango, abre las dos guías. El Go muestra el tráfico y Bravo añade el que recibe.</p>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">En vuelo</h2>
   <div class="guide-cards">
     <article>
@@ -55,7 +66,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">En tierra</h2>
   <div class="guide-cards">
     <article>
@@ -76,7 +87,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band band--tint">
+<section class="band">
   <h2 class="section-title">Cómo funciona</h2>
   <div class="guide-cards">
     <article>
@@ -102,7 +113,7 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section class="band">
+<section class="band band--tint">
   <h2 class="section-title">Para los curiosos</h2>
   <div class="resource-cards">
     <article>

@@ -21,4 +21,11 @@ namespace :content do
       ShareImages.new.generate.each { |path| puts path.relative_path_from(Rails.root) }
     end
   end
+
+  namespace :adsl_declaration do
+    desc "Print the ADS-L declaration of conformity for skyBlip Go to PDF, in Chrome"
+    task generate: :environment do
+      puts AdslDeclaration.new.generate.relative_path_from(Rails.root)
+    end
+  end
 end
