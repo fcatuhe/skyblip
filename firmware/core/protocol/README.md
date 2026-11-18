@@ -4,7 +4,7 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 
 | File | What it is |
 |---|---|
-| `adsl.{h,cpp}` | own-ship as an ADS-L Traffic payload, extrapolated to the instant the timestamp names, with the accuracy claimed from the receiver's DOP. A received Traffic payload as an `AircraftObservation`. The Status values this device declares |
+| `adsl.{h,cpp}` | own-ship as an ADS-L Traffic payload, the receiver's solution as measured and named by its own quarter second, with the accuracy claimed from the receiver's DOP. A received Traffic payload as an `AircraftObservation`. The Status values this device declares |
 | `callsign.{h,cpp}` | the name ADS-L has no field for, on the payload 66 record of `protocols/adsl_edge/` (below) |
 | `adsl_uplink.{h,cpp}` | `AdslUplink`, the stack's G.3 uplink over observations. `decode` counts a record older than 10 s, or dated ahead of the second it was heard in, as stale and does not draw it. `encode` re-encodes each target and dates it the instant the station sends, which G.3 allows only for traffic from systems other than ADS-L: an ADS-L payload must be forwarded verbatim. It serves the simulated skyPost and the tests, and a real ground station forwarding ADS-L would call `adsl::Uplink` with the payloads as heard |
 | `air.{h,cpp}` | one M-band dwell that hears ADS-L and ALP-TAS behind one shared sync window, names the system from the sync tail, and lays out the M-band buffer the SX1262 sends |
@@ -14,6 +14,10 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | `nmea_out.{h,cpp}` | the `$PFLAU` and `$PFLAA` sentences a tablet reads |
 
 `from_own`, `from_own_status` and `from_own_callsign` take the address as `settings::AirAddress`, and answer false with the packet untouched when there is none: a unit the server has not activated builds no frame, whatever the layers above it decided (`core/settings/README.md`). They write whatever table and address they are handed. `RadioService` hands all three the same pair, `settings::on_air()`: the aircraft's ICAO address under table 5 while the pilot has set one, which F.2.3 asks for, and table 58 with the serial otherwise, so a receiver files the Traffic, the Status and the name under one target (`core/settings/README.md`, The ICAO address). The Issue 1 form B.5 asks for keeps the pair, since Issue 1's F.2.2 has table 5 for ICAO too.
+
+## Own-ship's Traffic is the solution as measured
+
+`from_own` writes own-ship as the receiver solved it: the position, the height, the speed and the track of the newest solution, unextrapolated, and a Timestamp that names that solution's own quarter second from `own.utc_s` and `own.utc_ms` (G.1.1). It decides nothing about age. `RadioService` arms a position only while that solution will be at most 500 ms old when the burst goes on air, deferred or not (G.1.16, `core/timing/README.md`, The age of a position). It used to carry a once-a-second fix forward to the burst's instant and stamp that instant, which named the right time for a measurement up to a second old. The climb is the one derived field, differenced over a window by own-ship, and it carries its own validity (G.1.9).
 
 ## The Status payload
 

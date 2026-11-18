@@ -16,7 +16,7 @@ A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the cla
 | `test_datalink.cpp` | D.1 to D.3 | listen-before-talk as flown: the deferral, the 3000 ms force on the ground and the 2000 ms after it, and no force airborne | the whole subpart, `media_access()` among it |
 | `test_network.cpp` | E.1 to E.4.2 | the version own-ship's Traffic goes out in | the whole subpart |
 | `test_presentation.cpp` | F.1 to F.2.5 | skyBlip's address table, the ICAO address F.2.3 puts in its place, and the configurations it refuses | the header and the payload types |
-| `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the instant, the flight state, the category | every field's offset and code |
+| `test_traffic.cpp` | G.1 to G.1.10, G.1.16 | what own-ship becomes on air: invalid fields, the solution it carries and its age, the flight state, the category | every field's offset and code |
 | `test_quality.cpp` | G.1.11 to G.1.17 | the integrity and accuracy own-ship claims | the code tables |
 | `test_payloads.cpp` | G.2 to G.5 | the Status a Go flies and the uplink it hears | the Status payload's layout and cadence, and the payloads not implemented |
 
@@ -36,7 +36,7 @@ Where the firmware does not satisfy a clause, the case is still written as the c
 | F.2.4 | privacy mode, AMT 0 with an address drawn at start-up | F.2.4: "a device may be operated in privacy mode" | no Status field |
 | G.4 | the FIS-B Uplink payload, DO-358B's ground uplink message | G.2.10 lets a sender declare "Sender does not process FIS-B Uplink payloads" | FIS-B client 0 |
 
-The checker knows a fifth kind, `unmeasured:`, a figure the radio has to meet that no bench has measured yet. No ADS-L case uses it. The ADS-B suite does (`test/adsb/README.md`).
+The checker knows a fifth kind, `unmeasured:`, a figure the device has to meet that no bench has measured yet. One ADS-L case uses it: G.1.1's 10 ms on the L76K itself, which the simulator meets by construction and which waits for a bench to time the receiver's quarter solutions against its PPS edge (`hardware/parts/l76k/README.md`). The ADS-B suite uses it too (`test/adsb/README.md`).
 
 Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks.
 
