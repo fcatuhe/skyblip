@@ -4,6 +4,7 @@
 #include "core/comms/peer.h"
 #include "core/dfu/update.h"
 #include "core/flight/state.h"
+#include "core/gnss/acquisition.h"
 #include "core/gnss/validity.h"
 #include "core/identity/variant.h"
 #include "core/model/aircraft.h"
@@ -189,6 +190,16 @@ constexpr bool on_the_wire(comms::BravoState value) {
         case comms::BravoState::ReceiverDown:
         case comms::BravoState::NoUtc: return true;
         case comms::BravoState::Unpaired: return false;
+    }
+    return false;
+}
+
+constexpr bool on_the_wire(gnss::Stage value) {
+    switch (value) {
+        case gnss::Stage::Silent:
+        case gnss::Stage::Blind:
+        case gnss::Stage::Solving:
+        case gnss::Stage::Fixed: return true;
     }
     return false;
 }
@@ -379,6 +390,12 @@ static_assert(code(comms::BravoState::LinkDown) == 3, "bravo link_down");
 static_assert(code(comms::BravoState::ReceiverDown) == 4, "bravo receiver_down");
 static_assert(code(comms::BravoState::NoUtc) == 5, "bravo no_utc");
 static_assert(on_the_wire(comms::BravoState::Waiting), "bravo");
+
+static_assert(code(gnss::Stage::Silent) == 0, "gnss_stage silent");
+static_assert(code(gnss::Stage::Blind) == 1, "gnss_stage blind");
+static_assert(code(gnss::Stage::Solving) == 2, "gnss_stage solving");
+static_assert(code(gnss::Stage::Fixed) == 3, "gnss_stage fixed");
+static_assert(on_the_wire(gnss::Stage::Silent), "gnss_stage");
 
 static_assert(code(model::ClimbSource::Unknown) == 0, "climb_source unknown");
 static_assert(code(model::ClimbSource::Gnss) == 1, "climb_source gnss");

@@ -44,7 +44,7 @@ TEST_CASE("tango boot: Bravo's first health without UTC reads waiting, with no t
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
     CHECK(go::corner_reads(booted.glass(), "BRAVO"));
-    CHECK(go::corner_reads(booted.glass(), "OUTDOORS"));
+    CHECK(go::corner_reads(booted.glass(), "MOVE OUT"));
 }
 
 TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar and the self-test") {
@@ -52,7 +52,7 @@ TEST_CASE("tango boot: a Bravo that never has UTC stays waiting, on the radar an
     booted.tango.run_for(3 * go::BravoService::kBootSettleMs);
     CHECK(booted.bravo() == comms::BravoState::Waiting);
     CHECK(booted.tones_since_boot() == 0);
-    CHECK(go::corner_reads(booted.glass(), "OUTDOORS"));
+    CHECK(go::corner_reads(booted.glass(), "MOVE OUT"));
 
     booted.tango.go.show(booted.tango.now_ms, go::Page::SelfTest);
     booted.tango.run_for(1100);
@@ -71,7 +71,7 @@ TEST_CASE("tango boot: a Bravo still without UTC when the Go taxis is lost, with
     booted.tango.go.seconds(booted.tango.now_ms, 2, 5000, 900);
     CHECK(booted.bravo() == comms::BravoState::NoUtc);
     CHECK(booted.tones_since_boot() == parked_tones + 1);
-    CHECK(go::corner_reads(booted.glass(), "OUTDOORS", false));
+    CHECK(go::corner_reads(booted.glass(), "MOVE OUT", false));
 
     booted.tango.go.seconds(booted.tango.now_ms, 3, 0, 900);
     CHECK(booted.bravo() == comms::BravoState::NoUtc);

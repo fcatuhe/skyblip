@@ -234,7 +234,9 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       assert_current_path "/briefing/devices/bravo-3f2a"
       select "Loud sound + visual", from: "Alarm"
       click_button "Save 1 change"
-      assert_selector ".glass-lamp", text: "The LED blinks green fast. With no press, it refuses after thirty seconds."
+      assert_selector ".glass-lamp", text: /The LED above the button blinks green fast.\s+With no press, it refuses after thirty seconds./
+      assert_selector ".glass-lamp svg[role=img][aria-label='A skyBlip Bravo, its round button marked press and the LED just above it marked.']", text: /Press\s+LED/
+      assert_selector ".glass-lamp .lamp.lamp--green"
       assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_selector ".glass"
       assert_no_text "Not activated"
@@ -248,7 +250,7 @@ class Briefing::DevicesTest < ApplicationSystemTestCase
       connect_device
       select "Power run", from: "Profile"
       click_button "Arm"
-      assert_selector ".glass-lamp", text: "The LED blinks green fast."
+      assert_selector ".glass-lamp", text: "The LED above the button blinks green fast."
       assert_selector ".glass-press", text: "Press the Bravo's button."
       assert_no_select "Profile"
       assert_equal "power_run", page.evaluate_script("#{unit("3F2A")}.capture")

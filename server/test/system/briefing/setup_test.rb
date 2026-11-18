@@ -39,6 +39,8 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Save"
       assert_text "Go 000003 is ready. Its settings stay on its page."
       assert_link "Set up a Bravo", href: "/briefing/setup?for=go-000003"
+      assert_link "New to the Go? Read its first steps.", href: "/go-first-steps"
+      assert_no_link "New to Bravo? Read its first steps."
       assert_equal({ "aircraft_type" => 4, "callsign" => "F-CABC" }, page.evaluate_script("#{unit("Go 000003")}.stored").slice("aircraft_type", "callsign"))
       screen "15-go-ready"
 
@@ -68,7 +70,15 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Done"
       assert_text "Bravo 5C1D is ready."
       assert_link "Set up a Go", href: "/briefing/setup?for=bravo-5c1d"
+      assert_link "New to Bravo? Read its first steps.", href: "/bravo-first-steps"
+      assert_no_link "New to the Go? Read its first steps."
       screen "22-bravo-ready"
+
+      click_link "New to Bravo? Read its first steps."
+      assert_current_path "/bravo-first-steps"
+      assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+LED\s+USB-C/
+      assert_selector "table .lamp--white"
+      screen "23-bravo-first-steps"
     end
   end
 
@@ -94,10 +104,16 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Done"
       assert_text "Your Tango is ready: Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
       assert_no_link "Set up a Go"
+      assert_link "New to the Go? Read its first steps."
+      assert_link "New to Bravo? Read its first steps."
       screen "32-tango-ready"
 
       click_link "Open Go 000003"
       assert_selector ".tango", text: "Paired with Bravo 5C1D."
+
+      visit "/go-first-steps"
+      assert_selector ".device-figure--go svg[role=img]", text: /Pad\s+Button\s+RESET\s+LEDs\s+USB-C/
+      screen "33-go-first-steps"
     end
   end
 
@@ -131,8 +147,10 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand, then choose the USB drive named TECHOBOOT in the next window:", wait: 6
-      assert_text "Go: press RST twice, quickly."
+      assert_text "Go: press RESET twice, quickly. It is the upper button on its left side."
+      assert_selector ".setup-by-hand svg[role=img][aria-label^='A skyBlip Go seen from the front, an arrow on its left side pointing at RESET']", text: "RESET, twice"
       assert_no_text "Bravo: unplug it"
+      assert_no_selector ".setup-by-hand .device-figure--bravo"
       assert_no_selector ".unit-message"
       screen "50-not-answering"
 
@@ -145,6 +163,23 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
+  test "a Bravo that does not answer over USB gets its button pictured, held while the cable goes in until the LED above it turns white" do
+    in_range
+    plugged_in a_meshtastic_bravo(mode: "silent")
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white.", wait: 6
+      within ".setup-by-hand .device-figure--bravo" do
+        assert_selector "svg[role=img][aria-label='A skyBlip Bravo, its round button marked hold, the LED just above it marked, and its USB-C port marked plug in.']", text: /Hold\s+LED\s+Plug in/
+        assert_selector ".lamp.lamp--white.lamp--steady"
+        assert_text "Release once the LED above the button turns white."
+      end
+      assert_no_text "Go: press RESET twice"
+      screen "55-bravo-gesture"
+    end
+  end
+
   test "a T-Echo on a firmware that cannot restart into its drive gets the gesture at once, and one already in its bootloader goes straight to the drive" do
     in_range
     plugged_in a_meshtastic_go(mode: "softrf")
@@ -152,14 +187,14 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       visit "/briefing/setup"
       click_button "Install"
       assert_text "Start the installer of Go by hand", wait: 1
-      assert_text "Go: press RST twice, quickly."
+      assert_text "Go: press RESET twice, quickly. It is the upper button on its left side."
       screen "53-softrf-gesture"
 
       visit "/briefing/setup"
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
       click_button "Install"
       assert_text "Go shows a USB drive named TECHOBOOT. Choose that drive in the next window, then let Briefing save to it.", wait: 1
-      assert_no_text "press RST"
+      assert_no_text "press RESET"
       screen "54-already-bootloader"
       assert_equal 0, page.evaluate_script("fakeUsb.restarts")
     end
@@ -176,6 +211,7 @@ class Briefing::SetupTest < ApplicationSystemTestCase
 
       click_button "Connect it over Bluetooth"
       assert_current_path "/briefing/devices/go-00012a"
+      assert_selector ".fleet-unit", text: /is out|up to date|needs its firmware/, wait: 15
     end
   end
 

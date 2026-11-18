@@ -1,0 +1,73 @@
+@layer components {
+  .device-figure {
+    display: grid;
+    justify-self: start;
+    justify-items: center;
+    inline-size: min(100%, 22rem);
+    box-sizing: border-box;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: var(--space-s) var(--space-inline-s);
+    border: 1px solid var(--card-border);
+    border-radius: var(--space-inline-xs);
+    background: var(--photo);
+  }
+  .feature > .device-figure { inline-size: 100%; }
+
+  .device-figure svg {
+    inline-size: 100%;
+    block-size: auto;
+    font-family: var(--font-sans);
+    font-weight: 700;
+  }
+  .device-figure--go svg { font-size: calc(var(--text-s) * 2.2); }
+  .device-figure--bravo svg { font-size: calc(var(--text-s) * 1.7); }
+
+  .device-mark line,
+  .device-mark circle { fill: none; stroke: var(--blip); stroke-width: 5; stroke-linecap: round; }
+  .device-mark polygon { fill: var(--blip); }
+  .device-mark text { fill: var(--blip-text); }
+
+  .device-figure figcaption {
+    display: flex;
+    align-items: center;
+    gap: var(--space-inline-xs);
+    font-size: var(--text-s);
+    color: var(--ink-soft);
+  }
+
+  .lamp {
+    --lamp: var(--lamp-green);
+    flex: none;
+    inline-size: 2rem;
+    block-size: 2rem;
+    border-radius: 50%;
+    border: 2px solid var(--lamp);
+    background: var(--lamp);
+    background-clip: content-box;
+    padding: 3px;
+    animation: lamp-blink 500ms steps(1, end) infinite;
+  }
+  .lamp--blue { --lamp: var(--lamp-blue); }
+  .lamp--red { --lamp: var(--lamp-red); }
+  .lamp--white { --lamp: var(--lamp-white); border-color: var(--sky); box-shadow: 0 0 0.5rem var(--sky); }
+  .lamp--steady { animation: none; }
+  .lamp--dot {
+    display: inline-block;
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    margin-inline-end: var(--space-inline-2xs);
+    padding: 0;
+    border-width: 1px;
+    vertical-align: baseline;
+    animation: none;
+  }
+  @keyframes lamp-blink {
+    0% { background-color: var(--lamp); }
+    50% { background-color: transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lamp { animation: none; }
+  }
+}

@@ -473,6 +473,8 @@ enum : uint32_t {
     kPowerLevel = 19,
     kFrameRateHz = 20,
     kDismissedAnnouncement = 21,
+    kGnssStage = 22,
+    kSatellites = 23,
 };
 }
 

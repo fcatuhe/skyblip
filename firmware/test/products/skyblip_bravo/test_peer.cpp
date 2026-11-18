@@ -164,6 +164,22 @@ TEST_CASE("bravo peer: health says the firmware Bravo runs, its cell and its rec
     CHECK(field(last, "frame_rate_hz") == "0");
 }
 
+// The Go's nearby page says for Bravo's receiver what it says for its own.
+TEST_CASE(
+    "bravo peer: health says how far Bravo's receiver has got, and its satellites once fixed") {
+    Served solving;
+    solving.seconds(3, false, nullptr);
+    const std::string reading = solving.last_health();
+    CHECK(field(reading, "gnss_stage") == "solving");
+    CHECK(field(reading, "satellites").empty());
+
+    Served fixed;
+    fixed.seconds(3, true, nullptr);
+    const std::string solved = fixed.last_health();
+    CHECK(field(solved, "gnss_stage") == "fixed");
+    CHECK(field(solved, "satellites") == std::to_string(fixed.rig.state().own.satellites));
+}
+
 TEST_CASE("bravo peer: a Go Bravo has not pinned hears so, and is never the reference") {
     Served served(false);
     const GoPosition far{BravoRig::kLatitude1e7 + 5000000};

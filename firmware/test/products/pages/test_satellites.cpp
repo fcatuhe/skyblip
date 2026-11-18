@@ -87,7 +87,7 @@ TEST_CASE(
     Glass canvas;
     draw_satellites(canvas, snapshot);
     CHECK(reads_in(canvas, "NO SATELLITE HEARD", 0, 176, 200, 196));
-    CHECK(reads_in(canvas, "OUTDOORS", 0, 140, 80, 158));
+    CHECK(reads_in(canvas, "MOVE OUT", 0, 140, 80, 158));
     CHECK(reads_in(canvas, "HDOP ---", 0, 150, 130, 168));
     // No PPS edge to measure the solution against is no figure, never a zero.
     CHECK(ink_in(canvas, 130, 150, 200, 168) == 0);

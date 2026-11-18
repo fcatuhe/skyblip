@@ -46,6 +46,14 @@ fr:
     app: "application de navigation"
     received: "reçu"
     transmitted: "émis"
+  devices:
+    press: "Appuyer"
+    pad: "Pavé"
+    button: "Bouton"
+    reset: "RESET"
+    lights: "Voyants"
+    led: "Voyant"
+    usb: "USB-C"
   second:
     title: "Une seconde UTC"
     description: "Une seconde de 0 à 1200 ms : le Go écoute la liaison montante de 210 à 440 ms, le canal A de 450 à 820 ms et le canal B de 830 à 1200 ms, avec un passage de 10 ms d\u2019une fenêtre à l\u2019autre. Ses positions et Status partent de 450 à 810 ms sur A ou de 830 à 990 ms sur B, son indicatif de 1000 à 1190 ms sur B, après la fin du créneau direct d\u2019ADS-L à 1000 ms."

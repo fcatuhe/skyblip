@@ -31,7 +31,7 @@ const char* solution_dimensions(const StatusSnapshot& snapshot) {
 }
 
 int format_elapsed(char* out, uint32_t seconds) {
-    constexpr uint32_t kElapsedCeilingS = 99 * 60 + 59;
+    constexpr uint32_t kElapsedCeilingS = 9 * 60 + 59;
     const uint32_t capped = seconds > kElapsedCeilingS ? kElapsedCeilingS : seconds;
     int written = format_unsigned(out, capped / 60, 1);
     out[written++] = ':';

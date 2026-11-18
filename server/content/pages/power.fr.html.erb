@@ -5,7 +5,7 @@ slug: alimentation
 description: "Rechargez skyBlip Go en USB-C. Comprenez les alertes de batterie, le message BATTERY EMPTY, l'arrêt et l'écran e-paper qui garde son image."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-18"
 ---
 
 <section>
@@ -25,9 +25,10 @@ updated_on: "2026-11-09"
       <p>
         Une pression l&rsquo;allume et affiche le trafic. Tant qu&rsquo;il
         n&rsquo;a pas de position, le cercle le signale. Le mot en dessous
-        indique où en est le récepteur&nbsp;: il est silencieux, envoie des positions
-        encore sans date ou lit une date sur un
-        satellite.
+        indique où en est le récepteur&nbsp;: <span class="mono">GPS OFF</span>
+        s&rsquo;il est silencieux, <span class="mono">MOVE OUT</span> s&rsquo;il
+        envoie des positions encore sans date, et <span class="mono">FINDS FIX</span>
+        dès qu&rsquo;il lit une date sur un satellite.
       </p>
       <p>
         Vous savez ainsi s&rsquo;il faut attendre ou sortir l&rsquo;appareil
@@ -108,7 +109,7 @@ updated_on: "2026-11-09"
         <tr><th>Branchement du chargeur</th><td>charge et reste éteint&nbsp;: un câble dans une sacoche n&rsquo;est pas une demande d&rsquo;émettre</td></tr>
         <tr><th>Chargeur branché sur un appareil à plat</th><td>charge, reste éteint, et le logo remplace <span class="mono">BATTERY EMPTY</span></td></tr>
         <tr><th>Bouton maintenu, chargeur branché</th><td>démarre et charge</td></tr>
-        <tr><th>Pression sur <span class="mono">RST</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
+        <tr><th>Pression sur <span class="mono">RESET</span></th><td>redémarre, et deux fois en moins d&rsquo;une demi-seconde, le bootloader USB</td></tr>
       </tbody>
     </table>
   </div>

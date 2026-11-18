@@ -13,6 +13,7 @@
 #include "products/skyblip_go/pages/nearby.h"
 #include "simulator/paired_simulator.h"
 #include "test/support/glass_text.h"
+#include "test/support/nearby_glass.h"
 #include "test/support/radar_rig.h"
 
 using namespace skyblip;
@@ -234,7 +235,7 @@ TEST_CASE("paired scenario: the Go shows Bravo's ADS-B as B targets, the airline
     paired.simulator.world().tap_pad();
     paired.run_until(12000);
     REQUIRE(paired.simulator.product().screen().page() == go::Page::Nearby);
-    CHECK(paired.reads("B 300002", go::kNearbyScale));
+    CHECK(go::nearby_lists(paired.glass(), 'B', "300002"));
 }
 
 // ADS-L F.2.3 puts the ICAO address on both systems, and the table ranks a direct reception first.
@@ -252,8 +253,8 @@ TEST_CASE("paired scenario: an aircraft on ADS-L and ADS-B shows once on the Go,
 
     paired.simulator.world().tap_pad();
     paired.run_until(12000);
-    CHECK(paired.reads("L 300003", go::kNearbyScale));
-    CHECK_FALSE(paired.reads("B 300003", go::kNearbyScale));
+    CHECK(go::nearby_lists(paired.glass(), 'L', "300003"));
+    CHECK_FALSE(go::nearby_lists(paired.glass(), 'B', "300003"));
 }
 
 TEST_CASE("paired scenario: a lost link reverses BRAVO, keeps the ADS-L target, and comes back") {

@@ -8,6 +8,7 @@
 #include "core/annunciation/call.h"
 #include "core/comms/link_registry.h"
 #include "core/events/stamp.h"
+#include "core/gnss/acquisition.h"
 #include "core/model/aircraft.h"
 #include "core/power/cutoff.h"
 #include "core/util/result.h"
@@ -100,6 +101,8 @@ struct PeerHealth {
     power::PowerLevel power_level{power::PowerLevel::Unknown};
     std::optional<uint32_t> frame_rate_hz{};
     std::optional<uint32_t> dismissed_announcement{};
+    std::optional<gnss::Stage> gnss_stage{};
+    std::optional<uint8_t> satellites{};
 };
 
 int write_health(const PeerHealth& health, uint8_t* out, int capacity);

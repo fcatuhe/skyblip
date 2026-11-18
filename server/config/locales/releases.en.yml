@@ -17,4 +17,4 @@ en:
       glass: The simulated e-paper panel of a skyBlip Go
       key: "The device button: press to open the menu of the page you are on, hold two seconds to switch off, hold it again to switch on"
       pad: "The capacitive pad: tap to change page, hold one second to come back to the radar"
-      reset: "RST: reboot the device"
+      reset: "RESET: reboot the device"

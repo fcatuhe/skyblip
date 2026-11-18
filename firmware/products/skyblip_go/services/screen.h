@@ -126,6 +126,8 @@ class ScreenService : public runtime::Service {
     void change_screen();
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page(uint32_t now_ms);
+    NearbyGo nearby_go() const;
+    NearbyBravo nearby_bravo() const;
     void enter_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);
