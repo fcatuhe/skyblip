@@ -30,10 +30,10 @@ updated_on: "2026-11-18"
         <tr><th>Time since the start of the second</th><th>Tuned to</th><th>What is on the channel</th></tr>
       </thead>
       <tbody>
-        <tr><th>0 to 202&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 827&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
-        <tr><th>207 to 442&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
-        <tr><th>447 to 822&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
-        <tr><th>827 to 1202&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 202&nbsp;ms into the next second</td></tr>
+        <tr><th>0 to 200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the end of the time slot that began at 830&nbsp;ms in the previous second. FLARM-generation traffic is still transmitting here, so the device keeps listening. It also sends its callsign here every 10&nbsp;s</td></tr>
+        <tr><th>210 to 440&nbsp;ms</th><td>869.525&nbsp;MHz</td><td>the skyPost uplink from the ground station: the ADS-B traffic it received and the weather data it holds, at 200&nbsp;kbit/s. Receive only, always</td></tr>
+        <tr><th>450 to 820&nbsp;ms</th><td>868.200&nbsp;MHz</td><td>direct traffic on the lower channel, ADS-L and FLARM-generation together</td></tr>
+        <tr><th>830 to 1200&nbsp;ms</th><td>868.400&nbsp;MHz</td><td>the same on the upper channel, continuing 200&nbsp;ms into the next second</td></tr>
       </tbody>
     </table>
   </div>
@@ -68,8 +68,9 @@ updated_on: "2026-11-18"
     cycle, on the other channel from that second&rsquo;s position. The callsign
     is the exception: every 10&nbsp;s, it goes between 1000 and 1190&nbsp;ms
     on 868.4&nbsp;MHz, in the tail that falls in the next second.
-    The device sends ADS-L frames, including its own callsign record:
-    the FLARM-generation format is received, never transmitted.
+    The device sends ADS-L frames. ADS-L has no callsign field yet, so the
+    device sends its callsign separately in OGN-Tracker&rsquo;s record format.
+    It receives the FLARM-generation format but never transmits it.
     The ground station transmits on 869.525&nbsp;MHz. This device only listens
     there and never transmits on that frequency. Its planned transmission time
     within each window is calculated from the device address and the current

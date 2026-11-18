@@ -31,10 +31,10 @@ updated_on: "2026-11-18"
         <tr><th>Tempo dall&rsquo;inizio del secondo</th><th>Sintonizzato su</th><th>Cosa passa sul canale</th></tr>
       </thead>
       <tbody>
-        <tr><th>da 0 a 202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fine dell&rsquo;intervallo iniziato a 827&nbsp;ms nel secondo precedente. Il traffico di generazione FLARM sta ancora trasmettendo qui, quindi il dispositivo continua ad ascoltare. Qui trasmette anche il proprio nominativo ogni 10&nbsp;s</td></tr>
-        <tr><th>da 207 a 442&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>il collegamento skyPost dalla stazione a terra: il traffico ADS-B che ha ricevuto e i dati meteo di cui dispone, a 200&nbsp;kbit/s. Sempre e solo in ricezione</td></tr>
-        <tr><th>da 447 a 822&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>il traffico diretto sul canale inferiore, ADS-L e generazione FLARM insieme</td></tr>
-        <tr><th>da 827 a 1202&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>lo stesso sul canale superiore, proseguendo per 202&nbsp;ms nel secondo successivo</td></tr>
+        <tr><th>da 0 a 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>la fine dell&rsquo;intervallo iniziato a 830&nbsp;ms nel secondo precedente. Il traffico di generazione FLARM sta ancora trasmettendo qui, quindi il dispositivo continua ad ascoltare. Qui trasmette anche il proprio nominativo ogni 10&nbsp;s</td></tr>
+        <tr><th>da 210 a 440&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>il collegamento skyPost dalla stazione a terra: il traffico ADS-B che ha ricevuto e i dati meteo di cui dispone, a 200&nbsp;kbit/s. Sempre e solo in ricezione</td></tr>
+        <tr><th>da 450 a 820&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>il traffico diretto sul canale inferiore, ADS-L e generazione FLARM insieme</td></tr>
+        <tr><th>da 830 a 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>lo stesso sul canale superiore, proseguendo per 200&nbsp;ms nel secondo successivo</td></tr>
       </tbody>
     </table>
   </div>
@@ -69,8 +69,9 @@ updated_on: "2026-11-18"
     di 20&nbsp;s, sul canale opposto a quello della posizione di quel secondo. Il nominativo
     fa eccezione: ogni 10&nbsp;s parte fra 1000 e 1190&nbsp;ms
     su 868,4&nbsp;MHz, nella coda che ricade nel secondo successivo.
-    Il dispositivo trasmette trame ADS-L, compreso il proprio messaggio di nominativo:
-    il formato di generazione FLARM viene ricevuto, mai trasmesso.
+    Il dispositivo trasmette trame ADS-L. ADS-L non ha ancora un campo per il nominativo,
+    quindi il dispositivo lo invia a parte nel formato di messaggio di OGN-Tracker.
+    Il formato di generazione FLARM viene ricevuto, mai trasmesso.
     La stazione a terra trasmette su 869,525&nbsp;MHz. Qui il dispositivo ascolta soltanto
     e non trasmette mai. L&rsquo;istante di trasmissione previsto
     in ogni finestra viene calcolato dall&rsquo;indirizzo del dispositivo e dal secondo
