@@ -153,7 +153,7 @@ TEST_CASE("transmit cycle: on the ground A hears 11 and 9 s apart, B 3, 4, 6 and
     }
 }
 
-// C.2.5 asks it of Traffic and Status: every transmission the schedule makes changes channel.
+// C.2.5 asks it of Traffic and Status: within a flight state, every transmission changes channel.
 TEST_CASE("transmit cycle: positions and Status alternate channel, names keep to B every 10 s") {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         for (const bool airborne : {true, false}) {
@@ -223,6 +223,60 @@ TEST_CASE("transmit cycle: no dwell owes two bursts, and one frequency's bursts 
             check_spacing(flown(transmitter, kMinuteStartS, 60, airborne));
         }
     }
+}
+
+// The Status holds A in odd seconds and B in even ones, so positions 10 s apart would double one.
+TEST_CASE(
+    "transmit cycle: across the ten cycle starts every direct window carries one ground burst") {
+    int carried[Transmitter::kCycleS][2] = {};
+    for (uint32_t serial = 1; serial <= 10; serial++) {
+        Transmitter transmitter = transmitter_for(serial);
+        for (const Burst& burst : flown(transmitter, kMinuteStartS, Transmitter::kCycleS, false))
+            if (burst.payload != Payload::Callsign)
+                carried[(burst.utc_s - kMinuteStartS) % Transmitter::kCycleS][burst.slot]++;
+    }
+    for (uint32_t second = 0; second < Transmitter::kCycleS; second++) {
+        CAPTURE(second);
+        CHECK(carried[second][0] == 1);
+        CHECK(carried[second][1] == 1);
+    }
+}
+
+// The ground schedule picks no channel of its own, so the second's parity can repeat the last one.
+TEST_CASE(
+    "transmit cycle: a takeoff or a landing may repeat a position's channel once, and only there") {
+    bool repeated_at[2] = {};
+    for (uint32_t serial = 1; serial <= 10; serial++) {
+        for (uint32_t takeoff = 1; takeoff <= Transmitter::kCycleS; takeoff++) {
+            for (uint32_t flight = Transmitter::kCycleS; flight < 2 * Transmitter::kCycleS;
+                 flight++) {
+                CAPTURE(serial);
+                CAPTURE(takeoff);
+                CAPTURE(flight);
+                Transmitter transmitter = transmitter_for(serial);
+                const uint32_t c = kMinuteStartS + transmitter.cycle_start();
+                const auto in_flight = [&](uint32_t utc_s) {
+                    return utc_s >= c + takeoff && utc_s < c + takeoff + flight;
+                };
+                const std::vector<Burst> positions =
+                    of_type(flown(transmitter, c, 3 * Transmitter::kCycleS + flight, in_flight),
+                            Payload::Position);
+                int repeats[2] = {};
+                for (size_t i = 1; i < positions.size(); i++) {
+                    if (positions[i].slot != positions[i - 1].slot) continue;
+                    const bool before = in_flight(positions[i - 1].utc_s);
+                    const bool after = in_flight(positions[i].utc_s);
+                    REQUIRE(before != after);
+                    repeats[after ? 0 : 1]++;
+                    repeated_at[after ? 0 : 1] = true;
+                }
+                CHECK(repeats[0] <= 1);
+                CHECK(repeats[1] <= 1);
+            }
+        }
+    }
+    CHECK(repeated_at[0]);
+    CHECK(repeated_at[1]);
 }
 
 // A takeoff at +7 and a landing at +33 move no extra, and nothing ever crowds a dwell.
