@@ -57,9 +57,9 @@ TEST_CASE(
     REQUIRE(records.size() >= 40);
     std::map<uint32_t, int> per_second;
     for (const flight::LogRecord& record : records) per_second[record.utc_s]++;
-    for (const auto& [utc_s, count] : per_second) {
-        CAPTURE(utc_s);
-        CHECK(count == 1);
+    for (const auto& second : per_second) {
+        CAPTURE(second.first);
+        CHECK(second.second == 1);
     }
     for (const flight::LogRecord& record : records) {
         CAPTURE(record.utc_s);
