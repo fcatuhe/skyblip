@@ -1,0 +1,126 @@
+---
+title: "skyBlip Go GPS fix and flight state"
+nav_title: GPS
+description: "How skyBlip Go turns GPS sentences into a fix, waits for it to settle, keeps time with PPS, and decides from ground speed alone whether it is flying."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>A fix is earned, and a flight is a speed.</h1>
+  <p class="lede">A skyBlip Go needs its own position and time before it can broadcast a position over ADS-L. It checks the GPS receiver&rsquo;s output, waits for it to settle and uses ground speed to decide whether the aircraft is airborne. That decision changes how often it transmits and whether it allows an update.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The fix</h2>
+
+  <h3 id="fix">A solution is not a fix.</h3>
+  <p class="lede">The GPS receiver sends a solution every second, whether or not it can see the sky. The Go accepts that solution as a fix only after its own checks. Both sentences carrying the position and date must be present and fresh. The date must not be the 1980 placeholder some receivers send before they know it. The position must be within plausible reach of the previous one. The receiver also reports whether it considers its solution valid, but the Go uses its own verdict.</p>
+  <p class="lede">A Go uses a Quectel L76K receiver. A Bravo uses an Airoha AG3335. Both send their readings in the same NMEA sentence format, which the same parser reads.</p>
+
+  <h3 id="waiting">Three words while it waits.</h3>
+  <p class="lede"><span class="mono">NO FIX</span> alone cannot tell you whether the antenna is under a hangar roof, the receiver has stopped talking or a fix is twenty seconds away. The Go reads the sentences already arriving and shows a word that tells you whether to move it, wait or take it to the bench:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Word</th><th>What the Go sees</th><th>What to do</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>NO DATA</th><td>no recent sentence from the receiver</td><td>take the unit to the bench. Waiting for a clearer sky will not make the receiver talk</td></tr>
+        <tr><th>OUTDOORS</th><td>solutions arrive without a usable date</td><td>move the unit where the antenna has a clearer view of the sky</td></tr>
+        <tr><th>WAIT</th><td>a usable date has been decoded</td><td>leave the unit where it is. The receiver has read a satellite&rsquo;s navigation message but still lacks the geometry for a fix</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede"><span class="mono">WAIT</span> tells you that waiting can help. The date comes from the satellites&rsquo; navigation message, so decoding it marks progress beyond receiving no usable signal. The status page adds the time spent at the current stage. The radar ring shows only the word, to avoid redrawing part of the screen every second while the unit has no fix.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "no-fix.png", alt: "The radar page with no position: the empty ring shows NO FIX and, below it, the receiver's progress towards a position fix" %>
+    <figcaption>No fix yet, but the receiver has decoded a date</figcaption>
+  </figure>
+
+  <h3 id="settle">It transmits once the fix has settled.</h3>
+  <p class="lede">A receiver starting cold can produce fixes whose position, altitude and especially ground speed wander for several seconds. Ground speed also triggers the airborne state. Transmitting too soon could broadcast a track the aircraft never flew, at the airborne rate while it is parked.</p>
+  <p class="lede">The Go measures whether the fixes are settling rather than imposing a fixed wait. Each second it predicts the next position from the previous fix, at constant speed and turn rate, then compares the prediction with the new fix. It starts transmitting after three predictions in a row miss by less than 12&nbsp;m. Twelve metres over one second corresponds to 12&nbsp;m/s, the takeoff threshold, so the error limit is tied to the flight decision it protects. A 2D solution never counts towards settling because its altitude is not a measurement. If the receiver does not settle, transmission starts after 20&nbsp;s from the first fix, or 5&nbsp;s after a brief loss of fix. The wait has a ceiling because withholding every transmission would be worse.</p>
+
+  <h3 id="deadline">The fix must land before 450&nbsp;ms.</h3>
+  <p class="lede">The Go cannot use a solution for the current second until the receiver has sent its closing sentence. The first possible transmission is 450&nbsp;ms after the start of that second. The receiver starts sending about 70&nbsp;ms into it. At its startup rate of 9600&nbsp;baud, the 320 bytes of a fix take 333&nbsp;ms to arrive, leaving only 47&nbsp;ms of margin. A bench unit using 22 satellites completed its fix at 780&nbsp;ms. Every transmission scheduled before then was refused.</p>
+  <p class="lede">The Go therefore switches the receiver to 115200&nbsp;baud, the highest rate documented for its configuration command. The same fix then takes 28&nbsp;ms to arrive. The command has no acknowledgement, so the Go checks for a correctly received sentence at the new rate. If none arrives, it returns to the old rate.</p>
+  <p class="lede">The satellites page shows a signal bar for each satellite. The sentences carrying those levels also delay the fix, so the Go requests them only while that page is open, with one set every five seconds. The counts on the page still update every second. The receiver produces one solution per second. Five solutions per second would not bring the first fix sooner and would add noisier readings.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "satellites.png", alt: "The satellites page: one bar per satellite grouped by constellation, against a dotted line at 40 dB-Hz" %>
+    <figcaption>Signal levels are requested only while this page is open</figcaption>
+  </figure>
+
+  <h3 id="pps">PPS marks the start of the second.</h3>
+  <p class="lede">The receiver provides a pulse per second, or PPS. An interrupt captures its edge without waiting for the next operating-system tick. That edge marks the start of the UTC second from which each <%= link_to_page "timing", label: "radio window" %> is measured. Each solution is dated at the edge, not when its last sentence arrives. If the pulses stop, the radio windows continue from the last edge for 60&nbsp;s, to receive only: the Go transmits nothing without a PPS lock.</p>
+  <p class="lede">Whether the L76K keeps producing pulses without a fix is still unverified. Its documentation describes the pulse but does not say whether losing a fix stops it. The chip supports either behaviour, and the Go does not configure it. A bench test is needed to establish what happens during a loss of fix.</p>
+</section>
+
+<section>
+  <h2 class="kicker">The flight state</h2>
+
+  <h3 id="flight">Airborne or on the ground, from ground speed alone.</h3>
+  <p class="lede">The Go decides whether the aircraft is airborne from the ground speed reported with each fix. It uses no altitude, vertical rate or barometer for that decision. Separate thresholds prevent a small change in speed from switching it back and forth:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>State</th><th>Condition</th><th>Why that number</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Takeoff</th><td>12&nbsp;m/s or more (23&nbsp;kt)</td><td>a tug hurrying back to the grid does 10&nbsp;m/s. A glider lifts off on aerotow at about 20&nbsp;m/s</td></tr>
+        <tr><th>Landing</th><td>under 8&nbsp;m/s for 10&nbsp;s</td><td>a sustained taxi speed lets the Go recognise a landing before the aircraft stops</td></tr>
+        <tr><th>Landing</th><td>under 1&nbsp;m/s</td><td>a stop. The threshold is about three times the receiver&rsquo;s usual stationary speed noise</td></tr>
+        <tr><th>TAXI on the screen</th><td>1.5&nbsp;m/s or more, on the ground</td><td>about a brisk walk. The display returns to GROUND below 1&nbsp;m/s</td></tr>
+        <tr><th>In between</th><td>keep the previous state</td><td>the gap prevents repeated changes near a threshold</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/flight_state" %>
+
+  <p class="lede">The gap between 12 and 1&nbsp;m/s matters in wind. A circling glider in a 15&nbsp;m/s wind can go from 5&nbsp;m/s upwind to 40&nbsp;m/s downwind on each turn. A single threshold between those speeds would repeatedly declare landings and takeoffs. Requiring 10&nbsp;s under 8&nbsp;m/s avoids that during the example turn: in a 20&nbsp;m/s wind, a glider circling at 22&nbsp;m/s spends about 3&nbsp;s of a 25&nbsp;s turn below the landing threshold.</p>
+  <p class="lede">An earlier rule also declared flight above 2000&nbsp;m. That left a unit parked at Courchevel, at 2008&nbsp;m, permanently airborne. Ground speed avoids that altitude trap, but the quality of the fix still matters. Evidence for flight is reduced when the fix is poor, and a speed jump of more than fourfold between consecutive fixes is ignored. Evidence for the ground is never reduced, because reducing a speed must not manufacture a landing. The first fix after switching on decides immediately. Between the thresholds it selects the ground, since switching on while being towed to the grid is the common case.</p>
+
+  <h3 id="changes">What the state changes.</h3>
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th></th><th>On the ground</th><th>Airborne</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Positions on the air</th><td>every 9 then 11&nbsp;s</td><td>every second</td></tr>
+        <tr><th>Traffic alarm</th><td>silent</td><td>traffic is assessed for alerts, see <%= link_to_page "traffic", label: "traffic", anchor: "ground" %></td></tr>
+        <tr><th>Updates, settings from the phone, flight log offload</th><td>allowed</td><td>new updates, log offload and settings that need a press refused. Settings from a trusted browser remain allowed</td></tr>
+        <tr><th>Flight log</th><td>the preceding minute of taxi held in memory</td><td>recorded every second, including that preceding minute</td></tr>
+        <tr><th>Flight timer</th><td>holds its reading</td><td>counts airborne time</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">A false takeoff blocks updates on the ground and uses the battery at the airborne transmission rate. A missed takeoff leaves an aircraft broadcasting at the parked rate while flying. Once the Go has declared flight, losing the fix cannot clear the update lock. Only a positive ground state does that, so an antenna losing reception over a ridge cannot unlock an update in flight. A unit with no fix since switching on has an unknown state and allows updates, so it can be worked on indoors at the bench.</p>
+  <p class="lede">The flight timer counts airborne time since switching on, not since the last takeoff. It pauses at a landing and resumes at the next takeoff. A touch and go therefore does not reset the accumulated time, and a false landing loses only the seconds spent in the ground state.</p>
+
+  <h3 id="no-roll">Wings that need no ground speed.</h3>
+  <p class="lede">A paraglider flying at about 10&nbsp;m/s through the air has only 5&nbsp;m/s of ground speed into a 5&nbsp;m/s breeze. It can remain below the takeoff threshold throughout the flight. Hang gliders working a ridge and balloons can present the same problem. For those aircraft types, the Go broadcasts ADS-L&rsquo;s undefined state instead of on the ground. ADS-L sends that state at the full rate, so the broadcast never labels them as parked. This does not make the ground-speed detector declare flight. Their flight log has a separate rule: it opens when they move and closes after two minutes standing still.</p>
+  <p class="lede">Barometric climb was once used to detect these flights. It was removed because gusts, pressure changes and spikes when the barometer dropped out caused false takeoffs in the hangar queue. Ground speed avoids those false detections, but it can miss flight at low ground speed. The undefined broadcast state and the separate logging rule address those limits without treating barometric climb as proof of flight.</p>
+
+  <ul class="points">
+    <li>The Go checks each fix rather than accepting the receiver&rsquo;s validity flag</li>
+    <li>NO DATA, OUTDOORS and WAIT tell you whether to investigate, move or wait</li>
+    <li>Transmission starts after three predictions within 12&nbsp;m, with a ceiling of 20&nbsp;s after the first fix</li>
+    <li>115200&nbsp;baud brings the fix in before the first possible transmission</li>
+    <li>The Go declares takeoff at 12&nbsp;m/s and landing under 1&nbsp;m/s or after 10&nbsp;s under 8&nbsp;m/s</li>
+    <li>Losing a fix in flight never counts as a landing</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

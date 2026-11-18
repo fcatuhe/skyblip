@@ -2,14 +2,14 @@
 title: "Guides de skyBlip Go et Bravo"
 nav_title: Guides
 slug: guides
-description: "Neuf guides pour skyBlip Go et Bravo. Découvrez les commandes et les voyants, puis le radar, les réglages, la batterie, le téléphone et les écrans."
+description: "Les premiers pas avec skyBlip Go et Bravo, six guides pour utiliser le Go et quatre sur son fonctionnement, de la radio aux alarmes."
 share_image: radar
 updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Votre Go ou Bravo, dès le premier vol.</h1>
-  <p class="page-hero-subtitle">Neuf guides, des commandes et voyants aux écrans du Go tels que le firmware les dessine.</p>
+  <h1>Prenez en main votre Go ou Bravo.</h1>
+  <p class="page-hero-subtitle">Commencez par votre appareil, puis découvrez six guides pour utiliser le Go et quatre sur son fonctionnement, avec les écrans du firmware.</p>
 </header>
 
 <section class="band">
@@ -71,12 +71,34 @@ updated_on: "2026-11-18"
 </section>
 
 <section class="band band--tint">
-  <h2 class="section-title">Pour les curieux</h2>
-  <div class="resource-cards">
+  <h2 class="section-title">Comment ça marche</h2>
+  <div class="guide-cards">
     <article>
+      <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
       <p>Une radio utilise quatre créneaux par seconde et reçoit les signaux de deux systèmes dans le même créneau.</p>
     </article>
+    <article>
+      <%= render "shared/cycle", compact: true %>
+      <h3><%= link_to_page "timing" %></h3>
+      <p>Le numéro de série choisit les secondes d&rsquo;un cycle de 20&nbsp;s, la parité de la seconde choisit le canal, et un tirage refait chaque seconde choisit la milliseconde.</p>
+    </article>
+    <article>
+      <%= render "shared/flight_state", compact: true %>
+      <h3><%= link_to_page "gps" %></h3>
+      <p>Un point qui doit se stabiliser et arriver avant 450&nbsp;ms, l&rsquo;impulsion qui ouvre chaque seconde, et le vol décidé à partir de la seule vitesse sol.</p>
+    </article>
+    <article>
+      <%= render "shared/advisory_ring", compact: true %>
+      <h3><%= link_to_page "traffic" %></h3>
+      <p>Un seul anneau d&rsquo;avis de 3&nbsp;km et 300&nbsp;m, aucun avis au sol, six messages manqués pour oublier une cible, et le vol en formation.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Pour les curieux</h2>
+  <div class="resource-cards">
     <article>
       <h3><%= link_to_page "see-and-avoid" %></h3>
       <p>Les chiffres publiés sur le principe «&nbsp;voir et éviter&nbsp;» portent sur le champ de vision, le secteur balayé, la taille apparente d&rsquo;un aéronef et le temps de réaction.</p>

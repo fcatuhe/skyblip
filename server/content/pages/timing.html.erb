@@ -1,0 +1,156 @@
+---
+title: "When skyBlip Go transmits, second by second"
+nav_title: Timing
+description: "When a skyBlip Go transmits: the windows of each second, a 20 s cycle set by its serial, an instant drawn every second, listen-before-talk and retries."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Every burst has its second, its channel and its millisecond.</h1>
+  <p class="lede">A skyBlip Go schedules each radio burst in three steps. Its serial number sets the seconds. Whether the second is even or odd sets the channel. A draw repeated every second sets the millisecond within that channel&rsquo;s window.</p>
+</section>
+
+<section>
+  <h3 id="second">The second, cut into three windows.</h3>
+  <p class="lede">GPS marks the start of each UTC second. The Go has one radio, so it listens in three windows, each on a different channel. <%= link_to_page "radio", label: "The radio guide", anchor: "second" %> explains what it receives in each. Here, the question is when it transmits. All times below are measured from the start of the second.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Window</th><th>Channel</th><th>Full listening window</th><th>The Go&rsquo;s own bursts start</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Uplink</th><td>869.525&nbsp;MHz</td><td>210 to 440&nbsp;ms</td><td>never: the ground station transmits here and the Go only listens</td></tr>
+        <tr><th>Window 1</th><td>868.2&nbsp;MHz, channel A</td><td>450 to 820&nbsp;ms</td><td>positions and Status from 450 to 810&nbsp;ms</td></tr>
+        <tr><th>Window 2</th><td>868.4&nbsp;MHz, channel B</td><td>830 to 1200&nbsp;ms</td><td>positions and Status from 830 to 990&nbsp;ms, callsign from 1000 to 1190&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/second" %>
+
+  <p class="lede">Window 2 extends 200&nbsp;ms into the next second to receive FLARM-generation devices still transmitting there. ADS-L&rsquo;s direct slot, reserved for transmissions between aircraft, ends at 1000&nbsp;ms. Positions must finish by then. A burst spends 4.64&nbsp;ms on air. The latest permitted start leaves room for its booked air time and a 5&nbsp;ms allowance before its window closes. Bench measurements found a worst case of 5.5&nbsp;ms from the transmit command to the end of the burst, within that allowance.</p>
+  <p class="lede">Each change between windows takes 10&nbsp;ms: 2&nbsp;ms still listening on the old channel for a late burst, 5&nbsp;ms to retune, then 3&nbsp;ms listening on the new channel before its window opens. Those 3&nbsp;ms also leave room to check the channel before a burst scheduled for the window&rsquo;s first instant.</p>
+
+  <h3 id="channel">The parity of the second picks the channel.</h3>
+  <p class="lede">A position uses channel A in an even UTC second and channel B in an odd one, both on the ground and in flight. A Status message reports what the Go can receive. It uses the channel opposite to the one a position would use in that second. The callsign always uses channel B, at the end of window 2.</p>
+  <p class="lede">ADS-L requires consecutive positions to change channel, and consecutive Status messages to do the same. The even-or-odd rule makes the position channel predictable from the time alone. A receiver listening on only one channel can still receive every other scheduled position.</p>
+
+  <h3 id="cycle">A 20&nbsp;s cycle that starts from the serial.</h3>
+  <p class="lede">Each Go follows a 20&nbsp;s cycle. Its start, called c here, is an even second: twice the last decimal digit of its serial number, or <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu assigns that number at <%= link_to "activation", briefing_activation_path %>. For the example unit <span class="mono">skyBlip Go 00012A</span>, the hexadecimal serial is 298 in decimal. Its last digit is 8, so its cycle starts at second 16.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Last digit of the serial</th><th>The cycle starts at</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>0</th><td>:00, :20 and :40</td></tr>
+        <tr><th>1</th><td>:02, :22 and :42</td></tr>
+        <tr><th>2</th><td>:04, :24 and :44</td></tr>
+        <tr><th>3</th><td>:06, :26 and :46</td></tr>
+        <tr><th>4</th><td>:08, :28 and :48</td></tr>
+        <tr><th>5</th><td>:10, :30 and :50</td></tr>
+        <tr><th>6</th><td>:12, :32 and :52</td></tr>
+        <tr><th>7</th><td>:14, :34 and :54</td></tr>
+        <tr><th>8</th><td>:16, :36 and :56</td></tr>
+        <tr><th>9</th><td>:18, :38 and :58</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">skyblip.eu assigns serials in order from 1, spreading consecutive units evenly over the ten cycle starts. Each unit schedules its bursts at the same offsets from its own start:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Second</th><th>On the ground</th><th>In flight</th><th>Channel</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>c</th><td>position</td><td>position</td><td>A</td></tr>
+        <tr><th>c + 2</th><td>Status</td><td>position and Status</td><td>Status on B, position on A</td></tr>
+        <tr><th>c + 4</th><td>callsign</td><td>position and callsign</td><td>position on A, callsign on B with its start in the first 190&nbsp;ms of c + 5</td></tr>
+        <tr><th>c + 9</th><td>position</td><td>position</td><td>B</td></tr>
+        <tr><th>c + 11</th><td>Status</td><td>position and Status</td><td>Status on A, position on B</td></tr>
+        <tr><th>c + 14</th><td>callsign</td><td>position and callsign</td><td>position on A, callsign on B with its start in the first 190&nbsp;ms of c + 15</td></tr>
+        <tr><th>any other</th><td>nothing scheduled</td><td>position</td><td>A in an even second, B in an odd one</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/cycle" %>
+
+  <p class="lede">On the ground, <span class="mono">skyBlip Go 00012A</span> schedules positions at :05, :16, :25, :36, :45 and :56 in each minute, Status messages at :07, :18, :27, :38, :47 and :58, and its callsign at the start of :01, :11, :21, :31, :41 and :51. In flight, it schedules a position every second. The Status and callsign schedule stays the same through takeoff and landing.</p>
+  <p class="lede">An exhaustive search chose these offsets to meet four rules:</p>
+  <ul class="points">
+    <li>Ground positions are 9 then 11&nbsp;s apart. A gap of 10&nbsp;s would put consecutive positions on the same channel. The average remains one every 10&nbsp;s, skyBlip&rsquo;s reading of the ADS-L ground rate</li>
+    <li>Positions and Status messages each alternate channels. Each channel carries a Status every 20&nbsp;s. The callsign goes every 10&nbsp;s</li>
+    <li>The callsign is scheduled in an even second, when the position uses A and leaves B free for it</li>
+    <li>The schedule keeps bursts from the same unit on the same frequency at least 100&nbsp;ms apart, with no more than one in each window</li>
+  </ul>
+  <p class="lede">The schedule always uses the unit&rsquo;s own address, even when its messages carry an aircraft&rsquo;s ICAO address. Setting or clearing that address in flight changes neither the timing nor the channel of a burst.</p>
+
+  <h3 id="instant">The millisecond is drawn again every second.</h3>
+  <p class="lede">Within its window, a position&rsquo;s start time comes from a hash: a calculation that mixes the unit&rsquo;s address with the UTC second and spreads the result across the available milliseconds. Status and callsign messages use further rounds of the same calculation, giving each its own draw. Units sharing a scheduled second need not share a start time. If their bursts overlap, the next second gives them new draws.</p>
+  <p class="lede">For a 5&nbsp;ms burst spread over the 550&nbsp;ms direct slot, start times within 5&nbsp;ms of each other give a rough collision estimate of 1.8&nbsp;% per neighbour in range. Drawing again reduces the risk of the same pair colliding repeatedly. With a fixed instant per unit, two unlucky aircraft could overlap every second for the whole flight.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "radio-log.png", alt: "The radio log: below the satellite positioning status, the PPS timing signal state and the background noise level, one row per radio burst received or sent, newest first, with its time to the millisecond" %>
+    <figcaption>The radio log lists each burst with its time to the millisecond</figcaption>
+  </figure>
+
+  <h3 id="listen">It listens before transmitting.</h3>
+  <p class="lede">ADS-L requires listen-before-talk under the polite spectrum access rules of ETSI EN 300 220-1. Before the scheduled instant, the Go measures the burst&rsquo;s channel for 200&nbsp;&micro;s. It averages nine readings as power, with the measurement ending no more than 2&nbsp;ms before transmission. Below the threshold, it transmits. At or above it, the Go waits a random 5 to 40&nbsp;ms in steps of 5&nbsp;ms, one booked burst duration, then listens again. The address and the instant the channel was busy determine that draw.</p>
+  <p class="lede">The threshold comes from the standard&rsquo;s rule for a 200&nbsp;kHz channel, adjusted for antenna gain. At the radio chip, the channel counts as busy from &minus;78&nbsp;dBm. The antenna gain and feed loss used in this calculation come from the datasheet and an allowance, not from measurements on a unit.</p>
+  <p class="lede">A deferred burst stays in its window and on its channel. A deferred position is encoded again for its new instant using the newest fix. If the channel stays busy until the window closes, the burst is missed. On the ground, once 3&nbsp;s have passed since its first busy assessment, the Go may force a transmission without listening, as ADS-L permits. It then stays silent for 2&nbsp;s after the burst ends. It never forces a transmission in flight, where that silence would cost two positions.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>EN 300 220-1 parameter</th><th>Declared</th><th>The standard allows</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Minimum channel measurement</th><td>200&nbsp;&micro;s</td><td>at least 160&nbsp;&micro;s</td></tr>
+        <tr><th>Maximum gap between measurement and transmission</th><td>2&nbsp;ms</td><td>at most 5&nbsp;ms</td></tr>
+        <tr><th>Method used to randomise a deferral</th><td>a hash of the address and the instant the channel was busy</td><td></td></tr>
+        <tr><th>Deferral step</th><td>5&nbsp;ms, one booked burst duration</td><td>at least the measurement duration</td></tr>
+        <tr><th>Minimum and maximum deferral</th><td>5 and 40&nbsp;ms</td><td></td></tr>
+        <tr><th>Maximum transmission duration</th><td>5&nbsp;ms</td><td>at most 1&nbsp;s</td></tr>
+        <tr><th>Minimum silence on the same frequency</th><td>100&nbsp;ms</td><td>at least 100&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Listening cannot prevent every collision. It can detect only a burst already on air, and it measures the channel at the Go&rsquo;s antenna, not at the receiver. Another aircraft may hear two overlapping bursts even when neither transmitter hears the other. The check also favours nearby, stronger signals over distant ones. The timing design therefore relies on a fresh draw every second and the 1&nbsp;% duty-cycle limit, rather than on listening alone.</p>
+
+  <h3 id="retry">A burst that missed tries again 2&nbsp;s later.</h3>
+  <p class="lede">A burst can miss its scheduled second because the fix is too old, the channel stays busy or the hour&rsquo;s air-time budget is exhausted. It gets another opportunity 2&nbsp;s later, in a second of the same parity and therefore on the same channel. If that channel&rsquo;s window already carries one of the unit&rsquo;s bursts, the retry waits for the next free second of the same parity. It gets opportunities every 2&nbsp;s until it succeeds or the next message of its type is due. At that point, the Go gives up on the old one and counts the miss. On the ground, a position missed at c can be retried at c + 2, c + 4, c + 6 and c + 8. In flight, positions are not retried: the new position 2&nbsp;s later already uses the same channel.</p>
+
+  <h3 id="callsign">The callsign goes in the tail.</h3>
+  <p class="lede">ADS-L Issue 2 has no callsign field. The Go sends its callsign in OGN-Tracker&rsquo;s record format, with a start between 1000 and 1190&nbsp;ms on 868.4&nbsp;MHz. This is the end of window 2, outside the direct slot reserved for ADS-L messages and where ADS-L transmits nothing today. <%= link_to_page "ads-l/callsign", label: "The callsign question" %> explains that choice, and what changes once Issue 3 defines a field.</p>
+  <p class="lede">OGN-Tracker drops a callsign if it has no target with that address, so the position needs to arrive first. With the normal schedule in flight, that position is at most a second old. On the ground, the callsign follows a position by 4 or 5&nbsp;s, well inside the time a receiver keeps a ground target between its reports.</p>
+
+  <h3 id="budget">1&nbsp;% of any hour, enforced.</h3>
+  <p class="lede">The Go declares a limit of 1&nbsp;% of any hour on air for its use of the 868&nbsp;MHz band. It keeps sixty one-minute counters and checks the budget before every burst. A position every second plus a Status and a callsign every 10&nbsp;s uses 6&nbsp;ms per second: 0.6&nbsp;% of the time in flight, or 0.15&nbsp;% on the ground. The normal schedule cannot exhaust the budget. If a fault does exhaust it, the Go blocks transmission rather than keep occupying the band.</p>
+
+  <h3 id="clock">GPS sets the clock, and the clock gates the radio.</h3>
+  <p class="lede">The GPS receiver&rsquo;s pulse per second, PPS, marks the edge from which the radio deadlines are calculated. The Go transmits only with a <%= link_to_page "gps", label: "settled fix", anchor: "settle" %>, valid UTC time, a PPS lock and an assigned serial number. If the pulses stop, it keeps the windows running for 60&nbsp;s to receive, but transmits nothing.</p>
+  <p class="lede">The GPS receiver reports the UTC second in a data sentence that arrives hundreds of milliseconds after the pulse. Until then, that report still names the previous second. Dating a received burst from it could put the burst in the wrong second. Two Go units exposed the problem on the bench: a burst read 42:52.954 on the sender and 42:53.956 on the receiver. Received bursts are now dated from the UTC second opened by the latest pulse.</p>
+  <p class="lede">The firmware&rsquo;s service loop runs every 10&nbsp;ms, too slowly to open each radio window on time itself. Early bench captures showed window 2 opening 3 to 6&nbsp;ms late at the median, and up to 120&nbsp;ms late at worst. The firmware now gives the radio its next window as soon as the current one starts, with an absolute deadline calculated from the pulse. The radio can then switch without waiting for another pass through the loop.</p>
+
+  <ul class="points">
+    <li>The serial&rsquo;s last digit sets the start of the 20&nbsp;s cycle</li>
+    <li>An even second puts the position on 868.2&nbsp;MHz, an odd one on 868.4&nbsp;MHz</li>
+    <li>On the ground, the Go schedules two positions, two Status messages and two callsigns every 20&nbsp;s</li>
+    <li>In flight, it schedules a position every second without moving the Status or callsign schedule</li>
+    <li>It draws the instant within the window again every second</li>
+    <li>It checks the channel before normal transmissions and gives missed bursts another opportunity 2&nbsp;s later, except for positions in flight</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
