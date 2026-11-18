@@ -2,7 +2,6 @@
 
 #include <optional>
 
-#include "core/flight/extrapolate.h"
 #include "core/flight/state.h"
 #include "core/model/aircraft.h"
 #include "core/model/ownship.h"
@@ -75,32 +74,16 @@ bool from_own_status(adsl::Packet& packet, settings::AirAddress address,
 
 bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddress address,
               uint8_t address_mapping_table, uint8_t aircraft_category) {
-    return from_own(packet, own, address, address_mapping_table, aircraft_category,
-                    BurstInstant{own.utc_s, 0, 0});
-}
-
-bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddress address,
-              uint8_t address_mapping_table, uint8_t aircraft_category, const BurstInstant& at) {
     if (!address) return false;
     adsl::Traffic traffic;
     traffic.address = *address & settings::kAddressMask;
-
-    // The burst leaves later than the fix was solved, so the position goes
-    // forward to the instant the timestamp names. Past the model's bound the
-    // fix goes out as it stands, dated when it was solved: neither half of the
-    // pair is allowed to describe an instant the other does not.
-    const int32_t named_ms =
-        at.into_utc_ms - at.into_utc_ms % static_cast<int32_t>(adsl::kTimestampQuarterMs);
-    const flight::Prediction where =
-        flight::extrapolate(own, at.since_fix_ms - (at.into_utc_ms - named_ms));
-    traffic.timestamp =
-        adsl::timestamp_code(at.utc_s, where.valid ? named_ms : at.into_utc_ms - at.since_fix_ms);
+    traffic.timestamp = adsl::timestamp_code(own.utc_s, own.utc_ms);
     traffic.flight_state = flight::announced_state(own.flight_state, aircraft_category);
     traffic.aircraft_category = aircraft_category;
     traffic.emergency = adsl::kEmergencyNone;
     traffic.position_valid = own.fix_valid;
-    traffic.latitude_1e7 = where.latitude_1e7;
-    traffic.longitude_1e7 = where.longitude_1e7;
+    traffic.latitude_1e7 = own.latitude_1e7;
+    traffic.longitude_1e7 = own.longitude_1e7;
 
     // Altitude and ground speed come from the 3D fix, so without one they are
     // UNAVAILABLE and must say so (G.1.7, G.1.8). Transmitting a stale or zeroed
@@ -109,7 +92,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     if (own.fix_valid) {
         traffic.altitude_valid = own.vdop_e2 != 0;
         if (traffic.altitude_valid)
-            traffic.altitude_m = to_metres(Millimetres(where.altitude_hae_mm)).value;
+            traffic.altitude_m = to_metres(Millimetres(own.altitude_hae_mm)).value;
         traffic.speed_valid = true;
         traffic.speed_q = to_speed_q(MillimetresPerSecond(own.speed_mm_s)).value;
         traffic.integrity = integrity_from_dop_e2(own.hdop_e2, own.vdop_e2);
@@ -121,7 +104,7 @@ bool from_own(adsl::Packet& packet, const model::Ownship& own, settings::AirAddr
     traffic.climb_valid = own.climb_valid;
     if (own.climb_valid) traffic.climb_e8 = to_climb_e8(MillimetresPerSecond(own.climb_mm_s)).value;
 
-    traffic.track_c9 = to_cordic9(CentiDegrees(where.track_cdeg)).value;
+    traffic.track_c9 = to_cordic9(CentiDegrees(own.track_cdeg)).value;
     adsl::encode_traffic(packet, address_mapping_table, traffic);
     return true;
 }

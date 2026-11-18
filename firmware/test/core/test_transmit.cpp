@@ -11,6 +11,7 @@
 #include "doctest/doctest.h"
 #include "ports/rf.h"
 #include "test/support/anchored_clock.h"
+#include "test/support/fresh_fix.h"
 
 using namespace skyblip;
 using namespace skyblip::timing;
@@ -32,7 +33,7 @@ SlotPlan slot_plan(int phase_ms) {
 int instant_at(uint32_t address, uint32_t utc_s) {
     const int phase = Transmitter::slot_in(utc_s) == 0 ? 500 : 900;
     return airborne_transmitter(address)
-        .attempt(slot_plan(phase), utc_s, utc_s * 1000, true, 0)
+        .attempt(slot_plan(phase), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd)
         .at_ms;
 }
 
@@ -54,7 +55,7 @@ TEST_CASE("transmit: a position on A goes out from 450 to 810 ms") {
     // Every other second is the lower channel's: §C.2.5's alternation is the clock's.
     for (uint32_t utc_s = 1000; utc_s < 6000; utc_s += 2) {
         const Transmitter::Attempt attempt =
-            transmitter.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0);
+            transmitter.attempt(slot_plan(500), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd);
         REQUIRE(attempt.go);
         CHECK(attempt.frequency_hz == adsl::kMBand0Hz);
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
@@ -71,7 +72,7 @@ TEST_CASE("transmit: a position on B goes out from 830 to 990 ms, where the dire
     int earliest = 2000, latest = 0;
     for (uint32_t utc_s = 1; utc_s < 5000; utc_s += 2) {
         const Transmitter::Attempt attempt =
-            transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
+            transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd);
         REQUIRE(attempt.go);
         if (attempt.at_ms < earliest) earliest = attempt.at_ms;
         if (attempt.at_ms > latest) latest = attempt.at_ms;
@@ -103,8 +104,8 @@ TEST_CASE("transmit: two devices do not pick the same instant every second") {
     Transmitter second = airborne_transmitter(0x123456);
     int same = 0;
     for (uint32_t utc_s = 0; utc_s < 100; utc_s += 2) {
-        if (first.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0).at_ms ==
-            second.attempt(slot_plan(500), utc_s, utc_s * 1000, true, 0).at_ms)
+        if (first.attempt(slot_plan(500), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd).at_ms ==
+            second.attempt(slot_plan(500), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd).at_ms)
             same++;
     }
     CHECK(same < 5);
@@ -138,7 +139,7 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
     Transmitter transmitter = airborne_transmitter();
     for (uint32_t utc_s = 1; utc_s < 400; utc_s += 2) {  // the odd seconds are the upper channel's
         const Transmitter::Attempt attempt =
-            transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, 0);
+            transmitter.attempt(slot_plan(900), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd);
         REQUIRE(attempt.go);
         CHECK(attempt.frequency_hz == adsl::kMBand1Hz);
         CHECK(attempt.at_ms >= kWindowBMs.start_ms);
@@ -146,48 +147,66 @@ TEST_CASE("transmit: the burst completes inside the direct slot, tail or no tail
               adsl::kDirectEndMs);
     }
     // And the tail is not a position opportunity, however anchored the clock is.
-    CHECK_FALSE(position_burst(transmitter.attempt(slot_plan(100), 500, 500000, true, 0)));
+    CHECK_FALSE(position_burst(
+        transmitter.attempt(slot_plan(100), 500, 500000, true, kFixSolvedAtSecondEnd)));
 }
 
 TEST_CASE("transmit: consecutive transmissions alternate channel and slot") {
     Transmitter transmitter = airborne_transmitter();
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == adsl::kMBand0Hz);
-    CHECK_FALSE(position_burst(transmitter.attempt(slot_plan(900), 10, 10000, true, 0)));
+    CHECK(
+        transmitter.attempt(slot_plan(500), 10, 10000, true, kFixSolvedAtSecondEnd).frequency_hz ==
+        adsl::kMBand0Hz);
+    CHECK_FALSE(position_burst(
+        transmitter.attempt(slot_plan(900), 10, 10000, true, kFixSolvedAtSecondEnd)));
     transmitter.sent(10, 10500);
-    CHECK_FALSE(transmitter.attempt(slot_plan(500), 11, 11000, true, 0).go);
-    CHECK(transmitter.attempt(slot_plan(900), 11, 11000, true, 0).frequency_hz == adsl::kMBand1Hz);
+    CHECK_FALSE(transmitter.attempt(slot_plan(500), 11, 11000, true, kFixSolvedAtSecondEnd).go);
+    CHECK(
+        transmitter.attempt(slot_plan(900), 11, 11000, true, kFixSolvedAtSecondEnd).frequency_hz ==
+        adsl::kMBand1Hz);
 }
 
 // A burst refused for any reason used to shift the alternation for ever after.
 TEST_CASE("transmit: a missed transmission does not put the channel out of step") {
     Transmitter transmitter = airborne_transmitter();
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 0).frequency_hz == adsl::kMBand0Hz);
-    CHECK(transmitter.attempt(slot_plan(500), 12, 12000, true, 0).frequency_hz == adsl::kMBand0Hz);
-    CHECK(transmitter.attempt(slot_plan(900), 13, 13000, true, 0).frequency_hz == adsl::kMBand1Hz);
+    CHECK(
+        transmitter.attempt(slot_plan(500), 10, 10000, true, kFixSolvedAtSecondEnd).frequency_hz ==
+        adsl::kMBand0Hz);
+    CHECK(
+        transmitter.attempt(slot_plan(500), 12, 12000, true, kFixSolvedAtSecondEnd).frequency_hz ==
+        adsl::kMBand0Hz);
+    CHECK(
+        transmitter.attempt(slot_plan(900), 13, 13000, true, kFixSolvedAtSecondEnd).frequency_hz ==
+        adsl::kMBand1Hz);
 }
 
-// §G.1.16, measured to the top of the transmit second: what it refuses is a missed solution.
-TEST_CASE("transmit: a missed solution is not transmitted, a late slot is") {
+// §G.1.16, measured to the burst's own instant rather than to the top of its second.
+TEST_CASE("transmit: a solution is aged at the burst's instant, not at the top of its second") {
     Transmitter transmitter = airborne_transmitter();
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 500).go);
-    CHECK_FALSE(transmitter.attempt(slot_plan(500), 10, 10000, true, 501).go);
+    const int at_ms =
+        transmitter.attempt(slot_plan(500), 10, 10000, true, kFixSolvedAtSecondEnd).at_ms;
+    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 500 - at_ms).go);
+    CHECK_FALSE(transmitter.attempt(slot_plan(500), 10, 10000, true, 501 - at_ms).go);
 
-    // This second's own solution, however late in the slot the burst goes out.
-    CHECK(transmitter.attempt(slot_plan(750), 10, 10750, true, 0).go);
+    // The quarter 250 ms before the instant, solved inside the second: a negative lag.
+    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 250 - at_ms).go);
 
-    // A solution stamped after the second it opens: early, not stale.
-    CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, -20).go);
+    // The top of the second's solution, however late in the slot the burst goes out, is not.
+    CHECK_FALSE(transmitter.attempt(slot_plan(900), 11, 11000, true, 0).go);
 }
 
 TEST_CASE("transmit: nothing goes out unless the slot allows it") {
     Transmitter transmitter = airborne_transmitter();
     Scheduler scheduler;
     ClockState no_pps{true, false, 0};
-    CHECK_FALSE(transmitter.attempt(scheduler.plan(500, no_pps), 10, 10000, true, 0).go);
-    CHECK_FALSE(transmitter.attempt(scheduler.plan(300, anchored()), 10, 10000, true, 0).go);
+    CHECK_FALSE(
+        transmitter.attempt(scheduler.plan(500, no_pps), 10, 10000, true, kFixSolvedAtSecondEnd)
+            .go);
+    CHECK_FALSE(
+        transmitter.attempt(scheduler.plan(300, anchored()), 10, 10000, true, kFixSolvedAtSecondEnd)
+            .go);
     // Claimed from the retune at 442, but the instant is what waits for the window to open at 450.
-    const Transmitter::Attempt early =
-        transmitter.attempt(scheduler.plan(444, anchored()), 10, 10000, true, 0);
+    const Transmitter::Attempt early = transmitter.attempt(scheduler.plan(444, anchored()), 10,
+                                                           10000, true, kFixSolvedAtSecondEnd);
     CHECK(early.go);
     CHECK(early.at_ms >= adsl::kDirectStartMs);
 }
@@ -232,7 +251,7 @@ TEST_CASE("transmit: an exhausted hour blocks the burst and says so") {
     REQUIRE(transmitter.air_time().window_ms(3599500) == timing::AirTime::kBudgetMs);
 
     const Transmitter::Attempt attempt =
-        transmitter.attempt(slot_plan(500), 7200, 3599500, true, 0);
+        transmitter.attempt(slot_plan(500), 7200, 3599500, true, kFixSolvedAtSecondEnd);
     CHECK_FALSE(attempt.go);
     CHECK(attempt.over_budget);
 }
@@ -242,7 +261,7 @@ TEST_CASE("transmit: the design rate never reaches the limit, so nothing is ever
     for (uint32_t i = 0; i < 3600; i++) transmitter.sent(i, i * 1000);
     CHECK(transmitter.air_time().permille(3599000) == 5);
     const Transmitter::Attempt attempt =
-        transmitter.attempt(slot_plan(500), 3600, 3600000, true, 0);
+        transmitter.attempt(slot_plan(500), 3600, 3600000, true, kFixSolvedAtSecondEnd);
     CHECK(attempt.go);
     CHECK_FALSE(attempt.over_budget);
 }
@@ -260,6 +279,11 @@ TEST_CASE("transmit: the ground schedule is UTC's, so the millisecond wrap canno
     const int phase = Transmitter::slot_in(owned) == 0 ? 500 : 900;
     transmitter.sent(owned - 20, kBeforeWrap);
     constexpr Transmitter::Payload kPosition = Transmitter::Payload::Position;
-    CHECK(transmitter.attempt(slot_plan(phase), owned, 1024u, false, 0, kPosition).go);
-    CHECK_FALSE(transmitter.attempt(slot_plan(phase), owned + 1, 2024u, false, 0, kPosition).go);
+    CHECK(
+        transmitter.attempt(slot_plan(phase), owned, 1024u, false, kFixSolvedAtSecondEnd, kPosition)
+            .go);
+    CHECK_FALSE(
+        transmitter
+            .attempt(slot_plan(phase), owned + 1, 2024u, false, kFixSolvedAtSecondEnd, kPosition)
+            .go);
 }

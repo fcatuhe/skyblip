@@ -12,6 +12,7 @@
 #include "protocols/adsl/transmit.h"
 #include "protocols/adsl_edge/registration.h"
 #include "simulator/simulator.h"
+#include "test/support/fresh_fix.h"
 #include "test/support/settings_link.h"
 #include "test/support/simulator_run.h"
 
@@ -70,7 +71,8 @@ TEST_CASE("adsl edge: the name goes in window B's tail, past the direct slot, on
         tx.configure(address * 0x9E37u);
         for (uint32_t utc_s = 0; utc_s < 40; utc_s++) {
             const timing::Transmitter::Attempt attempt =
-                tx.attempt(slot1, utc_s, 1000, true, 0, timing::Transmitter::Payload::Callsign);
+                tx.attempt(slot1, utc_s, 1000, true, kFixSolvedAtSecondEnd,
+                           timing::Transmitter::Payload::Callsign);
             if (!attempt.go) continue;
             seen++;
             CHECK_FALSE(timing::Scheduler::in_direct_slot(attempt.at_ms));

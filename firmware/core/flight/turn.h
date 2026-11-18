@@ -1,6 +1,6 @@
 // core/flight/turn.h: how fast a track is swinging, from two reported tracks
 // and the gap between them. Own-ship differentiates its own GNSS track for the
-// six-pack and for the extrapolation the transmitter applies; the alarm
+// six-pack and for the model its residual and the alarm carry it by; the alarm
 // differentiates a target's track history to tell a gaggle from a collision
 // course. Same arithmetic, two callers, one place: cordic9 is 512 units to the
 // turn and the difference has to be taken the short way round, or a heading

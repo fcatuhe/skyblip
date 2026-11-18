@@ -165,7 +165,8 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
 bool Transmitter::due(Payload payload, const SlotPlan& plan, uint32_t utc_s, bool airborne,
                       int32_t fix_lag_ms) const {
     const int dwell_slot = Scheduler::slot_of(plan.start_ms);
-    if (payload == Payload::Position && fix_lag_ms > kFixMaxAgeMs) return false;
+    if (payload == Payload::Position && !fresh(fix_lag_ms + instant_in(payload, dwell_slot, utc_s)))
+        return false;
     if (dwell_slot != channel_of(payload, utc_s)) return false;
     return turn(payload, utc_s, airborne) || retry(payload, utc_s, airborne);
 }

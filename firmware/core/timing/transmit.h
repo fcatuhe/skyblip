@@ -48,7 +48,9 @@ class Transmitter {
     void configure(uint32_t address) { address_ = address; }
 
     // The instant this device transmits in the second `utc_s`, or go=false. Pure:
-    // calling it twice with the same arguments gives the same answer.
+    // calling it twice with the same arguments gives the same answer. fix_lag_ms
+    // is how far the solution lags the top of that second, negative when it was
+    // solved inside it.
     Attempt attempt(const SlotPlan& plan, uint32_t utc_s, uint32_t now_ms, bool airborne,
                     int32_t fix_lag_ms, Payload payload) const;
     // INFO: fc 13nov26 the first burst the dwell owes, in Payload order
@@ -56,6 +58,9 @@ class Transmitter {
                     int32_t fix_lag_ms) const;
 
     void sent(uint32_t utc_s, uint32_t now_ms, Payload payload = Payload::Position);
+
+    // INFO: fc 18nov26 G.1.16: a solution goes on air at most 500 ms after it was solved
+    static bool fresh(int32_t fix_age_ms) { return fix_age_ms <= kFixMaxAgeMs; }
 
     uint32_t sent_count() const { return sent_; }
     const AirTime& air_time() const { return air_time_; }

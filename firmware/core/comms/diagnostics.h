@@ -85,8 +85,8 @@ struct Diagnostics {
     uint32_t gnss_overruns{0};
     uint16_t gnss_solution_phase_ms{0};
     bool gnss_solution_phase_valid{false};
-    // The extrapolation the transmitter applies, measured against the fix that
-    // closed the interval (products/common/services/ownship.cpp). It belongs
+    // The constant-turn model own-ship is carried by, measured against the fix
+    // that closed the interval (products/common/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
     // receiver rather than with the radio.
     uint16_t residual_m{0};

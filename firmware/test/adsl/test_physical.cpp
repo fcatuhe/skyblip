@@ -11,6 +11,7 @@
 #include "hardware/parts/sx1262/sx1262.h"
 #include "protocols/common/manchester.h"
 #include "simulator/simulator.h"
+#include "test/support/fresh_fix.h"
 #include "test/support/simulator_run.h"
 
 using namespace skyblip;
@@ -118,8 +119,9 @@ TEST_CASE(
         for (int slot = 0; slot < 2; slot++) {
             const timing::SlotPlan plan =
                 timing::Scheduler::plan(timing::Scheduler::window(slot).start_ms, clock);
-            const timing::Transmitter::Attempt attempt = tx.attempt(
-                plan, utc_s, utc_s * 1000, false, 0, timing::Transmitter::Payload::Position);
+            const timing::Transmitter::Attempt attempt =
+                tx.attempt(plan, utc_s, utc_s * 1000, false, kFixSolvedAtSecondEnd,
+                           timing::Transmitter::Payload::Position);
             if (!attempt.go || utc_s == c) continue;
             tx.sent(utc_s, utc_s * 1000, timing::Transmitter::Payload::Position);
             slots.push_back(slot);
@@ -175,7 +177,7 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
                      {timing::Transmitter::Payload::Position,
                       timing::Transmitter::Payload::Status}) {
                     const timing::Transmitter::Attempt owed =
-                        tx.attempt(plan, utc_s, 1000, true, 0, payload);
+                        tx.attempt(plan, utc_s, 1000, true, kFixSolvedAtSecondEnd, payload);
                     if (!owed.go) continue;
                     CHECK(owed.at_ms >= adsl::kDirectStartMs);
                     CHECK(owed.at_ms + static_cast<int>(timing::Transmitter::kAirTimeMs) <=

@@ -72,12 +72,15 @@ void RadioService::contend(Armed& dwell, Payload payload, const bus::RfState::Bu
     }
 }
 
-// INFO: fc 14nov26 G.1.1: a position is encoded again for its new instant, from the newest fix
+// INFO: fc 14nov26 a position is encoded again from the newest fix | 18nov26 aged at its instant
 bool RadioService::rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced) {
-    if (!timing::ownship_transmits(context_.state.own, context_.state.clock,
-                                   context_.state.activation.address()))
+    const model::Ownship& own = context_.state.own;
+    if (!timing::ownship_transmits(own, context_.state.clock, context_.state.activation.address()))
         return false;
     if (silenced(tx_at_us)) return false;
+    const int32_t fix_age_ms =
+        static_cast<int32_t>(static_cast<uint32_t>(tx_at_us / 1000) - own.fix_at_ms);
+    if (payload == Payload::Position && !timing::Transmitter::fresh(fix_age_ms)) return false;
 
     timing::Transmitter::Attempt attempt{};
     attempt.go = true;

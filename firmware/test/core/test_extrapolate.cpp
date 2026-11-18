@@ -282,7 +282,8 @@ TEST_CASE("extrapolate: a relative height past int32 stops at the type's limit")
     CHECK(up_valid);
 }
 
-TEST_CASE("adsl: the transmitted position is the position at the quarter second it names") {
+// The receiver solves on the quarter, so the burst carries that solution unmoved, named by it.
+TEST_CASE("adsl: own Traffic is the solution as measured, named by its own quarter second") {
     model::Ownship own{};
     own.fix_valid = true;
     own.latitude_1e7 = 485000000;
@@ -295,50 +296,17 @@ TEST_CASE("adsl: the transmitted position is the position at the quarter second 
     own.vdop_e2 = 150;
     own.utc_s = 1000;  // 1000 % 15 == 10 s into the timestamp cycle
 
-    adsl::Packet at_fix{};
-    from_own(at_fix, own, 0xABCDEF, 6, 4);
-    CHECK(int(at_fix.timestamp) == 40);  // 10 s, quarter zero
+    adsl::Packet at_second{};
+    from_own(at_second, own, 0xABCDEF, 6, 4);
+    CHECK(int(at_second.timestamp) == 40);  // 10 s, quarter zero
 
-    // A burst 600 ms later names the quarter at 500 ms, and the position goes to it.
-    adsl::Packet in_flight{};
-    from_own(in_flight, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, 600, 600});
-    CHECK(int(in_flight.timestamp) == 42);
-    CHECK(in_flight.altitude_m() == at_fix.altitude_m() + 1);
-    CHECK(in_flight.latitude_1e7() == at_fix.latitude_1e7());
-
-    // 25 m of easting at 50 m/s over 500 ms, inside the 2.4 m the longitude field quantises to.
-    const double east_m = (in_flight.longitude_1e7() - at_fix.longitude_1e7()) * 0.011132 * 0.6626;
-    CHECK(east_m == doctest::Approx(25.0).epsilon(0.1));
-}
-
-// The bound, and the side of it we chose: a gap the model cannot cover is not
-// filled with a guess. The last fix goes out unmoved, dated when it was solved,
-// so the position and the timestamp still describe the same instant.
-TEST_CASE("adsl: past the extrapolation bound the fix goes out dated as the fix") {
-    model::Ownship own{};
-    own.fix_valid = true;
-    own.latitude_1e7 = 485000000;
-    own.longitude_1e7 = 85000000;
-    own.altitude_hae_mm = 1200000;
-    own.speed_mm_s = 50000;
-    own.track_cdeg = 9000;
-    own.utc_s = 1000;
-
-    adsl::Packet at_fix{};
-    from_own(at_fix, own, 0xABCDEF, 6, 4);
-
-    const int32_t bound = kExtrapolationCeilingMs;
-    adsl::Packet inside{};
-    from_own(inside, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, bound, bound});
-    CHECK(inside.longitude_1e7() != at_fix.longitude_1e7());
-    CHECK(int(inside.timestamp) == adsl::timestamp_code(own.utc_s, bound));
-
-    const int32_t past = bound + static_cast<int32_t>(adsl::kTimestampQuarterMs);
-    adsl::Packet beyond{};
-    from_own(beyond, own, 0xABCDEF, 6, 4, BurstInstant{own.utc_s, past, past});
-    CHECK(beyond.longitude_1e7() == at_fix.longitude_1e7());
-    CHECK(beyond.latitude_1e7() == at_fix.latitude_1e7());
-    CHECK(int(beyond.timestamp) == int(at_fix.timestamp));
+    own.utc_ms = 500;
+    adsl::Packet at_half{};
+    from_own(at_half, own, 0xABCDEF, 6, 4);
+    CHECK(int(at_half.timestamp) == 42);
+    CHECK(at_half.altitude_m() == at_second.altitude_m());
+    CHECK(at_half.latitude_1e7() == at_second.latitude_1e7());
+    CHECK(at_half.longitude_1e7() == at_second.longitude_1e7());
 }
 
 // Quarter seconds inside a 15 s cycle: six bits, and the wrap is part of the

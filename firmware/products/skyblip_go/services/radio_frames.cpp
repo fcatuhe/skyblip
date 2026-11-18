@@ -3,21 +3,6 @@
 
 namespace skyblip::go {
 
-// Two clocks meet here. The TimeStamp field counts quarter seconds from the top
-// of the UTC second the slot belongs to, which the latched PPS edge anchors;
-// the position has to be carried over the interval since the fix, which is a
-// monotonic one. The dwell is armed before the slot opens, so the second figure
-// is the staleness already accrued plus the whole wait still to come.
-protocol::BurstInstant RadioService::burst_instant(const timing::Transmitter::Attempt& attempt,
-                                                   uint64_t tx_at_us, uint32_t utc_s) const {
-    const uint32_t tx_ms = static_cast<uint32_t>(tx_at_us / 1000);
-    protocol::BurstInstant instant{};
-    instant.utc_s = utc_s;
-    instant.into_utc_ms = attempt.at_ms;
-    instant.since_fix_ms = static_cast<int32_t>(tx_ms - context_.state.own.fix_at_ms);
-    return instant;
-}
-
 uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64_t tx_at_us,
                              uint32_t utc_s, uint8_t* chips) {
     // INFO: fc 18oct26 no frame, no chips: the encoder refuses on its own, whatever attempt() said
@@ -26,9 +11,9 @@ uint8_t RadioService::encode(const timing::Transmitter::Attempt& attempt, uint64
     bool built = false;
     switch (attempt.payload) {
         case Payload::Position:
-            built = protocol::from_own(
-                outgoing_, context_.state.own, sender.address, sender.address_mapping_table,
-                context_.state.own.aircraft_category, burst_instant(attempt, tx_at_us, utc_s));
+            built = protocol::from_own(outgoing_, context_.state.own, sender.address,
+                                       sender.address_mapping_table,
+                                       context_.state.own.aircraft_category);
             if (built &&
                 outgoing_.protocol_version() >
                     context_.state.traffic.readable_version(

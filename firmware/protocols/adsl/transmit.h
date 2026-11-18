@@ -14,7 +14,7 @@ constexpr int kDirectStartMs = 450;
 constexpr int kDirectEndMs = 1000;
 // INFO: fc 28sep26 §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms
 constexpr uint32_t kAirTimeMs = 5;
-// INFO: fc 13sep26 G.1.16 nav age, to the top of the transmit second: the burst is extrapolated
+// INFO: fc 18nov26 G.1.16 nav age, from the PVT fix to the instant the burst goes on air
 constexpr int32_t kFixMaxAgeMs = 500;
 // INFO: fc 13nov26 G.2.11 asks for a Status at least once every 20 s
 constexpr uint32_t kStatusPeriodS = 20;

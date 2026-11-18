@@ -375,7 +375,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kDirectStartMs` | 450 | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kDirectEndMs` | 1000 (1 s) | milliseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
 | `kAirTimeMs` | 5 | milliseconds | - | §C.2 at 100 kchip/s: 16 preamble + 64 sync + 24 bytes Manchester, 4.64 ms |
-| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, to the top of the transmit second: the burst is extrapolated |
+| `kFixMaxAgeMs` | 500 | milliseconds | MaxAge | G.1.16 nav age, from the PVT fix to the instant the burst goes on air |
 | `kStatusPeriodS` | 20 | seconds | Period | G.2.11 asks for a Status at least once every 20 s |
 | `kCycleMs` | `int64_t{kTimestampCycleS} * 1000` | milliseconds | - | - |
 | `kUplinkBurstUs` | `kUplinkBurstBits * 1000000u / kUplinkChipRateBps` | microseconds | - | [README](../firmware/protocols/adsl/README.md) argues it |
