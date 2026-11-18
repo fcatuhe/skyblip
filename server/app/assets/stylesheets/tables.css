@@ -15,6 +15,20 @@
     vertical-align: top;
   }
 
+  .seller-offers {
+    display: grid;
+    gap: var(--space-xs);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .seller-offers small {
+    display: block;
+    color: var(--ink-soft);
+    font-size: var(--text-xs);
+  }
+
   .table-scroll thead th {
     font-size: var(--text-xs);
     font-weight: 400;
