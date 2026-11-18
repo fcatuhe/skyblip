@@ -105,7 +105,7 @@ TEST_CASE("DO-260B 2.2.4.5: the parity is checked on every frame before it is re
     const adsb::Squitter frame = sealed(position());
     Message message;
     REQUIRE(receive_frame(frame, message) == Status::Ok);
-    for (uint8_t bit : {5, 33, 88, 112}) {
+    for (uint8_t bit : {6, 33, 88, 112}) {
         adsb::Squitter damaged = frame;
         flip_bit(damaged, bit);
         CHECK(receive_frame(damaged, message) == Status::Crc);

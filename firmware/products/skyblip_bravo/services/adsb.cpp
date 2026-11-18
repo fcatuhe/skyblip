@@ -49,6 +49,8 @@ void AdsbService::hear(const events::AdsbFrame& frame, const adsb::Reference& he
         refuse(status);
         return;
     }
+    // INFO: fc 18nov26 nothing believes a Mode S reply's address yet, so it goes no further
+    if (message.kind == adsb::Kind::AllCall || message.kind == adsb::Kind::Reply) return;
     // INFO: fc 13nov26 before the fold drops the aircraft address, so a set address still reads as
     // heard
     own_transponder_.hear(message, now_ms);

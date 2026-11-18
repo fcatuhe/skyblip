@@ -324,11 +324,7 @@ TEST_CASE("adsb: a message carries the reception it was heard with") {
     CHECK(heard.message.reception.rssi_dbm == kReception.rssi_dbm);
 }
 
-TEST_CASE("adsb: DF16, an unparsed type code and a short report are refused") {
-    Frame acas = frame_of("8d4840d6202cc371c32ce0576098");
-    acas.bytes[0] = 0x85;
-    CHECK(hear_sealed(acas).status == Status::Unsupported);
-
+TEST_CASE("adsb: an unparsed type code and a short report are refused") {
     const Heard no_position = hear_sealed(extended_squitter(0));
     CHECK(no_position.status == Status::Unsupported);
     CHECK(no_position.message.address == 0x4840D6);

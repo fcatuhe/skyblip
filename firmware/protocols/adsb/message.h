@@ -9,6 +9,9 @@
 namespace skyblip::adsb {
 
 constexpr uint8_t kFrameBytes = 14;
+constexpr uint8_t kShortFrameBytes = 7;
+// INFO: fc 18nov26 DF24 is every frame opening on 11, so 25 formats cover all 32 codes
+constexpr uint8_t kDownlinkFormats = 25;
 constexpr uint8_t kCallsignCharacters = 8;
 
 struct MovementBand {
@@ -48,6 +51,8 @@ enum class Kind : uint8_t {
     AirbornePosition,
     Velocity,
     OperationalStatus,
+    AllCall,
+    Reply,
 };
 
 struct Identification {
@@ -97,10 +102,18 @@ struct OperationalStatus {
     bool gva_valid{false};
 };
 
+// INFO: fc 18nov26 a reply's address is its parity overlaid, which noise reads as some address too
+struct Reply {
+    int32_t pressure_altitude_ft{0};
+    bool pressure_altitude_valid{false};
+};
+
 struct Message {
     Kind kind{Kind::Identification};
     Reception reception;
+    uint8_t downlink_format{0};
     uint32_t address{0};
+    bool address_verified{false};
     uint8_t capability{0};
     uint8_t type_code{0};
     Identification identification;
@@ -108,6 +121,7 @@ struct Message {
     AirbornePosition airborne_position;
     Velocity velocity;
     OperationalStatus operational_status;
+    Reply reply;
 };
 
 wire::Status receive(const uint8_t* frame, size_t frame_bytes, Reception reception, Message& out);

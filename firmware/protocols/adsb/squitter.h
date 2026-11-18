@@ -32,14 +32,18 @@ struct Squitter {
     uint8_t bytes[kFrameBytes]{};
 };
 
-inline void set_message_bits(Squitter& frame, uint8_t first, uint8_t last, uint64_t value) {
+inline void set_frame_bits(Squitter& frame, uint8_t first, uint8_t last, uint64_t value) {
     for (uint8_t bit = first; bit <= last; bit++) {
-        const uint8_t index = static_cast<uint8_t>(32 + bit - 1);
+        const uint8_t index = static_cast<uint8_t>(bit - 1);
         const uint8_t mask = static_cast<uint8_t>(0x80u >> (index & 7));
         const bool set = (value >> (last - bit)) & 1u;
         frame.bytes[index >> 3] = static_cast<uint8_t>(set ? frame.bytes[index >> 3] | mask
                                                            : frame.bytes[index >> 3] & ~mask);
     }
+}
+
+inline void set_message_bits(Squitter& frame, uint8_t first, uint8_t last, uint64_t value) {
+    set_frame_bits(frame, static_cast<uint8_t>(32 + first), static_cast<uint8_t>(32 + last), value);
 }
 
 inline Squitter squitter(uint32_t address, uint8_t capability, uint8_t type_code) {
@@ -181,6 +185,42 @@ inline Squitter operational_status(uint32_t address, uint8_t capability, uint8_t
     set_message_bits(frame, 41, 43, version);
     set_message_bits(frame, 49, 50, gva);
     return frame;
+}
+
+// INFO: fc 18nov26 Mode S overlays a 24-bit value on the parity of a frame of 7 or 14 bytes
+inline void overlay_parity(Squitter& frame, uint8_t bytes, uint32_t overlay) {
+    const uint8_t data_bytes = static_cast<uint8_t>(bytes - 3);
+    const uint32_t parity = wire::crc24_compute(frame.bytes, data_bytes) ^ overlay;
+    frame.bytes[data_bytes] = static_cast<uint8_t>(parity >> 16);
+    frame.bytes[data_bytes + 1] = static_cast<uint8_t>(parity >> 8);
+    frame.bytes[data_bytes + 2] = static_cast<uint8_t>(parity);
+}
+
+inline Squitter all_call(uint32_t address, uint8_t capability, uint8_t interrogator = 0) {
+    Squitter frame;
+    set_frame_bits(frame, 1, 5, 11);
+    set_frame_bits(frame, 6, 8, capability);
+    set_frame_bits(frame, 9, 32, address);
+    overlay_parity(frame, kShortFrameBytes, interrogator);
+    return frame;
+}
+
+// INFO: fc 18nov26 the AC field is the 12-bit ES altitude with a zero M bit after A4
+inline uint32_t altitude_code(int32_t feet) {
+    const uint32_t field = altitude_field(feet);
+    return ((field >> 6) << 7) | (field & 0x3Fu);
+}
+
+inline Squitter reply(uint32_t address, uint8_t downlink_format, uint32_t field_20_32) {
+    Squitter frame;
+    set_frame_bits(frame, 1, 5, downlink_format);
+    set_frame_bits(frame, 20, 32, field_20_32);
+    overlay_parity(frame, downlink_format >= 16 ? kFrameBytes : kShortFrameBytes, address);
+    return frame;
+}
+
+inline Squitter altitude_reply(uint32_t address, int32_t altitude_ft, uint8_t downlink_format = 4) {
+    return reply(address, downlink_format, altitude_code(altitude_ft));
 }
 
 }
