@@ -77,6 +77,10 @@ struct GnssSolution {
     // How late this solution reached us relative to the PPS edge it describes.
     // Zero until a driver that knows its part stamps it.
     uint16_t pps_latency_ms{0};
+    // INFO: fc 18nov26 the drain that closed it closed an older pair too: the host was late
+    bool backlogged{false};
+    // INFO: fc 18nov26 the part's start plus line time at the live rate, 0 when unknown
+    uint16_t delivery_ms{0};
     uint8_t satellites{0};
     uint8_t fix_quality{0};
     uint8_t fix_mode{0};
@@ -141,6 +145,16 @@ bool nmea_parse_coordinate(const char* degrees_minutes, char hemisphere, int32_t
 
 // INFO: fc 18nov26 the stated assumption: the L76K delivers a solution within a quarter
 constexpr uint32_t kSolutionLatencyCeilingMs = 250;
+
+// INFO: fc 18nov26 G.1.1's 10 ms: a stamp that close to a quarter is that quarter
+constexpr int32_t kStampToleranceMs = 10;
+inline std::optional<int32_t> named_quarter_ms(uint16_t utc_ms) {
+    constexpr int32_t kQuarterMs = 250;
+    const int32_t nearest_ms = (utc_ms + kQuarterMs / 2) / kQuarterMs * kQuarterMs;
+    const int32_t off_ms = utc_ms > nearest_ms ? utc_ms - nearest_ms : nearest_ms - utc_ms;
+    if (off_ms > kStampToleranceMs) return std::nullopt;
+    return nearest_ms;
+}
 
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms) {
     return arrival_ms - solution.pps_latency_ms;

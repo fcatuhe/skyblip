@@ -199,23 +199,59 @@ TEST_CASE("l76k: a cold start asks a part that refused 4 Hz for it again") {
     CHECK(gnss.solving_quarters());
 }
 
-// The pinned case: a backlog drained at once dates its last pair by the drain, a second young.
-TEST_CASE("l76k: pairs drained closer than a quarter apart are a backlog and publish nothing") {
+// The pinned case: a stalled pass drained two pairs and published neither, the newest included.
+TEST_CASE("l76k: a stalled pass publishes the newest pair it drains, marked as a backlog") {
     ScriptedWire wire;
     parts::L76k gnss(wire);
     wire.say(gga("123520.000", 1000) + rmc("123520.000") + gga("123520.250", 1005) +
              rmc("123520.250"));
-    gnss.poll(1000);
-    CHECK_FALSE(gnss.solution().fix_valid);
+    REQUIRE(gnss.poll(1300));
+    CHECK(gnss.solution().fix_valid);
+    CHECK(gnss.solution().utc_ms == 250);
+    CHECK(gnss.solution().altitude_hae_mm == 1005000 + kGeoidMm);
+    CHECK(gnss.solution().backlogged);
 
     wire.say(gga("123520.500", 1010) + rmc("123520.500"));
-    gnss.poll(1010);
-    CHECK_FALSE(gnss.solution().fix_valid);
+    REQUIRE(gnss.poll(1310));
+    CHECK(gnss.solution().utc_ms == 500);
+    CHECK_FALSE(gnss.solution().backlogged);
+}
 
-    wire.say(gga("123520.750", 1015) + rmc("123520.750"));
-    REQUIRE(gnss.poll(1260));
-    CHECK(gnss.solution().fix_valid);
+// Delivery jitters: an epoch landing 240 ms late and the next 70 ms late are 80 ms apart.
+TEST_CASE("l76k: pairs delivered 80 ms apart are both published") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.000", 1000) + rmc("123520.000"));
+    REQUIRE(gnss.poll(1240));
+    wire.say(gga("123520.250", 1005) + rmc("123520.250"));
+    REQUIRE(gnss.poll(1320));
+    CHECK(gnss.solution().utc_ms == 250);
+    CHECK_FALSE(gnss.solution().backlogged);
+}
+
+// A pair the driver has already passed in time is old news, whenever it arrives.
+TEST_CASE("l76k: a pair no newer than the last one published is not published") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.500", 1000) + rmc("123520.500"));
+    REQUIRE(gnss.poll(1000));
+    wire.say(gga("123520.250", 1005) + rmc("123520.250"));
+    CHECK_FALSE(gnss.poll(1250));
+    CHECK(gnss.solution().utc_ms == 500);
+    wire.say(gga("123520.750", 1010) + rmc("123520.750"));
+    REQUIRE(gnss.poll(1500));
     CHECK(gnss.solution().utc_ms == 750);
+}
+
+// The receiver's start and its line time at the live rate bound when a solution can land.
+TEST_CASE("l76k: a solution says how late it can land at the rate the port runs at") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.000", 1000) + rmc("123520.000"));
+    REQUIRE(gnss.poll(1000));
+    CHECK(gnss.solution().delivery_ms ==
+          parts::L76k::kBurstStartMs +
+              io::wire_ms(parts::L76k::kBurstBytes, parts::L76k::kFactoryBaudRate));
 }
 
 // What sat in the port before bring-up belongs to no solution the driver asked for.
@@ -227,4 +263,15 @@ TEST_CASE("l76k: what waited in the port before bring-up is thrown away") {
     gnss.poll(0);
     CHECK_FALSE(gnss.solution().fix_valid);
     CHECK(gnss.sentences() == 0);
+}
+
+// A part whose clock steps back, its first fix correcting a guess, is a new time and not a replay.
+TEST_CASE("l76k: a stamp that jumps back by more than a replay could is published") {
+    ScriptedWire wire;
+    parts::L76k gnss(wire);
+    wire.say(gga("123520.000", 1000) + rmc("123520.000"));
+    REQUIRE(gnss.poll(1000));
+    wire.say(gga("120000.000", 1000) + rmc("120000.000"));
+    REQUIRE(gnss.poll(1250));
+    CHECK(gnss.solution().utc_ms == 0);
 }

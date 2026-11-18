@@ -128,6 +128,7 @@ void L76k::flush() {
     while (uart_.read(buffer, sizeof(buffer)) == sizeof(buffer)) {
     }
     parser_.reset();
+    published_stamp_ms_ = -1;
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -310,9 +311,10 @@ bool L76k::obeying() const { return parser_.unrequested() == unrequested_at_veri
 
 bool L76k::poll(uint32_t now_ms) {
     uint8_t buffer[kReadChunkBytes];
-    bool closed = false;
     gnss::GnssSolution paired{};
     bool paired_valid = false;
+    int32_t paired_stamp_ms = -1;
+    int pairs = 0;
     for (;;) {
         size_t received = uart_.read(buffer, sizeof(buffer));
         if (received == 0) break;
@@ -324,16 +326,15 @@ bool L76k::poll(uint32_t now_ms) {
                             (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
             if (sentence != kBurstClosingSentence || !parser_.same_epoch()) continue;
             observe_cadence();
-            const bool in_step = !paired_before_ || now_ms - paired_at_ms_ >= kPairSpacingFloorMs;
-            paired_before_ = true;
-            paired_at_ms_ = now_ms;
-            closed = in_step;
-            if (!in_step) continue;
+            pairs++;
             paired = parser_.solution();
             paired_valid = validity_.evaluate(now_ms) == gnss::FixReject::None;
+            paired_stamp_ms = parser_.stamp_ms();
         }
         if (received < sizeof(buffer)) break;  // drained
     }
+    const bool closed = pairs > 0 && newer_than_published(paired_stamp_ms);
+    if (closed && paired_stamp_ms >= 0) published_stamp_ms_ = paired_stamp_ms;
     // INFO: fc 29sep26 each burst: a GSV already on the wire lands after the $PCAS03 ending it
     if (closed && satellites_in_view_every_ == 0) parser_.forget_satellites_in_view();
     levels_heard_ = levels_heard_ || burst_levels_;
@@ -352,7 +353,17 @@ bool L76k::poll(uint32_t now_ms) {
     solution_ = paired;
     solution_.fix_valid = paired_valid && valid;
     solution_.pps_latency_ms = pps_latency_ms();
+    solution_.backlogged = pairs > 1;
+    solution_.delivery_ms =
+        static_cast<uint16_t>(kBurstStartMs + io::wire_ms(kBurstBytes, baud_rate()));
     return true;
+}
+
+// INFO: fc 18nov26 a pair at or just behind the last one published is a replay, a far jump not
+bool L76k::newer_than_published(int32_t stamp_ms) const {
+    if (stamp_ms < 0 || published_stamp_ms_ < 0) return true;
+    const int32_t behind_ms = (published_stamp_ms_ - stamp_ms + kDayMs) % kDayMs;
+    return behind_ms > static_cast<int32_t>(gnss::kSentenceMaxAgeMs) || behind_ms > kDayMs / 2;
 }
 
 }  // namespace skyblip::parts

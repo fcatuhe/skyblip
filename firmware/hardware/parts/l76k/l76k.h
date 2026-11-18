@@ -89,8 +89,6 @@ class L76k : public ports::Gnss {
         "$PCAS03,,,2,,,,,,,,,,,*30\r\n",
     };
     static constexpr uint32_t kQuarterRetryMs = 300000;
-    // INFO: fc 18nov26 two pairs nearer than this are a backlog draining, never the part's cadence
-    static constexpr uint32_t kPairSpacingFloorMs = kSolutionPeriodMs / 2;
     // INFO: fc 18nov26 the second $PCAS03 above keeps GSA, and the VDOP it carries, once a second
     static constexpr uint8_t kGsaPeriodSolutions = 4;
     static_assert(kGsaPeriodSolutions * kSolutionPeriodMs == kFactorySolutionPeriodMs,
@@ -252,6 +250,7 @@ class L76k : public ports::Gnss {
     void observe_cadence();
     void watch_cadence(uint32_t now_ms);
     void rate_failed(uint32_t now_ms);
+    bool newer_than_published(int32_t stamp_ms) const;
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -280,8 +279,7 @@ class L76k : public ports::Gnss {
     uint32_t cadence_steps_{0};
     uint32_t verify_unstamped_{0};
     uint32_t verify_steps_{0};
-    uint32_t paired_at_ms_{0};
-    bool paired_before_{false};
+    int32_t published_stamp_ms_{-1};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};
