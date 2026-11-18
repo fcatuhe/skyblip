@@ -96,8 +96,14 @@
   --space-inline-xl: 3ch;
   --space-inline-2xl: 4ch;
 
+  --site-header-block-size: 6.75rem;
+
   --measure: 88ch;
   --gutter: clamp(var(--space-inline-s), 4vw, var(--space-inline-xl));
+}
+
+@media (min-width: 60rem) {
+  :root { --site-header-block-size: 3.75rem; }
 }
 
 @supports (color: oklch(from red l c h)) {

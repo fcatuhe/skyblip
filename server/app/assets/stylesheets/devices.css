@@ -21,7 +21,7 @@
     font-weight: 700;
   }
   .device-figure--go svg { font-size: calc(var(--text-s) * 2.2); }
-  .device-figure--bravo svg { font-size: calc(var(--text-s) * 1.7); }
+  .device-figure--bravo svg { font-size: calc(var(--text-s) * 1.7); overflow: visible; }
 
   .device-mark line,
   .device-mark circle { fill: none; stroke: var(--blip); stroke-width: 5; stroke-linecap: round; }

@@ -1,5 +1,6 @@
 @layer base {
   html { font-size: 100%; }
+  html:has(.site-header) { scroll-padding-block-start: calc(var(--site-header-block-size) + var(--space-s)); }
   @media (min-width: 100ch) {
     html { font-size: 112.5%; }
   }
