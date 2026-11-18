@@ -68,20 +68,6 @@ TEST_CASE("l76k: at 4 Hz GGA and RMC close every solution, and GSA comes once a 
     CHECK(gnss.sky().in_use() > 0);
 }
 
-// A receiver that takes every other $PCAS sentence and stays at 1 Hz cannot keep G.1.16's age.
-TEST_CASE("l76k: a receiver that will not solve at 4 Hz is reported degraded") {
-    models::L76k chip;
-    chip.refuses_quarter_rate = true;
-    parts::L76k gnss(chip, chip);
-
-    run(gnss, chip, 0, 60000);
-
-    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
-    CHECK_FALSE(gnss.solving_quarters());
-    CHECK(gnss.degraded());
-    CHECK(gnss.solution().fix_valid);  // still a fix, once a second
-}
-
 // I, rows "A wake byte before probing" and "Receiver identification", in one
 // assertion: the order the datasheet and SoftRF want. The wake byte comes first
 // because the receiver is deaf until UART activity has woken it

@@ -121,12 +121,15 @@ class L76k : public ports::Gnss {
     // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 4 Hz, the solution count
     static constexpr uint32_t kVerifyWindowMs = 3000;
     static constexpr uint32_t kMinVerifySentences = 2;
-    // INFO: fc 18nov26 4 Hz puts eight solutions in the window, and 1 Hz three at most
+    // INFO: fc 18nov26 a part with no time yet is judged on pairs: eight at 4 Hz, three at 1 Hz
     static constexpr uint32_t kQuarterVerifyWindowMs = 2000;
     static constexpr uint32_t kMinVerifySolutions = 5;
     static_assert(kMinVerifySolutions > kQuarterVerifyWindowMs / kFactorySolutionPeriodMs + 1 &&
                       kMinVerifySolutions < kQuarterVerifyWindowMs / kSolutionPeriodMs,
                   "the count tells a receiver at 4 Hz from one left at 1 Hz");
+    // INFO: fc 18nov26 4 Hz makes eight quarter steps in the window, and any other cadence none
+    static constexpr uint32_t kMinQuarterSteps = 3;
+    static constexpr int32_t kDayMs = 86400000;
     static constexpr uint8_t kMaxConfigAttempts = 3;
 
     // Drive the configuration sequence. Until it has run the receiver is on its
@@ -230,6 +233,10 @@ class L76k : public ports::Gnss {
     uint8_t satellites_in_view_every() const;
     static const char* satellites_in_view_command(uint8_t every);
     bool verified() const;
+    bool on_quarters() const;
+    void observe_cadence();
+    void watch_cadence(uint32_t now_ms);
+    void quarter_failed(uint32_t now_ms);
 
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
@@ -250,8 +257,15 @@ class L76k : public ports::Gnss {
     int sequence_count_{kCommandCount};
     int next_command_{0};
     bool quarter_rate_{false};
-    uint32_t closings_{0};
-    uint32_t verify_closings_{0};
+    bool quarter_refused_{false};
+    uint8_t quarter_attempts_{0};
+    int32_t last_stamp_ms_{-1};
+    uint32_t pairs_{0};
+    uint32_t stamped_{0};
+    uint32_t quarter_steps_{0};
+    uint32_t verify_pairs_{0};
+    uint32_t verify_stamped_{0};
+    uint32_t verify_quarter_steps_{0};
     int baud_index_{0};
     uint32_t baud_before_raise_{kFactoryBaudRate};
     uint8_t baud_tried_{1};

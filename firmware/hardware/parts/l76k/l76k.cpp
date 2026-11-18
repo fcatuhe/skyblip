@@ -31,11 +31,13 @@ void L76k::start_quarter_rate(uint32_t now_ms) {
 }
 
 void L76k::settle(uint32_t now_ms) {
-    if (!quarter_rate_ && baud_rate() == kTargetBaudRate) {
+    if (!quarter_rate_ && !quarter_refused_ && baud_rate() == kTargetBaudRate) {
+        quarter_attempts_ = 1;
         start_quarter_rate(now_ms);
         return;
     }
     stage_ = ConfigStage::Ready;
+    begin_verify(now_ms);
 }
 
 void L76k::send_next(uint32_t now_ms) {
@@ -48,14 +50,60 @@ void L76k::send_next(uint32_t now_ms) {
 void L76k::begin_verify(uint32_t now_ms) {
     verify_start_ms_ = now_ms;
     verify_sentences_ = parser_.solution().sentences;
-    verify_closings_ = closings_;
+    verify_pairs_ = pairs_;
+    verify_stamped_ = stamped_;
+    verify_quarter_steps_ = quarter_steps_;
     unrequested_at_verify_ = parser_.unrequested();
 }
 
 bool L76k::verified() const {
     if (parser_.solution().sentences - verify_sentences_ < kMinVerifySentences || !obeying())
         return false;
-    return !quarter_rate_ || closings_ - verify_closings_ >= kMinVerifySolutions;
+    return !quarter_rate_ || on_quarters();
+}
+
+// INFO: fc 18nov26 a part with no time yet stamps nothing, so its cadence is the count of pairs
+bool L76k::on_quarters() const {
+    if (stamped_ == verify_stamped_) return pairs_ - verify_pairs_ >= kMinVerifySolutions;
+    return quarter_steps_ - verify_quarter_steps_ >= kMinQuarterSteps;
+}
+
+// INFO: fc 18nov26 a quarter step is two pairs stamped 250 ms apart, each on a quarter second
+void L76k::observe_cadence() {
+    pairs_++;
+    const int32_t stamp_ms = parser_.stamp_ms();
+    if (stamp_ms < 0) {
+        last_stamp_ms_ = -1;
+        return;
+    }
+    stamped_++;
+    const int32_t step_ms = (stamp_ms - last_stamp_ms_ + kDayMs) % kDayMs;
+    if (last_stamp_ms_ >= 0 && step_ms == static_cast<int32_t>(kSolutionPeriodMs) &&
+        stamp_ms % static_cast<int32_t>(kSolutionPeriodMs) == 0)
+        quarter_steps_++;
+    last_stamp_ms_ = stamp_ms;
+}
+
+// INFO: fc 18nov26 a part that drifts off the quarters while ready is asked for them again
+void L76k::watch_cadence(uint32_t now_ms) {
+    if (now_ms - verify_start_ms_ < kQuarterVerifyWindowMs) return;
+    const bool heard = parser_.solution().sentences != verify_sentences_;
+    const bool steady = on_quarters();
+    begin_verify(now_ms);
+    if (!heard || steady) return;
+    quarter_attempts_ = 1;
+    start_quarter_rate(now_ms);
+}
+
+// INFO: fc 18nov26 kCommands put the whole 1 Hz set back, so a refused 4 Hz is not half set
+void L76k::quarter_failed(uint32_t now_ms) {
+    if (quarter_attempts_ < kMaxConfigAttempts) {
+        quarter_attempts_++;
+        start_quarter_rate(now_ms);
+        return;
+    }
+    quarter_refused_ = true;
+    start_sequence(now_ms);
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -100,6 +148,10 @@ bool L76k::next_baud() {
 }
 
 void L76k::verify_failed(uint32_t now_ms) {
+    if (quarter_rate_ && parser_.solution().sentences != verify_sentences_) {
+        quarter_failed(now_ms);
+        return;
+    }
     // Two different failures wearing one face. A receiver that answered nothing
     // at all is a receiver we cannot hear, and the rate is the first suspect. A
     // receiver that is talking has the right rate and is simply not obeying, and
@@ -133,6 +185,7 @@ void L76k::service(uint32_t now_ms) {
         // orbit data, which is the whole point of asking for one.
         if (factory) {
             validity_.reset();
+            quarter_refused_ = false;
             adopt_baud(kFactoryBaudRate);
             stage_ = ConfigStage::Restarting;
         }
@@ -191,6 +244,8 @@ void L76k::service(uint32_t now_ms) {
             stage_ = ConfigStage::Ready;
             break;
         case ConfigStage::Ready:
+            if (quarter_rate_) watch_cadence(now_ms);
+            break;
         case ConfigStage::Degraded: break;
     }
 
@@ -228,6 +283,8 @@ bool L76k::obeying() const { return parser_.unrequested() == unrequested_at_veri
 bool L76k::poll(uint32_t now_ms) {
     uint8_t buffer[kReadChunkBytes];
     bool closed = false;
+    gnss::GnssSolution paired{};
+    bool paired_valid = false;
     for (;;) {
         size_t received = uart_.read(buffer, sizeof(buffer));
         if (received == 0) break;
@@ -237,7 +294,11 @@ bool L76k::poll(uint32_t now_ms) {
             validity_.observe(parser_.solution(), sentence, now_ms);
             burst_levels_ = burst_levels_ ||
                             (sentence == gnss::Sentence::Gsv && satellites_in_view_every_ != 0);
-            closed = closed || (sentence == kBurstClosingSentence && parser_.same_epoch());
+            if (sentence != kBurstClosingSentence || !parser_.same_epoch()) continue;
+            closed = true;
+            paired = parser_.solution();
+            paired_valid = validity_.evaluate(now_ms) == gnss::FixReject::None;
+            observe_cadence();
         }
         if (received < sizeof(buffer)) break;  // drained
     }
@@ -246,18 +307,18 @@ bool L76k::poll(uint32_t now_ms) {
     levels_heard_ = levels_heard_ || burst_levels_;
 
     const bool valid = validity_.check(now_ms) == gnss::FixReject::None;
-    // A receiver that stops talking publishes nothing, so nothing would ever
-    // withdraw the last fix it managed to send. The validity edge is an update in
-    // its own right, and it is the one that matters most.
-    if (!closed && valid == solution_.fix_valid) return false;
-
-    levels_fresh_ = closed && burst_levels_ && satellites_in_view_every_ != 0;
-    if (closed) {
-        burst_levels_ = false;
-        closings_++;
+    // INFO: fc 18nov26 only a whole GGA and RMC pair is published, a withdrawal needs none
+    if (!closed) {
+        if (valid || !solution_.fix_valid) return false;
+        levels_fresh_ = false;
+        solution_.fix_valid = false;
+        return true;
     }
-    solution_ = parser_.solution();
-    solution_.fix_valid = valid;
+
+    levels_fresh_ = burst_levels_ && satellites_in_view_every_ != 0;
+    burst_levels_ = false;
+    solution_ = paired;
+    solution_.fix_valid = paired_valid && valid;
     solution_.pps_latency_ms = pps_latency_ms();
     return true;
 }

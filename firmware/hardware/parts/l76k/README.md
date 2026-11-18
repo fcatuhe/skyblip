@@ -14,9 +14,9 @@ The driver brings the part up in three steps:
 |---|---|---|
 | 1, at the boot rate | `$PCAS04,7`, `$PCAS03,1,0,1,0,1,0,0,0,0,0,,,0,0`, `$PCAS11,6`, `$PCAS02,1000` | no GLL or VTG for `kVerifyWindowMs` |
 | 2 | `$PCAS01,5`, 115200 | one sentence that checksums at the new rate |
-| 3, at 115200 | `$PCAS02,250`, `$PCAS03,,,4,,,,,,,,,,,` | `kMinVerifySolutions` solutions in `kQuarterVerifyWindowMs` |
+| 3, at 115200 | `$PCAS02,250`, `$PCAS03,,,4,,,,,,,,,,,` | `kMinQuarterSteps` quarter steps in `kQuarterVerifyWindowMs` |
 
-Step 3 comes only after step 2 has proved the part answers at 115200, as V1.1 requires. A port that cannot retune, or a part that does not take `$PCAS01`, stays at 9600 and 1 Hz. A part that takes step 3 and keeps solving once a second fails the count, and after `kMaxConfigAttempts` the driver reports it `DEGRADED`. It still delivers a fix once a second, and `L76k::solving_quarters()` is false.
+Step 3 comes only after step 2 has proved the part answers at 115200, as V1.1 requires. A port that cannot retune, or a part that does not take `$PCAS01`, stays at 9600 and 1 Hz. A quarter step is two consecutive pairs whose stamps are 250 ms apart, each on a quarter second. A part at 4 Hz makes eight in the window, and a part at any other rate makes none, on the quarters or off them: 1 Hz steps by 1000 ms and 5 Hz stamps `.200` and `.400`. A part that has no time yet stamps nothing, and is judged on the count of pairs instead, `kMinVerifySolutions`. A part that fails step 3 `kMaxConfigAttempts` times gets step 1 again, `$PCAS02,1000` and the whole 1 Hz sentence set, and stays there: it delivers a fix once a second, `L76k::solving_quarters()` is false, and `air.tx_held_for_fix` counts the positions G.1.16 then holds. While ready at 4 Hz the driver keeps counting quarter steps in each window, and a part heard drifting off them, after a restart or on its own, gets step 3 again.
 
 ## The sentences
 
@@ -38,9 +38,11 @@ GGA and RMC go out every solution, GSA every fourth, once a second as at 1 Hz, a
 
 None of this has been measured on a unit. Each item below is a capture with the diagnostics armed.
 
+- 250 ms is documented in the CASIC protocol, §1.6.3, and not in Quectel's L76K interval table, which lists 1000, 500 and 200 ms. Whether this firmware takes it is the first thing to see.
 - `$PCAS02,250` at 115200 gives four RMC a second, stamped `.000`, `.250`, `.500` and `.750`, on the firmware `$PCAS06` names. The G.1.1 case `ADS-L.4.SRD860.G.1.1: the L76K solves on the quarter its stamp names, within 10 ms` is skipped as `unmeasured:` until then.
 - The `.000` solution is the one the PPS edge opens, and `solution_phase_ms` stays under 250 ms on every quarter. Past 250 ms a burst can find its solution too old.
-- GGA and RMC every solution, against V1.1's single-sentence note: `gnss_solutions` counts 14400 in an hour with no solution dropped and no overrun.
+- GGA and RMC every solution, against V1.1's note that a rate under 1000 ms needs "the type of NMEA sentences output" set "to single": `gnss_solutions` counts 14400 in an hour with no solution dropped and no overrun.
+- If the part does not keep up with two sentences, CASIC's binary NAV-PV (0x01 0x03, CASIC §2.7.4) carries position, ellipsoid height, velocity and their accuracies in one 80-byte message. It dates itself by time since power-on rather than UTC, so it would need NAV-TIMEUTC beside it, and the driver would need a binary reader. It is the alternative to try on the bench, not something the driver sends.
 - `kBurstStartMs`, the 70 ms SoftRF measured at 1 Hz, still holds at 4 Hz.
 - The current at 4 Hz, against the 29 mA tracking figure of the L76K hardware design V1.0 table 2 that `scripts/power_budget.py` books.
 - 4 Hz survives `$PCAS10` hot, warm and cold starts, as the model assumes.

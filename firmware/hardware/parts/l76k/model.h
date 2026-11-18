@@ -7,6 +7,7 @@
 #ifndef SKYBLIP_HARDWARE_MODEL_L76K_H
 #define SKYBLIP_HARDWARE_MODEL_L76K_H
 
+#include <deque>
 #include <string>
 
 #include "core/gnss/nmea.h"
@@ -59,6 +60,8 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
     bool refuses_quarter_rate{false};
+    // INFO: fc 18nov26 a part answering $PCAS02,250 at another interval, which only its stamps show
+    uint32_t quarter_rate_runs_at_ms{0};
 
     // INFO: fc 03aug26 $PCAS06 is answered with the CASIC firmware banner. A
     // clone that takes $PCAS sentences but never introduces itself is exactly
@@ -80,6 +83,12 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     uint32_t solution_period_ms{kFactoryPeriodMs};
     // INFO: fc 18nov26 how long after its solution the part starts talking: SoftRF measured 70 ms
     uint32_t latency_ms{0};
+    // INFO: fc 18nov26 a UART stall: what lands in [from, until) of each period lands at until
+    uint32_t stall_period_ms{0};
+    uint32_t stall_from_ms{0};
+    uint32_t stall_until_ms{0};
+    // INFO: fc 18nov26 the quarter whose RMC the part leaves off the wire, -1 for none
+    int32_t drop_rmc_at_ms{-1};
     uint8_t constellations{0};
     uint8_t dynamic_model{0};
     bool sentence_set_applied{false};
@@ -109,6 +118,7 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
         uint16_t utc_ms{0};
         int32_t latitude_1e7{0};
         int32_t longitude_1e7{0};
+        int32_t altitude_hae_mm{0};
     };
     static constexpr int kSolvedKept = 256;
     int solved_count() const { return solved_count_ < kSolvedKept ? solved_count_ : kSolvedKept; }
@@ -211,9 +221,9 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
             solve(now_ms - static_cast<uint32_t>(left_ms));
         }
         fly(left_ms);
-        if (said_ && now_ms - said_at_ms_ >= latency_ms) {
-            pending_ += saying_;
-            said_ = false;
+        while (!said_.empty() && static_cast<int32_t>(now_ms - said_.front().at_ms) >= 0) {
+            pending_ += said_.front().text;
+            said_.pop_front();
         }
     }
 
@@ -243,26 +253,41 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
     std::string heard_;
     Solved solved_[kSolvedKept]{};
     int solved_count_{0};
+    struct Said {
+        uint32_t at_ms{0};
+        std::string text;
+    };
+    std::deque<Said> said_;
     std::string saying_;
-    uint32_t said_at_ms_{0};
-    bool said_{false};
     bool solving_now_{false};
 
     // A receiver nobody has spoken to yet is not producing, and one that is
     // rebooting after $PCAS10 has nothing to say either.
     void solve(uint32_t at_ms) {
         if (asleep || rebooting()) return;
-        if (said_) pending_ += saying_;
         saying_.clear();
         solving_now_ = true;
         emit_burst();
         solving_now_ = false;
-        solved_[solved_count_ % kSolvedKept] =
-            Solved{at_ms, utc_seconds_of_day, static_cast<uint16_t>(utc_ms()),
-                   walked_latitude_1e7(), longitude_1e7};
+        solved_[solved_count_ % kSolvedKept] = Solved{at_ms,
+                                                      utc_seconds_of_day,
+                                                      static_cast<uint16_t>(utc_ms()),
+                                                      walked_latitude_1e7(),
+                                                      longitude_1e7,
+                                                      altitude_mm()};
         solved_count_++;
-        said_ = true;
-        said_at_ms_ = at_ms;
+        said_.push_back(Said{heard_at(at_ms + latency_ms), saying_});
+    }
+
+    uint32_t heard_at(uint32_t ready_ms) const {
+        if (stall_period_ms == 0) return ready_ms;
+        const uint32_t phase_ms = ready_ms % stall_period_ms;
+        if (phase_ms < stall_from_ms || phase_ms >= stall_until_ms) return ready_ms;
+        return ready_ms - phase_ms + stall_until_ms;
+    }
+
+    bool rmc_dropped() const {
+        return drop_rmc_at_ms >= 0 && utc_ms() == static_cast<uint32_t>(drop_rmc_at_ms);
     }
 
     void say(const char* line, int bytes) {
@@ -335,6 +360,8 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
         if (interval_ms < kFactoryPeriodMs &&
             (baud != parts::L76k::kTargetBaudRate || refuses_quarter_rate))
             return;
+        if (interval_ms < kFactoryPeriodMs && quarter_rate_runs_at_ms != 0)
+            interval_ms = quarter_rate_runs_at_ms;
         solution_period_ms = interval_ms;
     }
 
@@ -368,7 +395,7 @@ class L76k : public io::Uart, public io::UartRate, public GnssTruth {
         reboot_since_ms_ = last_tick_ms_;
         rebooting_ = true;
         pending_.clear();
-        said_ = false;
+        said_.clear();
         if (kind >= 2) {
             cold_since_ms_ = last_tick_ms_;
             cold_ = true;
