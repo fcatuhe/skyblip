@@ -30,13 +30,14 @@ inline Glass radar(const RadarSnapshot& snapshot) {
     return canvas;
 }
 
-// The top-right corner, where the radar says how a paired Bravo is: black on white, or reversed.
+// The top-right corner, where the radar says what is wrong with a Bravo: black, or reversed.
 inline bool corner_reads(const ui::Canvas& canvas, const char* text, bool ink = true) {
     return reads_in(canvas, text, 140, 0, kGlassWidth, 24, 1, ink);
 }
 
+// The footer's right end, where a live Bravo's B stands by the traffic count it adds to.
 inline bool marks_bravo_live(const ui::Canvas& canvas) {
-    return reads_in(canvas, "B", 180, 0, kGlassWidth, 20);
+    return reads_in(canvas, "B", 140, 150, kGlassWidth, kGlassHeight);
 }
 
 }  // namespace skyblip::go

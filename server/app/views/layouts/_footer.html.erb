@@ -18,7 +18,7 @@
       <div>
         <h2><%= t "footer.use" %></h2>
         <ul>
-          <% %w[install go-first-steps bravo-first-steps guides].each do |slug| %>
+          <% %w[install go-first-steps bravo-first-steps mount guides].each do |slug| %>
             <li><%= link_to_page slug, label_type: :nav %></li>
           <% end %>
           <li><%= link_to t("briefing.title"), briefing_root_path %></li>
