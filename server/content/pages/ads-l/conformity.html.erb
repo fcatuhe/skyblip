@@ -140,50 +140,23 @@ updated_on: "2026-11-18"
   <h3 id="declaration">The appendix template, filled in for skyBlip Go.</h3>
 
   <p>
-    In accordance with ED Decision 2022/024/R and the attached Technical
-    Specification for ADS-L transmissions using the SRD-860 frequency band
-    (&ldquo;ADS-L 4 SRD 860&rdquo;).
-  </p>
-  <p>
     The <a href="<%= asset_path "pages/ads-l/skyblip-go-ads-l-declaration.pdf" %>">PDF to sign</a>
-    lays out the same declaration in the appendix&rsquo;s wording, with a
-    shorter answer in each field. The tables below give the reasons behind
-    each answer.
+    prints this same text. The next section gives the grounds for each field
+    and statement.
   </p>
 
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr><th>Manufacturer</th><td>François Catuhe EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
-        <tr><th>Product name</th><td>skyBlip Go</td></tr>
-        <tr><th>Hardware reference</th><td>Brand LILYGO, model T-Echo, 868&nbsp;MHz, with BME280</td></tr>
-        <tr><th>Firmware version</th><td>skyBlip v1, with ADS-L protocol v1</td></tr>
-        <tr><th>Standard</th><td>ADS-L 4 SRD860 Issue 2</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <%= render "shared/adsl_declaration" %>
+</section>
+
+<section>
+  <h2 class="kicker">The grounds</h2>
+  <h3>What stands behind each field and statement.</h3>
 
   <p>The declaration names skyBlip firmware v1, which carries skyBlip&rsquo;s ADS-L protocol v1, for ADS-L 4 SRD-860 Issue 2. Every v1 release of the protocol is covered, from v1.0.0. Development builds carry 0.1.0 until the first production release. The ADS-L protocol version is separate from the packet&rsquo;s Protocol Version field in E.1.1. From v1.0.0, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
 
   <h3>Transmission parameters</h3>
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr>
-          <th>Transmission bands and power levels</th>
-          <td>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the unit&rsquo;s own address and UTC second, not from the configured ICAO address. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
-        </tr>
-        <tr>
-          <th>Optional parameters transmitted</th>
-          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status always carries Protocol Version 1.</td>
-        </tr>
-        <tr>
-          <th>Receive capabilities</th>
-          <td>M-band 868.2 and 868.4&nbsp;MHz, 400&nbsp;ms on each channel every second. O-band HDR 869.525&nbsp;MHz, 190&nbsp;ms every second, for the Traffic Uplink. O-band LDR is not received.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <p>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the unit&rsquo;s own address and UTC second, not from the configured ICAO address. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band. The declaration states the 14&nbsp;dBm the firmware sets.</p>
+  <p>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status always carries Protocol Version 1.</p>
 
   <p>Channel access uses EN 300 220-2 band M&rsquo;s 1&nbsp;% duty-cycle limit over any hour. The firmware refuses a burst past that budget. D.3 also requires listen-before-talk. Before an unforced burst, Go assesses its channel for 200&nbsp;&micro;s, ending at most 2&nbsp;ms before transmission. The -78.99&nbsp;dBm limit for a 0&nbsp;dBd antenna becomes -78.44&nbsp;dBm at the antenna connector after correction for the antenna&rsquo;s datasheet gain of -0.55&nbsp;dBd. The 0.5&nbsp;dB feed loss allowance between connector and chip puts the chip&rsquo;s busy threshold at -78.94&nbsp;dBm. Neither gain nor loss has been measured on a unit. The SX1262&rsquo;s RSSI is uncalibrated, with no margin for its error. This is a known limit of the declaration. A busy channel defers the burst by a random 1 to 8 units of 5&nbsp;ms within its window. Only on the ground may Go force it after 3000&nbsp;ms, followed by 2000&nbsp;ms without its own transmissions.</p>
 
@@ -236,16 +209,6 @@ updated_on: "2026-11-18"
           <td>yes</td>
           <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
         </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr><th>Date</th><td>to be signed in November or December 2026</td></tr>
-        <tr><th>Authorized representative</th><td>François Catuhe, Entrepreneur individuel</td></tr>
-        <tr><th>Signature and company stamp</th><td>not signed</td></tr>
       </tbody>
     </table>
   </div>
