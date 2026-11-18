@@ -156,15 +156,14 @@ updated_on: "2026-11-18"
       <tbody>
         <tr><th>Manufacturer</th><td>François Catuhe EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
         <tr><th>Product name</th><td>skyBlip Go</td></tr>
-        <tr><th>Hardware</th><td>LilyGO T-Echo</td></tr>
-        <tr><th>Device P/N</th><td>skyBlipGo</td></tr>
-        <tr><th>Firmware version</th><td>skyBlip 1.0.0, with ADS-L implementation 1.0.0</td></tr>
+        <tr><th>Hardware P/N</th><td>LilyGO T-Echo</td></tr>
+        <tr><th>Firmware version</th><td>skyBlip 1, with ADS-L protocol v1.0.0</td></tr>
         <tr><th>Standard</th><td>ADS-L 4 SRD860 Issue 2</td></tr>
       </tbody>
     </table>
   </div>
 
-  <p>The declaration names firmware 1.0.0, the first production release, and skyBlip&rsquo;s ADS-L implementation 1.0.0, for ADS-L 4 SRD-860 Issue 2. Development builds carry 0.1.0 until that release. The ADS-L implementation version is separate from the packet&rsquo;s Protocol Version field in E.1.1. After 1.0.0, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
+  <p>The declaration names skyBlip firmware 1, which carries skyBlip&rsquo;s ADS-L protocol v1.0.0, for ADS-L 4 SRD-860 Issue 2. Development builds carry 0.1.0 until the first production release. The ADS-L protocol version is separate from the packet&rsquo;s Protocol Version field in E.1.1. After v1.0.0, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
 
   <h3>Transmission parameters</h3>
   <div class="table-scroll">
@@ -176,7 +175,7 @@ updated_on: "2026-11-18"
         </tr>
         <tr>
           <th>Optional parameters transmitted</th>
-          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. In addition, one callsign record of payload type 66 is scheduled every 10&nbsp;s in OGN-Tracker&rsquo;s layout: telemetry type 1, info type 5, with 14 characters. F.2.1 assigns that type to OGN Diagnostics and leaves its definition outside the specification. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status and payload 66 always carry Protocol Version 1.</td>
+          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status always carries Protocol Version 1.</td>
         </tr>
         <tr>
           <th>Receive capabilities</th>
