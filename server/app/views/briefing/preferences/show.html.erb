@@ -8,7 +8,7 @@
       <legend><%= t("briefing.preferences.language") %></legend>
       <% Briefing::Preferences.locales.each do |locale| %>
         <div class="field field--check">
-          <%= form.label :locale, t("briefing.preferences.language_name", locale:), value: locale, lang: locale %>
+          <%= form.label :locale, t("language_name", locale:), value: locale, lang: locale %>
           <%= form.radio_button :locale, locale %>
         </div>
       <% end %>

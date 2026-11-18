@@ -1,0 +1,64 @@
+---
+title: "ADS-L- und FLARM-Funk auf 868 MHz"
+nav_title: Funk
+slug: funk
+description: "So sendet skyBlip Go ADS-L und empfängt ADS-L und FLARM auf 868 MHz. Kanäle, GPS-Zeit und der Empfang künftiger Bodenstationssignale."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Ein Funkmodul und dieselbe Sekunde für alle in Reichweite.</h1>
+  <p class="lede">
+    Ein Funkmodul und eine Antenne. Alle Geräte in Reichweite teilen die Sekunde gleich ein.
+  </p>
+</section>
+
+<section>
+  <h3 id="second">So ist die Sekunde aufgeteilt.</h3>
+  <p class="lede">
+    Go hat ein Funkmodul und eine Antenne. Er teilt jede Sekunde in Zeitfenster mit je einer Frequenz. GPS markiert den Sekundenbeginn auf die Mikrosekunde genau. Jeder skyBlip Go, jede skyPost-Station und jedes Gerät mit FLARM-Übertragungsformat in Reichweite teilt dieselbe Sekunde gleich ein.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Zeit seit Sekundenbeginn</th><th>Frequenz</th><th>Was auf dem Kanal läuft</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>0 bis 200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>Ende des Zeitfensters, das bei 830&nbsp;ms der vorigen Sekunde begann. Geräte mit FLARM-Übertragungsformat senden hier noch, daher empfängt Go weiter. Er sendet hier auch alle 10&nbsp;s sein Rufzeichen.</td></tr>
+        <tr><th>210 bis 440&nbsp;ms</th><td>869,525&nbsp;MHz</td><td>Signal von der skyPost-Bodenstation mit empfangenem ADS-B-Verkehr und vorhandenen Wetterdaten bei 200&nbsp;kbit/s. Immer nur Empfang.</td></tr>
+        <tr><th>450 bis 820&nbsp;ms</th><td>868,200&nbsp;MHz</td><td>Direkter Verkehr auf dem unteren Kanal, ADS-L und FLARM gemeinsam.</td></tr>
+        <tr><th>830 bis 1200&nbsp;ms</th><td>868,400&nbsp;MHz</td><td>Dasselbe auf dem oberen Kanal, bis 200&nbsp;ms in die nächste Sekunde.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/second" %>
+
+  <p class="lede">
+    Empfang auf beiden 868-MHz-Kanälen ist wichtig. ADS-L wechselt den Kanal von einer Aussendung zur nächsten. Geräte mit FLARM-Übertragungsformat senden in der ersten Sekundenhälfte auf dem unteren Kanal und in der zweiten auf dem oberen. Wer auf einem Kanal bleibt, hört nur die Hälfte und weiß nicht, welche.
+  </p>
+  <p class="lede">
+    Auf diesen beiden Kanälen empfängt Go zwei Systeme im selben Zeitfenster. ADS-L und das FLARM-Übertragungsformat setzen vor jeden Rahmen ein 32-Bit-Synchronisationswort, also ein Signalmuster. Die ersten achtzehn Chips, also Signalelemente, sind in beiden Wörtern gleich. Der Empfänger erkennt diese gemeinsame Folge. Die Software bestimmt das System anhand der folgenden Chips. Jeder Fensterwechsel dauert 10&nbsp;ms: 2&nbsp;ms Empfang auf dem alten Kanal für eine späte Aussendung, 5&nbsp;ms zum Abstimmen und 3&nbsp;ms Empfang auf dem neuen Kanal, bevor dort gesendet wird. Die gleichen 5&nbsp;ms reichen auch für den Modulationswechsel zwischen den Bereichen: unten Manchester-FSK bei 100&nbsp;kbit/s, oben GMSK bei 200&nbsp;kbit/s.
+  </p>
+  <p class="lede">
+    Das Sendefenster ist kürzer. Positions- und Statusmeldungen werden 450 bis 1000&nbsp;ms nach Sekundenbeginn gesendet. Statusmeldungen geben an, was Go empfangen kann. Positionen nutzen in geraden UTC-Sekunden 868,2&nbsp;MHz und in ungeraden 868,4&nbsp;MHz. Im Flug kommt jede Sekunde eine Position, am Boden abwechselnd nach 9 und 11&nbsp;s. Statusmeldungen kommen zweimal pro Zyklus von 20&nbsp;s, jeweils auf dem anderen Kanal als eine Position in derselben Sekunde. Das Rufzeichen ist die Ausnahme. Es geht alle 10&nbsp;s zwischen 1000 und 1190&nbsp;ms auf 868,4&nbsp;MHz hinaus, im letzten Abschnitt, der in die nächste Sekunde reicht. Das Gerät sendet ADS-L-Rahmen. Da ADS-L noch kein Rufzeichenfeld hat, sendet es sein Rufzeichen separat im Datensatzformat von OGN-Tracker. Das FLARM-Übertragungsformat empfängt es nur. Die Bodenstation sendet auf 869,525&nbsp;MHz. Das Gerät empfängt dort nur und sendet nie auf dieser Frequenz. Es berechnet die geplante Sendezeit im Fenster aus seiner Adresse und der aktuellen Sekunde. Jede Sekunde wird sie neu berechnet, damit Aussendungen seltener wiederholt zusammenfallen. Vor jeder Aussendung prüft Go den Kanal. Ist er belegt, wartet Go und prüft innerhalb desselben Fensters erneut.
+    <%= link_to_page "timing", label: "Der Leitfaden zur Sendezeit" %> erklärt, welche Sekunden und Zeitpunkte jedes Gerät nutzt.
+  </p>
+
+  <ul class="points">
+    <li>GPS richtet vier Zeitfenster pro Sekunde auf die Mikrosekunde genau aus</li>
+    <li>Das Gerät nutzt 868,200 und 868,400&nbsp;MHz für je 375&nbsp;ms</li>
+    <li>Go empfängt die Bodenstation auf 869,525&nbsp;MHz für 235&nbsp;ms</li>
+    <li>Go dekodiert zwei Systeme in einem Synchronisationsfenster</li>
+    <li>Eine Aussendung dauert etwa 5&nbsp;ms. Ein belegter Kanal kann sie verzögern</li>
+    <li>Go darf in jeder Stunde 1&nbsp;% der Zeit senden. Im Flug nutzt er rund 0,6&nbsp;%, am Boden rund 0,15&nbsp;%. Die Firmware setzt die Grenze durch</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

@@ -1,0 +1,31 @@
+---
+title: "Qué viene después para skyBlip Panel y skyPost"
+slug: proximos-proyectos
+nav_title: "Próximos proyectos"
+description: "skyBlip Panel mostrará el tráfico en una pantalla de cabina. Las estaciones skyPost retransmitirán tráfico y datos meteorológicos en torno a un aeródromo."
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Dos proyectos para la cabina y para tierra</h1>
+  <p class="page-hero-subtitle">Estamos diseñando skyBlip Panel y las estaciones skyPost. No están a la venta.</p>
+</header>
+
+<section id="on-board" class="band band--tint">
+  <h2 class="section-title">En cabina: ver el tráfico en la pantalla de la aeronave</h2>
+  <p>skyBlip Panel se montará detrás del panel de instrumentos. Se alimentará del sistema eléctrico de la aeronave y no tendrá pantalla propia. Transmitirá tu posición y recibirá tráfico en ADS-L, el estándar europeo para compartir la posición por radio. El tráfico aparecerá en una pantalla de cabina como Garmin G3X o Dynon SkyView. Panel enviará el tráfico por cable serie, Bluetooth o Wi-Fi.</p>
+  <p>Panel usará una placa LilyGO T-Beam Supreme y un adaptador MAX3232 RS-232.</p>
+  <figure class="shot shot--photo">
+    <%= pages_image_tag "skyblip-panel-board.avif", alt: "La placa del skyBlip Panel en su carcasa, con la antena." %>
+  </figure>
+</section>
+
+<section id="on-the-ground" class="band">
+  <h2 class="section-title">En tierra: retransmitir tráfico e información meteorológica en torno a un aeródromo</h2>
+  <p>Una estación skyPost recibirá ADS-B. Añadirá tráfico de la Open Glider Network (OGN) e información meteorológica del aeródromo: el ajuste del altímetro (QNH), la última observación (METAR) y la previsión (TAF). Lo retransmitirá por ADS-L a los dispositivos skyBlip Go que estén a su alcance.</p>
+  <h3 id="helio">skyPost Helio</h3>
+  <p>Helio irá montada en un mástil, dentro de una carcasa resistente a la intemperie. Se alimentará con energía solar y recibirá ADS-B, ADS-L y FLARM, un sistema para compartir la posición muy usado en vuelo a vela. Usará una placa LilyGO T-Beam Supreme, un receptor Ebyte E80-900MBL y un kit LilyGO T-Solar.</p>
+  <h3 id="bridge">skyPost Bridge</h3>
+  <p>Bridge funcionará junto a estaciones OGN, PiAware o adsb.lol existentes. Retransmitirá en ADS-L el tráfico que ya reciben, sin cambiar sus flujos de datos. Usará una placa LilyGO T-Beam Supreme.</p>
+  <p><%= link_to_page "buy", label: "Consulta qué equipos puedes usar hoy" %> · <%= link_to_page "skyblip-bravo", label: "skyBlip Bravo", id: "bravo" %> · <%= link_to_page "skyblip-tango", label: "skyBlip Tango", id: "tango" %></p>
+</section>

@@ -1,0 +1,55 @@
+---
+title: "Instrumentos GPS y medidor de carga del Go+"
+slug: instrumentos
+nav_title: "Instrumentos"
+description: "Seis instrumentos con datos del GPS y del barómetro. El Go+ registra los extremos de carga del vuelo. No son instrumentos de vuelo certificados."
+parent: guides
+share_image: radar
+updated_on: "2026-11-09"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Seis instrumentos y las cargas que soporta la aeronave.</h1>
+  <p class="lede">
+    Seis instrumentos muestran lecturas del GPS y del barómetro, por curiosidad. El Go+ también tiene un medidor de carga.
+  </p>
+</section>
+
+<section>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="six-pack">Seis instrumentos <span class="highlight">y la batería que queda</span>.</h3>
+      <p>
+        Velocidad respecto al suelo, horizonte, altímetro, viraje, trayectoria y velocidad vertical: una forma de mostrar las lecturas del GPS y del barómetro. Sobre el instrumento central, el porcentaje de batería indica la autonomía que le queda al dispositivo. Los otros cinco no te dan ese dato. El tiempo desde el despegue aparece en el radar para tu cuaderno de vuelo.
+      </p>
+      <p>
+        No son instrumentos de vuelo. El horizonte muestra el ángulo de alabeo que requeriría un viraje coordinado a esa velocidad. El dispositivo no mide el ángulo de alabeo. Ninguna de estas indicaciones está certificada. No uses esta pantalla como horizonte artificial para volar en nubes.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "Pantalla de seis instrumentos: velocidad respecto al suelo, horizonte artificial con el porcentaje de batería encima, altímetro, coordinador de viraje con bola, rosa de trayectoria y velocidad vertical" %>
+      <figcaption>Seis instrumentos</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="g-meter">Las cargas <span class="highlight">que soporta la aeronave</span>.</h3>
+      <p>
+        La cuarta pantalla muestra las lecturas del acelerómetro sin interpretarlas. El marcador muestra la carga actual sobre el ala. El recuadro muestra las cargas más altas y más bajas registradas hasta ese momento, así como las máximas hacia la izquierda y la derecha.
+      </p>
+      <p>
+        Los límites corresponden a este vuelo. Se ponen a cero cuando arranca el cronómetro de vuelo. Las cargas longitudinales tienen su propia franja. Un frenazo o un aterrizaje brusco no son una carga sobre el ala.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "Pantalla del medidor de carga: un marcador indica las cargas normales (verticales) y laterales en un gráfico. Un recuadro muestra los extremos del vuelo. A su lado hay una franja para las cargas longitudinales y tres filas de cifras en décimas de g" %>
+      <figcaption>Medidor de carga</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

@@ -19,7 +19,14 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
     assert_select "link[rel=canonical][href=?]", "https://skyblip.eu/fr/a-propos"
     assert_select "link[rel=alternate][hreflang=en][href=?]", "https://skyblip.eu/about"
     assert_select "link[rel=alternate][hreflang=x-default][href=?]", "https://skyblip.eu/about"
-    assert_select ".locale-switcher a[href='/about']", text: "EN"
+    assert_select ".locale-switcher summary", text: "FR"
+    assert_select ".locale-switcher a[href='/about'][hreflang=en]", text: "English"
+  end
+
+  test "the language switcher lists the browser's languages first, in its order, then the others by name" do
+    get "/about", headers: { "Accept-Language" => "it-IT,es;q=0.5,fr;q=0.9,xx;q=0.8" }
+
+    assert_equal %w[it fr es de en], css_select(".locale-switcher li").map { it["lang"] }
   end
 
   test "the footer offers the contact email first, then the repository on GitHub" do
@@ -36,7 +43,7 @@ class Content::PagesTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "link[rel=alternate][hreflang=fr]", count: 0
-    assert_select ".locale-switcher [aria-disabled=true]", text: "FR"
+    assert_select ".locale-switcher [aria-disabled=true]", text: "Français"
   end
 
   test "unknown and noncanonical content slugs are not recognized" do

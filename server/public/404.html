@@ -188,16 +188,45 @@
 
     <script>
       (function () {
-        if (!/^\/fr(\/|$)/.test(location.pathname.toLowerCase())) return;
-        document.documentElement.lang = "fr";
-        document.title = "Aucun Trafic Détecté (404 Page introuvable)";
-        var t = {
-          h1: "Aucun Trafic Détecté",
-          lede1: "La page que vous cherchez n\u2019existe pas.",
-          lede2: "Vous avez peut-être mal saisi l\u2019adresse, ou la page a été déplacée.",
-          cta: "Retour à l\u2019accueil",
-          radar: "Balayage radar sans trafic détecté — erreur 404"
+        var translations = {
+          fr: {
+            title: "Aucun Trafic Détecté (404 Page introuvable)",
+            h1: "Aucun Trafic Détecté",
+            lede1: "La page que vous cherchez n\u2019existe pas.",
+            lede2: "Vous avez peut-être mal saisi l\u2019adresse, ou la page a été déplacée.",
+            cta: "Retour à l\u2019accueil",
+            radar: "Balayage radar sans trafic détecté — erreur 404"
+          },
+          de: {
+            title: "Kein Flugverkehr erkannt (404: Seite nicht gefunden)",
+            h1: "Kein Flugverkehr erkannt",
+            lede1: "Die gesuchte Seite gibt es nicht.",
+            lede2: "Vielleicht ist die Adresse falsch eingegeben oder die Seite wurde verschoben.",
+            cta: "Zur Startseite",
+            radar: "Radar ohne erkannten Flugverkehr, Fehler 404"
+          },
+          it: {
+            title: "Nessun traffico rilevato (404 Pagina non trovata)",
+            h1: "Nessun traffico rilevato",
+            lede1: "La pagina che cercavi non esiste.",
+            lede2: "Potresti aver digitato male l\u2019indirizzo oppure la pagina potrebbe essere stata spostata.",
+            cta: "Torna alla pagina iniziale",
+            radar: "Scansione radar senza traffico rilevato, errore 404"
+          },
+          es: {
+            title: "No se ha detectado tráfico (404: página no encontrada)",
+            h1: "No se ha detectado tráfico",
+            lede1: "La página que buscas no existe.",
+            lede2: "Puede que hayas escrito mal la dirección o que la página se haya movido.",
+            cta: "Volver al inicio",
+            radar: "Barrido de radar sin tráfico detectado, error 404"
+          }
         };
+        var locale = (location.pathname.toLowerCase().match(/^\/([a-z]{2})(\/|$)/) || [])[1];
+        var t = translations[locale];
+        if (!t) return;
+        document.documentElement.lang = locale;
+        document.title = t.title;
         document.querySelectorAll("[data-t]").forEach(function (el) {
           var v = t[el.getAttribute("data-t")];
           if (v == null) return;

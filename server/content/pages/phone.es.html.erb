@@ -1,0 +1,100 @@
+---
+title: "Tráfico en SDVFR, SkyDemon y ForeFlight"
+slug: movil
+nav_title: "Móvil"
+description: "Ve el tráfico de skyBlip Go en SDVFR Next, SkyDemon o ForeFlight por Bluetooth. Tres conexiones simultáneas, sin emparejar."
+parent: guides
+share_image: radar
+updated_on: "2026-11-15"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Con tu móvil, sin tener que confiar en él.</h1>
+  <p class="lede">
+    Qué puede ver una aplicación, qué puede pedir y por qué la pantalla del dispositivo tiene la última palabra.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="by-name">Aparece por su nombre y <span class="highlight">tres pantallas</span> muestran su tráfico a la vez.</h3>
+      <p>
+        <span class="mono">skyBlip Go+ 00012A</span>: el producto, seguido de la dirección de 24 bits que recibió al <%= link_to "activarse", briefing_activation_path %>. No tienes que emparejarlo ni introducir un código. Envía el tráfico en un flujo de datos FLARM NMEA por los dos tipos de conexión serie Bluetooth que buscan las aplicaciones de navegación. La aplicación con la que ya vuelas lo encuentra.
+      </p>
+      <p>
+        La tableta en los mandos, el móvil en el bolsillo y el iPad de tu acompañante ven el mismo tráfico. Solo una aplicación puede cambiar ajustes a la vez. La primera que guarda ajustes conserva el permiso hasta que se desconecta. La segunda recibe el nombre de la aplicación que tiene el permiso.
+      </p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "Un skyBlip Go en una carcasa blanca con su antena y el radar de tráfico en la pantalla de tinta electrónica" %>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Conecta sin emparejar, sin código y sin cuenta</li>
+    <li>Usa tres conexiones a la vez</li>
+    <li>Conecta con perfiles Nordic UART o de tipo FLARM</li>
+    <li>Usa SDVFR Next, SkyDemon, ForeFlight y otras aplicaciones</li>
+    <li>El dispositivo conserva tus últimos vuelos</li>
+    <li>Descárgalos en tierra por la misma conexión</li>
+  </ul>
+
+  <h3 id="asked">Pulsa para aceptar <span class="highlight">y toca para rechazar</span>.</h3>
+  <p class="lede">
+    Si una aplicación pide instalar firmware, reiniciar en el gestor de arranque USB, guardar ajustes, borrar vuelos o apagar el dispositivo, el equipo de a bordo no se limita a aceptar lo que pide el móvil. Muestra en su pantalla qué le han pedido y espera treinta segundos. Pulsa la tecla <span class="mono">ACCEPT</span> para aceptar o toca la tecla <span class="mono">CANCEL</span> del panel táctil para rechazar. La pantalla muestra la cuenta atrás <span class="mono">CANCELS IN 30 S</span>. Si no respondes a tiempo, el dispositivo rechaza la solicitud.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "confirm.png", alt: "Solicitud de autorización de los ajustes enviados por el móvil: SETTINGS bajo el símbolo grande, el cambio solicitado, CANCELS IN con los segundos restantes, ACCEPT para el botón y CANCEL para el panel táctil" %>
+    <figcaption>La pantalla pide permiso antes de guardar ajustes</figcaption>
+  </figure>
+
+  <p class="lede">
+    Tu indicativo es uno de esos ajustes. La aplicación lo envía y la pantalla pide permiso. Cuando lo apruebas, aparece en la pantalla de estado, se transmite una vez cada diez segundos y se muestra en las pantallas de las aeronaves cercanas. También puedes introducirlo en el dispositivo, en <%= link_to_page "controls", label: "el campo del indicativo", anchor: "callsign" %>, o configurarlo desde un navegador en <%= link_to "Briefing", briefing_root_path %>, junto al tipo de aeronave, las unidades y la alerta.
+  </p>
+  <p class="lede">
+    La pulsación solo cuenta si la pregunta ya está en pantalla y antes has soltado el botón. Las pulsaciones para cambiar un ajuste no sirven también para autorizar una solicitud.
+  </p>
+
+  <h3 id="firmware">El nuevo firmware llega <span class="highlight">desde una página web</span>.</h3>
+  <p class="lede">
+    <%= link_to "Briefing", briefing_root_path %> envía un archivo de firmware firmado por la misma conexión Bluetooth, desde Chrome o Edge. La pantalla pide permiso una vez e indica la versión antes de que el dispositivo acepte e instale el archivo. El nuevo firmware debe iniciar la radio, recibir datos del receptor y actualizar la pantalla antes de quedar instalado de forma definitiva. Si no lo consigue, el equipo vuelve al firmware anterior y a los ajustes que tenías al iniciar la actualización.
+  </p>
+  <p class="lede">
+    Si el dispositivo no puede leer tus ajustes, te avisa y usa los valores predeterminados. En la comprobación de funcionamiento, la fila <span class="mono">STORAGE</span> muestra <span class="mono">NVS+NOR DEFAULTS</span>. El móvil te pide que compruebes el indicativo y el tipo de aeronave antes de volar.
+  </p>
+  <p class="lede">
+    Si no hay forma de instalar el firmware, la misma página pasa el control al gestor de arranque USB después de la misma pulsación. El dispositivo se apaga con la pantalla que ves abajo. La siguiente pulsación inicia el gestor de arranque. Al conectarlo por USB, el dispositivo aparece como una unidad llamada <span class="mono">TECHOBOOT</span>. Copia en ella un archivo <span class="mono">.uf2</span> para instalar el nuevo firmware.
+    <span class="mono">RESET</span> te devuelve a skyBlip. El dispositivo no transmite durante la recuperación. Dos pulsaciones de <span class="mono">RESET</span> abren la misma unidad sin móvil.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "recovery.png", alt: "Pantalla de recuperación: RECOVERY bajo el símbolo grande, el nombre de la unidad USB TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET y START para el botón" %>
+    <figcaption>El dispositivo está listo para la recuperación por USB</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Notas técnicas</h2>
+
+  <h3 id="no-pairing">Por qué no hay emparejamiento.</h3>
+  <p class="lede">
+    El emparejamiento Bluetooth cifra los campos de datos llamados características GATT. Esto provoca un fallo conocido de Web Bluetooth en Windows e impediría usar
+    <%= link_to "la página del navegador que instala el firmware", briefing_root_path %>. Por tanto, la seguridad depende de comprobar el archivo de firmware, no de proteger la conexión.
+  </p>
+
+  <ul class="points">
+    <li>El gestor de arranque comprueba la firma del firmware con nuestra clave</li>
+    <li>Rechaza firmware anterior a la versión instalada</li>
+    <li>Una conexión abierta no puede instalar firmware</li>
+    <li>Todas las demás solicitudes solo se ejecutan en tierra</li>
+    <li>El dispositivo las rechaza si no confirmas en su pantalla</li>
+    <li>Tu presencia junto al dispositivo sustituye al código de emparejamiento</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

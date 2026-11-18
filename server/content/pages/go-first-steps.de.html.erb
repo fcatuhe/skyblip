@@ -1,0 +1,106 @@
+---
+title: "Erste Schritte mit skyBlip Go: Bedienung, LEDs und Flug"
+nav_title: "Go: Erste Schritte"
+slug: go-erste-schritte
+description: "Schalten Sie Go ein, prüfen Sie seine Position und lernen Sie das Radar kennen. Wählen Sie Ihren Luftfahrzeugtyp und geben Sie Ihr Rufzeichen ein."
+parent: guides
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Ihr Go vom ersten Tastendruck an.</h1>
+  <p class="lede">Ein Tastendruck schaltet skyBlip Go ein. Zwei Sekunden schalten ihn aus. Das Touchfeld wechselt die Ansicht und schaltet Warnungen stumm.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Das Gerät in der Hand</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Erst das Touchfeld, <span class="highlight">dann die Taste</span>.</h3>
+      <p>Das Touchfeld liegt an der Oberkante und reagiert auf Berührung. Links ist die Taste das untere der beiden Bedienelemente. RESET liegt darüber. Der USB-C-Anschluss sitzt rechts. Neben dem Display befinden sich die rote, grüne oder blaue skyBlip-LED und die rote Lade-LED.</p>
+      <p>Das E-Paper-Display behält sein Bild ohne Strom. Zeigt es das Logo, ist Go aus.</p>
+    </div>
+    <%= render "shared/device", device: :go, label: "skyBlip Go mit markiertem Touchfeld, Taste, RESET, LEDs und USB-C-Anschluss", marks: { pad: t("devices.pad"), button: t("devices.button"), reset: t("devices.reset"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Bedienung</th><th>Funktion</th></tr></thead>
+      <tbody>
+        <tr><th>Touchfeld antippen</th><td>Öffnet die nächste Ansicht. Lehnt eine Anfrage ab: Auf dem Display steht CANCEL.</td></tr>
+        <tr><th>Touchfeld 1&nbsp;s berühren</th><td>Schaltet eine aktive Warnung stumm. Ohne Warnung kehren Sie zum Radar zurück.</td></tr>
+        <tr><th>Taste drücken</th><td>Startet das Radar, wenn das Gerät aus ist. Öffnet das Menü der aktuellen Ansicht. Ändert im Menü den ausgewählten Wert. Bestätigt eine Anfrage.</td></tr>
+        <tr><th>Taste 2&nbsp;s halten</th><td>Schaltet das Gerät aus. Das Logo bleibt auf dem Display.</td></tr>
+        <tr><th>Taste ebenso halten und dabei das Touchfeld berühren</th><td>Schaltet das Gerät für die Lagerung mit leerem Display aus. Bleibt ein Bild den ganzen Winter stehen, hinterlässt es einen Schatten.</td></tr>
+        <tr><th>Taste halten und Ladegerät anschließen</th><td>Startet das Gerät und lädt es. Schließen Sie das Ladegerät ohne Tastendruck an, lädt Go, bleibt aber aus.</td></tr>
+        <tr><th>RESET drücken</th><td>Startet Go neu.</td></tr>
+        <tr><th>RESET zweimal innerhalb einer halben Sekunde drücken</th><td>Öffnet TECHOBOOT, ein USB-Laufwerk für die Firmwareinstallation. Briefing fordert Sie nur dazu auf, wenn es Go nicht selbst neu starten kann.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Achten Sie auf Farbe <span class="highlight">und Takt</span>.</h3>
+      <p>Die skyBlip-LED blinkt nur kurz, um den Akku zu schonen. Eine Position liegt vor, sobald der Satellitenempfänger Ihren Standort bestimmt hat.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>LED</th><th>Bedeutung</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Grün, alle 3&nbsp;s</th><td>In Betrieb, Position gefunden.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blau, alle 3&nbsp;s</th><td>In Betrieb, noch keine Position.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Zweimaliges Blinken alle 3&nbsp;s</th><td>Eine in Briefing gestartete Diagnoseaufzeichnung läuft. Die Farbe zeigt weiterhin den Positionsstatus.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, rasches Flackern</th><td>Eine Verkehrswarnung ist aktiv.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, alle 3&nbsp;s</th><td>Akkustand niedrig.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rot, alle 600&nbsp;ms</th><td>Akkustand kritisch. Landen und laden Sie das Gerät.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Ein grüner Lichtimpuls, 400&nbsp;ms</th><td>Gerade eingeschaltet. Beim skyBlip Go+ spüren Sie den Impuls auch.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Drei kurze rote Lichtimpulse</th><td>Das Gerät schaltet sich aus. Beim Go+ spüren Sie die Impulse auch.</td></tr>
+        <tr><th>Dunkel</th><td>Aus.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Die separate rote Lade-LED leuchtet beim Laden durchgehend. Sie blinkt, wenn der Akku fehlt oder defekt ist, und erlischt bei vollem Akku.</p>
+</section>
+
+<section id="type" class="band band--tint">
+  <h2 class="section-title">Wählen Sie Ihren Luftfahrzeugtyp</h2>
+  <p>Wählen Sie bei der Installation Ihren Luftfahrzeugtyp und Ihr Rufzeichen oder stellen Sie beides später ein. Öffnen Sie die Geräteseite Ihres Go in <%= link_to "Briefing", briefing_root_path %>. Drücken Sie am Go in der Radaransicht die Taste und öffnen Sie das Menü <code>AIRCRAFT</code>. <code>TYPE</code> stellt den Luftfahrzeugtyp ein. <code>CALLSIGN</code> ist das Feld für <%= link_to_page "controls", label: "Ihr Rufzeichen", anchor: "callsign" %>.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead><tr><th scope="col">Bezeichnung in Briefing</th><th scope="col">Bezeichnung auf Go</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Leichtflugzeug</th><td><code>LIGHT</code></td></tr>
+        <tr><th scope="row">Schweres Luftfahrzeug</th><td><code>HEAVY</code></td></tr>
+        <tr><th scope="row">Leichter Hubschrauber</th><td><code>LIGHT HELI</code></td></tr>
+        <tr><th scope="row">Schwerer Hubschrauber</th><td><code>HEAVY HELI</code></td></tr>
+        <tr><th scope="row">Segelflugzeug</th><td><code>GLIDER</code></td></tr>
+        <tr><th scope="row">Ballon</th><td><code>BALLOON</code></td></tr>
+        <tr><th scope="row">Ultraleicht</th><td><code>MICROLIGHT</code></td></tr>
+        <tr><th scope="row">Gleitschirm</th><td><code>PARAGLIDER</code></td></tr>
+        <tr><th scope="row">Fallschirmspringer</th><td><code>SKYDIVER</code></td></tr>
+        <tr><th scope="row">VTOL</th><td><code>VTOL</code></td></tr>
+        <tr><th scope="row">Tragschrauber</th><td><code>GYROCOPTER</code></td></tr>
+        <tr><th scope="row">Hängegleiter</th><td><code>HANG GLIDER</code></td></tr>
+        <tr><th scope="row">Motorschirm</th><td><code>PARAMOTOR</code></td></tr>
+        <tr><th scope="row">Unbekannt</th><td><code>UNKNOWN</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Vor dem Start</h2>
+  <p>Schalten Sie Go im Freien ein und warten Sie, bis die skyBlip-LED grün blinkt. Dann kennt Go seine Position. <%= link_to_page "radar", label: "Lernen Sie die Radaransicht kennen" %> und <%= link_to_page "phone", label: "verbinden Sie Ihre Navigations-App" %>, falls Sie eine nutzen. Tipps zum Laden und Lagern finden Sie im Leitfaden <%= link_to_page "power", label: "Strom und Akku" %>.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Nach dem Flug</h2>
+  <p>Halten Sie die Taste zwei Sekunden lang und laden Sie das Gerät dann per USB-C. Lassen Sie das Display für die Winterlagerung leer. Lesen Sie den <%= link_to_page "power", label: "Leitfaden zum Laden und Lagern" %>.</p>
+  <%= render "shared/cta" %>
+</section>

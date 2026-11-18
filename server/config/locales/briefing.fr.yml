@@ -16,7 +16,6 @@ fr:
     preferences:
       title: "Paramètres"
       language: "Langue"
-      language_name: "Français"
       support_code: "Code d\u2019assistance"
       support_code_hint: "Donnez ce code quand vous demandez de l\u2019aide. Il nous permet de lire ce qui s\u2019est passé entre ce navigateur et vos appareils\u00a0: connexions, refus, installations et erreurs. Il ne contient rien de ce que vous avez saisi."
     devices:

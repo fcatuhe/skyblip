@@ -35,7 +35,7 @@ class Content::MetaTest < ActionDispatch::IntegrationTest
 
     assert_equal "Le trafic alentour, dans votre poche · skyBlip", css_select("head > title").text
     assert_equal "https://github.com/fcatuhe/skyblip", structured_data("Organization")["sameAs"].first
-    assert_equal %w[en fr], structured_data("WebSite")["inLanguage"]
+    assert_equal %w[en fr de it es], structured_data("WebSite")["inLanguage"]
   end
 
   test "a guide carries its breadcrumb through the guides index" do

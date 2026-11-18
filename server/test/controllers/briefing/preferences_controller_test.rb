@@ -22,14 +22,14 @@ class Briefing::PreferencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a language the app does not speak is refused" do
-    patch briefing_preferences_path, params: { preferences: { locale: "de" } }
+    patch briefing_preferences_path, params: { preferences: { locale: "nl" } }
 
     assert_response :unprocessable_entity
     assert_nil cookies[:locale]
   end
 
   test "before any choice the app speaks the browser's language, and a choice wins over it" do
-    get briefing_root_path, headers: { "Accept-Language" => "de-DE,fr-FR;q=0.8,en;q=0.5" }
+    get briefing_root_path, headers: { "Accept-Language" => "nl-NL,fr-FR;q=0.8,en;q=0.5" }
     assert_select "html[lang=fr]"
 
     cookies[:locale] = "en"

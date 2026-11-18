@@ -5,14 +5,21 @@
       locale_available_value: I18n.available_locales.to_json,
       locale_alternates_value: page_alternate_paths.to_json
     } do %>
-  <% I18n.available_locales.each do |locale| %>
-    <% if locale == I18n.locale %>
-      <span aria-current="true"><%= locale.to_s.upcase %></span>
-    <% elsif (path = page_alternate_paths[locale]) %>
-      <%= link_to locale.to_s.upcase, path,
-            data: { action: "locale#choose", locale_locale_param: locale } %>
-    <% else %>
-      <span aria-disabled="true"><%= locale.to_s.upcase %></span>
-    <% end %>
-  <% end %>
+  <details>
+    <summary><%= locale_flag(I18n.locale) %><%= I18n.locale.to_s.upcase %></summary>
+    <ul>
+      <% switcher_locales.each do |locale| %>
+        <% label = safe_join([ locale_flag(locale), t("language_name", locale:) ]) %>
+        <li lang="<%= locale %>">
+          <% if locale == I18n.locale %>
+            <span aria-current="true"><%= label %></span>
+          <% elsif (path = page_alternate_paths[locale]) %>
+            <%= link_to label, path, hreflang: locale, data: { action: "locale#choose", locale_locale_param: locale } %>
+          <% else %>
+            <span aria-disabled="true"><%= label %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </details>
 <% end %>

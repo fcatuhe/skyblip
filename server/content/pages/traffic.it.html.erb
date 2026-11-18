@@ -1,0 +1,86 @@
+---
+title: "Come skyBlip Go valuta il traffico"
+nav_title: Traffico
+slug: traffico
+description: "Come skyBlip Go sceglie quali aeromobili segnalare: anello di 3 km e 300 m, regole a terra, durata dei bersagli e riconoscimento della formazione."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Un solo anello, escludendo gli aeromobili che volano con te.</h1>
+  <p class="lede">skyBlip Go usa le posizioni degli aeromobili che riceve per decidere quando avvisarti. Conserva ogni posizione per un tempo limitato, sceglie fra i messaggi dello stesso aeromobile e riconosce quelli che volano con te. <%= link_to_page "radar", label: "La guida al radar" %> mostra cosa vedi. Questa pagina spiega queste decisioni.</p>
+</section>
+
+<section>
+  <h3 id="ring">Un solo anello di avviso.</h3>
+  <p class="lede">Un aeromobile entro 3&nbsp;km in orizzontale e 300&nbsp;m sopra o sotto di te rientra nei limiti per un avviso di traffico. Fuori da questi limiti può comparire sul radar senza avviso. Non esiste un livello di avviso superiore.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Limite</th><th>Valore</th><th>Da dove viene</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Orizzontale</th><td>3000&nbsp;m</td><td>scelto per il Go. A 240&nbsp;kt di avvicinamento frontale lascia 24&nbsp;s, nella fascia di tempo degli avvisi di traffico del TCAS&nbsp;II a bassa quota. La distanza è il doppio di quella dell&rsquo;avviso FLARM</td></tr>
+        <tr><th>Verticale</th><td>300&nbsp;m</td><td>lo stesso limite verticale dell&rsquo;avviso di traffico FLARM</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/advisory_ring" %>
+
+  <p class="lede">Un avviso di traffico dice dove guardare, mai di salire o scendere. Il TCAS può anche emettere un avviso di risoluzione: un&rsquo;istruzione coordinata con l&rsquo;altro aeromobile. Il Go non ha un collegamento per questo coordinamento, quindi dà soltanto avvisi di traffico.</p>
+  <p class="lede">In precedenza il Go prevedeva i conflitti. Questo richiedeva di scegliere un volume protetto intorno a ogni aeromobile, tenere conto dell&rsquo;incertezza crescente con l&rsquo;anticipo della previsione e decidere fino a quanto prevedere. Queste scelte determinavano se venivi avvisato di un aeromobile a un chilometro. L&rsquo;anello usa invece la sua posizione ricevuta. Gli aeromobili che spiralano insieme, uno dei motivi per usare la previsione, sono gestiti dalle regole di <a href="#formation">formazione</a> qui sotto.</p>
+  <p class="lede">Se un aeromobile non trasmette la quota, il Go non presume che sia alla tua. La sua quota è sconosciuta. Entro 3&nbsp;km può attivare un avviso, perché potrebbe essere alla tua quota. Le schermate non mostrano alcuna differenza di quota quando non è nota.</p>
+
+  <h3 id="ground">Nessun avviso a terra.</h3>
+  <p class="lede">Un aeromobile che si dichiara a terra resta sul radar e nella lista, con il nome se disponibile, ma non attiva mai un avviso. Altrimenti un anello di 3&nbsp;km intorno a un campo di volo includerebbe gli aeromobili sul piazzale. La stessa regola vale per il tuo aeromobile: finché il tuo Go è a terra, non dà avvisi di traffico. Così un&rsquo;unità al punto attesa non segnala ogni aeromobile di un circuito affollato. Anche FLARM disattiva gli avvisi mentre il proprio aeromobile rulla o è fermo a terra.</p>
+  <p class="lede">Al distacco da terra, gli aeromobili in volo che rientrano nei criteri di avviso dentro l&rsquo;anello vengono segnalati insieme. Il Go emette un solo avviso per tutti, non uno per aeromobile. Le regole di formazione qui sotto possono mantenere silenziosi gli aeromobili che decollano con te. <%= link_to_page "gps", label: "La guida al GPS", anchor: "flight" %> spiega come il Go decide che sta volando.</p>
+
+  <h3 id="held">Sei messaggi mancati e il bersaglio scompare.</h3>
+  <p class="lede">Ogni posizione di aeromobile conservata dal Go è un bersaglio. Lo elimina dopo sei messaggi attesi e non ricevuti, usando l&rsquo;intervallo di trasmissione corrispondente al suo stato di volo. In volo l&rsquo;intervallo è di un secondo, quindi il bersaglio scompare dopo 6&nbsp;s. A terra è di 10&nbsp;s, quindi scompare dopo 60&nbsp;s.</p>
+  <p class="lede">Il radar mantiene un bersaglio nella sua ultima posizione ricevuta. Quanto può spostarsi prima di scomparire dipende dalla sua velocità: 6&nbsp;s a 60&nbsp;m/s sono 360&nbsp;m. A terra, 60&nbsp;s a una velocità fra 5 e 8&nbsp;m/s sono fra 300 e 480&nbsp;m. Gli stessi sei messaggi mancati ammettono quindi uno spostamento simile nei due casi. A 1&nbsp;Hz, questo tempo distingue una breve interruzione di ricezione da un collegamento perso. Anche perdendo metà delle trasmissioni, la probabilità di sei mancate ricezioni consecutive è circa l&rsquo;1,5&nbsp;%.</p>
+  <p class="lede">L&rsquo;allarme usa un limite di freschezza separato: valuta solo posizioni vecchie di meno di 5&nbsp;s. A 100&nbsp;m/s di avvicinamento, questo tempo rappresenta già 500&nbsp;m di incertezza. Entrambe le età partono da quando il messaggio è stato ricevuto via radio, non da quando è arrivato al Go. Un messaggio inoltrato da un Bravo abbinato non torna quindi recente al suo arrivo.</p>
+
+  <h3 id="sources">Qualunque sistema lo abbia ricevuto.</h3>
+  <p class="lede">Un Go riceve direttamente i messaggi radio ADS-L e FLARM. Riceve i messaggi ADS-B tramite un ricevitore <%= link_to_page "skyblip-bravo", label: "Bravo" %> abbinato e può ricevere traffico ritrasmesso da una stazione a terra. Ogni fonte fornisce lo stesso stato di volo: in volo, a terra o sconosciuto. Le regole usano questo stato indipendentemente dalla fonte. Sconosciuto viene trattato come in volo.</p>
+  <p class="lede">Quando il Go riceve più copie dello stesso aeromobile, preferisce la ricezione diretta ADS-L o FLARM, poi ADS-B, poi il ripetitore a terra. Una copia con priorità inferiore subentra solo quando quella preferita è diventata troppo vecchia. ADS-B viene dopo la ricezione diretta perché invia i singoli campi in messaggi separati, ognuno con la propria età. ADS-L e FLARM li trasmettono insieme in un unico invio.</p>
+  <p class="lede">I messaggi vengono uniti solo se hanno lo stesso indirizzo e la stessa tabella di indirizzi, che identifica il sistema di indirizzamento. Un aeromobile con un Go e un transponder compare quindi una volta sola soltanto se il Go trasmette l&rsquo;indirizzo ICAO del transponder. Impostare l&rsquo;indirizzo dell&rsquo;aeromobile lo fa usare al Go. Il Go non deduce che identità diverse appartengano allo stesso aeromobile.</p>
+  <p class="lede">Il Go filtra la propria identità radio e l&rsquo;indirizzo ICAO configurato per l&rsquo;aeromobile che lo trasporta. Così una stazione a terra che ritrasmette la sua posizione, o un Bravo che riceve il proprio transponder, non crea un bersaglio. Impostare l&rsquo;indirizzo dell&rsquo;aeromobile rimuove dal radar ogni bersaglio con quell&rsquo;identità al successivo passaggio di elaborazione.</p>
+  <p class="lede">La tabella del traffico non applica un limite di distanza scelto per ADS-B, ma restano i controlli di decodifica e plausibilità. Rifiuta una posizione oltre 1115&nbsp;km come decodifica errata, usando l&rsquo;orizzonte radio fra due aeromobili a FL600. Quando i suoi 48 posti sono pieni, rimuove prima gli aeromobili a terra, poi i più lontani. Non rimuove mai un bersaglio sotto allarme per fare spazio. Il tablet riceve fino a 10 aeromobili al secondo, a turno nella tabella.</p>
+
+  <h3 id="dismiss">Un tocco silenzia gli aeromobili già segnalati.</h3>
+  <p class="lede">Tieni il dito sul pad per un secondo per confermare il traffico che hai in vista. Questo ferma il suono, il settore nero e il LED per ogni aeromobile già segnalato, ma non silenzia gli aeromobili che il Go non ha ancora annunciato. Ogni simbolo di avviso resta pieno. Confermare l&rsquo;avviso cambia ciò che il Go ti segnala, non la sua valutazione dell&rsquo;aeromobile.</p>
+  <p class="lede">Un aeromobile che esce dall&rsquo;anello di avviso per 2&nbsp;s e rientra viene segnalato di nuovo. Se uno dei due aeromobili è a terra, questo tempo di riarmo diventa un minuto, così un tocca e riparti non attiva lo stesso annuncio a ogni circuito. La conferma non ha un timer di scadenza che faccia risuonare il traffico che stai ancora osservando. Un avviso viene annunciato una volta e non si ripete finché resta attivo.</p>
+
+  <h3 id="formation">Gli aeromobili che volano con te vengono disegnati, non segnalati.</h3>
+  <p class="lede">Una pattuglia, un trainatore e un aliante, amici sullo stesso tema di volo o alianti nella stessa termica possono mantenere una posizione relativa stabile. Il Go non può conoscere le loro intenzioni, quindi cerca questa geometria. Osserva gli aeromobili entro 1000&nbsp;m in orizzontale e 100&nbsp;m in verticale. Un aeromobile che mantiene la propria posizione rispetto a te mentre viri, entro 60&nbsp;m in orizzontale, per 6&nbsp;s può essere riconosciuto come in volo con te. Deve mantenere anche la quota relativa. Spiralare insieme può soddisfare lo stesso criterio di una pattuglia.</p>
+  <p class="lede">Il riferimento è la prima posizione dell&rsquo;aeromobile rispetto a te, non la tua posizione. Un aeromobile visto per la prima volta a 40&nbsp;m da un&rsquo;ala che si sposta a 40&nbsp;m dall&rsquo;altra si è mosso di 80&nbsp;m. Non ha mantenuto il suo posto.</p>
+  <p class="lede">L&rsquo;ingresso in formazione non genera annunci. Un quadrato si chiude intorno al tuo simbolo, con un numero in ogni quarto per gli aeromobili che volano con te in quella direzione. Quegli aeromobili non hanno più simboli separati sul radar, ma ognuno resta nella lista dei traffici nelle vicinanze. Tre regole governano questo silenzio:</p>
+  <ul class="points">
+    <li>Un aeromobile che si avvicina a 3&nbsp;m/s o più in due messaggi consecutivi perde il silenzio di formazione e viene valutato come altro traffico</li>
+    <li>Un aeromobile che lascia la formazione resta silenzioso mentre si allontana, perché una separazione può sembrare un avvicinamento per l&rsquo;allarme</li>
+    <li>Il riconoscimento della formazione vale solo quando entrambi gli aeromobili sono in volo. L&rsquo;atterraggio lo cancella</li>
+  </ul>
+  <p class="lede">Un aeromobile visto per la prima volta entro la distanza di formazione nei 6&nbsp;s successivi al distacco da terra di uno dei due inizia come candidato silenzioso. Questo permette a una coppia, o a un trainatore e un aliante, di decollare insieme senza avviso mentre stabiliscono la formazione. Ne diventa membro dopo 6&nbsp;s mantenendo la posizione. Un solo messaggio fuori da quella posizione lo rende traffico ordinario. Anche un avvicinamento confermato termina il silenzio.</p>
+  <p class="lede">La convergenza lenta resta un limite di questa scelta. Un membro della formazione che si avvicina a meno di 3&nbsp;m/s resta silenzioso. Colmare una distanza di 30&nbsp;m richiede allora più di 10&nbsp;s. L&rsquo;aeromobile avrà mantenuto la posizione per almeno 6&nbsp;s, ma questo non dice al Go se i piloti si sono visti. La regola evita un allarme per tutto il volo in formazione. Non avverte di ogni riduzione graduale della separazione.</p>
+
+  <h3 id="names">I nomi vengono conservati separatamente dalle posizioni.</h3>
+  <p class="lede">Una posizione scade dopo sei messaggi mancati. Un nome arriva al massimo ogni 10&nbsp;s e non cambia in volo. Il Go conserva quindi i nomi separatamente per 10&nbsp;minuti, così un bersaglio che scompare e ritorna può mostrare subito il suo nome. Solo i messaggi di nominativo ADS-L forniscono questi nomi. FLARM non trasmette nomi, quindi un bersaglio ricevuto solo tramite FLARM è mostrato con il suo indirizzo esadecimale.</p>
+
+  <ul class="points">
+    <li>Il Go usa un solo anello di avviso: 3&nbsp;km in orizzontale e 300&nbsp;m in verticale</li>
+    <li>Non dà avvisi per gli aeromobili a terra né mentre il tuo aeromobile è a terra</li>
+    <li>Elimina un bersaglio dopo sei messaggi attesi e non ricevuti</li>
+    <li>Preferisce la ricezione diretta ad ADS-B e ADS-B a un ripetitore a terra</li>
+    <li>Un tocco prolungato silenzia gli aeromobili già segnalati, non quelli in arrivo</li>
+    <li>Mantiene silenziosi i membri della formazione, ma un avvicinamento confermato termina il silenzio</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

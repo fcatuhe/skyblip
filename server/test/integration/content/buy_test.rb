@@ -2,8 +2,8 @@ require "test_helper"
 
 class Content::BuyTest < ActionDispatch::IntegrationTest
   test "the buy page opens on the language's country and gives every country a recommended and an alternative offer" do
-    { "/buy" => "gb", "/fr/s-equiper" => "fr" }.each do |path, country|
-      get path
+    { en: "gb", fr: "fr", de: "de", it: "it", es: "es" }.each do |locale, country|
+      get Content::Page.find_by(base_slug: "buy", locale:).url_path
 
       assert_select "#where .country-tabs input[checked][value=?]", country
       css_select("#where .country-tabs input").each do |tab|

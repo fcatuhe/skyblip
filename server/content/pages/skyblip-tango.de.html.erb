@@ -1,0 +1,49 @@
+---
+title: "skyBlip Tango: drei Arten von Verkehr auf einem Radar"
+nav_title: Tango
+slug: tango
+share_image: tango
+description: "Koppeln Sie Go und Bravo, um ADS-L-, FLARM- und ADS-B-Verkehr auf einem Radar zu sehen. Go sendet Ihre Position weiterhin per ADS-L."
+updated_on: "2026-11-18"
+---
+
+<%= render "shared/device_tabs" %>
+
+<header class="page-hero">
+  <h1>Sehen Sie ADS-B-Verkehr auf dem Radar Ihres Go</h1>
+  <p class="page-hero-subtitle">Ein Go und ein Bravo ergeben einen Tango. Go sendet Ihre Position per ADS-L und zeigt ADS-L- und FLARM-Verkehr an. Bravo erkennt Mode-S- und ADS-B-Transponder und leitet ADS-B-Verkehr per Bluetooth an Go weiter. Go zeigt ADS-B-Verkehr neben ADS-L- und FLARM-Verkehr auf demselben Radar an.</p>
+  <figure class="pair">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, ein weißer LilyGO T-Echo mit Antenne und Verkehrsradar auf dem Display." %>
+    <span class="pair-plus" aria-hidden="true">+</span>
+    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo, ein schwarzer Seeed SenseCAP MeshTracker X1 im Kartenformat.", class: "photo-x1" %>
+  </figure>
+  <p class="pair-caption">Maßstabsgetreu abgebildet. Foto des X1: Seeed Studio.</p>
+</header>
+
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Drei Arten von Verkehr auf einem Radar</h2>
+  <p>Auf einem Display sehen Sie das Segelflugzeug mit FLARM, das Ultraleicht mit ADS-L und das Flugzeug mit ADS-B. Das kann ein neueres Flugzeug sein oder ein älteres, das mit einem Glascockpit samt ADS-B-Sender oder einem neuen ADS-B-Transponder nachgerüstet wurde. In Flugplatznähe sehen Sie auch Verkehrs- und Geschäftsreiseflugzeuge, die ADS-B senden.</p>
+  <%= render "shared/tango" %>
+  <p>Go sendet Ihre Position weiterhin nur per ADS-L. Verbinden Sie Ihre Navigations-App mit Go, um den gesamten Verkehr zu sehen. Bravo belegt eine Bluetooth-Verbindung am Go. Zwei bleiben für Ihre Geräte frei.</p>
+</section>
+
+<section id="alarm" class="band">
+  <h2 class="section-title">Das Display zeigt, wohin Sie schauen sollten</h2>
+  <p>Bei einer Warnung blinkt der entsprechende Bereich auf dem Display des Go in Richtung des Verkehrs. Verliert Go die Verbindung zu Bravo, steht rechts oben im Radar <strong>BRAVO / NO LINK</strong>. Go zeigt weiterhin ADS-L- und FLARM-Verkehr. Bravo empfängt weiterhin ADS-B-Verkehr und warnt eigenständig. Schalten Sie eine Warnung an dem Gerät stumm, das sie ausgibt.</p>
+  <p>Tango ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Halten Sie auch bei leerem Display Ausschau.</p>
+</section>
+
+<section id="versions" class="band band--tint">
+  <h2 class="section-title">Tango oder Tango+?</h2>
+  <ul>
+    <li><strong>Tango</strong> mit Go und Bravo: Go zeigt die Warnung an. Bei eingeschaltetem Ton gibt Bravo einen Ton ab und vibriert.</li>
+    <li><strong>Tango+</strong> mit Go+ und Bravo: Go+ zeigt die Warnung an. Bei eingeschaltetem Ton geben beide Geräte bei derselben Warnung einen Ton ab und vibrieren.</li>
+  </ul>
+  <p>Sind die Geräte verbunden, gilt die Einstellung ALARM am Go für beide. Drücken Sie die Taste am Bravo oder berühren Sie das Touchfeld am Go eine Sekunde lang, um die Warnung auf beiden Geräten stummzuschalten.</p>
+</section>
+
+<section id="buy" class="band">
+  <h2 class="section-title">Kombinieren Sie zwei Geräte zu einem Tango</h2>
+  <p>Sie kaufen die Geräte einzeln. Wenn Sie schon einen Go oder Go+ haben, kaufen Sie für Bravo einen MeshTracker X1. Haben Sie beide Geräte, hilft Ihnen Briefing, sie am Boden zu koppeln.</p>
+  <p class="signature"><%= link_to_page "buy", label: "Bezugsquellen ansehen", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Geräte installieren oder koppeln" %></p>
+</section>
