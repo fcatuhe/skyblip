@@ -83,6 +83,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/flight_state" %>
+
   <p class="lede">The gap between 12 and 1&nbsp;m/s matters in wind. A circling glider in a 15&nbsp;m/s wind can go from 5&nbsp;m/s upwind to 40&nbsp;m/s downwind on each turn. A single threshold between those speeds would repeatedly declare landings and takeoffs. Requiring 10&nbsp;s under 8&nbsp;m/s avoids that during the example turn: in a 20&nbsp;m/s wind, a glider circling at 22&nbsp;m/s spends about 3&nbsp;s of a 25&nbsp;s turn below the landing threshold.</p>
   <p class="lede">An earlier rule also declared flight above 2000&nbsp;m. That left a unit parked at Courchevel, at 2008&nbsp;m, permanently airborne. Ground speed avoids that altitude trap, but the quality of the fix still matters. Evidence for flight is reduced when the fix is poor, and a speed jump of more than fourfold between consecutive fixes is ignored. Evidence for the ground is never reduced, because reducing a speed must not manufacture a landing. The first fix after switching on decides immediately. Between the thresholds it selects the ground, since switching on while being towed to the grid is the common case.</p>
 

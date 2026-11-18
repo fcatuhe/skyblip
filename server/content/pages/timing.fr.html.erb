@@ -31,6 +31,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/second" %>
+
   <p class="lede">La fenêtre 2 déborde de 200&nbsp;ms sur la seconde suivante pour recevoir les appareils de génération FLARM qui y émettent encore. Le créneau direct d&rsquo;ADS-L, réservé aux échanges entre aéronefs, se termine à 1000&nbsp;ms. Les positions doivent avoir fini d&rsquo;émettre à cet instant. Une émission occupe l&rsquo;antenne pendant 4,64&nbsp;ms. Son dernier départ autorisé laisse sa durée comptabilisée et une marge de 5&nbsp;ms avant la fermeture de la fenêtre. Au banc, le délai maximal entre l&rsquo;ordre d&rsquo;émission et la fin de la trame était de 5,5&nbsp;ms, dans cette marge.</p>
   <p class="lede">Le passage d&rsquo;une fenêtre à la suivante prend 10&nbsp;ms&nbsp;: encore 2&nbsp;ms d&rsquo;écoute sur l&rsquo;ancien canal pour une émission tardive, 5&nbsp;ms pour changer de fréquence, puis 3&nbsp;ms d&rsquo;écoute sur le nouveau canal avant l&rsquo;ouverture de sa fenêtre. Ces 3&nbsp;ms permettent aussi de vérifier le canal avant une émission prévue au tout début de la fenêtre.</p>
 
@@ -79,6 +81,8 @@ updated_on: "2026-11-18"
       </tbody>
     </table>
   </div>
+
+  <%= render "shared/cycle" %>
 
   <p class="lede">Au sol, <span class="mono">skyBlip Go 00012A</span> programme ses positions à :05, :16, :25, :36, :45 et :56 de chaque minute, ses Status à :07, :18, :27, :38, :47 et :58, et son indicatif au début de :01, :11, :21, :31, :41 et :51. En vol, il programme une position chaque seconde. Les secondes du Status et de l&rsquo;indicatif restent les mêmes au décollage et à l&rsquo;atterrissage.</p>
   <p class="lede">Une recherche exhaustive a retenu ces décalages pour respecter quatre règles&nbsp;:</p>

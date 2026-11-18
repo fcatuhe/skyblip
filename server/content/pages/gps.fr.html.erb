@@ -84,6 +84,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/flight_state" %>
+
   <p class="lede">L&rsquo;écart entre 12 et 1&nbsp;m/s compte dans le vent. Un planeur qui spirale dans un vent de 15&nbsp;m/s peut passer de 5&nbsp;m/s face au vent à 40&nbsp;m/s vent arrière à chaque tour. Un seuil unique entre ces vitesses lui ferait enchaîner les atterrissages et les décollages. Exiger 10&nbsp;s sous 8&nbsp;m/s l&rsquo;évite dans cet exemple de spirale&nbsp;: avec un vent de 20&nbsp;m/s, un planeur qui tourne à 22&nbsp;m/s passe environ 3&nbsp;s d&rsquo;un tour de 25&nbsp;s sous le seuil d&rsquo;atterrissage.</p>
   <p class="lede">Une ancienne règle déclarait aussi le vol au-dessus de 2000&nbsp;m. Un appareil garé à Courchevel, à 2008&nbsp;m, restait donc en vol en permanence. La vitesse sol évite ce piège lié à l&rsquo;altitude, mais la qualité du point compte toujours. Les indices de vol sont atténués quand le point est médiocre, et une vitesse qui fait plus que quadrupler entre deux points consécutifs est ignorée. Les indices de sol ne sont jamais atténués, car réduire une vitesse ne doit pas fabriquer un atterrissage. Le premier point après la mise en marche décide immédiatement. Entre les seuils, il retient le sol, car l&rsquo;allumage pendant le remorquage vers la grille est le cas courant.</p>
 

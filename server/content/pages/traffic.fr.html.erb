@@ -30,6 +30,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/advisory_ring" %>
+
   <p class="lede">Un avis de trafic indique où regarder. Il ne demande jamais de monter ou de descendre. Le TCAS peut aussi émettre un avis de résolution&nbsp;: une consigne coordonnée avec l&rsquo;autre aéronef. Le Go n&rsquo;a pas de liaison pour cette coordination. Il se limite donc aux avis de trafic.</p>
   <p class="lede">Le Go prédisait auparavant les conflits. Il fallait choisir un volume de protection autour de chaque aéronef, tenir compte d&rsquo;une incertitude croissante avec l&rsquo;anticipation et fixer un horizon de prévision. Ces choix déterminaient si le pilote était averti d&rsquo;un aéronef à un kilomètre. L&rsquo;anneau se fonde sur sa position reçue. Les planeurs qui spiralent ensemble, un des cas qui motivaient la prédiction, relèvent des règles de <a href="#formation">formation</a> décrites plus bas.</p>
   <p class="lede">Si un aéronef n&rsquo;envoie pas son altitude, le Go ne le considère pas à votre niveau. Sa hauteur est inconnue. À moins de 3&nbsp;km, il peut déclencher un avis puisqu&rsquo;il pourrait être à votre niveau. Les écrans n&rsquo;affichent aucun écart de hauteur quand cet écart est inconnu.</p>

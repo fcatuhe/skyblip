@@ -29,6 +29,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/advisory_ring" %>
+
   <p class="lede">A traffic advisory tells you where to look, never to climb or descend. TCAS can also issue a resolution advisory: an instruction coordinated with the other aircraft. The Go has no link for that coordination, so it gives traffic advisories only.</p>
   <p class="lede">The Go previously predicted conflicts. That meant choosing a protected volume around each aircraft, allowing for uncertainty as the prediction looked further ahead, and deciding how far ahead to look. Those choices determined whether you heard about an aircraft a kilometre away. The ring uses its reported position instead. Aircraft circling together, one reason for using prediction, are handled by the <a href="#formation">formation</a> rules below.</p>
   <p class="lede">If an aircraft sends no altitude, the Go does not assume it is level with you. Its height is unknown. Within 3&nbsp;km, it qualifies for an advisory because it may be at your level. The screens show no height difference when none is known.</p>

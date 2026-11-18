@@ -30,6 +30,8 @@ updated_on: "2026-11-18"
     </table>
   </div>
 
+  <%= render "shared/second" %>
+
   <p class="lede">Window 2 extends 200&nbsp;ms into the next second to receive FLARM-generation devices still transmitting there. ADS-L&rsquo;s direct slot, reserved for transmissions between aircraft, ends at 1000&nbsp;ms. Positions must finish by then. A burst spends 4.64&nbsp;ms on air. The latest permitted start leaves room for its booked air time and a 5&nbsp;ms allowance before its window closes. Bench measurements found a worst case of 5.5&nbsp;ms from the transmit command to the end of the burst, within that allowance.</p>
   <p class="lede">Each change between windows takes 10&nbsp;ms: 2&nbsp;ms still listening on the old channel for a late burst, 5&nbsp;ms to retune, then 3&nbsp;ms listening on the new channel before its window opens. Those 3&nbsp;ms also leave room to check the channel before a burst scheduled for the window&rsquo;s first instant.</p>
 
@@ -78,6 +80,8 @@ updated_on: "2026-11-18"
       </tbody>
     </table>
   </div>
+
+  <%= render "shared/cycle" %>
 
   <p class="lede">On the ground, <span class="mono">skyBlip Go 00012A</span> schedules positions at :05, :16, :25, :36, :45 and :56 in each minute, Status messages at :07, :18, :27, :38, :47 and :58, and its callsign at the start of :01, :11, :21, :31, :41 and :51. In flight, it schedules a position every second. The Status and callsign schedule stays the same through takeoff and landing.</p>
   <p class="lede">An exhaustive search chose these offsets to meet four rules:</p>

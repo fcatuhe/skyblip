@@ -57,20 +57,24 @@ updated_on: "2026-11-18"
 
 <section class="band band--tint">
   <h2 class="section-title">How it works</h2>
-  <div class="resource-cards">
+  <div class="guide-cards">
     <article>
+      <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
       <p>One radio uses four time slots a second and receives signals from two systems in the same slot.</p>
     </article>
     <article>
+      <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
       <p>The serial picks the seconds of a 20&nbsp;s cycle, the parity of the second picks the channel, and a draw redone every second picks the millisecond.</p>
     </article>
     <article>
+      <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
       <p>A fix that must settle and land before 450&nbsp;ms, the pulse that starts each second, and flight decided from ground speed alone.</p>
     </article>
     <article>
+      <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
       <p>One advisory ring of 3&nbsp;km and 300&nbsp;m, no advisories on the ground, six missed reports to drop a target, and formation flying.</p>
     </article>

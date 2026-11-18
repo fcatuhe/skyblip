@@ -58,20 +58,24 @@ updated_on: "2026-11-18"
 
 <section class="band band--tint">
   <h2 class="section-title">Comment ça marche</h2>
-  <div class="resource-cards">
+  <div class="guide-cards">
     <article>
+      <%= render "shared/second", compact: true %>
       <h3><%= link_to_page "radio" %></h3>
       <p>Une radio utilise quatre créneaux par seconde et reçoit les signaux de deux systèmes dans le même créneau.</p>
     </article>
     <article>
+      <%= render "shared/cycle", compact: true %>
       <h3><%= link_to_page "timing" %></h3>
       <p>Le numéro de série choisit les secondes d&rsquo;un cycle de 20&nbsp;s, la parité de la seconde choisit le canal, et un tirage refait chaque seconde choisit la milliseconde.</p>
     </article>
     <article>
+      <%= render "shared/flight_state", compact: true %>
       <h3><%= link_to_page "gps" %></h3>
       <p>Un point qui doit se stabiliser et arriver avant 450&nbsp;ms, l&rsquo;impulsion qui ouvre chaque seconde, et le vol décidé à partir de la seule vitesse sol.</p>
     </article>
     <article>
+      <%= render "shared/advisory_ring", compact: true %>
       <h3><%= link_to_page "traffic" %></h3>
       <p>Un seul anneau d&rsquo;avis de 3&nbsp;km et 300&nbsp;m, aucun avis au sol, six messages manqués pour oublier une cible, et le vol en formation.</p>
     </article>
