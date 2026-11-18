@@ -172,7 +172,7 @@ TEST_CASE("bravo traffic: a deaf receiver and a Bravo without UTC are lost, and 
     flight.tango.bravo.health.utc_valid = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(go::corner_reads(flight.glass(), "OUTDOORS", false));
+    CHECK(go::corner_reads(flight.glass(), "MOVE OUT", false));
     CHECK(flight.tones.size() == 1);
 
     flight.go().show(flight.tango.now_ms, go::Page::SelfTest);
@@ -207,7 +207,7 @@ TEST_CASE("bravo traffic: a Bravo that loses the UTC it had is lost, with one to
     flight.tango.bravo.health.utc_valid = false;
     flight.fly(2);
     CHECK(flight.state().bravo == comms::BravoState::NoUtc);
-    CHECK(go::corner_reads(flight.glass(), "OUTDOORS", false));
+    CHECK(go::corner_reads(flight.glass(), "MOVE OUT", false));
     CHECK(flight.tones == std::vector<uint16_t>{annunciation::kNoteC7Hz});
 }
 
