@@ -1,0 +1,83 @@
+---
+title: "Premiers pas avec skyBlip Go"
+nav_title: Premiers pas Go
+slug: go-premiers-pas
+description: "Repérez les commandes de skyBlip Go, lisez ses voyants et répondez aux demandes. Les gestes à connaître avant votre prochain vol."
+parent: guides
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Votre Go, dès le premier appui.</h1>
+  <p class="lede">Un appui allume skyBlip Go. Deux secondes l&rsquo;éteignent. Entre les deux, le pavé fait défiler les pages et coupe les alarmes.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Dans votre main</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Repérez le pavé, <span class="highlight">puis le bouton</span>.</h3>
+      <p>Le pavé tactile est sur le bord supérieur. Sur le côté gauche, le bouton est la commande du bas. RST est au-dessus. Le port USB-C est à droite. Deux voyants sont près de l&rsquo;écran&nbsp;: celui de skyBlip, rouge, vert ou bleu, et celui du chargeur, rouge.</p>
+      <p>Le papier électronique garde son image sans courant. Le logo signifie que le Go est éteint.</p>
+    </div>
+    <%= render "shared/device", device: :go, label: "skyBlip Go avec les repères du pavé, du bouton, de RST, des voyants et du port USB-C", marks: { pad: t("devices.pad"), button: t("devices.button"), rst: t("devices.rst"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Geste</th><th>Ce qui se passe</th></tr></thead>
+      <tbody>
+        <tr><th>Bref contact sur le pavé</th><td>Passe à la page suivante. Sur une demande, la refuse&nbsp;: c&rsquo;est la touche CANCEL.</td></tr>
+        <tr><th>Doigt sur le pavé, 1&nbsp;s</th><td>Coupe une alarme en cours. Sans alarme, revient au radar.</td></tr>
+        <tr><th>Appui sur le bouton</th><td>Éteint, démarre sur le radar. Sur une page, ouvre son menu. Dans un menu, change la valeur sélectionnée. Sur une demande, l&rsquo;accepte.</td></tr>
+        <tr><th>Bouton maintenu, 2&nbsp;s</th><td>Éteint le Go. Le logo reste affiché.</td></tr>
+        <tr><th>Même appui, doigt sur le pavé</th><td>Éteint avec l&rsquo;écran vierge, pour le rangement. Une image laissée tout un hiver laisse une trace.</td></tr>
+        <tr><th>Bouton maintenu, puis chargeur branché</th><td>Démarre et charge. Le chargeur seul recharge sans allumer.</td></tr>
+        <tr><th>Appui sur RST</th><td>Redémarre le Go.</td></tr>
+        <tr><th>Deux appuis sur RST en moins d&rsquo;une demi-seconde</th><td>Ouvre TECHOBOOT, un lecteur USB pour installer le firmware. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer le Go lui-même.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Lisez la couleur <span class="highlight">et le rythme</span>.</h3>
+      <p>Le voyant skyBlip clignote pour économiser la batterie. Une position signifie que le récepteur satellite a trouvé où vous êtes.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Voyant</th><th>Signification</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Vert, toutes les 3&nbsp;s</th><td>En marche, avec une position.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Bleu, toutes les 3&nbsp;s</th><td>En marche, sans position.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Deux éclats toutes les 3&nbsp;s</th><td>Un enregistrement de diagnostic lancé depuis Briefing est en cours. La couleur indique toujours si la position est connue.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, scintillement rapide</th><td>Une alarme de trafic est active.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 3&nbsp;s</th><td>Batterie faible.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 600&nbsp;ms</th><td>Batterie critique. Atterrissez et rechargez.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Un éclat vert de 400&nbsp;ms</th><td>Le Go vient de s&rsquo;allumer. Sur skyBlip Go+, vous le sentez aussi vibrer.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Trois brefs éclats rouges</th><td>Le Go s&rsquo;éteint. Le Go+ vibre aussi.</td></tr>
+        <tr><th>Éteint</th><td>Appareil éteint.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Le voyant rouge du chargeur reste allumé pendant la charge, clignote si la batterie est absente ou défectueuse, puis s&rsquo;éteint quand elle est pleine.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">En vol</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li><h3>Allumez à découvert.</h3><p>Appuyez sur le bouton. Le radar affiche NO FIX et la progression du récepteur jusqu&rsquo;à la première position. Consultez <%= link_to_page "power", label: "le guide sur la mise en marche" %>.</p></li>
+    <li><h3>Regardez où il indique.</h3><p>Le Go émet votre position en ADS-L et reçoit le trafic ADS-L et FLARM. Le radar garde votre route en haut et montre la trajectoire prévue de chaque aéronef sur une minute. Une alarme indique où regarder. Gardez le doigt sur le pavé une seconde pour la couper. Consultez <%= link_to_page "radar", label: "le guide du radar" %>.</p></li>
+    <li><h3>Retrouvez votre application.</h3><p>Le trafic arrive en Bluetooth dans SDVFR, SkyDemon ou ForeFlight, sur trois applications à la fois, sans appairage. Réglez l&rsquo;alarme et l&rsquo;indicatif dans le menu radar ou dans <%= link_to "Briefing", briefing_root_path %>. Consultez <%= link_to_page "phone", label: "le guide du téléphone" %>.</p></li>
+    <li><h3>Éteignez après le vol.</h3><p>Maintenez le bouton deux secondes, puis rechargez en USB-C. Avant le rangement hivernal, laissez l&rsquo;écran vierge. Consultez <%= link_to_page "power", label: "le guide de la charge et du rangement" %>.</p></li>
+  </ol>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

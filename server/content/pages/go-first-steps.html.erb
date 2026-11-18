@@ -1,0 +1,82 @@
+---
+title: "skyBlip Go first steps: buttons, lights and flight"
+nav_title: Go first steps
+description: "Find the skyBlip Go controls, read its lights, answer requests and silence alarms. Know what to do before and after your next flight."
+parent: guides
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Your Go, from the first press.</h1>
+  <p class="lede">One press switches skyBlip Go on. Two seconds switches it off. Between the two, the pad moves through pages and silences alarms.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In your hand</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Find the pad, <span class="highlight">then the button</span>.</h3>
+      <p>The pad is touch-sensitive, on the top edge. On the left side, the button is the lower of the two controls. RST is above it. The USB-C port is on the right. Two lights sit beside the screen: skyBlip's red, green or blue light and the charger's red light.</p>
+      <p>The e-paper screen keeps its image without power. The logo means the Go is off.</p>
+    </div>
+    <%= render "shared/device", device: :go, label: "skyBlip Go with its pad, button, RST, lights and USB-C port marked", marks: { pad: t("devices.pad"), button: t("devices.button"), rst: t("devices.rst"), lights: t("devices.lights"), usb: t("devices.usb") } %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Gesture</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><th>Tap the pad</th><td>Opens the next page. On a request, refuses it: the screen's CANCEL key.</td></tr>
+        <tr><th>Touch the pad, 1&nbsp;s</th><td>Silences an active alarm. With no alarm, returns to the radar.</td></tr>
+        <tr><th>Press the button</th><td>From off, starts the radar. On a page, opens its menu. In a menu, changes the selected value. On a request, accepts it.</td></tr>
+        <tr><th>Hold the button, 2&nbsp;s</th><td>Switches off. The logo stays on the screen.</td></tr>
+        <tr><th>The same hold, finger on the pad</th><td>Switches off with a blank screen, for storage. An image left all winter leaves a shadow.</td></tr>
+        <tr><th>Hold the button and plug the charger in</th><td>Starts and charges. Plugging in alone charges and leaves it off.</td></tr>
+        <tr><th>Press RST</th><td>Restarts the Go.</td></tr>
+        <tr><th>Press RST twice within half a second</th><td>Opens TECHOBOOT, a USB drive for installing firmware. Briefing asks for this only if it cannot restart the Go itself.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Read the colour <span class="highlight">and the rhythm</span>.</h3>
+      <p>The skyBlip light only winks, to save the battery. A position means the satellite receiver has found where you are.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Light</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Green, every 3&nbsp;s</th><td>Running, with a position.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blue, every 3&nbsp;s</th><td>Running, no position yet.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Two winks every 3&nbsp;s</th><td>A diagnostic recording started from Briefing is running. The colour still shows the position state.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, fast flicker</th><td>A traffic alarm is active.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 3&nbsp;s</th><td>Battery low.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 600&nbsp;ms</th><td>Battery critical. Land and charge.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> One green pulse, 400&nbsp;ms</th><td>Just switched on. On skyBlip Go+, you feel it too.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Three short red pulses</th><td>Switching off. On the Go+, you feel these too.</td></tr>
+        <tr><th>Dark</th><td>Off.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The charger's separate red light stays lit while charging, blinks if the battery is missing or faulty, and goes out when full.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">In flight</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li><h3>Start outdoors.</h3><p>Press the button. The radar says NO FIX and shows the receiver's progress until it has a position. See <%= link_to_page "power", label: "the startup and power guide" %>.</p></li>
+    <li><h3>Look where it points.</h3><p>The Go broadcasts your position in ADS-L and receives ADS-L and FLARM traffic. The radar keeps your direction of travel at the top and projects each aircraft's next minute. An alarm tells you where to look. Touch the pad for a second to silence it. Read <%= link_to_page "radar", label: "the radar guide" %>.</p></li>
+    <li><h3>Use your usual app.</h3><p>Send traffic over Bluetooth to SDVFR, SkyDemon or ForeFlight, with three apps at once and no pairing. Set the alarm and callsign in the radar menu or in <%= link_to "Briefing", briefing_root_path %>. See <%= link_to_page "phone", label: "the phone guide" %>.</p></li>
+    <li><h3>Switch off after landing.</h3><p>Hold the button for two seconds, then charge over USB-C. Before storing it for winter, leave the screen blank. See <%= link_to_page "power", label: "the charging and storage guide" %>.</p></li>
+  </ol>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

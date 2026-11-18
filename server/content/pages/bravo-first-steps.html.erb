@@ -1,0 +1,84 @@
+---
+title: "skyBlip Bravo first steps: button, light and flight"
+nav_title: Bravo first steps
+description: "Use skyBlip Bravo's button, read its light, approve requests and silence alarms. Prepare your navigation app and transponder for the next flight."
+parent: guides
+share_image: bravo
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Bravo, one button and a light.</h1>
+  <p class="lede">skyBlip Bravo warns you of approaching ADS-B traffic and sends it to your navigation app. It only receives. It does not broadcast your position.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In your hand</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Press to answer, <span class="highlight">hold to switch off</span>.</h3>
+      <p>Bravo is a Seeed SenseCAP MeshTracker X1 running skyBlip. Its round button is on the top face. The USB-C port is on a short edge. There is no screen. A light, a buzzer and a vibration motor tell you what is happening.</p>
+    </div>
+    <%= render "shared/device", device: :bravo, label: "skyBlip Bravo on a Seeed SenseCAP MeshTracker X1, with its button and USB-C port marked", marks: { button: t("devices.button"), usb: t("devices.usb") }, caption: "The X1 running skyBlip Bravo. Photo Seeed Studio." %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Gesture</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><th>Press from off</th><td>Switches on, with one green pulse you feel.</td></tr>
+        <tr><th>Press during a fast red flicker</th><td>Silences the alarm, including the paired Go while they are linked.</td></tr>
+        <tr><th>Press during a fast green blink</th><td>Allows a setting or update requested by a phone or Briefing. Without a press, it expires after 30 seconds.</td></tr>
+        <tr><th>Press during a fast blue blink</th><td>Pairs with the Go that asked.</td></tr>
+        <tr><th>Hold for 2&nbsp;s</th><td>Switches off, with three red pulses you feel.</td></tr>
+        <tr><th>Hold, plug in USB-C, keep holding</th><td>After about 3 seconds, the light turns white. The X1 becomes a USB drive named X1 for installing firmware by hand. Briefing asks only if it cannot restart Bravo itself.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>A press begun before a request arrives answers nothing. A hold never answers a request. The browser that installed Bravo changes settings, updates it and pairs it without a press. Other browsers ask.</p>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">The colour gives the state, <span class="highlight">the rhythm gives the detail</span>.</h3>
+      <p>Blue means no satellite position yet. Green means Bravo knows where it is.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Light</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> One green pulse, felt</th><td>Just switched on.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blue, every 3&nbsp;s</th><td>No position yet.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Green, every 3&nbsp;s</th><td>Position found.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Either colour, every 1.5&nbsp;s</th><td>A phone or Briefing is connected.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, fast flicker</th><td>Traffic alarm.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Green, fast blink</th><td>A request awaits your press.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blue, fast blink</th><td>A Go asks to pair.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Two winks every 3&nbsp;s</th><td>A diagnostic recording is armed. The colour still shows the position state.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 3&nbsp;s</th><td>Battery low.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Red, every 600&nbsp;ms</th><td>Battery critical. With a full battery, a traffic or satellite receiver is not answering and Bravo refuses to run.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Three red pulses, felt</th><td>Switching off, then dark.</td></tr>
+        <tr><th>Dark</th><td>Off.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Steady white</th><td>The X1 is a USB drive for installing firmware.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">In flight</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li><h3>Wait for green.</h3><p>Press to start. Without a position, Bravo listens but sends no traffic to your app. With a position, it sends ADS-B traffic over Bluetooth to one app, such as SDVFR or SkyDemon. It receives neither ADS-L nor FLARM. Read <%= link_to_page "skyblip-bravo", label: "how Bravo works" %>.</p></li>
+    <li><h3>Exclude your own transponder.</h3><p>In the aircraft, switch it to ALT. With Bravo alone, open <%= link_to "Briefing", briefing_root_path %> and take the address it offers. With a paired Go, the Go offers the address, callsign and type Bravo hears. Press the Go's button to take them. See <%= link_to_page "skyblip-bravo", label: "the transponder setup", anchor: "install" %>.</p></li>
+    <li><h3>Use both as a Tango.</h3><p>A paired Go displays Bravo's ADS-B traffic. Its ALARM row sets both units. While linked, a press on Bravo or a one-second touch on the Go's pad silences both. Read <%= link_to_page "skyblip-tango", label: "the Tango guide" %>.</p></li>
+    <li><h3>Switch off after landing.</h3><p>Hold for two seconds. Later updates come over Bluetooth from Briefing. See <%= link_to_page "skyblip-bravo", label: "Bravo's update guide", anchor: "status" %>.</p></li>
+  </ol>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
