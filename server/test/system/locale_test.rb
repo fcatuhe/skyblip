@@ -18,7 +18,10 @@ class LocaleTest < ApplicationSystemTestCase
 
   test "a language chosen in the switcher wins over the browser's" do
     visit "/about"
-    within(".locale-switcher") { click_link "FR" }
+    within(".locale-switcher") do
+      find("summary").click
+      click_link "Français"
+    end
     assert_current_path "/fr/a-propos"
 
     visit "/about"

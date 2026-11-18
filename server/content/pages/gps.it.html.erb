@@ -1,0 +1,127 @@
+---
+title: "Fix GPS e stato di volo di skyBlip Go"
+nav_title: GPS
+slug: gps
+description: "Come skyBlip Go ricava un fix dalle frasi GPS, attende che si stabilizzi, tiene il tempo con il PPS e decide se è in volo dalla sola velocità al suolo."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Un fix va verificato. Il volo si misura con la velocità.</h1>
+  <p class="lede">Uno skyBlip Go ha bisogno della propria posizione e dell&rsquo;ora prima di poter trasmettere una posizione in ADS-L. Controlla i dati del ricevitore GPS, attende che si stabilizzino e usa la velocità al suolo per decidere se l&rsquo;aeromobile è in volo. Questa decisione cambia la frequenza delle trasmissioni e la possibilità di eseguire un aggiornamento.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Il fix</h2>
+
+  <h3 id="fix">Una soluzione non è un fix.</h3>
+  <p class="lede">Il ricevitore GPS invia una soluzione ogni secondo, che veda il cielo oppure no. Il Go la accetta come fix solo dopo i propri controlli. Le due frasi che contengono posizione e data devono essere presenti e recenti. La data non deve essere quella fittizia del 1980 che alcuni ricevitori inviano prima di conoscere quella corretta. La posizione deve essere a una distanza plausibile dalla precedente. Anche il ricevitore indica se considera valida la propria soluzione, ma il Go usa il proprio verdetto.</p>
+  <p class="lede">Un Go usa un ricevitore Quectel L76K. Un Bravo usa un Airoha AG3335. Entrambi inviano le letture nello stesso formato di frasi NMEA, lette dallo stesso parser.</p>
+
+  <h3 id="waiting">Tre scritte durante l&rsquo;attesa.</h3>
+  <p class="lede"><span class="mono">NO FIX</span> da solo non può dirti se l&rsquo;antenna è sotto il tetto di un hangar, il ricevitore ha smesso di comunicare o manca una ventina di secondi al fix. Il Go legge le frasi che stanno già arrivando e mostra una scritta che ti dice se spostarlo, aspettare o portarlo al banco:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Scritta</th><th>Cosa vede il Go</th><th>Cosa fare</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>GPS OFF</th><td>nessuna frase recente dal ricevitore</td><td>porta l&rsquo;unità al banco. Aspettare un cielo più libero non farà comunicare il ricevitore</td></tr>
+        <tr><th>MOVE OUT</th><td>arrivano soluzioni senza una data utilizzabile</td><td>sposta l&rsquo;unità dove l&rsquo;antenna ha una vista più libera del cielo</td></tr>
+        <tr><th>FINDS FIX</th><td>è stata decodificata una data utilizzabile</td><td>lascia l&rsquo;unità dov&rsquo;è. Il ricevitore ha letto il messaggio di navigazione di un satellite, ma manca ancora la geometria necessaria per un fix</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede"><span class="mono">FINDS FIX</span> indica che aspettare può servire. La data proviene dal messaggio di navigazione dei satelliti, quindi decodificarla segna un progresso rispetto a non ricevere alcun segnale utilizzabile. La pagina di stato aggiunge il tempo trascorso nella fase attuale, fino a 9:59. Il cerchio del radar e la lista dei traffici nelle vicinanze mostrano solo la scritta, per evitare di ridisegnare parte dello schermo ogni secondo mentre l&rsquo;unità non ha un fix.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "no-fix.png", alt: "La pagina radar senza posizione: il cerchio vuoto mostra NO FIX e, sotto, il progresso del ricevitore verso un fix" %>
+    <figcaption>Ancora nessun fix, ma il ricevitore ha decodificato una data</figcaption>
+  </figure>
+
+  <h3 id="settle">Trasmette quando il fix si è stabilizzato.</h3>
+  <p class="lede">All&rsquo;avvio a freddo un ricevitore può produrre fix con posizione, quota e soprattutto velocità al suolo instabili per diversi secondi. La velocità al suolo attiva anche lo stato in volo. Trasmettere troppo presto potrebbe diffondere una traiettoria che l&rsquo;aeromobile non ha mai seguito, alla frequenza di trasmissione del volo mentre è parcheggiato.</p>
+  <p class="lede">Il Go misura se i fix si stanno stabilizzando anziché imporre un&rsquo;attesa fissa. Ogni secondo prevede la posizione successiva dal fix precedente, a velocità e rateo di virata costanti, poi confronta la previsione con il nuovo fix. Inizia a trasmettere dopo tre previsioni consecutive con un errore inferiore a 12&nbsp;m. Dodici metri in un secondo corrispondono a 12&nbsp;m/s, la soglia di decollo, quindi il limite di errore è legato alla decisione di volo che protegge. Una soluzione 2D non conta mai per la stabilizzazione perché la sua quota non è una misura. Se il ricevitore non si stabilizza, la trasmissione inizia dopo 20&nbsp;s dal primo fix, o 5&nbsp;s dopo una breve perdita del fix. L&rsquo;attesa ha un limite perché non trasmettere mai sarebbe peggio.</p>
+
+  <h3 id="deadline">Il fix deve arrivare prima di 450&nbsp;ms.</h3>
+  <p class="lede">Il Go non può usare una soluzione per il secondo corrente finché il ricevitore non ha inviato la frase conclusiva. La prima trasmissione possibile è a 450&nbsp;ms dall&rsquo;inizio di quel secondo. Il ricevitore inizia a inviare dati circa 70&nbsp;ms dopo l&rsquo;inizio. Alla velocità iniziale di 9600&nbsp;baud, i 320 byte di un fix impiegano 333&nbsp;ms ad arrivare, lasciando solo 47&nbsp;ms di margine. Un&rsquo;unità al banco che usava 22 satelliti ha completato il fix a 780&nbsp;ms. Ogni trasmissione programmata prima di allora è stata rifiutata.</p>
+  <p class="lede">Il Go porta quindi il ricevitore a 115200&nbsp;baud, la velocità massima documentata per il suo comando di configurazione. Lo stesso fix impiega allora 28&nbsp;ms ad arrivare. Il comando non prevede una conferma di ricezione, quindi il Go controlla che arrivi una frase ricevuta correttamente alla nuova velocità. Se non ne arriva nessuna, torna alla vecchia velocità.</p>
+  <p class="lede">La pagina dei satelliti mostra una barra di segnale per ogni satellite. Anche le frasi che contengono questi livelli ritardano il fix, quindi il Go le richiede solo mentre quella pagina è aperta, con una serie ogni cinque secondi. I conteggi sulla pagina continuano ad aggiornarsi ogni secondo. Il ricevitore produce una soluzione al secondo. Cinque soluzioni al secondo non farebbero arrivare prima il primo fix e aggiungerebbero letture più rumorose.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "satellites.png", alt: "La pagina dei satelliti: una barra per satellite raggruppata per costellazione, con una linea tratteggiata a 40 dB-Hz" %>
+    <figcaption>I livelli di segnale vengono richiesti solo mentre questa pagina è aperta</figcaption>
+  </figure>
+
+  <h3 id="pps">Il PPS segna l&rsquo;inizio del secondo.</h3>
+  <p class="lede">Il ricevitore fornisce un impulso al secondo, o PPS. Un interrupt ne cattura il fronte senza attendere il successivo tick del sistema operativo. Quel fronte segna l&rsquo;inizio del secondo UTC da cui si misura ogni <%= link_to_page "timing", label: "finestra radio" %>. Ogni soluzione viene datata al fronte, non quando arriva la sua ultima frase. Se gli impulsi si fermano, le finestre radio proseguono dall&rsquo;ultimo fronte per 60&nbsp;s, solo per ricevere: il Go non trasmette nulla senza aggancio PPS.</p>
+  <p class="lede">Non è ancora verificato se il L76K continui a produrre impulsi senza un fix. La sua documentazione descrive l&rsquo;impulso ma non dice se la perdita del fix lo interrompa. Il chip supporta entrambi i comportamenti e il Go non lo configura. Serve una prova al banco per stabilire cosa accade quando si perde il fix.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Lo stato di volo</h2>
+
+  <h3 id="flight">In volo o a terra, dalla sola velocità al suolo.</h3>
+  <p class="lede">Il Go decide se l&rsquo;aeromobile è in volo dalla velocità al suolo riportata con ogni fix. Per questa decisione non usa quota, velocità verticale o barometro. Soglie separate impediscono che piccole variazioni di velocità facciano cambiare lo stato di continuo:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Stato</th><th>Condizione</th><th>Perché quel valore</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Decollo</th><td>12&nbsp;m/s o più (23&nbsp;kt)</td><td>un trainatore che torna rapidamente allo schieramento fa 10&nbsp;m/s. Un aliante al traino aereo si stacca a circa 20&nbsp;m/s</td></tr>
+        <tr><th>Atterraggio</th><td>sotto 8&nbsp;m/s per 10&nbsp;s</td><td>una velocità di rullaggio mantenuta permette al Go di riconoscere un atterraggio prima che l&rsquo;aeromobile si fermi</td></tr>
+        <tr><th>Atterraggio</th><td>sotto 1&nbsp;m/s</td><td>un arresto. La soglia è circa tre volte il normale rumore di velocità del ricevitore da fermo</td></tr>
+        <tr><th>TAXI sullo schermo</th><td>1,5&nbsp;m/s o più, a terra</td><td>circa un passo svelto. Lo schermo torna a GROUND sotto 1&nbsp;m/s</td></tr>
+        <tr><th>Fra le soglie</th><td>mantiene lo stato precedente</td><td>la distanza fra le soglie evita cambiamenti ripetuti vicino a una soglia</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/flight_state" %>
+
+  <p class="lede">La distanza fra 12 e 1&nbsp;m/s conta con il vento. Un aliante in spirale con vento di 15&nbsp;m/s può passare da 5&nbsp;m/s controvento a 40&nbsp;m/s sottovento a ogni giro. Una singola soglia fra queste velocità dichiarerebbe ripetutamente atterraggi e decolli. Richiedere 10&nbsp;s sotto 8&nbsp;m/s lo evita nella virata di esempio: con vento di 20&nbsp;m/s, un aliante che spirala a 22&nbsp;m/s passa circa 3&nbsp;s di un giro di 25&nbsp;s sotto la soglia di atterraggio.</p>
+  <p class="lede">Una regola precedente dichiarava il volo anche sopra 2000&nbsp;m. Questo lasciava un&rsquo;unità parcheggiata a Courchevel, a 2008&nbsp;m, permanentemente in volo. La velocità al suolo evita questa trappola della quota, ma la qualità del fix conta ancora. Gli indizi di volo vengono ridotti quando il fix è scarso e un salto di velocità superiore a quattro volte fra fix consecutivi viene ignorato. Gli indizi dello stato a terra non vengono mai ridotti, perché ridurre una velocità non deve inventare un atterraggio. Il primo fix dopo l&rsquo;accensione decide subito. Fra le soglie sceglie lo stato a terra, perché l&rsquo;accensione durante il traino allo schieramento è il caso comune.</p>
+
+  <h3 id="changes">Cosa cambia con lo stato.</h3>
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th></th><th>A terra</th><th>In volo</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Posizioni trasmesse</th><td>ogni 9 poi 11&nbsp;s</td><td>ogni secondo</td></tr>
+        <tr><th>Allarme traffico</th><td>silenzioso</td><td>il traffico viene valutato per gli avvisi, vedi <%= link_to_page "traffic", label: "traffico", anchor: "ground" %></td></tr>
+        <tr><th>Aggiornamenti, impostazioni dal telefono, scaricamento del registro di volo</th><td>consentiti</td><td>rifiutati i nuovi aggiornamenti, lo scaricamento del registro e le impostazioni che richiedono una pressione. Le impostazioni da un browser autorizzato restano consentite</td></tr>
+        <tr><th>Registro di volo</th><td>il minuto di rullaggio precedente conservato in memoria</td><td>registrato ogni secondo, incluso quel minuto precedente</td></tr>
+        <tr><th>Cronometro di volo</th><td>mantiene il valore</td><td>conta il tempo in volo</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Un falso decollo blocca gli aggiornamenti a terra e consuma la batteria alla frequenza di trasmissione del volo. Un decollo mancato lascia un aeromobile a trasmettere alla frequenza del parcheggio mentre vola. Dopo che il Go ha dichiarato il volo, perdere il fix non può rimuovere il blocco degli aggiornamenti. Solo uno stato a terra accertato lo rimuove, così un&rsquo;antenna che perde ricezione oltre un crinale non può sbloccare un aggiornamento in volo. Un&rsquo;unità senza fix dall&rsquo;accensione ha uno stato sconosciuto e consente gli aggiornamenti, così si può lavorare al banco al chiuso.</p>
+  <p class="lede">Il cronometro di volo conta il tempo in volo dall&rsquo;accensione, non dall&rsquo;ultimo decollo. Si ferma all&rsquo;atterraggio e riparte al decollo successivo. Un tocca e riparti non azzera quindi il tempo accumulato e un falso atterraggio perde solo i secondi trascorsi nello stato a terra.</p>
+
+  <h3 id="no-roll">Ali che non richiedono velocità al suolo.</h3>
+  <p class="lede">Un parapendio che vola a circa 10&nbsp;m/s rispetto all&rsquo;aria ha solo 5&nbsp;m/s di velocità al suolo contro una brezza di 5&nbsp;m/s. Può restare sotto la soglia di decollo per tutto il volo. Deltaplani in dinamica e palloni possono presentare lo stesso problema. Per questi tipi di aeromobile il Go trasmette lo stato indefinito di ADS-L invece dello stato a terra. ADS-L invia quello stato alla frequenza piena, quindi la trasmissione non li indica mai come parcheggiati. Questo non fa dichiarare il volo al rilevatore basato sulla velocità al suolo. Il loro registro di volo ha una regola separata: si apre quando si muovono e si chiude dopo due minuti da fermi.</p>
+  <p class="lede">In passato la salita barometrica veniva usata per rilevare questi voli. È stata rimossa perché raffiche, variazioni di pressione e picchi quando il barometro smetteva di rispondere causavano falsi decolli nella coda davanti all&rsquo;hangar. La velocità al suolo evita questi falsi rilevamenti, ma può non riconoscere il volo a bassa velocità al suolo. Lo stato indefinito trasmesso e la regola separata per il registro affrontano questi limiti senza trattare la salita barometrica come prova di volo.</p>
+
+  <ul class="points">
+    <li>Il Go controlla ogni fix anziché accettare l&rsquo;indicatore di validità del ricevitore</li>
+    <li>GPS OFF, MOVE OUT e FINDS FIX ti dicono se indagare, spostarti o aspettare</li>
+    <li>La trasmissione inizia dopo tre previsioni entro 12&nbsp;m, con un limite di 20&nbsp;s dal primo fix</li>
+    <li>115200&nbsp;baud fanno arrivare il fix prima della prima trasmissione possibile</li>
+    <li>Il Go dichiara il decollo a 12&nbsp;m/s e l&rsquo;atterraggio sotto 1&nbsp;m/s o dopo 10&nbsp;s sotto 8&nbsp;m/s</li>
+    <li>Perdere un fix in volo non conta mai come un atterraggio</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

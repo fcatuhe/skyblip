@@ -1,7 +1,8 @@
 en:
+  language_name: "English"
   nav:
     label: "Site"
-    try: "Try it"
+    devices: "Devices"
   cta:
     prompt: "Want to try it now, or get one?"
     try: "Try it online"
@@ -9,6 +10,7 @@ en:
     get: "Get one"
     get_note: "a Go from €68, no subscription"
   simulator:
+    with_bravo: "With Bravo (skyBlip Tango)"
     keys:
       pitch: "climb, descend"
       turn: "turn left, right"
@@ -31,6 +33,8 @@ en:
       capture: "Capture"
       self test: "Self test"
       menu: "Menu"
+      bravo: "Bravo"
+      bravo log: "Bravo log"
   promo_code:
     copy: "copy"
     copied: "copied"
@@ -121,11 +125,12 @@ en:
       go: "Your transponder's address, such as 3C6586. The Go transmits under it. Leave blank without a transponder."
       bravo: "Your transponder's address, such as 3C6586. Bravo leaves it out of the traffic. Leave blank without a transponder."
   footer:
+    label: "Footer"
     description: "Electronic conspicuity for recreational flying and air sports. skyBlip Go broadcasts your position in ADS-L, receives ADS-L and FLARM traffic and tells you where to look."
     open_source: "Open source, no subscription, no account."
-    product: "Devices"
-    guides: "Guides"
-    project: "skyBlip"
+    choose: "Choose"
+    use: "Use"
+    project: "The project"
     question: "A question? A comment?"
     write_html: "Write to us at %{email} or on %{github}."
     license: "Code under the MIT license"

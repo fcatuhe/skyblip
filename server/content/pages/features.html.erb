@@ -1,312 +1,149 @@
 ---
-title: "skyBlip Go, ADS-L transmitter and FLARM receiver"
+title: "skyBlip Go, pocket radar for ADS-L and FLARM"
 nav_title: Go
 slug: go
-description: "skyBlip Go broadcasts ADS-L and receives ADS-L and FLARM. Traffic display, directional alerts and Bluetooth. Fly without a phone or subscription."
-updated_on: "2026-11-13"
 product:
   name: skyBlip Go
   low_price: "68"
   currency: EUR
   image: pages/index/skyblip-go-techo.avif
+description: "See ADS-L and FLARM traffic on Go's radar. Transmit your position in ADS-L. A traffic alert shows you where to look."
+updated_on: "2026-11-18"
 ---
 
+<%= render "shared/device_tabs" %>
+
 <header class="page-hero">
-  <h1>Everything skyBlip Go does.</h1>
-  <p class="page-hero-subtitle">
-    Radar, alarm, ADS-L broadcast, Bluetooth.<br>
-    In a pocket device, with no subscription.
-  </p>
+  <h1>A pocket radar to see and be seen</h1>
+  <p class="page-hero-subtitle">skyBlip Go transmits your position in ADS-L and shows ADS-L and FLARM traffic.</p>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, a white device with its antenna and traffic radar on the screen." %>
+  </figure>
 </header>
 
-<section class="band band--tint">
-  <h2 class="section-title">The traffic</h2>
-
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Read the traffic at a glance</h2>
   <div class="feature">
     <div>
-      <h3 id="radar">A radar with your <span class="highlight">track up</span>.</h3>
-      <p>
-        You are in the centre, track up, and the sky turns around you. Traffic
-        at the upper right is to the right of the nose. No mental rotation needed.
-      </p>
-      <p>
-        Each aircraft has a symbol: a point facing up means it is above you.
-        A point facing down means below. A diamond means level with you. A chevron
-        shows a climb or descent, and a line shows where it will be in a minute.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "Reading the radar", anchor: "heading-up" %>
-        <small>From the guide &ldquo;Radar and traffic&rdquo;</small>
-      </p>
+      <h3 id="radar">Your track at the top, traffic around you</h3>
+      <p>A symbol at the top right tells you to look ahead and to your right. The point tells you whether the aircraft is above or below you. A diamond means it&rsquo;s roughly at your level. The line shows where it will be in a minute if it keeps flying the same track. Choose a radar circle of 1, 2, 4 or 8 nautical miles (NM).</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read the radar", anchor: "heading-up" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radar.png", alt: "The radar page: three aircraft, one above, one below, one level and climbing, each with a line showing its position in a minute, and your track shown as a dotted line" %>
+      <%= screen_image_tag "radar.png", alt: "Three aircraft on the radar: one above, one below and one climbing at your level. Each has a line to its position in one minute. Your track is dashed." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>Track up, never north</li>
-    <li>Ring of 1, 2, 4 or 8&nbsp;NM</li>
-    <li>Above, level, below</li>
-    <li>A line showing where each aircraft will be in a minute</li>
-    <li>The number of aircraft whose signals are received</li>
-    <li>Flight time, for the logbook</li>
-  </ul>
-
+  <div class="blip-legend">
+    <div>
+      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
+      <p>Above you</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
+      <p>At your level</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
+      <p>Below you</p>
+    </div>
+  </div>
   <div class="feature feature--reverse">
     <div>
-      <h3 id="every-aircraft">Every aircraft, <span class="highlight">however far</span>.</h3>
-      <p>
-        With <span class="mono">PLOT ALL</span>, the factory setting, the ring
-        has a band around it. An aircraft beyond the ring is placed on it,
-        at its bearing, with its symbol. Every aircraft received with a position is
-        shown.
-      </p>
-      <p>
-        With <span class="mono">PLOT TO SCALE</span>, the picture is to the
-        scale of the ring and stops at the edge of the screen.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "displays", label: "The radar, both ways", anchor: "both-ways" %>
-        <small>From the guide &ldquo;Every screen&rdquo;</small>
-      </p>
+      <h3 id="every-aircraft">Traffic stays visible beyond the circle</h3>
+      <p>In PLOT ALL, the default setting, the edge of the circle doesn&rsquo;t cut off traffic. Go puts traffic it receives beyond the circle in a band around the outside, in the direction it&rsquo;s coming from. See where it&rsquo;s coming from without changing the scale. If you want positions drawn to scale, choose PLOT TO SCALE.</p>
+      <p class="feature-guide"><%= link_to_page "displays", label: "Compare the two radar modes", anchor: "both-ways" %> <small>(From the guide &quot;Every screen&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "far-all.png", alt: "The radar page in PLOT ALL: two aircraft inside the ring, and on the band around it one aircraft ahead, a group of three at the upper right and one aircraft to the left" %>
+      <%= screen_image_tag "far-all.png", alt: "PLOT ALL shows two aircraft inside the circle and others in the outer band: one ahead, three at the top right and one to the left." %>
     </figure>
   </div>
-
   <div class="feature">
     <div>
-      <h3 id="alarm">An alarm <span class="highlight">that says where to look</span>.</h3>
-      <p>
-        When traffic is within 3&nbsp;km and 300&nbsp;m above or below you, a quarter
-        of the screen centred on it flashes once a second. The radar replaces
-        whichever page is showing.
-      </p>
-      <p>
-        The sector is angled towards the exact bearing of the traffic. The device
-        never tells you to climb or descend: it tells you to look.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "The alarm in detail", anchor: "alarm" %>
-        <small>From the guide &ldquo;Radar and traffic&rdquo;</small>
-      </p>
+      <h3 id="alarm">An alert tells you where to look</h3>
+      <p>When traffic triggers an alert, Go returns to the radar. A quarter of the screen flashes in the direction of the traffic. Look that way. Go doesn&rsquo;t tell you to climb or descend.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read an alert", anchor: "alarm" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "alarm.png", alt: "The radar page during an alarm: a 90° sector tilted towards the traffic, turned black" %>
+      <%= screen_image_tag "alarm.png", alt: "During an alert, the 90-degree sector on the radar pointing towards the traffic turns black." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>3&nbsp;km around, 300&nbsp;m above and below</li>
-    <li>A quarter of the screen, centred on the traffic</li>
-    <li>One flash a second</li>
-    <li>One touch on the pad silences it</li>
-    <li>The radar takes over</li>
-    <li>A warning, never an order</li>
-  </ul>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="nearby">Who is there, <span class="highlight">those at your height first</span>.</h3>
-      <p>
-        One line per aircraft: the source, ADS-L or FLARM, the callsign or
-        address, the ground distance and the altitude difference from you.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radar", label: "The Nearby list", anchor: "nearby" %>
-        <small>From the guide &ldquo;Radar and traffic&rdquo;</small>
-      </p>
+      <h3 id="nearby">Nearby: who&rsquo;s there and how far away?</h3>
+      <p>The list puts alerts first, then aircraft near your altitude. Each line shows the source, the callsign if received, the horizontal distance and the difference in altitude if known.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Read the Nearby list", anchor: "nearby" %> <small>(From the guide &quot;Radar and traffic&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "nearby.png", alt: "The Nearby page: five aircraft, those at your height first, with their source, their callsign, their distance and their altitude difference from you" %>
+      <%= screen_image_tag "nearby.png", alt: "The Nearby screen lists five aircraft, closest to your altitude first, with their source, callsign, distance and relative altitude." %>
     </figure>
   </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band">
-  <h2 class="section-title">Being seen</h2>
-
+<section id="broadcast" class="band">
+  <h2 class="section-title">Your position, every second in flight</h2>
   <div class="feature">
     <div>
-      <h3 id="broadcast">Your position, <span class="highlight">every second</span>.</h3>
-      <p>
-        In flight, it broadcasts your position in ADS-L once a second, on the
-        ground once every ten seconds. The transmission lasts about 5&nbsp;ms,
-        at a time determined by its address and the current second.
-      </p>
-      <p>
-        For the rest of the second, it listens on both 868&nbsp;MHz channels for
-        ADS-L and FLARM, and on 869.525&nbsp;MHz, reserved for transmissions from future skyPost
-        ground stations.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "radio", label: "Where the second goes", anchor: "second" %>
-        <small>From the guide &ldquo;The radio second&rdquo;</small>
-      </p>
+      <p>In flight, Go transmits your position in ADS-L every second. It also sends your callsign in a separate message if you&rsquo;ve set one. Pilots whose equipment receives those messages can see and identify you on their screen.</p>
+      <p class="feature-guide"><%= link_to_page "radio", label: "Where the second goes", anchor: "second" %> <small>(From the guide &quot;The radio second&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "radio-log.png", alt: "The radio log: one line per frame received or sent, with its time, its channel, its address and its level" %>
+      <%= screen_image_tag "radio-log.png", alt: "The radio log shows one line per message sent or received, with its time, channel, address and signal level." %>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>ADS-L, the open standard from EASA</li>
-    <li>1&nbsp;Hz in flight, 0.1&nbsp;Hz on the ground</li>
-    <li>Synchronised with GPS to the microsecond</li>
-    <li>ADS-L and FLARM reception</li>
-    <li>Listening for future ground stations</li>
-    <li>Half the permitted transmit time</li>
-  </ul>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="callsign">Your callsign <span class="highlight">on other screens</span>.</h3>
-      <p>
-        Enter your callsign on the device using its two controls, send it from your phone or set it from
-        the browser. It is broadcast once every ten seconds and appears on the
-        screens of the aircraft around you.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "controls", label: "Typing your callsign", anchor: "callsign" %>
-        <small>From the guide &ldquo;Controls and menus&rdquo;</small>
-      </p>
+      <h3 id="callsign">Set your callsign on Go or in Briefing</h3>
+      <p id="asked">Change your aircraft type or callsign in Go&rsquo;s menu or over Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+      <p class="feature-guide"><%= link_to_page "controls", label: "Enter your callsign", anchor: "callsign" %> <small>(From the guide &quot;Controls and menus&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field: S-BLIP at triple height, a bar under the third character, and the keys NEXT for the button and CHANGE for the pad" %>
+      <%= screen_image_tag "menu-callsign.png", alt: "The callsign field shows S-BLIP in large type. A bar marks the third character. The controls say NEXT for the button and CHANGE for the pad." %>
     </figure>
   </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">With your phone</h2>
-
+<section id="apps" class="band band--tint">
+  <h2 class="section-title">The same traffic in your apps</h2>
   <div class="feature">
     <div>
-      <h3 id="apps">Three apps, <span class="highlight">no pairing</span>.</h3>
-      <p>
-        It shows up under its name, skyBlip Go followed by its address. It sends
-        traffic data in FLARM NMEA format to SDVFR Next, SkyDemon, ForeFlight and
-        other apps. The tablet, the phone and the passenger&rsquo;s iPad see the
-        same traffic.
-      </p>
-      <p>
-        You can download its last flights on the ground over the same link.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "phone", label: "With your phone", anchor: "by-name" %>
-        <small>From the guide &ldquo;Phone and firmware&rdquo;</small>
-      </p>
+      <p>Choose your Go in SDVFR Next, SkyDemon or ForeFlight. Go sends traffic over Bluetooth to three devices at once. Your tablet, your phone and your passenger&rsquo;s phone can all receive the same traffic.</p>
+      <p class="feature-guide"><%= link_to_page "phone", label: "Connect your app", anchor: "by-name" %> <small>(From the guide &quot;Phone and firmware&quot;)</small></p>
     </div>
-    <figure class="shot shot--photo">
-      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, a white case with its antenna, the traffic radar on the screen" %>
+    <figure class="shot shot--photo shot--app">
+      <%= content_image_tag "pages/index/sdvfr-next-traffic.avif", alt: "The SDVFR Next map shows traffic from skyBlip Go, with a callsign beside each aircraft." %>
+      <figcaption>SkyDreamSoft SDVFR Next.</figcaption>
     </figure>
   </div>
-
-  <ul class="points points--center">
-    <li>No pairing, no code, no account</li>
-    <li>Three connections at once</li>
-    <li>SDVFR Next, SkyDemon, ForeFlight</li>
-    <li>Its last flights in memory</li>
-  </ul>
-
-  <div class="feature feature--reverse">
-    <div>
-      <h3 id="asked">Every change <span class="highlight">waits for your approval</span>.</h3>
-      <p>
-        New firmware, settings, erasing your flights: the device does not take
-        the phone at its word. It asks on its screen. A press allows, a tap
-        of the pad refuses, silence counts as a refusal.
-      </p>
-      <p>
-        Updates go through the browser, over Bluetooth. If the new version does
-        not start, the device goes back to the old one.
-      </p>
-      <p class="feature-guide">
-        <%= link_to "Update my skyBlip", briefing_root_path %>
-        <small>Updates and settings, from Chrome or Edge</small>
-      </p>
-    </div>
-    <figure class="shot">
-      <%= screen_image_tag "confirm.png", alt: "The authorization prompt for settings sent by the phone: SETTINGS under the large mark, the change it makes, CANCELS IN with the seconds left, the button's key ACCEPT and the pad's key CANCEL" %>
-    </figure>
-  </div>
-
-  <%= render "shared/cta" %>
 </section>
 
-<section class="band">
-  <h2 class="section-title">Day to day</h2>
-
+<section id="instruments" class="band">
+  <h2 class="section-title">Six dials on Go, a g-meter on Go+</h2>
   <div class="feature">
     <div>
-      <h3 id="instruments">The GPS and the barometer <span class="highlight">on six dials</span>.</h3>
-      <p>
-        Ground speed, horizon, altimeter, turn, track and vertical speed: a
-        playful display of the GPS and barometer readings. The battery indicator sits
-        above the middle dial.
-      </p>
-      <p>
-        These are not flight instruments. None is certified, and this is not
-        a horizon for flying in cloud.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "instruments", label: "The instruments", anchor: "six-pack" %>
-        <small>From the guide &ldquo;Instruments&rdquo;</small>
-      </p>
+      <h3 id="six-pack">Readings from the GPS and barometer</h3>
+      <p>The six dials show ground speed, horizon, altitude, turn, track and vertical speed. Treat these readings as a guide. They don&rsquo;t replace your flight instruments.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the six dials", anchor: "six-pack" %> <small>(From the guide &quot;Instruments&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "sixpack.png", alt: "The six-dial page: ground speed, horizon, altimeter, slip ball, track and vertical speed" %>
+      <%= screen_image_tag "sixpack.png", alt: "The six-pack screen shows ground speed, horizon, altimeter, slip ball, track and vertical speed." %>
     </figure>
   </div>
-
   <div class="feature feature--reverse">
     <div>
-      <h3 id="controls">Two controls, <span class="highlight">no phone</span>.</h3>
-      <p>
-        A tap on the touch pad changes page. Hold it for one second to return to the
-        radar. The button opens the menu: aircraft type, callsign, units,
-        range, display mode and alarm.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "controls", label: "The controls", anchor: "two-contacts" %>
-        <small>From the guide &ldquo;Controls and menus&rdquo;</small>
-      </p>
+      <h3 id="g-meter">The Go+ g-meter keeps the highest and lowest readings</h3>
+      <p>The g-meter shows the loads measured by Go+&rsquo;s accelerometer. Read the current load and see the extremes reached during your flight. Go+ also adds sound and vibration to the on-screen alert.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Read the g-meter", anchor: "g-meter" %> <small>(From the guide &quot;Instruments&quot;)</small></p>
     </div>
     <figure class="shot">
-      <%= screen_image_tag "menu-radar.png", alt: "The settings menu: light, aircraft, units, range, plot, alarm and Bravo, with the button's key CHANGE and the pad's key NEXT at the foot" %>
+      <%= screen_image_tag "gmeter.png", alt: "The g-meter marks normal and lateral loads, frames the extremes from the flight and shows fore-aft load in a strip." %>
     </figure>
   </div>
+</section>
 
-  <div class="feature">
-    <div>
-      <h3 id="power">A battery <span class="highlight">that warns you</span>.</h3>
-      <p>
-        Without a position, it tells you how far the receiver has got. Switched
-        off, the e-paper screen keeps the logo without power. On an empty
-        battery, it says so on the screen before it cuts out.
-      </p>
-      <p class="feature-guide">
-        <%= link_to_page "power", label: "The battery", anchor: "waiting" %>
-        <small>From the guide &ldquo;Power and battery&rdquo;</small>
-      </p>
-    </div>
-    <figure class="shot">
-      <%= screen_image_tag "off-flat-battery.png", alt: "The screen of a device that switched off because its battery was empty: the skyBlip logo and BATTERY EMPTY" %>
-    </figure>
-  </div>
-
-  <ul class="points points--center">
-    <li>850&nbsp;mAh battery</li>
-    <li>Charges over USB-C</li>
-    <li>200&times;200 e-paper screen</li>
-    <li>BME280 barometer</li>
-  </ul>
-
-  <%= render "shared/cta" %>
+<section id="try" class="band band--tint">
+  <h2 class="section-title">Try the radar, then choose your hardware</h2>
+  <p>Go and Go+ share the same radar. Pair either with a Bravo to also see aircraft that transmit their position in ADS-B.</p>
+  <p>Go is an uncertified aid to visual lookout. It doesn&rsquo;t replace FLARM equipment or a transponder required for your flight.</p>
+  <p><%= link_to_page "controls", label: "Go controls", anchor: "two-contacts", id: "controls" %> · <%= link_to_page "power", label: "Power and battery", id: "power" %></p>
+  <p class="signature"><%= link_to_page "skyblip-go", label: "Try the radar", class: "button button--primary" %> · <%= link_to_page "buy", label: "Compare Go and Go+", anchor: "compare" %></p>
 </section>

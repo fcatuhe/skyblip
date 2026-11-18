@@ -109,4 +109,39 @@
     content: "\2713";
     color: var(--blip);
   }
+
+  .blip-legend {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-m) var(--space-inline-m);
+    max-inline-size: 36rem;
+    margin: var(--space-xl) auto;
+    padding: var(--space-l) var(--space-inline-m);
+    background: var(--card-bg);
+    border-radius: var(--space-inline-s);
+    text-align: center;
+  }
+
+  .blip-legend > div {
+    display: grid;
+    justify-items: center;
+    gap: var(--space-s);
+  }
+
+  .blip-legend img {
+    box-sizing: content-box;
+    inline-size: 57px;
+    block-size: auto;
+    padding: var(--space-xs);
+    background: var(--glass);
+    image-rendering: pixelated;
+    box-shadow: 0 0 0 4px var(--glass-bezel), 0 0 0 5px var(--card-border);
+  }
+
+  .blip-legend p {
+    margin: 0;
+    font-size: var(--text-s);
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
 }

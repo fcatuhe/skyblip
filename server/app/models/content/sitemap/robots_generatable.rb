@@ -11,7 +11,7 @@ module Content::Sitemap::RobotsGeneratable
     end
 
     def robots_content
-      "User-agent: *\nAllow: /\n\n" \
+      "User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n\n" \
         "Sitemap: #{sitemap_url(compressed: true)}\nSitemap: #{sitemap_url}\n"
     end
 end

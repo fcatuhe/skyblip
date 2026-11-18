@@ -6,6 +6,11 @@ const ACTIVATION_KEYS = [" ", "Enter"]
 const TRAFFIC_MIN_RANGE_M = 800
 const TRAFFIC_MAX_RANGE_M = 4800
 const TRAFFIC_VERT_SPREAD_M = 600
+const ADSB_MIN_RANGE_M = 8000
+const ADSB_MAX_RANGE_M = 30_000
+const ADSB_MAX_ABOVE_M = 8500
+const ADSB_MIN_CRUISE_KT = 105
+const ADSB_MAX_CRUISE_KT = 460
 const KT_TO_MPS = 0.514444
 const TRAFFIC_MIN_CRUISE_KT = 90
 const TRAFFIC_MAX_CRUISE_KT = 180
@@ -23,6 +28,9 @@ const CALLSIGN_PREFIXES = ["F-G", "F-H", "F-J", "F-C", "D-E", "D-K", "G-", "HB-"
 const REGISTRATION_LENGTH = 6
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const ADSL = 0
+const FLARM = 1
+const ADSB = 2
+const FLARM_SHARE = 0.25
 
 const FEET_PER_METRE = 3.28084
 const FPM_PER_MPS = 196.85
@@ -128,35 +136,29 @@ const WAKE_HOLD_MS = 1000
 const BOOT_DELAY_MS = 2000
 const FIRST_TRAFFIC_MS = 3000
 const TRAFFIC_MIN = 1
-// INFO: fc 13nov26 the public page keeps the sky it shipped with, under the world's 32
-const TRAFFIC_MAX = 8
+// INFO: fc 13nov26 the public page keeps the sky it shipped with, under the world's 32 | 18nov26 eight per group, so Bravo's ADS-B adds eight
+const TRAFFIC_MAX_PER_GROUP = 8
 const TRAFFIC_TICK_MIN_MS = 10_000
 const TRAFFIC_TICK_MAX_MS = 30_000
 const TRAFFIC_ARRIVAL_SHARE = 0.5
 const TRAFFIC_STAY_MIN_MS = 60_000
 const TRAFFIC_STAY_MAX_MS = 180_000
-const GLASS_IN_VIEW = 0.5
 
 export default class extends Controller {
-  static targets = ["canvas", "status", "pad", "lamp", "charge",
+  static targets = ["canvas", "status", "pad", "lamp", "charge", "bravo", "bravoControl",
                     "horizonGauge", "attitudeReadout",
                     ...Object.keys(AXES).flatMap(axis => [axis, `${axis}Readout`, `${axis}Gauge`])]
   static values = { src: String, screens: Object }
 
+  // INFO: fc 18nov26 a load superseded by another boot or a Turbo visit must not start the simulator
   #generation = 0
 
   connect() {
     this.bootTimer = setTimeout(() => this.start(), BOOT_DELAY_MS)
-    this.sight = new IntersectionObserver(
-      ([glass]) => { this.inView = glass.intersectionRatio >= GLASS_IN_VIEW },
-      { threshold: GLASS_IN_VIEW }
-    )
-    this.sight.observe(this.canvasTarget)
   }
 
   disconnect() {
     this.#generation++
-    this.sight.disconnect()
     this.#stop()
     clearTimeout(this.bootTimer)
     clearTimeout(this.wakeTimer)
@@ -168,13 +170,20 @@ export default class extends Controller {
     clearTimeout(this.bootTimer)
     this.#stop()
     const generation = ++this.#generation
-    const { load, PAGES } = await import(this.srcValue)
+    const { load, PAGES, PRODUCT } = await import(this.srcValue)
     if (generation !== this.#generation) return
     this.pages = PAGES
     const sim = await load()
     if (generation !== this.#generation) return
+    const supportsBravo = PRODUCT?.includes("paired") && typeof sim.loadScenario === "function"
+    this.bravoControlTarget.hidden = !supportsBravo
+    this.paired = supportsBravo && this.bravoTarget.checked
+    if (this.paired) {
+      const scenario = JSON.stringify({ product: "paired" })
+      if (!sim.loadScenario(scenario, scenario.length)) throw new Error("The firmware rejected the paired scenario")
+    }
     this.sim = sim
-    this.departures = new Map()
+    this.departures = { nearby: new Map(), adsb: new Map() }
     this.nextTrafficMs = FIRST_TRAFFIC_MS
     this.element.classList.add("simulator--running")
     for (const axis in AXES) this.#apply(axis)
@@ -185,23 +194,28 @@ export default class extends Controller {
     const now = this.sim.elapsedMs()
     if (now < this.nextTrafficMs) return
     this.nextTrafficMs = now + this.#between(TRAFFIC_TICK_MIN_MS, TRAFFIC_TICK_MAX_MS)
-    for (const [index, due] of this.departures) {
+    this.#arrivals("nearby", now)
+    if (this.paired) this.#arrivals("adsb", now)
+  }
+
+  #arrivals(group, now) {
+    const departures = this.departures[group]
+    for (const [index, due] of departures) {
       if (due <= now) {
         this.sim.removeAircraft(index)
-        this.departures.delete(index)
+        departures.delete(index)
       }
     }
-    const count = this.departures.size
-    if (count < TRAFFIC_MIN || (count < TRAFFIC_MAX && Math.random() < TRAFFIC_ARRIVAL_SHARE))
-      this.addTraffic()
+    if (departures.size < TRAFFIC_MIN || Math.random() < TRAFFIC_ARRIVAL_SHARE)
+      this.#addAircraft(group)
   }
 
   steer(event) {
-    this.#apply(event.target.dataset.axis)
+    if (this.sim) this.#apply(event.target.dataset.axis)
   }
 
   fly(event) {
-    if (!this.sim || !this.inView || this.#typing(event.target)) return
+    if (!this.sim) return
     if (event.metaKey || event.ctrlKey || event.altKey) return
     if (event.key.toLowerCase() === TRAFFIC_KEY) {
       if (event.repeat) return
@@ -216,10 +230,6 @@ export default class extends Controller {
     const dial = this[`${axis}Target`]
     dial.value = Number(dial.value) + direction * Number(dial.step)
     this.#apply(axis)
-  }
-
-  #typing(target) {
-    return target.isContentEditable || target.matches("input, textarea, select")
   }
 
   #apply(axis) {
@@ -255,21 +265,30 @@ export default class extends Controller {
 
   addTraffic() {
     if (!this.sim) return
+    this.#addAircraft("nearby")
+    if (this.paired) this.#addAircraft("adsb")
+  }
+
+  #addAircraft(group) {
+    const departures = this.departures[group]
+    if (departures.size >= TRAFFIC_MAX_PER_GROUP) return
+    const adsb = group === "adsb"
     const bearing = Math.random() * 2 * Math.PI
-    const range = this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
+    const range = adsb ? this.#between(ADSB_MIN_RANGE_M, ADSB_MAX_RANGE_M)
+                       : this.#between(TRAFFIC_MIN_RANGE_M, TRAFFIC_MAX_RANGE_M)
     const index = this.sim.addAircraft(
       Math.round(Math.cos(bearing) * range),
       Math.round(Math.sin(bearing) * range),
-      Math.round(this.#between(-TRAFFIC_VERT_SPREAD_M, TRAFFIC_VERT_SPREAD_M)),
-      this.#speedMps(),
+      Math.round(this.#between(-TRAFFIC_VERT_SPREAD_M, adsb ? ADSB_MAX_ABOVE_M : TRAFFIC_VERT_SPREAD_M)),
+      adsb ? Math.round(this.#between(ADSB_MIN_CRUISE_KT, ADSB_MAX_CRUISE_KT) * KT_TO_MPS) : this.#speedMps(),
       Math.round(Math.random() * 359),
-      this.#turnDpsE1(),
-      this.#climbMmS(),
-      ADSL,
+      adsb ? 0 : this.#turnDpsE1(),
+      adsb ? 0 : this.#climbMmS(),
+      adsb ? ADSB : (Math.random() < FLARM_SHARE ? FLARM : ADSL),
       this.#address()
     )
     if (index < 0) return
-    this.departures.set(index, this.sim.elapsedMs() + this.#between(TRAFFIC_STAY_MIN_MS, TRAFFIC_STAY_MAX_MS))
+    departures.set(index, this.sim.elapsedMs() + this.#between(TRAFFIC_STAY_MIN_MS, TRAFFIC_STAY_MAX_MS))
     if (Math.random() < TRAFFIC_NAMED_SHARE) this.sim.nameAircraft(index, this.#callsign())
   }
 

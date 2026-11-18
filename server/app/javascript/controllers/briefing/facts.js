@@ -2,7 +2,7 @@ import { compareVersions, parseVersion } from "#skyblip/image"
 import { say } from "controllers/briefing/words"
 
 const DATE = { day: "numeric", month: "short", year: "numeric" }
-const DATE_LOCALES = { en: "en-GB", fr: "fr-FR" }
+const DATE_LOCALES = { en: "en-GB", fr: "fr-FR", de: "de-DE", it: "it-IT", es: "es-ES" }
 
 export function shortName(unit) {
   return unit.name.replace(/^skyBlip /, "").replace(/^activate (\w+) skyBlip$/, "Go $1")

@@ -1,0 +1,153 @@
+---
+title: "¿Qué equipo compro para skyBlip?"
+slug: comprar
+nav_title: "Comprar"
+description: "Compara Go, Go+ y Bravo. Compra el dispositivo que necesitas e instala gratis el software skyBlip, sin suscripción."
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Elige el equipo que necesitas</h1>
+  <p class="page-hero-subtitle">Compra el equipo al vendedor que elijas. El software skyBlip y sus actualizaciones son gratis, sin suscripción.</p>
+  <p>Para <%= link_to_page "install", label: "instalar skyBlip" %> necesitas un ordenador con Chrome o Edge y un cable USB-C de datos.</p>
+</header>
+
+<section id="choose" class="band band--tint">
+  <h2 class="section-title">¿Go, Go+, Bravo o Tango?</h2>
+  <p>El Go transmite tu posición en ADS-L y muestra tráfico ADS-L y FLARM. Bravo detecta transpondedores Mode S y ADS-B.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead>
+        <tr><th scope="col">Si quieres</th><th scope="col">Elige</th><th scope="col">Qué comprar</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Ver el tráfico ADS-L y FLARM en un radar de bolsillo y transmitir tu posición en ADS-L.</th><td><%= link_to_page "features", label: "Go" %></td><td>LilyGO T-Echo</td></tr>
+        <tr><th scope="row">Usar el mismo radar con sonido y vibración además de la alerta en pantalla.</th><td><%= link_to_page "features", label: "Go+" %></td><td>LilyGO T-Echo Plus</td></tr>
+        <tr><th scope="row">Ver el tráfico ADS-B en una aplicación de navegación compatible.</th><td><%= link_to_page "skyblip-bravo", label: "Bravo" %></td><td>MeshTracker X1</td></tr>
+        <tr><th scope="row">Añadir el tráfico ADS-B al radar del Go o Go+.</th><td><%= link_to_page "skyblip-tango", label: "Tango" %></td><td>Un T-Echo o T-Echo Plus y un MeshTracker X1, comprados por separado</td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td colspan="3">El Go muestra los planeadores equipados con FLARM, pero no transmite en FLARM ni sustituye a tu equipo FLARM.</td></tr>
+      </tfoot>
+    </table>
+  </div>
+  <p><strong>Para Go y Go+, comprueba que el anuncio indique 868 MHz y barómetro BME280.</strong> Algunas variantes no sirven para skyBlip. El Go necesita el barómetro BME280.</p>
+  <div class="photo-row">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "LilyGO T-Echo" %>
+    <%= content_image_tag "pages/buy/skyblip-go-plus.avif", alt: "LilyGO T-Echo Plus", class: "photo-go-plus" %>
+    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "Seeed SenseCAP MeshTracker X1", class: "photo-x1" %>
+  </div>
+</section>
+
+<section id="compare" class="band">
+  <h2 class="section-title">¿Go o Go+?</h2>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead>
+        <tr><td></td><th scope="col">skyBlip Go</th><th scope="col">skyBlip Go+</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Equipo</th><td>LilyGO T-Echo</td><td>LilyGO T-Echo Plus</td></tr>
+        <tr><th scope="row">Precio orientativo</th><td>Desde 68&nbsp;€</td><td>Desde 96&nbsp;€</td></tr>
+        <tr><th scope="row">Transmisión y recepción ADS-L, recepción FLARM</th><td>Sí</td><td>Sí</td></tr>
+        <tr><th scope="row">Radar y lista de tráfico</th><td>Sí</td><td>Sí</td></tr>
+        <tr><th scope="row">Tráfico por Bluetooth con un Go sin emparejar</th><td>Tres conexiones</td><td>Tres conexiones</td></tr>
+        <tr><th scope="row">Alerta</th><td>En pantalla</td><td>En pantalla, con sonido y vibración</td></tr>
+        <tr><th scope="row">Sensor inercial</th><td>No</td><td>Bosch BHI260AP</td></tr>
+        <tr><th scope="row">Medidor de carga</th><td>No</td><td>Sí</td></tr>
+        <tr><th scope="row">Batería</th><td>850 mAh</td><td>2400 mAh</td></tr>
+        <tr><th scope="row">Barómetro que debes elegir al comprar</th><td>BME280</td><td>BME280</td></tr>
+        <tr><th scope="row">Pantalla de tinta electrónica</th><td>1,54 in</td><td>1,54 in</td></tr>
+        <tr><th scope="row">Software</th><td>skyBlip, gratis</td><td>skyBlip, gratis</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="where" class="band band--tint country-offers">
+  <h2 class="section-title">Dónde comprar</h2>
+  <p>Los precios incluyen el envío. Elige tu país.</p>
+  <fieldset class="country-tabs">
+    <legend class="visually-hidden">País</legend>
+    <label><input type="radio" name="country" value="es" checked><%= image_tag "flags/es.svg", alt: "", class: "flag" %>España</label>
+    <label><input type="radio" name="country" value="gb"><%= image_tag "flags/gb.svg", alt: "", class: "flag" %>Reino Unido</label>
+    <label><input type="radio" name="country" value="fr"><%= image_tag "flags/fr.svg", alt: "", class: "flag" %>Francia</label>
+    <label><input type="radio" name="country" value="de"><%= image_tag "flags/de.svg", alt: "", class: "flag" %>Alemania</label>
+    <label><input type="radio" name="country" value="it"><%= image_tag "flags/it.svg", alt: "", class: "flag" %>Italia</label>
+  </fieldset>
+  <div class="table-scroll">
+    <table class="compare offers">
+      <thead>
+        <tr><td></td><th scope="col">Recomendados</th></tr>
+      </thead>
+      <tbody data-country="gb">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz con BME280</span></th><td><%= link_to "52 £", "https://link.amazon/B02Dnj0kb", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic en Amazon, con envío gratis en tu primer pedido.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz con BME280</span></th><td><%= link_to "71 £", "https://link.amazon/B0g84Docp", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanco en Amazon, con envío gratis en tu primer pedido.</span></td></tr>
+      </tbody>
+      <tbody data-country="fr">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz con BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B00EaKI0W", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic en Amazon, con envío gratis.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz con BME280</span></th><td><%= link_to "96 €", "https://link.amazon/B05es09aX", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanco en Amazon, 82&nbsp;€ + 14&nbsp;€ de envío.</span></td></tr>
+      </tbody>
+      <tbody data-country="de">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz con BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B0bD44XPr", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic en Amazon, con envío gratis.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz con BME280</span></th><td><%= link_to "100 €", "https://link.amazon/B0cBLPptv", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanco en Amazon, 85&nbsp;€ + 15&nbsp;€ de envío.</span></td></tr>
+      </tbody>
+      <tbody data-country="it">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz con BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B04VNC2lv", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic en Amazon, con envío gratis.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz con BME280</span></th><td><%= link_to "99 €", "https://link.amazon/B0eSR27Ym", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanco en Amazon, 85&nbsp;€ + 14&nbsp;€ de envío.</span></td></tr>
+      </tbody>
+      <tbody data-country="es">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz con BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B00bnKSXW", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic en Amazon, con envío gratis.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz con BME280</span></th><td><span class="offer-details">El 18 de noviembre de 2026, Amazon no enviaba el T-Echo Plus a España. Pídelo a China con el enlace de abajo.</span></td></tr>
+      </tbody>
+      <tbody>
+        <tr><th scope="row">Bravo <span>MeshTracker X1</span></th><td><%= link_to "55,95 $", "https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&referring_service=link", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">MeshTracker X1 en Seeed Studio, enviado desde China, 44,91&nbsp;$ con el código <%= seeed_promo_code %> + 11,04&nbsp;$ de envío a Francia.</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 id="other-offers">Otras ofertas</h3>
+  <div class="table-scroll">
+    <table class="compare offers offers--other">
+      <tbody data-country="gb">
+        <tr><td class="offer-device">Go</td><td><%= link_to "50 £", "https://link.amazon/B01oG7F8P", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF en Amazon, con envío gratis en tu primer pedido.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "71 £", "https://link.amazon/B035DPkcv", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus negro en Amazon, con envío gratis en tu primer pedido.</td></tr>
+      </tbody>
+      <tbody data-country="fr">
+        <tr><td class="offer-device">Go</td><td><%= link_to "90 €", "https://link.amazon/B04TPbtA9", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF en Amazon, 76&nbsp;€ + 14&nbsp;€ de envío.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "99 €", "https://link.amazon/B06htezto", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus negro en Amazon, 85&nbsp;€ + 14&nbsp;€ de envío.</td></tr>
+      </tbody>
+      <tbody data-country="de">
+        <tr><td class="offer-device">Go</td><td><%= link_to "73 €", "https://link.amazon/B08HH7jyI", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo en Amazon, 58&nbsp;€ + 15&nbsp;€ de envío.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "100 €", "https://link.amazon/B08OddOjf", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus negro en Amazon, 85&nbsp;€ + 15&nbsp;€ de envío.</td></tr>
+      </tbody>
+      <tbody data-country="it">
+        <tr><td class="offer-device">Go+</td><td><%= link_to "99 €", "https://link.amazon/B0amSsfjd", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus negro en Amazon, 85&nbsp;€ + 14&nbsp;€ de envío.</td></tr>
+      </tbody>
+      <tbody data-country="es">
+        <tr><td class="offer-device">Go</td><td><%= link_to "75 €", "https://link.amazon/B06qd0Xpk", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF en Amazon. No se enviaba a España el 18 de noviembre de 2026.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "85 €", "https://link.amazon/B0anpBItH", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus blanco en Amazon. No se enviaba a España el 18 de noviembre de 2026.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "85 €", "https://link.amazon/B0afXfuul", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus negro en Amazon. No se enviaba a España el 18 de noviembre de 2026.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 id="from-china"><%= image_tag "flags/cn.svg", alt: "", class: "flag" %>Envío desde China</h3>
+  <p>Estos vendedores envían a todos los países de la lista.</p>
+  <div class="table-scroll">
+    <table class="compare offers offers--other">
+      <tbody>
+        <tr><td class="offer-device">Go</td><td><%= link_to "59,84 $", "https://www.lilygo.cc/skyblip-go", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo de LilyGO, el fabricante. Incluye 13,80&nbsp;$ de envío.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "81,91 $", "https://www.lilygo.cc/skyblip-go-plus", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus de LilyGO, el fabricante. Incluye 15,60&nbsp;$ de envío.</td></tr>
+        <tr><td class="offer-device">Go</td><td><%= link_to "Consulta el precio", "https://s.click.aliexpress.com/e/_c4nyUpy1", class: "offer-price offer-price--unknown", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo en AliExpress.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Los precios son orientativos. Los de Amazon se consultaron el 18 de noviembre de 2026 para envíos a París, Berlín, Roma, Madrid y Londres. Los de LilyGO son del 8 de octubre de 2026 y el del MeshTracker X1, del 9 de noviembre de 2026. El envío depende de la dirección.</p>
+  <p>Estos enlaces son de afiliados. Si compras a través de ellos, el proyecto skyBlip recibe una comisión sin coste adicional para ti. Como afiliado de Amazon, skyBlip obtiene ingresos por las compras que cumplen los requisitos.</p>
+</section>
+
+<section id="install" class="band">
+  <h2 class="section-title">¿Ya tienes el equipo?</h2>
+  <p>Usa un ordenador con Chrome o Edge y un cable USB-C de datos. Briefing instala el software skyBlip en tu dispositivo. No necesitas abrirlo ni soldar nada.</p>
+  <p id="install-bravo" class="signature"><%= link_to_page "install", label: "Consulta cómo instalar skyBlip", class: "button button--primary" %></p>
+  <p id="type" class="signature"><%= link_to_page "go-first-steps", label: "Elige tu tipo de aeronave", anchor: "type" %> · <%= link_to_page "mount", label: "Móntalo en la cabina" %></p>
+</section>

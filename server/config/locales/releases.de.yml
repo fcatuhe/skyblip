@@ -1,0 +1,20 @@
+de:
+  firmwares:
+    label: Verfügbare Version
+    prompt: Version auswählen
+    full: mit Firmware für den Bewegungssensor
+    loading: Verfügbare Firmware wird geladen.
+    unavailable: Die Liste verfügbarer Firmwareversionen ist nicht erreichbar. Wählen Sie stattdessen eine Datei.
+    empty: Es gibt noch keine veröffentlichte Firmware. Wählen Sie stattdessen eine Datei.
+  simulator_builds:
+    loading: Der Simulator wird von GitHub geladen.
+    unavailable: Der Simulator konnte nicht von GitHub geladen werden. Laden Sie die Seite neu.
+    empty: Es gibt noch keine veröffentlichte Simulatorversion.
+    controls:
+      wake: Halten Sie die untere Taste gedrückt, um das Gerät wieder einzuschalten.
+      traffic: Verkehr hinzufügen
+      keys: "Wählen Sie Go per Tabulatortaste oder Klick, um mit den Pfeiltasten zu fliegen. Drücken Sie die Pfeiltaste nach unten, um zu steigen."
+      glass: Das simulierte E-Paper-Display eines skyBlip Go
+      key: "Die Gerätetaste: Drücken öffnet das Menü der aktuellen Ansicht. Zwei Sekunden halten schaltet das Gerät aus. Erneut halten schaltet es wieder ein."
+      pad: "Das Touchfeld: Tippen wechselt die Ansicht. Eine Sekunde berühren führt zum Radar zurück."
+      reset: "RESET: Gerät neu starten"

@@ -81,7 +81,7 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two
     CHECK(radio_repetitions + lead_repetitions <= 12);
 }
 
-// skyBlip's reading: every transmission the schedule makes alternates channel.
+// skyBlip's reading: within a flight state, every transmission the schedule makes alternates.
 TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency") {
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {

@@ -1,0 +1,100 @@
+---
+title: "Verkehr in SDVFR, SkyDemon und ForeFlight"
+nav_title: Smartphone
+slug: smartphone
+description: "Sehen Sie den Verkehr von skyBlip Go per Bluetooth in SDVFR Next, SkyDemon oder ForeFlight. Drei Verbindungen gleichzeitig, ohne Kopplung."
+parent: guides
+share_image: radar
+updated_on: "2026-11-15"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Das letzte Wort hat das Gerät, nicht das Smartphone.</h1>
+  <p class="lede">
+    Was eine App sehen und anfragen kann, und warum das Display am Gerät entscheidet.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="by-name">Go erscheint unter seinem Namen. <span class="highlight">Drei Displays</span> zeigen seinen Verkehr gleichzeitig.</h3>
+      <p>
+        <span class="mono">skyBlip Go+ 00012A</span>: zuerst das Produkt, dann die 24-Bit-Adresse, die das Gerät bei der <%= link_to "Aktivierung", briefing_activation_path %> erhalten hat. Sie müssen nichts koppeln und keinen Code eingeben. Go sendet den Verkehr als FLARM-NMEA-Datenstrom über beide seriellen Bluetooth-Verbindungsarten, nach denen Navigationssoftware sucht. Die App, mit der Sie bereits fliegen, findet ihn dadurch.
+      </p>
+      <p>
+        Das Tablet am Steuerhorn, das Smartphone in der Tasche und das iPad Ihres Passagiers zeigen denselben Verkehr. Nur eine App kann gleichzeitig Einstellungen ändern. Die erste, die eine Einstellung speichert, behält dieses Recht, bis sie die Verbindung trennt. Die zweite erfährt, welche App es gerade hat.
+      </p>
+    </div>
+    <figure class="shot shot--photo">
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "Ein skyBlip Go in einem weißen Gehäuse mit Antenne und Verkehrsradar auf dem E-Paper-Display" %>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Ohne Kopplung, Code oder Konto verbinden</li>
+    <li>Drei Verbindungen gleichzeitig nutzen</li>
+    <li>Über Nordic UART oder FLARM-Profile verbinden</li>
+    <li>SDVFR Next, SkyDemon, ForeFlight und andere Apps nutzen</li>
+    <li>Das Gerät speichert Ihre letzten Flüge</li>
+    <li>Am Boden über dieselbe Verbindung herunterladen</li>
+  </ul>
+
+  <h3 id="asked">Drücken bestätigt, <span class="highlight">Antippen lehnt ab</span>.</h3>
+  <p class="lede">
+    Neue Firmware, Neustart im USB-Bootloader, Einstellungen speichern, Flüge löschen oder Ausschalten: Betrifft die Anfrage einer App das Gerät an Bord, reicht die Bestätigung am Smartphone nicht. Das Gerät nennt die Anfrage auf seinem eigenen Display und wartet dreißig Sekunden. Drücken Sie die Taste bei <span class="mono">ACCEPT</span>, um zu bestätigen. Tippen Sie auf das Touchfeld bei <span class="mono">CANCEL</span>, um abzulehnen. Das Display zählt herunter: <span class="mono">CANCELS IN 30 S</span>. Antworten Sie bis dahin nicht, lehnt das Gerät die Anfrage ab.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "confirm.png", alt: "Bestätigungsanfrage für Einstellungen vom Smartphone: SETTINGS unter dem großen Symbol, die Änderung, CANCELS IN mit den verbleibenden Sekunden, ACCEPT für die Taste und CANCEL für das Touchfeld" %>
+    <figcaption>Vor dem Speichern von Einstellungen fragt das Display nach</figcaption>
+  </figure>
+
+  <p class="lede">
+    Auch das Rufzeichen ist eine dieser Einstellungen. Die App sendet es. Das Display fragt nach Ihrer Zustimmung. Danach erscheint es in der Statusansicht. Go sendet es alle zehn Sekunden, und Luftfahrzeuge in der Nähe zeigen es an. Sie können es auch direkt am Gerät im <%= link_to_page "controls", label: "Rufzeichenfeld", anchor: "callsign" %> eingeben oder im Browser in <%= link_to "Briefing", briefing_root_path %> neben Luftfahrzeugtyp, Einheiten und Warnung einstellen.
+  </p>
+  <p class="lede">
+    Erst wenn die Frage angezeigt wird und Sie die Taste losgelassen haben, zählt ein Tastendruck. Eine Folge von Tastendrücken zum Ändern einer Einstellung kann also nicht auch eine Anfrage bestätigen.
+  </p>
+
+  <h3 id="firmware">Neue Firmware kommt <span class="highlight">von einer Webseite</span>.</h3>
+  <p class="lede">
+    <%= link_to "Briefing", briefing_root_path %> sendet eine signierte Firmwaredatei über dieselbe Bluetooth-Verbindung aus Chrome oder Edge. Das Display fragt einmal nach und nennt die Version, bevor das Gerät die Datei annimmt und installiert. Das Gerät behält die neue Firmware nur, wenn diese das Funkmodul startet, Daten vom Empfänger empfängt und das Display aktualisiert. Andernfalls kehrt es zur vorherigen Firmware und zu den Einstellungen vom Beginn des Updates zurück.
+  </p>
+  <p class="lede">
+    Kann das Gerät Ihre Einstellungen nicht lesen, meldet es das und verwendet die Standardwerte. Im Selbsttest steht in der Zeile <span class="mono">STORAGE</span> der Eintrag <span class="mono">NVS+NOR DEFAULTS</span>. Das Smartphone zeigt einen Hinweis an: Prüfen Sie Rufzeichen und Luftfahrzeugtyp vor dem Flug.
+  </p>
+  <p class="lede">
+    Lässt sich die Firmware gar nicht installieren, startet dieselbe Seite nach Bestätigung den USB-Bootloader. Das Gerät schaltet sich mit der unten gezeigten Anzeige aus. Der nächste Tastendruck startet den Bootloader. Über USB erscheint das Gerät als Laufwerk namens <span class="mono">TECHOBOOT</span>. Kopieren Sie eine <span class="mono">.uf2</span> -Datei darauf, um neue Firmware zu installieren.
+    <span class="mono">RESET</span> führt zurück zu skyBlip. Während der Wiederherstellung sendet das Gerät nichts. Zweimaliges Drücken von <span class="mono">RESET</span> öffnet dasselbe Laufwerk ohne Smartphone.
+  </p>
+
+  <figure class="shot">
+    <%= screen_image_tag "recovery.png", alt: "Wiederherstellungsansicht: RECOVERY unter dem großen Symbol, das USB-Laufwerk TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET und START für die Taste" %>
+    <figcaption>Das Gerät ist für die Wiederherstellung per USB bereit</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2 class="kicker">Technische Hinweise</h2>
+
+  <h3 id="no-pairing">Warum es keine Kopplung gibt.</h3>
+  <p class="lede">
+    Die Bluetooth-Kopplung verschlüsselt die als GATT-Merkmale bezeichneten Datenfelder. Das löst unter Windows einen bekannten Web-Bluetooth-Fehler aus. Die
+    <%= link_to "Browserseite zur Firmwareinstallation", briefing_root_path %> würde nicht funktionieren. Für die Sicherheit zählt daher die Prüfung der Firmwaredatei, nicht die Absicherung der Verbindung.
+  </p>
+
+  <ul class="points">
+    <li>Der Bootloader prüft die Signatur der Firmware mit unserem Schlüssel</li>
+    <li>Er lehnt Firmware ab, die älter ist als die installierte Version</li>
+    <li>Ohne diese Prüfung lässt sich über die offene Verbindung keine Firmware installieren</li>
+    <li>Alle übrigen Anfragen sind nur am Boden möglich</li>
+    <li>Das Gerät lehnt sie ab, wenn Sie sie nicht am Display bestätigen</li>
+    <li>Ihre Anwesenheit am Gerät ersetzt den Kopplungscode</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

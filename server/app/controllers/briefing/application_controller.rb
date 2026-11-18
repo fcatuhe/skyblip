@@ -10,10 +10,7 @@ class Briefing::ApplicationController < ApplicationController
 
     def chosen_locale = cookies[:locale].presence_in(Briefing::Preferences.locales)
 
-    def browser_locale
-      languages = request.headers["Accept-Language"].to_s.split(",").map { it.split(";").first.strip.split("-").first.downcase }
-      languages.find { it.in?(Briefing::Preferences.locales) }
-    end
+    def browser_locale = browser_locales.find { it.in?(Briefing::Preferences.locales) }
 
     def default_url_options = {}
 end

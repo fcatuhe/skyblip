@@ -1,5 +1,14 @@
 module LocaleHelper
+  FLAGS = { en: "gb" }.freeze
+
   def crawler? = DeviceDetector.new(request.user_agent).bot?
+
+  def locale_flag(locale) = image_tag("flags/#{FLAGS.fetch(locale.to_sym, locale)}.svg", alt: "", class: "flag")
+
+  def switcher_locales
+    preferred = browser_locales.map(&:to_sym) & I18n.available_locales
+    preferred + (I18n.available_locales - preferred).sort_by { |locale| t("language_name", locale:) }
+  end
 
   def page_alternate_paths
     @page_alternate_paths ||= if @page

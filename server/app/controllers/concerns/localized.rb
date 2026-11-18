@@ -3,6 +3,7 @@ module Localized
 
   included do
     around_action :switch_locale
+    helper_method :browser_locales
   end
 
   private
@@ -11,6 +12,12 @@ module Localized
     end
 
     def requested_locale = params[:locale] || I18n.default_locale
+
+    def browser_locales
+      ranges = request.accept_language.to_s.split(",").map { it.strip.split(";q=") }
+      ranges = ranges.reject { |tag, quality| tag.blank? || quality&.to_f&.zero? }
+      ranges.sort_by.with_index { |(_, quality), index| [ -(quality || 1).to_f, index ] }.map { |tag, _| tag.downcase.split("-").first }.uniq
+    end
 
     def default_url_options
       return {} if I18n.locale == I18n.default_locale

@@ -2,7 +2,7 @@
 title: "Premiers pas avec skyBlip Go"
 nav_title: Premiers pas Go
 slug: go-premiers-pas
-description: "Repérez les commandes de skyBlip Go, lisez ses voyants et répondez aux demandes. Les gestes à connaître avant votre prochain vol."
+description: "Allumez votre Go, vérifiez sa position et apprenez à lire son radar. Choisissez votre type d'aéronef et réglez votre indicatif."
 parent: guides
 updated_on: "2026-11-18"
 ---
@@ -68,16 +68,39 @@ updated_on: "2026-11-18"
   <p>Le voyant rouge du chargeur reste allumé pendant la charge, clignote si la batterie est absente ou défectueuse, puis s&rsquo;éteint quand elle est pleine.</p>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">En vol</h2>
-  <ol class="steps-grid steps-grid--sequence">
-    <li><h3>Allumez à découvert.</h3><p>Appuyez sur le bouton. Le radar affiche NO FIX et la progression du récepteur jusqu&rsquo;à la première position. Consultez <%= link_to_page "power", label: "le guide sur la mise en marche" %>.</p></li>
-    <li><h3>Regardez où il indique.</h3><p>Le Go émet votre position en ADS-L et reçoit le trafic ADS-L et FLARM. Le radar garde votre route en haut et montre la trajectoire prévue de chaque aéronef sur une minute. Une alarme indique où regarder. Gardez le doigt sur le pavé une seconde pour la couper. Consultez <%= link_to_page "radar", label: "le guide du radar" %>.</p></li>
-    <li><h3>Retrouvez votre application.</h3><p>Le trafic arrive en Bluetooth dans SDVFR, SkyDemon ou ForeFlight, sur trois applications à la fois, sans appairage. Réglez l&rsquo;alarme et l&rsquo;indicatif dans le menu radar ou dans <%= link_to "Briefing", briefing_root_path %>. Consultez <%= link_to_page "phone", label: "le guide du téléphone" %>.</p></li>
-    <li><h3>Éteignez après le vol.</h3><p>Maintenez le bouton deux secondes, puis rechargez en USB-C. Avant le rangement hivernal, laissez l&rsquo;écran vierge. Consultez <%= link_to_page "power", label: "le guide de la charge et du rangement" %>.</p></li>
-  </ol>
+<section id="type" class="band band--tint">
+  <h2 class="section-title">Choisissez le type de votre aéronef</h2>
+  <p>Vous pouvez choisir un type et un indicatif pendant l&rsquo;installation, ou les régler plus tard. Dans le <%= link_to "Briefing", briefing_root_path %>, ouvrez la page de votre Go. Sur le Go, appuyez sur le bouton depuis le radar et ouvrez le menu <code>AIRCRAFT</code>. La ligne <code>TYPE</code> règle le type d&rsquo;aéronef. La ligne <code>CALLSIGN</code> règle <%= link_to_page "controls", label: "l'indicatif", anchor: "callsign" %>.</p>
+  <div class="table-scroll">
+    <table class="compare">
+      <thead><tr><th scope="col">Nom dans le Briefing</th><th scope="col">Nom sur le Go</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Avion léger</th><td><code>LIGHT</code></td></tr>
+        <tr><th scope="row">Avion lourd</th><td><code>HEAVY</code></td></tr>
+        <tr><th scope="row">Hélicoptère léger</th><td><code>LIGHT HELI</code></td></tr>
+        <tr><th scope="row">Hélicoptère lourd</th><td><code>HEAVY HELI</code></td></tr>
+        <tr><th scope="row">Planeur</th><td><code>GLIDER</code></td></tr>
+        <tr><th scope="row">Ballon</th><td><code>BALLOON</code></td></tr>
+        <tr><th scope="row">ULM</th><td><code>MICROLIGHT</code></td></tr>
+        <tr><th scope="row">Parapente</th><td><code>PARAGLIDER</code></td></tr>
+        <tr><th scope="row">Parachutiste</th><td><code>SKYDIVER</code></td></tr>
+        <tr><th scope="row">VTOL</th><td><code>VTOL</code></td></tr>
+        <tr><th scope="row">Autogire</th><td><code>GYROCOPTER</code></td></tr>
+        <tr><th scope="row">Deltaplane</th><td><code>HANG GLIDER</code></td></tr>
+        <tr><th scope="row">Paramoteur</th><td><code>PARAMOTOR</code></td></tr>
+        <tr><th scope="row">Inconnu</th><td><code>UNKNOWN</code></td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="band">
+  <h2 class="section-title">Avant de partir</h2>
+  <p>Allumez le Go à découvert et attendez que le voyant skyBlip clignote en vert&nbsp;: le Go connaît sa position. <%= link_to_page "radar", label: "Apprenez à lire le radar" %>, puis <%= link_to_page "phone", label: "connectez votre application de navigation" %> si vous en utilisez une. Consultez le <%= link_to_page "power", label: "guide d'alimentation" %> pour la charge et le rangement.</p>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Après le vol</h2>
+  <p>Maintenez le bouton deux secondes pour éteindre le Go, puis rechargez-le en USB-C. Le logo reste affiché. Pour ranger le Go plusieurs semaines ou tout un hiver, maintenez plutôt le bouton deux secondes avec un doigt posé sur le pavé&nbsp;: le Go s&rsquo;éteint avec l&rsquo;écran vierge. Une image laissée aussi longtemps laisse une trace permanente. Consultez <%= link_to_page "power", label: "le guide de la charge et du rangement" %>.</p>
   <%= render "shared/cta" %>
 </section>

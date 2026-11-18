@@ -7,6 +7,10 @@ module ApplicationHelper
     "skyBlip"
   end
 
+  def app_name
+    content_for(:app_name) || site_name
+  end
+
   def title
     if page_title.blank? || page_title.include?(site_name)
       page_title.presence || site_name

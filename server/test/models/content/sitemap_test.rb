@@ -64,6 +64,7 @@ class Content::SitemapTest < ActiveSupport::TestCase
       assert sitemap.current?
       assert_equal sitemap.to_xml, Zlib::GzipReader.open(File.join(directory, "sitemap.xml.gz"), &:read)
       assert_includes File.read(File.join(directory, "robots.txt")), "Sitemap: https://skyblip.eu/sitemap.xml\n"
+      assert_includes File.read(File.join(directory, "robots.txt")), "User-agent: *\nContent-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n"
 
       File.write(File.join(directory, "sitemap.xml"), "outdated")
 

@@ -227,21 +227,11 @@ const char* bravo_reason(const RadarSnapshot& snapshot, char* cell_buffer) {
     return nullptr;
 }
 
-void bravo_live_mark(ui::Canvas& canvas) {
-    const Box box = padded(kGlassWidth - kMargin - kLiveMarkPad - kCharacterWidth,
-                           kMargin + kLiveMarkPad, kCharacterWidth, kCharacterHeight, kLiveMarkPad);
-    canvas.rectangle(box.x, box.y, box.width, box.height, true);
-    canvas.draw_text(box.x + kLiveMarkPad, box.y + kLiveMarkPad, "B", true, 1);
-}
-
 Box bravo_corner(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     if (snapshot.bravo == comms::BravoState::Unpaired) return {};
     char cell_buffer[12];
     const char* reason = bravo_reason(snapshot, cell_buffer);
-    if (!reason) {
-        bravo_live_mark(canvas);
-        return {};
-    }
+    if (!reason) return {};
     const int name_width = text_width("BRAVO", 1), reason_width = text_width(reason, 1);
     const int width = name_width > reason_width ? name_width : reason_width;
     const int right = kGlassWidth - kMargin;
@@ -271,6 +261,14 @@ void state_note(ui::Canvas& canvas, const char* note, int y) {
     canvas.draw_text(box.x + kLabelPad, box.y + kLabelPad, note, true, kNoteScale);
 }
 
+void bravo_live_mark(ui::Canvas& canvas, int right, int bottom) {
+    const Box box =
+        padded(right - kLiveMarkPad - kCharacterWidth, bottom - kLiveMarkPad - kCharacterHeight,
+               kCharacterWidth, kCharacterHeight, kLiveMarkPad);
+    canvas.rectangle(box.x, box.y, box.width, box.height, true);
+    canvas.draw_text(box.x + kLiveMarkPad, box.y + kLiveMarkPad, "B", true, 1);
+}
+
 void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     char text[4];
     if (snapshot.fix_valid && snapshot.receiver_listening)
@@ -278,11 +276,19 @@ void traffic_count(ui::Canvas& canvas, const RadarSnapshot& snapshot) {
     else
         text[format_string(text, "-")] = 0;
     const int x = kGlassWidth - kMargin - text_width(text, kTrafficScale);
-    canvas.draw_text(x, kFooterBottom - kCharacterHeight * kTrafficScale, text, true,
-                     kTrafficScale);
+    const int y = kFooterBottom - kCharacterHeight * kTrafficScale;
+    canvas.draw_text(x, y, text, true, kTrafficScale);
     // INFO: fc 17nov26 TRAFFIC beside two digits crosses the TO SCALE ring, so it shortens to TFC
-    const char* word = snapshot.plot == RadarPlot::ToScale && text[1] ? "TFC" : "TRAFFIC";
+    const bool shortened = snapshot.plot == RadarPlot::ToScale && text[1];
+    const char* word = shortened ? "TFC" : "TRAFFIC";
     canvas.draw_text(x - kUnitGap - text_width(word, 1), kFooterY, word, true, 1);
+    if (snapshot.bravo == comms::BravoState::Live) {
+        // INFO: fc 18nov26 a B over TFC would cross the TO SCALE ring, so it stands over the digits
+        if (shortened)
+            bravo_live_mark(canvas, kGlassWidth - kMargin, y - kStackGap);
+        else
+            bravo_live_mark(canvas, x - kUnitGap, kFooterY - kStackGap);
+    }
 }
 
 Box banner_box(const char* word, int y) {

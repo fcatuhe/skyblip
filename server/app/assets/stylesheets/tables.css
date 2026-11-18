@@ -15,6 +15,44 @@
     vertical-align: top;
   }
 
+  .table-scroll .offers td { font-family: var(--font-sans); }
+
+  .offer-price {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .table-scroll .compare.offers > :is(thead, tbody) > tr > :is(th, td) { text-align: start; }
+
+  .offers--other .offer-price {
+    font-size: var(--text-m);
+    white-space: nowrap;
+  }
+
+  .offers--other .offer-price--unknown {
+    font-family: var(--font-sans);
+    font-size: var(--text-xs);
+    font-weight: 400;
+  }
+
+  .offers--other td { vertical-align: baseline; }
+
+  .offers--other .offer-device { font-weight: 700; }
+
+  .offers--other td.offer-details {
+    display: table-cell;
+    inline-size: 100%;
+  }
+
+  .offer-details {
+    display: block;
+    margin-block-start: var(--space-2xs);
+    color: var(--ink-soft);
+    font-size: var(--text-xs);
+  }
+
   .table-scroll thead th {
     font-size: var(--text-xs);
     font-weight: 400;

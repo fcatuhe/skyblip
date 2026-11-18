@@ -1,0 +1,146 @@
+---
+title: "Go: Einstellungen, Rufzeichen und Bedienung"
+nav_title: Bedienung
+slug: bedienung
+description: "Bedienen Sie skyBlip Go mit Touchfeld und Taste. Geben Sie Ihr Rufzeichen ein, ändern Sie Radareinstellungen und öffnen Sie die Diagnose ohne Smartphone."
+parent: guides
+share_image: radar
+updated_on: "2026-11-09"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Zwei Bedienelemente mit klarer Aufgabe.</h1>
+  <p class="lede">
+    Ein Touchfeld und eine Taste bedienen die Menüs. Die Diagnoseansichten sind für die Werkbank gedacht.
+  </p>
+</section>
+
+<section>
+  <div class="feature">
+    <div>
+      <h3 id="two-contacts">Das Touchfeld wechselt, <span class="highlight">die Taste ändert</span>.</h3>
+      <p>
+        Merken Sie sich je eine Aufgabe. Mit dem kapazitiven Touchfeld an der Oberkante wechseln Sie durch die vier Ansichten, ohne Einstellungen zu ändern. Die Taste an der Seite öffnet das Menü der laufenden Ansicht. Jeder weitere Druck ändert den Wert der gewählten Zeile.
+      </p>
+      <p>
+        Zwei Ansichten haben ein Menü. Alle am Gerät änderbaren Einstellungen stehen im Radarmenü, der ersten Ansicht beim Einrichten. Sie müssen nichts bestätigen. Jeder Tastendruck setzt die Änderung sofort um.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Einstellungsmenü mit LIGHT, AIRCRAFT, UNITS, RANGE, PLOT, ALARM und BRAVO. Unten stehen CHANGE für die Taste und NEXT für das Touchfeld." %>
+      <figcaption>Das Radarmenü</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Tippen Sie auf das Touchfeld für die nächste Ansicht</li>
+    <li>Berühren Sie das Touchfeld eine Sekunde lang, um zum Radar zurückzukehren</li>
+    <li>Drücken Sie die Taste, um das Menü zu öffnen, sofern die Ansicht eines hat</li>
+    <li>Drücken Sie erneut, um den Wert der gewählten Zeile zu ändern</li>
+    <li>Gehen Sie über die letzte Zeile hinaus, um zur Ansicht zurückzukehren</li>
+    <li>Berühren Sie die Bedienelemente eine Minute lang nicht. Das Gerät kehrt dann selbst zur Ansicht zurück</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Ihr Rufzeichen, <span class="highlight">eingegeben mit zwei Bedienelementen</span>.</h3>
+      <p>
+        <span class="mono">CALLSIGN</span> öffnet als einzige Zeile ein Eingabefeld, statt einen Wert zu ändern. Darin tauschen die Bedienelemente ihre Aufgaben. Das Touchfeld ändert das Zeichen über dem Balken. Die Taste springt zum nächsten Zeichen. Die Folge läuft vom Leerzeichen über den Bindestrich, <span class="mono">A</span> bis
+        <span class="mono">Z</span>, <span class="mono">0</span> bis
+        <span class="mono">9</span> und zurück zum Leerzeichen. Haben Sie einen Buchstaben übersprungen, tippen Sie weiter, bis er wieder erscheint.
+      </p>
+      <p>
+        Drücken Sie beim letzten Zeichen die Taste, um das Rufzeichen zu speichern. Leerzeichen am Ende werden entfernt. Zum Löschen stellen Sie das erste Zeichen auf ein Leerzeichen und drücken die Taste. Unter der Taste steht <span class="mono">ERASE</span>, sobald das Leerzeichen über dem Balken steht. Verlassen Sie das Feld vorher oder berühren Sie eine Minute lang nichts, speichert das Gerät nichts.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Rufzeichenfeld: S-BLIP in dreifacher Höhe, ein Balken unter dem dritten Zeichen sowie NEXT für die Taste und CHANGE für das Touchfeld" %>
+      <figcaption>Das Rufzeichenfeld</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Rufzeichenfeld mit einem Leerzeichen an erster Stelle, dem Balken darunter und ERASE für die Taste" %>
+      <figcaption>Das erste Zeichen ist ein Leerzeichen</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Menü AIRCRAFT nach dem Tastendruck. Die Zeile CALLSIGN ist gewählt und zeigt NONE." %>
+      <figcaption>Nach einem Tastendruck</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="diagnostics">Vier Ansichten der Reihe nach, <span class="highlight">die übrigen über das Menü</span>.</h3>
+      <p>
+        Beim Antippen folgen Radar, Liste, Instrumente und g-Messer. Andere Ansichten sind nicht Teil der Folge. Wer im Flug umschaltet, soll nicht beim Satellitendiagramm landen. Ohne Inertialsensor gibt es keinen g-Messer. Das Gerät überspringt die Ansicht, statt bei jedem vierten Tippen
+        <span class="mono">NO SENSOR</span> anzuzeigen.
+      </p>
+      <p>
+        Die übrigen Ansichten öffnen Sie über ihren Namen im Menü der Liste. Beim Schließen kehren Sie zur vorherigen Ansicht zurück. Die folgenden Ansichten sind für Werkbank, Vorfeld und Fehlermeldungen gedacht. Mit dem Touchfeld allein erreichen Sie sie nicht. Das Bravo-Protokoll zeigt die Firmware eines gekoppelten Bravo, seinen Akkustand und den Empfang. Um einen Flug für eine Fehlermeldung aufzuzeichnen oder einen Entladetest zu starten, beginnen Sie die Aufzeichnung auf der Geräteseite in Briefing. Das Display zeigt, was gelöscht wird. Ein Tastendruck startet die Aufzeichnung.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Menü der Liste NEARBY: Status, Satelliten, Funkprotokoll, Bravo-Protokoll und Selbsttest. Diese fünf Ansichten öffnen Sie über das Menü." %>
+      <figcaption>Das Menü der Liste</figcaption>
+    </figure>
+  </div>
+
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "Statusansicht: Positionsfix und Satelliten, Position, Kurs über Grund, Anzahl der Luftfahrzeuge, Sendestatus, Sensor-Hub, Druck, beide Höhen, Geschwindigkeit, Vertikalgeschwindigkeit und Akku in Volt und Prozent" %>
+      <figcaption>Status</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "Satellitenansicht: Ein Balken pro Satellit, nach Konstellation gruppiert, mit gepunkteter Referenzlinie bei 40 dB-Hz" %>
+      <figcaption>Satelliten</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Funkprotokoll: Unter Positionsfix, PPS-Signalstatus und Grundrauschen steht jede empfangene oder gesendete Aussendung in einer Zeile. Die jüngste steht oben, mit Zeit, Richtung, Kanal, Inhalt, Adresse und Signalpegel." %>
+      <figcaption>Funkprotokoll</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "Selbsttest: eine Zeile pro Bauteil der Platine, mit Name und Testergebnis für jedes antwortende Bauteil" %>
+      <figcaption>Selbsttest</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Bedienung</th><th>In einer Ansicht</th><th>In einem Menü</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Touchfeld antippen</th>
+          <td>Öffnet die nächste Ansicht oder lehnt eine Anfrage auf dem Display ab</td>
+          <td>Wechselt zur nächsten Zeile oder nach der letzten Zeile zurück zur Ansicht</td>
+        </tr>
+        <tr>
+          <th>Touchfeld 1&nbsp;s berühren</th>
+          <td>Schaltet eine aktive Warnung stumm. Ohne Warnung geht es zum Radar zurück</td>
+          <td>Kehrt zum Radar zurück</td>
+        </tr>
+        <tr>
+          <th>Taste einmal drücken</th>
+          <td>Öffnet das Menü der Ansicht oder bestätigt eine Anfrage auf dem Display</td>
+          <td>Ändert den gewählten Eintrag, bei jedem weiteren Druck erneut</td>
+        </tr>
+        <tr>
+          <th>Taste 2&nbsp;s halten</th>
+          <td colspan="2">Schaltet das Gerät aus</td>
+        </tr>
+        <tr>
+          <th>Taste ebenso halten und dabei das Touchfeld berühren</th>
+          <td colspan="2">Schaltet das Gerät mit leerem Display für die Lagerung aus</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>
