@@ -52,6 +52,12 @@ test('a capture target with no altitude decodes as unknown', () => {
   assert.equal('relative_altitude_m' in decoded, false);
 });
 
+// Bravo runs adsb, button and peer, which no Go service shares a code with.
+test('a loop window names Bravo services by their own codes', () => {
+  const names = [12, 13, 14].map(code => decodeDiagnosticsRecord(record(20, 0, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, code, 0])).worst_service);
+  assert.deepEqual(names, ['adsb', 'button', 'peer']);
+});
+
 test('a slot that is no record decodes as unreadable, and says why', () => {
   const decoded = decodeChunk(join([new Uint8Array(24).fill(0xff), record(99, 0), record(17, 0, [2])]), 40);
   assert.deepEqual(decoded.map(({ index, type, error }) => [index, type, error]), [

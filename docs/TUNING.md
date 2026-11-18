@@ -113,7 +113,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSignOnPulseMs` | 400 | milliseconds | - | no hand has felt these through a motor that spins up, until #169 benches one |
 | `kSignOffPulseMs` | 150 | milliseconds | - | - |
 | `kSignOffGapMs` | 150 | milliseconds | - | - |
-| `kSignatureShortestPhaseMs` | `std::min(shortest_phase_ms(kSignOn), shortest_phase_ms(kSignOff))` | milliseconds | - | - |
+| `kSignShortestPhaseMs` | `std::min(shortest_phase_ms(kSignOn), shortest_phase_ms(kSignOff))` | milliseconds | - | - |
 
 ## [`firmware/core/power`](../firmware/core/power/README.md)
 

@@ -109,7 +109,7 @@ Where an ADS-B emitter category or an ALP-TAS aircraft type covers G.1.3 categor
 | B7 | space vehicle | 0 | G.1.3 has no value for it |
 | A0, B0, B5, C0 to C7, D0 to D7 | no information, reserved, surface vehicles and obstacles | 0 | |
 
-Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the panel.
+Bravo's own transponder is read with `adsb_emitter_to_own_category` instead, because the category it proposes becomes the one a Go transmits for the pilot's own aircraft. Where traffic reads the heavier side of a weight split, own-ship takes the lighter: A6 is 1, A7 is 3 and B6 is 11. A pilot who flies a heavy helicopter picks `HEAVY HELI` on the glass.
 
 ## The type a tablet draws
 

@@ -62,12 +62,12 @@ void hold(uint32_t ms) {
 }
 
 void show_outputs() {
-    for (indication::Lamp lamp :
-         {indication::Lamp::Red, indication::Lamp::Green, indication::Lamp::Blue}) {
-        g_platform.indicator().show(lamp);
+    for (indication::Colour colour :
+         {indication::Colour::Red, indication::Colour::Green, indication::Colour::Blue}) {
+        g_platform.indicator().show(colour);
         hold(kSmokeLampMs);
     }
-    g_platform.indicator().show(indication::Lamp::None);
+    g_platform.indicator().show(indication::Colour::None);
     g_platform.annunciator().tone(kSmokeTonePitchHz, ports::Loudness::Loud);
     hold(kSmokeOutputMs);
     g_platform.annunciator().silence();
@@ -92,7 +92,7 @@ void print_calibration() {
 
 void report() {
     uint16_t battery_mv = 0;
-    const bool battery_plausible = g_platform.read_battery_mv(battery_mv);
+    const bool battery_plausible = g_platform.read_divider_mv(battery_mv);
     printk("smoke: battery=%umV%s vbus=%d charging=%d charged=%d button=%d\n", battery_mv,
            battery_plausible ? "" : " (implausible)", g_platform.external_power(),
            g_platform.charging(), g_platform.charged(), g_platform.button_down());

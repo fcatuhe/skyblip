@@ -3,7 +3,7 @@
 // the in-flight lockout (fail closed) and backpressure.
 //
 // Two of these guard the wire the shell now provides: the gate is fed from the
-// ADS-L flight code core/flight publishes, and a prompt standing on the panel
+// ADS-L flight code core/flight publishes, and a prompt standing on the glass
 // is an open authorisation, so it has a life of its own that ends in a refusal.
 #include <cstring>
 #include <initializer_list>

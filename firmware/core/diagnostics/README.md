@@ -181,7 +181,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 | `Motion` | `products/common/services/ownship.cpp` `record_motion` | `OwnshipService::kMotionRecordPeriodMs`, and only where a hub is fitted |
 | `Contact` | `services/screen.cpp` `record_contact` | every debounced edge, carrying the gesture the product made of it |
 | `Link` | `products/common/services/config_link.cpp` `record_link` and `record_link_down`, `products/common/services/flight_log.cpp` `record_link` | a connection up or down, the claim changing hands, a frame in, a frame dropped |
-| `Traffic` | `products/common/services/alarm.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
+| `Traffic` | `products/common/alarm_grader.cpp` `record_traffic` | every reception that reached a target, once the alarm layer has graded it |
 | `Adsb` | `products/common/services/adsb_capture.cpp` `AdsbCapture::record` | every ADS-B observation folded, at most once per aircraft each `AdsbCapture::kRecordPeriodMs` and ten in any second. Bravo's `AdsbService` calls it after each `protocol::adsb_fold`, and a paired Go's `BravoService` after each `observation` frame it folds. Nothing arms a capture on Bravo yet (#247) |
 | `Write` | `products/common/services/config_link.cpp` `record_write` | every verdict of the durable-write window that is not `Idle` |
 | `Screen` | `services/screen.cpp` `record_screen` | `ScreenService::kRecordPeriodMs`, the render cadence |

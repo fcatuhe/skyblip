@@ -250,7 +250,7 @@ TEST_CASE(
     CHECK(next_aircraft_type(17) == 0);
 }
 
-TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the panel") {
+TEST_CASE("menu page: the UAV categories are not a choice a pilot can make on the glass") {
     MenuValues values = default_menu_values();
     values.settings.aircraft_type = 11;
     const Drawn menu = aircraft_of(values, MenuRow::AircraftAddress);

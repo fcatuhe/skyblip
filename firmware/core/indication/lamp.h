@@ -38,7 +38,7 @@ enum class Condition : uint8_t {
 constexpr uint16_t kShortestFlashEyeCanCatchMs = 20;
 
 struct Indication {
-    indication::Lamp lamp{indication::Lamp::None};
+    Colour lamp{Colour::None};
     uint16_t on_ms{0};
     uint16_t off_ms{0};
     uint8_t flashes{1};
@@ -71,49 +71,49 @@ struct Row {
 constexpr int kRowCount = static_cast<int>(Condition::Count);
 
 inline constexpr Row kTable[kRowCount] = {
-    {Condition::Off, {indication::Lamp::None, 0, 0}, Budget::Dark, "dark: off, or on its way down"},
+    {Condition::Off, {Colour::None, 0, 0}, Budget::Dark, "dark: off, or on its way down"},
     {Condition::Alarm,
-     {indication::Lamp::Red, 50, 150},
+     {Colour::Red, 50, 150},
      Budget::Transient,
      "red, fast flicker: a traffic advisory stands"},
     {Condition::Prompt,
-     {indication::Lamp::Green, 60, 190},
+     {Colour::Green, 60, 190},
      Budget::Transient,
      "green, fast blink: a phone asks, one press allows"},
     {Condition::Pairing,
-     {indication::Lamp::Blue, 60, 190},
+     {Colour::Blue, 60, 190},
      Budget::Transient,
      "blue, fast blink: a skyBlip Go asks to pair, one press pairs"},
     {Condition::Critical,
-     {indication::Lamp::Red, 60, 540},
+     {Colour::Red, 60, 540},
      Budget::Transient,
      "red, blinking every 600 ms: cell critical, land and charge"},
     {Condition::Low,
-     {indication::Lamp::Red, 30, 2970},
+     {Colour::Red, 30, 2970},
      Budget::Steady,
      "red, one wink every 3 s: cell low, past the knee and into the last of its charge"},
     {Condition::NoFixCapturing,
-     {indication::Lamp::Blue, 30, 2790, 2, 150},
+     {Colour::Blue, 30, 2790, 2, 150},
      Budget::Steady,
      "blue, two winks every 3 s: a diagnostics capture is armed, no GNSS fix yet"},
     {Condition::AliveCapturing,
-     {indication::Lamp::Green, 30, 2790, 2, 150},
+     {Colour::Green, 30, 2790, 2, 150},
      Budget::Steady,
      "green, two winks every 3 s: a diagnostics capture is armed, fix valid"},
     {Condition::NoFixLinked,
-     {indication::Lamp::Blue, 30, 1470},
+     {Colour::Blue, 30, 1470},
      Budget::Steady,
      "blue, one wink every 1.5 s: a phone is connected, no GNSS fix yet"},
     {Condition::AliveLinked,
-     {indication::Lamp::Green, 30, 1470},
+     {Colour::Green, 30, 1470},
      Budget::Steady,
      "green, one wink every 1.5 s: a phone is connected, fix valid"},
     {Condition::NoFix,
-     {indication::Lamp::Blue, 30, 2970},
+     {Colour::Blue, 30, 2970},
      Budget::Steady,
      "blue, one wink every 3 s: running, no GNSS fix yet"},
     {Condition::Alive,
-     {indication::Lamp::Green, 30, 2970},
+     {Colour::Green, 30, 2970},
      Budget::Steady,
      "green, one wink every 3 s: running, fix valid"},
 };
@@ -126,7 +126,7 @@ constexpr uint32_t cycle_ms(const Indication& indication) {
 
 constexpr uint16_t duty_permille(const Indication& indication) {
     const uint32_t cycle = cycle_ms(indication);
-    if (indication.lamp == indication::Lamp::None || indication.on_ms == 0 || cycle == 0) return 0;
+    if (indication.lamp == Colour::None || indication.on_ms == 0 || cycle == 0) return 0;
     return static_cast<uint16_t>(1000u * indication.flashes * indication.on_ms / cycle);
 }
 
@@ -157,7 +157,7 @@ constexpr bool every_row_is_inside_its_budget() {
 
 constexpr bool every_lit_row_blinks() {
     for (int i = 0; i < kRowCount; i++)
-        if (kTable[i].indication.lamp != indication::Lamp::None && kTable[i].indication.off_ms == 0)
+        if (kTable[i].indication.lamp != Colour::None && kTable[i].indication.off_ms == 0)
             return false;
     return true;
 }
@@ -166,7 +166,7 @@ constexpr uint16_t shortest_phase_ms() {
     uint16_t shortest = 0xFFFF;
     for (int i = 0; i < kRowCount; i++) {
         const Indication& indication = kTable[i].indication;
-        if (indication.lamp == indication::Lamp::None) continue;
+        if (indication.lamp == Colour::None) continue;
         shortest = std::min(indication.on_ms, shortest);
         shortest = std::min(indication.off_ms, shortest);
         if (indication.flashes > 1) shortest = std::min(indication.between_ms, shortest);
@@ -210,7 +210,7 @@ static_assert(every_cycle_divides_the_minute(), "a row whose flashes drift off s
 
 const Indication& indication_for(Condition condition);
 const char* to_string(Condition condition);
-const char* to_string(indication::Lamp lamp);
+const char* to_string(Colour colour);
 // The line support reads. Same string the table carries; a second accessor so a
 // caller that has a condition and no table does not go looking for one.
 const char* meaning_of(Condition condition);
@@ -245,7 +245,7 @@ constexpr traffic::Level kAlarmTakesLamp = traffic::Level::Advisory;
 Condition condition_for(const Situation& situation);
 
 struct Command {
-    indication::Lamp lamp{indication::Lamp::None};
+    Colour lamp{Colour::None};
     // The lamp has to be told something different from what it was last told.
     // An LED re-driven on every pass is a register write a hundred times a
     // second for no light.
@@ -258,7 +258,7 @@ class Policy {
 
     Condition condition() const { return condition_; }
     // What is lit right now, gaps included: None during the off phase of a wink.
-    indication::Lamp lamp() const { return shown_; }
+    Colour lamp() const { return shown_; }
     bool on_utc_grid() const { return on_grid_; }
 
    private:
@@ -266,7 +266,7 @@ class Policy {
                            const timing::ClockState& clock);
 
     Condition condition_{Condition::Off};
-    indication::Lamp shown_{indication::Lamp::None};
+    Colour shown_{Colour::None};
     uint32_t cycle_start_ms_{0};
     bool on_grid_{false};
     bool started_{false};

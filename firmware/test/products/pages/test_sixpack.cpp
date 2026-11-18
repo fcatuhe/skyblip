@@ -8,7 +8,7 @@
 using namespace skyblip::go;
 
 namespace {
-// The six dial centres, in the order the panel draws them.
+// The six dial centres, in the order the page draws them.
 struct Tile {
     int centre_x, centre_y;
 };

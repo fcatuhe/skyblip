@@ -147,7 +147,7 @@ class MeshtrackerX1 {
         last_battery_ms_ = now_ms;
         uint16_t divider_mv = 0;
         // INFO: fc 12nov26 refused or not, the reading and VBUS go out: core/power judges it
-        platform_.read_battery_mv(divider_mv);
+        platform_.read_divider_mv(divider_mv);
         bus_.battery.push(events::BatterySample{divider_mv, platform_.external_power()});
     }
 

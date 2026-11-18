@@ -57,7 +57,7 @@ class MeshtrackerX1Lines {
     bool storage_mounted() const { return storage_mounted_; }
 
     bool button_down() { return gpio_pin_get_dt(&button_) == 1; }
-    bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
+    bool read_divider_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() { return zephyr::Battery::external_power(); }
     bool charging() { return gpio_pin_get_dt(&charge_status_) == 1; }
     bool charged() { return gpio_pin_get_dt(&charge_done_) == 1; }

@@ -62,7 +62,7 @@ struct Settings {
     // it. Placed here rather than at the end because a signed 16-bit value after
     // the 32-bit address costs no padding, so the blob is the same length it was.
     //
-    // INFO: fc 20oct26 set-only: read back as the millivolts the status reply and the panel show
+    // INFO: fc 20oct26 set-only: read back as the millivolts the status reply and the glass show
     int16_t battery_offset_mv{0};
     // The radio's frequency trim in tenths of a ppm, positive upwards, applied
     // to every dwell the radio arms (hardware/parts/sx1262). Beside

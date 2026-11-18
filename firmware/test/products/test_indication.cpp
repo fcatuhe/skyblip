@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "core/indication/lamp.h"
-#include "core/indication/signature.h"
+#include "core/indication/sign.h"
 #include "core/power/cutoff.h"
 #include "core/power/shutdown.h"
 #include "doctest/doctest.h"
@@ -51,13 +51,13 @@ TEST_CASE("product: a running device with no fix winks blue, and green once it h
 
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::NoFix);
     REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Blue);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Blue);
 
     rig.push_fix(/*altitude_m=*/500, /*updates=*/1);
     settle(rig, now_ms, 500);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
     REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
 }
 
 TEST_CASE("product: a healthy device holds its lamp dark almost all the time") {
@@ -100,7 +100,7 @@ TEST_CASE("product: with a PPS lock the wink falls on the UTC grid, not on when 
         rig.platform.clock().set_milliseconds(now_ms);
         rig.product.run_pass(now_ms);
         const bool lit = lamp_of(rig).lit();
-        if (lit && !was_lit && lamp_of(rig).lamp() == indication::Lamp::Green)
+        if (lit && !was_lit && lamp_of(rig).lamp() == indication::Colour::Green)
             green_from_ms.push_back(now_ms);
         was_lit = lit;
     }
@@ -124,7 +124,7 @@ TEST_CASE("product: a critical cell blinks the lamp red") {
     REQUIRE(rig.state().power.level == power::PowerLevel::Critical);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Critical);
     REQUIRE(step_until_lit(rig, now_ms, 1000) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 }
 
 // The first step a pilot meets: red at the alive cadence, so it costs the pack nothing.
@@ -141,7 +141,7 @@ TEST_CASE("product: a cell past the knee winks red at the rate a healthy one win
     REQUIRE(rig.state().power.level == power::PowerLevel::Low);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Low);
     REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 
     const indication::Indication& low = indication::indication_for(indication::Condition::Low);
     const indication::Indication& alive = indication::indication_for(indication::Condition::Alive);
@@ -182,7 +182,7 @@ TEST_CASE("product: a cable in leaves the lamp saying what the charger cannot") 
     REQUIRE(rig.state().power.battery.charging);
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
     REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
 }
 
 TEST_CASE("product: a low cell on the cable is not low, and the cutoff monitor is why") {
@@ -217,7 +217,7 @@ TEST_CASE(
     const uint32_t first_pulse_ms = now_ms + indication::kSignOff.lead_ms + 100;
     rig.run(now_ms, first_pulse_ms);
     REQUIRE(rig.product.shutdown().phase() == power::ShutdownPhase::Parking);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Red);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Red);
 
     const uint32_t signed_off_ms = now_ms + indication::length_ms(indication::kSignOff) + 100;
     rig.run(first_pulse_ms + 50, signed_off_ms);
@@ -238,7 +238,7 @@ TEST_CASE("product: a press from off signs on with one green pulse, felt as it i
     rig.platform.system_power().causes = power::ResetCause::LowPowerWake;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 100, 10);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
     CHECK(rig.platform.annunciator().vibrating());
 
     rig.run(110, 100 + indication::kSignOnPulseMs, 10);
@@ -320,7 +320,7 @@ TEST_CASE("product: switching the alarm off silences the buzzer and does not dar
 
     CHECK(rig.product.alarm().indicator_condition() == indication::Condition::Alive);
     REQUIRE(step_until_lit(rig, now_ms, 3500) > 0);
-    CHECK(lamp_of(rig).lamp() == indication::Lamp::Green);
+    CHECK(lamp_of(rig).lamp() == indication::Colour::Green);
     CHECK_FALSE(rig.product.alarm().sounding());
 }
 

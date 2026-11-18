@@ -24,13 +24,13 @@ class Indicator : public ports::Indicator {
     }
 
     void begin() {
-        if (ready()) show(indication::Lamp::None);
+        if (ready()) show(indication::Colour::None);
     }
 
-    void show(indication::Lamp lamp) override {
-        drive(green_, lamp == indication::Lamp::Green);
-        drive(red_, lamp == indication::Lamp::Red);
-        drive(blue_, lamp == indication::Lamp::Blue);
+    void show(indication::Colour colour) override {
+        drive(green_, colour == indication::Colour::Green);
+        drive(red_, colour == indication::Colour::Red);
+        drive(blue_, colour == indication::Colour::Blue);
     }
 
     // Dark AND released. These LEDs hang off the gated peripheral rail - SoftRF's
@@ -39,13 +39,13 @@ class Indicator : public ports::Indicator {
     // HIGH. A pin held high once the rail has collapsed sources current back into
     // it through the LED, which is why SoftRF switches its LEDs off and then to
     // inputs in SoC_fini (platform/nRF52.cpp:2799-2807) and why this is a step of
-    // its own rather than show(Lamp::None).
+    // its own rather than show(Colour::None).
     //
     // GPIO_DISCONNECTED rather than GPIO_INPUT: an input leaves the pin's input
     // buffer powered, which is the microamps this whole exercise is about. The
     // next show() reconfigures as an output, so park() is not one-way.
     void park() override {
-        show(indication::Lamp::None);
+        show(indication::Colour::None);
         release(green_);
         release(red_);
         release(blue_);

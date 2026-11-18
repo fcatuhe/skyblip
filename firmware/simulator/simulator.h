@@ -89,7 +89,7 @@ class Simulator {
     // What is being announced, gaps included. This is the one to assert on when
     // the question is whether traffic is being called out at all.
     traffic::Level announcing_level() { return product_.alarm().announcing_level(); }
-    indication::Lamp lamp_since_last_look() { return lamp_.since_last_look(); }
+    indication::Colour lamp_since_last_look() { return lamp_.since_last_look(); }
 
    private:
     // INFO: fc 21sep26 settings are what a device was found with, not an act inside the scenario

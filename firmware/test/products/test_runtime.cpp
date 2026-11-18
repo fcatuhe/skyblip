@@ -69,7 +69,8 @@ TEST_CASE("runtime: the loop sets up every service and ticks them in order") {
     int order[8]{0};
     Spy first(context, 1, order, Status::Ok);
     Spy second(context, 2, order, Status::Ok);
-    runtime::Service* services[] = {&first, &second};
+    const runtime::Loop::Entry services[] = {{&first, diagnostics::LoopService::Config},
+                                             {&second, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services, 2);
 
     CHECK(loop.setup() == Status::Ok);
@@ -120,7 +121,8 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     runtime::Context context{roles, bus, state, recorder};
     Slow quick(context, clock, 300);
     Slow render(context, clock, 2000);
-    runtime::Service* services[] = {&quick, &render};
+    const runtime::Loop::Entry services[] = {{&quick, diagnostics::LoopService::Config},
+                                             {&render, diagnostics::LoopService::Screen}};
     runtime::Loop loop(services, 2);
     runtime::LoopMeter meter(clock);
 
@@ -130,7 +132,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
     for (int i = 0; i < 4; i++) {
         render.cost_us = i == 2 ? 190000 : 2000;
         meter.begin_pass(phases[i]);
-        meter.timed(diagnostics::kLoopBoardPoll, [&] { clock.now_us += 100; });
+        meter.timed(diagnostics::LoopService::BoardPoll, [&] { clock.now_us += 100; });
         loop.run_pass(clock.milliseconds(), &meter);
         meter.end_pass();
         clock.now_us += sleeps_us[i];
@@ -138,7 +140,7 @@ TEST_CASE("runtime: the loop meter names the slowest service and dates the longe
 
     const diagnostics::Loop window = meter.take();
     CHECK(window.passes == 4);
-    CHECK(window.worst_service == 1);
+    CHECK(window.worst_service == diagnostics::LoopService::Screen);
     CHECK(window.worst_tick_ms == 190);
     CHECK(window.worst_pass_us == 190400);
     CHECK(window.worst_pass_phase_ms == 230);
@@ -168,13 +170,17 @@ TEST_CASE("runtime: a meter that rested measures no gap across the rest") {
     CHECK(window.worst_gap_ms == 10);
 }
 
-// A capture names its slowest service by code, and the eleventh service came after the board
-// poll's.
-TEST_CASE("runtime: a service placed past the board poll's code takes the next, none renumbered") {
-    for (int index = 0; index < diagnostics::kLoopBoardPoll; index++)
-        CHECK(diagnostics::loop_service_code(index) == index);
-    CHECK(diagnostics::loop_service_code(diagnostics::kLoopBoardPoll) ==
-          diagnostics::kLoopBoardPoll + 1);
+// Captures already in the field name the Go's services by these numbers.
+TEST_CASE("runtime: a loop code names the service, and the Go's codes keep their numbers") {
+    using diagnostics::LoopService;
+    const LoopService go[] = {LoopService::Config, LoopService::Ownship,   LoopService::Power,
+                              LoopService::Radio,  LoopService::Traffic,   LoopService::Alarm,
+                              LoopService::Nmea,   LoopService::FlightLog, LoopService::Capture,
+                              LoopService::Screen, LoopService::BoardPoll, LoopService::Bravo};
+    for (int code = 0; code < 12; code++) CHECK(static_cast<int>(go[code]) == code);
+    CHECK(static_cast<int>(LoopService::Adsb) == 12);
+    CHECK(static_cast<int>(LoopService::Button) == 13);
+    CHECK(static_cast<int>(LoopService::Peer) == 14);
 }
 
 TEST_CASE("runtime: setup reports the first failure but still sets up the rest") {
@@ -198,7 +204,8 @@ TEST_CASE("runtime: setup reports the first failure but still sets up the rest")
     int order[8]{0};
     Spy failing(context, 1, order, Status::Down);
     Spy ok(context, 2, order, Status::Ok);
-    runtime::Service* services[] = {&failing, &ok};
+    const runtime::Loop::Entry services[] = {{&failing, diagnostics::LoopService::Config},
+                                             {&ok, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services, 2);
 
     CHECK(loop.setup() == Status::Down);
@@ -302,7 +309,8 @@ TEST_CASE("watchdog: the loop refuses to feed for a service that is not progress
     int order[8]{0};
     Spy healthy(context, 1, order, Status::Ok);
     Spy wedged(context, 2, order, Status::Ok);
-    runtime::Service* services[] = {&healthy, &wedged};
+    const runtime::Loop::Entry services[] = {{&healthy, diagnostics::LoopService::Config},
+                                             {&wedged, diagnostics::LoopService::Ownship}};
     runtime::Loop loop(services, 2);
 
     // order[0] is the Spy's write cursor: rewound every pass, because this case

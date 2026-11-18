@@ -99,6 +99,30 @@ The subject comes first because a mechanism on its own is ambiguous where it is 
 
 Out of scope, deliberately: `hardware/`, `boards/` and `ports/`. A datasheet's 2.6 s busy time is the part's figure under the part's name, and renaming it would hide where it came from.
 
+## Naming a part of the device
+
+Each word below names one thing, in code and in prose. A word that names two things makes a reader check which one is meant every time, and it hides a bug where the two differ.
+
+| Word | What it names | Not |
+|---|---|---|
+| glass | what the pilot reads and presses through: the drawing surface, its pages and its prompts. `go::Glass` is a `ui::Bitmap` the size the board states | the part behind it |
+| panel | the e-paper part: its lot and ID, its controller, its refreshes, its rails and its lines. `parts::Panel`, `panel_full_refreshes` | what a page draws |
+| `Display` | the port the panel fills, `ports::Display` | |
+| screen | `ScreenService`, which decides what the glass shows and when the panel refreshes, and its `Screen` record | |
+| bitmap | `ui::Bitmap<W,H>`, a canvas that owns its bytes, at any size | |
+| lamp | the one status light, showing one `indication::Colour` or none | the backlight |
+| LED | a part a board fills the lamp with, one per colour. Only `boards/` and `hardware/` drive one | |
+| annunciator | the buzzer and the haptic, the two voices a call is played on, `ports::Annunciator` | |
+| haptic | the role that shakes, `ports::Haptic`. Its verbs are `vibrate()` and `still()` | `vibro` |
+| motor | the part that shakes, on a pin or behind a DRV2605 | |
+| sign | the lamp and the motor pulsed together as the unit comes on or goes off, `indication::kSignOn` and `kSignOff` | a signature |
+| signature | a cryptographic signature: Ed25519, MCUboot or ADS-L's | a sign, a panel ID |
+| cell | the Li-ion cell. `cell_mv` is its voltage, valid only when the reading is the cell | the USB rail |
+| battery | the subsystem and the pilot's word for it: `BatteryState`, `battery_percent`, `BATTERY` on the glass | |
+| divider | the resistor divider the ADC reads: the cell off the cable, the USB rail on it. `read_divider_mv()`, `BatterySample::divider_mv` | the cell |
+| park | stop a part and release its lines, ready for the rails to drop | `show(Colour::None)`, which only darkens |
+| pass | one run of the service loop over every service | |
+
 ## License
 
 MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). [`NOTICE.md`](../NOTICE.md) lists what an image is built from that is not ours, each with its license: Zephyr and its modules, the toolchain's libraries, Monocypher and the Bosch hub image.

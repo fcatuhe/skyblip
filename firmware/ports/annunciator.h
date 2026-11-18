@@ -1,4 +1,4 @@
-// ports/annunciator.h: capability port: buzzer + vibration motor (T-Echo Plus).
+// ports/annunciator.h: capability port: the buzzer and the haptic a call is played on.
 #ifndef SKYBLIP_PORTS_ANNUNCIATOR_H
 #define SKYBLIP_PORTS_ANNUNCIATOR_H
 

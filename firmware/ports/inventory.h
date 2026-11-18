@@ -5,7 +5,7 @@
 // carries the identities behind them, because LilyGO ships more than one part
 // against the same footprint and the self-test page is the only place a bench
 // can see which one it is holding: which of the two BME280 addresses answered,
-// which e-paper lot the glass is from, whether the haptic is a waveform driver
+// which e-paper lot the panel is from, whether the haptic is a waveform driver
 // or a motor on a pin. Names and addresses only: nothing here decides anything.
 #ifndef SKYBLIP_PORTS_INVENTORY_H
 #define SKYBLIP_PORTS_INVENTORY_H

@@ -252,6 +252,12 @@ class DiagnosticsPayloads(unittest.TestCase):
             "loop", 0, passes=87, busy_ms=231, worst_pass_us=191204, worst_pass_phase_ms=203,
             worst_gap_ms=201, worst_gap_phase_ms=394, worst_service="screen", worst_tick_ms=190))
 
+    # Bravo runs adsb, button and peer, which no Go service shares a code with.
+    def test_loop_names_bravo_services_by_their_own_codes(self):
+        names = [decoded(20, struct.pack("<2HI3H2B", 1, 0, 0, 0, 0, 0, code, 0))["worst_service"]
+                 for code in (12, 13, 14)]
+        self.assertEqual(names, ["adsb", "button", "peer"])
+
     def test_gap_carries_the_hole_itself(self):
         payload = struct.pack("<3IH", 17, 830, 41, 64)
         self.assertEqual(decoded(16, payload), whole(

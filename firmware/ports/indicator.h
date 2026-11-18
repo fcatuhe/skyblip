@@ -3,17 +3,17 @@
 //
 // E-paper holds its last image with the rails down, which is why the wordmark is
 // painted before power off - so an off device and an on device look identical and
-// the panel says nothing at all about whether there is a device there. This is
+// the glass says nothing at all about whether there is a device there. This is
 // the port that does.
 //
-// show() takes a LEVEL, not a pattern: exactly one lamp, or none, right now.
+// show() takes a LEVEL, not a pattern: exactly one colour, or none, right now.
 // The cadence is core/indication's, for the same reason the buzzer's cadence is
 // core/annunciation's - a blink a driver plays is a blink nothing can test - and
 // for one more: the duty cycle is the entire power argument for lighting an LED
 // on a battery at all, and it has to be readable in one table rather than
 // scattered across two platform adapters.
 //
-// park() is not show(Lamp::None). Dark is a pin driven to its inactive level,
+// park() is not show(Colour::None). Dark is a pin driven to its inactive level,
 // and on a board whose LEDs are active-low that level is HIGH: with the rail
 // already collapsed, a pin held high sources current back into it through the
 // LED. park() is dark AND the lines let go, and it is what the way down calls.
@@ -28,7 +28,7 @@
 
 #include <cstdint>
 
-#include "core/indication/lamps.h"
+#include "core/indication/colour.h"
 
 namespace skyblip::ports {
 
@@ -38,7 +38,7 @@ class Indicator {
 
     // Called only when the answer changes: an LED re-driven on every pass of the
     // loop is the same register write a hundred times a second for no light.
-    virtual void show(indication::Lamp lamp) { (void)lamp; }
+    virtual void show(indication::Colour colour) { (void)colour; }
 
     // Dark, and the pins released. After this the indicator is inert until the
     // next show().

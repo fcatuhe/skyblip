@@ -112,7 +112,7 @@ TEST_CASE("duty: an install or a recovery parks through black, never on a full r
     }
 }
 
-TEST_CASE("duty: the backlight counter runs while the lamp is lit and stops with it") {
+TEST_CASE("duty: the backlight counter runs while the backlight is lit and stops with it") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

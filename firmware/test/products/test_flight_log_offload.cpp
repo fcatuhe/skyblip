@@ -438,7 +438,7 @@ TEST_CASE("flight log: erasing every flight takes the button, not just the phone
     REQUIRE(rig.product.flight_log().records_written() > 0);
 
     // Long enough for the question to have reached the glass: a press only
-    // counts towards an answer once the prompt is on the panel and the thumb
+    // counts towards an answer once the prompt is on the glass and the thumb
     // has stopped (products/common/prompt_answer.h), which is what makes a pilot stepping a
     // value on the settings page unable to authorise anything by accident.
     rig.send_log("{\"command\":\"erase\"}");

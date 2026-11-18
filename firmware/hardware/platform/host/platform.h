@@ -255,12 +255,12 @@ class Platform {
 
     static parts::GlassRotation glass_rotation() { return parts::GlassRotation::Degrees0; }
 
-    // The panel signature, as the silicon platform's board port takes it: 11
-    // bytes of register 0x2D then 10 of 0x2E. The virtual glass carries which lot
+    // The panel ID, as the silicon platform's board port takes it: 11
+    // bytes of register 0x2D then 10 of 0x2E. The virtual panel carries which lot
     // it is from, so a host test flies a panel that cannot be powered off after a
     // partial update without a soldering iron.
-    bool read_panel_signature(parts::PanelSignature& out) const {
-        out = chips_.epd.signature;
+    bool read_panel_id(parts::PanelId& out) const {
+        out = chips_.epd.panel_id;
         return out.valid;
     }
 
@@ -283,7 +283,7 @@ class Platform {
         out.temperature_valid = true;
         return true;
     }
-    bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
+    bool read_divider_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() const { return battery_.external_power; }
     Chips& chips() { return chips_; }
     Gpio& board_gpio() { return gpio_; }

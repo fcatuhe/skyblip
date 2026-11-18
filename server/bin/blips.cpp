@@ -40,13 +40,13 @@ constexpr Motion kMotions[] = {
 };
 
 void emit(const char* name, Vertical vertical, Trend trend, bool alarm) {
-    skyblip::ui::Panel<kW, kH> panel;
-    panel.clear();
-    skyblip::ui::draw_blip(panel, kX, kY, vertical, trend, alarm);
+    skyblip::ui::Bitmap<kW, kH> bitmap;
+    bitmap.clear();
+    skyblip::ui::draw_blip(bitmap, kX, kY, vertical, trend, alarm);
 
     std::printf("%s %d %d\n", name, kW, kH);
     for (int y = 0; y < kH; y++) {
-        for (int x = 0; x < kW; x++) std::putchar(panel.get_pixel(x, y) ? '1' : '0');
+        for (int x = 0; x < kW; x++) std::putchar(bitmap.get_pixel(x, y) ? '1' : '0');
         std::putchar('\n');
     }
 }

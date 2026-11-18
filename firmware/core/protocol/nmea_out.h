@@ -63,7 +63,7 @@ constexpr uint32_t kLk8NoBattery = 999;
 // instead of volts as an integer, percent+1000" (MB src/driver/Baro.cpp:406-407,
 // and again at src/protocol/data/NMEA.cpp:1399-1400); GXAirCom sends
 // Clamp(percent,0,100)+1000 (src/main.cpp:4382). The percentage is also the
-// figure our own panel draws, and a device that says 38% while the tablet says
+// figure our own glass draws, and a device that says 38% while the tablet says
 // something else is a support call. Sending 38 in the voltage half of this field
 // would put 38 volts in front of a pilot.
 constexpr uint32_t kLk8BatteryPercentBase = 1000;

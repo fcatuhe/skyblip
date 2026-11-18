@@ -271,7 +271,7 @@ TEST_CASE("rf: nothing goes on air while the receiver's solutions still walk") {
 
     // And there is one copy of that fact. Own-ship owns the window; the flag on
     // the bus is how the transmit gate reads it, and how anything else that
-    // wants the first fix - the chirp on the panel, a status line over the link -
+    // wants the first fix - the chirp on the glass, a status line over the link -
     // reads it too, rather than starting a second watch of its own.
     CHECK(simulator.product().ownship().first_fix().ever_fixed());
     CHECK_FALSE(simulator.product().ownship().first_fix().settled(gnss::kFirstFixSettleMs - 2000));

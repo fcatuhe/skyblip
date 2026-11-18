@@ -1417,7 +1417,7 @@ $LK8EX1 is the one sentence LK8000, XCSoar and their descendants already parse t
 **nmea**
 
 - LK8EX1 battery is a percentage plus 1000, never a bare percentage
-  > The distinction the whole sentence turns on. Field 5 below 1000 is a VOLTAGE in volts; at 1000 and above it is a percentage with 1000 added. Sending 38 for 38% would be read as 38 volts, and sending 1038 for a 3.8 V cell would be read as 100%. SoftRF's lyusupov tree sends the voltage form and the moshe-braner fork corrected itself to this one with the reason in the code ("LK8000 specs say send percent instead of volts as an integer, percent+1000", MB src/driver/Baro.cpp:406-407); we send the percentage, because it is also the number our own panel draws and the two must not disagree.
+  > The distinction the whole sentence turns on. Field 5 below 1000 is a VOLTAGE in volts; at 1000 and above it is a percentage with 1000 added. Sending 38 for 38% would be read as 38 volts, and sending 1038 for a 3.8 V cell would be read as 100%. SoftRF's lyusupov tree sends the voltage form and the moshe-braner fork corrected itself to this one with the reason in the code ("LK8000 specs say send percent instead of volts as an integer, percent+1000", MB src/driver/Baro.cpp:406-407); we send the percentage, because it is also the number our own glass draws and the two must not disagree.
 - LK8EX1 carries pressure, altitude, vario, temperature and the cell
 - LK8EX1 clamps every field short of its own 'not available' value
   > A reading that happens to equal a sentinel would be read as no reading at all, so each field stops one short of the value that names it. The altitude and temperature bounds are SoftRF's own (constrain(-1000, 99998) and constrain(-99, 98), lyusupov NMEA.cpp:250-253).
@@ -1742,11 +1742,11 @@ The road from running to SYSTEM OFF: what starts a shutdown, and the order the r
   > M. The whole sequencer across the 49.7-day wrap of ports::Clock::milliseconds(): the long press, the park, and the settle after the button comes up. It is written as unsigned differences from a stamp guarded by a flag, and this is the case that keeps it that way. What the two failures would be: a press that never reaches two seconds, so the device cannot be switched off at all until the counter comes round; or a park that expires the instant it starts, so the rails go while the panel is still refreshing.
 - the wake pin waits for the button to come up
 
-### test/core/test_signature.cpp
+### test/core/test_sign.cpp
 
 What the device signs in the hand as it comes on and as it goes off, read pass by pass.
 
-**signature**
+**sign**
 
 - a cancelled one stops at once
 - it ends dark and still at its length, across the clock's wrap
@@ -2607,7 +2607,7 @@ The X1's barometer commanded without waiting, compensated in integers, checked a
 
 ### test/hardware/test_ssd1681.cpp
 
-SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the glass turned or not, and the signature that names the panel, all on the host, no panel required.
+SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequence, the framebuffer to RAM polarity (canvas 1=black becomes panel 0=black), the glass turned or not, and the ID that names the panel, all on the host, no panel required.
 
 **ssd1681**
 
@@ -2621,12 +2621,12 @@ SSD1681 e-paper driver tests against models/ssd1681.h. Verifies the init sequenc
   > A canvas of another size would be written as if it were this glass: same bank, same window, rows sheared by the stride it does not have.
 - a glass turned 270 degrees takes framebuffer columns as gate lines
   > The Plus mounts the glass a quarter turn off the scan: unturned here, the device reads sideways.
-- a signature nobody has recorded is unlisted, and an unread one is neither
 - a turned glass writes the same count of black pixels it was handed
+- an ID nobody has recorded is unlisted, and an unread one is neither
 - an unturned glass takes framebuffer rows as gate lines
 - begin() runs the SSD1681 init sequence and resets the panel
 - present() writes a full framebuffer with correct black/white polarity
-- the five signatures shipped in T-Echos are told apart
+- the five IDs shipped in T-Echos are told apart
 - the identity is a name the self-test page can print
 
 ### test/hardware/test_ssd1681_push.cpp
@@ -2927,7 +2927,7 @@ The page a bench reads for a Bravo, which has no glass: what it runs, holds and 
 
 ### test/products/pages/test_confirm.cpp
 
-The authorisation prompt, read back off the glass. With BLE pairing off, this page is the only thing standing between a stranger's phone and the secondary slot, so "there is ink on the panel" is not the claim: "the panel says POWER OFF, and says which press allows it" is.
+The authorisation prompt, read back off the glass. With BLE pairing off, this page is the only thing standing between a stranger's phone and the secondary slot, so "there is ink on the glass" is not the claim: "the glass says POWER OFF, and says which press allows it" is.
 
 **confirm page**
 
@@ -3042,7 +3042,7 @@ The menu behind each page as drawn: the focused row, what each row reads, the ca
 - no label and value a row can hold meet at double height
 - six typed hex digits are an address, and a blank or 000000 is none
   > 000000 is no address, and 0 is what the setting holds while it is unset.
-- the UAV categories are not a choice a pilot can make on the panel
+- the UAV categories are not a choice a pilot can make on the glass
 - the aircraft address ring is blank, 0 to 9, A to F, and back
 - the button's key names what a press does to the focused row
 - the callsign ring is blank, dash, A to Z, 0 to 9, and back
@@ -3347,7 +3347,7 @@ The power-on self test, on the glass. On a first flash this is the only thing th
 
 **self-test page**
 
-- a full inventory still fits the panel
+- a full inventory still fits the glass
 - a paired Go lists its Bravo by tag under the bus, and how it is heard
 - a paired Go with no aircraft address either side lists the warning under the bus
 - a part that could be two parts says which one it is
@@ -3750,7 +3750,7 @@ The press on a prompt also trusts a browser that proved a key, so the glass says
 
 ### test/products/test_comms.cpp
 
-core/comms config state machine tested over a link model with scripted JSON messages, NO device. Covers get, set-with-confirmation, the in-flight lockout (fail closed) and backpressure.  Two of these guard the wire the shell now provides: the gate is fed from the ADS-L flight code core/flight publishes, and a prompt standing on the panel is an open authorisation, so it has a life of its own that ends in a refusal.
+core/comms config state machine tested over a link model with scripted JSON messages, NO device. Covers get, set-with-confirmation, the in-flight lockout (fail closed) and backpressure.  Two of these guard the wire the shell now provides: the gate is fed from the ADS-L flight code core/flight publishes, and a prompt standing on the glass is an open authorisation, so it has a life of its own that ends in a refusal.
 
 **comms**
 
@@ -4190,7 +4190,7 @@ The seven cumulative duty counters on bus::State, through the service that owns 
   > The install and recovery frames are worn for seconds, so they change like a page.
 - the BLE counter runs while a central is connected and stops when it goes
 - the annunciator counter runs while it sounds and stands still while muted
-- the backlight counter runs while the lamp is lit and stops with it
+- the backlight counter runs while the backlight is lit and stops with it
 - the parked frame is the only full refresh a page swap or a present pays for
   > A page swap wipes the glass black on the partial waveform: pricing it as a full is five partials.
 - the receiver counter advances by what the executor was armed for
@@ -4263,8 +4263,8 @@ The settings write through the whole product: a change goes in where a pilot or 
 - a settings write is placed at the instant it starts, not its pass
   > Work earlier in the pass left the settings write deciding on the phase the pass began at.
 - a store that did not mount is never written, and nothing is owed to it
-- a thumb stepping the alarm on the panel writes flash once
-  > The same, stepped by a real thumb on the panel: presses in at the pin the board polls.
+- a thumb stepping the alarm on the glass writes flash once
+  > The same, stepped by a real thumb on the glass: presses in at the pin the board polls.
 - a write the store refused is retried until it lands
   > A refused write was counted as written, and the pilot's change was gone at the next boot.
 - six rapid changes are one write
@@ -4345,7 +4345,7 @@ A flight run: the glass flies while the unit sits on the bench, and nothing fals
 - a stop lands the glass, and leaves no flight time behind
 - every burst on air says on ground, at the real position, standing still
 - records the pair every 30 s, and its boot names the profile
-- the glass refreshes as a flown one does, and a parked one does not
+- the panel refreshes as a flown one does, and a parked one does not
 - the radar flies, the flight log writes nothing, the gates stay grounded
   > A simulated flight in the pilot's log could not be told from a real one, so it writes none.
 
@@ -4544,8 +4544,8 @@ The two wires that decide whether the companion link can do anything at all: the
   > The case the whole gesture was chosen for.
 - the gate closes on the take-off the fix stream proved, not on a phone's word
   > Unknown is a unit with no fix since boot: it sends no position and grades no traffic.
-- the panel counts down the seconds the prompt has left, once a second
-- the panel names the operation while it waits, and stops cycling pages
+- the glass counts down the seconds the prompt has left, once a second
+- the glass names the operation while it waits, and stops cycling pages
 - the pass the first fix says airborne takes a staged set off an advisory
   > One pass: the first airborne fix brings an advisory, and the press that lands with it confirms nothing.
 
@@ -4631,7 +4631,7 @@ The settings page through the whole product: presses in at the pin the board pol
 
 **product**
 
-- a callsign typed on the panel is stored and put on the air
+- a callsign typed on the glass is stored and put on the air
   > G3 again, for the one setting that is text: a pilot with no phone can name their own aircraft, on the glass, with a pad and a button.
 - a long touch the button joins switches the device off, it opens nothing
   > The pad's gestures are one long press apart from the stow, and this one takes the device off.
@@ -4641,14 +4641,14 @@ The settings page through the whole product: presses in at the pin the board pol
 - a press opens the menu of the page a pilot is standing on
 - a screen change wipes the glass, and no keypress asks for a full
   > A full refresh flashes the panel for about 2.5 s, so a menu swap goes through black instead.
-- an aircraft address typed on the panel is stored, drawn, and cleared only when confirmed
+- an aircraft address typed on the glass is stored, drawn, and cleared only when confirmed
 - an invalid setting is never written by the page that could not fix it
 - every page the pad does not walk is opened by a row that names it
   > Every page off the walk hangs on one walked page's menu, and a page on no menu is unreachable.
-- the aircraft type set on the panel is the one that goes on the air
-- the alarm a pilot sets on the panel is the one that survives a boot
+- the aircraft type set on the glass is the one that goes on the air
+- the alarm a pilot sets on the glass is the one that survives a boot
 - the pad walks out of a menu onto the page that opened it
-- the range and the plot a pilot picks on the panel survive a boot
+- the range and the plot a pilot picks on the glass survive a boot
 - the self test is a page the nearby menu opens
   > Boot no longer flashes the self test, so the nearby menu is the only way to it.
 - the settings page reaches the glass, drawn from what the device is running
@@ -4656,7 +4656,7 @@ The settings page through the whole product: presses in at the pin the board pol
 
 ### test/products/test_menu_page_gate.cpp
 
-What editing on the panel cannot spend: the prompt a press answers, the hold that switches the device off, and the refusal a phone gets in the air.
+What editing on the glass cannot spend: the prompt a press answers, the hold that switches the device off, and the refusal a phone gets in the air.
 
 **product**
 
@@ -5334,11 +5334,11 @@ The loop is what every shell drives, so setup failure reporting and tick order a
 
 **runtime**
 
+- a loop code names the service, and the Go's codes keep their numbers
+  > Captures already in the field name the Go's services by these numbers.
 - a meter that rested measures no gap across the rest
   > The products meter only while a capture records, so the passes before an arm are no wait.
 - a null role accepts every call and reports nothing works
-- a service placed past the board poll's code takes the next, none renumbered
-  > A capture names its slowest service by code, and the eleventh service came after the board poll's.
 - setup reports the first failure but still sets up the rest
 - the loop meter names the slowest service and dates the longest wait
   > The bench saw the fix processed later every second, and only this says which wait it was.
@@ -5515,7 +5515,7 @@ Settings survive a power cycle, so every way a stored blob can be wrong is a way
 
 - a blob from a version this firmware never wrote is refused
 - a callsign is only what the menu can type, so a comma or a star is refused
-- a callsign is what a panel can draw, and a patch that is not is refused
+- a callsign is what the glass can draw, and a patch that is not is refused
 - a callsign longer than the field is refused, not cut to fit
 - a corrupted blob is detected (CRC), caller falls back
 - a patch that names an identity changes nothing and refuses nothing

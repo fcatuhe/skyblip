@@ -71,7 +71,7 @@ class MeshtrackerX1 {
     zephyr::Random& random() { return random_; }
 
     bool button_down() { return lines_.button_down(); }
-    bool read_battery_mv(uint16_t& out_mv) { return lines_.read_battery_mv(out_mv); }
+    bool read_divider_mv(uint16_t& out_mv) { return lines_.read_divider_mv(out_mv); }
     bool external_power() { return lines_.external_power(); }
 
     // INFO: fc 12nov26 the board grants the radio, the barometer and the haptic driver from their

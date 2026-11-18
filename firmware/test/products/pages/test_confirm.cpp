@@ -1,6 +1,6 @@
 // The authorisation prompt, read back off the glass. With BLE pairing off, this
 // page is the only thing standing between a stranger's phone and the secondary
-// slot, so "there is ink on the panel" is not the claim: "the panel says POWER
+// slot, so "there is ink on the glass" is not the claim: "the glass says POWER
 // OFF, and says which press allows it" is.
 #include <cstdio>
 #include <cstring>

@@ -59,7 +59,7 @@ void hear_for(Rig& rig, uint32_t& now_ms, int32_t north_m, int seconds,
 
 bool blip_anywhere(const ui::Canvas& glass, ui::Vertical vertical) {
     constexpr int kHalf = 8;
-    ui::Panel<2 * kHalf + 1, 2 * kHalf + 1> alone;
+    ui::Bitmap<2 * kHalf + 1, 2 * kHalf + 1> alone;
     alone.clear(true);
     ui::draw_blip(alone, kHalf, kHalf, vertical, ui::Trend::Steady, false);
     for (int y = kHalf; y < go::kGlassHeight - kHalf; y++)

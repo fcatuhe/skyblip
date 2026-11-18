@@ -41,7 +41,7 @@ Situation everything_at_once() {
 struct LampRig {
     Policy policy{};
     timing::ClockState clock{};
-    indication::Lamp shown{indication::Lamp::None};
+    indication::Colour shown{indication::Colour::None};
     uint32_t shows{0};
     uint32_t lit_ms{0};
     uint32_t total_ms{0};
@@ -49,11 +49,12 @@ struct LampRig {
 
     void step(const Situation& situation, uint32_t now_ms) {
         const Command command = policy.update(situation, now_ms, clock);
-        if (shown != indication::Lamp::None) lit_ms += kStepMs;
+        if (shown != indication::Colour::None) lit_ms += kStepMs;
         total_ms += kStepMs;
         if (!command.changed) return;
         shows++;
-        if (command.lamp != indication::Lamp::None && shown == indication::Lamp::None) flashes++;
+        if (command.lamp != indication::Colour::None && shown == indication::Colour::None)
+            flashes++;
         shown = command.lamp;
     }
 
@@ -105,7 +106,7 @@ TEST_CASE("indication: no row spends more of the pack than the budget it declare
         // Every lit row is on the pack's bill, and nothing on the pack is held solid.
         if (row.budget != Budget::Dark) CHECK(row.indication.off_ms > 0);
         // A flash the eye would miss is a lamp that costs and says nothing.
-        if (row.indication.lamp != indication::Lamp::None)
+        if (row.indication.lamp != indication::Colour::None)
             CHECK(row.indication.on_ms >= kShortestFlashEyeCanCatchMs);
     }
 }
@@ -113,7 +114,7 @@ TEST_CASE("indication: no row spends more of the pack than the budget it declare
 TEST_CASE("indication: traffic outranks everything the device has to say about itself") {
     Situation situation = everything_at_once();
     CHECK(condition_for(situation) == Condition::Alarm);
-    CHECK(indication_for(Condition::Alarm).lamp == indication::Lamp::Red);
+    CHECK(indication_for(Condition::Alarm).lamp == indication::Colour::Red);
 
     // And an empty sky does not.
     situation.alarm_level = Level::None;
@@ -186,8 +187,8 @@ TEST_CASE("indication: a capture winks twice in the fix colour, below a prompt a
     LampRig lamp;
     lamp.run(situation, 0, 30000);
     CHECK(lamp.policy.condition() == Condition::AliveCapturing);
-    CHECK(indication_for(Condition::AliveCapturing).lamp == indication::Lamp::Green);
-    CHECK(indication_for(Condition::NoFixCapturing).lamp == indication::Lamp::Blue);
+    CHECK(indication_for(Condition::AliveCapturing).lamp == indication::Colour::Green);
+    CHECK(indication_for(Condition::NoFixCapturing).lamp == indication::Colour::Blue);
     // Two winks in each of ten 3 s cycles, at the same duty a phone connected spends.
     CHECK(lamp.flashes >= 19);
     CHECK(lamp.flashes <= 21);
@@ -235,7 +236,7 @@ TEST_CASE("indication: no fix is the same wink in another colour") {
     lamp.run(situation, 0, 30000);
     CHECK(lamp.policy.condition() == Condition::NoFix);
     CHECK(lamp.duty_permille() <= kSteadyDutyCeilingPermille);
-    CHECK(indication_for(Condition::NoFix).lamp == indication::Lamp::Blue);
+    CHECK(indication_for(Condition::NoFix).lamp == indication::Colour::Blue);
     // Same rhythm, so a pilot reads the colour and not a count of flashes.
     CHECK(indication_for(Condition::NoFix).on_ms == indication_for(Condition::Alive).on_ms);
     CHECK(indication_for(Condition::NoFix).off_ms == indication_for(Condition::Alive).off_ms);
@@ -261,7 +262,7 @@ TEST_CASE("indication: a critical cell keeps SoftRF's blink rate at a tenth of i
 
 TEST_CASE("indication: no row is held, so every lit row is paid for in winks") {
     for (int i = 0; i < kRowCount; i++)
-        if (kTable[i].indication.lamp != indication::Lamp::None)
+        if (kTable[i].indication.lamp != indication::Colour::None)
             CHECK(kTable[i].indication.off_ms > 0);
 
     Situation situation{};
@@ -278,17 +279,17 @@ TEST_CASE("indication: the lamp goes dark the moment the device starts going dow
     situation.alarm_level = Level::Advisory;
     LampRig lamp;
     lamp.step(situation, 0);
-    REQUIRE(lamp.shown == indication::Lamp::Red);
+    REQUIRE(lamp.shown == indication::Colour::Red);
 
     situation.running = false;
     lamp.step(situation, 1010);
-    CHECK(lamp.shown == indication::Lamp::None);
+    CHECK(lamp.shown == indication::Colour::None);
     CHECK(lamp.policy.condition() == Condition::Off);
     // And it stays dark: nothing about the cell or the sky brings it back while
     // the device is on its way down.
     situation.power_level = power::PowerLevel::Critical;
     lamp.run(situation, 1010, 5000);
-    CHECK(lamp.shown == indication::Lamp::None);
+    CHECK(lamp.shown == indication::Colour::None);
 }
 
 TEST_CASE("indication: a change shows itself at once, not at the end of the cycle") {
@@ -298,11 +299,11 @@ TEST_CASE("indication: a change shows itself at once, not at the end of the cycl
     LampRig lamp;
     lamp.run(situation, 0, 1000);
     // Mid-cycle: the wink is long over and the lamp is dark for another 2 s.
-    REQUIRE(lamp.shown == indication::Lamp::None);
+    REQUIRE(lamp.shown == indication::Colour::None);
 
     situation.alarm_level = Level::Advisory;
     lamp.step(situation, 1010);
-    CHECK(lamp.shown == indication::Lamp::Red);
+    CHECK(lamp.shown == indication::Colour::Red);
 }
 
 // Side by side in one cockpit, a Go and its Bravo used to wink at unrelated offsets.
@@ -321,7 +322,7 @@ TEST_CASE("indication: two units locked to UTC wink together, whenever each cond
         if (now_ms >= 1700) late.step(situation, now_ms);
         if (now_ms < 10000) continue;
         CHECK(early.shown == late.shown);
-        if (early.shown != indication::Lamp::None) together++;
+        if (early.shown != indication::Colour::None) together++;
     }
     CHECK(early.policy.on_utc_grid());
     CHECK(late.policy.on_utc_grid());
@@ -353,10 +354,10 @@ TEST_CASE("indication: every row's flash starts on second 00 of the UTC minute")
             lamp.step(situation, now_ms);
         }
         CAPTURE(to_string(lamp.policy.condition()));
-        CHECK(lamp.shown == indication::Lamp::None);
+        CHECK(lamp.shown == indication::Colour::None);
         lamp.clock = locked_at(kMinuteMs);
         lamp.step(situation, 10000);
-        CHECK(lamp.shown != indication::Lamp::None);
+        CHECK(lamp.shown != indication::Colour::None);
     }
 }
 
@@ -373,8 +374,8 @@ TEST_CASE("indication: the grid takes over after the change's own flash, and cut
     for (uint32_t now_ms = 0; now_ms <= 10000; now_ms += kStepMs) {
         lamp.clock = locked_at(kGridHalfwayMs + now_ms);
         lamp.step(situation, now_ms);
-        if (now_ms == 0) CHECK(lamp.shown == indication::Lamp::Green);
-        if (lamp.shown != indication::Lamp::None) {
+        if (now_ms == 0) CHECK(lamp.shown == indication::Colour::Green);
+        if (lamp.shown != indication::Colour::None) {
             lit_run_ms += kStepMs;
         } else {
             cut_short = cut_short || (lit_run_ms != 0 && lit_run_ms != 30);
@@ -402,10 +403,10 @@ TEST_CASE("indication: a lost PPS lock keeps the rhythm it was winking on") {
 
     lamp.clock = timing::ClockState{};
     lamp.run(situation, 5010, 7490);
-    CHECK(lamp.shown == indication::Lamp::None);
+    CHECK(lamp.shown == indication::Colour::None);
     CHECK_FALSE(lamp.policy.on_utc_grid());
     lamp.step(situation, 7500);
-    CHECK(lamp.shown == indication::Lamp::Green);
+    CHECK(lamp.shown == indication::Colour::Green);
 }
 
 TEST_CASE("indication: the lamp is told only when the answer changes") {
@@ -443,5 +444,5 @@ TEST_CASE("indication: every condition has a name and a lamp that can be named")
         CHECK(std::string(to_string(kTable[i].condition)) != "?");
         CHECK(std::string(to_string(kTable[i].indication.lamp)) != "?");
     }
-    CHECK(std::string(to_string(indication::Lamp::None)) == "dark");
+    CHECK(std::string(to_string(indication::Colour::None)) == "dark");
 }

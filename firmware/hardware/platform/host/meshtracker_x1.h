@@ -108,7 +108,7 @@ class MeshtrackerX1 {
 
     bool button_down() const { return button_down_; }
     void set_button_down(bool down) { button_down_ = down; }
-    bool read_battery_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
+    bool read_divider_mv(uint16_t& out_mv) { return battery_.read_mv(out_mv); }
     bool external_power() const { return battery_.external_power; }
 
     // INFO: fc 12nov26 the board probes these three itself, as it does on silicon

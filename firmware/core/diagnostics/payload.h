@@ -340,13 +340,24 @@ struct Switch {
     bool late{false};
 };
 
-// INFO: fc 03oct26 the service loop's index of each service, then the board poll that precedes them
-constexpr uint8_t kLoopBoardPoll = 10;
-
-// INFO: fc 11nov26 a service past the board poll's code takes the next, so none is renumbered
-constexpr uint8_t loop_service_code(int index) {
-    return static_cast<uint8_t>(index < kLoopBoardPoll ? index : index + 1);
-}
+// INFO: fc 17nov26 a code names the service, not its loop position, so every product decodes alike
+enum class LoopService : uint8_t {
+    Config = 0,
+    Ownship = 1,
+    Power = 2,
+    Radio = 3,
+    Traffic = 4,
+    Alarm = 5,
+    Nmea = 6,
+    FlightLog = 7,
+    Capture = 8,
+    Screen = 9,
+    BoardPoll = 10,
+    Bravo = 11,
+    Adsb = 12,
+    Button = 13,
+    Peer = 14,
+};
 
 struct Loop {
     uint16_t passes{0};
@@ -355,7 +366,7 @@ struct Loop {
     uint16_t worst_pass_phase_ms{0};
     uint16_t worst_gap_ms{0};
     uint16_t worst_gap_phase_ms{0};
-    uint8_t worst_service{0};
+    LoopService worst_service{LoopService::Config};
     uint8_t worst_tick_ms{0};
 };
 
