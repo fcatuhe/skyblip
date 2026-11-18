@@ -31,6 +31,27 @@ bool all_digits(const char* text, int count) {
 
 constexpr int64_t kMillimetresPerSecondPerKnotE3 = 514444;
 constexpr int kRmcStampDigits = 6;
+constexpr int kStampFractionDigits = 3;
+
+uint16_t stamp_fraction_ms(const char* stamp) {
+    if (stamp[kRmcStampDigits] != '.') return 0;
+    uint16_t ms = 0;
+    uint16_t place = 100;
+    for (int i = 0; i < kStampFractionDigits; i++) {
+        const char digit = stamp[kRmcStampDigits + 1 + i];
+        if (digit < '0' || digit > '9') break;
+        ms = static_cast<uint16_t>(ms + (digit - '0') * place);
+        place /= 10;
+    }
+    return ms;
+}
+
+int32_t stamp_ms_of_day(const char* stamp) {
+    if (!all_digits(stamp, kRmcStampDigits)) return -1;
+    const int32_t seconds =
+        two_digits(stamp) * 3600 + two_digits(stamp + 2) * 60 + two_digits(stamp + 4);
+    return seconds * 1000 + stamp_fraction_ms(stamp);
+}
 
 // INFO: fc 23sep26 no aircraft flies past COCOM's 1000 kn, the Karman line, or 1 km under the sea
 constexpr int64_t kSpeedCeilingMmS = 514444;
@@ -172,6 +193,9 @@ bool NmeaParser::parse_line(const char* line, int bytes) {
 bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
     if (field_count <= kGsaVdopField) return false;
     last_sentence_ = Sentence::Gsa;
+    // INFO: fc 18nov26 GSA comes once a second at 4 Hz, so its set replaces the marks, not each GGA
+    if (solution_marks_stale_) sky_.clear_solution();
+    solution_marks_stale_ = false;
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
     int64_t pdop_e2 = 0;
     if (!parse_scaled(fields[kGsaPdopField], 100, pdop_e2) || pdop_e2 <= 0) return true;
@@ -260,6 +284,8 @@ bool NmeaParser::apply_rmc(const char* fields[], int field_count) {
                           nmea_parse_coordinate(fields[3], fields[4][0], latitude_1e7) &&
                           nmea_parse_coordinate(fields[5], fields[6][0], longitude_1e7);
     solution_.utc_valid = false;
+    rmc_stamp_ms_ = stamp_ms_of_day(fields[1]);
+    solution_.utc_ms = rmc_stamp_ms_ < 0 ? 0 : static_cast<uint16_t>(rmc_stamp_ms_ % 1000);
     if (all_digits(fields[1], kRmcStampDigits) && all_digits(fields[9], kRmcStampDigits)) {
         int hours = two_digits(fields[1]), minutes = two_digits(fields[1] + 2),
             seconds = two_digits(fields[1] + 4);
@@ -300,7 +326,8 @@ bool NmeaParser::apply_gga(const char* fields[], int field_count, int bytes) {
     // that catches it, which is why moshe-braner measures it.
     if (field_count < 10 || bytes < kGgaLengthFloorBytes) return false;
     last_sentence_ = Sentence::Gga;
-    sky_.clear_solution();
+    gga_stamp_ms_ = stamp_ms_of_day(fields[1]);
+    solution_marks_stale_ = true;
     solution_.fix_quality = static_cast<uint8_t>(parse_long(fields[6], 2));
     solution_.satellites = static_cast<uint8_t>(parse_long(fields[7], 2));
 

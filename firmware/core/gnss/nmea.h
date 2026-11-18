@@ -67,6 +67,8 @@ struct GnssSolution {
     int32_t speed_mm_s{0};
     int32_t track_cdeg{0};
     uint32_t utc_s{0};
+    // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 4 Hz they name the quarter solved
+    uint16_t utc_ms{0};
     // Horizontal dilution of precision in hundredths, GGA field 8.
     uint16_t hdop_e2{0};
     // INFO: fc 13sep26 vertical DOP in hundredths, GSA field 17, zero on a 2D solution
@@ -108,6 +110,9 @@ class NmeaParser {
     const SkyView& sky() const { return sky_; }
     void forget_satellites_in_view() { sky_.forget_in_view(); }
 
+    // INFO: fc 18nov26 the last GGA and RMC carry one UTC stamp, so height and position are one fix
+    bool same_epoch() const { return gga_stamp_ms_ == rmc_stamp_ms_; }
+
    private:
     static constexpr int kVersionBytes = 24;
 
@@ -117,7 +122,10 @@ class NmeaParser {
     SkyView sky_{};
     char firmware_version_[kVersionBytes]{};
     uint32_t unrequested_{0};
+    int32_t gga_stamp_ms_{-1};
+    int32_t rmc_stamp_ms_{-1};
     Sentence last_sentence_{Sentence::None};
+    bool solution_marks_stale_{false};
 
     bool apply_rmc(const char* fields[], int field_count);
     bool apply_gga(const char* fields[], int field_count, int bytes);
@@ -134,11 +142,13 @@ inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arriv
 }
 
 // INFO: fc 13sep26 a locked PPS edge IS the top of the second the burst describes
+// | 18nov26 and the solution's milliseconds are its offset from that edge, or from the one before
 inline uint32_t solution_instant_ms(const GnssSolution& solution, uint32_t arrival_ms,
                                     uint32_t pps_edge_ms, bool pps_locked) {
     if (!pps_locked || arrival_ms - pps_edge_ms >= 1000)
         return solution_instant_ms(solution, arrival_ms);
-    return pps_edge_ms;
+    const uint32_t this_second_ms = pps_edge_ms + solution.utc_ms;
+    return arrival_ms - this_second_ms < 1000 ? this_second_ms : this_second_ms - 1000;
 }
 
 }
