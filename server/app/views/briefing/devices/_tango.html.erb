@@ -1,0 +1,18 @@
+<%= tag.section class: "tango", hidden: true, aria: { labelledby: "tango-title" }, data: {
+      controller: "tango",
+      tango_slug_value: slug,
+      tango_setup_value: briefing_setup_path
+    } do %>
+  <h2 class="unit-label" id="tango-title" data-tango-target="title"></h2>
+  <p class="tango-text" data-tango-target="text"></p>
+  <div data-tango-target="pressBravo" hidden>
+    <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_press"), marks: { button: t("devices.press"), led: t("devices.led") }, lamp: %i[blue], caption: t("briefing.figures.blue") %>
+  </div>
+  <div class="tango-actions" data-tango-target="actions">
+    <button type="button" class="button-app" data-tango-target="pair" data-action="tango#pair" hidden></button>
+    <button type="button" class="button-app" data-tango-target="connect" data-action="tango#connectPartner" hidden></button>
+    <a class="button-app" data-tango-target="setup" hidden></a>
+    <button type="button" class="button-app button-app--quiet" data-tango-target="connectNew" data-action="tango#connectNew" hidden></button>
+  </div>
+  <p class="unit-message" role="status" data-tango-target="message" hidden></p>
+<% end %>

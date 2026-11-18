@@ -19,6 +19,7 @@ ConstByteSpan span_of(const events::RxFrame& frame) {
 }  // namespace
 
 Status PeerService::setup() {
+    config_.serve_pairing(comms::PairingSide::Bravo);
     const std::optional<uint32_t> epoch = comms::draw_boot_epoch(context_.roles.random);
     if (!epoch) return Status::Down;
     boot_epoch_ = *epoch;
@@ -28,10 +29,16 @@ Status PeerService::setup() {
 
 void PeerService::tick(uint32_t now_ms) {
     forget_gone();
+    if (const std::optional<uint16_t> tag = config_.take_pair_request())
+        acceptance_ = Acceptance{*tag, now_ms};
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take(frame, now_ms);
     pairing_.tick(now_ms);
+    accept(now_ms);
     keep_pin();
+    config_.set_paired_tag(settings_.peer.pinned ? std::optional<uint16_t>(events::bluetooth_tag(
+                                                       address_of(settings_.peer)))
+                                                 : std::nullopt);
     expire_call(now_ms);
     context_.state.link.pairing_standing = pairing_.requested();
     context_.state.followed_call =
@@ -50,6 +57,12 @@ bool PeerService::answer(uint32_t now_ms) {
     health_owed_ = true;
     context_.state.link.pairing_standing = false;
     return true;
+}
+
+void PeerService::accept(uint32_t now_ms) {
+    if (!acceptance_) return;
+    const bool expired = now_ms - acceptance_->since_ms >= kAcceptanceWindowMs;
+    if (expired || (pairing_.requested_by(acceptance_->tag) && answer(now_ms))) acceptance_.reset();
 }
 
 void PeerService::forget_gone() {
@@ -185,6 +198,9 @@ void PeerService::describe_self(comms::PeerHealth& health) const {
     health.charging = battery.charging;
     health.power_level = context_.state.power.level;
     if (health.listening) health.frame_rate_hz = receiver_.statistics().frame_rate_hz;
+    health.gnss_stage = context_.state.gnss.stage;
+    if (context_.state.gnss.stage == gnss::Stage::Fixed)
+        health.satellites = context_.state.own.satellites;
 }
 
 // INFO: fc 11nov26 every Go hears whether Bravo holds its pin, so a Go holding one alone drops it

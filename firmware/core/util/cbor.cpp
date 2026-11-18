@@ -36,6 +36,8 @@ bool read_head(ConstByteSpan frame, size_t& at, Head& out) {
     return head_bytes(argument) == static_cast<int>(1 + width);
 }
 
+}  // namespace
+
 bool valid_utf8(ConstByteSpan text) {
     size_t at = 0;
     while (at < text.size()) {
@@ -73,6 +75,8 @@ bool valid_utf8(ConstByteSpan text) {
     }
     return true;
 }
+
+namespace {
 
 bool read_value(ConstByteSpan frame, size_t& at, Entry& out) {
     Head head;

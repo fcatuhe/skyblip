@@ -30,6 +30,9 @@ class Pairing {
     void tick(uint32_t now_ms);
 
     bool requested() const { return request_.has_value(); }
+    bool requested_by(uint16_t tag) const {
+        return request_ && events::bluetooth_tag(request_->go) == tag;
+    }
     bool pinned() const { return pin_.pinned; }
     bool pinned_to(const events::BluetoothAddress& go) const;
     bool offered_to(const events::BluetoothAddress& go) const;

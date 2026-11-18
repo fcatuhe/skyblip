@@ -17,6 +17,7 @@ struct BravoView {
     uint16_t found_tags[kBravoFoundRows]{};
     int found_count{0};
     uint16_t pairing_tag{0};
+    bool seeking{false};
 };
 
 struct BravoSnapshot {

@@ -1,0 +1,22 @@
+{
+  "description": "The install trust record a .uf2 written by Briefing carries, so the unit trusts the browser that installed it (firmware/core/comms/README.md, Trusted browsers). Bytes are hexadecimal, offsets and sizes decimal. firmware/test/core/test_install_trust.cpp reads this file, and the server's writer is tested against it.",
+  "browser_seed": "4207000000000000000000000000000000000000000000000000000000000000",
+  "key": "0a2a700b987300d3881c63dfc1f8c8468c428c39ff57bf73802718653f7e6873",
+  "label": "Chrome on macOS",
+  "record": "736b79626c69703a74727573743a76310a2a700b987300d3881c63dfc1f8c8468c428c39ff57bf73802718653f7e68730f4368726f6d65206f6e206d61634f530000000000000000001e155767",
+  "record_with_a_bad_crc": "736b79626c69703a74727573743a76310a2a700b987300d3881c63dfc1f8c8468c428c39ff57bf73802718653f7e68730f4368726f6d65206f6e206d61634f530000000000000000001e155768",
+  "header_bytes": 512,
+  "image_bytes": 442788,
+  "protected_tlv_bytes": 85,
+  "tlv_total": 152,
+  "image_end": 443537,
+  "page_offset": 446464,
+  "x1_slot0_start": 217088,
+  "x1_slot0_bytes": 741376,
+  "x1_page_address": 663552,
+  "t_echo_slot0_start": 212992,
+  "t_echo_slot0_bytes": 745472,
+  "t_echo_page_address": 659456,
+  "x1_last_image_end": 733184,
+  "x1_first_image_end_with_no_page": 733185
+}

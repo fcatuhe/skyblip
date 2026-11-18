@@ -60,6 +60,7 @@ constexpr uint16_t kFirstFixEighthMs = 60000 / kFirstFixTempoBpm / 2;
 constexpr uint16_t kFirstFixNoteMs = (7 * kFirstFixEighthMs + 9 / 2) / 9;
 constexpr uint16_t kFirstFixNextBeatMs = kFirstFixEighthMs - kFirstFixNoteMs;
 constexpr uint16_t kFirstFixSkipBeatMs = 2 * kFirstFixEighthMs - kFirstFixNoteMs;
+constexpr uint16_t kFirstFixLastNoteMs = 2 * kFirstFixEighthMs;
 
 inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
@@ -67,7 +68,7 @@ inline constexpr Note kFirstFixJingle[] = {
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
     {kNoteC7Hz, kFirstFixNoteMs, kFirstFixNextBeatMs},
     {kNoteE7Hz, kFirstFixNoteMs, kFirstFixSkipBeatMs},
-    {kNoteG7Hz, kFirstFixNoteMs, 0},
+    {kNoteG7Hz, kFirstFixLastNoteMs, 0},
 };
 inline constexpr Tune kFirstFixTune = tune_of(kFirstFixJingle);
 

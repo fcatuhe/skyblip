@@ -15,7 +15,6 @@ constexpr uint16_t kProtectedTlvMagic = 0x6908;
 constexpr uint16_t kTlvKeyHash = 0x01;
 constexpr uint16_t kTlvImageDigest = 0x10;
 constexpr uint16_t kTlvImageClass = 0x75;
-constexpr size_t kTlvInfoBytes = 4;
 constexpr size_t kTlvEntryBytes = 4;
 constexpr size_t kTlvReadBytes = 256;
 constexpr size_t kHashChunkBytes = 256;
@@ -56,6 +55,13 @@ bool read_header(const uint8_t* data, size_t bytes, ImageHeader& out) {
     out.version.revision = wire::get_uint16(data + 22);
     out.version.build = wire::get_uint32(data + 24);
     return out.header_bytes >= kImageHeaderBytes;
+}
+
+std::optional<uint32_t> image_end(const ImageHeader& header, const uint8_t* tlv_info,
+                                  size_t bytes) {
+    if (tlv_info == nullptr || bytes < kTlvInfoBytes || wire::get_uint16(tlv_info) != kTlvMagic)
+        return std::nullopt;
+    return header.unprotected_tlv_offset() + wire::get_uint16(tlv_info + 2);
 }
 
 bool find_key_hash(const uint8_t* tlvs, size_t bytes, ports::SigningKeyHash& out) {

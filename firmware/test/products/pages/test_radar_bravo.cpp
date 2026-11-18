@@ -36,9 +36,9 @@ TEST_CASE("radar page: a Bravo not live says BRAVO and why in the corner, revers
         bool lost;
     };
     for (const Case each : {Case{BravoState::Waiting, false, "NO LINK", false},
-                            Case{BravoState::Waiting, true, "OUTDOORS", false},
+                            Case{BravoState::Waiting, true, "MOVE OUT", false},
                             Case{BravoState::LinkDown, false, "NO LINK", true},
-                            Case{BravoState::NoUtc, true, "OUTDOORS", true},
+                            Case{BravoState::NoUtc, true, "MOVE OUT", true},
                             Case{BravoState::ReceiverDown, true, "RX DOWN", true}}) {
         CAPTURE(each.why);
         CAPTURE(each.lost);
@@ -70,7 +70,7 @@ TEST_CASE("radar page: the ring speaks for the Go alone, whatever Bravo says") {
     blind.bravo = BravoState::Waiting;
     const Glass searching = radar(blind);
     CHECK(reads_in(searching, "NO FIX", 40, 120, 160, 160, 2));
-    CHECK(reads_in(searching, "OUTDOORS", 20, 140, 180, 175));
+    CHECK(reads_in(searching, "MOVE OUT", 20, 140, 180, 175));
     CHECK(corner_reads(searching, "NO LINK"));
 }
 

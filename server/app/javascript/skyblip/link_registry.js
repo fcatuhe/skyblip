@@ -124,6 +124,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "annunciator_fitted",
           "number": 14,
           "type": "boolean"
+        },
+        {
+          "name": "paired_tag",
+          "number": 15,
+          "type": "unsigned"
         }
       ]
     },
@@ -200,6 +205,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "annunciator_fitted",
           "number": 14,
           "type": "boolean"
+        },
+        {
+          "name": "paired_tag",
+          "number": 15,
+          "type": "unsigned"
         }
       ],
       "keys_of": "config"
@@ -277,6 +287,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "annunciator_fitted",
           "number": 14,
           "type": "boolean"
+        },
+        {
+          "name": "paired_tag",
+          "number": 15,
+          "type": "unsigned"
         }
       ],
       "keys_of": "config"
@@ -2229,6 +2244,17 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "dismissed_announcement",
           "number": 21,
           "type": "unsigned"
+        },
+        {
+          "name": "gnss_stage",
+          "number": 22,
+          "type": "enum",
+          "enum": "gnss_stage"
+        },
+        {
+          "name": "satellites",
+          "number": 23,
+          "type": "unsigned"
         }
       ]
     },
@@ -2710,6 +2736,26 @@ export const LINK_REGISTRY = Object.freeze({
           "required": true
         }
       ]
+    },
+    {
+      "command": "pair",
+      "code": 40,
+      "endpoint": "config",
+      "sender": "host",
+      "keys": [
+        {
+          "name": "command",
+          "number": 0,
+          "type": "enum",
+          "enum": "command"
+        },
+        {
+          "name": "tag",
+          "number": 1,
+          "type": "unsigned",
+          "required": true
+        }
+      ]
     }
   ],
   "enums": {
@@ -2926,6 +2972,42 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "set_on_go",
           "code": 53
+        },
+        {
+          "name": "confirm_pair",
+          "code": 54
+        },
+        {
+          "name": "pair",
+          "code": 55
+        },
+        {
+          "name": "paired",
+          "code": 56
+        },
+        {
+          "name": "not_found",
+          "code": 57
+        },
+        {
+          "name": "phones_connected",
+          "code": 58
+        },
+        {
+          "name": "narrow_link",
+          "code": 59
+        },
+        {
+          "name": "no_answer",
+          "code": 60
+        },
+        {
+          "name": "link_lost",
+          "code": 61
+        },
+        {
+          "name": "unknown_protocol",
+          "code": 62
         }
       ]
     },
@@ -3422,6 +3504,34 @@ export const LINK_REGISTRY = Object.freeze({
         }
       ]
     },
+    "gnss_stage": {
+      "mirrors": {
+        "type": "gnss::Stage",
+        "header": "core/gnss/acquisition.h"
+      },
+      "values": [
+        {
+          "name": "silent",
+          "code": 0,
+          "mirrors": "Silent"
+        },
+        {
+          "name": "blind",
+          "code": 1,
+          "mirrors": "Blind"
+        },
+        {
+          "name": "solving",
+          "code": 2,
+          "mirrors": "Solving"
+        },
+        {
+          "name": "fixed",
+          "code": 3,
+          "mirrors": "Fixed"
+        }
+      ]
+    },
     "climb_source": {
       "mirrors": {
         "type": "model::ClimbSource",
@@ -3810,6 +3920,10 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "identity",
           "code": 39
+        },
+        {
+          "name": "pair",
+          "code": 40
         }
       ]
     }

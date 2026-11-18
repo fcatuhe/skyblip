@@ -1,0 +1,127 @@
+---
+title: "skyBlip Go, point GPS et état de vol"
+nav_title: GPS
+slug: gps
+description: "Comment skyBlip Go tire un point des phrases GPS, attend qu'il se stabilise, garde l'heure avec le PPS et décide du vol à partir de la seule vitesse sol."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Un point se mérite, et un vol est une vitesse.</h1>
+  <p class="lede">Un skyBlip Go a besoin de sa propre position et de l&rsquo;heure pour émettre une position en ADS-L. Il contrôle les données du récepteur GPS, attend qu&rsquo;elles se stabilisent et détermine l&rsquo;état de vol à partir de la vitesse sol. Cet état commande la cadence d&rsquo;émission et l&rsquo;autorisation des mises à jour.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Le point</h2>
+
+  <h3 id="fix">Une solution n&rsquo;est pas un point.</h3>
+  <p class="lede">Le récepteur GPS envoie une solution chaque seconde, qu&rsquo;il voie le ciel ou non. Le Go ne la retient comme point GPS qu&rsquo;après ses propres contrôles. Les deux phrases qui portent la position et la date doivent être présentes et récentes. La date ne doit pas être celle de 1980 que certains récepteurs annoncent avant de connaître la bonne. La position doit rester à une distance plausible de la précédente. Le récepteur indique aussi s&rsquo;il juge sa solution valide, mais le Go s&rsquo;en tient à ses propres contrôles.</p>
+  <p class="lede">Le Go utilise un récepteur Quectel L76K, le Bravo un Airoha AG3335. Tous deux transmettent leurs données sous forme de phrases NMEA, lues par le même analyseur.</p>
+
+  <h3 id="waiting">Trois mots pendant l&rsquo;attente.</h3>
+  <p class="lede"><span class="mono">NO FIX</span> ne suffit pas à distinguer une antenne sous le toit d&rsquo;un hangar, un récepteur muet ou un point attendu dans vingt secondes. Le Go examine les phrases déjà reçues et affiche un mot pour vous dire s&rsquo;il faut déplacer l&rsquo;appareil, attendre ou le passer au banc&nbsp;:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Mot</th><th>Ce que voit le Go</th><th>Que faire</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>GPS OFF</th><td>aucune phrase récente du récepteur</td><td>passez l&rsquo;appareil au banc. Un ciel plus dégagé ne fera pas parler le récepteur</td></tr>
+        <tr><th>MOVE OUT</th><td>des solutions arrivent sans date exploitable</td><td>déplacez l&rsquo;appareil pour dégager la vue de l&rsquo;antenne sur le ciel</td></tr>
+        <tr><th>FINDS FIX</th><td>une date exploitable a été décodée</td><td>laissez l&rsquo;appareil en place. Le récepteur a lu le message de navigation d&rsquo;un satellite, mais la géométrie ne suffit pas encore pour un point</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede"><span class="mono">FINDS FIX</span> indique que patienter peut servir. La date vient du message de navigation des satellites. Son décodage marque donc un progrès par rapport à l&rsquo;absence de signal exploitable. La page d&rsquo;état ajoute le temps passé à l&rsquo;étape en cours, jusqu&rsquo;à 9:59. L&rsquo;anneau du radar et la liste nearby n&rsquo;affichent que le mot, pour éviter de redessiner une partie de l&rsquo;écran chaque seconde tant que l&rsquo;appareil n&rsquo;a pas de point.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "no-fix.png", alt: "La page radar sans position : l'anneau vide affiche NO FIX et, en dessous, l'avancée du récepteur vers un point" %>
+    <figcaption>Pas encore de point, mais le récepteur a décodé une date</figcaption>
+  </figure>
+
+  <h3 id="settle">Il émet une fois le point stabilisé.</h3>
+  <p class="lede">Au démarrage à froid, les premiers points d&rsquo;un récepteur peuvent dériver pendant plusieurs secondes, en position, en altitude et surtout en vitesse sol. Or cette vitesse déclenche aussi le passage à l&rsquo;état en vol. Émettre trop tôt pourrait diffuser une trajectoire que l&rsquo;aéronef n&rsquo;a jamais suivie, à la cadence du vol alors qu&rsquo;il est garé.</p>
+  <p class="lede">Le Go mesure la stabilisation des points plutôt que d&rsquo;imposer une attente fixe. Chaque seconde, il prédit la position suivante à partir du point précédent, à vitesse et taux de virage constants, puis compare la prévision au nouveau point. Il commence à émettre après trois prédictions consécutives dont l&rsquo;écart reste inférieur à 12&nbsp;m. Douze mètres en une seconde correspondent à 12&nbsp;m/s, le seuil de décollage. La limite d&rsquo;erreur est donc liée à la décision de vol qu&rsquo;elle protège. Une solution 2D ne compte jamais pour cette stabilisation, car son altitude n&rsquo;est pas une mesure. Si le récepteur ne se stabilise pas, l&rsquo;émission commence malgré tout 20&nbsp;s après le premier point, ou 5&nbsp;s après une brève perte du point. L&rsquo;attente est plafonnée, car ne jamais émettre serait pire.</p>
+
+  <h3 id="deadline">Le point doit arriver avant 450&nbsp;ms.</h3>
+  <p class="lede">Le Go ne peut utiliser une solution pour la seconde en cours qu&rsquo;après réception de la phrase qui la termine. La première émission possible se situe à 450&nbsp;ms après le début de cette seconde. Le récepteur commence à envoyer ses données vers 70&nbsp;ms. À son débit de démarrage de 9600&nbsp;bauds, les 320 octets d&rsquo;un point mettent 333&nbsp;ms à arriver. Il ne reste que 47&nbsp;ms de marge. Lors d&rsquo;un essai au banc avec 22 satellites utilisés, le point était complet à 780&nbsp;ms. Toute émission prévue avant cet instant était refusée.</p>
+  <p class="lede">Le Go passe donc le récepteur à 115200&nbsp;bauds, le débit maximal documenté pour sa commande de configuration. Le même point arrive alors en 28&nbsp;ms. La commande ne reçoit pas d&rsquo;accusé de réception. Le Go vérifie donc qu&rsquo;une phrase est correctement reçue au nouveau débit et revient à l&rsquo;ancien si aucune n&rsquo;arrive.</p>
+  <p class="lede">La page satellites représente le niveau de signal de chaque satellite par une barre. Les phrases qui portent ces niveaux retardent aussi le point. Le Go ne les demande donc que lorsque cette page est ouverte, à raison d&rsquo;une série toutes les cinq secondes. Les compteurs continuent de se mettre à jour chaque seconde. Le récepteur calcule une solution par seconde. Cinq solutions par seconde n&rsquo;avanceraient pas le premier point et ajouteraient des mesures plus bruitées.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "satellites.png", alt: "La page satellites : une barre par satellite, regroupées par constellation, devant une ligne pointillée à 40 dB-Hz" %>
+    <figcaption>Les niveaux de signal ne sont demandés que lorsque cette page est ouverte</figcaption>
+  </figure>
+
+  <h3 id="pps">Le PPS marque le début de la seconde.</h3>
+  <p class="lede">Le récepteur fournit une impulsion par seconde, appelée PPS. Une interruption en capture le front sans attendre le prochain tick du système d&rsquo;exploitation. Ce front marque le début de la seconde UTC à partir de laquelle se mesure chaque <%= link_to_page "timing", label: "fenêtre radio" %>. Chaque solution est datée à ce front, et non à l&rsquo;arrivée de sa dernière phrase. Si les impulsions cessent, les fenêtres radio continuent pendant 60&nbsp;s à partir du dernier front, en réception seulement&nbsp;: le Go n&rsquo;émet rien sans PPS verrouillé.</p>
+  <p class="lede">On ne sait pas encore si le L76K continue de produire ces impulsions sans point GPS. Sa documentation décrit l&rsquo;impulsion, mais ne précise pas si la perte du point l&rsquo;arrête. La puce permet les deux comportements, et le Go ne choisit pas ce réglage. Un essai au banc doit établir ce qui se passe lors d&rsquo;une perte du point.</p>
+</section>
+
+<section>
+  <h2 class="kicker">L&rsquo;état de vol</h2>
+
+  <h3 id="flight">En vol ou au sol, à partir de la seule vitesse sol.</h3>
+  <p class="lede">Le Go détermine l&rsquo;état de vol à partir de la vitesse sol fournie avec chaque point. Il n&rsquo;utilise ni altitude, ni vitesse verticale, ni baromètre pour cette décision. Des seuils distincts évitent qu&rsquo;une petite variation de vitesse le fasse changer d&rsquo;état à répétition&nbsp;:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>État</th><th>Condition</th><th>Pourquoi ce nombre</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Décollage</th><td>12&nbsp;m/s ou plus (23&nbsp;kt)</td><td>un remorqueur pressé de rejoindre la grille roule à 10&nbsp;m/s. Un planeur quitte le sol en remorqué vers 20&nbsp;m/s</td></tr>
+        <tr><th>Atterrissage</th><td>moins de 8&nbsp;m/s pendant 10&nbsp;s</td><td>une vitesse de roulage maintenue permet de reconnaître l&rsquo;atterrissage avant l&rsquo;arrêt</td></tr>
+        <tr><th>Atterrissage</th><td>moins de 1&nbsp;m/s</td><td>un arrêt. Ce seuil vaut environ trois fois le bruit de vitesse habituel d&rsquo;un récepteur immobile</td></tr>
+        <tr><th>TAXI à l&rsquo;écran</th><td>1,5&nbsp;m/s ou plus, au sol</td><td>environ un pas rapide. L&rsquo;affichage revient à GROUND sous 1&nbsp;m/s</td></tr>
+        <tr><th>Entre les deux</th><td>conserver l&rsquo;état précédent</td><td>l&rsquo;écart entre les seuils évite les changements répétés</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/flight_state" %>
+
+  <p class="lede">L&rsquo;écart entre 12 et 1&nbsp;m/s compte dans le vent. Un planeur qui spirale dans un vent de 15&nbsp;m/s peut passer de 5&nbsp;m/s face au vent à 40&nbsp;m/s vent arrière à chaque tour. Un seuil unique entre ces vitesses lui ferait enchaîner les atterrissages et les décollages. Exiger 10&nbsp;s sous 8&nbsp;m/s l&rsquo;évite dans cet exemple de spirale&nbsp;: avec un vent de 20&nbsp;m/s, un planeur qui tourne à 22&nbsp;m/s passe environ 3&nbsp;s d&rsquo;un tour de 25&nbsp;s sous le seuil d&rsquo;atterrissage.</p>
+  <p class="lede">Une ancienne règle déclarait aussi le vol au-dessus de 2000&nbsp;m. Un appareil garé à Courchevel, à 2008&nbsp;m, restait donc en vol en permanence. La vitesse sol évite ce piège lié à l&rsquo;altitude, mais la qualité du point compte toujours. Les indices de vol sont atténués quand le point est médiocre, et une vitesse qui fait plus que quadrupler entre deux points consécutifs est ignorée. Les indices de sol ne sont jamais atténués, car réduire une vitesse ne doit pas fabriquer un atterrissage. Le premier point après la mise en marche décide immédiatement. Entre les seuils, il retient le sol, car l&rsquo;allumage pendant le remorquage vers la grille est le cas courant.</p>
+
+  <h3 id="changes">Ce que l&rsquo;état change.</h3>
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th></th><th>Au sol</th><th>En vol</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Positions émises</th><td>toutes les 9 puis 11&nbsp;s</td><td>chaque seconde</td></tr>
+        <tr><th>Alarme de trafic</th><td>muette</td><td>le trafic est évalué pour les alertes, voir <%= link_to_page "traffic", label: "trafic", anchor: "ground" %></td></tr>
+        <tr><th>Mises à jour, réglages depuis le téléphone, téléchargement des vols</th><td>permis</td><td>nouvelles mises à jour, téléchargement des vols et réglages qui demandent un appui refusés. Les réglages depuis un navigateur de confiance restent permis</td></tr>
+        <tr><th>Journal de vol</th><td>la minute de roulage précédente conservée en mémoire</td><td>enregistré chaque seconde, avec cette minute précédente</td></tr>
+        <tr><th>Chronomètre de vol</th><td>conserve le temps affiché</td><td>compte le temps en vol</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Un faux décollage bloque les mises à jour au sol et consomme la batterie à la cadence d&rsquo;émission du vol. Un décollage manqué laisse un aéronef émettre à la cadence du parking alors qu&rsquo;il vole. Une fois le vol déclaré, la perte du point ne peut pas lever le verrou des mises à jour. Il faut un état sol confirmé. Une antenne qui perd la réception derrière une crête ne peut donc pas autoriser une mise à jour en plein vol. Un appareil qui n&rsquo;a encore obtenu aucun point depuis sa mise en marche reste dans un état inconnu et autorise les mises à jour, ce qui permet de travailler au banc en intérieur.</p>
+  <p class="lede">Le chronomètre additionne le temps en vol depuis la mise en marche, pas depuis le dernier décollage. Il se met en pause à l&rsquo;atterrissage et reprend au décollage suivant. Un posé-décollé ne remet donc pas le compteur à zéro. Un faux atterrissage ne retire que les secondes passées dans l&rsquo;état sol.</p>
+
+  <h3 id="no-roll">Les ailes qui n&rsquo;ont pas besoin de vitesse sol.</h3>
+  <p class="lede">Un parapente qui vole à environ 10&nbsp;m/s dans l&rsquo;air n&rsquo;a plus que 5&nbsp;m/s de vitesse sol face à une brise de 5&nbsp;m/s. Il peut rester sous le seuil de décollage pendant tout son vol. Les deltas en vol de pente et les ballons peuvent poser le même problème. Pour ces types d&rsquo;aéronefs, le Go émet l&rsquo;état indéfini d&rsquo;ADS-L plutôt que l&rsquo;état au sol. ADS-L transmet cet état à pleine cadence, sans jamais les annoncer comme garés. Cela ne fait pas passer le détecteur fondé sur la vitesse sol à l&rsquo;état en vol. Leur journal suit une règle distincte&nbsp;: il s&rsquo;ouvre quand ils bougent et se ferme après deux minutes d&rsquo;immobilité.</p>
+  <p class="lede">La montée barométrique servait autrefois à détecter ces vols. Elle a été retirée parce que les rafales, les variations de pression et les pics lors d&rsquo;une perte du baromètre provoquaient de faux décollages dans la file du hangar. La vitesse sol évite ces fausses détections, mais peut manquer un vol à faible vitesse sol. L&rsquo;état indéfini émis par radio et la règle propre au journal répondent à ces limites sans prendre une montée barométrique pour une preuve de vol.</p>
+
+  <ul class="points">
+    <li>Le Go contrôle chaque point au lieu d&rsquo;accepter l&rsquo;indicateur de validité du récepteur</li>
+    <li>GPS OFF, MOVE OUT et FINDS FIX disent s&rsquo;il faut examiner l&rsquo;appareil, le déplacer ou attendre</li>
+    <li>L&rsquo;émission commence après trois prédictions à moins de 12&nbsp;m, avec une attente plafonnée à 20&nbsp;s après le premier point</li>
+    <li>115200&nbsp;bauds font arriver le point avant la première émission possible</li>
+    <li>Le Go déclare le décollage à 12&nbsp;m/s et l&rsquo;atterrissage sous 1&nbsp;m/s ou après 10&nbsp;s sous 8&nbsp;m/s</li>
+    <li>Une perte du point en vol ne compte jamais comme un atterrissage</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

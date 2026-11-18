@@ -1,0 +1,27 @@
+<%# locals: (device:, label:, marks: {}, lamp: [], caption: nil) %>
+<% photo = device_photo(device) %>
+<% drawn = device_marks(device, marks) %>
+<figure class="device-figure device-figure--<%= device %>">
+  <svg viewBox="<%= device_view_box(device, drawn) %>" role="img" aria-label="<%= label %>">
+    <image href="<%= image_path photo.path %>" width="<%= photo.width %>" height="<%= photo.height %>"/>
+    <% drawn.each do |mark| %>
+      <g class="device-mark">
+        <line x1="<%= mark.spot.from[0] %>" y1="<%= mark.spot.from[1] %>" x2="<%= mark.line_end[0] %>" y2="<%= mark.line_end[1] %>"/>
+        <% if mark.ring? %>
+          <circle cx="<%= mark.spot.x %>" cy="<%= mark.spot.y %>" r="<%= mark.spot.radius %>"/>
+        <% else %>
+          <polygon points="<%= mark.head %>"/>
+        <% end %>
+        <text x="<%= mark.spot.text[0] %>" y="<%= mark.spot.text[1] %>" text-anchor="<%= mark.spot.anchor %>"><%= mark.label %></text>
+      </g>
+    <% end %>
+  </svg>
+  <% if lamp.any? || caption %>
+    <figcaption>
+      <% if lamp.any? %>
+        <span class="<%= class_names("lamp", lamp.map { "lamp--#{it}" }) %>" aria-hidden="true"></span>
+      <% end %>
+      <%= caption %>
+    </figcaption>
+  <% end %>
+</figure>

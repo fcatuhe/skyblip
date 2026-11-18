@@ -115,6 +115,32 @@ TEST_CASE("bravo page: each refusal says why") {
     canvas = drawn(snapshot);
     CHECK(centred_reads(canvas, "UNKNOWN", kMenuScale));
     CHECK(centred_reads(canvas, "UPDATE THE GO OR", kMenuScale));
+
+    snapshot.view.refusal = BravoRefusal::NotFound;
+    canvas = drawn(snapshot);
+    CHECK(centred_reads(canvas, "NOT FOUND", kMenuScale));
+    CHECK(centred_reads(canvas, "START THE BRAVO", kMenuScale));
+    CHECK(reads_button_key(canvas, "PAIR"));
+}
+
+// A browser named the Bravo, so the Go searches for that tag with no list to pick from.
+TEST_CASE("bravo page: a search for a named Bravo reads PAIRING, its tag and WAIT") {
+    BravoSnapshot snapshot;
+    snapshot.view = scanning(1);
+    snapshot.view.seeking = true;
+    snapshot.view.pairing_tag = 0x01B7;
+    const Glass canvas = drawn(snapshot);
+    CHECK(reads_heading(canvas, "PAIRING", Heading::Opened));
+    CHECK(centred_reads(canvas, "01B7", 4));
+    CHECK(centred_reads(canvas, "WAIT", kMenuScale));
+    CHECK_FALSE(has_button_key(canvas));
+    CHECK(reads_pad_key(canvas, "CANCEL"));
+
+    BravoPage page;
+    page.open(0);
+    CHECK(page.button(snapshot.view, 10) == BravoAction::None);
+    CHECK(page.idle(snapshot.view, MenuEditor::kIdleReturnHoldMs + 20) == BravoAction::None);
+    CHECK(page.pad(snapshot.view, 30) == BravoAction::Cancel);
 }
 
 TEST_CASE("bravo page: a paired Go reads its Bravo's tag and whether it is connected") {

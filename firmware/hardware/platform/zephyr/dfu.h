@@ -116,6 +116,25 @@ class Dfu : public ports::Dfu {
     bool running_hash(ports::ImageHash& out) override { return read_hash(kPrimarySlot, out); }
     bool staged_hash(ports::ImageHash& out) override { return read_hash(kSecondarySlot, out); }
 
+    uint32_t running_slot_bytes() override {
+        const struct flash_area* area = nullptr;
+        if (flash_area_open(PARTITION_ID(slot0_partition), &area) != 0) return 0;
+        const uint32_t bytes = area->fa_size;
+        flash_area_close(area);
+        return bytes;
+    }
+    bool read_running_slot(uint32_t offset, uint8_t* out, size_t bytes) override {
+        AreaImage slot{PARTITION_ID(slot0_partition), 0};
+        return slot.opened() && slot.read(offset, out, bytes);
+    }
+    bool erase_running_slot_page(uint32_t offset) override {
+        const struct flash_area* area = nullptr;
+        if (flash_area_open(PARTITION_ID(slot0_partition), &area) != 0) return false;
+        const bool erased = flash_area_erase(area, offset, kRunningSlotPageBytes) == 0;
+        flash_area_close(area);
+        return erased;
+    }
+
     void publish_upload_allowed(bool allowed) override { UploadGate::publish(allowed); }
     bool upload_finished() override { return UploadGate::finished(); }
     void forget_upload() override { UploadGate::forget_finished(); }
@@ -178,6 +197,7 @@ class Dfu : public ports::Dfu {
         }
     }
 
+    static constexpr size_t kRunningSlotPageBytes = 4096;
     static constexpr int kPrimarySlot = 0;
     static constexpr int kSecondarySlot = 1;
     static constexpr size_t kWidestImageHashBytes = 64;

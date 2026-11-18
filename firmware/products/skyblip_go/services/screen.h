@@ -115,6 +115,7 @@ class ScreenService : public runtime::Service {
     }
     void act_on_bravo(BravoAction action, uint32_t now_ms);
     void step_bravo(uint32_t now_ms);
+    void show_link_pairing(uint32_t now_ms);
     void sync_notice(uint32_t now_ms);
     bool close_notice();
     Detected detected() const;
@@ -125,6 +126,8 @@ class ScreenService : public runtime::Service {
     void change_screen();
     void draw_prompt(uint32_t now_ms);
     void draw_menu_page(uint32_t now_ms);
+    NearbyGo nearby_go() const;
+    NearbyBravo nearby_bravo() const;
     void enter_menu(uint32_t now_ms);
     void leave_menu();
     void page_forward(uint32_t now_ms);

@@ -8,7 +8,8 @@ class Release
   TAG = /\A(?:v\d+\.\d+\.\d+(?:[.+-][A-Za-z0-9.-]+)?|dev-\d+(?:-[A-Za-z0-9.-]+)?)\z/
   FIRMWARE = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+(?:\.full)?\.signed\.bin\z/
   FULL_FIRMWARE = /\.full\.signed\.bin\z/
-  FILE = /#{FIRMWARE}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
+  INSTALLER = /\Askyblip-(go|bravo)-[A-Za-z0-9.+-]+\.uf2\z/
+  FILE = /#{FIRMWARE}|#{INSTALLER}|\A(?:skyblip_simulator\.(?:js|wasm)|embed\.js|scenarios\.json)\z/
   SIMULATOR_FILES = %w[skyblip_simulator.js skyblip_simulator.wasm embed.js].freeze
   LOCAL_TAG = "local".freeze
   DOWNLOAD_HOSTS = %w[github.com release-assets.githubusercontent.com objects.githubusercontent.com].freeze
@@ -63,6 +64,16 @@ class Release
     else
       raise Unavailable, "No release holds the simulator"
     end
+  end
+
+  # INFO: fc 17nov26 a unit installed over USB gets what a pilot should fly: the newest stable release, else the newest main build
+  def self.installers(releases = published)
+    newest_first = releases.sort_by(&:published_at).reverse
+    %w[go bravo].index_with do |product|
+      holding = newest_first.select { |release| release.installer_file(product) }
+      release = holding.find(&:stable?) || holding.find(&:main_development?)
+      [ release, release.installer_file(product) ] if release
+    end.compact
   end
 
   def self.simulator(releases = all)
@@ -167,4 +178,5 @@ class Release
   def url = "https://github.com/#{REPOSITORY}/releases/tag/#{tag}"
   def simulator? = (SIMULATOR_FILES - assets).empty?
   def firmware_files = assets.grep(FIRMWARE)
+  def installer_file(product) = assets.find { |asset| asset[INSTALLER, 1] == product }
 end

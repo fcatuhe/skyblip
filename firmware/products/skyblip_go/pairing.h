@@ -13,7 +13,8 @@ enum class BravoRefusal : uint8_t {
     NarrowLink,
     NoAnswer,
     LinkLost,
-    UnknownProtocol
+    UnknownProtocol,
+    NotFound
 };
 
 enum class BravoLink : uint8_t { Down, Up, Narrow, Unsupported };

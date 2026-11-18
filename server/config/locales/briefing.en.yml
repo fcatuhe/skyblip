@@ -7,6 +7,7 @@ en:
       description: Activate, set up and update your skyBlip over Bluetooth.
     menu:
       open: Menu
+      set_up: Set up a device
       activate: Activate a new Go
       tools: Developer tools
       preferences: Settings
@@ -24,9 +25,9 @@ en:
       no_bluetooth_tools: The simulator and the ownship editor work here.
       title: Your devices
       first_title: Your skyBlip
-      first_hint: Switch it on and keep it close.
+      first_hint: "New device? Set it up over USB. Already running skyBlip? Switch it on and connect it."
       connect_new: Connect a device
-      activate_new: Activate a new Go
+      set_up: Set up a device
       no_bluetooth: "This browser cannot connect to Bluetooth devices. Chrome and Edge support Bluetooth on Android, Windows, macOS and Linux."
       copy_link: Copy the link
       copied: Copied
@@ -113,7 +114,7 @@ en:
       release: Release notes and the .uf2
       changes: What changed since your version
       recovery: Firmware will not take?
-      recovery_hint: "Without Bluetooth: plug the device into a computer and press RST twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
+      recovery_hint: "Without Bluetooth: plug the device into a computer and press RESET twice within half a second. It shows up as a USB drive named TECHOBOOT: drop the .uf2 file of a release on it."
       recover: Restart into the USB drive
       report_received_html: "skyBlip received the details of this failure. If you write to us, tell us what you did and give your support code %{code}."
     terminal:
@@ -135,9 +136,122 @@ en:
       activate: Activate
       kept_summary: What skyblip.eu keeps
       kept: skyblip.eu keeps the device's factory identifier, public key, serial number and firmware. The Go transmits in ADS-L, so activation assigns it an address from skyBlip's range in the ADS-L registry. No account needed.
+    setup:
+      title: Set up a device
+      steps:
+        install: Install
+        connect: Connect
+        aircraft: Your aircraft
+      start: "Plug your Go or Bravo into this computer with a USB cable. Briefing installs skyBlip on it, then connects to it."
+      install: Install
+      connect_running: Connect it over Bluetooth
+      drive: "%{name} restarted as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
+      drive_by_hand: "If it shows a USB drive named %{drive}, choose it. If not, start its installer by hand first:"
+      drive_ready: "%{name} shows a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
+      drive_gesture: "Start the installer of %{name} by hand, then choose the USB drive named %{drive} in the next window:"
+      or: " or "
+      by_hand:
+        go: "Go: press RESET twice, quickly. It is the upper button on its left side."
+        bravo: "Bravo: unplug it, hold its button, plug it back in, and release once the LED above the button turns white."
+      choose_drive: Choose the drive
+      downloading: "Downloading skyBlip for %{name}."
+      writing: "Installing skyBlip %{version} on %{name}."
+      keep_plugged: Keep it plugged in. This takes a few seconds.
+      installed: "Installed. Last step: connect %{name} over Bluetooth."
+      installed_trusted: "Installed. Last step: connect %{name} over Bluetooth. It trusts this browser, so it asks for no button press."
+      connect: Connect
+      choose_in_list: "Choose %{name} in the list."
+      activating: "Activating %{name}."
+      confirm_activation: Press the Go's button to activate it.
+      the_device: the device
+      unsupported_phone: "Install from a computer first, in Chrome or Edge. This phone then sets up and updates your devices over Bluetooth."
+      unsupported_other: Installing over USB needs Chrome or Edge on a computer.
+      by_hand_link: Install it by hand instead
+      guide_go: New to the Go? Read its first steps.
+      guide_bravo: New to Bravo? Read its first steps.
+      try_again: Try again
+      save: Save
+      later: Later
+      done: Done
+      set_now: Set them now
+      aircraft_go: "Name your aircraft. Other pilots see its callsign and type. You can change both later, on the Go or in Briefing."
+      aircraft_tango: "Nothing to type. In the aircraft, switch the transponder to ALT: the Go offers its address, callsign and type from what Bravo hears, and one press on the Go takes them."
+      aircraft_bravo: "In the aircraft, switch the transponder to ALT and open Briefing: it offers the address Bravo hears, so Bravo leaves your own transponder out of the traffic. Without a transponder, there is nothing to set."
+      transponder_go: Has a transponder? Its address, if you know it
+      transponder_known: Know its address already? Enter it now
+      done_go: "%{name} is ready. Its settings stay on its page."
+      done_tango: "Your Tango is ready: %{name} shows the ADS-B traffic %{partner} hears."
+      done_bravo: "%{name} is ready."
+      open: "Open %{name}"
+      images_unavailable: The skyBlip images did not load. Check the connection, then reload the page.
+    setup_notices:
+      port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
+      port_failed: "The USB port could not be opened:"
+      port_busy: "Another program is using the device. Close it, then click Install again."
+      other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
+      not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
+      drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."
+      drive_failed: "The drive could not be opened:"
+      download_failed: "The skyBlip image did not download. Check the connection, then choose the drive again."
+      no_image: No skyBlip image is published for this device yet.
+      image_not_uf2: The published file is not a UF2 image. Tell us.
+      image_wrong_product: The published image is for the other product. Tell us.
+      image_no_image: The published file holds no skyBlip image. Tell us.
+      image_no_room: "The image leaves no room for this browser's key, so the device will ask for its presses."
+      write_failed: "The drive refused the file. Unplug the device, plug it back in, then try again:"
+      failed: "Something failed:"
+    tango:
+      title_go: Bravo
+      title_bravo: Go
+      offer_go: "%{partner} is connected. Pair it with this Go, and the Go shows the ADS-B traffic it hears."
+      offer_bravo: "%{partner} is connected. Pair it with this Bravo, and the Go shows the ADS-B traffic this Bravo hears."
+      leaves_bravo: It leaves the Go it was paired with.
+      leaves_go: It leaves the Bravo it was paired with.
+      pair: "Pair with %{partner}"
+      replace: "Paired with %{current}. Pair with %{partner} instead?"
+      pair_instead: "Pair with %{partner} instead"
+      paired: "Paired with %{partner}."
+      away: "%{partner} can pair with this %{kind}. Switch it on, then connect it."
+      connect: "Connect %{partner}"
+      none_go: Have a Bravo? Paired with this Go, it adds the ADS-B traffic it hears to the Go's screen.
+      none_bravo: Have a Go? Paired with this Bravo, it shows the ADS-B traffic this Bravo hears.
+      set_up: "Set up a %{other}"
+      connect_running: "Connect a %{other} running skyBlip"
+      not_paired: Not paired.
+      try_again: Try again
+      steps:
+        arming: "Getting %{bravo} ready."
+        pairing: "Pairing %{go} with %{bravo}. Keep both close."
+        press_bravo: "Press the button on %{bravo} when the LED above its button blinks blue."
+        confirm_go: "Press the button on %{go} to confirm."
+        paired: "Paired. %{go} shows the ADS-B traffic %{bravo} hears."
+    pair_notices:
+      not_found: The Go did not find the Bravo. Keep the Bravo on and within a few metres, then try again.
+      phones_connected: Three phones are connected to the Go. Disconnect one, then try again.
+      narrow_link: "The link between the Go and the Bravo is too small. Restart both, then try again."
+      no_answer: Nobody pressed the Bravo's button within thirty seconds. Try again.
+      link_lost: The Go lost the Bravo during the pairing. Keep them close, then try again.
+      unknown_protocol: The Bravo runs firmware this Go cannot pair with. Update both, then try again.
+      in_flight: Pair on the ground.
+      timeout: "The Go did not say how the pairing ended. Read its screen, then try again."
+      expired: Nobody pressed within thirty seconds. Try again.
+      cancelled: Refused on the Go. Reconnect, then try again.
+      refused_on_device: Refused on the Go. Reconnect, then try again.
+      prompt_pending: The Go is already asking a question. Answer it or wait thirty seconds.
+      unknown_command: "This firmware is too old to pair from Briefing. Update both devices, or pair from the Go's BRAVO menu."
+      refused: "The device refused:"
     glass:
-      lamp: The LED blinks green fast.
+      lamp: The LED above the button blinks green fast.
       remembers: "Allowing it also adds this browser to the trusted list. Future saves and updates need no button press. You can forget the browser from this page."
+    figures:
+      go_reset: "A skyBlip Go seen from the front, an arrow on its left side pointing at RESET, the upper of its two side buttons."
+      reset_twice: RESET, twice
+      bravo_hold: A skyBlip Bravo, its round button marked hold, the LED just above it marked, and its USB-C port marked plug in.
+      hold: Hold
+      plug: Plug in
+      white: Release once the LED above the button turns white.
+      bravo_press: A skyBlip Bravo, its round button marked press and the LED just above it marked.
+      blue: The LED above the button blinks blue fast.
     tools:
       back: Back to your devices
       title: Developer tools

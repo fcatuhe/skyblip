@@ -33,6 +33,7 @@ const std::map<std::string, int64_t> kNarrowerThanTheirType = {
     {"health.own_transponder", 0xFFFFFF},
     {"health.own_transponder_category", 17},
     {"health.battery_percent", 100},
+    {"health.satellites", 255},
     {"peer_claim.into_ms", 999},
     {"peer_claim.latitude_1e7", -900000000},
     {"peer_claim.longitude_1e7", -1800000000},
@@ -50,8 +51,8 @@ const std::map<std::string, std::string> kPeerFramesAtTheirWidest = {
      "ff083a7fffffff093a7fffffff0a3a7fffffff0b3a7fffffff0c19ffff0d1901ff0e3a7fffffff0f397fff10"
      "02113a7fffffff1202133a7fffffff1411150716031768414243443132333418181affffffff"},
     {"health",
-     "b200181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f"
-     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff"},
+     "b400181b0102021affffffff03f504f5051affffffff06f50b020cf50d1a00ffffff0e6841424344313233340f"
+     "11106d392e39392e39392b393939393911186412f51304141affffffff151affffffff16031718ff"},
     {"peer_claim",
      "b100181c011affffffff021affffffff031903e7043a35a4e8ff053a6b49d1ff061affffffff073a7fffffff"
      "081affffffff093a7fffffff0a1affffffff0b1a00ffffff12f513031401151affffffff1601"},

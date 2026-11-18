@@ -134,10 +134,10 @@ export class FakeServer {
 // INFO: fc 18oct26 the activation frames of schemas/link.v1.json, over the fake's config endpoint
 export class FakeUnit extends FakeSkyblip {
   constructor({ seed = VECTORS.unit_seed, deviceId = VECTORS.device_id, trusted = VECTORS.server_public_key,
-    version = VECTORS.version, release = VECTORS.release, keyed = true, ...options } = {}) {
+    version = VECTORS.version, release = VECTORS.release, keyed = true, trustsBrowser = false, ...options } = {}) {
     super({ address: null, variant: VECTORS.variant, ...options });
     this.unitKey = keyPair(seed);
-    Object.assign(this, { deviceId, trusted, version, release, keyed });
+    Object.assign(this, { deviceId, trusted, version, release, keyed, trustsBrowser });
     this.trustedId = hex(createHash('sha256').update(bytes(trusted)).digest().subarray(0, 4));
     this.nonce = null;
     this.serverNonce = null;
@@ -168,6 +168,8 @@ export class FakeUnit extends FakeSkyblip {
     if (this.mtu - ATT_HEADER_BYTES < REGISTRATION_FRAME_BYTES) return this.acknowledge(false, 'small_mtu');
     this.serverNonce = serverNonce;
     this.pending = 'register';
+    // INFO: fc 17nov26 identity_link.cpp signs at once for a trusted browser, as config.cpp's one rule for presses says
+    if (this.trustsBrowser) return this.press();
     this.reply({ command: 'acknowledgement', acknowledge: false, pending: true, reason: 'confirm_register' });
   }
 

@@ -214,9 +214,9 @@ RingWords ring_words(const RadarSnapshot& snapshot, char* cell_buffer) {
 // INFO: fc 17nov26 Bravo's lamp winks red from its knee, and in a bag nobody sees it
 const char* bravo_reason(const RadarSnapshot& snapshot, char* cell_buffer) {
     switch (snapshot.bravo) {
-        case comms::BravoState::Waiting: return snapshot.bravo_heard ? "OUTDOORS" : "NO LINK";
+        case comms::BravoState::Waiting: return snapshot.bravo_heard ? "MOVE OUT" : "NO LINK";
         case comms::BravoState::LinkDown: return "NO LINK";
-        case comms::BravoState::NoUtc: return "OUTDOORS";
+        case comms::BravoState::NoUtc: return "MOVE OUT";
         case comms::BravoState::ReceiverDown: return "RX DOWN";
         case comms::BravoState::Live:
             if (!snapshot.bravo_battery_low) return nullptr;

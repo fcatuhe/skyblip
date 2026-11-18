@@ -278,7 +278,7 @@ TEST_CASE("annunciation: the buzzer and the motor are released the moment their 
         now_ms += kStepMs;
         buzzer.run(standing(Level::None), now_ms, 5000);
         CHECK(buzzer.beeps == kFirstFixTune.count);
-        CHECK(within_a_step(buzzer.last_beep_ms, kFirstFixNoteMs));
+        CHECK(within_a_step(buzzer.last_beep_ms, kFirstFixLastNoteMs));
         CHECK_FALSE(buzzer.on);
         CHECK(buzzer.policy.voice() == Voice::None);
     }
@@ -307,9 +307,9 @@ TEST_CASE("annunciation: the first fix is a 200 BPM melody on an eighth grid") {
     now_ms += kStepMs;
     buzzer.run(Situation{}, now_ms, 5000);
 
-    // At 200 BPM an eighth is 150 ms, and a note sounds for 7/9 of it, 117 ms.
+    // At 200 BPM an eighth is 150 ms. A note sounds 7/9 of it, 117 ms, and the last G a quarter.
     constexpr uint32_t kEighthMs = 150;
-    constexpr uint32_t kSoundingMs = 117;
+    constexpr uint32_t kSoundingMs[] = {117, 117, 117, 117, 117, 300};
     constexpr uint32_t kOnsetEighths[] = {0, 1, 3, 5, 6, 8};
     constexpr uint16_t kPitchesHz[] = {kNoteE7Hz, kNoteE7Hz, kNoteE7Hz,
                                        kNoteC7Hz, kNoteE7Hz, kNoteG7Hz};
@@ -318,7 +318,7 @@ TEST_CASE("annunciation: the first fix is a 200 BPM melody on an eighth grid") {
     for (uint8_t i = 0; i < kFirstFixTune.count; i++) {
         if (i > 0) onset_ms += buzzer.beep_ms_of[i - 1] + buzzer.gap_before[i];
         CHECK(within_a_step(onset_ms, kOnsetEighths[i] * kEighthMs));
-        CHECK(within_a_step(buzzer.beep_ms_of[i], kSoundingMs));
+        CHECK(within_a_step(buzzer.beep_ms_of[i], kSoundingMs[i]));
         CHECK(buzzer.hz_of[i] == kPitchesHz[i]);
     }
 }

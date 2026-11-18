@@ -1,0 +1,85 @@
+---
+title: "Premiers pas avec skyBlip Bravo"
+nav_title: Premiers pas Bravo
+slug: bravo-premiers-pas
+description: "Utilisez le bouton de skyBlip Bravo, lisez son voyant et répondez aux demandes. Préparez votre application et votre transpondeur pour le prochain vol."
+parent: guides
+share_image: bravo
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Bravo, un bouton et un voyant.</h1>
+  <p class="lede">skyBlip Bravo vous prévient du trafic ADS-B qui approche et le transmet à votre application de navigation. Il reçoit seulement. Il n&rsquo;émet pas votre position.</p>
+</section>
+
+<section>
+  <h2 class="kicker">Dans votre main</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Appuyez pour répondre, <span class="highlight">maintenez pour éteindre</span>.</h3>
+      <p>Bravo est un Seeed SenseCAP MeshTracker X1 équipé de skyBlip. Son bouton rond est sur la face supérieure. Le port USB-C est sur un petit côté. Il n&rsquo;a pas d&rsquo;écran. Le voyant au-dessus du bouton, un avertisseur sonore et un vibreur vous renseignent.</p>
+    </div>
+    <%= render "shared/device", device: :bravo, label: "skyBlip Bravo sur un Seeed SenseCAP MeshTracker X1, avec les repères du bouton, du voyant juste au-dessus du bouton et du port USB-C", marks: { button: t("devices.button"), led: t("devices.led"), usb: t("devices.usb") }, caption: "Le X1 équipé de skyBlip Bravo. Photo Seeed Studio." %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Geste</th><th>Ce qui se passe</th></tr></thead>
+      <tbody>
+        <tr><th>Appui, appareil éteint</th><td>Allume Bravo. Un éclat vert accompagne une vibration.</td></tr>
+        <tr><th>Appui pendant un scintillement rouge rapide</th><td>Coupe l&rsquo;alarme, y compris celle du Go appairé tant que la liaison tient.</td></tr>
+        <tr><th>Appui pendant un clignotement vert rapide</th><td>Autorise un réglage ou une mise à jour demandé par un téléphone ou Briefing. Sans appui, la demande expire après 30 secondes.</td></tr>
+        <tr><th>Appui pendant un clignotement bleu rapide</th><td>Appaire Bravo avec le Go qui le demande.</td></tr>
+        <tr><th>Appui maintenu, 2&nbsp;s</th><td>Éteint Bravo. Trois éclats rouges accompagnent trois vibrations.</td></tr>
+        <tr><th>Bouton maintenu, USB-C branché, sans relâcher</th><td>Après environ 3 secondes, le voyant au-dessus du bouton devient blanc. Le X1 devient un lecteur USB nommé X1 pour installer le firmware manuellement. Briefing ne le demande que s&rsquo;il ne peut pas redémarrer Bravo lui-même.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Un appui commencé avant une demande n&rsquo;y répond pas. Un appui maintenu n&rsquo;autorise jamais une demande. Le navigateur qui a installé Bravo modifie ses réglages, le met à jour et l&rsquo;appaire sans appui. Les autres navigateurs en demandent un.</p>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">La couleur donne l&rsquo;état, <span class="highlight">le rythme précise</span>.</h3>
+      <p>Bleu, Bravo attend sa position satellite. Vert, il sait où il est.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Voyant</th><th>Signification</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Un éclat vert et une vibration</th><td>Bravo vient de s&rsquo;allumer.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Bleu, toutes les 3&nbsp;s</th><td>Pas encore de position.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Vert, toutes les 3&nbsp;s</th><td>Position connue.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Vert ou bleu, toutes les 1,5&nbsp;s</th><td>Un téléphone ou Briefing est connecté.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, scintillement rapide</th><td>Alarme de trafic.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Vert, clignotement rapide</th><td>Une demande attend votre appui.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Bleu, clignotement rapide</th><td>Un Go demande l&rsquo;appairage.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Deux éclats toutes les 3&nbsp;s</th><td>Un enregistrement de diagnostic est armé. La couleur indique toujours si la position est connue.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 3&nbsp;s</th><td>Batterie faible.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rouge, toutes les 600&nbsp;ms</th><td>Batterie critique. Batterie pleine, un récepteur de trafic ou satellite ne répond pas et Bravo refuse de démarrer.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Trois éclats rouges et trois vibrations</th><td>Bravo s&rsquo;éteint, puis le voyant aussi.</td></tr>
+        <tr><th>Éteint</th><td>Appareil éteint.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Blanc fixe</th><td>Le X1 est un lecteur USB pour installer le firmware.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">En vol</h2>
+  <ol class="steps-grid steps-grid--sequence">
+    <li><h3>Attendez le vert.</h3><p>Appuyez pour allumer. Sans position, Bravo écoute mais ne transmet aucun trafic à votre application. Position acquise, il envoie le trafic ADS-B en Bluetooth à une application, comme SDVFR ou SkyDemon. Il ne reçoit ni ADS-L ni FLARM. Consultez <%= link_to_page "skyblip-bravo", label: "le fonctionnement de Bravo" %>.</p></li>
+    <li><h3>Écartez votre propre transpondeur.</h3><p>À bord, mettez-le sur ALT. Avec Bravo seul, ouvrez <%= link_to "Briefing", briefing_root_path %> et acceptez l&rsquo;adresse proposée. Avec un Go appairé, le Go propose l&rsquo;adresse, l&rsquo;indicatif et le type reçus par Bravo. Un appui sur le bouton du Go les enregistre. Consultez <%= link_to_page "skyblip-bravo", label: "le réglage du transpondeur", anchor: "install" %>.</p></li>
+    <li><h3>Volez avec un Tango.</h3><p>Un Go appairé affiche le trafic ADS-B de Bravo. Sa ligne ALARM règle les deux appareils. Tant qu&rsquo;ils sont liés, un appui sur Bravo ou une seconde sur le pavé du Go coupe les deux alarmes. Consultez <%= link_to_page "skyblip-tango", label: "le guide du Tango" %>.</p></li>
+    <li><h3>Éteignez après le vol.</h3><p>Maintenez le bouton deux secondes. Les mises à jour se font ensuite en Bluetooth depuis Briefing. Consultez <%= link_to_page "skyblip-bravo", label: "les mises à jour de Bravo", anchor: "status" %>.</p></li>
+  </ol>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

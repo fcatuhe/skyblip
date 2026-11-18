@@ -14,6 +14,10 @@ BravoView ScreenService::bravo_view() const {
     for (int i = 0; i < view.found_count; i++)
         view.found_tags[i] = events::bluetooth_tag(bravo_.found(i));
     view.pairing_tag = events::bluetooth_tag(bravo_.pairing_with());
+    if (const std::optional<uint16_t> wanted = bravo_.seeking()) {
+        view.seeking = true;
+        view.pairing_tag = *wanted;
+    }
     return view;
 }
 
@@ -43,7 +47,17 @@ void ScreenService::act_on_bravo(BravoAction action, uint32_t now_ms) {
 }
 
 void ScreenService::step_bravo(uint32_t now_ms) {
+    if (bravo_.take_link_pairing_notice()) show_link_pairing(now_ms);
     if (on_bravo_page()) act_on_bravo(bravo_page_.idle(bravo_view(), now_ms), now_ms);
+}
+
+// INFO: fc 16nov26 a browser started the pairing, so opening the page starts and stops no scan
+void ScreenService::show_link_pairing(uint32_t now_ms) {
+    if (mode_ == Mode::Menu) leave_menu();
+    (void)close_notice();
+    page_ = Page::Bravo;
+    bravo_page_.open(now_ms);
+    change_screen();
 }
 
 uint32_t ScreenService::bravo_seconds_left(const BravoView& view, uint32_t now_ms) const {

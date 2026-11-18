@@ -4,7 +4,7 @@ nav_title: Power
 description: "Charge skyBlip Go over USB-C. Understand low-battery warnings, BATTERY EMPTY, shutdown and why the e-paper screen keeps its image when off."
 parent: guides
 share_image: radar
-updated_on: "2026-11-09"
+updated_on: "2026-11-18"
 ---
 
 <section>
@@ -24,8 +24,10 @@ updated_on: "2026-11-09"
       <p>
         One press turns it on and opens the traffic display. Until it has a
         position, the ring says so. The word below it tells you how far
-        the receiver has got: silent, sending position solutions with no date
-        yet, or reading a date from a satellite.
+        the receiver has got: <span class="mono">GPS OFF</span> when it is
+        silent, <span class="mono">MOVE OUT</span> when it sends position
+        solutions with no date yet, and <span class="mono">FINDS FIX</span>
+        once it reads a date from a satellite.
       </p>
       <p>
         That tells you whether to wait or carry the device into the open.
@@ -102,7 +104,7 @@ updated_on: "2026-11-09"
         <tr><th>Plug the charger in</th><td>charges and stays off. Connecting a cable in a flight bag does not tell it to transmit</td></tr>
         <tr><th>Plug the charger into a device with a flat battery</th><td>charges and stays off. The logo replaces <span class="mono">BATTERY EMPTY</span></td></tr>
         <tr><th>Hold the button and plug the charger in</th><td>starts and charges</td></tr>
-        <tr><th>Press <span class="mono">RST</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
+        <tr><th>Press <span class="mono">RESET</span></th><td>restarts. Press twice inside half a second to start the USB bootloader, which lets you install firmware over USB</td></tr>
       </tbody>
     </table>
   </div>

@@ -11,81 +11,115 @@ namespace skyblip::go {
 namespace {
 using ui::kCellWidth;
 using ui::kCharacterHeight;
-constexpr int kCountScale = 2;
-constexpr int kRuleY = 32;
+constexpr int kRuleDrop = 10;
+constexpr int kFigureUnitGap = 1;
 constexpr int kRelativeHundredsCeiling = 99;
 constexpr int32_t kDistanceCeilingE1 = 999;
 
-void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int length, int scale) {
-    canvas.draw_text(x_end - length * kCellWidth * scale, y, text, true, scale);
-}
-
-void right_aligned_text(ui::Canvas& canvas, int x_end, int y, const char* text, int scale) {
+int length(const char* text) {
     int count = 0;
     while (text[count]) count++;
-    right_aligned(canvas, x_end, y, text, count, scale);
+    return count;
 }
 
-void draw_count(ui::Canvas& canvas, int heard_count) {
-    char text[8];
-    const int written = format_unsigned(text, static_cast<uint32_t>(heard_count), 1);
-    text[written] = 0;
-    right_aligned(canvas, kNearbyRelativeAltitudeEnd, kNearbyTitleY, text, written, kCountScale);
-
-    const int word_end =
-        kNearbyRelativeAltitudeEnd - written * kCellWidth * kCountScale - kNearbyWordGap;
-    right_aligned_text(canvas, word_end, kNearbyTitleY + kCharacterHeight * (kCountScale - 1),
-                       "TRAFFIC", 1);
+void right_aligned(ui::Canvas& canvas, int x_end, int y, const char* text, int scale) {
+    canvas.draw_text(x_end - length(text) * kCellWidth * scale, y, text, true, scale);
 }
 
-int format_own_name(char* out, const char* callsign) {
-    int written = 0;
-    while (written < kNearbyOwnNameCharacters && callsign[written] != 0) {
-        out[written] = callsign[written];
-        written++;
+void figure(ui::Canvas& canvas, int x_end, int y, const char* value, const char* unit) {
+    int x = x_end;
+    if (unit[0] != 0) {
+        x -= length(unit) * kCellWidth;
+        canvas.draw_text(x, y + kCharacterHeight * (kNearbyScale - 1), unit, true, 1);
+        x -= kFigureUnitGap;
     }
-    return written;
+    canvas.draw_text(x - length(value) * kNearbyCellWidth, y, value, true, kNearbyScale);
 }
 
-void draw_own_address(ui::Canvas& canvas, int x, int y, settings::AirAddress address, int scale) {
-    char buffer[8];
-    const int written = format_air_address(buffer, address);
-    buffer[written] = 0;
-    canvas.draw_text(x, y, buffer, true, scale);
-}
-
-void draw_own_id(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
-    if (snapshot.own_callsign == nullptr || snapshot.own_callsign[0] == 0) {
-        draw_own_address(canvas, kNearbyIdX, kNearbyTitleY, snapshot.own_address,
-                         kNearbyTitleScale);
+void battery(ui::Canvas& canvas, int y, std::optional<uint8_t> percent, bool charging) {
+    if (charging) {
+        right_aligned(canvas, kNearbyBatteryEnd, y, "CHG", kNearbyScale);
         return;
     }
-
-    char text[16];
-    const int written = format_own_name(text, snapshot.own_callsign);
-    text[written] = 0;
-    canvas.draw_text(kNearbyIdX, kNearbyTitleY, text, true, kNearbyTitleScale);
-
-    const int address_x = kNearbyIdX + written * kCellWidth * kNearbyTitleScale + kNearbyWordGap;
-    draw_own_address(canvas, address_x, kNearbyTitleY + kCharacterHeight * (kNearbyTitleScale - 1),
-                     snapshot.own_address, 1);
+    if (!percent) {
+        right_aligned(canvas, kNearbyBatteryEnd, y, "--", kNearbyScale);
+        return;
+    }
+    char text[4];
+    text[format_unsigned(text, *percent)] = 0;
+    figure(canvas, kNearbyBatteryEnd, y, text, "%");
 }
 
-void banner(ui::Canvas& canvas, const char* text) {
-    int count = 0;
-    while (text[count]) count++;
-    canvas.draw_text((kGlassWidth - count * kCellWidth * kNearbyScale) / 2, kNearbyBannerY, text,
-                     true, kNearbyScale);
+void satellites_and_traffic(ui::Canvas& canvas, int y, std::optional<uint8_t> satellites,
+                            int traffic) {
+    char text[8];
+    if (satellites)
+        text[format_unsigned(text, *satellites)] = 0;
+    else
+        text[format_string(text, "--")] = 0;
+    figure(canvas, kNearbySatellitesEnd, y, text, "SAT");
+    text[format_unsigned(text, static_cast<uint32_t>(traffic))] = 0;
+    figure(canvas, kNearbyRelativeAltitudeEnd, y, text, "TFC");
 }
 
-void draw_header(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
-    draw_own_id(canvas, snapshot);
-    draw_count(canvas, snapshot.heard_count);
+void unit_row(ui::Canvas& canvas, int y, const char* label, std::optional<uint8_t> percent,
+              bool charging, const char* word, std::optional<uint8_t> satellites, int traffic) {
+    canvas.draw_text(kNearbyIdX, y, label, true, kNearbyScale);
+    battery(canvas, y, percent, charging);
+    if (word != nullptr)
+        right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, word, kNearbyScale);
+    else
+        satellites_and_traffic(canvas, y, satellites, traffic);
+}
 
-    canvas.draw_text(kNearbyIdX, kNearbyHeadY, "SRC ID", true, 1);
-    right_aligned_text(canvas, kNearbyDistanceEnd, kNearbyHeadY, "DIST", 1);
-    right_aligned_text(canvas, kNearbyRelativeAltitudeEnd, kNearbyHeadY, "ALT", 1);
-    canvas.horizontal_line(kNearbyIdX, kRuleY, kNearbyRelativeAltitudeEnd - kNearbyIdX, true);
+const char* stage_word(gnss::Stage stage) {
+    const char* word = gnss::stage_name(stage);
+    return word[0] != 0 ? word : "NO FIX";
+}
+
+const char* go_word(const NearbySnapshot& snapshot) {
+    if (!snapshot.fix_valid) return stage_word(snapshot.go.stage);
+    return snapshot.go.transmitting ? nullptr : "TX OFF";
+}
+
+// INFO: fc 18nov26 an older Bravo sends no gnss_stage, so no UTC reads MOVE OUT as on its corner
+const char* bravo_word(const NearbyBravo& bravo) {
+    switch (bravo.state) {
+        case comms::BravoState::LinkDown: return "NO LINK";
+        case comms::BravoState::ReceiverDown: return "RX DOWN";
+        case comms::BravoState::Waiting:
+            if (!bravo.heard) return "NO LINK";
+            break;
+        case comms::BravoState::NoUtc:
+        case comms::BravoState::Live:
+        case comms::BravoState::Unpaired: break;
+    }
+    if (bravo.stage) return *bravo.stage == gnss::Stage::Fixed ? nullptr : stage_word(*bravo.stage);
+    return bravo.state == comms::BravoState::Live ? nullptr : stage_word(gnss::Stage::Blind);
+}
+
+void draw_units(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
+    unit_row(canvas, kNearbyUnitY, "GO", snapshot.go.battery_percent, snapshot.go.charging,
+             go_word(snapshot), snapshot.go.satellites, snapshot.go.traffic);
+    const NearbyBravo& bravo = snapshot.bravo;
+    if (bravo.state == comms::BravoState::Unpaired) return;
+    const bool heard = bravo.heard && bravo.state != comms::BravoState::LinkDown;
+    unit_row(canvas, kNearbyUnitY + kNearbyLineHeight, "B",
+             heard ? bravo.battery_percent : std::nullopt, heard && bravo.charging,
+             bravo_word(bravo), bravo.satellites, bravo.traffic);
+}
+
+void banner(ui::Canvas& canvas, int y, const char* text) {
+    canvas.draw_text((kGlassWidth - length(text) * kNearbyCellWidth) / 2, y, text, true,
+                     kNearbyScale);
+}
+
+void draw_head(ui::Canvas& canvas, int y) {
+    canvas.draw_text(kNearbyIdX, y, "SRC ID", true, 1);
+    right_aligned(canvas, kNearbyDistanceEnd, y, "DIST", 1);
+    right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, "ALT", 1);
+    canvas.horizontal_line(kNearbyIdX, y + kRuleDrop, kNearbyRelativeAltitudeEnd - kNearbyIdX,
+                           true);
 }
 
 int32_t relative_hundreds_of_feet(int32_t up_m) {
@@ -96,25 +130,28 @@ int32_t relative_hundreds_of_feet(int32_t up_m) {
     return rounded;
 }
 
-int format_id(char* out, const traffic::RangeRow& row) {
-    out[0] = model::source_letter(row.source);
-    out[1] = ' ';
-    if (row.callsign == nullptr || row.callsign[0] == 0)
-        return 2 + format_hex(out + 2, row.address, 6);
-    int written = 2;
-    while (written < kNearbyIdCharacters && row.callsign[written - 2] != 0) {
-        out[written] = row.callsign[written - 2];
+void draw_id(ui::Canvas& canvas, int y, const traffic::RangeRow& row) {
+    char text[16];
+    text[0] = model::source_letter(row.source);
+    text[1] = 0;
+    canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
+    if (row.callsign == nullptr || row.callsign[0] == 0) {
+        text[format_hex(text, row.address, 6)] = 0;
+        canvas.draw_text(kNearbyAddressX, y + kNearbyAddressDrop, text, true, 1);
+        return;
+    }
+    int written = 0;
+    while (written < kNearbyIdCharacters - 2 && row.callsign[written] != 0) {
+        text[written] = row.callsign[written];
         written++;
     }
-    return written;
+    text[written] = 0;
+    canvas.draw_text(kNearbyAddressX, y, text, true, kNearbyScale);
 }
 
 void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metric) {
     char text[16];
-
-    const int id_written = format_id(text, row);
-    text[id_written] = 0;
-    canvas.draw_text(kNearbyIdX, y, text, true, kNearbyScale);
+    draw_id(canvas, y, row);
 
     const int32_t distance_e1 =
         metric ? wire::divide_rounded(row.ground_m, 100) : to_nm_e1(Metres(row.ground_m)).value;
@@ -122,7 +159,7 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
                       ? format_string(text, "FAR")
                       : format_unsigned(text, static_cast<uint32_t>(distance_e1), 2, 1);
     text[written] = 0;
-    right_aligned(canvas, kNearbyDistanceEnd, y, text, written, kNearbyScale);
+    right_aligned(canvas, kNearbyDistanceEnd, y, text, kNearbyScale);
 
     if (row.up_valid) {
         const int32_t relative = relative_hundreds_of_feet(row.up_m);
@@ -131,27 +168,32 @@ void draw_row(ui::Canvas& canvas, int y, const traffic::RangeRow& row, bool metr
         written = format_string(text, "--");
     }
     text[written] = 0;
-    right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, text, written, kNearbyScale);
+    right_aligned(canvas, kNearbyRelativeAltitudeEnd, y, text, kNearbyScale);
 }
 
 }  // namespace
 
 void draw_nearby(ui::Canvas& canvas, const NearbySnapshot& snapshot) {
-    draw_header(canvas, snapshot);
+    draw_units(canvas, snapshot);
+    const bool paired = snapshot.bravo.state != comms::BravoState::Unpaired;
+    const int shift = nearby_shift(paired);
+    draw_head(canvas, kNearbyHeadY + shift);
 
     if (!snapshot.fix_valid) {
-        banner(canvas, "NO FIX");
+        banner(canvas, kNearbyBannerY + shift, "NO FIX");
         return;
     }
     if (snapshot.row_count == 0 || snapshot.rows == nullptr) {
-        banner(canvas, "NO TRAFFIC");
+        banner(canvas, kNearbyBannerY + shift, "NO TRAFFIC");
         return;
     }
 
-    const int rows = snapshot.row_count < kNearbyRows ? snapshot.row_count : kNearbyRows;
+    const int fit = kNearbyRows - (paired ? 1 : 0);
+    const int rows = snapshot.row_count < fit ? snapshot.row_count : fit;
     const bool metric = snapshot.units == go::Units::Metric;
     for (int i = 0; i < rows; i++)
-        draw_row(canvas, kNearbyFirstRowY + i * kNearbyLineHeight, snapshot.rows[i], metric);
+        draw_row(canvas, kNearbyFirstRowY + shift + i * kNearbyLineHeight, snapshot.rows[i],
+                 metric);
 }
 
 }  // namespace skyblip::go

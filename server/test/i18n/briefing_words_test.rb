@@ -20,6 +20,14 @@ class BriefingWordsTest < ActiveSupport::TestCase
   ACTIVATION_NOTICES = %w[activated no_bluetooth not_skyblip link_lost failed refused].freeze
   # INFO: fc 13nov26 a forget the unit never answers is a timeout, which trust.js names
   BROWSER_NOTICES = %w[untrusted invalid timeout].freeze
+  # INFO: fc 17nov26 the page asks an untrusted Bravo nothing and names a tag in range, and tango.js times out a silent Go
+  PAIR_NEVER_ASKED = %w[untrusted out_of_range].freeze
+  PAIR_NOTICES = %w[timeout].freeze
+  GO_PAIRING = Rails.root.join("../firmware/products/skyblip_go/services/bravo.cpp")
+  SETUP_NOTICES = %w[
+    port_closed port_failed port_busy other_board not_drive drive_denied drive_failed download_failed no_image
+    image_not_uf2 image_wrong_product image_no_image image_no_room write_failed failed
+  ].freeze
   INSTALL_CAUSES = Rails.root.join("app/javascript/skyblip/install_report.js").read[/INSTALL_CAUSES = \[(.*?)\]/, 1].scan(/'(\w+)'/).flatten
 
   test "the firmware still refuses with the reasons this test reads" do
@@ -63,10 +71,26 @@ class BriefingWordsTest < ActiveSupport::TestCase
       assert_empty keys - words(locale, :activation_notices)
     end
 
+    test "every refusal and verdict of a pairing has words in #{locale}" do
+      verdicts = GO_PAIRING.read.scan(/return link::Reason::(\w+);/).flatten.map(&:underscore)
+      keys = refusals("pair_link.cpp", "refuse\\(") - NEVER_ASKED - PAIR_NEVER_ASKED + verdicts + PROMPT_REFUSALS + PAIR_NOTICES
+      assert_includes verdicts, "not_found"
+      assert_empty keys - words(locale, :pair_notices) - words(locale, :notices)
+    end
+
+    test "every notice of a USB install has words in #{locale}" do
+      assert_empty SETUP_NOTICES - words(locale, :setup_notices)
+    end
+
     test "the units and the alarm steps are offered under the registry's names in #{locale}" do
       assert_equal enum("units"), I18n.t("briefing.settings.unit_names", locale:).keys.map(&:to_s)
       assert_equal enum("alarm"), I18n.t("briefing.settings.alarm_names", locale:).keys.map(&:to_s)
     end
+  end
+
+  test "the installer still names every notice this test words" do
+    source = %w[installer.js uf2.js].sum("") { Rails.root.join("app/javascript/skyblip", it).read } + Rails.root.join("app/javascript/controllers/setup_controller.js").read
+    SETUP_NOTICES.each { |key| assert_match(/["']#{key.delete_prefix("image_")}["']|setup_notices\.#{key}/, source, key) }
   end
 
   test "every word the pages ask for exists in both languages" do

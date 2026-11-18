@@ -1,0 +1,88 @@
+<% compact = local_assigns.fetch(:compact, false) %>
+<% scale = compact ? 0.19 : 0.28 %>
+<% x = ->(ms) { ((compact ? 36 : 20) + ms * scale).round(1) } %>
+<% width = ->(from, to) { (x.(to) - x.(from)).round(1) } %>
+<% bar_y = compact ? 24 : 56 %>
+<% burst_y = bar_y + 30 %>
+<% axis_y = compact ? 74 : 180 %>
+<% flag = ->(ms, from, to) { tag.line(class: "diagram-flag", x1: x.(ms), y1: from, x2: x.(ms), y2: to) } %>
+<figure class="diagram <%= compact ? "diagram--compact" : "diagram--wide" %>">
+  <svg viewBox="0 0 <%= compact ? "280 140" : "420 262" %>" role="img" aria-labelledby="second-title second-description">
+    <title id="second-title"><%= t "second.title" %></title>
+    <desc id="second-description"><%= t "second.description" %></desc>
+
+    <%= flag.(440, 4, bar_y) %>
+    <%= flag.(450, 4, bar_y) %>
+    <%= flag.(830, 4, bar_y) %>
+    <text class="diagram-label diagram-label--end" x="<%= x.(440) - 5 %>" y="16"><%= t "second.uplink" %></text>
+    <text class="diagram-label diagram-label--start" x="<%= x.(450) + 5 %>" y="16"><%= t "second.window_1" %></text>
+    <text class="diagram-label diagram-label--start" x="<%= x.(830) + 5 %>" y="16"><%= t "second.window_2" %></text>
+    <% unless compact %>
+      <text class="diagram-note diagram-note--end" x="<%= x.(440) - 5 %>" y="31"><%= t "second.uplink_frequency" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(450) + 5 %>" y="31"><%= t "second.a_frequency" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(830) + 5 %>" y="31"><%= t "second.b_frequency" %></text>
+      <text class="diagram-note diagram-note--end" x="<%= x.(440) - 5 %>" y="46"><%= t "second.uplink_window" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(450) + 5 %>" y="46"><%= t "second.a_window" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(830) + 5 %>" y="46"><%= t "second.b_window" %></text>
+    <% end %>
+
+    <%= tag.rect class: "diagram-window diagram-window--quiet", x: x.(0), y: bar_y, width: width.(0, 200), height: 24 %>
+    <%= tag.rect class: "diagram-window", x: x.(210), y: bar_y, width: width.(210, 440), height: 24 %>
+    <%= tag.rect class: "diagram-window", x: x.(450), y: bar_y, width: width.(450, 820), height: 24 %>
+    <%= tag.rect class: "diagram-window", x: x.(830), y: bar_y, width: width.(830, 1200), height: 24 %>
+    <text class="diagram-letter diagram-letter--quiet" x="<%= x.(100) %>" y="<%= bar_y + 17 %>">B</text>
+    <text class="diagram-letter" x="<%= x.(635) %>" y="<%= bar_y + 17 %>">A</text>
+    <text class="diagram-letter" x="<%= x.(915) %>" y="<%= bar_y + 17 %>">B</text>
+    <text class="diagram-letter" x="<%= x.(1100) %>" y="<%= bar_y + 17 %>">B</text>
+
+    <%= tag.rect class: "diagram-burst", x: x.(450), y: burst_y, width: width.(450, 810), height: 10 %>
+    <%= tag.rect class: "diagram-burst", x: x.(830), y: burst_y, width: width.(830, 990), height: 10 %>
+    <%= tag.rect class: "diagram-burst", x: x.(1000), y: burst_y, width: width.(1000, 1190), height: 10 %>
+
+    <% unless compact %>
+      <text class="diagram-note diagram-note--end" x="<%= x.(440) %>" y="<%= burst_y + 9 %>"><%= t "second.receive_only" %></text>
+      <%= flag.(450, burst_y + 10, 130) %>
+      <text class="diagram-note diagram-note--start diagram-note--transmit" x="<%= x.(450) + 5 %>" y="114"><%= t "second.positions" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(450) + 5 %>" y="128"><%= t "second.a_bursts" %></text>
+      <%= flag.(990, burst_y + 10, 162) %>
+      <text class="diagram-note diagram-note--end diagram-note--transmit" x="<%= x.(990) - 5 %>" y="146"><%= t "second.positions" %></text>
+      <text class="diagram-note diagram-note--end" x="<%= x.(990) - 5 %>" y="160"><%= t "second.b_bursts" %></text>
+      <text class="diagram-note diagram-note--start diagram-note--transmit" x="<%= x.(1000) + 5 %>" y="114"><%= t "second.callsign" %></text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(1000) + 5 %>" y="128"><%= t "second.callsign_bursts" %></text>
+    <% end %>
+
+    <line class="diagram-rule" x1="<%= x.(1000) %>" y1="<%= bar_y %>" x2="<%= x.(1000) %>" y2="<%= axis_y %>"/>
+    <line class="diagram-axis" x1="<%= x.(0) %>" y1="<%= axis_y %>" x2="<%= x.(1200) %>" y2="<%= axis_y %>"/>
+    <% (0..1200).step(100) do |ms| %>
+      <line class="diagram-axis" x1="<%= x.(ms) %>" y1="<%= axis_y %>" x2="<%= x.(ms) %>" y2="<%= axis_y + (ms % 500 == 0 ? 6 : 3) %>"/>
+    <% end %>
+    <% if compact %>
+      <text class="diagram-note diagram-note--start" x="<%= x.(0) - 3 %>" y="<%= axis_y + 18 %>">0 ms</text>
+      <text class="diagram-note" x="<%= x.(1000) %>" y="<%= axis_y + 18 %>">1000</text>
+      <text class="diagram-note" x="<%= x.(1200) %>" y="<%= axis_y + 18 %>">1200</text>
+    <% else %>
+      <text class="diagram-note" x="<%= x.(0) %>" y="<%= axis_y + 18 %>">0</text>
+      <text class="diagram-note" x="<%= x.(500) %>" y="<%= axis_y + 18 %>">500</text>
+      <text class="diagram-note" x="<%= x.(1000) %>" y="<%= axis_y + 18 %>">1000</text>
+      <text class="diagram-note diagram-note--start" x="<%= x.(1200) - 8 %>" y="<%= axis_y + 18 %>">1200 ms</text>
+    <% end %>
+
+    <% if compact %>
+      <rect class="diagram-window" x="36" y="<%= axis_y + 34 %>" width="16" height="10"/>
+      <text class="diagram-note diagram-note--start" x="58" y="<%= axis_y + 43 %>"><%= t "second.listening" %></text>
+      <rect class="diagram-burst" x="146" y="<%= axis_y + 34 %>" width="16" height="10"/>
+      <text class="diagram-note diagram-note--start" x="168" y="<%= axis_y + 43 %>"><%= t "second.own_bursts_short" %></text>
+    <% else %>
+      <text class="diagram-note diagram-note--end" x="414" y="<%= axis_y + 36 %>"><%= t "second.direct_slot_end" %></text>
+      <text class="diagram-note diagram-note--end" x="414" y="<%= axis_y + 50 %>"><%= t "second.next_second" %></text>
+
+      <rect class="diagram-window" x="20" y="<%= axis_y + 28 %>" width="16" height="10"/>
+      <text class="diagram-note diagram-note--start" x="42" y="<%= axis_y + 37 %>"><%= t "second.listening" %></text>
+      <rect class="diagram-burst" x="20" y="<%= axis_y + 46 %>" width="16" height="10"/>
+      <text class="diagram-note diagram-note--start" x="42" y="<%= axis_y + 55 %>"><%= t "second.own_bursts" %></text>
+      <rect class="diagram-window" x="20" y="<%= axis_y + 64 %>" width="6" height="10"/>
+      <rect class="diagram-window" x="30" y="<%= axis_y + 64 %>" width="6" height="10"/>
+      <text class="diagram-note diagram-note--start" x="42" y="<%= axis_y + 73 %>"><%= t "second.switch" %></text>
+    <% end %>
+  </svg>
+</figure>

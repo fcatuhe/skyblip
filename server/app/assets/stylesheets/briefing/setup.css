@@ -1,0 +1,73 @@
+@layer components {
+  .setup-steps {
+    display: flex;
+    gap: var(--space-inline-m);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    font-size: var(--text-s);
+    color: var(--ink-muted);
+  }
+  .setup-steps li { counter-increment: step; display: flex; align-items: center; gap: var(--space-inline-xs); }
+  .setup-steps li::before {
+    content: counter(step);
+    display: grid;
+    place-items: center;
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    border: 1px solid var(--card-border);
+    border-radius: 50%;
+    font-variant-numeric: tabular-nums;
+  }
+  .setup-steps li[aria-current="step"] { color: var(--ink); font-weight: 700; }
+  .setup-steps li[aria-current="step"]::before { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .setup-steps li:has(~ li[aria-current="step"])::before { content: "\2713"; border-color: var(--coverage); color: var(--coverage); }
+
+  .setup-step { display: grid; gap: var(--space-m); }
+  .setup-step .note { margin: 0; font-size: var(--text-s); color: var(--ink-muted); }
+
+  .setup-alternatives { display: grid; gap: var(--space-xs); margin: 0; padding: 0; list-style: none; font-size: var(--text-s); color: var(--ink-muted); }
+  .setup-alternatives li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2xs) var(--space-inline-s); }
+
+  .setup-by-hand {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: var(--space-m) var(--space-inline-l);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .setup-by-hand li { display: grid; align-content: start; gap: var(--space-xs); }
+  .setup-by-hand p { margin: 0; }
+  .setup-by-hand [hidden] { display: none; }
+
+  .setup-guides { display: grid; gap: var(--space-2xs); margin: 0; padding: 0; list-style: none; font-size: var(--text-s); }
+  .setup-guides [hidden] { display: none; }
+
+  .setup-aircraft { display: grid; gap: var(--space-m); }
+  .setup-fields { display: grid; gap: var(--space-xs); margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+  .setup-fields:not(:has(> [data-setting]:not([hidden]))) { display: none; }
+  .setup-fields [hidden] { display: none; }
+  .setup-transponder summary { cursor: pointer; font-size: var(--text-s); color: var(--ink-muted); }
+  .setup-transponder summary:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+  .setup-transponder[open] summary { margin-block-end: var(--space-xs); }
+
+  .setup-progress { inline-size: 100%; block-size: 0.5rem; accent-color: var(--signal); }
+
+  .tango {
+    display: grid;
+    gap: var(--space-s);
+    padding: var(--space-m) var(--space-inline-m);
+    border: 1px solid var(--card-border);
+    border-radius: var(--space-inline-xs);
+    background: var(--card-bg);
+  }
+  .tango[hidden] { display: none; }
+  .tango .unit-label { margin: 0; }
+  .tango-text { margin: 0; color: var(--ink-soft); }
+  .tango [hidden] { display: none; }
+  .tango-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-inline-s); }
+  .tango-actions [hidden] { display: none; }
+  .tango-actions:not(:has(> :not([hidden]))) { display: none; }
+}

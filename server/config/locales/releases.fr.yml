@@ -17,4 +17,4 @@ fr:
       glass: L'écran e-paper simulé d'un skyBlip Go
       key: "Le bouton de l'appareil : une pression ouvre le menu de la page affichée, un appui de deux secondes éteint, un nouvel appui rallume"
       pad: "Le pavé tactile : une tape change de page, un contact d'une seconde ramène le radar"
-      reset: "RST : redémarrer l'appareil"
+      reset: "RESET : redémarrer l'appareil"
