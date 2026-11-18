@@ -1,7 +1,6 @@
 // The list a pilot reads when the plot says something is there: who, how far, how much above.
 #include <cstring>
 #include <optional>
-#include <utility>
 
 #include "core/model/aircraft.h"
 #include "doctest/doctest.h"
@@ -274,16 +273,21 @@ TEST_CASE("nearby page: the Go's row reads its cell, its satellites and the traf
 
 TEST_CASE(
     "nearby page: a Go with no fix says its receiver's rung in place of satellites and traffic") {
-    for (const auto& [stage, word] :
-         {std::pair{gnss::Stage::Silent, "GPS OFF"}, std::pair{gnss::Stage::Blind, "MOVE OUT"},
-          std::pair{gnss::Stage::Solving, "FINDS FIX"}}) {
-        CAPTURE(word);
+    struct Case {
+        gnss::Stage stage;
+        const char* word;
+    };
+    for (const Case each :
+         {Case{gnss::Stage::Silent, "GPS OFF"}, Case{gnss::Stage::Blind, "MOVE OUT"},
+          Case{gnss::Stage::Solving, "FINDS FIX"}}) {
+        CAPTURE(each.word);
         NearbySnapshot snapshot = listing(nullptr, 0, go::Units::Nautical);
         snapshot.fix_valid = false;
-        snapshot.go.stage = stage;
+        snapshot.go.stage = each.stage;
         Glass canvas;
         draw_nearby(canvas, snapshot);
-        CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, word, kNearbyScale));
+        CHECK(reads_right_of(canvas, kNearbyRelativeAltitudeEnd, kNearbyUnitY, each.word,
+                             kNearbyScale));
         CHECK(figure_reads(canvas, kNearbyBatteryEnd, kNearbyUnitY, "87", "%"));
         CHECK_FALSE(reads_in(canvas, "SAT", 0, kNearbyUnitY, kGlassWidth, kNearbyHeadY));
     }
