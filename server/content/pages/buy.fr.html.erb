@@ -64,23 +64,84 @@ updated_on: "2026-11-18"
   </div>
 </section>
 
-<section id="where" class="band band--tint">
+<section id="where" class="band band--tint country-offers">
   <h2 class="section-title">Où les acheter</h2>
+  <p>Prix livraison comprise. Choisissez votre pays.</p>
+  <fieldset class="country-tabs">
+    <legend class="visually-hidden">Pays</legend>
+    <label><input type="radio" name="country" value="fr" checked><%= image_tag "flags/fr.svg", alt: "", class: "flag" %>France</label>
+    <label><input type="radio" name="country" value="de"><%= image_tag "flags/de.svg", alt: "", class: "flag" %>Allemagne</label>
+    <label><input type="radio" name="country" value="it"><%= image_tag "flags/it.svg", alt: "", class: "flag" %>Italie</label>
+    <label><input type="radio" name="country" value="es"><%= image_tag "flags/es.svg", alt: "", class: "flag" %>Espagne</label>
+    <label><input type="radio" name="country" value="gb"><%= image_tag "flags/gb.svg", alt: "", class: "flag" %>Royaume-Uni</label>
+  </fieldset>
   <div class="table-scroll">
-    <table class="compare sellers" role="table">
-      <thead role="rowgroup">
-        <tr role="row"><th scope="col" role="columnheader">Vendeur</th><th scope="col" role="columnheader">Go : T-Echo 868 MHz avec BME280</th><th scope="col" role="columnheader">Go+ : T-Echo Plus 868 MHz avec BME280</th><th scope="col" role="columnheader">Bravo : MeshTracker X1</th></tr>
+    <table class="compare offers">
+      <thead>
+        <tr><td></td><th scope="col">Recommandé</th></tr>
       </thead>
-      <tbody role="rowgroup">
-        <tr role="row"><th scope="row" role="rowheader">Amazon France</th><td role="cell"><ul class="seller-offers"><li><%= link_to "T-Echo Meshtastic, 68 €", "https://link.amazon/B00EaKI0W", target: "_blank", rel: "sponsored" %><small>livraison offerte</small></li><li><%= link_to "T-Echo SoftRF, 90 €", "https://link.amazon/B04TPbtA9", target: "_blank", rel: "sponsored" %><small>76 € + 14 € de livraison</small></li></ul></td><td role="cell"><ul class="seller-offers"><li><%= link_to "T-Echo Plus blanc, 96 €", "https://link.amazon/B05es09aX", target: "_blank", rel: "sponsored" %><small>82 € + 14 € de livraison</small></li><li><%= link_to "T-Echo Plus noir, 99 €", "https://link.amazon/B06htezto", target: "_blank", rel: "sponsored" %><small>85 € + 14 € de livraison</small></li></ul></td><td role="cell"></td></tr>
-        <tr role="row"><th scope="row" role="rowheader">Amazon Allemagne</th><td role="cell"><ul class="seller-offers"><li><%= link_to "T-Echo Meshtastic, 68 €", "https://link.amazon/B0bD44XPr", target: "_blank", rel: "sponsored" %><small>livraison offerte</small></li><li><%= link_to "T-Echo, 73 €", "https://link.amazon/B08HH7jyI", target: "_blank", rel: "sponsored" %><small>58 € + 15 € de livraison</small></li></ul></td><td role="cell"><ul class="seller-offers"><li><%= link_to "T-Echo Plus blanc, 100 €", "https://link.amazon/B0cBLPptv", target: "_blank", rel: "sponsored" %><small>85 € + 15 € de livraison</small></li><li><%= link_to "T-Echo Plus noir, 100 €", "https://link.amazon/B08OddOjf", target: "_blank", rel: "sponsored" %><small>85 € + 15 € de livraison</small></li></ul></td><td role="cell"></td></tr>
-        <tr role="row"><th scope="row" role="rowheader">LilyGO</th><td role="cell"><%= link_to "T-Echo, 59,84 $", "https://www.lilygo.cc/skyblip-go", target: "_blank", rel: "sponsored" %>, dont 13,80 $ de livraison</td><td role="cell"><%= link_to "T-Echo Plus, 81,91 $", "https://www.lilygo.cc/skyblip-go-plus", target: "_blank", rel: "sponsored" %>, dont 15,60 $ de livraison</td><td role="cell"></td></tr>
-        <tr role="row"><th scope="row" role="rowheader">AliExpress</th><td role="cell"><%= link_to "T-Echo", "https://s.click.aliexpress.com/e/_c4nyUpy1", target: "_blank", rel: "sponsored" %></td><td role="cell"></td><td role="cell"></td></tr>
-        <tr role="row"><th scope="row" role="rowheader">Seeed Studio</th><td role="cell"></td><td role="cell"></td><td role="cell"><%= link_to "MeshTracker X1", "https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&referring_service=link", target: "_blank", rel: "sponsored" %> : <s><span class="visually-hidden">Sans code : </span>49,90 $</s> <span class="visually-hidden">Avec code : </span> 44,91 $ avec le code <%= seeed_promo_code %>, soit 55,95 $ avec 11,04 $ de livraison vers la France</td></tr>
+      <tbody data-country="fr">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz avec BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B00EaKI0W", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic sur Amazon, livraison offerte.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz avec BME280</span></th><td><%= link_to "96 €", "https://link.amazon/B05es09aX", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanc sur Amazon, 82 € + 14 € de livraison.</span></td></tr>
+      </tbody>
+      <tbody data-country="de">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz avec BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B0bD44XPr", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic sur Amazon, livraison offerte.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz avec BME280</span></th><td><%= link_to "100 €", "https://link.amazon/B0cBLPptv", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanc sur Amazon, 85 € + 15 € de livraison.</span></td></tr>
+      </tbody>
+      <tbody data-country="it">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz avec BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B04VNC2lv", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic sur Amazon, livraison offerte.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz avec BME280</span></th><td><%= link_to "99 €", "https://link.amazon/B0eSR27Ym", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanc sur Amazon, 85 € + 14 € de livraison.</span></td></tr>
+      </tbody>
+      <tbody data-country="es">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz avec BME280</span></th><td><%= link_to "68 €", "https://link.amazon/B00bnKSXW", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic sur Amazon, livraison offerte.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz avec BME280</span></th><td><span class="offer-details">Amazon ne livrait pas le T-Echo Plus en Espagne le 18 novembre 2026. Commandez-le depuis la Chine, ci-dessous.</span></td></tr>
+      </tbody>
+      <tbody data-country="gb">
+        <tr><th scope="row">Go <span>T-Echo 868 MHz avec BME280</span></th><td><%= link_to "52 £", "https://link.amazon/B02Dnj0kb", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Meshtastic sur Amazon, livraison offerte sur la première commande.</span></td></tr>
+        <tr><th scope="row">Go+ <span>T-Echo Plus 868 MHz avec BME280</span></th><td><%= link_to "71 £", "https://link.amazon/B0g84Docp", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">T-Echo Plus blanc sur Amazon, livraison offerte sur la première commande.</span></td></tr>
+      </tbody>
+      <tbody>
+        <tr><th scope="row">Bravo <span>MeshTracker X1</span></th><td><%= link_to "55,95 $", "https://www.seeedstudio.com/sensecap-meshtracker-x1-meshtastic-gps-tracker-p-6935.html?sensecap_affiliate=eJCcqI3&referring_service=link", class: "offer-price", target: "_blank", rel: "sponsored" %><span class="offer-details">MeshTracker X1 sur Seeed Studio, expédié depuis la Chine, 44,91 $ avec le code <%= seeed_promo_code %> + 11,04 $ de livraison vers la France.</span></td></tr>
       </tbody>
     </table>
   </div>
-  <p>Prix indicatifs. Prix Amazon relevés le 18 novembre 2026, avec livraison à Paris et à Berlin. Prix LilyGO relevés le 8 octobre 2026, prix du MeshTracker X1 relevé le 9 novembre 2026. Les frais de livraison dépendent de l&rsquo;adresse.</p>
+  <h3 id="other-offers">Autres offres</h3>
+  <div class="table-scroll">
+    <table class="compare offers offers--other">
+      <tbody data-country="fr">
+        <tr><td class="offer-device">Go</td><td><%= link_to "90 €", "https://link.amazon/B04TPbtA9", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF sur Amazon, 76 € + 14 € de livraison.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "99 €", "https://link.amazon/B06htezto", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus noir sur Amazon, 85 € + 14 € de livraison.</td></tr>
+      </tbody>
+      <tbody data-country="de">
+        <tr><td class="offer-device">Go</td><td><%= link_to "73 €", "https://link.amazon/B08HH7jyI", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo sur Amazon, 58 € + 15 € de livraison.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "100 €", "https://link.amazon/B08OddOjf", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus noir sur Amazon, 85 € + 15 € de livraison.</td></tr>
+      </tbody>
+      <tbody data-country="it">
+        <tr><td class="offer-device">Go+</td><td><%= link_to "99 €", "https://link.amazon/B0amSsfjd", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus noir sur Amazon, 85 € + 14 € de livraison.</td></tr>
+      </tbody>
+      <tbody data-country="es">
+        <tr><td class="offer-device">Go</td><td><%= link_to "75 €", "https://link.amazon/B06qd0Xpk", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF sur Amazon, non livré en Espagne le 18 novembre 2026.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "85 €", "https://link.amazon/B0anpBItH", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus blanc sur Amazon, non livré en Espagne le 18 novembre 2026.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "85 €", "https://link.amazon/B0afXfuul", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus noir sur Amazon, non livré en Espagne le 18 novembre 2026.</td></tr>
+      </tbody>
+      <tbody data-country="gb">
+        <tr><td class="offer-device">Go</td><td><%= link_to "50 £", "https://link.amazon/B01oG7F8P", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo SoftRF sur Amazon, livraison offerte sur la première commande.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "71 £", "https://link.amazon/B035DPkcv", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus noir sur Amazon, livraison offerte sur la première commande.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 id="from-china"><%= image_tag "flags/cn.svg", alt: "", class: "flag" %>Expédié depuis la Chine</h3>
+  <p>Ces vendeurs livrent dans tous les pays ci-dessus.</p>
+  <div class="table-scroll">
+    <table class="compare offers offers--other">
+      <tbody>
+        <tr><td class="offer-device">Go</td><td><%= link_to "59,84 $", "https://www.lilygo.cc/skyblip-go", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo chez LilyGO, le fabricant, dont 13,80 $ de livraison.</td></tr>
+        <tr><td class="offer-device">Go+</td><td><%= link_to "81,91 $", "https://www.lilygo.cc/skyblip-go-plus", class: "offer-price", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo Plus chez LilyGO, le fabricant, dont 15,60 $ de livraison.</td></tr>
+        <tr><td class="offer-device">Go</td><td><%= link_to "Voir le prix", "https://s.click.aliexpress.com/e/_c4nyUpy1", class: "offer-price offer-price--unknown", target: "_blank", rel: "sponsored" %></td><td class="offer-details">T-Echo sur AliExpress.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Prix indicatifs. Prix Amazon relevés le 18 novembre 2026, avec livraison à Paris, Berlin, Rome, Madrid et Londres. Prix LilyGO relevés le 8 octobre 2026, prix du MeshTracker X1 relevé le 9 novembre 2026. Les frais de livraison dépendent de l&rsquo;adresse.</p>
   <p>Les liens d&rsquo;achat sont affiliés. Le projet skyBlip touche une commission si vous achetez par leur intermédiaire, sans supplément pour vous. En tant que Partenaire Amazon, skyBlip réalise un bénéfice sur les achats remplissant les conditions requises.</p>
 </section>
 
