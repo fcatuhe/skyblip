@@ -110,6 +110,10 @@
       <a class="button-app" data-setup-target="open"></a>
       <a class="button-app button-app--quiet" data-setup-target="setUpPartner" hidden></a>
     </div>
+    <ul class="setup-guides" data-setup-target="guides">
+      <li data-product="go"><%= link_to_page "go-first-steps", label: t("briefing.setup.guide_go") %></li>
+      <li data-product="bravo"><%= link_to_page "bravo-first-steps", label: t("briefing.setup.guide_bravo") %></li>
+    </ul>
   </section>
 
   <section class="setup-step" data-setup-target="panel" data-panel="unsupported" hidden>

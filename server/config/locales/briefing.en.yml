@@ -167,6 +167,8 @@ en:
       unsupported_phone: "Install from a computer first, in Chrome or Edge. This phone then sets up and updates your devices over Bluetooth."
       unsupported_other: Installing over USB needs Chrome or Edge on a computer.
       by_hand_link: Install it by hand instead
+      guide_go: New to the Go? Read its first steps.
+      guide_bravo: New to Bravo? Read its first steps.
       try_again: Try again
       save: Save
       later: Later

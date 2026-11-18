@@ -25,7 +25,7 @@ const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: [
 export default class extends Controller {
   static targets = ["title", "steps", "panel", "install", "driveText", "byHand", "chooseDrive", "writingText", "connectText", "connect", "connectHint",
                     "finishText", "pressBravo", "retry", "aircraftText", "aircraftForm", "aircraftFields", "transponder", "transponderSummary", "save", "editNow", "later",
-                    "doneText", "open", "setUpPartner", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
+                    "doneText", "open", "setUpPartner", "guides", "unsupportedText", "message", "messageText", "connectRunning", "installers"]
   static values = { devices: String, activation: String, setup: String, partner: String, challenges: String, registrations: String }
   static outlets = ["glass"]
 
@@ -318,6 +318,7 @@ export default class extends Controller {
     this.setUpPartnerTarget.hidden = known
     this.setUpPartnerTarget.href = `${this.setupValue}?for=${this.unit.slug}`
     this.setUpPartnerTarget.textContent = say("tango.set_up", { other: PRODUCT_WORDS[other] })
+    for (const item of this.guidesTarget.children) item.hidden = kind !== "tango" && item.dataset.product !== kind
     this.#show("done")
   }
 

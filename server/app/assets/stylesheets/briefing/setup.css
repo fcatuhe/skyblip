@@ -42,6 +42,8 @@
   .setup-by-hand p { margin: 0; }
   .setup-by-hand [hidden] { display: none; }
 
+  .setup-guides { display: grid; gap: var(--space-2xs); margin: 0; padding: 0; list-style: none; font-size: var(--text-s); }
+  .setup-guides [hidden] { display: none; }
 
   .setup-aircraft { display: grid; gap: var(--space-m); }
   .setup-fields { display: grid; gap: var(--space-xs); margin: 0; padding: 0; border: 0; min-inline-size: 0; }

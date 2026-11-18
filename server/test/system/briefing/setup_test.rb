@@ -39,6 +39,8 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Save"
       assert_text "Go 000003 is ready. Its settings stay on its page."
       assert_link "Set up a Bravo", href: "/briefing/setup?for=go-000003"
+      assert_link "New to the Go? Read its first steps.", href: "/go-first-steps"
+      assert_no_link "New to Bravo? Read its first steps."
       assert_equal({ "aircraft_type" => 4, "callsign" => "F-CABC" }, page.evaluate_script("#{unit("Go 000003")}.stored").slice("aircraft_type", "callsign"))
       screen "15-go-ready"
 
@@ -68,7 +70,15 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Done"
       assert_text "Bravo 5C1D is ready."
       assert_link "Set up a Go", href: "/briefing/setup?for=bravo-5c1d"
+      assert_link "New to Bravo? Read its first steps.", href: "/bravo-first-steps"
+      assert_no_link "New to the Go? Read its first steps."
       screen "22-bravo-ready"
+
+      click_link "New to Bravo? Read its first steps."
+      assert_current_path "/bravo-first-steps"
+      assert_selector ".device-figure--bravo svg[role=img]", text: /Button\s+USB-C/
+      assert_selector "table .lamp--white"
+      screen "23-bravo-first-steps"
     end
   end
 
@@ -94,10 +104,16 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Done"
       assert_text "Your Tango is ready: Go 000003 shows the ADS-B traffic Bravo 5C1D hears."
       assert_no_link "Set up a Go"
+      assert_link "New to the Go? Read its first steps."
+      assert_link "New to Bravo? Read its first steps."
       screen "32-tango-ready"
 
       click_link "Open Go 000003"
       assert_selector ".tango", text: "Paired with Bravo 5C1D."
+
+      visit "/go-first-steps"
+      assert_selector ".device-figure--go svg[role=img]", text: /Pad\s+Button\s+RST\s+LEDs\s+USB-C/
+      screen "33-go-first-steps"
     end
   end
 

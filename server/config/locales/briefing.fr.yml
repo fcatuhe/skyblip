@@ -167,6 +167,8 @@ fr:
       unsupported_phone: "Installez d\u2019abord depuis un ordinateur, dans Chrome ou Edge. Ce téléphone règle et met ensuite à jour vos appareils en Bluetooth."
       unsupported_other: "L\u2019installation en USB demande Chrome ou Edge sur un ordinateur."
       by_hand_link: "L\u2019installer à la main"
+      guide_go: "Nouveau avec le Go\u00a0? Lisez ses premiers pas."
+      guide_bravo: "Nouveau avec Bravo\u00a0? Lisez ses premiers pas."
       try_again: "Réessayer"
       save: "Enregistrer"
       later: "Plus tard"
