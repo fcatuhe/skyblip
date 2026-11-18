@@ -124,17 +124,17 @@ class Briefing::SetupTest < ApplicationSystemTestCase
     end
   end
 
-  test "a unit that does not answer as Meshtastic gets the drive by hand, with the gesture of each product" do
+  test "a unit that does not answer over USB gets the drive by hand, with its product's gesture" do
     in_range
     plugged_in a_meshtastic_go(mode: "silent")
     with_installers do
       visit "/briefing/setup"
       click_button "Install"
-      assert_text "If it shows a USB drive named TECHOBOOT or X1, choose it. If not, start its installer by hand first:", wait: 6
+      assert_text "Start the installer of Go by hand, then choose the USB drive named TECHOBOOT in the next window:", wait: 6
       assert_text "Go: press RST twice, quickly."
-      assert_text "Bravo: unplug it, hold its button, plug it back in, and release once the light turns white."
+      assert_no_text "Bravo: unplug it"
       assert_no_selector ".unit-message"
-      screen "50-not-meshtastic"
+      screen "50-not-answering"
 
       page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
       click_button "Choose the drive"
@@ -142,6 +142,26 @@ class Briefing::SetupTest < ApplicationSystemTestCase
       click_button "Connect"
       assert_text "Name your aircraft."
       assert_equal [ [ { "namePrefix" => "activate" } ] ], page.evaluate_script("fakeFleet.asked")
+    end
+  end
+
+  test "a T-Echo on a firmware that cannot restart into its drive gets the gesture at once, and one already in its bootloader goes straight to the drive" do
+    in_range
+    plugged_in a_meshtastic_go(mode: "softrf")
+    with_installers do
+      visit "/briefing/setup"
+      click_button "Install"
+      assert_text "Start the installer of Go by hand", wait: 1
+      assert_text "Go: press RST twice, quickly."
+      screen "53-softrf-gesture"
+
+      visit "/briefing/setup"
+      page.execute_script("fakeUsb.plug(#{a_meshtastic_go(mode: "bootloader").to_json})")
+      click_button "Install"
+      assert_text "Go shows a USB drive named TECHOBOOT. Choose that drive in the next window, then let Briefing save to it.", wait: 1
+      assert_no_text "press RST"
+      screen "54-already-bootloader"
+      assert_equal 0, page.evaluate_script("fakeUsb.restarts")
     end
   end
 

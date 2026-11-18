@@ -20,7 +20,6 @@ const SETUP_NOTICES = ["setup_notices", "notices"]
 const ACTIVATING = { asking: "words.asking_server", registering: "words.registering", unlocking: "words.registering" }
 const PRODUCT_WORDS = { go: "Go", bravo: "Bravo" }
 const FIELDS = { go: ["aircraft_type", "callsign", "aircraft_address"], tango: ["aircraft_type", "callsign", "aircraft_address"], bravo: ["aircraft_address"] }
-const QUIET_NOTICES = new Set(["no_meshtastic"])
 
 // INFO: fc 17nov26 one page from Meshtastic to a unit ready to fly: USB, Bluetooth, then the aircraft (skyblip/README.md, The installer)
 export default class extends Controller {
@@ -39,6 +38,7 @@ export default class extends Controller {
       pickDrive: () => window.showDirectoryPicker({ id: "skyblip-drive", mode: "readwrite" }),
       download: product => this.#download(product),
       browserKey: storedBrowserKey,
+      journal: sharedJournal(),
     })
     this.#render()
   }
@@ -121,22 +121,20 @@ export default class extends Controller {
   async #onboard(unit) {
     if (this.onboarding) return
     this.unit = unit
-    this.onboarding = { stage: unit.product === "go" ? "activating" : "connected", failure: null }
-    this.#render()
+    this.#stage({ stage: unit.product === "go" ? "activating" : "connected", failure: null })
     if (unit.product === "go" && !(await this.#activated(unit))) return
     const partner = this.partnerValue ? this.fleet.unit(this.partnerValue) : null
     if (partner?.linked && partner.product === PARTNER[unit.product]) {
-      this.onboarding = { stage: "pairing", step: "arming", failure: null }
-      this.#render()
+      this.#stage({ stage: "pairing", step: "arming", failure: null })
       try {
         await pairTango({ fleet: this.fleet, ...sides(unit, partner), onStep: step => this.#step(step) })
       } catch (error) {
         if (!(error instanceof PairingFailed)) throw error
         this.pairFailure = { key: error.key, detail: error.detail }
+        sharedJournal().record("installer.noticed", { key: error.key, detail: error.detail ?? null, phase: "pairing" })
       }
     }
-    this.onboarding = { stage: "aircraft" }
-    this.#render()
+    this.#stage({ stage: "aircraft" })
   }
 
   #activated(unit) {
@@ -163,6 +161,17 @@ export default class extends Controller {
       }
       check()
     })
+  }
+
+  #stage(onboarding) {
+    const previous = this.onboarding?.stage ?? this.installer.state.phase
+    if (onboarding.stage !== previous) {
+      const now = performance.now()
+      sharedJournal().record("installer.stepped", { phase: onboarding.stage, previous, lasted_ms: Math.round(now - (this.steppedAt ?? now)) })
+      this.steppedAt = now
+    }
+    this.onboarding = onboarding
+    this.#render()
   }
 
   #step(step) {
@@ -195,14 +204,15 @@ export default class extends Controller {
     if (panel === "drive") this.#drive(state, name)
     if (panel === "writing") this.writingTextTarget.textContent = state.version ? say("setup.writing", { version: state.version, name }) : say("setup.downloading", { name })
     if (panel === "connect") this.#connectPanel(state, name)
-    this.#show(panel, { notice: this.failure ?? (QUIET_NOTICES.has(state.notice?.key) ? null : state.notice) })
+    this.#show(panel, { notice: this.failure ?? state.notice })
   }
 
   #drive(state, name) {
-    const byHand = !state.product
     const drive = DRIVE_NAMES[state.product] ?? `${DRIVE_NAMES.go}${say("setup.or")}${DRIVE_NAMES.bravo}`
-    this.driveTextTarget.textContent = byHand ? say("setup.drive_by_hand", { drive }) : say("setup.drive", { name, drive })
-    this.byHandTarget.hidden = !byHand
+    const words = state.drive === "restarted" ? "setup.drive" : state.drive === "ready" ? "setup.drive_ready" : state.product ? "setup.drive_gesture" : "setup.drive_by_hand"
+    this.driveTextTarget.textContent = say(words, { name, drive })
+    this.byHandTarget.hidden = state.drive !== "gesture"
+    for (const item of this.byHandTarget.children) item.hidden = Boolean(state.product) && item.dataset.product !== state.product
     this.chooseDriveTarget.disabled = state.phase !== "drive"
   }
 
@@ -289,9 +299,9 @@ export default class extends Controller {
   }
 
   #finished() {
+    sharedJournal().record("installer.finished", { kind: this.#case(), saved: Boolean(this.saving) })
     this.saving = false
-    this.onboarding = { stage: "done" }
-    this.#render()
+    this.#stage({ stage: "done" })
   }
 
   #done() {

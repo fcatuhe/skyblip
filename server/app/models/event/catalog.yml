@@ -111,6 +111,48 @@ activation.noticed:
   keys: [key, detail, phase]
   says: The activation page showed a notice, the unit's refusal, the server's as `server_` and its error, or a Bluetooth failure, with the step it came at.
   answers: Why activations fail, from the pilot's side, beside `activation.refused` from the server's.
+installer.stepped:
+  group: Installer
+  from: browser
+  keys: [phase, previous, lasted_ms]
+  says: The setup of a unit over USB moved from one step to the next, from choosing the port to the drive, the write, the Bluetooth connection, the activation, the pairing, the aircraft and the end card, with how long the step before lasted.
+  answers: How far pilots get in setting up a unit, where they wait and where they give up.
+installer.port_chosen:
+  group: Installer
+  from: browser
+  keys: [usb_vendor, usb_product, firmware]
+  says: The pilot picked a USB serial port, with its vendor and product ids and the firmware they point to, `bootloader`, `meshtastic`, `softrf` or `unknown`.
+  answers: What new units arrive running, and which USB ids the table that reads them is missing.
+installer.identified:
+  group: Installer
+  from: browser
+  keys: [product, hw_model, version]
+  says: The unit answered over USB as Meshtastic does, with the product its board model gives, the board model number and the firmware version, before it was restarted into its drive.
+  answers: Which boards and firmware versions pilots bring, and whether a board model is missing from the products.
+installer.drive_chosen:
+  group: Installer
+  from: browser
+  keys: [board, product]
+  says: The pilot chose the unit's drive, with the Board-ID its INFO_UF2.TXT names and the product it gives.
+  answers: Which bootloaders the units ship with, the first thing to check when a write fails.
+installer.wrote:
+  group: Installer
+  from: browser
+  keys: [product, version, trusted, write_ms]
+  says: The release image was written to the drive, with the product, the version, whether it carried this browser's trust record, and how long the write took.
+  answers: How many units are installed over USB, and how many trust their browser from the start.
+installer.noticed:
+  group: Installer
+  from: browser
+  keys: [key, detail, phase]
+  says: The setup page showed a notice, a closed port chooser, a refused drive, a failed download or write, or a pairing that failed, by its key, with the browser's message and the step it came at.
+  answers: Why setups fail, the list to work down so no pilot is stranded with a unit half installed.
+installer.finished:
+  group: Installer
+  from: browser
+  keys: [kind, saved]
+  says: The setup reached its end card, `kind` `go` for a Go alone, `tango` for a Go and a Bravo paired, `bravo` for a Bravo alone, and `saved` when the pilot named the aircraft there.
+  answers: How many setups finish, how many end as a Tango, and how many pilots name the aircraft at setup rather than from the transponder.
 activation.refused:
   group: Activation
   says: The server refused a challenge or a registration, with the reason the page words, such as `bad_signature`, `other_key`, `revoked_key`, `daily_cap` or `network_cap`, and the `step`.

@@ -86,7 +86,10 @@
           }
         },
       });
+      // INFO: fc 18nov26 the USB ids installer.js reads its firmware from, the vendor alone for a board it does not list
+      const ids = { meshtastic: 0x4405, softrf: 0x8029, bootloader: 0x0029 }[device.mode] ?? 0x1234;
       return {
+        getInfo: () => ({ usbVendorId: device.product === 'go' ? 0x239a : 0x2886, usbProductId: device.product === 'go' ? ids : 0x1234 }),
         open: async () => {},
         close: async () => {},
         readable,

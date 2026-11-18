@@ -25,7 +25,7 @@ class BriefingWordsTest < ActiveSupport::TestCase
   PAIR_NOTICES = %w[timeout].freeze
   GO_PAIRING = Rails.root.join("../firmware/products/skyblip_go/services/bravo.cpp")
   SETUP_NOTICES = %w[
-    port_closed port_failed port_busy no_meshtastic other_board not_drive drive_denied drive_failed download_failed no_image
+    port_closed port_failed port_busy other_board not_drive drive_denied drive_failed download_failed no_image
     image_not_uf2 image_wrong_product image_no_image image_no_room write_failed failed
   ].freeze
   INSTALL_CAUSES = Rails.root.join("app/javascript/skyblip/install_report.js").read[/INSTALL_CAUSES = \[(.*?)\]/, 1].scan(/'(\w+)'/).flatten

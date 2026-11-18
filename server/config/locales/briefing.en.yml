@@ -25,7 +25,7 @@ en:
       no_bluetooth_tools: The simulator and the ownship editor work here.
       title: Your devices
       first_title: Your skyBlip
-      first_hint: "New, and still running Meshtastic? Set it up over USB. Already running skyBlip? Switch it on and connect it."
+      first_hint: "New device? Set it up over USB. Already running skyBlip? Switch it on and connect it."
       connect_new: Connect a device
       set_up: Set up a device
       no_bluetooth: "This browser cannot connect to Bluetooth devices. Chrome and Edge support Bluetooth on Android, Windows, macOS and Linux."
@@ -142,11 +142,13 @@ en:
         install: Install
         connect: Connect
         aircraft: Your aircraft
-      start: "Plug your Go or Bravo into this computer with a USB cable. Briefing replaces Meshtastic with skyBlip, then connects to it."
+      start: "Plug your Go or Bravo into this computer with a USB cable. Briefing installs skyBlip on it, then connects to it."
       install: Install
       connect_running: Connect it over Bluetooth
       drive: "%{name} restarted as a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
       drive_by_hand: "If it shows a USB drive named %{drive}, choose it. If not, start its installer by hand first:"
+      drive_ready: "%{name} shows a USB drive named %{drive}. Choose that drive in the next window, then let Briefing save to it."
+      drive_gesture: "Start the installer of %{name} by hand, then choose the USB drive named %{drive} in the next window:"
       or: " or "
       by_hand:
         go: "Go: press RST twice, quickly."
@@ -183,8 +185,7 @@ en:
     setup_notices:
       port_closed: "Nothing listed? Switch the device on and try another cable: many USB-C cables only charge. A unit already running skyBlip lists no USB port: connect it over Bluetooth."
       port_failed: "The USB port could not be opened:"
-      port_busy: "Another program is using the device. Close Meshtastic's app or flasher, then click Install again."
-      no_meshtastic: "It did not answer as Meshtastic, so it did not restart by itself."
+      port_busy: "Another program is using the device. Close it, then click Install again."
       other_board: "This board does not run skyBlip. skyBlip runs on a LilyGO T-Echo or T-Echo Plus, and on a Seeed MeshTracker X1."
       not_drive: "That is not the drive. Choose the drive named TECHOBOOT or X1."
       drive_denied: "Briefing needs permission to save to the drive. Choose it again, and click Allow or Save changes."

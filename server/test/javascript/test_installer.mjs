@@ -16,10 +16,15 @@ function namedError(name, message = name) {
 }
 
 class FakePort {
-  constructor(node) {
+  constructor(node, info = { usbVendorId: 0x239a, usbProductId: 0x4405 }) {
     this.node = node;
+    this.info = info;
     this.opened = null;
     this.closed = false;
+  }
+
+  getInfo() {
+    return this.info;
   }
 
   async open(options) {
@@ -65,8 +70,10 @@ function installer({ node = new FakeNode(), drive = new FakeDrive(T_ECHO_INFO), 
   const serial = { requestPort: async options => (asked.push(options), fakePort instanceof Error ? Promise.reject(fakePort) : fakePort) };
   const pickDrive = async () => (drive instanceof Error ? Promise.reject(drive) : drive);
   const download = async product => ({ bytes: (release ?? releaseUf2(product)).bytes, version: '0.1.0+1858' });
-  const unit = new Installer({ onChange: state => states.push(state), serial, pickDrive, download, browserKey: async () => key, identifyWithinMs: 20 });
-  return { unit, node, drive, port: fakePort, asked, states };
+  const recorded = [];
+  const journal = { record: (name, properties) => recorded.push([name, properties]) };
+  const unit = new Installer({ onChange: state => states.push(state), serial, pickDrive, download, browserKey: async () => key, identifyWithinMs: 20, journal });
+  return { unit, node, drive, port: fakePort, asked, states, recorded };
 }
 
 function written(drive) {
@@ -99,12 +106,48 @@ test('an X1 gets the Bravo image, written at its own slot0', async () => {
   assert.ok(readSpan(written(drive), LAYOUTS.bravo.slot0, 4).every((byte, at) => byte === [0x3d, 0xb8, 0xf3, 0x96][at]));
 });
 
-test('a port that is not Meshtastic leads to the drive by hand, without a tag', async () => {
-  const { unit } = installer({ node: new FakeNode({ answers: false }) });
+test('a port that is not Meshtastic leads to the drive by hand, without a tag, for the product its USB vendor names', async () => {
+  const { unit } = installer({ port: new FakePort(new FakeNode({ answers: false }), { usbVendorId: 0x2886, usbProductId: 0x1234 }) });
   await unit.restart();
-  assert.equal(unit.state.phase, 'drive');
-  assert.deepEqual(unit.state.notice, { key: 'no_meshtastic' });
-  assert.equal(unit.state.tag, null);
+  assert.deepEqual({ phase: unit.state.phase, drive: unit.state.drive, product: unit.state.product, tag: unit.state.tag, notice: unit.state.notice },
+    { phase: 'drive', drive: 'gesture', product: 'bravo', tag: null, notice: null });
+});
+
+test('a unit already in its bootloader goes straight to its drive, and is never opened', async () => {
+  const port = new FakePort(new FakeNode(), { usbVendorId: 0x239a, usbProductId: 0x0029 });
+  const { unit, node } = installer({ port });
+  await unit.restart();
+  assert.deepEqual({ phase: unit.state.phase, drive: unit.state.drive, product: unit.state.product }, { phase: 'drive', drive: 'ready', product: 'go' });
+  assert.equal(port.opened, null);
+  assert.equal(node.restarted, false);
+});
+
+test('a T-Echo on SoftRF, which cannot restart into its drive, gets the gesture at once, with no wait', async () => {
+  const port = new FakePort(new FakeNode(), { usbVendorId: 0x239a, usbProductId: 0x8029 });
+  const { unit, recorded } = installer({ port });
+  await unit.restart();
+  assert.deepEqual({ phase: unit.state.phase, drive: unit.state.drive, product: unit.state.product }, { phase: 'drive', drive: 'gesture', product: 'go' });
+  assert.equal(port.opened, null);
+  assert.deepEqual(recorded.find(([name]) => name === 'installer.port_chosen'), ['installer.port_chosen', { usb_vendor: 0x239a, usb_product: 0x8029, firmware: 'softrf' }]);
+});
+
+test('an install leaves a trail of steps and facts, with no personal data', async () => {
+  const { unit, recorded } = installer({ node: new FakeNode({ nodeNum: 0x9a3f2a, hwModel: 7 }) });
+  await unit.restart();
+  await unit.install();
+  const facts = recorded.filter(([name]) => name !== 'installer.stepped');
+  assert.deepEqual(facts.map(([name]) => name), ['installer.port_chosen', 'installer.identified', 'installer.drive_chosen', 'installer.wrote']);
+  assert.deepEqual(facts[1][1], { product: 'go', hw_model: 7, version: '2.7.15.567b8ea' });
+  assert.deepEqual(facts[2][1], { board: 'nRF52840-TEcho-v1', product: 'go' });
+  assert.deepEqual({ ...facts[3][1], write_ms: 0 }, { product: 'go', version: '0.1.0+1858', trusted: true, write_ms: 0 });
+  const steps = recorded.filter(([name]) => name === 'installer.stepped').map(([, { phase, previous }]) => `${previous}>${phase}`);
+  assert.deepEqual(steps, ['idle>choosing_port', 'choosing_port>reading', 'reading>drive', 'drive>choosing_drive', 'choosing_drive>downloading', 'downloading>writing', 'writing>installed']);
+});
+
+test('every notice the page shows is recorded with the step it came at', async () => {
+  const { unit, recorded } = installer({ port: namedError('NotFoundError', 'No port selected by the user.') });
+  await unit.restart();
+  assert.deepEqual(recorded.at(-1), ['installer.noticed', { key: 'port_closed', detail: null, phase: 'idle' }]);
 });
 
 test('a Meshtastic board skyBlip does not run on is told so, and is not restarted', async () => {
