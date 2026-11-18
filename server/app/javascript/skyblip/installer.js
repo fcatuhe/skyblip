@@ -1,5 +1,5 @@
 import { IDENTIFY_WITHIN_MS, MeshtasticLink } from '#skyblip/meshtastic';
-import { LAYOUTS, Uf2Error, boardOf, encodeUf2, imageOf, parseUf2, trustRecord, withTrustRecord } from '#skyblip/uf2';
+import { BLOCK_BYTES, LAYOUTS, Uf2Error, boardOf, encodeUf2, imageOf, parseUf2, trustRecord, withTrustRecord } from '#skyblip/uf2';
 
 // INFO: fc 17nov26 Adafruit's USB vendor id, which LilyGO's T-Echo builds use, and Seeed's, which the X1's do
 export const USB_VENDORS = [0x239a, 0x2886];
@@ -134,25 +134,29 @@ export class Installer {
     return { bytes: encodeUf2(withTrustRecord(uf2, layout, trustRecord(key))), version, trusted: true };
   }
 
-  // INFO: fc 17nov26 the bootloader restarts the unit once the last block lands, which can fail the close that follows
+  // INFO: fc 18nov26 the bootloader restarts once the last block lands, cutting that write or the close, so only a cut before it is a failure
   async #write(drive, bytes) {
     let writable = null;
+    let onLastBlock = false;
+    let cut = null;
     const started = performance.now();
     try {
       const file = await drive.getFileHandle(DRIVE_FILE, { create: true });
       writable = await file.createWritable();
-      await writable.write(bytes);
-    } catch (error) {
-      writable?.abort().catch(aborted => console.warn('The half-written file could not be dropped:', aborted.message));
-      return this.#set({ phase: 'drive', notice: { key: 'write_failed', detail: error.message } });
-    }
-    try {
+      await writable.write(bytes.subarray(0, -BLOCK_BYTES));
+      onLastBlock = true;
+      await writable.write(bytes.subarray(-BLOCK_BYTES));
       await writable.close();
     } catch (error) {
-      console.warn('The drive went away as the image landed, as a restarting bootloader does:', error.message);
+      if (!onLastBlock) {
+        writable?.abort().catch(aborted => console.warn('The half-written file could not be dropped:', aborted.message));
+        return this.#set({ phase: 'drive', notice: { key: 'write_failed', detail: error.message } });
+      }
+      cut = error.message;
+      console.warn('The drive went away as the last block landed, as a restarting bootloader does:', error.message);
     }
     const { product, version, trusted } = this.#state;
-    this.#record('installer.wrote', { product, version, trusted, write_ms: Math.round(performance.now() - started) });
+    this.#record('installer.wrote', { product, version, trusted, write_ms: Math.round(performance.now() - started), detail: cut });
     this.#set({ phase: 'installed', notice: null });
   }
 

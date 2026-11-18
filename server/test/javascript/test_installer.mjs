@@ -39,23 +39,28 @@ class FakePort {
 }
 
 class FakeDrive {
-  constructor(info, { failWrite = false, failClose = false } = {}) {
+  constructor(info, { failWrite = false, restartIn = null } = {}) {
     this.files = new Map(info === null ? [] : [['INFO_UF2.TXT', new TextEncoder().encode(info)]]);
-    Object.assign(this, { failWrite, failClose });
+    Object.assign(this, { failWrite, restartIn, flashed: false });
   }
 
   async getFileHandle(name, { create = false } = {}) {
     if (!this.files.has(name) && !create) throw namedError('NotFoundError');
     const drive = this;
+    let landed = new Uint8Array();
+    const cut = () => namedError('InvalidStateError', 'An operation that depends on state cached in an interface object was made but the state had changed since it was read from disk.');
     return {
       getFile: async () => new Blob([drive.files.get(name)]),
       createWritable: async () => ({
         write: async bytes => {
           if (drive.failWrite) throw namedError('NoModificationAllowedError', 'The drive is read-only.');
-          drive.files.set(name, bytes);
+          landed = Uint8Array.from([...landed, ...bytes]);
+          drive.flashed = new DataView(landed.buffer).getUint32(24, true) * 512 === landed.length;
+          if (drive.flashed && drive.restartIn === 'write') throw cut();
         },
         close: async () => {
-          if (drive.failClose) throw namedError('NotFoundError', 'The device went away.');
+          if (drive.flashed && drive.restartIn === 'close') throw cut();
+          drive.files.set(name, landed);
         },
         abort: async () => {},
       }),
@@ -139,7 +144,7 @@ test('an install leaves a trail of steps and facts, with no personal data', asyn
   assert.deepEqual(facts.map(([name]) => name), ['installer.port_chosen', 'installer.identified', 'installer.drive_chosen', 'installer.wrote']);
   assert.deepEqual(facts[1][1], { product: 'go', hw_model: 7, version: '2.7.15.567b8ea' });
   assert.deepEqual(facts[2][1], { board: 'nRF52840-TEcho-v1', product: 'go' });
-  assert.deepEqual({ ...facts[3][1], write_ms: 0 }, { product: 'go', version: '0.1.0+1858', trusted: true, write_ms: 0 });
+  assert.deepEqual({ ...facts[3][1], write_ms: 0 }, { product: 'go', version: '0.1.0+1858', trusted: true, write_ms: 0, detail: null });
   const steps = recorded.filter(([name]) => name === 'installer.stepped').map(([, { phase, previous }]) => `${previous}>${phase}`);
   assert.deepEqual(steps, ['idle>choosing_port', 'choosing_port>reading', 'reading>drive', 'drive>choosing_drive', 'choosing_drive>downloading', 'downloading>writing', 'writing>installed']);
 });
@@ -216,16 +221,23 @@ test('an image of the other product is never written', async () => {
   assert.equal(drive.files.has(DRIVE_FILE), false);
 });
 
-test('a write the drive refuses is said, and a close the restart cuts is not', async () => {
-  const refused = installer({ drive: new FakeDrive(T_ECHO_INFO, { failWrite: true }) });
-  await refused.unit.restart();
-  await refused.unit.install();
-  assert.deepEqual({ phase: refused.unit.state.phase, key: refused.unit.state.notice.key }, { phase: 'drive', key: 'write_failed' });
+test('a write the drive refuses before the last block is said', async () => {
+  const { unit } = installer({ drive: new FakeDrive(T_ECHO_INFO, { failWrite: true }) });
+  await unit.restart();
+  await unit.install();
+  assert.deepEqual({ phase: unit.state.phase, key: unit.state.notice.key }, { phase: 'drive', key: 'write_failed' });
+});
 
-  const restarted = installer({ drive: new FakeDrive(T_ECHO_INFO, { failClose: true }) });
-  await restarted.unit.restart();
-  await restarted.unit.install();
-  assert.equal(restarted.unit.state.phase, 'installed');
+// Chrome cut the write itself on a T-Echo, once the bootloader had flashed the image and restarted
+test('a restart that cuts the write or the close once the last block lands is an install', async () => {
+  for (const restartIn of ['write', 'close']) {
+    const { unit, drive, recorded } = installer({ drive: new FakeDrive(T_ECHO_INFO, { restartIn }) });
+    await unit.restart();
+    await unit.install();
+    assert.equal(drive.flashed, true);
+    assert.deepEqual({ phase: unit.state.phase, notice: unit.state.notice }, { phase: 'installed', notice: null }, restartIn);
+    assert.match(recorded.find(([name]) => name === 'installer.wrote')[1].detail, /state had changed/);
+  }
 });
 
 test('installing needs Web Serial and the folder chooser, which only Chrome and Edge on a computer have', () => {
