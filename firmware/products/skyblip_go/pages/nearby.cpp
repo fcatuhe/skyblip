@@ -82,8 +82,7 @@ const char* go_word(const NearbySnapshot& snapshot) {
     return snapshot.go.transmitting ? nullptr : "TX OFF";
 }
 
-// INFO: fc 18nov26 a Bravo from before gnss_stage says no UTC alone, which its corner reads MOVE
-// OUT
+// INFO: fc 18nov26 an older Bravo sends no gnss_stage, so no UTC reads MOVE OUT as on its corner
 const char* bravo_word(const NearbyBravo& bravo) {
     switch (bravo.state) {
         case comms::BravoState::LinkDown: return "NO LINK";

@@ -1,11 +1,13 @@
 // A Go paired with the Bravo stub folds Bravo's targets in, and says Bravo is lost on health alone.
 #include <cstdint>
+#include <cstring>
 #include <functional>
 #include <string>
 #include <vector>
 
 #include "core/annunciation/annunciator.h"
 #include "core/flight/log_record.h"
+#include "core/gnss/first_fix.h"
 #include "core/settings/address.h"
 #include "core/store/sector.h"
 #include "core/traffic/range.h"
@@ -49,6 +51,14 @@ std::string last_status(Rig& rig) {
             link_text(it->bytes).rfind("{\"command\":\"status\"", 0) == 0)
             return link_text(it->bytes);
     return std::string();
+}
+
+// INFO: fc 18nov26 a figure ends at its column and its unit stands on the figure's baseline
+bool unit_reads(const ui::Canvas& glass, int x_end, int y, const char* value, const char* unit) {
+    const int unit_x = x_end - static_cast<int>(std::strlen(unit)) * ui::kCellWidth;
+    const int value_x = unit_x - 1 - static_cast<int>(std::strlen(value)) * go::kNearbyCellWidth;
+    return reads_at(glass, unit_x, y + 7, unit, 1) &&
+           reads_at(glass, value_x, y, value, go::kNearbyScale);
 }
 
 std::string last_pflaa(Rig& rig) {
@@ -100,6 +110,33 @@ TEST_CASE("bravo traffic: nearby lists Bravo's target under B, and the radar mar
     REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
     flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
     CHECK(flight.reads("B DLH4AB", go::kNearbyScale));
+}
+
+// The figures come off Bravo's health and the table's sources, so they stop once the link does.
+TEST_CASE("bravo traffic: nearby's Bravo row reads its health and its ADS-B, until the link goes") {
+    Flight flight(named_target_every_second(2, 40));
+    flight.tango.bravo.health.status_fields =
+        "\"battery_percent\":64,\"charging\":false,\"power_level\":\"normal\","
+        "\"gnss_stage\":\"fixed\",\"satellites\":9";
+    flight.fly(gnss::kFirstFixSettleMs / 1000 + 2);
+    flight.go().tap(flight.tango.now_ms);
+    REQUIRE(flight.go().product.screen().page() == go::Page::Nearby);
+    flight.go().run(flight.tango.now_ms, flight.tango.now_ms + 1100);
+
+    constexpr int kBravoY = go::kNearbyUnitY + go::kNearbyLineHeight;
+    CHECK(unit_reads(flight.glass(), go::kNearbyBatteryEnd, kBravoY, "64", "%"));
+    CHECK(unit_reads(flight.glass(), go::kNearbySatellitesEnd, kBravoY, "9", "SAT"));
+    CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, kBravoY, "1", "TFC"));
+    CHECK(unit_reads(flight.glass(), go::kNearbyRelativeAltitudeEnd, go::kNearbyUnitY, "0", "TFC"));
+
+    flight.tango.air.set_in_range(false);
+    flight.tango.air.drop();
+    flight.fly(6);
+    REQUIRE(flight.state().bravo == comms::BravoState::LinkDown);
+    CHECK(reads_at(flight.glass(), go::kNearbyRelativeAltitudeEnd - 7 * go::kNearbyCellWidth,
+                   kBravoY, "NO LINK", go::kNearbyScale));
+    CHECK(reads_at(flight.glass(), go::kNearbyBatteryEnd - 2 * go::kNearbyCellWidth, kBravoY, "--",
+                   go::kNearbyScale));
 }
 
 TEST_CASE("bravo traffic: BRAVO LOG lists each frame Bravo forwards, under what Bravo runs") {

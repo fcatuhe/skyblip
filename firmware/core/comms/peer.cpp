@@ -259,8 +259,7 @@ bool read_bravo_status(const cbor::Reader& reader, PeerHealth& health) {
     return true;
 }
 
-// INFO: fc 18nov26 a receiver counts the satellites in its solution, so a count without a fix is
-// refused
+// INFO: fc 18nov26 a receiver counts only the satellites in a solution, so no fix has no count
 bool read_bravo_gnss(const cbor::Reader& reader, PeerHealth& health) {
     uint32_t stage = 0, satellites = 0;
     bool staged = false, counted = false;

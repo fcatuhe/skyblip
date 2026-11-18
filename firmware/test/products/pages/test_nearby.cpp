@@ -313,8 +313,7 @@ TEST_CASE("nearby page: a Go that does not transmit says TX OFF, and one on the 
     CHECK(reads_right_of(canvas, kNearbyBatteryEnd, kNearbyUnitY, "CHG", kNearbyScale));
 }
 
-// The two TFC figures add up to every emitter heard, so neither unit's radio hides behind the
-// other.
+// Bravo's row stands under the Go's, so the heads and the list start a row lower.
 TEST_CASE("nearby page: a paired Go reads Bravo's row under its own, and the list a row lower") {
     traffic::RangeRow rows[1] = {row_at(400, 0)};
     Glass canvas;
