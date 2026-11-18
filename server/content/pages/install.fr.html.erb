@@ -1,47 +1,46 @@
 ---
-title: "Installer skyBlip avec le Briefing"
+title: "Installer skyBlip depuis votre navigateur"
 nav_title: Installer
 slug: installer
-description: "Branchez votre Go ou Bravo en USB-C. Le Briefing vous montre les gestes à faire, installe skyBlip et vous indique quand votre appareil est prêt."
+description: "Installez skyBlip sur votre Go ou votre Bravo depuis votre navigateur, avec le Briefing. Un ordinateur, Chrome ou Edge et un câble USB-C suffisent."
 updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Installez skyBlip avec le Briefing</h1>
-  <p class="page-hero-subtitle">Prenez un ordinateur avec Chrome ou Edge et un câble USB-C qui transmet les données. Un câble qui ne sert qu&rsquo;à charger ne suffit pas.</p>
+  <h1>Installez skyBlip depuis votre navigateur</h1>
+  <p class="page-hero-subtitle">Un ordinateur, Chrome ou Edge, un câble USB-C. Le Briefing fait le reste.</p>
 </header>
 
 <section id="steps" class="band band--tint">
-  <h2 class="section-title">Installez en quatre étapes</h2>
+  <h2 class="section-title">Quatre étapes</h2>
   <div class="install-steps">
     <ol class="steps-grid steps-grid--sequence">
       <li>
-        <h3>Branchez le boîtier à l&rsquo;ordinateur.</h3>
+        <h3>Branchez</h3>
+        <p>Le boîtier, en USB-C, à votre ordinateur.</p>
       </li>
       <li>
-        <h3>Cliquez sur Installer dans le Briefing.</h3>
-        <p>Choisissez le boîtier, puis le lecteur USB indiqué. Le Briefing installe le bon logiciel.</p>
+        <h3>Installez</h3>
+        <p>Cliquez sur Installer dans le Briefing.</p>
       </li>
       <li>
-        <h3>Connectez l&rsquo;appareil en Bluetooth quand le Briefing vous le propose.</h3>
+        <h3>Connectez</h3>
+        <p>En Bluetooth, quand le Briefing vous le propose.</p>
       </li>
       <li>
-        <h3>Ouvrez le guide Premiers pas quand le Briefing vous indique que l&rsquo;appareil est prêt.</h3>
+        <h3>Volez</h3>
+        <p><%= link_to_page "guides", label: "Le guide Premiers pas" %> vous montre l&rsquo;essentiel.</p>
       </li>
     </ol>
-    <p class="install-start"><%= link_to "Installer un appareil dans le Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
-    <div class="install-gesture">
-      <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_hold"), marks: { button: t("briefing.figures.hold"), led: t("devices.led"), usb: t("briefing.figures.plug") }, lamp: %i[white steady], caption: t("briefing.figures.white") %>
-      <p>Si le Briefing vous demande un geste sur le boîtier, il vous montre quoi faire. Vous n&rsquo;avez rien à ouvrir ni à souder.</p>
-    </div>
+    <p class="install-start"><%= link_to "Installer dans le Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
   </div>
 </section>
 
 <section id="connected" class="band">
-  <h2 class="section-title">Une fois l&rsquo;appareil connecté</h2>
-  <p>Le Briefing lance l&rsquo;activation d&rsquo;un Go neuf. Elle lui donne l&rsquo;adresse dont il a besoin pour diffuser sa position. Vous n&rsquo;avez pas besoin de compte. Vous pouvez choisir votre type d&rsquo;aéronef et saisir votre indicatif à cette étape ou <%= link_to_page "go-first-steps", label: "les régler plus tard" %>. Bravo reçoit le trafic et n&rsquo;a pas besoin d&rsquo;activation.</p>
-  <p>Pour former un Tango, allumez les deux appareils au sol. Dans le <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, ouvrez la page du premier appareil connecté. Elle propose d&rsquo;installer ou de connecter le second, puis de les associer.</p>
-  <p>Votre boîtier utilise déjà skyBlip ? <%= link_to "Connectez-le dans le Briefing", briefing_root_path(locale: I18n.locale) %> en Bluetooth. Les réglages et les mises à jour se font ensuite depuis le Briefing dans Chrome ou Edge sur ordinateur ou Android.</p>
+  <h2 class="section-title">Bon à savoir</h2>
+  <p>Un Go neuf s&rsquo;active dans le Briefing, sans compte. Bravo n&rsquo;a pas besoin d&rsquo;activation.</p>
+  <p>Pour un Tango, installez les deux appareils, puis associez-les dans le <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+  <p>Déjà sous skyBlip ? <%= link_to "Connectez-le dans le Briefing", briefing_root_path(locale: I18n.locale) %> pour les réglages et les mises à jour.</p>
 </section>
 
 <section id="si-quelque-chose-bloque" class="band band--tint">

@@ -1,46 +1,45 @@
 ---
-title: "Install skyBlip with Briefing"
+title: "Install skyBlip from your browser"
 nav_title: Install
-description: "Plug in your Go or Bravo over USB-C. Briefing shows you what to do, installs skyBlip and tells you when your device is ready."
+description: "Install skyBlip on your Go or Bravo from your browser, with Briefing. All you need is a computer, Chrome or Edge, and a USB-C cable."
 updated_on: "2026-11-18"
 ---
 
 <header class="page-hero">
-  <h1>Install skyBlip with Briefing</h1>
-  <p class="page-hero-subtitle">Use a computer with Chrome or Edge and a USB-C cable that carries data. A charge-only cable won&rsquo;t work.</p>
+  <h1>Install skyBlip from your browser</h1>
+  <p class="page-hero-subtitle">A computer, Chrome or Edge, a USB-C cable. Briefing does the rest.</p>
 </header>
 
 <section id="steps" class="band band--tint">
-  <h2 class="section-title">Install in four steps</h2>
+  <h2 class="section-title">Four steps</h2>
   <div class="install-steps">
     <ol class="steps-grid steps-grid--sequence">
       <li>
-        <h3>Plug the device into your computer.</h3>
+        <h3>Plug in</h3>
+        <p>The device, over USB-C, into your computer.</p>
       </li>
       <li>
-        <h3>Click Install in Briefing.</h3>
-        <p>Choose your device, then select the USB drive it names. Briefing installs the right software.</p>
+        <h3>Install</h3>
+        <p>Click Install in Briefing.</p>
       </li>
       <li>
-        <h3>Connect the device over Bluetooth when Briefing asks.</h3>
+        <h3>Connect</h3>
+        <p>Over Bluetooth, when Briefing asks.</p>
       </li>
       <li>
-        <h3>Open the first steps guide when Briefing tells you your device is ready.</h3>
+        <h3>Fly</h3>
+        <p><%= link_to_page "guides", label: "The first steps guide" %> shows you the essentials.</p>
       </li>
     </ol>
-    <p class="install-start"><%= link_to "Install a device in Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
-    <div class="install-gesture">
-      <%= render "shared/device", device: :bravo, label: t("briefing.figures.bravo_hold"), marks: { button: t("briefing.figures.hold"), led: t("devices.led"), usb: t("briefing.figures.plug") }, lamp: %i[white steady], caption: t("briefing.figures.white") %>
-      <p>If Briefing asks you to do something on the device, it shows you what to do. You don&rsquo;t need to open it or solder anything.</p>
-    </div>
+    <p class="install-start"><%= link_to "Install in Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
   </div>
 </section>
 
 <section id="connected" class="band">
-  <h2 class="section-title">Once the device is connected</h2>
-  <p>Briefing starts activation for a new Go. That gives Go the address it needs to transmit its position. You don&rsquo;t need an account. Choose your aircraft type and enter your callsign now, or <%= link_to_page "go-first-steps", label: "set them later" %>. Bravo receives traffic and needs no activation.</p>
-  <p>To make a Tango, turn on both devices on the ground. In <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>, open the page for the first device you connect. It offers to install or connect the second device and then pair them.</p>
-  <p>Already running skyBlip? <%= link_to "Connect your device in Briefing", briefing_root_path(locale: I18n.locale) %> over Bluetooth. Change settings and install updates in Briefing using Chrome or Edge on a computer or Android.</p>
+  <h2 class="section-title">Good to know</h2>
+  <p>A new Go activates in Briefing, with no account. Bravo needs no activation.</p>
+  <p>For a Tango, install both devices, then pair them in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+  <p>Already on skyBlip? <%= link_to "Connect it in Briefing", briefing_root_path(locale: I18n.locale) %> for settings and updates.</p>
 </section>
 
 <section id="si-quelque-chose-bloque" class="band band--tint">

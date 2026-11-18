@@ -96,43 +96,14 @@
 
   .install-steps {
     display: grid;
-    gap: var(--space-xl) var(--space-inline-2xl);
-    max-inline-size: 48rem;
+    gap: var(--space-xl);
+    max-inline-size: 36rem;
     margin-inline: auto;
   }
 
   .install-steps > .steps-grid { max-inline-size: none; margin: 0; }
 
   .install-start { margin: 0; text-align: center; }
-
-  .install-gesture {
-    display: grid;
-    justify-items: center;
-    gap: var(--space-s);
-  }
-
-  .install-gesture .device-figure { justify-self: center; }
-
-  .install-gesture p {
-    max-inline-size: 22rem;
-    margin: 0;
-    font-size: var(--text-s);
-    text-align: center;
-    color: var(--ink-soft);
-  }
-
-  @media (min-width: 58rem) {
-    .install-steps {
-      grid-template-columns: minmax(0, 1fr) 22rem;
-      grid-template-areas: "steps gesture" "start gesture";
-      align-items: start;
-      max-inline-size: none;
-    }
-
-    .install-steps > .steps-grid { grid-area: steps; }
-    .install-start { grid-area: start; }
-    .install-gesture { grid-area: gesture; }
-  }
 
   .journey {
     --journey-mark: var(--space-3xl);
