@@ -38,7 +38,7 @@ updated_on: "2026-11-18"
 
   <h3 id="channel">Gerade oder ungerade: Die Sekunde bestimmt den Kanal.</h3>
   <p class="lede">Eine Position nutzt in geraden UTC-Sekunden Kanal A und in ungeraden Kanal B, am Boden wie im Flug. Eine Statusmeldung gibt an, was Go empfangen kann. Sie nutzt den anderen Kanal als eine Position in derselben Sekunde. Das Rufzeichen nutzt stets Kanal B am Ende von Fenster 2.</p>
-  <p class="lede">ADS-L verlangt einen Kanalwechsel zwischen aufeinanderfolgenden Positionen und ebenso zwischen aufeinanderfolgenden Statusmeldungen. Mit der Regel für gerade und ungerade Sekunden ergibt sich der Positionskanal aus der Uhrzeit. Wer nur auf einem Kanal empfängt, kann noch jede zweite geplante Position empfangen.</p>
+  <p class="lede">ADS-L verlangt einen Kanalwechsel zwischen aufeinanderfolgenden Positionen und ebenso zwischen aufeinanderfolgenden Statusmeldungen. Mit der Regel für gerade und ungerade Sekunden ergibt sich der Positionskanal aus der Uhrzeit. Wer nur auf einem Kanal empfängt, kann noch jede zweite geplante Position empfangen. Ein Start oder eine Landung kann zwei Positionen nacheinander auf denselben Kanal legen, einmal beim Wechsel. Das geschieht bei fast jedem zweiten Wechsel.</p>
 
   <h3 id="cycle">Die Seriennummer legt den Beginn des 20&nbsp;s langen Zyklus fest.</h3>
   <p class="lede">Jeder Go folgt einem Zyklus von 20&nbsp;s. Sein Beginn c ist eine gerade Sekunde: das Doppelte der letzten Dezimalziffer der Seriennummer, also <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu vergibt die Nummer bei der <%= link_to "Aktivierung", briefing_activation_path %>. Beim Beispielgerät <span class="mono">skyBlip Go 00012A</span> entspricht die hexadezimale Seriennummer dezimal 298. Die letzte Ziffer ist 8. Der Zyklus beginnt also bei Sekunde 16.</p>
@@ -92,6 +92,7 @@ updated_on: "2026-11-18"
     <li>Das Rufzeichen ist in einer geraden Sekunde eingeplant. Dann nutzt die Position A und lässt B frei.</li>
     <li>Zwischen Aussendungen desselben Geräts auf derselben Frequenz liegen mindestens 100&nbsp;ms. Je Fenster ist nur eine eingeplant.</li>
   </ul>
+  <p class="lede">Der Zeitplan verteilt außerdem die Flotte gleichmäßig. Über die zehn Zyklusstarts trägt das Fenster jedes Kanals in jeder Sekunde eine geplante Bodenaussendung. Positionen im Abstand von 10&nbsp;s auf wechselnden Kanälen brächten zwei in ein Viertel der Fenster und keine in ein anderes Viertel.</p>
   <p class="lede">Der Zeitplan nutzt immer die geräteeigene Adresse, auch wenn die Meldungen die ICAO-Adresse eines Luftfahrzeugs enthalten. Wird diese Adresse im Flug gesetzt oder gelöscht, ändern sich weder Kanal noch Zeitpunkt.</p>
 
   <h3 id="instant">Go lost die Millisekunde jede Sekunde neu aus.</h3>

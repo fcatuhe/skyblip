@@ -38,7 +38,7 @@ updated_on: "2026-11-18"
 
   <h3 id="channel">La paridad del segundo elige el canal.</h3>
   <p class="lede">Una posición usa el canal A en un segundo UTC par y el canal B en uno impar, tanto en tierra como en vuelo. Un mensaje Status indica qué puede recibir el Go. Usa el canal opuesto al que usaría una posición en ese segundo. El indicativo usa siempre el canal B, al final de la ventana 2.</p>
-  <p class="lede">ADS-L exige que las posiciones consecutivas y los mensajes Status consecutivos cambien de canal. La regla par o impar permite predecir el canal de posición solo a partir de la hora. Un receptor que escucha en un solo canal puede recibir una de cada dos posiciones programadas.</p>
+  <p class="lede">ADS-L exige que las posiciones consecutivas y los mensajes Status consecutivos cambien de canal. La regla par o impar permite predecir el canal de posición solo a partir de la hora. Un receptor que escucha en un solo canal puede recibir una de cada dos posiciones programadas. Un despegue o un aterrizaje puede poner dos posiciones consecutivas en el mismo canal, una sola vez, en el cambio. Ocurre en casi uno de cada dos cambios.</p>
 
   <h3 id="cycle">Un ciclo de 20&nbsp;s fijado por el número de serie.</h3>
   <p class="lede">Cada Go sigue un ciclo de 20&nbsp;s. Su inicio, que aquí llamamos c, es un segundo par: el doble de la última cifra decimal de su número de serie, o <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu asigna ese número durante la <%= link_to "activación", briefing_activation_path %>. En el ejemplo <span class="mono">skyBlip Go 00012A</span>, el número de serie hexadecimal equivale a 298 en decimal. Su última cifra es 8, así que el ciclo empieza en el segundo 16.</p>
@@ -92,6 +92,7 @@ updated_on: "2026-11-18"
     <li>El indicativo se programa en un segundo par, cuando la posición usa A y deja libre B</li>
     <li>El programa mantiene las ráfagas de la misma unidad en la misma frecuencia separadas al menos 100&nbsp;ms, con un máximo de una por ventana</li>
   </ul>
+  <p class="lede">El programa también reparte la flota de forma uniforme. En los diez inicios de ciclo, la ventana de cada canal lleva una ráfaga en tierra programada en cada segundo. Posiciones separadas 10&nbsp;s en canales alternos pondrían dos en una cuarta parte de las ventanas y ninguna en otra cuarta parte.</p>
   <p class="lede">El programa usa la dirección propia de la unidad incluso cuando sus mensajes llevan la dirección OACI de una aeronave. Configurar o borrar esa dirección en vuelo no cambia el instante ni el canal de una ráfaga.</p>
 
   <h3 id="instant">El milisegundo se sortea de nuevo cada segundo.</h3>
