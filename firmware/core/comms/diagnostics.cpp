@@ -41,6 +41,8 @@ void DiagnosticsReport::build(const Diagnostics& diagnostics, const Group* only)
             static_cast<int64_t>(diagnostics.reset));
         add(Group::System, link::diagnostics_key::kLinkDrops, Kind::Unsigned,
             diagnostics.link_drops);
+        add(Group::System, link::diagnostics_key::kLinkDropReason, Kind::Unsigned,
+            diagnostics.link_drop_reason);
     }
 
     if (radio) {

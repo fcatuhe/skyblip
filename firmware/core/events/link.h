@@ -36,8 +36,10 @@ enum class MtuRequest : uint8_t { NotAsked, Pending, Exchanged, AlreadyExchanged
 
 enum class MtuExchangeStarter : uint8_t { None = 0, Central = 1, Unit = 2, Both = 3 };
 
+// INFO: fc 19nov26 reason is the HCI code the controller gave, 0 where the platform names none
 struct LinkDown {
     uint16_t session_id;
+    uint8_t reason{0};
 };
 
 // INFO: le 04aug26 One tagged event on one queue, not a queue of LinkUp beside a
@@ -52,6 +54,7 @@ struct LinkEvent {
     uint16_t session_id;
     uint16_t payload_bytes;
     uint32_t connection;
+    uint8_t reason{0};
 };
 
 struct RxFrame {

@@ -84,8 +84,28 @@ test('a connection is told once, with what the device runs and holds', async () 
     { variant: 'plus', version: '0.1.0+12', release: true, device_id: '8f3a1c2e9b7d4f60', bluetooth_tag: 0x5afe },
   );
   const [disconnected] = journal.named('device.disconnected');
-  assert.equal(disconnected.expected, false);
+  assert.equal(disconnected.expected, true);
   assert.equal(journal.named('device.read').length, 1);
+});
+
+// A link the pilot closed counted as a drop, beside the ones the radio lost.
+test('a link that drops on its own is unexpected, and the next one says why the unit saw it drop', async () => {
+  const fake = new FakeSkyblip({ name: 'skyBlip Go 00012A', bufSize: 300 });
+  airwaves(fake);
+  const journal = recorder();
+  const fleet = new Fleet({ journal });
+  const unit = await fleet.connectNew();
+  await settled(fleet, () => unit.state.dump);
+  assert.deepEqual(journal.named('device.drop_reported'), []);
+  fake.drop(0x08);
+  await settled(fleet, () => journal.named('device.disconnected').length);
+  assert.equal(journal.named('device.disconnected')[0].expected, false);
+
+  await fleet.connect('go-00012a');
+  await settled(fleet, () => journal.named('device.drop_reported').length);
+  unit.disconnect();
+
+  assert.deepEqual(journal.named('device.drop_reported').map(({ reason, code }) => ({ reason, code })), [{ reason: 'timeout', code: 8 }]);
 });
 
 // A unit on a release with a development bootloader still takes development images, which its track alone hides.

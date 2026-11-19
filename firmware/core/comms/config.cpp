@@ -108,6 +108,7 @@ void ConfigService::on_link_up(const events::LinkUp& event) {
 // prompt.
 void ConfigService::on_link_down(const events::LinkDown& event) {
     note_disconnected(event.session_id);
+    diagnostics_.link_drop_reason = event.reason;
     if (identity_ != nullptr) identity_->forget(event.session_id);
     browsers_.forget(event.session_id);
     if (pairing_peer_ && pairing_peer_->session_id == event.session_id) pairing_peer_.reset();

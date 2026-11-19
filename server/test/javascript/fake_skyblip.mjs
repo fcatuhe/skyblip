@@ -123,6 +123,7 @@ export class FakeSkyblip {
     this.refusedOnDevice = false;
     this.staged = null;
     this.capturing = false;
+    this.linkDropReason = 0;
     this.windowOpen = false;
     this.slot = null;
     this.finished = false;
@@ -227,8 +228,10 @@ export class FakeSkyblip {
     characteristic.onWrite(Uint8Array.from(bytes));
   }
 
-  drop() {
+  // INFO: fc 19nov26 0x13 is the HCI reason of a central closing the link, and a restart forgets any reason
+  drop(reason = 0x13) {
     if (!this.connected) return;
+    this.linkDropReason = reason;
     this.connected = false;
     this.pending = null;
     this.refusedOnDevice = false;
@@ -365,7 +368,7 @@ export class FakeSkyblip {
 
   // INFO: fc 15nov26 diagnostics.cpp's next_frame: a group whole when it fits the payload, else one field a frame
   sendDiagnostics() {
-    const groups = [['system', { uptime_s: 120, reset: 'power_on' }], ['capture', {
+    const groups = [['system', { uptime_s: 120, reset: 'power_on', link_drop_reason: this.linkDropReason }], ['capture', {
       armed: this.capturing, ...(this.capturing ? { profile: this.staged ?? 'full' } : {}), session: this.capturing ? 1785628800 : 0,
       records: this.capturing ? 960 : 0, records_dropped: 0, sectors: 0, keeps_s: 0, takes_sectors: 170, evicts_flights: this.evictsFlights,
       keeps_full_s: 1926, keeps_power_run_s: 433500,
@@ -408,7 +411,7 @@ export class FakeSkyblip {
       return this.acknowledge(false, refusal);
     }
     this.acknowledge(true, 'install');
-    setImmediate(() => setImmediate(() => this.drop()));
+    setImmediate(() => setImmediate(() => this.drop(0)));
   }
 
   landingRefusal(image) {
@@ -487,7 +490,7 @@ export class FakeSkyblip {
       return this.acknowledge(true, 'dfu');
     }
     this.acknowledge(true, task);
-    setImmediate(() => setImmediate(() => this.drop()));
+    setImmediate(() => setImmediate(() => this.drop(0)));
   }
 
   refuse() {
@@ -537,7 +540,7 @@ export class FakeSkyblip {
     else if (upload) answer = this.imageUpload(body);
     else answer = { rc: MGMT_ERR_ENOTSUP };
     this.sendSmp(request, answer);
-    if (upload && --this.dropAfterPackets === 0) setImmediate(() => this.drop());
+    if (upload && --this.dropAfterPackets === 0) setImmediate(() => this.drop(0x08));
     if (upload && --this.refuseAfterPackets === 0) this.refuse();
   }
 

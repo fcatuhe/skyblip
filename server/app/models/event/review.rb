@@ -49,6 +49,8 @@ class Event::Review
       { connected: connected.map { it["device"] }.uniq.size, connections: connected.size,
         connect_ms: spread(connected.reject { yes?(it["payload.returned"]) }.map { it["payload.connect_ms"] }),
         dropped_while_busy: top(dropped.map { it["payload.phase"] }.select { it.in?(BUSY) }),
+        dropped_by_phase: top(dropped.map { it["payload.phase"] }),
+        drop_reasons: top(rows("device.drop_reported", "payload.reason").map { it["payload.reason"] }),
         choosers_closed: top(rows("bluetooth.chooser_closed", "payload.filter").map { it["payload.filter"] }),
         choosers_failed: top(rows("bluetooth.chooser_failed", "payload.error").map { it["payload.error"] }) }
     end

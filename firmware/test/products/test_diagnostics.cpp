@@ -158,6 +158,28 @@ TEST_CASE("diagnostics: the link answers what the collector and the config servi
     CHECK(has(frames, ("\"fixes\":" + fixes).c_str()));
 }
 
+// A browser saw its link drop and could not tell a phone asleep from a unit that hung up.
+TEST_CASE("diagnostics: the next link reads why the last one dropped") {
+    Rig rig;
+    REQUIRE(rig.setup() == Status::Ok);
+    Collector collector;
+    uint32_t now_ms = 0;
+    fly(rig, collector, now_ms, 2);
+    rig.raise_link(1);
+    pass(rig, collector, now_ms, 100);
+    constexpr uint8_t kSupervisionTimeout = 0x08;
+    rig.drop_link(1, kSupervisionTimeout);
+    pass(rig, collector, now_ms, 100);
+    rig.raise_link(2);
+    rig.platform.link().clear();
+    pass(rig, collector, now_ms, 1000);
+    rig.send("{\"command\":\"diagnostics\"}");
+    pass(rig, collector, now_ms, 200);
+
+    CHECK(snapshot(rig).link_drop_reason == kSupervisionTimeout);
+    CHECK(has(config_frames(rig), "\"link_drop_reason\":8"));
+}
+
 namespace {
 // INFO: fc 14nov26 now_ms + for_ms is no bound across the wrap, so this walks a count of steps
 void pass_across_wrap(Rig& rig, Collector& collector, uint32_t& now_ms, uint32_t for_ms) {

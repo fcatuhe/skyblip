@@ -200,6 +200,7 @@ export class Updater {
     dump: null,
     capture: null,
     fetching: null,
+    left: false,
   };
 
   constructor({ onChange, device = null, returnEveryMs = null, returnWithinMs = RETURN_WITHIN_MS, browserKey = storedBrowserKey, attestations = null }) {
@@ -232,7 +233,7 @@ export class Updater {
     if (this.#opening) return this.#opening;
     this.#stopReturn();
     this.#leaving = false;
-    this.#set({ phase: 'connecting', notice: null });
+    this.#set({ phase: 'connecting', notice: null, left: false });
     try {
       await this.#open();
     } catch (error) {
@@ -660,7 +661,7 @@ export class Updater {
     this.#attestation?.close();
     if (EXPECTED_DROP.has(phase)) {
       const next = phase === 'recovering' ? 'recovering' : 'rebooting';
-      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null });
+      this.#set({ phase: next, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false, progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null, left: leaving });
       if (next === 'rebooting' && this.#returnEveryMs !== null && !leaving) this.#awaitReturn();
       return;
     }
@@ -668,7 +669,7 @@ export class Updater {
     this.#set({
       phase: 'offline', task: null, device: null, identity: null, identityRefused: null, running: null, status: null, settings: null, goAlarm: null, sounds: null, address: null, pairedTag: null, defaults: null, refusedOnDevice: false,
       progress: null, installReport: null, landing: null, protocols: null, dump: null, capture: null, fetching: null,
-      notice,
+      notice, left: leaving,
     });
   }
 

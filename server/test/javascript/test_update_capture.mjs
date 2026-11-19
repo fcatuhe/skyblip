@@ -72,6 +72,6 @@ test('a Go asks for a capture on its glass, and the dump then says it records', 
 test('the dump keeps every group it read, for a report', async () => {
   const { updater, until } = await connected();
   const read = await until(state => state.dump);
-  assert.deepEqual(read.dump.system, { uptime_s: 120, reset: 'power_on' });
+  assert.deepEqual(read.dump.system, { uptime_s: 120, reset: 'power_on', link_drop_reason: 0 });
   assert.equal(read.dump.capture.takes_sectors, 170);
 });

@@ -30,6 +30,20 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ "probation_failed" => 1 }, installs[:failed_by_cause])
   end
 
+  # Links dropped while ready were left out, and they were most of the drops pilots saw.
+  test "links that dropped unasked are counted by phase, beside the reasons the units gave" do
+    journey "BROWSER0", "device.disconnected", 30.minutes.ago, phase: "ready", expected: false
+    journey "BROWSER0", "device.disconnected", 20.minutes.ago, phase: "uploading", expected: false
+    journey "BROWSER0", "device.disconnected", 15.minutes.ago, phase: "ready", expected: true
+    journey "BROWSER0", "device.drop_reported", 10.minutes.ago, reason: "timeout", code: 8
+
+    devices = Event::Review.new.devices
+
+    assert_equal({ "ready" => 1, "uploading" => 1 }, devices[:dropped_by_phase])
+    assert_equal({ "uploading" => 1 }, devices[:dropped_while_busy])
+    assert_equal({ "timeout" => 1 }, devices[:drop_reasons])
+  end
+
   test "browsers are counted once, and those without Bluetooth by browser and system" do
     journey "IPHONE00", "browser.opened", 2.days.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"
     journey "IPHONE00", "browser.opened", 1.day.ago, bluetooth: false, browser_name: "Safari", os_name: "iOS"
