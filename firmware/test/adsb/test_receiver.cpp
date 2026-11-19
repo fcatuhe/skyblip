@@ -137,10 +137,10 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.2: the preamble is four pulses at 0, 1, 3.5 and 4
     CHECK(chip::kAdsbPreambleChips == 16);
     for (int chip_index : {0, 2, 7, 9})
         CHECK(((chip::kAdsbPreamblePattern >> chip_index) & 1u) == 1u);
-    int pulses = 0;
+    unsigned pulses = 0;
     for (int chip_index = 0; chip_index < chip::kAdsbPreambleChips; chip_index++)
         pulses += (chip::kAdsbPreamblePattern >> chip_index) & 1u;
-    CHECK(pulses == 4);
+    CHECK(pulses == 4u);
     CHECK(framed(identification()));
 }
 
