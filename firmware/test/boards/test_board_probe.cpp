@@ -52,7 +52,8 @@ TEST_CASE("board: one scan, taken when the page asks, names everything on the se
         CHECK(inventory.i2c_addresses[i - 1] < inventory.i2c_addresses[i]);
 }
 
-TEST_CASE("board: a haptic that answers the bus is a capability, and it is the part") {
+TEST_CASE("board: a haptic that answers the bus is a capability, and it is the part" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
@@ -89,7 +90,8 @@ TEST_CASE("board: the T-Echo Plus drives its motor as an ERM in open loop, uncal
 }
 
 // A loop that stalls mid-call would otherwise hold an output on until the watchdog bites.
-TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both") {
+TEST_CASE("board: an output left on past its ceiling is cut, the motor and the buzzer both" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     bus::Bus bus;
     Board board{platform, bus};
@@ -196,7 +198,8 @@ TEST_CASE("board: a panel nobody has fingerprinted is named, not guessed at") {
 }
 
 // Read off our own two units the day the page had them the wrong way round.
-TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer") {
+TEST_CASE("board: a buzzer pin held down by its drive stage is a fitted buzzer" *
+          doctest::test_suite("main")) {
     platform::host::Platform platform;
     platform.set_buzzer_pin_held_low(true);
     bus::Bus bus;

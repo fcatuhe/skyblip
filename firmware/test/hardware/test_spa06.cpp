@@ -196,7 +196,8 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("spa06: a reading is the altitude the part was carried to, on the BME280's path") {
+TEST_CASE("spa06: a reading is the altitude the part was carried to, on the BME280's path" *
+          doctest::test_suite("main")) {
     Bench bench;
 
     for (int32_t altitude_mm : {-300000, 0, 1500000, 6000000}) {

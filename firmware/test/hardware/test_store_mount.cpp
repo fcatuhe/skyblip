@@ -95,7 +95,7 @@ TEST_CASE("store mount: every value this firmware stores opens on a word no ring
     CHECK_FALSE(platform::is_warm_node_store_page(first_word(update)));
 }
 
-TEST_CASE("store mount: our own records mount untouched") {
+TEST_CASE("store mount: our own records mount untouched" * doctest::test_suite("main")) {
     Flash flash;
     uint8_t blob[16] = {};
     const uint8_t payload[4] = {0x57, 0x52, 0x4E, 0x33};
@@ -107,7 +107,8 @@ TEST_CASE("store mount: our own records mount untouched") {
 }
 
 // Meshtastic 2.8.0 and later keep a WarmNodeStore ring on our sectors, and NVS can mount over it.
-TEST_CASE("store mount: a Meshtastic WarmNodeStore page is erased before NVS reads it") {
+TEST_CASE("store mount: a Meshtastic WarmNodeStore page is erased before NVS reads it" *
+          doctest::test_suite("main")) {
     for (const uint32_t magic : {0x474E5257u, 0x324E5257u, 0x334E5257u}) {
         for (int sector = 0; sector < kSectors; sector++) {
             Flash flash;

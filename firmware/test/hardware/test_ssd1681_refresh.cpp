@@ -12,7 +12,8 @@
 using namespace skyblip;
 
 // A partial against an unknown glass diffs against garbage, so a session's first frame is full.
-TEST_CASE("ssd1681: the first present after begin() is a full refresh, whatever was asked") {
+TEST_CASE("ssd1681: the first present after begin() is a full refresh, whatever was asked" *
+          doctest::test_suite("main")) {
     models::Ssd1681 chip;
     parts::Ssd1681 driver = driver_for(chip);
     driver.begin();
@@ -341,7 +342,8 @@ TEST_CASE("ssd1681: power_off() sleeps the panel whatever waveform ran last") {
 }
 
 // The path the shutdown actually takes: a full park frame, and then it may sleep.
-TEST_CASE("ssd1681: power_off() after the full park frame leaves nothing powered") {
+TEST_CASE("ssd1681: power_off() after the full park frame leaves nothing powered" *
+          doctest::test_suite("main")) {
     models::Ssd1681 chip;
     parts::Ssd1681 driver = driver_for(chip);
     driver.begin();

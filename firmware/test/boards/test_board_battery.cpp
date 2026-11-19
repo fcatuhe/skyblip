@@ -43,7 +43,8 @@ struct Unit {
 }  // namespace
 
 // 0B1B2C's divider sat over the window for a whole charge, and hid the cable with it (#114).
-TEST_CASE("board battery: a refused reading still publishes the cable and what was read") {
+TEST_CASE("board battery: a refused reading still publishes the cable and what was read" *
+          doctest::test_suite("main")) {
     Unit unit;
     unit.platform.battery().external_power = true;
     unit.platform.battery().divider_mv = 4812;
@@ -69,7 +70,8 @@ TEST_CASE("board battery: an ADC that gave nothing still publishes the cable, at
     }
 }
 
-TEST_CASE("board battery: a believable reading off the cable goes out as it was read") {
+TEST_CASE("board battery: a believable reading off the cable goes out as it was read" *
+          doctest::test_suite("main")) {
     Unit unit;
     unit.platform.battery().divider_mv = 3870;
 

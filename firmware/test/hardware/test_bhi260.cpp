@@ -198,7 +198,7 @@ TEST_CASE("bhi260: the upload is paced, so no single pass of the loop owns the b
     CHECK(passes_while_uploading == 5);
 }
 
-TEST_CASE("bhi260: a running part reports acceleration in milli-g") {
+TEST_CASE("bhi260: a running part reports acceleration in milli-g" * doctest::test_suite("main")) {
     models::Bhi260 chip;
     parts::Bhi260 imu{chip};
     REQUIRE(imu.probe() == Status::Ok);

@@ -84,8 +84,8 @@ TEST_CASE("bme280: a conversion is dated at the middle of its pressure phase") {
     CHECK(parts::Bme280::kConversionMidpointMs == 21);
 }
 
-TEST_CASE(
-    "bme280: the pressure read is the one the part was given, within six tenths of a pascal") {
+TEST_CASE("bme280: the pressure read is the one the part was given, within six tenths of a pascal" *
+          doctest::test_suite("main")) {
     Bench bench;
 
     for (int16_t temperature_dc : {int16_t{-200}, int16_t{150}, int16_t{452}}) {

@@ -125,7 +125,8 @@ TEST_CASE("board: the published sample is the one triggered at the edge") {
     for (uint32_t pressure_mpa : published) CHECK((pressure_mpa + 500) / 1000 == 95000);
 }
 
-TEST_CASE("board: the barometer is published once a second, on the PPS edge") {
+TEST_CASE("board: the barometer is published once a second, on the PPS edge" *
+          doctest::test_suite("main")) {
     Unit unit;
 
     const std::vector<uint32_t> at = unit.sample_instants(0, 10000);

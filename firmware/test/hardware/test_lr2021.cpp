@@ -95,7 +95,8 @@ TEST_CASE("lr2021: the TCXO is powered at 1.6 V from standby RC before the calib
     CHECK(part.fallback_mode == 0x01);
 }
 
-TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Manchester layout") {
+TEST_CASE("lr2021: the modem is SoftRF's 1090 MHz OOK receiver, in the part's Manchester layout" *
+          doctest::test_suite("main")) {
     models::Lr2021 part;
     REQUIRE(lr2021_for(part).begin(chip::kDetectionThresholdDbm) == Status::Ok);
     CHECK(part.packet_type == 0x0A);
@@ -158,7 +159,8 @@ TEST_CASE("lr2021: the default threshold is the -110 dBm #293 measured best, bel
     CHECK(part.reg(0xF30E14) == static_cast<uint32_t>(((-100 + 74) & 0x7F) << 20));
 }
 
-TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line") {
+TEST_CASE("lr2021: receive is continuous, with RxDone alone on the IRQ line" *
+          doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_for(part);
     REQUIRE(radio.begin(chip::kDetectionThresholdDbm) == Status::Ok);
@@ -190,7 +192,8 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
 }
 
 // With no sync word, every downlink format lands, and the decoder tells them apart.
-TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them") {
+TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them" *
+          doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     const AdsbAir reply = mode_s_air(adsb::all_call(kAddress, 5));
@@ -245,7 +248,7 @@ TEST_CASE("lr2021: two frames read in one wake come out oldest first, the RSSI o
     CHECK(radio.poll(frame, sizeof(frame)).type == Lr2021EventType::None);
 }
 
-TEST_CASE("lr2021: chips with no preamble in them are not a frame") {
+TEST_CASE("lr2021: chips with no preamble in them are not a frame" * doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     AdsbAir noise = identification(kAddress);

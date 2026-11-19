@@ -85,7 +85,8 @@ TEST_CASE("sx1262: the PA is the SX1262 high-power configuration, ordered before
 // makes it legal: feed loss out, antenna gain in, dBi referenced back to the
 // dipole the e.r.p. limit is written against. Change the antenna and this is the
 // case that fails.
-TEST_CASE("sx1262: output power is 14 dBm conducted, which is under 25 mW e.r.p. on our antenna") {
+TEST_CASE("sx1262: output power is 14 dBm conducted, which is under 25 mW e.r.p. on our antenna" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);
@@ -201,7 +202,8 @@ TEST_CASE("sx1262: a reset pulse one microsecond under 100 us is a fault, 100 us
 }
 
 // A7. SetTx with no timeout is a PA that stays keyed when TxDone never arrives.
-TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the configured bitrate") {
+TEST_CASE("sx1262: SetTx carries a timeout past the frame's air time at the configured bitrate" *
+          doctest::test_suite("main")) {
     models::Sx1262 chip;
     Sx1262 radio = driver_for(chip);
     REQUIRE(radio.begin() == Status::Ok);

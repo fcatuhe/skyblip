@@ -6,13 +6,15 @@
 
 using namespace skyblip;
 
-TEST_CASE("boot magic: a T-Echo switch-off skips the DFU its wake press would enter") {
+TEST_CASE("boot magic: a T-Echo switch-off skips the DFU its wake press would enter" *
+          doctest::test_suite("main")) {
     CHECK(power::boot_magic_for_system_off(boards::t_echo_plus::kFactoryDfuButton, false) == 0x6d);
     CHECK(power::boot_magic_for_system_off(boards::t_echo_plus::kFactoryDfuButton, true) == 0x57);
 }
 
 // 0x6d made the X1's bootloader skip the 3 s hold that opens its UF2 drive.
-TEST_CASE("boot magic: an X1 switch-off leaves its bootloader's 3 s hold to UF2 in reach") {
+TEST_CASE("boot magic: an X1 switch-off leaves its bootloader's 3 s hold to UF2 in reach" *
+          doctest::test_suite("main")) {
     CHECK(power::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton, false) ==
           0x00);
     CHECK(power::boot_magic_for_system_off(boards::meshtracker_x1::kFactoryDfuButton, true) ==
