@@ -123,6 +123,23 @@ Each word below names one thing, in code and in prose. A word that names two thi
 | park | stop a part and release its lines, ready for the rails to drop | `show(Colour::None)`, which only darkens |
 | pass | one run of the service loop over every service | |
 
+## Naming a test case
+
+A test case states a claim, and [`docs/BEHAVIOR.md`](../docs/BEHAVIOR.md) and the pages under `docs/behavior/` are generated from the claims (`scripts/behavior_index.py`). Name a case `subject: what holds`, as in `button: a stable press emits exactly one event`, because the subject groups the cases on their area's page. Open every test file with a comment that says what it pins down. A comment above a case is quoted under its claim.
+
+A claim is main or it is an edge case. Mark a main case with the `main` test suite, the only one the suite uses, and leave every other case unmarked:
+
+```cpp
+TEST_CASE("button: a stable press emits exactly one event" * doctest::test_suite("main")) {
+```
+
+| Tier | What it covers |
+|---|---|
+| main | what the device does when used as intended, which a pilot, a reviewer or a declaration of conformity relies on: what goes on air and when, what is received and shown, what an alarm means, what the screen and the controls do, what activation, update, pairing and settings do, and the rules a standard imposes on what the device sends. State it as a user or a reviewer would recognize it |
+| edge case or detail | refusals of malformed input, boundaries and saturation, clock and counter wraps, failure and recovery paths, regressions found by fuzzing, internal mechanics, formatting details and harness checks |
+
+Keep main small, about 10 to 15% of an area's cases. Give a subject a user would recognize at least one main case when one qualifies, and give a purely internal subject none. Each area's page lists its main claims first and folds the rest below them, and `docs/BEHAVIOR.md` lists every main claim. `build/skyblip_tests -ts=main` runs the main cases alone. `scripts/behavior_index.py` refuses a name with no subject, a file with no opening comment, a test suite other than `main`, and a skipped case marked main, because a skipped case claims nothing.
+
 ## License
 
 MIT, like the rest of the repository: see [`LICENSE`](../LICENSE). [`NOTICE.md`](../NOTICE.md) lists what an image is built from that is not ours, each with its license: Zephyr and its modules, the toolchain's libraries, Monocypher and the Bosch hub image.
