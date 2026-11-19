@@ -101,27 +101,16 @@ jobs:
         run: python3 scripts/test_check_protocol_freeze.py
       - name: test-coverage structural gate
         run: python3 scripts/check_test_coverage.py
-      # The conformance suite reads the published specification clause by clause, and a
-      # clause nobody read is the one a product is found non-conformant on.
-      - name: every ADS-L clause has a case
-        run: python3 scripts/check_adsl_clauses.py
-      - name: the clause check refuses a skipped case of no kind
-        run: python3 scripts/test_check_adsl_clauses.py
+      # A conformance suite reads its standard clause by clause, and a clause nobody read is the one a product is found non-conformant on.
+      - name: every clause of ADS-L, EN 300 220 and DO-260B has a case
+        run: python3 scripts/check_clauses.py
+      - name: the clause check refuses a case of no kind or off the list
+        run: python3 scripts/test_check_clauses.py
       # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
         run: python3 scripts/check_spec_markdown.py
       - name: the markdown check refuses a word lost, cut or misplaced
         run: python3 scripts/test_check_spec_markdown.py
-      # The ETSI standards cannot be fetched here, so the suite is held to the clause list committed in their place.
-      - name: every listed EN 300 220 clause has a case
-        run: python3 scripts/check_en300220_clauses.py
-      - name: the EN 300 220 clause check refuses a case off the list
-        run: python3 scripts/test_check_en300220_clauses.py
-      # RTCA's draft cannot be committed either, so the ADS-B suite is held to its committed clause list.
-      - name: every listed DO-260B clause has a case
-        run: python3 scripts/check_do260b_clauses.py
-      - name: the DO-260B clause check refuses a case off the list
-        run: python3 scripts/test_check_do260b_clauses.py
       # A hold, a settle and a floor behave nothing alike, and a tree that spells
       # them three ways is a tree where nobody can grep for the one they mean.
       - name: tuning constants read as the vocabulary asks
