@@ -5,7 +5,7 @@ slug: emission
 description: "Quand un skyBlip Go émet. Les fenêtres de la seconde, un cycle de 20 s fixé par son numéro de série, un instant tiré chaque seconde, l'écoute du canal."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -105,7 +105,7 @@ updated_on: "2026-11-18"
   </figure>
 
   <h3 id="listen">Il écoute avant d&rsquo;émettre.</h3>
-  <p class="lede">ADS-L impose d&rsquo;écouter avant d&rsquo;émettre, selon les règles d&rsquo;accès poli au spectre de la norme ETSI EN 300 220-1. Avant l&rsquo;instant prévu, le Go mesure le canal de l&rsquo;émission pendant 200&nbsp;&micro;s. Il fait la moyenne de neuf lectures en puissance. La mesure se termine au plus 2&nbsp;ms avant l&rsquo;émission. Sous le seuil, il émet. Au seuil ou au-dessus, il attend de 5 à 40&nbsp;ms par pas de 5&nbsp;ms, la durée comptabilisée d&rsquo;une émission, puis écoute à nouveau. L&rsquo;adresse et l&rsquo;instant où le canal était occupé déterminent ce tirage.</p>
+  <p class="lede">ADS-L impose d&rsquo;écouter avant d&rsquo;émettre, selon les règles d&rsquo;accès poli au spectre de la norme ETSI EN 300 220-1. Avant l&rsquo;instant prévu, le Go mesure le canal de l&rsquo;émission pendant 200&nbsp;&micro;s. Il fait la moyenne de neuf lectures en puissance. La mesure se termine au plus 2&nbsp;ms avant l&rsquo;émission. Sous le seuil, il émet. Au seuil ou au-dessus, il tire un délai de 15 à 250&nbsp;ms par pas de 5&nbsp;ms, la durée comptabilisée d&rsquo;une émission, puis écoute à nouveau. C&rsquo;est la plage de report prévue par ADS-L 4 SRD-860, section C.2, limitée aux délais qui tiennent dans la fenêtre d&rsquo;émission. S&rsquo;il reste moins de 15&nbsp;ms, l&rsquo;émission est manquée. L&rsquo;adresse et l&rsquo;instant où le canal était occupé déterminent ce tirage.</p>
   <p class="lede">Le seuil vient de la règle de la norme pour un canal de 200&nbsp;kHz, corrigée du gain de l&rsquo;antenne. Au niveau de la puce radio, le canal est déclaré occupé à partir de &minus;78&nbsp;dBm. Le gain d&rsquo;antenne et la perte de la ligne utilisés dans ce calcul viennent de la fiche technique et d&rsquo;une marge, pas de mesures sur un appareil.</p>
   <p class="lede">Une émission retardée reste dans sa fenêtre et sur son canal. Une position retardée est encodée à nouveau pour son nouvel instant, avec le point le plus récent. Si le canal reste occupé jusqu&rsquo;à la fermeture de la fenêtre, l&rsquo;émission est manquée. Au sol, une fois 3&nbsp;s écoulées depuis le premier constat de canal occupé, le Go peut forcer une émission sans écouter, comme ADS-L le permet. Il se tait ensuite pendant 2&nbsp;s après la fin de cette émission. En vol, il ne force jamais&nbsp;: ce silence coûterait deux positions.</p>
 
@@ -119,7 +119,7 @@ updated_on: "2026-11-18"
         <tr><th>Délai maximal entre mesure et émission</th><td>2&nbsp;ms</td><td>au plus 5&nbsp;ms</td></tr>
         <tr><th>Méthode de tirage du report</th><td>un hachage de l&rsquo;adresse et de l&rsquo;instant où le canal était occupé</td><td></td></tr>
         <tr><th>Pas du report</th><td>5&nbsp;ms, la durée comptabilisée d&rsquo;une émission</td><td>au moins la durée de mesure</td></tr>
-        <tr><th>Report minimal et maximal</th><td>5 et 40&nbsp;ms</td><td></td></tr>
+        <tr><th>Report minimal et maximal</th><td>15 et 250&nbsp;ms</td><td></td></tr>
         <tr><th>Durée maximale d&rsquo;émission</th><td>5&nbsp;ms</td><td>au plus 1&nbsp;s</td></tr>
         <tr><th>Silence minimal sur une même fréquence</th><td>100&nbsp;ms</td><td>au moins 100&nbsp;ms</td></tr>
       </tbody>
