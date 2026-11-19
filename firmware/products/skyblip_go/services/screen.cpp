@@ -1,5 +1,7 @@
 #include "products/skyblip_go/services/screen.h"
 
+#include <algorithm>
+
 #include "core/events/input.h"
 #include "core/fec/crc.h"
 #include "core/power/cutoff.h"
@@ -310,11 +312,12 @@ void ScreenService::tick(uint32_t now_ms) {
     record_screen(now_ms);
 
     if (!ports::has(context_.roles.capabilities, ports::Capability::Display)) return;
+    if (panel_waiting_) (void)panel_ready(now_ms);
     settle_park(now_ms);
     if (!powered_) return;
 
     if (change_ != Change::Wiped && !refresh_allowed()) {
-        context_.roles.display.ready(now_ms);
+        (void)panel_ready(now_ms);
         return;
     }
 
@@ -323,7 +326,7 @@ void ScreenService::tick(uint32_t now_ms) {
                      (!at.phase_valid || at.into_ms < kLockedRedrawWindowEndMs);
     const bool on_the_second = due && at.phase_valid;
     if (!dirty_ && !due) return;
-    if (!context_.roles.display.ready(now_ms)) return;
+    if (!panel_ready(now_ms)) return;
 
     if (change_ == Change::Asked) {
         wipe_glass(now_ms);
@@ -346,11 +349,36 @@ void ScreenService::tick(uint32_t now_ms) {
 
     const uint64_t present_began_us = context_.roles.clock.microseconds();
     context_.roles.display.present(framebuffer_, ports::Refresh::Partial, now_ms);
+    panel_waiting_ = true;
     present_us_ = microseconds_since(present_began_us);
     count_refresh(ports::Refresh::Partial);
     presented_crc_ = frame_crc;
     note_presented(now_ms);
     flash_alarm();
+}
+
+uint32_t ScreenService::due_in_ms(uint32_t now_ms) const {
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Display))
+        return runtime::kServiceRestCeilingMs;
+    if (park_ != ParkStep::None || change_ != Change::None || notice_ || answering())
+        return runtime::kServicePassCeilingMs;
+    if (panel_waiting_)
+        return std::max(runtime::kServicePassCeilingMs, context_.roles.display.ready_in_ms(now_ms));
+    if (!powered_) return runtime::kServiceRestCeilingMs;
+    const diagnostics::Instant at = context_.instant(now_ms);
+    const uint32_t window_ms =
+        !at.phase_valid ? runtime::remaining_ms(now_ms - last_render_ms_, kRenderPeriodMs)
+        : at.into_ms < kLockedRedrawWindowStartMs ? kLockedRedrawWindowStartMs - at.into_ms
+                                                  : 1000 - at.into_ms + kLockedRedrawWindowStartMs;
+    if (!dirty_ || !refresh_allowed()) return window_ms;
+    const uint32_t floor_ms =
+        presented_once_ ? runtime::remaining_ms(now_ms - last_present_ms_, kPresentFloorMs) : 0;
+    return std::max(runtime::kServicePassCeilingMs, std::min(window_ms, floor_ms));
+}
+
+bool ScreenService::panel_ready(uint32_t now_ms) {
+    panel_waiting_ = !context_.roles.display.ready(now_ms);
+    return !panel_waiting_;
 }
 
 void ScreenService::flash_alarm() {
@@ -391,6 +419,7 @@ void ScreenService::wipe_glass(uint32_t now_ms) {
 void ScreenService::paint_black(uint32_t now_ms) {
     framebuffer_.clear(/*white=*/false);
     context_.roles.display.paint_black(now_ms);
+    panel_waiting_ = true;
     count_refresh(ports::Refresh::Partial);
 }
 
@@ -453,7 +482,7 @@ bool ScreenService::worn_powered_off(ParkFrame frame) {
 // INFO: fc 12sep26 every step is a command, and a command sent over a live BUSY is lost
 void ScreenService::settle_park(uint32_t now_ms) {
     if (park_ == ParkStep::None) return;
-    if (!context_.roles.display.ready(now_ms)) return;
+    if (!panel_ready(now_ms)) return;
     if (park_ == ParkStep::Wipe) {
         park_ = ParkStep::Frame;
         paint_black(now_ms);
@@ -465,6 +494,7 @@ void ScreenService::settle_park(uint32_t now_ms) {
         const ports::Refresh mode =
             worn_powered_off(park_frame_) ? ports::Refresh::Full : ports::Refresh::Partial;
         context_.roles.display.present(framebuffer_, mode, now_ms);
+        panel_waiting_ = true;
         count_refresh(mode);
         cell_on_glass_ = park_frame_ == ParkFrame::FlatCell  ? power::CellOnGlass::Flat
                          : park_frame_ == ParkFrame::LowCell ? power::CellOnGlass::Low

@@ -62,6 +62,8 @@ class ScreenService : public runtime::Service {
           bravo_(bravo) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 a redraw once a second in its window, a press or a refresh a pass at a time
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     void next_page();
     Page next_fitted_page(Page from) const;
@@ -179,6 +181,7 @@ class ScreenService : public runtime::Service {
     bool showing_radar() const { return mode_ == Mode::Page && page_ == Page::Radar; }
 
     bool answering() const { return prompt_ != comms::Pending::None; }
+    bool panel_ready(uint32_t now_ms);
     bool unit_activated();
 
     bool alarm_takes_glass() const {
@@ -256,6 +259,7 @@ class ScreenService : public runtime::Service {
     Change change_{Change::Asked};
     bool presented_once_{false};
     ParkStep park_{ParkStep::None};
+    bool panel_waiting_{false};
     ParkFrame park_frame_{ParkFrame::Wordmark};
     ports::RecoveryPath recovery_path_{ports::RecoveryPath::Rebooted};
     power::CellOnGlass cell_on_glass_{power::CellOnGlass::None};

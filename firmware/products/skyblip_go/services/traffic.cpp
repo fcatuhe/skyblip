@@ -33,7 +33,7 @@ void TrafficService::tick(uint32_t now_ms) {
                                            context_.state.activation.address().value_or(0));
     context_.state.traffic.set_aircraft_address(settings_.aircraft_address);
     events::RfEvent event{};
-    while (context_.bus.rf.pop(event)) {
+    while (rf_.pop(event)) {
         switch (event.type) {
             case events::RfEventType::RxDone: on_frame(event, now_ms); break;
             case events::RfEventType::CrcError:
@@ -59,6 +59,10 @@ void TrafficService::tick(uint32_t now_ms) {
     const uint32_t now_s = context_.state.traffic_now_s(now_ms);
     context_.state.traffic.age_out(now_s);
     context_.state.callsigns.age_out(now_s);
+}
+
+uint32_t TrafficService::due_in_ms(uint32_t /*now_ms*/) const {
+    return runtime::kServiceRestCeilingMs;
 }
 
 events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t now_ms) const {

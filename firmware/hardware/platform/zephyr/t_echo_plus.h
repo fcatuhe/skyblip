@@ -28,6 +28,7 @@
 #include "hardware/platform/zephyr/io.h"
 #include "hardware/platform/zephyr/kvstore.h"
 #include "hardware/platform/zephyr/link.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/pps.h"
 #include "hardware/platform/zephyr/random.h"
 #include "hardware/platform/zephyr/rf.h"
@@ -85,6 +86,8 @@ class TEchoPlus {
         (void)bme280_.begin();
         gpio_pin_configure_dt(&button_, GPIO_INPUT);
         gpio_pin_configure_dt(&pad_, GPIO_INPUT);
+        (void)wake_on_edges(button_, button_edges_);
+        (void)wake_on_edges(pad_, pad_edges_);
         (void)pps_.begin();
         return Status::Ok;
     }
@@ -201,6 +204,8 @@ class TEchoPlus {
     struct gpio_dt_spec haptic_enable_ = GPIO_DT_SPEC_GET(DT_ALIAS(haptic_enable), gpios);
     struct gpio_dt_spec button_ = GPIO_DT_SPEC_GET(DT_ALIAS(button), gpios);
     struct gpio_dt_spec pad_ = GPIO_DT_SPEC_GET(DT_ALIAS(pad), gpios);
+    struct gpio_callback button_edges_{};
+    struct gpio_callback pad_edges_{};
     // _OR, not _GET: a board file with no LED node has to build. That is the seam
     // - the specs come back null, ready() answers false, and the device runs the
     // same table and lights nothing.

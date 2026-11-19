@@ -176,6 +176,7 @@ static_assert(every_cycle_divides_the_minute(), "a row whose flashes drift off s
 const Indication& indication_for(Condition condition);
 const char* to_string(Condition condition);
 const char* to_string(Colour colour);
+uint32_t until_edge_ms(const Indication& indication, uint32_t into_cycle_ms);
 
 // Everything the decision depends on, gathered by the one service that owns the
 // indicator and passed in whole. Every field is already published on bus::State
@@ -222,6 +223,8 @@ class Policy {
     // What is lit right now, gaps included: None during the off phase of a wink.
     Colour lamp() const { return shown_; }
     bool on_utc_grid() const { return on_grid_; }
+    // INFO: fc 19nov26 until the lamp next lights or darkens, from the phase the last update found
+    uint32_t until_change_ms(uint32_t now_ms) const;
 
    private:
     uint32_t into_cycle_ms(const Indication& indication, uint32_t now_ms,
@@ -230,6 +233,8 @@ class Policy {
     Condition condition_{Condition::Off};
     Colour shown_{Colour::None};
     uint32_t cycle_start_ms_{0};
+    uint32_t into_ms_{0};
+    uint32_t updated_ms_{0};
     bool on_grid_{false};
     bool started_{false};
 };

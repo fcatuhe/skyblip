@@ -31,10 +31,12 @@ struct OwnshipSettings {
 // alarm logic and every screen read.
 class OwnshipService : public runtime::Service {
    public:
-    OwnshipService(runtime::Context& context, OwnshipSettings settings)
-        : runtime::Service(context), settings_(settings) {}
+    OwnshipService(runtime::Context& context, OwnshipSettings settings,
+                   bus::AccelerometerQueue* accelerometer = nullptr)
+        : runtime::Service(context), settings_(settings), accelerometer_(accelerometer) {}
 
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     bool barometer_active() const { return barometer_active_; }
 
@@ -105,6 +107,7 @@ class OwnshipService : public runtime::Service {
     // INFO: fc 20sep26 the hub reports faster than the filters behind it move, in whole seconds
     static constexpr uint32_t kMotionRecordPeriodMs = 1000;
     OwnshipSettings settings_;
+    bus::AccelerometerQueue* accelerometer_;
 };
 
 }  // namespace skyblip::common

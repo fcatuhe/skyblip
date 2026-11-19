@@ -24,10 +24,12 @@ namespace skyblip::go {
 // never shown.
 class TrafficService : public runtime::Service {
    public:
-    TrafficService(runtime::Context& context, common::TrafficSettings settings)
-        : runtime::Service(context), settings_(settings) {}
+    TrafficService(runtime::Context& context, bus::RfQueue& rf, common::TrafficSettings settings)
+        : runtime::Service(context), rf_(rf), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 every frame wakes the loop, and the table ages by the second
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
    private:
     void on_frame(const events::RfEvent& event, uint32_t now_ms);
@@ -50,6 +52,7 @@ class TrafficService : public runtime::Service {
 
     protocol::AdslUplink uplink_codec_{};
     protocol::AlptasReceiver alptas_receiver_{};
+    bus::RfQueue& rf_;
     common::TrafficSettings settings_;
 };
 

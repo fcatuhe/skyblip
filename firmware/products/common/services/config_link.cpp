@@ -66,6 +66,13 @@ void ConfigLinkService::tick(uint32_t now_ms) {
     watch_link_drops(now_ms);
 }
 
+uint32_t ConfigLinkService::due_in_ms(uint32_t /*now_ms*/) const {
+    const bool owed = config_.replying() || (config_.status_push_due() && config_.link_up()) ||
+                      writes_.pending() || browser_writes_.pending() || unlock_writes_.pending() ||
+                      trust_page_erases_.pending();
+    return owed ? runtime::kServicePassCeilingMs : runtime::kServiceRestCeilingMs;
+}
+
 // INFO: fc 18oct26 before the link advertises at all: the name says whether the unit is activated
 void ConfigLinkService::load_identity() {
     unit_.load();
