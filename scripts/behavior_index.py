@@ -141,10 +141,9 @@ def parse_run(xml):
 
 def problems(cases, skipped, prose):
     messages = []
-    for case in cases:
+    for case in cases + skipped:
         if not states_a_claim(case.name):
             messages.append(f"name must read `subject{SUBJECT_SEPARATOR}what holds`: {case.name}")
-    for case in cases + skipped:
         if case.suite not in ("", MAIN):
             messages.append(f"test suite must be \"{MAIN}\" or none, not \"{case.suite}\": "
                             f"{case.name}")
@@ -153,7 +152,7 @@ def problems(cases, skipped, prose):
             messages.append("a skipped case claims nothing, so it cannot be main: "
                             f"{case.path}: {case.name}")
     for path in sorted({case.path for case in cases + skipped}):
-        if not prose[path][0]:
+        if not prose[path][0].strip():
             messages.append(f"no opening comment saying what it pins down: {path}")
         if area_of(path) not in AREAS:
             messages.append(f"in no area: {path}: name its area in AREAS")

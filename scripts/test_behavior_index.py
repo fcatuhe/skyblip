@@ -106,6 +106,17 @@ class Problems(unittest.TestCase):
         self.assertEqual(behavior_index.problems(cases(), silent, PROSE),
                          [f"no opening comment saying what it pins down: {CHIME}"])
 
+    def test_a_skipped_case_is_held_to_the_naming_rule(self):
+        unnamed = [behavior_index.Case(TONE, 30, "tone squeals", "")]
+        self.assertEqual(behavior_index.problems(cases(), unnamed, PROSE),
+                         ["name must read `subject: what holds`: tone squeals"])
+
+    def test_an_opening_comment_of_bare_slashes_says_nothing(self):
+        prose = {"test/core/test_bare.cpp": (behavior_index.flatten("//\n//\n"), {})}
+        bare = [behavior_index.Case("test/core/test_bare.cpp", 3, "bare: a case", "")]
+        self.assertEqual(behavior_index.problems(bare, [], prose),
+                         ["no opening comment saying what it pins down: test/core/test_bare.cpp"])
+
 
 class Pages(unittest.TestCase):
     def test_one_page_per_area_with_subdirectories_folded_in(self):
