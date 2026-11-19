@@ -76,6 +76,7 @@ class ScreenService : public runtime::Service {
     void park_for_off();
     void park_for_flat_cell();
     void park_for_low_cell();
+    void present_self_test();
     void set_range_step(int step) {
         settings_.range_step = static_cast<uint8_t>(clamped_range_step(step));
         dirty_ = true;
@@ -236,7 +237,7 @@ class ScreenService : public runtime::Service {
     std::optional<bool> activated_{};
 
     Glass framebuffer_{};
-    Glass presented_{};
+    uint32_t presented_crc_{0};
     RadarTarget targets_[kMaxRadarTargets]{};
     traffic::RangeRow nearby_rows_[kNearbyRows]{};
     Page page_{Page::Radar};

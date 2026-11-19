@@ -51,7 +51,7 @@ A prompt is refused only while the flight state is `Airborne`, as on the Go (`co
 
 ## The lamp
 
-`core/indication` decides the lamp for both products. Bravo claims `common::Feature::LampShowsLink`, so its alarm service also tells the table whether a prompt stands and whether a phone is connected. The Go makes no such claim and its lamp is unchanged.
+`core/indication` decides the lamp for both products. Bravo hands its alarm service `lamp_shows_link`, so it also tells the table whether a prompt stands and whether a phone is connected. The Go does not, and its lamp is unchanged.
 
 | State | Lamp |
 |---|---|

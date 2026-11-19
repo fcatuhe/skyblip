@@ -41,11 +41,8 @@ class OwnshipService : public runtime::Service {
     // ADS-L G.1.2 FlightState, decided by core/flight from the fix stream.
     flight::FlightState flight_state_from(const model::Ownship& own, uint32_t now_ms);
 
-    // The one copy of "has the receiver settled": the transmit gate reads it
-    // through state.own.tx_settled, and whoever annunciates the first fix takes
-    // the edge from here rather than keeping a second watch of its own.
+    // INFO: fc 19nov26 the one first-fix watch, published as own.tx_settled and own.fix_acquired
     const gnss::FirstFix& first_fix() const { return first_fix_; }
-    bool take_fix_acquired() { return first_fix_.take_acquired(); }
 
    private:
     const flight::FlightTimer& timer_on_glass(uint32_t now_ms);

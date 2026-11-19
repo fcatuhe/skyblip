@@ -15,11 +15,6 @@ void FlightLogService::tick(uint32_t now_ms) {
     serve_link(now_ms);
     watch_link_drops(now_ms);
 
-    if (config_.log_erase_requested()) {
-        config_.clear_log_erase_request();
-        erase_peer_ = config_.log_erase_peer();
-        flights_.begin_erase();
-    }
     if (flights_.erasing()) {
         flights_.step_erase(now_ms);
         if (!flights_.erasing()) {

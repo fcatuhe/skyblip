@@ -1,4 +1,4 @@
-#include "products/common/services/traffic.h"
+#include "products/skyblip_go/services/traffic.h"
 
 #include <optional>
 
@@ -14,7 +14,7 @@
 #include "protocols/adsl_edge/registration.h"
 #include "protocols/alptas/frame.h"
 
-namespace skyblip::common {
+namespace skyblip::go {
 
 namespace {
 // INFO: fc 20sep26 the branch bus::State::traffic_now_s() takes is what dates the second it returns
@@ -22,12 +22,6 @@ bool utc_dated(const bus::State& state) {
     return (state.clock.pps_locked && state.clock.utc_s != 0) || state.own.utc_valid;
 }
 }  // namespace
-
-Status TrafficService::setup() {
-    uplink_enabled_ =
-        has_feature(supported(declared_, context_.roles.capabilities), Feature::UplinkRx);
-    return Status::Ok;
-}
 
 void TrafficService::tick(uint32_t now_ms) {
     // The reference the table's range gate measures a claimed position against
@@ -180,7 +174,6 @@ void TrafficService::on_frame(const events::RfEvent& event, uint32_t now_ms) {
 // missing without a single number moving.
 void TrafficService::on_uplink(const events::RfEvent& event, const events::Stamp& stamp,
                                uint32_t now_ms) {
-    if (!uplink_enabled_) return;
     context_.state.air.uplink_frames++;
 
     model::AircraftObservation relayed[protocol::AdslUplink::kMaxTargets];
@@ -318,4 +311,4 @@ radio::Verdict TrafficService::verdict_of(Status decoded) {
     }
 }
 
-}  // namespace skyblip::common
+}  // namespace skyblip::go

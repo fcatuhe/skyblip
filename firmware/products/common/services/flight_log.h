@@ -26,6 +26,10 @@ class FlightLogService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    void erase(const events::Peer& asked_by) {
+        erase_peer_ = asked_by;
+        flights_.begin_erase();
+    }
 
     bool available() const { return flights_.available(); }
     bool recording() const { return session_.recording(); }

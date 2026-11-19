@@ -9,8 +9,7 @@
 #include "hardware/platform/host/identity.h"
 #include "hardware/platform/host/random.h"
 #include "ports/null.h"
-#include "products/common/services/traffic.h"
-#include "products/skyblip_go/features.h"
+#include "products/skyblip_go/services/traffic.h"
 
 using namespace skyblip;
 
@@ -49,7 +48,7 @@ struct StampRig {
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
     uint32_t aircraft_address{};
-    common::TrafficService traffic{context, go::kFeatures, aircraft_address};
+    go::TrafficService traffic{context, aircraft_address};
 
     StampRig() {
         roles.capabilities = ports::Capability::Rf;

@@ -1,8 +1,7 @@
 #include "products/skyblip_go/services/screen.h"
 
-#include <cstring>
-
 #include "core/events/input.h"
+#include "core/fec/crc.h"
 #include "core/power/cutoff.h"
 #include "products/skyblip_go/pages/installing.h"
 #include "products/skyblip_go/pages/parked.h"
@@ -340,14 +339,16 @@ void ScreenService::tick(uint32_t now_ms) {
     render(now_ms);
     render_us_ = microseconds_since(render_began_us);
 
-    const bool changed = !presented_once_ || change_ == Change::Wiped ||
-                         std::memcmp(framebuffer_.data(), presented_.data(), Glass::kBytes) != 0;
+    const uint32_t frame_crc = fec::crc32(framebuffer_.data(), Glass::kBytes);
+    const bool changed =
+        !presented_once_ || change_ == Change::Wiped || frame_crc != presented_crc_;
     if (!changed) return;
 
     const uint64_t present_began_us = context_.roles.clock.microseconds();
     context_.roles.display.present(framebuffer_, ports::Refresh::Partial, now_ms);
     present_us_ = microseconds_since(present_began_us);
     count_refresh(ports::Refresh::Partial);
+    presented_crc_ = frame_crc;
     note_presented(now_ms);
     flash_alarm();
 }
@@ -396,7 +397,6 @@ void ScreenService::paint_black(uint32_t now_ms) {
 void ScreenService::note_presented(uint32_t now_ms) {
     change_ = Change::None;
     cell_on_glass_ = power::CellOnGlass::None;
-    std::memcpy(presented_.data(), framebuffer_.data(), Glass::kBytes);
     presented_once_ = true;
     context_.state.panel_presented = true;
     prompt_on_glass_ = answering();

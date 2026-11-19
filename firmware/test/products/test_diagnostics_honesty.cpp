@@ -4,7 +4,7 @@
 #include "core/diagnostics/payload.h"
 #include "core/timing/slot.h"
 #include "products/common/services/ownship.h"
-#include "products/common/services/traffic.h"
+#include "products/skyblip_go/services/traffic.h"
 #include "test/support/screen_rig.h"
 
 namespace {
@@ -44,7 +44,7 @@ struct ServiceRig {
     uint8_t aircraft_type{go::kAircraftTypeLight};
     common::OwnshipService ownship{context, aircraft_type};
     uint32_t aircraft_address{};
-    common::TrafficService traffic{context, common::Feature::None, aircraft_address};
+    go::TrafficService traffic{context, aircraft_address};
 
     ServiceRig() { recorder.arm(); }
 

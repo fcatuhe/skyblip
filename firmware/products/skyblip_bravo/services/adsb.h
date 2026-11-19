@@ -7,7 +7,7 @@
 #include "core/bus/bus.h"
 #include "core/model/aircraft.h"
 #include "products/common/services/adsb_capture.h"
-#include "products/common/services/traffic.h"
+#include "products/common/traffic_settings.h"
 #include "products/skyblip_bravo/gate_reference.h"
 #include "products/skyblip_bravo/own_transponder.h"
 #include "products/skyblip_bravo/transponders.h"

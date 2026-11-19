@@ -9,9 +9,8 @@
 #include "core/diagnostics/recorder.h"
 #include "hardware/platform/host/platform.h"
 #include "ports/null.h"
-#include "products/common/services/traffic.h"
-#include "products/skyblip_go/features.h"
 #include "products/skyblip_go/services/radio.h"
+#include "products/skyblip_go/services/traffic.h"
 #include "products/skyblip_go/settings.h"
 #include "runtime/service.h"
 
@@ -49,7 +48,7 @@ struct Pass {
     runtime::Context context{roles, bus, state, recorder};
     go::Settings settings{};
     go::RadioService radio_service{context, settings};
-    common::TrafficService traffic_service{context, go::kFeatures, settings.aircraft_address};
+    go::TrafficService traffic_service{context, settings.aircraft_address};
 
     Status begin() {
         const Status status = rf.begin();
