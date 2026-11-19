@@ -71,13 +71,13 @@ def run_suite():
     if not os.path.exists(TEST_BINARY):
         report(f"no test binary at {os.path.relpath(TEST_BINARY, ROOT)}: run `make test` first")
         sys.exit(1)
-    plain = junit()
-    if any(failure for _, _, failure in plain):
+    plain, returncode = junit()
+    if returncode != 0 or any(failure for _, _, failure in plain):
         report("the ADS-L suite is failing, so it is not a report yet")
         sys.exit(1)
     passed = [(path, name) for path, name, _ in plain]
     ran = set(passed)
-    skipped = [(path, name, failure) for path, name, failure in junit("--no-skip")
+    skipped = [(path, name, failure) for path, name, failure in junit("--no-skip")[0]
                if (path, name) not in ran]
     if any(not failure for _, _, failure in skipped):
         report("a skipped case passes with --no-skip: drop its skip")
@@ -96,15 +96,17 @@ def junit(*extra):
         failure = case.find("failure")
         cases.append((case.get("classname"), case.get("name"),
                       failure.get("message") if failure is not None else None))
-    return cases
+    return cases, run.returncode
 
 
 def render(passed, skipped, prose, spec, en300220_clauses, version_h):
     by_subject = defaultdict(list)
     for path, name in sorted(passed, key=half_of):
-        by_subject[subject_of(name)].append(passed_line(path, name, prose))
+        if not is_unit_case(path):
+            by_subject[subject_of(name)].append(passed_line(path, name, prose))
     for path, name, message in sorted(skipped, key=half_of):
-        by_subject[subject_of(name)].append(skipped_line(path, name, message))
+        if not is_unit_case(path):
+            by_subject[subject_of(name)].append(skipped_line(path, name, message))
 
     adsl = [(path, name) for path, name in passed if is_adsl_clause_case(path)]
     adsl_skipped = [message for path, _, message in skipped if is_adsl_clause_case(path)]
@@ -147,13 +149,22 @@ def render(passed, skipped, prose, spec, en300220_clauses, version_h):
     lines.append("What the component checks beyond the clauses, by file: the packet over a "
                  "bit-error channel, the uplink's code, the media access branch by branch and "
                  "the version.\n")
-    unit = defaultdict(list)
+    unit, unit_skipped = defaultdict(list), defaultdict(list)
     for path, name in passed:
-        if path.startswith(UNIT) and not path.startswith(COMPONENT):
+        if is_unit_case(path):
             unit[path].append(name)
-    for path in sorted(unit):
+    for path, name, message in skipped:
+        if is_unit_case(path):
+            unit_skipped[path].append(skipped_line(path, name, message))
+    for path in sorted(set(unit) | set(unit_skipped)):
         lines.append(f"### {path}\n")
         lines.extend(behavior_index.render_subjects(unit[path], prose[path]))
+        if unit_skipped[path]:
+            lines.extend(unit_skipped[path] + [""])
+
+    if by_subject:
+        report(f"cases with no place in the report: {', '.join(sorted(by_subject))}")
+        sys.exit(1)
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -199,6 +210,10 @@ def en300220_entries(text):
 
 def half_of(case):
     return 0 if case[0].startswith(COMPONENT) else 1
+
+
+def is_unit_case(path):
+    return path.startswith(UNIT) and not path.startswith(COMPONENT)
 
 
 def is_adsl_clause_case(path):

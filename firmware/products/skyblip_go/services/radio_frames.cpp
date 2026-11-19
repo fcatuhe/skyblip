@@ -64,9 +64,13 @@ adsl::StatusReport RadioService::status_report() const {
     report.conspicuity_received = adsl::conspicuity::kFlarm;
     if (context_.state.bravo == comms::BravoState::Live)
         report.conspicuity_received |= adsl::conspicuity::kAdsb1090;
+    // INFO: fc 19nov26 Bravo's service runs after this one, so an address changed this pass is
+    // unconfirmed
     const bus::AircraftTransponder& transponder = context_.state.aircraft_transponder;
-    if (transponder.address != 0) report.transponder = adsl::Transponder::ModeS;
-    if (transponder.adsb_out) report.conspicuity_transmitted = adsl::conspicuity::kAdsb1090;
+    if (transponder.address != 0 && transponder.address == settings_.aircraft_address) {
+        report.transponder = adsl::Transponder::ModeS;
+        if (transponder.adsb_out) report.conspicuity_transmitted = adsl::conspicuity::kAdsb1090;
+    }
     report.traffic_uplink_client = true;
     return report;
 }

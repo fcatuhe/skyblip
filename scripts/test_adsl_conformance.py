@@ -55,6 +55,7 @@ PASSED = [
 SKIPPED = [
     (COMPONENT, "ADS-L.4.SRD860.C.1: ADS-L runs on two bands",
      "prose: an introduction to the bands"),
+    (UNIT, "adsl: a frame survives two flipped bits", "optional: no second repair pass"),
 ]
 PROSE = {
     DEVICE: {"ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency":
@@ -112,6 +113,13 @@ class AdslConformance(unittest.TestCase):
                       "- a burst goes out below the CCA threshold", text)
         self.assertIn("### " + UNIT, text)
         self.assertIn("- a frame survives one flipped bit", text)
+        self.assertIn("- a frame survives two flipped bits (`" + UNIT + "`)\n"
+                      "  > Skipped, optional: no second repair pass", text)
+
+    def test_a_case_whose_subject_has_no_heading_stops_the_report(self):
+        stray = PASSED + [(PART1, "EN 300 220-9 1.1: a clause the list does not hold")]
+        with self.assertRaises(SystemExit):
+            adsl_conformance.render(stray, SKIPPED, PROSE, SPEC, EN300220, VERSION)
 
 
 if __name__ == "__main__":
