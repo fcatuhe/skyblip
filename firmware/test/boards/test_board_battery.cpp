@@ -70,8 +70,7 @@ TEST_CASE("board battery: an ADC that gave nothing still publishes the cable, at
     }
 }
 
-TEST_CASE("board battery: a believable reading off the cable goes out as it was read" *
-          doctest::test_suite("main")) {
+TEST_CASE("board battery: a believable reading off the cable goes out as it was read") {
     Unit unit;
     unit.platform.battery().divider_mv = 3870;
 

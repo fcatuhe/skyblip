@@ -61,8 +61,7 @@ TEST_CASE("board: an address that answers and is not a BHI260 is no inclinometer
     CHECK_FALSE(ports::has(board.capabilities(), ports::Capability::Inclinometer));
 }
 
-TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer" *
-          doctest::test_suite("main")) {
+TEST_CASE("board: a plain T-Echo has nothing at 0x28 and no inclinometer") {
     platform::host::Platform platform;
     platform.i2c_bus().answer(parts::Bhi260::kAddress, false);
     bus::Bus bus;
@@ -171,8 +170,7 @@ std::string hex_prefix(const Sha256::Digest& digest) {
 
 }  // namespace
 
-TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it is confirmed" *
-          doctest::test_suite("main")) {
+TEST_CASE("board: a full image keeps a copy of the hub's image on flash once it is confirmed") {
     platform::host::Platform platform;
     platform.dfu().image_confirmed = false;
     bus::Bus bus;
