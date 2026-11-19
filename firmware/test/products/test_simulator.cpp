@@ -402,9 +402,8 @@ TEST_CASE("simulator: a phone connects, the gauge pushes, the phone leaves and i
     CHECK(simulator.companion_frames(events::Endpoint::Config) == pushed);
 }
 
-// The same call the page's "+ Aircraft" button and the terminal's [j] make. If
-// this passes and the page still shows nothing, the gap is in the shell, not in
-// the receive path.
+// The same call the page's "+ Aircraft" button makes. If this passes and the
+// page still shows nothing, the gap is in the shell, not in the receive path.
 TEST_CASE("simulator: an ALP-TAS-equipped aircraft enters traffic as ALP-TAS") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
@@ -555,4 +554,33 @@ TEST_CASE("simulator: a lamp still lit is seen at every look") {
     REQUIRE(step_until_lamp(simulator, now_ms, /*lit=*/true));
     CHECK(simulator.lamp_since_last_look() == indication::Colour::Green);
     CHECK(simulator.lamp_since_last_look() == indication::Colour::Green);
+}
+
+// The loop sleeps until something is due, so a quiet flight must leave it idle most of the time.
+TEST_CASE("simulator: a quiet flight lets the loop sleep between dwells and redraws") {
+    simulator::Simulator simulator;
+    REQUIRE(simulator.setup() == Status::Ok);
+    simulator.world().set_fix(true);
+    simulator.world().set_satellites(11);
+    simulator.world().set_altitude_m(1500);
+    simulator.world().set_speed_kt(50);
+    simulator.world().gnss().latitude_1e7 = 485000000;
+    simulator.world().gnss().longitude_1e7 = 85000000;
+    run(simulator, 0, 30000);
+
+    int resting = 0;
+    int steps = 0;
+    uint32_t longest_ms = 0;
+    for (uint32_t now_ms = 30005; now_ms <= 40000; now_ms += simulator::Simulator::kStepMs) {
+        simulator.step(now_ms);
+        const uint32_t due_ms = simulator.product().due_in_ms(now_ms);
+        const uint32_t radio_ms = simulator.product().radio().due_in_ms(now_ms);
+        CHECK(radio_ms <= 1000);
+        CHECK(simulator.product().screen().due_in_ms(now_ms) <= 1000);
+        longest_ms = std::max(longest_ms, due_ms);
+        if (due_ms > runtime::kServicePassCeilingMs) resting++;
+        steps++;
+    }
+    CHECK(resting * 2 > steps);
+    CHECK(longest_ms > 100);
 }

@@ -72,7 +72,7 @@ class DurableWriteWindow {
     // a different number: CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE splits a page erase
     // into ERASEPAGEPARTIAL slices of CONFIG_SOC_FLASH_NRF_PARTIAL_ERASE_MS and
     // the flash is readable between them (both set in
-    // products/skyblip_go/prj.conf). kWorstWriteMs of wall clock still passes;
+    // products/common/prj.conf). kWorstWriteMs of wall clock still passes;
     // what shrinks is how long the core is held at once, and the static_assert
     // below is what that buys - a write that had to go outside its window cannot
     // move a dwell edge further than kSwitchRetuneMs, the retune every switch

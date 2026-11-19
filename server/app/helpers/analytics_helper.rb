@@ -91,6 +91,17 @@ module AnalyticsHelper
     end
   end
 
+  def analytics_outbound_label(href) = href.to_s.sub(%r{\Ahttps?://}, "").sub(/\?.*\z/, "")
+
+  def analytics_outbound_detail(link)
+    detail = [ link.section, link.text ].compact_blank
+    tag.span(detail.join(" · "), class: "note") if detail.any?
+  end
+
+  def analytics_conversion(visitors, of:)
+    number_to_percentage(of.positive? ? 100.0 * visitors / of : 0, precision: 1)
+  end
+
   def analytics_visitor_link(visitor, users:, filter_params:)
     label = visitor.user_id ? analytics_user_name(visitor.user_id, users:) : visitor.visitor_token.to_s.first(8)
 

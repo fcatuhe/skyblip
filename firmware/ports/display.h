@@ -20,6 +20,8 @@ class Display {
     // INFO: fc 13sep26 the frame that needs no previous: every pixel takes the white-to-black step
     virtual void paint_black(uint32_t /*now_ms*/) {}
     virtual bool ready(uint32_t /*now_ms*/) { return true; }
+    // INFO: fc 19nov26 how long a refresh still runs before ready() is worth asking, 0 to ask now
+    virtual uint32_t ready_in_ms(uint32_t /*now_ms*/) const { return 0; }
     virtual void power_off() = 0;
     virtual void power_on() {}
     virtual void set_backlight(bool /*on*/) {}

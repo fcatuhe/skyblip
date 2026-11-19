@@ -22,6 +22,10 @@ module Analytics
     scope :filter_by_entry,   ->(value) { where(entry_path: value) }
     scope :filter_by_exit,    ->(value) { where(exit_path: value) }
     scope :filter_by_path,    ->(value) { where("EXISTS (SELECT 1 FROM json_each(analytics_visits.page_paths) WHERE json_each.value = ?)", value) }
+    scope :filter_by_outbound, ->(href) {
+      where(Ahoy::Event.outbound_clicks.where(Ahoy::Event.property(:href).eq(href))
+        .where(Ahoy::Event.arel_table[:visit_id].eq(arel_table[:ahoy_visit_id])).arel.exists)
+    }
 
     def self.filtered(filter_params)
       Filter.new(filter_params).scope

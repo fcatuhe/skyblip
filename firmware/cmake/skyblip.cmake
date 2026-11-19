@@ -1,8 +1,11 @@
-# Shared by every product's Zephyr build: the include root and the layers that
+# Shared by every product's Zephyr build: the shared Kconfig, the include root and the layers that
 # go into an image. A product's own CMakeLists declares its board and adds
 # itself; nothing here knows which product is being built.
 
 set(SKYBLIP_FIRMWARE ${CMAKE_CURRENT_LIST_DIR}/..)
+
+# What every product shares first, then the product's own prj.conf, which may override it.
+set(CONF_FILE ${SKYBLIP_FIRMWARE}/products/common/prj.conf ${CMAKE_CURRENT_SOURCE_DIR}/prj.conf)
 
 # Globbed per layer, exactly like the host build: a source that exists is built.
 # simulator/ and the part models are host-only and never enter an image.

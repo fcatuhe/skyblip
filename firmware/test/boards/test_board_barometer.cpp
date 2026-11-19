@@ -53,7 +53,7 @@ struct Unit {
     models::Bme280& chip() { return platform.barometer().chip; }
 
     platform::host::Platform platform;
-    bus::Bus bus;
+    bus::GoBus bus;
     Board board{platform, bus};
     bus::State state;
 };

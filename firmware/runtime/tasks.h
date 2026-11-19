@@ -10,6 +10,8 @@ enum class TaskPriority : uint8_t {
 };
 
 constexpr uint32_t kServicePassCeilingMs = 10;
+// INFO: fc 19nov26 the longest the loop sleeps with nothing due, well inside the silence ceiling
+constexpr uint32_t kServiceRestCeilingMs = 1000;
 // INFO: fc 03oct26 a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second
 constexpr uint32_t kServicePassFloorMs = 2;
 // The longest a supervised service may go without reporting progress before the
@@ -20,6 +22,8 @@ constexpr uint32_t kServiceSilenceCeilingMs = 5000;
 // the whole device gets: longer than kServiceSilenceCeilingMs so the loop's own refusal
 // to feed is what is seen first, and the bite is the backstop under it.
 constexpr uint32_t kHardwareWatchdogCeilingMs = 12000;
+static_assert(kServiceRestCeilingMs < kServiceSilenceCeilingMs,
+              "a loop with nothing due still ticks every service inside its silence ceiling");
 constexpr uint32_t kRadioRxSilenceCeilingMs = 30000;
 constexpr uint32_t kBarometerPublishPeriodMs = 1000;
 constexpr uint32_t kBarometerPpsWindowMs = 2 * kServicePassCeilingMs;
