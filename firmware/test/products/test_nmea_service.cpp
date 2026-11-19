@@ -404,8 +404,8 @@ TEST_CASE("nmea: a pass longer than the link's share reaches a tablet at the BLE
 namespace {
 
 // The service alone, with a link that is up and a fix that is valid, so that the
-// only thing a case changes is what the product claims to be.
-struct FeatureRig {
+// only thing a case changes is whether the board has a link.
+struct ServiceRig {
     platform::host::Clock clock;
     platform::host::Link link;
     ports::NullRoles null;
@@ -424,8 +424,8 @@ struct FeatureRig {
     comms::ConfigService config{link, store};
     common::NmeaService nmea;
 
-    FeatureRig(common::Feature declared, ports::Capabilities fitted = ports::Capability::Link)
-        : nmea(context, declared, config) {
+    explicit ServiceRig(ports::Capabilities fitted = ports::Capability::Link)
+        : nmea(context, config) {
         roles.capabilities = fitted;
         state.own.fix_valid = true;
         state.own.utc_valid = true;
@@ -441,25 +441,16 @@ struct FeatureRig {
 
 }  // namespace
 
-TEST_CASE("nmea: a product that does not declare the companion link says nothing on it") {
-    FeatureRig silent(common::Feature::None);
-    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) silent.nmea.tick(now_ms);
-    CHECK_FALSE(silent.nmea.enabled());
-    CHECK(silent.frames() == 0);
-
-    // The same rig, the same link, the same fix: the feature is the difference,
-    // which is what makes it a gate and not decoration.
-    FeatureRig speaking(common::Feature::CompanionLink);
-    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) speaking.nmea.tick(now_ms);
-    CHECK(speaking.nmea.enabled());
-    CHECK(speaking.frames() > 0);
-}
-
-TEST_CASE("nmea: the companion link is not claimed on a board with no link fitted") {
-    FeatureRig unfitted(common::Feature::CompanionLink, ports::Capability::None);
+TEST_CASE("nmea: a board with no link fitted says nothing on it") {
+    ServiceRig unfitted(ports::Capability::None);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) unfitted.nmea.tick(now_ms);
     CHECK_FALSE(unfitted.nmea.enabled());
     CHECK(unfitted.frames() == 0);
+
+    ServiceRig speaking;
+    for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) speaking.nmea.tick(now_ms);
+    CHECK(speaking.nmea.enabled());
+    CHECK(speaking.frames() > 0);
 }
 
 // M. The pass cadence across the 49.7-day wrap of ports::Clock::milliseconds(). The

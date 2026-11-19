@@ -61,6 +61,7 @@ class Bhi260 {
     void load(Image& image, uint32_t now_ms);
     void service(uint32_t now_ms);
     bool poll();
+    uint32_t read_due_in_ms(uint32_t now_ms) const;
 
     const Acceleration& acceleration() const { return sample_; }
     Stage stage() const { return stage_; }
