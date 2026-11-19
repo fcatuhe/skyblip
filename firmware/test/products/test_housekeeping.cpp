@@ -18,7 +18,8 @@ using namespace skyblip;
 // D4: the way out. The radio is asked to sleep, the panel is parked, and only
 // then are the rails allowed to drop - and not while the button is still down.
 
-TEST_CASE("product: a long press parks the radio and the panel, then asks for the rails") {
+TEST_CASE("product: a long press parks the radio and the panel, then asks for the rails" *
+          doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -243,7 +244,8 @@ TEST_CASE("product: a page tap is not a power-off") {
 
 // D3: the acting half of the gauge, wired up.
 
-TEST_CASE("product: a cell at its cutoff takes the device down on its own") {
+TEST_CASE("product: a cell at its cutoff takes the device down on its own" *
+          doctest::test_suite("main")) {
     HousekeepingRig rig;
     REQUIRE(rig.setup() == Status::Ok);
     rig.run(0, 2000);

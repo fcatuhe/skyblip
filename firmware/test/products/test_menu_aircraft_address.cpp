@@ -39,8 +39,8 @@ bool glass_shows(Rig& rig, uint32_t& now_ms, const go::Glass& expected) {
 
 }  // namespace
 
-TEST_CASE(
-    "menu: an aircraft address typed against the transponder Bravo names stays in the field") {
+TEST_CASE("menu: an aircraft address typed against the transponder Bravo names stays in the field" *
+          doctest::test_suite("main")) {
     Tango tango;
     tango.bravo.health.aircraft_address_set = true;
     tango.pair_and_store();

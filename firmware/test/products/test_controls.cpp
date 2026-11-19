@@ -28,7 +28,8 @@ go::Gesture touch(go::Controls& controls, uint32_t at_ms, uint32_t held_ms) {
 
 }  // namespace
 
-TEST_CASE("controls: a tap pages on the release, not on the contact") {
+TEST_CASE("controls: a tap pages on the release, not on the contact" *
+          doctest::test_suite("main")) {
     go::Controls controls;
     CHECK(controls.read(down(events::Contact::Pad, 1000)) == go::Gesture::None);
     CHECK(controls.tick(1100) == go::Gesture::None);
@@ -38,7 +39,8 @@ TEST_CASE("controls: a tap pages on the release, not on the contact") {
     CHECK(controls.tick(5000) == go::Gesture::None);
 }
 
-TEST_CASE("controls: the long touch fires while the finger is still on the pad") {
+TEST_CASE("controls: the long touch fires while the finger is still on the pad" *
+          doctest::test_suite("main")) {
     go::Controls controls;
     controls.read(down(events::Contact::Pad, 1000));
     CHECK(controls.tick(1000 + kLongTouchHoldMs - 1) == go::Gesture::None);
@@ -95,7 +97,8 @@ TEST_CASE("controls: a touch the button joins says nothing, in either direction"
     CHECK(touch(joined, 9000, kLongTouchHoldMs + 100) == go::Gesture::LongTouch);
 }
 
-TEST_CASE("prompt answer: one press accepts once armed, and only once") {
+TEST_CASE("prompt answer: one press accepts once armed, and only once" *
+          doctest::test_suite("main")) {
     common::PromptAnswer answer;
     answer.ask(1000);
     answer.arm_once_quiet(/*readable=*/true, 1000 + common::PromptAnswer::kAnswerSettleMs);

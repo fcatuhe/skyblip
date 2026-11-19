@@ -211,7 +211,8 @@ struct FeatureRig {
 
 // THE GUARD. Delete the uplink branch from TrafficService, or the O-band arming
 // from RadioService, and this is the case that goes red.
-TEST_CASE("uplink: one ground-station frame carries several aircraft onto the radar") {
+TEST_CASE("uplink: one ground-station frame carries several aircraft onto the radar" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -273,7 +274,8 @@ TEST_CASE("uplink: a frame Reed-Solomon cannot repair is counted apart and dropp
 // A relay is a rebroadcast of something we may already be hearing for ourselves.
 // One aircraft, two paths, one target - and the better report is the one that
 // stays, even though the relay of it arrives afterwards and is therefore newer.
-TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two") {
+TEST_CASE("uplink: an aircraft heard directly and relayed is one target, not two" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

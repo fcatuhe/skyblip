@@ -122,7 +122,8 @@ TEST_CASE(
 }
 
 // A name typed on a phone, end to end: the glass names it, and one press stores it.
-TEST_CASE("companion link: a callsign is written by an app and authorised on the glass") {
+TEST_CASE("companion link: a callsign is written by an app and authorised on the glass" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -314,7 +315,8 @@ TEST_CASE("companion link: a late MTU exchange is the same phone, not a new one"
 
 // The traffic picture is the same picture on every screen, so a tablet on the
 // yoke and a phone in a pocket both read it off one device.
-TEST_CASE("companion link: two centrals read the same traffic stream") {
+TEST_CASE("companion link: two centrals read the same traffic stream" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -335,7 +337,8 @@ TEST_CASE("companion link: two centrals read the same traffic stream") {
 
 // Configuration is not broadcast: two apps writing settings is two apps
 // disagreeing about what the device stores.
-TEST_CASE("companion link: the first app to ask holds config, and the second is told who has it") {
+TEST_CASE("companion link: the first app to ask holds config, and the second is told who has it" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

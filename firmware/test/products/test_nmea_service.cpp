@@ -122,7 +122,8 @@ std::string last_of(Rig& rig, const char* kind) {
 // ports::Link::send, and this is the case that goes red. It is written the way a
 // pilot experiences the feature: pair a tablet, see traffic; walk away, see it
 // stop.
-TEST_CASE("nmea: a tablet that pairs starts hearing sentences, and they stop when it leaves") {
+TEST_CASE("nmea: a tablet that pairs starts hearing sentences, and they stop when it leaves" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -147,7 +148,8 @@ TEST_CASE("nmea: a tablet that pairs starts hearing sentences, and they stop whe
     CHECK(rig.platform.link().count_on(events::Endpoint::Nmea) == 0);
 }
 
-TEST_CASE("nmea: an aircraft heard over the air becomes a $PFLAA a tablet can parse") {
+TEST_CASE("nmea: an aircraft heard over the air becomes a $PFLAA a tablet can parse" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
@@ -244,7 +246,7 @@ TEST_CASE("nmea: PFLAU's TX field is the transmitter's own gate, so a silent dev
 
 // FLARM's scale is time to impact, and 1 is its lowest real alarm: a 3 km ring
 // is the only band that number does not overstate.
-TEST_CASE("nmea: an advisory goes out as FLARM alarm level 1") {
+TEST_CASE("nmea: an advisory goes out as FLARM alarm level 1" * doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;

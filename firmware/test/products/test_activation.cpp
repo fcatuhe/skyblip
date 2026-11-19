@@ -121,7 +121,8 @@ std::string refusal(const char* word) {
 }  // namespace
 
 // Issue #126: the first of three refusals, each with its own case.
-TEST_CASE("activation: a unit with no serial arms neither receiver nor transmitter, fix or not") {
+TEST_CASE("activation: a unit with no serial arms neither receiver nor transmitter, fix or not" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.boot();
     bench.rig.seconds(bench.now_ms, 20, 0, 300);
@@ -132,7 +133,8 @@ TEST_CASE("activation: a unit with no serial arms neither receiver nor transmitt
     CHECK(bench.rig.product.radio().transmitter().sent_count() == 0);
 }
 
-TEST_CASE("activation: a unit with no serial advertises activate and its tag, and says where") {
+TEST_CASE("activation: a unit with no serial advertises activate and its tag, and says where" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.boot();
     CHECK(bench.rig.platform.link().advertised == "activate 3F2A skyBlip");
@@ -186,7 +188,8 @@ TEST_CASE("activation: the vectors' exchange activates the unit, byte for byte")
     CHECK(bench.rig.platform.identity().stored_unlock_code->serial == 298);
 }
 
-TEST_CASE("activation: once unlocked the unit names itself, reports its address, arms its radio") {
+TEST_CASE("activation: once unlocked the unit names itself, reports its address, arms its radio" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
@@ -257,7 +260,8 @@ TEST_CASE(
 }
 
 // The activation page's run on one link: each answer opens the next question, none is re-sent.
-TEST_CASE("activation: the page activates, then stores the settings it offers, on one connection") {
+TEST_CASE("activation: the page activates, then stores the settings it offers, on one connection" *
+          doctest::test_suite("main")) {
     Bench bench;
     bench.boot();
     bench.challenge_with_vectors_nonce();
@@ -572,7 +576,8 @@ TEST_CASE(
     CHECK(queue.bench.activation().serial == Identity::kSerial);
 }
 
-TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitted, Go without") {
+TEST_CASE("activation: the name is Go+ with inclinometer, buzzer and haptic fitted, Go without" *
+          doctest::test_suite("main")) {
     SUBCASE("all three fitted") {
         Rig rig;
         REQUIRE(rig.setup() == Status::Ok);
@@ -673,7 +678,8 @@ TEST_CASE(
 }
 
 // An activated unit transmits, so it owes every identity command the flight gate the others obey.
-TEST_CASE("activation: an activated unit refuses challenge, register and unlock in flight") {
+TEST_CASE("activation: an activated unit refuses challenge, register and unlock in flight" *
+          doctest::test_suite("main")) {
     Desk desk(Identity::kSerial);
     REQUIRE(desk.identity.activated());
     desk.config.set_flight_state(flight::FlightState::Airborne);

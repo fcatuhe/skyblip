@@ -65,7 +65,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "settings: an aircraft address other than the transponder a paired Bravo names is refused") {
+    "settings: an aircraft address other than the transponder a paired Bravo names is refused" *
+    doctest::test_suite("main")) {
     Settings settings = defaults();
     CHECK(apply_patch(settings, "{\"aircraft_address\":3934737,\"units\":\"metric\"}", kHeard) ==
           Status::Conflict);

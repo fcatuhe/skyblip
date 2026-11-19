@@ -40,7 +40,8 @@ TEST_CASE("settings: blob round-trips through version+crc framing") {
     CHECK(out.units == Units::Metric);
 }
 
-TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships on 4 NM and ALL") {
+TEST_CASE("settings: the radar's range and plot are stored, and a new unit ships on 4 NM and ALL" *
+          doctest::test_suite("main")) {
     Settings settings = defaults();
     CHECK(int(settings.range_step) == kDefaultRangeStep);
     CHECK(settings.plot == RadarPlot::All);
@@ -130,7 +131,7 @@ TEST_CASE("settings: a set patch out of range is refused atomically") {
 }
 
 // Issue #126: the registry assigned prefix 0x00, and the server fills the 16 bits below it.
-TEST_CASE("address: the prefix, then the serial the server signed") {
+TEST_CASE("address: the prefix, then the serial the server signed" * doctest::test_suite("main")) {
     CHECK(address_of(0x0000) == 0x000000u);
     CHECK(address_of(0x012A) == 0x00012Au);
     CHECK(address_of(0xFFFF) == 0x00FFFFu);

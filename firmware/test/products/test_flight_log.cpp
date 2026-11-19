@@ -30,7 +30,8 @@ TEST_CASE("flight log: a device parked on the ground writes nothing at all") {
     CHECK(rig.platform.log_flash().erases == erases_at_boot);
 }
 
-TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the ground after is quiet") {
+TEST_CASE("flight log: a takeoff opens a session, a landing closes it, the ground after is quiet" *
+          doctest::test_suite("main")) {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
