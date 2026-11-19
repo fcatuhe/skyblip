@@ -36,6 +36,7 @@ class OwnshipService : public runtime::Service {
         : runtime::Service(context), settings_(settings), accelerometer_(accelerometer) {}
 
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     bool barometer_active() const { return barometer_active_; }
 

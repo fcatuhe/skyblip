@@ -146,6 +146,7 @@ class ConfigService {
     // this service that no reply reveals until the gauge happens to move, and a
     // product test has to be able to assert that a connection reached it.
     bool link_up() const { return connected_count_ > 0; }
+    bool status_push_due() const { return status_push_due_; }
     const LinkClaim& claim() const { return claim_; }
     bool claim_link(const events::Peer& peer) { return claim_.grant(peer); }
     uint16_t claim_holder() const { return claim_.holder(); }

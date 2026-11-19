@@ -407,6 +407,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | Constant | Value | Unit | Mechanism | Why |
 |---|---|---|---|---|
 | `kServicePassCeilingMs` | 10 | milliseconds | Ceiling | - |
+| `kServiceRestCeilingMs` | 1000 (1 s) | milliseconds | Ceiling | the longest the loop sleeps with nothing due, well inside the silence ceiling |
 | `kServicePassFloorMs` | 2 | milliseconds | Floor | a stream of '\n' or a ringing PPS pin wakes at most 500 passes a second |
 | `kServiceSilenceCeilingMs` | 5000 (5 s) | milliseconds | Ceiling | The longest a supervised service may go without reporting progress before the loop stops feeding the dog. |
 | `kHardwareWatchdogCeilingMs` | 12000 (12 s) | milliseconds | Ceiling | SoftRF's figure on the same silicon (src/platform/nRF52.cpp:4558). |
@@ -417,4 +418,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-272 constants over 26 folders.
+273 constants over 26 folders.

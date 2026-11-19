@@ -56,6 +56,7 @@ class BravoService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     void begin_pairing(uint32_t now_ms);
     void end_pairing();

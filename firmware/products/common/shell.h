@@ -1,6 +1,7 @@
 #ifndef SKYBLIP_PRODUCTS_COMMON_SHELL_H
 #define SKYBLIP_PRODUCTS_COMMON_SHELL_H
 
+#include <algorithm>
 #include <optional>
 
 #include "core/comms/config.h"
@@ -113,6 +114,13 @@ class Shell {
     bool may_feed_watchdog(uint32_t now_ms) const {
         if (!flyable_ || shutdown_.going_down()) return true;
         return product_.loop_.may_feed_watchdog(now_ms);
+    }
+
+    // INFO: fc 19nov26 a refusal or a shutdown keeps the pass cadence its parking is timed in
+    uint32_t due_in_ms(uint32_t now_ms) const {
+        if (!flyable_ || shutdown_.going_down()) return runtime::kServicePassCeilingMs;
+        return std::min(product_.loop_.due_in_ms(now_ms),
+                        product_.board_.due_in_ms(product_.state_.clock, now_ms));
     }
 
     bool flyable() const { return flyable_; }

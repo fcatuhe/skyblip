@@ -1,6 +1,8 @@
 #ifndef SKYBLIP_RUNTIME_LOOP_H
 #define SKYBLIP_RUNTIME_LOOP_H
 
+#include <algorithm>
+
 #include "runtime/loop_meter.h"
 #include "runtime/service.h"
 #include "runtime/tasks.h"
@@ -43,6 +45,13 @@ class Loop {
                 service.tick(now_ms);
             if (service.progressing(now_ms)) feed_decision_.check_in(i, now_ms);
         }
+    }
+
+    uint32_t due_in_ms(uint32_t now_ms) const {
+        uint32_t due_ms = kServiceRestCeilingMs;
+        for (int i = 0; i < count_; i++)
+            due_ms = std::min(due_ms, entries_[i].service->due_in_ms(now_ms));
+        return due_ms;
     }
 
     bool may_feed_watchdog(uint32_t now_ms) const { return feed_decision_.may_feed(now_ms); }

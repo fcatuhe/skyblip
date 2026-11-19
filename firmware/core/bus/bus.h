@@ -73,6 +73,14 @@ struct Bus {
     Queue<events::RxFrame, 4> peer_rx;
     Queue<events::ContactEvent, 8> input;
     Queue<events::BatterySample, 2> battery;
+
+    bool deliver(const events::RxFrame& frame) {
+        switch (frame.endpoint) {
+            case events::Endpoint::Log: return log_rx.push(frame);
+            case events::Endpoint::Peer: return peer_rx.push(frame);
+            default: return link_rx.push(frame);
+        }
+    }
 };
 
 // INFO: fc 19nov26 the Go's SX1262, central and IMU: Bravo has none of them, so it holds no slot

@@ -90,6 +90,12 @@ void BravoService::tick(uint32_t now_ms) {
                                : std::nullopt);
 }
 
+uint32_t BravoService::due_in_ms(uint32_t now_ms) const {
+    if (step_ != BravoStep::Idle || leaving_ || seek_due_) return runtime::kServicePassCeilingMs;
+    if (linked()) return runtime::remaining_ms(now_ms - claimed_ms_, kClaimPeriodMs);
+    return runtime::kServiceRestCeilingMs;
+}
+
 void BravoService::begin_pairing(uint32_t /*now_ms*/) {
     if (paired(settings_) || asking_again_) return;
     end_pairing();

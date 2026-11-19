@@ -35,7 +35,7 @@ template <class Platform, class Product, class Collector>
 
         if (product.ready_to_power_off()) platform.system_power().system_off();
 
-        skyblip::platform::zephyr::g_loop_wake.rest_after(began_ticks);
+        skyblip::platform::zephyr::g_loop_wake.rest_after(began_ticks, product.due_in_ms(now_ms));
     }
 }
 

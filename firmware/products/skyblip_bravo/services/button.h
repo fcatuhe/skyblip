@@ -19,6 +19,7 @@ class ButtonService : public runtime::Service {
         : runtime::Service(context), config_(config), alarm_(alarm), peer_(peer) {}
 
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     comms::Pending prompt() const { return prompt_; }
     bool answering() const { return prompt_ != comms::Pending::None; }

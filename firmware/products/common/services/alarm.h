@@ -47,6 +47,8 @@ class AlarmService : public runtime::Service {
         : runtime::Service(context), lamp_shows_link_(lamp_shows_link), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 a tune, a sign or a motor is timed in passes, the lamp to its next edge
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     // The device is going down: the loop stops running, so the buzzer is
     // released and the lamp is darkened and let go here rather than left latched

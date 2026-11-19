@@ -30,6 +30,8 @@ A paired Bravo names the transponder it hears loudest in `health`'s `own_transpo
 
 A service is one unit of work the loop steps, under the watchdog, in dataflow order. It owns one thing: a queue it drains, a slice of `bus::State` it writes, or an output port it drives. Never two of the same kind, and never a queue somebody else also drains.
 
+A service also says how long the loop may sleep before it needs a pass, `due_in_ms()`. The default is one pass, `runtime::kServicePassCeilingMs`. A service that only waits on its queues, or on a cadence of its own, returns the time to its next deadline instead. The loop sleeps until the earliest service or board deadline, `runtime::kServiceRestCeilingMs` at most, unless a producer wakes it first.
+
 That is why `nmea` is a service and not a helper, though it drains nothing and writes nothing: it drives `ports::Link` on a one-second cadence that has to defer around an armed burst, which needs its own place in the order and its own watchdog row. Something that consumes the finished product rather than being stepped by it is a reader, and `DiagnosticsCollector` is the one the tree has.
 
 Everything a service needs arrives at construction: the `runtime::Context` with the roles, the bus, the state and the diagnostics recorder, plus whatever else it is handed as a reference. There is no `attach_` after the fact and no member that starts null, because a service that can be half-built is a service every method has to check.

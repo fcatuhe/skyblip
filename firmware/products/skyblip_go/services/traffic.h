@@ -28,6 +28,8 @@ class TrafficService : public runtime::Service {
         : runtime::Service(context), rf_(rf), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 every frame wakes the loop, and the table ages by the second
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
    private:
     void on_frame(const events::RfEvent& event, uint32_t now_ms);

@@ -61,6 +61,10 @@ void TrafficService::tick(uint32_t now_ms) {
     context_.state.callsigns.age_out(now_s);
 }
 
+uint32_t TrafficService::due_in_ms(uint32_t /*now_ms*/) const {
+    return runtime::kServiceRestCeilingMs;
+}
+
 events::Stamp TrafficService::stamp_for(const events::RfEvent& event, uint32_t now_ms) const {
     const bus::State& state = context_.state;
     return events::stamp_of(event.at_us, state.clock.pps_edge_us, state.clock.pps_locked,

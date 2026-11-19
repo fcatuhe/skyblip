@@ -15,6 +15,7 @@
 #include "core/timing/slot.h"
 #include "hardware/parts/sx1262/sx1262.h"
 #include "hardware/platform/clear_channel.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/rf_mailbox.h"
 #include "ports/clock.h"
 #include "ports/rf.h"
@@ -294,7 +295,7 @@ class Rf : public ports::Rf {
 
     bool refuse(const ports::RfBurst& burst, uint8_t index, const Assessment& assessment) {
         mailbox_.release(index);
-        out_.push(busy_report(burst, assessment, band_, frequency_hz_, clock_.microseconds()));
+        report(busy_report(burst, assessment, band_, frequency_hz_, clock_.microseconds()));
         return false;
     }
 
@@ -407,7 +408,7 @@ class Rf : public ports::Rf {
         rx_.rssi_dbm = event.rssi_dbm;
         rx_.rssi_valid = event.rssi_valid;
         rx_.at_us = at_us;
-        out_.push(rx_);
+        report(rx_);
     }
 
     void emit(events::RfEventType type, uint64_t at_us, const parts::RadioEvent& event = {}) {
@@ -421,7 +422,12 @@ class Rf : public ports::Rf {
         reported.keyed_at_us = keyed_at_us_;
         reported.staged_at_us = staged_at_us_;
         reported.tx_at_us = tx_at_us_;
-        out_.push(reported);
+        report(reported);
+    }
+
+    void report(const events::RfEvent& event) {
+        out_.push(event);
+        g_loop_wake.wake();
     }
 
     parts::Sx1262& radio_;

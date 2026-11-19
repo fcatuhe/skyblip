@@ -97,6 +97,7 @@ class Product {
     const power::ShutdownSequencer& shutdown() const { return shell_.shutdown(); }
     bool ready_to_power_off() const { return shell_.ready_to_power_off(); }
     bool may_feed_watchdog(uint32_t now_ms) const { return shell_.may_feed_watchdog(now_ms); }
+    uint32_t due_in_ms(uint32_t now_ms) const { return shell_.due_in_ms(now_ms); }
 
     Board& board() { return board_; }
     bus::Bus& bus() { return bus_; }

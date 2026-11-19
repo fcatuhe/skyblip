@@ -79,6 +79,14 @@ void NmeaService::tick(uint32_t now_ms) {
     run_pass(now_ms);
 }
 
+uint32_t NmeaService::due_in_ms(uint32_t now_ms) const {
+    if (!listening()) return runtime::kServiceRestCeilingMs;
+    if (!passed_once_ || pass_sent_ < pass_bytes_) return runtime::kServicePassCeilingMs;
+    const uint32_t since_ms = now_ms - last_pass_ms_;
+    if (since_ms >= kMovingTargetRedrawPeriodMs) return runtime::kServicePassCeilingMs;
+    return kMovingTargetRedrawPeriodMs - since_ms;
+}
+
 // The order is the policy: the alarm sentence is written first and is never
 // inside the per-pass cap, so the one sentence a pilot's life may depend on
 // cannot be the one a full sky pushes off the end.

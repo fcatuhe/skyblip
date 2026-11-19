@@ -79,6 +79,7 @@ class NmeaService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    uint32_t due_in_ms(uint32_t now_ms) const override;
 
     // Frames the link would not take. Silence towards a phone is a fault worth a
     // number, the way core/comms counts its own (ConfigService::link_drops).

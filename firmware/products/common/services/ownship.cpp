@@ -1,5 +1,7 @@
 #include "products/common/services/ownship.h"
 
+#include <algorithm>
+
 #include "core/diagnostics/payload.h"
 #include "core/diagnostics/profile.h"
 #include "core/events/sensor.h"
@@ -53,6 +55,14 @@ void OwnshipService::tick(uint32_t now_ms) {
     if (!barometer_active_) context_.state.own.pressure_altitude_valid = false;
     context_.state.own.tx_settled = first_fix_.settled(now_ms);
     context_.state.own.fix_acquired = first_fix_.take_acquired();
+}
+
+uint32_t OwnshipService::due_in_ms(uint32_t now_ms) const {
+    if (!context_.diagnostics.armed()) return runtime::kServiceRestCeilingMs;
+    const uint32_t pps_ms = runtime::remaining_ms(now_ms - pps_recorded_ms_, kPpsRecordPeriodMs);
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Inclinometer)) return pps_ms;
+    return std::min(pps_ms,
+                    runtime::remaining_ms(now_ms - motion_recorded_ms_, kMotionRecordPeriodMs));
 }
 
 // INFO: fc 05oct26 a flight run flies the glass alone: air, flight log and gates read flight_

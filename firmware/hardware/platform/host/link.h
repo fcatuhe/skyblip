@@ -29,27 +29,30 @@ class Link : public ports::Link {
 
     static Status begin() { return Status::Ok; }
 
+    void deliver_to(bus::Bus& bus) { bus_ = &bus; }
+
     bool push_rx(events::RxFrame frame) {
         frame.connection = sessions_.connection(frame.session_id);
-        return rx_.push(frame);
+        return bus_ != nullptr && bus_->deliver(frame);
     }
-    bool pop_rx(events::RxFrame& out) { return rx_.pop(out); }
 
     void raise_link(uint16_t session_id = 1, const events::BluetoothAddress& central = {}) {
-        if (!sessions_.connected(session_id, declared_payload_bytes_, central)) return;
+        const bool admitted = sessions_.connected(session_id, declared_payload_bytes_, central);
+        forward_events();
+        if (!admitted) return;
         live_.push_back(session_id);
         last_session_id_ = session_id;
     }
     void drop_link() { drop_link(last_session_id_); }
     void drop_link(uint16_t session_id, uint8_t reason = 0) {
         sessions_.disconnected(session_id, reason);
+        forward_events();
         for (size_t i = 0; i < live_.size(); i++) {
             if (live_[i] != session_id) continue;
             live_.erase(live_.begin() + static_cast<long>(i));
             break;
         }
     }
-    bool pop_event(events::LinkEvent& out) { return sessions_.pop(out); }
     bool up() const { return sessions_.up(); }
     int links() const { return sessions_.count(); }
     // INFO: fc 11nov26 what silicon decides advertising on: a phone more may connect
@@ -66,15 +69,18 @@ class Link : public ports::Link {
         declared_payload_bytes_ =
             bytes < ports::kMinimumLinkPayloadBytes ? ports::kMinimumLinkPayloadBytes : bytes;
         for (uint16_t session : live_) sessions_.payload_changed(session, declared_payload_bytes_);
+        forward_events();
     }
 
     void declare_payload_bytes(uint16_t session_id, uint16_t bytes) {
         sessions_.payload_changed(session_id, bytes);
+        forward_events();
     }
 
     void exchange_mtu_by_unit(uint16_t session_id, uint16_t bytes) {
         sessions_.payload_changed(session_id, bytes);
         sessions_.mtu_requested(session_id, events::MtuRequest::Exchanged);
+        forward_events();
     }
 
     uint16_t payload_bytes() const override { return sessions_.payload_bytes(); }
@@ -167,6 +173,11 @@ class Link : public ports::Link {
     int refused_oversize{0};
 
    private:
+    void forward_events() {
+        events::LinkEvent event{};
+        while (bus_ != nullptr && sessions_.pop(event)) (void)bus_->link_events.push(event);
+    }
+
     Status record(uint16_t session_id, events::Endpoint endpoint, ConstByteSpan bytes) {
         // The controller's refusal, modelled: an oversized notification is not
         // shortened, it fails, so no case can pass by sending one.
@@ -191,7 +202,7 @@ class Link : public ports::Link {
         return Status::Ok;
     }
 
-    bus::Queue<events::RxFrame, 4> rx_;
+    bus::Bus* bus_{nullptr};
     comms::LinkSessions sessions_{};
     std::vector<uint16_t> live_;
     std::vector<uint16_t> held_sessions_;

@@ -1,6 +1,9 @@
 #ifndef SKYBLIP_BOARDS_T_ECHO_PLUS_BOARD_H
 #define SKYBLIP_BOARDS_T_ECHO_PLUS_BOARD_H
 
+#include <algorithm>
+
+#include "boards/common/producer.h"
 #include "boards/lilygo/t_echo_plus/glass.h"
 #include "boards/lilygo/t_echo_plus/i2c_scan.h"
 #include "boards/lilygo/t_echo_plus/imu_mount.h"
@@ -62,8 +65,11 @@ class TEchoPlus {
           imu_(platform.i2c(io::BusId::Sensor)),
           imu_store_(platform.imu_flash()),
           rf_(radio_, platform.clock(), bus.rf),
+          producer_(platform, bus),
           capabilities_(platform.capabilities()) {
         platform_.wire(t_echo_plus::kPinMap);
+        platform_.link().deliver_to(bus);
+        platform_.central().deliver_to(bus);
     }
 
     // INFO: fc 11nov26 not in the constructor: the product is a global, built before the watchdog
@@ -170,7 +176,7 @@ class TEchoPlus {
         if (!ports::has(capabilities_, ports::Capability::Barometer)) return;
         if (barometer_converting_) collect_barometer(now_ms);
         if (barometer_converting_) return;
-        if (barometer_due(clock, now_ms)) {
+        if (barometer_due(clock, now_ms - last_barometer_ms_)) {
             last_barometer_ms_ = now_ms;
             barometer_quarter_ = 0;
             trigger_barometer(now_ms, true);
@@ -209,31 +215,7 @@ class TEchoPlus {
         return quarter > barometer_quarter_ && quarter < kBarometerConversionsPerSecond;
     }
 
-    bool barometer_due(const timing::ClockState& clock, uint32_t now_ms) const {
-        const uint32_t since_published_ms = now_ms - last_barometer_ms_;
-        if (since_published_ms < runtime::kBarometerPublishPeriodMs / 2) return false;
-        if (!clock.pps_locked) return since_published_ms >= runtime::kBarometerPublishPeriodMs;
-        return clock.since_edge_ms < runtime::kBarometerPpsWindowMs ||
-               since_published_ms >= 2 * runtime::kBarometerPublishPeriodMs;
-    }
-
-    void publish_contact(events::Contact which, input::Contact& contact, bool level,
-                         uint32_t now_ms) {
-        const input::Contact::Edge edge = contact.update(level, now_ms);
-        if (edge == input::Contact::Edge::None) return;
-        bus_.input.push(
-            events::ContactEvent{which, edge == input::Contact::Edge::Down, contact.edge_ms()});
-    }
-
-    void poll_battery(uint32_t now_ms) {
-        if (!ports::has(capabilities_, ports::Capability::Battery)) return;
-        if (now_ms - last_battery_ms_ < runtime::kBatteryPeriodMs) return;
-        last_battery_ms_ = now_ms;
-        uint16_t divider_mv = 0;
-        // INFO: fc 05oct26 refused or not, the reading and VBUS go out: core/power judges it
-        platform_.read_divider_mv(divider_mv);
-        bus_.battery.push(events::BatterySample{divider_mv, platform_.external_power()});
-    }
+    void poll_battery(uint32_t now_ms) { producer_.poll_battery(capabilities_, now_ms); }
 
     // The producer side: everything hardware says arrives on the bus, and the
     // clock's PPS phase is refreshed. Identical on both platforms.
@@ -241,25 +223,6 @@ class TEchoPlus {
         rf_.service(now_ms);
         // INFO: fc 17oct26 serves the host annunciator's guards: a test catches an output left on
         platform_.annunciator().service(now_ms);
-
-        // The connection before the bytes: a frame from a session whose Up is
-        // still queued behind it would be answered by a service that does not yet
-        // believe there is anyone there.
-        events::LinkEvent link_event;
-        while (platform_.link().pop_event(link_event)) bus_.link_events.push(link_event);
-
-        events::RxFrame frame;
-        while (platform_.link().pop_rx(frame)) {
-            if (frame.endpoint == events::Endpoint::Log)
-                bus_.log_rx.push(frame);
-            else
-                bus_.link_rx.push(frame);
-        }
-
-        events::CentralEvent central_event;
-        while (platform_.central().pop_event(central_event))
-            bus_.central_events.push(central_event);
-        while (platform_.central().pop_rx(frame)) bus_.peer_rx.push(frame);
 
         if (ports::has(capabilities_, ports::Capability::Gnss)) {
             gnss_.request_satellites_in_view(state.gnss.levels_wanted);
@@ -277,21 +240,24 @@ class TEchoPlus {
         poll_battery(now_ms);
         poll_inclinometer(state, now_ms);
 
-        publish_contact(events::Contact::Button, button_, platform_.button_down(), now_ms);
-        publish_contact(events::Contact::Pad, pad_, platform_.pad_down(), now_ms);
+        const bool button = producer_.publish_contact(events::Contact::Button, button_,
+                                                      platform_.button_down(), now_ms);
+        const bool pad =
+            producer_.publish_contact(events::Contact::Pad, pad_, platform_.pad_down(), now_ms);
+        contacts_active_ = button || pad;
 
-        const uint64_t now_us = platform_.clock().microseconds();
-        state.clock.pps_locked = platform_.pps().locked();
-        state.clock.since_edge_ms = platform_.pps().since_edge_ms(now_us);
+        producer_.publish_clock(state);
         poll_barometer_on_pps(state.clock, now_ms);
-        // The edge itself, as the surface latched it: whoever reads it later
-        // reads an instant that has not gone stale in the meantime. Rebuilding
-        // it from the millisecond phase threw away up to a millisecond of the
-        // 5 ms retune before the plan was even armed.
-        timing::carry_utc_to_edge(state.clock, platform_.pps().last_edge_us());
-        // The one place the PPS edge is owned: the bench's interval-error
-        // histogram is fed here rather than by a second reader of the pin.
-        state.rf.timing_statistics.record_edge(state.clock.pps_edge_us, state.clock.pps_locked);
+    }
+
+    // INFO: fc 19nov26 the loop sleeps until the earliest of these, or until an edge wakes it
+    uint32_t due_in_ms(const timing::ClockState& clock, uint32_t now_ms) const {
+        if (contacts_active_ || gnss_bringing_up() || imu_bringing_up())
+            return runtime::kServicePassCeilingMs;
+        uint32_t due_ms = std::min(producer_.battery_due_in_ms(capabilities_, now_ms),
+                                   barometer_due_in_ms(clock, now_ms));
+        if (imu_.running()) due_ms = std::min(due_ms, imu_.read_due_in_ms(now_ms));
+        return due_ms;
     }
 
     typename Platform::Rf& rf() { return rf_; }
@@ -307,6 +273,41 @@ class TEchoPlus {
    private:
     static constexpr uint32_t kBarometerConversionsPerSecond =
         runtime::kBarometerPublishPeriodMs / runtime::kBarometerConversionPeriodMs;
+
+    uint32_t barometer_due_in_ms(const timing::ClockState& clock, uint32_t now_ms) const {
+        if (!ports::has(capabilities_, ports::Capability::Barometer))
+            return runtime::kServiceRestCeilingMs;
+        if (barometer_converting_ && barometer_published_) return runtime::kServicePassCeilingMs;
+        if (barometer_converting_)
+            return runtime::remaining_ms(now_ms - barometer_triggered_ms_,
+                                         runtime::kBarometerConversionCeilingMs);
+        const uint32_t published_ms =
+            boards::barometer_due_in_ms(clock, now_ms - last_barometer_ms_);
+        const uint32_t period_ms = runtime::kBarometerConversionPeriodMs;
+        if (!clock.pps_locked)
+            return std::min(published_ms,
+                            runtime::remaining_ms(now_ms - barometer_triggered_ms_, period_ms));
+        const uint32_t next_quarter = clock.since_edge_ms / period_ms + 1;
+        if (next_quarter >= kBarometerConversionsPerSecond) return published_ms;
+        return std::min(published_ms, next_quarter * period_ms - clock.since_edge_ms);
+    }
+
+    bool gnss_bringing_up() const {
+        return ports::has(capabilities_, ports::Capability::Gnss) && !gnss_.configured() &&
+               !gnss_.degraded();
+    }
+
+    bool imu_bringing_up() const {
+        if (!ports::has(capabilities_, ports::Capability::Inclinometer)) return false;
+        if (imu_store_.writing()) return true;
+        switch (imu_.stage()) {
+            case parts::Bhi260::Stage::Absent:
+            case parts::Bhi260::Stage::Failed:
+            case parts::Bhi260::Stage::Running: return false;
+            case parts::Bhi260::Stage::Idle: return imu_image_bootable();
+            default: return true;
+        }
+    }
 
     void prove_roles() {
         if (ports::has(capabilities_, ports::Capability::Rf)) probed_rf_.prove(rf_);
@@ -477,6 +478,8 @@ class TEchoPlus {
     input::Contact button_{t_echo_plus::kButtonHoldMs};
     input::Contact pad_{t_echo_plus::kPadSettleMs};
     ports::NullRoles null_{};
+    Producer<Platform> producer_;
+    bool contacts_active_{false};
     t_echo_plus::ProbedRf probed_rf_{null_.rf};
     t_echo_plus::ProbedAnnunciator probed_annunciator_{null_.annunciator};
     ports::Capabilities capabilities_;
@@ -486,7 +489,6 @@ class TEchoPlus {
     uint32_t barometer_faults_{0};
     bool barometer_converting_{false};
     bool barometer_published_{false};
-    uint32_t last_battery_ms_{0};
 };
 
 }  // namespace skyblip::boards

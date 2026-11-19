@@ -368,3 +368,46 @@ TEST_CASE("watchdog: silence is a difference, so the wrap is not a stall") {
     // The one that is still checking in is not the one stalled.
     CHECK(feed.silent_ms(radio, 744u) == 1);
 }
+
+namespace {
+
+struct Due : runtime::Service {
+    Due(runtime::Context& context, uint32_t due_ms) : runtime::Service(context), due_ms_(due_ms) {}
+    void tick(uint32_t) override {}
+    uint32_t due_in_ms(uint32_t) const override { return due_ms_; }
+    uint32_t due_ms_;
+};
+
+}  // namespace
+
+// The loop sleeps until the earliest service is due, and never past the rest ceiling.
+TEST_CASE("runtime: the loop is due when its earliest service is, the rest ceiling at most") {
+    struct : ports::Clock {
+        uint32_t milliseconds() const override { return 0; }
+        uint64_t microseconds() const override { return 0; }
+    } clock;
+
+    platform::host::Identity identity{platform::host::Identity::kSerial};
+    platform::host::Random random{};
+    ports::NullRoles null;
+    ports::Roles roles{
+        clock,          null.rf,          null.link, null.display,           null.key_value,
+        null.log_flash, null.annunciator, null.dfu,  null.die_temperature,   null.indicator,
+        null.gnss,      identity,         random,    ports::Capability::None};
+    bus::Bus bus;
+    bus::State state;
+    diagnostics::Recorder recorder{};
+    runtime::Context context{roles, bus, state, recorder};
+
+    Due idle(context, 5 * runtime::kServiceRestCeilingMs);
+    Due soon(context, 250);
+    const runtime::Loop::Entry both[] = {{&idle, diagnostics::LoopService::Config},
+                                         {&soon, diagnostics::LoopService::Ownship}};
+    CHECK(runtime::Loop(both).due_in_ms(0) == 250);
+    const runtime::Loop::Entry alone[] = {{&idle, diagnostics::LoopService::Config}};
+    CHECK(runtime::Loop(alone).due_in_ms(0) == runtime::kServiceRestCeilingMs);
+
+    int order[8]{0};
+    Spy plain(context, 1, order, Status::Ok);
+    CHECK(plain.due_in_ms(0) == runtime::kServicePassCeilingMs);
+}

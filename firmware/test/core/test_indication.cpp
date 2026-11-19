@@ -446,3 +446,21 @@ TEST_CASE("indication: every condition has a name and a lamp that can be named")
     }
     CHECK(std::string(to_string(indication::Colour::None)) == "dark");
 }
+
+// The loop sleeps until the lamp's next edge, so a wink that lands late is a wink shown late.
+TEST_CASE("indication: the next edge is the next flash start or end, then the next cycle") {
+    const Indication twice{Colour::Blue, 30, 2790, 2, 150};
+    CHECK(until_edge_ms(twice, 0) == 30);
+    CHECK(until_edge_ms(twice, 29) == 1);
+    CHECK(until_edge_ms(twice, 30) == 150);
+    CHECK(until_edge_ms(twice, 180) == 30);
+    CHECK(until_edge_ms(twice, 210) == cycle_ms(twice) - 210);
+
+    Policy policy{};
+    Situation running{};
+    running.power_level = power::PowerLevel::Normal;
+    (void)policy.update(running, 1000, timing::ClockState{});
+    const Indication& shown = indication_for(policy.condition());
+    CHECK(policy.until_change_ms(1000) == shown.on_ms);
+    CHECK(policy.until_change_ms(1000 + shown.on_ms) == cycle_ms(shown) - shown.on_ms);
+}
