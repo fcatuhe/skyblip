@@ -54,7 +54,7 @@ export function noticeOf(error) {
     return { key: 'smp', detail: error.message };
   }
   if (error instanceof SmpTimeout) return { key: 'timeout' };
-  if (error instanceof LinkLost) return { key: 'link_lost' };
+  if (error instanceof LinkLost || error.cause instanceof LinkLost) return { key: 'link_lost' };
   return { key: 'failed', detail: error.message };
 }
 
@@ -143,7 +143,10 @@ function motionSensorWithoutFirmwareOf({ image }) {
 export class Updater {
   #onChange;
   #device = null;
-  #smp = new SmpClient(bytes => this.#device.sendSmp(bytes, this.#writeBytes));
+  #smp = new SmpClient(async bytes => {
+    if (!this.#device) throw new LinkLost();
+    return this.#device.sendSmp(bytes, this.#writeBytes);
+  });
   #packetBytes = null;
   #writeBytes = GATT_WRITE_BYTES;
   #probed = false;

@@ -84,6 +84,20 @@ test('after an install a browser that keeps the dropped link\'s notify sessions 
   updater.disconnect();
 });
 
+test('a link that drops before the first SMP request says it was lost, and nothing else', async () => {
+  const device = new FakeSkyblip({ bufSize: 300 }).install();
+  const onConfig = device.onConfig.bind(device);
+  device.onConfig = bytes => {
+    onConfig(bytes);
+    if (device.commands.at(-1) === 'defaults') device.drop();
+  };
+  const { updater, until } = session();
+  await updater.connect();
+  const lost = await until(state => state.phase === 'offline' && state.notice);
+  assert.equal(lost.notice.key, 'link_lost');
+  assert.equal(lost.notice.detail, undefined);
+});
+
 test('a device that does not come back in time is left offline, and says so', async () => {
   const { device, updater, until } = await chosen({ returnEveryMs: 0, returnWithinMs: 0 });
   updater.install();
