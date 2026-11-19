@@ -284,17 +284,6 @@ enum : uint32_t {
     kModeSAltitude = 88,
     kUnmatched = 89,
     kTxHeldForFix = 90,
-    kIntervalMs = 91,
-    kIntervalSeenMs = 92,
-    kVerdict = 93,
-    kVerifySteps = 94,
-    kQuarterVerdict = 95,
-    kQuarterSteps = 96,
-    kCommands = 97,
-    kLastCommand = 98,
-    kLastCommandAtMs = 99,
-    kReceiverProbes = 100,
-    kReceiverResets = 101,
 };
 }
 

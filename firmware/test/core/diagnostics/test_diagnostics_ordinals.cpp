@@ -230,71 +230,6 @@ uint8_t wire(traffic::Level value) {
     return kUnpinned;
 }
 
-uint8_t wire(ports::GnssCommand value) {
-    switch (value) {
-        case ports::GnssCommand::None: return 0;
-        case ports::GnssCommand::Wake: return 1;
-        case ports::GnssCommand::Identify: return 2;
-        case ports::GnssCommand::Constellations: return 3;
-        case ports::GnssCommand::SentenceSet: return 4;
-        case ports::GnssCommand::DynamicModel: return 5;
-        case ports::GnssCommand::Rate1Hz: return 6;
-        case ports::GnssCommand::Baud115200: return 7;
-        case ports::GnssCommand::Rate4Hz: return 8;
-        case ports::GnssCommand::Gsa4: return 9;
-        case ports::GnssCommand::Rate2Hz: return 10;
-        case ports::GnssCommand::Gsa2: return 11;
-        case ports::GnssCommand::GsvOff: return 12;
-        case ports::GnssCommand::GsvEvery: return 13;
-        case ports::GnssCommand::GsvPaced5: return 14;
-        case ports::GnssCommand::GsvPaced9: return 15;
-        case ports::GnssCommand::RestartHot: return 16;
-        case ports::GnssCommand::RestartWarm: return 17;
-        case ports::GnssCommand::RestartCold: return 18;
-        case ports::GnssCommand::RestartFactory: return 19;
-        case ports::GnssCommand::ResetPulse: return 20;
-    }
-    return kUnpinned;
-}
-
-uint8_t wire(ports::GnssVerdict value) {
-    switch (value) {
-        case ports::GnssVerdict::None: return 0;
-        case ports::GnssVerdict::Passed: return 1;
-        case ports::GnssVerdict::Silent: return 2;
-        case ports::GnssVerdict::Disobeying: return 3;
-        case ports::GnssVerdict::OffCadence: return 4;
-        case ports::GnssVerdict::Drifted: return 5;
-    }
-    return kUnpinned;
-}
-
-uint8_t wire(ports::GnssConfigStage value) {
-    switch (value) {
-        case ports::GnssConfigStage::Idle: return 0;
-        case ports::GnssConfigStage::Restarting: return 1;
-        case ports::GnssConfigStage::Waking: return 2;
-        case ports::GnssConfigStage::Identifying: return 3;
-        case ports::GnssConfigStage::Sending: return 4;
-        case ports::GnssConfigStage::Verifying: return 5;
-        case ports::GnssConfigStage::Confirming: return 6;
-        case ports::GnssConfigStage::Ready: return 7;
-        case ports::GnssConfigStage::Degraded: return 8;
-        case ports::GnssConfigStage::Probing: return 9;
-        case ports::GnssConfigStage::Resetting: return 10;
-    }
-    return kUnpinned;
-}
-
-uint8_t wire(ports::GnssEventKind value) {
-    switch (value) {
-        case ports::GnssEventKind::Command: return 0;
-        case ports::GnssEventKind::Stage: return 1;
-        case ports::GnssEventKind::Verdict: return 2;
-    }
-    return kUnpinned;
-}
-
 template <class E>
 void codes_pinned(int count) {
     int found = 0;
@@ -437,28 +372,4 @@ TEST_CASE(
     "diagnostics ordinals: traffic::Level's codes are the traffic and screen alarm byte, and a "
     "member added here raises the maximum the schema puts on alarm") {
     codes_pinned<traffic::Level>(2);
-}
-
-TEST_CASE(
-    "diagnostics ordinals: ports::GnssCommand's codes are the receiver command byte, and a code "
-    "changed here changes GNSS_COMMAND in blip_records.py and the schema's command enum") {
-    codes_pinned<ports::GnssCommand>(21);
-}
-
-TEST_CASE(
-    "diagnostics ordinals: ports::GnssVerdict's codes are the receiver verification byte, and a "
-    "code changed here changes GNSS_VERDICT in blip_records.py and the verification enum") {
-    codes_pinned<ports::GnssVerdict>(6);
-}
-
-TEST_CASE(
-    "diagnostics ordinals: ports::GnssConfigStage's codes are the receiver stage byte, and a code "
-    "changed here changes GNSS_CONFIG in blip_records.py and the config_stage enum") {
-    codes_pinned<ports::GnssConfigStage>(11);
-}
-
-TEST_CASE(
-    "diagnostics ordinals: ports::GnssEventKind's codes are receiver flag bits 2-3, and a code "
-    "changed here changes RECEIVER_EVENT in blip_records.py and the event enum") {
-    codes_pinned<ports::GnssEventKind>(3);
 }

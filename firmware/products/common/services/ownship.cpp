@@ -29,9 +29,6 @@ void OwnshipService::tick(uint32_t now_ms) {
     barometer_active_ = barometer_heard_within_max_age(now_ms);
     gnss::GnssSolution solution{};
     while (context_.bus.gnss.pop(solution)) apply_solution(solution, now_ms);
-    ports::GnssEvent receiver{};
-    while (context_.bus.gnss_events.pop(receiver))
-        context_.diagnostics.record(receiver, context_.instant(now_ms));
 
     events::BarometerSample sample{};
     while (context_.bus.barometer.pop(sample)) apply_barometer(sample, now_ms);

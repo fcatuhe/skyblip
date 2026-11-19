@@ -110,13 +110,3 @@ TEST_CASE("diagnostics: one subsystem can be asked for on its own, under its own
     CHECK_FALSE(has(body, "uptime_s"));
     CHECK_FALSE(has(body, "firmware"));
 }
-
-// The receiver's group with the bring-up the L76K reports, alone in its frame.
-TEST_CASE("diagnostics: the widest gnss frame is 155 bytes, one frame on an iPhone's link") {
-    DiagnosticsReport report(widest_device(), link::Command::Diagnostics,
-                             DiagnosticsReport::Group::Gnss);
-    uint8_t buffer[DiagnosticsReport::kFrameBytes];
-    // 99 without the bring-up, a map head grown to 2 bytes, eleven 2-byte keys and 33 of values.
-    CHECK(report.next_frame(kSmallestSupportedPayloadBytes, buffer, sizeof(buffer)) == 155);
-    CHECK(report.exhausted());
-}

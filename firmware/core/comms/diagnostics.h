@@ -86,8 +86,6 @@ struct Diagnostics {
     uint32_t gnss_overruns{0};
     uint16_t gnss_solution_phase_ms{0};
     bool gnss_solution_phase_valid{false};
-    bool gnss_bring_up_reported{false};
-    ports::GnssBringUp gnss_bring_up{};
     // The constant-turn model own-ship is carried by, measured against the fix
     // that closed the interval (products/common/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the
@@ -175,11 +173,10 @@ class DiagnosticsReport {
         Group group;
     };
 
-    static constexpr int kMaxFields = 96;
+    static constexpr int kMaxFields = 85;
 
     void build(const Diagnostics& diagnostics, const Group* only);
     void add_capture(const Diagnostics& diagnostics);
-    void add_bring_up(const ports::GnssBringUp& bring_up);
     void add(Group group, uint32_t key, Kind kind, int64_t value, const char* text = nullptr);
     void add_array(Group group, uint32_t key, Array array);
     const uint32_t* values_of(const Field& field, int& count) const;

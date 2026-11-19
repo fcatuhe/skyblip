@@ -20,7 +20,6 @@
 #include "core/timing/durable_write.h"
 #include "core/timing/slot.h"
 #include "core/traffic/alarm.h"
-#include "ports/gnss.h"
 
 namespace skyblip::diagnostics {
 
@@ -419,7 +418,6 @@ Record record_of(const Duty& value, const Instant& at);
 Record record_of(const Switch& value, const Instant& at);
 Record record_of(const Loop& value, const Instant& at);
 Record record_of(const Adsb& value, const Instant& at);
-Record record_of(const ports::GnssEvent& value, const Instant& at);
 
 bool read(const Record& record, Boot& out);
 bool read(const Record& record, Config& out);
@@ -442,7 +440,6 @@ bool read(const Record& record, Duty& out);
 bool read(const Record& record, Switch& out);
 bool read(const Record& record, Loop& out);
 bool read(const Record& record, Adsb& out);
-bool read(const Record& record, ports::GnssEvent& out);
 
 }  // namespace skyblip::diagnostics
 

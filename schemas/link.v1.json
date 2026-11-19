@@ -101,7 +101,7 @@
     },
     {
       "command": "diagnostics", "code": 9, "endpoint": "config", "sender": "both",
-      "description": "One dump, one table behind it (firmware/core/comms/diagnostics.h). Asked with the bare command and answered as one frame per subsystem, or more where the negotiated payload cannot carry a subsystem whole: every frame carries group, part and more, no frame mixes two groups, and no frame exceeds the payload the asking central negotiated. Asking before the device has collected a dump is refused no_statistics, since a device must not report health it has not measured. Nothing here is reset by being read. Each key's description starts with the group it belongs to. At their widest the adsb group is 284 bytes, the radio group 169, the gnss group 155 and the capture group 78. A unit whose flash holds a capture ring answers the capture group, so a page reads whether a capture runs and what one costs before it asks for one. Key 53, the adsb group's invalid, is retired and never reused: crc and unsupported split it.",
+      "description": "One dump, one table behind it (firmware/core/comms/diagnostics.h). Asked with the bare command and answered as one frame per subsystem, or more where the negotiated payload cannot carry a subsystem whole: every frame carries group, part and more, no frame mixes two groups, and no frame exceeds the payload the asking central negotiated. Asking before the device has collected a dump is refused no_statistics, since a device must not report health it has not measured. Nothing here is reset by being read. Each key's description starts with the group it belongs to. At their widest the adsb group is 284 bytes, the radio group 169 and the capture group 78. A unit whose flash holds a capture ring answers the capture group, so a page reads whether a capture runs and what one costs before it asks for one. Key 53, the adsb group's invalid, is retired and never reused: crc and unsupported split it.",
       "keys": [
         {"name": "group", "number": 1, "type": "enum", "enum": "group", "required": true, "description": "The subsystem every field in this frame belongs to, in this order."},
         {"name": "part", "number": 2, "type": "unsigned", "required": true, "description": "Frame index within one answer, from 0. A group that does not fit the negotiated payload spans consecutive parts"},
@@ -191,18 +191,7 @@
         {"name": "mode_s", "number": 87, "type": "unsigned", "description": "adsb. The transponders never heard in a DF17: Mode S without ADS-B out, which give no position"},
         {"name": "mode_s_altitude", "number": 88, "type": "unsigned", "description": "adsb. The mode_s transponders whose replies gave a pressure altitude in the last 30 s, which only a radar or a TCAS interrogating them makes them send"},
         {"name": "unmatched", "number": 89, "type": "unsigned", "description": "adsb. Replies refused since boot because the address their parity gives was not heard in clear first: noise reads as some address, so a reply counts only for a transponder already held"},
-        {"name": "tx_held_for_fix", "number": 90, "type": "unsigned", "description": "radio. Seconds own-ship held an owed position because the newest solution would be over G.1.16's 500 ms old when the burst left, less the frame's air time and the key's slack, or because its stamp named no quarter second to within G.1.1's 10 ms, or because no fix delivered inside its quarter had anchored the clock yet (core/timing/README.md, The age of a position)"},
-        {"name": "interval_ms", "number": 91, "type": "unsigned", "description": "gnss. The solution interval the driver last asked the L76K for, 250, 500 or 1000 ms (hardware/parts/l76k/README.md, Bring-up). Absent on a receiver whose driver reports no bring-up, Bravo's"},
-        {"name": "interval_seen_ms", "number": 92, "type": "unsigned", "description": "gnss. The interval between the last two distinct stamps of whole GGA and RMC pairs: 250 from a part solving at 4 Hz, 500 at 2 Hz, 1000 at 1 Hz. Absent until two stamped pairs have been heard"},
-        {"name": "verdict", "number": 93, "type": "enum", "enum": "gnss_verdict", "description": "gnss. What the last verification window found: passed, silent when fewer than two sentences checksummed, disobeying when a sentence turned off kept coming, off_cadence when the part talked but not on the asked rate's grid, or drifted when a part verified at 4 or 2 Hz left that grid while ready. none before the first window closes"},
-        {"name": "verify_steps", "number": 94, "type": "unsigned", "description": "gnss. The steps the last verification window counted: two pairs stamped one asked interval apart, each on that interval's grid, saturating at 255. A part at 4 Hz makes about eight in its 2 s window, at 2 Hz about four"},
-        {"name": "quarter_verdict", "number": 95, "type": "enum", "enum": "gnss_verdict", "description": "gnss. The verdict on this session's one $PCAS02,250: passed, or why 4 Hz was refused. none until it has been asked. It answers whether the part refused 250 ms"},
-        {"name": "quarter_steps", "number": 96, "type": "unsigned", "description": "gnss. The quarter steps counted while that verdict was reached, saturating at 255: 0 from a part that stayed at another rate, 3 or more from one that solved on the quarters"},
-        {"name": "commands", "number": 97, "type": "unsigned", "description": "gnss. Configuration commands sent to the receiver since boot: every $PCAS sentence, wake byte and reset pulse"},
-        {"name": "last_command", "number": 98, "type": "enum", "enum": "gnss_command", "description": "gnss. The last of those commands"},
-        {"name": "last_command_at_ms", "number": 99, "type": "unsigned", "description": "gnss. Milliseconds since boot when it was sent"},
-        {"name": "receiver_probes", "number": 100, "type": "unsigned", "description": "gnss. Probe rounds since boot: each listens for a silent receiver at every rate in turn, one every 10 s until it answers"},
-        {"name": "receiver_resets", "number": 101, "type": "unsigned", "description": "gnss. Times the driver held the receiver's RESET_N low after three silent probe rounds"}
+        {"name": "tx_held_for_fix", "number": 90, "type": "unsigned", "description": "radio. Seconds own-ship held an owed position because the newest solution would be over G.1.16's 500 ms old when the burst left, less the frame's air time and the key's slack, or because its stamp named no quarter second to within G.1.1's 10 ms, or because no fix delivered inside its quarter had anchored the clock yet (core/timing/README.md, The age of a position)"}
       ]
     },
     {
@@ -684,43 +673,6 @@
         {"name": "degraded", "code": 8, "mirrors": "Degraded"},
         {"name": "probing", "code": 9, "mirrors": "Probing"},
         {"name": "resetting", "code": 10, "mirrors": "Resetting"}
-      ]
-    },
-    "gnss_command": {
-      "mirrors": {"type": "ports::GnssCommand", "header": "ports/gnss.h"},
-      "values": [
-        {"name": "none", "code": 0, "mirrors": "None"},
-        {"name": "wake", "code": 1, "mirrors": "Wake"},
-        {"name": "identify", "code": 2, "mirrors": "Identify"},
-        {"name": "constellations", "code": 3, "mirrors": "Constellations"},
-        {"name": "sentence_set", "code": 4, "mirrors": "SentenceSet"},
-        {"name": "dynamic_model", "code": 5, "mirrors": "DynamicModel"},
-        {"name": "rate_1hz", "code": 6, "mirrors": "Rate1Hz"},
-        {"name": "baud_115200", "code": 7, "mirrors": "Baud115200"},
-        {"name": "rate_4hz", "code": 8, "mirrors": "Rate4Hz"},
-        {"name": "gsa_4", "code": 9, "mirrors": "Gsa4"},
-        {"name": "rate_2hz", "code": 10, "mirrors": "Rate2Hz"},
-        {"name": "gsa_2", "code": 11, "mirrors": "Gsa2"},
-        {"name": "gsv_off", "code": 12, "mirrors": "GsvOff"},
-        {"name": "gsv_every", "code": 13, "mirrors": "GsvEvery"},
-        {"name": "gsv_paced_5", "code": 14, "mirrors": "GsvPaced5"},
-        {"name": "gsv_paced_9", "code": 15, "mirrors": "GsvPaced9"},
-        {"name": "restart_hot", "code": 16, "mirrors": "RestartHot"},
-        {"name": "restart_warm", "code": 17, "mirrors": "RestartWarm"},
-        {"name": "restart_cold", "code": 18, "mirrors": "RestartCold"},
-        {"name": "restart_factory", "code": 19, "mirrors": "RestartFactory"},
-        {"name": "reset_pulse", "code": 20, "mirrors": "ResetPulse"}
-      ]
-    },
-    "gnss_verdict": {
-      "mirrors": {"type": "ports::GnssVerdict", "header": "ports/gnss.h"},
-      "values": [
-        {"name": "none", "code": 0, "mirrors": "None"},
-        {"name": "passed", "code": 1, "mirrors": "Passed"},
-        {"name": "silent", "code": 2, "mirrors": "Silent"},
-        {"name": "disobeying", "code": 3, "mirrors": "Disobeying"},
-        {"name": "off_cadence", "code": 4, "mirrors": "OffCadence"},
-        {"name": "drifted", "code": 5, "mirrors": "Drifted"}
       ]
     },
     "reject": {

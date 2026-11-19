@@ -35,16 +35,6 @@ test('a host capture decodes to the target the rig heard', () => {
   });
 });
 
-// The refused 4 Hz firmware/test/products/test_diagnostics_receiver.cpp pins, as scripts/test_blip.py reads it.
-test('a receiver verdict decodes to the cadence and stamp the part kept', () => {
-  const decoded = decodeDiagnosticsRecord(bytes('163b0e0187886e6a05000405661c0000fa00e80300000004'));
-  assert.deepEqual(decoded, {
-    type: 'receiver', at_s: BASE_UTC_S + 7, into_ms: 270, phase_valid: true, utc_dated: true, event: 'verdict',
-    baud: 115200, command: 'none', verification: 'off_cadence', config_stage: 'verifying', uptime_ms: 7270,
-    interval_ms: 250, interval_seen_ms: 1000, stamp_ms: 0, steps: 0, heard: 4,
-  });
-});
-
 test('a version never heard is absent, and version zero is zero', () => {
   const unheard = decodeDiagnosticsRecord(record(21, 0, [0x5e, 0x4d, 0x3c, 0x00]));
   assert.equal('adsb_version' in unheard, false);
@@ -78,7 +68,7 @@ test('a slot that is no record decodes as unreadable, and says why', () => {
 // Two tools read one capture, so the console's download must be the file blip.py writes, byte for byte.
 test('every record type decodes to the NDJSON blip.py writes for it', () => {
   const records = [];
-  for (let type = 1; type <= 23; type++) {
+  for (let type = 1; type <= 22; type++) {
     for (const flags of [0x00, 0x55, 0xaa, 0xff]) {
       records.push(Uint8Array.from({ length: 24 }, (_, at) => (at === 0 ? type : at === 1 ? flags : (type * 37 + flags + at * 59) & 0xff)));
     }

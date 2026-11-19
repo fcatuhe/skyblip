@@ -156,22 +156,6 @@ inline constexpr Value kGnssConfigValues[] = {
 };
 inline constexpr Enumeration kGnssConfig{kGnssConfigValues, 11};
 
-inline constexpr Value kGnssCommandValues[] = {
-    {"none", 0},         {"wake", 1},          {"identify", 2},      {"constellations", 3},
-    {"sentence_set", 4}, {"dynamic_model", 5}, {"rate_1hz", 6},      {"baud_115200", 7},
-    {"rate_4hz", 8},     {"gsa_4", 9},         {"rate_2hz", 10},     {"gsa_2", 11},
-    {"gsv_off", 12},     {"gsv_every", 13},    {"gsv_paced_5", 14},  {"gsv_paced_9", 15},
-    {"restart_hot", 16}, {"restart_warm", 17}, {"restart_cold", 18}, {"restart_factory", 19},
-    {"reset_pulse", 20},
-};
-inline constexpr Enumeration kGnssCommand{kGnssCommandValues, 21};
-
-inline constexpr Value kGnssVerdictValues[] = {
-    {"none", 0},       {"passed", 1},      {"silent", 2},
-    {"disobeying", 3}, {"off_cadence", 4}, {"drifted", 5},
-};
-inline constexpr Enumeration kGnssVerdict{kGnssVerdictValues, 6};
-
 inline constexpr Value kRejectValues[] = {
     {"none", 0},  {"no_solution", 1}, {"missing_rmc", 2}, {"missing_gga", 3},
     {"stale", 4}, {"no_date", 5},     {"jump", 6},
@@ -487,17 +471,6 @@ inline constexpr Key kDiagnosticsKeys[] = {
     {"mode_s_altitude", 88, Type::Unsigned, nullptr, 0, false},
     {"unmatched", 89, Type::Unsigned, nullptr, 0, false},
     {"tx_held_for_fix", 90, Type::Unsigned, nullptr, 0, false},
-    {"interval_ms", 91, Type::Unsigned, nullptr, 0, false},
-    {"interval_seen_ms", 92, Type::Unsigned, nullptr, 0, false},
-    {"verdict", 93, Type::Enum, &kGnssVerdict, 0, false},
-    {"verify_steps", 94, Type::Unsigned, nullptr, 0, false},
-    {"quarter_verdict", 95, Type::Enum, &kGnssVerdict, 0, false},
-    {"quarter_steps", 96, Type::Unsigned, nullptr, 0, false},
-    {"commands", 97, Type::Unsigned, nullptr, 0, false},
-    {"last_command", 98, Type::Enum, &kGnssCommand, 0, false},
-    {"last_command_at_ms", 99, Type::Unsigned, nullptr, 0, false},
-    {"receiver_probes", 100, Type::Unsigned, nullptr, 0, false},
-    {"receiver_resets", 101, Type::Unsigned, nullptr, 0, false},
 };
 
 inline constexpr Key kUpdateKeys[] = {
@@ -780,8 +753,8 @@ inline constexpr Frame kFrames[] = {
     {"status", 5, events::Endpoint::Config, Sender::Both, kStatusKeys, 12},
     {"timing", 6, events::Endpoint::Config, Sender::Both, kTimingKeys, 16},
     {"flash", 7, events::Endpoint::Config, Sender::Both, kFlashKeys, 9},
-    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 101},
-    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 101},
+    {"radio", 8, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 90},
+    {"diagnostics", 9, events::Endpoint::Config, Sender::Both, kDiagnosticsKeys, 90},
     {"update", 10, events::Endpoint::Config, Sender::Both, kUpdateKeys, 11},
     {"dfu", 11, events::Endpoint::Config, Sender::Host, kDfuKeys, 2},
     {"recovery", 12, events::Endpoint::Config, Sender::Host, kRecoveryKeys, 1},

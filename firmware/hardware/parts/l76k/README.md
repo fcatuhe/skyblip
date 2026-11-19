@@ -1,6 +1,6 @@
 # hardware/parts/l76k
 
-The Quectel L76K on the LilyGO T-Echo, an AT6558 receiver that takes the CASIC `$PCAS` sentences and acknowledges none of them. `l76k.h` is the driver: `l76k.cpp` brings the part up, `l76k_bring_up.cpp` names its commands, journals them and recovers a silent part, and `l76k_solutions.cpp` publishes what it solves. `model.h` with `model_commands.h` and `model_sentences.h` is the host model the simulator flies. What the parser, the validity rule, the port rate and the settle do with its output is in `../../../core/gnss/README.md`.
+The Quectel L76K on the LilyGO T-Echo, an AT6558 receiver that takes the CASIC `$PCAS` sentences and acknowledges none of them. `l76k.h` is the driver: `l76k.cpp` brings the part up, `l76k_bring_up.cpp` names its commands, journals them for `L76k::take_event()` and recovers a silent part, and `l76k_solutions.cpp` publishes what it solves. `model.h` with `model_commands.h` and `model_sentences.h` is the host model the simulator flies. What the parser, the validity rule, the port rate and the settle do with its output is in `../../../core/gnss/README.md`.
 
 ## Four solutions a second
 
@@ -27,15 +27,6 @@ The driver empties the port before every configuration. Each drain publishes its
 A part that has said nothing for `kSilenceMs`, 3 s, while ready or degraded is probed: the driver sends the wake byte at each rate of `kBaudCandidates` in turn and listens `kProbeListenMs`, a wake and one 1 Hz solution, at each. A round takes 9 s and one starts every `kProbePeriodMs`, 10 s, for as long as the part stays silent. The first sentence that checksums ends the probing, and the part is configured again from step 1 at that rate. A verification that heard nothing after the part had been heard once probes too, so a part silent after `$PCAS02,250` is never walked down the rates to an end. Degraded now means only a part that talks and does not obey.
 
 After `kSilentRoundsBeforeReset`, three rounds, the driver holds the part's RESET_N low for `kResetHoldMs`, 150 ms, then waits `kRestartSettleMs` and probes again from 9600. Quectel's L76K Hardware Design V1.0, §4.2.1, asks for at least 100 ms low and for RESET_N to be wired "so that it can be used to reset the module if the module enters an abnormal state". The T-Echo Plus wires it to P1.05, active low: the devicetree's `gnss_reset_gpio`, LilyGO's T-Echo `utilities.h` (`Gps_Reset_Pin _PINNUM(1,5)`, beside `Gps_Wakeup_Pin _PINNUM(1,2)`), and Meshtastic's `variants/nrf52840/t-echo-plus/variant.h` (`PIN_GPS_REINIT (32 + 5)`). The part has no power switch of its own: P0.12 feeds the e-paper, the external flash and the sensor bus with it, so the reset line is the one way to restart the part alone. A board that hands the driver no reset line probes for ever and never resets.
-
-## What a capture records
-
-A Full capture writes one `receiver` record for each thing the driver does to the part: each command it sends, the wake byte, every `$PCAS` sentence and the reset pulse, each change of configuration stage, and each verification verdict. Each record carries the uptime, the port's rate, the interval asked, the interval between the last two distinct stamps, the last stamp's milliseconds, and the steps and sentences counted in the open window (`../../../core/diagnostics/README.md`). The board drains the driver's journal of `kJournalEvents` each pass onto `bus::Bus::gnss_events`, and `OwnshipService` records it. The diagnostics dump's gnss group carries the same story in one frame: `interval_ms`, `interval_seen_ms`, `verdict` and `verify_steps` of the last window, `quarter_verdict` and `quarter_steps` of the one 4 Hz attempt, `commands`, `last_command` and `last_command_at_ms`, `receiver_probes` and `receiver_resets`, beside `config`, the stage.
-
-Two questions the device test left open read off a unit this way:
-
-- Did the part refuse 250 ms? Read `quarter_verdict` and `quarter_steps` in the dump. `passed` with 3 or more steps is a part at 4 Hz. `off_cadence` with 0 steps is a refusal, and the `receiver` record with `event` `verdict` and `interval_ms` 250 says what the part did instead: `interval_seen_ms` 1000 and `stamp_ms` 0 is a part that stayed at 1 Hz, 500 one that took 2 Hz. `silent` is a part that stopped talking after `$PCAS02,250`, and the records after it show the probing and the reset.
-- What preceded a silence? The `receiver` records before the one whose `config_stage` turns `probing`: the last `command` sent and its `uptime_ms`, against the gnss and pps records that stopped. With no command in the minutes before, the part went silent on its own.
 
 ## The sentences
 

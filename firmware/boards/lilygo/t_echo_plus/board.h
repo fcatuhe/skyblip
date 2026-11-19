@@ -275,8 +275,6 @@ class TEchoPlus {
                 state.gnss.rejected = gnss_.rejected();
             }
             state.gnss.levels_live = gnss_.satellites_in_view_live();
-            ports::GnssEvent event;
-            while (gnss_.take_event(event)) bus_.gnss_events.push(event);
         }
 
         poll_battery(now_ms);

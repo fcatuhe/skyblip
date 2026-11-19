@@ -47,13 +47,6 @@ const PLACEMENT = ['idle', 'hold', 'place', 'forced'];
 const WRITE_KIND = ['settings', 'flight_record'];
 const CHANGE = ['retune', 'hop', 'to_o_band', 'to_m_band', 'wake'];
 const SERVICE = ['config', 'ownship', 'power', 'radio', 'traffic', 'alarm', 'nmea', 'flight_log', 'capture', 'screen', 'board_poll', 'bravo', 'adsb', 'button', 'peer'];
-const RECEIVER_EVENT = ['command', 'stage', 'verdict'];
-const GNSS_COMMAND = ['none', 'wake', 'identify', 'constellations', 'sentence_set', 'dynamic_model', 'rate_1hz', 'baud_115200', 'rate_4hz', 'gsa_4', 'rate_2hz', 'gsa_2', 'gsv_off', 'gsv_every', 'gsv_paced_5', 'gsv_paced_9', 'restart_hot', 'restart_warm', 'restart_cold', 'restart_factory', 'reset_pulse'];
-const GNSS_VERDICT = ['none', 'passed', 'silent', 'disobeying', 'off_cadence', 'drifted'];
-const GNSS_CONFIG = ['idle', 'restarting', 'waking', 'identifying', 'sending', 'verifying', 'confirming', 'ready', 'degraded', 'probing', 'resetting'];
-const PCAS01_BAUD = [4800, 9600, 19200, 38400, 57600, 115200];
-const flagField = (shift, mask, names) => (raw, flags) => names[(flags >> shift) & mask] ?? (flags >> shift) & mask;
-const baud = at => raw => PCAS01_BAUD[raw[at]];
 
 const TYPES = {
   1: ['boot', [
@@ -156,12 +149,6 @@ const TYPES = {
     ['pressure_relative_altitude_m', validOnly(int16(14), 7)], ['adsb_version_valid', flag(2)],
     ['gva_valid', flag(3)], ['pressure_altitude_valid', flag(4)], ['height_difference_valid', flag(5)],
     ['gnss_relative_altitude_valid', flag(6)], ['pressure_relative_altitude_valid', flag(7)]]],
-  22: ['receiver', [
-    ['event', flagField(2, 0x03, RECEIVER_EVENT)], ['baud', baud(0)],
-    ['command', enum8(1, GNSS_COMMAND)], ['verification', enum8(2, GNSS_VERDICT)],
-    ['config_stage', enum8(3, GNSS_CONFIG)], ['uptime_ms', uint32(4)], ['interval_ms', uint16(8)],
-    ['interval_seen_ms', validOnly(uint16(10), 5)], ['stamp_ms', validOnly(uint16(12), 4)],
-    ['steps', uint8(14)], ['heard', uint8(15)]]],
 };
 
 export function decodeDiagnosticsRecord(raw) {

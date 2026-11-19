@@ -11,7 +11,6 @@
 #include "core/events/rf.h"
 #include "core/events/sensor.h"
 #include "core/gnss/nmea.h"
-#include "ports/gnss.h"
 
 namespace skyblip::bus {
 
@@ -56,7 +55,6 @@ using AdsbQueue = Queue<events::AdsbFrame, events::kAdsbQueueFrames>;
 
 struct Bus {
     Queue<gnss::GnssSolution, 2> gnss;
-    Queue<ports::GnssEvent, 8> gnss_events;
     Queue<events::BarometerSample, 2> barometer;
     Queue<events::AccelerometerSample, 2> accelerometer;
     Queue<events::RfEvent, 8> rf;
