@@ -156,9 +156,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: a Status flies on the channel the second's posi
     CHECK(checked >= 3);
 }
 
-// C.5 lists Traffic, Status and Remote ID for the direct slot, and every ADS-L burst of ours is
-// there.
-TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else" *
+// Payload 66 goes out after the direct slot, which docs/ADSL_EASA_QUESTIONS.md asks EASA about.
+TEST_CASE("ADS-L.4.SRD860.C.5: own-ship's Traffic and Status go out inside the Direct slot" *
           doctest::test_suite("main")) {
     CHECK(adsl::kDirectStartMs == 450);
     CHECK(adsl::kDirectEndMs == 1000);

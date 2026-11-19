@@ -4,7 +4,7 @@ ETSI EN 300 220-1 V3.1.1 and EN 300 220-2 V3.3.1, read clause by clause against 
 
 ## One case per clause
 
-A case is named `EN 300 220-<part> <clause>: what holds`, as in `EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, at the front end`, so `docs/BEHAVIOR.md` groups by the clause. `test_part1.cpp` reads EN 300 220-1 and `test_part2.cpp` EN 300 220-2.
+A case is named `EN 300 220-<part> <clause>: what holds`, as in `EN 300 220-1 5.21.2.2: the CCA threshold is 15 dB over the sensitivity limit, at the front end`, so `docs/behavior/en300220.md` groups by the clause. `test_part1.cpp` reads EN 300 220-1 and `test_part2.cpp` EN 300 220-2.
 
 ETSI does not let the standards be committed (`docs/reference/README.md`), so CI cannot read their headings the way `scripts/check_adsl_clauses.py` reads ADS-L's. [`clauses.txt`](clauses.txt) stands in: one line per clause the suite reads, its number and its heading, and no other text of the standard. `scripts/check_en300220_clauses.py` fails when a listed clause has no case, when a case names a clause the list does not, and when a skipped case opens on none of the ADS-L suite's kinds. Where `scripts/fetch_etsi.py` has fetched the standards, it also checks each listed heading against the document, so a typo in the list cannot stand in for a clause. CI runs it, and `scripts/test_check_en300220_clauses.py` checks the checker.
 
