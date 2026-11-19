@@ -4,7 +4,7 @@ nav_title: GPS
 description: "How skyBlip Go turns GPS sentences into a fix, waits for it to settle, keeps time with PPS, and decides from ground speed alone whether it is flying."
 parent: guides
 share_image: radar
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -17,7 +17,7 @@ updated_on: "2026-11-18"
   <h2 class="kicker">The fix</h2>
 
   <h3 id="fix">A solution is not a fix.</h3>
-  <p class="lede">The GPS receiver sends a solution every second, whether or not it can see the sky. The Go accepts that solution as a fix only after its own checks. Both sentences carrying the position and date must be present and fresh. The date must not be the 1980 placeholder some receivers send before they know it. The position must be within plausible reach of the previous one. The receiver also reports whether it considers its solution valid, but the Go uses its own verdict.</p>
+  <p class="lede">The GPS receiver sends a solution twice a second, whether or not it can see the sky. The Go accepts that solution as a fix only after its own checks. Both sentences carrying the position and date must be present and fresh. The date must not be the 1980 placeholder some receivers send before they know it. The position must be within plausible reach of the previous one. The receiver also reports whether it considers its solution valid, but the Go uses its own verdict.</p>
   <p class="lede">A Go uses a Quectel L76K receiver. A Bravo uses an Airoha AG3335. Both send their readings in the same NMEA sentence format, which the same parser reads.</p>
 
   <h3 id="waiting">Three words while it waits.</h3>
@@ -50,7 +50,8 @@ updated_on: "2026-11-18"
   <h3 id="deadline">The fix must land before 450&nbsp;ms.</h3>
   <p class="lede">The Go cannot use a solution for the current second until the receiver has sent its closing sentence. The first possible transmission is 450&nbsp;ms after the start of that second. The receiver starts sending about 70&nbsp;ms into it. At its startup rate of 9600&nbsp;baud, the 320 bytes of a fix take 333&nbsp;ms to arrive, leaving only 47&nbsp;ms of margin. A bench unit using 22 satellites completed its fix at 780&nbsp;ms. Every transmission scheduled before then was refused.</p>
   <p class="lede">The Go therefore switches the receiver to 115200&nbsp;baud, the highest rate documented for its configuration command. The same fix then takes 28&nbsp;ms to arrive. The command has no acknowledgement, so the Go checks for a correctly received sentence at the new rate. If none arrives, it returns to the old rate.</p>
-  <p class="lede">The satellites page shows a signal bar for each satellite. The sentences carrying those levels also delay the fix, so the Go requests them only while that page is open, with one set every five seconds. The counts on the page still update every second. The receiver produces one solution per second. Five solutions per second would not bring the first fix sooner and would add noisier readings.</p>
+  <p class="lede">The satellites page shows a signal bar for each satellite. The sentences carrying those levels also delay the fix, so the Go requests them only while that page is open, with one set every five seconds. The counts on the page still update every second.</p>
+  <p class="lede">The receiver solves twice a second, on the full second and on the half. ADS-L stamps each position to the quarter second, to within 10&nbsp;ms of the moment the receiver measured it, and sends no position measured more than 500&nbsp;ms earlier. A solution on the full second therefore serves transmissions only until 490&nbsp;ms, keeping 10&nbsp;ms for the burst itself, and the half-second solution serves the rest of the slot. The receiver ignores a request for four solutions a second. At five a second, only the full second falls on a quarter. Our <%= link_to_page "ads-l/questions", label: "open questions to EASA" %> ask whether the rule means this.</p>
 
   <figure class="shot">
     <%= screen_image_tag "satellites.png", alt: "The satellites page: one bar per satellite grouped by constellation, against a dotted line at 40 dB-Hz" %>

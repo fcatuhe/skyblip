@@ -4,7 +4,7 @@ nav_title: ADS-L conformity
 description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go, with the CE, installation and user documents the standard asks for."
 published_on: "2026-11-12"
 parent: ads-l
-updated_on: "2026-11-18"
+updated_on: "2026-11-19"
 ---
 
 <section>
@@ -206,7 +206,7 @@ updated_on: "2026-11-18"
         <tr>
           <th>Traffic and Status payloads, Subpart G</th>
           <td>yes</td>
-          <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
+          <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Each position is a solution the receiver measured on .000 or .500 of the second, named to the quarter second under G.1.1, and leaves within 500&nbsp;ms of that measurement under G.1.16. The receiver solves twice a second for this, and a position on 868.2&nbsp;MHz that would carry an older fix waits for the half-second solution. The reading is one of our <%= link_to_page "ads-l/questions", label: "open questions to EASA" %>. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
         </tr>
       </tbody>
     </table>
