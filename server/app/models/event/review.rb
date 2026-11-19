@@ -135,7 +135,11 @@ class Event::Review
     { failed: top(rows("active_job.completed", "payload.job_class", "payload.exception_class").select { it["payload.exception_class"] }.map { it["payload.job_class"] }) }
   end
 
-  def agents = { calls: top(rows("mcp.answered", "payload.tool").map { it["payload.tool"] || "other" }) }
+  # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
+  def agents
+    answered = rows("mcp.answered", "payload.method", "payload.tool")
+    { sessions: answered.count { it["payload.method"] == "initialize" }, calls: top(answered.filter_map { it["payload.tool"] }) }
+  end
 
   private
     def within(names) = Event.where(name: names, occurred_at: since..till)

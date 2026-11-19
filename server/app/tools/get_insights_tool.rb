@@ -5,7 +5,7 @@ class GetInsightsTool < ApplicationTool
               "the briefing app and those with no Bluetooth, devices connected and how long it takes, links dropped mid-task, " \
               "device choosers closed empty, the notices pilots read, tasks granted and refused, installs started, succeeded " \
               "and failed by cause, the firmware the fleet runs, activations, the browsers whose last step was a failure, " \
-              "errors, slow requests, failing jobs and agents' calls. Read it to find what to improve, and again after a change."
+              "errors, slow requests, failing jobs, and agents' calls by tool beside the sessions they opened. Read it to find what to improve, and again after a change."
   input_schema properties: {
     days: { type: "integer", enum: Event::Review::PERIODS, description: "The period, #{Event::Review::PERIODS.first} unless said" }
   }

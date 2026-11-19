@@ -67,6 +67,16 @@ class Event::ReviewTest < ActiveSupport::TestCase
     assert_equal({ "Safari on iOS" => 1 }, browsers[:without_bluetooth_on])
   end
 
+  test "agents' calls are counted by tool, and the sessions they open apart from them" do
+    2.times { answered "initialize" }
+    answered "notifications/initialized"
+    answered "tools/list"
+    2.times { answered "tools/call", tool: "list_errors" }
+    answered "tools/call", tool: "get_insights"
+
+    assert_equal({ sessions: 2, calls: { "list_errors" => 2, "get_insights" => 1 } }, Event::Review.new.agents)
+  end
+
   test "the daily cap is compared with the busiest day, and a cap under twice it is advised up to three times it" do
     freeze_time
     3.times { Event.create!(name: "unit.enrolled", occurred_at: 2.days.ago) }
@@ -83,6 +93,10 @@ class Event::ReviewTest < ActiveSupport::TestCase
   end
 
   private
+    def answered(method, tool: nil)
+      Event.create! name: "mcp.answered", payload: { method:, tool: }.compact, occurred_at: 1.minute.ago
+    end
+
     def journey(browser, name, at, **payload)
       Event.create! name:, payload:, context: { browser:, device: "go-00012a" }, occurred_at: at
     end
