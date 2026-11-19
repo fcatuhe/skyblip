@@ -50,6 +50,8 @@ Rails.application.configure do
   # config.generators.apply_rubocop_autocorrect_after_generate!
 
   config.hotwire.spark.html_paths += %w[ content ]
+  # Content::Page keeps the pages it read until the code reloads, so an edited page reloads it.
+  config.watchable_dirs["content"] = %w[ erb ]
 
   # ---
 
