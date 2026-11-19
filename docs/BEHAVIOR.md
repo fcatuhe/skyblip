@@ -76,8 +76,8 @@ ADS-L 4 SRD-860 issue 2 Subpart A and the performance appendix: what the documen
 
 **ADS-L.4.SRD860.APPENDIX**
 
-- the transmitter sits inside the nominal power and latency
-  > The appendix's airborne transmitter: 12 to 14 dBm e.r.p., and half a second of latency.
+- the computed e.r.p. and the fix age bound sit in the nominal range
+  > The e.r.p. comes from datasheet figures and the fix age from the top of the second: neither is measured.
 
 ### test/adsl/test_network.cpp
 
@@ -219,8 +219,8 @@ ADS-L 4 SRD-860 issue 2 Subpart C, the physical layer: the bands, the coding and
 
 **ADS-L.4.SRD860.C.5**
 
-- own-ship transmits inside the Direct slot and nowhere else
-  > C.5 lists Traffic, Status and Remote ID for the direct slot, and every ADS-L burst of ours is there.
+- own-ship's Traffic and Status go out inside the Direct slot
+  > Payload 66 goes out after the direct slot, which docs/ADSL_EASA_QUESTIONS.md asks EASA about.
 - the Uplink slot is listened to on the O band, inside its edges
 
 ### test/adsl/test_presentation.cpp
