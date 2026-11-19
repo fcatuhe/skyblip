@@ -165,8 +165,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version th
 
 // The dwells hear 868.2 MHz from 450 to 822 ms and 868.4 MHz from 827 to 1000, of the direct slot's
 // 550.
-TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class") {
     CHECK(timing::Scheduler::direct_heard_permille() == (372 + 173) * 1000 / 1100);
     CHECK(status_field(wire::BitField{44, 2}) == 2);
 }
@@ -186,8 +185,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile 
 }
 
 // Bit 0 is the ALP-TAS wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
-TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
     CHECK(status_field(wire::BitField{52, 8}) == 0x01);
 
     comms::BravoState bravo = comms::BravoState::Unpaired;
@@ -219,8 +217,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address
 }
 
 // The cockpit transponder at the entered address, heard by Bravo on the ground, on the Go's Status.
-TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status on air carries the ADS-B out Bravo heard" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status on air carries the ADS-B out Bravo heard") {
     CHECK(status_beside_cockpit(cockpit_identification()).field(wire::BitField{60, 8}) ==
           adsl::conspicuity::kAdsb1090);
     CHECK(status_beside_cockpit(cockpit_all_call()).field(wire::BitField{60, 8}) == 0);
@@ -235,8 +232,7 @@ TEST_CASE("ADS-L.4.SRD860.G.2.8: a Go with no Bravo declares no transponder, whi
 }
 
 // The pilot's entry of the address Bravo hears is what makes it ours, not a neighbour's.
-TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered address" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered address") {
     CHECK(status_beside_transponder(kOwnTransponder, kOwnTransponder, "")
               .field(wire::BitField{68, 2}) == 2);
     CHECK(status_beside_transponder(go::kAircraftAddressUnset, kOwnTransponder, "")
@@ -329,8 +325,7 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
 }
 
 // Encoded 300 ms into a second, the timestamp names 250 ms, so the record is 10 s old at 10.250.
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn") {
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[2] = {target(0x300001), target(0x300002)};
     uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};

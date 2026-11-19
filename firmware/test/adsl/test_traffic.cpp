@@ -56,8 +56,7 @@ adsl::Packet traffic_packet() {
 }  // namespace
 
 // The clause is emphatic: a field nobody measured is transmitted as invalid, never as zero.
-TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted as invalid" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted as invalid") {
     model::Ownship own = flying();
     own.fix_valid = false;
     own.climb_valid = false;
@@ -70,8 +69,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
 }
 
 // A burst at 613 ms named 500 while carrying the position to 613: 113 ms apart, 14 m at 120 kt.
-TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms") {
     model::Ownship own = flying();
     own.utc_s = 1785628800;
     const int32_t into_utc_ms = 613;
@@ -127,8 +125,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
 }
 
 // Our reading, put to EASA: with no ground speed to tell, a craft that can hover is Undefined.
-TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz") {
     const auto flown = [](uint8_t category, uint8_t& state) {
         simulator::Simulator simulator;
         REQUIRE(simulator.setup() == Status::Ok);
@@ -259,8 +256,7 @@ TEST_CASE(
 }
 
 // A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
-TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable" *
-          doctest::test_suite("main")) {
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
     model::Ownship own = flying();
     own.vdop_e2 = 0;
     adsl::Packet packet{};

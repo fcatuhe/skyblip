@@ -115,8 +115,7 @@ TEST_CASE("DO-260B 2.2.4.3.4.6: the received signals carry the formats of 2.2.3.
     FAIL("prose: a pointer to the message formats, which the component's half reads");
 }
 
-TEST_CASE("DO-260B 2.2.4.3.4.7: a framed burst is a message the decoder reads" *
-          doctest::test_suite("main")) {
+TEST_CASE("DO-260B 2.2.4.3.4.7: a framed burst is a message the decoder reads") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
     const AdsbAir air = identification();
@@ -146,8 +145,7 @@ TEST_CASE("DO-260B 2.2.4.3.4.7.2: the preamble is four pulses at 0, 1, 3.5 and 4
     CHECK(framed(identification()));
 }
 
-TEST_CASE("DO-260B 2.2.4.3.5: the driver receives three modeled bursts after one SetRx" *
-          doctest::test_suite("main")) {
+TEST_CASE("DO-260B 2.2.4.3.5: the driver receives three modeled bursts after one SetRx") {
     models::Lr2021 part;
     parts::Lr2021 radio = lr2021_receiving(part);
     uint8_t frame[adsb::kFrameBytes]{};
@@ -173,8 +171,7 @@ TEST_CASE("DO-260B 2.2.8.5: every frame is dated by the instant the radio report
     CHECK(stamp.into_ms == 345);
 }
 
-TEST_CASE("DO-260B 2.2.8.5.1: with a PPS the date is UTC to the millisecond, finer than 1/128 s" *
-          doctest::test_suite("main")) {
+TEST_CASE("DO-260B 2.2.8.5.1: with a PPS the date is UTC to the millisecond, finer than 1/128 s") {
     const uint64_t edge_us = 9000000;
     const events::Stamp late = events::stamp_of(edge_us + 1999000, edge_us, true, 1700000300);
     CHECK(late.at_s == 1700000301);

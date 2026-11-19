@@ -50,8 +50,7 @@ TEST_CASE("EN 300 220-2 4.4.3.3: the air time of any hour stays within band M's 
     CHECK(refused.over_budget);
 }
 
-TEST_CASE("EN 300 220-2 4.6.1.0: a held channel defers a burst, which goes once it clears" *
-          doctest::test_suite("main")) {
+TEST_CASE("EN 300 220-2 4.6.1.0: a held channel defers a burst, which goes once it clears") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);
