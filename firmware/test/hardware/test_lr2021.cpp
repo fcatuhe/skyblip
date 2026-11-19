@@ -193,7 +193,9 @@ TEST_CASE("lr2021: the part's 14 Manchester bytes come up as the frame the decod
 }
 
 // With no sync word, every downlink format lands, and the decoder tells them apart.
-TEST_CASE("lr2021: a frame of every downlink format goes up, an all-call reply among them") {
+TEST_CASE(
+    "lr2021: an all-call reply and an identification squitter both go up, in the order heard" *
+    doctest::test_suite("main")) {
     models::Lr2021 part;
     Lr2021 radio = lr2021_receiving(part);
     const AdsbAir reply = mode_s_air(adsb::all_call(kAddress, 5));
