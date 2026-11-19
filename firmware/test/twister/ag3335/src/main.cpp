@@ -13,7 +13,7 @@ platform::zephyr::Ag3335Wiring g_wiring;
 
 int main(void) {
     if (g_wiring.begin() != Status::Ok) return -1;
-    parts::Ag3335 gnss(g_wiring.uart());
+    parts::Ag3335 gnss(ports::SolutionRate::Second, g_wiring.uart());
     for (;;) {
         const uint32_t now_ms = k_uptime_get_32();
         gnss.service(now_ms);
