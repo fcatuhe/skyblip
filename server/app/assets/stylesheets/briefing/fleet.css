@@ -109,6 +109,19 @@
     background: var(--sky-soft);
   }
 
+  @property --fleet-fade-start { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @property --fleet-fade-end { syntax: "<length>"; inherits: false; initial-value: 0px; }
+
+  @keyframes fleet-fade-start {
+    from { --fleet-fade-start: 0px; }
+    to { --fleet-fade-start: calc(2 * var(--gutter)); }
+  }
+
+  @keyframes fleet-fade-end {
+    from { --fleet-fade-end: calc(2 * var(--gutter)); }
+    to { --fleet-fade-end: 0px; }
+  }
+
   @media (max-width: 59.99rem) {
     .fleet--home .fleet-actions { column-gap: var(--space-inline-s); }
     .fleet--home .fleet-actions > .button-app { flex: 1 1 0; min-inline-size: max-content; padding-inline: var(--space-inline-xs); }
@@ -121,6 +134,15 @@
       padding-inline: var(--gutter);
       overflow-x: auto;
       scrollbar-width: none;
+    }
+
+    @supports (animation-timeline: scroll()) {
+      .fleet--rail .fleet-strip {
+        mask-image: linear-gradient(to right, transparent, var(--ink) var(--fleet-fade-start), var(--ink) calc(100% - var(--fleet-fade-end)), transparent);
+        animation: fleet-fade-start linear both, fleet-fade-end linear both;
+        animation-timeline: scroll(self inline);
+        animation-range: 0 calc(2 * var(--gutter)), calc(100% - 2 * var(--gutter)) 100%;
+      }
     }
 
     .fleet--rail .fleet-list {
