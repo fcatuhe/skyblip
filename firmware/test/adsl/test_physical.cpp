@@ -82,7 +82,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.3: the preamble is at most twelve 01s and then two
 }
 
 // skyBlip's reading: within a flight state, every transmission the schedule makes alternates.
-TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency") {
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change frequency" *
+          doctest::test_suite("main")) {
     uint32_t previous = 0;
     for (uint32_t utc_s = 1785628800; utc_s < 1785628810; utc_s++) {
         const int slot = timing::Transmitter::slot_in(utc_s);
@@ -93,7 +94,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Traffic transmissions change freque
     }
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency") {
+TEST_CASE("ADS-L.4.SRD860.C.2.5: consecutive Status transmissions change frequency" *
+          doctest::test_suite("main")) {
     for (const int speed_kt : {0, 50}) {
         CAPTURE(speed_kt);
         const std::vector<simulator::AirRecord> statuses = statuses_flown(speed_kt, 61);
@@ -156,7 +158,8 @@ TEST_CASE("ADS-L.4.SRD860.C.2.5: a Status flies on the channel the second's posi
 
 // C.5 lists Traffic, Status and Remote ID for the direct slot, and every ADS-L burst of ours is
 // there.
-TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else") {
+TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and nowhere else" *
+          doctest::test_suite("main")) {
     CHECK(adsl::kDirectStartMs == 450);
     CHECK(adsl::kDirectEndMs == 1000);
 
@@ -186,7 +189,8 @@ TEST_CASE("ADS-L.4.SRD860.C.5: own-ship transmits inside the Direct slot and now
     }
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges") {
+TEST_CASE("ADS-L.4.SRD860.C.5: the Uplink slot is listened to on the O band, inside its edges" *
+          doctest::test_suite("main")) {
     const timing::Window dwell = timing::dwell_of(timing::kUplinkWindowMs);
     CHECK(dwell.start_ms >= adsl::kUplinkSlotStartMs);
     CHECK(dwell.end_ms <= adsl::kUplinkSlotEndMs);

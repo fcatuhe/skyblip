@@ -111,7 +111,8 @@ TEST_CASE("DO-260B 2.2.10.3: an even and an odd position acquire the participant
 }
 
 TEST_CASE(
-    "DO-260B 2.2.10.3.1: an airborne pair within 10 s decodes, unless past the receiver's range") {
+    "DO-260B 2.2.10.3.1: an airborne pair within 10 s decodes, unless past the receiver's range" *
+    doctest::test_suite("main")) {
     Bravo bravo;
     bravo.fly(kLatitude, kLongitude, 0, false);
     bravo.fly(kLatitude, kLongitude, kAirbornePairMaxAgeMs, true);
@@ -134,7 +135,8 @@ TEST_CASE("DO-260B 2.2.10.3.1.1: the track is handed out by the fold that comple
     CHECK(bravo.heard.at_ms == 500);
 }
 
-TEST_CASE("DO-260B 2.2.10.3.2: a surface pair within 50 s, or 25 s when fast or unknown, decodes") {
+TEST_CASE("DO-260B 2.2.10.3.2: a surface pair within 50 s, or 25 s when fast or unknown, decodes" *
+          doctest::test_suite("main")) {
     Bravo slow;
     REQUIRE(slow.hear(surface(kHomeLatitude, false, 9), 0));
     REQUIRE(slow.hear(surface(kHomeLatitude, true, 9), kSlowSurfacePairMaxAgeMs));
@@ -156,7 +158,8 @@ TEST_CASE(
     CHECK(bravo.heard.air_ground == AirGround::Ground);
 }
 
-TEST_CASE("DO-260B 2.2.10.3.3: a message before the pair is kept and shows once the track does") {
+TEST_CASE("DO-260B 2.2.10.3.3: a message before the pair is kept and shows once the track does" *
+          doctest::test_suite("main")) {
     Bravo bravo;
     REQUIRE(bravo.hear(adsb::identification(kAddress, kNoCapability, 3, 1, "DGLID"), 0));
     REQUIRE(bravo.hear(adsb::operational_status(kAddress, kNoCapability, 2, 1), 100));

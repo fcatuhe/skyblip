@@ -18,7 +18,8 @@ TEST_CASE("ADS-L.4.SRD860.C.1: ADS-L runs on an M band of two channels and an O 
     FAIL("prose: an introduction to the bands, whose parameters are C.2, C.3 and C.4");
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.2: the M band is modulated as the table prints it") {
+TEST_CASE("ADS-L.4.SRD860.C.2: the M band is modulated as the table prints it" *
+          doctest::test_suite("main")) {
     CHECK(adsl::kMBand0Hz == 868200000u);
     CHECK(adsl::kMBand1Hz == 868400000u);
     CHECK(adsl::kMBandChannelBandwidthHz == 200000u);
@@ -99,7 +100,8 @@ TEST_CASE("ADS-L.4.SRD860.C.3.2: the O-band LDR preamble is 10, forty times" * d
     FAIL("optional: O-band LDR is not taken, so no preamble is emitted on that channel");
 }
 
-TEST_CASE("ADS-L.4.SRD860.C.4: the O-band HDR channel is modulated as the table prints it") {
+TEST_CASE("ADS-L.4.SRD860.C.4: the O-band HDR channel is modulated as the table prints it" *
+          doctest::test_suite("main")) {
     CHECK(adsl::kOBandHz == 869525000u);
     CHECK(adsl::kUplinkChannelBandwidthHz == 250000u);
     CHECK(adsl::kUplinkChipRateBps == 200000u);

@@ -224,7 +224,8 @@ TEST_CASE("adsb assembly: the operational status names the version and, from ver
     CHECK(bravo.heard.gva == 2);
 }
 
-TEST_CASE("adsb assembly: the aircraft's own address never becomes an observation") {
+TEST_CASE("adsb assembly: the aircraft's own address never becomes an observation" *
+          doctest::test_suite("main")) {
     Bravo bravo;
     bravo.assembly.set_own_address(kAddress);
     adsb::Message message;
@@ -282,7 +283,8 @@ TEST_CASE("adsb assembly: after 30 s of silence a single frame moves nothing, an
     CHECK(bravo.heard.at_ms == 33000);
 }
 
-TEST_CASE("adsb assembly: a track continues on single frames, and on landing and takeoff") {
+TEST_CASE("adsb assembly: a track continues on single frames, and on landing and takeoff" *
+          doctest::test_suite("main")) {
     Bravo bravo;
     bravo.fly(kLatitude, kLongitude, 0, false);
     bravo.fly(kLatitude, kLongitude, 500, true);

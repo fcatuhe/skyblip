@@ -364,7 +364,8 @@ TEST_CASE("adsl: a field reads back the middle of the step its code names") {
 }
 
 // The frame a fix becomes, written here from the fields it decodes to, under the FLARM table.
-TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers already read") {
+TEST_CASE("adsl: a Traffic payload is byte for byte the frame other receivers already read" *
+          doctest::test_suite("main")) {
     adsl::Traffic traffic;
     traffic.address = 0x2ABCDE;
     traffic.timestamp = 48;

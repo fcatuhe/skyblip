@@ -109,8 +109,8 @@ adsl::Packet status_beside_transponder(uint32_t aircraft_address, uint32_t heard
 
 }  // namespace
 
-TEST_CASE(
-    "ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version") {
+TEST_CASE("ADS-L.4.SRD860.G.2: a Status payload declares this device's bands, systems and version" *
+          doctest::test_suite("main")) {
     const adsl::Packet& packet = status_heard();
     CHECK(packet.payload_type == 3);
     CHECK(packet.address() == settings::address_of(platform::host::Identity::kSerial));
@@ -126,7 +126,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.1: the Status payload names the highest version th
 
 // The dwells hear 868.2 MHz from 450 to 822 ms and 868.4 MHz from 827 to 1000, of the direct slot's
 // 550.
-TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class") {
+TEST_CASE("ADS-L.4.SRD860.G.2.2: the Status payload declares the M-band dwell as a receive class" *
+          doctest::test_suite("main")) {
     CHECK(timing::Scheduler::direct_heard_permille() == (372 + 173) * 1000 / 1100);
     CHECK(status_field(wire::BitField{44, 2}) == 2);
 }
@@ -146,7 +147,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.5: the Status payload declares the ADS-L 4 Mobile 
 }
 
 // Bit 0 is the ALP-TAS wire this device decodes, bit 4 the ADS-B a paired Bravo hears.
-TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received") {
+TEST_CASE("ADS-L.4.SRD860.G.2.6: the Status payload declares which other systems are received" *
+          doctest::test_suite("main")) {
     CHECK(status_field(wire::BitField{52, 8}) == 0x01);
 
     comms::BravoState bravo = comms::BravoState::Unpaired;
@@ -168,7 +170,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.7: a Go with no Bravo declares no other system tra
 }
 
 // An identification Bravo heard from the entered address is an extended squitter, so ADS-B out.
-TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address identifies") {
+TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address identifies" *
+          doctest::test_suite("main")) {
     const adsl::Packet named = status_beside_transponder(kOwnTransponder, kOwnTransponder,
                                                          ",\"own_transponder_callsign\":\"FHBXA\"");
     CHECK(named.field(wire::BitField{60, 8}) == adsl::conspicuity::kAdsb1090);
@@ -182,7 +185,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.8: a Go with no Bravo declares no transponder, whi
 }
 
 // The pilot's entry of the address Bravo hears is what makes it ours, not a neighbour's.
-TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered address") {
+TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered address" *
+          doctest::test_suite("main")) {
     CHECK(status_beside_transponder(kOwnTransponder, kOwnTransponder, "")
               .field(wire::BitField{68, 2}) == 2);
     CHECK(status_beside_transponder(go::kAircraftAddressUnset, kOwnTransponder, "")
@@ -192,7 +196,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered
 }
 
 // Bravo names the aircraft's transponder on the ground only, and the aircraft keeps it in flight.
-TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays declared in flight") {
+TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays declared in flight" *
+          doctest::test_suite("main")) {
     Tango tango;
     confirm_on_ground(tango, kOwnTransponder, kOwnTransponder,
                       ",\"own_transponder_callsign\":\"FHBXA\"");
@@ -221,7 +226,8 @@ TEST_CASE("ADS-L.4.SRD860.G.2.10: the Status payload declares whether FIS-B is p
 // Twenty seconds from second to second, and the instant inside each one is the direct slot's own
 // draw.
 // Gaps alternate 11 and 9 s, so a receiver parked on one channel still hears one every 20 s.
-TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds") {
+TEST_CASE("ADS-L.4.SRD860.G.2.11: a Status payload goes out at least every 20 seconds" *
+          doctest::test_suite("main")) {
     constexpr uint64_t kSlotUs = (adsl::kDirectEndMs - adsl::kDirectStartMs) * 1000;
     for (const int speed_kt : {0, 50}) {
         CAPTURE(speed_kt);
@@ -269,7 +275,8 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target that is not an aircraft is refus
 }
 
 // Encoded 300 ms into a second, the timestamp names 250 ms, so the record is 10 s old at 10.250.
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn") {
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not drawn" *
+          doctest::test_suite("main")) {
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[2] = {target(0x300001), target(0x300002)};
     uint8_t packet[protocol::AdslUplink::kPacketBytes] = {0};
@@ -296,7 +303,8 @@ TEST_CASE("ADS-L.4.SRD860.G.3: a relayed record older than 10 seconds is not dra
 
 // What the ground station sends is the aircraft's own payload, so the climb and track a relay once
 // lost now arrive.
-TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload") {
+TEST_CASE("ADS-L.4.SRD860.G.3: a relayed target arrives with its whole Traffic payload" *
+          doctest::test_suite("main")) {
     protocol::AdslUplink uplink;
     model::AircraftObservation targets[1] = {target(0x300001)};
     targets[0].climb_valid = true;

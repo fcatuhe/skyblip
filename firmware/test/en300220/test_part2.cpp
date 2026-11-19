@@ -13,7 +13,8 @@
 using namespace skyblip;
 
 // Table 4, band M: 868.000 MHz to 868.600 MHz, 25 mW e.r.p., which is 13.98 dBm.
-TEST_CASE("EN 300 220-2 4.2.4: own-ship transmits inside band M, at no more than 25 mW e.r.p.") {
+TEST_CASE("EN 300 220-2 4.2.4: own-ship transmits inside band M, at no more than 25 mW e.r.p." *
+          doctest::test_suite("main")) {
     for (const uint32_t centre_hz : {adsl::kMBand0Hz, adsl::kMBand1Hz}) {
         CHECK(centre_hz - adsl::kMBandChannelBandwidthHz / 2 >= 868000000u);
         CHECK(centre_hz + adsl::kMBandChannelBandwidthHz / 2 <= 868600000u);
@@ -22,7 +23,8 @@ TEST_CASE("EN 300 220-2 4.2.4: own-ship transmits inside band M, at no more than
 }
 
 // 1 % of Tobs, an hour (4.4.3.2): the route this device declares, kept beside polite access.
-TEST_CASE("EN 300 220-2 4.4.3.3: the air time of any hour stays within band M's 1 % duty cycle") {
+TEST_CASE("EN 300 220-2 4.4.3.3: the air time of any hour stays within band M's 1 % duty cycle" *
+          doctest::test_suite("main")) {
     timing::AirTime air;
     CHECK(timing::AirTime::kWindowMs == 3600000u);
     CHECK(timing::AirTime::kBudgetMs == 36000u);
@@ -46,7 +48,8 @@ TEST_CASE("EN 300 220-2 4.4.3.3: the air time of any hour stays within band M's 
     CHECK(refused.over_budget);
 }
 
-TEST_CASE("EN 300 220-2 4.6.1.0: a held channel defers a burst, which goes once it clears") {
+TEST_CASE("EN 300 220-2 4.6.1.0: a held channel defers a burst, which goes once it clears" *
+          doctest::test_suite("main")) {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     simulator.world().set_fix(true);

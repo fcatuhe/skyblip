@@ -56,7 +56,8 @@ adsl::Packet traffic_packet() {
 }  // namespace
 
 // The clause is emphatic: a field nobody measured is transmitted as invalid, never as zero.
-TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted as invalid") {
+TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted as invalid" *
+          doctest::test_suite("main")) {
     model::Ownship own = flying();
     own.fix_valid = false;
     own.climb_valid = false;
@@ -69,7 +70,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1: a field with no valid information is transmitted 
 }
 
 // A burst at 613 ms named 500 while carrying the position to 613: 113 ms apart, 14 m at 120 kt.
-TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms") {
+TEST_CASE("ADS-L.4.SRD860.G.1.1: the instant the timestamp names is the position's, within 10 ms" *
+          doctest::test_suite("main")) {
     model::Ownship own = flying();
     own.utc_s = 1785628800;
     const int32_t into_utc_ms = 613;
@@ -125,7 +127,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airbo
 }
 
 // Our reading, put to EASA: with no ground speed to tell, a craft that can hover is Undefined.
-TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz") {
+TEST_CASE("ADS-L.4.SRD860.G.1.2: a paraglider standing still is Undefined, and goes at 1 Hz" *
+          doctest::test_suite("main")) {
     const auto flown = [](uint8_t category, uint8_t& state) {
         simulator::Simulator simulator;
         REQUIRE(simulator.setup() == Status::Ok);
@@ -180,7 +183,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.3: the aircraft category is five bits, and a glide
 }
 
 // Every type the panel offers is a G.1.3 code a person flies seated in, and goes out as that code.
-TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own code") {
+TEST_CASE("ADS-L.4.SRD860.G.1.3: every type a pilot picks goes out as its own code" *
+          doctest::test_suite("main")) {
     for (const go::AircraftType& type : go::kAircraftTypes) {
         CAPTURE(int(type.code));
         CHECK((type.code <= 10 || (type.code >= 15 && type.code <= 17)));
@@ -255,7 +259,8 @@ TEST_CASE(
 }
 
 // A 2D fix still reports a height, the last one the receiver solved, and it went out as valid.
-TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable") {
+TEST_CASE("ADS-L.4.SRD860.G.1.7: a 2D fix sends its position, and its altitude as unavailable" *
+          doctest::test_suite("main")) {
     model::Ownship own = flying();
     own.vdop_e2 = 0;
     adsl::Packet packet{};
@@ -312,7 +317,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a fix over 500 ms old at the top of the second
 // skyBlip reads "0.1 Hz (once every 10 seconds)" as an average: C.2.5 and the parity rule make it
 // 9 then 11 s.
 TEST_CASE(
-    "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart") {
+    "ADS-L.4.SRD860.G.1.16: on the ground Traffic averages exactly 0.1 Hz, 9 then 11 s apart" *
+    doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         CAPTURE(serial);
         timing::Transmitter tx;
