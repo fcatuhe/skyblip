@@ -29,6 +29,8 @@ That is 282 clauses. Bravo answers to equipage class A0, the class whose 100 tra
 
 A case is named `DO-260B <clause>: what holds`. `scripts/check_clauses.py` fails when a listed clause has no case in either half, when a case names a clause the list does not, and when a skipped case opens on none of the kinds below. Where the draft is fetched, it also checks each listed heading against it, so a typo in the list cannot stand in for a clause. CI runs it, and `scripts/test_check_clauses.py` checks the checker.
 
+[`docs/ADSB_CONFORMANCE.md`](../../../docs/ADSB_CONFORMANCE.md) puts both halves under the headings from `clauses.txt`. It lists the passing cases and the reason each skipped case makes no claim. `python3 scripts/conformance.py adsb` generates it from the host test run without the fetched draft. CI checks that it matches the suite.
+
 ## A gap is a skipped case
 
 As in the ADS-L suite, a clause the firmware does not meet is written as the clause requires and skipped over a `TODO:`. `build/skyblip_tests --no-skip --test-case="DO-260B*"` runs them all. The kinds are the ADS-L suite's, with one more:

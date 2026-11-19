@@ -6,7 +6,7 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 [`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) lists the main claims the firmware makes about itself, straight from the host test suite that checks them. It links one page per area of the tree, under [`docs/behavior/`](docs/behavior), with every claim beside the line of the test that checks it. It is generated, so it cannot describe a behavior that stopped being true.
 
-[`docs/ADSL_CONFORMANCE.md`](docs/ADSL_CONFORMANCE.md) is the ADS-L part of that index, put back in the specification's order: each clause of ADS-L 4 SRD-860 Issue 2 with the cases that check it and those skipped, and why. It is the test report the ADS-L declaration of conformity attaches, generated the same way.
+[`docs/ADSL_CONFORMANCE.md`](docs/ADSL_CONFORMANCE.md) lists each clause of ADS-L 4 SRD-860 Issue 2 in the specification's order, with the cases that pass and the reasons for skips. It is the test report the ADS-L declaration of conformity attaches. [`docs/ADSB_CONFORMANCE.md`](docs/ADSB_CONFORMANCE.md) reports the same evidence for the receive-side clauses of RTCA DO-260B draft 4.2 that the Bravo suite reads.
 
 [`docs/TUNING.md`](docs/TUNING.md) is the other half: every number that behavior is tuned by, with the line of source that justifies it. Also generated, from the constants themselves.
 
@@ -37,7 +37,7 @@ skyBlip runs on the LilyGO T-Echo: a T-Echo Plus, the reference board for the tr
 |---|---|
 | [`firmware/`](firmware) | the C++ tree: `core/`, `ui/`, `ports/`, the Zephyr platform, the host test suite, and the simulator's world |
 | [`server/`](server) | [skyblip.eu](https://skyblip.eu), public content and the device tools under `/briefing`, served by Rails on crooz |
-| `docs/`, `schemas/`, `scripts/`, `lib/` | the generated behavior and tuning indexes, the wire schemas, the build and release tooling and its Ruby logic |
+| `docs/`, `schemas/`, `scripts/`, `lib/` | the generated behavior and tuning indexes, the conformance reports, the wire schemas, and the build and release tooling and its Ruby logic |
 
 The firmware and the server share a tree so that a change in behavior and the page documenting it can land in one commit. They do not share a build: each has its own workflow, gated on the paths it owns. Firmware releases include the browser simulator runtime. Rails discovers releases through separate Turbo Frame requests, so publishing firmware does not redeploy the server.
 

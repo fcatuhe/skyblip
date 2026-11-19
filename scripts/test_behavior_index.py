@@ -209,7 +209,7 @@ class Writing(unittest.TestCase):
 
 
 class Subjects(unittest.TestCase):
-    # adsl_conformance.py renders the stack's own tests through it, so its output must not move.
+    # The ADS-L conformance report uses this format for the stack's own tests.
     def test_render_subjects_keeps_its_output(self):
         self.assertEqual(
             behavior_index.render_subjects(
