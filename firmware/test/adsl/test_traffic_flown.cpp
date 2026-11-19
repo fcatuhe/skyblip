@@ -118,8 +118,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: a backlog of old sentences at a cold start nev
     CHECK(check_every_position(simulator) >= 15);
 }
 
-// TODO: fc 18nov26 a receiver late by a second from power-up is unmeasured, until the PPS bench
-// item
+// TODO: fc 18nov26 a receiver a second late from power-up is unmeasured, until the PPS bench item
 TEST_CASE("ADS-L.4.SRD860.G.1.16: an L76K that delivers every solution a second late is refused" *
           doctest::skip()) {
     FAIL("unmeasured: no bench has shown the L76K delivers each solution within 250 ms of it");

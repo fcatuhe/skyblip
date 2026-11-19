@@ -8,8 +8,7 @@
 
 namespace skyblip::common {
 
-// INFO: fc 19nov26 ADS-L G.1.1 names a position's quarter and G.1.16 ages it to 500 ms: two a
-// second
+// INFO: fc 19nov26 ADS-L G.1.1 names a position's quarter, G.1.16 ages it to 500 ms: 2 Hz
 template <class Gnss, size_t N>
 constexpr bool solution_rate_serves(const comms::RadioProtocol (&protocols)[N],
                                     ports::SolutionRate rate) {

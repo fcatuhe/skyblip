@@ -190,8 +190,7 @@ class RadioService : public runtime::Service {
     bool held_for_b5_{false};
     uint32_t held_for_fix_s_{0};
     bool held_for_fix_{false};
-    // INFO: fc 19nov26 a position seen waiting for its fix, lost unless armed before its second
-    // ends
+    // INFO: fc 19nov26 a position waiting for its fix, lost unless armed before its second ends
     uint32_t fix_wanted_s_{0};
     bool fix_wanted_{false};
     uint32_t redrawn_s_{0};

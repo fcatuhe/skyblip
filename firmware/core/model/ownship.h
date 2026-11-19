@@ -44,8 +44,7 @@ struct Ownship {
     uint32_t fix_at_ms;
     // INFO: fc 18nov26 fix_at_ms mapped through an anchor a fix set, the dating positions trust
     bool fix_dated;
-    // INFO: fc 19nov26 when own-ship took that solution, which decides whether a position is
-    // redrawn
+    // INFO: fc 19nov26 when own-ship took that solution, which decides whether a position redraws
     uint32_t fix_in_hand_ms;
     // Horizontal dilution of precision in hundredths. Zero means the receiver
     // did not report it, which is not the same as a good one.

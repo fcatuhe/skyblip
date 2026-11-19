@@ -135,8 +135,7 @@ class L76k : public ports::Gnss {
     static constexpr uint8_t kSilentRoundsBeforeReset = 3;
     // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
     static constexpr uint32_t kResetHoldMs = 150;
-    // INFO: fc 19nov26 a part that refuses the asked rate or disobeys is retried for good, ever
-    // slower
+    // INFO: fc 19nov26 a part refusing the rate or disobeying is retried for good, ever slower
     static constexpr int kRecoveryBackoffSteps = 3;
     static constexpr uint32_t kRecoveryBackoffMs[kRecoveryBackoffSteps] = {10000, 30000, 60000};
 

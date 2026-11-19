@@ -63,8 +63,7 @@ inline void L76k::apply_rate(uint32_t interval_ms) {
     solution_period_ms = interval_ms;
 }
 
-// INFO: fc 18sep26 $PCAS03 fields are GGA,GLL,GSA,GSV,RMC,VTG and an empty one keeps its
-// setting
+// INFO: fc 18sep26 $PCAS03 fields are GGA,GLL,GSA,GSV,RMC,VTG, and an empty one keeps it
 inline void L76k::apply_sentence_set() {
     static constexpr int kGsaField = 2;
     static constexpr int kGsvField = 3;
