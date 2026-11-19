@@ -20,7 +20,7 @@ ADS-L 4 SRD-860 Issue 2, EASA's iConspicuity link, from the specification the de
 These are skyBlip's choices, built on this stack:
 
 - which aircraft categories announce G.1.2's Undefined rather than on ground, because no ground speed shows they have landed (`core/flight/state.*`, `announced_state()`)
-- own-ship as a Traffic payload: the extrapolation to the instant the timestamp names, which fields claim invalid without a fix, the VFOM taken from VDOP by G.1.14's model, and the velocity accuracy left at 0, unknown, because the receiver reports no velocity error (`core/protocol/adsl.*`)
+- own-ship as a Traffic payload: the extrapolation to the instant the timestamp names, which fields claim invalid without a fix, the VFOM taken from VDOP by G.1.14's model and left at 0, unknown, when the receiver gave no geoid separation, and the velocity accuracy left at 0, unknown, because the receiver reports no velocity error (`core/protocol/adsl.*`)
 - which second of ten a unit owns, the instant drawn inside the direct slot, where the Status goes, and the hour's air time declared as the channel-access route (`core/timing/transmit.*`, `core/timing/channel.*`)
 - the listen-before-talk §D.3 asks for, built on `media_access()`: the EN 300 220-1 parameters skyBlip declares, the deferral unit and its draw, the CCA threshold at this antenna (`core/timing/channel.*`), which packets it forces, what counts as the initial attempt, and how a deferred burst is re-armed (`products/skyblip_go/services/radio_access.cpp`), and the assessment in the executor (`hardware/platform/zephyr/rf.h`)
 - the address table 58 and the manufacturer prefix, and F.2.3's ICAO address under table 5 in their place while the pilot has set one (`core/settings/address.h`, `on_air()`), what the Go refuses as an inconsistent configuration (`products/skyblip_go/settings.*`), and airborne detection (`core/flight/state.*`)
@@ -59,7 +59,7 @@ Everything is in namespace `skyblip::adsl`.
 - `kAddressTableRandom` to `kAddressTableManufacturerLast`, `manufacturer_page_table()`, `kEmergencyNone`, `kUereCm`, `hfom_cm()`
 - `Packet` with `reset()`, the field accessors, `key_index()`, `data_bytes()`, `kStatusDataBytes`, `scramble()`, `descramble()`, `set_crc()`, `crc_ok()` and `correct()`, the free `receive()` and `receive_as_heard()`, and `kSyncWord`, `sync_word()`, `kFrameBytes`
 - `Traffic`, `Integrity`, `encode_traffic()`, `decode_traffic()`, `timestamp_code()`, `lowest_version()`, `issue2_category()`
-- `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `encode_status()`
+- `StatusReport`, `ReceiveClass`, `receive_class()`, `conspicuity::`, `Transponder`, `encode_status()`
 - `Uplink`, `UplinkStatistics`, `uplink_length()`, `uplink_payload_bytes()`, `uplink_record_current()`, `encode_o_band()`, `ReedSolomon255`
 - `status_max_version()`, `traffic_max_version()`, `close_client()`, `issue1_form()`, `kCloseHorizontalM`, `kCloseVerticalM`, `kCloseTcpaS`, `Packet::kMaxProtocolVersion`
 - `FlightState`, `state_from()`, `reduced_rate()`, `report_period_s()`
@@ -153,7 +153,7 @@ E.3.2 computes the parity over the network header and the scrambled data, prefix
 
 ## The conformance suite
 
-The specification is read clause by clause in two halves. `test/conformance/` holds the cases this component satisfies on its own, one file per subpart, and `firmware/test/adsl/` holds the cases that need skyBlip around it: the simulator, a product or the dwell map. `scripts/check_adsl_clauses.py` checks the two together: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one half, and every case names a real clause. `firmware/test/adsl/README.md` says how a case is named and what a skipped one means.
+The specification is read clause by clause in two halves. `test/conformance/` holds the cases this component satisfies on its own, one file per subpart, and `firmware/test/adsl/` holds the cases that need skyBlip around it: the simulator, a product or the dwell map. `scripts/check_adsl_clauses.py` checks the two together: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one half, and every case names a real clause. `firmware/test/adsl/README.md` says how a case is named and what a skipped one means. `docs/ADSL_CONFORMANCE.md` puts both halves back together, clause by clause in the specification's order, each case naming the half it belongs to.
 
 Where the specification prints code or a worked example, the test carries it rather than restating our answer: E.2's XXTEA and E.3.1's CRC-24 are transcribed from the clause and compared against `protocols/common/`, G.1.6's exponential encoder is implemented from the algorithm as written, and G.1.7 to G.1.9 assert the exact codes of the clauses' example tables. The G.1 case reads every field at the bit offsets of the payload table, so a field that moves by one bit fails there first.
 
