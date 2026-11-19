@@ -135,6 +135,10 @@ class L76k : public ports::Gnss {
     static constexpr uint8_t kSilentRoundsBeforeReset = 3;
     // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
     static constexpr uint32_t kResetHoldMs = 150;
+    // INFO: fc 19nov26 a part that refuses the asked rate or disobeys is retried for good, ever
+    // slower
+    static constexpr int kRecoveryBackoffSteps = 3;
+    static constexpr uint32_t kRecoveryBackoffMs[kRecoveryBackoffSteps] = {10000, 30000, 60000};
 
     // INFO: fc 13sep26 obedience is the sentence set | 18nov26 and, after 2 Hz, its cadence
     static constexpr uint32_t kVerifyWindowMs = 3000;
@@ -159,6 +163,12 @@ class L76k : public ports::Gnss {
     Cadence cadence() const { return cadence_; }
     uint32_t solution_period_ms() const;
     bool configured() const { return stage_ == ConfigStage::Ready; }
+    // INFO: fc 19nov26 ready at the rate the product asked, which the transmit gate reads
+    bool holds_rate() const {
+        return configured() &&
+               (solution_rate_ == ports::SolutionRate::Second || cadence_ == Cadence::Half);
+    }
+    uint32_t recoveries() const { return recoveries_; }
     bool degraded() const { return stage_ == ConfigStage::Degraded; }
 
     // Drain whatever the receiver has said into the parser. Returns true when
@@ -249,6 +259,9 @@ class L76k : public ports::Gnss {
     bool step_baud();
     void begin_reset(uint32_t now_ms);
     void hold_reset(uint32_t now_ms);
+    void recover(uint32_t now_ms);
+    uint32_t recovery_backoff_ms() const;
+    void retry_bring_up(uint32_t now_ms);
     void flush();
     void settle(uint32_t now_ms);
     void send_next(uint32_t now_ms);
@@ -294,7 +307,8 @@ class L76k : public ports::Gnss {
     int sequence_count_{kCommandCount};
     int next_command_{0};
     Cadence cadence_{Cadence::Second};
-    bool half_refused_{false};
+    uint32_t recoveries_{0};
+    int failed_rounds_{0};
     uint8_t rate_attempts_{0};
     uint32_t entered_ms_{0};
     uint32_t heard_ms_{0};

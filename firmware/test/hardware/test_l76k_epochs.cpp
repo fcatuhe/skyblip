@@ -100,8 +100,8 @@ TEST_CASE("l76k: a part solving every 200 ms is not taken for one solving on .00
     run(gnss, chip, 0, 60000);
 
     CHECK_FALSE(gnss.solving_half_seconds());
-    CHECK(gnss.configured());
-    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+    CHECK_FALSE(gnss.holds_rate());
+    CHECK(gnss.recoveries() >= 1);
 }
 
 // A part that took 2 Hz and then fell back, after a restart or on its own, is asked again.
@@ -119,19 +119,19 @@ TEST_CASE("l76k: a part that drifts off 2 Hz while ready is asked for it again")
     CHECK(gnss.solving_half_seconds());
 }
 
-// Left at 1 Hz, the part gets the whole 1 Hz configuration back, GSA every solution included.
-TEST_CASE("l76k: a part that will not solve at 2 Hz is stepped back to a whole 1 Hz set") {
+// The pinned case: a part refusing 2 Hz was put back on 1 Hz for good, where ADS-L loses most
+// bursts.
+TEST_CASE("l76k: a part that will not solve at 2 Hz is reset and asked again, never left at 1 Hz") {
     models::L76k chip;
     chip.refuses_fast_rate = true;
-    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    chip.reset_pin = 37;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip, &chip, 37);
 
-    run(gnss, chip, 0, 60000);
+    run(gnss, chip, 0, 180000);
 
-    CHECK(gnss.configured());
-    CHECK_FALSE(gnss.solving_half_seconds());
-    CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
-    CHECK(chip.gsa_every == 1);
-    CHECK(gnss.solution().fix_valid);
+    CHECK_FALSE(gnss.holds_rate());
+    CHECK(chip.hardware_resets >= 2);
+    CHECK(chip.sub_second_rate_asked > 2 * parts::L76k::kMaxConfigAttempts);
 }
 
 // The pinned case: no time read as off the quarters, and three tries left the part at 1 Hz for
@@ -156,17 +156,20 @@ TEST_CASE("l76k: a part that loses its time stays at 2 Hz, and its fix comes bac
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
 }
 
-// A refusal is for the session: the bench saw a part go silent once, so the rate is asked thrice.
-TEST_CASE("l76k: a part that refused 2 Hz is not asked for it again this session") {
+// A refusal is not for the session: the part is asked again after its backoff, until it takes 2 Hz.
+TEST_CASE(
+    "l76k: a part that refused 2 Hz is asked again, and solves twice a second once it takes it") {
     models::L76k chip;
     chip.fastest_interval_ms = parts::L76k::kFactorySolutionPeriodMs;
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, 30000);
+    REQUIRE(gnss.recoveries() == 1);
+    REQUIRE_FALSE(gnss.holds_rate());
 
-    run(gnss, chip, 0, 20 * 60000);
-
-    CHECK(chip.sub_second_rate_asked == parts::L76k::kMaxConfigAttempts);
-    CHECK(gnss.cadence() == parts::L76k::Cadence::Second);
-    CHECK(gnss.configured());
+    chip.fastest_interval_ms = 100;
+    run(gnss, chip, 30010, 90000);
+    CHECK(gnss.holds_rate());
+    CHECK(gnss.solving_half_seconds());
 }
 
 // The pinned case: a stalled pass drained two pairs and published neither, the newest included.

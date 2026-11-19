@@ -51,8 +51,9 @@ TEST_CASE("l76k: a part silent for three probe rounds has its RESET_N held low, 
     CHECK(gnss.cadence() == parts::L76k::Cadence::Half);
 }
 
-// A rate command that silences the part is not sent again, so a reset does not loop.
-TEST_CASE("l76k: a part that hangs on $PCAS02,500 is reset, and kept at 1 Hz") {
+// Quectel lists 500 ms, so a part it silences is a broken part: it is reset again and again,
+// loudly.
+TEST_CASE("l76k: a part that hangs on $PCAS02,500 is reset each time, never settled at 1 Hz") {
     models::L76k chip;
     chip.hangs_on_fast_rate = true;
     chip.reset_pin = kResetPin;
@@ -60,11 +61,9 @@ TEST_CASE("l76k: a part that hangs on $PCAS02,500 is reset, and kept at 1 Hz") {
 
     run(gnss, chip, 0, 120000);
 
-    CHECK(chip.sub_second_rate_asked == 1);
-    CHECK(chip.hardware_resets == 1);
-    CHECK(gnss.configured());
-    CHECK(gnss.cadence() == parts::L76k::Cadence::Second);
-    CHECK(gnss.solution().fix_valid);
+    CHECK(chip.sub_second_rate_asked >= 2);
+    CHECK(chip.hardware_resets >= 2);
+    CHECK_FALSE(gnss.holds_rate());
 }
 
 TEST_CASE("l76k: a silent part on a board with no reset line is probed for good, never reset") {
@@ -85,11 +84,12 @@ TEST_CASE("l76k: a degraded part that falls silent is probed too") {
     models::L76k chip;
     chip.accepts_commands = false;
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
-    run(gnss, chip, 0, 30000);
+    uint32_t now_ms = 0;
+    for (; now_ms < 30000 && !gnss.degraded(); now_ms += 10) run(gnss, chip, now_ms, now_ms);
     REQUIRE(gnss.degraded());
 
     chip.hung = true;
-    run(gnss, chip, 30010, 40000);
+    run(gnss, chip, now_ms, now_ms + parts::L76k::kSilenceMs + 500);
 
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Probing);
 }

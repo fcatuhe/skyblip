@@ -87,6 +87,8 @@ struct Diagnostics {
     uint32_t gnss_overruns{0};
     uint16_t gnss_solution_phase_ms{0};
     bool gnss_solution_phase_valid{false};
+    uint32_t gnss_recoveries{0};
+    bool gnss_recoveries_valid{false};
     // The constant-turn model own-ship is carried by, measured against the fix
     // that closed the interval (products/common/services/ownship.cpp). It belongs
     // to the fix stream that feeds it, which is why it reads out with the

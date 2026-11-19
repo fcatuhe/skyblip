@@ -95,6 +95,8 @@ class DiagnosticsCollector {
         snapshot.gnss_reject = gnss.last_reject();
         snapshot.gnss_rejected = gnss.rejected();
         snapshot.gnss_overruns = gnss.port_overruns();
+        snapshot.gnss_recoveries = gnss.recoveries();
+        snapshot.gnss_recoveries_valid = true;
         snapshot.gnss_solution_phase_ms = state.gnss.solution_phase_ms;
         snapshot.gnss_solution_phase_valid = state.gnss.solution_phase_valid;
 

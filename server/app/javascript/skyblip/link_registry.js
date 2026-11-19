@@ -999,6 +999,11 @@ export const LINK_REGISTRY = Object.freeze({
           "type": "unsigned"
         },
         {
+          "name": "receiver_recoveries",
+          "number": 92,
+          "type": "unsigned"
+        },
+        {
           "name": "link_drop_reason",
           "number": 94,
           "type": "unsigned"
@@ -1476,6 +1481,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "tx_redrawn_for_fix",
           "number": 91,
+          "type": "unsigned"
+        },
+        {
+          "name": "receiver_recoveries",
+          "number": 92,
           "type": "unsigned"
         },
         {

@@ -45,12 +45,16 @@ void L76k::start_rate(uint32_t now_ms) {
 void L76k::settle(uint32_t now_ms) {
     enter(ConfigStage::Ready, now_ms);
     begin_verify(now_ms);
+    if (holds_rate()) failed_rounds_ = 0;
 }
 
-// INFO: fc 19nov26 2 Hz refused thrice, or answered with silence, is not asked again until reboot
+// INFO: fc 19nov26 a product that asked 2 Hz never settles below it: a part off 115200 is recovered
 void L76k::seek_rate(uint32_t now_ms) {
-    if (solution_rate_ == ports::SolutionRate::Second || half_refused_) return;
-    if (cadence_ == Cadence::Half || baud_rate() != kTargetBaudRate) return;
+    if (solution_rate_ == ports::SolutionRate::Second || cadence_ == Cadence::Half) return;
+    if (baud_rate() != kTargetBaudRate) {
+        recover(now_ms);
+        return;
+    }
     rate_attempts_ = 1;
     start_rate(now_ms);
 }
@@ -81,7 +85,7 @@ void L76k::watch_cadence(uint32_t now_ms) {
     start_rate(now_ms);
 }
 
-// INFO: fc 19nov26 2 Hz refused thrice is the whole 1 Hz set put back
+// INFO: fc 19nov26 2 Hz refused thrice is a recovery: the part reset and configured again
 void L76k::rate_failed(uint32_t now_ms) {
     if (rate_attempts_ < kMaxConfigAttempts) {
         rate_attempts_++;
@@ -89,8 +93,7 @@ void L76k::rate_failed(uint32_t now_ms) {
         return;
     }
     rate_attempts_ = 1;
-    half_refused_ = true;
-    start_sequence(now_ms);
+    recover(now_ms);
 }
 
 // INFO: fc 19sep26 only a receiver that has just obeyed four $PCAS sentences is asked to move
@@ -144,7 +147,6 @@ void L76k::verify_failed(uint32_t now_ms) {
         rate_failed(now_ms);
         return;
     }
-    if (cadence_ != Cadence::Second) half_refused_ = true;
     // Two different failures wearing one face. A receiver that answered nothing
     // at all is a receiver we cannot hear, and the rate is the first suspect. A
     // receiver that is talking has the right rate and is simply not obeying, and
@@ -159,7 +161,7 @@ void L76k::verify_failed(uint32_t now_ms) {
         return;
     }
     if (attempts_ >= kMaxConfigAttempts) {
-        enter(ConfigStage::Degraded, now_ms);
+        recover(now_ms);
         return;
     }
     attempts_++;
@@ -236,7 +238,7 @@ void L76k::service(uint32_t now_ms) {
             if (now_ms - verify_start_ms_ < kVerifyWindowMs) break;
             adopt_baud(baud_before_raise_);
             raise_fallbacks_++;
-            enter(ConfigStage::Ready, now_ms);
+            settle(now_ms);
             break;
         case ConfigStage::Ready:
             if (silent(now_ms)) {
@@ -247,7 +249,11 @@ void L76k::service(uint32_t now_ms) {
             if (stage_ == ConfigStage::Ready && cadence_ != Cadence::Second) watch_cadence(now_ms);
             break;
         case ConfigStage::Degraded:
-            if (silent(now_ms)) start_probing(now_ms);
+            if (silent(now_ms)) {
+                start_probing(now_ms);
+                break;
+            }
+            if (now_ms - entered_ms_ >= recovery_backoff_ms()) retry_bring_up(now_ms);
             break;
         case ConfigStage::Probing: probe(now_ms); break;
         case ConfigStage::Resetting: hold_reset(now_ms); break;

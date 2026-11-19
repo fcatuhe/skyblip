@@ -139,7 +139,7 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
     parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
 
-    run(gnss, chip, 0, 30000);
+    run(gnss, chip, 0, 20000);
 
     // Every attempt wakes the receiver and asks it who it is before it starts
     // configuring, so an attempt is five sentences, not four.
@@ -149,8 +149,30 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     // baud rates here would throw away the sentences we do get.
     CHECK(chip.baud_changes == 0);
     CHECK(gnss.degraded());
+    CHECK(gnss.recoveries() == 1);
     CHECK_FALSE(gnss.configured());
     CHECK(gnss.sentences() > 0);  // it is talking, just not listening
+}
+
+// The pinned case: degraded was terminal, so a part that disobeyed once was left so until reboot.
+TEST_CASE("l76k: a degraded part is configured again after 10 s, 30 s, then every 60 s") {
+    models::L76k chip;
+    chip.accepts_commands = false;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    run(gnss, chip, 0, 20000);
+    REQUIRE(gnss.recoveries() == 1);
+
+    run(gnss, chip, 20010, 50000);
+    CHECK(gnss.recoveries() == 2);
+    run(gnss, chip, 50010, 120000);
+    CHECK(gnss.recoveries() == 3);
+    run(gnss, chip, 120010, 300000);
+    CHECK(gnss.recoveries() >= 5);
+    CHECK_FALSE(gnss.configured());
+
+    chip.accepts_commands = true;
+    run(gnss, chip, 300010, 420000);
+    CHECK(gnss.holds_rate());
 }
 
 TEST_CASE("l76k: a receiver that obeys is reported configured") {
@@ -187,7 +209,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
 TEST_CASE("l76k: a receiver that ignores the rate command is followed back down to 9600") {
     models::L76k chip;
     chip.refuses_baud_command = true;
-    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Second, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 3 * parts::L76k::kVerifyWindowMs);
 
@@ -205,7 +227,7 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
 // Without a rate port the receiver must be left where it boots, not asked to move alone.
 TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     models::L76k chip;
-    parts::L76k gnss(ports::SolutionRate::Half, chip);  // no rate port: io::FixedUartRate
+    parts::L76k gnss(ports::SolutionRate::Second, chip);  // no rate port: io::FixedUartRate
 
     run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
 
@@ -214,6 +236,19 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     CHECK(gnss.configured());
     CHECK(gnss.baud_raises() == 0);
     CHECK(chip.solution_period_ms == parts::L76k::kFactorySolutionPeriodMs);
+}
+
+// 2 Hz needs 115200 (V1.1 2.3.2), so a Go whose port stays at 9600 never settles there.
+TEST_CASE("l76k: asked for 2 Hz, a part held at 9600 is recovered, never settled at 1 Hz") {
+    models::L76k chip;
+    chip.refuses_baud_command = true;
+    parts::L76k gnss(ports::SolutionRate::Half, chip, chip);
+
+    run(gnss, chip, 0, 120000);
+
+    CHECK_FALSE(gnss.holds_rate());
+    CHECK(gnss.recoveries() >= 2);
+    CHECK(chip.sub_second_rate_asked == 0);
 }
 
 // I, row "Baud detection and recovery". A receiver that comes up at another rate

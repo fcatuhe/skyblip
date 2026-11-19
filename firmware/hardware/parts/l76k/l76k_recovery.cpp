@@ -2,6 +2,27 @@
 
 namespace skyblip::parts {
 
+// INFO: fc 19nov26 a part that will not take what the product asked waits, then starts again
+void L76k::recover(uint32_t now_ms) {
+    recoveries_++;
+    if (failed_rounds_ < kRecoveryBackoffSteps) failed_rounds_++;
+    enter(ConfigStage::Degraded, now_ms);
+}
+
+uint32_t L76k::recovery_backoff_ms() const {
+    return kRecoveryBackoffMs[failed_rounds_ == 0 ? 0 : failed_rounds_ - 1];
+}
+
+void L76k::retry_bring_up(uint32_t now_ms) {
+    if (reset_ != nullptr) {
+        begin_reset(now_ms);
+        return;
+    }
+    attempts_ = 1;
+    baud_tried_ = 1;
+    begin_wake(now_ms);
+}
+
 bool L76k::silent(uint32_t now_ms) const {
     return now_ms - heard_ms_ >= kSilenceMs && now_ms - entered_ms_ >= kSilenceMs;
 }
