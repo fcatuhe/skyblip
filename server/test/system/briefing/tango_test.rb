@@ -88,7 +88,7 @@ class Briefing::TangoTest < ApplicationSystemTestCase
       [ "Bravo 5C1D", "Bravo 3F2A", "Go+ 00012B", "Go 00012A" ].each do |name|
         page.execute_script("fakeFleet.pick = '#{name}'")
         find(".fleet-connect-new").click
-        assert_selector ".fleet-unit.is-linked", text: name
+        assert_on_unit name
       end
 
       within ".fleet--rail" do
@@ -107,9 +107,15 @@ class Briefing::TangoTest < ApplicationSystemTestCase
       connect_device
       page.execute_script("fakeFleet.pick = 'Bravo 5C1D'")
       find(".fleet-connect-new").click
-      assert_current_path "/briefing/devices/bravo-5c1d"
-      assert_selector ".fleet-unit.is-linked", text: "Bravo 5C1D"
+      assert_on_unit "Bravo 5C1D"
       find(".fleet-unit-link", text: "Go 00012A").click
-      assert_current_path "/briefing/devices/go-00012a"
+      assert_on_unit "Go 00012A"
+    end
+
+    # INFO: fc 19nov26 Turbo changes the address before it renders the page, and renders a cached preview first, so the test waits for the visit to end
+    def assert_on_unit(name)
+      assert_selector ".fleet-unit-link[aria-current=page]", text: name
+      assert_no_selector "html[aria-busy]", visible: :all
+      assert_selector ".unit-row", text: /is out|up to date|needs its firmware/, wait: 15
     end
 end
