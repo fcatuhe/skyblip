@@ -5,6 +5,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/atomic.h>
 
+#include "hardware/platform/zephyr/loop_wake.h"
+
 #if defined(CONFIG_NRFX_POWER)
 #include <hal/nrf_power.h>
 #include <nrfx_power.h>
@@ -65,9 +67,12 @@ class SupplyMonitor {
 
    private:
     // Interrupt context, on the shared POWER/CLOCK line. It does one atomic
-    // increment: the decision is core/power's and the pass that polls this is
-    // milliseconds away, which is the only budget a collapsing rail gives.
-    static void on_warning() { atomic_inc(&warnings_); }
+    // increment and wakes the loop: the decision is core/power's, and the pass it
+    // wakes is the only budget a collapsing rail gives.
+    static void on_warning() {
+        atomic_inc(&warnings_);
+        g_loop_wake.wake();
+    }
 
     static inline atomic_t warnings_ = 0;
     bool armed_{false};

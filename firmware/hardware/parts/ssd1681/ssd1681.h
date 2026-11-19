@@ -48,6 +48,7 @@ class Ssd1681 : public ports::Display {
     void present(const ui::Canvas& canvas, ports::Refresh mode, uint32_t now_ms) override;
     void paint_black(uint32_t now_ms) override;
     bool ready(uint32_t now_ms) override;
+    uint32_t ready_in_ms(uint32_t now_ms) const override;
     void power_off() override;
     void power_on() override { begin(); }
     void set_backlight(bool on) override;

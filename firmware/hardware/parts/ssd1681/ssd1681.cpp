@@ -153,6 +153,11 @@ bool Ssd1681::ready(uint32_t now_ms) {
     return true;
 }
 
+uint32_t Ssd1681::ready_in_ms(uint32_t now_ms) const {
+    const int32_t until_ms = static_cast<int32_t>(ready_at_ms_ - now_ms);
+    return refreshing_ && until_ms > 0 ? static_cast<uint32_t>(until_ms) : 0;
+}
+
 void Ssd1681::power_off() {
     if (refreshing_) abort_refresh();
     if (!wait_busy()) glass_known_ = false;

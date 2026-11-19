@@ -26,6 +26,13 @@ class FlightLogService : public runtime::Service {
 
     Status setup() override;
     void tick(uint32_t now_ms) override;
+    // INFO: fc 19nov26 flash work and a link read go a pass at a time, a fix wakes the rest
+    uint32_t due_in_ms(uint32_t now_ms) const override;
+
+    void erase(const events::Peer& asked_by) {
+        erase_peer_ = asked_by;
+        flights_.begin_erase();
+    }
 
     bool available() const { return flights_.available(); }
     bool recording() const { return session_.recording(); }

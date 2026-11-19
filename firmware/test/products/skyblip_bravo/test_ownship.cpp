@@ -38,7 +38,7 @@ TEST_CASE("bravo: a unit with no barometer flies, and never claims a pressure al
     BravoRig rig(
         ports::without(platform::host::MeshtrackerX1::kFullyFitted, ports::Capability::Barometer));
     REQUIRE(rig.setup() == Status::Ok);
-    CHECK(ports::has(rig.product.degraded(), ports::Capability::Barometer));
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::Barometer));
     rig.seconds_with_fix(3);
     CHECK_FALSE(rig.state().own.pressure_altitude_valid);
 }

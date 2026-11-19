@@ -15,7 +15,7 @@
 # .version line lands beside them.
 #
 #   SKYBLIP_CHANNEL     development (default): MCUboot takes any image signed by its key
-#                       production: products/<product>/release/ adds the refusal of an older one
+#                       production: products/common/release/ adds the refusal of an older one
 #   SKYBLIP_TREE        the checkout to build (default: the one holding this script)
 #   SKYBLIP_PRISTINE=1  throw the build directory away first
 #   PYTHON, WEST        default python3 and west
@@ -134,12 +134,12 @@ build_image() {
   echo "SB_CONFIG_BOOT_SIGNATURE_KEY_FILE=\"$(bootloader_key_files)\"" > "$conf/signing.conf"
   echo "CONFIG_MCUBOOT_IMGTOOL_SIGN_VERSION=\"$version\"" > "$conf/version.conf"
   # Passed every time, sysbuild/mcuboot.conf too: a -D replaces it, and a list left out stays cached.
-  local product_dir=$firmware/products/$product
+  local release=$firmware/products/common/release
   local app_conf=$conf/version.conf
-  local mcuboot_conf=$product_dir/sysbuild/mcuboot.conf
+  local mcuboot_conf=$firmware/products/$product/sysbuild/mcuboot.conf
   if [ "$channel" = production ]; then
-    app_conf="$app_conf;$product_dir/release/app.conf"
-    mcuboot_conf="$mcuboot_conf;$product_dir/release/mcuboot.conf"
+    app_conf="$app_conf;$release/app.conf"
+    mcuboot_conf="$mcuboot_conf;$release/mcuboot.conf"
   fi
 
   local hub_flag=()

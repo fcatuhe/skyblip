@@ -11,6 +11,7 @@ TEST_CASE("crc: crc32 known/stability") {
     const uint8_t message[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
     uint32_t first = crc32(message, 9);
     uint32_t second = crc32(message, 9);
+    CHECK(first == 0xCBF43926u);
     CHECK(first == second);
     uint8_t flipped_message[9];
     std::memcpy(flipped_message, message, 9);

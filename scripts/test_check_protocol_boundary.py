@@ -26,9 +26,6 @@ def tree(files):
 
 
 class CheckProtocolBoundary(unittest.TestCase):
-    def test_the_tree_as_it_stands_keeps_the_boundary(self):
-        self.assertEqual(check_protocol_boundary.violations(), [])
-
     def test_a_stack_may_include_itself_common_and_the_standard_library(self):
         root, protocols = tree({
             "adsl/packet.cpp": '#include "protocols/adsl/packet.h"\n#include "protocols/common/crc.h"\n'

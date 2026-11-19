@@ -15,16 +15,21 @@ bool lit_at(const Indication& indication, uint32_t into_cycle_ms) {
 
 }  // namespace
 
+uint32_t until_edge_ms(const Indication& indication, uint32_t into_cycle_ms) {
+    const uint32_t stride = static_cast<uint32_t>(indication.on_ms) + indication.between_ms;
+    uint32_t edge_ms = cycle_ms(indication);
+    for (uint32_t flash = indication.flashes; flash-- > 0;) {
+        const uint32_t starts_ms = flash * stride;
+        if (starts_ms + indication.on_ms > into_cycle_ms) edge_ms = starts_ms + indication.on_ms;
+        if (starts_ms > into_cycle_ms) edge_ms = starts_ms;
+    }
+    return edge_ms - into_cycle_ms;
+}
+
 const Indication& indication_for(Condition condition) {
     for (int i = 0; i < kRowCount; i++)
         if (kTable[i].condition == condition) return kTable[i].indication;
     return kTable[0].indication;
-}
-
-const char* meaning_of(Condition condition) {
-    for (int i = 0; i < kRowCount; i++)
-        if (kTable[i].condition == condition) return kTable[i].meaning;
-    return kTable[0].meaning;
 }
 
 const char* to_string(Condition condition) {
@@ -90,14 +95,23 @@ Command Policy::update(const Situation& situation, uint32_t now_ms,
     }
 
     const Indication& indication = indication_for(condition_);
-    const bool lit = indication.lamp != Colour::None && indication.on_ms != 0 &&
-                     lit_at(indication, into_cycle_ms(indication, now_ms, clock));
+    into_ms_ = into_cycle_ms(indication, now_ms, clock);
+    updated_ms_ = now_ms;
+    const bool lit =
+        indication.lamp != Colour::None && indication.on_ms != 0 && lit_at(indication, into_ms_);
 
     Command command{};
     command.lamp = lit ? indication.lamp : Colour::None;
     command.changed = command.lamp != shown_;
     shown_ = command.lamp;
     return command;
+}
+
+uint32_t Policy::until_change_ms(uint32_t now_ms) const {
+    const Indication& indication = indication_for(condition_);
+    const uint32_t cycle = cycle_ms(indication);
+    if (indication.lamp == Colour::None || indication.on_ms == 0 || cycle == 0) return UINT32_MAX;
+    return until_edge_ms(indication, (into_ms_ + (now_ms - updated_ms_)) % cycle);
 }
 
 // INFO: fc 12nov26 the grid is joined only where both phases are dark, so no flash is cut short

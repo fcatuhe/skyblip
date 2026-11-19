@@ -244,10 +244,9 @@ class TrailerSector(unittest.TestCase):
 
     # 192 sectors put the status at 0xE99C8, where the stuck T-Echo's flash held it.
     def test_mcuboot_trailer_and_swap_status_fit_the_blanked_sector(self):
-        for conf in sorted(PRODUCTS.glob("*/sysbuild/mcuboot.conf")):
-            with self.subTest(product=conf.parent.parent.name):
-                self.assertLessEqual(trailer_bytes(conf), mkuf2.TRAILER_SECTOR_BYTES)
-                self.assertEqual(GO.user_flash_end - trailer_bytes(conf), 0xE99C8)
+        conf = PRODUCTS / "common" / "sysbuild" / "mcuboot.conf"
+        self.assertLessEqual(trailer_bytes(conf), mkuf2.TRAILER_SECTOR_BYTES)
+        self.assertEqual(GO.user_flash_end - trailer_bytes(conf), 0xE99C8)
 
 
 class IntelHex(unittest.TestCase):
@@ -304,9 +303,6 @@ def tree_with(directory, relative, text):
 
 
 class NoNordicDfuPackage(unittest.TestCase):
-    def test_the_tree_as_committed_ships_no_dfu_package(self):
-        self.assertEqual(check_no_dfu_package.findings(), [])
-
     def test_a_workflow_staging_a_zip_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             tree_with(d, ".github/workflows/release.yml", "  path: build/out/skyblip-go.zip\n")

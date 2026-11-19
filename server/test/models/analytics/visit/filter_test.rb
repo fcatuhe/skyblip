@@ -50,6 +50,17 @@ class Analytics::Visit::FilterTest < ActiveSupport::TestCase
     assert_equal 1, filtered(entry: "/home").count
   end
 
+  test "outbound filter keeps the visits that clicked the link out" do
+    create_computed_visit("visit-1", "visitor-1", pages: [ "/buy" ])
+    create_computed_visit("visit-2", "visitor-2", pages: [ "/buy" ])
+    clicked = Ahoy::Visit.find_by!(visit_token: "visit-1")
+    Ahoy::Event.create!(name: "$click", time: clicked.started_at + 2.minutes, visit_id: clicked.id,
+                        properties: { "page" => "/buy", "href" => "https://link.amazon/B00EaKI0W" })
+
+    assert_equal [ clicked.id ], filtered(outbound: "https://link.amazon/B00EaKI0W").pluck(:ahoy_visit_id)
+    assert_equal 0, filtered(outbound: "https://link.amazon/B05es09aX").count
+  end
+
   # --- Unknown filters ---
 
   test "unknown entry matches visits with nil or blank entry path" do

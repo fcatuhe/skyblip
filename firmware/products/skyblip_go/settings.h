@@ -2,12 +2,6 @@
 // and the two framings it survives in: a versioned CRC blob for flash, CBOR for
 // the companion link. Validation is one function, so no path can store a value
 // another path would refuse.
-//
-// Every field here has a reader outside this module. A page that accepts a
-// setting the firmware ignores is worse than one that does not offer it, so a
-// field that loses its last reader leaves the struct, the link and the schema
-// together, and the blob layout is versioned so a device that stored the old
-// one still comes back up as itself.
 #ifndef SKYBLIP_PRODUCTS_SKYBLIP_GO_SETTINGS_H
 #define SKYBLIP_PRODUCTS_SKYBLIP_GO_SETTINGS_H
 
