@@ -64,58 +64,23 @@ struct Row {
     Condition condition;
     Indication indication;
     Budget budget;
-    // One line, in the words a support call uses. Never null.
-    const char* meaning;
 };
 
 constexpr int kRowCount = static_cast<int>(Condition::Count);
 
 inline constexpr Row kTable[kRowCount] = {
-    {Condition::Off, {Colour::None, 0, 0}, Budget::Dark, "dark: off, or on its way down"},
-    {Condition::Alarm,
-     {Colour::Red, 50, 150},
-     Budget::Transient,
-     "red, fast flicker: a traffic advisory stands"},
-    {Condition::Prompt,
-     {Colour::Green, 60, 190},
-     Budget::Transient,
-     "green, fast blink: a phone asks, one press allows"},
-    {Condition::Pairing,
-     {Colour::Blue, 60, 190},
-     Budget::Transient,
-     "blue, fast blink: a skyBlip Go asks to pair, one press pairs"},
-    {Condition::Critical,
-     {Colour::Red, 60, 540},
-     Budget::Transient,
-     "red, blinking every 600 ms: cell critical, land and charge"},
-    {Condition::Low,
-     {Colour::Red, 30, 2970},
-     Budget::Steady,
-     "red, one wink every 3 s: cell low, past the knee and into the last of its charge"},
-    {Condition::NoFixCapturing,
-     {Colour::Blue, 30, 2790, 2, 150},
-     Budget::Steady,
-     "blue, two winks every 3 s: a diagnostics capture is armed, no GNSS fix yet"},
-    {Condition::AliveCapturing,
-     {Colour::Green, 30, 2790, 2, 150},
-     Budget::Steady,
-     "green, two winks every 3 s: a diagnostics capture is armed, fix valid"},
-    {Condition::NoFixLinked,
-     {Colour::Blue, 30, 1470},
-     Budget::Steady,
-     "blue, one wink every 1.5 s: a phone is connected, no GNSS fix yet"},
-    {Condition::AliveLinked,
-     {Colour::Green, 30, 1470},
-     Budget::Steady,
-     "green, one wink every 1.5 s: a phone is connected, fix valid"},
-    {Condition::NoFix,
-     {Colour::Blue, 30, 2970},
-     Budget::Steady,
-     "blue, one wink every 3 s: running, no GNSS fix yet"},
-    {Condition::Alive,
-     {Colour::Green, 30, 2970},
-     Budget::Steady,
-     "green, one wink every 3 s: running, fix valid"},
+    {Condition::Off, {Colour::None, 0, 0}, Budget::Dark},
+    {Condition::Alarm, {Colour::Red, 50, 150}, Budget::Transient},
+    {Condition::Prompt, {Colour::Green, 60, 190}, Budget::Transient},
+    {Condition::Pairing, {Colour::Blue, 60, 190}, Budget::Transient},
+    {Condition::Critical, {Colour::Red, 60, 540}, Budget::Transient},
+    {Condition::Low, {Colour::Red, 30, 2970}, Budget::Steady},
+    {Condition::NoFixCapturing, {Colour::Blue, 30, 2790, 2, 150}, Budget::Steady},
+    {Condition::AliveCapturing, {Colour::Green, 30, 2790, 2, 150}, Budget::Steady},
+    {Condition::NoFixLinked, {Colour::Blue, 30, 1470}, Budget::Steady},
+    {Condition::AliveLinked, {Colour::Green, 30, 1470}, Budget::Steady},
+    {Condition::NoFix, {Colour::Blue, 30, 2970}, Budget::Steady},
+    {Condition::Alive, {Colour::Green, 30, 2970}, Budget::Steady},
 };
 
 constexpr uint32_t cycle_ms(const Indication& indication) {
@@ -211,9 +176,6 @@ static_assert(every_cycle_divides_the_minute(), "a row whose flashes drift off s
 const Indication& indication_for(Condition condition);
 const char* to_string(Condition condition);
 const char* to_string(Colour colour);
-// The line support reads. Same string the table carries; a second accessor so a
-// caller that has a condition and no table does not go looking for one.
-const char* meaning_of(Condition condition);
 
 // Everything the decision depends on, gathered by the one service that owns the
 // indicator and passed in whole. Every field is already published on bus::State
