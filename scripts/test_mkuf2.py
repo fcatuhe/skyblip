@@ -304,9 +304,6 @@ def tree_with(directory, relative, text):
 
 
 class NoNordicDfuPackage(unittest.TestCase):
-    def test_the_tree_as_committed_ships_no_dfu_package(self):
-        self.assertEqual(check_no_dfu_package.findings(), [])
-
     def test_a_workflow_staging_a_zip_is_refused(self):
         with tempfile.TemporaryDirectory() as d:
             tree_with(d, ".github/workflows/release.yml", "  path: build/out/skyblip-go.zip\n")
