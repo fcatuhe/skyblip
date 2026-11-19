@@ -52,12 +52,13 @@ class Queue {
 
 // INFO: fc 11nov26 only Bravo hears 1090 MHz, so the queue is a type and its product holds it
 using AdsbQueue = Queue<events::AdsbFrame, events::kAdsbQueueFrames>;
+using RfQueue = Queue<events::RfEvent, 8>;
+using CentralQueue = Queue<events::CentralEvent, 8>;
+using AccelerometerQueue = Queue<events::AccelerometerSample, 2>;
 
 struct Bus {
     Queue<gnss::GnssSolution, 2> gnss;
     Queue<events::BarometerSample, 2> barometer;
-    Queue<events::AccelerometerSample, 2> accelerometer;
-    Queue<events::RfEvent, 8> rf;
     // The connection itself, ahead of the bytes that travel over it: the config
     // service is the single reader, because it is the one that holds what a link
     // being up or gone means (a standing prompt, an upload window, the gauge it
@@ -69,10 +70,16 @@ struct Bus {
     // by the wrong service.
     Queue<events::RxFrame, 2> log_rx;
     // INFO: fc 11nov26 the peer endpoint: the Go's BravoService drains it, and Bravo's PeerService
-    Queue<events::CentralEvent, 8> central_events;
     Queue<events::RxFrame, 4> peer_rx;
     Queue<events::ContactEvent, 8> input;
     Queue<events::BatterySample, 2> battery;
+};
+
+// INFO: fc 19nov26 the Go's SX1262, central and IMU: Bravo has none of them, so it holds no slot
+struct GoBus : Bus {
+    RfQueue rf;
+    CentralQueue central_events;
+    AccelerometerQueue accelerometer;
 };
 
 }  // namespace skyblip::bus

@@ -35,7 +35,7 @@ struct ScreenRig {
         clock,          null.rf,        null.link,        epd,  // epd fills Display
         null.key_value, null.log_flash, null.annunciator, null.dfu, null.die_temperature,
         null.indicator, null.gnss,      identity,         random};
-    bus::Bus bus{};
+    bus::GoBus bus{};
     bus::State state{};
     diagnostics::Recorder recorder{};
     runtime::Context context{roles, bus, state, recorder};
@@ -49,7 +49,8 @@ struct ScreenRig {
     common::RecordStore flights_store{pool, store::SectorOwner::Flights};
     go::CaptureSettings capture_settings{settings};
     common::CaptureService capture{context, capture_store, flights_store, capture_settings, config};
-    go::BravoService bravo{context, settings, config, null.central, alarm_service};
+    go::BravoService bravo{context,      settings,           config,
+                           null.central, bus.central_events, alarm_service};
     go::ScreenService screen{context, settings, config, alarm_service, self_test, bravo};
 
     ScreenRig() {

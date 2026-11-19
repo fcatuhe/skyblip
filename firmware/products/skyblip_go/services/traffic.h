@@ -24,8 +24,8 @@ namespace skyblip::go {
 // never shown.
 class TrafficService : public runtime::Service {
    public:
-    TrafficService(runtime::Context& context, common::TrafficSettings settings)
-        : runtime::Service(context), settings_(settings) {}
+    TrafficService(runtime::Context& context, bus::RfQueue& rf, common::TrafficSettings settings)
+        : runtime::Service(context), rf_(rf), settings_(settings) {}
 
     void tick(uint32_t now_ms) override;
 
@@ -50,6 +50,7 @@ class TrafficService : public runtime::Service {
 
     protocol::AdslUplink uplink_codec_{};
     protocol::AlptasReceiver alptas_receiver_{};
+    bus::RfQueue& rf_;
     common::TrafficSettings settings_;
 };
 

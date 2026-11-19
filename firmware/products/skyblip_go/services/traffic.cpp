@@ -33,7 +33,7 @@ void TrafficService::tick(uint32_t now_ms) {
                                            context_.state.activation.address().value_or(0));
     context_.state.traffic.set_aircraft_address(settings_.aircraft_address);
     events::RfEvent event{};
-    while (context_.bus.rf.pop(event)) {
+    while (rf_.pop(event)) {
         switch (event.type) {
             case events::RfEventType::RxDone: on_frame(event, now_ms); break;
             case events::RfEventType::CrcError:

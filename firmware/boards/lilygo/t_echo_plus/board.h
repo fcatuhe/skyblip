@@ -48,7 +48,7 @@ static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
 template <class Platform>
 class TEchoPlus {
    public:
-    TEchoPlus(Platform& platform, bus::Bus& bus)
+    TEchoPlus(Platform& platform, bus::GoBus& bus)
         : platform_(platform),
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
@@ -462,7 +462,7 @@ class TEchoPlus {
     static constexpr uint32_t kImuImageStepsPerPass = 8;
 
     Platform& platform_;
-    bus::Bus& bus_;
+    bus::GoBus& bus_;
     parts::Sx1262 radio_;
     parts::Ssd1681 display_;
     parts::L76k gnss_;

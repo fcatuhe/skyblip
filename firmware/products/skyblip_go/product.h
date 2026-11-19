@@ -127,7 +127,7 @@ class Product {
     bool may_feed_watchdog(uint32_t now_ms) const { return shell_.may_feed_watchdog(now_ms); }
 
     Board& board() { return board_; }
-    bus::Bus& bus() { return bus_; }
+    bus::GoBus& bus() { return bus_; }
     bus::State& state() { return state_; }
     Settings& settings() { return settings_; }
     const Settings& settings() const { return settings_; }
@@ -272,7 +272,7 @@ class Product {
         state_.rf.dwell = timing::DwellPhase{};
     }
 
-    bus::Bus bus_{};
+    bus::GoBus bus_{};
     bus::State state_{};
     diagnostics::Recorder diagnostics_{};
     Settings settings_{};
@@ -294,16 +294,17 @@ class Product {
     common::ConfigLinkService config_link_{
         context_,     settings_store_,          power_.cutoff_monitor(),
         "skyBlip Go", identity::bluetooth_name, dfu::Product::Go};
-    common::OwnshipService ownship_{context_, settings_.aircraft_type};
+    common::OwnshipService ownship_{context_, settings_.aircraft_type, &bus_.accelerometer};
     RadioService radio_{context_, settings_};
-    TrafficService traffic_{context_, settings_.aircraft_address};
+    TrafficService traffic_{context_, bus_.rf, settings_.aircraft_address};
     common::AlarmService alarm_{context_, common::AlarmSettings{settings_.alarm}};
     common::NmeaService nmea_{context_, config_link_.config()};
     common::FlightLogService flight_log_{context_, flights_store_, &capture_store_,
                                          config_link_.config()};
     common::CaptureService capture_{context_, capture_store_, flights_store_, capture_settings_,
                                     config_link_.config()};
-    BravoService bravo_{context_, settings_, config_link_.config(), board_.central(), alarm_};
+    BravoService bravo_{context_,         settings_,           config_link_.config(),
+                        board_.central(), bus_.central_events, alarm_};
     ScreenService screen_{context_, settings_,           config_link_.config(),
                           alarm_,   self_test_snapshot_, bravo_};
 

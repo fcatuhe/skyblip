@@ -19,7 +19,7 @@ namespace skyblip::platform::host {
 // deadlines are therefore testable to the microsecond with no hardware.
 class Rf : public ports::Rf {
    public:
-    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
+    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::RfQueue& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
@@ -334,7 +334,7 @@ class Rf : public ports::Rf {
 
     parts::Sx1262& radio_;
     ports::Clock& clock_;
-    bus::Queue<events::RfEvent, 8>& out_;
+    bus::RfQueue& out_;
     ports::RfPlan flying_plan_{};
     ports::RfPlan queued_plan_{};
     ports::RfBursts flying_bursts_{};

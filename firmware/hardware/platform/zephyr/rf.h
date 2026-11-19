@@ -45,7 +45,7 @@ class Rf : public ports::Rf {
     // INFO: fc 03oct26 two RTC ticks: at most 17 status reads a burst, none outside its tail
     static constexpr uint64_t kTxTailPollUs = 60;
 
-    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::Queue<events::RfEvent, 8>& out)
+    Rf(parts::Sx1262& radio, ports::Clock& clock, bus::RfQueue& out)
         : radio_(radio), clock_(clock), out_(out) {}
 
     Status begin() override {
@@ -427,7 +427,7 @@ class Rf : public ports::Rf {
 
     parts::Sx1262& radio_;
     ports::Clock& clock_;
-    bus::Queue<events::RfEvent, 8>& out_;
+    bus::RfQueue& out_;
     RfMailbox mailbox_{};
     ports::RfCarrier carrier_{};
     ports::RfSwitching switching_{};

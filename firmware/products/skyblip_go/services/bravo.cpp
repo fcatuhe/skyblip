@@ -55,7 +55,7 @@ void BravoService::tick(uint32_t now_ms) {
     if (const std::optional<uint16_t> tag = config_.take_pair_request()) pair_with(*tag, now_ms);
     if (seek_due_ && !leaving_) seek(now_ms);
     events::CentralEvent event{};
-    while (context_.bus.central_events.pop(event)) take_event(event, now_ms);
+    while (central_events_.pop(event)) take_event(event, now_ms);
     events::RxFrame frame{};
     while (context_.bus.peer_rx.pop(frame)) take_frame(frame, now_ms);
 

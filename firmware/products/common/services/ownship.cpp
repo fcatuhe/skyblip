@@ -31,7 +31,8 @@ void OwnshipService::tick(uint32_t now_ms) {
     while (context_.bus.barometer.pop(sample)) apply_barometer(sample, now_ms);
 
     events::AccelerometerSample specific_force{};
-    while (context_.bus.accelerometer.pop(specific_force)) apply_accelerometer(specific_force);
+    while (accelerometer_ != nullptr && accelerometer_->pop(specific_force))
+        apply_accelerometer(specific_force);
     publish_inertial(now_ms);
     record_motion(now_ms);
     record_pps(now_ms);
