@@ -27,6 +27,13 @@ int Transmitter::last_instant(Payload payload, int slot) {
     return last_instant_ms(window_of(payload, slot), kAirTimeMs * 1000);
 }
 
+// INFO: fc 19nov26 C.5 on a held second: an instant nearer its window's edges than the drift waits
+bool Transmitter::clear_of_drift(Payload payload, int slot, int at_ms, int drift_ms) {
+    if (drift_ms == 0) return true;
+    return at_ms >= window_of(payload, slot).start_ms + drift_ms &&
+           at_ms <= last_instant(payload, slot) - drift_ms;
+}
+
 // INFO: fc 13nov26 one hash round more for a Status, two for a name, so no two bursts share a draw
 int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
     uint32_t drawn = hash(address_ ^ hash(utc_s));
@@ -177,6 +184,7 @@ Transmitter::Attempt Transmitter::attempt(const SlotPlan& plan, uint32_t utc_s, 
         return attempt;
     }
     const int at_ms = instant.value_or(drawn_ms);
+    if (!clear_of_drift(payload, dwell_slot, at_ms, plan.drift_ms)) return attempt;
     attempt.redrawn = late;
 
     if (!air_time_.may_spend(now_ms, kAirTimeMs)) {

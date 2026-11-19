@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <optional>
 
+#include "core/gnss/nmea.h"
 #include "core/model/band.h"
 #include "protocols/adsl/physical.h"
 #include "protocols/adsl/transmit.h"
@@ -57,6 +58,15 @@ static_assert(switched(kUplinkWindowMs, kWindowAMs) && switched(kWindowAMs, kWin
 
 constexpr uint32_t kPpsHoldoverMs = 60000;
 
+// INFO: fc 19nov26 the bench read the radio clock 152 ppm off PPS: 9 ms over the holdover
+constexpr uint32_t kRadioClockDriftCeilingPpm = 152;
+
+constexpr int drift_ms_after(uint32_t held_ms) {
+    return static_cast<int>((uint64_t{held_ms} * kRadioClockDriftCeilingPpm + 999999) / 1000000);
+}
+static_assert(drift_ms_after(kPpsHoldoverMs) <= gnss::kStampToleranceMs,
+              "a second held through the whole holdover stays inside G.1.1's 10 ms");
+
 // One name for the band, spelled where a received burst can carry it.
 using model::Band;
 
@@ -90,8 +100,14 @@ constexpr uint64_t since_edge_us(uint64_t edge_us, uint64_t now_us) {
     return now_us > edge_us ? now_us - edge_us : 0;
 }
 
-// Unlocked since an edge recent enough that the slot map still flies on it, receive only.
+// INFO: fc 19nov26 unlocked since an edge recent enough that the slot map still flies on it
 bool in_pps_holdover(const ClockState& clock);
+
+// INFO: fc 19nov26 C.5 and G.1.1: the second is the latched edge, or the last one held
+bool pps_anchored(const ClockState& clock);
+
+// INFO: fc 19nov26 how far a held second may have drifted, none while the edge is latched
+int holdover_drift_ms(const ClockState& clock);
 
 // INFO: fc 12nov26 UTC to the millisecond, none without a PPS lock and a dated second
 std::optional<uint64_t> utc_ms(const ClockState& clock);
@@ -105,6 +121,8 @@ struct SlotPlan {
     int end_ms{0};
     bool tx_allowed{false};
     bool listen_only{true};
+    // INFO: fc 19nov26 C.5: a burst keeps this far inside its window, the held second's drift
+    int drift_ms{0};
 };
 
 class Scheduler {

@@ -253,6 +253,29 @@ TEST_CASE("transmit: own-ship with every fact but an address does not go on air"
     CHECK_FALSE(ownship_transmits(own, anchored(), std::nullopt));
 }
 
+// C.5 on a held second: the bench's drift never carries a burst out of its window.
+TEST_CASE("transmit: on a held second a burst keeps the drift away from its window's edges") {
+    const ClockState held{true, false, kPpsHoldoverMs, 12'000'000};
+    REQUIRE(holdover_drift_ms(held) == 10);
+    int refused = 0;
+    for (uint32_t utc_s = 1000; utc_s < 3000; utc_s++) {
+        const int slot = Transmitter::slot_in(utc_s);
+        const int phase = slot == 0 ? 500 : 900;
+        const Transmitter::Attempt locked = airborne_transmitter().attempt(
+            Scheduler::plan(phase, anchored()), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd);
+        const Transmitter::Attempt kept = airborne_transmitter().attempt(
+            Scheduler::plan(phase, held), utc_s, utc_s * 1000, true, kFixSolvedAtSecondEnd);
+        REQUIRE(locked.go);
+        const int first = Transmitter::window_of(Transmitter::Payload::Position, slot).start_ms;
+        const int last = Transmitter::last_instant(Transmitter::Payload::Position, slot);
+        const bool clear = locked.at_ms >= first + 10 && locked.at_ms <= last - 10;
+        CHECK(kept.go == clear);
+        if (kept.go) CHECK(kept.at_ms == locked.at_ms);
+        if (!clear) refused++;
+    }
+    CHECK(refused > 0);
+}
+
 // A transmitter at twice the design rate is faulted, and a faulted one that will not stop is worse.
 TEST_CASE("transmit: an exhausted hour blocks the burst and says so") {
     Transmitter transmitter = airborne_transmitter();

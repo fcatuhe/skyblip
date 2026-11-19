@@ -17,7 +17,7 @@ namespace skyblip::timing {
 inline bool ownship_transmits(const model::Ownship& own, const ClockState& clock,
                               const settings::AirAddress& address) {
     return address && own.fix_valid && own.utc_valid && own.tx_settled && clock.utc_valid &&
-           clock.pps_locked;
+           pps_anchored(clock);
 }
 
 class Transmitter {
@@ -95,6 +95,7 @@ class Transmitter {
     // INFO: fc 17nov26 the dwell's window cut to the direct slot, or past it for the name
     static Window window_of(Payload payload, int slot);
     static int last_instant(Payload payload, int slot);
+    static bool clear_of_drift(Payload payload, int slot, int at_ms, int drift_ms);
     // INFO: fc 13nov26 the turn utc_s acts for: its own, or the one a retry in it is for
     uint32_t turn_of(Payload payload, uint32_t utc_s, bool airborne) const;
     // INFO: fc 14nov26 EN 300 220-1 5.21.3.2 3): a deferral's draw, hashed from address and instant

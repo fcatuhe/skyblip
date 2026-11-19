@@ -26,13 +26,11 @@ SlotPlan anchored_plan(int phase_ms) {
     return scheduler.plan(phase_ms, clock);
 }
 
-// The same second with no PPS lock but a believed UTC: the map still runs, the
-// dwells are still armed, and nothing goes on air.
-SlotPlan holdover_plan(int phase_ms) {
+// INFO: fc 19nov26 a lock but no UTC: the dwells are armed and nothing goes on air
+SlotPlan undated_plan(int phase_ms) {
     ClockState clock{};
-    clock.utc_valid = true;
-    clock.pps_locked = false;
-    clock.since_edge_ms = 10000;
+    clock.utc_valid = false;
+    clock.pps_locked = true;
     clock.pps_edge_us = 12'000'000;
     Scheduler scheduler{};
     return scheduler.plan(phase_ms, clock);
@@ -44,8 +42,8 @@ bool free_at(int phase_ms) {
                                        DurableWriteWindow::kWorstWriteMs);
 }
 
-bool free_in_holdover_at(int phase_ms) {
-    return DurableWriteWindow::free_at(holdover_plan(phase_ms), phase_ms,
+bool free_undated_at(int phase_ms) {
+    return DurableWriteWindow::free_at(undated_plan(phase_ms), phase_ms,
                                        DurableWriteWindow::kWorstWriteMs);
 }
 
@@ -125,17 +123,17 @@ TEST_CASE("durable write: slot 0's head is refused because the direct slot follo
     for (int phase = adsl::kDirectStartMs; phase < 1000; phase++) CHECK_FALSE(free_at(phase));
 }
 
-// With no lock there is no transmission, so slot 1's body is genuinely free -
+// With no UTC there is no transmission, so slot 1's body is genuinely free -
 // except for the phases where the write would still be running when the top of the
 // second arrives. That edge is timestamped inside the GPIO callback
 // (hardware/platform/zephyr/pps.h), so a stall that spans it does not delay one
 // dwell: it moves the anchor under every dwell that follows.
 TEST_CASE("durable write: a write is never allowed to span the top of the second") {
-    CHECK(free_in_holdover_at(dwell_of(kWindowBMs).start_ms));
+    CHECK(free_undated_at(dwell_of(kWindowBMs).start_ms));
     // 904 is the last phase whose write still finishes a whole guard before the
     // edge: 904 + 91 = 995, and the guard runs to 1000 exactly.
-    CHECK(free_in_holdover_at(904));
-    for (int phase = 905; phase < 1000; phase++) CHECK_FALSE(free_in_holdover_at(phase));
+    CHECK(free_undated_at(904));
+    for (int phase = 905; phase < 1000; phase++) CHECK_FALSE(free_undated_at(phase));
 }
 
 TEST_CASE("durable write: nothing pending is not a decision to make") {

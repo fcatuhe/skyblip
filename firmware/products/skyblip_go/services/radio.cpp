@@ -100,7 +100,7 @@ int RadioService::phase_ms() const { return phase_at(pass_us_); }
 
 int RadioService::phase_at(uint64_t now_us) const {
     const timing::ClockState& clock = context_.state.clock;
-    if (clock.pps_locked && now_us >= clock.pps_edge_us)
+    if (timing::pps_anchored(clock) && now_us >= clock.pps_edge_us)
         return static_cast<int>((now_us - clock.pps_edge_us) / 1000 % 1000);
     return static_cast<int>(now_us / 1000 % 1000);
 }
@@ -110,7 +110,7 @@ int RadioService::phase_at(uint64_t now_us) const {
 int64_t RadioService::second_origin_us() const {
     const timing::ClockState& clock = context_.state.clock;
     const uint64_t now_us = pass_us_;
-    if (clock.pps_locked && now_us >= clock.pps_edge_us)
+    if (timing::pps_anchored(clock) && now_us >= clock.pps_edge_us)
         return static_cast<int64_t>(clock.pps_edge_us +
                                     (now_us - clock.pps_edge_us) / kSecondUs * kSecondUs);
     return static_cast<int64_t>(now_us - now_us % kSecondUs);

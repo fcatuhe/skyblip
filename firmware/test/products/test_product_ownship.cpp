@@ -243,13 +243,12 @@ TEST_CASE("product: the PPS edge on the bus is the edge itself, to the microseco
         12345678u - static_cast<uint64_t>(rig.state().clock.since_edge_ms) * 1000;
     CHECK(rebuilt - rig.state().clock.pps_edge_us == 678u);
 
-    // No lock, no edge: a stale instant is worse than none, because the phase
-    // it implies is a plausible one.
     rig.platform.pps().set_locked(false);
     rig.platform.clock().set_microseconds(13345678);
     rig.product.run_pass(13345);
     CHECK_FALSE(rig.state().clock.pps_locked);
-    CHECK(rig.state().clock.pps_edge_us == 0u);
+    CHECK(rig.state().clock.pps_edge_us == 12000000u);
+    CHECK(rig.state().clock.since_edge_ms == 1345u);
 }
 
 TEST_CASE("product: the first fix is announced once, then own-ship settles before it flies") {
