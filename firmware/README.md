@@ -136,7 +136,7 @@ TEST_CASE("button: a stable press emits exactly one event" * doctest::test_suite
 | Tier | What it covers |
 |---|---|
 | main | what the device does when used as intended, which a pilot, a reviewer or a declaration of conformity relies on: what goes on air and when, what is received and shown, what an alarm means, what the screen and the controls do, what activation, update, pairing and settings do, and the rules a standard imposes on what the device sends. State it as a user or a reviewer would recognize it |
-| edge case or detail | refusals of malformed input, boundaries and saturation, clock and counter wraps, failure and recovery paths, regressions found by fuzzing, internal mechanics, formatting details and harness checks |
+| edge case or detail | refusals of malformed input that a pilot never sees, that change nothing on air and that no standard requires, boundaries and saturation, clock and counter wraps, recovery mechanics, regressions found by fuzzing, internal mechanics, formatting details and harness checks |
 
 A failure, a refusal or a guard is main when a pilot sees it or relies on it for safety, when it changes what goes on air, or when a standard requires it. How the firmware recovers from it is a detail. When in doubt, leave the case unmarked.
 
