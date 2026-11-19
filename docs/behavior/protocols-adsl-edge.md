@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # protocols/adsl_edge - the stack for what ADS-L issue 2 leaves out
 
 6 host test cases over 2 subjects in 2 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. No case here is marked main, so every claim is listed.

@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # Behavior
 
 3269 host test cases over 501 subjects in 303 files, as the doctest suite states them, on one page per area under [`docs/behavior/`](behavior). A test name is a claim, and each claim links the line where it is checked. Quoted prose is the comment the test file or the case carries.

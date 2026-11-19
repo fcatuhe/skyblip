@@ -1,3 +1,4 @@
+<!-- Written by scripts/behavior_index.py, which owns this file. -->
 # bravo - skyBlip Bravo, the ADS-B receiver, end to end
 
 160 host test cases over 10 subjects in 18 files, as the doctest suite states them. A test name is a claim, and the link beside it is the line where it is checked. Quoted prose is the comment the test file or the case carries. No case here is marked main, so every claim is listed.
