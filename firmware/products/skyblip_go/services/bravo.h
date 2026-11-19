@@ -118,6 +118,7 @@ class BravoService : public runtime::Service {
     void claim(uint32_t now_ms);
     bool call_changed() const;
     std::optional<comms::OwnTransponderHeard> own_transponder_on_ground() const;
+    bus::AircraftTransponder aircraft_transponder() const;
     void ask_again(uint32_t now_ms);
     void drop_pin();
     void forget();

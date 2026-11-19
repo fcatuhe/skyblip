@@ -64,6 +64,9 @@ adsl::StatusReport RadioService::status_report() const {
     report.conspicuity_received = adsl::conspicuity::kFlarm;
     if (context_.state.bravo == comms::BravoState::Live)
         report.conspicuity_received |= adsl::conspicuity::kAdsb1090;
+    const bus::AircraftTransponder& transponder = context_.state.aircraft_transponder;
+    if (transponder.address != 0) report.transponder = adsl::Transponder::ModeS;
+    if (transponder.adsb_out) report.conspicuity_transmitted = adsl::conspicuity::kAdsb1090;
     report.traffic_uplink_client = true;
     return report;
 }

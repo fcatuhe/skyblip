@@ -27,10 +27,12 @@ skyBlip's side of the radio protocols. The stacks in `protocols/` decide what th
 | O-band HDR receive | 0 | heard only in the uplink slot, which §G.2.4 leaves out |
 | ADS-L 4 Mobile | 0 | none |
 | E-conspicuity receive | bit 0, and bit 4 while the paired Bravo is live | the ALP-TAS wire is decoded here. A live Bravo hears ADS-B 1090 in the same aircraft, and §G.2.6 leaves a capability unset when it is unknown, as it is while the Bravo is out of reach |
-| E-conspicuity transmit | 0 | nothing but ADS-L goes out |
-| XPDR | 0 | no transponder is known |
+| E-conspicuity transmit | bit 4 once the aircraft's transponder is known to send ADS-B 1090, 0 otherwise | the unit sends nothing but ADS-L, and §G.2.7 counts the systems installed in the same vehicle. Bravo heard an identification, an extended squitter, from the address the pilot entered (below) |
+| XPDR | 2, Mode S, once the aircraft's transponder is known, 0 otherwise | Bravo heard the address the pilot entered, so the aircraft carries a Mode S transponder (below). 0 also means unknown |
 | Traffic Uplink client | 1 | the uplink is decoded and drawn |
 | FIS-B client | 0 | not decoded |
+
+The aircraft's transponder is known once two sources agree: the pilot entered the aircraft address (F.2.3), and a paired Bravo, on the ground, names the transponder it hears loudest at that same address (`products/skyblip_bravo/README.md`, Own transponder). Neither is enough alone. An ICAO address is assigned to aircraft that carry no transponder, and the loudest transponder on an apron can be a neighbour's. A 24-bit address heard on 1090 MHz is a Mode S transponder, and an identification heard from it is an extended squitter, so ADS-B out. `BravoService` keeps what it confirmed in `bus::State::aircraft_transponder` for as long as the entered address stays the same and the unit runs, so it holds through the flight after Bravo stops naming it. A Go with no Bravo, or one that never heard the entered address, declares neither, which §G.2.7 and §G.2.8 read as unknown.
 
 ## Writing for an Issue 1 neighbour
 

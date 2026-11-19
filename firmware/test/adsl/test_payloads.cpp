@@ -1,8 +1,10 @@
 // ADS-L 4 SRD-860 issue 2 G.2 to G.5: the Status, Traffic Uplink, FIS-B and Remote ID payloads.
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "core/comms/peer.h"
+#include "core/flight/state.h"
 #include "core/gnss/first_fix.h"
 #include "core/model/aircraft.h"
 #include "core/protocol/adsl.h"
@@ -12,10 +14,12 @@
 #include "core/timing/transmit.h"
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
+#include "products/skyblip_go/settings.h"
 #include "protocols/common/bit_field.h"
 #include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
 #include "test/support/simulator_run.h"
+#include "test/support/tango.h"
 
 using namespace skyblip;
 
@@ -76,6 +80,33 @@ adsl::Packet status_beside_bravo(bool link_up, comms::BravoState& bravo) {
 
 uint32_t status_field(wire::BitField where) { return status_heard().field(where); }
 
+constexpr uint32_t kOwnTransponder = 0x3A4B5C;
+
+// A Go on the ground beside its Bravo, the pilot's address entered and Bravo naming what it hears.
+void confirm_on_ground(Tango& tango, uint32_t aircraft_address, uint32_t heard,
+                       const std::string& more) {
+    tango.bravo.health.aircraft_address_set = true;
+    tango.pair_and_store();
+    tango.go.settings().aircraft_address = aircraft_address;
+    tango.go.seconds(tango.now_ms, 5, 0, 500);
+    REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Ground);
+    tango.bravo.health.own_transponder_fields =
+        "\"own_transponder\":" + std::to_string(heard) + more;
+    tango.run_for(2500);
+    REQUIRE(comms::address_of(tango.go.state().own_transponder) == heard);
+}
+
+adsl::Packet status_beside_transponder(uint32_t aircraft_address, uint32_t heard,
+                                       const std::string& more) {
+    Tango tango;
+    confirm_on_ground(tango, aircraft_address, heard, more);
+    adsl::Packet packet{};
+    adsl::encode_status(packet, settings::address_of(platform::host::Identity::kSerial),
+                        settings::kSkyblipAddressMappingTable,
+                        tango.go.product.radio().status_report());
+    return packet;
+}
+
 }  // namespace
 
 TEST_CASE(
@@ -131,12 +162,52 @@ TEST_CASE("ADS-L.4.SRD860.G.2.6: a paired Bravo the Go cannot reach is not decla
     CHECK(bravo != comms::BravoState::Unpaired);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status payload declares which other systems are transmitted") {
+// A Go alone knows of no other system aboard, and G.2.7 leaves an unknown one unset.
+TEST_CASE("ADS-L.4.SRD860.G.2.7: a Go with no Bravo declares no other system transmitted") {
     CHECK(status_field(wire::BitField{60, 8}) == 0);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status payload declares the transponder fitted") {
+// An identification Bravo heard from the entered address is an extended squitter, so ADS-B out.
+TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address identifies") {
+    const adsl::Packet named = status_beside_transponder(kOwnTransponder, kOwnTransponder,
+                                                         ",\"own_transponder_callsign\":\"FHBXA\"");
+    CHECK(named.field(wire::BitField{60, 8}) == adsl::conspicuity::kAdsb1090);
+
+    const adsl::Packet silent = status_beside_transponder(kOwnTransponder, kOwnTransponder, "");
+    CHECK(silent.field(wire::BitField{60, 8}) == 0);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.2.8: a Go with no Bravo declares no transponder, which is unknown") {
     CHECK(status_field(wire::BitField{68, 2}) == 0);
+}
+
+// The pilot's entry of the address Bravo hears is what makes it ours, not a neighbour's.
+TEST_CASE("ADS-L.4.SRD860.G.2.8: Mode S is declared once Bravo hears the entered address") {
+    CHECK(status_beside_transponder(kOwnTransponder, kOwnTransponder, "")
+              .field(wire::BitField{68, 2}) == 2);
+    CHECK(status_beside_transponder(go::kAircraftAddressUnset, kOwnTransponder, "")
+              .field(wire::BitField{68, 2}) == 0);
+    CHECK(status_beside_transponder(0x3A0001, kOwnTransponder, "").field(wire::BitField{68, 2}) ==
+          0);
+}
+
+// Bravo names the aircraft's transponder on the ground only, and the aircraft keeps it in flight.
+TEST_CASE("ADS-L.4.SRD860.G.2.8: a transponder confirmed on the ground stays declared in flight") {
+    Tango tango;
+    confirm_on_ground(tango, kOwnTransponder, kOwnTransponder,
+                      ",\"own_transponder_callsign\":\"FHBXA\"");
+    tango.go.seconds(tango.now_ms, 20, 25000, 900);
+    REQUIRE(tango.go.state().flight.confirmed_state == flight::FlightState::Airborne);
+    REQUIRE_FALSE(tango.go.state().own_transponder);
+    adsl::StatusReport report = tango.go.product.radio().status_report();
+    CHECK(report.transponder == adsl::Transponder::ModeS);
+    CHECK(report.conspicuity_transmitted == adsl::conspicuity::kAdsb1090);
+
+    tango.go.settings().aircraft_address = 0x3A0001;
+    tango.go.seconds(tango.now_ms, 2, 25000, 900);
+    report = tango.go.product.radio().status_report();
+    CHECK(report.transponder == adsl::Transponder::None);
+    CHECK(report.conspicuity_transmitted == 0);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.2.9: the Status payload declares that Traffic Uplink is processed") {
