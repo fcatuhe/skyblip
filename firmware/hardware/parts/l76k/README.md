@@ -4,6 +4,8 @@ The Quectel L76K on the LilyGO T-Echo, an AT6558 receiver that takes the CASIC `
 
 ## Four solutions a second
 
+The product chooses the rate and the driver applies it: `L76k` takes a `ports::SolutionRate` at construction, from the board, from the product's `kSolutionRate`. Asked for `Second`, the driver stops after step 2 below and never sends a `$PCAS02` under 1000 ms. The raise to 115200 still happens, because it predates 4 Hz: it is what lets a GSV set fit a solution (`../../../core/gnss/README.md`). Asked for `Quarters`, it runs step 3. The Go asks `Quarters` (`../../../products/skyblip_go/README.md`, The GNSS rate).
+
 The Go runs the L76K at 4 Hz, so its solutions fall at 0, 250, 500 and 750 ms of each UTC second. Those are the quarter seconds ADS-L 4 SRD-860 Issue 2 G.1.1 counts the Timestamp in, so every solution can be named to within its 10 ms. A Traffic burst carries the newest solution as measured, and G.1.16 keeps it off the air once that solution is 500 ms old (`../../../core/timing/README.md`, The age of a position). At 1 Hz most airborne bursts would be held.
 
 Two documents set the command. The CASIC Multimode Satellite Navigation Receiver Protocol Specification V4.2.0.3, §1.6.3, lists `$PCAS02` intervals of 1000, 500, 250, 200 and 100 ms, with 250 as 4 Hz. Quectel's L76K GNSS Protocol Specification V1.1, §2.3.2, lists 1000, 500 and 200, and adds: "It is required to set the type of NMEA sentences output to single and change the baud rate to 115200 bps when the <Interval> is less than 1000." 5 Hz is the faster rate Quectel prints, and it would put four solutions in five off G.1.1's quarters.

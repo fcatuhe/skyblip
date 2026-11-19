@@ -57,7 +57,7 @@ uint8_t in_view(const models::L76k& chip) {
 // The levels cost a set of sentences, so only the page that draws them asks for them.
 TEST_CASE("l76k: satellites in view are asked for every solution until a set lands, then paced") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE_FALSE(chip.gsv_enabled());  // the bring-up sentence set switches it off
@@ -95,7 +95,7 @@ TEST_CASE("l76k: satellites in view are asked for every solution until a set lan
 // The pinned bug: a page 0 capture read 32 in view, the last set the sats page had asked for.
 TEST_CASE("l76k: given up, the satellites in view are forgotten, not kept at the last set") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     gnss.request_satellites_in_view(true);
     run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);
@@ -117,7 +117,7 @@ TEST_CASE("l76k: given up, the satellites in view are forgotten, not kept at the
 TEST_CASE("l76k: with the levels up, eight fixes in nine close on the fix burst alone") {
     models::L76k chip;
     TappedWire wire(chip);
-    parts::L76k gnss(wire, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, wire, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
     REQUIRE(gnss.baud_rate() == parts::L76k::kTargetBaudRate);
@@ -163,7 +163,7 @@ TEST_CASE("l76k: the satellites-in-view burst fits a solution period only at the
 TEST_CASE("l76k: a satellite in view with no level is not a satellite at zero dB-Hz") {
     models::L76k chip;
     chip.fix_valid = false;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     gnss.request_satellites_in_view(true);
     run(gnss, chip, kConfiguredMs + 10, kConfiguredMs + 3000);

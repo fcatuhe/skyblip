@@ -70,6 +70,7 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     bool hung{false};
     bool hangs_on_quarter_rate{false};
     uint32_t quarter_rate_asked{0};
+    uint32_t sub_second_rate_asked{0};
     // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
     static constexpr uint32_t kResetLowMs = 100;
     int reset_pin{-1};

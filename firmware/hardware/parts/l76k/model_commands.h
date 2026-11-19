@@ -46,6 +46,7 @@ inline void L76k::apply_baud(int code) {
 // INFO: fc 18nov26 CASIC V4.2.0.3 1.6.3's intervals, and under 1000 ms only at 115200 (V1.1)
 inline void L76k::apply_rate(uint32_t interval_ms) {
     if (interval_ms == parts::L76k::kSolutionPeriodMs) quarter_rate_asked++;
+    if (interval_ms < kFactoryPeriodMs) sub_second_rate_asked++;
     if (interval_ms == parts::L76k::kSolutionPeriodMs && hangs_on_quarter_rate) {
         hung = true;
         pending_.clear();

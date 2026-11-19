@@ -10,7 +10,7 @@ using namespace skyblip;
 TEST_CASE("board: the host glass is unturned, so the simulator shows the framebuffer as drawn") {
     platform::host::Platform platform;
     bus::Bus bus;
-    boards::TEchoPlus<platform::host::Platform> board{platform, bus};
+    boards::TEchoPlus<platform::host::Platform> board{platform, bus, ports::SolutionRate::Quarters};
     board.probe();
     REQUIRE(board.begin() == Status::Ok);
 

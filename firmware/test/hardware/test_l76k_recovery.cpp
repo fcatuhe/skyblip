@@ -30,7 +30,7 @@ std::vector<ports::GnssEvent> journal(parts::L76k& driver, models::L76k& chip, u
 // The pinned case: Go 000001's part went silent in flight and the driver ended degraded for good.
 TEST_CASE("l76k: a part that falls silent while ready is probed, and configured when it answers") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
 
@@ -52,7 +52,7 @@ TEST_CASE("l76k: a part that falls silent while ready is probed, and configured 
 TEST_CASE("l76k: a part silent for three probe rounds has its RESET_N held low, and comes back") {
     models::L76k chip;
     chip.reset_pin = kResetPin;
-    parts::L76k gnss(chip, chip, &chip, kResetPin);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip, &chip, kResetPin);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
 
@@ -72,7 +72,7 @@ TEST_CASE("l76k: a part that hangs on $PCAS02,250 is reset, says so, and settles
     models::L76k chip;
     chip.hangs_on_quarter_rate = true;
     chip.reset_pin = kResetPin;
-    parts::L76k gnss(chip, chip, &chip, kResetPin);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip, &chip, kResetPin);
 
     run(gnss, chip, 0, 120000);
 
@@ -86,7 +86,7 @@ TEST_CASE("l76k: a part that hangs on $PCAS02,250 is reset, says so, and settles
 TEST_CASE("l76k: a silent part on a board with no reset line is probed for good, never reset") {
     models::L76k chip;
     chip.reset_pin = kResetPin;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     chip.hung = true;
 
@@ -100,7 +100,7 @@ TEST_CASE("l76k: a silent part on a board with no reset line is probed for good,
 TEST_CASE("l76k: a degraded part that falls silent is probed too") {
     models::L76k chip;
     chip.accepts_commands = false;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, 30000);
     REQUIRE(gnss.degraded());
 
@@ -113,7 +113,7 @@ TEST_CASE("l76k: a degraded part that falls silent is probed too") {
 // The journal is what a capture records: every command in the order the part heard it.
 TEST_CASE("l76k: every command, stage and verdict of a bring-up is journalled in order") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     const std::vector<ports::GnssEvent> events = journal(gnss, chip, 0, kConfiguredMs);
 
@@ -145,7 +145,7 @@ TEST_CASE("l76k: every command, stage and verdict of a bring-up is journalled in
 TEST_CASE("l76k: a refused 4 Hz is journalled with the cadence and the stamps the part kept") {
     models::L76k chip;
     chip.fastest_interval_ms = parts::L76k::kHalfSolutionPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     const std::vector<ports::GnssEvent> events = journal(gnss, chip, 0, kConfiguredMs);
 

@@ -4,8 +4,13 @@ namespace skyblip::parts {
 
 void Ag3335::request_restart(ports::Restart kind) { pending_restart_ = static_cast<uint8_t>(kind); }
 
+// INFO: fc 18nov26 a rate it cannot solve at leaves it unconfigured and degraded, never at 1 Hz
 void Ag3335::service(uint32_t now_ms) {
     serviced_ms_ = now_ms;
+    if (!solves(solution_rate_)) {
+        stage_ = ConfigStage::Degraded;
+        return;
+    }
 
     if (pending_restart_ != kNoRestart) {
         const bool factory = pending_restart_ == static_cast<uint8_t>(ports::Restart::Factory);
@@ -128,6 +133,7 @@ void Ag3335::hear(PairReader::Heard heard) {
 }
 
 bool Ag3335::poll(uint32_t now_ms) {
+    if (!solves(solution_rate_)) return false;
     uint8_t buffer[kReadChunkBytes];
     bool closed = false;
     for (;;) {

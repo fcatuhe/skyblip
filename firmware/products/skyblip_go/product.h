@@ -16,6 +16,7 @@
 #include "products/common/services/ownship.h"
 #include "products/common/services/power.h"
 #include "products/common/services/traffic.h"
+#include "products/common/solution_rate.h"
 #include "products/skyblip_go/capture_settings.h"
 #include "products/skyblip_go/features.h"
 #include "products/skyblip_go/flash_window.h"
@@ -47,14 +48,21 @@ constexpr uint32_t kRefusalParkCeilingMs = 6000;
 // against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of)
 constexpr uint32_t kRadioParkCeilingMs = 2000;
 
+// INFO: fc 18nov26 the Go transmits ADS-L, whose positions are dated to a quarter second
+constexpr ports::SolutionRate kSolutionRate = ports::SolutionRate::Quarters;
+
 // skyBlip Go: one board, one service list. The shell around it only decides how
 // often run_pass() is called and where the pixels go.
 template <class Platform>
 class Product {
    public:
     using Board = boards::TEchoPlus<Platform>;
+    static_assert(common::solution_rate_serves<typename Board::Gnss>(kRadioProtocols,
+                                                                     kSolutionRate),
+                  "an ADS-L transmitter needs a receiver solving on the quarters");
 
-    explicit Product(Platform& platform) : platform_(platform), board_(platform, bus_) {
+    explicit Product(Platform& platform)
+        : platform_(platform), board_(platform, bus_, kSolutionRate) {
         config_link_.config().serve_captures();
         config_link_.config().set_radio_protocols(kRadioProtocols);
     }

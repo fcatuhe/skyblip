@@ -47,6 +47,7 @@ void L76k::settle(uint32_t now_ms) {
 
 // INFO: fc 18nov26 4 Hz is asked once a session, and a warm or cold start begins a new one
 void L76k::seek_rate(uint32_t now_ms) {
+    if (solution_rate_ == ports::SolutionRate::Second) return;
     if (cadence_ == Cadence::Quarter || baud_rate() != kTargetBaudRate) return;
     if (rebooting_ && now_ms - rebooted_ms_ < kRestartSettleMs) return;
     rebooting_ = false;

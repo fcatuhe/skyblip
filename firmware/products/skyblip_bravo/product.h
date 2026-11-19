@@ -16,6 +16,7 @@
 #include "products/common/services/nmea.h"
 #include "products/common/services/ownship.h"
 #include "products/common/services/power.h"
+#include "products/common/solution_rate.h"
 #include "products/skyblip_bravo/capture_settings.h"
 #include "products/skyblip_bravo/features.h"
 #include "products/skyblip_bravo/flash_window.h"
@@ -47,13 +48,19 @@ constexpr uint32_t kReceiverParkCeilingMs =
      parts::lr2021::kSleepSettleUs) /
     1000;
 
+// INFO: fc 18nov26 Bravo transmits nothing, so its log, EFB and gate need one solution a second
+constexpr ports::SolutionRate kSolutionRate = ports::SolutionRate::Second;
+
 template <class Platform>
 class Product {
    public:
     using Board = boards::MeshtrackerX1<Platform>;
+    static_assert(common::solution_rate_serves<typename Board::Gnss>(kRadioProtocols,
+                                                                     kSolutionRate),
+                  "the receiver solves at the rate the product asks");
 
     explicit Product(Platform& platform)
-        : platform_(platform), board_(platform, bus_, adsb_frames_) {
+        : platform_(platform), board_(platform, bus_, adsb_frames_, kSolutionRate) {
         config_link_.config().serve_captures();
         config_link_.config().set_radio_protocols(kRadioProtocols);
     }

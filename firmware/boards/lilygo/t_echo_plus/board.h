@@ -48,7 +48,9 @@ static_assert(parts::L76k::kBurstStartMs + parts::L76k::kSearchingBurstMs +
 template <class Platform>
 class TEchoPlus {
    public:
-    TEchoPlus(Platform& platform, bus::Bus& bus)
+    using Gnss = parts::L76k;
+
+    TEchoPlus(Platform& platform, bus::Bus& bus, ports::SolutionRate solution_rate)
         : platform_(platform),
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
@@ -56,7 +58,7 @@ class TEchoPlus {
           display_(platform.spi(io::BusId::Epd), platform.gpio(), platform.delay(),
                    t_echo_plus::kEpdDc, t_echo_plus::kEpdReset, t_echo_plus::kEpdBusy,
                    t_echo_plus::kEpdBacklight, platform.glass_rotation()),
-          gnss_(platform.uart(io::BusId::Gnss), platform.uart_rate(io::BusId::Gnss),
+          gnss_(solution_rate, platform.uart(io::BusId::Gnss), platform.uart_rate(io::BusId::Gnss),
                 &platform.gpio(), t_echo_plus::kGnssReset),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), platform.delay(),
                   t_echo_plus::kHapticEnable, parts::Drv2605::Actuator::Erm),
@@ -468,7 +470,7 @@ class TEchoPlus {
     bus::Bus& bus_;
     parts::Sx1262 radio_;
     parts::Ssd1681 display_;
-    parts::L76k gnss_;
+    Gnss gnss_;
     parts::Drv2605 haptic_;
     parts::Bhi260 imu_;
     parts::Bhi260ImageStore imu_store_;

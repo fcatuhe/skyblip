@@ -18,9 +18,15 @@ namespace skyblip::parts {
 
 class L76k : public ports::Gnss {
    public:
-    explicit L76k(io::Uart& uart, io::UartRate& rate = io::kFixedUartRate,
-                  io::Gpio* reset = nullptr, int reset_pin = -1)
-        : uart_(uart), rate_(rate), reset_(reset), reset_pin_(reset_pin) {}
+    L76k(ports::SolutionRate solution_rate, io::Uart& uart, io::UartRate& rate = io::kFixedUartRate,
+         io::Gpio* reset = nullptr, int reset_pin = -1)
+        : solution_rate_(solution_rate),
+          uart_(uart),
+          rate_(rate),
+          reset_(reset),
+          reset_pin_(reset_pin) {}
+
+    static constexpr bool solves(ports::SolutionRate) { return true; }
 
     using ConfigStage = ports::GnssConfigStage;
 
@@ -280,6 +286,7 @@ class L76k : public ports::Gnss {
     // INFO: fc 13sep26 RMC is last in the cycle, so it is the sentence that completes a solution
     static constexpr gnss::Sentence kBurstClosingSentence = gnss::Sentence::Rmc;
 
+    ports::SolutionRate solution_rate_;
     io::Uart& uart_;
     io::UartRate& rate_;
     io::Gpio* reset_;

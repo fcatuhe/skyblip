@@ -26,14 +26,17 @@ static_assert(runtime::kBarometerConversionCeilingMs < runtime::kBarometerPublis
 template <class Platform>
 class MeshtrackerX1 {
    public:
-    MeshtrackerX1(Platform& platform, bus::Bus& bus, bus::AdsbQueue& adsb)
+    using Gnss = parts::Ag3335;
+
+    MeshtrackerX1(Platform& platform, bus::Bus& bus, bus::AdsbQueue& adsb,
+                  ports::SolutionRate solution_rate)
         : platform_(platform),
           bus_(bus),
           radio_(platform.spi(io::BusId::Radio), platform.gpio(), platform.delay(),
                  meshtracker_x1::kRadioBusy, meshtracker_x1::kRadioReset, meshtracker_x1::kRadioIrq,
                  meshtracker_x1::kRadioIrqDio),
           receiver_(radio_, platform.clock(), platform.radio_irq(), adsb),
-          gnss_(platform.uart(io::BusId::Gnss)),
+          gnss_(solution_rate, platform.uart(io::BusId::Gnss)),
           barometer_(platform.i2c(io::BusId::Sensor)),
           haptic_(platform.i2c(io::BusId::Sensor), platform.gpio(), platform.delay(),
                   meshtracker_x1::kHapticEnable, meshtracker_x1::kHapticActuator),
@@ -219,7 +222,7 @@ class MeshtrackerX1 {
     bus::Bus& bus_;
     parts::Lr2021 radio_;
     typename Platform::AdsbReceiver receiver_;
-    parts::Ag3335 gnss_;
+    Gnss gnss_;
     parts::Spa06 barometer_;
     parts::Drv2605 haptic_;
     input::Contact button_{meshtracker_x1::kButtonHoldMs};

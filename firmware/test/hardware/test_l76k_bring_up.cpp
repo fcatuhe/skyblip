@@ -18,7 +18,7 @@ using namespace skyblip;
 TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model and rate") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
@@ -41,7 +41,7 @@ TEST_CASE("l76k: bring-up configures constellations, sentences, dynamic model an
 TEST_CASE("l76k: 4 Hz is asked for only once the receiver answers at 115200") {
     models::L76k chip;
     chip.asleep = true;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, kConfiguredMs);
 
@@ -54,7 +54,7 @@ TEST_CASE("l76k: 4 Hz is asked for only once the receiver answers at 115200") {
 // GSA alone carries VDOP, so at 4 Hz it stays once a second rather than going every solution.
 TEST_CASE("l76k: at 4 Hz GGA and RMC close every solution, and GSA comes once a second") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
 
@@ -78,7 +78,7 @@ TEST_CASE("l76k: at 4 Hz GGA and RMC close every solution, and GSA comes once a 
 TEST_CASE("l76k: the receiver is woken, then identified, then configured, in that order") {
     models::L76k chip;
     chip.asleep = true;  // cold: it has heard nothing since power came up
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
@@ -120,7 +120,7 @@ TEST_CASE("l76k: a cold receiver eats whatever is said in the first 500 ms") {
 TEST_CASE("l76k: an unidentified receiver is still configured, and still says so") {
     models::L76k chip;
     chip.answers_identification = false;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, kConfiguredMs);
 
@@ -137,7 +137,7 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
     models::L76k chip;
     chip.accepts_commands = false;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, 30000);
 
@@ -156,7 +156,7 @@ TEST_CASE("l76k: a receiver that never obeys is reported degraded, not assumed g
 TEST_CASE("l76k: a receiver that obeys is reported configured") {
     models::L76k chip;
     chip.solution_period_ms = models::L76k::kFactoryPeriodMs;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     CHECK(gnss.config_stage() == parts::L76k::ConfigStage::Idle);
 
     run(gnss, chip, 0, 10000);
@@ -168,7 +168,7 @@ TEST_CASE("l76k: a receiver that obeys is reported configured") {
 // A receiver moved to a rate the port cannot follow is a GNSS-less device that looks fitted.
 TEST_CASE("l76k: bring-up raises the receiver and the port together") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
     run(gnss, chip, 0, kConfiguredMs);
@@ -187,7 +187,7 @@ TEST_CASE("l76k: bring-up raises the receiver and the port together") {
 TEST_CASE("l76k: a receiver that ignores the rate command is followed back down to 9600") {
     models::L76k chip;
     chip.refuses_baud_command = true;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
 
     run(gnss, chip, 0, kBringUpLeadMs + 3 * parts::L76k::kVerifyWindowMs);
 
@@ -205,7 +205,7 @@ TEST_CASE("l76k: a receiver that ignores the rate command is followed back down 
 // Without a rate port the receiver must be left where it boots, not asked to move alone.
 TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
     models::L76k chip;
-    parts::L76k gnss(chip);  // no rate port: io::FixedUartRate
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);  // no rate port: io::FixedUartRate
 
     run(gnss, chip, 0, kBringUpLeadMs + 2 * parts::L76k::kVerifyWindowMs);
 
@@ -224,7 +224,7 @@ TEST_CASE("l76k: a port that cannot retune never moves the receiver") {
 TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
     models::L76k chip;
     chip.baud = 38400;  // not what the devicetree pins
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     REQUIRE(gnss.baud_rate() == parts::L76k::kFactoryBaudRate);
 
     run(gnss, chip, 0, 30000);
@@ -245,7 +245,7 @@ TEST_CASE("l76k: a receiver at the wrong baud is found, not written off") {
 TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not have") {
     models::L76k chip;
     chip.baud = 38400;
-    parts::L76k gnss(chip);  // no rate port: io::FixedUartRate
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);  // no rate port: io::FixedUartRate
 
     run(gnss, chip, 0, 30000);
 
@@ -262,7 +262,7 @@ TEST_CASE("l76k: without a retunable port, autobaud is a capability we do not ha
 // hatch leaves the receiver on pedestrian smoothing at 1 Hz.
 TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(chip.aviation_dynamic_model());
@@ -295,7 +295,7 @@ TEST_CASE("l76k: a factory reset is recoverable, and the configuration goes back
 // support script should reach for first.
 TEST_CASE("l76k: a cold start keeps the configuration and loses only the almanac") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solution().fix_valid);
 

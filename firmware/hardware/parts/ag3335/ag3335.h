@@ -11,7 +11,13 @@ namespace skyblip::parts {
 
 class Ag3335 : public ports::Gnss {
    public:
-    explicit Ag3335(io::Uart& uart) : uart_(uart) {}
+    Ag3335(ports::SolutionRate solution_rate, io::Uart& uart)
+        : solution_rate_(solution_rate), uart_(uart) {}
+
+    // INFO: fc 18nov26 only $PAIR050,1000 is in the sequence, so this driver solves once a second
+    static constexpr bool solves(ports::SolutionRate rate) {
+        return rate == ports::SolutionRate::Second;
+    }
 
     using ConfigStage = ports::GnssConfigStage;
 
@@ -138,6 +144,7 @@ class Ag3335 : public ports::Gnss {
     void send(const char* sentence);
     void hear(PairReader::Heard heard);
 
+    ports::SolutionRate solution_rate_;
     io::Uart& uart_;
     gnss::NmeaParser parser_{};
     PairReader reader_{};

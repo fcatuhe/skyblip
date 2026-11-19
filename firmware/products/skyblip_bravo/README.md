@@ -27,6 +27,10 @@ Bravo runs no `TrafficService`. 1090 MHz is its only source, so `AdsbService` ow
 
 The queue, `bus::AdsbQueue`, lives in the product beside `bus::Bus`, because only Bravo hears 1090 MHz. The board's receiver pushes into it, from its own thread on silicon and from the board's poll on the host.
 
+## The GNSS rate
+
+Bravo asks its AG3335 for one solution a second, `kSolutionRate` in `product.h`, and hands that rate to the board, which hands it to the part. Bravo transmits nothing, so no ADS-L clause dates its position to a quarter. Its flight log, its EFB sentences and its ADS-B gate read one position a second, as on the Go, where `OwnshipService` reads the whole second out of four. The AG3335 driver solves only at that rate. Asked for more, it configures nothing, publishes no fix and reads `DEGRADED`, and `common::solution_rate_serves` refuses such a product at compile time (`../../hardware/parts/ag3335/README.md`). `test/products/skyblip_bravo/test_solution_rate.cpp` flies the AG3335 model for three minutes and reads one own-ship second, one `$GPRMC`, one `$GPGGA` and one flight log record for each UTC second, with no gap.
+
 ## Without a fix
 
 The receiver and the decoder keep running. CPR still pairs an even and an odd position with no reference, so aircraft are folded and recorded. Nothing reaches the phone as `$PFLAA`, because `NmeaService` sends traffic only from a valid own position, and `$PFLAU` says GPS 0. The lamp shows no fix.

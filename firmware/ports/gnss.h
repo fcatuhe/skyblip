@@ -9,6 +9,8 @@ namespace skyblip::ports {
 
 enum class Restart : uint8_t { Hot, Warm, Cold, Factory };
 
+enum class SolutionRate : uint8_t { Second, Quarters };
+
 enum class GnssConfigStage : uint8_t {
     Idle = 0,
     Restarting = 1,

@@ -53,7 +53,7 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
     chip.satellites = 9;
     chip.altitude_m = 1200;
     chip.latitude_1e7 = 485000000;
-    parts::L76k gnss(chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);
 
     CHECK_FALSE(gnss.poll());  // the receiver has said nothing yet
     chip.tick(0);              // arms the 1 Hz cadence, emits nothing
@@ -71,7 +71,7 @@ TEST_CASE("l76k: a new fix is reported exactly once") {
 
 TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
     models::L76k chip;  // never ticked: powered, connected, saying nothing
-    parts::L76k gnss(chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);
     for (uint32_t now_ms = 0; now_ms <= 5000; now_ms += 100) CHECK_FALSE(gnss.poll());
     CHECK(gnss.sentences() == 0);
 }
@@ -79,7 +79,7 @@ TEST_CASE("l76k: a wired but silent receiver never reports a fix") {
 TEST_CASE("l76k: losing the fix is reported like any other update") {
     models::L76k chip;
     chip.fix_valid = true;
-    parts::L76k gnss(chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);
     chip.tick(0);
     chip.tick(1000);
     REQUIRE(gnss.poll());
@@ -94,7 +94,7 @@ TEST_CASE("l76k: losing the fix is reported like any other update") {
 // G.1.15 wants a vertical accuracy claim, and GSA alone carries the VDOP it is made of.
 TEST_CASE("l76k: GSA is asked for, and the VDOP in it is the one the fix carries") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
     CHECK(chip.gga_enabled);
@@ -115,7 +115,7 @@ TEST_CASE("l76k: GSA is asked for, and the VDOP in it is the one the fix carries
 TEST_CASE("l76k: a receiver reporting no VDOP leaves the fix without one") {
     models::L76k chip;
     chip.vdop_e2 = 0;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kBringUpLeadMs + 1000);
 
     CHECK(gnss.solution().vdop_e2 == 0);
@@ -128,7 +128,7 @@ TEST_CASE("l76k: four solutions a second, each on the wire well inside G.1.16's 
           static_cast<uint32_t>(timing::Transmitter::kFixMaxAgeMs));
 
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.solving_quarters());
     CHECK(chip.solution_period_ms == parts::L76k::kSolutionPeriodMs);
@@ -146,7 +146,7 @@ TEST_CASE("l76k: four solutions a second, each on the wire well inside G.1.16's 
 TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") {
     models::L76k chip;
     SentenceWire wire(chip);
-    parts::L76k gnss(wire, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, wire, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(gnss.solution().fix_valid);
@@ -166,7 +166,7 @@ TEST_CASE("l76k: a burst reaches the bus once, on the sentence that closes it") 
 // The estimate own-ship falls back to with no PPS edge latched, stamped by the part that knows it.
 TEST_CASE("l76k: the fix carries the part's burst-to-PPS latency") {
     models::L76k chip;
-    parts::L76k gnss(chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip);
     chip.tick(0);
     chip.tick(1000);
     REQUIRE(gnss.poll());
@@ -279,7 +279,7 @@ TEST_CASE("l76k: a turn rate flies a circle, and it is the size the arithmetic s
 // kept transmitting the place it lost the sky.
 TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
     models::L76k chip;
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
     REQUIRE(gnss.configured());
     REQUIRE(gnss.solution().fix_valid);
@@ -315,7 +315,7 @@ TEST_CASE("l76k: a receiver that goes silent withdraws its fix, once") {
 TEST_CASE("l76k: a solution dated 1980 does not reach the bus as a fix") {
     models::L76k chip;
     chip.date = "010180";
-    parts::L76k gnss(chip, chip);
+    parts::L76k gnss(ports::SolutionRate::Quarters, chip, chip);
     run(gnss, chip, 0, kConfiguredMs);
 
     CHECK(gnss.configured());                // the receiver is fine, it is being obeyed
