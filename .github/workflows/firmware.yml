@@ -190,7 +190,7 @@ jobs:
       - name: behavior index matches the suite
         run: |
           python3 scripts/behavior_index.py
-          git add --intent-to-add docs/behavior
+          git add --intent-to-add docs/BEHAVIOR.md docs/behavior
           git diff --exit-code docs/BEHAVIOR.md docs/behavior
       # docs/ADSL_CONFORMANCE.md is what the declaration of conformity attaches, so it must be the suite as it runs.
       - name: ADS-L report matches the suite
