@@ -1,6 +1,6 @@
 # ADS-L conformance
 
-skyBlip's ADS-L implementation 0.1.0, read against ADS-L 4 SRD-860 Issue 2 clause by clause by the host test suite. Each of the specification's 80 clause headings is below, in the document's order, with the cases that read it: 161 pass and 18 are skipped (8 prose, 2 paperwork, 8 optional).
+skyBlip's ADS-L implementation 0.1.0, read against ADS-L 4 SRD-860 Issue 2 clause by clause by the host test suite. Each of the specification's 80 clause headings is below, in the document's order, with the cases that read it: 163 pass and 18 are skipped (8 prose, 2 paperwork, 8 optional).
 
 Each claim names the file that checks it, under `firmware/`. A file under `protocols/adsl/test/conformance/` belongs to the component, which builds and passes on its own and goes with any copy of the stack (`firmware/protocols/README.md`, Taking a stack into another project). A file under `test/adsl/` needs skyBlip around the stack, because it checks skyBlip's choices, which a copy replaces with its own. A skipped case is a clause this device makes no claim on, and says why: prose, paperwork, optional, not implemented or unmeasured (`firmware/test/adsl/README.md`). Quoted prose is the comment the case carries.
 
@@ -518,9 +518,12 @@ Issue 2 gives the same number to Transmit Rate and Timing, so the cases of both 
   > A Go alone knows of no other system aboard, and G.2.7 leaves an unknown one unset.
 - ADS-B 1090 is declared once the entered address identifies (`test/adsl/test_payloads.cpp`)
   > An identification Bravo heard from the entered address is an extended squitter, so ADS-B out.
+- the Status on air carries the ADS-B out Bravo heard (`test/adsl/test_payloads.cpp`)
+  > The cockpit transponder at the entered address, heard by Bravo on the ground, on the Go's Status.
 
 ### ADS-L.4.SRD860.G.2.8 XPDR Capabilities
 
+- the Status on air carries the Mode S transponder Bravo heard (`test/adsl/test_payloads.cpp`)
 - a Go with no Bravo declares no transponder, which is unknown (`test/adsl/test_payloads.cpp`)
 - Mode S is declared once Bravo hears the entered address (`test/adsl/test_payloads.cpp`)
   > The pilot's entry of the address Bravo hears is what makes it ours, not a neighbour's.
@@ -605,8 +608,7 @@ Issue 2 gives the same number to Transmit Rate and Timing, so the cases of both 
 
 ### EN 300 220-2 4.2.4 Operating frequency bands and limits for all equipment
 
-- own-ship transmits inside band M, at no more than 25 mW e.r.p. (`test/en300220/test_part2.cpp`)
-  > Table 4, band M: 868.000 MHz to 868.600 MHz, 25 mW e.r.p., which is 13.98 dBm.
+- own-ship's channels are in band M and its computed e.r.p. is at most 25 mW (`test/en300220/test_part2.cpp`)
 
 ### EN 300 220-2 4.4.3.3 Limits
 

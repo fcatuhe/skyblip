@@ -15,9 +15,11 @@
 #include "doctest/doctest.h"
 #include "hardware/platform/host/identity.h"
 #include "products/skyblip_go/settings.h"
+#include "protocols/adsb/squitter.h"
 #include "protocols/common/bit_field.h"
 #include "simulator/paired_simulator.h"
 #include "simulator/simulator.h"
+#include "simulator/world/adsb_out.h"
 #include "test/support/simulator_run.h"
 #include "test/support/tango.h"
 
@@ -79,6 +81,44 @@ adsl::Packet status_beside_bravo(bool link_up, comms::BravoState& bravo) {
 }
 
 uint32_t status_field(wire::BitField where) { return status_heard().field(where); }
+
+// INFO: fc 19nov26 far louder than the world's squitters, as a transponder a metre from Bravo is
+constexpr int8_t kCockpitDbm = -10;
+
+adsl::Packet status_beside_cockpit(const simulator::AdsbAir& air) {
+    simulator::PairedSimulator paired;
+    REQUIRE(paired.setup() == Status::Ok);
+    paired.world().set_fix(true);
+    paired.world().set_speed_kt(0);
+    paired.aboard().set_fix(true);
+    paired.aboard().set_link(true);
+    paired.run(gnss::kFirstFixSettleMs);
+    const uint32_t until_ms =
+        gnss::kFirstFixSettleMs + (2 * timing::Transmitter::kStatusPeriodS + 1) * 1000;
+    for (uint32_t now_ms = gnss::kFirstFixSettleMs; now_ms <= until_ms;
+         now_ms += simulator::PairedSimulator::kStepMs) {
+        if (now_ms % 500 == 0)
+            paired.bravo_platform().radio().receive_air(air.chips, sizeof(air.chips), kCockpitDbm);
+        paired.step(now_ms);
+    }
+    REQUIRE(comms::address_of(paired.product().state().own_transponder) ==
+            simulator::PairedSimulator::kAircraftAddress);
+    const std::vector<simulator::AirRecord> statuses =
+        records_of(paired.world().air(), adsl::Packet::kPayloadTypeStatus);
+    REQUIRE_FALSE(statuses.empty());
+    adsl::Packet heard{};
+    REQUIRE(packet_of(statuses.back(), heard));
+    return heard;
+}
+
+simulator::AdsbAir cockpit_identification() {
+    return simulator::adsb_air(
+        adsb::identification(simulator::PairedSimulator::kAircraftAddress, 5, 4, 1, "FHBXA"));
+}
+
+simulator::AdsbAir cockpit_all_call() {
+    return simulator::mode_s_air(adsb::all_call(simulator::PairedSimulator::kAircraftAddress, 5));
+}
 
 constexpr uint32_t kOwnTransponder = 0x3A4B5C;
 
@@ -174,6 +214,17 @@ TEST_CASE("ADS-L.4.SRD860.G.2.7: ADS-B 1090 is declared once the entered address
 
     const adsl::Packet silent = status_beside_transponder(kOwnTransponder, kOwnTransponder, "");
     CHECK(silent.field(wire::BitField{60, 8}) == 0);
+}
+
+// The cockpit transponder at the entered address, heard by Bravo on the ground, on the Go's Status.
+TEST_CASE("ADS-L.4.SRD860.G.2.7: the Status on air carries the ADS-B out Bravo heard") {
+    CHECK(status_beside_cockpit(cockpit_identification()).field(wire::BitField{60, 8}) ==
+          adsl::conspicuity::kAdsb1090);
+    CHECK(status_beside_cockpit(cockpit_all_call()).field(wire::BitField{60, 8}) == 0);
+}
+
+TEST_CASE("ADS-L.4.SRD860.G.2.8: the Status on air carries the Mode S transponder Bravo heard") {
+    CHECK(status_beside_cockpit(cockpit_all_call()).field(wire::BitField{68, 2}) == 2);
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.2.8: a Go with no Bravo declares no transponder, which is unknown") {
