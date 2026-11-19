@@ -60,6 +60,27 @@ class Admin::AnalyticsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".admin-chips a", text: /Browser: Firefox/
   end
 
+  # As in Plausible, a click on an outbound link filters the overview and its visitors to the visits that clicked it.
+  test "the outbound links count their clicks, and one filters the overview to the visits that clicked it" do
+    go = "https://link.amazon/B00EaKI0W"
+    click browse([ [ "/buy", 30 ] ], visitor: "pilot", started_at: 1.day.ago), go, text: "€68", section: "go"
+    browse [ [ "/buy", 30 ] ], visitor: "other-pilot", started_at: 1.day.ago
+
+    get admin_analytics_path
+
+    assert_select ".analytics-outbound tbody tr", 1 do
+      assert_select "th a", text: "link.amazon/B00EaKI0W"
+      assert_select "th .note", text: "go · €68"
+      assert_select "td", text: "50.0%"
+    end
+
+    get css_select(".analytics-outbound th a").first["href"]
+
+    assert_select ".admin-metrics div:first-child dd", text: "1"
+    assert_select ".admin-chips a", text: /Outbound link: #{Regexp.escape(go)}/
+    assert_select ".admin-metrics div:first-child dd a[href*=?]", "filters%5Boutbound%5D="
+  end
+
   test "is for admins only" do
     sign_in_as users(:amelie)
 

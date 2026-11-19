@@ -2,7 +2,6 @@
 builds/
 firmware/build/
 firmware/build-*/
-.pio/
 *.o
 *.elf
 *.uf2

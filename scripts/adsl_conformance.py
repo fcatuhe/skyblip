@@ -22,9 +22,10 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 
 import behavior_index
-import check_adsl_clauses
+import check_clauses
 
-ROOT = check_adsl_clauses.ROOT
+ROOT = check_clauses.ROOT
+ADSL = next(s for s in check_clauses.STANDARDS if s.title.startswith("ADS-L"))
 FIRMWARE = os.path.join(ROOT, "firmware")
 TEST_BINARY = os.path.join(FIRMWARE, "build", "skyblip_tests")
 OUTPUT = os.path.join(ROOT, "docs", "ADSL_CONFORMANCE.md")
@@ -37,10 +38,10 @@ UNIT = "protocols/adsl/test/"
 EN300220 = "test/en300220/"
 SOURCE_FILES = f"*{UNIT}*,*{DEVICE}*,*{EN300220}*"
 
-APPENDIX = check_adsl_clauses.APPENDIX
+APPENDIX = ADSL.unnumbered[0]
 PERFORMANCE_APPENDIX = "APPENDIX - PERFORMANCE INFORMATION"
 SECTION = re.compile(r"^## ((?:SUBPART|APPENDIX)\b.*)$")
-CLAUSE_HEADING = re.compile(rf"^#+\s+({check_adsl_clauses.CLAUSE})\s+(.*)$")
+CLAUSE_HEADING = re.compile(rf"^#+\s+({ADSL.clause})\s+(.*)$")
 EN300220_CLAUSE = re.compile(r"^(EN 300 220-\d \d+(?:\.\d+)*) (.*)$")
 SEPARATOR = behavior_index.SUBJECT_SEPARATOR
 
@@ -60,7 +61,7 @@ def main():
     for path in {path for path, _ in passed} | {path for path, _, _ in skipped}:
         prose[path] = behavior_index.read_prose(path)[1]
     with open(OUTPUT, "w", encoding="utf-8") as out:
-        out.write(render(passed, skipped, prose, read(check_adsl_clauses.SPEC),
+        out.write(render(passed, skipped, prose, read(ADSL.spec),
                          read(EN300220_CLAUSES), read(VERSION)))
     report(f"{len(passed)} cases passed and {len(skipped)} skipped -> "
            f"{os.path.relpath(OUTPUT, ROOT)}")
@@ -221,8 +222,8 @@ def is_adsl_clause_case(path):
 
 
 def kind_counts(messages):
-    counts = [(sum(check_adsl_clauses.kind_of(message) == kind for message in messages), kind)
-              for kind in check_adsl_clauses.KINDS]
+    counts = [(sum(check_clauses.kind_of(message) == kind for message in messages), kind)
+              for kind in check_clauses.KINDS]
     return ", ".join(f"{count} {kind}" for count, kind in counts if count)
 
 

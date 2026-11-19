@@ -57,7 +57,7 @@ class BravoStub {
     void run_pass(uint32_t now_ms) {
         read_claims();
         events::LinkEvent event{};
-        while (link_->pop_event(event)) {
+        while (bus_->link_events.pop(event)) {
         }
         if (!booted_) {
             booted_ = true;
@@ -80,7 +80,10 @@ class BravoStub {
    private:
     void boot() {
         previous_link_ = std::move(link_);
+        previous_bus_ = std::move(bus_);
         link_ = std::make_unique<platform::host::Link>();
+        bus_ = std::make_unique<bus::Bus>();
+        link_->deliver_to(*bus_);
         (void)link_->advertise_as(kAdvertisedName);
         boot_epoch_ = random_.next();
         sequence_ = 0;
@@ -91,10 +94,9 @@ class BravoStub {
 
     void read_claims() {
         events::RxFrame frame{};
-        while (link_->pop_rx(frame))
-            if (frame.endpoint == events::Endpoint::Peer)
-                claims.push_back(link_text(
-                    std::string(reinterpret_cast<const char*>(frame.data.data()), frame.bytes)));
+        while (bus_->peer_rx.pop(frame))
+            claims.push_back(link_text(
+                std::string(reinterpret_cast<const char*>(frame.data.data()), frame.bytes)));
     }
 
     void serve_recording(uint32_t now_ms) {
@@ -147,8 +149,10 @@ class BravoStub {
     size_t next_recorded_{0};
     wire::Random random_;
     std::unique_ptr<platform::host::Link> link_{};
+    std::unique_ptr<bus::Bus> bus_{};
     // INFO: fc 10nov26 kept to the next reboot, so a link bound to it counts what it lost
     std::unique_ptr<platform::host::Link> previous_link_{};
+    std::unique_ptr<bus::Bus> previous_bus_{};
     uint32_t boot_epoch_{0};
     uint32_t sequence_{0};
     uint32_t next_health_at_ms_{0};

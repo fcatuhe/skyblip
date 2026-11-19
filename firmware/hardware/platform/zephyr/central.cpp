@@ -13,9 +13,10 @@
 
 #include <cstring>
 
-#include "core/util/fifo.h"
+#include "core/bus/bus.h"
 #include "hardware/platform/zephyr/att_budget.h"
 #include "hardware/platform/zephyr/bluetooth_address.h"
+#include "hardware/platform/zephyr/loop_wake.h"
 #include "hardware/platform/zephyr/skyblip_uuid.h"
 
 namespace skyblip::platform::zephyr {
@@ -35,8 +36,7 @@ constexpr uint32_t kScanUnitsFloor = 0x0004;
 constexpr uint32_t kScanUnitsCeiling = 0x4000;
 
 struct k_spinlock g_lock;
-Fifo<CentralEvent, 8> g_events;
-Fifo<RxFrame, 8> g_rx;
+bus::GoBus* g_bus = nullptr;
 atomic_t g_up = ATOMIC_INIT(0);
 // INFO: fc 11nov26 written and cleared under g_lock only, and one central link at most
 struct bt_conn* g_peer = nullptr;
@@ -92,8 +92,9 @@ uint16_t payload_from_mtu(uint16_t mtu) {
 
 void raise(const CentralEvent& event) {
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    (void)g_events.push(event);
+    if (g_bus != nullptr) (void)g_bus->central_events.push(event);
     k_spin_unlock(&g_lock, key);
+    g_loop_wake.wake();
 }
 
 void raise(CentralEventType type, uint16_t payload_bytes = 0) {
@@ -169,8 +170,9 @@ uint8_t notified(struct bt_conn* /*connection*/, struct bt_gatt_subscribe_params
     frame.bytes = bytes;
     std::memcpy(frame.data.data(), data, bytes);
     k_spinlock_key_t key = k_spin_lock(&g_lock);
-    (void)g_rx.push(frame);
+    if (g_bus != nullptr) (void)g_bus->peer_rx.push(frame);
     k_spin_unlock(&g_lock, key);
+    g_loop_wake.wake();
     return BT_GATT_ITER_CONTINUE;
 }
 
@@ -326,23 +328,7 @@ Status Central::write(ConstByteSpan bytes) {
     return Status::Down;
 }
 
-bool Central::pop_event(CentralEvent& out) {
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    Result<CentralEvent> popped = g_events.pop();
-    k_spin_unlock(&g_lock, key);
-    if (!popped.ok()) return false;
-    out = popped.value();
-    return true;
-}
-
-bool Central::pop_rx(RxFrame& out) {
-    k_spinlock_key_t key = k_spin_lock(&g_lock);
-    Result<RxFrame> popped = g_rx.pop();
-    k_spin_unlock(&g_lock, key);
-    if (!popped.ok()) return false;
-    out = popped.value();
-    return true;
-}
+void Central::deliver_to(bus::GoBus& bus) { g_bus = &bus; }
 
 Central& central() {
     static Central instance;
