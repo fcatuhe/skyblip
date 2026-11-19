@@ -6,7 +6,7 @@ The suite has two halves. The cases the ADS-L component satisfies on its own tra
 
 ## One case per clause
 
-A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the clause and `docs/BEHAVIOR.md` groups by it. `scripts/check_adsl_clauses.py` is the gate over both halves: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one of them, and every case names a real clause. Each half names a file after the subpart it reads, and has no file for a subpart it has no case in:
+A case is named `ADS-L.4.SRD860.<clause>: what holds`, so the subject is the clause and the area's page under `docs/behavior/` groups by it. `scripts/check_adsl_clauses.py` is the gate over both halves: every `ADS-L.4.SRD860.x.y` heading in the specification has at least one case in one of them, and every case names a real clause. Each half names a file after the subpart it reads, and has no file for a subpart it has no case in:
 
 | File | Clauses | Here, in the device's half | In the component's half |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Where the firmware does not satisfy a clause, the case is still written as the c
 
 The checker knows a fifth kind, `unmeasured:`, a figure the radio has to meet that no bench has measured yet. No ADS-L case uses it. The ADS-B suite does (`test/adsb/README.md`).
 
-Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks. `docs/ADSL_CONFORMANCE.md` is the report for the declaration of conformity, and it lists them: every clause in the specification's order, with the cases of both halves that pass and the skipped ones with their messages, then the EN 300 220 cases and the stack's own tests. `python3 scripts/conformance.py adsl` generates it from the run, and CI fails when it differs from the suite.
+Skipped cases carry no claim, so they never reach `docs/behavior/`: the generated pages stay a list of what the suite checks. `docs/ADSL_CONFORMANCE.md` is the report for the declaration of conformity, and it lists them: every clause in the specification's order, with the cases of both halves that pass and the skipped ones with their messages, then the EN 300 220 cases and the stack's own tests. `python3 scripts/conformance.py adsl` generates it from the run, and CI fails when it differs from the suite.
 
 ## EN 300 220
 

@@ -4,7 +4,7 @@ Open-source electronic conspicuity for general aviation: [ADS-L 4 SRD-860](https
 
 ## What it does
 
-[`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) lists every claim the firmware makes about itself, straight from the host test suite that checks them. It is generated, so it cannot describe a behavior that stopped being true.
+[`docs/BEHAVIOR.md`](docs/BEHAVIOR.md) lists the main claims the firmware makes about itself, straight from the host test suite that checks them. It links one page per area of the tree, under [`docs/behavior/`](docs/behavior), with every claim beside the line of the test that checks it. It is generated, so it cannot describe a behavior that stopped being true.
 
 [`docs/ADSL_CONFORMANCE.md`](docs/ADSL_CONFORMANCE.md) lists each clause of ADS-L 4 SRD-860 Issue 2 in the specification's order, with the cases that pass and the reasons for skips. It is the test report the ADS-L declaration of conformity attaches. [`docs/ADSB_CONFORMANCE.md`](docs/ADSB_CONFORMANCE.md) reports the same evidence for the receive-side clauses of RTCA DO-260B draft 4.2 that the Bravo suite reads.
 
