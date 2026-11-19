@@ -104,7 +104,7 @@ updated_on: "2026-11-19"
   </figure>
 
   <h3 id="listen">It listens before transmitting.</h3>
-  <p class="lede">ADS-L requires listen-before-talk under the polite spectrum access rules of ETSI EN 300 220-1. Before the scheduled instant, the Go measures the burst&rsquo;s channel for 200&nbsp;&micro;s. It averages nine readings as power, with the measurement ending no more than 2&nbsp;ms before transmission. Below the threshold, it transmits. At or above it, the Go waits a random 15 to 250&nbsp;ms in steps of 5&nbsp;ms, one booked burst duration, then listens again. That is the ADS-L 4 SRD-860 C.2 backoff range, limited to waits that end before the burst&rsquo;s latest permitted start in its window. If no wait of at least 15&nbsp;ms fits, the burst is missed. The wait counts from the burst&rsquo;s scheduled instant, and the address and that instant determine the draw.</p>
+  <p class="lede">ADS-L requires listen-before-talk under the polite spectrum access rules of ETSI EN 300 220-1. Before the scheduled instant, the Go measures the burst&rsquo;s channel for 200&nbsp;&micro;s. It averages nine readings as power, with the measurement ending no more than 2&nbsp;ms before transmission. Below the threshold, it transmits. At or above it, the Go waits a random 15 to 250&nbsp;ms in steps of 5&nbsp;ms, one booked burst duration, then listens again. That is the ADS-L 4 SRD-860 C.2 backoff range, limited to waits that end at or before the burst&rsquo;s latest permitted start in its window. If no wait of at least 15&nbsp;ms fits, the burst is missed. The wait counts from the burst&rsquo;s scheduled instant, and the address and that instant determine the draw.</p>
   <p class="lede">The threshold comes from the standard&rsquo;s rule for a 200&nbsp;kHz channel, adjusted for antenna gain. At the radio chip, the channel counts as busy from &minus;78&nbsp;dBm. The antenna gain and feed loss used in this calculation come from the datasheet and an allowance, not from measurements on a unit.</p>
   <p class="lede">A deferred burst stays in its window and on its channel. A deferred position is encoded again for its new instant using the newest fix. If the channel stays busy until the window closes, the burst is missed. On the ground, once 3&nbsp;s have passed since its first busy assessment, the Go may force a transmission without listening, as ADS-L permits. It then stays silent for 2&nbsp;s after the burst ends. It never forces a transmission in flight, where that silence would cost two positions.</p>
 
@@ -116,7 +116,7 @@ updated_on: "2026-11-19"
       <tbody>
         <tr><th>Minimum channel measurement</th><td>200&nbsp;&micro;s</td><td>at least 160&nbsp;&micro;s</td></tr>
         <tr><th>Maximum gap between measurement and transmission</th><td>2&nbsp;ms</td><td>at most 5&nbsp;ms</td></tr>
-        <tr><th>Method used to randomise a deferral</th><td>a hash of the address and the instant the channel was busy</td><td></td></tr>
+        <tr><th>Method used to randomise a deferral</th><td>a hash of the address and the burst&rsquo;s scheduled instant</td><td></td></tr>
         <tr><th>Deferral step</th><td>5&nbsp;ms, one booked burst duration</td><td>at least the measurement duration</td></tr>
         <tr><th>Minimum and maximum deferral</th><td>15 and 250&nbsp;ms</td><td></td></tr>
         <tr><th>Maximum transmission duration</th><td>5&nbsp;ms</td><td>at most 1&nbsp;s</td></tr>
