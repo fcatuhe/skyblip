@@ -236,6 +236,8 @@ export class Updater {
     try {
       await this.#open();
     } catch (error) {
+      // INFO: fc 19nov26 Chrome answers NetworkError on a handle it lost track of, as on a page left open for hours, and only a new scan finds the device
+      if (error.name === 'NetworkError' && !this.#device) this.#bluetoothDevice = null;
       return this.#set({ phase: 'offline', notice: error.name === 'NotFoundError' ? null : noticeOf(error) });
     }
   }

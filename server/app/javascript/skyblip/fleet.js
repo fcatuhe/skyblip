@@ -206,11 +206,11 @@ export class Fleet {
 
   async connect(slug) {
     const unit = this.unit(slug) ?? this.#add(new Unit(this, slug));
-    if (!unit.handle) {
-      const device = await this.#choose({ names: namesOf(slug) }, 'named', slug);
-      if (!device) return unit;
-      unit.attach(device);
-    }
+    if (unit.handle) await unit.connect();
+    if (unit.handle) return unit;
+    const device = await this.#choose({ names: namesOf(slug) }, 'named', slug);
+    if (!device) return unit;
+    unit.attach(device);
     await unit.connect();
     return unit;
   }
