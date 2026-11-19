@@ -3,6 +3,7 @@
 #include "core/events/stamp.h"
 #include "core/protocol/adsb_observation.h"
 #include "core/settings/address.h"
+#include "products/skyblip_bravo/flash_window.h"
 #include "protocols/adsb/message.h"
 
 namespace skyblip::bravo {
@@ -30,6 +31,10 @@ void AdsbService::tick(uint32_t now_ms) {
     const uint32_t now_s = state.traffic_now_s(now_ms);
     state.traffic.age_out(now_s);
     state.callsigns.age_out(now_s);
+}
+
+uint32_t AdsbService::due_in_ms(uint32_t /*now_ms*/) const {
+    return events::kAdsbQueueDrainWindowMs - kFlashPassCeilingMs;
 }
 
 adsb::Reference AdsbService::reference(const model::Ownship& own) {

@@ -24,6 +24,11 @@ void ButtonService::tick(uint32_t now_ms) {
     if (answering()) answer_.arm_once_quiet(prompt_readable(), now_ms);
 }
 
+uint32_t ButtonService::due_in_ms(uint32_t /*now_ms*/) const {
+    return answering() || requested_ ? runtime::kServicePassCeilingMs
+                                     : runtime::kServiceRestCeilingMs;
+}
+
 void ButtonService::sync_prompt(uint32_t now_ms) {
     const comms::Pending pending = config_.prompt_allowed_in(context_.state.flight.confirmed_state)
                                        ? config_.pending()

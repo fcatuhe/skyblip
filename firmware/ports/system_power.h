@@ -19,8 +19,6 @@ class SystemPower {
 
     virtual void system_off() {}
 
-    virtual void reboot() {}
-
     // THE POWER-FAILURE COMPARATOR.
     //
     // Absence is a capability and it is reported here, by the one object that

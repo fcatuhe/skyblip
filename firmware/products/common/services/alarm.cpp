@@ -1,12 +1,8 @@
 #include "products/common/services/alarm.h"
 
-namespace skyblip::common {
+#include <algorithm>
 
-Status AlarmService::setup() {
-    lamp_shows_link_ =
-        has_feature(supported(declared_, context_.roles.capabilities), Feature::LampShowsLink);
-    return Status::Ok;
-}
+namespace skyblip::common {
 
 void AlarmService::tick(uint32_t now_ms) {
     accrue_annunciator(now_ms);
@@ -31,6 +27,15 @@ void AlarmService::tick(uint32_t now_ms) {
     if (command.tone_changed) drive_buzzer(command);
     drive_motor(sign_.playing() ? signal.vibrating : command.vibrating);
     drive_lamp(now_ms, running_, signal);
+}
+
+uint32_t AlarmService::due_in_ms(uint32_t now_ms) const {
+    if (annunciation_.voice() != annunciation::Voice::None || sign_.playing() || sign_on_pending_ ||
+        motor_on_)
+        return runtime::kServicePassCeilingMs;
+    if (!ports::has(context_.roles.capabilities, ports::Capability::Indicator))
+        return runtime::kServiceRestCeilingMs;
+    return std::min(runtime::kServiceRestCeilingMs, indication_.until_change_ms(now_ms));
 }
 
 // INFO: fc 17nov26 a plain Go plays no lost-Bravo tone, so a Bravo in flight says it lost its Go

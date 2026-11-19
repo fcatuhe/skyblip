@@ -2,8 +2,9 @@
 """Fail if a logic module or a part has no host test that reaches it.
 
 Structural gate, not line coverage. Tests live in firmware/test/, one folder per
-layer, and never beside the code they test: every core/ and ui/ module must be
-included by some test there, and every part with a driver must have
+layer, and never beside the code they test: every directory with a header under
+protocols/, core/, ui/, products/, runtime/ and simulator/ must be included by
+some test the host suite compiles, and every part with a driver must have
 test/hardware/test_<part>.cpp that includes both the driver and its model. A part
 with no test is a datasheet transcription nothing checks. A radio protocol stack
 under protocols/ is the one exception: it travels with its tests, so they live in
@@ -15,37 +16,32 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FW = os.path.join(ROOT, "firmware")
 
-REQUIRED_MODULES = [
-    "protocols/common", "protocols/adsl", "protocols/adsl_edge", "protocols/adsb", "protocols/alptas",
-    "core/util", "core/fec", "core/protocol", "core/gnss", "core/timing",
-    "core/traffic", "core/settings", "core/comms", "core/flight", "core/bus",
-    "core/power", "core/annunciation", "core/indication", "core/dfu", "core/radio",
-    "core/input", "core/crypto", "core/identity",
-    "products/common/services", "products/skyblip_go/pages", "products/skyblip_go/input",
-    "products/skyblip_bravo",
-    "ui/widgets", "runtime",
-    "simulator",
-]
-
-TEST_DIRS = ("test", "test/adsl", "test/adsl_edge", "test/adsb", "test/core", "test/ui", "test/products", "test/products/pages",
-             "test/products/skyblip_bravo", "test/hardware", "test/boards",
-             "protocols/common/test", "protocols/adsl/test", "protocols/adsl/test/conformance",
-             "protocols/adsl_edge/test", "protocols/adsb/test", "protocols/adsb/test/conformance",
-             "protocols/alptas/test")
-
+MODULE_LAYERS = ("protocols", "core", "ui", "products", "runtime", "simulator")
+NOT_HOST_TESTS = ("test/fuzz", "test/twister")
 PART_TEST_DIR = "test/hardware"
 
 
-def test_blob():
+def modules(fw=FW):
+    found = []
+    for layer in MODULE_LAYERS:
+        for dirpath, dirs, files in os.walk(os.path.join(fw, layer)):
+            dirs[:] = sorted(d for d in dirs if d != "test")
+            if any(f.endswith(".h") for f in files):
+                found.append(os.path.relpath(dirpath, fw))
+    return found
+
+
+def test_blob(fw=FW):
+    tops = [os.path.join(fw, "test")] + [os.path.join(fw, "protocols", stack, "test")
+                                         for stack in sorted(os.listdir(os.path.join(fw, "protocols")))]
     blob = []
-    for base in TEST_DIRS:
-        d = os.path.join(FW, base)
-        if not os.path.isdir(d):
-            continue
-        for f in sorted(os.listdir(d)):
-            if f.endswith(".cpp"):
-                with open(os.path.join(d, f)) as fh:
-                    blob.append(fh.read())
+    for top in tops:
+        for dirpath, dirs, files in os.walk(top):
+            dirs[:] = sorted(d for d in dirs if os.path.relpath(os.path.join(dirpath, d), fw) not in NOT_HOST_TESTS)
+            for f in sorted(files):
+                if f.endswith(".cpp"):
+                    with open(os.path.join(dirpath, f)) as fh:
+                        blob.append(fh.read())
     return "\n".join(blob)
 
 
@@ -73,12 +69,13 @@ def strays():
     return sorted(found)
 
 
+def untested(fw=FW):
+    blob = test_blob(fw)
+    return [mod for mod in modules(fw) if f'#include "{mod}/' not in blob]
+
+
 def main():
-    blob = test_blob()
-    missing = []
-    for mod in REQUIRED_MODULES:
-        if f'#include "{mod}/' not in blob:
-            missing.append(mod)
+    missing = untested()
 
     for part in parts():
         if not has_driver(part):
@@ -107,7 +104,7 @@ def main():
             for m in misplaced:
                 print("  -", m)
         return 1
-    print("OK: every module and part is reached by a host test.")
+    print(f"OK: all {len(modules())} modules and every part are reached by a host test.")
     return 0
 
 

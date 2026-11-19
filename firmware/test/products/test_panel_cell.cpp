@@ -288,7 +288,7 @@ TEST_CASE("product: the press on the cable after a flat cell names it on the sel
     REQUIRE(pressed.setup() == Status::Ok);
     REQUIRE(pressed.product.boot_path() == power::BootPath::Run);
     CHECK(pressed.product.went_dark_flat());
-    CHECK(reads_in(pressed.product.self_test_page(), "WAS EMPTY", 0, 150, 200, 199));
+    CHECK(reads_in(pressed.self_test_page(), "WAS EMPTY", 0, 150, 200, 199));
     CHECK_FALSE(pressed.platform.system_power().went_dark_flat());
     pressed.send("{\"command\":\"status\"}");
     pressed.run(0, 200);
@@ -308,7 +308,7 @@ TEST_CASE("product: a cutoff leaves the note for the next boot, an ordinary boot
     Rig ordinary;
     REQUIRE(ordinary.setup() == Status::Ok);
     CHECK_FALSE(ordinary.product.went_dark_flat());
-    CHECK_FALSE(reads_in(ordinary.product.self_test_page(), "WAS EMPTY", 0, 0, 200, 199));
+    CHECK_FALSE(reads_in(ordinary.self_test_page(), "WAS EMPTY", 0, 0, 200, 199));
 }
 
 // The note is the cell's, not the frame's: a panel held off in the heat parks nothing.

@@ -9,7 +9,7 @@ The public halves of the keys MCUboot is built to trust. A unit takes an update 
 
 CI signs, then fails unless the image verifies against the file named for its environment.
 
-The key also decides the bootloader's rule. A release is built with `products/<product>/release/`, which refuses an image older than the running one: a unit on the production key only goes up, or installs the same version again. A development build leaves those fragments out. A pull request is signed with a key made for that run and checked against nothing: it proves the build, and its image updates no unit.
+The key also decides the bootloader's rule. A release is built with `products/common/release/`, which refuses an image older than the running one: a unit on the production key only goes up, or installs the same version again. A development build leaves those fragments out. A pull request is signed with a key made for that run and checked against nothing: it proves the build, and its image updates no unit.
 
 | Bootloader | Verifies | Installs over the air |
 |---|---|---|

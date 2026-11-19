@@ -13,7 +13,7 @@ TEST_CASE("bravo: boots on the X1's host models and listens on 1090 MHz under it
     CHECK(ports::has(rig.product.capabilities(),
                      ports::Capability::AdsbReceiver | ports::Capability::Gnss |
                          ports::Capability::Barometer | ports::Capability::HapticDriver));
-    CHECK(rig.product.degraded() == ports::Capability::DieTemperature);
+    CHECK_FALSE(ports::has(rig.product.capabilities(), ports::Capability::DieTemperature));
     CHECK(rig.platform.radio().listening_for_adsb());
     rig.run_for(1000);
     CHECK(rig.platform.link().advertised == "skyBlip Bravo 3F2A");
