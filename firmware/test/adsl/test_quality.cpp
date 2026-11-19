@@ -120,14 +120,16 @@ TEST_CASE("ADS-L.4.SRD860.G.1.17: a fix with no reported HDOP claims no accuracy
 }
 
 // The accuracy claim moves with the fix, which is what the clause asks an uncertified device for.
-TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static zero") {
+TEST_CASE("ADS-L.4.SRD860.G.1.17: the accuracy codes are dynamic, not a static zero" *
+          doctest::test_suite("main")) {
     const adsl::Packet good = from_dop(90, 150);
     const adsl::Packet poor = from_dop(800, 800);
     CHECK(good.horizontal_accuracy > poor.horizontal_accuracy);
     CHECK(good.vertical_accuracy >= poor.vertical_accuracy);
 }
 
-TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance") {
+TEST_CASE("ADS-L.4.SRD860.G.1.17: an uncertified device claims no integrity and no assurance" *
+          doctest::test_suite("main")) {
     const adsl::Packet packet = from_dop(90, 150);
     CHECK(packet.source_integrity == 0);
     CHECK(packet.design_assurance == 0);
