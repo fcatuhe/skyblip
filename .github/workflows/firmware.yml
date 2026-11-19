@@ -192,11 +192,12 @@ jobs:
           python3 scripts/behavior_index.py
           git add --intent-to-add docs/BEHAVIOR.md docs/behavior
           git diff --exit-code docs/BEHAVIOR.md docs/behavior
-      # Both reports show which clauses the suite checks and why cases are skipped.
+      # Both reports must match their suites, and a deleted report counts as a diff.
       - name: ADS-L and ADS-B reports match their suites
         run: |
           python3 scripts/conformance.py adsl
           python3 scripts/conformance.py adsb
+          git add --intent-to-add docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
           git diff --exit-code docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
       # docs/TUNING.md is generated from the constants themselves: a threshold
       # that moves without its note moving is the whole point of the gate.
