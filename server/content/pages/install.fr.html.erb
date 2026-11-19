@@ -1,0 +1,61 @@
+---
+title: "Installer skyBlip depuis votre navigateur"
+nav_title: Installer
+slug: installer
+description: "Installez skyBlip sur votre Go ou votre Bravo depuis votre navigateur, avec le Briefing. Un ordinateur, Chrome ou Edge et un câble USB-C suffisent."
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Installez skyBlip depuis votre navigateur</h1>
+  <p class="page-hero-subtitle">Un ordinateur, Chrome ou Edge, un câble USB-C. Le Briefing fait le reste.</p>
+</header>
+
+<section id="steps" class="band band--tint">
+  <h2 class="section-title">Quatre étapes</h2>
+  <div class="install-steps">
+    <ol class="steps-grid steps-grid--sequence">
+      <li>
+        <h3>Branchez</h3>
+        <p>Le boîtier, en USB-C, à votre ordinateur.</p>
+      </li>
+      <li>
+        <h3>Installez</h3>
+        <p>Cliquez sur Installer dans le Briefing.</p>
+      </li>
+      <li>
+        <h3>Connectez</h3>
+        <p>En Bluetooth, quand le Briefing vous le propose.</p>
+      </li>
+      <li>
+        <h3>Volez</h3>
+        <p><%= link_to_page "guides", label: "Le guide Premiers pas" %> vous montre l&rsquo;essentiel.</p>
+      </li>
+    </ol>
+    <p class="install-start"><%= link_to "Installer dans le Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
+  </div>
+</section>
+
+<section id="connected" class="band">
+  <h2 class="section-title">Bon à savoir</h2>
+  <p>Un Go neuf s&rsquo;active dans le Briefing, sans compte. Bravo n&rsquo;a pas besoin d&rsquo;activation.</p>
+  <p>Pour un Tango, installez les deux appareils, puis associez-les dans le <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+  <p>Déjà sous skyBlip ? <%= link_to "Connectez-le dans le Briefing", briefing_root_path(locale: I18n.locale) %> pour les réglages et les mises à jour.</p>
+</section>
+
+<section id="si-quelque-chose-bloque" class="band band--tint">
+  <div class="troubleshooting">
+    <h2>Si quelque chose bloque</h2>
+    <h3 id="not-found">Le boîtier n&rsquo;apparaît pas</h3>
+    <p>Allumez-le et essayez un câble USB-C qui transmet les données. Pour l&rsquo;installation guidée par USB, utilisez Chrome ou Edge sur un ordinateur. Si vous ne pouvez pas utiliser ce parcours, vous pouvez copier le logiciel à la main.</p>
+    <h3 id="manual">Installer le logiciel à la main</h3>
+    <p>Téléchargez le fichier <code>.uf2</code> prévu pour votre appareil sur la <%= link_to "page des versions de skyBlip", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
+    <ul>
+      <li><strong>Go ou Go+ :</strong> branchez le boîtier et appuyez deux fois rapidement sur le bouton RESET, en haut sur le côté gauche. Copiez le fichier du Go sur le lecteur <strong>TECHOBOOT</strong>. S&rsquo;il s&rsquo;agit d&rsquo;un Go neuf, <%= link_to "activez-le ensuite en Bluetooth", briefing_activation_path(locale: I18n.locale) %> dans Chrome ou Edge sur ordinateur ou Android. Suivez la demande affichée sur le Go.</li>
+      <li><strong>Bravo :</strong> débranchez le boîtier. Maintenez son bouton enfoncé pendant que vous le rebranchez. Relâchez quand le voyant devient blanc. Copiez le fichier skyBlip Bravo sur le lecteur <strong>X1</strong>.</li>
+    </ul>
+    <h3 id="transponder">Votre propre transpondeur apparaît comme un trafic</h3>
+    <p>Au sol, mettez votre transpondeur sur ALT. Bravo peut alors proposer son adresse, qu&rsquo;il soit Mode S ou ADS-B : dans le Briefing avec Bravo seul, sur l&rsquo;écran du Go avec un Tango. Vérifiez qu&rsquo;il s&rsquo;agit de votre aéronef avant de l&rsquo;accepter. Si vous connaissez déjà son adresse, vous pouvez la saisir dans le réglage « Adresse ADS-B ». Sans transpondeur, vous n&rsquo;avez rien à renseigner.</p>
+    <p>Toujours bloqué ? Écrivez-nous à <%= mail_to Rails.configuration.x.contact_email %> ou sur <%= link_to "GitHub", "#{Rails.configuration.x.repository_url}/issues" %>.</p>
+  </div>
+</section>

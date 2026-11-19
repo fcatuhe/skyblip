@@ -1,0 +1,149 @@
+---
+title: "skyBlip Go, radar tascabile per ADS-L e FLARM"
+nav_title: Go
+slug: go
+product:
+  name: skyBlip Go
+  low_price: "68"
+  currency: EUR
+  image: pages/index/skyblip-go-techo.avif
+description: "Vedi il traffico ADS-L e FLARM sul radar del Go. Trasmetti la tua posizione in ADS-L. Un avviso di traffico ti indica dove guardare."
+updated_on: "2026-11-18"
+---
+
+<%= render "shared/device_tabs" %>
+
+<header class="page-hero">
+  <h1>Un radar tascabile per vedere e farti vedere</h1>
+  <p class="page-hero-subtitle">skyBlip Go trasmette la tua posizione in ADS-L e mostra il traffico ADS-L e FLARM.</p>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, un dispositivo bianco con antenna e il radar del traffico sullo schermo." %>
+  </figure>
+</header>
+
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Leggi il traffico a colpo d&rsquo;occhio</h2>
+  <div class="feature">
+    <div>
+      <h3 id="radar">La tua rotta verso l&rsquo;alto, il traffico intorno a te</h3>
+      <p>Un simbolo in alto a destra ti indica di guardare avanti a destra. La punta indica se l&rsquo;aeromobile è sopra o sotto di te. Un rombo indica che è circa alla tua quota. La linea mostra dove sarà fra un minuto se mantiene la stessa rotta al suolo. Scegli un cerchio radar di 1, 2, 4 o 8 miglia nautiche (NM).</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Leggi il radar", anchor: "heading-up" %> <small>(Dalla guida «Radar e traffico»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Tre aeromobili sul radar: uno sopra, uno sotto e uno alla tua quota in salita. Una linea indica la posizione di ciascuno fra un minuto. La tua rotta è tratteggiata." %>
+    </figure>
+  </div>
+  <div class="blip-legend">
+    <div>
+      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
+      <p>Sopra di te</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
+      <p>Alla tua quota</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
+      <p>Sotto di te</p>
+    </div>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Il traffico resta visibile oltre il cerchio</h3>
+      <p>In PLOT ALL, l&rsquo;impostazione predefinita, il bordo del cerchio non taglia fuori il traffico. Il Go mostra il traffico ricevuto oltre il cerchio in una fascia esterna, nella direzione da cui proviene. Vedi da dove arriva senza cambiare scala. Se vuoi vedere le posizioni in scala, scegli PLOT TO SCALE.</p>
+      <p class="feature-guide"><%= link_to_page "displays", label: "Confronta le due modalità radar", anchor: "both-ways" %> <small>(Dalla guida «Tutte le schermate»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "PLOT ALL mostra due aeromobili nel cerchio e altri nella fascia esterna: uno davanti, tre in alto a destra e uno a sinistra." %>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="alarm">Un avviso ti indica dove guardare</h3>
+      <p>Quando il traffico fa scattare un avviso, il Go torna al radar. Un quarto dello schermo lampeggia nella direzione del traffico. Guarda da quella parte. Il Go non ti dice di salire o scendere.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Leggi un avviso", anchor: "alarm" %> <small>(Dalla guida «Radar e traffico»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Durante un avviso, il settore di 90 gradi del radar rivolto verso il traffico diventa nero." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="nearby">NEARBY: chi c&rsquo;è e a che distanza?</h3>
+      <p>La lista mostra prima gli avvisi, poi gli aeromobili vicini alla tua quota. Ogni riga indica la fonte, il nominativo se ricevuto, la distanza orizzontale e la differenza di quota se nota.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Leggi la lista NEARBY", anchor: "nearby" %> <small>(Dalla guida «Radar e traffico»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "La schermata NEARBY elenca cinque aeromobili, prima quelli più vicini alla tua quota, con fonte, nominativo, distanza e quota relativa." %>
+    </figure>
+  </div>
+</section>
+
+<section id="broadcast" class="band">
+  <h2 class="section-title">La tua posizione, ogni secondo in volo</h2>
+  <div class="feature">
+    <div>
+      <p>In volo, il Go trasmette la tua posizione in ADS-L ogni secondo. Invia anche il tuo nominativo in un messaggio separato, se lo hai impostato. I piloti con apparati che ricevono questi messaggi possono vederti e identificarti sul loro schermo.</p>
+      <p class="feature-guide"><%= link_to_page "radio", label: "Come si divide il secondo", anchor: "second" %> <small>(Dalla guida «Il secondo radio»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Il registro radio mostra una riga per ogni messaggio trasmesso o ricevuto, con orario, canale, indirizzo e livello del segnale." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Imposta il nominativo sul Go o in Briefing</h3>
+      <p id="asked">Cambia il tipo di aeromobile o il nominativo nel menu del Go o via Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+      <p class="feature-guide"><%= link_to_page "controls", label: "Inserisci il nominativo", anchor: "callsign" %> <small>(Dalla guida «Comandi e menu»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Il campo del nominativo mostra S-BLIP in grande. Una barra indica il terzo carattere. I comandi indicano NEXT per il pulsante e CHANGE per il pad." %>
+    </figure>
+  </div>
+</section>
+
+<section id="apps" class="band band--tint">
+  <h2 class="section-title">Lo stesso traffico nelle tue app</h2>
+  <div class="feature">
+    <div>
+      <p>Seleziona il tuo Go in SDVFR Next, SkyDemon o ForeFlight. Il Go invia il traffico via Bluetooth a tre dispositivi alla volta. Il tuo tablet, il tuo telefono e quello del passeggero possono ricevere lo stesso traffico.</p>
+      <p class="feature-guide"><%= link_to_page "phone", label: "Connetti la tua app", anchor: "by-name" %> <small>(Dalla guida «Telefono e firmware»)</small></p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= content_image_tag "pages/index/sdvfr-next-traffic.avif", alt: "La mappa di SDVFR Next mostra il traffico ricevuto da skyBlip Go, con il nominativo accanto a ogni aeromobile." %>
+      <figcaption>SkyDreamSoft SDVFR Next.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="instruments" class="band">
+  <h2 class="section-title">Sei quadranti sul Go, un accelerometro sul Go+</h2>
+  <div class="feature">
+    <div>
+      <h3 id="six-pack">Misure da GPS e barometro</h3>
+      <p>I sei quadranti mostrano velocità al suolo, orizzonte, quota, virata, rotta al suolo e velocità verticale. Usa queste letture come riferimento. Non sostituiscono gli strumenti di volo.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Leggi i sei quadranti", anchor: "six-pack" %> <small>(Dalla guida «Strumenti»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "La schermata a sei quadranti mostra velocità al suolo, orizzonte, altimetro, pallina, rotta al suolo e velocità verticale." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="g-meter">L&rsquo;accelerometro del Go+ conserva i valori minimi e massimi</h3>
+      <p>L&rsquo;accelerometro mostra i carichi misurati dal sensore del Go+. Leggi il carico attuale e i valori estremi raggiunti durante il volo. Il Go+ aggiunge anche suono e vibrazione all&rsquo;avviso sullo schermo.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Leggi l'accelerometro", anchor: "g-meter" %> <small>(Dalla guida «Strumenti»)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "L'accelerometro indica il carico normale e laterale. Un riquadro delimita i valori estremi del volo. Una fascia mostra il carico longitudinale." %>
+    </figure>
+  </div>
+</section>
+
+<section id="try" class="band band--tint">
+  <h2 class="section-title">Prova il radar, poi scegli il dispositivo</h2>
+  <p>Go e Go+ hanno lo stesso radar. Abbina uno dei due a un Bravo per vedere anche gli aeromobili che trasmettono la posizione in ADS-B.</p>
+  <p>Il Go è un ausilio non certificato alla sorveglianza visiva. Non sostituisce gli apparati FLARM né il transponder richiesti per il tuo volo.</p>
+  <p><%= link_to_page "controls", label: "Comandi del Go", anchor: "two-contacts", id: "controls" %> · <%= link_to_page "power", label: "Alimentazione e batteria", id: "power" %></p>
+  <p class="signature"><%= link_to_page "skyblip-go", label: "Prova il radar", class: "button button--primary" %> · <%= link_to_page "buy", label: "Confronta Go e Go+", anchor: "compare" %></p>
+</section>

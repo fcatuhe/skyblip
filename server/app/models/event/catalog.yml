@@ -138,8 +138,8 @@ installer.drive_chosen:
 installer.wrote:
   group: Installer
   from: browser
-  keys: [product, version, trusted, write_ms]
-  says: The release image was written to the drive, with the product, the version, whether it carried this browser's trust record, and how long the write took.
+  keys: [product, version, trusted, write_ms, detail]
+  says: The release image was written to the drive, with the product, the version, whether it carried this browser's trust record, how long the write took, and the error the bootloader's restart raised as the last block landed, if any.
   answers: How many units are installed over USB, and how many trust their browser from the start.
 installer.noticed:
   group: Installer

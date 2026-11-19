@@ -1,0 +1,42 @@
+---
+title: "skyBlip Bravo, traffico ADS-B nella tua app di navigazione"
+nav_title: Bravo
+slug: bravo
+share_image: bravo
+product:
+  name: skyBlip Bravo
+  low_price: "44.91"
+  currency: USD
+  image: pages/skyblip-bravo/seeed-x1.avif
+description: "Bravo rileva i transponder Mode S e ADS-B. Invia il traffico ADS-B alla tua app di navigazione o al radar del Go."
+updated_on: "2026-11-18"
+---
+
+<%= render "shared/device_tabs" %>
+
+<header class="page-hero">
+  <h1>Vedi il traffico ADS-B nella tua app di navigazione</h1>
+  <p class="page-hero-subtitle">skyBlip Bravo rileva i transponder Mode S e ADS-B. Invia il traffico ADS-B via Bluetooth a un&rsquo;app di navigazione compatibile come SDVFR o SkyDemon. Il MeshTracker X1 non ha schermo. In volo emette un suono e vibra se il traffico fa scattare un avviso.</p>
+  <figure class="hero-figure">
+    <%= pages_image_tag "seeed-x1.avif", alt: "Il Seeed SenseCAP MeshTracker X1, un dispositivo nero grande come una tessera, con un pulsante verde." %>
+    <figcaption class="pair-caption">Foto: Seeed Studio.</figcaption>
+  </figure>
+</header>
+
+<section id="status" class="band band--tint">
+  <h2 class="section-title">Vedi gli aeromobili con cui già condividi il cielo</h2>
+  <p>Bravo rileva gli aeromobili più recenti dotati di ADS-B e quelli meno recenti aggiornati con strumentazione digitale collegata a un trasmettitore ADS-B o con un nuovo transponder ADS-B. Nei pressi di un campo di volo o di un aeroporto vedi anche gli aerei di linea, i jet d&rsquo;affari e gli elicotteri che trasmettono in ADS-B.</p>
+  <p>Bravo rileva anche i transponder Mode S senza ADS-B. Non forniscono la posizione. Stiamo raccogliendo dati su questi rilevamenti per capire come segnalarli al meglio sul Go e nelle app di navigazione. Bravo riceve questi segnali direttamente a bordo a 1090 MHz, senza una stazione a terra. Non riceve ADS-L né FLARM. Non trasmette la tua posizione.</p>
+  <p>Bravo è un ausilio non certificato alla sorveglianza visiva.</p>
+</section>
+
+<section id="with-go" class="band">
+  <h2 class="section-title">Aggiungi questo traffico al radar del Go</h2>
+  <p>Hai già un Go? Abbinalo a Bravo per formare un Tango. Il radar del Go mostra il traffico ADS-B insieme a quello ADS-L e FLARM. Il Go continua a trasmettere la tua posizione in ADS-L.</p>
+</section>
+
+<section id="buy" class="band band--tint">
+  <h2 class="section-title">Cerchi un MeshTracker X1?</h2>
+  <p>Acquista il dispositivo, poi installa il software skyBlip Bravo. Il software di serie dell&rsquo;X1 non riceve l&rsquo;ADS-B.</p>
+  <p id="install" class="signature"><%= link_to_page "buy", label: "Scopri dove acquistare il MeshTracker X1", class: "button button--primary", anchor: "where" %> · <%= link_to_page "install", label: "Installa skyBlip Bravo" %></p>
+</section>

@@ -1,0 +1,243 @@
+---
+title: "Go: Displayansichten und Radarmodi"
+nav_title: Displayansichten
+slug: displayansichten
+description: "Sehen Sie jede Ansicht von skyBlip Go, vom Flugverkehr bis zur Diagnose. Vergleichen Sie PLOT ALL und PLOT TO SCALE anhand desselben Verkehrs."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Jede Ansicht, wie sie das Gerät darstellt.</h1>
+  <p class="lede">
+    Jedes Bild zeigt die 200&times;200 Pixel, die der
+    <%= link_to_page "skyblip-go", label: "Simulator", anchor: "simulator" %> im jeweiligen Zustand zeichnet. Wir erfassen sie pixelgenau. Ändert sich eine Anzeige auf dem Gerät, nehmen wir sie neu auf.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="both-ways">Zwei Radarmodi</h2>
+  <p class="lede">
+    <span class="mono">PLOT</span> im Einstellungsmenü stellt das Radar auf eine von zwei Arten dar. <span class="mono">ALL</span> ist die voreingestellte erste Option. Sie verkleinert den Kreis und setzt jedes Luftfahrzeug außerhalb des Kreises in der jeweiligen Richtung in den Ring darum. <span class="mono">TO SCALE</span> zeichnet jedes Symbol im Maßstab des Kreises. Was nicht auf das Display passt, entfällt. Wir zeigen drei Verkehrslagen in beiden Modi, jeweils mit derselben Firmware aufgezeichnet.
+  </p>
+
+  <div class="plot" data-controller="plot" data-plot-view-value="both">
+    <p class="plot-choices" data-plot-target="choices" hidden>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="all">PLOT ALL</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="to-scale">PLOT TO SCALE</button>
+      <button type="button" class="plot-choice" data-plot-target="choice" data-action="plot#show" data-plot-view-param="both">Direktvergleich</button>
+    </p>
+
+    <div class="plot-situation">
+      <h3 id="quiet-sky">Alles passt in den Kreis.</h3>
+      <p>
+        Drei Luftfahrzeuge innerhalb von vier nautischen Meilen. Mit <span class="mono">ALL</span>
+        liegen sie im kleineren Kreis. Sonst ändert sich nichts. In der maßstabsgetreuen Ansicht ist der Kreis größer.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "radar.png", alt: "Radaransicht mit PLOT ALL: dieselben drei Luftfahrzeuge in einem kleineren Kreis, kein Symbol im Ring darum" %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "radar-to-scale.png", alt: "Maßstabsgetreues Radar: drei Luftfahrzeuge im Kreis von vier nautischen Meilen, jeweils mit einer Linie zur Position in einer Minute" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="past-the-ring">Verkehr außerhalb des Kreises.</h3>
+      <p>
+        Ein Luftfahrzeug nähert sich aus fünf nautischen Meilen voraus. Eine Gruppe von drei fliegt acht nautische Meilen rechts voraus, ein weiteres elf nautische Meilen links. Mit
+        <span class="mono">ALL</span> erscheinen alle im äußeren Ring. Die Gruppe teilt sich ein Symbol mit der Zahl 3. Die Linie zur Position des sich nähernden Luftfahrzeugs in einer Minute reicht bereits in den Kreis. Maßstabsgetreu erscheint nur das Luftfahrzeug voraus auf dem Display.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "far-all.png", alt: "Radaransicht mit PLOT ALL: Im äußeren Ring steht voraus ein Luftfahrzeug, dessen Kurslinie in den Kreis führt. Rechts oben steht ein Symbol mit der Zahl 3, links ein weiteres Luftfahrzeug." %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "far-to-scale.png", alt: "Maßstabsgetreues Radar: die Luftfahrzeuge im Kreis und ein weiteres ganz oben. Die Gruppe und das Luftfahrzeug links fehlen." %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+    <div class="plot-situation">
+      <h3 id="astern">Verkehr hinter Ihnen.</h3>
+      <p>
+        Drei Luftfahrzeuge sechs bis acht nautische Meilen hinter Ihnen und eines im Kreis. Mit
+        <span class="mono">ALL</span> teilen sich die drei ein Symbol mit der Zahl 3. Es steht neben der Reichweitenangabe, nicht darunter. Maßstabsgetreu liegen die drei außerhalb des Displays.
+      </p>
+      <div class="shots">
+        <figure class="shot plot-all">
+          <%= screen_image_tag "astern-all.png", alt: "Radaransicht mit PLOT ALL: dasselbe Luftfahrzeug im Kreis. Neben der Reichweitenangabe unten steht ein Symbol mit der Zahl 3 für die Luftfahrzeuge hinter Ihnen." %>
+          <figcaption>PLOT ALL</figcaption>
+        </figure>
+        <figure class="shot plot-to-scale">
+          <%= screen_image_tag "astern-to-scale.png", alt: "Maßstabsgetreues Radar: ein Luftfahrzeug links hinter Ihnen im Kreis, sonst keines" %>
+          <figcaption>PLOT TO SCALE</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <p><%= link_to_page "radar", label: "Den äußeren Ring lesen", anchor: "every-aircraft", class: "cta cta--next" %></p>
+</section>
+
+<section>
+  <h2 class="kicker" id="in-flight">Im Flug</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Radaransicht: drei Luftfahrzeuge als Rauten, eines über Ihnen, eines unter Ihnen und eines auf Ihrer Höhe im Steigflug. Die Linien zeigen ihre Position in einer Minute. Ihre eigene Kurslinie ist gestrichelt und hat für die nächsten beiden Minuten je einen Punkt. Außerdem sehen Sie den Kreis von vier nautischen Meilen, die Flugzeit und die Anzahl empfangener Luftfahrzeuge." %>
+      <figcaption>Radar</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Radar bei einem Verkehrshinweis: ein schwarzer 90-Grad-Sektor in Richtung des Verkehrs. Die ausgefüllte Raute des sich nähernden Luftfahrzeugs und seine Kurslinie für eine Minute sind darauf weiß." %>
+      <figcaption>Verkehrshinweis</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "Ansicht NEARBY: eine Zeile für Go mit 92% Akkustand, 9 Satelliten und 5 empfangenen Luftfahrzeugen. Dann folgen fünf Luftfahrzeuge, die auf Ihrer Höhe zuerst. Jeweils ein Buchstabe für die Quelle, das Rufzeichen oder klein gedruckt die Adresse, die horizontale Entfernung und die relative Höhe." %>
+      <figcaption>NEARBY</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "Sechs Rundanzeigen: Geschwindigkeit über Grund, künstlicher Horizont mit Akkustand darüber, Höhenmesser, Wendezeiger mit Kugel, Kursrose und Vertikalgeschwindigkeit" %>
+      <figcaption>Die sechs Rundanzeigen</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "g-Messer: Eine Markierung zeigt Lasten nach oben und unten und zur Seite. Ein Rahmen markiert die Spitzenlasten des Flugs. Daneben stehen eine Anzeige der Längslast und drei Zahlenzeilen in Zehntel g." %>
+      <figcaption>g-Messer</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "radar", label: "Radar und Verkehr", anchor: "heading-up", class: "cta cta--next" %>
+    &nbsp;&middot;&nbsp;
+    <%= link_to_page "instruments", label: "Instrumente", anchor: "six-pack", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="settings">Einstellungen</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-radar.png", alt: "Einstellungsmenü mit LIGHT, AIRCRAFT, UNITS, RANGE, PLOT, ALARM und BRAVO. Unten stehen CHANGE für die Taste und NEXT für das Touchfeld." %>
+      <figcaption>Das Radarmenü</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Rufzeichenfeld: S-BLIP in dreifacher Höhe, ein Balken unter dem dritten Zeichen sowie NEXT für die Taste und CHANGE für das Touchfeld" %>
+      <figcaption>Das Rufzeichenfeld</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-blank.png", alt: "Rufzeichenfeld mit einem Leerzeichen an erster Stelle, dem Balken darunter und ERASE für die Taste" %>
+      <figcaption>Das erste Zeichen ist ein Leerzeichen</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign-none.png", alt: "Menü AIRCRAFT nach dem Tastendruck. Die Zeile CALLSIGN ist gewählt und zeigt NONE." %>
+      <figcaption>Nach einem Tastendruck</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Bedienung und Menüs", anchor: "two-contacts", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="diagnostics">Diagnose</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "menu-nearby.png", alt: "Menü der Liste NEARBY: Status, Satelliten, Funkprotokoll, Bravo-Protokoll und Selbsttest. Diese fünf Ansichten öffnen Sie über das Menü." %>
+      <figcaption>Das Menü der Liste NEARBY</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "status.png", alt: "Statusansicht: Satellitenstatus und Satelliten, Position, Kurs über Grund, Anzahl der Luftfahrzeuge, Sendestatus, Sensor-Hub, Druck, beide Höhen, Geschwindigkeit, Vertikalgeschwindigkeit und Akku in Volt und Prozent" %>
+      <figcaption>Status</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "satellites.png", alt: "Satellitenansicht: ein Balken pro Satellit, gruppiert nach Konstellation, mit gepunkteter Linie bei 40 dB-Hz" %>
+      <figcaption>Satelliten</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Funkprotokoll: Unter Satellitenstatus, PPS-Signalstatus und Grundrauschen steht jede empfangene oder gesendete Aussendung in einer Zeile. Die jüngste steht oben, mit Zeit, Richtung, Kanal, Inhalt, Adresse und Signalpegel." %>
+      <figcaption>Funkprotokoll</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "self-test.png", alt: "Selbsttest: eine Zeile pro Bauteil der Platine, mit Name und Testergebnis für jedes antwortende Bauteil" %>
+      <figcaption>Selbsttest</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "controls", label: "Ansichten, die Sie über das Menü öffnen", anchor: "diagnostics", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="on-the-ground">Am Boden und ausgeschaltet</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "Radaransicht ohne Position: Im leeren Kreis steht NO FIX, darunter der Fortschritt zur Positionsbestimmung." %>
+      <figcaption>Warten auf einen Positionsfix</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery.png", alt: "Radaransicht im Flug bei niedrigem Akkustand: BAT und Prozentwert im Kreis statt der Statusmeldung" %>
+      <figcaption>Akkustand niedrig</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "low-battery-taxi.png", alt: "Radaransicht beim Rollen bei niedrigem Akkustand: BAT und Prozentwert im Kreis, darunter TAXI" %>
+      <figcaption>Akkustand niedrig, beim Rollen</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "Anzeige eines ausgeschalteten Geräts: Der skyBlip-Schriftzug bleibt ohne Strom auf dem E-Paper-Display stehen" %>
+      <figcaption>Aus</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "Anzeige nach dem Abschalten bei leerem Akku: unter dem skyBlip-Schriftzug steht BATTERY EMPTY" %>
+      <figcaption>Akku leer</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "power", label: "Strom und Akku", anchor: "waiting", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker" id="asked">Bestätigen Sie Anfragen am Display.</h2>
+  <div class="shots">
+    <figure class="shot">
+      <%= screen_image_tag "confirm.png", alt: "Bestätigungsanfrage für Einstellungen vom Smartphone: SETTINGS unter dem großen Symbol, die Änderung, CANCELS IN mit den verbleibenden Sekunden, ACCEPT für die Taste und CANCEL für das Touchfeld" %>
+      <figcaption>Vor einer Änderung fragt das Gerät nach</figcaption>
+    </figure>
+    <figure class="shot">
+      <%= screen_image_tag "recovery.png", alt: "Wiederherstellungsansicht: RECOVERY unter dem großen Symbol, das USB-Laufwerk TECHOBOOT, COPY A .UF2 FILE TO IT, TO GO BACK, PUSH RESET und START für die Taste" %>
+      <figcaption>Übergabe an den USB-Bootloader</figcaption>
+    </figure>
+  </div>
+  <p>
+    <%= link_to_page "phone", label: "Smartphone und Firmware", anchor: "asked", class: "cta cta--next" %>
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Technische Hinweise</h2>
+
+  <h3 id="screen">So arbeitet das Display.</h3>
+  <p class="lede">
+    Das E-Paper-Display misst 1,54&Prime; und hat 200&times;200 Pixel. Es behält das letzte Bild ohne Strom. Deshalb zeigt der Schriftzug an, dass das Gerät aus ist. Zur Lagerung sollte das Display leer sein.
+  </p>
+  <p class="lede">
+    Im Flug wird jedes Bild nur teilweise aktualisiert. Zweimal pro Nutzung, beim Ein- und Ausschalten, wechselt das Display bei einer vollständigen Aktualisierung anderthalb Sekunden lang zwischen Schwarz und Weiß. Beim Ansichtswechsel zieht einmal Schwarz über das Display. Die Warnung blinkt einmal pro Sekunde. Das ist die Grenze des Displays und keine frei gewählte Rate. Schnellere Aktualisierungen sind möglich, aber ein großer schwarzer Bereich hinterlässt bei wiederholtem schnellem Umschalten dauerhafte Spuren.
+  </p>
+
+  <ul class="points">
+    <li>Jedes Bild wird teilweise aktualisiert</li>
+    <li>Das Display wird zweimal pro Nutzung vollständig aktualisiert</li>
+    <li>Beim Ansichtswechsel zieht für eine Drittelsekunde Schwarz über das Display</li>
+    <li>Ein mit dem letzten identisches Bild wird nicht gesendet</li>
+    <li>Über 50&nbsp;&deg;C, der Herstellergrenze, bleibt das Display unverändert</li>
+    <li>Beim Abschalten bleibt das Display weiß, nie mitten im Bild</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

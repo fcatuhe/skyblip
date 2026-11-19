@@ -6,6 +6,7 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
 
     manifest = response.parsed_body
     assert_equal "skyBlip Briefing", manifest["name"]
+    assert_equal "skyBlip Briefing", manifest["short_name"]
     assert_equal "/briefing", manifest["start_url"]
     assert_equal "/briefing", manifest["scope"]
     assert_equal "standalone", manifest["display"]
@@ -28,6 +29,16 @@ class Briefing::ManifestsControllerTest < ActionDispatch::IntegrationTest
     maskable = response.parsed_body["icons"].select { it["purpose"] == "maskable" }
     assert_equal %w[/icon-maskable.png /icon-maskable.svg], maskable.pluck("src")
     maskable.each { assert Rails.public_path.join(it["src"].delete_prefix("/")).file?, it["src"] }
+  end
+
+  test "the app installs on iOS under its own name, and the site keeps its own" do
+    get briefing_root_path
+    assert_select "meta[name=apple-mobile-web-app-title][content=?]", "skyBlip Briefing"
+    assert_select "meta[name=application-name][content=?]", "skyBlip Briefing"
+
+    get "/"
+    assert_select "meta[name=apple-mobile-web-app-title][content=?]", "skyBlip"
+    assert_select "meta[name=application-name][content=?]", "skyBlip"
   end
 
   test "no public page offers the app" do

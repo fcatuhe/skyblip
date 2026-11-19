@@ -1,48 +1,33 @@
 ---
-title: "skyBlip Go simulator in your browser"
+title: "Try the skyBlip radar in your browser"
 nav_title: Try it
 slug: try
-description: "Try skyBlip Go firmware in your browser. Add up to eight ADS-L aircraft and test the traffic display, buttons and alarm before buying hardware."
 share_image: radar
-updated_on: "2026-11-09"
+description: "Try the skyBlip radar on its own page. Find an aircraft, follow its track and compare Go on its own with Tango and ADS-B traffic."
+updated_on: "2026-11-18"
 ---
+
 <% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
 
 <header class="page-hero page-hero--compact">
-  <h1>Try it.</h1>
-  <p class="page-hero-subtitle">It is the software inside skyBlip.</p>
+  <h1>Take the controls in the simulator</h1>
+  <p class="page-hero-subtitle">Start with Go on its own. Find an aircraft on the radar. If it&rsquo;s at the top right, look ahead and to your right.</p>
 </header>
 
 <section id="simulator">
   <%= render "shared/simulator_loader" %>
-
-  <p class="note">
-    One to eight aircraft come and go on the display as they would in flight. Each sends
-    real ADS-L messages. The LED on the left blinks every 3&nbsp;seconds. It is blue until the
-    device has a GPS position, then green. The LED flickers red when an aircraft triggers
-    the alarm.
-  </p>
-
-  <%= render "shared/cta", prompt: false, try: false %>
 </section>
 
-<section class="band band--tint">
-  <h2 class="section-title">What next?</h2>
-  <div class="resource-cards">
-    <article>
-      <h3>Everything it does.</h3>
-      <p>See the radar, the alarm, what it broadcasts, the phone connection and the instruments.</p>
-      <p><%= link_to_page "features", label: "See the features" %></p>
-    </article>
-    <article>
-      <h3>Screen by screen.</h3>
-      <p>Seven guides, one per subject, with captures from this same firmware.</p>
-      <p><%= link_to_page "guides", label: "Read the guides" %></p>
-    </article>
-    <article>
-      <h3>Your own.</h3>
-      <p>A LilyGO T-Echo or T-Echo Plus, the skyBlip firmware, and it is ready.</p>
-      <p><%= link_to_page "buy", label: "Get one" %></p>
-    </article>
-  </div>
+<section id="exercise" class="band band--tint">
+  <h2 class="section-title">Read a symbol and follow its line</h2>
+  <p>The point tells you whether the aircraft is above or below you. If it&rsquo;s flying at roughly your level, you&rsquo;ll see a diamond. The line shows where the aircraft should be in a minute if it keeps flying the same track. When a sector flashes, look for traffic in that direction.</p>
+  <p><%= link_to_page "radar", label: "See the radar symbols", anchor: "shapes" %></p>
+</section>
+
+<section id="compare" class="band">
+  <h2 class="section-title">Compare Go on its own with Tango</h2>
+  <p>With Go on its own, you see nearby ADS-L and FLARM traffic.</p>
+  <p>Tick &quot;With Bravo (skyBlip Tango)&quot;. The simulator restarts with a Go paired to a Bravo. Nearby traffic is still ADS-L and FLARM. Bravo adds aircraft that transmit their positions in ADS-B. They start between 8 and 30 km away in this scenario.</p>
+  <p>Look at the band around the radar circle. It shows the direction of traffic beyond the circle.</p>
+  <p class="signature"><%= link_to_page "buy", label: "Choose my device", class: "button button--primary" %></p>
 </section>

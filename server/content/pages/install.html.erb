@@ -1,0 +1,60 @@
+---
+title: "Install skyBlip from your browser"
+nav_title: Install
+description: "Install skyBlip on your Go or Bravo from your browser, with Briefing. All you need is a computer, Chrome or Edge, and a USB-C cable."
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Install skyBlip from your browser</h1>
+  <p class="page-hero-subtitle">A computer, Chrome or Edge, a USB-C cable. Briefing does the rest.</p>
+</header>
+
+<section id="steps" class="band band--tint">
+  <h2 class="section-title">Four steps</h2>
+  <div class="install-steps">
+    <ol class="steps-grid steps-grid--sequence">
+      <li>
+        <h3>Plug in</h3>
+        <p>The device, over USB-C, into your computer.</p>
+      </li>
+      <li>
+        <h3>Install</h3>
+        <p>Click Install in Briefing.</p>
+      </li>
+      <li>
+        <h3>Connect</h3>
+        <p>Over Bluetooth, when Briefing asks.</p>
+      </li>
+      <li>
+        <h3>Fly</h3>
+        <p><%= link_to_page "guides", label: "The first steps guide" %> shows you the essentials.</p>
+      </li>
+    </ol>
+    <p class="install-start"><%= link_to "Install in Briefing", briefing_setup_path(locale: I18n.locale), class: "button button--primary" %></p>
+  </div>
+</section>
+
+<section id="connected" class="band">
+  <h2 class="section-title">Good to know</h2>
+  <p>A new Go activates in Briefing, with no account. Bravo needs no activation.</p>
+  <p>For a Tango, install both devices, then pair them in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+  <p>Already on skyBlip? <%= link_to "Connect it in Briefing", briefing_root_path(locale: I18n.locale) %> for settings and updates.</p>
+</section>
+
+<section id="si-quelque-chose-bloque" class="band band--tint">
+  <div class="troubleshooting">
+    <h2>If you get stuck</h2>
+    <h3 id="not-found">The device doesn&rsquo;t show up</h3>
+    <p>Turn it on and try a USB-C cable that carries data. Use Chrome or Edge on a computer for guided USB installation. If you can&rsquo;t use it, copy the software by hand.</p>
+    <h3 id="manual">Install the software by hand</h3>
+    <p>Download the <code>.uf2</code> file for your device from the <%= link_to "skyBlip releases page", "https://github.com/fcatuhe/skyblip/releases" %>.</p>
+    <ul>
+      <li><strong>Go or Go+:</strong> Plug in the device and quickly press RESET twice. It&rsquo;s near the top on the left side. Copy the Go file to the <strong>TECHOBOOT</strong> drive. For a new Go, <%= link_to "activate it over Bluetooth", briefing_activation_path(locale: I18n.locale) %> in Chrome or Edge on a computer or Android. Follow the request on Go&rsquo;s screen.</li>
+      <li><strong>Bravo:</strong> Unplug the device. Hold its button down as you plug it back in. Release it when the light turns white. Copy the skyBlip Bravo file to the <strong>X1</strong> drive.</li>
+    </ul>
+    <h3 id="transponder">Your own transponder shows up as traffic</h3>
+    <p>On the ground, set your transponder to ALT. Bravo can suggest its address for Mode S or ADS-B. Look in Briefing for a Bravo on its own, or on Go&rsquo;s screen for a Tango. Check that it&rsquo;s your aircraft before accepting. If you already know the address, enter it under &quot;ADS-B address&quot;. If you don&rsquo;t have a transponder, leave it blank.</p>
+    <p>Still stuck? Write to us at <%= mail_to Rails.configuration.x.contact_email %> or on <%= link_to "GitHub", "#{Rails.configuration.x.repository_url}/issues" %>.</p>
+  </div>
+</section>

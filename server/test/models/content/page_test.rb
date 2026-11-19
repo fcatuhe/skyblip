@@ -15,6 +15,13 @@ class Content::PageTest < ActiveSupport::TestCase
     assert_equal "/fr", Content::Page.find("index", locale: :fr).url_path
   end
 
+  test "a page's Markdown lives at its address with .md, and a homepage's at index.md" do
+    assert_equal "/index.md", Content::Page.find("index", locale: :en).markdown_path
+    assert_equal "/fr/index.md", Content::Page.find("index", locale: :fr).markdown_path
+    assert_equal "/fr/a-propos.md", Content::Page.find("a-propos", locale: :fr).markdown_path
+    assert_equal "/ads-l/nmea.md", Content::Page.find("ads-l/nmea", locale: :en).markdown_path
+  end
+
   test "nested pages retain their URL and source path" do
     page = Content::Page.find("ads-l/nmea", locale: :en)
 

@@ -48,9 +48,9 @@
       return {
         getFile: async () => new Blob([drive.files.get(name)]),
         createWritable: async () => {
-          let written = null;
+          let written = new Uint8Array();
           return {
-            write: async bytes => (written = new Uint8Array(bytes)),
+            write: async bytes => (written = Uint8Array.from([...written, ...bytes])),
             abort: async () => {},
             close: async () => {
               drive.files.set(name, written);

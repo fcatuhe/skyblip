@@ -1,0 +1,86 @@
+---
+title: "Primi passi con skyBlip Bravo: pulsante, spia e volo"
+nav_title: Primi passi con Bravo
+slug: primi-passi-bravo
+description: "Accendi Bravo, leggi la sua spia e vedi il traffico ADS-B nella tua app o sul radar del Go."
+parent: guides
+share_image: bravo
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Bravo, un pulsante e una spia.</h1>
+  <p class="lede">skyBlip Bravo ti avvisa del traffico ADS-B in avvicinamento e lo invia alla tua app di navigazione. Bravo riceve soltanto. Non trasmette la tua posizione.</p>
+</section>
+
+<section>
+  <h2 class="kicker">In mano</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="controls">Premi per rispondere, <span class="highlight">tieni premuto per spegnere</span>.</h3>
+      <p>Bravo è un Seeed SenseCAP MeshTracker X1 con skyBlip installato. Il pulsante rotondo si trova sulla faccia superiore. La porta USB-C è su un lato corto. Non ha uno schermo. Il LED sopra il pulsante, un cicalino e un motore a vibrazione ti indicano cosa succede.</p>
+    </div>
+    <%= render "shared/device", device: :bravo, label: "skyBlip Bravo su un Seeed SenseCAP MeshTracker X1, con indicati il pulsante, il LED subito sopra e la porta USB-C", marks: { button: t("devices.button"), led: t("devices.led"), usb: t("devices.usb") }, caption: "X1 con skyBlip Bravo. Foto Seeed Studio." %>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Gesto</th><th>Cosa fa</th></tr></thead>
+      <tbody>
+        <tr><th>Premi da spento</th><td>Si accende, con un impulso verde che senti anche come vibrazione.</td></tr>
+        <tr><th>Premi durante un rapido tremolio rosso</th><td>Silenzia l&rsquo;allarme, anche sul Go abbinato finché sono collegati.</td></tr>
+        <tr><th>Premi durante un lampeggio verde rapido</th><td>Autorizza una modifica alle impostazioni o un aggiornamento richiesti da un telefono o da Briefing. Se non premi, la richiesta scade dopo 30 secondi.</td></tr>
+        <tr><th>Premi durante un lampeggio blu rapido</th><td>Si abbina al Go che lo ha richiesto.</td></tr>
+        <tr><th>Tieni premuto per 2&nbsp;s</th><td>Si spegne, con tre impulsi rossi che senti anche come vibrazioni.</td></tr>
+        <tr><th>Tieni premuto, collega USB-C e continua a tenere premuto</th><td>Dopo circa 3 secondi, il LED sopra il pulsante diventa bianco. X1 diventa un&rsquo;unità USB chiamata X1 per installare il firmware manualmente. Briefing te lo chiede solo se non riesce a riavviare Bravo da solo.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Una pressione iniziata prima che arrivi una richiesta non risponde a nulla. Tenere premuto non risponde mai a una richiesta. Il browser che ha installato Bravo modifica le impostazioni, lo aggiorna e lo abbina senza richiedere una pressione. Gli altri browser la richiedono.</p>
+
+  <div class="feature">
+    <div>
+      <h3 id="light">Il colore indica lo stato, <span class="highlight">il ritmo dà il dettaglio</span>.</h3>
+      <p>Blu significa che non ha ancora una posizione satellitare. Verde significa che Bravo sa dove si trova.</p>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Spia</th><th>Significato</th></tr></thead>
+      <tbody>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Un impulso verde con vibrazione</th><td>Si è appena acceso.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blu, ogni 3&nbsp;s</th><td>Non ha ancora una posizione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Verde, ogni 3&nbsp;s</th><td>Posizione acquisita.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Uno dei due colori, ogni 1,5&nbsp;s</th><td>Un telefono o Briefing è collegato.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, tremolio rapido</th><td>Allarme di traffico.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span> Verde, lampeggio rapido</th><td>Una richiesta attende che tu prema il pulsante.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Blu, lampeggio rapido</th><td>Un Go chiede di abbinarsi.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--green" aria-hidden="true"></span><span class="lamp lamp--dot lamp--blue" aria-hidden="true"></span> Due brevi lampi ogni 3&nbsp;s</th><td>Una registrazione diagnostica è pronta a partire. Il colore continua a indicare lo stato della posizione.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 3&nbsp;s</th><td>Batteria quasi scarica.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Rosso, ogni 600&nbsp;ms</th><td>Batteria a livello critico. Se la batteria è carica, un ricevitore di traffico o satellitare non risponde e Bravo rifiuta di funzionare.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--red" aria-hidden="true"></span> Tre impulsi rossi con vibrazioni</th><td>Si sta spegnendo, poi la spia si spegne.</td></tr>
+        <tr><th>Spia spenta</th><td>Dispositivo spento.</td></tr>
+        <tr><th><span class="lamp lamp--dot lamp--white" aria-hidden="true"></span> Bianco fisso</th><td>X1 è un&rsquo;unità USB per installare il firmware.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Prima di partire</h2>
+  <p>Accendi Bravo all&rsquo;aperto. Quando la spia lampeggia in verde, Bravo conosce la sua posizione. Se usi Bravo da solo, collega la tua app di navigazione compatibile via Bluetooth. Con Tango, verifica sul radar del Go che Bravo sia collegato. Il traffico ADS-B appare quindi sul Go. Mostra le posizioni che gli aeromobili equipaggiati trasmettono via radio.</p>
+  <p>Se il tuo transponder appare come un altro aeromobile, <%= link_to_page "install", label: "controlla il suo indirizzo a terra", anchor: "si-quelque-chose-bloque" %>.</p>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Dopo il volo</h2>
+  <p>Tieni premuto il pulsante per due secondi per spegnere Bravo. Per aggiornarlo, riaccendilo e apri la sua pagina in <%= link_to "Briefing", briefing_root_path %>. Segui le istruzioni sullo schermo.</p>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

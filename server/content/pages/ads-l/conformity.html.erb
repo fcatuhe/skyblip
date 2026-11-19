@@ -1,15 +1,15 @@
 ---
 title: "ADS-L declaration of conformity"
 nav_title: ADS-L conformity
-description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go and Go+, and the CE, installation and user documents the standard asks a manufacturer for."
+description: "skyBlip's ADS-L 4 SRD-860 declaration of conformity for the Go, with the CE, installation and user documents the standard asks for."
 published_on: "2026-11-12"
 parent: ads-l
-updated_on: "2026-11-14"
+updated_on: "2026-11-18"
 ---
 
 <section>
   <p class="kicker"><%= link_to_page "ads-l", label_type: :nav, class: "cta" %></p>
-  <h1>The declaration skyBlip Go and Go+ need, and the documents that go with it.</h1>
+  <h1>The declaration skyBlip Go needs, and the documents that go with it.</h1>
   <p class="lede">
     ADS-L has no ETSO and no MOPS. Under <strong>ADS-L.4.SRD860.A.4</strong>
     the manufacturer verifies its equipment against the specification and
@@ -19,10 +19,10 @@ updated_on: "2026-11-14"
     installation manual and a user manual.
   </p>
   <p>
-    This page holds the declaration for skyBlip Go and Go+, filled in as far as
-    the facts allow, and links each of the four documents. It will be signed
-    in November or December 2026. Two of the four statements the manufacturer
-    must make do not hold yet, and the tables below say which. The firmware
+    This page holds the declaration for skyBlip Go, filled in as far as the
+    facts allow, and links each of the four documents. It will be signed in
+    November or December 2026. The four statements the manufacturer must make
+    hold, and the last table below gives the grounds for each. The firmware
     now transmits the configured ICAO address under F.2.3. Our reading that
     this overrides the manufacturer&rsquo;s address on every payload remains
     subject to confirmation by EASA, as recorded on the
@@ -31,18 +31,24 @@ updated_on: "2026-11-14"
 </section>
 
 <section>
-  <h2 class="kicker">Go and Go+</h2>
-  <h3>One product for ADS-L: a Go+ is a Go with accessories.</h3>
+  <h2 class="kicker">Firmware and hardware</h2>
+  <h3>skyBlip supplies the firmware, declared on one hardware: the LilyGO T-Echo.</h3>
 
   <p>
-    A skyBlip Go runs on a LilyGO T-Echo, and a skyBlip Go+ on a LilyGO T-Echo
-    Plus. Everything ADS-L depends on is the same in both: the nRF52840
-    processor, the Quectel L76K GNSS receiver and its PPS, the Semtech SX1262
-    868&nbsp;MHz radio and the antenna. Both run the same firmware image, built
-    for one board definition. The T-Echo Plus adds an inertial unit, a buzzer,
-    a vibration motor and a larger battery. None of them transmits, receives
-    or feeds the ADS-L payload, so one declaration covers both under one part
-    number.
+    skyBlip Go is skyBlip&rsquo;s firmware on a LilyGO T-Echo. LilyGO builds
+    the hardware, and the T-Echo has passed CE testing. The declaration
+    covers the firmware on the T-Echo. skyBlip will revise it before it
+    supports any other hardware.
+  </p>
+  <p>
+    The firmware checks the hardware it runs on. At every start-up it probes
+    the SX1262 radio by a register written and read back, and the BME280
+    barometer by its chip id. Without either, the unit does not run: it shows
+    its self-test page, neither transmits nor receives, and cannot be
+    activated, because no service runs to answer the activation. A part that
+    fails or is removed after activation stops the unit at its next
+    start-up. A compile-time check rejects a build whose programmed power,
+    with the declared antenna, would exceed 14&nbsp;dBm e.r.p.
   </p>
 </section>
 
@@ -53,18 +59,17 @@ updated_on: "2026-11-14"
   <div class="table-scroll">
     <table>
       <thead>
-        <tr><th>Document</th><th>Device</th><th>Where it stands</th></tr>
+        <tr><th>Document</th><th>Where it stands</th></tr>
       </thead>
       <tbody>
         <tr>
           <th>ADS-L declaration of conformity</th>
-          <td>Go, Go+</td>
           <td>drafted <a href="#declaration">below</a>, not signed</td>
         </tr>
         <tr>
           <th>CE: radio, EMC, safety, health</th>
-          <td>Go, a LilyGO T-Echo</td>
           <td>
+            skyBlip Go runs on a LilyGO T-Echo, which holds the
             <a href="https://cdn.shopify.com/s/files/1/0617/7190/7253/files/T-ECHO_CE.pdf?v=1691478157">attestation of conformity SZ1220803-35313E-RF</a>,
             issued by BACL Shenzhen on 18 Nov 2022 to LilyGO for model T-Echo,
             under the Radio Equipment Directive 2014/53/EU. It is a test
@@ -75,18 +80,19 @@ updated_on: "2026-11-14"
           </td>
         </tr>
         <tr>
-          <th>CE: radio, EMC, safety, health</th>
-          <td>Go+, a LilyGO T-Echo Plus</td>
-          <td>missing. The radio is the T-Echo&rsquo;s, but LilyGO sells the T-Echo Plus as its own model, and the T-Echo attestation names model T-Echo only. LilyGO publishes none for the T-Echo Plus.</td>
-        </tr>
-        <tr>
           <th>Installation manual</th>
-          <td>Go, Go+</td>
-          <td>not written. It has to cover where to mount the device and its antenna for range, vertical polarisation and an omnidirectional pattern.</td>
+          <td>
+            the <%= link_to_page "guides", label: "Install section", anchor: "install" %>
+            of the guides. <%= link_to_page "install", label: "Install" %> puts
+            the firmware on the device, and
+            <%= link_to_page "mount", label: "Cockpit mount" %> fixes it to the
+            glareshield and places its antenna upright, clear of metal, carbon
+            fibre and the pilot, for vertical polarisation and an omnidirectional
+            pattern.
+          </td>
         </tr>
         <tr>
           <th>User manual</th>
-          <td>Go, Go+</td>
           <td>
             the <%= link_to_page "guides", label: "guides" %>. The ADS-L parts
             are <%= link_to_page "radio", label: "Radio" %>, on channels,
@@ -131,47 +137,25 @@ updated_on: "2026-11-14"
 
 <section>
   <h2 class="kicker">The declaration</h2>
-  <h3 id="declaration">The appendix template, filled in for skyBlip Go and Go+.</h3>
+  <h3 id="declaration">The appendix template, filled in for skyBlip Go.</h3>
 
   <p>
-    In accordance with ED Decision 2022/024/R and the attached Technical
-    Specification for ADS-L transmissions using the SRD-860 frequency band
-    (&ldquo;ADS-L 4 SRD 860&rdquo;).
+    The PDF to sign will be printed from this same text. The next section
+    gives the grounds for each field and statement.
   </p>
 
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr><th>Manufacturer</th><td>François Catuhe EI, 23 cours de Verdun, 33000 Bordeaux, France</td></tr>
-        <tr><th>Product name</th><td>skyBlip Go, on a LilyGO T-Echo. skyBlip Go+, on a LilyGO T-Echo Plus, is the same product with accessories.</td></tr>
-        <tr><th>Device P/N</th><td>skyBlipGo</td></tr>
-        <tr><th>Firmware version</th><td>skyBlip 0.1.0</td></tr>
-        <tr><th>Standard</th><td>ADS-L 4 SRD860 Issue 2</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <%= render "shared/adsl_declaration" %>
+</section>
 
-  <p>This draft names firmware 0.1.0 and skyBlip&rsquo;s ADS-L implementation 0.1.0, for ADS-L 4 SRD-860 Issue 2. No production release of firmware 0.1.0 exists yet. The ADS-L implementation version is separate from the packet&rsquo;s Protocol Version field in E.1.1. It stays at 0.1.0 until ready for production. After that, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
+<section>
+  <h2 class="kicker">The grounds</h2>
+  <h3>What stands behind each field and statement.</h3>
+
+  <p>The declaration names skyBlip firmware v1, which carries skyBlip&rsquo;s ADS-L protocol v1, for ADS-L 4 SRD-860 Issue 2. Every v1 release of the protocol is covered, from v1.0.0. Development builds carry 0.1.0 until the first production release. The ADS-L protocol version is separate from the packet&rsquo;s Protocol Version field in E.1.1. From v1.0.0, it changes only when ADS-L behaviour changes. Each firmware release lists the protocol versions it carries. A unit reports its ADS-L version through the companion link&rsquo;s <code>protocols</code> command, and the briefing app&rsquo;s device page displays it.</p>
 
   <h3>Transmission parameters</h3>
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr>
-          <th>Transmission bands and power levels</th>
-          <td>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the unit&rsquo;s own address and UTC second, not from the configured ICAO address. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band.</td>
-        </tr>
-        <tr>
-          <th>Optional parameters transmitted</th>
-          <td>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. In addition, one callsign record of payload type 66 is scheduled every 10&nbsp;s in OGN-Tracker&rsquo;s layout: telemetry type 1, info type 5, with 14 characters. F.2.1 assigns that type to OGN Diagnostics and leaves its definition outside the specification. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status and payload 66 always carry Protocol Version 1.</td>
-        </tr>
-        <tr>
-          <th>Receive capabilities</th>
-          <td>M-band 868.2 and 868.4&nbsp;MHz, 400&nbsp;ms on each channel every second. O-band HDR 869.525&nbsp;MHz, 190&nbsp;ms every second, for the Traffic Uplink. O-band LDR is not received.</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <p>M-band only. Traffic uses 868.2&nbsp;MHz in an even UTC second and 868.4&nbsp;MHz in an odd one. Status uses the other channel. Traffic and Status bursts start and finish inside C.5&rsquo;s direct slot, 450 to 1000&nbsp;ms after the UTC second. Their instants are drawn from the unit&rsquo;s own address and UTC second, not from the configured ICAO address. The SX1262 is programmed for nominal +14&nbsp;dBm conducted power, with a datasheet tolerance of &plusmn;2&nbsp;dB. A 0.5&nbsp;dB feed loss allowance and the antenna&rsquo;s datasheet peak gain of 1.6&nbsp;dBi give a computed e.r.p. of 12.95&nbsp;dBm after the 2.15&nbsp;dB conversion from dBi to dBd. A compile-time check rejects a computed e.r.p. above 14&nbsp;dBm, the M-band limit in C.2. Output power, antenna gain and feed loss have not been measured on a unit. The appendix asks for 12 to 14&nbsp;dBm e.r.p. on M-band. Nothing is transmitted on the O-band. The declaration states the 14&nbsp;dBm the firmware sets.</p>
+  <p>No optional parameters within the defined Traffic and Status payloads. Both payloads are required by the appendix declaration. No secure signature (E.4) is appended. Each packet carries the lowest Protocol Version whose payload encoding is the same, as E.1.1 requires. Status always carries Protocol Version 1.</p>
 
   <p>Channel access uses EN 300 220-2 band M&rsquo;s 1&nbsp;% duty-cycle limit over any hour. The firmware refuses a burst past that budget. D.3 also requires listen-before-talk. Before an unforced burst, Go assesses its channel for 200&nbsp;&micro;s, ending at most 2&nbsp;ms before transmission. The -78.99&nbsp;dBm limit for a 0&nbsp;dBd antenna becomes -78.44&nbsp;dBm at the antenna connector after correction for the antenna&rsquo;s datasheet gain of -0.55&nbsp;dBd. The 0.5&nbsp;dB feed loss allowance between connector and chip puts the chip&rsquo;s busy threshold at -78.94&nbsp;dBm. Neither gain nor loss has been measured on a unit. The SX1262&rsquo;s RSSI is uncalibrated, with no margin for its error. This is a known limit of the declaration. A busy channel defers the burst by a random 1 to 8 units of 5&nbsp;ms within its window. Only on the ground may Go force it after 3000&nbsp;ms, followed by 2000&nbsp;ms without its own transmissions.</p>
 
@@ -206,13 +190,13 @@ updated_on: "2026-11-14"
       <tbody>
         <tr>
           <th>Design processes and production controls</th>
-          <td>to write</td>
-          <td>LilyGO builds the hardware. skyBlip builds the firmware. CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. These software checks do not replace measurements on a unit. The statement still has to say how hardware and firmware design and production are controlled.</td>
+          <td>yes</td>
+          <td>LilyGO manufactures the T-Echo under its own production controls, and the model passed BACL Shenzhen&rsquo;s CE tests. skyBlip designs the firmware, and CI runs the ADS-L component and device conformance suites, the EN 300 220 suite and both clause checks on every pull request and push to main that changes the firmware. The ADS-L suites have at least one case for each of Issue 2&rsquo;s 80 clause headings. Nineteen cases are skipped: nine prose, two paperwork and eight optional. None is skipped as not implemented. The cases for F.2.3, the last clause marked as not implemented, now pass. Go refuses <code>FFFFFF</code>, an address no aircraft holds, and, on the ground while a paired live Bravo names the aircraft&rsquo;s transponder, an entered address that differs from it. A clear is never refused. Each unit is checked again where it is used: at every start-up the firmware refuses to run without its radio and barometer, and skyblip.eu activates each unit on its own, signing its serial against its chip id. These software checks do not replace measurements on a unit.</td>
         </tr>
         <tr>
-          <th>CE marked and documented</th>
-          <td>Go only</td>
-          <td>the T-Echo has LilyGO&rsquo;s RED attestation. The T-Echo Plus has no published CE document.</td>
+          <th>Hardware has passed CE</th>
+          <td>yes</td>
+          <td>the T-Echo passed BACL Shenzhen&rsquo;s tests for radio, EMC, safety and health under the Radio Equipment Directive. The declaration states this in place of the template&rsquo;s wording, which says the product is CE marked.</td>
         </tr>
         <tr>
           <th>Approved address range, F.2.2</th>
@@ -224,16 +208,6 @@ updated_on: "2026-11-14"
           <td>yes</td>
           <td>Traffic is scheduled at 1&nbsp;Hz airborne and 0.1&nbsp;Hz on average on the ground, with ground positions 9 then 11&nbsp;s apart. This is skyBlip&rsquo;s reading of G.1.16 with C.2.5&rsquo;s channel alternation. Status, payload type 3, is scheduled twice per 20&nbsp;s cycle, 9 then 11&nbsp;s apart. Each channel carries one Status every 20&nbsp;s, meeting G.2.11&rsquo;s minimum. Under B.5, Traffic uses Issue 1 encoding beside a close neighbour that reads only Issue 1. A position with unknown altitude, ground speed or vertical rate is held rather than sent with a false Issue 1 value.</td>
         </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="table-scroll">
-    <table>
-      <tbody>
-        <tr><th>Date</th><td>to be signed in November or December 2026</td></tr>
-        <tr><th>Authorized representative</th><td>François Catuhe, [position]</td></tr>
-        <tr><th>Signature and company stamp</th><td>not signed</td></tr>
       </tbody>
     </table>
   </div>

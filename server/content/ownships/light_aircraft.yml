@@ -101,6 +101,9 @@ planforms:
     name:
       en: skyShip's original outline
       fr: Contour d'origine de skyShip
+      de: Originalkontur von skyShip
+      it: Sagoma originale di skyShip
+      es: Contorno original de skyShip
     hot_spot: 2.2
     sources:
       - the reference outline the compiled skyShip was hinted against, in the standalone editor this page replaced, https://github.com/fcatuhe/skyblip/blob/9e3fdfa7/skyship/index.html, scaled to a 10 m span

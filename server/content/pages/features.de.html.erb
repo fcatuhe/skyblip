@@ -1,0 +1,149 @@
+---
+title: "skyBlip Go: Taschenradar für ADS-L und FLARM"
+nav_title: Go
+slug: go
+product:
+  name: skyBlip Go
+  low_price: "68"
+  currency: EUR
+  image: pages/index/skyblip-go-techo.avif
+description: "Sehen Sie ADS-L- und FLARM-Verkehr auf dem Radar des Go. Senden Sie Ihre Position per ADS-L. Eine Verkehrswarnung zeigt, wohin Sie schauen sollten."
+updated_on: "2026-11-18"
+---
+
+<%= render "shared/device_tabs" %>
+
+<header class="page-hero">
+  <h1>Ein Taschenradar zum Sehen und Gesehenwerden</h1>
+  <p class="page-hero-subtitle">skyBlip Go sendet Ihre Position per ADS-L und zeigt ADS-L- und FLARM-Verkehr an.</p>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, ein weißes Gerät mit Antenne und Verkehrsradar auf dem Display." %>
+  </figure>
+</header>
+
+<section id="traffic" class="band band--tint">
+  <h2 class="section-title">Flugverkehr auf einen Blick</h2>
+  <div class="feature">
+    <div>
+      <h3 id="radar">Ihre Flugrichtung oben, der Verkehr um Sie herum</h3>
+      <p>Bei einem Symbol rechts oben schauen Sie nach rechts vorn. Die Spitze zeigt, ob das Luftfahrzeug über oder unter Ihnen fliegt. Eine Raute steht für etwa gleiche Höhe. Die Linie zeigt, wo das Luftfahrzeug in einer Minute sein wird, wenn es seinen Kurs über Grund beibehält. Wählen Sie einen Radarkreis von 1, 2, 4 oder 8 nautischen Meilen (NM).</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Die Radaransicht lesen", anchor: "heading-up" %> <small>(Aus der Anleitung »Radar und Verkehr«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Drei Luftfahrzeuge auf dem Radar: eines höher, eines tiefer und eines auf gleicher Höhe im Steigflug. Jede Linie endet an der Position in einer Minute. Ihre eigene Kurslinie ist gestrichelt." %>
+    </figure>
+  </div>
+  <div class="blip-legend">
+    <div>
+      <%= screen_image_tag "blips/above-steady.png", alt: "" %>
+      <p>Über Ihnen</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/level-steady.png", alt: "" %>
+      <p>Auf Ihrer Höhe</p>
+    </div>
+    <div>
+      <%= screen_image_tag "blips/below-steady.png", alt: "" %>
+      <p>Unter Ihnen</p>
+    </div>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Verkehr bleibt auch außerhalb des Kreises sichtbar</h3>
+      <p>In der Voreinstellung PLOT ALL blendet der Rand des Kreises keinen Verkehr aus. Go zeigt empfangenen Verkehr jenseits des Kreises im Ring darum in der entsprechenden Richtung. Sie sehen die Richtung, ohne den Maßstab zu ändern. Für maßstabsgetreue Positionen wählen Sie PLOT TO SCALE.</p>
+      <p class="feature-guide"><%= link_to_page "displays", label: "Die beiden Radarmodi vergleichen", anchor: "both-ways" %> <small>(Aus der Anleitung »Displayansichten«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "PLOT ALL zeigt zwei Luftfahrzeuge innerhalb des Kreises und weitere im äußeren Ring: eines voraus, drei rechts oben und eines links." %>
+    </figure>
+  </div>
+  <div class="feature">
+    <div>
+      <h3 id="alarm">Eine Warnung zeigt, wohin Sie schauen sollten</h3>
+      <p>Bei einer Verkehrswarnung wechselt Go zum Radar. Ein Viertel des Displays blinkt in Richtung des Verkehrs. Schauen Sie dorthin. Go fordert Sie nicht zum Steigen oder Sinken auf.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Eine Warnung lesen", anchor: "alarm" %> <small>(Aus der Anleitung »Radar und Verkehr«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Bei einer Warnung wird der 90-Grad-Sektor in Richtung des Verkehrs schwarz." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="nearby">NEARBY: Wer ist in der Nähe und wie weit entfernt?</h3>
+      <p>Die Liste zeigt zuerst Verkehr mit Warnung und dann Luftfahrzeuge nahe Ihrer Höhe. Jede Zeile zeigt die Quelle, das Rufzeichen, sofern empfangen, den horizontalen Abstand und die bekannte Höhendifferenz.</p>
+      <p class="feature-guide"><%= link_to_page "radar", label: "Die Liste NEARBY lesen", anchor: "nearby" %> <small>(Aus der Anleitung »Radar und Verkehr«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "Die Ansicht NEARBY zeigt fünf Luftfahrzeuge mit Quelle, Rufzeichen, Entfernung und relativer Höhe. Die Luftfahrzeuge nahe Ihrer Höhe stehen zuerst." %>
+    </figure>
+  </div>
+</section>
+
+<section id="broadcast" class="band">
+  <h2 class="section-title">Ihre Position im Flug jede Sekunde</h2>
+  <div class="feature">
+    <div>
+      <p>Im Flug sendet Go Ihre Position jede Sekunde per ADS-L. Haben Sie ein Rufzeichen eingegeben, sendet Go es in einer eigenen Meldung. Wer die Meldungen empfängt, kann Sie auf dem Display sehen und identifizieren.</p>
+      <p class="feature-guide"><%= link_to_page "radio", label: "Die Aufteilung der Funksekunde ansehen", anchor: "second" %> <small>(Aus der Anleitung »Funk«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radio-log.png", alt: "Das Funkprotokoll zeigt je eine Zeile pro gesendeter oder empfangener Meldung mit Zeit, Kanal, Adresse und Signalpegel." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="callsign">Geben Sie Ihr Rufzeichen am Go oder in Briefing ein</h3>
+      <p id="asked">Ändern Sie Ihren Luftfahrzeugtyp oder Ihr Rufzeichen im Go-Menü oder per Bluetooth in <%= link_to "Briefing", briefing_root_path(locale: I18n.locale) %>.</p>
+      <p class="feature-guide"><%= link_to_page "controls", label: "Ihr Rufzeichen eingeben", anchor: "callsign" %> <small>(Aus der Anleitung »Bedienung«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "menu-callsign.png", alt: "Im Rufzeichenfeld steht S-BLIP in großer Schrift. Ein Balken markiert das dritte Zeichen. Für die Taste steht NEXT, für das Touchfeld CHANGE." %>
+    </figure>
+  </div>
+</section>
+
+<section id="apps" class="band band--tint">
+  <h2 class="section-title">Derselbe Verkehr in Ihren Apps</h2>
+  <div class="feature">
+    <div>
+      <p>Wählen Sie Ihren Go in SDVFR Next, SkyDemon oder ForeFlight. Go sendet den Verkehr gleichzeitig per Bluetooth an drei Geräte. Ihr Tablet, Ihr Smartphone und das Smartphone Ihres Passagiers können denselben Verkehr empfangen.</p>
+      <p class="feature-guide"><%= link_to_page "phone", label: "Ihre App verbinden", anchor: "by-name" %> <small>(Aus der Anleitung »Smartphone«)</small></p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= content_image_tag "pages/index/sdvfr-next-traffic.avif", alt: "Auf der Karte von SDVFR Next erscheint Verkehr von skyBlip Go. Neben jedem Luftfahrzeug steht sein Rufzeichen." %>
+      <figcaption>SkyDreamSoft SDVFR Next.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="instruments" class="band">
+  <h2 class="section-title">Sechs Rundanzeigen am Go, ein g-Messer am Go+</h2>
+  <div class="feature">
+    <div>
+      <h3 id="six-pack">Messwerte von GPS und Barometer</h3>
+      <p>Sechs Rundanzeigen zeigen Geschwindigkeit über Grund, Horizont, Höhe, Kurve, Kurs über Grund und Vertikalgeschwindigkeit. Nutzen Sie die Werte zur Orientierung. Sie ersetzen Ihre Fluginstrumente nicht.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Die sechs Rundanzeigen lesen", anchor: "six-pack" %> <small>(Aus der Anleitung »Instrumente«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "Die sechs Rundanzeigen zeigen Geschwindigkeit über Grund, Horizont, Höhe, Libelle, Kurs über Grund und Vertikalgeschwindigkeit." %>
+    </figure>
+  </div>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="g-meter">Der g-Messer des Go+ hält Höchst- und Tiefstwerte fest</h3>
+      <p>Der g-Messer zeigt die vom Beschleunigungssensor des Go+ gemessenen Lasten. Lesen Sie die aktuelle Last sowie die Höchst- und Tiefstwerte während des Flugs ab. Go+ ergänzt die Warnung auf dem Display um Ton und Vibration.</p>
+      <p class="feature-guide"><%= link_to_page "instruments", label: "Den g-Messer lesen", anchor: "g-meter" %> <small>(Aus der Anleitung »Instrumente«)</small></p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "Der g-Messer markiert Lasten nach oben und unten sowie zur Seite. Ein Rahmen zeigt die Spitzenwerte des Flugs. Eine eigene Leiste zeigt die Längslast." %>
+    </figure>
+  </div>
+</section>
+
+<section id="try" class="band band--tint">
+  <h2 class="section-title">Probieren Sie das Radar aus und wählen Sie ein Gerät</h2>
+  <p>Go und Go+ haben dasselbe Radar. Koppeln Sie eines der beiden Geräte mit Bravo, um auch Luftfahrzeuge zu sehen, die ihre Position per ADS-B senden.</p>
+  <p>Go ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Das Gerät ersetzt weder FLARM noch einen Transponder, wenn diese für Ihren Flug vorgeschrieben sind.</p>
+  <p><%= link_to_page "controls", label: "Go bedienen", anchor: "two-contacts", id: "controls" %> · <%= link_to_page "power", label: "Strom und Akku", id: "power" %></p>
+  <p class="signature"><%= link_to_page "skyblip-go", label: "Radar ausprobieren", class: "button button--primary" %> · <%= link_to_page "buy", label: "Go und Go+ vergleichen", anchor: "compare" %></p>
+</section>

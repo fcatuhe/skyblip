@@ -43,8 +43,10 @@
 
   .site-nav-links a,
   .site-nav-manage {
+    display: block;
     color: var(--ink-soft);
     text-decoration: none;
+    white-space: nowrap;
     padding-block: var(--space-2xs);
     border-block-end: 2px solid transparent;
   }
@@ -52,7 +54,7 @@
   .site-nav-links a:hover,
   .site-nav-manage:hover { color: var(--ink); }
 
-  .site-nav-links a[aria-current="page"],
+  .site-nav-links a[aria-current],
   .site-nav-manage[aria-current="page"] {
     color: var(--ink);
     border-block-end-color: var(--blip);
@@ -80,7 +82,10 @@
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-width: none;
-      gap: var(--space-inline-m);
+      justify-content: space-between;
+      gap: var(--space-inline-s);
     }
+
+    .site-nav-links a { padding-block: var(--space-xs); }
   }
 }

@@ -1,4 +1,4 @@
-version 1.0.0
+version 0.1.0
 root firmware/protocols/adsl/
 root firmware/test/adsl/
 root firmware/test/en300220/
@@ -13,7 +13,6 @@ root firmware/hardware/platform/zephyr/clock.h
 root firmware/hardware/platform/zephyr/io.h
 root firmware/test/support/simulator_run.h
 root firmware/test/support/m_band_rig.h
-root firmware/test/support/fresh_fix.h
 94cbfbb93b3befabcbbf74986e6c567c5ec9a24339fb24d5007afbd3b2ed8dad  firmware/core/protocol/air.cpp
 2e76b6fddde4afd4d7e6e268332b0cf1ec15c1ee670d5ab8a5dd61603e197aab  firmware/core/protocol/air.h
 fe894ff8394e2aa3edccc8f19311dc11463dab7dbb4ab279a09ed0c52b39a278  firmware/hardware/parts/sx1262/sx1262.cpp
@@ -23,7 +22,7 @@ d2b990bd8f693906c9b26bd485c3f71e4b81c284932a37b89d365f4fa31de4ee  firmware/hardw
 30baa59123c98f99bb4078e22592c9d5e51d4e6a48e0de18c18c417df51f438a  firmware/hardware/platform/zephyr/pps.h
 66203cc448a82d2b38f09637da6939879fb492b20202df6315e0916fdf51d675  firmware/hardware/platform/zephyr/rf.h
 4a6321e96c41cf455df73cfbcbdfc80cb199bc1c55de7726d7092b1484ddaa8b  firmware/hardware/platform/zephyr/rf_mailbox.h
-edfc089620bfbc69d53b4aec32f457daaf18a2e3026a7b2958d6717896f6968c  firmware/protocols/adsl/README.md
+d3aa90aa41aabc1047f31cdcb1367dbabbfe5088b764996f5a10933fa2448efa  firmware/protocols/adsl/README.md
 b9abd034fa7c29b1e53d57b775fd7c823dc32dcbe166b57e24d74138f1e0692e  firmware/protocols/adsl/flight_state.cpp
 972ef09e2b991a7fa4a2be6e5fbe84ec3163630209e5f704f015a8b084d8458b  firmware/protocols/adsl/flight_state.h
 783b0a9796f14321655da34a0dd6b46f1f6f1f2a8066d8dcff17bf0c369d6c18  firmware/protocols/adsl/media_access.cpp
@@ -53,7 +52,7 @@ fc0a6aecea4f3c3221fc0d829cebd87a2b452b5ceb006bd3975b4c1ab350387a  firmware/proto
 1feb26873f74ef30bed137a03086d75967170c792dee5a8b2408c9ed89c0ec02  firmware/protocols/adsl/transmit.h
 0e3a0be32c5fd634a4c659c8ba1478bdd2ee676b080bd95437e9c1525c86efbb  firmware/protocols/adsl/uplink.cpp
 18cf3b54a241b56495036bce36d472eac23bf102f082537592da9c817e5062c7  firmware/protocols/adsl/uplink.h
-5cf2708399e6c1edde6fd7ac80ca9f1b5dca094086d77e6c439ea639e9bff814  firmware/protocols/adsl/version.h
+a7a59c0806f7d3c18573c4986251811b962f7358e680be20b017e5cc4cd32110  firmware/protocols/adsl/version.h
 d0c8fe462b3eca224c689cef594e4811b313a8c596449da78287d7955c764aa0  firmware/protocols/common/bit_field.h
 ffe91a409ca0133fd3a7e4940194551c836cd30c97063efc13f380723a9fba91  firmware/protocols/common/crc.h
 40c5dc007ffb6f323f8b6003c2b4b9c8f9e4e1e1aa759c31f3f81a15525a7ad4  firmware/protocols/common/en300220.h
@@ -75,7 +74,7 @@ e480d3d0cf5224ed112bad72b8a23dad14353322bd4e8a7818dbf320fa1e433a  firmware/proto
 19975b8f54268cb8c1f2feae1dee94b7925410b6d3d7659cf73414aa97092506  firmware/test/adsl/test_network.cpp
 43e64a425f6bcbd9b93f3f78257065f54de594d2b9e772cdd2442362ca8d15f7  firmware/test/adsl/test_overview.cpp
 e732d19998d17e78c3660d40445421b08e775d3b78887dc4ad24f479f62939e4  firmware/test/adsl/test_payloads.cpp
-637ec8877d24037fdc0f658c9a77be116708f77d68049e0726d1854dd5b369f6  firmware/test/adsl/test_physical.cpp
+4535b5d6adcc3bee1f07a31a9f5730efa4f9f127db7247b7898aec774c6bece5  firmware/test/adsl/test_physical.cpp
 bad932a4f62698ed611955af4abfc642c724c48f20d5c63d0ff63c8a77b7e292  firmware/test/adsl/test_presentation.cpp
 52dba435c45ee0c5f7e9e4b49090d3288355615f0c5bbc6ad31ea6067acbe546  firmware/test/adsl/test_quality.cpp
 85522d67f291821f8fc23732dd1855a88b327f83eca261612f2d0331f4898881  firmware/test/adsl/test_traffic.cpp
@@ -84,6 +83,5 @@ bad932a4f62698ed611955af4abfc642c724c48f20d5c63d0ff63c8a77b7e292  firmware/test/
 81e58c9fe47b8c88fd67daf4c3684e278210817d76fa46644c01695a562deedc  firmware/test/en300220/clauses.txt
 9dba7d8ae930576e594765eb9a517ebd6a8c7166833da5d700694b33fe685d7a  firmware/test/en300220/test_part1.cpp
 96c9745ec314dce1a4b8c3780b8af712be741b462fe16955adcda21cca34febf  firmware/test/en300220/test_part2.cpp
-006422358f8f0f34618b964159083b3547576899eb3e131830a345dda539d4e4  firmware/test/support/fresh_fix.h
 60af4bab775f470fe3a81c46af822b11133839cc93d78c21143008494dfadf22  firmware/test/support/m_band_rig.h
 39b07cbe239945d080ea7d20eb4ebdff324584022842c1e27cf53e40af656cf8  firmware/test/support/simulator_run.h

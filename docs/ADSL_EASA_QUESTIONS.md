@@ -1,6 +1,6 @@
 # ADS-L questions for EASA
 
-The readings of ADS-L 4 SRD-860 Issue 2 that skyBlip's ADS-L 1.0.0 rests on and that the text does not settle. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
+The readings of ADS-L 4 SRD-860 Issue 2 that the text does not settle, and that skyBlip's ADS-L stack and its coming 1.0.0 rest on. Each one is flown as written here. If EASA reads a clause otherwise, the change is a new ADS-L version (`firmware/protocols/README.md`, Versions), but for question 3, which concerns payload 66 outside the ADS-L stack.
 
 | # | Clause | Status |
 |---|---|---|
@@ -24,7 +24,7 @@ C.5 gives aircraft the direct slot, 450 to 1000 ms of each UTC second, and says 
 
 ## 4. C.2.5: alternation after a burst that did not go out
 
-C.2.5 says the sender "shall alternate between these frequencies for every transmission to facilitate reception of these payloads for restricted, single-channel receivers". The Go picks the channel from the UTC second's parity: a position on A in an even second and on B in an odd one, the Status the other way round. When a burst does not go out, because the channel stayed busy, the next one keeps its second's channel, so two positions in a row can leave on the same frequency. A single-channel receiver then still hears every other second from us, which is the purpose the clause gives. We ask whether alternation by the schedule meets C.2.5, or whether each transmission must take the channel opposite to the last one that went out.
+C.2.5 says the sender "shall alternate between these frequencies for every transmission to facilitate reception of these payloads for restricted, single-channel receivers". The Go picks the channel from the UTC second's parity: a position on A in an even second and on B in an odd one, the Status the other way round. When a burst does not go out, because the channel stayed busy, the next one keeps its second's channel, so two positions in a row can leave on the same frequency. A takeoff or a landing changes the rate, and in about one case in two it puts two positions in a row on one channel, once, at the change (`firmware/core/timing/README.md`). A single-channel receiver then still hears every other second from us, which is the purpose the clause gives. We ask whether alternation by the schedule meets C.2.5, or whether each transmission must take the channel opposite to the last one that went out.
 
 ## 5. G.1.16 and G.1.17: velocity accuracy with no measured bound
 

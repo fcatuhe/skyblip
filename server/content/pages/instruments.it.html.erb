@@ -1,0 +1,67 @@
+---
+title: "Strumenti GPS e accelerometro del Go+"
+nav_title: Strumenti
+slug: strumenti
+description: "Sei quadranti con letture di GPS e barometro. Il Go+ ha anche un accelerometro che conserva gli estremi del volo. Non sono strumenti di volo certificati."
+parent: guides
+share_image: radar
+updated_on: "2026-11-09"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Sei quadranti, e cosa ha subito la cellula.</h1>
+  <p class="lede">
+    Sei quadranti mostrano le letture di GPS e barometro, per divertimento. Il Go+ ha anche un
+    accelerometro.
+  </p>
+</section>
+
+<section>
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="six-pack">Sei quadranti e <span class="highlight">quanto resta nella batteria</span>.</h3>
+      <p>
+        Velocità al suolo, orizzonte, altimetro, virata, rotta al suolo, velocità verticale: un modo giocoso
+        di mostrare le letture di GPS e barometro. Sopra il quadrante centrale, la percentuale della batteria indica quanta autonomia di volo resta
+        al dispositivo. Gli altri cinque non possono dirtelo. Il tempo dal
+        decollo si trova sul radar, per il tuo libretto di volo.
+      </p>
+      <p>
+        Questi non sono strumenti di volo. L&rsquo;orizzonte mostra l&rsquo;angolo di inclinazione che
+        servirebbe per una virata coordinata a quella velocità. Nulla nel dispositivo
+        misura l&rsquo;angolo di inclinazione. Nulla qui è certificato. Questo non è
+        un indicatore di assetto per volare in nube.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "sixpack.png", alt: "La pagina con sei quadranti: velocità al suolo, orizzonte artificiale con la percentuale della batteria sopra, altimetro, coordinatore di virata con pallina, rosa della rotta al suolo e velocità verticale" %>
+      <figcaption>Sei quadranti</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="g-meter">Cosa la cellula <span class="highlight">ha subito</span>.</h3>
+      <p>
+        La quarta pagina mostra le letture dell&rsquo;accelerometro senza interpretarle.
+        L&rsquo;indicatore mostra il carico attuale sull&rsquo;ala. Il riquadro intorno indica
+        il carico massimo e minimo fino a quel momento e i carichi massimi verso
+        sinistra e destra.
+      </p>
+      <p>
+        I valori estremi si riferiscono a questo volo. Si azzerano quando parte il cronometro
+        di volo. I carichi longitudinali hanno una barra dedicata, perché una frenata e un
+        atterraggio duro non sono un carico sull&rsquo;ala.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "gmeter.png", alt: "La pagina dell'accelerometro: un indicatore mostra i fattori di carico normale (alto-basso) e laterale (sinistra-destra) su un grafico, con un riquadro intorno che indica i valori estremi del volo, una barra longitudinale accanto e tre righe di cifre in decimi di g" %>
+      <figcaption>Accelerometro</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

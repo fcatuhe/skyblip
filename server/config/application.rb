@@ -70,7 +70,7 @@ module Skyblip
     # INFO: fc 14nov26 Kamal names the image it deployed, so an error says which revision raised it
     config.x.revision = ENV["KAMAL_VERSION"]
 
-    config.i18n.available_locales = %i[ en fr ]
+    config.i18n.available_locales = %i[ en fr de it es ]
     config.i18n.default_locale = :en
 
     config.action_dispatch.rescue_responses["Decant::FileNotFound"] = :not_found

@@ -1,0 +1,34 @@
+@layer declaration {
+  @page {
+    size: A4;
+    margin: 10mm 20mm 12mm;
+  }
+
+  html { font-size: 9.5pt; }
+
+  .declaration { line-height: 1.4; print-color-adjust: exact; }
+
+  .declaration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-block: var(--space-l) var(--space-s);
+    border-block-end: 1px solid var(--card-border);
+    margin-block-end: var(--space-m);
+  }
+  .declaration-wordmark { font-size: 1.75rem; }
+  .declaration .declaration-draft {
+    margin: 0;
+    font-weight: 700;
+    color: var(--blip-text);
+  }
+
+  .declaration h1 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    margin-block: 0 var(--space-xs);
+  }
+  .declaration .declaration-basis { margin-block-end: var(--space-m); }
+}

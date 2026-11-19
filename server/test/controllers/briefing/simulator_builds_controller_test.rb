@@ -10,7 +10,7 @@ class Briefing::SimulatorBuildsControllerTest < ActionDispatch::IntegrationTest
 
   test "the frame offers the simulator of the newest main build that holds it" do
     VCR.use_cassette("github/releases") do
-      get "/briefing/simulator_build"
+      with_config(simulator_build: nil) { get "/briefing/simulator_build" }
     end
 
     assert_response :success
@@ -18,9 +18,20 @@ class Briefing::SimulatorBuildsControllerTest < ActionDispatch::IntegrationTest
     assert_match "dev-1765", response.body
   end
 
+  test "the French simulator frame labels the Bravo control in French" do
+    VCR.use_cassette("github/releases") do
+      with_config(simulator_build: nil) { get "/briefing/simulator_build", params: { locale: :fr } }
+    end
+
+    assert_response :success
+    assert_select "label[data-simulator-target=bravoControl]", text: "Avec Bravo (skyBlip Tango)" do
+      assert_select "input[type=checkbox][data-action='change->simulator#restart']"
+    end
+  end
+
   test "GitHub failure is contained in the simulator frame" do
     VCR.use_cassette("github/unavailable") do
-      get "/briefing/simulator_build"
+      with_config(simulator_build: nil) { get "/briefing/simulator_build" }
     end
 
     assert_response :success

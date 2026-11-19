@@ -1,0 +1,172 @@
+---
+title: "Verkehrsradar und Warnungen für ADS-L und FLARM"
+nav_title: Radar
+slug: radar
+description: "Lesen Sie Radar, Symbole und die Liste NEARBY auf skyBlip Go. Warnungen gelten innerhalb von 3 km und 300 m. PLOT ALL zeigt auch entfernten Verkehr."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Wohin Sie schauen sollten und wer dort fliegt.</h1>
+  <p class="lede">
+    Die Ansicht, die auf skyBlip Go offen bleibt: Wohin Sie schauen sollten, wer dort fliegt und was eine Warnung bedeutet.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Was Sie im Flug sehen</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="heading-up">Der Verkehr erscheint so, <span class="highlight">wie Sie ihn vor sich sehen</span>.</h3>
+      <p>
+        Sie sind in der Mitte, Ihre Flugrichtung zeigt nach oben. Das bleibt auch in der Kurve so. Verkehr rechts oben suchen Sie rechts vor der Nase, ohne umzurechnen. Über der oberen Hälfte steht kein Text, denn in diese Richtung fliegen Sie.
+      </p>
+      <p>
+        Die Form jedes Luftfahrzeugs zeigt, wohin Sie schauen sollten. Eine Spitze nach oben bedeutet über Ihnen, eine nach unten unter Ihnen. Eine Raute bedeutet auf Ihrer Höhe. Ein kleiner Winkel zeigt Steig- oder Sinkflug. Die Linie am Symbol endet an der Position des Luftfahrzeugs in einer Minute.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Radaransicht: drei Luftfahrzeuge, eines höher, eines tiefer und eines auf gleicher Höhe im Steigflug, jeweils mit einer Linie zur Position in einer Minute. Die eigene Kurslinie ist gestrichelt und hat je einen Punkt für die nächsten zwei Minuten. Dazu kommen der Kreis von vier nautischen Meilen, die Flugzeit und die Anzahl empfangener Luftfahrzeuge." %>
+      <figcaption>Radar</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>Flugrichtung oben, nie Norden</li>
+    <li>Kreis von 1, 2, 4 oder 8&nbsp;NM</li>
+    <li>Die Form zeigt: höher, gleich hoch oder tiefer</li>
+    <li>Eine Minute voraus auf dem Kurs jedes Luftfahrzeugs</li>
+    <li>Anzahl aller empfangenen Luftfahrzeuge</li>
+    <li>Flugzeit für das Flugbuch</li>
+  </ul>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="every-aircraft">Jedes Luftfahrzeug, <span class="highlight">auch weit entfernt</span>.</h3>
+      <p>
+        Maßstabsgetreu endet die Ansicht am Displayrand. Beim Kreis von 4&nbsp;NM ist ein Luftfahrzeug jenseits von etwa sechs nautischen Meilen nicht sichtbar. Steht
+        <span class="mono">PLOT</span> auf <span class="mono">ALL</span>, der ersten Option im Einstellungsmenü und der Voreinstellung neuer Geräte, erscheint jedes empfangene Luftfahrzeug mit Position. Der Kreis wird kleiner und lässt Platz für einen äußeren Ring. Ein Luftfahrzeug außerhalb des Kreises erscheint dort in seiner Richtung, mit demselben Symbol wie im Kreis.
+      </p>
+      <p>
+        Die Entfernung ist dort nicht maßstabsgetreu. Die Kurslinie für eine Minute ist es: Sie geht von der tatsächlichen Position aus und erscheint nur, soweit sie im Kreis liegt. Bei einem Luftfahrzeug, das sich aus sechs nautischen Meilen schnell nähert, steht das Symbol im äußeren Ring. Die Linie reicht bereits in den Kreis und endet an der Position in einer Minute.
+      </p>
+      <p>
+        Nahe beieinanderliegende Luftfahrzeuge teilen sich im äußeren Ring ein Symbol mit einer Zahl daneben. Ein Luftfahrzeug mit Warnung hat Vorrang. Sonst zeigt das Symbol das Luftfahrzeug, das Ihrer Höhe am nächsten ist. Die Zahl verdeckt kein anderes Luftfahrzeug. Ein Symbol hinter Ihnen rückt zur Seite, statt unter der Reichweitenangabe zu verschwinden.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "far-all.png", alt: "Radaransicht mit PLOT ALL: ein kleinerer Kreis mit zwei Luftfahrzeugen. Im äußeren Ring stehen ein Luftfahrzeug voraus mit einer Kurslinie in den Kreis, ein Symbol mit der Zahl 3 für die Gruppe rechts oben und ein weit entferntes Luftfahrzeug links." %>
+      <figcaption>PLOT ALL</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>ALL, die Voreinstellung: jedes Luftfahrzeug mit Position</li>
+    <li>TO SCALE: Darstellung im Maßstab des Kreises</li>
+    <li>Im äußeren Ring: Richtung, Symbolform und Warnung</li>
+    <li>Eine Minute Kurslinie, soweit sie in den Kreis reicht</li>
+    <li>Nahe beieinanderliegende Luftfahrzeuge teilen sich ein Symbol und eine Zahl</li>
+    <li>In der Ecke steht die Anzahl aller empfangenen Luftfahrzeuge</li>
+  </ul>
+
+  <p class="lede">
+    <%= link_to_page "displays", label: "Die Anleitung zu den Displayansichten", anchor: "both-ways" %>
+    zeigt denselben Verkehr in den beiden Modi, die Sie mit einem Tastendruck wechseln.
+  </p>
+
+  <div class="feature">
+    <div>
+      <h3 id="alarm">Eine Warnung zeigt, <span class="highlight">wohin Sie schauen sollten</span>.</h3>
+      <p>
+        Liegt ein Luftfahrzeug innerhalb von 3&nbsp;km horizontal und 300&nbsp;m vertikal, wird sein Symbol ausgefüllt. Ein auf das Luftfahrzeug ausgerichtetes Viertel des Displays wird einmal pro Sekunde schwarz. Sie brauchen nichts zu lesen. Sie sehen das Blinken aus dem Augenwinkel und drehen den Kopf in diese Richtung. Das Radar erscheint unabhängig von der geöffneten Ansicht.
+      </p>
+      <p>
+        Der schwarze Sektor fällt auf. Das Symbol zeigt den Winkel. Verkehr 38° neben der Nase wird nicht zu »rechts voraus« gerundet. Der Sektor ist auf 38° ausgerichtet, damit Sie dorthin schauen, statt ein ganzes Viertel des Himmels abzusuchen.
+      </p>
+      <p>
+        Eine höhere Warnstufe gibt es nicht und wird es nicht geben. Steigen oder Sinken müsste mit dem anderen Luftfahrzeug abgestimmt sein. Dem Gerät fehlt dafür die Verbindung. Es kann Ihnen nur zeigen, wohin Sie schauen sollten.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Radar bei einem Verkehrshinweis: ein schwarzer 90-Grad-Sektor in Richtung des Verkehrs. Darauf erscheinen die ausgefüllte Raute des sich nähernden Luftfahrzeugs und seine Kurslinie für eine Minute in Weiß." %>
+      <figcaption>Verkehrshinweis</figcaption>
+    </figure>
+  </div>
+
+  <ul class="points">
+    <li>3&nbsp;km um Sie herum, 300&nbsp;m darüber und darunter</li>
+    <li>Ein Viertel des Displays, ausgerichtet auf den Verkehr</li>
+    <li>Einmaliges Blinken pro Sekunde</li>
+    <li>Summer, Vibration und LED warnen ebenfalls</li>
+    <li>Eine Berührung des Touchfelds schaltet die Warnung stumm</li>
+    <li>Ein Hinweis, nie eine Anweisung</li>
+  </ul>
+
+  <h3 id="shapes">Sechs Formen, <span class="highlight">die Sie ohne Lernen verstehen</span>.</h3>
+  <p class="lede">
+    Eine Spitze nach oben bedeutet Verkehr über Ihnen, eine nach unten darunter. Eine Raute bedeutet Verkehr bis zu 60&nbsp;m über oder unter Ihnen. Ein normal großes Symbol steht für ein Luftfahrzeug innerhalb des Höhenbereichs von 300&nbsp;m, den die Warnung nutzt. Ein kleineres Symbol steht für mehr vertikalen Abstand. Es bleibt sichtbar, ohne eine Warnung auszulösen. Der Winkel erscheint ab 2,5&nbsp;m/s Steigen oder Sinken und zeigt in die entsprechende Richtung.
+  </p>
+  <p class="lede">
+    Ein Ring bedeutet, dass das Luftfahrzeug keine Höhe sendet. Er zeigt weder nach oben noch nach unten, weil die relative Höhe unbekannt ist. Innerhalb von 3&nbsp;km wird er wie bei jeder Warnung ausgefüllt, weil das Luftfahrzeug auf Ihrer Höhe sein könnte.
+  </p>
+  <p class="lede">
+    Ein schwarz ausgefülltes Symbol zeigt eine Warnung. Solange kein Symbol ausgefüllt ist, ist nichts dringend. Für diesen Fall behält sich das Display den Kontrast vor.
+  </p>
+
+  <%= render "shared/blips",
+        plain: "Ohne Warnung",
+        alarm: "Warnung",
+        climbing: "steigend",
+        steady: "gleichbleibend",
+        sinking: "sinkend",
+        above: "Spitze nach oben",
+        above_when: "bis zu 300 m über Ihnen",
+        level: "Raute",
+        level_when: "bis zu 60 m über oder unter Ihnen",
+        below: "Spitze nach unten",
+        below_when: "bis zu 300 m unter Ihnen",
+        far_above: "Spitze nach oben, klein",
+        far_above_when: "mehr als 300 m über Ihnen",
+        far_below: "Spitze nach unten, klein",
+        far_below_when: "mehr als 300 m unter Ihnen",
+        unknown: "Ring",
+        unknown_when: "keine Höhe gesendet",
+        out_of_window: "außerhalb des Höhenbereichs für Warnungen" %>
+
+  <div class="feature">
+    <div>
+      <h3 id="nearby">Verkehr in der Nähe, <span class="highlight">zuerst auf Ihrer Höhe</span>.</h3>
+      <p>
+        Das Radar zeigt, wohin Sie schauen sollten. Diese Ansicht zeigt, wer dort ist. Je Luftfahrzeug mit bekannter Position sehen Sie eine Zeile: das Rufzeichen, falls es eines sendet, sonst die Funkadresse, die horizontale Entfernung und die Höhe über oder unter Ihnen. Zwei Striche stehen für eine unbekannte Höhe. Die Funkadresse ist kleiner gedruckt, damit Sie sie vom Rufzeichen unterscheiden können.
+      </p>
+      <p>
+        Über der Liste steht je eine Zeile für Go und einen gekoppelten Bravo: Akkustand, Satelliten für den Positionsfix und empfangene Luftfahrzeuge. Hat ein Gerät keine Position oder funktioniert es nicht, ersetzt eine Meldung die letzten beiden Angaben: <span class="mono">GPS OFF</span>,
+        <span class="mono">MOVE OUT</span>, <span class="mono">FINDS FIX</span>,
+        <span class="mono">TX OFF</span>, <span class="mono">NO LINK</span> oder
+        <span class="mono">RX DOWN</span>.
+      </p>
+      <p>
+        Zuerst kommt ein Luftfahrzeug mit Warnung, dann die Luftfahrzeuge bis zu 300&nbsp;m (etwa 1.000&nbsp;ft) über oder unter Ihnen, dann die übrigen. In jeder Gruppe steht das nächste zuerst. Ein Verkehrsflugzeug direkt über Ihnen ist horizontal nah, steht aber unter einem Segelflugzeug auf Ihrer Höhe.
+      </p>
+      <p>
+        Der Buchstabe am Zeilenbeginn zeigt die Quelle.
+        <span class="mono">L</span> für direkt empfangenes ADS-L,
+        <span class="mono">F</span> für FLARM-kompatiblen Verkehr,
+        <span class="mono">U</span> für ein von einer Bodenstation weitergeleitetes Luftfahrzeug,
+        <span class="mono">B</span> für ADS-B von einem gekoppelten Bravo.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "Ansicht NEARBY: eine Zeile für Go mit 92% Akkustand, 9 Satelliten und 5 empfangenen Luftfahrzeugen. Dann folgen fünf Luftfahrzeuge, die auf Ihrer Höhe zuerst. Jeweils ein Buchstabe für die Quelle, das Rufzeichen oder klein gedruckt die Funkadresse, die horizontale Entfernung und die relative Höhe." %>
+      <figcaption>NEARBY</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

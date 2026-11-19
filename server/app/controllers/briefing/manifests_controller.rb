@@ -3,7 +3,7 @@ class Briefing::ManifestsController < Briefing::ApplicationController
     render json: {
       id: "/briefing",
       name: t("briefing.app.name"),
-      short_name: "skyBlip",
+      short_name: t("briefing.app.name"),
       icons: [
         { src: "/icon.png", type: "image/png", sizes: "512x512" },
         { src: "/icon.svg", type: "image/svg+xml", sizes: "any" },

@@ -13,7 +13,7 @@ class DevReleaseTest < Minitest::Test
   GO_NOTES = <<~NOTES.chomp
     ## skyBlip Go
 
-    Radio protocols: ADS-L 1.0.0, ALP-TAS 0.1.0.
+    Radio protocols: ADS-L 0.1.0, ALP-TAS 0.1.0.
 
     - `.signed.bin` installs over Bluetooth only on a unit whose bootloader trusts that key ([firmware/keys](https://github.com/fcatuhe/skyblip/tree/main/firmware/keys)), older builds included.
     - `.full.signed.bin` is the same image with the sensor hub's firmware, for a unit the update page asks it for.

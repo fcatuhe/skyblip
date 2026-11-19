@@ -1,0 +1,137 @@
+---
+title: "Go: Akku, Laden per USB-C und Betriebszustände"
+nav_title: Strom und Akku
+slug: strom-und-akku
+description: "Laden Sie skyBlip Go per USB-C. Lesen Sie, wie Go bei leerem Akku warnt und warum das E-Paper-Display sein Bild ohne Strom behält."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Das Display informiert auch im ausgeschalteten Zustand.</h1>
+  <p class="lede">
+    Was das Gerät anzeigt, bevor es eine Position hat, wenn es ausgeschaltet ist und wenn der Akku leer wird.
+  </p>
+</section>
+
+<section>
+  <h2 class="kicker">Auf dem Vorfeld und in der Tasche</h2>
+
+  <div class="feature">
+    <div>
+      <h3 id="waiting">Das Display zeigt, <span class="highlight">worauf Go wartet</span>.</h3>
+      <p>
+        Ein Tastendruck schaltet das Gerät ein und öffnet die Verkehrsanzeige. Solange Go keine Position hat, steht das im Radarkreis. Die Meldung darunter zeigt, wie weit der Empfänger ist: <span class="mono">GPS OFF</span>, wenn der Empfänger keine Daten liefert, <span class="mono">MOVE OUT</span>, wenn er Positionslösungen ohne Datum liefert, und <span class="mono">FINDS FIX</span>, sobald er das Datum eines Satelliten liest.
+      </p>
+      <p>
+        So wissen Sie, ob Sie warten oder das Gerät ins Freie bringen sollten. Sobald es seine erste Position meldet, zeigt das Display den Luftraum um Sie herum.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "no-fix.png", alt: "Radaransicht ohne Position: Im leeren Kreis steht NO FIX, darunter der Fortschritt des Empfängers" %>
+      <figcaption>Warten auf einen Positionsfix</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3 id="off">Das Logo zeigt, <span class="highlight">dass Go aus ist</span>.</h3>
+      <p>
+        Halten Sie die Taste zum Ausschalten zwei Sekunden lang. Das Funkmodul stoppt. Das Display hat drei Sekunden, um das Logo zu zeichnen. Wenn Sie loslassen, wird die Stromversorgung getrennt. E-Paper behält sein Bild ohne Strom. Das Logo bleibt also stehen, wenn das Gerät aus ist.
+      </p>
+      <p>
+        Halten Sie die Taste genauso und legen Sie einen Finger auf das Touchfeld, um das Display leer zu lassen. Ein Bild, das den ganzen Winter auf E-Paper steht, hinterlässt einen dauerhaften Schatten. Lassen Sie das Display für die Lagerung leer.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off.png", alt: "Anzeige eines ausgeschalteten Geräts: Das skyBlip-Logo bleibt ohne Strom auf dem E-Paper-Display stehen" %>
+      <figcaption>Aus</figcaption>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3 id="flat-battery">Wenn der Akku leer ist, <span class="highlight">steht es auf dem Display</span>.</h3>
+      <p>
+        Bei 3,2&nbsp;V schaltet sich das Gerät aus. Die letzte Meldung nennt den Grund. Sie haben nichts gedrückt, also kann nur das Display erklären, warum Go aus ist. Ohne diese Meldung sähe es nach einem Absturz oder Defekt aus. Die Taste reagiert ab diesem Moment nicht mehr. Ein Tastendruck würde den Akku nur wieder an dieselbe Abschaltspannung bringen.
+      </p>
+      <p>
+        Schließen Sie das Kabel an, um das Gerät wieder zu nutzen. Das weckt die Elektronik, ohne das Gerät zu starten, und zeigt das Logo wieder an. Das Gerät ist aus und lädt. Der nächste Tastendruck startet es. Hat sich der Akku bei der Lagerung entladen, steht noch keine Meldung auf dem Display. In diesem Fall zeigt ein Tastendruck dieselbe Meldung zum leeren Akku an.
+      </p>
+      <p>
+        Das Gerät merkt sich das bis zum nächsten Start. Im Selbsttest steht
+        <span class="mono">WAS EMPTY</span> neben der Spannung. Verbindet sich beim Start ein Smartphone, erhält es denselben Hinweis. So meldet sich das Gerät nach dem Ausfall nicht zurück, als wäre nichts passiert.
+      </p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "off-flat-battery.png", alt: "Anzeige nach dem Abschalten bei leerem Akku: unter dem skyBlip-Logo steht BATTERY EMPTY" %>
+      <figcaption>Akku leer</figcaption>
+    </figure>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Bei ausgeschaltetem Gerät</th><th>Was passiert</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Taste drücken</th><td>Das Gerät startet, außer der Akku liegt ohne angeschlossenes Ladegerät unter 3,4&nbsp;V. Dann zeigt das Display <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Taste nach dem Abschalten bei leerem Akku drücken</th><td>Nichts. Das Display nennt den Grund bereits. Schließen Sie das Kabel an, um das Gerät wieder zu nutzen</td></tr>
+        <tr><th>Ladegerät anschließen</th><td>Das Gerät lädt und bleibt aus. Das Anschließen in der Flugtasche löst keine Aussendung aus</td></tr>
+        <tr><th>Ladegerät bei leerem Akku anschließen</th><td>Das Gerät lädt und bleibt aus. Das Logo erscheint anstelle von <span class="mono">BATTERY EMPTY</span></td></tr>
+        <tr><th>Taste halten und Ladegerät anschließen</th><td>Das Gerät startet und lädt</td></tr>
+        <tr><th>Drücken Sie <span class="mono">RESET</span></th><td>für einen Neustart. Drücken Sie zweimal innerhalb einer halben Sekunde, um den USB-Bootloader zu starten und die Firmware per USB zu installieren</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2 class="kicker">Technische Hinweise</h2>
+
+  <h3 id="cell">Warum der Akku über den Tag reicht.</h3>
+  <p class="lede">
+    Beim Ausschalten wird der Strom nicht sofort getrennt. Die Reihenfolge der Schritte zählt. Der externe Flash-Speicher erhält den Ruhebefehl, solange er noch Strom hat und den Befehl annehmen kann. Nach dem Abschalten hätte er keine Wirkung. Der Speicher würde dann die ganze Nacht den vollen Ruhestrom ziehen, obwohl das Gerät in der Tasche ausgeschaltet aussieht.
+  </p>
+  <p class="lede">
+    Den restlichen Strom verbrauchen Funkmodul und Sensoren. Im Flug sendet das Gerät einmal pro Sekunde, am Boden einmal alle zehn Sekunden. Seine Adresse bestimmt, welche der zehn Sekunden es nutzt. So verteilen sich die Aussendungen mehrerer Luftfahrzeuge auf demselben Flugplatz.
+  </p>
+
+  <ul class="points">
+    <li>Das Funkmodul geht vor dem Reset-Signal in den Ruhezustand</li>
+    <li>Beim Abschalten gilt diese Reihenfolge: Flash-Speicher, Empfänger, Stromversorgungen, Anschlüsse</li>
+    <li>Das Gerät sendet mit 1&nbsp;Hz im Flug und 0,1&nbsp;Hz am Boden</li>
+    <li>Das Gyroskop des Sensor-Hubs wird nicht ausgelesen. Es zieht ein Milliampere</li>
+    <li>Außerhalb von 5 bis 60&nbsp;&deg;C lädt Go nicht</li>
+    <li>Die LED blinkt und leuchtet nie dauerhaft</li>
+  </ul>
+
+  <h3 id="gauge">Was die Akkuanzeige nicht tut.</h3>
+  <p class="lede">
+    Die Anzeige nutzt zwei Spannungskurven statt einer. Beim Laden ist die Klemmenspannung höher als die eigene Spannung des Akkus. Derselbe Messwert entspricht dann einem deutlich leereren Akku. Der Prozentwert zeigt, welche Kurve verwendet wurde.
+  </p>
+  <p class="lede">
+    Der Prozentwert läuft nicht rückwärts. Auch eine Aussendung mit 22&nbsp;dBm, die die Spannung kurz senkt, verändert ihn nicht. Eine Anzeige, die bei jeder Aussendung springt, ist für Piloten nicht verlässlich.
+  </p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Schwelle</th><th>Was passiert</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>3,60&nbsp;V</th><td>Der Akkustand ist niedrig, etwa 12%. Die LED blinkt rot. Auf dem Radar stehen BAT und der Prozentwert. Nach dem Ausschalten steht CHARGE THE BATTERY auf dem Display.</td></tr>
+        <tr><th>3,50&nbsp;V</th><td>Der Akkustand ist kritisch, etwa 5%. Die LED blinkt alle 600&nbsp;ms. Von hier an speichert das Gerät dauerhaft nur noch das Flugprotokoll. Es dokumentiert den zu Ende gehenden Flug.</td></tr>
+        <tr><th>3,40&nbsp;V</th><td>Mit so leerem Akku startet das Gerät nicht. Die Taste bleibt gesperrt, damit Druck in der Tasche keine wiederholten Startversuche auslöst.</td></tr>
+        <tr><th>3,20&nbsp;V</th><td>Der Akku ist leer. Das Gerät schaltet sich aus und lässt BATTERY EMPTY auf dem Display stehen. Für jeden Wechsel über eine Schwelle oder zurück müssen drei Messwerte in Folge die Bedingung erfüllen. Ein kurzer Spannungseinbruch beim Senden löst keinen Wechsel aus. Nahe einer Schwelle springt die Anzeige nicht ständig hin und her.</td></tr>
+        <tr><th>1,80&nbsp;V</th><td>Unterhalb dieses Werts stammt die Messung von einem nicht angeschlossenen Spannungsteiler, nicht von einem leeren Akku. Das Gerät reagiert darauf nicht.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

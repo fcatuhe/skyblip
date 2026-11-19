@@ -1,0 +1,149 @@
+---
+title: "Flugverkehr in Ihrer Nähe, im Taschenformat"
+description: "Senden Sie Ihre Position per ADS-L und sehen Sie ADS-L- und FLARM-Verkehr mit skyBlip Go. Ab 68 €, ohne Abo."
+updated_on: "2026-11-18"
+---
+
+<% content_for :stylesheets, area_stylesheet_link_tags("simulator") %>
+
+<header class="page-hero page-hero--home">
+  <div>
+    <h1>Flugverkehr in Ihrer Nähe, im Taschenformat.</h1>
+    <p class="page-hero-subtitle">skyBlip Go sendet Ihre Position per ADS&#8209;L und zeigt ADS&#8209;L- und FLARM-Verkehr an. skyBlip Bravo erkennt Mode-S- und ADS&#8209;B-Transponder. Zusammen bilden die beiden skyBlip Tango.</p>
+  </div>
+  <figure class="hero-figure">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "" %>
+  </figure>
+</header>
+
+<section id="journey" class="band band--tint">
+  <h2 class="section-title">Vom Ausprobieren bis zum ersten Flug</h2>
+  <p class="section-intro">Ob Leichtflugzeug, Ultraleicht, Segelflugzeug oder Gleitschirm: Wir begleiten Sie Schritt für Schritt.</p>
+  <div class="journey">
+    <ol class="journey-steps">
+      <li>
+        <h3><%= link_to_page "skyblip-go", label: "Ausprobieren" %></h3>
+        <p>Testen Sie das Radar im Simulator.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "buy", label: "Gerät kaufen" %></h3>
+        <p>Das Gerät ist im Handel erhältlich. Die Software ist kostenlos.</p>
+      </li>
+      <li>
+        <h3><%= link_to_page "install", label: "Installieren" %></h3>
+        <p>Mit Briefing direkt im Browser.</p>
+      </li>
+    </ol>
+    <p class="journey-end"><strong>Jetzt sind Sie startklar.</strong> Der Leitfaden <%= link_to_page "guides", label: "Erste Schritte" %> zeigt Ihnen das Wichtigste.</p>
+  </div>
+</section>
+
+<section id="where-to-look" class="band">
+  <h2 class="section-title">Sehen und gesehen werden, <span class="highlight">mit Go</span></h2>
+
+  <div class="feature">
+    <div>
+      <h3>Ein Radar, <span class="highlight">das Sie auf einen Blick erfassen</span>.</h3>
+      <p>Sie sind in der Mitte, Ihre Flugrichtung zeigt nach oben. Das Symbol zeigt, ob ein Luftfahrzeug über, auf oder unter Ihrer Höhe fliegt. Die Linie zeigt, wo es in einer Minute sein wird.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "radar.png", alt: "Radaransicht mit drei Luftfahrzeugen: eines höher, eines tiefer und eines auf gleicher Höhe im Steigflug. Die Linien zeigen ihre Position in einer Minute." %>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Eine Warnung, <span class="highlight">die Ihnen die Richtung zeigt</span>.</h3>
+      <p>Innerhalb von 3&nbsp;km und 300&nbsp;m blinkt das Bildschirmviertel in Richtung des Verkehrs.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "alarm.png", alt: "Radaransicht bei einer Warnung: Das Bildschirmviertel in Richtung des Verkehrs ist schwarz." %>
+    </figure>
+  </div>
+
+  <div class="feature">
+    <div>
+      <h3>Ihre Position <span class="highlight">wird jede Sekunde gesendet</span>.</h3>
+      <p>Im Flug sendet Go Ihre Position jede Sekunde per ADS-L. Wer ADS-L empfängt, sieht Sie. Go sendet Ihr Rufzeichen in einer eigenen Meldung, und nur Geräte, die diese Meldung lesen, zeigen es an.</p>
+    </div>
+    <figure class="shot">
+      <%= screen_image_tag "nearby.png", alt: "Ansicht NEARBY: fünf Luftfahrzeuge, zuerst die auf gleicher Höhe. Angezeigt werden die Quelle ADS-L oder FLARM, das Rufzeichen, die Entfernung und die relative Höhe." %>
+    </figure>
+  </div>
+
+  <div class="feature feature--reverse">
+    <div>
+      <h3>Flugverkehr <span class="highlight">in Ihrer App</span>.</h3>
+      <p>Per Bluetooth erscheint der Verkehr in SDVFR Next, SkyDemon, ForeFlight und anderen Apps.</p>
+    </div>
+    <figure class="shot shot--photo shot--app">
+      <%= pages_image_tag "sdvfr-next-traffic.avif", alt: "SDVFR Next: Auf der Karte erscheint der von skyBlip Go empfangene Verkehr. Bei jedem Luftfahrzeug steht sein Rufzeichen." %>
+      <figcaption>SkyDreamSoft SDVFR Next <a href="https://skydreamsoft.fr">skydreamsoft.fr</a></figcaption>
+    </figure>
+  </div>
+
+  <p class="signature"><%= link_to_page "features", label: "Alle Funktionen ansehen" %></p>
+</section>
+
+<section id="simulator" class="band band--tint try-radar">
+  <h2 class="section-title">Probieren Sie das Radar aus</h2>
+  <p class="section-intro">Suchen Sie ein Luftfahrzeug. Am Symbol erkennen Sie, ob es höher, tiefer oder auf Ihrer Höhe fliegt. Verfolgen Sie die Kurslinie.</p>
+  <%= render "shared/simulator_loader", loading: :lazy %>
+  <p class="try-radar-bravo">Wählen Sie »Mit Bravo (skyBlip Tango)«, um den Simulator neu zu starten. Dann sehen Sie auch weiter entfernte Luftfahrzeuge mit ADS-B.</p>
+  <p class="try-radar-more"><%= link_to_page "skyblip-go", label: "Simulator in voller Größe öffnen", class: "button button--primary" %></p>
+</section>
+
+<section id="devices" class="band">
+  <h2 class="section-title">Welches Gerät passt zu Ihnen?</h2>
+  <figure class="pair">
+    <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go, ein weißes Gerät mit Antenne und Verkehrsradar auf dem E-Paper-Display." %>
+    <span class="pair-plus" aria-hidden="true">+</span>
+    <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo, ein schwarzer Seeed SenseCAP MeshTracker X1 im Kartenformat.", class: "photo-x1" %>
+  </figure>
+  <ul>
+    <li><%= link_to_page "features", label: "Go" %> sendet Ihre Position per ADS-L und zeigt ADS-L- und FLARM-Verkehr an. Go zeigt Segelflugzeuge mit FLARM an, sendet aber kein FLARM und ersetzt Ihr FLARM nicht.</li>
+    <li><%= link_to_page "skyblip-bravo", label: "Bravo" %> erkennt Mode-S- und ADS-B-Transponder und leitet ADS-B-Verkehr an Ihre Navigations-App weiter. Bravo sendet Ihre Position nicht.</li>
+    <li><%= link_to_page "skyblip-tango", label: "Tango" %> verbindet Go mit Bravo. Sie sehen alle drei Verkehrsarten auf dem Radar des Go. Go sendet Ihre Position weiter per ADS-L.</li>
+  </ul>
+</section>
+
+<section id="value" class="band band--blip">
+  <h2 class="section-title">Handelsübliche Geräte ab 68&nbsp;€</h2>
+  <p>Kaufen Sie für Go einen LilyGO T-Echo oder für Bravo einen MeshTracker X1. Sie bezahlen das Gerät. Software und Updates sind kostenlos und brauchen kein Abo. Der Code ist offen. Jeder kann ihn lesen und prüfen.</p>
+  <div class="quote">
+    <blockquote>
+      »Sicherheit ist keine Premiumfunktion. Unsere Sicherheitsfunktionen für die Freizeitfliegerei und den Luftsport bleiben quelloffen und kostenlos.«
+    </blockquote>
+  </div>
+  <p class="signature"><%= link_to_page "buy", label: "Geräte und Preise ansehen", class: "button button--primary" %> · <%= link_to_page "about", label: "Unser Versprechen lesen" %></p>
+</section>
+
+<section id="questions" class="band">
+  <h2 class="section-title">Häufige Fragen vor dem Kauf</h2>
+  <div class="faq">
+    <details>
+      <summary>Wer sieht mich?</summary>
+      <p>Wer Ihre ADS-L-Signale empfangen kann, sieht die Position, die Ihr Go sendet. Go empfängt FLARM, sendet es aber nicht. Bravo sendet Ihre Position nicht.</p>
+    </details>
+    <details>
+      <summary>Sehe ich Luftfahrzeuge mit Transponder?</summary>
+      <p>Ja, wenn sie ADS-B senden. Mit Bravo sehen Sie ihre Position in Ihrer Navigations-App oder auf einem gekoppelten Go. Mode S allein liefert keine Position. Bravo erkennt solche Signale. Wir sammeln Daten, um herauszufinden, wie Go und Navigations-Apps sie am besten anzeigen können.</p>
+    </details>
+    <details>
+      <summary>Brauche ich ein Abo?</summary>
+      <p>Nein. Sie kaufen das Gerät. Positionsmeldungen, Verkehrsanzeige, Warnungen und Updates brauchen kein Abo.</p>
+    </details>
+    <details>
+      <summary>Ist skyBlip zugelassen?</summary>
+      <p>Nein. skyBlip ist eine nicht zugelassene Hilfe für die Luftraumbeobachtung. Halten Sie weiter Ausschau. Ein Luftfahrzeug erscheint nur, wenn Ihr Gerät ein kompatibles Signal empfängt. Behalten Sie die vorgeschriebene Ausrüstung für Ihren Flug.</p>
+    </details>
+    <details>
+      <summary>Brauche ich ein Smartphone?</summary>
+      <p>Go hat ein eigenes Display. Mit Bravo allein brauchen Sie eine kompatible App auf dem Smartphone oder Tablet, um den Verkehr zu sehen. Bei Tango zeigt Go den Verkehr an.</p>
+    </details>
+    <details>
+      <summary>Kann ich die Originalsoftware wieder installieren?</summary>
+      <p>Ja. skyBlip lässt das Programm zur Softwareinstallation unverändert. Laden Sie die Originalsoftware für den T-Echo oder den X1 aus dem Internet herunter, um sie neu zu installieren.</p>
+    </details>
+  </div>
+</section>

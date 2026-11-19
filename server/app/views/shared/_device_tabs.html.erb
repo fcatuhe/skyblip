@@ -1,0 +1,7 @@
+<% content_for :subnav do %>
+  <nav class="device-tabs" aria-label="<%= t "nav.devices" %>">
+    <% PagesHelper::DEVICE_PAGES.each do |slug| %>
+      <%= link_to_page slug, label_type: :nav, "aria-current": ("page" if on_page?(slug)) %>
+    <% end %>
+  </nav>
+<% end %>

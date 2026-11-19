@@ -16,7 +16,6 @@ en:
     preferences:
       title: Settings
       language: Language
-      language_name: English
       support_code: Support code
       support_code_hint: "When you ask for help, give this code. It lets us read what happened between this browser and your devices: connections, refusals, installs and errors. It holds nothing you typed."
     devices:

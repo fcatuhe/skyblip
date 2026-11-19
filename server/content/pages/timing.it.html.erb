@@ -1,0 +1,158 @@
+---
+title: "Quando trasmette skyBlip Go, secondo per secondo"
+nav_title: Trasmissioni
+slug: trasmissioni
+description: "Quando trasmette skyBlip Go: finestre radio, ciclo di 20 s fissato dal seriale, istante estratto ogni secondo, ascolto e nuovi tentativi."
+parent: guides
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<section>
+  <p class="kicker"><%= link_to_page "guides", label_type: :nav, class: "cta" %></p>
+  <h1>Ogni trasmissione ha il suo secondo, il suo canale e il suo millisecondo.</h1>
+  <p class="lede">Uno skyBlip Go programma ogni trasmissione radio in tre passi. Il numero di serie determina i secondi. Il secondo pari o dispari determina il canale. Un&rsquo;estrazione ripetuta ogni secondo determina il millisecondo nella finestra di quel canale.</p>
+</section>
+
+<section>
+  <h3 id="second">Il secondo, diviso in tre finestre.</h3>
+  <p class="lede">Il GPS segna l&rsquo;inizio di ogni secondo UTC. Il Go ha una sola radio, quindi ascolta in tre finestre, ciascuna su un canale diverso. <%= link_to_page "radio", label: "La guida alla radio", anchor: "second" %> spiega cosa riceve in ciascuna. Qui la domanda è quando trasmette. Tutti i tempi qui sotto sono misurati dall&rsquo;inizio del secondo.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Finestra</th><th>Canale</th><th>Finestra di ascolto completa</th><th>Inizio delle trasmissioni del Go</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Collegamento da terra</th><td>869,525&nbsp;MHz</td><td>da 210 a 440&nbsp;ms</td><td>mai: qui trasmette la stazione a terra e il Go ascolta soltanto</td></tr>
+        <tr><th>Finestra 1</th><td>868,2&nbsp;MHz, canale A</td><td>da 450 a 820&nbsp;ms</td><td>posizioni e Status da 450 a 810&nbsp;ms</td></tr>
+        <tr><th>Finestra 2</th><td>868,4&nbsp;MHz, canale B</td><td>da 830 a 1200&nbsp;ms</td><td>posizioni e Status da 830 a 990&nbsp;ms, nominativo da 1000 a 1190&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/second" %>
+
+  <p class="lede">La finestra 2 si estende per 200&nbsp;ms nel secondo successivo per ricevere i dispositivi di generazione FLARM che stanno ancora trasmettendo. L&rsquo;intervallo diretto di ADS-L, riservato alle trasmissioni fra aeromobili, termina a 1000&nbsp;ms. Le posizioni devono finire entro quel momento. Una trasmissione occupa il canale per 4,64&nbsp;ms. L&rsquo;ultimo istante di inizio consentito lascia spazio al tempo di occupazione riservato e a un margine di 5&nbsp;ms prima che la finestra si chiuda. Le misure al banco hanno rilevato un caso peggiore di 5,5&nbsp;ms dal comando di trasmissione alla sua fine, entro quel margine.</p>
+  <p class="lede">Ogni passaggio fra finestre richiede 10&nbsp;ms: 2&nbsp;ms ancora in ascolto sul vecchio canale per una trasmissione tardiva, 5&nbsp;ms per risintonizzarsi, poi 3&nbsp;ms in ascolto sul nuovo canale prima che la sua finestra si apra. Questi 3&nbsp;ms lasciano anche il tempo di controllare il canale prima di una trasmissione programmata per il primo istante della finestra.</p>
+
+  <h3 id="channel">La parità del secondo sceglie il canale.</h3>
+  <p class="lede">Una posizione usa il canale A in un secondo UTC pari e il canale B in uno dispari, sia a terra sia in volo. Un messaggio Status indica cosa può ricevere il Go. Usa il canale opposto a quello che una posizione userebbe in quel secondo. Il nominativo usa sempre il canale B, alla fine della finestra 2.</p>
+  <p class="lede">ADS-L richiede che le posizioni consecutive cambino canale e che i messaggi Status consecutivi facciano lo stesso. La regola pari o dispari rende prevedibile il canale della posizione dalla sola ora. Un ricevitore in ascolto su un solo canale può comunque ricevere una posizione programmata su due. Al decollo o all&rsquo;atterraggio, due posizioni consecutive possono usare lo stesso canale, una sola volta nel passaggio tra terra e volo. Succede in quasi un passaggio su due, ossia nel 45&nbsp;% delle fasi di decollo e atterraggio coperte dai test.</p>
+
+  <h3 id="cycle">Un ciclo di 20&nbsp;s che parte dal seriale.</h3>
+  <p class="lede">Ogni Go segue un ciclo di 20&nbsp;s. Il suo inizio, qui chiamato c, è un secondo pari: il doppio dell&rsquo;ultima cifra decimale del suo numero di serie, ovvero <span class="mono">c = 2 &times; (serial mod 10)</span>. skyblip.eu assegna quel numero durante l&rsquo;<%= link_to "attivazione", briefing_activation_path %>. Per l&rsquo;unità di esempio <span class="mono">skyBlip Go 00012A</span>, il seriale esadecimale è 298 in decimale. La sua ultima cifra è 8, quindi il ciclo inizia al secondo 16.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Ultima cifra del seriale</th><th>Il ciclo inizia a</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>0</th><td>:00, :20 e :40</td></tr>
+        <tr><th>1</th><td>:02, :22 e :42</td></tr>
+        <tr><th>2</th><td>:04, :24 e :44</td></tr>
+        <tr><th>3</th><td>:06, :26 e :46</td></tr>
+        <tr><th>4</th><td>:08, :28 e :48</td></tr>
+        <tr><th>5</th><td>:10, :30 e :50</td></tr>
+        <tr><th>6</th><td>:12, :32 e :52</td></tr>
+        <tr><th>7</th><td>:14, :34 e :54</td></tr>
+        <tr><th>8</th><td>:16, :36 e :56</td></tr>
+        <tr><th>9</th><td>:18, :38 e :58</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">skyblip.eu assegna i seriali in ordine da 1, distribuendo uniformemente le unità consecutive sui dieci inizi di ciclo. Ogni unità programma le trasmissioni agli stessi scarti dal proprio inizio:</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Secondo</th><th>A terra</th><th>In volo</th><th>Canale</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>c</th><td>posizione</td><td>posizione</td><td>A</td></tr>
+        <tr><th>c + 2</th><td>Status</td><td>posizione e Status</td><td>Status su B, posizione su A</td></tr>
+        <tr><th>c + 4</th><td>nominativo</td><td>posizione e nominativo</td><td>posizione su A, nominativo su B con inizio nei primi 190&nbsp;ms di c + 5</td></tr>
+        <tr><th>c + 9</th><td>posizione</td><td>posizione</td><td>B</td></tr>
+        <tr><th>c + 11</th><td>Status</td><td>posizione e Status</td><td>Status su A, posizione su B</td></tr>
+        <tr><th>c + 14</th><td>nominativo</td><td>posizione e nominativo</td><td>posizione su A, nominativo su B con inizio nei primi 190&nbsp;ms di c + 15</td></tr>
+        <tr><th>ogni altro</th><td>nulla di programmato</td><td>posizione</td><td>A in un secondo pari, B in uno dispari</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <%= render "shared/cycle" %>
+
+  <p class="lede">A terra, <span class="mono">skyBlip Go 00012A</span> programma le posizioni a :05, :16, :25, :36, :45 e :56 di ogni minuto, i messaggi Status a :07, :18, :27, :38, :47 e :58 e il nominativo all&rsquo;inizio di :01, :11, :21, :31, :41 e :51. In volo programma una posizione ogni secondo. La programmazione di Status e nominativo resta invariata durante decollo e atterraggio.</p>
+  <p class="lede">Una ricerca esaustiva ha scelto questi scarti per rispettare quattro regole:</p>
+  <ul class="points">
+    <li>Le posizioni a terra sono separate da 9 poi 11&nbsp;s. Un intervallo di 10&nbsp;s metterebbe posizioni consecutive sullo stesso canale. La media resta una ogni 10&nbsp;s, secondo l&rsquo;interpretazione di skyBlip della frequenza a terra di ADS-L</li>
+    <li>Le posizioni e i messaggi Status alternano ciascuno i canali. Ogni canale trasporta uno Status ogni 20&nbsp;s. Il nominativo parte ogni 10&nbsp;s</li>
+    <li>Il nominativo è programmato in un secondo pari, quando la posizione usa A e gli lascia libero B</li>
+    <li>La programmazione mantiene le trasmissioni della stessa unità sulla stessa frequenza distanti almeno 100&nbsp;ms, con non più di una per finestra</li>
+  </ul>
+  <p class="lede">La programmazione distribuisce in modo uniforme anche le posizioni e i messaggi Status delle unità a terra. Considerando i dieci inizi di ciclo, la finestra di ogni canale contiene in ogni secondo una trasmissione programmata di uno di questi due tipi, proveniente da un&rsquo;unità a terra. Un messaggio Status su A cade sempre in un secondo dispari. Un messaggio Status su B cade sempre in un secondo pari. Per le posizioni a terra restano quindi le finestre A dei secondi pari e le finestre B dei secondi dispari. Le posizioni che si alternano tra queste finestre devono essere distanziate di un numero dispari di secondi. Per questo restano distanti 9 poi 11&nbsp;s, anziché esattamente 10&nbsp;s. Posizioni distanti 10&nbsp;s su canali alternati metterebbero due trasmissioni da terra in un quarto delle finestre e nessuna in un altro quarto. In un aeroporto trafficato, queste finestre più affollate subirebbero più collisioni.</p>
+  <p class="lede">La programmazione usa sempre l&rsquo;indirizzo proprio dell&rsquo;unità, anche quando i suoi messaggi contengono l&rsquo;indirizzo ICAO di un aeromobile. Impostare o cancellare quell&rsquo;indirizzo in volo non cambia né il momento né il canale di una trasmissione.</p>
+
+  <h3 id="instant">Il millisecondo viene estratto di nuovo ogni secondo.</h3>
+  <p class="lede">Dentro la finestra, l&rsquo;istante di inizio di una posizione viene da un hash: un calcolo che mescola l&rsquo;indirizzo dell&rsquo;unità con il secondo UTC e distribuisce il risultato sui millisecondi disponibili. I messaggi Status e nominativo usano ulteriori passaggi dello stesso calcolo, ciascuno con la propria estrazione. Le unità che condividono un secondo programmato non devono per forza condividere l&rsquo;istante di inizio. Se le trasmissioni si sovrappongono, il secondo successivo offre nuove estrazioni.</p>
+  <p class="lede">Per una trasmissione di 5&nbsp;ms distribuita sull&rsquo;intervallo diretto di 550&nbsp;ms, istanti di inizio distanti meno di 5&nbsp;ms danno una stima approssimativa di collisione dell&rsquo;1,8&nbsp;% per dispositivo a portata. Una nuova estrazione riduce il rischio che la stessa coppia interferisca ripetutamente. Con un istante fisso per unità, due aeromobili sfortunati potrebbero sovrapporsi ogni secondo per tutto il volo.</p>
+
+  <figure class="shot">
+    <%= screen_image_tag "radio-log.png", alt: "Il registro radio: sotto lo stato del posizionamento satellitare, lo stato del segnale di sincronizzazione PPS e il livello di rumore di fondo, una riga per ogni trasmissione radio ricevuta o inviata, dalla più recente, con l'ora al millisecondo" %>
+    <figcaption>Il registro radio elenca ogni trasmissione con l&rsquo;ora al millisecondo</figcaption>
+  </figure>
+
+  <h3 id="listen">Ascolta prima di trasmettere.</h3>
+  <p class="lede">ADS-L richiede l&rsquo;ascolto prima della trasmissione secondo le regole di accesso non interferente allo spettro di ETSI EN 300 220-1. Prima dell&rsquo;istante programmato, il Go misura il canale della trasmissione per 200&nbsp;&micro;s. Fa la media di nove letture in potenza, con la misura che termina non più di 2&nbsp;ms prima della trasmissione. Sotto la soglia trasmette. Alla soglia o sopra, il Go attende un tempo casuale fra 5 e 40&nbsp;ms a passi di 5&nbsp;ms, la durata riservata di una trasmissione, poi ascolta di nuovo. L&rsquo;indirizzo e l&rsquo;istante in cui il canale era occupato determinano questa estrazione.</p>
+  <p class="lede">La soglia deriva dalla regola dello standard per un canale di 200&nbsp;kHz, corretta per il guadagno dell&rsquo;antenna. Al chip radio il canale è considerato occupato da &minus;78&nbsp;dBm. Il guadagno dell&rsquo;antenna e la perdita della linea usati in questo calcolo provengono dalla scheda tecnica e da una stima, non da misure su un&rsquo;unità.</p>
+  <p class="lede">Una trasmissione rinviata resta nella sua finestra e sul suo canale. Una posizione rinviata viene ricodificata per il nuovo istante usando il fix più recente. Se il canale resta occupato fino alla chiusura della finestra, la trasmissione viene persa. A terra, dopo 3&nbsp;s dalla prima rilevazione di canale occupato, il Go può forzare una trasmissione senza ascoltare, come consente ADS-L. Poi resta silenzioso per 2&nbsp;s dalla fine della trasmissione. Non forza mai una trasmissione in volo, dove quel silenzio costerebbe due posizioni.</p>
+
+  <div class="table-scroll">
+    <table class="modules">
+      <thead>
+        <tr><th>Parametro EN 300 220-1</th><th>Dichiarato</th><th>Lo standard consente</th></tr>
+      </thead>
+      <tbody>
+        <tr><th>Misura minima del canale</th><td>200&nbsp;&micro;s</td><td>almeno 160&nbsp;&micro;s</td></tr>
+        <tr><th>Intervallo massimo fra misura e trasmissione</th><td>2&nbsp;ms</td><td>al massimo 5&nbsp;ms</td></tr>
+        <tr><th>Metodo per rendere casuale un rinvio</th><td>un hash dell&rsquo;indirizzo e dell&rsquo;istante in cui il canale era occupato</td><td></td></tr>
+        <tr><th>Passo di rinvio</th><td>5&nbsp;ms, la durata riservata di una trasmissione</td><td>almeno la durata della misura</td></tr>
+        <tr><th>Rinvio minimo e massimo</th><td>5 e 40&nbsp;ms</td><td></td></tr>
+        <tr><th>Durata massima della trasmissione</th><td>5&nbsp;ms</td><td>al massimo 1&nbsp;s</td></tr>
+        <tr><th>Silenzio minimo sulla stessa frequenza</th><td>100&nbsp;ms</td><td>almeno 100&nbsp;ms</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="lede">Ascoltare non può impedire ogni collisione. Può rilevare solo una trasmissione già in corso e misura il canale all&rsquo;antenna del Go, non al ricevitore. Un altro aeromobile può ricevere due trasmissioni sovrapposte anche quando nessuno dei due trasmettitori sente l&rsquo;altro. Il controllo favorisce anche i segnali vicini e più forti rispetto a quelli lontani. La programmazione si basa quindi su una nuova estrazione ogni secondo e sul limite dell&rsquo;1&nbsp;% del tempo di trasmissione, non soltanto sull&rsquo;ascolto.</p>
+
+  <h3 id="retry">Una trasmissione mancata riprova 2&nbsp;s dopo.</h3>
+  <p class="lede">Una trasmissione può mancare il secondo programmato perché il fix è troppo vecchio, il canale resta occupato o il tempo di trasmissione consentito nell&rsquo;ora è esaurito. Ha un&rsquo;altra opportunità 2&nbsp;s dopo, in un secondo della stessa parità e quindi sullo stesso canale. Se la finestra di quel canale contiene già una trasmissione dell&rsquo;unità, il tentativo attende il successivo secondo libero della stessa parità. Ha opportunità ogni 2&nbsp;s finché riesce o finché arriva il momento del messaggio successivo dello stesso tipo. A quel punto il Go rinuncia al vecchio e conta la trasmissione mancata. A terra, una posizione mancata a c può essere ritentata a c + 2, c + 4, c + 6 e c + 8. In volo le posizioni non vengono ritentate: la nuova posizione 2&nbsp;s dopo usa già lo stesso canale.</p>
+
+  <h3 id="callsign">Il nominativo parte nella coda.</h3>
+  <p class="lede">ADS-L Issue 2 non ha un campo per il nominativo. Il Go invia il proprio nominativo nel formato di messaggio di OGN-Tracker, con inizio fra 1000 e 1190&nbsp;ms su 868,4&nbsp;MHz. È la fine della finestra 2, fuori dall&rsquo;intervallo diretto riservato ai messaggi ADS-L e dove oggi ADS-L non trasmette nulla. <%= link_to_page "ads-l/callsign", label: "La questione del nominativo" %> spiega questa scelta e cosa cambia quando Issue 3 definirà un campo.</p>
+  <p class="lede">OGN-Tracker scarta un nominativo se non ha un bersaglio con quell&rsquo;indirizzo, quindi la posizione deve arrivare prima. Con la normale programmazione in volo quella posizione ha al massimo un secondo. A terra il nominativo segue una posizione di 4 o 5&nbsp;s, ben entro il tempo per cui un ricevitore conserva un bersaglio a terra fra i messaggi.</p>
+
+  <h3 id="budget">L&rsquo;1&nbsp;% di ogni ora, fatto rispettare.</h3>
+  <p class="lede">Il Go dichiara un limite di trasmissione dell&rsquo;1&nbsp;% di ogni periodo di un&rsquo;ora per l&rsquo;uso della banda 868&nbsp;MHz. Tiene sessanta contatori da un minuto e controlla il tempo disponibile prima di ogni trasmissione. Una posizione ogni secondo più uno Status e un nominativo ogni 10&nbsp;s occupano 6&nbsp;ms al secondo: lo 0,6&nbsp;% del tempo in volo o lo 0,15&nbsp;% a terra. La programmazione normale non può esaurire il tempo disponibile. Se un guasto lo esaurisce, il Go blocca le trasmissioni anziché continuare a occupare la banda.</p>
+
+  <h3 id="clock">Il GPS regola l&rsquo;orologio e l&rsquo;orologio autorizza la radio.</h3>
+  <p class="lede">L&rsquo;impulso al secondo del ricevitore GPS, PPS, segna il fronte da cui si calcolano le scadenze radio. Il Go trasmette solo con un <%= link_to_page "gps", label: "fix stabilizzato", anchor: "settle" %>, un&rsquo;ora UTC valida, un aggancio PPS e un numero di serie assegnato. Se gli impulsi si fermano, mantiene le finestre attive per 60&nbsp;s per ricevere, ma non trasmette nulla.</p>
+  <p class="lede">Il ricevitore GPS comunica il secondo UTC in una frase di dati che arriva centinaia di millisecondi dopo l&rsquo;impulso. Fino ad allora quel dato indica ancora il secondo precedente. Datare una trasmissione ricevuta da quel dato potrebbe assegnarle il secondo sbagliato. Due Go hanno messo in evidenza il problema al banco: una trasmissione segnava 42:52.954 sul mittente e 42:53.956 sul ricevitore. Le trasmissioni ricevute vengono ora datate dal secondo UTC aperto dall&rsquo;ultimo impulso.</p>
+  <p class="lede">Il ciclo di servizio del firmware viene eseguito ogni 10&nbsp;ms, troppo lentamente per aprire da solo ogni finestra radio in tempo. Le prime acquisizioni al banco mostravano la finestra 2 aprirsi con un ritardo mediano fra 3 e 6&nbsp;ms e fino a 120&nbsp;ms nel caso peggiore. Il firmware ora comunica alla radio la finestra successiva appena inizia quella corrente, con una scadenza assoluta calcolata dall&rsquo;impulso. La radio può quindi cambiare senza attendere un altro passaggio nel ciclo.</p>
+
+  <ul class="points">
+    <li>L&rsquo;ultima cifra del seriale determina l&rsquo;inizio del ciclo di 20&nbsp;s</li>
+    <li>Un secondo pari mette la posizione su 868,2&nbsp;MHz, uno dispari su 868,4&nbsp;MHz</li>
+    <li>A terra il Go programma due posizioni, due messaggi Status e due nominativi ogni 20&nbsp;s</li>
+    <li>In volo programma una posizione ogni secondo senza spostare la programmazione di Status o nominativo</li>
+    <li>Estrae di nuovo l&rsquo;istante nella finestra ogni secondo</li>
+    <li>Controlla il canale prima delle trasmissioni normali e dà alle trasmissioni mancate un&rsquo;altra opportunità 2&nbsp;s dopo, tranne per le posizioni in volo</li>
+  </ul>
+</section>
+
+<section class="band">
+  <%= render "shared/cta" %>
+</section>

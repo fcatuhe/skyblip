@@ -76,6 +76,58 @@
 
 .simulator--running .simulator-placeholder { display: none; }
 
+.try-radar .simulator {
+  grid-template-columns: auto;
+  grid-template-areas: "case" "controls";
+  justify-content: center;
+  justify-items: center;
+  margin: 0;
+}
+.try-radar .simulator-panel { display: none; }
+.try-radar .simulator-controls { justify-content: center; }
+
+.try-radar > .section-intro {
+  margin-block: 0 var(--space-xl);
+}
+.try-radar-bravo {
+  max-inline-size: 36rem;
+  margin: var(--space-l) auto 0;
+  padding-inline-start: var(--space-inline-s);
+  border-inline-start: 3px solid var(--blip);
+  color: var(--ink-soft);
+}
+.try-radar-more {
+  margin-block: var(--space-xl) 0;
+  text-align: center;
+}
+
+@media (min-width: 52rem) {
+  .try-radar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto 1fr auto auto auto 1fr;
+    grid-template-areas:
+      "title title"
+      "frame ."
+      "frame intro"
+      "frame bravo"
+      "frame more"
+      "frame .";
+    column-gap: var(--space-inline-2xl);
+  }
+  .try-radar > .section-title { grid-area: title; }
+  .try-radar > turbo-frame { grid-area: frame; }
+  .try-radar > .section-intro {
+    grid-area: intro;
+    margin: 0;
+    text-align: start;
+    font-size: var(--text-l);
+    color: var(--ink);
+  }
+  .try-radar-bravo { grid-area: bravo; margin-inline: 0; }
+  .try-radar-more { grid-area: more; text-align: start; }
+}
+
 @media (max-width: 52rem) {
   .simulator {
     grid-template-columns: minmax(0, 1fr);
@@ -101,6 +153,31 @@
     cursor: pointer;
   }
   .simulator-traffic::before { content: "+ " / ""; }
+
+  .simulator-bravo:not([hidden]) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-inline-xs);
+    min-block-size: var(--space-3xl);
+    padding-inline: var(--space-inline-s) var(--space-inline-m);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    background: var(--card-bg);
+    font-size: var(--text-s);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .simulator-bravo:has(:checked) { border-color: var(--blip); }
+  .simulator-bravo:has(:focus-visible) { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  .simulator-bravo input {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    margin: 0;
+    accent-color: var(--blip-text);
+    cursor: pointer;
+  }
 
   .simulator-wake {
     display: none;

@@ -1,0 +1,128 @@
+---
+title: "Anleitungen und erste Schritte für skyBlip Go und Bravo"
+nav_title: Anleitungen
+slug: anleitungen
+description: "Installieren Sie die Software auf Ihrem Go oder Bravo. Lernen Sie die Bedienelemente und LEDs kennen und richten Sie das Gerät für Ihren ersten Flug ein."
+share_image: radar
+updated_on: "2026-11-18"
+---
+
+<header class="page-hero">
+  <h1>Die passende Anleitung für Ihren Go oder Bravo</h1>
+  <p class="page-hero-subtitle">Haben Sie Ihr Gerät neu? <%= link_to_page "install", label: "Installieren Sie zuerst die Software" %>. Sobald Briefing das Gerät als bereit meldet, öffnen Sie die passende Anleitung.</p>
+</header>
+
+<section id="install" class="band">
+  <h2 class="section-title">Installieren</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "self-test.png", alt: "Die Selbsttestansicht, jedes Bauteil des Geräts mit PASS markiert" %>
+      <h3><%= link_to_page "install", label_type: :nav %></h3>
+      <p>Installieren Sie skyBlip im Browser auf Ihrem Go oder Bravo. Bei jedem Start prüft der Go sein Funkmodul, sein GPS und sein Barometer und funktioniert ohne sie nicht.</p>
+    </article>
+    <article>
+      <%= content_image_tag "pages/mount/go-plus-clamp.avif", alt: "skyBlip Go+ auf einem weißen LilyGO T-Echo Plus neben der Klemme mit orangefarbenem Griff, die ihn auf der Instrumentenbrettabdeckung hält", class: "guide-photo" %>
+      <h3><%= link_to_page "mount", label_type: :nav %></h3>
+      <p>Befestigen Sie Go oder Go+ mit den von uns getesteten Teilen an einem Kugelgelenk auf der Instrumentenbrettabdeckung. Richten Sie die Antenne aus. Hängen Sie Bravo an seiner Schlaufe auf.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Beginnen Sie mit Ihrem Gerät</h2>
+  <div class="guide-cards">
+    <article>
+      <%= content_image_tag "pages/index/skyblip-go-techo.avif", alt: "skyBlip Go mit Antenne und Verkehrsradar auf dem E-Paper-Display", class: "guide-photo" %>
+      <h3><%= link_to_page "go-first-steps", label_type: :nav %></h3>
+      <p>Schalten Sie Go ein, lesen Sie das Radar und stellen Sie Ihren Luftfahrzeugtyp oder Ihr Rufzeichen ein.</p>
+    </article>
+    <article>
+      <%= content_image_tag "pages/skyblip-bravo/seeed-x1.avif", alt: "skyBlip Bravo auf einem Seeed SenseCAP MeshTracker X1, einem schwarzen Gerät mit einer runden Taste", class: "guide-photo photo-x1" %>
+      <h3><%= link_to_page "bravo-first-steps", label_type: :nav %></h3>
+      <p>Finden Sie die Taste und die LED. Sehen Sie Verkehr in Ihrer Navigations-App oder auf einem gekoppelten Go.</p>
+    </article>
+  </div>
+  <p class="signature">Öffnen Sie für Tango beide Anleitungen. Go zeigt den Verkehr an und Bravo ergänzt den Empfang.</p>
+</section>
+
+<section class="band">
+  <h2 class="section-title">Im Flug</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "far-all.png", alt: "Radaransicht mit PLOT ALL: Verkehr innerhalb des Kreises und im Ring darum" %>
+      <h3><%= link_to_page "radar" %></h3>
+      <p>Auf dem Radar liegt Ihre Flugrichtung oben. Zu jedem Luftfahrzeug sehen Sie die voraussichtliche Position in einer Minute. Eine Warnung zeigt, wohin Sie schauen sollten. Eine Liste zeigt Verkehr in der Nähe.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "sixpack.png", alt: "Ansicht mit sechs Rundanzeigen" %>
+      <h3><%= link_to_page "instruments" %></h3>
+      <p>Sechs Rundanzeigen stellen GPS- und Barometerwerte spielerisch dar. Der Akkustand steht über der mittleren Anzeige. Beim Go+ hält ein g-Messer die Spitzenlasten des Flugs fest.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "astern-all.png", alt: "Radaransicht mit PLOT ALL und einer Gruppe von Luftfahrzeugen hinter Ihnen" %>
+      <h3><%= link_to_page "displays" %></h3>
+      <p>Sehen Sie jede Ansicht, jedes Menü und jede Anfrage auf dem Display. Die Radaransicht ist in beiden Modi abgebildet.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Am Boden</h2>
+  <div class="guide-cards">
+    <article>
+      <%= screen_image_tag "menu-radar.png", alt: "Einstellungsmenü" %>
+      <h3><%= link_to_page "controls" %></h3>
+      <p>Mit Touchfeld und Taste ändern Sie Einstellungen im Radarmenü, geben Ihr Rufzeichen am Gerät ein und öffnen die Diagnoseansichten.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "off-flat-battery.png", alt: "Anzeige eines Geräts, das sich wegen eines leeren Akkus ausgeschaltet hat" %>
+      <h3><%= link_to_page "power" %></h3>
+      <p>Erfahren Sie, worauf das Gerät auf dem Vorfeld wartet, wie es ausgeschaltet aussieht und wie es bei sinkendem Akkustand warnt.</p>
+    </article>
+    <article>
+      <%= screen_image_tag "confirm.png", alt: "Bestätigungsanfrage auf dem Display" %>
+      <h3><%= link_to_page "phone", label_type: :nav %></h3>
+      <p>Sehen Sie Verkehr in Ihrer Navigations-App. Ändern Sie Einstellungen oder aktualisieren Sie skyBlip mit Briefing.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band">
+  <h2 class="section-title">So funktioniert es</h2>
+  <div class="guide-cards">
+    <article>
+      <%= render "shared/second", compact: true %>
+      <h3><%= link_to_page "radio" %></h3>
+      <p>Ein Funkmodul nutzt vier Zeitfenster pro Sekunde und empfängt Signale zweier Systeme im selben Fenster.</p>
+    </article>
+    <article>
+      <%= render "shared/cycle", compact: true %>
+      <h3><%= link_to_page "timing" %></h3>
+      <p>Die Seriennummer bestimmt die Sekunden eines Zyklus von 20&nbsp;s. Ob die Sekunde gerade oder ungerade ist, bestimmt den Kanal. Die Millisekunde wird jede Sekunde neu ausgelost.</p>
+    </article>
+    <article>
+      <%= render "shared/flight_state", compact: true %>
+      <h3><%= link_to_page "gps" %></h3>
+      <p>Der Positionsfix muss stabil sein und vor 450&nbsp;ms eintreffen. Ein Impuls startet jede Sekunde. Ob Sie fliegen, ergibt sich allein aus der Geschwindigkeit über Grund.</p>
+    </article>
+    <article>
+      <%= render "shared/advisory_ring", compact: true %>
+      <h3><%= link_to_page "traffic" %></h3>
+      <p>Ein Hinweisbereich von 3&nbsp;km und 300&nbsp;m, keine Verkehrshinweise am Boden, sechs ausgebliebene Meldungen bis zum Entfernen eines Ziels und Formationsflug.</p>
+    </article>
+  </div>
+</section>
+
+<section class="band band--tint">
+  <h2 class="section-title">Für Neugierige</h2>
+  <div class="resource-cards">
+    <article>
+      <h3><%= link_to_page "see-and-avoid" %></h3>
+      <p>Die veröffentlichten Zahlen zu Sehen und Ausweichen betreffen das Sichtfeld, den abgesuchten Sektor, die scheinbare Größe eines Luftfahrzeugs und die Reaktionszeit.</p>
+    </article>
+    <article>
+      <h3><%= link_to_page "roadmap", label_type: :nav %></h3>
+      <p>Lesen Sie mehr über skyBlip Panel für Cockpitdisplays und skyPost-Stationen, die Verkehrsdaten am Flugplatz weiterleiten.</p>
+    </article>
+  </div>
+</section>

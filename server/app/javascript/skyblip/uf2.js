@@ -1,6 +1,6 @@
 import { imageEnd, readImage } from '#skyblip/image';
 
-const BLOCK_BYTES = 512;
+export const BLOCK_BYTES = 512;
 const DATA_OFFSET = 32;
 const DATA_ROOM = 476;
 const PAYLOAD_BYTES = 256;
