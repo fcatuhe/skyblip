@@ -1,7 +1,7 @@
 name: firmware
 
-# Everything in this tree that is not the server: firmware/, plus the scripts,
-# schemas and simulator harnesses the firmware is tested through. The site has
+# Everything in this tree that is not the server or prose: firmware/, plus the
+# scripts, schemas and simulator harnesses the firmware is tested through. The site has
 # its own workflow, and every dependency is Dependabot's: the upstreams it has no
 # manifest for are named in .github/pins/action.yml.
 #
@@ -40,9 +40,17 @@ jobs:
       - uses: dorny/paths-filter@v4
         id: filter
         with:
+          # A negated pattern excludes a file whatever else matches it, and the other patterns of a filter stay OR-ed.
+          predicate-quantifier: some-with-excludes
           filters: |
+            # Prose no check reads. The firmware's READMEs stay in: docs/TUNING.md and the protocol locks read them.
             firmware:
               - '!(server)/**'
+              - '!*.md'
+              - '!docs/!(BEHAVIOR|TUNING).md'
+              - '!docs/bench/*.md'
+              - '!scripts/*.md'
+              - '!.agents/**'
             # What goes into a published image, so a change elsewhere publishes no build. lib/dev_release.rb lists the same paths.
             release:
               - 'firmware/**'
