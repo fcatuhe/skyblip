@@ -152,8 +152,7 @@ TEST_CASE("radio verdicts: an ADS-L Traffic frame carrying no position is a deco
     CHECK(rig.state().air.rx_bad == bad_before + 1);
 }
 
-TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft" *
-          doctest::test_suite("main")) {
+TEST_CASE("radio verdicts: the frame we can read is read, and names its aircraft") {
     Rig rig;
     REQUIRE(rig.setup() == Status::Ok);
     uint32_t now_ms = 0;
