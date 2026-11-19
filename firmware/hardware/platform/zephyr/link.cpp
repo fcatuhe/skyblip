@@ -315,12 +315,12 @@ void connected(struct bt_conn* connection, uint8_t error) {
     request_mtu(connection);
     resume_advertising();
 }
-void disconnected(struct bt_conn* connection, uint8_t /*reason*/) {
+void disconnected(struct bt_conn* connection, uint8_t reason) {
     const uint8_t index = bt_conn_index(connection);
     if (g_connections[index] != connection) return;
     k_spinlock_key_t key = k_spin_lock(&g_lock);
     g_connections[index] = nullptr;
-    g_sessions.disconnected(session_of(connection));
+    g_sessions.disconnected(session_of(connection), reason);
     k_spin_unlock(&g_lock, key);
     bt_conn_unref(connection);
 }

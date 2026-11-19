@@ -41,8 +41,8 @@ class Link : public ports::Link {
         last_session_id_ = session_id;
     }
     void drop_link() { drop_link(last_session_id_); }
-    void drop_link(uint16_t session_id) {
-        sessions_.disconnected(session_id);
+    void drop_link(uint16_t session_id, uint8_t reason = 0) {
+        sessions_.disconnected(session_id, reason);
         for (size_t i = 0; i < live_.size(); i++) {
             if (live_[i] != session_id) continue;
             live_.erase(live_.begin() + static_cast<long>(i));

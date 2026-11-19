@@ -49,6 +49,8 @@ class Event::Review
       { connected: connected.map { it["device"] }.uniq.size, connections: connected.size,
         connect_ms: spread(connected.reject { yes?(it["payload.returned"]) }.map { it["payload.connect_ms"] }),
         dropped_while_busy: top(dropped.map { it["payload.phase"] }.select { it.in?(BUSY) }),
+        dropped_by_phase: top(dropped.map { it["payload.phase"] }),
+        drop_reasons: top(rows("device.drop_reported", "payload.reason").map { it["payload.reason"] }),
         choosers_closed: top(rows("bluetooth.chooser_closed", "payload.filter").map { it["payload.filter"] }),
         choosers_failed: top(rows("bluetooth.chooser_failed", "payload.error").map { it["payload.error"] }) }
     end
@@ -76,7 +78,7 @@ class Event::Review
 
       { started: tasks.dig("install", :started).to_i, installed: installed.size,
         minutes: spread(installed.map { it["payload.lasted_ms"]&.fdiv(60_000)&.round(1) }),
-        failed_by_cause: top(rows("device.install_reported", "payload.cause").map { it["payload.cause"] || "image_failed" }) }
+        failed_by_cause: top(failed_installs.map { it["payload.cause"] || "image_failed" }) }
     end
   end
 
@@ -133,7 +135,11 @@ class Event::Review
     { failed: top(rows("active_job.completed", "payload.job_class", "payload.exception_class").select { it["payload.exception_class"] }.map { it["payload.job_class"] }) }
   end
 
-  def agents = { calls: top(rows("mcp.answered", "payload.tool").map { it["payload.tool"] || "other" }) }
+  # INFO: fc 19nov26 an agent opens a session and lists the tools before each call, so the protocol's requests would outnumber the calls twenty to one
+  def agents
+    answered = rows("mcp.answered", "payload.method", "payload.tool")
+    { sessions: answered.count { it["payload.method"] == "initialize" }, calls: top(answered.filter_map { it["payload.tool"] }) }
+  end
 
   private
     def within(names) = Event.where(name: names, occurred_at: since..till)
@@ -141,6 +147,15 @@ class Event::Review
     def rows(name, *fields)
       (@rows ||= {})[[ name, fields ]] ||= within(name).order(:occurred_at, :id).pluck(*fields.map { Event.field(it) })
         .map { |values| fields.zip(Array.wrap(values)).to_h }
+    end
+
+    # INFO: fc 19nov26 a unit repeats its install report on every connection until the next install, and only the page that sent the image knows it tried
+    def failed_installs
+      seen = Set.new
+      rows("device.install_reported", "device", "payload.cause", "payload.from", "payload.to", "payload.tried").select do |report|
+        first = seen.add?(report.values_at("device", "payload.from", "payload.to"))
+        first || report["payload.tried"]
+      end
     end
 
     def failure?(event)

@@ -4,6 +4,8 @@ import { LINKED_PHASES, productOf } from '#skyblip/update';
 const TASKS = new Set(['dfu', 'install', 'recovery', 'set', 'capture']);
 const EXPECTED_DROP = new Set(['rebooting', 'recovering']);
 const IMU_STATES = new Set(['none', 'missing', 'corrupt', 'unreadable', 'writing']);
+// INFO: fc 19nov26 the HCI reasons a unit's controller gives a dropped link, the central being the phone or a paired unit
+const DROP_REASONS = { 0x08: 'timeout', 0x13: 'central_closed', 0x14: 'central_low_resources', 0x15: 'central_powered_off', 0x16: 'unit_closed', 0x22: 'll_timeout', 0x3d: 'mic_failure', 0x3e: 'not_established' };
 
 const linked = state => LINKED_PHASES.has(state?.phase);
 const sameNotice = (a, b) => a?.key === b?.key && a?.during === b?.during && a?.detail === b?.detail;
@@ -19,6 +21,7 @@ export class DeviceWitness {
   #install = null;
   #returning = false;
   #read = false;
+  #dropRead = false;
 
   constructor({ now = () => performance.now() } = {}) {
     this.#now = now;
@@ -33,6 +36,7 @@ export class DeviceWitness {
       ...this.#notice(before, state),
       ...this.#landing(before, state),
       ...this.#learned(state, attempted),
+      ...this.#lastDrop(state),
     ];
   }
 
@@ -46,12 +50,13 @@ export class DeviceWitness {
       this.#linkedSince = now;
       this.#returning = returned;
       this.#read = false;
+      this.#dropRead = false;
       return [['device.connected', { connect_ms: returned ? null : connectMs, returned }]];
     }
     if (linked(before) && !linked(state)) {
       const linkedMs = this.#linkedSince === null ? null : Math.round(now - this.#linkedSince);
       this.#linkedSince = null;
-      return [['device.disconnected', { phase: before.phase, expected: EXPECTED_DROP.has(state.phase), linked_ms: linkedMs }]];
+      return [['device.disconnected', { phase: before.phase, expected: EXPECTED_DROP.has(state.phase) || state.left === true, linked_ms: linkedMs }]];
     }
     return [];
   }
@@ -117,6 +122,13 @@ export class DeviceWitness {
       this.#returning = false;
     }
     return entries;
+  }
+
+  #lastDrop(state) {
+    if (!linked(state) || !state.dump || this.#dropRead) return [];
+    this.#dropRead = true;
+    const code = state.dump.system?.link_drop_reason;
+    return code ? [['device.drop_reported', { reason: DROP_REASONS[code] ?? 'other', code }]] : [];
   }
 }
 

@@ -987,6 +987,11 @@ export const LINK_REGISTRY = Object.freeze({
           "name": "unmatched",
           "number": 89,
           "type": "unsigned"
+        },
+        {
+          "name": "link_drop_reason",
+          "number": 94,
+          "type": "unsigned"
         }
       ],
       "keys_of": "diagnostics"
@@ -1451,6 +1456,11 @@ export const LINK_REGISTRY = Object.freeze({
         {
           "name": "unmatched",
           "number": 89,
+          "type": "unsigned"
+        },
+        {
+          "name": "link_drop_reason",
+          "number": 94,
           "type": "unsigned"
         }
       ]

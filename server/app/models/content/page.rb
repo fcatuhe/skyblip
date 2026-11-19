@@ -5,6 +5,9 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
   frontmatter :description
   frontmatter :nav_title
 
+  # INFO: fc 19nov26 every link in the nav and the footer looks a page up, so the pages are read once a process and not once a link
+  def self.all = @all ||= super
+
   def self.find(slug, locale: I18n.locale)
     locale = locale.to_sym
 
@@ -30,6 +33,8 @@ Content::Page = Decant.define(dir: Rails.root.join("content/pages"), ext: "html.
 
     Content::Markdown.new(html).to_markdown
   end
+
+  def slug = @slug ||= super
 
   def to_param
     frontmatter&.dig(:slug)&.to_s.presence || base_slug

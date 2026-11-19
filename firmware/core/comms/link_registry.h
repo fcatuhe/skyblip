@@ -283,6 +283,7 @@ enum : uint32_t {
     kModeS = 87,
     kModeSAltitude = 88,
     kUnmatched = 89,
+    kLinkDropReason = 94,
 };
 }
 
