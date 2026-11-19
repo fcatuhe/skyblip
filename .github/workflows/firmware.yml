@@ -107,8 +107,8 @@ jobs:
         run: python3 scripts/check_adsl_clauses.py
       - name: the clause check refuses a skipped case of no kind
         run: python3 scripts/test_check_adsl_clauses.py
-      - name: the ADS-L report renders each clause in the specification's order
-        run: python3 scripts/test_adsl_conformance.py
+      - name: conformance reports render the clauses and cases in order
+        run: python3 scripts/test_conformance.py
       # The suite reads the markdown, not the PDF, so a word the conversion lost is a requirement nobody reads.
       - name: the ADS-L markdown carries every word of its PDF, in order
         run: python3 scripts/check_spec_markdown.py
@@ -189,11 +189,11 @@ jobs:
         run: |
           python3 scripts/behavior_index.py
           git diff --exit-code docs/BEHAVIOR.md
-      # docs/ADSL_CONFORMANCE.md is what the declaration of conformity attaches, so it must be the suite as it runs.
-      - name: ADS-L report matches the suite
+      - name: ADS-L and ADS-B reports match their suites
         run: |
-          python3 scripts/adsl_conformance.py
-          git diff --exit-code docs/ADSL_CONFORMANCE.md
+          python3 scripts/conformance.py adsl
+          python3 scripts/conformance.py adsb
+          git diff --exit-code docs/ADSL_CONFORMANCE.md docs/ADSB_CONFORMANCE.md
       # docs/TUNING.md is generated from the constants themselves: a threshold
       # that moves without its note moving is the whole point of the gate.
       - name: tuning index matches the sources

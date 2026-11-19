@@ -38,7 +38,7 @@ Where the firmware does not satisfy a clause, the case is still written as the c
 
 The checker knows a fifth kind, `unmeasured:`, a figure the radio has to meet that no bench has measured yet. No ADS-L case uses it. The ADS-B suite does (`test/adsb/README.md`).
 
-Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks. `docs/ADSL_CONFORMANCE.md` is the report for the declaration of conformity, and it lists them: every clause in the specification's order, with the cases of both halves that pass and the skipped ones with their messages, then the EN 300 220 cases and the stack's own tests. `scripts/adsl_conformance.py` generates it from the run, and CI fails when it differs from the suite.
+Skipped cases carry no claim, so they never reach `docs/BEHAVIOR.md`: the generated index stays a list of what the suite checks. `docs/ADSL_CONFORMANCE.md` is the report for the declaration of conformity, and it lists them: every clause in the specification's order, with the cases of both halves that pass and the skipped ones with their messages, then the EN 300 220 cases and the stack's own tests. `python3 scripts/conformance.py adsl` generates it from the run, and CI fails when it differs from the suite.
 
 ## EN 300 220
 
