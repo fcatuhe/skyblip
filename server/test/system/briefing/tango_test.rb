@@ -93,7 +93,9 @@ class Briefing::TangoTest < ApplicationSystemTestCase
 
       within ".fleet--rail" do
         assert_selector ".fleet-list > .fleet-unit", count: 3
-        assert_equal [ "Go 00012A", "Go+ 00012B", "Bravo 3F2A" ], all(".fleet-list > .fleet-unit > .fleet-unit-link .fleet-unit-name").map(&:text)
+        [ "Go 00012A", "Go+ 00012B", "Bravo 3F2A" ].each.with_index(1) do |name, position|
+          assert_selector ".fleet-list > .fleet-unit:nth-child(#{position}) > .fleet-unit-link .fleet-unit-name", exact_text: name
+        end
         assert_selector ".fleet-unit.has-partners", text: "Go+ 00012B" do
           assert_selector ".fleet-partners[aria-label='Paired with this Go'] .fleet-unit-name", text: "Bravo 5C1D"
         end
