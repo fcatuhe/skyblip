@@ -14,8 +14,6 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
-		zephyr,console = &cdc_acm_uart0;
-		zephyr,shell-uart = &cdc_acm_uart0;
 	};
 
 	aliases {
@@ -384,14 +382,6 @@
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
-};
-
-zephyr_udc0: &usbd {
-	status = "okay";
-
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-	};
 };
 
 /* INFO: fc 11nov26 the factory bootloader reads GPREGRET on every boot, so its magic bytes are written through this one area */

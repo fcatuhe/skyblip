@@ -15,8 +15,6 @@
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
-		zephyr,console = &cdc_acm_uart0;
-		zephyr,shell-uart = &cdc_acm_uart0;
 	};
 
 	aliases {
@@ -499,11 +497,11 @@
  *
  * The BME280 is "optional, selected" in our BOM, AND its address is disputed:
  * Our BOM says 0x76, LilyGO's own README I2C table and SoftRF's
- * platform/nRF52.h both say 0x77. Nobody has checked a unit. So BOTH are
- * declared, and hardware/parts/bme280 probes 0x76 then 0x77 for the chip id and
+ * platform/nRF52.h both say 0x77. Nobody has checked a unit. So
+ * hardware/parts/bme280 probes 0x76 then 0x77 for the chip id and
  * takes whichever answered: one image that boots on either variant instead of
- * silently having no barometer on half of them. Zephyr's driver is off
- * (CONFIG_BME280=n), its fetch sleeps through each conversion.
+ * silently having no barometer on half of them. It is not declared: Zephyr's
+ * driver fetch sleeps through each conversion.
  *
  * The IMU header (0x28 BHI260AP / 0x68 ICM-20948) is not declared, for the same
  * reason the DRV2605 below is not: Zephyr has no driver for a sensor hub that is
@@ -514,7 +512,7 @@
  * drive it, with our own part under hardware/parts/drv2605/, because a haptic
  * pulse is a handful of register writes, and Zephyr has no haptic subsystem to
  * put it behind. It is found by the bus scan, not declared here, for the reason
- * the barometer is declared twice: what is fitted on this footprint is a
+ * the barometer is probed at both addresses: what is fitted on this footprint is a
  * procurement question the device answers about itself.
  *
  * Nor is the PCF8563 RTC at 0x51 that project/2-DEVICES.md:73 records as fitted,
@@ -551,18 +549,6 @@
 	 * at 100 kHz one 240-byte chunk is 22 ms, which is longer than the service
 	 * loop's own pass. Every part on this bus is rated for 400 kHz. */
 	clock-frequency = <I2C_BITRATE_FAST>;
-
-	bme280_76: bme280@76 {
-		compatible = "bosch,bme280";
-		reg = <0x76>;
-		status = "okay";
-	};
-
-	bme280_77: bme280@77 {
-		compatible = "bosch,bme280";
-		reg = <0x77>;
-		status = "okay";
-	};
 };
 
 &uart0 {
@@ -572,20 +558,6 @@
 	pinctrl-0 = <&uart0_default>;
 	pinctrl-1 = <&uart0_sleep>;
 	pinctrl-names = "default", "sleep";
-};
-
-/* USB CDC ACM, for an image that builds a console. The products build none.
- *
- * The `zephyr_udc0` label is REQUIRED, not decoration: the USB device next
- * stack's CDC ACM serial helper does USBD_DEVICE_DEFINE(...,
- * DEVICE_DT_GET(DT_NODELABEL(zephyr_udc0)), ...), so without this label the
- * console does not build. Same idiom as the upstream nRF52840 board files.
- */
-zephyr_udc0: &usbd {
-	status = "okay";
-	cdc_acm_uart0: cdc_acm_uart0 {
-		compatible = "zephyr,cdc-acm-uart";
-	};
 };
 
 /*
