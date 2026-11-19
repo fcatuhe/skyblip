@@ -245,8 +245,8 @@ event.listed:
   answers: Who read the log, and what for.
 analytics.listed:
   group: Agents
-  says: An admin, `by_id`, read the clicks on outbound links through an agent, with the days, the segment, the `href` it narrowed to and whether it listed `each` click.
-  answers: Who read the visitors' clicks, and what for.
+  says: An admin, `by_id`, read the site's analytics through an agent, with the `tool` and the arguments it was called with, such as the filters, a `visitor_token` or an `href`.
+  answers: Who read the visitors' visits and clicks, and what for.
 error.reported:
   group: Errors
   says: An error reported to `Rails.error`, raised in a request or a job or handled on purpose, with its class, message, cause, first frames, the controller or job, the revision and a fingerprint that groups it with the same error from the same method.
