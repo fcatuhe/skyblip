@@ -68,6 +68,7 @@ function recordOf(slug, state, before = {}) {
     newest: newestOf(state, before),
     track: image?.key ? (image.downgrade ? 'development' : 'release') : before.track ?? null,
     settings: settings ?? before.settings ?? null,
+    pairedTag: settings ? state.pairedTag ?? null : before.pairedTag ?? null,
     seen: before.seen ?? null,
   };
 }
@@ -105,6 +106,14 @@ export class Unit {
 
   get tag() {
     return this.state?.identity?.bluetoothTag ?? this.record.tag ?? tagOfSlug(this.slug);
+  }
+
+  get plus() {
+    return this.state?.identity?.variant === 'plus' || this.name.startsWith('skyBlip Go+');
+  }
+
+  get pairedTag() {
+    return this.state?.settings ? this.state.pairedTag ?? null : this.record.pairedTag ?? null;
   }
 
   get remembered() {
