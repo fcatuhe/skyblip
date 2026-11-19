@@ -191,7 +191,8 @@ TEST_CASE("formation: a parted neighbour holding a station elsewhere is still pa
 }
 
 // Four metres apart the line of sight is GNSS noise, and a car trip put 3.1 m/s of closure on it.
-TEST_CASE("formation: one fix of closure is noise, two release the member and re-arm the window") {
+TEST_CASE("formation: one fix of closure is noise, two release the member and re-arm the window" *
+          doctest::test_suite("main")) {
     Tracker tracker;
     uint32_t now_ms = fly_on_station(tracker) + 1000;
     REQUIRE(tracker.together(6, 0x424242));

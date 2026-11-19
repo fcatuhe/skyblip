@@ -217,7 +217,8 @@ TEST_CASE(
 }
 
 // EN 300 220-1's off-time, and the executor's dwell: 100 ms apart on one frequency, one a dwell.
-TEST_CASE("transmit cycle: no dwell owes two bursts, and one frequency's bursts are 100 ms apart") {
+TEST_CASE("transmit cycle: no dwell owes two bursts, and one frequency's bursts are 100 ms apart" *
+          doctest::test_suite("main")) {
     for (uint32_t serial = 1; serial <= 1024; serial++) {
         for (const bool airborne : {true, false}) {
             CAPTURE(serial);

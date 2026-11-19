@@ -79,8 +79,7 @@ timing::ClockState locked_at(uint64_t utc_ms) {
 
 }  // namespace
 
-TEST_CASE("indication: the whole state-to-indicator table, in priority order" *
-          doctest::test_suite("main")) {
+TEST_CASE("indication: the whole state-to-indicator table, in priority order") {
     for (int i = 0; i < kRowCount; i++) {
         const Row& row = kTable[i];
         MESSAGE(i, ": ", std::string(to_string(row.condition)), " -> ",
@@ -150,7 +149,8 @@ TEST_CASE("indication: the priority order is the table, top row first") {
 
 // The rows a product with no glass lights: a phone's prompt, and a phone connected.
 TEST_CASE(
-    "indication: a prompt yields only to traffic, and a link keeps the fix colour twice as fast") {
+    "indication: a prompt yields only to traffic, and a link keeps the fix colour twice as fast" *
+    doctest::test_suite("main")) {
     Situation situation = everything_at_once();
     situation.prompting = true;
     situation.linked = true;

@@ -304,8 +304,7 @@ TEST_CASE("power down: every step runs once, in the order the table declares") {
 // already lost its supply, the command does nothing, and an external flash draws
 // its full standby current for the whole night the device spends in a flight bag
 // looking switched off.
-TEST_CASE("power down: the external flash is told to sleep while it still has a rail" *
-          doctest::test_suite("main")) {
+TEST_CASE("power down: the external flash is told to sleep while it still has a rail") {
     RecordingSink sink;
     power_down(sink);
     CHECK(sink.at(PowerDownStep::ExternalFlashDeepPowerDown) <

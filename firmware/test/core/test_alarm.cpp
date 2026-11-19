@@ -40,7 +40,8 @@ TEST_CASE("alarm: an aircraft that says it is on the ground is a target and neve
 }
 
 // No height is not our height: the grade is the distance, and the altitude stays unknown.
-TEST_CASE("alarm: a neighbour that sends no altitude is an advisory on distance alone") {
+TEST_CASE("alarm: a neighbour that sends no altitude is an advisory on distance alone" *
+          doctest::test_suite("main")) {
     const model::Ownship own = flying(30, 0);
     model::AircraftObservation no_altitude = target_at(own, 55, 0, 0, 30, 180);
     no_altitude.altitude_valid = false;

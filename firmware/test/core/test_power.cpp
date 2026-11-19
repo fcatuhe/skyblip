@@ -168,8 +168,7 @@ TEST_CASE("gauge: a refused reading is counted, and its value is what the gauge 
 // 1.8 V floor under both so an unconnected divider cannot switch the device off
 // in someone's hand.
 
-TEST_CASE("cutoff: two samples below the cutoff are not enough, the third acts" *
-          doctest::test_suite("main")) {
+TEST_CASE("cutoff: two samples below the cutoff are not enough, the third acts") {
     // Under the rule, two samples claim nothing at all: the monitor has not yet
     // separated a real cell from a burst sagging the rail.
     CutoffMonitor monitor;

@@ -246,7 +246,8 @@ TEST_CASE("traffic: without a fix of our own, ADS-B churns among itself and give
 // Every branch of a full table's door, in the sky a Tango sees beside a busy airfield.
 TEST_CASE(
     "traffic: a full table of dense ADS-B evicts the ground, then the farthest, never an "
-    "advisory") {
+    "advisory" *
+    doctest::test_suite("main")) {
     const model::Ownship own = flying(30, 0);
     TrafficTable table;
     table.set_own_reference(own);

@@ -217,8 +217,7 @@ TEST_CASE("traffic: a full table keeps its nearest aircraft, whatever floods in 
     CHECK(table.find(6, 0xAAAAAA) >= 0);
 }
 
-TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms" *
-          doctest::test_suite("main")) {
+TEST_CASE("traffic: overflow drops oldest non-threat, keeps active alarms") {
     TrafficTable table;
     // fill capacity
     for (int i = 0; i < TrafficTable::kMaxTargets; i++) {

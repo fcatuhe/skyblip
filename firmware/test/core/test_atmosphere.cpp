@@ -17,7 +17,7 @@ double isa_altitude_cm(double pressure_pa) {
 
 }  // namespace
 
-TEST_CASE("atmosphere: the table agrees with the ICAO closed form" * doctest::test_suite("main")) {
+TEST_CASE("atmosphere: the table agrees with the ICAO closed form") {
     // 25 cm is the worst linear-interpolation error between table entries.
     for (uint32_t pressure_pa = 26000; pressure_pa <= 110000;
          pressure_pa += 137) {  // 137: a prime, so it lands off-grid

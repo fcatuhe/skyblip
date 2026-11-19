@@ -107,7 +107,8 @@ TEST_CASE("nmea: PFLAA carries the id, the relative position and the checksum" *
 }
 
 // OGN hangs the name off the ID field behind a '!' (oss/nrf52-ogn-tracker/src/lookout.h:144).
-TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's does") {
+TEST_CASE("nmea: PFLAA carries a known callsign behind the address, as OGN's does" *
+          doctest::test_suite("main")) {
     auto own = own_at(481000000, 81000000, 1000);
     model::AircraftObservation observation{};
     observation.position_valid = true;

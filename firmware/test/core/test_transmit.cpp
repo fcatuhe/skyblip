@@ -169,7 +169,8 @@ TEST_CASE("transmit: a missed transmission does not put the channel out of step"
 }
 
 // §G.1.16, measured to the top of the transmit second: what it refuses is a missed solution.
-TEST_CASE("transmit: a missed solution is not transmitted, a late slot is") {
+TEST_CASE("transmit: a missed solution is not transmitted, a late slot is" *
+          doctest::test_suite("main")) {
     Transmitter transmitter = airborne_transmitter();
     CHECK(transmitter.attempt(slot_plan(500), 10, 10000, true, 500).go);
     CHECK_FALSE(transmitter.attempt(slot_plan(500), 10, 10000, true, 501).go);
