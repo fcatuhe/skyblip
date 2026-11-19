@@ -164,6 +164,8 @@ class RadioService : public runtime::Service {
     void log_access(radio::Verdict verdict, const Armed& dwell, Payload payload,
                     const bus::RfState::Busy& busy, uint32_t now_ms);
     bool rearm(Armed& dwell, Payload payload, uint64_t tx_at_us, bool forced);
+    bool fix_too_old_at(uint64_t tx_at_us) const;
+    void await_fix(uint32_t utc_s);
     bool silenced(uint64_t tx_at_us) const;
     void silence_after(uint64_t forced_at_us);
     void record_switch(const ports::RfSwitch& change, uint32_t now_ms);

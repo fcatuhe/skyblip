@@ -38,11 +38,14 @@ int Transmitter::instant_in(Payload payload, int slot, uint32_t utc_s) const {
 
 std::optional<int> Transmitter::redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
                                            int32_t fix_in_hand_ms) const {
+    const int window_last = last_instant(Payload::Position, slot);
+    if (fix_in_hand_ms > window_last) return std::nullopt;
     const int first = std::max(window_of(Payload::Position, slot).start_ms,
                                static_cast<int>(fix_in_hand_ms) + kRedrawLeadMs);
-    const int last = std::min(last_instant(Payload::Position, slot),
-                              static_cast<int>(kFixMaxAgeMs - kFixAgeAllowanceMs - fix_lag_ms));
-    if (first > last) return std::nullopt;
+    const int last =
+        std::min(window_last, static_cast<int>(kFixMaxAgeMs - kFixAgeAllowanceMs - fix_lag_ms));
+    // INFO: fc 19nov26 a fix by the last instant keys after its listen, inside the allowance
+    if (first >= last) return first;
     const uint32_t drawn = hash(hash(hash(hash(address_ ^ hash(utc_s)))));
     return first + static_cast<int>(drawn % static_cast<uint32_t>(last - first + 1));
 }

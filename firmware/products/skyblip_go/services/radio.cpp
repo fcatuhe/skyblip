@@ -277,7 +277,10 @@ void RadioService::count_held_for_fix(const timing::SlotPlan& plan, int64_t orig
         fix_wanted_ = false;
         hold_for_fix(fix_wanted_s_);
     }
-    if (!attempt(plan, origin_us, now_ms, Payload::Position).stale) return;
+    if (attempt(plan, origin_us, now_ms, Payload::Position).stale) await_fix(utc_s);
+}
+
+void RadioService::await_fix(uint32_t utc_s) {
     fix_wanted_ = true;
     fix_wanted_s_ = utc_s;
 }

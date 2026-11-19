@@ -24,14 +24,16 @@ uint16_t serial_drawn_between(int first_ms, int last_ms) {
         const timing::Transmitter::Attempt drawn =
             transmitter.attempt(window_a, kUtcS, kUtcS * 1000, true, 0,
                                 timing::Transmitter::Payload::Position, kWholeInHandMs);
-        if (drawn.stale && drawn.at_ms >= first_ms && drawn.at_ms <= last_ms) return serial;
+        if ((drawn.go || drawn.stale) && drawn.at_ms >= first_ms && drawn.at_ms <= last_ms)
+            return serial;
     }
     FAIL("no serial draws an instant in that range");
     return 0;
 }
 
 // One second of a 2 Hz receiver: the .000 solution in hand at 70 ms, the .500 one at half_in_ms.
-void fly_second(Armings& armings, uint32_t second, int half_in_ms) {
+// With busy_once, the first burst armed finds its channel busy at its instant.
+void fly_second(Armings& armings, uint32_t second, int half_in_ms, bool busy_once = false) {
     const uint32_t edge_ms = static_cast<uint32_t>(Armings::kEdgeUs / 1000) + second * 1000;
     armings.state.own.utc_s = kUtcS + second;
     for (int phase = timing::kWindowBSpillMs + 10; phase <= 990; phase += 10) {
@@ -40,6 +42,13 @@ void fly_second(Armings& armings, uint32_t second, int half_in_ms) {
         armings.state.own.fix_at_ms = edge_ms + (half ? 500 : 0);
         armings.state.own.fix_in_hand_ms = edge_ms + static_cast<uint32_t>(half ? half_in_ms : 70);
         armings.tick_in(second, phase);
+        const uint64_t now_us = Armings::kEdgeUs + second * 1000000ull + phase * 1000ull;
+        for (uint32_t i = 0; busy_once && i < armings.rf.handed; i++) {
+            const ports::RfPlan& plan = armings.rf.plans[i];
+            if (plan.tx == nullptr || plan.tx_at_us > now_us) continue;
+            armings.state.rf.note_busy({plan.tx_at_us, -50, true});
+            busy_once = false;
+        }
     }
 }
 
@@ -88,4 +97,27 @@ TEST_CASE("rf: a position whose .500 fix comes after .810 is lost, and counted a
     CHECK(position_tx_at_us(armings) == 0);
     CHECK(armings.state.air.tx_redrawn_for_fix == 0);
     CHECK(armings.state.air.tx_held_for_fix == 1);
+}
+
+// The pinned case: drawn at .48x, deferred past 490 ms on a busy channel, and missed for its age.
+TEST_CASE("rf: a deferred position too old for its .000 fix waits for the .500 one, redrawn") {
+    Armings armings;
+    armings.state.activation.serial = serial_drawn_between(478, 486);
+    armings.ready_to_transmit(kUtcS);
+    armings.solving = false;
+    REQUIRE(armings.radio.setup() == Status::Ok);
+
+    fly_second(armings, 0, 590, /*busy_once=*/true);
+    armings.state.own.utc_s = kUtcS + 1;
+    armings.tick_in(1, 300);
+
+    REQUIRE(armings.state.air.tx_deferred == 1);
+    uint64_t redrawn_us = 0;
+    for (uint32_t i = 0; i < armings.rf.handed; i++)
+        if (armings.rf.plans[i].tx != nullptr) redrawn_us = armings.rf.plans[i].tx_at_us;
+    const int64_t at_ms = static_cast<int64_t>((redrawn_us - Armings::kEdgeUs) / 1000);
+    CHECK(at_ms >= 590 + timing::Transmitter::kRedrawLeadMs);
+    CHECK(armings.state.air.tx_redrawn_for_fix == 1);
+    CHECK(armings.state.air.tx_busy_missed == 0);
+    CHECK(armings.state.air.tx_held_for_fix == 0);
 }

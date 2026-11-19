@@ -111,7 +111,7 @@ class Transmitter {
     // two aircraft with different addresses do not collide every second, and
     // one aircraft's instant is reproducible in a test.
     int instant_in(Payload payload, int slot, uint32_t utc_s) const;
-    // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves, or none
+    // INFO: fc 19nov26 drawn like instant_in over what of the window the late fix leaves
     std::optional<int> redrawn_in(int slot, uint32_t utc_s, int32_t fix_lag_ms,
                                   int32_t fix_in_hand_ms) const;
 

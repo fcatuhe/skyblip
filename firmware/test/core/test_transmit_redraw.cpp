@@ -88,15 +88,16 @@ TEST_CASE("transmit: a redrawn instant keeps the solution at most 490 ms old on 
     CHECK(redrawn.at_ms <= Transmitter::kFixMaxAgeMs - Transmitter::kFixAgeAllowanceMs);
 }
 
-TEST_CASE("transmit: a .500 fix in hand after .810 is too late for any instant on A") {
+TEST_CASE("transmit: a .500 fix in hand by .810 still flies, one after it is too late on A") {
     const uint32_t address = drawn_between(500, 585);
     const int last = Transmitter::last_instant(Transmitter::Payload::Position, 0);
     CHECK(last == 810);
 
-    // The channel check listens 2.2 ms before the instant, so the last fix that flies is in at
-    // .807.
-    CHECK(position(address, kHalfSecondFix, 807).go);
-    const Transmitter::Attempt lost = position(address, kHalfSecondFix, 808);
+    // In hand at .810 itself, it keys after the channel check, inside the completion allowance.
+    const Transmitter::Attempt latest = position(address, kHalfSecondFix, last);
+    REQUIRE(latest.go);
+    CHECK(latest.at_ms == last + Transmitter::kRedrawLeadMs);
+    const Transmitter::Attempt lost = position(address, kHalfSecondFix, last + 1);
     CHECK_FALSE(lost.go);
     CHECK(lost.stale);
 }
