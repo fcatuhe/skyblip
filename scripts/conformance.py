@@ -94,25 +94,42 @@ def run_suite(source_roots):
         raise ValueError(f"no test binary at {os.path.relpath(TEST_BINARY, ROOT)}: "
                          "run `make -C firmware test` first")
     source_files = ",".join(f"*{root}*" for root in source_roots)
-    plain = junit(source_files)
-    passed = [(path, name) for path, name, failure in plain if failure is None]
-    if len(passed) != len(plain):
-        raise ValueError("the normal suite run contains failures")
-    ran = set(passed)
-    skipped = [(path, name, failure) for path, name, failure in
-               junit(source_files, "--no-skip", "--no-exitcode") if (path, name) not in ran]
-    for path, name, failure in skipped:
-        if not failure:
-            raise ValueError(f"a skipped case passes with --no-skip: {path}: {name}")
-        if check_adsl_clauses.kind_of(failure) is None:
-            raise ValueError(f"a skipped case has no recognized reason: {path}: {name}: {failure}")
-    return passed, skipped
+    return classify_runs(junit(source_files), junit(source_files, "--no-skip"))
+
+
+def classify_runs(normal, no_skip):
+    ran = indexed_cases(normal, "normal run")
+    all_cases = indexed_cases(no_skip, "--no-skip run")
+    failures = [f"{path}: {name}: {message}" for (path, name), message in ran.items()
+                if message is not None]
+    if failures:
+        raise ValueError("the normal suite run contains failures:\n" + "\n".join(failures))
+
+    skipped = []
+    for (path, name), failure in all_cases.items():
+        if (path, name) not in ran:
+            if failure is None:
+                raise ValueError(f"a skipped case passes with --no-skip: {path}: {name}")
+            if check_adsl_clauses.kind_of(failure) is None:
+                raise ValueError(f"a skipped case has no recognized reason: {path}: {name}: {failure}")
+            skipped.append((path, name, failure))
+    return list(ran), skipped
+
+
+def indexed_cases(cases, run):
+    indexed = {}
+    for path, name, failure in cases:
+        key = (path, name)
+        if key in indexed:
+            raise ValueError(f"duplicate case in {run}: {path}: {name}")
+        indexed[key] = failure
+    return indexed
 
 
 # INFO: fc 19nov26 scenario cases open scenarios/*.json by relative path, so this runs in firmware/
 def junit(source_files, *extra):
     run = subprocess.run(
-        [TEST_BINARY, "--reporters=junit", f"--source-file={source_files}", *extra],
+        [TEST_BINARY, "--reporters=junit", f"--source-file={source_files}", "--no-exitcode", *extra],
         cwd=FIRMWARE, stdout=subprocess.PIPE, text=True, encoding="utf-8", check=True,
     )
     return junit_cases(run.stdout)

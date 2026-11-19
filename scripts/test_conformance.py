@@ -4,6 +4,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
@@ -207,17 +208,53 @@ class AdsbConformance(unittest.TestCase):
                 conformance.do260b_clauses(listing)
 
 
+def parsed_run(*results):
+    root = ET.Element("testsuites")
+    suite = ET.SubElement(root, "testsuite")
+    for name, *failures in results:
+        case = ET.SubElement(suite, "testcase", classname=ADSB_DEVICE, name=name)
+        for message in failures:
+            ET.SubElement(case, "failure", message=message)
+    return conformance.junit_cases(ET.tostring(root))
+
+
 class JunitConformance(unittest.TestCase):
     def test_a_skipped_case_reports_its_reason_after_a_failing_check(self):
-        xml = """<testsuites><testsuite>
-          <testcase classname="test/adsb/test_receiver.cpp" name="DO-260B 2.2.4: the target is met">
-            <failure message="true" type="CHECK_FALSE"/>
-            <failure message="unmeasured: no bench measurement yet" type="FAIL"/>
-          </testcase>
-        </testsuite></testsuites>"""
-        self.assertEqual(conformance.junit_cases(xml), [
-            (ADSB_DEVICE, "DO-260B 2.2.4: the target is met", "unmeasured: no bench measurement yet"),
-        ])
+        normal = parsed_run(("receiver: a frame arrives",))
+        no_skip = parsed_run(("receiver: a frame arrives",),
+                             ("receiver: the target is met", "true", "unmeasured: bench pending"))
+        self.assertEqual(conformance.classify_runs(normal, no_skip), (
+            [(ADSB_DEVICE, "receiver: a frame arrives")],
+            [(ADSB_DEVICE, "receiver: the target is met", "unmeasured: bench pending")],
+        ))
+
+    def test_a_duplicate_key_cannot_hide_a_skipped_case_with_the_same_name(self):
+        name = "receiver: a frame arrives"
+        passing = parsed_run((name,))
+        duplicate = parsed_run((name,), (name, "optional: unsupported mode"))
+        for run, normal, no_skip in [("normal run", duplicate, passing),
+                                     ("--no-skip run", passing, duplicate)]:
+            with self.subTest(run=run):
+                with self.assertRaisesRegex(ValueError, f"duplicate case in {run}: {ADSB_DEVICE}: {name}"):
+                    conformance.classify_runs(normal, no_skip)
+
+    def test_a_failed_normal_run_names_each_failing_case(self):
+        failing = parsed_run(("receiver: a frame arrives", "no frame"),
+                             ("receiver: a frame is dated", ""))
+        with self.assertRaises(ValueError) as error:
+            conformance.classify_runs(failing, failing)
+        self.assertIn(f"{ADSB_DEVICE}: receiver: a frame arrives: no frame", str(error.exception))
+        self.assertIn(f"{ADSB_DEVICE}: receiver: a frame is dated", str(error.exception))
+
+    def test_a_skipped_case_that_passes_is_named(self):
+        no_skip = parsed_run(("receiver: a frame arrives",))
+        with self.assertRaisesRegex(ValueError, r"passes with --no-skip: .*receiver: a frame arrives"):
+            conformance.classify_runs([], no_skip)
+
+    def test_a_skipped_case_without_a_recognized_reason_is_named(self):
+        no_skip = parsed_run(("receiver: a frame arrives", "no frame"))
+        with self.assertRaisesRegex(ValueError, r"no recognized reason: .*receiver: a frame arrives: no frame"):
+            conformance.classify_runs([], no_skip)
 
 
 if __name__ == "__main__":
