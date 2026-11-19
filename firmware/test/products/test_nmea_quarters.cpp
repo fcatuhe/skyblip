@@ -1,4 +1,4 @@
-// The EFB's own-ship sentences at 4 Hz: the whole second they report, and its withdrawal.
+// The EFB's own-ship sentences fed every quarter: the whole second they report, and its withdrawal.
 #include <cstdint>
 #include <string>
 

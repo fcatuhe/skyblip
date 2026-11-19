@@ -9,8 +9,7 @@ bool L76k::verified() const {
 
 // INFO: fc 18nov26 a pair with no time is no solution to judge, so it never reads as off cadence
 bool L76k::on_cadence() const {
-    const uint32_t needed = cadence_ == Cadence::Quarter ? kMinQuarterSteps : kMinHalfSteps;
-    return window_steps() >= needed || unstamped_ != verify_unstamped_;
+    return window_steps() >= kMinHalfSteps || unstamped_ != verify_unstamped_;
 }
 
 // INFO: fc 13sep26 a $PCAS sentence is acknowledged only by what the receiver stops saying
@@ -27,18 +26,11 @@ void L76k::observe_cadence() {
     const int32_t period_ms = static_cast<int32_t>(solution_period_ms());
     const int32_t step_ms = (stamp_ms - last_stamp_ms_ + kDayMs) % kDayMs;
     if (last_stamp_ms_ >= 0 && step_ms == period_ms && stamp_ms % period_ms == 0) cadence_steps_++;
-    if (last_stamp_ms_ >= 0 && step_ms != 0 && step_ms <= 0xFFFF)
-        interval_seen_ms_ = static_cast<uint16_t>(step_ms);
     last_stamp_ms_ = stamp_ms;
 }
 
 uint32_t L76k::solution_period_ms() const {
-    switch (cadence_) {
-        case Cadence::Quarter: return kSolutionPeriodMs;
-        case Cadence::Half: return kHalfSolutionPeriodMs;
-        case Cadence::Second: break;
-    }
-    return kFactorySolutionPeriodMs;
+    return cadence_ == Cadence::Half ? kSolutionPeriodMs : kFactorySolutionPeriodMs;
 }
 
 // INFO: fc 18nov26 what waited in the port before a configuration is no solution of this one

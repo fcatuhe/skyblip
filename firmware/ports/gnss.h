@@ -9,7 +9,7 @@ namespace skyblip::ports {
 
 enum class Restart : uint8_t { Hot, Warm, Cold, Factory };
 
-enum class SolutionRate : uint8_t { Second, Quarters };
+enum class SolutionRate : uint8_t { Second, Half };
 
 enum class GnssConfigStage : uint8_t {
     Idle = 0,
@@ -41,69 +41,6 @@ constexpr const char* to_string(GnssConfigStage state) {
     }
     return "?";
 }
-
-enum class GnssCommand : uint8_t {
-    None = 0,
-    Wake = 1,
-    Identify = 2,
-    Constellations = 3,
-    SentenceSet = 4,
-    DynamicModel = 5,
-    Rate1Hz = 6,
-    Baud115200 = 7,
-    Rate4Hz = 8,
-    Gsa4 = 9,
-    Rate2Hz = 10,
-    Gsa2 = 11,
-    GsvOff = 12,
-    GsvEvery = 13,
-    GsvPaced5 = 14,
-    GsvPaced9 = 15,
-    RestartHot = 16,
-    RestartWarm = 17,
-    RestartCold = 18,
-    RestartFactory = 19,
-    ResetPulse = 20,
-};
-
-enum class GnssVerdict : uint8_t {
-    None = 0,
-    Passed = 1,
-    Silent = 2,
-    Disobeying = 3,
-    OffCadence = 4,
-    Drifted = 5
-};
-
-enum class GnssEventKind : uint8_t { Command = 0, Stage = 1, Verdict = 2 };
-
-struct GnssEvent {
-    GnssEventKind kind{GnssEventKind::Stage};
-    GnssCommand command{GnssCommand::None};
-    GnssVerdict verdict{GnssVerdict::None};
-    GnssConfigStage stage{GnssConfigStage::Idle};
-    uint32_t at_ms{0};
-    uint32_t baud{0};
-    uint16_t interval_ms{0};
-    uint16_t interval_seen_ms{0};
-    int16_t stamp_ms{-1};
-    uint8_t steps{0};
-    uint8_t heard{0};
-};
-
-struct GnssBringUp {
-    uint16_t interval_ms{0};
-    uint16_t interval_seen_ms{0};
-    GnssVerdict verdict{GnssVerdict::None};
-    uint8_t verify_steps{0};
-    GnssVerdict quarter_verdict{GnssVerdict::None};
-    uint8_t quarter_steps{0};
-    uint32_t commands{0};
-    GnssCommand command{GnssCommand::None};
-    uint32_t command_at_ms{0};
-    uint32_t probes{0};
-    uint32_t resets{0};
-};
 
 struct GnssHealth {
     uint32_t baud{0};

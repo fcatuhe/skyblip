@@ -103,7 +103,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: a solution off the quarter seconds builds no Tr
 // TODO: fc 18nov26 the L76K's quarters are unmeasured against its PPS, until a bench capture
 TEST_CASE("ADS-L.4.SRD860.G.1.1: the L76K solves on the quarter its stamp names, within 10 ms" *
           doctest::skip()) {
-    FAIL("unmeasured: no bench has timed the L76K's 4 Hz solutions against its PPS edge");
+    FAIL("unmeasured: no bench has timed the L76K's 2 Hz solutions against its PPS edge");
 }
 
 TEST_CASE("ADS-L.4.SRD860.G.1.2: flight state is 0 unknown, 1 on ground, 2 airborne, never 3") {

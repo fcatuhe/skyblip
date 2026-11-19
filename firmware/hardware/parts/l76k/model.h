@@ -59,17 +59,17 @@ class L76k : public io::Uart, public io::UartRate, public io::Gpio, public GnssT
     // io::UartRate, and the two only agree because someone made them.
     uint32_t baud{parts::L76k::kFactoryBaudRate};
     bool refuses_baud_command{false};
-    bool refuses_quarter_rate{false};
-    // INFO: fc 18nov26 a part answering $PCAS02,250 at another interval, which only its stamps show
-    uint32_t quarter_rate_runs_at_ms{0};
-    // INFO: fc 18nov26 the shortest $PCAS02 interval the part takes, so 500 passes where 250 fails
+    bool refuses_fast_rate{false};
+    // INFO: fc 18nov26 a part answering a sub-second $PCAS02 at another interval, as its stamps
+    // show
+    uint32_t fast_rate_runs_at_ms{0};
+    // INFO: fc 18nov26 the shortest $PCAS02 interval the part takes, so 1000 refuses 2 Hz
     uint32_t fastest_interval_ms{100};
     // INFO: fc 18nov26 a part that lost UTC sends a no-time GGA and RMC, LilyGO-Modem-Series #95
     bool time_lost{false};
     // INFO: fc 18nov26 Go 000001 stopped NMEA and PPS together at 22:07, and only a reboot cured it
     bool hung{false};
-    bool hangs_on_quarter_rate{false};
-    uint32_t quarter_rate_asked{0};
+    bool hangs_on_fast_rate{false};
     uint32_t sub_second_rate_asked{0};
     // INFO: fc 18nov26 Quectel L76K Hardware Design V1.0 4.2.1: RESET_N low at least 100 ms
     static constexpr uint32_t kResetLowMs = 100;

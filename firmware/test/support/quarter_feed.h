@@ -1,4 +1,4 @@
-// Harness, not a test: a 4 Hz receiver's solutions fed onto the product's bus, each when it lands.
+// Harness, not a test: a solution every quarter fed onto the product's bus, each when it lands.
 #ifndef SKYBLIP_TEST_SUPPORT_QUARTER_FEED_H
 #define SKYBLIP_TEST_SUPPORT_QUARTER_FEED_H
 

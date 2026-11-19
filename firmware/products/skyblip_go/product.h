@@ -48,8 +48,8 @@ constexpr uint32_t kRefusalParkCeilingMs = 6000;
 // against 2 s (zephyr/rf.h sleep_until, slot.h dwell_of)
 constexpr uint32_t kRadioParkCeilingMs = 2000;
 
-// INFO: fc 18nov26 the Go transmits ADS-L, whose positions are dated to a quarter second
-constexpr ports::SolutionRate kSolutionRate = ports::SolutionRate::Quarters;
+// INFO: fc 19nov26 the Go transmits ADS-L, so it solves on .000 and .500, two of G.1.1's quarters
+constexpr ports::SolutionRate kSolutionRate = ports::SolutionRate::Half;
 
 // skyBlip Go: one board, one service list. The shell around it only decides how
 // often run_pass() is called and where the pixels go.
@@ -59,7 +59,7 @@ class Product {
     using Board = boards::TEchoPlus<Platform>;
     static_assert(common::solution_rate_serves<typename Board::Gnss>(kRadioProtocols,
                                                                      kSolutionRate),
-                  "an ADS-L transmitter needs a receiver solving on the quarters");
+                  "an ADS-L transmitter needs a receiver solving twice a second");
 
     explicit Product(Platform& platform)
         : platform_(platform), board_(platform, bus_, kSolutionRate) {

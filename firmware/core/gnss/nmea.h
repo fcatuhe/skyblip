@@ -68,7 +68,7 @@ struct GnssSolution {
     int32_t speed_mm_s{0};
     int32_t track_cdeg{0};
     uint32_t utc_s{0};
-    // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 4 Hz they name the quarter solved
+    // INFO: fc 18nov26 the milliseconds of RMC's hhmmss.sss: at 2 Hz they name the quarter solved
     uint16_t utc_ms{0};
     // Horizontal dilution of precision in hundredths, GGA field 8.
     uint16_t hdop_e2{0};

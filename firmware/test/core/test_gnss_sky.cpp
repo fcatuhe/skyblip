@@ -68,7 +68,7 @@ TEST_CASE("gnss: a QZSS satellite on the GP talker is not counted as GPS") {
     CHECK(parser.sky().in_view_of(System::Qzss) == 1);
 }
 
-// At 4 Hz GSA comes once a second, so its set stands until the next set, not the next GGA.
+// At 2 Hz GSA comes once a second, so its set stands until the next set, not the next GGA.
 TEST_CASE("gnss: each GSA set after a GGA starts the solution set again") {
     NmeaParser parser;
     const char* gsa = "$GNGSA,A,3,01,03,,,,,,,,,,,2.50,1.25,2.10,1*01";

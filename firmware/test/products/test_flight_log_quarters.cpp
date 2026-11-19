@@ -1,4 +1,4 @@
-// The flight log at 4 Hz: each record is its whole second's solution, read back off the flash.
+// The flight log fed every quarter: each record is its whole second's solution, off the flash.
 #include <cstdint>
 #include <map>
 #include <vector>

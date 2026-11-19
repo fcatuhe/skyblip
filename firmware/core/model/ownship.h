@@ -37,7 +37,7 @@ struct Ownship {
     // and not a display value. Zero when nothing measured it.
     int16_t turn_cdps;
     uint32_t utc_s;
-    // INFO: fc 18nov26 milliseconds into utc_s: at 4 Hz the quarter the G.1.1 timestamp names
+    // INFO: fc 18nov26 milliseconds into utc_s: at 2 Hz the quarter the G.1.1 timestamp names
     uint16_t utc_ms;
     // When the solution behind this state was solved, on the millisecond clock.
     // ADS-L G.1.16 refuses a Traffic burst whose solution is over 500 ms old on air.

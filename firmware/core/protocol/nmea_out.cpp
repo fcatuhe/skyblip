@@ -257,7 +257,7 @@ void civil_from_epoch(uint32_t utc_s, int& year, int& month, int& day) {
     year = static_cast<int>(march_year + (month <= 2 ? 1 : 0));
 }
 
-// INFO: fc 18nov26 a quarter solution keeps its fraction, so the time stays the position's at 4 Hz
+// INFO: fc 18nov26 a .500 solution keeps its fraction, so the time stays the position's at 2 Hz
 int format_nmea_time(char* out, uint32_t utc_s, uint16_t utc_ms) {
     const uint32_t second_of_day = utc_s % 86400u;
     int written = 0;

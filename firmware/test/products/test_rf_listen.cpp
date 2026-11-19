@@ -252,13 +252,13 @@ TEST_CASE("rf: after a forced burst ends nothing of ours goes on air for 2000 ms
     CHECK(sent[1].at_us >= sent[0].at_us + kAirTimeUs + adsl::kSilenceAfterForceUs);
 }
 
-// Without a name to force, the turn that waits longest on the ground is a position.
+// Without a name to force, the turn that waits longest on the ground is a position, on a retry.
 TEST_CASE("rf: on the ground with no name set, a position busy for 3000 ms is forced") {
     Listening run(0);
     run.to_cycle_second(timing::Transmitter::kPositionOffsetsS[0]);
     const uint64_t held_from_us = ms_to_us(run.now_ms);
     run.hold(true);
-    run.run_for(6000);
+    run.run_for(8000);
     run.hold(false);
     CHECK(run.state().air.tx_forced >= 1);
     std::vector<simulator::AirRecord> sent;

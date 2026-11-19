@@ -35,7 +35,7 @@ std::string gga_at(const char* stamp) {
 }
 }  // namespace
 
-// G.1.1 names a quarter second, and at 4 Hz the stamp's fraction is the only thing that says which.
+// G.1.1 names a quarter second, and at 2 Hz the stamp's fraction is the only thing that says which.
 TEST_CASE("gnss: the milliseconds of an RMC stamp are the solution's own") {
     NmeaParser parser;
     REQUIRE(parse(parser, rmc_at("123519.750")));

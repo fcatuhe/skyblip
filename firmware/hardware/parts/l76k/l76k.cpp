@@ -2,21 +2,23 @@
 
 namespace skyblip::parts {
 
-void L76k::send(ports::GnssCommand command, uint32_t now_ms) {
-    if (command == ports::GnssCommand::Wake) {
-        const uint8_t wake = kWakeByte;
-        uart_.write(&wake, 1);
-    } else if (command != ports::GnssCommand::ResetPulse) {
-        const char* sentence = sentence_of(command);
-        size_t bytes = 0;
-        while (sentence[bytes]) bytes++;
-        uart_.write(reinterpret_cast<const uint8_t*>(sentence), bytes);
-    }
+void L76k::send(const char* sentence, uint32_t now_ms) {
+    size_t bytes = 0;
+    while (sentence[bytes]) bytes++;
+    uart_.write(reinterpret_cast<const uint8_t*>(sentence), bytes);
     last_command_ms_ = now_ms;
-    bring_up_.commands++;
-    bring_up_.command = command;
-    bring_up_.command_at_ms = now_ms;
-    note(ports::GnssEventKind::Command, now_ms);
+}
+
+void L76k::wake(uint32_t now_ms) {
+    const uint8_t wake = kWakeByte;
+    uart_.write(&wake, 1);
+    last_command_ms_ = now_ms;
+}
+
+void L76k::enter(ConfigStage stage, uint32_t now_ms) {
+    if (stage == stage_) return;
+    stage_ = stage;
+    entered_ms_ = now_ms;
 }
 
 void L76k::start_sequence(uint32_t now_ms) {
@@ -30,12 +32,12 @@ void L76k::start_sequence(uint32_t now_ms) {
     send_next(now_ms);
 }
 
-// INFO: fc 18nov26 only a part proven at 115200 is asked for 4 or 2 Hz, as V1.1 SS2.3.2 wants
-void L76k::start_rate(Cadence cadence, uint32_t now_ms) {
-    sequence_ = cadence == Cadence::Quarter ? kQuarterRateCommands : kHalfRateCommands;
-    sequence_count_ = kQuarterRateCommandCount;
+// INFO: fc 18nov26 only a part proven at 115200 is asked for 2 Hz, as V1.1 SS2.3.2 wants
+void L76k::start_rate(uint32_t now_ms) {
+    sequence_ = kRateCommands;
+    sequence_count_ = kRateCommandCount;
     next_command_ = 0;
-    cadence_ = cadence;
+    cadence_ = Cadence::Half;
     enter(ConfigStage::Sending, now_ms);
     send_next(now_ms);
 }
@@ -45,19 +47,12 @@ void L76k::settle(uint32_t now_ms) {
     begin_verify(now_ms);
 }
 
-// INFO: fc 18nov26 4 Hz is asked once a session, and a warm or cold start begins a new one
+// INFO: fc 19nov26 2 Hz refused thrice, or answered with silence, is not asked again until reboot
 void L76k::seek_rate(uint32_t now_ms) {
-    if (solution_rate_ == ports::SolutionRate::Second) return;
-    if (cadence_ == Cadence::Quarter || baud_rate() != kTargetBaudRate) return;
-    if (rebooting_ && now_ms - rebooted_ms_ < kRestartSettleMs) return;
-    rebooting_ = false;
+    if (solution_rate_ == ports::SolutionRate::Second || half_refused_) return;
+    if (cadence_ == Cadence::Half || baud_rate() != kTargetBaudRate) return;
     rate_attempts_ = 1;
-    if (!quarter_tried_) {
-        quarter_tried_ = true;
-        start_rate(Cadence::Quarter, now_ms);
-    } else if (cadence_ == Cadence::Second && !half_refused_) {
-        start_rate(Cadence::Half, now_ms);
-    }
+    start_rate(now_ms);
 }
 
 void L76k::send_next(uint32_t now_ms) {
@@ -75,30 +70,25 @@ void L76k::begin_verify(uint32_t now_ms) {
     unrequested_at_verify_ = parser_.unrequested();
 }
 
-// INFO: fc 18nov26 a part that drifts off 4 Hz is put at 2 Hz, one off 2 Hz asked for it again
+// INFO: fc 18nov26 a part that drifts off its rate while ready is asked for it again
 void L76k::watch_cadence(uint32_t now_ms) {
-    if (now_ms - verify_start_ms_ < kQuarterVerifyWindowMs) return;
+    if (now_ms - verify_start_ms_ < kRateVerifyWindowMs) return;
     const bool heard = parser_.solution().sentences != verify_sentences_;
     const bool steady = on_cadence();
-    if (heard && !steady) conclude(ports::GnssVerdict::Drifted, now_ms);
     begin_verify(now_ms);
     if (!heard || steady) return;
     rate_attempts_ = 1;
-    start_rate(Cadence::Half, now_ms);
+    start_rate(now_ms);
 }
 
-// INFO: fc 18nov26 4 Hz refused once is 2 Hz tried, and 2 Hz refused thrice the whole 1 Hz set
+// INFO: fc 19nov26 2 Hz refused thrice is the whole 1 Hz set put back
 void L76k::rate_failed(uint32_t now_ms) {
-    if (cadence_ == Cadence::Half && rate_attempts_ < kMaxConfigAttempts) {
+    if (rate_attempts_ < kMaxConfigAttempts) {
         rate_attempts_++;
-        start_rate(Cadence::Half, now_ms);
+        start_rate(now_ms);
         return;
     }
     rate_attempts_ = 1;
-    if (cadence_ == Cadence::Quarter) {
-        start_rate(Cadence::Half, now_ms);
-        return;
-    }
     half_refused_ = true;
     start_sequence(now_ms);
 }
@@ -108,7 +98,7 @@ bool L76k::raise_baud(uint32_t now_ms) {
     if (baud_rate() == kTargetBaudRate) return false;
     if (!port_can_retune()) return false;
     baud_before_raise_ = baud_rate();
-    send(ports::GnssCommand::Baud115200, now_ms);
+    send(kBaudCommand, now_ms);
     baud_raises_++;
     return adopt_baud(kTargetBaudRate);
 }
@@ -130,7 +120,7 @@ bool L76k::adopt_baud(uint32_t baud) {
 // receiver we could not hear may also have been asleep.
 void L76k::begin_wake(uint32_t now_ms) {
     flush();
-    send(ports::GnssCommand::Wake, now_ms);
+    wake(now_ms);
     enter(ConfigStage::Waking, now_ms);
 }
 
@@ -149,12 +139,12 @@ bool L76k::step_baud() {
 }
 
 void L76k::verify_failed(uint32_t now_ms) {
-    conclude(failure(), now_ms);
     const bool heard_nothing = parser_.solution().sentences == verify_sentences_;
     if (cadence_ != Cadence::Second && !heard_nothing) {
         rate_failed(now_ms);
         return;
     }
+    if (cadence_ != Cadence::Second) half_refused_ = true;
     // Two different failures wearing one face. A receiver that answered nothing
     // at all is a receiver we cannot hear, and the rate is the first suspect. A
     // receiver that is talking has the right rate and is simply not obeying, and
@@ -176,12 +166,7 @@ void L76k::verify_failed(uint32_t now_ms) {
     begin_wake(now_ms);
 }
 
-void L76k::request_restart(ports::Restart kind) {
-    pending_restart_ = static_cast<uint8_t>(kind);
-    if (kind == ports::Restart::Hot) return;
-    quarter_tried_ = false;
-    half_refused_ = false;
-}
+void L76k::request_restart(ports::Restart kind) { pending_restart_ = static_cast<uint8_t>(kind); }
 
 void L76k::service(uint32_t now_ms) {
     serviced_ms_ = now_ms;
@@ -190,8 +175,6 @@ void L76k::service(uint32_t now_ms) {
         const bool factory = pending_restart_ == static_cast<uint8_t>(ports::Restart::Factory);
         send(kRestartCommands[pending_restart_], now_ms);
         pending_restart_ = kNoRestart;
-        rebooting_ = true;
-        rebooted_ms_ = now_ms;
         // A factory reset takes the constellations, the sentence set, the
         // dynamic model and the rate with it, so the receiver that comes back is
         // not the one we configured. A cold or warm start only throws away the
@@ -216,7 +199,7 @@ void L76k::service(uint32_t now_ms) {
             break;
         case ConfigStage::Waking:
             if (now_ms - last_command_ms_ < kWakeDelayMs) break;
-            send(ports::GnssCommand::Identify, now_ms);
+            send(kIdentifyCommand, now_ms);
             enter(ConfigStage::Identifying, now_ms);
             break;
         case ConfigStage::Identifying:
@@ -231,13 +214,12 @@ void L76k::service(uint32_t now_ms) {
             break;
         case ConfigStage::Verifying:
             if (now_ms - verify_start_ms_ <
-                (cadence_ != Cadence::Second ? kQuarterVerifyWindowMs : kVerifyWindowMs))
+                (cadence_ != Cadence::Second ? kRateVerifyWindowMs : kVerifyWindowMs))
                 break;
             if (!verified()) {
                 verify_failed(now_ms);
                 break;
             }
-            conclude(ports::GnssVerdict::Passed, now_ms);
             if (raise_baud(now_ms)) {
                 enter(ConfigStage::Confirming, now_ms);
                 begin_verify(now_ms);
@@ -287,15 +269,15 @@ uint8_t L76k::satellites_in_view_every() const {
     if (!satellites_in_view_wanted_) return 0;
     if (!levels_heard_) return 1;
     return cadence_ == Cadence::Second ? kSatellitesInViewPeriodSolutions
-                                       : kQuarterSatellitesInViewPeriodSolutions;
+                                       : kHalfSecondSatellitesInViewPeriodSolutions;
 }
 
-ports::GnssCommand L76k::satellites_in_view_command(uint8_t every) {
+const char* L76k::satellites_in_view_command(uint8_t every) {
     switch (every) {
-        case 0: return ports::GnssCommand::GsvOff;
-        case 1: return ports::GnssCommand::GsvEvery;
-        case kQuarterSatellitesInViewPeriodSolutions: return ports::GnssCommand::GsvPaced9;
-        default: return ports::GnssCommand::GsvPaced5;
+        case 0: return kSatellitesInViewOff;
+        case 1: return kSatellitesInViewEverySolution;
+        case kHalfSecondSatellitesInViewPeriodSolutions: return kSatellitesInViewHalfSecondPaced;
+        default: return kSatellitesInViewPaced;
     }
 }
 

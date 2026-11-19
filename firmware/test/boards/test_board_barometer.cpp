@@ -54,7 +54,7 @@ struct Unit {
 
     platform::host::Platform platform;
     bus::Bus bus;
-    Board board{platform, bus, ports::SolutionRate::Quarters};
+    Board board{platform, bus, ports::SolutionRate::Half};
     bus::State state;
 };
 

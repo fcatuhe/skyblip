@@ -171,7 +171,7 @@ One tap per fact, in the service that owns the field on `bus::State` (`core/bus/
 |---|---|---|
 | `Boot` | `products/common/services/capture.cpp` `record_boot` | as a capture session opens, so a corpus names the build that produced it |
 | `Config` | `products/common/services/capture.cpp` `record_config`, with the settings `products/skyblip_go/capture_settings.h` describes | the same instant, and for the same reason |
-| `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | the solution on each whole second the receiver publishes, fix or not, so one in four at 4 Hz |
+| `Gnss` | `products/common/services/ownship.cpp` `record_gnss` | the solution on each whole second the receiver publishes, fix or not, so one in two at 2 Hz |
 | `Pps` | `products/common/services/ownship.cpp` `record_pps` | every latched edge, and every `kPpsRecordPeriodMs` that brings none |
 | `Burst` | `products/common/services/traffic.cpp` `log`, `products/skyblip_go/services/radio.cpp` `log_refusal` | every tape entry: what the air delivered, and what policy refused to key |
 | `Dwell` | `services/radio.cpp` `record_dwell` | every dwell armed, which is three a second: the two band edges and the M-band hop |

@@ -68,16 +68,15 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: every Traffic burst names its solution's time w
     CHECK(check_every_position(simulator) >= 25);
 }
 
-// The pinned case: a stalled drain held the .250 pair with the .500 GGA, and mixed the two.
+// The pinned case was a drain mixing two solutions: a .500 pair stalled 120 ms flies whole or not.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: a height and a position from two solutions never go on air") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     fly_measured(simulator);
     models::L76k& chip = simulator.world().gnss();
-    chip.drop_rmc_at_ms = 500;
     chip.stall_period_ms = 2000;
-    chip.stall_from_ms = 300;
-    chip.stall_until_ms = 600;
+    chip.stall_from_ms = 1520;
+    chip.stall_until_ms = 1640;
     run_on(simulator, past_settling(simulator), 40000);
 
     int behind_the_stall = 0;
@@ -85,7 +84,7 @@ TEST_CASE("ADS-L.4.SRD860.G.1.1: a height and a position from two solutions neve
          records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition)) {
         check_flown(simulator, record);
         const uint32_t phase_ms = static_cast<uint32_t>(record.at_us / 1000 % 2000);
-        if (phase_ms >= chip.stall_until_ms && phase_ms < 760) behind_the_stall++;
+        if (phase_ms >= chip.stall_until_ms && phase_ms < 2000) behind_the_stall++;
     }
     CHECK(behind_the_stall > 0);
 }
@@ -126,15 +125,15 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: an L76K that delivers every solution a second 
     FAIL("unmeasured: no bench has shown the L76K delivers each solution within 250 ms of it");
 }
 
-// The pinned case: a part at 5 Hz passed as 4 Hz and a .600 solution went out named .500.
+// The pinned case: a part at 5 Hz passed a quarter count and a .600 solution went out named .500.
 TEST_CASE("ADS-L.4.SRD860.G.1.1: a receiver solving off the quarters never names a fix wrongly") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     fly_measured(simulator);
-    simulator.world().gnss().quarter_rate_runs_at_ms = 200;
+    simulator.world().gnss().fast_rate_runs_at_ms = 200;
     run_on(simulator, past_settling(simulator), 30000);
 
-    CHECK_FALSE(simulator.product().board().gnss().solving_quarters());
+    CHECK_FALSE(simulator.product().board().gnss().solving_half_seconds());
     check_every_position(simulator);
 }
 
@@ -181,7 +180,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: no Traffic burst goes on air over 500 ms after
 }
 
 // A receiver left at 1 Hz holds most airborne bursts, its solution too old by the time they fly.
-TEST_CASE("ADS-L.4.SRD860.G.1.16: four solutions a second put a Traffic burst in every second") {
+TEST_CASE(
+    "ADS-L.4.SRD860.G.1.16: two solutions a second and the redraw put a burst in every second") {
     simulator::Simulator simulator;
     REQUIRE(simulator.setup() == Status::Ok);
     fly_measured(simulator);
@@ -189,8 +189,8 @@ TEST_CASE("ADS-L.4.SRD860.G.1.16: four solutions a second put a Traffic burst in
     const uint32_t solutions = simulator.product().state().flight.gnss_solutions;
     run_on(simulator, now_ms, 20000 - simulator::Simulator::kStepMs);
 
-    CHECK(simulator.product().board().gnss().solving_quarters());
-    CHECK(simulator.product().state().flight.gnss_solutions - solutions == 80);
+    CHECK(simulator.product().board().gnss().solving_half_seconds());
+    CHECK(simulator.product().state().flight.gnss_solutions - solutions == 40);
     std::vector<uint32_t> seconds;
     for (const simulator::AirRecord& record :
          records_of(simulator.world().air(), adsl::Packet::kPayloadTypePosition))

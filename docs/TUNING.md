@@ -106,7 +106,7 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kSolutionLatencyCeilingMs` | 250 | milliseconds | Ceiling | the stated assumption: the L76K delivers a solution within a quarter |
 | `kStampToleranceMs` | 10 | milliseconds | - | G.1.1's 10 ms: a stamp that close to a quarter is that quarter |
 | `kQuarterMs` | 250 | milliseconds | - | - |
-| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 14 bursts at 4 Hz |
+| `kSentenceMaxAgeMs` | 3500 (3.5 s) | milliseconds | MaxAge | SoftRF's NMEA_EXP_TIME: liveness, not a freshness rule, 7 bursts at 2 Hz |
 
 ## [`firmware/core/indication`](../firmware/core/indication/README.md)
 
@@ -204,6 +204,8 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kCycleS` | 20 | seconds | - | each unit's cycle starts on an even second, c = 2 * (serial % 10) |
 | `kRetryStepS` | 2 | seconds | - | a burst that missed its second tries the same channel two seconds on |
 | `kFixMaxAgeMs` | `adsl::kFixMaxAgeMs` = 500 | milliseconds | MaxAge | [README](../firmware/core/timing/README.md) argues it |
+| `kFixInHandEarlyMs` | -1000000 | milliseconds | - | a fix in hand before every instant, for a caller that names no arrival |
+| `kRedrawLeadMs` | `static_cast<int>((PoliteAccess::kCcaLeadUs + 999) / 1000)` | milliseconds | - | a redrawn instant leaves the channel check its listen before it |
 | `kFixAgeAllowanceMs` | `static_cast<int32_t>(kAirTimeMs) + kCompletionAllowanceMs` | milliseconds | - | so the frame ends inside G.1.16's 500 ms: air time and SetTx slack |
 
 ## [`firmware/core/traffic`](../firmware/core/traffic/README.md)
@@ -422,4 +424,4 @@ in `firmware/products/skyblip_go/settings.h`.
 | `kBarometerConversionCeilingMs` | 150 | milliseconds | Ceiling | Zephyr's BME280_MEASUREMENT_TIMEOUT_MS, over 3x the DS 9.1 worst case |
 | `kBatteryPeriodMs` | 1000 (1 s) | milliseconds | Period | A cell moves over minutes. The gauge needs three readings before it can throw out a transient, so a second between them is the slowest cadence that still shows the state of charge on the first screen a pilot sees. |
 
-277 constants over 26 folders.
+279 constants over 26 folders.

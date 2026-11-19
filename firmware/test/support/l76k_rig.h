@@ -26,14 +26,14 @@ inline void run(parts::L76k& driver, models::L76k& chip, uint32_t from_ms, uint3
 // specification.
 constexpr uint32_t kBringUpLeadMs = parts::L76k::kWakeDelayMs + parts::L76k::kIdentifyWindowMs;
 
-// How long until the receiver solves four times a second: the four sentences
+// How long until the receiver solves twice a second: the four sentences
 // and their verification at 9600, the second the raised port waits for its
-// first sentence, then the two that ask for 4 Hz and the window that counts it.
+// first sentence, then the two that ask for 2 Hz and the window that counts it.
 constexpr uint32_t kConfiguredMs =
     kBringUpLeadMs + (parts::L76k::kCommandCount - 1) * parts::L76k::kCommandGapMs +
     parts::L76k::kVerifyWindowMs + parts::L76k::kFactorySolutionPeriodMs +
-    (parts::L76k::kQuarterRateCommandCount - 1) * parts::L76k::kCommandGapMs +
-    parts::L76k::kQuarterVerifyWindowMs + 100;
+    (parts::L76k::kRateCommandCount - 1) * parts::L76k::kCommandGapMs +
+    parts::L76k::kRateVerifyWindowMs + 100;
 
 }  // namespace skyblip
 

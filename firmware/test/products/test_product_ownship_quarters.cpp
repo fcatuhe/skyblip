@@ -1,4 +1,4 @@
-// Own-ship at 4 Hz: each quarter solution moves the state ADS-L sends, the whole second the rest.
+// Own-ship fed every quarter: each solution moves the state ADS-L sends, the whole second the rest.
 #include <cstdint>
 
 #include "core/flight/state.h"

@@ -194,7 +194,7 @@ bool NmeaParser::parse_line(const char* line, int bytes) {
 bool NmeaParser::apply_gsa(const char* fields[], int field_count) {
     if (field_count <= kGsaVdopField) return false;
     last_sentence_ = Sentence::Gsa;
-    // INFO: fc 18nov26 GSA comes once a second at 4 Hz, so its set replaces the marks, not each GGA
+    // INFO: fc 18nov26 GSA comes once a second at 2 Hz, so its set replaces the marks, not each GGA
     if (solution_marks_stale_) sky_.clear_solution();
     solution_marks_stale_ = false;
     // INFO: fc 18sep26 one GSA per constellation, and one that solved nothing carries no DOP at all
