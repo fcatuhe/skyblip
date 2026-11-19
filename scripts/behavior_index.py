@@ -57,7 +57,11 @@ AREAS = {
     "hardware": "hardware - one folder per part, driver against model",
     "boards": "boards - one assembly, its parts probed on both platforms",
     "products": "products - a SKU end to end, and the committed scenarios",
+    "pages": "pages - the Go's glass, one page at a time, from a snapshot to pixels",
+    "bravo": "bravo - skyBlip Bravo, the ADS-B receiver, end to end",
 }
+
+PRODUCT_AREAS = {"pages": "pages", "skyblip_bravo": "bravo"}
 
 Case = namedtuple("Case", "path line name suite")
 
@@ -306,6 +310,8 @@ def area_of(path):
     parts = path.split("/")
     if parts[0] == "protocols":
         return "/".join(parts[:2] + parts[3:-1])
+    if parts[1:2] == ["products"] and len(parts) > 3:
+        return PRODUCT_AREAS.get(parts[2], "products")
     return parts[1] if len(parts) > 2 else ""
 
 
